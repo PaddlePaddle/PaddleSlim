@@ -20,7 +20,7 @@ import platform
 
 from setuptools import find_packages
 from setuptools import setup
-from slim.version import slim_version
+from paddleslim.version import slim_version
 
 
 def python_version():
@@ -33,12 +33,12 @@ with open('./requirements.txt') as f:
     setup_requires = f.read().splitlines()
 
 packages = [
-    'slim', 'slim.prune', 'slim.dist', 'slim.nas', 'slim.analysis',
-    'slim.quant'
+    'paddleslim', 'paddleslim.prune', 'paddleslim.dist', 'paddleslim.nas',
+    'paddleslim.analysis', 'paddleslim.quant'
 ]
 
 setup(
-    name='slim',
+    name='paddleslim',
     version=slim_version,
     description=('A toolkit for generating small model.'),
     long_description='',
