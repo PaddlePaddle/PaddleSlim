@@ -170,7 +170,7 @@ def _quant_embedding_abs_max(graph, scope, place, config):
             (1 << (bit_length - 1)) - 1))
         return scale, quanted_tensor.astype(np.int8)
 
-    def _insert_dequant_abx_max_op(graph, scope, var_node, scale_node, config):
+    def _insert_dequant_abs_max_op(graph, scope, var_node, scale_node, config):
         """
         Insert dequantize_abs_max op in graph
         """
@@ -233,7 +233,7 @@ def _quant_embedding_abs_max(graph, scope, place, config):
         if op_node.name() == 'lookup_table':
             graph.update_input_link(embedding_node, quant_tensor_var, op_node)
             var_node = op_node.outputs[0]
-            _insert_dequant_abx_max_op(graph, scope, var_node, scale_var,
+            _insert_dequant_abs_max_op(graph, scope, var_node, scale_var,
                                        config)
 
     # free float embedding params memory
