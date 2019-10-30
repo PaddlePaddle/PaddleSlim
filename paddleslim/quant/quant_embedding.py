@@ -241,12 +241,10 @@ def _quant_embedding_abs_max(graph, scope, place, config):
     graph.safe_remove_nodes(embedding_node)
 
 
-def quant_embedding(program, scope, place, config=None):
-    if config is not None:
-        assert isinstance(config, dict), "config must be dict"
-        config = _merge_config(copy.deepcopy(default_config), config)
-    else:
-        config = default_config
+def quant_embedding(program, scope, place, config):
+    assert isinstance(config, dict), "config must be dict"
+    config = _merge_config(copy.deepcopy(default_config), config)
+
     graph = IrGraph(core.Graph(program.desc), for_test=True)
     if config['quantize_type'] == 'abs_max':
         _quant_embedding_abs_max(graph, scope, place, config)
