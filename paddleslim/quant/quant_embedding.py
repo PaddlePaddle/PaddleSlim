@@ -70,7 +70,7 @@ def _merge_config(old_config, new_config):
             supported, now supported dtypes are {} \
                 ".format(dtype, support_dtype)
     if 'threshold' in keys:
-        assert isinstance(new_config['threshold'], (float, int)), "threshold \
+        assert isinstance(old_config['threshold'], (float, int)), "threshold \
                 must be number."
 
     print("quant_embedding config {}".format(old_config))
