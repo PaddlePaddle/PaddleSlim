@@ -52,6 +52,8 @@ class Pruner():
                               False means modifying graph and variables in scope. Default: False.
             param_backup(dict): A dict to backup the values of parameters. Default: None.
             param_shape_backup(dict): A dict to backup the shapes of parameters. Default: None.
+        Returns:
+            Program: The pruned program.
         """
 
         self.pruned_list = []
