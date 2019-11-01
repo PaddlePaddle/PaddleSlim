@@ -27,7 +27,6 @@ from paddle.fluid.reader import DataLoaderBase
 from paddle.fluid.core import EOFException
 from paddle.fluid.incubate.fleet.utils.hdfs import HDFSClient
 
-__all__ = ["HDFSClient"]
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
