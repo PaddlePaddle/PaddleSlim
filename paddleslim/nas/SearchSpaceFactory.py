@@ -1,15 +1,17 @@
 from MobileNetV2Space import MobileNetV2Space
 
 class SearchSpaceFactory(object):
-    def __init__(self, key, config):
-        self.key = key
-        self.input_size = config['input_size']
-        self.output_size = config['output_size']
-        self.block_num = config['block_num']
+    def __init__(self):
+        pass
 
-    def get_search_space(self):
-        if self.key == 'MobileNetV2':
-            space = MobileNetV2Space(self.input_size, self.output_size, self.block_num)
+    def get_search_space(self, key, config):
+        """
+        Args:
+            key(str): model name
+            config(dict): basic config information.
+        """
+        if key == 'MobileNetV2':
+            space = MobileNetV2Space(config['input_size'], config['output_size'], config['block_num'])
 
         return space
 
@@ -17,9 +19,9 @@ class SearchSpaceFactory(object):
 import paddle.fluid as fluid
 if __name__ == '__main__':
     config = {'input_size': 224, 'output_size': 7, 'block_num': 5}
-    space = SearchSpaceFactory('MobileNetV2', config=config)
+    space = SearchSpaceFactory()
     
-    my_space = space.get_search_space()
+    my_space = space.get_search_space('MobileNetV2', config)
     model_arch = my_space.token2arch()
     
     train_prog = fluid.Program()

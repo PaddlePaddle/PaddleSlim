@@ -16,15 +16,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from SearchSpace import SearchSpace
-from paddle.fluid.param_attr import ParamAttr
-import paddle.fluid as fluid
 import numpy as np
+import paddle.fluid as fluid
+from paddle.fluid.param_attr import ParamAttr
+from SearchSpace import SearchSpace
+from base_layer import conv_bn_layer
 
 class MobileNetV2Space(SearchSpace):
-    def __init__(self, input_size, output_size, block_num, scale=1.0, class_dim=1000):
+    def __init__(self, input_size, output_size, block_num, scale=1.0):
         super(MobileNetV2Space, self).__init__(input_size, output_size, block_num)
-        self.scale=scale
         self.head_num = np.array([3,4,8,12,16,24,32]) #7
         self.filter_num1 = np.array([3,4,8,12,16,24,32,48]) #8
         self.filter_num2 = np.array([8,12,16,24,32,48,64,80]) #8
@@ -35,11 +35,13 @@ class MobileNetV2Space(SearchSpace):
         self.k_size = np.array([3,5]) #2
         self.multiply = np.array([1,2,3,4,6]) #5
         self.repeat = np.array([1,2,3,4,5,6]) #6
-        self.class_dim=class_dim
+        self.scale=scale
 
     def init_tokens(self):
         """
-        initial tokens
+        initial tokens. The fist tokens to controller.
+        The first one is the index of the first layers' channel in self.head_num,
+        each line in the following represent the index of the [expansion_factor, filter_num, repeat_num, kernel_size]
         """
         # original MobileNetV2
         return [4,          # 1, 16, 1
@@ -67,7 +69,7 @@ class MobileNetV2Space(SearchSpace):
 
     def token2arch(self, tokens=None):
         """
-        return netArch function
+        return net_arch function
         """
         if tokens is None:
             tokens = self.init_tokens()
@@ -82,17 +84,18 @@ class MobileNetV2Space(SearchSpace):
             (self.multiply[tokens[21]], self.filter_num5[tokens[22]], self.repeat[tokens[23]], 2, self.k_size[tokens[24]]),
             (self.multiply[tokens[25]], self.filter_num6[tokens[26]], self.repeat[tokens[27]], 1, self.k_size[tokens[28]]),
         ]
+
         bottleneck_params_list = bottleneck_params_list[:self.block_num]
 
-        def netArch(input):
+        def net_arch(input):
             #conv1
-            input = self.conv_bn_layer(
+            input = conv_bn_layer(
                 input,
                 num_filters=int(32 * self.scale),
                 filter_size=3,
                 stride=2,
-                padding=1,
-                if_act=True,
+                padding='SAME',
+                act='relu6',
                 name='conv1_1')
 
             # bottleneck sequences
@@ -111,56 +114,28 @@ class MobileNetV2Space(SearchSpace):
                     k=k,
                     name='conv' + str(i))
                 in_c = int(c * self.scale)
-            #last_conv
-            input = self.conv_bn_layer(
-                input=input,
-                num_filters=int(1280 * self.scale) if self.scale > 1.0 else 1280,
-                filter_size=1,
-                stride=1,
-                padding=0,
-                if_act=True,
-                name='conv9')
+            ##last_conv
+            #input = conv_bn_layer(
+            #    input=input,
+            #    num_filters=int(1280 * self.scale) if self.scale > 1.0 else 1280,
+            #    filter_size=1,
+            #    stride=1,
+            #    padding='SAME',
+            #    act='relu6',
+            #    name='conv9')
 
             #input = fluid.layers.pool2d(
-            #    input=input,
-            #    pool_size=7,
-            #    pool_stride=1,
-            #    pool_type='avg',
-            #    global_pooling=True)
+            #    input=input, pool_type='avg', global_pooling=True)
 
             #output = fluid.layers.fc(input=input,
-            #                         size=self.class_dim,
-            #                         param_attr=ParamAttr(name='fc10_weights'),
-            #                         bias_attr=ParamAttr(name='fc10_offset'))
+            #                     size=class_dim,
+            #                     param_attr=ParamAttr(name='fc10_weights'),
+            #                     bias_attr=ParamAttr(name='fc10_offset'))
+
             return input
 
-        return netArch
+        return net_arch
 
-
-    def conv_bn_layer(self, input, filter_size, num_filters, stride, padding, num_groups=1, if_act=True, name=None, use_cudnn=True):
-        """Build convolution and batch normalization layers.
-        Args:
-            input: Variable, input.
-            filter_size: int, filter size.
-            num_filters: int, number of filters.
-            stride: int, stride.
-            padding: int, padding.
-            num_groups: int, number of groups.
-            if_act: bool, whether using activation.
-            name: str, name.
-            use_cudnn: bool, whether use cudnn.
-        Returns:
-            Variable, layers output.
-        """
-        conv = fluid.layers.conv2d(input, num_filters=num_filters, filter_size=filter_size, stride=stride, padding=padding, 
-                                   groups=num_groups, act=None, use_cudnn=use_cudnn, param_attr=ParamAttr(name=name+'_weights'), bias_attr=False)
-        bn_name = name + '_bn'
-        bn = fluid.layers.batch_norm(input=conv, param_attr=ParamAttr(name=bn_name+'_scale'), bias_attr=ParamAttr(name=bn_name+'_offset'),
-                                     moving_mean_name=bn_name+'_mean', moving_variance_name=bn_name+'_variance')
-        if if_act:
-            return fluid.layers.relu6(bn)
-        else:
-            return bn
 
     def shortcut(self, input, data_residual):
         """Build shortcut layer.
@@ -185,48 +160,48 @@ class MobileNetV2Space(SearchSpace):
                                name=None):
         """Build inverted residual unit.
         Args:
-            input: Variable, input.
-            num_in_filter: int, number of in filters.
-            num_filters: int, number of filters.
-            ifshortcut: bool, whether using shortcut.
-            stride: int, stride.
-            filter_size: int, filter size.
-            padding: int, padding.
-            expansion_factor: float, expansion factor.
-            name: str, name.
+            input(Variable), input.
+            num_in_filter(int), number of in filters.
+            num_filters(int), number of filters.
+            ifshortcut(bool), whether using shortcut.
+            stride(int), stride.
+            filter_size(int), filter size.
+            padding(str, 'SAME'|'VAILD'), padding.
+            expansion_factor(float), expansion factor.
+            name(str), name.
         Returns:
             Variable, layers output.
         """
         num_expfilter = int(round(num_in_filter * expansion_factor))
-        channel_expand = self.conv_bn_layer(
+        channel_expand = conv_bn_layer(
             input=input,
             num_filters=num_expfilter,
             filter_size=1,
             stride=1,
-            padding=0,
+            padding='SAME',
             num_groups=1,
-            if_act=True,
+            act='relu6',
             name=name + '_expand')
 
-        bottleneck_conv = self.conv_bn_layer(
+        bottleneck_conv = conv_bn_layer(
             input=channel_expand,
             num_filters=num_expfilter,
             filter_size=filter_size,
             stride=stride,
-            padding=int((filter_size - 1) / 2),
+            padding='SAME',
             num_groups=num_expfilter,
-            if_act=True,
+            act='relu6',
             name=name + '_dwise',
             use_cudnn=False)
 
-        linear_out = self.conv_bn_layer(
+        linear_out = conv_bn_layer(
             input=bottleneck_conv,
             num_filters=num_filters,
             filter_size=1,
             stride=1,
-            padding=0,
+            padding='SAME',
             num_groups=1,
-            if_act=False,
+            act=None,
             name=name + '_linear')
         out = linear_out
         if ifshortcut:
