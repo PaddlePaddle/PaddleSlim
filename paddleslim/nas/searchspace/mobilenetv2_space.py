@@ -16,14 +16,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
+sys.path.append('..')
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from SearchSpace import SearchSpace
-from base_layer import conv_bn_layer
+from searchspacebase import SearchSpaceBase
+from .base_layer import conv_bn_layer
+from .registry import SEARCHSPACE
 
-class MobileNetV2Space(SearchSpace):
-    def __init__(self, input_size, output_size, block_num, scale=1.0):
+@SEARCHSPACE.register_module
+class MobileNetV2Space(SearchSpaceBase):
+    def __init__(self, input_size, output_size, block_num, scale=1.0, class_dim=1000):
         super(MobileNetV2Space, self).__init__(input_size, output_size, block_num)
         self.head_num = np.array([3,4,8,12,16,24,32]) #7
         self.filter_num1 = np.array([3,4,8,12,16,24,32,48]) #8
@@ -36,10 +40,11 @@ class MobileNetV2Space(SearchSpace):
         self.multiply = np.array([1,2,3,4,6]) #5
         self.repeat = np.array([1,2,3,4,5,6]) #6
         self.scale=scale
+        self.class_dim=class_dim
 
     def init_tokens(self):
         """
-        initial tokens. The fist tokens to controller.
+        The initial token send to controller.
         The first one is the index of the first layers' channel in self.head_num,
         each line in the following represent the index of the [expansion_factor, filter_num, repeat_num, kernel_size]
         """
@@ -74,7 +79,7 @@ class MobileNetV2Space(SearchSpace):
         if tokens is None:
             tokens = self.init_tokens()
 
-        bottleneck_params_list = [
+        base_bottleneck_params_list = [
             (1, self.head_num[tokens[0]], 1, 1, 3),
             (self.multiply[tokens[1]], self.filter_num1[tokens[2]], self.repeat[tokens[3]], 2, self.k_size[tokens[4]]),
             (self.multiply[tokens[5]], self.filter_num1[tokens[6]], self.repeat[tokens[7]], 2, self.k_size[tokens[8]]),
@@ -85,10 +90,24 @@ class MobileNetV2Space(SearchSpace):
             (self.multiply[tokens[25]], self.filter_num6[tokens[26]], self.repeat[tokens[27]], 1, self.k_size[tokens[28]]),
         ]
 
-        bottleneck_params_list = bottleneck_params_list[:self.block_num]
+        assert self.block_num < 7, 'block number must less than 7, but receive block number is {}'.format(self.block_num)
+
+        # the stride = 2 means downsample feature map in the convolution, so only when stride=2, block_num minus 1,
+        # otherwise, add layers to params_list directly.
+        bottleneck_params_list = []
+        for param_list in base_bottleneck_params_list:
+            if param_list[3] == 1:
+                bottleneck_params_list.append(param_list)
+            else:
+                if self.block_num > 1:
+                    bottleneck_params_list.append(param_list)
+                    self.block_num -= 1
+                else:
+                    break
 
         def net_arch(input):
             #conv1
+            # all padding is 'SAME' in the conv2d, can compute the actual padding automatic. 
             input = conv_bn_layer(
                 input,
                 num_filters=int(32 * self.scale),
@@ -114,23 +133,18 @@ class MobileNetV2Space(SearchSpace):
                     k=k,
                     name='conv' + str(i))
                 in_c = int(c * self.scale)
-            ##last_conv
-            #input = conv_bn_layer(
-            #    input=input,
-            #    num_filters=int(1280 * self.scale) if self.scale > 1.0 else 1280,
-            #    filter_size=1,
-            #    stride=1,
-            #    padding='SAME',
-            #    act='relu6',
-            #    name='conv9')
 
-            #input = fluid.layers.pool2d(
-            #    input=input, pool_type='avg', global_pooling=True)
-
-            #output = fluid.layers.fc(input=input,
-            #                     size=class_dim,
-            #                     param_attr=ParamAttr(name='fc10_weights'),
-            #                     bias_attr=ParamAttr(name='fc10_offset'))
+            # if output_size is 1, add fc layer in the end
+            if self.output_size == 1:
+                input = fluid.layers.fc(input=input,
+                                 size=self.class_dim,
+                                 param_attr=ParamAttr(name='fc10_weights'),
+                                 bias_attr=ParamAttr(name='fc10_offset'))
+            else:
+                assert self.output_size == input.shape[2], \
+                          ("output_size must EQUAL to input_size / (2^block_num)."
+                          "But receive input_size={}, output_size={}, block_num={}".format(
+                          self.input_size, self.output_size, self.block_num))
 
             return input
 
@@ -140,8 +154,8 @@ class MobileNetV2Space(SearchSpace):
     def shortcut(self, input, data_residual):
         """Build shortcut layer.
         Args:
-            input: Variable, input.
-            data_residual: Variable, residual layer.
+            input(Variable): input.
+            data_residual(Variable): residual layer.
         Returns:
             Variable, layer output.
         """
@@ -166,7 +180,7 @@ class MobileNetV2Space(SearchSpace):
             ifshortcut(bool), whether using shortcut.
             stride(int), stride.
             filter_size(int), filter size.
-            padding(str, 'SAME'|'VAILD'), padding.
+            padding(str|int|list), padding.
             expansion_factor(float), expansion factor.
             name(str), name.
         Returns:

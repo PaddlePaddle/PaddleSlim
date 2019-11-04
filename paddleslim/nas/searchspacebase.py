@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['SearchSpace']
+__all__ = ['SearchSpaceBase']
 
-class SearchSpace(object):
+class SearchSpaceBase(object):
     """Controller for Neural Architecture Search.
     """
 
