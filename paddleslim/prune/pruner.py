@@ -14,7 +14,7 @@
 
 import numpy as np
 import paddle.fluid as fluid
-from ..common import VarWrapper, OpWrapper, GraphWrapper
+from ..core import VarWrapper, OpWrapper, GraphWrapper
 
 __all__ = ["prune"]
 
