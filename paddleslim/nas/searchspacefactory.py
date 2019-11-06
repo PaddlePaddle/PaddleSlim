@@ -12,4 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .quant_embedding import quant_embedding
+from searchspace.registry import SEARCHSPACE
+
+class SearchSpaceFactory(object):
+    def __init__(self):
+        pass
+
+    def get_search_space(self, key, config):
+        """
+        get specific model space based on key and config.
+
+        Args:
+            key(str): model space name.
+            config(dict): basic config information.
+        return:
+            model space(class)
+        """
+        cls = SEARCHSPACE.get(key)
+        space = cls(config['input_size'], config['output_size'], config['block_num'])
+
+        return space
+
+

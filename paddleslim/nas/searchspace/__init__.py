@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .quant_embedding import quant_embedding
+from .mobilenetv2_space import MobileNetV2Space
