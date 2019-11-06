@@ -11,10 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import flops as flops_module
-from flops import *
-import model_size as model_size_module
-from model_size import *
-__all__ = []
-__all__ += flops_module.__all__
-__all__ += model_size_module.__all__
+
+import numpy as np
+from ..core import GraphWrapper
+
+__all__ = ["model_size"]
+
+
+def model_size(program):
+    """
+    Get total value numbers of all parameters.
+    Args:
+        program(Program): The program used to calculate model size.
+    """
+    size = 0
+    for block in program.blocks:
+        for param in block.all_parameters():
+            size += np.product(param.shape)
+    return size
