@@ -27,7 +27,7 @@ class ResNet():
         self.layers = layers
         self.prefix_name = prefix_name
 
-    def net(self, input, class_dim=1000, conv1_name='conv1', fc_name=None):
+    def net(self, input, class_dim=1000, conv1_name='conv1', fc_name='res_fc'):
         layers = self.layers
         prefix_name = self.prefix_name if self.prefix_name is '' else self.prefix_name + '_'
         supported_layers = [34, 50, 101, 152]

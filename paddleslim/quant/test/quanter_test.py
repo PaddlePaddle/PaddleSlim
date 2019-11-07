@@ -189,7 +189,7 @@ def train(args):
         'activation_quantize_type': 'abs_max',
         # weight quantize bit num, default is 8
         'weight_bits': 8,
-        # activation quantize bit num， default is 8
+        # activation quantize bit num, default is 8
         'activation_bits': 8,
         # op of name_scope in not_quant_pattern list, will not quantized
         'not_quant_pattern': ['skip_quant'],
@@ -199,7 +199,7 @@ def train(args):
         'dtype': 'int8',
         # window size for 'range_abs_max' quantization. defaulf is 10000
         'window_size': 10000,
-        # The decay coefficient of moving average，default is 0.9
+        # The decay coefficient of moving average, default is 0.9
         'moving_rate': 0.9,
         # if set quant_weight_only True, then only quantize parameters of layers which need quantization,
         # and insert anti-quantization op for parameters of these layers.
