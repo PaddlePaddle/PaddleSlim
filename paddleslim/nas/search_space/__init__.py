@@ -13,3 +13,14 @@
 # limitations under the License.
 
 from .mobilenetv2_space import MobileNetV2Space
+import search_space_registry
+from search_space_registry import *
+import search_space_factory
+from search_space_factory import *
+import search_space_base
+from search_space_base import *
+
+__all__ = ["MobileNetV2Space"]
+__all__ += search_space_registry.__all__
+__all__ += search_space_factory.__all__
+__all__ += search_space_base.__all__

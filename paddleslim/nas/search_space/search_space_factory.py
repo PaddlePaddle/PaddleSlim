@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from searchspace.registry import SEARCHSPACE
+from search_space_registry import SEARCHSPACE
+
+__all__ = ["SearchSpaceFactory"]
+
 
 class SearchSpaceFactory(object):
     def __init__(self):
@@ -29,8 +32,7 @@ class SearchSpaceFactory(object):
             model space(class)
         """
         cls = SEARCHSPACE.get(key)
-        space = cls(config['input_size'], config['output_size'], config['block_num'])
+        space = cls(config['input_size'], config['output_size'],
+                    config['block_num'])
 
         return space
-
-
