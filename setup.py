@@ -33,8 +33,12 @@ with open('./requirements.txt') as f:
     setup_requires = f.read().splitlines()
 
 packages = [
-    'paddleslim', 'paddleslim.prune', 'paddleslim.dist', 'paddleslim.nas',
-    'paddleslim.analysis', 'paddleslim.quant'
+    'paddleslim',
+    'paddleslim.prune',
+    'paddleslim.dist',
+    'paddleslim.nas',
+    'paddleslim.analysis',
+    'paddleslim.quant',
 ]
 
 setup(

@@ -13,3 +13,4 @@
 # limitations under the License.
 
 from quanter import quant_aware, quant_post, convert
+from .quant_embedding import quant_embedding
