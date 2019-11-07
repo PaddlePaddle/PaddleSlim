@@ -16,13 +16,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import sys
-sys.path.append('..')
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from searchspacebase import SearchSpaceBase
-from .base_layer import conv_bn_layer
+from ..search_space_base import SearchSpaceBase
+from .layer import conv_bn_layer
 from .registry import SEARCHSPACE
 
 @SEARCHSPACE.register_module
