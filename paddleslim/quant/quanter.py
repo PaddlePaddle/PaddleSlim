@@ -17,22 +17,43 @@ def quant_aware(program, scope, place, config, for_test=False, loss_name=''):
     if 'activation_quantize_type' in config:
         activation_quant_type = config['activation_quantize_type']
 
+    weight_bits = 8
+    activation_bits = 8
+    if 'weight_bits' in config:
+        weight_bits = config['weight_bits']
+    if 'activation_bits' in config:
+        activation_bits = config['activation_bits']
+
+    window_size=10000
+    if 'window_size' in config:
+        window_size = config['window_size']
+
+    moving_rate = 10000
+    if 'moving_rate' in config:
+        moving_rate = config['moving_rate']
+
+    not_quant_pattern=['skip_quant']
+    assert not_quant_pattern is list, 'not_quant_pattern should config as list, for example, not_quant_pattern:["skip_quant"]'
+
+
     transform_pass = QuantizationTransformPass(
         scope=scope, place=place,
+        weight_bits=weight_bits,
+        activation_bits=activation_bits,
         activation_quantize_type=activation_quant_type,
-        weight_quantize_type=weight_quant_type)
+        weight_quantize_type=weight_quant_type,
+        window_size=window_size,
+        moving_rate=moving_rate,
+        skip_pattern=''#not_quant_pattern
+    )
+
+
     transform_pass.apply(main_graph)
 
     if for_test:
         quant_program = main_graph.to_program()
     else:
-        build_strategy = fluid.BuildStrategy()
-        build_strategy.memory_optimize = False
-        build_strategy.enable_inplace = False
-        binary = fluid.CompiledProgram(main_graph.graph).with_data_parallel(
-            loss_name=loss_name, build_strategy=build_strategy)
-
-        quant_program = binary
+        quant_program = fluid.CompiledProgram(main_graph.graph)
     return quant_program
 
 def quant_post(program, scope, place, config):
