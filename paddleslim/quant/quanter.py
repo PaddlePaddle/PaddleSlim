@@ -31,7 +31,7 @@ quant_config_default = {
         'activation_quantize_type': 'abs_max',
         # weight quantize bit num, default is 8
         'weight_bits': 8,
-        # activation quantize bit num， default is 8
+        # activation quantize bit num, default is 8
         'activation_bits': 8,
         # ops of name_scope in not_quant_pattern list, will not be quantized
         'not_quant_pattern': ['skip_quant'],
@@ -115,8 +115,8 @@ def quant_aware(program, scope, place, config, for_test=False):
     scope = fluid.global_scope() if not scope else scope
     assert isinstance(config, dict), "config must be dict"
 
-    assert 'weight_quant_type' in config.keys(), 'weight_quant_type must be configured'
-    assert 'activation_quant_type' in config.keys(), 'activation_quant_type must be configured'
+    assert 'weight_quantize_type' in config.keys(), 'weight_quantize_type must be configured'
+    assert 'activation_quantize_type' in config.keys(), 'activation_quantize_type must be configured'
 
     config = _parse_configs(config)
     main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
@@ -125,8 +125,8 @@ def quant_aware(program, scope, place, config, for_test=False):
         scope=scope, place=place,
         weight_bits=config['weight_bits'],
         activation_bits=config['activation_bits'],
-        activation_quantize_type=config['activation_quant_type'],
-        weight_quantize_type=config['weight_quant_type'],
+        activation_quantize_type=config['activation_quantize_type'],
+        weight_quantize_type=config['weight_quantize_type'],
         window_size=config['window_size'],
         moving_rate=config['moving_rate'],
         skip_pattern=''#not_quant_pattern
@@ -156,8 +156,8 @@ def quant_post(program, scope, place, config):
 
     scope = fluid.global_scope() if not scope else scope
     assert isinstance(config, dict), "config must be dict"
-    assert 'weight_quant_type' in config.keys(), 'weight_quant_type must be configured'
-    assert 'activation_quant_type' in config.keys(), 'activation_quant_type must be configured'
+    assert 'weight_quantize_type' in config.keys(), 'weight_quantize_type must be configured'
+    assert 'activation_quantize_type' in config.keys(), 'activation_quantize_type must be configured'
 
     config = _parse_configs(config)
 
@@ -165,8 +165,8 @@ def quant_post(program, scope, place, config):
 
     transform_pass = QuantizationTransformPass(
         scope=scope, place=place,
-        activation_quantize_type=config['activation_quant_type'],
-        weight_quantize_type=config['weight_quant_type'])
+        activation_quantize_type=config['activation_quantize_type'],
+        weight_quantize_type=config['weight_quantize_type'])
     transform_pass.apply(main_graph)
 
 
@@ -195,7 +195,7 @@ def convert(program, scope, place, config, save_int8=False):
     freeze_pass = QuantizationFreezePass(
         scope=scope,
         place=place,
-        weight_quantize_type=config['weight_quant_type'])
+        weight_quantize_type=config['weight_quantize_type'])
     freeze_pass.apply(test_graph)
     freezed_program = test_graph.to_program()
     freezed_program_int8 = None

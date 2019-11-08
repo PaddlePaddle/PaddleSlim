@@ -252,15 +252,7 @@ def train(args):
     scope = fluid.global_scope()
     exe = fluid.Executor(place)
 
-    ############################################################################################################
-    # 2. quantization transform programs (training aware)
-    #    Make some quantization transforms in the graph before training and testing.
-    #    According to the weight and activation quantization type, the graph will be added
-    #    some fake quantize operators and fake dequantize operators.
-    ############################################################################################################
-    train_prog = quant.quanter.quant_aware(train_prog, scope, place, quant_config, for_test = False)
-    test_prog = quant.quanter.quant_aware(test_prog, scope, place, quant_config, for_test=True)
-
+    
     # load checkpoint todo
 
 
@@ -293,6 +285,16 @@ def train(args):
 
     train_fetch_list = [train_cost.name, train_acc1.name, train_acc5.name, global_lr.name]
     test_fetch_list = [test_cost.name, test_acc1.name, test_acc5.name]
+
+    ############################################################################################################
+    # 2. quantization transform programs (training aware)
+    #    Make some quantization transforms in the graph before training and testing.
+    #    According to the weight and activation quantization type, the graph will be added
+    #    some fake quantize operators and fake dequantize operators.
+    ############################################################################################################
+    train_prog = quant.quanter.quant_aware(train_prog, scope, place, quant_config, for_test = False)
+    test_prog = quant.quanter.quant_aware(test_prog, scope, place, quant_config, for_test=True)
+
 
 
     build_strategy = fluid.BuildStrategy()

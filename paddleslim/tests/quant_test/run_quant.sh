@@ -4,7 +4,7 @@ source activate py27_paddle1.6
 #MobileNet v1:
 python quanter_test.py \
     --model=MobileNet \
-    --pretrained_fp32_model='../../pretrain/MobileNetV1_pretrained/' \
+    --pretrained_fp32_model='../../../../pretrain/MobileNetV1_pretrained/' \
     --use_gpu=True \
     --data_dir='/home/ssd8/wsz/tianfei01/traindata/imagenet/' \
     --batch_size=256 \
