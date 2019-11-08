@@ -2,3 +2,5 @@
 *.pyc
 build/
 ./dist/
+*.pyc
+dist/
