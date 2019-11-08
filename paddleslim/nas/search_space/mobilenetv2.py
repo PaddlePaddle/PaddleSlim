@@ -23,6 +23,8 @@ from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
 
+__all__ = ["MobileNetV2Space"]
+
 
 @SEARCHSPACE.register
 class MobileNetV2Space(SearchSpaceBase):

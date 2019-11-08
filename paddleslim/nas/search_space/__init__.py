@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .mobilenetv2_space import MobileNetV2Space
+import mobilenetv2
+from .mobilenetv2 import *
 import search_space_registry
 from search_space_registry import *
 import search_space_factory
@@ -20,7 +21,8 @@ from search_space_factory import *
 import search_space_base
 from search_space_base import *
 
-__all__ = ["MobileNetV2Space"]
+__all__ = []
+__all__ += mobilenetv2.__all__
 __all__ += search_space_registry.__all__
 __all__ += search_space_factory.__all__
 __all__ += search_space_base.__all__
