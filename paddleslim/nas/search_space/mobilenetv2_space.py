@@ -57,47 +57,32 @@ class MobileNetV2Space(SearchSpaceBase):
         each line in the following represent the index of the [expansion_factor, filter_num, repeat_num, kernel_size]
         """
         # original MobileNetV2
-        return [
-            4,  # 1, 16, 1
-            4,
-            5,
-            1,
-            0,  # 6, 24, 1
-            4,
-            5,
-            1,
-            0,  # 6, 24, 2
-            4,
-            4,
-            2,
-            0,  # 6, 32, 3
-            4,
-            4,
-            3,
-            0,  # 6, 64, 4
-            4,
-            5,
-            2,
-            0,  # 6, 96, 3
-            4,
-            7,
-            2,
-            0,  # 6, 160, 3
-            4,
-            9,
-            0,
-            0
-        ]  # 6, 320, 1
+        # yapf: disable
+        return [4,          # 1, 16, 1
+                4, 5, 1, 0, # 6, 24, 1
+                4, 5, 1, 0, # 6, 24, 2
+                4, 4, 2, 0, # 6, 32, 3
+                4, 4, 3, 0, # 6, 64, 4
+                4, 5, 2, 0, # 6, 96, 3
+                4, 7, 2, 0, # 6, 160, 3
+                4, 9, 0, 0] # 6, 320, 1
+        # yapf: enable
 
     def range_table(self):
         """
         get range table of current search space 
         """
         # head_num + 7 * [multiple(expansion_factor), filter_num, repeat, kernel_size]
-        return [
-            7, 5, 8, 6, 2, 5, 8, 6, 2, 5, 8, 6, 2, 5, 8, 6, 2, 5, 10, 6, 2, 5,
-            10, 6, 2, 5, 12, 6, 2
-        ]
+        # yapf: disable
+        return [7,
+                5, 8, 6, 2,
+                5, 8, 6, 2,
+                5, 8, 6, 2,
+                5, 8, 6, 2,
+                5, 10, 6, 2,
+                5, 10, 6, 2,
+                5, 12, 6, 2]
+        # yapf: enable
 
     def token2arch(self, tokens=None):
         """
