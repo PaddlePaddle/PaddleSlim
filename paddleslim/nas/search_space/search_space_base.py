@@ -14,6 +14,7 @@
 
 __all__ = ['SearchSpaceBase']
 
+
 class SearchSpaceBase(object):
     """Controller for Neural Architecture Search.
     """
@@ -41,4 +42,3 @@ class SearchSpaceBase(object):
             list<layers> 
         """
         raise NotImplementedError('Abstract method.')
-

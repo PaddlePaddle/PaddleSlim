@@ -19,26 +19,38 @@ from __future__ import print_function
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from ..search_space_base import SearchSpaceBase
-from .layer import conv_bn_layer
-from .registry import SEARCHSPACE
+from .search_space_base import SearchSpaceBase
+from .base_layer import conv_bn_layer
+from .search_space_registry import SEARCHSPACE
 
-@SEARCHSPACE.register_module
+__all__ = ["MobileNetV2Space"]
+
+
+@SEARCHSPACE.register
 class MobileNetV2Space(SearchSpaceBase):
-    def __init__(self, input_size, output_size, block_num, scale=1.0, class_dim=1000):
-        super(MobileNetV2Space, self).__init__(input_size, output_size, block_num)
-        self.head_num = np.array([3,4,8,12,16,24,32]) #7
-        self.filter_num1 = np.array([3,4,8,12,16,24,32,48]) #8
-        self.filter_num2 = np.array([8,12,16,24,32,48,64,80]) #8
-        self.filter_num3 = np.array([16,24,32,48,64,80,96,128]) #8
-        self.filter_num4 = np.array([24,32,48,64,80,96,128,144,160,192]) #10
-        self.filter_num5 = np.array([32,48,64,80,96,128,144,160,192,224]) #10
-        self.filter_num6 = np.array([64,80,96,128,144,160,192,224,256,320,384,512]) #12
-        self.k_size = np.array([3,5]) #2
-        self.multiply = np.array([1,2,3,4,6]) #5
-        self.repeat = np.array([1,2,3,4,5,6]) #6
-        self.scale=scale
-        self.class_dim=class_dim
+    def __init__(self,
+                 input_size,
+                 output_size,
+                 block_num,
+                 scale=1.0,
+                 class_dim=1000):
+        super(MobileNetV2Space, self).__init__(input_size, output_size,
+                                               block_num)
+        self.head_num = np.array([3, 4, 8, 12, 16, 24, 32])  #7
+        self.filter_num1 = np.array([3, 4, 8, 12, 16, 24, 32, 48])  #8
+        self.filter_num2 = np.array([8, 12, 16, 24, 32, 48, 64, 80])  #8
+        self.filter_num3 = np.array([16, 24, 32, 48, 64, 80, 96, 128])  #8
+        self.filter_num4 = np.array(
+            [24, 32, 48, 64, 80, 96, 128, 144, 160, 192])  #10
+        self.filter_num5 = np.array(
+            [32, 48, 64, 80, 96, 128, 144, 160, 192, 224])  #10
+        self.filter_num6 = np.array(
+            [64, 80, 96, 128, 144, 160, 192, 224, 256, 320, 384, 512])  #12
+        self.k_size = np.array([3, 5])  #2
+        self.multiply = np.array([1, 2, 3, 4, 6])  #5
+        self.repeat = np.array([1, 2, 3, 4, 5, 6])  #6
+        self.scale = scale
+        self.class_dim = class_dim
 
     def init_tokens(self):
         """
@@ -47,6 +59,7 @@ class MobileNetV2Space(SearchSpaceBase):
         each line in the following represent the index of the [expansion_factor, filter_num, repeat_num, kernel_size]
         """
         # original MobileNetV2
+        # yapf: disable
         return [4,          # 1, 16, 1
                 4, 5, 1, 0, # 6, 24, 1
                 4, 5, 1, 0, # 6, 24, 2
@@ -55,13 +68,15 @@ class MobileNetV2Space(SearchSpaceBase):
                 4, 5, 2, 0, # 6, 96, 3
                 4, 7, 2, 0, # 6, 160, 3
                 4, 9, 0, 0] # 6, 320, 1
+        # yapf: enable
 
     def range_table(self):
         """
         get range table of current search space 
         """
         # head_num + 7 * [multiple(expansion_factor), filter_num, repeat, kernel_size]
-        return [7, 
+        # yapf: disable
+        return [7,
                 5, 8, 6, 2,
                 5, 8, 6, 2,
                 5, 8, 6, 2,
@@ -69,6 +84,7 @@ class MobileNetV2Space(SearchSpaceBase):
                 5, 10, 6, 2,
                 5, 10, 6, 2,
                 5, 12, 6, 2]
+        # yapf: enable
 
     def token2arch(self, tokens=None):
         """
@@ -79,16 +95,24 @@ class MobileNetV2Space(SearchSpaceBase):
 
         base_bottleneck_params_list = [
             (1, self.head_num[tokens[0]], 1, 1, 3),
-            (self.multiply[tokens[1]], self.filter_num1[tokens[2]], self.repeat[tokens[3]], 2, self.k_size[tokens[4]]),
-            (self.multiply[tokens[5]], self.filter_num1[tokens[6]], self.repeat[tokens[7]], 2, self.k_size[tokens[8]]),
-            (self.multiply[tokens[9]], self.filter_num2[tokens[10]], self.repeat[tokens[11]], 2, self.k_size[tokens[12]]),
-            (self.multiply[tokens[13]], self.filter_num3[tokens[14]], self.repeat[tokens[15]], 2, self.k_size[tokens[16]]),
-            (self.multiply[tokens[17]], self.filter_num3[tokens[18]], self.repeat[tokens[19]], 1, self.k_size[tokens[20]]),
-            (self.multiply[tokens[21]], self.filter_num5[tokens[22]], self.repeat[tokens[23]], 2, self.k_size[tokens[24]]),
-            (self.multiply[tokens[25]], self.filter_num6[tokens[26]], self.repeat[tokens[27]], 1, self.k_size[tokens[28]]),
+            (self.multiply[tokens[1]], self.filter_num1[tokens[2]],
+             self.repeat[tokens[3]], 2, self.k_size[tokens[4]]),
+            (self.multiply[tokens[5]], self.filter_num1[tokens[6]],
+             self.repeat[tokens[7]], 2, self.k_size[tokens[8]]),
+            (self.multiply[tokens[9]], self.filter_num2[tokens[10]],
+             self.repeat[tokens[11]], 2, self.k_size[tokens[12]]),
+            (self.multiply[tokens[13]], self.filter_num3[tokens[14]],
+             self.repeat[tokens[15]], 2, self.k_size[tokens[16]]),
+            (self.multiply[tokens[17]], self.filter_num3[tokens[18]],
+             self.repeat[tokens[19]], 1, self.k_size[tokens[20]]),
+            (self.multiply[tokens[21]], self.filter_num5[tokens[22]],
+             self.repeat[tokens[23]], 2, self.k_size[tokens[24]]),
+            (self.multiply[tokens[25]], self.filter_num6[tokens[26]],
+             self.repeat[tokens[27]], 1, self.k_size[tokens[28]]),
         ]
 
-        assert self.block_num < 7, 'block number must less than 7, but receive block number is {}'.format(self.block_num)
+        assert self.block_num < 7, 'block number must less than 7, but receive block number is {}'.format(
+            self.block_num)
 
         # the stride = 2 means downsample feature map in the convolution, so only when stride=2, block_num minus 1,
         # otherwise, add layers to params_list directly.
@@ -134,10 +158,11 @@ class MobileNetV2Space(SearchSpaceBase):
 
             # if output_size is 1, add fc layer in the end
             if self.output_size == 1:
-                input = fluid.layers.fc(input=input,
-                                 size=self.class_dim,
-                                 param_attr=ParamAttr(name='fc10_weights'),
-                                 bias_attr=ParamAttr(name='fc10_offset'))
+                input = fluid.layers.fc(
+                    input=input,
+                    size=self.class_dim,
+                    param_attr=ParamAttr(name='fc10_weights'),
+                    bias_attr=ParamAttr(name='fc10_offset'))
             else:
                 assert self.output_size == input.shape[2], \
                           ("output_size must EQUAL to input_size / (2^block_num)."
@@ -148,7 +173,6 @@ class MobileNetV2Space(SearchSpaceBase):
 
         return net_arch
 
-
     def shortcut(self, input, data_residual):
         """Build shortcut layer.
         Args:
@@ -158,7 +182,6 @@ class MobileNetV2Space(SearchSpaceBase):
             Variable, layer output.
         """
         return fluid.layers.elementwise_add(input, data_residual)
-
 
     def inverted_residual_unit(self,
                                input,
@@ -220,15 +243,7 @@ class MobileNetV2Space(SearchSpaceBase):
             out = self.shortcut(input=input, data_residual=out)
         return out
 
-    def invresi_blocks(self,
-                       input,
-                       in_c,
-                       t,
-                       c,
-                       n,
-                       s,
-                       k,
-                       name=None):
+    def invresi_blocks(self, input, in_c, t, c, n, s, k, name=None):
         """Build inverted residual blocks.
         Args:
             input: Variable, input.
@@ -266,5 +281,3 @@ class MobileNetV2Space(SearchSpaceBase):
                 expansion_factor=t,
                 name=name + '_' + str(i + 1))
         return last_residual_block
-
-
