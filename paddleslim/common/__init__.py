@@ -11,12 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import search_space
-from search_space import *
-import sa_nas
-from sa_nas import *
+import controller
+from controller import *
+import sa_controller
+from sa_controller import *
+import log_helper
+from log_helper import *
+import controller_server
+from controller_server import *
+import controller_client
+from controller_client import *
 
 __all__ = []
-__all__ += search_space.__all__
-__all__ += sa_nas.__all__
+__all__ += controller.__all__
+__all__ += sa_controller.__all__
+__all__ += controller_server.__all__
+__all__ += controller_client.__all__
