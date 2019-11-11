@@ -11,17 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pruner
-from pruner import *
-import auto_pruner
-from auto_pruner import *
-import controller_server
-from controller_server import *
-import controller_client
-from controller_client import *
+import controller
+from controller import *
+import sa_controller
+from sa_controller import *
+import log_helper
+from log_helper import *
 
 __all__ = []
-__all__ += pruner.__all__
-__all__ += auto_pruner.__all__
-__all__ += controller_server.__all__
-__all__ += controller_client.__all__
+__all__ += controller.__all__
+__all__ += sa_controller.__all__

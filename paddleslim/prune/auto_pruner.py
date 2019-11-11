@@ -24,12 +24,21 @@ __all__ = ["AutoPruner"]
 
 class AutoPruner(object):
     def __init__(self,
+                 program,
                  params=[],
                  init_ratios=None,
                  pruned_flops=0.5,
                  pruned_latency=None,
-                 server_addr=("", ""),
-                 search_strategy="sa"):
+                 server_addr=("", 0),
+                 init_temperature=100,
+                 reduce_rate=0.85,
+                 max_iter_number=300,
+                 max_client_num=10,
+                 search_steps=300,
+                 max_ratios=[0.9],
+                 min_ratios=[0],
+                 key="auto_pruner"
+                 ):
         """
         Search a group of ratios used to prune program.
         Args:
@@ -45,71 +54,86 @@ class AutoPruner(object):
             search_strategy(str): The search strategy. Default: 'sa'.
         """
         # step1: Create controller server. And start server if current host match server_ip.
-        self._controller_server = ControllerServer(
-            addr=(server_ip, server_port), search_strategy="sa")
+       
+        self._program = program
         self._params = params
         self._init_ratios = init_ratios
         self._pruned_flops = pruned_flops
         self._pruned_latency = pruned_latency
+        self._reduce_rate = reduce_rate
+        self._init_temperature = init_temperature
+        self._max_try_number = max_try_number
+
+        assert isinstance(self._max_ratios, float) or isinstance(self._max_ratios)
+        self._range_table = self._get_range_table(min_ratios, max_ratios)
+        
         self._pruner = Pruner()
-        self._controller_agent = None
-        self._base_flops = None
-        self._base_latency = None
+        if self._pruned_flops:
+            self._base_flops = flops(program)
+        if self._pruned_latency:
+            self._base_latency = latency(program)
+        if self._init_ratios is None:
+            self._init_ratios = self._get_init_ratios(
+                    self,_program, self._params, self._pruned_flops,
+                    self._pruned_latency)
+        init_tokens = self._ratios2tokens(self._init_ratios)
+         
+
+        controller = SAController(self._range_table,
+                                  self._reduce_rate,
+                                  self._init_temperature,
+                                  self._max_try_number,
+                                  init_tokens,
+                                  self._constrain_func)
+
+        self._controller_server = ControllerServer(
+            controller=controller,
+            addr=server_addr,
+            max_client_num,
+            search_steps,
+            key=key)
+
+
+        self._controller_client = ControllerClient(server_addr, key=key)
+
+        self._iter = 0
+
+    def _get_init_ratios(self, program, params, pruned_flops, pruned_latency):
+        pass
+
+    def _get_range_table(self, min_ratios, max_ratios):
+        assert isinstance(min_ratios, list) or isinstance(min_ratios, float)
+        assert isinstance(max_ratios, list) or isinstance(max_ratios, float)
+        min_ratios = min_ratios if isinstance(min_ratios, list) else [min_ratios]
+        max_ratios = max_ratios if isinstance(max_ratios, list) else [max_ratios]
+        min_tokens = self._ratios2tokens(min_ratios)
+        max_tokens = self._ratios2tokens(max_ratios)
+        return (min_tokens, max_tokens)
+
+    def _constrain_func(self, tokens):
+        ratios = self._tokens2ratios(tokens)
+
+        pruned_program = self._pruner.prune(
+            program,
+            scope,
+            self._params,
+            self._current_ratios,
+            only_graph=True)
+        return flops(pruned_program) < self._base_flops
 
     def prune(self, program, scope, place):
-
-        if self._controller_agent is None:
-            self._controller_agent = PrunerAgent(
-                addr=self._controller_server.addr, self._range_table)
-            if self._init_ratios is None:
-                self._init_ratios = self._get_init_ratios(
-                    program, self._params, self._pruned_flops,
-                    self._pruned_latency)
-            self._current_ratios = self._init_ratios
-        else:
-            self._current_ratios = self._controller_agent.next_ratios()
-
-        if self._base_flops == None:
-            self._base_flops = flops(program)
-
-        for i in range(self._max_try_num):
-            pruned_program = self._pruner.prune(
-                program,
-                scope,
-                self._params,
-                self._current_ratios,
-                only_graph=True)
-            if flops(pruned_program) < self._base_flops * (
-                    1 - self._pruned_flops):
-                break
-            self._current_ratios = self._controller_agent.illegal_ratios(
-                self._current_ratios)
-
+        self._current_ratios = self._next_ratios()
         pruned_program = self._pruner.prune(program, scope, self._params,
                                             self._current_ratios)
         return pruned_program
 
     def reward(self, score):
-        self._controller_agent.reward(self._current_ratios, score)
+        tokens = self.ratios2tokens(self._current_ratios)
+        self._controller_client.reward(tokens, score)
+        self._iter += 1
 
-
-class PrunerAgent(object):
-    """
-    The agent used to talk with controller server.
-    """
-
-    def __init__(self, server_attr=("", ""), range_table):
-        self._range_table = range_table
-        self._controller_client = ControllerClient(server_attr)
-        self._controller_client.send_range_table(range_table)
-
-    def next_ratios(self):
+    def _next_ratios(self):
         tokens = self._controller_client.next_tokens()
-        self._tokens2ratios(tokens)
-
-    def illegal_ratios(self, ratios):
-        tokens = self._ratios2tokens(ratios)
-        tokens = self._controller_client.illegal_tokens(tokens)
         return self._tokens2ratios(tokens)
 
     def _ratios2tokens(self, ratios):
