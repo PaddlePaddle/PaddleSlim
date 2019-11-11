@@ -26,7 +26,7 @@ WEIGHT_QUANTIZATION_TYPES=['abs_max', 'channel_wise_abs_max']
 ACTIVATION_QUANTIZATION_TYPES=['abs_max','range_abs_max', 'moving_average_abs_max']
 VALID_DTYPES = ['int8']
 
-quant_config_default = {
+_quant_config_default = {
         # weight quantize type, default is 'abs_max'
         'weight_quantize_type': 'abs_max',
         # activation quantize type, default is 'abs_max'
@@ -59,7 +59,7 @@ def _parse_configs(user_config):
         configs(dict): final configs will be used.
     """
 
-    configs = copy.deepcopy(quant_config_default)
+    configs = copy.deepcopy(_quant_config_default)
     configs.update(user_config)
 
     # check configs is valid
@@ -209,13 +209,11 @@ def convert(program, scope, place, config, save_int8=False):
         weight_quantize_type=config['weight_quantize_type'])
     freeze_pass.apply(test_graph)
     freezed_program = test_graph.to_program()
-    freezed_program_int8 = None
 
     if save_int8:
         convert_int8_pass = ConvertToInt8Pass(scope=fluid.global_scope(), place=place)
         convert_int8_pass.apply(test_graph)
         freezed_program_int8 = test_graph.to_program()
-
-    return freezed_program, freezed_program_int8
-
-
+        return freezed_program, freezed_program_int8
+    else:
+        return freezed_program
