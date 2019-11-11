@@ -24,6 +24,7 @@ __all__ = ["SAController"]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
+
 class SAController(EvolutionaryController):
     """Simulated annealing controller."""
 
@@ -45,7 +46,8 @@ class SAController(EvolutionaryController):
         """
         super(SAController, self).__init__()
         self._range_table = range_table
-        assert isinstance(self._range_table, tuple) and (len(self._range_table) == 2)
+        assert isinstance(self._range_table, tuple) and (
+            len(self._range_table) == 2)
         self._reduce_rate = reduce_rate
         self._init_temperature = init_temperature
         self._max_iter_number = max_iter_number
@@ -79,10 +81,9 @@ class SAController(EvolutionaryController):
         if reward > self._max_reward:
             self._max_reward = reward
             self._best_tokens = tokens
-        _logger.info("iter: {}; max_reward: {}; best_tokens: {}".format(
-            self._iter, self._max_reward, self._best_tokens))
-        _logger.info("current_reward: {}; current tokens: {}".format(
-            self._reward, self._tokens))
+        _logger.info(
+            "Controller - iter: {}; current_reward: {}; current tokens: {}".
+            format(self._iter, self._reward, self._tokens))
 
     def next_tokens(self, control_token=None):
         """
@@ -94,16 +95,19 @@ class SAController(EvolutionaryController):
             tokens = self._tokens
         new_tokens = tokens[:]
         index = int(len(self._range_table[0]) * np.random.random())
-        new_tokens[index] = np.random.randint(self._range_table[0][index], self._range_table[1][index]+1)
-        _logger.info("change index[{}] from {} to {}".format(index, tokens[
+        new_tokens[index] = np.random.randint(self._range_table[0][index],
+                                              self._range_table[1][index] + 1)
+        _logger.debug("change index[{}] from {} to {}".format(index, tokens[
             index], new_tokens[index]))
         if self._constrain_func is None:
             return new_tokens
         for _ in range(self._max_iter_number):
             if not self._constrain_func(new_tokens):
-                index = int(len(self._range_table) * np.random.random())
+                index = int(len(self._range_table[0]) * np.random.random())
                 new_tokens = tokens[:]
-                new_tokens[index] = np.random.randint(self._range_table[index])
+                new_tokens[index] = np.random.randint(
+                    self._range_table[0][index],
+                    self._range_table[1][index] + 1)
             else:
                 break
         return new_tokens

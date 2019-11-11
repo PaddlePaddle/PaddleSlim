@@ -16,7 +16,15 @@ import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
 
 
-def conv_bn_layer(input, filter_size, num_filters, stride, padding, num_groups=1, act=None, name=None, use_cudnn=True):
+def conv_bn_layer(input,
+                  filter_size,
+                  num_filters,
+                  stride,
+                  padding,
+                  num_groups=1,
+                  act=None,
+                  name=None,
+                  use_cudnn=True):
     """Build convolution and batch normalization layers.
     Args:
         input(Variable): input.
@@ -31,11 +39,24 @@ def conv_bn_layer(input, filter_size, num_filters, stride, padding, num_groups=1
     Returns:
         Variable, layers output.
     """
-    conv = fluid.layers.conv2d(input, num_filters=num_filters, filter_size=filter_size, stride=stride, padding=padding, 
-                               groups=num_groups, act=None, use_cudnn=use_cudnn, param_attr=ParamAttr(name=name+'_weights'), bias_attr=False)
+    conv = fluid.layers.conv2d(
+        input,
+        num_filters=num_filters,
+        filter_size=filter_size,
+        stride=stride,
+        padding=padding,
+        groups=num_groups,
+        act=None,
+        use_cudnn=use_cudnn,
+        param_attr=ParamAttr(name=name + '_weights'),
+        bias_attr=False)
     bn_name = name + '_bn'
-    bn = fluid.layers.batch_norm(input=conv, param_attr=ParamAttr(name=bn_name+'_scale'), bias_attr=ParamAttr(name=bn_name+'_offset'),
-                                 moving_mean_name=bn_name+'_mean', moving_variance_name=bn_name+'_variance')
+    bn = fluid.layers.batch_norm(
+        input=conv,
+        param_attr=ParamAttr(name=bn_name + '_scale'),
+        bias_attr=ParamAttr(name=bn_name + '_offset'),
+        moving_mean_name=bn_name + '_mean',
+        moving_variance_name=bn_name + '_variance')
     if act == 'relu6':
         return fluid.layers.relu6(bn)
     else:

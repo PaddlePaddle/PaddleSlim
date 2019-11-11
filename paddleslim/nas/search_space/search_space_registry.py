@@ -12,4 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .mobilenetv2_space import MobileNetV2Space
+from ...core import Registry
+
+__all__ = ["SEARCHSPACE"]
+
+SEARCHSPACE = Registry('searchspace')

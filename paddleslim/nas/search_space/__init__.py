@@ -12,25 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from searchspace.registry import SEARCHSPACE
+import mobilenetv2
+from .mobilenetv2 import *
+import search_space_registry
+from search_space_registry import *
+import search_space_factory
+from search_space_factory import *
+import search_space_base
+from search_space_base import *
 
-class SearchSpaceFactory(object):
-    def __init__(self):
-        pass
-
-    def get_search_space(self, key, config):
-        """
-        get specific model space based on key and config.
-
-        Args:
-            key(str): model space name.
-            config(dict): basic config information.
-        return:
-            model space(class)
-        """
-        cls = SEARCHSPACE.get(key)
-        space = cls(config['input_size'], config['output_size'], config['block_num'])
-
-        return space
-
-
+__all__ = []
+__all__ += mobilenetv2.__all__
+__all__ += search_space_registry.__all__
+__all__ += search_space_factory.__all__
+__all__ += search_space_base.__all__

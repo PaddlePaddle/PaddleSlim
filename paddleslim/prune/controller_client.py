@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import socket
+from ..common import get_logger
 
 __all__ = ['ControllerClient']
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 
 class ControllerClient(object):
