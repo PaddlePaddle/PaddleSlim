@@ -52,6 +52,7 @@ class MobileNetV2Space(SearchSpaceBase):
         self.scale = scale
         self.class_dim = class_dim
 
+
     def init_tokens(self):
         """
         The initial token send to controller.
@@ -60,7 +61,7 @@ class MobileNetV2Space(SearchSpaceBase):
         """
         # original MobileNetV2
         # yapf: disable
-        return [4,          # 1, 16, 1
+        init_token_base =  [4,          # 1, 16, 1
                 4, 5, 1, 0, # 6, 24, 1
                 4, 5, 1, 0, # 6, 24, 2
                 4, 4, 2, 0, # 6, 32, 3
@@ -69,6 +70,7 @@ class MobileNetV2Space(SearchSpaceBase):
                 4, 7, 2, 0, # 6, 160, 3
                 4, 9, 0, 0] # 6, 320, 1
         # yapf: enable
+        return init_token_base#[:self.tokens_lens]
 
     def range_table(self):
         """
@@ -76,7 +78,7 @@ class MobileNetV2Space(SearchSpaceBase):
         """
         # head_num + 7 * [multiple(expansion_factor), filter_num, repeat, kernel_size]
         # yapf: disable
-        return [7,
+        range_table_base =  [7,
                 5, 8, 6, 2,
                 5, 8, 6, 2,
                 5, 8, 6, 2,
@@ -85,6 +87,7 @@ class MobileNetV2Space(SearchSpaceBase):
                 5, 10, 6, 2,
                 5, 12, 6, 2]
         # yapf: enable
+        return range_table_base#[:self.tokens_lens]
 
     def token2arch(self, tokens=None):
         """
@@ -127,6 +130,8 @@ class MobileNetV2Space(SearchSpaceBase):
                 else:
                     break
 
+        self.tokens_lens = 1 + (len(bottleneck_params_list) - 1) * 4
+
         def net_arch(input):
             #conv1
             # all padding is 'SAME' in the conv2d, can compute the actual padding automatic. 
@@ -137,7 +142,7 @@ class MobileNetV2Space(SearchSpaceBase):
                 stride=2,
                 padding='SAME',
                 act='relu6',
-                name='conv1_1')
+                name='mobilenetv2_conv1_1')
 
             # bottleneck sequences
             i = 1
@@ -145,7 +150,7 @@ class MobileNetV2Space(SearchSpaceBase):
             for layer_setting in bottleneck_params_list:
                 t, c, n, s, k = layer_setting
                 i += 1
-                input = self.invresi_blocks(
+                input = self._invresi_blocks(
                     input=input,
                     in_c=in_c,
                     t=t,
@@ -153,7 +158,7 @@ class MobileNetV2Space(SearchSpaceBase):
                     n=n,
                     s=s,
                     k=k,
-                    name='conv' + str(i))
+                    name='mobilenetv2_conv' + str(i))
                 in_c = int(c * self.scale)
 
             # if output_size is 1, add fc layer in the end
@@ -161,8 +166,8 @@ class MobileNetV2Space(SearchSpaceBase):
                 input = fluid.layers.fc(
                     input=input,
                     size=self.class_dim,
-                    param_attr=ParamAttr(name='fc10_weights'),
-                    bias_attr=ParamAttr(name='fc10_offset'))
+                    param_attr=ParamAttr(name='mobilenetv2_fc_weights'),
+                    bias_attr=ParamAttr(name='mobilenetv2_fc_offset'))
             else:
                 assert self.output_size == input.shape[2], \
                           ("output_size must EQUAL to input_size / (2^block_num)."
@@ -173,7 +178,7 @@ class MobileNetV2Space(SearchSpaceBase):
 
         return net_arch
 
-    def shortcut(self, input, data_residual):
+    def _shortcut(self, input, data_residual):
         """Build shortcut layer.
         Args:
             input(Variable): input.
@@ -183,7 +188,7 @@ class MobileNetV2Space(SearchSpaceBase):
         """
         return fluid.layers.elementwise_add(input, data_residual)
 
-    def inverted_residual_unit(self,
+    def _inverted_residual_unit(self,
                                input,
                                num_in_filter,
                                num_filters,
@@ -240,10 +245,10 @@ class MobileNetV2Space(SearchSpaceBase):
             name=name + '_linear')
         out = linear_out
         if ifshortcut:
-            out = self.shortcut(input=input, data_residual=out)
+            out = self._shortcut(input=input, data_residual=out)
         return out
 
-    def invresi_blocks(self, input, in_c, t, c, n, s, k, name=None):
+    def _invresi_blocks(self, input, in_c, t, c, n, s, k, name=None):
         """Build inverted residual blocks.
         Args:
             input: Variable, input.
@@ -257,7 +262,7 @@ class MobileNetV2Space(SearchSpaceBase):
         Returns:
             Variable, layers output.
         """
-        first_block = self.inverted_residual_unit(
+        first_block = self._inverted_residual_unit(
             input=input,
             num_in_filter=in_c,
             num_filters=c,
@@ -271,7 +276,7 @@ class MobileNetV2Space(SearchSpaceBase):
         last_c = c
 
         for i in range(1, n):
-            last_residual_block = self.inverted_residual_unit(
+            last_residual_block = self._inverted_residual_unit(
                 input=last_residual_block,
                 num_in_filter=last_c,
                 num_filters=c,
