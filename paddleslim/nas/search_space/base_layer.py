@@ -59,5 +59,7 @@ def conv_bn_layer(input,
         moving_variance_name=bn_name + '_variance')
     if act == 'relu6':
         return fluid.layers.relu6(bn)
+    elif act == 'sigmoid':
+        return fluid.layers.sigmoid(bn)
     else:
         return bn

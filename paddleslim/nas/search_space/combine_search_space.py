@@ -86,9 +86,5 @@ class CombineSearchSpace(object):
         for space, token in zip(self.spaces, self.token):
             model_archs.append(space.token2arch(token))
 
-        def net_arch(input):
-            for model_arch in model_archs:
-                input = model_arch(input)
-            return input
+        return model_archs
 
-        return net_arch
