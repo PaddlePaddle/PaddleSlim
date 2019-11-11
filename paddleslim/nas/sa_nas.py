@@ -23,6 +23,7 @@ from ..analysis import flops
 
 from ..common import ControllerServer
 from ..common import ControllerClient
+from .search_space import SearchSpaceFactory
 
 __all__ = ["SANAS"]
 
@@ -32,8 +33,8 @@ _logger = get_logger(__name__, level=logging.INFO)
 class SANAS(object):
     def __init__(self,
                  configs,
-                 flops=None,
-                 latency=None,
+                 max_flops=None,
+                 max_latency=None,
                  server_addr=("", 0),
                  init_temperature=100,
                  reduce_rate=0.85,
@@ -73,6 +74,9 @@ class SANAS(object):
         self._search_space = factory.get_search_space(configs)
         init_tokens = self._search_space.init_tokens()
         range_table = self._search_space.range_table()
+        range_table = (len(range_table) * [0], range_table)
+
+        print range_table
 
         controller = SAController(range_table, self._reduce_rate,
                                   self._init_temperature, self._max_try_number,
@@ -112,6 +116,7 @@ class SANAS(object):
         with fluid.program_guard(main_program, startup_program):
             i = 0
             for config, arch in zip(self._configs, archs):
+                input_size = config[1]["input_size"]
                 input = fluid.data(
                     name="data_{}".format(i),
                     shape=[None, 3, input_size, input_size],
