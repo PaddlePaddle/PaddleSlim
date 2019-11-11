@@ -39,6 +39,6 @@ class SearchSpaceBase(object):
         Args:
             tokens(list<int>): The tokens which represent a network.
         Return:
-            list<layers> 
+            model arch 
         """
         raise NotImplementedError('Abstract method.')

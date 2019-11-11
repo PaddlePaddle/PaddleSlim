@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from search_space_registry import SEARCHSPACE
+from .combine_search_space import CombineSearchSpace
 
 __all__ = ["SearchSpaceFactory"]
 
@@ -21,18 +21,11 @@ class SearchSpaceFactory(object):
     def __init__(self):
         pass
 
-    def get_search_space(self, key, config):
+    def get_search_space(self, config_lists):
         """
-        get specific model space based on key and config.
+        get model spaces based on list(key, config). 
 
-        Args:
-            key(str): model space name.
-            config(dict): basic config information.
-        return:
-            model space(class)
         """
-        cls = SEARCHSPACE.get(key)
-        space = cls(config['input_size'], config['output_size'],
-                    config['block_num'])
+        assert isinstance(config_lists, list), "configs must be a list"
 
-        return space
+        return CombineSearchSpace(config_lists) 
