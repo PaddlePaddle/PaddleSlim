@@ -11,15 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import sys
-sys.path.append("../")
+sys.path.append('..')
 import unittest
 import paddle.fluid as fluid
-from paddleslim.nas import SearchSpaceFactory
+from nas.search_space_factory import SearchSpaceFactory
 
 
-class TestSearchSpaceFactory(unittest.TestCase):
-    def test_factory(self):
+class TestSearchSpace(unittest.TestCase):
+    def test_searchspace(self):
         # if output_size is 1, the model will add fc layer in the end.
         config = {'input_size': 224, 'output_size': 7, 'block_num': 5}
         space = SearchSpaceFactory()
@@ -36,10 +37,12 @@ class TestSearchSpaceFactory(unittest.TestCase):
                 shape=[1, 3, input_size, input_size],
                 dtype='float32',
                 append_batch_size=False)
-            print('input shape', model_input.shape)
             predict = model_arch(model_input)
-            print('output shape', predict.shape)
+            self.assertTrue(predict.shape[2] == config['output_size'])
 
+
+#for op in train_prog.global_block().ops:
+#    print(op.type)
 
 if __name__ == '__main__':
     unittest.main()
