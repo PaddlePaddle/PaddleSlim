@@ -206,7 +206,7 @@ def train(args):
         # activation quantize bit num, default is 8
         'activation_bits': 8,
         # op of name_scope in not_quant_pattern list, will not quantized
-        'not_quant_pattern': ['skip_quant'],
+        'not_quant_pattern': ['skip_quant_dd'],
         # op of types in quantize_op_types, will quantized
         'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
         # data type after quantization, default is 'int8'
@@ -292,14 +292,16 @@ def train(args):
     #    According to the weight and activation quantization type, the graph will be added
     #    some fake quantize operators and fake dequantize operators.
     ############################################################################################################
-    train_prog = quant.quanter.quant_aware(train_prog, scope, place, quant_config, for_test = False)
-    test_prog = quant.quanter.quant_aware(test_prog, scope, place, quant_config, for_test=True)
-
-
-
     build_strategy = fluid.BuildStrategy()
     build_strategy.memory_optimize = False
     build_strategy.enable_inplace = False
+    build_strategy.fuse_all_reduce_ops = False
+    test_prog = quant.quanter.quant_aware(test_prog, scope, place, quant_config, for_test=True)
+    train_prog = quant.quanter.quant_aware(train_prog, scope, place, quant_config, for_test=False)
+    train_prog = train_prog.with_data_parallel(loss_name=train_cost.name, build_strategy=build_strategy)
+    #train_prog_binary = train_prog_binary.with_data_parallel(loss_name=train_cost.name)
+
+
     params = models.__dict__[args.model]().params
     for pass_id in range(params["num_epochs"]):
 

@@ -72,13 +72,13 @@ def _parse_configs(user_config):
     assert isinstance(configs['weight_bits'], int), \
         "weight_bits must be int value."
 
-    assert isinstance(configs['weight_bits'] >= 1 and configs['weight_bits'] <= 16), \
+    assert (configs['weight_bits'] >= 1 and configs['weight_bits'] <= 16), \
         "weight_bits should be between 1 and 16."
 
     assert isinstance(configs['activation_bits'], int), \
         "activation_bits must be int value."
 
-    assert isinstance(configs['activation_bits'] >= 1 and configs['activation_bits'] <= 16), \
+    assert (configs['activation_bits'] >= 1 and configs['activation_bits'] <= 16), \
         "activation_bits should be between 1 and 16."
 
     assert isinstance(configs['not_quant_pattern'], list), \
@@ -90,7 +90,7 @@ def _parse_configs(user_config):
     assert isinstance(configs['dtype'], str), \
         "dtype must be a str."
 
-    assert isinstance(configs['dtype'] in VALID_DTYPES), \
+    assert (configs['dtype'] in VALID_DTYPES), \
         "dtype can only be " + " ".join(VALID_DTYPES)
 
     assert isinstance(configs['window_size'], int), \
@@ -140,7 +140,7 @@ def quant_aware(program, scope, place, config, for_test=False):
         window_size=config['window_size'],
         moving_rate=config['moving_rate'],
         quantizable_op_type=config['quantize_op_types'],
-        skip_pattern=''#not_quant_pattern
+        skip_pattern=config['not_quant_pattern']
     )
 
     transform_pass.apply(main_graph)

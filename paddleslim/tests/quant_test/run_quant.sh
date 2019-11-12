@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-source activate py27_paddle1.6
-
+source /home/wsz/anaconda2/bin/activate py27_paddle1.6
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #MobileNet v1:
-python quanter_test.py \
+nohup python quanter_test.py \
     --model=MobileNet \
     --pretrained_fp32_model='../../../../pretrain/MobileNetV1_pretrained/' \
     --use_gpu=True \
     --data_dir='/home/ssd8/wsz/tianfei01/traindata/imagenet/' \
-    --batch_size=256 \
+    --batch_size=2048 \
     --total_images=1281167 \
     --class_dim=1000 \
     --image_shape=3,224,224 \
@@ -16,7 +16,7 @@ python quanter_test.py \
     --num_epochs=20 \
     --lr=0.0001 \
     --act_quant_type=abs_max \
-    --wt_quant_type=abs_max
+    --wt_quant_type=abs_max 2>&1 &
 
 #ResNet50:
 #python quanter_test.py \
