@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import numpy as np
 from ..core import GraphWrapper
+from ..common import get_logger
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ["sensitivity"]
 
