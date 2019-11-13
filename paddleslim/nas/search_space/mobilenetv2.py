@@ -52,7 +52,6 @@ class MobileNetV2Space(SearchSpaceBase):
         self.scale = scale
         self.class_dim = class_dim
 
-
     def init_tokens(self):
         """
         The initial token send to controller.
@@ -71,10 +70,11 @@ class MobileNetV2Space(SearchSpaceBase):
                 4, 9, 0, 0] # 6, 320, 1
         # yapf: enable
 
-        if self.block_num < 5: 
+        if self.block_num < 5:
             self.token_len = 1 + (self.block_num - 1) * 4
         else:
-            self.token_len = 1 + (self.block_num + 2 * (self.block_num - 5)) * 4 
+            self.token_len = 1 + (self.block_num + 2 *
+                                  (self.block_num - 5)) * 4
 
         return init_token_base[:self.token_len]
 
@@ -92,6 +92,7 @@ class MobileNetV2Space(SearchSpaceBase):
                 5, 10, 6, 2,
                 5, 10, 6, 2,
                 5, 12, 6, 2]
+        range_table_base = list(np.array(range_table_base) - 1)
         # yapf: enable
         return range_table_base[:self.token_len]
 
@@ -107,24 +108,36 @@ class MobileNetV2Space(SearchSpaceBase):
             tokens = self.init_tokens()
 
         bottleneck_params_list = []
-        if self.block_num >= 1: bottleneck_params_list.append((1, self.head_num[tokens[0]], 1, 1, 3)) 
-        if self.block_num >= 2: bottleneck_params_list.append((self.multiply[tokens[1]], self.filter_num1[tokens[2]],
-                                       self.repeat[tokens[3]], 2, self.k_size[tokens[4]])) 
-        if self.block_num >= 3: bottleneck_params_list.append((self.multiply[tokens[5]], self.filter_num1[tokens[6]],
-                                       self.repeat[tokens[7]], 2, self.k_size[tokens[8]])) 
-        if self.block_num >= 4: bottleneck_params_list.append((self.multiply[tokens[9]], self.filter_num2[tokens[10]],
-                                       self.repeat[tokens[11]], 2, self.k_size[tokens[12]])) 
-        if self.block_num >= 5: 
-            bottleneck_params_list.append((self.multiply[tokens[13]], self.filter_num3[tokens[14]],
-                                       self.repeat[tokens[15]], 2, self.k_size[tokens[16]])) 
-            bottleneck_params_list.append((self.multiply[tokens[17]], self.filter_num3[tokens[18]],
-                                       self.repeat[tokens[19]], 1, self.k_size[tokens[20]])) 
-        if self.block_num >= 6: 
-            bottleneck_params_list.append((self.multiply[tokens[21]], self.filter_num5[tokens[22]],
-                                       self.repeat[tokens[23]], 2, self.k_size[tokens[24]]))
-            bottleneck_params_list.append((self.multiply[tokens[25]], self.filter_num6[tokens[26]],
-                                       self.repeat[tokens[27]], 1, self.k_size[tokens[28]])) 
-        
+        if self.block_num >= 1:
+            bottleneck_params_list.append(
+                (1, self.head_num[tokens[0]], 1, 1, 3))
+        if self.block_num >= 2:
+            bottleneck_params_list.append(
+                (self.multiply[tokens[1]], self.filter_num1[tokens[2]],
+                 self.repeat[tokens[3]], 2, self.k_size[tokens[4]]))
+        if self.block_num >= 3:
+            bottleneck_params_list.append(
+                (self.multiply[tokens[5]], self.filter_num1[tokens[6]],
+                 self.repeat[tokens[7]], 2, self.k_size[tokens[8]]))
+        if self.block_num >= 4:
+            bottleneck_params_list.append(
+                (self.multiply[tokens[9]], self.filter_num2[tokens[10]],
+                 self.repeat[tokens[11]], 2, self.k_size[tokens[12]]))
+        if self.block_num >= 5:
+            bottleneck_params_list.append(
+                (self.multiply[tokens[13]], self.filter_num3[tokens[14]],
+                 self.repeat[tokens[15]], 2, self.k_size[tokens[16]]))
+            bottleneck_params_list.append(
+                (self.multiply[tokens[17]], self.filter_num3[tokens[18]],
+                 self.repeat[tokens[19]], 1, self.k_size[tokens[20]]))
+        if self.block_num >= 6:
+            bottleneck_params_list.append(
+                (self.multiply[tokens[21]], self.filter_num5[tokens[22]],
+                 self.repeat[tokens[23]], 2, self.k_size[tokens[24]]))
+            bottleneck_params_list.append(
+                (self.multiply[tokens[25]], self.filter_num6[tokens[26]],
+                 self.repeat[tokens[27]], 1, self.k_size[tokens[28]]))
+
         def net_arch(input):
             #conv1
             # all padding is 'SAME' in the conv2d, can compute the actual padding automatic. 
@@ -182,15 +195,15 @@ class MobileNetV2Space(SearchSpaceBase):
         return fluid.layers.elementwise_add(input, data_residual)
 
     def _inverted_residual_unit(self,
-                               input,
-                               num_in_filter,
-                               num_filters,
-                               ifshortcut,
-                               stride,
-                               filter_size,
-                               expansion_factor,
-                               reduction_ratio=4,
-                               name=None):
+                                input,
+                                num_in_filter,
+                                num_filters,
+                                ifshortcut,
+                                stride,
+                                filter_size,
+                                expansion_factor,
+                                reduction_ratio=4,
+                                name=None):
         """Build inverted residual unit.
         Args:
             input(Variable), input.

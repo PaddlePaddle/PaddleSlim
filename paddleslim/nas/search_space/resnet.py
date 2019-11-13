@@ -25,19 +25,25 @@ from .search_space_registry import SEARCHSPACE
 
 __all__ = ["ResNetSpace"]
 
+
 @SEARCHSPACE.register
 class ResNetSpace(SearchSpaceBase):
-    def __init__(self, input_size, output_size, block_num, scale=1.0, class_dim=1000):
+    def __init__(self,
+                 input_size,
+                 output_size,
+                 block_num,
+                 scale=1.0,
+                 class_dim=1000):
         super(ResNetSpace, self).__init__(input_size, output_size, block_num)
         pass
 
     def init_tokens(self):
-        return [0,0,0,0,0,0]
+        return [0, 0, 0, 0, 0, 0]
 
     def range_table(self):
-        return [3,3,3,3,3,3]
+        return [2, 2, 2, 2, 2, 2]
 
-    def token2arch(self,tokens=None):
+    def token2arch(self, tokens=None):
         if tokens is None:
             self.init_tokens()
 
@@ -54,5 +60,3 @@ class ResNetSpace(SearchSpaceBase):
             return input
 
         return net_arch
-
-
