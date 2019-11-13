@@ -81,7 +81,7 @@ def sensitivity(program,
                 param_t = scope.find_var(param_name).get_tensor()
                 param_t.set(param_backup[param_name], place)
             ratio += step_size
-            return sensitivities
+        return sensitivities
 
 
 def _load_sensitivities(sensitivities_file):
