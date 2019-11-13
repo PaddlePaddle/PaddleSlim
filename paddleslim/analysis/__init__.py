@@ -15,6 +15,9 @@ import flops as flops_module
 from flops import *
 import model_size as model_size_module
 from model_size import *
+import sensitive
+from sensitive import *
 __all__ = []
 __all__ += flops_module.__all__
 __all__ += model_size_module.__all__
+__all__ += sensitive.__all__
