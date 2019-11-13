@@ -39,6 +39,8 @@ packages = [
     'paddleslim.nas',
     'paddleslim.analysis',
     'paddleslim.quant',
+    'paddleslim.core',
+    'paddleslim.common',
 ]
 
 setup(
