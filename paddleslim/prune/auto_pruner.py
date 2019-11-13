@@ -22,8 +22,8 @@ from ..common import SAController
 from ..common import get_logger
 from ..analysis import flops
 
-from .controller_server import ControllerServer
-from .controller_client import ControllerClient
+from ..common import ControllerServer
+from ..common import ControllerClient
 
 __all__ = ["AutoPruner"]
 

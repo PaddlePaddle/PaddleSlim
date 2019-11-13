@@ -25,7 +25,7 @@ class TestSearchSpace(unittest.TestCase):
         config = {'input_size': 224, 'output_size': 7, 'block_num': 5}
         space = SearchSpaceFactory()
 
-        my_space = space.get_search_space('MobileNetV2Space', config)
+        my_space = space.get_search_space([('MobileNetV2Space', config)])
         model_arch = my_space.token2arch()
 
         train_prog = fluid.Program()
@@ -37,12 +37,33 @@ class TestSearchSpace(unittest.TestCase):
                 shape=[1, 3, input_size, input_size],
                 dtype='float32',
                 append_batch_size=False)
-            predict = model_arch(model_input)
+            predict = model_arch[0](model_input)
             self.assertTrue(predict.shape[2] == config['output_size'])
 
 
-#for op in train_prog.global_block().ops:
-#    print(op.type)
+class TestMultiSearchSpace(unittest.TestCase):
+    space = SearchSpaceFactory()
+
+    config0 = {'input_size': 224, 'output_size': 7, 'block_num': 5}
+    config1 = {'input_size': 7, 'output_size': 1, 'block_num': 2}
+    my_space = space.get_search_space(
+        [('MobileNetV2Space', config0), ('ResNetSpace', config1)])
+    model_archs = my_space.token2arch()
+
+    train_prog = fluid.Program()
+    startup_prog = fluid.Program()
+    with fluid.program_guard(train_prog, startup_prog):
+        input_size = config0['input_size']
+        model_input = fluid.layers.data(
+            name='model_in',
+            shape=[1, 3, input_size, input_size],
+            dtype='float32',
+            append_batch_size=False)
+        for model_arch in model_archs:
+            predict = model_arch(model_input)
+            model_input = predict
+        print(predict)
+
 
 if __name__ == '__main__':
     unittest.main()

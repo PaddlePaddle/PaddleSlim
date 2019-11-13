@@ -19,6 +19,7 @@ import numpy as np
 
 __all__ = ['EvolutionaryController']
 
+
 class EvolutionaryController(object):
     """Abstract controller for all evolutionary searching method.
     """
@@ -48,6 +49,3 @@ class EvolutionaryController(object):
         """Generate new tokens.
         """
         raise NotImplementedError('Abstract method.')
-
-
-
