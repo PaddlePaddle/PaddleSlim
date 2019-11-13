@@ -20,6 +20,7 @@ from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass
 from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
 from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
 from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
+from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddle.fluid import core
 
 WEIGHT_QUANTIZATION_TYPES=['abs_max', 'channel_wise_abs_max', 'range_abs_max', 'moving_average_abs_max']
@@ -153,19 +154,55 @@ def quant_aware(program, place, config, scope=None, for_test=False):
     return quant_program
 
 
-def quant_post(program, place, config, scope=None):
+def quant_post(executor, 
+               model_path,
+               quantize_model_path,
+               data_reader,
+               batch_size=10,
+               batch_nums=None,
+               scope=None,
+               algo='KL',
+               quantizable_op_type=[
+                   "conv2d", "depthwise_conv2d", 
+                   "mul", "pool2d", "elementwise_add"]):
     """
-    add quantization ops in program. the program returned is not trainable.
+    The class utilizes post training quantization methon to quantize the 
+    fp32 model. It uses calibrate data to calculate the scale factor of 
+    quantized variables, and inserts fake quant/dequant op to obtain the 
+    quantized model.
+
     Args:
-        program(fluid.Program): program
-        scope(fluid.Scope): the scope to store var, it's should be the value of program's scope, usually it's fluid.global_scope().
-        place(fluid.CPUPlace or fluid.CUDAPlace): place
-        config(dict): configs for quantization, default values are in quant_config_default dict.
-        for_test: is for test program.
-    Return:
-        fluid.Program: the quantization program is not trainable.
+        executor(fluid.Executor): The executor to load, run and save the 
+            quantized model.
+        model_path(str): The path of fp32 model that will be quantized(
+            load_inference_model).
+        quantize_model_path(str): The path to save quantized model.
+        data_reader(Reader): The data reader generates a sample every time,
+                        and it provides calibrate data for DataLoader.
+        batch_size(int, optional): The batch size of DataLoader, default is 10.
+        batch_nums(int, optional): If set batch_nums, the number of calibrate 
+                        data is batch_size*batch_nums. If batch_nums=None, use all data
+                        provided by data_reader as calibrate data.
+        scope(fluid.Scope, optional): The scope of the program, use it to load 
+                        and save variables. If scope=None, get scope by global_scope().
+        algo(str, optional): If algo=KL, use KL-divergenc method to 
+                        get the more precise scale factor. If algo='direct', use 
+                        abs_max methon to get the scale factor. Default is KL.
+        quantizable_op_type(list[str], optional): List the type of ops 
+                        that will be quantized. Default is ["conv2d", "depthwise_conv2d", 
+                        "mul", "pool2d", "elementwise_add"].
     """
-    pass
+    post_training_quantization = PostTrainingQuantization(
+            executor=executor,
+            model_path=model_path,
+            data_reader=data_reader,
+            batch_size=batch_size,
+            batch_nums=batch_nums,
+            scope=scope,
+            algo=algo,
+            quantizable_op_type=quantizable_op_type)
+    post_training_quantization.quantize()
+    post_training_quantization.save_quantized_model(quantize_model_path)
 
 
 def convert(program, scope, place, config, save_int8=False):
