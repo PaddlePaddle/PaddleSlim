@@ -14,9 +14,10 @@
 
 import numpy as np
 import paddle.fluid as fluid
-from core import VarWrapper, OpWrapper, GraphWrapper
+import copy
+from ..core import VarWrapper, OpWrapper, GraphWrapper
 
-__all__ = ["prune"]
+__all__ = ["Pruner"]
 
 
 class Pruner():
@@ -64,10 +65,10 @@ class Pruner():
             params,
             ratios,
             place,
-            lazy=False,
-            only_graph=False,
-            param_backup=None,
-            param_shape_backup=None)
+            lazy=lazy,
+            only_graph=only_graph,
+            param_backup=param_backup,
+            param_shape_backup=param_shape_backup)
         return graph.program
 
     def _prune_filters_by_ratio(self,
