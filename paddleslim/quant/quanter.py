@@ -22,34 +22,33 @@ from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
 from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
 from paddle.fluid import core
 
-WEIGHT_QUANTIZATION_TYPES=['abs_max', 'channel_wise_abs_max']
+WEIGHT_QUANTIZATION_TYPES=['abs_max', 'channel_wise_abs_max', 'range_abs_max', 'moving_average_abs_max']
 ACTIVATION_QUANTIZATION_TYPES=['abs_max','range_abs_max', 'moving_average_abs_max']
 VALID_DTYPES = ['int8']
 
-
 _quant_config_default = {
-        # weight quantize type, default is 'abs_max'
-        'weight_quantize_type': 'abs_max',
-        # activation quantize type, default is 'abs_max'
-        'activation_quantize_type': 'abs_max',
-        # weight quantize bit num, default is 8
-        'weight_bits': 8,
-        # activation quantize bit num, default is 8
-        'activation_bits': 8,
-        # ops of name_scope in not_quant_pattern list, will not be quantized
-        'not_quant_pattern': ['skip_quant'],
-        # ops of type in quantize_op_types, will be quantized
-        'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
-        # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
-        'dtype': 'int8',
-        # window size for 'range_abs_max' quantization. defaulf is 10000
-        'window_size': 10000,
-        # The decay coefficient of moving average, default is 0.9
-        'moving_rate': 0.9,
-        # if set quant_weight_only True, then only quantize parameters of layers which need to be quantized,
-        # and activations will not be quantized.
-        'quant_weight_only': False
-    }
+    # weight quantize type, default is 'abs_max'
+    'weight_quantize_type': 'abs_max',
+    # activation quantize type, default is 'abs_max'
+    'activation_quantize_type': 'abs_max',
+    # weight quantize bit num, default is 8
+    'weight_bits': 8,
+    # activation quantize bit num, default is 8
+    'activation_bits': 8,
+    # ops of name_scope in not_quant_pattern list, will not be quantized
+    'not_quant_pattern': ['skip_quant'],
+    # ops of type in quantize_op_types, will be quantized
+    'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
+    # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
+    'dtype': 'int8',
+    # window size for 'range_abs_max' quantization. defaulf is 10000
+    'window_size': 10000,
+    # The decay coefficient of moving average, default is 0.9
+    'moving_rate': 0.9,
+    # if set quant_weight_only True, then only quantize parameters of layers which need to be quantized,
+    # and activations will not be quantized.
+    'quant_weight_only': False
+}
 
 
 def _parse_configs(user_config):
@@ -125,8 +124,10 @@ def quant_aware(program, place, config, scope=None, for_test=False):
     scope = fluid.global_scope() if not scope else scope
     assert isinstance(config, dict), "config must be dict"
 
-    assert 'weight_quantize_type' in config.keys(), 'weight_quantize_type must be configured'
-    assert 'activation_quantize_type' in config.keys(), 'activation_quantize_type must be configured'
+    assert 'weight_quantize_type' in config.keys(
+    ), 'weight_quantize_type must be configured'
+    assert 'activation_quantize_type' in config.keys(
+    ), 'activation_quantize_type must be configured'
 
     config = _parse_configs(config)
     main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
@@ -141,8 +142,7 @@ def quant_aware(program, place, config, scope=None, for_test=False):
         window_size=config['window_size'],
         moving_rate=config['moving_rate'],
         quantizable_op_type=config['quantize_op_types'],
-        skip_pattern=config['not_quant_pattern']
-    )
+        skip_pattern=config['not_quant_pattern'])
 
     transform_pass.apply(main_graph)
 
@@ -164,7 +164,7 @@ def quant_post(program, place, config, scope=None):
         for_test: is for test program.
     Return:
         fluid.Program: the quantization program is not trainable.
-    """   
+    """
     pass
 
 
@@ -196,7 +196,8 @@ def convert(program, scope, place, config, save_int8=False):
     freezed_program = test_graph.to_program()
 
     if save_int8:
-        convert_int8_pass = ConvertToInt8Pass(scope=fluid.global_scope(), place=place)
+        convert_int8_pass = ConvertToInt8Pass(
+            scope=fluid.global_scope(), place=place)
         convert_int8_pass.apply(test_graph)
         freezed_program_int8 = test_graph.to_program()
         return freezed_program, freezed_program_int8

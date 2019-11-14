@@ -14,4 +14,8 @@
 
 from . import graph_wrapper
 from .graph_wrapper import *
+from . import registry
+from .registry import *
+
 __all__ = graph_wrapper.__all__
+__all__ += registry.__all__
