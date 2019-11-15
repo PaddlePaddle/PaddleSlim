@@ -201,7 +201,7 @@ def quant_post(program, place, config, scope=None):
     pass
 
 
-def convert(program, scope, place, config, save_int8=False):
+def convert(program, place, config, scope=None, save_int8=False):
     """
     add quantization ops in program. the program returned is not trainable.
     Args:
@@ -216,7 +216,7 @@ def convert(program, scope, place, config, save_int8=False):
         fluid.Program: freezed int8 program which can be used for inference.
                        if save_int8 is False, this value is None.
     """
-
+    scope = fluid.global_scope() if not scope else scope
     test_graph = IrGraph(core.Graph(program.desc), for_test=True)
 
     # Freeze the graph after training by adjusting the quantize
