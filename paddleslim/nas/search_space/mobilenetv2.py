@@ -54,7 +54,7 @@ class MobileNetV2Space(SearchSpaceBase):
 
     def init_tokens(self):
         """
-        The initial token send to controller.
+        The initial token.
         The first one is the index of the first layers' channel in self.head_num,
         each line in the following represent the index of the [expansion_factor, filter_num, repeat_num, kernel_size]
         """
@@ -80,7 +80,7 @@ class MobileNetV2Space(SearchSpaceBase):
 
     def range_table(self):
         """
-        get range table of current search space 
+        Get range table of current search space, constrains the range of tokens. 
         """
         # head_num + 7 * [multiple(expansion_factor), filter_num, repeat, kernel_size]
         # yapf: disable
@@ -128,7 +128,7 @@ class MobileNetV2Space(SearchSpaceBase):
                 (self.multiply[tokens[13]], self.filter_num3[tokens[14]],
                  self.repeat[tokens[15]], 2, self.k_size[tokens[16]]))
             bottleneck_params_list.append(
-                (self.multiply[tokens[17]], self.filter_num3[tokens[18]],
+                (self.multiply[tokens[17]], self.filter_num4[tokens[18]],
                  self.repeat[tokens[19]], 1, self.k_size[tokens[20]]))
         if self.block_num >= 6:
             bottleneck_params_list.append(
@@ -169,6 +169,7 @@ class MobileNetV2Space(SearchSpaceBase):
 
             # if output_size is 1, add fc layer in the end
             if self.output_size == 1:
+                print('NOTE: if output_size is 1, add fc layer in the end!!!')
                 input = fluid.layers.fc(
                     input=input,
                     size=self.class_dim,
