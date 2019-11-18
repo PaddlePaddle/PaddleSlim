@@ -45,47 +45,57 @@ class ResNetSpace(SearchSpaceBase):
         self.repeat4 = [2, 3, 4, 5, 6, 7]  #6
         self.class_dim = class_dim
         self.extract_feature = extract_feature
+        assert self.block_num < 5, 'ResNet: block number must less than 5, but receive block number is {}'.format(
+            self.block_num)
 
     def init_tokens(self):
+        """
+        The initial token.
+        return 2 * self.block_num, 2 means depth and num_filter
+        """
         init_token_base = [0, 0, 0, 0, 0, 0, 0, 0]
         self.token_len = self.block_num * 2
         return init_token_base[:self.token_len]
 
     def range_table(self):
-        range_table_base = [3, 3, 3, 3, 3, 3, 3, 3]
+        """
+        Get range table of current search space, constrains the range of tokens.
+        """
+        #2 * self.block_num, 2 means depth and num_filter
+        range_table_base = [6, 6, 5, 4, 4, 5, 12, 5]
         return range_table_base[:self.token_len]
 
     def token2arch(self, tokens=None):
-        assert self.block_num < 5, 'block number must less than 5, but receive block number is {}'.format(
-            self.block_num)
-
+        """
+        return net_arch function
+        """
         if tokens is None:
             tokens = self.init_tokens()
 
-        def net_arch(input):
-            depth = []
-            num_filters = []
-            if self.block_num >= 1:
-                filter1 = self.filter_num1[tokens[0]]
-                repeat1 = self.repeat1[tokens[1]]
-                depth.append(filter1)
-                num_filters.append(repeat1)
-            if self.block_num >= 2:
-                filter2 = self.filter_num2[tokens[2]]
-                repeat2 = self.repeat2[tokens[3]]
-                depth.append(filter2)
-                num_filters.append(repeat2)
-            if self.block_num >= 3:
-                filter3 = self.filter_num3[tokens[4]]
-                repeat3 = self.repeat3[tokens[5]]
-                depth.append(filter3)
-                num_filters.append(repeat3)
-            if self.block_num >= 4:
-                filter4 = self.filter_num4[tokens[6]]
-                repeat4 = self.repeat4[tokens[7]]
-                depth.append(filter4)
-                num_filters.append(repeat4)
+        depth = []
+        num_filters = []
+        if self.block_num >= 1:
+            filter1 = self.filter_num1[tokens[0]]
+            repeat1 = self.repeat1[tokens[1]]
+            depth.append(filter1)
+            num_filters.append(repeat1)
+        if self.block_num >= 2:
+            filter2 = self.filter_num2[tokens[2]]
+            repeat2 = self.repeat2[tokens[3]]
+            depth.append(filter2)
+            num_filters.append(repeat2)
+        if self.block_num >= 3:
+            filter3 = self.filter_num3[tokens[4]]
+            repeat3 = self.repeat3[tokens[5]]
+            depth.append(filter3)
+            num_filters.append(repeat3)
+        if self.block_num >= 4:
+            filter4 = self.filter_num4[tokens[6]]
+            repeat4 = self.repeat4[tokens[7]]
+            depth.append(filter4)
+            num_filters.append(repeat4)
 
+        def net_arch(input):
             conv = conv_bn_layer(
                 input=input,
                 filter_size=5,

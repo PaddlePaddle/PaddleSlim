@@ -15,7 +15,7 @@ def create_data_loader():
     label = fluid.data(name='label', shape=[-1, 1], dtype='int64')
     data_loader = fluid.io.DataLoader.from_generator(
         feed_list=[data, label],
-        capacity=64,
+        capacity=1024,
         use_double_buffer=True,
         iterable=True)
     return data_loader, data, label
@@ -72,45 +72,32 @@ def search_mobilenetv2_cifar10(config, args):
         place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
         exe = fluid.Executor(place)
         exe.run(startup_program)
-        train_reader = paddle.batch(
-            paddle.reader.shuffle(
-                paddle.dataset.cifar.train10(cycle=False), buf_size=1024),
-            batch_size=512)
-        train_loader.set_batch_generator(
+        train_reader = paddle.reader.shuffle(
+            paddle.dataset.cifar.train10(cycle=False), buf_size=1024)
+        train_loader.set_sample_generator(
             train_reader,
+            batch_size=512,
             places=fluid.cuda_places() if args.use_gpu else fluid.cpu_places())
 
         test_loader, _, _ = create_data_loader()
-        test_reader = paddle.batch(
-            paddle.dataset.cifar.test10(cycle=False), batch_size=256)
-        test_loader.set_batch_generator(
+        test_reader = paddle.dataset.cifar.test10(cycle=False)
+        test_loader.set_sample_generator(
             test_reader,
+            batch_size=256,
+            drop_last=False,
             places=fluid.cuda_places() if args.use_gpu else fluid.cpu_places())
-
-        data_loader.set_batch_generator
 
         for epoch_id in range(10):
             for batch_id, data in enumerate(train_loader()):
-                real_image = np.array(list(map(lambda x: x[0], data))).reshape(
-                    -1, 3, 32, 32).astype('float32')
-                real_label = np.array(list(map(lambda x: x[1], data))).reshape(
-                    -1, 1).astype('int64')
                 loss = exe.run(train_program,
-                               feed={'data': real_image,
-                                     'label': real_label},
+                               feed=data,
                                fetch_list=[cost.name])[0]
                 if batch_id % 5 == 0:
                     print('epoch: {}, batch: {}, loss: {}'.format(
                         epoch_id, batch_id, loss[0]))
 
         for data in test_loader():
-            test_image = np.array(list(map(lambda x: x[0], data))).reshape(
-                -1, 3, 32, 32).astype('float32')
-            test_label = np.array(list(map(lambda x: x[1], data))).reshape(
-                -1, 1).astype('int64')
-            reward = exe.run(test_program,
-                             feed={'data': test_image,
-                                   'label': test_label},
+            reward = exe.run(test_program, feed=data,
                              fetch_list=[cost.name])[0]
 
         print('reward:', reward)

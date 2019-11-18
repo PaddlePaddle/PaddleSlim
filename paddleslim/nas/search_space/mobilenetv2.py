@@ -52,6 +52,9 @@ class MobileNetV2Space(SearchSpaceBase):
         self.scale = scale
         self.class_dim = class_dim
 
+        assert self.block_num < 7, 'MobileNetV2: block number must less than 7, but receive block number is {}'.format(
+            self.block_num)
+
     def init_tokens(self):
         """
         The initial token.
@@ -100,9 +103,6 @@ class MobileNetV2Space(SearchSpaceBase):
         """
         return net_arch function
         """
-
-        assert self.block_num < 7, 'block number must less than 7, but receive block number is {}'.format(
-            self.block_num)
 
         if tokens is None:
             tokens = self.init_tokens()
