@@ -38,7 +38,9 @@ class MobileNetV1Space(SearchSpaceBase):
                                                block_num)
         self.scale = scale
         self.class_dim = class_dim
+        # self.head_num means the channel of first convolution
         self.head_num = np.array([3, 4, 8, 12, 16, 24, 32])  # 7
+        # self.filter_num1 ~ self.filtet_num9 means channel of the following convolution
         self.filter_num1 = np.array([3, 4, 8, 12, 16, 24, 32, 48])  # 8
         self.filter_num2 = np.array([8, 12, 16, 24, 32, 48, 64, 80])  # 8
         self.filter_num3 = np.array(
@@ -58,7 +60,9 @@ class MobileNetV1Space(SearchSpaceBase):
         self.filter_num9 = np.array(
             [160, 192, 224, 256, 320, 384, 512, 640, 768, 832, 1024,
              1048])  #12
+        # self.k_size means kernel size
         self.k_size = np.array([3, 5])  #2
+        # self.repeat means repeat_num in forth downsample 
         self.repeat = np.array([1, 2, 3, 4, 5, 6])  #6
 
         assert self.block_num < 6, 'MobileNetV1: block number must less than 6, but receive block number is {}'.format(
@@ -69,7 +73,7 @@ class MobileNetV1Space(SearchSpaceBase):
         The initial token.
         The first one is the index of the first layers' channel in self.head_num,
         each line in the following represent the index of the [filter_num1, filter_num2, kernel_size]
-        and depth means repeat times for forth upsample
+        and depth means repeat times for forth downsample
         """
         # yapf: disable
         base_init_tokens = [6,  # 32
@@ -95,8 +99,16 @@ class MobileNetV1Space(SearchSpaceBase):
         Get range table of current search space, constrains the range of tokens.
         """
         base_range_table = [
-            7, 8, 8, 2, 8, 10, 2, 10, 10, 2, 10, 12, 2, 12, 11, 2, 11, 14, 2,
-            6, 14, 13, 2, 13, 12, 2, 12, 12, 2
+            len(self.head_num), len(self.filter_num1), len(self.filter_num2),
+            len(self.k_size), len(self.filter_num2), len(self.filter_num3),
+            len(self.k_size), len(self.filter_num3), len(self.filter_num4),
+            len(self.k_size), len(self.filter_num4), len(self.filter_num5),
+            len(self.k_size), len(self.filter_num5), len(self.filter_num6),
+            len(self.k_size), len(self.filter_num6), len(self.filter_num7),
+            len(self.k_size), len(self.repeat), len(self.filter_num7),
+            len(self.filter_num8), len(self.k_size), len(self.filter_num8),
+            len(self.filter_num9), len(self.k_size), len(self.filter_num9),
+            len(self.filter_num9), len(self.k_size)
         ]
         return base_range_table[:self.token_len]
 
