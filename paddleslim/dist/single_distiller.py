@@ -162,7 +162,7 @@ def soft_label_loss(teacher_var_name,
     return soft_label_loss
 
 
-def self_defined_loss(program, loss_func, **kwargs):
+def loss(program, loss_func, **kwargs):
     """
     Combine variables from student model and teacher model by self defined loss.
     Args:
