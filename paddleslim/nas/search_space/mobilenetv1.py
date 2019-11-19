@@ -98,18 +98,19 @@ class MobileNetV1Space(SearchSpaceBase):
         """
         Get range table of current search space, constrains the range of tokens.
         """
-        base_range_table = [
-            len(self.head_num), len(self.filter_num1), len(self.filter_num2),
-            len(self.k_size), len(self.filter_num2), len(self.filter_num3),
-            len(self.k_size), len(self.filter_num3), len(self.filter_num4),
-            len(self.k_size), len(self.filter_num4), len(self.filter_num5),
-            len(self.k_size), len(self.filter_num5), len(self.filter_num6),
-            len(self.k_size), len(self.filter_num6), len(self.filter_num7),
-            len(self.k_size), len(self.repeat), len(self.filter_num7),
-            len(self.filter_num8), len(self.k_size), len(self.filter_num8),
-            len(self.filter_num9), len(self.k_size), len(self.filter_num9),
-            len(self.filter_num9), len(self.k_size)
-        ]
+        # yapf: disable
+        base_range_table = [len(self.head_num),
+            len(self.filter_num1), len(self.filter_num2), len(self.k_size),
+            len(self.filter_num2), len(self.filter_num3), len(self.k_size),
+            len(self.filter_num3), len(self.filter_num4), len(self.k_size),
+            len(self.filter_num4), len(self.filter_num5), len(self.k_size),
+            len(self.filter_num5), len(self.filter_num6), len(self.k_size),
+            len(self.filter_num6), len(self.filter_num7), len(self.k_size),
+            len(self.repeat),
+            len(self.filter_num7), len(self.filter_num8), len(self.k_size),
+            len(self.filter_num8), len(self.filter_num9), len(self.k_size),
+            len(self.filter_num9), len(self.filter_num9), len(self.k_size)]
+        # yapf: enable
         return base_range_table[:self.token_len]
 
     def token2arch(self, tokens=None):
