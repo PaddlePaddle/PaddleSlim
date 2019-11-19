@@ -5,6 +5,7 @@ import argparse
 import ast
 import paddle
 import paddle.fluid as fluid
+from paddle.fluid.param_attr import ParamAttr
 from paddleslim.nas.search_space.search_space_factory import SearchSpaceFactory
 from paddleslim.analysis import flops
 from paddleslim.nas import SANAS
@@ -31,6 +32,11 @@ def init_sa_nas(config):
     with fluid.program_guard(main_program, startup_program):
         data_loader, data, label = create_data_loader()
         output = model_arch(data)
+        output = fluid.layers.fc(
+            input=output,
+            size=args.class_dim,
+            param_attr=ParamAttr(name='mobilenetv2_fc_weights'),
+            bias_attr=ParamAttr(name='mobilenetv2_fc_offset'))
         cost = fluid.layers.mean(
             fluid.layers.softmax_with_cross_entropy(
                 logits=output, label=label))
@@ -59,6 +65,11 @@ def search_mobilenetv2_cifar10(config, args):
         with fluid.program_guard(train_program, startup_program):
             train_loader, data, label = create_data_loader()
             output = archs(data)
+            output = fluid.layers.fc(
+                input=output,
+                size=args.class_dim,
+                param_attr=ParamAttr(name='mobilenetv2_fc_weights'),
+                bias_attr=ParamAttr(name='mobilenetv2_fc_offset'))
             cost = fluid.layers.mean(
                 fluid.layers.softmax_with_cross_entropy(
                     logits=output, label=label))[0]
@@ -115,15 +126,18 @@ if __name__ == '__main__':
         type=ast.literal_eval,
         default=True,
         help='Whether to use GPU in train/test model.')
+    parser.add_argument(
+        '--class_dim', type=int, default=1000, help='classify number.')
     args = parser.parse_args()
     print(args)
 
+    # block mask means block number, 1 mean downsample, 0 means the size of feature map don't change after this block
     config_info = {
         'input_size': 32,
         'output_size': 1,
         'block_num': 5,
-        'block_mask': None
+        'block_mask': [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
     }
-    config = [('MobileNetV2Space', config_info)]
+    config = [('MobileNetV2BlockSpace', config_info)]
 
     search_mobilenetv2_cifar10(config, args)

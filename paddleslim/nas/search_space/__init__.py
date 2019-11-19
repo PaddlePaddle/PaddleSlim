@@ -14,6 +14,8 @@
 
 import mobilenetv2
 from .mobilenetv2 import *
+import mobilenetv2_block
+from .mobilenetv2_block import *
 import mobilenetv1
 from .mobilenetv1 import *
 import resnet
