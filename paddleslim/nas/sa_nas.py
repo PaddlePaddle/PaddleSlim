@@ -140,6 +140,8 @@ class SANAS(object):
         Return reward of current searched network.
         Args:
             score(float): The score of current searched network.
+        Returns:
+            bool: True means updating successfully while false means failure.
         """
-        self._controller_client.update(self._current_tokens, score)
         self._iter += 1
+        return self._controller_client.update(self._current_tokens, score)
