@@ -51,7 +51,7 @@ class ControllerClient(object):
         socket_client.send("{}\t{}\t{}".format(self._key, tokens, reward)
                            .encode())
         response = socket_client.recv(1024).decode()
-        if response.trip('\n').split("\t") == "ok":
+        if response.strip('\n').split("\t") == "ok":
             return True
         else:
             return False
