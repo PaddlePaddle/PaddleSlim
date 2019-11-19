@@ -32,13 +32,18 @@ class ResNetSpace(SearchSpaceBase):
                  input_size,
                  output_size,
                  block_num,
+                 block_mask=None,
                  extract_feature=False,
                  class_dim=1000):
-        super(ResNetSpace, self).__init__(input_size, output_size, block_num)
+        super(ResNetSpace, self).__init__(input_size, output_size, block_num,
+                                          block_mask)
+        assert self.block_mask == None, 'ResNetSpace will use origin ResNet as seach space, so use input_size, output_size and block_num to search'
+        # self.filter_num1 ~ self.filter_num4 means convolution channel
         self.filter_num1 = np.array([48, 64, 96, 128, 160, 192, 224])  #7 
         self.filter_num2 = np.array([64, 96, 128, 160, 192, 256, 320])  #7
         self.filter_num3 = np.array([128, 160, 192, 256, 320, 384])  #6
         self.filter_num4 = np.array([192, 256, 384, 512, 640])  #5
+        # self.repeat1 ~ self.repeat4 means depth of network
         self.repeat1 = [2, 3, 4, 5, 6]  #5
         self.repeat2 = [2, 3, 4, 5, 6, 7]  #6
         self.repeat3 = [2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24]  #13
@@ -62,7 +67,11 @@ class ResNetSpace(SearchSpaceBase):
         Get range table of current search space, constrains the range of tokens.
         """
         #2 * self.block_num, 2 means depth and num_filter
-        range_table_base = [6, 6, 5, 4, 4, 5, 12, 5]
+        range_table_base = [
+            len(self.filter_num1), len(self.repeat1), len(self.filter_num2),
+            len(self.repeat2), len(self.filter_num3), len(self.repeat3),
+            len(self.filter_num4), len(self.repeat4)
+        ]
         return range_table_base[:self.token_len]
 
     def token2arch(self, tokens=None):
@@ -77,23 +86,23 @@ class ResNetSpace(SearchSpaceBase):
         if self.block_num >= 1:
             filter1 = self.filter_num1[tokens[0]]
             repeat1 = self.repeat1[tokens[1]]
-            depth.append(filter1)
-            num_filters.append(repeat1)
+            num_filters.append(filter1)
+            depth.append(repeat1)
         if self.block_num >= 2:
             filter2 = self.filter_num2[tokens[2]]
             repeat2 = self.repeat2[tokens[3]]
-            depth.append(filter2)
-            num_filters.append(repeat2)
+            num_filters.append(filter2)
+            depth.append(repeat2)
         if self.block_num >= 3:
             filter3 = self.filter_num3[tokens[4]]
             repeat3 = self.repeat3[tokens[5]]
-            depth.append(filter3)
-            num_filters.append(repeat3)
+            num_filters.append(filter3)
+            depth.append(repeat3)
         if self.block_num >= 4:
             filter4 = self.filter_num4[tokens[6]]
             repeat4 = self.repeat4[tokens[7]]
-            depth.append(filter4)
-            num_filters.append(repeat4)
+            num_filters.append(filter4)
+            depth.append(repeat4)
 
         def net_arch(input):
             conv = conv_bn_layer(
@@ -105,7 +114,7 @@ class ResNetSpace(SearchSpaceBase):
                 name='resnet_conv0')
             for block in range(len(depth)):
                 for i in range(depth[block]):
-                    conv = self._basicneck_block(
+                    conv = self._bottleneck_block(
                         input=conv,
                         num_filters=num_filters[block],
                         stride=2 if i == 0 and block != 0 else 1,
@@ -138,22 +147,29 @@ class ResNetSpace(SearchSpaceBase):
         else:
             return input
 
-    def _basicneck_block(self, input, num_filters, stride, name=None):
+    def _bottleneck_block(self, input, num_filters, stride, name=None):
         conv0 = conv_bn_layer(
             input=input,
-            filter_size=3,
             num_filters=num_filters,
-            stride=stride,
+            filter_size=1,
             act='relu',
-            name=name + '_basicneck_conv0')
+            name=name + '_bottleneck_conv0')
         conv1 = conv_bn_layer(
             input=conv0,
-            filter_size=3,
             num_filters=num_filters,
-            stride=1,
+            filter_size=3,
+            stride=stride,
+            act='relu',
+            name=name + '_bottleneck_conv1')
+        conv2 = conv_bn_layer(
+            input=conv1,
+            num_filters=num_filters * 4,
+            filter_size=1,
             act=None,
-            name=name + '_basicneck_conv1')
+            name=name + '_bottleneck_conv2')
+
         short = self._shortcut(
-            input, num_filters, stride, name=name + '_short')
+            input, num_filters * 4, stride, name=name + '_shortcut')
+
         return fluid.layers.elementwise_add(
-            x=short, y=conv1, act='relu', name=name + '_basicneck_add')
+            x=short, y=conv2, act='relu', name=name + '_bottleneck_add')

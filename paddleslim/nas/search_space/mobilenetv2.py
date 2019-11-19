@@ -32,11 +32,15 @@ class MobileNetV2Space(SearchSpaceBase):
                  input_size,
                  output_size,
                  block_num,
+                 block_mask=None,
                  scale=1.0,
                  class_dim=1000):
         super(MobileNetV2Space, self).__init__(input_size, output_size,
-                                               block_num)
+                                               block_num, block_mask)
+        assert self.block_mask == None, 'MobileNetV2Space will use origin MobileNetV2 as seach space, so use input_size, output_size and block_num to search'
+        # self.head_num means the first convolution channel
         self.head_num = np.array([3, 4, 8, 12, 16, 24, 32])  #7
+        # self.filter_num1 ~ self.filter_num6 means following convlution channel
         self.filter_num1 = np.array([3, 4, 8, 12, 16, 24, 32, 48])  #8
         self.filter_num2 = np.array([8, 12, 16, 24, 32, 48, 64, 80])  #8
         self.filter_num3 = np.array([16, 24, 32, 48, 64, 80, 96, 128])  #8
@@ -46,8 +50,11 @@ class MobileNetV2Space(SearchSpaceBase):
             [32, 48, 64, 80, 96, 128, 144, 160, 192, 224])  #10
         self.filter_num6 = np.array(
             [64, 80, 96, 128, 144, 160, 192, 224, 256, 320, 384, 512])  #12
+        # self.k_size means kernel size
         self.k_size = np.array([3, 5])  #2
+        # self.multiply means expansion_factor of each _inverted_residual_unit
         self.multiply = np.array([1, 2, 3, 4, 6])  #5
+        # self.repeat means repeat_num _inverted_residual_unit in each _invresi_blocks 
         self.repeat = np.array([1, 2, 3, 4, 5, 6])  #6
         self.scale = scale
         self.class_dim = class_dim
@@ -87,14 +94,14 @@ class MobileNetV2Space(SearchSpaceBase):
         """
         # head_num + 7 * [multiple(expansion_factor), filter_num, repeat, kernel_size]
         # yapf: disable
-        range_table_base =  [7,
-                5, 8, 6, 2,
-                5, 8, 6, 2,
-                5, 8, 6, 2,
-                5, 8, 6, 2,
-                5, 10, 6, 2,
-                5, 10, 6, 2,
-                5, 12, 6, 2]
+        range_table_base =  [len(self.head_num),
+                len(self.multiply), len(self.filter_num1), len(self.repeat), len(self.k_size),
+                len(self.multiply), len(self.filter_num1), len(self.repeat), len(self.k_size),
+                len(self.multiply), len(self.filter_num2), len(self.repeat), len(self.k_size),
+                len(self.multiply), len(self.filter_num3), len(self.repeat), len(self.k_size),
+                len(self.multiply), len(self.filter_num4), len(self.repeat), len(self.k_size),
+                len(self.multiply), len(self.filter_num5), len(self.repeat), len(self.k_size),
+                len(self.multiply), len(self.filter_num6), len(self.repeat), len(self.k_size)]
         range_table_base = list(np.array(range_table_base) - 1)
         # yapf: enable
         return range_table_base[:self.token_len]
@@ -106,6 +113,7 @@ class MobileNetV2Space(SearchSpaceBase):
 
         if tokens is None:
             tokens = self.init_tokens()
+        print(tokens)
 
         bottleneck_params_list = []
         if self.block_num >= 1:
@@ -169,7 +177,6 @@ class MobileNetV2Space(SearchSpaceBase):
 
             # if output_size is 1, add fc layer in the end
             if self.output_size == 1:
-                print('NOTE: if output_size is 1, add fc layer in the end!!!')
                 input = fluid.layers.fc(
                     input=input,
                     size=self.class_dim,
