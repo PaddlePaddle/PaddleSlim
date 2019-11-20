@@ -113,7 +113,7 @@ class Pruner():
                 new_shape = list(ori_shape)
                 new_shape[0] -= pruned_num
                 param.set_shape(new_shape)
-                _logger.info("prune [{}] from {} to {}".format(param.name(
+                _logger.debug("prune [{}] from {} to {}".format(param.name(
                 ), ori_shape, new_shape))
                 self.pruned_list[0].append(param.name())
             return range(pruned_num)
@@ -141,7 +141,7 @@ class Pruner():
                 new_shape = list(param.shape())
                 new_shape[0] = pruned_param.shape[0]
                 param.set_shape(new_shape)
-                _logger.info("prune [{}] from {} to {}".format(param.name(
+                _logger.debug("prune [{}] from {} to {}".format(param.name(
                 ), ori_shape, new_shape))
                 self.pruned_list[0].append(param.name())
             return pruned_idx
@@ -182,7 +182,7 @@ class Pruner():
                 new_shape = list(ori_shape)
                 new_shape[pruned_axis] -= pruned_num
                 param.set_shape(new_shape)
-                _logger.info("prune [{}] from {} to {}".format(param.name(
+                _logger.debug("prune [{}] from {} to {}".format(param.name(
                 ), ori_shape, new_shape))
                 self.pruned_list[pruned_axis].append(param.name())
 
@@ -206,7 +206,7 @@ class Pruner():
                 new_shape = list(param.shape())
                 new_shape[pruned_axis] = pruned_param.shape[pruned_axis]
                 param.set_shape(new_shape)
-                _logger.info("prune [{}] from {} to {}".format(param.name(
+                _logger.debug("prune [{}] from {} to {}".format(param.name(
                 ), ori_shape, new_shape))
                 self.pruned_list[pruned_axis].append(param.name())
 
