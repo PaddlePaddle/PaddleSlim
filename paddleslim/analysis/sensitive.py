@@ -27,13 +27,12 @@ __all__ = ["sensitivity"]
 
 
 def sensitivity(program,
-                scope,
                 place,
                 param_names,
                 eval_func,
                 sensitivities_file=None,
                 step_size=0.2):
-
+    scope = fluid.global_scope()
     graph = GraphWrapper(program)
     sensitivities = _load_sensitivities(sensitivities_file)
 
@@ -55,7 +54,7 @@ def sensitivity(program,
                 ratio += step_size
                 continue
             if baseline is None:
-                baseline = eval_func(graph.program, scope)
+                baseline = eval_func(graph.program)
 
             param_backup = {}
             pruner = Pruner()
@@ -68,7 +67,7 @@ def sensitivity(program,
                 lazy=True,
                 only_graph=False,
                 param_backup=param_backup)
-            pruned_metric = eval_func(pruned_program, scope)
+            pruned_metric = eval_func(pruned_program)
             loss = (baseline - pruned_metric) / baseline
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))
