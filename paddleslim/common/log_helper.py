@@ -19,7 +19,7 @@ import logging
 __all__ = ['get_logger']
 
 
-def get_logger(name, level, fmt=None):
+def get_logger(name, level, fmt='%(asctime)s-%(levelname)s: %(message)s'):
     """
     Get logger from logging with given name, level and format without
     setting logging basicConfig. For setting basicConfig in paddle
@@ -39,10 +39,10 @@ def get_logger(name, level, fmt=None):
     logger = logging.getLogger(name)
     logger.setLevel(level)
     handler = logging.StreamHandler()
-
     if fmt:
         formatter = logging.Formatter(fmt=fmt)
         handler.setFormatter(formatter)
 
     logger.addHandler(handler)
+    logger.propagate = 0
     return logger

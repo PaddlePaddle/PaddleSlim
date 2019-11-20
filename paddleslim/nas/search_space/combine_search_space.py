@@ -25,12 +25,14 @@ from .base_layer import conv_bn_layer
 
 __all__ = ["CombineSearchSpace"]
 
+
 class CombineSearchSpace(object):
     """
     Combine Search Space.
     Args:
         configs(list<tuple>): multi config.
     """
+
     def __init__(self, config_lists):
         self.lens = len(config_lists)
         self.spaces = []
@@ -50,11 +52,10 @@ class CombineSearchSpace(object):
         """
         cls = SEARCHSPACE.get(key)
         space = cls(config['input_size'], config['output_size'],
-                    config['block_num'])
+                    config['block_num'], config['block_mask'])
 
         return space
 
-        
     def init_tokens(self):
         """
         Combine init tokens.
@@ -96,4 +97,3 @@ class CombineSearchSpace(object):
             model_archs.append(space.token2arch(token))
 
         return model_archs
-

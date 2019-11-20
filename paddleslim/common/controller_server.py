@@ -117,9 +117,8 @@ class ControllerServer(object):
                     reward = messages[2]
                     tokens = [int(token) for token in tokens.split(",")]
                     self._controller.update(tokens, float(reward))
-                    tokens = self._controller.next_tokens()
-                    tokens = ",".join([str(token) for token in tokens])
-                    conn.send(tokens.encode())
+                    response = "ok"
+                    conn.send(response.encode())
                     _logger.debug("send message to {}: [{}]".format(addr,
                                                                     tokens))
                 conn.close()

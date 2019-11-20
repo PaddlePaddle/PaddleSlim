@@ -20,7 +20,7 @@ def conv_bn_layer(input,
                   filter_size,
                   num_filters,
                   stride,
-                  padding,
+                  padding='SAME',
                   num_groups=1,
                   act=None,
                   name=None,
@@ -51,15 +51,10 @@ def conv_bn_layer(input,
         param_attr=ParamAttr(name=name + '_weights'),
         bias_attr=False)
     bn_name = name + '_bn'
-    bn = fluid.layers.batch_norm(
-        input=conv,
-        param_attr=ParamAttr(name=bn_name + '_scale'),
-        bias_attr=ParamAttr(name=bn_name + '_offset'),
-        moving_mean_name=bn_name + '_mean',
-        moving_variance_name=bn_name + '_variance')
-    if act == 'relu6':
-        return fluid.layers.relu6(bn)
-    elif act == 'sigmoid':
-        return fluid.layers.sigmoid(bn)
-    else:
-        return bn
+    return fluid.layers.batch_norm(
+               input=conv,
+               act = act,
+               param_attr=ParamAttr(name=bn_name + '_scale'),
+               bias_attr=ParamAttr(name=bn_name + '_offset'),
+               moving_mean_name=bn_name + '_mean',
+               moving_variance_name=bn_name + '_variance')
