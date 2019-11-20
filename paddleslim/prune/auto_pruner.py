@@ -96,8 +96,10 @@ class AutoPruner(object):
         self._pruner = Pruner()
         if self._pruned_flops:
             self._base_flops = flops(program)
-            _logger.info("AutoPruner - base flops: {};".format(
-                self._base_flops))
+            self._max_flops = self._base_flops * (1 - self._pruned_flops)
+            _logger.info(
+                "AutoPruner - base flops: {}; pruned_flops: {}; max_flops: {}".
+                format(self._base_flops, self._pruned_flops, self._max_flops))
         if self._pruned_latency:
             self._base_latency = latency(program)
 
@@ -160,8 +162,15 @@ class AutoPruner(object):
             ratios,
             place=self._place,
             only_graph=True)
-        return flops(pruned_program) < self._base_flops * (
-            1 - self._pruned_flops)
+        current_flops = flops(pruned_program)
+        result = current_flops < self._max_flops
+        if not result:
+            _logger.info("Failed try ratios: {}; flops: {}; max_flops: {}".
+                         format(ratios, current_flops, self._max_flops))
+        else:
+            _logger.info("Success try ratios: {}; flops: {}; max_flops: {}".
+                         format(ratios, current_flops, self._max_flops))
+        return result
 
     def prune(self, program, eval_program=None):
         """
