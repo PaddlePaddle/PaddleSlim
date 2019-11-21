@@ -35,6 +35,7 @@ add_arg('config_file',      str, None,                 "The config file for comp
 add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
+add_arg('checkpoints',      str, "./checkpoints",                 "Checkpoints path.")
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -188,17 +189,25 @@ def compress(args):
     def eval_func(program):
         return test(0, program)
 
-    pruner = SensitivePruner(place, eval_func)
-
     if args.data == "mnist":
         train(0, fluid.default_main_program())
-    pruned_program = fluid.default_main_program()
-    pruned_val_program = val_program
-    for iter in range(6):
+
+    pruner = SensitivePruner(place, eval_func, checkpoints=args.checkpoints)
+    pruned_program, pruned_val_program, iter = pruner.restore()
+
+    if pruned_program is None:
+        pruned_program = fluid.default_main_program()
+    if pruned_val_program is None:
+        pruned_val_program = val_program
+
+    start = iter
+    end = 6
+    for iter in range(start, end):
         pruned_program, pruned_val_program = pruner.prune(
             pruned_program, pruned_val_program, params, 0.1)
         train(iter, pruned_program)
         test(iter, pruned_val_program)
+        pruner.save_checkpoint(pruned_program, pruned_val_program)
 
     print("before flops: {}".format(flops(fluid.default_main_program())))
     print("after flops: {}".format(flops(pruned_val_program)))
