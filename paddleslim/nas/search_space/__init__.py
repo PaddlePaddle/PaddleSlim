@@ -14,6 +14,8 @@
 
 import mobilenetv2
 from .mobilenetv2 import *
+import mobilenetv1
+from .mobilenetv1 import *
 import resnet
 from .resnet import *
 import search_space_registry
@@ -28,4 +30,3 @@ __all__ += mobilenetv2.__all__
 __all__ += search_space_registry.__all__
 __all__ += search_space_factory.__all__
 __all__ += search_space_base.__all__
-

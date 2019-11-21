@@ -14,6 +14,9 @@
 
 import search_space
 from search_space import *
+import sa_nas
+from sa_nas import *
 
 __all__ = []
 __all__ += search_space.__all__
+__all__ += sa_nas.__all__
