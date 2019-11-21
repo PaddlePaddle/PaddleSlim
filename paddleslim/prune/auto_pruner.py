@@ -212,7 +212,7 @@ class AutoPruner(object):
         self._restore(self._scope)
         self._param_backup = {}
         tokens = self._ratios2tokens(self._current_ratios)
-        self._controller_client.update(tokens, score)
+        self._controller_client.update(tokens, score, self._iter)
         self._iter += 1
 
     def _restore(self, scope):

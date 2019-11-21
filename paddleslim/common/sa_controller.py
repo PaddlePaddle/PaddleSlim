@@ -65,15 +65,16 @@ class SAController(EvolutionaryController):
                 d[key] = self.__dict__[key]
         return d
 
-    def update(self, tokens, reward):
+    def update(self, tokens, reward, iter):
         """
         Update the controller according to latest tokens and reward.
         Args:
             tokens(list<int>): The tokens generated in last step.
             reward(float): The reward of tokens.
         """
-        self._iter += 1
-        temperature = self._init_temperature * self._reduce_rate**self._iter
+        if iter > self._iter:
+            self._iter = iter
+            temperature = self._init_temperature * self._reduce_rate**self._iter
         if (reward > self._reward) or (np.random.random() <= math.exp(
             (reward - self._reward) / temperature)):
             self._reward = reward

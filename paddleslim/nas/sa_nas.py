@@ -112,4 +112,5 @@ class SANAS(object):
             bool: True means updating successfully while false means failure.
         """
         self._iter += 1
-        return self._controller_client.update(self._current_tokens, score)
+        return self._controller_client.update(self._current_tokens, score,
+                                              self._iter)
