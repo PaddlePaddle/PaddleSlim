@@ -12,5 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .quanter import quant_aware, quant_post, convert
-from .quant_embedding import quant_embedding
+from ...core import Registry
+
+__all__ = ["SEARCHSPACE"]
+
+SEARCHSPACE = Registry('searchspace')

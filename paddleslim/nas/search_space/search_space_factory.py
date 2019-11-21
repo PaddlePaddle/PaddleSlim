@@ -11,4 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Controllers and controller server"""
+
+from .combine_search_space import CombineSearchSpace
+
+__all__ = ["SearchSpaceFactory"]
+
+
+class SearchSpaceFactory(object):
+    def __init__(self):
+        pass
+
+    def get_search_space(self, config_lists):
+        """
+        get model spaces based on list(key, config). 
+
+        """
+        assert isinstance(config_lists, list), "configs must be a list"
+
+        return CombineSearchSpace(config_lists) 
