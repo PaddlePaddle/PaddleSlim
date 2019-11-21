@@ -215,11 +215,11 @@ def quant_post(executor,
         sample_generator(Python Generator): The sample generator provides 
             calibrate data for DataLoader, and it only returns a sample every time.
         model_filename(str, optional): The name of model file to load the inference 
-                program. If parameters were saved in separate files, 
+                program. If parameters are saved in separate files, 
                 set it as 'None'. Default is 'None'.
         params_filename(str, optional): The name of params file to load all parameters.
-                When all parameters were saved in a single file, set it 
-                as filename. If parameters were saved in separate files, 
+                When all parameters are saved in a single file, set it 
+                as filename. If parameters are saved in separate files, 
                 set it as 'None'. Default is 'None'.
         batch_size(int, optional): The batch size of DataLoader, default is 16.
         batch_nums(int, optional): If set batch_nums, the number of calibrate 
