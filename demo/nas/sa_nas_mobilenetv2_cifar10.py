@@ -39,7 +39,7 @@ def init_sa_nas(config):
         search_steps = 10000000
 
         ### start a server and a client
-        sa_nas = SANAS(config, max_flops=base_flops, search_steps=search_steps)
+        sa_nas = SANAS(config, search_steps=search_steps, is_server=True)
 
         ### start a client, server_addr is server address
         #sa_nas = SANAS(config, max_flops = base_flops, server_addr=("10.255.125.38", 18607), search_steps = search_steps, is_server=False)
