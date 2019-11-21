@@ -12,8 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import copy
+from scipy.optimize import leastsq
+import numpy as np
+import paddle.fluid as fluid
 from ..common import get_logger
 from ..analysis import sensitivity
+from ..analysis import flops
+from .pruner import Pruner
 
 __all__ = ["SensitivePruner"]
 
@@ -22,12 +29,31 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 class SensitivePruner(object):
     def __init__(self, place, eval_func, scope=None):
+        """
+        Pruner used to prune parameters iteratively according to sensitivities of parameters in each step.
+        Args:
+            place(fluid.CUDAPlace | fluid.CPUPlace): The device place where program execute.
+            eval_func(function): A callback function used to evaluate pruned program. The argument of this function is pruned program. And it return a score of given program.
+            scope(fluid.scope): The scope used to execute program.
+        """
         self._eval_func = eval_func
         self._iter = 0
         self._place = place
         self._scope = fluid.global_scope() if scope is None else scope
+        self._pruner = Pruner()
 
     def prune(self, train_program, eval_program, params, pruned_flops):
+        """
+        Pruning parameters of training and evaluation network by sensitivities in current step.
+        Args:
+            train_program(fluid.Program): The training program to be pruned.
+            eval_program(fluid.Program): The evaluation program to be pruned. And it is also used to calculate sensitivities of parameters.
+            params(list<str>): The parameters to be pruned.
+            pruned_flops(float): The ratio of FLOPS to be pruned in current step.
+        Return:
+            tuple: A tuple of pruned training program and pruned evaluation program.
+        """
+        _logger.info("Pruning: {}".format(params))
         sensitivities_file = "sensitivities_iter{}.data".format(self._iter)
         with fluid.scope_guard(self._scope):
             sensitivities = sensitivity(
@@ -37,8 +63,9 @@ class SensitivePruner(object):
                 self._eval_func,
                 sensitivities_file=sensitivities_file,
                 step_size=0.1)
-        ratios = self._get_ratios_by_sensitive(sensitivities, pruned_flops,
-                                               eval_program)
+        print sensitivities
+        _, ratios = self._get_ratios_by_sensitive(sensitivities, pruned_flops,
+                                                  eval_program)
 
         pruned_program = self._pruner.prune(
             train_program,
@@ -91,13 +118,13 @@ class SensitivePruner(object):
             max_loss = np.max([max_loss, loss])
 
         # step 2: Find a group of ratios by binary searching.
-        flops = flops(eval_program)
+        base_flops = flops(eval_program)
         ratios = []
-        pruner = Pruner()
-        while min_loss < max_loss:
+        max_times = 20
+        while min_loss < max_loss and max_times > 0:
             loss = (max_loss + min_loss) / 2
             _logger.info(
-                '-----------Try pruned ratios while acc loss={:.4f}-----------'.
+                '-----------Try pruned ratios while acc loss={}-----------'.
                 format(loss))
             ratios = []
             # step 2.1: Get ratios according to current loss
@@ -114,22 +141,22 @@ class SensitivePruner(object):
                 [round(ratio, 3) for ratio in ratios]))
             # step 2.2: Pruning by current ratios
             param_shape_backup = {}
-            pruned_program = pruner.prune(
+            pruned_program = self._pruner.prune(
                 eval_program,
                 None,  # scope
                 sensitivities.keys(),
                 ratios,
                 None,  # place
                 only_graph=True)
-
-            pruned_flops = 1 - (flops(pruned_program) / flops)
-            _logger.info('Pruned flops: {:.4f}'.format(pruned_flops))
+            pruned_ratio = 1 - (float(flops(pruned_program)) / base_flops)
+            _logger.info('Pruned flops: {:.4f}'.format(pruned_ratio))
 
             # step 2.3: Check whether current ratios is enough
-            if abs(pruned_flops - target_ratio) < 0.015:
+            if abs(pruned_ratio - pruned_flops) < 0.015:
                 break
-            if pruned_flops > target_ratio:
+            if pruned_ratio > pruned_flops:
                 max_loss = loss
             else:
                 min_loss = loss
+            max_times -= 1
         return sensitivities.keys(), ratios

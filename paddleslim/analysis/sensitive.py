@@ -17,6 +17,7 @@ import os
 import logging
 import pickle
 import numpy as np
+import paddle.fluid as fluid
 from ..core import GraphWrapper
 from ..common import get_logger
 from ..prune import Pruner
@@ -80,7 +81,7 @@ def sensitivity(program,
                 param_t = scope.find_var(param_name).get_tensor()
                 param_t.set(param_backup[param_name], place)
             ratio += step_size
-        return sensitivities
+    return sensitivities
 
 
 def _load_sensitivities(sensitivities_file):

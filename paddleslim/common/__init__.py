@@ -23,7 +23,7 @@ import controller_client
 from controller_client import *
 import lock_utils
 from lock_utils import *
-import cached_reader
+import cached_reader as cached_reader_module
 from cached_reader import *
 
 __all__ = []
@@ -32,4 +32,4 @@ __all__ += sa_controller.__all__
 __all__ += controller_server.__all__
 __all__ += controller_client.__all__
 __all__ += lock_utils.__all__
-__all__ += cached_reader.__all__
+__all__ += cached_reader_module.__all__
