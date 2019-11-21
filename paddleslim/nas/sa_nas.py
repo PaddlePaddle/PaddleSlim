@@ -15,6 +15,7 @@
 import socket
 import logging
 import numpy as np
+import hashlib
 import paddle.fluid as fluid
 from ..core import VarWrapper, OpWrapper, GraphWrapper
 from ..common import SAController
@@ -59,6 +60,7 @@ class SANAS(object):
         self._init_temperature = init_temperature
         self._is_server = is_server
         self._configs = configs
+        self._keys = hashlib.md5(self._configs).hexdigest()
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
@@ -82,11 +84,11 @@ class SANAS(object):
                 address=(server_ip, server_port),
                 max_client_num=max_client_num,
                 search_steps=search_steps,
-                key=key)
+                key=self._key)
             self._controller_server.start()
 
         self._controller_client = ControllerClient(
-            server_ip, server_port, key=key)
+            server_ip, server_port, key=self._key)
 
         self._iter = 0
 
