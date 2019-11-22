@@ -184,7 +184,7 @@ step:1 2722
 epoch:9          acc:0.153
 ```
 
-## 量化``基于skip-gram的word2vector模型``的训练流程保存的模型
+## 量化``基于skip-gram的word2vector模型``
 
 量化配置为:
 ```
@@ -236,3 +236,5 @@ quant_embedding config {'quantize_type': 'abs_max', 'params_name': 'emb', 'quant
 step:1 2719
 epoch:9          acc:0.153
 ```
+
+量化后的模型保存在``./output_quant``中，可看到量化后的参数``'emb.int8'``的大小为3.9M, 在``./v1_cpu5_b100_lr1dir``中可看到量化前的参数``'emb'``的大小为16M。

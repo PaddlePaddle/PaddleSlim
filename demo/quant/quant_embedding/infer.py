@@ -82,6 +82,10 @@ def infer_epoch(args, vocab_size, test_reader, use_cuda, i2w):
                 if args.emb_quant:
                     config = {'params_name': 'emb', 'quantize_type': 'abs_max'}
                     copy_program = quant_embedding(copy_program, place, config)
+                    fluid.io.save_persistables(
+                        exe,
+                        './output_quant/pass-' + str(epoch),
+                        main_program=copy_program)
 
                 accum_num = 0
                 accum_num_sum = 0.0
