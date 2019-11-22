@@ -184,7 +184,7 @@ step:1 2722
 epoch:9          acc:0.153
 ```
 
-## 量化``基于skip-gram的word2vector模型``保存的模型
+## 量化``基于skip-gram的word2vector模型``的训练流程保存的模型
 
 量化配置为:
 ```
