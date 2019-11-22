@@ -60,7 +60,7 @@ class SANAS(object):
         self._init_temperature = init_temperature
         self._is_server = is_server
         self._configs = configs
-        self._keys = hashlib.md5(self._configs).hexdigest()
+        self._keys = hashlib.md5(str(self._configs)).hexdigest()
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
@@ -75,8 +75,12 @@ class SANAS(object):
             range_table = (len(range_table) * [0], range_table)
             _logger.info("range table: {}".format(range_table))
             controller = SAController(
-                range_table, self._reduce_rate, self._init_temperature,
-                self._max_try_number, init_tokens, self._constrain_func)
+                range_table,
+                self._reduce_rate,
+                self._init_temperature,
+                max_try_times=None,
+                init_tokens=init_tokens,
+                constrain_func=None)
 
             max_client_num = 100
             self._controller_server = ControllerServer(

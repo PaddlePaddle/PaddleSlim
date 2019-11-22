@@ -42,7 +42,7 @@ class AutoPruner(object):
                  server_addr=("", 0),
                  init_temperature=100,
                  reduce_rate=0.85,
-                 max_try_number=300,
+                 max_try_times=300,
                  max_client_num=10,
                  search_steps=300,
                  max_ratios=[0.9],
@@ -66,7 +66,7 @@ class AutoPruner(object):
             server_addr(tuple): A tuple of server ip and server port for controller server. 
             init_temperature(float): The init temperature used in simulated annealing search strategy.
             reduce_rate(float): The decay rate used in simulated annealing search strategy.
-            max_try_number(int): The max number of trying to generate legal tokens.
+            max_try_times(int): The max number of trying to generate legal tokens.
             max_client_num(int): The max number of connections of controller server.
             search_steps(int): The steps of searching.
             max_ratios(float|list<float>): Max ratios used to pruned parameters in `params`. List means max ratios for each parameter in `params`.
@@ -88,7 +88,7 @@ class AutoPruner(object):
         self._pruned_latency = pruned_latency
         self._reduce_rate = reduce_rate
         self._init_temperature = init_temperature
-        self._max_try_number = max_try_number
+        self._max_try_times = max_try_times
         self._is_server = is_server
 
         self._range_table = self._get_range_table(min_ratios, max_ratios)
@@ -110,7 +110,7 @@ class AutoPruner(object):
         init_tokens = self._ratios2tokens(self._init_ratios)
         _logger.info("range table: {}".format(self._range_table))
         controller = SAController(self._range_table, self._reduce_rate,
-                                  self._init_temperature, self._max_try_number,
+                                  self._init_temperature, self._max_try_times,
                                   init_tokens, self._constrain_func)
 
         server_ip, server_port = server_addr
