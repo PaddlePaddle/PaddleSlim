@@ -1,6 +1,6 @@
 # Embedding量化示例
 
-本示例介绍如何使用Embedding量化的接口 [paddleslim.quant.quant_embedding]() 。``quant_embedding``接口将网络中的Embedding参数从``float32``类型量化到 ``8-bit``整数类型，在几乎不损失模型精度的情况下较少模型的存储空间和显存占用。
+本示例介绍如何使用Embedding量化的接口 [paddleslim.quant.quant_embedding]() 。``quant_embedding``接口将网络中的Embedding参数从``float32``类型量化到 ``8-bit``整数类型，在几乎不损失模型精度的情况下减少模型的存储空间和显存占用。
 
 接口如下：
 ```
@@ -25,14 +25,14 @@ quant_embedding(program, place, config, scope=None)
 
 <p align="center">
 <img src="./image/before.png" height=200 width=100 hspace='10'/> <br />
-<strong>图3：应用ConvertToInt8Pass后的结果</strong>
+<strong>图1：量化前的模型结构</strong>
 </p>
 
 量化后：
 
 <p align="center">
 <img src="./image/after.png" height=300 width=300 hspace='10'/> <br />
-<strong>图3：应用ConvertToInt8Pass后的结果</strong>
+<strong>图2: 量化后的模型结构</strong>
 </p>
 
 以下将以 ``基于skip-gram的word2vector模型`` 为例来说明如何使用``quant_embedding``接口。首先介绍 ``基于skip-gram的word2vector模型`` 的正常训练和测试流程。
