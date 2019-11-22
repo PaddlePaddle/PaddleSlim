@@ -113,7 +113,6 @@ class MobileNetV2Space(SearchSpaceBase):
 
         if tokens is None:
             tokens = self.init_tokens()
-        print(tokens)
 
         bottleneck_params_list = []
         if self.block_num >= 1:
@@ -174,6 +173,25 @@ class MobileNetV2Space(SearchSpaceBase):
                     k=k,
                     name='mobilenetv2_conv' + str(i))
                 in_c = int(c * self.scale)
+
+            # last conv
+            input = conv_bn_layer(
+                input=input,
+                num_filters=int(1280 * self.scale)
+                if self.scale > 1.0 else 1280,
+                filter_size=1,
+                stride=1,
+                padding='SAME',
+                act='relu6',
+                name='mobilenetv2_conv' + str(i + 1))
+
+            input = fluid.layers.pool2d(
+                input=input,
+                pool_size=7,
+                pool_stride=1,
+                pool_type='avg',
+                global_pooling=True,
+                name='mobilenetv2_last_pool')
 
             # if output_size is 1, add fc layer in the end
             if self.output_size == 1:
