@@ -51,8 +51,11 @@ class CombineSearchSpace(object):
             model space(class)
         """
         cls = SEARCHSPACE.get(key)
-        space = cls(config['input_size'], config['output_size'],
-                    config['block_num'], config['block_mask'])
+        block_mask = config['block_mask'] if 'block_mask' in config else None
+        space = cls(config['input_size'],
+                    config['output_size'],
+                    config['block_num'],
+                    block_mask=block_mask)
 
         return space
 
