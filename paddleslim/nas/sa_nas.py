@@ -100,6 +100,9 @@ class SANAS(object):
     def _get_host_ip(self):
         return socket.gethostbyname(socket.gethostname())
 
+    def tokens2arch(self, tokens):
+        return self._search_space.token2arch(self.tokens)
+
     def next_archs(self):
         """
         Get next network architectures.
