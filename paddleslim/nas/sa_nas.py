@@ -15,6 +15,7 @@
 import socket
 import logging
 import numpy as np
+import hashlib
 import paddle.fluid as fluid
 from ..core import VarWrapper, OpWrapper, GraphWrapper
 from ..common import SAController
@@ -58,38 +59,40 @@ class SANAS(object):
         self._reduce_rate = reduce_rate
         self._init_temperature = init_temperature
         self._is_server = is_server
-
         self._configs = configs
-
-        factory = SearchSpaceFactory()
-        self._search_space = factory.get_search_space(configs)
-        init_tokens = self._search_space.init_tokens()
-        range_table = self._search_space.range_table()
-        range_table = (len(range_table) * [0], range_table)
-        _logger.info("range table: {}".format(range_table))
-        controller = SAController(range_table, self._reduce_rate,
-                                  self._init_temperature, self._max_try_number,
-                                  init_tokens, self._constrain_func)
+        self._keys = hashlib.md5(str(self._configs)).hexdigest()
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
             server_ip = self._get_host_ip()
-        max_client_num = 100
-        self._controller_server = ControllerServer(
-            controller=controller,
-            address=(server_ip, server_port),
-            max_client_num=max_client_num,
-            search_steps=search_steps,
-            key=key)
 
         # create controller server
         if self._is_server:
+            factory = SearchSpaceFactory()
+            self._search_space = factory.get_search_space(configs)
+            init_tokens = self._search_space.init_tokens()
+            range_table = self._search_space.range_table()
+            range_table = (len(range_table) * [0], range_table)
+            _logger.info("range table: {}".format(range_table))
+            controller = SAController(
+                range_table,
+                self._reduce_rate,
+                self._init_temperature,
+                max_try_times=None,
+                init_tokens=init_tokens,
+                constrain_func=None)
+
+            max_client_num = 100
+            self._controller_server = ControllerServer(
+                controller=controller,
+                address=(server_ip, server_port),
+                max_client_num=max_client_num,
+                search_steps=search_steps,
+                key=self._key)
             self._controller_server.start()
 
         self._controller_client = ControllerClient(
-            self._controller_server.ip(),
-            self._controller_server.port(),
-            key=key)
+            server_ip, server_port, key=self._key)
 
         self._iter = 0
 
@@ -115,4 +118,5 @@ class SANAS(object):
             bool: True means updating successfully while false means failure.
         """
         self._iter += 1
-        return self._controller_client.update(self._current_tokens, score)
+        return self._controller_client.update(self._current_tokens, score,
+                                              self._iter)

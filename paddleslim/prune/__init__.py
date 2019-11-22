@@ -19,9 +19,12 @@ import controller_server
 from controller_server import *
 import controller_client
 from controller_client import *
+import sensitive_pruner
+from sensitive_pruner import *
 
 __all__ = []
 __all__ += pruner.__all__
 __all__ += auto_pruner.__all__
 __all__ += controller_server.__all__
 __all__ += controller_client.__all__
+__all__ += sensitive_pruner.__all__
