@@ -39,6 +39,7 @@ class CombineSearchSpace(object):
         for config_list in config_lists:
             key, config = config_list
             self.spaces.append(self._get_single_search_space(key, config))
+        self.init_tokens()
 
     def _get_single_search_space(self, key, config):
         """
@@ -56,7 +57,6 @@ class CombineSearchSpace(object):
                     config['output_size'],
                     config['block_num'],
                     block_mask=block_mask)
-
         return space
 
     def init_tokens(self):
