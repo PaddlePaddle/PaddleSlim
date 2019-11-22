@@ -19,7 +19,12 @@ class SearchSpaceBase(object):
     """Controller for Neural Architecture Search.
     """
 
-    def __init__(self, input_size, output_size, block_num, block_mask, *argss):
+    def __init__(self,
+                 input_size,
+                 output_size,
+                 block_num,
+                 block_mask=None,
+                 *argss):
         self.input_size = input_size
         self.output_size = output_size
         self.block_num = block_num
