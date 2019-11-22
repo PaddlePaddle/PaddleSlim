@@ -66,10 +66,11 @@ class SANAS(object):
         if server_ip == None or server_ip == "":
             server_ip = self._get_host_ip()
 
+        factory = SearchSpaceFactory()
+        self._search_space = factory.get_search_space(configs)
+
         # create controller server
         if self._is_server:
-            factory = SearchSpaceFactory()
-            self._search_space = factory.get_search_space(configs)
             init_tokens = self._search_space.init_tokens()
             range_table = self._search_space.range_table()
             range_table = (len(range_table) * [0], range_table)
