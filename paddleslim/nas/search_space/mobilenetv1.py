@@ -32,6 +32,7 @@ class MobileNetV1Space(SearchSpaceBase):
                  input_size,
                  output_size,
                  block_num,
+                 block_mask,
                  scale=1.0,
                  class_dim=1000):
         super(MobileNetV1Space, self).__init__(input_size, output_size,
