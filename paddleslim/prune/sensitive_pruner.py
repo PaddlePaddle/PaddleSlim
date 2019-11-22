@@ -19,7 +19,7 @@ from scipy.optimize import leastsq
 import numpy as np
 import paddle.fluid as fluid
 from ..common import get_logger
-from ..analysis import sensitivity
+from .sensitive import sensitivity
 from ..analysis import flops
 from .pruner import Pruner
 
