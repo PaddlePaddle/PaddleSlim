@@ -54,6 +54,9 @@ class VarWrapper(object):
         """
         return self._var.name
 
+    def __repr__(self):
+        return self._var.name
+
     def shape(self):
         """
         Get the shape of the varibale.
@@ -130,6 +133,11 @@ class OpWrapper(object):
         Get the type of this operator.
         """
         return self._op.type
+
+    def __repr__(self):
+        return "op[id: {}, type: {}; inputs: {}]".format(self.idx(),
+                                                         self.type(),
+                                                         self.all_inputs())
 
     def is_bwd_op(self):
         """
