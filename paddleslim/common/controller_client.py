@@ -38,7 +38,7 @@ class ControllerClient(object):
         self.socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._key = key
 
-    def update(self, tokens, reward):
+    def update(self, tokens, reward, iter):
         """
         Update the controller according to latest tokens and reward.
         Args:
@@ -48,8 +48,8 @@ class ControllerClient(object):
         socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socket_client.connect((self.server_ip, self.server_port))
         tokens = ",".join([str(token) for token in tokens])
-        socket_client.send("{}\t{}\t{}".format(self._key, tokens, reward)
-                           .encode())
+        socket_client.send("{}\t{}\t{}\t{}".format(self._key, tokens, reward,
+                                                   iter).encode())
         response = socket_client.recv(1024).decode()
         if response.strip('\n').split("\t") == "ok":
             return True

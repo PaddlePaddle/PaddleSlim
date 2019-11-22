@@ -195,11 +195,12 @@ def compress(args):
         server_addr=("", 0),
         init_temperature=100,
         reduce_rate=0.85,
-        max_try_number=300,
+        max_try_times=300,
         max_client_num=10,
         search_steps=100,
         max_ratios=0.9,
         min_ratios=0.,
+        is_server=True,
         key="auto_pruner")
 
     while True:
