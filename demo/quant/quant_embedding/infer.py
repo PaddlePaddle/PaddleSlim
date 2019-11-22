@@ -57,7 +57,7 @@ def parse_args():
         '--emb_quant',
         type=bool,
         default=False,
-        help='whether to quang embedding parameter')
+        help='whether to quant embedding parameter')
     args = parser.parse_args()
     return args
 
