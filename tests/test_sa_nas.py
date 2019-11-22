@@ -40,8 +40,7 @@ class TestSANAS(unittest.TestCase):
         base_flops = flops(main_program)
 
         search_steps = 3
-        sa_nas = SANAS(
-            configs, max_flops=base_flops, search_steps=search_steps)
+        sa_nas = SANAS(configs, search_steps=search_steps, is_server=True)
 
         for i in range(search_steps):
             archs = sa_nas.next_archs()

@@ -8,7 +8,7 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-from paddleslim.prune import AutoPruner
+from paddleslim.prune import SensitivePruner
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 sys.path.append(sys.path[0] + "/../")
@@ -35,6 +35,7 @@ add_arg('config_file',      str, None,                 "The config file for comp
 add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
+add_arg('checkpoints',      str, "./checkpoints",                 "Checkpoints path.")
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -137,7 +138,7 @@ def compress(args):
             end_time = time.time()
             if batch_id % args.log_period == 0:
                 _logger.info(
-                    "Eval epoch[{}] batch[{}] - acc_top1: {}; acc_top5: {}; time: {}".
+                    "Eval epoch[{}] batch[{}] - acc_top1: {:.3f}; acc_top5: {:.3f}; time: {:.3f}".
                     format(epoch, batch_id,
                            np.mean(acc_top1_n),
                            np.mean(acc_top5_n), end_time - start_time))
@@ -145,10 +146,11 @@ def compress(args):
             acc_top5_ns.append(np.mean(acc_top5_n))
             batch_id += 1
 
-        _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".
-                     format(epoch,
-                            np.mean(np.array(acc_top1_ns)),
-                            np.mean(np.array(acc_top5_ns))))
+        _logger.info(
+            "Final eval epoch[{}] - acc_top1: {:.3f}; acc_top5: {:.3f}".format(
+                epoch,
+                np.mean(np.array(acc_top1_ns)), np.mean(
+                    np.array(acc_top5_ns))))
         return np.mean(np.array(acc_top1_ns))
 
     def train(epoch, program):
@@ -174,7 +176,7 @@ def compress(args):
             acc_top5_n = np.mean(acc_top5_n)
             if batch_id % args.log_period == 0:
                 _logger.info(
-                    "epoch[{}]-batch[{}] - loss: {}; acc_top1: {}; acc_top5: {}; time: {}".
+                    "epoch[{}]-batch[{}] - loss: {:.3f}; acc_top1: {:.3f}; acc_top5: {:.3f}; time: {:.3f}".
                     format(epoch, batch_id, loss_n, acc_top1_n, acc_top5_n,
                            end_time - start_time))
             batch_id += 1
@@ -184,32 +186,31 @@ def compress(args):
         if "_sep_weights" in param.name:
             params.append(param.name)
 
-    pruner = AutoPruner(
-        val_program,
-        fluid.global_scope(),
-        place,
-        params=params,
-        init_ratios=[0.33] * len(params),
-        pruned_flops=0.5,
-        pruned_latency=None,
-        server_addr=("", 0),
-        init_temperature=100,
-        reduce_rate=0.85,
-        max_try_times=300,
-        max_client_num=10,
-        search_steps=100,
-        max_ratios=0.9,
-        min_ratios=0.,
-        is_server=True,
-        key="auto_pruner")
+    def eval_func(program):
+        return test(0, program)
 
-    while True:
+    if args.data == "mnist":
+        train(0, fluid.default_main_program())
+
+    pruner = SensitivePruner(place, eval_func, checkpoints=args.checkpoints)
+    pruned_program, pruned_val_program, iter = pruner.restore()
+
+    if pruned_program is None:
+        pruned_program = fluid.default_main_program()
+    if pruned_val_program is None:
+        pruned_val_program = val_program
+
+    start = iter
+    end = 6
+    for iter in range(start, end):
         pruned_program, pruned_val_program = pruner.prune(
-            fluid.default_main_program(), val_program)
-        for i in range(1):
-            train(i, pruned_program)
-        score = test(0, pruned_val_program)
-        pruner.reward(score)
+            pruned_program, pruned_val_program, params, 0.1)
+        train(iter, pruned_program)
+        test(iter, pruned_val_program)
+        pruner.save_checkpoint(pruned_program, pruned_val_program)
+
+    print("before flops: {}".format(flops(fluid.default_main_program())))
+    print("after flops: {}".format(flops(pruned_val_program)))
 
 
 def main():
