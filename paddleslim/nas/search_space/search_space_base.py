@@ -19,16 +19,19 @@ class SearchSpaceBase(object):
     """Controller for Neural Architecture Search.
     """
 
-    def __init__(self,
-                 input_size,
-                 output_size,
-                 block_num,
-                 block_mask=None,
-                 *argss):
+    def __init__(self, input_size, output_size, block_num, block_mask, *args):
+        """init model config
+        """
         self.input_size = input_size
         self.output_size = output_size
         self.block_num = block_num
         self.block_mask = block_mask
+        if self.block_mask is not None:
+            assert isinstance(self.block_mask,
+                              list), 'Block_mask must be a list.'
+            print(
+                "If block_mask is NOT None, we will use block_mask as major configs!"
+            )
 
     def init_tokens(self):
         """Get init tokens in search space.
