@@ -57,12 +57,15 @@ def sensitivity(program,
             if ratio in sensitivities[name]['pruned_percent']:
                 _logger.debug('{}, {} has computed.'.format(name, ratio))
                 ratio += step_size
+                pruned_times += 1
                 continue
             if baseline is None:
                 baseline = eval_func(graph.program)
 
             param_backup = {}
             pruner = Pruner()
+            _logger.info("sensitive - param: {}; ratios: {}".format(name,
+                                                                    ratio))
             pruned_program = pruner.prune(
                 program=graph.program,
                 scope=scope,

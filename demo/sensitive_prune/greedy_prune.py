@@ -217,7 +217,7 @@ def compress(args):
             train(i, pruned_program)
             acc = test(i, pruned_val_program)
         print("iter:{}; pruned FLOPS: {}; acc: {}".format(
-            iter, float(base_flops - current_flops) / base_flops), acc)
+            iter, float(base_flops - current_flops) / base_flops, acc))
         pruner.save_checkpoint(pruned_program, pruned_val_program)
 
 
