@@ -60,16 +60,17 @@ class SANAS(object):
         self._init_temperature = init_temperature
         self._is_server = is_server
         self._configs = configs
-        self._keys = hashlib.md5(str(self._configs)).hexdigest()
+        self._key = hashlib.md5(str(self._configs)).hexdigest()
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
             server_ip = self._get_host_ip()
 
+        factory = SearchSpaceFactory()
+        self._search_space = factory.get_search_space(configs)
+
         # create controller server
         if self._is_server:
-            factory = SearchSpaceFactory()
-            self._search_space = factory.get_search_space(configs)
             init_tokens = self._search_space.init_tokens()
             range_table = self._search_space.range_table()
             range_table = (len(range_table) * [0], range_table)
@@ -90,6 +91,7 @@ class SANAS(object):
                 search_steps=search_steps,
                 key=self._key)
             self._controller_server.start()
+            server_port = self._controller_server.port()
 
         self._controller_client = ControllerClient(
             server_ip, server_port, key=self._key)
@@ -98,6 +100,9 @@ class SANAS(object):
 
     def _get_host_ip(self):
         return socket.gethostbyname(socket.gethostname())
+
+    def tokens2arch(self, tokens):
+        return self._search_space.token2arch(self.tokens)
 
     def next_archs(self):
         """

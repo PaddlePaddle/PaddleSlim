@@ -15,7 +15,7 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle.fluid as fluid
-from prune import Pruner
+from paddleslim.prune import Pruner
 from layers import conv_bn_layer
 
 
