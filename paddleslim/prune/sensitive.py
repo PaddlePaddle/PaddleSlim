@@ -32,7 +32,8 @@ def sensitivity(program,
                 param_names,
                 eval_func,
                 sensitivities_file=None,
-                step_size=0.2):
+                step_size=0.2,
+                max_pruned_times=None):
     scope = fluid.global_scope()
     graph = GraphWrapper(program)
     sensitivities = _load_sensitivities(sensitivities_file)
@@ -48,7 +49,10 @@ def sensitivity(program,
     baseline = None
     for name in sensitivities:
         ratio = step_size
+        pruned_times = 0
         while ratio < 1:
+            if max_pruned_times is not None and pruned_times >= max_pruned_times:
+                break
             ratio = round(ratio, 2)
             if ratio in sensitivities[name]['pruned_percent']:
                 _logger.debug('{}, {} has computed.'.format(name, ratio))
@@ -81,6 +85,7 @@ def sensitivity(program,
                 param_t = scope.find_var(param_name).get_tensor()
                 param_t.set(param_backup[param_name], place)
             ratio += step_size
+            pruned_times += 1
     return sensitivities
 
 

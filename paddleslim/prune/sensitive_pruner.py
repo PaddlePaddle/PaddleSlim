@@ -73,7 +73,6 @@ class SensitivePruner(object):
                     program_desc_str = f.read()
                 main_program = fluid.Program.parse_from_string(
                     program_desc_str)
-                print main_program
 
                 with open(latest_ck_path + "/eval_program", "rb") as f:
                     program_desc_str = f.read()
@@ -86,6 +85,47 @@ class SensitivePruner(object):
                 print("load checkpoint from: {}".format(latest_ck_path))
                 print("flops of eval program: {}".format(flops(eval_program)))
         return main_program, eval_program, self._iter
+
+    def greedy_prune(self,
+                     train_program,
+                     eval_program,
+                     params,
+                     pruned_ratio,
+                     topk=1):
+
+        sensitivities_file = "greedy_sensitivities_iter{}.data".format(
+            self._iter)
+        with fluid.scope_guard(self._scope):
+            sensitivities = sensitivity(
+                eval_program,
+                self._place,
+                params,
+                self._eval_func,
+                sensitivities_file=sensitivities_file,
+                step_size=pruned_ratio,
+                max_pruned_times=1)
+        print sensitivities
+        params, ratios = self._greedy_ratio_by_sensitive(sensitivities, topk)
+
+        _logger.info("Pruning: {} by {}".format(params, ratios))
+        pruned_program = self._pruner.prune(
+            train_program,
+            self._scope,
+            params,
+            ratios,
+            place=self._place,
+            only_graph=False)
+        pruned_val_program = None
+        if eval_program is not None:
+            pruned_val_program = self._pruner.prune(
+                eval_program,
+                self._scope,
+                params,
+                ratios,
+                place=self._place,
+                only_graph=True)
+        self._iter += 1
+        return pruned_program, pruned_val_program
 
     def prune(self, train_program, eval_program, params, pruned_flops):
         """
@@ -130,6 +170,16 @@ class SensitivePruner(object):
                 only_graph=True)
         self._iter += 1
         return pruned_program, pruned_val_program
+
+    def _greedy_ratio_by_sensitive(self, sensitivities, topk=1):
+        losses = {}
+        percents = {}
+        for param in sensitivities:
+            losses[param] = sensitivities[param]['loss'][0]
+            percents[param] = sensitivities[param]['pruned_percent'][0]
+        topk_parms = sorted(losses, key=losses.__getitem__)[:topk]
+        topk_percents = [percents[param] for param in topk_parms]
+        return topk_parms, topk_percents
 
     def _get_ratios_by_sensitive(self, sensitivities, pruned_flops,
                                  eval_program):
