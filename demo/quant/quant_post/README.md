@@ -25,8 +25,8 @@ quant_post(executor,
 - model_filename(str, optional): 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置``model_filename``为模型文件的名称，否则设置为``None``即可。默认值是``None``。
 - params_filename(str): 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置``params_filename``为参数文件的名称，否则设置为``None``即可。默认值是``None``。
 - batch_size(int): 每个batch的图片数量。默认值为16 。
-- batch_nums(int, optional): 迭代次数。如果设置为``None``，则会一只运行到``sample_generator`` 迭代结束， 否则，迭代次数为``batch_nums``, 也就是说参与对``Scale``进行校正的样本个数为 ``'batch_nums' * 'batch_size' ``.
-- scope(fluid.Scope, optional): 用来获取和写入``Variable``, 如果设置为``None``,则使用``fluid.global_scope()``.
+- batch_nums(int, optional): 迭代次数。如果设置为``None``，则会一直运行到``sample_generator`` 迭代结束， 否则，迭代次数为``batch_nums``, 也就是说参与对``Scale``进行校正的样本个数为 ``'batch_nums' * 'batch_size' ``.
+- scope(fluid.Scope, optional): 用来获取和写入``Variable``, 如果设置为``None``,则使用``fluid.global_scope()``. 默认值是``None``.
 - algo(str): 量化时使用的算法名称，可为``'KL'``或者``'direct'``。该参数仅针对激活值的量化，因为参数值的量化使用的方式为``'channel_wise_abs_max'``. 当``algo`` 设置为``'direct'``时，使用``'abs_max'``计算``Scale``值，当设置为``'KL'``时，则使用``KL``散度的方法来计算``Scale``值。默认值为``'KL'``。
 - quantizable_op_type(list[str]): 需要量化的``op``类型列表。默认值为``["conv2d", "depthwise_conv2d", "mul"]``。
 
@@ -48,7 +48,7 @@ quant_post(executor,
 在当前文件夹下创建``'pretrain'``文件夹，将``mobilenetv1``模型在该文件夹下解压，解压后的目录为``pretrain/MobileNetV1_pretrained``
 
 ### 导出模型
-通过运行以下命令可将模型转化为离线量化接口：
+通过运行以下命令可将模型转化为离线量化接口可用的模型：
 ```
 python export_model.py --model "MobileNet" --pretrained_model ./pretrain/MobileNetV1_pretrained --data imagenet
 ```
