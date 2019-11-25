@@ -98,7 +98,7 @@ class SAController(EvolutionaryController):
         new_tokens = tokens[:]
         index = int(len(self._range_table[0]) * np.random.random())
         new_tokens[index] = np.random.randint(self._range_table[0][index],
-                                              self._range_table[1][index] + 1)
+                                              self._range_table[1][index])
         _logger.debug("change index[{}] from {} to {}".format(index, tokens[
             index], new_tokens[index]))
         if self._constrain_func is None or self._max_try_times is None:
