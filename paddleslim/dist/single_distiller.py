@@ -107,7 +107,8 @@ def fsp_loss(teacher_var1_name, teacher_var2_name, student_var1_name,
         student_var2_name(str): The name of student_var2. Except for the
             second dimension, all other dimensions should
             be consistent with student_var1.
-        program(Program): The input distiller program. 
+        program(Program): The input distiller program.
+                          default: fluid.default_main_program()
     Return(Variable): fsp distiller loss.
     """
     teacher_var1 = program.global_block().var(teacher_var1_name)
@@ -128,7 +129,8 @@ def l2_loss(teacher_var_name, student_var_name,
     Args:
         teacher_var_name(str): The name of teacher_var.
         student_var_name(str): The name of student_var.
-        program(Program): The input distiller program. 
+        program(Program): The input distiller program.
+                          default: fluid.default_main_program() 
     Return(Variable): l2 distiller loss.
     """
     student_var = program.global_block().var(student_var_name)
@@ -148,7 +150,8 @@ def soft_label_loss(teacher_var_name,
     Args:
         teacher_var_name(str): The name of teacher_var.
         student_var_name(str): The name of student_var.
-        program(Program): The input distiller program. 
+        program(Program): The input distiller program.
+                          default: fluid.default_main_program() 
         teacher_temperature(float): Temperature used to divide
             teacher_feature_map before softmax. default: 1.0
         student_temperature(float): Temperature used to divide 
@@ -170,7 +173,8 @@ def loss(loss_func, program=fluid.default_main_program(), **kwargs):
     """
     Combine variables from student model and teacher model by self defined loss.
     Args:
-        program(Program): The input distiller program. 
+        program(Program): The input distiller program.
+                          default: fluid.default_main_program() 
         loss_func(function): The user self defined loss function. 
     Return(Variable): self defined distiller loss.
     """
