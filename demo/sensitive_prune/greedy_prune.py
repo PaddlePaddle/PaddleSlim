@@ -208,7 +208,7 @@ def compress(args):
     end = args.prune_steps
     for iter in range(start, end):
         pruned_program, pruned_val_program = pruner.greedy_prune(
-            pruned_program, pruned_val_program, params, 0.1, topk=1)
+            pruned_program, pruned_val_program, params, 0.03, topk=1)
         current_flops = flops(pruned_val_program)
         print("iter:{}; pruned FLOPS: {}".format(
             iter, float(base_flops - current_flops) / base_flops))

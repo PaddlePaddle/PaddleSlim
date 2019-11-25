@@ -20,6 +20,7 @@ import numpy as np
 import paddle.fluid as fluid
 from ..common import get_logger
 from .sensitive import sensitivity
+from .sensitive import flops_sensitivity
 from ..analysis import flops
 from .pruner import Pruner
 
@@ -90,20 +91,19 @@ class SensitivePruner(object):
                      train_program,
                      eval_program,
                      params,
-                     pruned_ratio,
+                     pruned_flops_rate,
                      topk=1):
 
         sensitivities_file = "greedy_sensitivities_iter{}.data".format(
             self._iter)
         with fluid.scope_guard(self._scope):
-            sensitivities = sensitivity(
+            sensitivities = flops_sensitivity(
                 eval_program,
                 self._place,
                 params,
                 self._eval_func,
                 sensitivities_file=sensitivities_file,
-                step_size=pruned_ratio,
-                max_pruned_times=1)
+                pruned_flops_rate=pruned_flops_rate)
         print sensitivities
         params, ratios = self._greedy_ratio_by_sensitive(sensitivities, topk)
 
