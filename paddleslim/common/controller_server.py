@@ -107,6 +107,8 @@ class ControllerServer(object):
                     _logger.debug("send message to {}: [{}]".format(addr,
                                                                     tokens))
                 conn.close()
+        except Exception, err:
+            _logger.error(err)
         finally:
             self._socket_server.close()
             self.close()
