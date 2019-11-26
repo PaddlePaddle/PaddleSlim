@@ -24,6 +24,15 @@ class SearchSpaceBase(object):
         self.output_size = output_size
         self.block_num = block_num
         self.block_mask = block_mask
+        if self.block_mask != None:
+            assert isinstance(self.block_mask,
+                              list), 'Block_mask must be a list.'
+            print(
+                "If block_mask is NOT None, we will use block_mask as major configs!"
+            )
+            self.block_num = None
+        if self.block_mask == None and self.block_num == None:
+            print("block_mask and block num can NOT be None at the same time!")
 
     def init_tokens(self):
         """Get init tokens in search space.
