@@ -3,3 +3,8 @@ build/
 ./dist/
 *.pyc
 dist/
+*.data
+*.log
+*.tar
+*.tar.gz
+*.zip
