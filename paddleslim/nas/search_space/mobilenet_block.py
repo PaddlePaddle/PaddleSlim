@@ -68,7 +68,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
                 range_table_base.append(len(self.repeat))
                 range_table_base.append(len(self.k_size))
         else:
-            for i in range(block_num):
+            for i in range(self.block_num):
                 range_table_base.append(len(self.multiply))
                 range_table_base.append(len(self.filter_num))
                 range_table_base.append(len(self.repeat))
