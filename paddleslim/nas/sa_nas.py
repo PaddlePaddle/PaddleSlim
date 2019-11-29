@@ -102,7 +102,7 @@ class SANAS(object):
         return socket.gethostbyname(socket.gethostname())
 
     def tokens2arch(self, tokens):
-        return self._search_space.token2arch(self.tokens)
+        return self._search_space.token2arch(tokens)
 
     def next_archs(self):
         """
