@@ -58,7 +58,7 @@ def quant_aware(program,
 
 返回参数：
 -  program(fluid.Program): 插入量化op后的program。
-   注意：如果for_test为False，这里返回的program是compiled program。
+   注意：如果for_test为False，这里返回的program是一个fluid.CompiledProgram。
 
 ```
 def convert(program, 
