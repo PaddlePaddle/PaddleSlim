@@ -137,7 +137,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
                     n=n,
                     s=s,
                     k=k,
-                    name='mobilenetv2_conv' + str(i+1))
+                    name='mobilenetv2_' + str(i+1))
                 in_c = int(c * self.scale)
 
             if return_mid_layer:
