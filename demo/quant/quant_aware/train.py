@@ -8,10 +8,10 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-from paddleslim.prune import AutoPruner
+sys.path.append(sys.path[0] + "../../../")
+sys.path.append(sys.path[0] + "../../")
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-sys.path.append(sys.path[0] + "/../")
 from paddleslim.quant import quant_aware, quant_post, convert
 import models
 from utility import add_arguments, print_arguments
@@ -26,16 +26,16 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
-add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretained",                "Whether to use pretrained model.")
-add_arg('lr',               float,  0.1,               "The learning rate used to fine-tune pruned model.")
+add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
+add_arg('lr',               float,  0.0001,               "The learning rate used to fine-tune pruned model.")
 add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
-add_arg('num_epochs',       int,  120,               "The number of total epochs.")
+add_arg('num_epochs',       int,  1,               "The number of total epochs.")
 add_arg('total_images',     int,  1281167,               "The number of total training images.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
 add_arg('config_file',      str, None,                 "The config file for compression with yaml format.")
-add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'")
+add_arg('data',             str, "imagenet",             "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
 # yapf: enable
@@ -87,7 +87,7 @@ def compress(args):
         # activation quantize bit num, default is 8
         'activation_bits': 8,
         # op of name_scope in not_quant_pattern list, will not quantized
-        'not_quant_pattern': ['skip_quant_dd'],
+        'not_quant_pattern': ['skip_quant'],
         # op of types in quantize_op_types, will quantized
         'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
         # data type after quantization, default is 'int8'
@@ -143,7 +143,6 @@ def compress(args):
     ############################################################################################################
     val_program = quant_aware(val_program, place, quant_config, scope=None, for_test=True)
     compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, for_test=False)
-
     opt = create_optimizer(args)
     opt.minimize(avg_cost)
 
@@ -153,8 +152,7 @@ def compress(args):
     if args.pretrained_model:
 
         def if_exist(var):
-            return os.path.exists(
-                os.path.join(args.pretrained_model, var.name))
+            return os.path.exists(os.path.join(args.pretrained_model, var.name))
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
@@ -195,6 +193,10 @@ def compress(args):
 
     def train(epoch, compiled_train_prog):
         build_strategy = fluid.BuildStrategy()
+        build_strategy.memory_optimize = False
+        build_strategy.enable_inplace = False
+        build_strategy.fuse_all_reduce_ops = False
+        build_strategy.sync_batch_norm = False
         exec_strategy = fluid.ExecutionStrategy()
         compiled_train_prog = compiled_train_prog.with_data_parallel(
                 loss_name=avg_cost.name,
@@ -219,7 +221,6 @@ def compress(args):
                            end_time - start_time))
             batch_id += 1
 
-
     ############################################################################################################
     # train loop
     ############################################################################################################
@@ -233,7 +234,8 @@ def compress(args):
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
     ############################################################################################################
-    float_program, int8_program = convert(val_program, fluid.global_scope(), place, quant_config,
+    float_program, int8_program = convert(val_program, place, quant_config, \
+                                                        scope=None, \
                                                         save_int8=True)
 
     ############################################################################################################
