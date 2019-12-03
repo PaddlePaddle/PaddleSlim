@@ -19,12 +19,15 @@ from __future__ import print_function
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
+import logging
+from ...common import get_logger
 from .search_space_base import SearchSpaceBase
 from .search_space_registry import SEARCHSPACE
 from .base_layer import conv_bn_layer
 
 __all__ = ["CombineSearchSpace"]
 
+_logger = get_logger(__name__, level=logging.INFO)
 
 class CombineSearchSpace(object):
     """
@@ -37,7 +40,13 @@ class CombineSearchSpace(object):
         self.lens = len(config_lists)
         self.spaces = []
         for config_list in config_lists:
-            key, config = config_list
+            if isinstance(config_list, tuple):
+                key, config = config_list
+            if isinstance(config_list, str):
+                key = config_list
+                config = None
+            else:
+                raise NotImplementedError('the type of config is Error!!! Please check the config information. Receive the type of config is {}'.format(type(config_list)))
             self.spaces.append(self._get_single_search_space(key, config))
         self.init_tokens()
 
@@ -52,10 +61,28 @@ class CombineSearchSpace(object):
             model space(class)
         """
         cls = SEARCHSPACE.get(key)
-        block_mask = config['block_mask'] if 'block_mask' in config else None
-        space = cls(config['input_size'],
-                    config['output_size'],
-                    config['block_num'],
+
+        if config is None:
+            block_mask = None
+            input_size = None
+            output_size = None
+            block_num = None
+        else:
+            if 'Block' not in cls.__name__:
+                _logger.warn('if space is not a Block space, config is useless, current space is {}'.format(cls.__name__))
+
+            block_mask = config['block_mask'] if 'block_mask' in config else None
+            input_size = config['input_size'] if 'input_size' in config else None
+            output_size = config['output_size'] if 'output_size' in config else None
+            block_num = config['block_num'] if 'block_num' in config else None
+
+        if 'Block' in cls.__name__:
+            if block_mask == None and (self.block_num == None or self.input_size == None or self.output_size == None):
+                raise NotImplementedError("block_mask or (block num and input_size and output_size) can NOT be None at the same time in Block SPACE!")
+
+        space = cls(input_size,
+                    output_size,
+                    block_num,
                     block_mask=block_mask)
         return space
 

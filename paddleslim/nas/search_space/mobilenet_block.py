@@ -98,19 +98,19 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
             num_minus = self.block_num % self.downsample_num
             ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
             for i in range(self.downsample_num):
-                self.bottleneck_params_list.append(self.mutiply[tokens[i * 4], self.filter_num[tokens[i * 4 + 1]],
-                           self.repeat[tokens[i * 4 + 2]], 2, self.k_size[tokens[i * 4 + 3]])
+                self.bottleneck_params_list.append((self.mutiply[tokens[i * 4]], self.filter_num[tokens[i * 4 + 1]],
+                           self.repeat[tokens[i * 4 + 2]], 2, self.k_size[tokens[i * 4 + 3]]))
 
                 ### if block_num / downsample_num > 1, add (block_num / downsample_num) times stride=1 block 
                 for k in range(repeat_num - 1):
                     kk = k * self.downsample_num + i
-                    self.bottleneck_params_list.append(self.mutiply[tokens[kk * 4], self.filter_num[tokens[kk * 4 + 1]],
-                               self.repeat[tokens[kk * 4 + 2]], 1, self.k_size[tokens[kk * 4 + 3]])
+                    self.bottleneck_params_list.append((self.mutiply[tokens[kk * 4]], self.filter_num[tokens[kk * 4 + 1]],
+                               self.repeat[tokens[kk * 4 + 2]], 1, self.k_size[tokens[kk * 4 + 3]]))
                     
                 if self.downsample_num - i <= num_minus:
                     j = self.downsample_num * repeat_num + i
-                    self.bottleneck_params_list.append(self.mutiply[tokens[j * 4], self.filter_num[tokens[j * 4 + 1]],
-                               self.repeat[tokens[j * 4 + 2]], 1, self.k_size[tokens[j * 4 + 3]])
+                    self.bottleneck_params_list.append((self.mutiply[tokens[j * 4]], self.filter_num[tokens[j * 4 + 1]],
+                               self.repeat[tokens[j * 4 + 2]], 1, self.k_size[tokens[j * 4 + 3]]))
 
         def net_arch(input, return_mid_layer=False, return_block=[]):
             assert isinstance(return_block, list), 'return_block must be a list.'
@@ -288,7 +288,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                 range_table_base.append(len(self.filter_num))
                 range_table_base.append(len(self.k_size))
         else:
-            for i in range(self.block_num)):
+            for i in range(self.block_num):
                 range_table_base.append(len(self.filter_num))
                 range_table_base.append(len(self.filter_num))
                 range_table_base.append(len(self.k_size))
@@ -300,26 +300,26 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
             tokens = self.init_tokens()
 
         self.bottleneck_param_list = []
-        if self.block_mask != None
+        if self.block_mask != None:
             for i in range(len(self.block_mask)):
-                self.bottleneck_params_list.append(self.filter_num[tokens[i * 3]], self.filter_num[tokens[i * 3 + 1]], 2 if self.block_mask[i] == 1 else 1, self.k_size[tokens[i * 3 + 2])
+                self.bottleneck_params_list.append((self.filter_num[tokens[i * 3]], self.filter_num[tokens[i * 3 + 1]], 2 if self.block_mask[i] == 1 else 1, self.k_size[tokens[i * 3 + 2]]))
         else:
             repeat_num = self.block_num / self.downsample_num
             num_minus = self.block_num % self.downsample_num
             for i in range(self.block_num):
                 ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
-                self.bottleneck_params_list.append(self.filter_num[tokens[i * 3]], self.filter_num[tokens[i * 3 + 1]], 2, self.k_size[tokens[i * 3 + 2])
+                self.bottleneck_params_list.append((self.filter_num[tokens[i * 3]], self.filter_num[tokens[i * 3 + 1]], 2, self.k_size[tokens[i * 3 + 2]]))
 
                 ### if block_num / downsample_num > 1, add (block_num / downsample_num) times stride=1 block 
                 for k in range(repeat_num - 1):
                     kk = k * self.downsample_num + i
-                    self.bottleneck_params_list.append(self.filter_num[tokens[kk * 3], self.filter_num[tokens[kk * 3 + 1]],
-                               1, self.k_size[tokens[kk * 3 + 2]])
+                    self.bottleneck_params_list.append((self.filter_num[tokens[kk * 3]], self.filter_num[tokens[kk * 3 + 1]],
+                               1, self.k_size[tokens[kk * 3 + 2]]))
                     
                 if self.downsample_num - i <= num_minus:
                     j = self.downsample_num * repeat_num + i
-                    self.bottleneck_params_list.append(self.filter_num[tokens[j * 3], self.filter_num[tokens[j * 3 + 1]],
-                               1, self.k_size[tokens[j * 3 + 2]])
+                    self.bottleneck_params_list.append((self.filter_num[tokens[j * 3]], self.filter_num[tokens[j * 3 + 1]],
+                               1, self.k_size[tokens[j * 3 + 2]]))
 
 
         def net_arch(input, return_mid_layer=False, return_block=[]):

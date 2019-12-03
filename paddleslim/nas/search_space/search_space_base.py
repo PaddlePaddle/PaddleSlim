@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from ...common import get_logger
+
 __all__ = ['SearchSpaceBase']
 
+_logger = get_logger(__name__, level=logging.INFO)
 
 class SearchSpaceBase(object):
     """Controller for Neural Architecture Search.
@@ -29,12 +33,10 @@ class SearchSpaceBase(object):
         if self.block_mask != None:
             assert isinstance(self.block_mask,
                               list), 'Block_mask must be a list.'
-            print(
+            _logger.warn(
                 "If block_mask is NOT None, we will use block_mask as major configs!"
             )
             self.block_num = None
-        if self.block_mask == None and (self.block_num == None or self.input_size == None or self.output_size == None):
-            print("block_mask and (block num or input_size or output_size) can NOT be None at the same time!")
 
     def init_tokens(self):
         """Get init tokens in search space.
