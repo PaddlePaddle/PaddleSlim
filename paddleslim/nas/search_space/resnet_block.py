@@ -93,6 +93,13 @@ class ResNetBlockSpace(SearchSpaceBase):
 
         return net_arch
 
+    def _shortcut(self, input, ch_out, stride, name=None):
+        ch_in = input.shape[1]
+        if ch_in != ch_out or stride != 1:
+            return self.conv_bn_layer(input, ch_out, 1, stride, name = name + '_shortcut')
+        else:
+            return input
+
     def _bottleneck_block(self, input, num_filters, kernel_size, stride, name=None):
         conv0 = conv_bn_layer(
             input=input,
@@ -115,7 +122,7 @@ class ResNetBlockSpace(SearchSpaceBase):
             name=name + '_bottleneck_conv2')
 
         short = self._shortcut(
-            input, num_filters * 4, stride, name=name + '_shortcut')
+            input, num_filters * 4, stride, name=name)
 
         return fluid.layers.elementwise_add(
             x=short, y=conv2, act='relu', name=name + '_bottleneck_add')
