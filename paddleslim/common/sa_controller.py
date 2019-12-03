@@ -109,7 +109,7 @@ class SAController(EvolutionaryController):
                 new_tokens = tokens[:]
                 new_tokens[index] = np.random.randint(
                     self._range_table[0][index],
-                    self._range_table[1][index] + 1)
+                    self._range_table[1][index])
             else:
                 break
         return new_tokens
