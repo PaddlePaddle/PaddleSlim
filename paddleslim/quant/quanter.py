@@ -20,11 +20,20 @@ from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass
 from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
 from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
 from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
+from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
+from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 from paddle.fluid import core
 
-WEIGHT_QUANTIZATION_TYPES=['abs_max', 'channel_wise_abs_max', 'range_abs_max', 'moving_average_abs_max']
-ACTIVATION_QUANTIZATION_TYPES=['abs_max','range_abs_max', 'moving_average_abs_max']
+WEIGHT_QUANTIZATION_TYPES = [
+    'abs_max', 'channel_wise_abs_max', 'range_abs_max',
+    'moving_average_abs_max'
+]
+ACTIVATION_QUANTIZATION_TYPES = [
+    'abs_max', 'range_abs_max', 'moving_average_abs_max'
+]
 VALID_DTYPES = ['int8']
+TRANSFORM_PASS_OP_TYPES = ['conv2d', 'depthwise_conv2d', 'mul']
+QUANT_DEQUANT_PASS_OP_TYPES = ['elementwise_add', 'pool2d']
 
 _quant_config_default = {
     # weight quantize type, default is 'abs_max'
@@ -38,7 +47,8 @@ _quant_config_default = {
     # ops of name_scope in not_quant_pattern list, will not be quantized
     'not_quant_pattern': ['skip_quant'],
     # ops of type in quantize_op_types, will be quantized
-    'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
+    'quantize_op_types':
+    ['conv2d', 'depthwise_conv2d', 'mul', 'elementwise_add', 'pool2d'],
     # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
     'dtype': 'int8',
     # window size for 'range_abs_max' quantization. defaulf is 10000
@@ -88,6 +98,12 @@ def _parse_configs(user_config):
     assert isinstance(configs['quantize_op_types'], list), \
         "quantize_op_types must be a list"
 
+    for op_type in configs['quantize_op_types']:
+        assert (op_type in QUANT_DEQUANT_PASS_OP_TYPES) or (
+            op_type in TRANSFORM_PASS_OP_TYPES), "{} is not support, \
+                    now support op types are {}".format(
+                op_type, TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES)
+
     assert isinstance(configs['dtype'], str), \
         "dtype must be a str."
 
@@ -132,19 +148,37 @@ def quant_aware(program, place, config, scope=None, for_test=False):
     config = _parse_configs(config)
     main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
 
-    transform_pass = QuantizationTransformPass(
-        scope=scope,
-        place=place,
-        weight_bits=config['weight_bits'],
-        activation_bits=config['activation_bits'],
-        activation_quantize_type=config['activation_quantize_type'],
-        weight_quantize_type=config['weight_quantize_type'],
-        window_size=config['window_size'],
-        moving_rate=config['moving_rate'],
-        quantizable_op_type=config['quantize_op_types'],
-        skip_pattern=config['not_quant_pattern'])
+    transform_pass_ops = []
+    quant_dequant_ops = []
+    for op_type in config['quantize_op_types']:
+        if op_type in TRANSFORM_PASS_OP_TYPES:
+            transform_pass_ops.append(op_type)
+        elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
+            quant_dequant_ops.append(op_type)
+    if len(transform_pass_ops) > 0:
+        transform_pass = QuantizationTransformPass(
+            scope=scope,
+            place=place,
+            weight_bits=config['weight_bits'],
+            activation_bits=config['activation_bits'],
+            activation_quantize_type=config['activation_quantize_type'],
+            weight_quantize_type=config['weight_quantize_type'],
+            window_size=config['window_size'],
+            moving_rate=config['moving_rate'],
+            quantizable_op_type=transform_pass_ops,
+            skip_pattern=config['not_quant_pattern'])
 
-    transform_pass.apply(main_graph)
+        transform_pass.apply(main_graph)
+
+    if len(quant_dequant_ops) > 0:
+        quant_dequant_pass = AddQuantDequantPass(
+            scope=scope,
+            place=place,
+            moving_rate=config['moving_rate'],
+            quant_bits=config['activation_bits'],
+            skip_pattern=config['not_quant_pattern'],
+            quantizable_op_type=quant_dequant_ops)
+        quant_dequant_pass.apply(main_graph)
 
     if for_test:
         quant_program = main_graph.to_program()
@@ -153,22 +187,71 @@ def quant_aware(program, place, config, scope=None, for_test=False):
     return quant_program
 
 
-def quant_post(program, place, config, scope=None):
+def quant_post(executor,
+               model_dir,
+               quantize_model_path,
+               sample_generator,
+               model_filename=None,
+               params_filename=None,
+               batch_size=16,
+               batch_nums=None,
+               scope=None,
+               algo='KL',
+               quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"]):
     """
-    add quantization ops in program. the program returned is not trainable.
+    The function utilizes post training quantization method to quantize the 
+    fp32 model. It uses calibrate data to calculate the scale factor of 
+    quantized variables, and inserts fake quant/dequant op to obtain the 
+    quantized model.
+
     Args:
-        program(fluid.Program): program
-        scope(fluid.Scope): the scope to store var, it's should be the value of program's scope, usually it's fluid.global_scope().
-        place(fluid.CPUPlace or fluid.CUDAPlace): place
-        config(dict): configs for quantization, default values are in quant_config_default dict.
-        for_test: is for test program.
-    Return:
-        fluid.Program: the quantization program is not trainable.
+        executor(fluid.Executor): The executor to load, run and save the 
+            quantized model.
+        model_dir(str): The path of fp32 model that will be quantized, and 
+            the model and params that saved by fluid.io.save_inference_model 
+            are under the path.
+        quantize_model_path(str): The path to save quantized model using api
+            fluid.io.save_inference_model.
+        sample_generator(Python Generator): The sample generator provides 
+            calibrate data for DataLoader, and it only returns a sample every time.
+        model_filename(str, optional): The name of model file. If parameters 
+            are saved in separate files, set it as 'None'. Default is 'None'.
+        params_filename(str, optional): The name of params file.
+                When all parameters are saved in a single file, set it 
+                as filename. If parameters are saved in separate files, 
+                set it as 'None'. Default is 'None'.
+        batch_size(int, optional): The batch size of DataLoader, default is 16.
+        batch_nums(int, optional): If batch_nums is not None, the number of calibrate 
+                        data is 'batch_size*batch_nums'. If batch_nums is None, use all data
+                        generated by sample_generator  as calibrate data.
+        scope(fluid.Scope, optional): The scope to run program, use it to load 
+                        and save variables. If scope is None, will use fluid.global_scope().
+        algo(str, optional): If algo=KL, use KL-divergenc method to 
+                        get the more precise scale factor. If algo='direct', use 
+                        abs_max method to get the scale factor. Default is 'KL'.
+        quantizable_op_type(list[str], optional): The list of op types
+                        that will be quantized. Default is ["conv2d", "depthwise_conv2d", 
+                        "mul"].
+    Returns:
+        None
     """
-    pass
+    post_training_quantization = PostTrainingQuantization(
+        executor=executor,
+        sample_generator=sample_generator,
+        model_dir=model_dir,
+        model_filename=model_filename,
+        params_filename=params_filename,
+        batch_size=batch_size,
+        batch_nums=batch_nums,
+        scope=scope,
+        algo=algo,
+        quantizable_op_type=quantizable_op_type,
+        is_full_quantize=False)
+    post_training_quantization.quantize()
+    post_training_quantization.save_quantized_model(quantize_model_path)
 
 
-def convert(program, scope, place, config, save_int8=False):
+def convert(program, place, config, scope=None, save_int8=False):
     """
     add quantization ops in program. the program returned is not trainable.
     Args:
@@ -183,7 +266,7 @@ def convert(program, scope, place, config, save_int8=False):
         fluid.Program: freezed int8 program which can be used for inference.
                        if save_int8 is False, this value is None.
     """
-
+    scope = fluid.global_scope() if not scope else scope
     test_graph = IrGraph(core.Graph(program.desc), for_test=True)
 
     # Freeze the graph after training by adjusting the quantize

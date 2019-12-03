@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import numpy as np
 import paddle.fluid as fluid
 import copy
 from ..core import VarWrapper, OpWrapper, GraphWrapper
+from ..common import get_logger
 
 __all__ = ["Pruner"]
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 
 class Pruner():
@@ -69,6 +73,10 @@ class Pruner():
             only_graph=only_graph,
             param_backup=param_backup,
             param_shape_backup=param_shape_backup)
+        for op in graph.ops():
+            if op.type() == 'depthwise_conv2d' or op.type(
+            ) == 'depthwise_conv2d_grad':
+                op.set_attr('groups', op.inputs('Filter')[0].shape()[0])
         return graph.program
 
     def _prune_filters_by_ratio(self,
@@ -94,27 +102,49 @@ class Pruner():
         """
         if params[0].name() in self.pruned_list[0]:
             return
-        param_t = scope.find_var(params[0].name()).get_tensor()
-        pruned_idx = self._cal_pruned_idx(
-            params[0].name(), np.array(param_t), ratio, axis=0)
-        for param in params:
-            assert isinstance(param, VarWrapper)
-            param_t = scope.find_var(param.name()).get_tensor()
-            if param_backup is not None and (param.name() not in param_backup):
-                param_backup[param.name()] = copy.deepcopy(np.array(param_t))
-            pruned_param = self._prune_tensor(
-                np.array(param_t), pruned_idx, pruned_axis=0, lazy=lazy)
-            if not only_graph:
+
+        if only_graph:
+            pruned_num = int(round(params[0].shape()[0] * ratio))
+            for param in params:
+                ori_shape = param.shape()
+                if param_backup is not None and (
+                        param.name() not in param_backup):
+                    param_backup[param.name()] = copy.deepcopy(ori_shape)
+                new_shape = list(ori_shape)
+                new_shape[0] -= pruned_num
+                param.set_shape(new_shape)
+                _logger.debug("prune [{}] from {} to {}".format(param.name(
+                ), ori_shape, new_shape))
+                self.pruned_list[0].append(param.name())
+            return range(pruned_num)
+
+        else:
+
+            param_t = scope.find_var(params[0].name()).get_tensor()
+            pruned_idx = self._cal_pruned_idx(
+                params[0].name(), np.array(param_t), ratio, axis=0)
+            for param in params:
+                assert isinstance(param, VarWrapper)
+                param_t = scope.find_var(param.name()).get_tensor()
+                if param_backup is not None and (
+                        param.name() not in param_backup):
+                    param_backup[param.name()] = copy.deepcopy(
+                        np.array(param_t))
+                pruned_param = self._prune_tensor(
+                    np.array(param_t), pruned_idx, pruned_axis=0, lazy=lazy)
                 param_t.set(pruned_param, place)
-            ori_shape = param.shape()
-            if param_shape_backup is not None and (
-                    param.name() not in param_shape_backup):
-                param_shape_backup[param.name()] = copy.deepcopy(param.shape())
-            new_shape = list(param.shape())
-            new_shape[0] = pruned_param.shape[0]
-            param.set_shape(new_shape)
-            self.pruned_list[0].append(param.name())
-        return pruned_idx
+                ori_shape = param.shape()
+                if param_shape_backup is not None and (
+                        param.name() not in param_shape_backup):
+                    param_shape_backup[param.name()] = copy.deepcopy(
+                        param.shape())
+                new_shape = list(param.shape())
+                new_shape[0] = pruned_param.shape[0]
+                param.set_shape(new_shape)
+                _logger.debug("prune [{}] from {} to {}".format(param.name(
+                ), ori_shape, new_shape))
+                self.pruned_list[0].append(param.name())
+            return pruned_idx
 
     def _prune_parameter_by_idx(self,
                                 scope,
@@ -141,24 +171,44 @@ class Pruner():
         """
         if params[0].name() in self.pruned_list[pruned_axis]:
             return
-        for param in params:
-            assert isinstance(param, VarWrapper)
-            param_t = scope.find_var(param.name()).get_tensor()
-            if param_backup is not None and (param.name() not in param_backup):
-                param_backup[param.name()] = copy.deepcopy(np.array(param_t))
-            pruned_param = self._prune_tensor(
-                np.array(param_t), pruned_idx, pruned_axis, lazy=lazy)
-            if not only_graph:
-                param_t.set(pruned_param, place)
-            ori_shape = param.shape()
 
-            if param_shape_backup is not None and (
-                    param.name() not in param_shape_backup):
-                param_shape_backup[param.name()] = copy.deepcopy(param.shape())
-            new_shape = list(param.shape())
-            new_shape[pruned_axis] = pruned_param.shape[pruned_axis]
-            param.set_shape(new_shape)
-            self.pruned_list[pruned_axis].append(param.name())
+        if only_graph:
+            pruned_num = len(pruned_idx)
+            for param in params:
+                ori_shape = param.shape()
+                if param_backup is not None and (
+                        param.name() not in param_backup):
+                    param_backup[param.name()] = copy.deepcopy(ori_shape)
+                new_shape = list(ori_shape)
+                new_shape[pruned_axis] -= pruned_num
+                param.set_shape(new_shape)
+                _logger.debug("prune [{}] from {} to {}".format(param.name(
+                ), ori_shape, new_shape))
+                self.pruned_list[pruned_axis].append(param.name())
+
+        else:
+            for param in params:
+                assert isinstance(param, VarWrapper)
+                param_t = scope.find_var(param.name()).get_tensor()
+                if param_backup is not None and (
+                        param.name() not in param_backup):
+                    param_backup[param.name()] = copy.deepcopy(
+                        np.array(param_t))
+                pruned_param = self._prune_tensor(
+                    np.array(param_t), pruned_idx, pruned_axis, lazy=lazy)
+                param_t.set(pruned_param, place)
+                ori_shape = param.shape()
+
+                if param_shape_backup is not None and (
+                        param.name() not in param_shape_backup):
+                    param_shape_backup[param.name()] = copy.deepcopy(
+                        param.shape())
+                new_shape = list(param.shape())
+                new_shape[pruned_axis] = pruned_param.shape[pruned_axis]
+                param.set_shape(new_shape)
+                _logger.debug("prune [{}] from {} to {}".format(param.name(
+                ), ori_shape, new_shape))
+                self.pruned_list[pruned_axis].append(param.name())
 
     def _forward_search_related_op(self, graph, param):
         """
@@ -478,19 +528,24 @@ class Pruner():
         Returns: 
             list<VarWrapper>: A list of operators.
         """
+        _logger.debug("######################search: {}######################".
+                      format(op_node))
         visited = [op_node.idx()]
         stack = []
         brothers = []
         for op in graph.next_ops(op_node):
-            if (op.type() != 'conv2d') and (op.type() != 'fc') and (
-                    not op.is_bwd_op()):
+            if ("conv2d" not in op.type()) and (op.type() != 'fc') and (
+                    not op.is_bwd_op()) and (not op.is_opt_op()):
                 stack.append(op)
                 visited.append(op.idx())
         while len(stack) > 0:
             top_op = stack.pop()
             for parent in graph.pre_ops(top_op):
-                if parent.idx() not in visited and (not parent.is_bwd_op()):
-                    if ((parent.type() == 'conv2d') or
+                if parent.idx() not in visited and (
+                        not parent.is_bwd_op()) and (not parent.is_opt_op()):
+                    _logger.debug("----------go back from {} to {}----------".
+                                  format(top_op, parent))
+                    if (('conv2d' in parent.type()) or
                         (parent.type() == 'fc')):
                         brothers.append(parent)
                     else:
@@ -498,11 +553,16 @@ class Pruner():
                     visited.append(parent.idx())
 
             for child in graph.next_ops(top_op):
-                if (child.type() != 'conv2d') and (child.type() != 'fc') and (
+                if ('conv2d' not in child.type()
+                    ) and (child.type() != 'fc') and (
                         child.idx() not in visited) and (
-                            not child.is_bwd_op()):
+                            not child.is_bwd_op()) and (not child.is_opt_op()):
                     stack.append(child)
                     visited.append(child.idx())
+        _logger.debug("brothers: {}".format(brothers))
+        _logger.debug(
+            "######################Finish search######################".format(
+                op_node))
         return brothers
 
     def _cal_pruned_idx(self, name, param, ratio, axis):

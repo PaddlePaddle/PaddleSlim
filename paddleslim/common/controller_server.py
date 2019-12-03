@@ -51,23 +51,8 @@ class ControllerServer(object):
         self._port = address[1]
         self._ip = address[0]
         self._key = key
-        self._socket_file = "./controller_server.socket"
 
     def start(self):
-        open(self._socket_file, 'a').close()
-        socket_file = open(self._socket_file, 'r+')
-        lock(socket_file)
-        tid = socket_file.readline()
-        if tid == '':
-            _logger.info("start controller server...")
-            tid = self._start()
-            socket_file.write("tid: {}\nip: {}\nport: {}\n".format(
-                tid, self._ip, self._port))
-            _logger.info("started controller server...")
-        unlock(socket_file)
-        socket_file.close()
-
-    def _start(self):
         self._socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket_server.bind(self._address)
         self._socket_server.listen(self._max_client_num)
@@ -82,7 +67,6 @@ class ControllerServer(object):
     def close(self):
         """Close the server."""
         self._closed = True
-        os.remove(self._socket_file)
         _logger.info("server closed!")
 
     def port(self):
@@ -109,20 +93,22 @@ class ControllerServer(object):
                     _logger.debug("recv message from {}: [{}]".format(addr,
                                                                       message))
                     messages = message.strip('\n').split("\t")
-                    if (len(messages) < 3) or (messages[0] != self._key):
+                    if (len(messages) < 4) or (messages[0] != self._key):
                         _logger.debug("recv noise from {}: [{}]".format(
                             addr, message))
                         continue
                     tokens = messages[1]
                     reward = messages[2]
+                    iter = messages[3]
                     tokens = [int(token) for token in tokens.split(",")]
-                    self._controller.update(tokens, float(reward))
-                    tokens = self._controller.next_tokens()
-                    tokens = ",".join([str(token) for token in tokens])
-                    conn.send(tokens.encode())
+                    self._controller.update(tokens, float(reward), int(iter))
+                    response = "ok"
+                    conn.send(response.encode())
                     _logger.debug("send message to {}: [{}]".format(addr,
                                                                     tokens))
                 conn.close()
+        except Exception, err:
+            _logger.error(err)
         finally:
             self._socket_server.close()
             self.close()

@@ -32,7 +32,7 @@ class SAController(EvolutionaryController):
                  range_table=None,
                  reduce_rate=0.85,
                  init_temperature=1024,
-                 max_iter_number=300,
+                 max_try_times=None,
                  init_tokens=None,
                  constrain_func=None):
         """Initialize.
@@ -40,7 +40,7 @@ class SAController(EvolutionaryController):
             range_table(list<int>): Range table.
             reduce_rate(float): The decay rate of temperature.
             init_temperature(float): Init temperature.
-            max_iter_number(int): max iteration number.
+            max_try_times(int): max try times before get legal tokens.
             init_tokens(list<int>): The initial tokens.
             constrain_func(function): The callback function used to check whether the tokens meet constraint. None means there is no constraint. Default: None.
         """
@@ -50,7 +50,7 @@ class SAController(EvolutionaryController):
             len(self._range_table) == 2)
         self._reduce_rate = reduce_rate
         self._init_temperature = init_temperature
-        self._max_iter_number = max_iter_number
+        self._max_try_times = max_try_times
         self._reward = -1
         self._tokens = init_tokens
         self._constrain_func = constrain_func
@@ -65,14 +65,16 @@ class SAController(EvolutionaryController):
                 d[key] = self.__dict__[key]
         return d
 
-    def update(self, tokens, reward):
+    def update(self, tokens, reward, iter):
         """
         Update the controller according to latest tokens and reward.
         Args:
             tokens(list<int>): The tokens generated in last step.
             reward(float): The reward of tokens.
         """
-        self._iter += 1
+        iter = int(iter)
+        if iter > self._iter:
+            self._iter = iter
         temperature = self._init_temperature * self._reduce_rate**self._iter
         if (reward > self._reward) or (np.random.random() <= math.exp(
             (reward - self._reward) / temperature)):
@@ -96,12 +98,12 @@ class SAController(EvolutionaryController):
         new_tokens = tokens[:]
         index = int(len(self._range_table[0]) * np.random.random())
         new_tokens[index] = np.random.randint(self._range_table[0][index],
-                                              self._range_table[1][index] + 1)
+                                              self._range_table[1][index])
         _logger.debug("change index[{}] from {} to {}".format(index, tokens[
             index], new_tokens[index]))
-        if self._constrain_func is None:
+        if self._constrain_func is None or self._max_try_times is None:
             return new_tokens
-        for _ in range(self._max_iter_number):
+        for _ in range(self._max_try_times):
             if not self._constrain_func(new_tokens):
                 index = int(len(self._range_table[0]) * np.random.random())
                 new_tokens = tokens[:]

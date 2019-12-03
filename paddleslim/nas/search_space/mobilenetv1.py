@@ -32,10 +32,12 @@ class MobileNetV1Space(SearchSpaceBase):
                  input_size,
                  output_size,
                  block_num,
+                 block_mask,
                  scale=1.0,
                  class_dim=1000):
         super(MobileNetV1Space, self).__init__(input_size, output_size,
-                                               block_num)
+                                               block_num, block_mask)
+        assert self.block_mask == None, 'MobileNetV1Space will use origin MobileNetV1 as seach space, so use input_size, output_size and block_num to search'
         self.scale = scale
         self.class_dim = class_dim
         # self.head_num means the channel of first convolution

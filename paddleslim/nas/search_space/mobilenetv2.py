@@ -113,40 +113,69 @@ class MobileNetV2Space(SearchSpaceBase):
 
         if tokens is None:
             tokens = self.init_tokens()
-        print(tokens)
 
-        bottleneck_params_list = []
+        self.bottleneck_params_list = []
         if self.block_num >= 1:
-            bottleneck_params_list.append(
+            self.bottleneck_params_list.append(
                 (1, self.head_num[tokens[0]], 1, 1, 3))
         if self.block_num >= 2:
-            bottleneck_params_list.append(
+            self.bottleneck_params_list.append(
                 (self.multiply[tokens[1]], self.filter_num1[tokens[2]],
                  self.repeat[tokens[3]], 2, self.k_size[tokens[4]]))
         if self.block_num >= 3:
-            bottleneck_params_list.append(
+            self.bottleneck_params_list.append(
                 (self.multiply[tokens[5]], self.filter_num1[tokens[6]],
                  self.repeat[tokens[7]], 2, self.k_size[tokens[8]]))
         if self.block_num >= 4:
-            bottleneck_params_list.append(
+            self.bottleneck_params_list.append(
                 (self.multiply[tokens[9]], self.filter_num2[tokens[10]],
                  self.repeat[tokens[11]], 2, self.k_size[tokens[12]]))
         if self.block_num >= 5:
-            bottleneck_params_list.append(
+            self.bottleneck_params_list.append(
                 (self.multiply[tokens[13]], self.filter_num3[tokens[14]],
                  self.repeat[tokens[15]], 2, self.k_size[tokens[16]]))
-            bottleneck_params_list.append(
+            self.bottleneck_params_list.append(
                 (self.multiply[tokens[17]], self.filter_num4[tokens[18]],
                  self.repeat[tokens[19]], 1, self.k_size[tokens[20]]))
         if self.block_num >= 6:
-            bottleneck_params_list.append(
+            self.bottleneck_params_list.append(
                 (self.multiply[tokens[21]], self.filter_num5[tokens[22]],
                  self.repeat[tokens[23]], 2, self.k_size[tokens[24]]))
-            bottleneck_params_list.append(
+            self.bottleneck_params_list.append(
                 (self.multiply[tokens[25]], self.filter_num6[tokens[26]],
                  self.repeat[tokens[27]], 1, self.k_size[tokens[28]]))
 
-        def net_arch(input):
+        def _modify_bottle_params(output_stride=None):
+            if output_stride is not None and output_stride % 2 != 0:
+                raise Exception("output stride must to be even number")
+            if output_stride is None:
+                return
+            else:
+                stride = 2
+                for i, layer_setting in enumerate(self.bottleneck_params_list):
+                    t, c, n, s, ks = layer_setting
+                    stride = stride * s
+                    if stride > output_stride:
+                        s = 1
+                    self.bottleneck_params_list[i] = (t, c, n, s, ks)
+
+        def net_arch(input,
+                     end_points=None,
+                     decode_points=None,
+                     output_stride=None):
+            _modify_bottle_params(output_stride)
+
+            decode_ends = dict()
+
+            def check_points(count, points):
+                if points is None:
+                    return False
+                else:
+                    if isinstance(points, list):
+                        return (True if count in points else False)
+                    else:
+                        return (True if count == points else False)
+
             #conv1
             # all padding is 'SAME' in the conv2d, can compute the actual padding automatic. 
             input = conv_bn_layer(
@@ -157,14 +186,21 @@ class MobileNetV2Space(SearchSpaceBase):
                 padding='SAME',
                 act='relu6',
                 name='mobilenetv2_conv1_1')
+            layer_count = 1
+            if check_points(layer_count, decode_points):
+                decode_ends[layer_count] = input
+
+            if check_points(layer_count, end_points):
+                return input, decode_ends
 
             # bottleneck sequences
             i = 1
             in_c = int(32 * self.scale)
-            for layer_setting in bottleneck_params_list:
+            for layer_setting in self.bottleneck_params_list:
                 t, c, n, s, k = layer_setting
                 i += 1
-                input = self._invresi_blocks(
+                #print(input)
+                input, depthwise_output = self._invresi_blocks(
                     input=input,
                     in_c=in_c,
                     t=t,
@@ -174,6 +210,33 @@ class MobileNetV2Space(SearchSpaceBase):
                     k=k,
                     name='mobilenetv2_conv' + str(i))
                 in_c = int(c * self.scale)
+                layer_count += 1
+
+                ### decode_points and end_points means block num
+                if check_points(layer_count, decode_points):
+                    decode_ends[layer_count] = depthwise_output
+
+                if check_points(layer_count, end_points):
+                    return input, decode_ends
+
+            # last conv
+            input = conv_bn_layer(
+                input=input,
+                num_filters=int(1280 * self.scale)
+                if self.scale > 1.0 else 1280,
+                filter_size=1,
+                stride=1,
+                padding='SAME',
+                act='relu6',
+                name='mobilenetv2_conv' + str(i + 1))
+
+            input = fluid.layers.pool2d(
+                input=input,
+                pool_size=7,
+                pool_stride=1,
+                pool_type='avg',
+                global_pooling=True,
+                name='mobilenetv2_last_pool')
 
             # if output_size is 1, add fc layer in the end
             if self.output_size == 1:
@@ -248,6 +311,8 @@ class MobileNetV2Space(SearchSpaceBase):
             name=name + '_dwise',
             use_cudnn=False)
 
+        depthwise_output = bottleneck_conv
+
         linear_out = conv_bn_layer(
             input=bottleneck_conv,
             num_filters=num_filters,
@@ -260,7 +325,7 @@ class MobileNetV2Space(SearchSpaceBase):
         out = linear_out
         if ifshortcut:
             out = self._shortcut(input=input, data_residual=out)
-        return out
+        return out, depthwise_output
 
     def _invresi_blocks(self, input, in_c, t, c, n, s, k, name=None):
         """Build inverted residual blocks.
@@ -276,7 +341,7 @@ class MobileNetV2Space(SearchSpaceBase):
         Returns:
             Variable, layers output.
         """
-        first_block = self._inverted_residual_unit(
+        first_block, depthwise_output = self._inverted_residual_unit(
             input=input,
             num_in_filter=in_c,
             num_filters=c,
@@ -290,7 +355,7 @@ class MobileNetV2Space(SearchSpaceBase):
         last_c = c
 
         for i in range(1, n):
-            last_residual_block = self._inverted_residual_unit(
+            last_residual_block, depthwise_output = self._inverted_residual_unit(
                 input=last_residual_block,
                 num_in_filter=last_c,
                 num_filters=c,
@@ -299,4 +364,4 @@ class MobileNetV2Space(SearchSpaceBase):
                 filter_size=k,
                 expansion_factor=t,
                 name=name + '_' + str(i + 1))
-        return last_residual_block
+        return last_residual_block, depthwise_output
