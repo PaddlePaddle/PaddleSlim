@@ -99,7 +99,6 @@ class SAController(EvolutionaryController):
         if self._checkpoints != None:
             self._save_checkpoint(self._checkpoints)
 
-
     def next_tokens(self, control_token=None):
         """
         Get next tokens.
@@ -121,22 +120,19 @@ class SAController(EvolutionaryController):
                 index = int(len(self._range_table[0]) * np.random.random())
                 new_tokens = tokens[:]
                 new_tokens[index] = np.random.randint(
-                    self._range_table[0][index],
-                    self._range_table[1][index])
+                    self._range_table[0][index], self._range_table[1][index])
             else:
                 break
         return new_tokens
 
-    def _save_checkpoint(self, output_file):
+    def _save_checkpoint(self, output_dir):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         file_path = os.path.join(output_dir, 'sanas.checkpoints')
         scene = dict()
-        for key in self.__dict__():
+        for key in self.__dict__:
             if key in ['_checkpoints']:
                 continue
             scene[key] = self.__dict__[key]
-        f = open(file_path, 'w')
-        json.dump(scene)
-        f.close()
-
+        with open(file_path, 'w') as f:
+            json.dump(scene, f)

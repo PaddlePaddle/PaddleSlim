@@ -81,10 +81,14 @@ class SANAS(object):
             _logger.info("range table: {}".format(range_table))
 
             if load_checkpoint != None:
-                assert os.path.exists(load_checkpoint) == True, 'load checkpoint file NOT EXIST!!! Please check the directory of checkpoint!!!'
-                checkpoint_path = os.path.join(load_checkpoint, 'sanas.checkpoints')
-                scene = json.load(checkpoint_path)
-                preinit_tokens = scene['_init_tokens']
+                assert os.path.exists(
+                    load_checkpoint
+                ) == True, 'load checkpoint file NOT EXIST!!! Please check the directory of checkpoint!!!'
+                checkpoint_path = os.path.join(load_checkpoint,
+                                               'sanas.checkpoints')
+                with open(checkpoint_path, 'r') as f:
+                    scene = json.load(f)
+                preinit_tokens = scene['_tokens']
                 prereward = scene['_reward']
                 premax_reward = scene['_max_reward']
                 prebest_tokens = scene['_best_tokens']
@@ -95,17 +99,17 @@ class SANAS(object):
                 premax_reward = -1
                 prebest_tokens = None
                 preiter = 0
-                      
+
             controller = SAController(
                 range_table,
                 self._reduce_rate,
                 self._init_temperature,
                 max_try_times=None,
                 init_tokens=preinit_tokens,
-                reward = prereward,
-                max_reward = premax_reward,
-                iters = preiter,
-                best_tokens = prebest_tokens,
+                reward=prereward,
+                max_reward=premax_reward,
+                iters=preiter,
+                best_tokens=prebest_tokens,
                 constrain_func=None,
                 checkpoints=save_checkpoint)
 
@@ -123,8 +127,6 @@ class SANAS(object):
             server_ip, server_port, key=self._key)
 
         if is_server and load_checkpoint != None:
-            checkpoint_path = os.path.join(load_checkpoint, 'sanas.checkpoints')
-            scene = json.load(checkpoint_path)
             self._iter = scene['_iter']
         else:
             self._iter = 0
