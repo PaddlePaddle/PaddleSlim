@@ -13,6 +13,7 @@
 # limitations under the License.
 """The controller used to search hyperparameters or neural architecture"""
 
+import os
 import copy
 import math
 import logging
@@ -127,12 +128,15 @@ class SAController(EvolutionaryController):
         return new_tokens
 
     def _save_checkpoint(self, output_file):
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        file_path = os.path.join(output_dir, 'sanas.checkpoints')
         scene = dict()
         for key in self.__dict__():
             if key in ['_checkpoints']:
                 continue
             scene[key] = self.__dict__[key]
-        f = open(output_file, 'w')
+        f = open(file_path, 'w')
         json.dump(scene)
         f.close()
 
