@@ -48,7 +48,11 @@ class SAController(EvolutionaryController):
             reduce_rate(float): The decay rate of temperature.
             init_temperature(float): Init temperature.
             max_try_times(int): max try times before get legal tokens.
-            init_tokens(list<int>): The initial tokens.
+            init_tokens(list<int>): The initial tokens. Default: None.
+            reward(float): The reward of current tokens. Default: -1.
+            max_reward(float): The max reward in the search of sanas, in general, best tokens get max reward. Default: -1.
+            iters(int): The iteration of sa controller. Default: 0.
+            best_tokens(list<int>): The best tokens in the search of sanas, in general, best tokens get max reward. Default: None.
             constrain_func(function): The callback function used to check whether the tokens meet constraint. None means there is no constraint. Default: None.
             checkpoints(str): if checkpoint is None, donnot save checkpoints, else save scene to checkpoints file.
         """

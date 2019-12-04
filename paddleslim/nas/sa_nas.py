@@ -41,7 +41,7 @@ class SANAS(object):
                  reduce_rate=0.85,
                  search_steps=300,
                  key="sa_nas",
-                 save_checkpoint=None,
+                 save_checkpoint='nas_checkpoint',
                  load_checkpoint=None,
                  is_server=False):
         """
@@ -55,6 +55,8 @@ class SANAS(object):
             reduce_rate(float): The decay rate used in simulated annealing search strategy.
             search_steps(int): The steps of searching.
             key(str): Identity used in communication between controller server and clients.
+            save_checkpoint(string|None): The directory of checkpoint to save, if set to None, not save checkpoint. Default: 'nas_checkpoint'.
+            load_checkpoint(string|None): The directory of checkpoint to load, if set to None, not load checkpoint. Default: None.
             is_server(bool): Whether current host is controller server. Default: True.
         """
         if not is_server:
