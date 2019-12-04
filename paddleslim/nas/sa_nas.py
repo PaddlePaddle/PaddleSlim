@@ -90,10 +90,10 @@ class SANAS(object):
                 prebest_tokens = scene['_best_tokens']
                 preiter = scene['_iter']
             else:
-                preinit_tokens = None
+                preinit_tokens = init_tokens
                 prereward = -1
                 premax_reward = -1
-                prebest_tokens = init_tokens
+                prebest_tokens = None
                 preiter = 0
                       
             controller = SAController(
