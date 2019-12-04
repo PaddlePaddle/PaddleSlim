@@ -26,18 +26,25 @@ PaddleSlim是PaddlePaddle框架的一个子模块，主要用于压缩图像领�
 
 ## 安装
 
-1. 安装develop版本
+安装PaddleSlim前，请确认已正确安装Paddle1.6版本或更新版本。Paddle安装请参考：[Paddle安装教程](https://www.paddlepaddle.org.cn/install/quick)。
+
+
+- 安装develop版本
+
 
 ```
 git clone http://gitlab.baidu.com/PaddlePaddle/PaddleSlim.git
 cd PaddleSlim
 python setup.py install
 ```
-2. 安装官方发布的最新版本
+
+- 安装官方发布的最新版本
+
 ```
 pip install paddleslim -i https://pypi.org/simple
 ```
-3. 安装历史版本
+
+- 安装历史版本
 
 请点击[pypi.org](https://pypi.org/project/paddleslim/#history)查看可安装历史版本。
 
