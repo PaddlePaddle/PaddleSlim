@@ -122,7 +122,12 @@ class SANAS(object):
         self._controller_client = ControllerClient(
             server_ip, server_port, key=self._key)
 
-        self._iter = 0
+        if is_server and load_checkpoint != None:
+            checkpoint_path = os.path.join(load_checkpoint, 'sanas.checkpoints')
+            scene = json.load(checkpoint_path)
+            self._iter = scene['_iter']
+        else:
+            self._iter = 0
 
     def _get_host_ip(self):
         return socket.gethostbyname(socket.gethostname())
