@@ -80,8 +80,12 @@ def sensitivity(program,
             loss = (baseline - pruned_metric) / baseline
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))
-            sensitivities[name]['pruned_percent'].append(ratio)
-            sensitivities[name]['loss'].append(loss)
+
+            for brother in pruner.pruned_list[0]:
+                if brother in sensitivities:
+                    sensitivities[name]['pruned_percent'].append(ratio)
+                    sensitivities[name]['loss'].append(loss)
+
             _save_sensitivities(sensitivities, sensitivities_file)
 
             # restore pruned parameters
