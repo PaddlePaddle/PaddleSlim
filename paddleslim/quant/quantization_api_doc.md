@@ -27,7 +27,7 @@ quant_config_default = {
 ```
 功能：设置量化训练需要的配置。
 
-参数说明：
+**参数介绍**
 - ``weight_quantize_type(str)``: 参数量化方式。可选``'abs_max'``,  ``'channel_wise_abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。 默认``'abs_max'``。
 - ``activation_quantize_type(str)``: 激活量化方式，可选``'abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``，默认``'abs_max'``。
 - ``weight_bits(int)``: 参数量化bit数，默认8, 推荐设为8。
@@ -44,20 +44,20 @@ quant_config_default = {
 功能：在``program``中加入量化和反量化``op``, 用于量化训练。具体如图所示：
 
 
-**参数介绍：**
+**参数介绍**
 * ``program (fluid.Program)``: 传入训练或测试``program``。
 * ``place(fluid.CPUPlace or fluid.CUDAPlace)``: 该参数表示``Executor``执行所在的设备。
 * ``config(dict)``: 量化配置表。
 * ``scope(fluid.Scope, optional)``: 传入用于存储``Variable``的``scope``，需要传入``program``所使用的``scope``，一般情况下，是``fluid.global_scope()``。设置为``None``时将使用``fluid.global_scope()``，默认值为``None``。
 * ``for_test(bool)``: 如果``program``参数是一个测试``program``，``for_test``应设为``True``，否则设为``False``。
 
-**返回值：**
+**返回值**
 
 含有量化和反量化``operator``的``program``
 * 当``for_test=False``，返回类型为``fluid.CompiledProgram``， **注意，此返回值不能用于保存参数**。
 * 当``for_test=True``，返回类型为``fluid.Program``。
 
-**注意事项**:
+**注意事项**
 * 此接口会改变``program``结构，并且可能增加一些``persistable``的变量，所以加载模型参数时请注意和相应的``program``对应。
 * 此接口底层经历了``fluid.Program``-> ``fluid.framework.IrGraph``->``fluid.Program``的转变，在``fluid.framework.IrGraph``中没有``Parameter``的概念，``Variable``只有``persistable``和``not persistable``的区别，所以在保存和加载参数时，请使用``fluid.io.save_persistables``和``fluid.io.load_persistables``接口。
 * 由于此接口会根据``program``的结构和量化配置来对``program``添加op，所以``Paddle``中一些通过``fuse op``来加速训练的策略不能使用。已知以下策略在使用量化时必须设为``False``： ``fuse_all_reduce_ops, sync_batch_norm``。
@@ -70,19 +70,21 @@ quant_config_default = {
 
 功能：把训练好的量化``program``，转换为可用于保存``inference model``的``program``。
 
-**参数介绍：**
+**参数介绍**
 - ``program (fluid.Program)``: 传入测试``program``。
 - ``place(fluid.CPUPlace or fluid.CUDAPlace)``: 该参数表示``Executor``执行所在的设备。
 - ``config(dict)``: 量化配置表。
 - ``scope(fluid.Scope)``: 传入用于存储``Variable``的``scope``，需要传入``program``所使用的``scope``，一般情况下，是``fluid.global_scope()``。设置为``None``时将使用``fluid.global_scope()``，默认值为``None``。
 - ``save_int8（bool）``: 是否需要返回参数为``int8``的``program``。该功能目前只能用于确认模型大小。默认值为``False``。
 
-返回值：
+**返回值**
+
 - ``program (fluid.Program)``: freezed program，可用于保存inference model，参数为``float32``类型，但其数值范围可用int8表示。
 - ``int8_program (fluid.Program)``: freezed program，可用于保存inference model，参数为``int8``类型。当``save_int8``为``False``时，不返回该值。
 
-**注意事项**:
-* 因为该接口会对``op``和``Variable``做相应的删除和修改，所以此接口只能在训练完成之后调用。如果想转化训练的中间模型，可加载相应的参数之后再使用此接口。
+**注意事项**
+
+因为该接口会对``op``和``Variable``做相应的删除和修改，所以此接口只能在训练完成之后调用。如果想转化训练的中间模型，可加载相应的参数之后再使用此接口。
 
 **使用示例**
 
@@ -143,7 +145,7 @@ paddleslim.quant.quant_post(executor,
            quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"])
 
 ```
-**参数介绍：**
+**参数介绍**
 - ``executor (fluid.Executor)``: 执行模型的executor，可以在cpu或者gpu上执行。
 - ``model_dir（str)``: 需要量化的模型所在的文件夹。
 - ``quantize_model_path(str)``: 保存量化后的模型的路径
@@ -192,7 +194,7 @@ quant_post(
 ```
 paddleslim.quant.quant_embedding(program, place, config, scope=None)
 ```
-**参数介绍:**
+**参数介绍**
 - ``program(fluid.Program)`` : 需要量化的program
 - ``scope(fluid.Scope, optional)``: 用来获取和写入``Variable``, 如果设置为``None``,则使用``fluid.global_scope()``.
 - ``place(fluid.CPUPlace or fluid.CUDAPlace)``: 运行program的设备
