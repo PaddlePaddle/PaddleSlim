@@ -25,9 +25,10 @@ quant_config_default = {
     'quant_weight_only': False
 }
 ```
-功能：设置量化训练需要的配置。
+设置量化训练需要的配置。
 
 **参数介绍**
+
 - ``weight_quantize_type(str)``: 参数量化方式。可选``'abs_max'``,  ``'channel_wise_abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。 默认``'abs_max'``。
 - ``activation_quantize_type(str)``: 激活量化方式，可选``'abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``，默认``'abs_max'``。
 - ``weight_bits(int)``: 参数量化bit数，默认8, 推荐设为8。
@@ -41,10 +42,11 @@ quant_config_default = {
 
 
 ### paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)
-功能：在``program``中加入量化和反量化``op``, 用于量化训练。具体如图所示：
+在``program``中加入量化和反量化``op``, 用于量化训练。具体如图所示：
 
 
 **参数介绍**
+
 * ``program (fluid.Program)``: 传入训练或测试``program``。
 * ``place(fluid.CPUPlace or fluid.CUDAPlace)``: 该参数表示``Executor``执行所在的设备。
 * ``config(dict)``: 量化配置表。
@@ -58,6 +60,7 @@ quant_config_default = {
 * 当``for_test=True``，返回类型为``fluid.Program``。
 
 **注意事项**
+
 * 此接口会改变``program``结构，并且可能增加一些``persistable``的变量，所以加载模型参数时请注意和相应的``program``对应。
 * 此接口底层经历了``fluid.Program``-> ``fluid.framework.IrGraph``->``fluid.Program``的转变，在``fluid.framework.IrGraph``中没有``Parameter``的概念，``Variable``只有``persistable``和``not persistable``的区别，所以在保存和加载参数时，请使用``fluid.io.save_persistables``和``fluid.io.load_persistables``接口。
 * 由于此接口会根据``program``的结构和量化配置来对``program``添加op，所以``Paddle``中一些通过``fuse op``来加速训练的策略不能使用。已知以下策略在使用量化时必须设为``False``： ``fuse_all_reduce_ops, sync_batch_norm``。
@@ -68,7 +71,7 @@ quant_config_default = {
 ### paddleslim.quant.convert(program, place, config, scope=None, save_int8=False)
 
 
-功能：把训练好的量化``program``，转换为可用于保存``inference model``的``program``。
+把训练好的量化``program``，转换为可用于保存``inference model``的``program``。
 
 **参数介绍**
 - ``program (fluid.Program)``: 传入测试``program``。
@@ -145,6 +148,8 @@ paddleslim.quant.quant_post(executor,
            quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"])
 
 ```
+对保存在``${model_dir}``下的模型进行量化，使用``sample_generator``的数据进行参数校正。
+
 **参数介绍**
 - ``executor (fluid.Executor)``: 执行模型的executor，可以在cpu或者gpu上执行。
 - ``model_dir（str)``: 需要量化的模型所在的文件夹。
@@ -163,6 +168,7 @@ paddleslim.quant.quant_post(executor,
 无。
 
 **注意事项**
+
 因为该接口会收集校正数据的所有的激活值，所以使用的校正图片不能太多。``'KL'``散度的计算也比较耗时。
 
 **使用示例**
@@ -194,6 +200,8 @@ quant_post(
 ```
 paddleslim.quant.quant_embedding(program, place, config, scope=None)
 ```
+对``Embedding``参数进行量化。
+
 **参数介绍**
 - ``program(fluid.Program)`` : 需要量化的program
 - ``scope(fluid.Scope, optional)``: 用来获取和写入``Variable``, 如果设置为``None``,则使用``fluid.global_scope()``.
