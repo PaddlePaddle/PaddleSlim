@@ -13,8 +13,7 @@ import numpy as np
 import paddle.fluid as fluid
 sys.path.append(sys.path[0] + "/../")
 import models
-import imagenet_reader as reader
-from utility import add_arguments, print_arguments
+from utility import add_arguments, print_arguments, _download, _decompress
 from paddleslim.dist import merge, l2_loss, soft_label_loss, fsp_loss
 
 logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
@@ -33,12 +32,12 @@ add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay 
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
 add_arg('num_epochs',       int,  120,               "The number of total epochs.")
-add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'")
+add_arg('data',             str, "cifar10",                 "Which data to use. 'cifar10' or 'imagenet'")
 add_arg('log_period',       int, 20,                 "Log period in batches.")
 add_arg('model',            str,  "MobileNet",          "Set the network to use.")
 add_arg('pretrained_model', str,  None,                "Whether to use pretrained model.")
 add_arg('teacher_model',    str,  "ResNet50",          "Set the teacher network to use.")
-add_arg('teacher_pretrained_model', str,  "../pretrain/ResNet50_pretrained",                "Whether to use pretrained model.")
+add_arg('teacher_pretrained_model', str,  "./ResNet50_pretrained",                "Whether to use pretrained model.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
 # yapf: enable
 
@@ -76,12 +75,12 @@ def create_optimizer(args):
 
 
 def compress(args):
-    if args.data == "mnist":
-        import paddle.dataset.mnist as reader
-        train_reader = reader.train()
-        val_reader = reader.test()
+    if args.data == "cifar10":
+        import paddle.dataset.cifar as reader
+        train_reader = reader.train10()
+        val_reader = reader.test10()
         class_dim = 10
-        image_shape = "1,28,28"
+        image_shape = "3,32,32"
     elif args.data == "imagenet":
         import imagenet_reader as reader
         train_reader = reader.train()
@@ -132,7 +131,7 @@ def compress(args):
         val_reader, batch_size=args.batch_size, drop_last=True)
     val_program = student_program.clone(for_test=True)
 
-    places = fluid.cuda_places()
+    places = fluid.cuda_places() if args.use_gpu else fluid.cpu_places()
     train_loader.set_sample_list_generator(train_reader, places)
     valid_loader.set_sample_list_generator(val_reader, place)
 
@@ -146,11 +145,13 @@ def compress(args):
                 name='image', shape=image_shape, dtype='float32')
             predict = teacher_model.net(image, class_dim=class_dim)
 
-        #print("="*50+"teacher_model_params"+"="*50)
-        #for v in teacher_program.list_vars():
-        #    print(v.name, v.shape)
+    #print("="*50+"teacher_model_params"+"="*50)
+    #for v in teacher_program.list_vars():
+    #    print(v.name, v.shape)
 
     exe.run(t_startup)
+    _download('http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_pretrained.tar', '.')
+    _decompress('./ResNet50_pretrained.tar')
     assert args.teacher_pretrained_model and os.path.exists(
         args.teacher_pretrained_model
     ), "teacher_pretrained_model should be set when teacher_model is not None."
@@ -158,7 +159,7 @@ def compress(args):
     def if_exist(var):
         return os.path.exists(
             os.path.join(args.teacher_pretrained_model, var.name)
-        ) and var.name != 'conv1_weights' and var.name != 'fc_0.w_0' and var.name != 'fc_0.b_0'
+        ) and var.name != 'fc_0.w_0' and var.name != 'fc_0.b_0'
 
     fluid.io.load_vars(
         exe,
@@ -173,19 +174,9 @@ def compress(args):
         data_name_map,
         place)
 
-    #print("="*50+"teacher_vars"+"="*50)
-    #for v in teacher_program.list_vars():
-    #    if '_generated_var' not in v.name and 'fetch' not in v.name and 'feed' not in v.name:
-    #        print(v.name, v.shape)
-    #return
-
     with fluid.program_guard(main, s_startup):
-        l2_loss_v = l2_loss("teacher_fc_0.tmp_0", "fc_0.tmp_0", main)
-        fsp_loss_v = fsp_loss("teacher_res2a_branch2a.conv2d.output.1.tmp_0",
-                              "teacher_res3a_branch2a.conv2d.output.1.tmp_0",
-                              "depthwise_conv2d_1.tmp_0", "conv2d_3.tmp_0",
-                              main)
-        loss = avg_cost + l2_loss_v + fsp_loss_v
+        l2_loss = l2_loss("teacher_fc_0.tmp_0", "fc_0.tmp_0", main)
+        loss = avg_cost + l2_loss
         opt = create_optimizer(args)
         opt.minimize(loss)
     exe.run(s_startup)
@@ -196,17 +187,16 @@ def compress(args):
 
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):
-            loss_1, loss_2, loss_3, loss_4 = exe.run(
+            loss_1, loss_2, loss_3 = exe.run(
                 parallel_main,
                 feed=data,
                 fetch_list=[
-                    loss.name, avg_cost.name, l2_loss_v.name, fsp_loss_v.name
+                    loss.name, avg_cost.name, l2_loss.name
                 ])
             if step_id % args.log_period == 0:
                 _logger.info(
-                    "train_epoch {} step {} loss {:.6f}, class loss {:.6f}, l2 loss {:.6f}, fsp loss {:.6f}".
-                    format(epoch_id, step_id, loss_1[0], loss_2[0], loss_3[0],
-                           loss_4[0]))
+                    "train_epoch {} step {} loss {:.6f}, class loss {:.6f}, l2 loss {:.6f}".
+                    format(epoch_id, step_id, loss_1[0], loss_2[0], loss_3[0]))
         val_acc1s = []
         val_acc5s = []
         for step_id, data in enumerate(valid_loader):
