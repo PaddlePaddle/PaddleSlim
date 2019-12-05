@@ -2,22 +2,8 @@
 
 本示例介绍如何使用Embedding量化的接口 [paddleslim.quant.quant_embedding]() 。``quant_embedding``接口将网络中的Embedding参数从``float32``类型量化到 ``8-bit``整数类型，在几乎不损失模型精度的情况下减少模型的存储空间和显存占用。
 
-接口如下：
-```
-quant_embedding(program, place, config, scope=None)
-```
 
-参数介绍：
-
-- program(fluid.Program) : 需要量化的program
-- scope(fluid.Scope, optional) : 用来获取和写入``Variable``, 如果设置为``None``,则使用``fluid.global_scope()``.
-- place(fluid.CPUPlace or fluid.CUDAPlace): 运行program的设备
-- config(dict) : 定义量化的配置。可以配置的参数有：
-    - ``'params_name'`` (str, required): 需要进行量化的参数名称，此参数必须设置。
-    - ``'quantize_type'`` (str, optional): 量化的类型，目前支持的类型是``'abs_max'``, 待支持的类型有 ``'log', 'product_quantization'``。 默认值是``'abs_max'``.
-    - ``'quantize_bits'``（int, optional): 量化的``bit``数，目前支持的``bit``数为8。默认值是8.
-    - ``'dtype'``(str, optional): 量化之后的数据类型， 目前支持的是``'int8'``. 默认值是``int8``。
-    - ``'threshold'``(float, optional): 量化之前将根据此阈值对需要量化的参数值进行``clip``. 如果不设置，则跳过``clip``过程直接量化。
+接口介绍请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
 
 该接口对program的修改：
 
