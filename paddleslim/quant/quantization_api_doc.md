@@ -199,7 +199,7 @@ quant_post(
 ```
 更详细的用法请参考 <a href='../../demo/quant/quant_post/README.md'>离线量化demo</a>。
 
-## Embedding 量化API
+## Embedding量化API
 ```
 paddleslim.quant.quant_embedding(program, place, config, scope=None)
 ```
