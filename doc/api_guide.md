@@ -5,7 +5,7 @@
 
 ### [通道剪裁](../paddleslim/prune/prune_api.md)
 
-### [量化](../paddleslim/prune/prune_api.md)
+### [量化](../paddleslim/quant/quantization_api_doc.md)
 
 #### [量化训练]()
 
