@@ -28,11 +28,7 @@ __all__ = ["MobileNetV2Space"]
 
 @SEARCHSPACE.register
 class MobileNetV2Space(SearchSpaceBase):
-    def __init__(self,
-                 input_size,
-                 output_size,
-                 block_num,
-                 block_mask=None):
+    def __init__(self, input_size, output_size, block_num, block_mask=None):
         super(MobileNetV2Space, self).__init__(input_size, output_size,
                                                block_num, block_mask)
         # self.head_num means the first convolution channel
@@ -53,7 +49,6 @@ class MobileNetV2Space(SearchSpaceBase):
         self.multiply = np.array([1, 2, 3, 4, 6])  #5
         # self.repeat means repeat_num _inverted_residual_unit in each _invresi_blocks 
         self.repeat = np.array([1, 2, 3, 4, 5, 6])  #6
-
 
     def init_tokens(self):
         """
@@ -140,8 +135,8 @@ class MobileNetV2Space(SearchSpaceBase):
                     self.bottleneck_params_list[i] = (t, c, n, s, ks)
 
         def net_arch(input,
-                     scale = 1.0,
-                     return_block = [],
+                     scale=1.0,
+                     return_block=[],
                      end_points=None,
                      output_stride=None):
             self.scale = scale
@@ -169,19 +164,21 @@ class MobileNetV2Space(SearchSpaceBase):
                 act='relu6',
                 name='mobilenetv2_conv1')
             layer_count = 1
-            if check_points(layer_count, return_block):
-                decode_ends[layer_count] = input
 
-            if check_points(layer_count, end_points):
-                return input, decode_ends
-
+            depthwise_output = None
             # bottleneck sequences
-            i = 1
             in_c = int(32 * self.scale)
             for layer_setting in self.bottleneck_params_list:
                 t, c, n, s, k = layer_setting
-                i += 1
-                #print(input)
+                if s == 2:
+                    layer_count += 1
+                ### return_block and end_points means block num
+                if check_points((layer_count - 1), return_block):
+                    decode_ends[layer_count - 1] = depthwise_output
+
+                if check_points((layer_count - 1), end_points):
+                    return input, decode_ends
+
                 input, depthwise_output = self._invresi_blocks(
                     input=input,
                     in_c=in_c,
@@ -192,14 +189,13 @@ class MobileNetV2Space(SearchSpaceBase):
                     k=k,
                     name='mobilenetv2_conv' + str(i))
                 in_c = int(c * self.scale)
-                layer_count += 1
 
-                ### return_block and end_points means block num
-                if check_points(layer_count, return_block):
-                    decode_ends[layer_count] = depthwise_output
+            ### return_block and end_points means block num
+            if check_points(layer_count, return_block):
+                decode_ends[layer_count] = depthwise_output
 
-                if check_points(layer_count, end_points):
-                    return input, decode_ends
+            if check_points(layer_count, end_points):
+                return input, decode_ends
 
             # last conv
             input = conv_bn_layer(

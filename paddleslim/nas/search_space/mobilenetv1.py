@@ -28,11 +28,7 @@ __all__ = ["MobileNetV1Space"]
 
 @SEARCHSPACE.register
 class MobileNetV1Space(SearchSpaceBase):
-    def __init__(self,
-                 input_size,
-                 output_size,
-                 block_num,
-                 block_mask):
+    def __init__(self, input_size, output_size, block_num, block_mask):
         super(MobileNetV1Space, self).__init__(input_size, output_size,
                                                block_num, block_mask)
         # self.head_num means the channel of first convolution
@@ -61,7 +57,6 @@ class MobileNetV1Space(SearchSpaceBase):
         self.k_size = np.array([3, 5])  #2
         # self.repeat means repeat_num in forth downsample 
         self.repeat = np.array([1, 2, 3, 4, 5, 6])  #6
-
 
     def init_tokens(self):
         """
@@ -136,8 +131,8 @@ class MobileNetV1Space(SearchSpaceBase):
              self.k_size[tokens[18]]))
         for i in range(self.repeat[tokens[19]]):
             self.bottleneck_param_list.append(
-                (self.filter_num7[tokens[20]],
-                 self.filter_num8[tokens[21]], 1, self.k_size[tokens[22]]))
+                (self.filter_num7[tokens[20]], self.filter_num8[tokens[21]], 1,
+                 self.k_size[tokens[22]]))
         # 512 1024 1024 1024
         self.bottleneck_param_list.append(
             (self.filter_num8[tokens[23]], self.filter_num9[tokens[24]], 2,
@@ -160,8 +155,11 @@ class MobileNetV1Space(SearchSpaceBase):
                         s = 1
                     self.bottleneck_params_list[i] = (f1, f2, s, ks)
 
-
-        def net_arch(input, scale=1.0, return_block=[], end_points=None, output_stride=None):
+        def net_arch(input,
+                     scale=1.0,
+                     return_block=[],
+                     end_points=None,
+                     output_stride=None):
             self.scale = scale
             _modify_bottle_params(output_stride)
 
@@ -186,6 +184,14 @@ class MobileNetV1Space(SearchSpaceBase):
             layer_count = 1
             for i, layer_setting in enumerate(bottleneck_param_list):
                 filter_num1, filter_num2, stride, kernel_size = layer_setting
+                if stride == 2:
+                    layer_count += 1
+                ### return_block and end_points means block num
+                if check_points((layer_count - 1), return_block):
+                    decode_ends[layer_count - 1] = input
+
+                if check_points((layer_count - 1), end_points):
+                    return input, decode_ends
                 input = self._depthwise_separable(
                     input=input,
                     num_filters1=filter_num1,
@@ -195,15 +201,16 @@ class MobileNetV1Space(SearchSpaceBase):
                     scale=self.scale,
                     kernel_size=kernel_size,
                     name='mobilenetv1_{}'.format(str(i + 1)))
-                layer_count += 1
-                ### return_block and end_points means block num
-                if check_points(layer_count, return_block):
-                    decode_ends[layer_count] = depthwise_output
 
-                if check_points(layer_count, end_points):
-                    return input, decode_ends
+            ### return_block and end_points means block num
+            if check_points(layer_count, end_points):
+                return input, decode_ends
 
-            input = fluid.layers.pool2d(input=input, pool_type='avg', global_pooling=True, name='mobilenetv1_last_pool')
+            input = fluid.layers.pool2d(
+                input=input,
+                pool_type='avg',
+                global_pooling=True,
+                name='mobilenetv1_last_pool')
 
             return input
 

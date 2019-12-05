@@ -40,12 +40,17 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
 
         if self.block_mask == None:
             # use input_size and output_size to compute self.downsample_num
-            self.downsample_num = compute_downsample_num(self.input_size, self.output_size)
+            self.downsample_num = compute_downsample_num(self.input_size,
+                                                         self.output_size)
         if self.block_num != None:
-            assert self.downsample_num <= self.block_num, 'downsample numeber must be LESS THAN OR EQUAL TO block_num, but NOW: downsample numeber is {}, block_num is {}'.format(self.downsample_num, self.block_num)
+            assert self.downsample_num <= self.block_num, 'downsample numeber must be LESS THAN OR EQUAL TO block_num, but NOW: downsample numeber is {}, block_num is {}'.format(
+                self.downsample_num, self.block_num)
 
         # self.filter_num means channel number
-        self.filter_num = np.array([3, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96, 128, 144, 160, 192, 224, 256, 320, 384, 512]) # 20
+        self.filter_num = np.array([
+            3, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96, 128, 144, 160, 192, 224,
+            256, 320, 384, 512
+        ])  # 20
         # self.k_size means kernel size
         self.k_size = np.array([3, 5])  #2
         # self.multiply means expansion_factor of each _inverted_residual_unit
@@ -58,22 +63,21 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
         if self.block_mask != None:
             return [0] * (len(self.block_mask) * 4)
         else:
-            return [0] * (self.block_num * 4) 
+            return [0] * (self.block_num * 4)
 
     def range_table(self):
         range_table_base = []
         if self.block_mask != None:
-            for i in range(len(self.block_mask)):
-                range_table_base.append(len(self.multiply))
-                range_table_base.append(len(self.filter_num))
-                range_table_base.append(len(self.repeat))
-                range_table_base.append(len(self.k_size))
+            range_table_length = len(self.block_mask)
         else:
-            for i in range(self.block_num):
-                range_table_base.append(len(self.multiply))
-                range_table_base.append(len(self.filter_num))
-                range_table_base.append(len(self.repeat))
-                range_table_base.append(len(self.k_size))
+            range_table_length = self.block_mum
+
+        for i in range(range_table_length):
+            range_table_base.append(len(self.multiply))
+            range_table_base.append(len(self.filter_num))
+            range_table_base.append(len(self.repeat))
+            range_table_base.append(len(self.k_size))
+
         return range_table_base
 
     def token2arch(self, tokens=None):
@@ -98,22 +102,40 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
             num_minus = self.block_num % self.downsample_num
             ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
             for i in range(self.downsample_num):
-                self.bottleneck_params_list.append((self.mutiply[tokens[i * 4]], self.filter_num[tokens[i * 4 + 1]],
-                           self.repeat[tokens[i * 4 + 2]], 2, self.k_size[tokens[i * 4 + 3]]))
+                self.bottleneck_params_list.append(
+                    (self.multiply[tokens[i * 4]],
+                     self.filter_num[tokens[i * 4 + 1]],
+                     self.repeat[tokens[i * 4 + 2]], 2,
+                     self.k_size[tokens[i * 4 + 3]]))
 
                 ### if block_num / downsample_num > 1, add (block_num / downsample_num) times stride=1 block 
                 for k in range(repeat_num - 1):
                     kk = k * self.downsample_num + i
-                    self.bottleneck_params_list.append((self.mutiply[tokens[kk * 4]], self.filter_num[tokens[kk * 4 + 1]],
-                               self.repeat[tokens[kk * 4 + 2]], 1, self.k_size[tokens[kk * 4 + 3]]))
-                    
+                    self.bottleneck_params_list.append(
+                        (self.multiply[tokens[kk * 4]],
+                         self.filter_num[tokens[kk * 4 + 1]],
+                         self.repeat[tokens[kk * 4 + 2]], 1,
+                         self.k_size[tokens[kk * 4 + 3]]))
+
                 if self.downsample_num - i <= num_minus:
                     j = self.downsample_num * repeat_num + i
-                    self.bottleneck_params_list.append((self.mutiply[tokens[j * 4]], self.filter_num[tokens[j * 4 + 1]],
-                               self.repeat[tokens[j * 4 + 2]], 1, self.k_size[tokens[j * 4 + 3]]))
+                    self.bottleneck_params_list.append(
+                        (self.multiply[tokens[j * 4]],
+                         self.filter_num[tokens[j * 4 + 1]],
+                         self.repeat[tokens[j * 4 + 2]], 1,
+                         self.k_size[tokens[j * 4 + 3]]))
+
+            if self.downsample_num == 0 and self.block_num != 0:
+                for i in range(len(self.block_num)):
+                    self.bottleneck_params_list.append(
+                        (self.multiply[tokens[i * 4]],
+                         self.filter_num[tokens[i * 4 + 1]],
+                         self.repeat[tokens[i * 4 + 2]], 1,
+                         self.k_size[tokens[i * 4 + 3]]))
 
         def net_arch(input, return_mid_layer=False, return_block=[]):
-            assert isinstance(return_block, list), 'return_block must be a list.'
+            assert isinstance(return_block,
+                              list), 'return_block must be a list.'
             # all padding is 'SAME' in the conv2d, can compute the actual padding automatic. 
             # bottleneck sequences
             in_c = int(32 * self.scale)
@@ -127,7 +149,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
                 if s == 2:
                     layer_count += 1
                 if (layer_count - 1) in return_block:
-                    mid_layer[layer_count] = depthwise_conv
+                    mid_layer[layer_count - 1] = depthwise_conv
 
                 input, depthwise_conv = self._invresi_blocks(
                     input=input,
@@ -137,8 +159,11 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
                     n=n,
                     s=s,
                     k=k,
-                    name='mobilenetv2_' + str(i+1))
+                    name='mobilenetv2_' + str(i + 1))
                 in_c = int(c * self.scale)
+
+            if layer_count in return_block:
+                mid_layer[layer_count] = depthwise_conv
 
             if return_mid_layer:
                 return input, mid_layer
@@ -259,18 +284,28 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
         return last_residual_block, depthwise_output
 
 
-
 @SEARCHSPACE.register
 class MobileNetV1BlockSpace(SearchSpaceBase):
-    def __init__(self, input_size, output_size, block_num, block_mask=None, scale=1.0):
-        super(MobileNetV1BlockSpace, self).__init__(input_size, output_size, block_num, block_mask)
+    def __init__(self,
+                 input_size,
+                 output_size,
+                 block_num,
+                 block_mask=None,
+                 scale=1.0):
+        super(MobileNetV1BlockSpace, self).__init__(input_size, output_size,
+                                                    block_num, block_mask)
         # use input_size and output_size to compute self.downsample_num
-        self.downsample_num = compute_downsample_num(self.input_size, self.output_size)
+        self.downsample_num = compute_downsample_num(self.input_size,
+                                                     self.output_size)
         if self.block_num != None:
-            assert self.downsample_num <= self.block_num, 'downsample numeber must be LESS THAN OR EQUAL TO block_num, but NOW: downsample numeber is {}, block_num is {}'.format(self.downsample_num, self.block_num)
+            assert self.downsample_num <= self.block_num, 'downsample numeber must be LESS THAN OR EQUAL TO block_num, but NOW: downsample numeber is {}, block_num is {}'.format(
+                self.downsample_num, self.block_num)
 
         # self.filter_num means channel number
-        self.filter_num = np.array([3, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96, 128, 144, 160, 192, 224, 256, 320, 384, 512, 576, 640, 768, 1024, 1048])
+        self.filter_num = np.array([
+            3, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96, 128, 144, 160, 192, 224,
+            256, 320, 384, 512, 576, 640, 768, 1024, 1048
+        ])
         self.k_size = np.array([3, 5])
         self.scale = scale
 
@@ -302,37 +337,55 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
         self.bottleneck_param_list = []
         if self.block_mask != None:
             for i in range(len(self.block_mask)):
-                self.bottleneck_params_list.append((self.filter_num[tokens[i * 3]], self.filter_num[tokens[i * 3 + 1]], 2 if self.block_mask[i] == 1 else 1, self.k_size[tokens[i * 3 + 2]]))
+                self.bottleneck_params_list.append(
+                    (self.filter_num[tokens[i * 3]],
+                     self.filter_num[tokens[i * 3 + 1]], 2
+                     if self.block_mask[i] == 1 else 1,
+                     self.k_size[tokens[i * 3 + 2]]))
         else:
             repeat_num = self.block_num / self.downsample_num
             num_minus = self.block_num % self.downsample_num
             for i in range(self.block_num):
                 ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
-                self.bottleneck_params_list.append((self.filter_num[tokens[i * 3]], self.filter_num[tokens[i * 3 + 1]], 2, self.k_size[tokens[i * 3 + 2]]))
+                self.bottleneck_params_list.append(
+                    (self.filter_num[tokens[i * 3]],
+                     self.filter_num[tokens[i * 3 + 1]], 2,
+                     self.k_size[tokens[i * 3 + 2]]))
 
                 ### if block_num / downsample_num > 1, add (block_num / downsample_num) times stride=1 block 
                 for k in range(repeat_num - 1):
                     kk = k * self.downsample_num + i
-                    self.bottleneck_params_list.append((self.filter_num[tokens[kk * 3]], self.filter_num[tokens[kk * 3 + 1]],
-                               1, self.k_size[tokens[kk * 3 + 2]]))
-                    
+                    self.bottleneck_params_list.append(
+                        (self.filter_num[tokens[kk * 3]],
+                         self.filter_num[tokens[kk * 3 + 1]], 1,
+                         self.k_size[tokens[kk * 3 + 2]]))
+
                 if self.downsample_num - i <= num_minus:
                     j = self.downsample_num * repeat_num + i
-                    self.bottleneck_params_list.append((self.filter_num[tokens[j * 3]], self.filter_num[tokens[j * 3 + 1]],
-                               1, self.k_size[tokens[j * 3 + 2]]))
+                    self.bottleneck_params_list.append(
+                        (self.filter_num[tokens[j * 3]],
+                         self.filter_num[tokens[j * 3 + 1]], 1,
+                         self.k_size[tokens[j * 3 + 2]]))
 
+            if self.downsample_num == 0 and self.block_num != 0:
+                for i in range(len(self.block_num)):
+                    self.bottleneck_params_list.append(
+                        (self.filter_num[tokens[i * 3]],
+                         self.filter_num[tokens[i * 3 + 1]], 1,
+                         self.k_size[tokens[i * 3 + 2]]))
 
         def net_arch(input, return_mid_layer=False, return_block=[]):
-            assert isinstance(return_block, list), 'return_block must be a list.'
+            assert isinstance(return_block,
+                              list), 'return_block must be a list.'
             mid_layer = dict()
             layer_count = 0
-            
+
             for i, layer_setting in enumerate(self.bottleneck_params_list):
                 filter_num1, filter_num2, stride, kernel_size = layer_setting
                 if stride == 2:
                     layer_count += 1
                 if (layer_count - 1) in return_block:
-                    mid_layer[layer_count] = input
+                    mid_layer[layer_count - 1] = input
 
                 input = self._depthwise_separable(
                     input=input,
@@ -343,6 +396,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                     scale=self.scale,
                     kernel_size=kernel_size,
                     name='mobilenetv1_{}'.format(str(i + 1)))
+
             if return_mid_layer:
                 return input, mid_layer
             else:
@@ -375,4 +429,3 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
             name=name + '_sep')
 
         return pointwise_conv
-
