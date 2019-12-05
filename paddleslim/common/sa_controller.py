@@ -13,10 +13,12 @@
 # limitations under the License.
 """The controller used to search hyperparameters or neural architecture"""
 
+import os
 import copy
 import math
 import logging
 import numpy as np
+import json
 from .controller import EvolutionaryController
 from log_helper import get_logger
 
@@ -34,15 +36,25 @@ class SAController(EvolutionaryController):
                  init_temperature=1024,
                  max_try_times=None,
                  init_tokens=None,
-                 constrain_func=None):
+                 reward=-1,
+                 max_reward=-1,
+                 iters=0,
+                 best_tokens=None,
+                 constrain_func=None,
+                 checkpoints=None):
         """Initialize.
         Args:
             range_table(list<int>): Range table.
             reduce_rate(float): The decay rate of temperature.
             init_temperature(float): Init temperature.
             max_try_times(int): max try times before get legal tokens.
-            init_tokens(list<int>): The initial tokens.
+            init_tokens(list<int>): The initial tokens. Default: None.
+            reward(float): The reward of current tokens. Default: -1.
+            max_reward(float): The max reward in the search of sanas, in general, best tokens get max reward. Default: -1.
+            iters(int): The iteration of sa controller. Default: 0.
+            best_tokens(list<int>): The best tokens in the search of sanas, in general, best tokens get max reward. Default: None.
             constrain_func(function): The callback function used to check whether the tokens meet constraint. None means there is no constraint. Default: None.
+            checkpoints(str): if checkpoint is None, donnot save checkpoints, else save scene to checkpoints file.
         """
         super(SAController, self).__init__()
         self._range_table = range_table
@@ -51,12 +63,13 @@ class SAController(EvolutionaryController):
         self._reduce_rate = reduce_rate
         self._init_temperature = init_temperature
         self._max_try_times = max_try_times
-        self._reward = -1
+        self._reward = reward
         self._tokens = init_tokens
         self._constrain_func = constrain_func
-        self._max_reward = -1
-        self._best_tokens = None
-        self._iter = 0
+        self._max_reward = max_reward
+        self._best_tokens = best_tokens
+        self._iter = iters
+        self._checkpoints = checkpoints
 
     def __getstate__(self):
         d = {}
@@ -84,8 +97,11 @@ class SAController(EvolutionaryController):
             self._max_reward = reward
             self._best_tokens = tokens
         _logger.info(
-            "Controller - iter: {}; current_reward: {}; current tokens: {}".
-            format(self._iter, self._reward, self._tokens))
+            "Controller - iter: {}; best_reward: {}, best tokens: {}, current_reward: {}; current tokens: {}".
+            format(self._iter, self._reward, self._tokens, reward, tokens))
+
+        if self._checkpoints != None:
+            self._save_checkpoint(self._checkpoints)
 
     def next_tokens(self, control_token=None):
         """
@@ -108,8 +124,19 @@ class SAController(EvolutionaryController):
                 index = int(len(self._range_table[0]) * np.random.random())
                 new_tokens = tokens[:]
                 new_tokens[index] = np.random.randint(
-                    self._range_table[0][index],
-                    self._range_table[1][index])
+                    self._range_table[0][index], self._range_table[1][index])
             else:
                 break
         return new_tokens
+
+    def _save_checkpoint(self, output_dir):
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        file_path = os.path.join(output_dir, 'sanas.checkpoints')
+        scene = dict()
+        for key in self.__dict__:
+            if key in ['_checkpoints']:
+                continue
+            scene[key] = self.__dict__[key]
+        with open(file_path, 'w') as f:
+            json.dump(scene, f)

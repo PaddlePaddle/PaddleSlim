@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import socket
 import logging
 import numpy as np
+import json
 import hashlib
 import paddle.fluid as fluid
 from ..core import VarWrapper, OpWrapper, GraphWrapper
@@ -39,6 +41,8 @@ class SANAS(object):
                  reduce_rate=0.85,
                  search_steps=300,
                  key="sa_nas",
+                 save_checkpoint='nas_checkpoint',
+                 load_checkpoint=None,
                  is_server=False):
         """
         Search a group of ratios used to prune program.
@@ -51,6 +55,8 @@ class SANAS(object):
             reduce_rate(float): The decay rate used in simulated annealing search strategy.
             search_steps(int): The steps of searching.
             key(str): Identity used in communication between controller server and clients.
+            save_checkpoint(string|None): The directory of checkpoint to save, if set to None, not save checkpoint. Default: 'nas_checkpoint'.
+            load_checkpoint(string|None): The directory of checkpoint to load, if set to None, not load checkpoint. Default: None.
             is_server(bool): Whether current host is controller server. Default: True.
         """
         if not is_server:
@@ -75,13 +81,39 @@ class SANAS(object):
             range_table = self._search_space.range_table()
             range_table = (len(range_table) * [0], range_table)
             _logger.info("range table: {}".format(range_table))
+
+            if load_checkpoint != None:
+                assert os.path.exists(
+                    load_checkpoint
+                ) == True, 'load checkpoint file NOT EXIST!!! Please check the directory of checkpoint!!!'
+                checkpoint_path = os.path.join(load_checkpoint,
+                                               'sanas.checkpoints')
+                with open(checkpoint_path, 'r') as f:
+                    scene = json.load(f)
+                preinit_tokens = scene['_tokens']
+                prereward = scene['_reward']
+                premax_reward = scene['_max_reward']
+                prebest_tokens = scene['_best_tokens']
+                preiter = scene['_iter']
+            else:
+                preinit_tokens = init_tokens
+                prereward = -1
+                premax_reward = -1
+                prebest_tokens = None
+                preiter = 0
+
             controller = SAController(
                 range_table,
                 self._reduce_rate,
                 self._init_temperature,
                 max_try_times=None,
-                init_tokens=init_tokens,
-                constrain_func=None)
+                init_tokens=preinit_tokens,
+                reward=prereward,
+                max_reward=premax_reward,
+                iters=preiter,
+                best_tokens=prebest_tokens,
+                constrain_func=None,
+                checkpoints=save_checkpoint)
 
             max_client_num = 100
             self._controller_server = ControllerServer(
@@ -96,7 +128,10 @@ class SANAS(object):
         self._controller_client = ControllerClient(
             server_ip, server_port, key=self._key)
 
-        self._iter = 0
+        if is_server and load_checkpoint != None:
+            self._iter = scene['_iter']
+        else:
+            self._iter = 0
 
     def _get_host_ip(self):
         return socket.gethostbyname(socket.gethostname())
