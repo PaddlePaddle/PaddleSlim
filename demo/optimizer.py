@@ -23,6 +23,16 @@ import paddle.fluid.layers.ops as ops
 from paddle.fluid.initializer import init_on_cpu
 from paddle.fluid.layers.learning_rate_scheduler import _decay_step_counter
 
+lr_strategy = 'cosine_decay'
+l2_decay = 1e-4
+step_epochs = [30, 60, 90]
+momentum_rate = 0.9
+warm_up_epochs = 5.0
+num_epochs = 120
+decay_epochs = 2.4
+decay_rate = 0.97
+total_images = 1281167
+
 
 def cosine_decay(learning_rate, step_each_epoch, epochs=120):
     """Applies cosine decay to the learning rate.
@@ -152,15 +162,15 @@ class Optimizer(object):
     def __init__(self, args):
         self.batch_size = args.batch_size
         self.lr = args.lr
-        self.lr_strategy = args.lr_strategy
-        self.l2_decay = args.l2_decay
-        self.momentum_rate = args.momentum_rate
-        self.step_epochs = args.step_epochs
-        self.num_epochs = args.num_epochs
-        self.warm_up_epochs = args.warm_up_epochs
-        self.decay_epochs = args.decay_epochs
-        self.decay_rate = args.decay_rate
-        self.total_images = args.total_images
+        self.lr_strategy = lr_strategy
+        self.l2_decay = l2_decay
+        self.momentum_rate = momentum_rate
+        self.step_epochs = step_epochs
+        self.num_epochs = num_epochs
+        self.warm_up_epochs = warm_up_epochs
+        self.decay_epochs = decay_epochs
+        self.decay_rate = decay_rate
+        self.total_images = total_images
 
         self.step = int(math.ceil(float(self.total_images) / self.batch_size))
 
@@ -295,6 +305,6 @@ class Optimizer(object):
 
 def create_optimizer(args):
     Opt = Optimizer(args)
-    optimizer = getattr(Opt, args.lr_strategy)()
+    optimizer = getattr(Opt, lr_strategy)()
 
     return optimizer

@@ -20,7 +20,7 @@ reduce_rate = 0.85
 init_temperature = 10.24
 max_flops = 321208544
 server_address = ""
-port = 8909
+port = 8979
 retain_epoch = 5
 
 
@@ -243,42 +243,7 @@ if __name__ == '__main__':
         type=int,
         default=100,
         help='controller server number.')
-    # optimizer args
-    parser.add_argument(
-        '--lr_strategy',
-        type=str,
-        default='piecewise_decay',
-        help='learning rate decay strategy.')
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate.')
-    parser.add_argument(
-        '--l2_decay', type=float, default=1e-4, help='learning rate decay.')
-    parser.add_argument(
-        '--step_epochs',
-        nargs='+',
-        type=int,
-        default=[30, 60, 90],
-        help="piecewise decay step")
-    parser.add_argument(
-        '--momentum_rate',
-        type=float,
-        default=0.9,
-        help='learning rate decay.')
-    parser.add_argument(
-        '--warm_up_epochs',
-        type=float,
-        default=5.0,
-        help='learning rate decay.')
-    parser.add_argument(
-        '--num_epochs', type=int, default=120, help='learning rate decay.')
-    parser.add_argument(
-        '--decay_epochs', type=float, default=2.4, help='learning rate decay.')
-    parser.add_argument(
-        '--decay_rate', type=float, default=0.97, help='learning rate decay.')
-    parser.add_argument(
-        '--total_images',
-        type=int,
-        default=1281167,
-        help='learning rate decay.')
     args = parser.parse_args()
     print(args)
 
