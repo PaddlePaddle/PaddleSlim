@@ -81,7 +81,7 @@ class InceptionABlockSpace(SearchSpaceBase):
             range_table_base.append(len(self.filter_num))
             range_table_base.append(len(self.filter_num))
             range_table_base.append(len(self.k_size))
-            range_table_base.append(len(self.pooltype))
+            range_table_base.append(len(self.pool_type))
 
         return range_table_base
 
@@ -97,51 +97,69 @@ class InceptionABlockSpace(SearchSpaceBase):
         if self.block_mask != None:
             for i in range(len(self.block_mask)):
                 self.bottleneck_params_list.append(
-                    (self.filter_num[i * 9], self.filter_num[i * 9 + 1],
-                     self.filter_num[i * 9 + 2], self.filter_num[i * 9 + 3],
-                     self.filter_num[i * 9 + 4], self.filter_num[i * 9 + 5],
-                     self.filter_num[i * 9 + 6], self.k_size[i * 9 + 7], 2 if
-                     self.block_mask == 1 else 1, self.pool_type[i * 9 + 8]))
+                    (self.filter_num[tokens[i * 9]],
+                     self.filter_num[tokens[i * 9 + 1]],
+                     self.filter_num[tokens[i * 9 + 2]],
+                     self.filter_num[tokens[i * 9 + 3]],
+                     self.filter_num[tokens[i * 9 + 4]],
+                     self.filter_num[tokens[i * 9 + 5]],
+                     self.filter_num[tokens[i * 9 + 6]],
+                     self.k_size[tokens[i * 9 + 7]], 2 if self.block_mask == 1
+                     else 1, self.pool_type[tokens[i * 9 + 8]]))
         else:
             repeat_num = self.block_num / self.downsample_num
             num_minus = self.block_num % self.downsample_num
             ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
             for i in range(self.downsample_num):
                 self.bottleneck_params_list.append(
-                    (self.filter_num[i * 9], self.filter_num[i * 9 + 1],
-                     self.filter_num[i * 9 + 2], self.filter_num[i * 9 + 3],
-                     self.filter_num[i * 9 + 4], self.filter_num[i * 9 + 5],
-                     self.filter_num[i * 9 + 6], self.k_size[i * 9 + 7], 2,
-                     self.pool_type[i * 9 + 8]))
+                    (self.filter_num[tokens[i * 9]],
+                     self.filter_num[tokens[i * 9 + 1]],
+                     self.filter_num[tokens[i * 9 + 2]],
+                     self.filter_num[tokens[i * 9 + 3]],
+                     self.filter_num[tokens[i * 9 + 4]],
+                     self.filter_num[tokens[i * 9 + 5]],
+                     self.filter_num[tokens[i * 9 + 6]],
+                     self.k_size[tokens[i * 9 + 7]], 2,
+                     self.pool_type[tokens[i * 9 + 8]]))
                 ### if block_num / downsample_num > 1, add (block_num / downsample_num) times stride=1 block 
                 for k in range(repeat_num - 1):
                     kk = k * self.downsample_num + i
                     self.bottleneck_params_list.append(
-                        (self.filter_num[kk * 9], self.filter_num[kk * 9 + 1],
-                         self.filter_num[kk * 9 + 2],
-                         self.filter_num[kk * 9 + 3],
-                         self.filter_num[kk * 9 + 4],
-                         self.filter_num[kk * 9 + 5],
-                         self.filter_num[kk * 9 + 6], self.k_size[kk * 9 + 7],
-                         1, self.pool_type[kk * 9 + 8]))
+                        (self.filter_num[tokens[kk * 9]],
+                         self.filter_num[tokens[kk * 9 + 1]],
+                         self.filter_num[tokens[kk * 9 + 2]],
+                         self.filter_num[tokens[kk * 9 + 3]],
+                         self.filter_num[tokens[kk * 9 + 4]],
+                         self.filter_num[tokens[kk * 9 + 5]],
+                         self.filter_num[tokens[kk * 9 + 6]],
+                         self.k_size[tokens[kk * 9 + 7]], 1,
+                         self.pool_type[tokens[kk * 9 + 8]]))
 
                 if self.downsample_num - i <= num_minus:
                     j = self.downsample_num * repeat_num + i
-                    self.bottleneck_params_list.append((
-                        self.filter_num[j * 9], self.filter_num[j * 9 + 1],
-                        self.filter_num[j * 9 + 2], self.filter_num[j * 9 + 3],
-                        self.filter_num[j * 9 + 4], self.filter_num[j * 9 + 5],
-                        self.filter_num[j * 9 + 6], self.k_size[j * 9 + 7], 1,
-                        self.pool_type[j * 9 + 8]))
+                    self.bottleneck_params_list.append(
+                        (self.filter_num[tokens[j * 9]],
+                         self.filter_num[tokens[j * 9 + 1]],
+                         self.filter_num[tokens[j * 9 + 2]],
+                         self.filter_num[tokens[j * 9 + 3]],
+                         self.filter_num[tokens[j * 9 + 4]],
+                         self.filter_num[tokens[j * 9 + 5]],
+                         self.filter_num[tokens[j * 9 + 6]],
+                         self.k_size[tokens[j * 9 + 7]], 1,
+                         self.pool_type[tokens[j * 9 + 8]]))
 
             if self.downsample_num == 0 and self.block_num != 0:
                 for i in range(len(self.block_num)):
-                    self.bottleneck_params_list.append((
-                        self.filter_num[i * 9], self.filter_num[i * 9 + 1],
-                        self.filter_num[i * 9 + 2], self.filter_num[i * 9 + 3],
-                        self.filter_num[i * 9 + 4], self.filter_num[i * 9 + 5],
-                        self.filter_num[i * 9 + 6], self.k_size[i * 9 + 7], 1,
-                        self.pool_type[i * 9 + 8]))
+                    self.bottleneck_params_list.append(
+                        (self.filter_num[tokens[i * 9]],
+                         self.filter_num[tokens[i * 9 + 1]],
+                         self.filter_num[tokens[i * 9 + 2]],
+                         self.filter_num[tokens[i * 9 + 3]],
+                         self.filter_num[tokens[i * 9 + 4]],
+                         self.filter_num[tokens[i * 9 + 5]],
+                         self.filter_num[tokens[i * 9 + 6]],
+                         self.k_size[tokens[i * 9 + 7]], 1,
+                         self.pool_type[tokens[i * 9 + 8]]))
 
         def net_arch(input, return_mid_layer=False, return_block=[]):
             assert isinstance(return_block,
@@ -169,7 +187,7 @@ class InceptionABlockSpace(SearchSpaceBase):
             if return_mid_layer:
                 return input, mid_layer
             else:
-                return input
+                return input,
 
         return net_arch
 
@@ -247,7 +265,7 @@ class InceptionABlockSpace(SearchSpaceBase):
 @SEARCHSPACE.register
 class InceptionCBlockSpace(SearchSpaceBase):
     def __init__(self, input_size, output_size, block_num, block_mask):
-        super(InceptionABlockSpace, self).__init__(input_size, output_size,
+        super(InceptionCBlockSpace, self).__init__(input_size, output_size,
                                                    block_num, block_mask)
         if self.block_mask == None:
             # use input_size and output_size to compute self.downsample_num
@@ -274,9 +292,9 @@ class InceptionCBlockSpace(SearchSpaceBase):
         The initial token.
         """
         if self.block_mask != None:
-            return [0] * (len(self.block_mask) * 9)
+            return [0] * (len(self.block_mask) * 11)
         else:
-            return [0] * (self.block_num * 9)
+            return [0] * (self.block_num * 11)
 
     def range_table(self):
         """
@@ -297,7 +315,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
             range_table_base.append(len(self.filter_num))
             range_table_base.append(len(self.filter_num))
             range_table_base.append(len(self.k_size))
-            range_table_base.append(len(self.pooltype))
+            range_table_base.append(len(self.pool_type))
 
         return range_table_base
 
@@ -313,63 +331,79 @@ class InceptionCBlockSpace(SearchSpaceBase):
         if self.block_mask != None:
             for i in range(len(self.block_mask)):
                 self.bottleneck_params_list.append(
-                    (self.filter_num[i * 11], self.filter_num[i * 11 + 1],
-                     self.filter_num[i * 11 + 2], self.filter_num[i * 11 + 3],
-                     self.filter_num[i * 11 + 4], self.filter_num[i * 11 + 5],
-                     self.filter_num[i * 11 + 6], self.filter_num[i * 11 + 7],
-                     self.filter_num[i * 11 + 8], self.k_size[i * 11 + 9], 2 if
-                     self.block_mask == 1 else 1, self.pool_type[i * 11 + 10]))
+                    (self.filter_num[tokens[i * 11]],
+                     self.filter_num[tokens[i * 11 + 1]],
+                     self.filter_num[tokens[i * 11 + 2]],
+                     self.filter_num[tokens[i * 11 + 3]],
+                     self.filter_num[tokens[i * 11 + 4]],
+                     self.filter_num[tokens[i * 11 + 5]],
+                     self.filter_num[tokens[i * 11 + 6]],
+                     self.filter_num[tokens[i * 11 + 7]],
+                     self.filter_num[tokens[i * 11 + 8]],
+                     self.k_size[tokens[i * 11 + 9]], 2 if self.block_mask == 1
+                     else 1, self.pool_type[tokens[i * 11 + 10]]))
         else:
             repeat_num = self.block_num / self.downsample_num
             num_minus = self.block_num % self.downsample_num
             ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
             for i in range(self.downsample_num):
                 self.bottleneck_params_list.append(
-                    (self.filter_num[i * 11], self.filter_num[i * 11 + 1],
-                     self.filter_num[i * 11 + 2], self.filter_num[i * 11 + 3],
-                     self.filter_num[i * 11 + 4], self.filter_num[i * 11 + 5],
-                     self.filter_num[i * 11 + 6], self.filter_num[i * 11 + 7],
-                     self.filter_num[i * 11 + 8], self.k_size[i * 11 + 9], 2,
-                     self.pool_type[i * 11 + 10]))
+                    (self.filter_num[tokens[i * 11]],
+                     self.filter_num[tokens[i * 11 + 1]],
+                     self.filter_num[tokens[i * 11 + 2]],
+                     self.filter_num[tokens[i * 11 + 3]],
+                     self.filter_num[tokens[i * 11 + 4]],
+                     self.filter_num[tokens[i * 11 + 5]],
+                     self.filter_num[tokens[i * 11 + 6]],
+                     self.filter_num[tokens[i * 11 + 7]],
+                     self.filter_num[tokens[i * 11 + 8]],
+                     self.k_size[tokens[i * 11 + 9]], 2,
+                     self.pool_type[tokens[i * 11 + 10]]))
                 ### if block_num / downsample_num > 1, add (block_num / downsample_num) times stride=1 block 
                 for k in range(repeat_num - 1):
                     kk = k * self.downsample_num + i
-                    self.bottleneck_params_list.append((
-                        self.filter_num[kk * 11], self.filter_num[kk * 11 + 1],
-                        self.filter_num[kk * 11 + 2],
-                        self.filter_num[kk * 11 + 3],
-                        self.filter_num[kk * 11 + 4],
-                        self.filter_num[kk * 11 + 5],
-                        self.filter_num[kk * 11 + 6],
-                        self.filter_num[kk * 11 + 7],
-                        self.filter_num[kk * 11 + 8], self.k_size[kk * 11 + 9],
-                        1, self.pool_type[kk * 11 + 10]))
+                    self.bottleneck_params_list.append(
+                        (self.filter_num[tokens[kk * 11]],
+                         self.filter_num[tokens[kk * 11 + 1]],
+                         self.filter_num[tokens[kk * 11 + 2]],
+                         self.filter_num[tokens[kk * 11 + 3]],
+                         self.filter_num[tokens[kk * 11 + 4]],
+                         self.filter_num[tokens[kk * 11 + 5]],
+                         self.filter_num[tokens[kk * 11 + 6]],
+                         self.filter_num[tokens[kk * 11 + 7]],
+                         self.filter_num[tokens[kk * 11 + 8]],
+                         self.k_size[tokens[kk * 11 + 9]], 1,
+                         self.pool_type[tokens[kk * 11 + 10]]))
 
                 if self.downsample_num - i <= num_minus:
                     j = self.downsample_num * repeat_num + i
                     self.bottleneck_params_list.append(
-                        (self.filter_num[j * 11], self.filter_num[j * 11 + 1],
-                         self.filter_num[j * 11 + 2],
-                         self.filter_num[j * 11 + 3],
-                         self.filter_num[j * 11 + 4],
-                         self.filter_num[j * 11 + 5],
-                         self.filter_num[j * 11 + 6],
-                         self.filter_num[j * 11 + 7],
-                         self.filter_num[j * 11 + 8], self.k_size[j * 11 + 9],
-                         1, self.pool_type[j * 11 + 10]))
+                        (self.filter_num[tokens[j * 11]],
+                         self.filter_num[tokens[j * 11 + 1]],
+                         self.filter_num[tokens[j * 11 + 2]],
+                         self.filter_num[tokens[j * 11 + 3]],
+                         self.filter_num[tokens[j * 11 + 4]],
+                         self.filter_num[tokens[j * 11 + 5]],
+                         self.filter_num[tokens[j * 11 + 6]],
+                         self.filter_num[tokens[j * 11 + 7]],
+                         self.filter_num[tokens[j * 11 + 8]],
+                         self.k_size[tokens[j * 11 + 9]], 1,
+                         self.pool_type[tokens[j * 11 + 10]]))
 
             if self.downsample_num == 0 and self.block_num != 0:
                 for i in range(len(self.block_num)):
                     self.bottleneck_params_list.append(
-                        (self.filter_num[i * 11], self.filter_num[i * 11 + 1],
-                         self.filter_num[i * 11 + 2],
-                         self.filter_num[i * 11 + 3],
-                         self.filter_num[i * 11 + 4],
-                         self.filter_num[i * 11 + 5],
-                         self.filter_num[i * 11 + 6],
-                         self.filter_num[i * 11 + 7],
-                         self.filter_num[i * 11 + 8], self.k_size[i * 11 + 9],
-                         1, self.pool_type[i * 11 + 10]))
+                        (self.filter_num[tokens[i * 11]],
+                         self.filter_num[tokens[i * 11 + 1]],
+                         self.filter_num[tokens[i * 11 + 2]],
+                         self.filter_num[tokens[i * 11 + 3]],
+                         self.filter_num[tokens[i * 11 + 4]],
+                         self.filter_num[tokens[i * 11 + 5]],
+                         self.filter_num[tokens[i * 11 + 6]],
+                         self.filter_num[tokens[i * 11 + 7]],
+                         self.filter_num[tokens[i * 11 + 8]],
+                         self.k_size[tokens[i * 11 + 9]], 1,
+                         self.pool_type[tokens[i * 11 + 10]]))
 
         def net_arch(input, return_mid_layer=False, return_block=[]):
             assert isinstance(return_block,
@@ -397,7 +431,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
             if return_mid_layer:
                 return input, mid_layer
             else:
-                return input
+                return input,
 
         return net_arch
 

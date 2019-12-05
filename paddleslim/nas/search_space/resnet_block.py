@@ -29,9 +29,9 @@ __all__ = ["ResNetBlockSpace"]
 
 @SEARCHSPACE.register
 class ResNetBlockSpace(SearchSpaceBase):
-    def __init__(input_size, output_size, block_num, block_mask):
-        super(ResNetSpace, self).__init__(input_size, output_size, block_num,
-                                          block_mask)
+    def __init__(self, input_size, output_size, block_num, block_mask=None):
+        super(ResNetBlockSpace, self).__init__(input_size, output_size,
+                                               block_num, block_mask)
         # use input_size and output_size to compute self.downsample_num
         self.downsample_num = compute_downsample_num(self.input_size,
                                                      self.output_size)
@@ -52,6 +52,14 @@ class ResNetBlockSpace(SearchSpaceBase):
 
     def range_table(self):
         range_table_base = []
+        if self.block_mask != None:
+            range_table_length = len(self.block_mask)
+        else:
+            range_table_length = self.block_mum
+
+        for i in range(range_table_length):
+            range_table_base.append(len(self.filter_num))
+            range_table_base.append(len(self.k_size))
 
         return range_table_base
 
@@ -63,39 +71,39 @@ class ResNetBlockSpace(SearchSpaceBase):
         if self.block_mask != None:
             for i in range(len(self.block_mask)):
                 self.bottleneck_params_list.append(
-                    (self.num_filters[tokens[i * 2]],
-                     self.kernel_size[tokens[i * 2 + 1]], 2
+                    (self.filter_num[tokens[i * 2]],
+                     self.k_size[tokens[i * 2 + 1]], 2
                      if self.block_mask[i] == 1 else 1))
         else:
             repeat_num = self.block_num / self.downsample_num
             num_minus = self.block_num % self.downsample_num
             for i in range(self.downsample_num):
                 self.bottleneck_params_list.append(
-                    self.num_filters[tokens[i * 2]],
-                    self.kernel_size[tokens[i * 2 + 1]], 2)
+                    self.filter_num[tokens[i * 2]],
+                    self.k_size[tokens[i * 2 + 1]], 2)
                 for k in range(repeat_num - 1):
                     kk = k * self.downsample_num + i
                     self.bottleneck_params_list.append(
-                        self.num_filters[tokens[kk * 2]],
-                        self.kernel_size[tokens[kk * 2 + 1]], 1)
+                        self.filter_num[tokens[kk * 2]],
+                        self.k_size[tokens[kk * 2 + 1]], 1)
                 if self.downsample_num - i <= num_minus:
                     j = self.downsample_num * repeat_num + i
                     self.bottleneck_params_list.append(
-                        self.num_filters[tokens[j * 2]],
-                        self.kernel_size[tokens[j * 2 + 1]], 1)
+                        self.filter_num[tokens[j * 2]],
+                        self.k_size[tokens[j * 2 + 1]], 1)
 
             if self.downsample_num == 0 and self.block_num != 0:
                 for i in range(len(self.block_num)):
                     self.bottleneck_params_list.append(
-                        self.num_filters[tokens[i * 2]],
-                        self.kernel_size[tokens[i * 2 + 1]], 1)
+                        self.filter_num[tokens[i * 2]],
+                        self.k_size[tokens[i * 2 + 1]], 1)
 
         def net_arch(input, return_mid_layer=False, return_block=[]):
             assert isinstance(return_block,
                               list), 'return_block must be a list.'
             layer_count = 0
             mid_layer = dict()
-            for layer_setting in self.bottleneck_params_list:
+            for i, layer_setting in enumerate(self.bottleneck_params_list):
                 filter_num, k_size, stride = layer_setting
                 if stride == 2:
                     layer_count += 1
@@ -138,6 +146,7 @@ class ResNetBlockSpace(SearchSpaceBase):
             input=input,
             num_filters=num_filters,
             filter_size=1,
+            stride=1,
             act='relu',
             name=name + '_bottleneck_conv0')
         conv1 = conv_bn_layer(
@@ -151,6 +160,7 @@ class ResNetBlockSpace(SearchSpaceBase):
             input=conv1,
             num_filters=num_filters * 4,
             filter_size=1,
+            stride=1,
             act=None,
             name=name + '_bottleneck_conv2')
 

@@ -334,7 +334,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
         if tokens == None:
             tokens = self.init_tokens()
 
-        self.bottleneck_param_list = []
+        self.bottleneck_params_list = []
         if self.block_mask != None:
             for i in range(len(self.block_mask)):
                 self.bottleneck_params_list.append(
@@ -391,7 +391,6 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                     input=input,
                     num_filters1=filter_num1,
                     num_filters2=filter_num2,
-                    num_groups=filter_num1,
                     stride=stride,
                     scale=self.scale,
                     kernel_size=kernel_size,
@@ -408,17 +407,17 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                              input,
                              num_filters1,
                              num_filters2,
-                             num_groups,
                              stride,
                              scale,
                              kernel_size,
                              name=None):
+        num_groups = input.shape[1]
         depthwise_conv = conv_bn_layer(
             input=input,
             filter_size=kernel_size,
             num_filters=int(num_filters1 * scale),
             stride=stride,
-            num_groups=int(num_groups * scale),
+            num_groups=num_groups,
             use_cudnn=False,
             name=name + '_dw')
         pointwise_conv = conv_bn_layer(

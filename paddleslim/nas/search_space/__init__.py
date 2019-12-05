@@ -20,6 +20,10 @@ import mobilenetv1
 from .mobilenetv1 import *
 import resnet
 from .resnet import *
+import resnet_block
+from .resnet_block import *
+import inception_block
+from .inception_block import *
 import search_space_registry
 from search_space_registry import *
 import search_space_factory
