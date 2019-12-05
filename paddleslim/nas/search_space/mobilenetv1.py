@@ -182,7 +182,7 @@ class MobileNetV1Space(SearchSpaceBase):
                 name='mobilenetv1_conv1')
 
             layer_count = 1
-            for i, layer_setting in enumerate(bottleneck_param_list):
+            for i, layer_setting in enumerate(self.bottleneck_param_list):
                 filter_num1, filter_num2, stride, kernel_size = layer_setting
                 if stride == 2:
                     layer_count += 1
@@ -225,6 +225,14 @@ class MobileNetV1Space(SearchSpaceBase):
                              scale,
                              kernel_size,
                              name=None):
+        num_groups = input.shape[1]
+
+        s_oc = int(num_filters1 * scale)
+        if s_oc > num_groups:
+            output_channel = s_oc - (s_oc % num_groups)
+        else:
+            output_channel = num_groups
+
         depthwise_conv = conv_bn_layer(
             input=input,
             filter_size=kernel_size,

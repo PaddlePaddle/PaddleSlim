@@ -168,7 +168,7 @@ class MobileNetV2Space(SearchSpaceBase):
             depthwise_output = None
             # bottleneck sequences
             in_c = int(32 * self.scale)
-            for layer_setting in self.bottleneck_params_list:
+            for i, layer_setting in enumerate(self.bottleneck_params_list):
                 t, c, n, s, k = layer_setting
                 if s == 2:
                     layer_count += 1

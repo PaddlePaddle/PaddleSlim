@@ -87,9 +87,9 @@ class CombineSearchSpace(object):
             block_num = config['block_num'] if 'block_num' in config else None
 
         if 'Block' in cls.__name__:
-            if block_mask == None and (self.block_num == None or
-                                       self.input_size == None or
-                                       self.output_size == None):
+            if block_mask == None and (block_num == None or
+                                       input_size == None or
+                                       output_size == None):
                 raise NotImplementedError(
                     "block_mask or (block num and input_size and output_size) can NOT be None at the same time in Block SPACE!"
                 )

@@ -40,26 +40,29 @@ class ResNetBlockSpace(SearchSpaceBase):
                 self.downsample_num, self.block_num)
         self.filter_num = np.array(
             [48, 64, 96, 128, 160, 192, 224, 256, 320, 384, 512, 640])
-        ### TODO: use repeat to compute normal cell
-        #self.repeat = [2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24]
+        self.repeat = np.array([0, 1, 2])
         self.k_size = np.array([3, 5])
 
     def init_tokens(self):
         if self.block_mask != None:
-            return [0] * (len(self.block_mask) * 2)
+            return [0] * (len(self.block_mask) * 6)
         else:
-            return [0] * (self.block_num * 2)
+            return [0] * (self.block_num * 6)
 
     def range_table(self):
         range_table_base = []
         if self.block_mask != None:
             range_table_length = len(self.block_mask)
         else:
-            range_table_length = self.block_mum
+            range_table_length = self.block_num
 
         for i in range(range_table_length):
             range_table_base.append(len(self.filter_num))
+            range_table_base.append(len(self.filter_num))
+            range_table_base.append(len(self.filter_num))
             range_table_base.append(len(self.k_size))
+            range_table_base.append(len(self.repeat))
+            range_table_base.append(len(self.repeat))
 
         return range_table_base
 
@@ -71,32 +74,52 @@ class ResNetBlockSpace(SearchSpaceBase):
         if self.block_mask != None:
             for i in range(len(self.block_mask)):
                 self.bottleneck_params_list.append(
-                    (self.filter_num[tokens[i * 2]],
-                     self.k_size[tokens[i * 2 + 1]], 2
+                    (self.filter_num[tokens[i * 6]],
+                     self.filter_num[tokens[i * 6 + 1]],
+                     self.filter_num[tokens[i * 6 + 2]],
+                     self.k_size[tokens[i * 6 + 3]],
+                     self.repeat[tokens[i * 6 + 4]],
+                     self.repeat[tokens[i * 6 + 5]], 2
                      if self.block_mask[i] == 1 else 1))
         else:
-            repeat_num = self.block_num / self.downsample_num
+            repeat_num = int(self.block_num / self.downsample_num)
             num_minus = self.block_num % self.downsample_num
             for i in range(self.downsample_num):
                 self.bottleneck_params_list.append(
-                    self.filter_num[tokens[i * 2]],
-                    self.k_size[tokens[i * 2 + 1]], 2)
+                    (self.filter_num[tokens[i * 6]],
+                     self.filter_num[tokens[i * 6 + 1]],
+                     self.filter_num[tokens[i * 6 + 2]],
+                     self.k_size[tokens[i * 6 + 3]],
+                     self.repeat[tokens[i * 6 + 4]],
+                     self.repeat[tokens[i * 6 + 5]], 2))
                 for k in range(repeat_num - 1):
                     kk = k * self.downsample_num + i
                     self.bottleneck_params_list.append(
-                        self.filter_num[tokens[kk * 2]],
-                        self.k_size[tokens[kk * 2 + 1]], 1)
+                        (self.filter_num[tokens[kk * 6]],
+                         self.filter_num[tokens[kk * 6 + 1]],
+                         self.filter_num[tokens[kk * 6 + 2]],
+                         self.k_size[tokens[kk * 6 + 3]],
+                         self.repeat[tokens[kk * 6 + 4]],
+                         self.repeat[tokens[kk * 6 + 5]], 1))
                 if self.downsample_num - i <= num_minus:
-                    j = self.downsample_num * repeat_num + i
+                    j = self.downsample_num * (repeat_num - 1) + i
                     self.bottleneck_params_list.append(
-                        self.filter_num[tokens[j * 2]],
-                        self.k_size[tokens[j * 2 + 1]], 1)
+                        (self.filter_num[tokens[j * 6]],
+                         self.filter_num[tokens[j * 6 + 1]],
+                         self.filter_num[tokens[j * 6 + 2]],
+                         self.k_size[tokens[j * 6 + 3]],
+                         self.repeat[tokens[j * 6 + 4]],
+                         self.repeat[tokens[j * 6 + 5]], 1))
 
             if self.downsample_num == 0 and self.block_num != 0:
                 for i in range(len(self.block_num)):
                     self.bottleneck_params_list.append(
-                        self.filter_num[tokens[i * 2]],
-                        self.k_size[tokens[i * 2 + 1]], 1)
+                        (self.filter_num[tokens[i * 6]],
+                         self.filter_num[tokens[i * 6 + 1]],
+                         self.filter_num[tokens[i * 6 + 2]],
+                         self.k_size[tokens[i * 6 + 3]],
+                         self.repeat[tokens[i * 6 + 4]],
+                         self.repeat[tokens[i * 6 + 5]], 1))
 
         def net_arch(input, return_mid_layer=False, return_block=[]):
             assert isinstance(return_block,
@@ -104,7 +127,7 @@ class ResNetBlockSpace(SearchSpaceBase):
             layer_count = 0
             mid_layer = dict()
             for i, layer_setting in enumerate(self.bottleneck_params_list):
-                filter_num, k_size, stride = layer_setting
+                filter_num1, filter_num2, filter_num3, k_size, repeat1, repeat2, stride = layer_setting
                 if stride == 2:
                     layer_count += 1
                 if (layer_count - 1) in return_block:
@@ -112,8 +135,12 @@ class ResNetBlockSpace(SearchSpaceBase):
 
                 input = self._bottleneck_block(
                     input=input,
-                    num_filters=filter_num,
+                    num_filters1=filter_num1,
+                    num_filters2=filter_num3,
+                    num_filters3=filter_num3,
                     kernel_size=k_size,
+                    repeat1=repeat1,
+                    repeat2=repeat2,
                     stride=stride,
                     name='resnet' + str(i + 1))
 
@@ -138,33 +165,40 @@ class ResNetBlockSpace(SearchSpaceBase):
 
     def _bottleneck_block(self,
                           input,
-                          num_filters,
+                          num_filters1,
+                          num_filters2,
+                          num_filters3,
                           kernel_size,
+                          repeat1,
+                          repeat2,
                           stride,
                           name=None):
-        conv0 = conv_bn_layer(
+        short = self._shortcut(input, num_filters3, stride, name=name)
+
+        for i in range(repeat1):
+            input = conv_bn_layer(
+                input=input,
+                num_filters=num_filters1,
+                filter_size=1,
+                stride=1,
+                act='relu',
+                name=name + '_bottleneck_conv0_{}'.format(str(i)))
+
+        input = conv_bn_layer(
             input=input,
-            num_filters=num_filters,
-            filter_size=1,
-            stride=1,
-            act='relu',
-            name=name + '_bottleneck_conv0')
-        conv1 = conv_bn_layer(
-            input=conv0,
-            num_filters=num_filters,
+            num_filters=num_filters2,
             filter_size=kernel_size,
             stride=stride,
             act='relu',
             name=name + '_bottleneck_conv1')
-        conv2 = conv_bn_layer(
-            input=conv1,
-            num_filters=num_filters * 4,
-            filter_size=1,
-            stride=1,
-            act=None,
-            name=name + '_bottleneck_conv2')
-
-        short = self._shortcut(input, num_filters * 4, stride, name=name)
+        for i in range(repeat2):
+            input = conv_bn_layer(
+                input=input,
+                num_filters=num_filters3,
+                filter_size=1,
+                stride=1,
+                act=None,
+                name=name + '_bottleneck_conv2_{}'.format(str(i)))
 
         return fluid.layers.elementwise_add(
-            x=short, y=conv2, act='relu', name=name + '_bottleneck_add')
+            x=short, y=input, act='relu', name=name + '_bottleneck_add')

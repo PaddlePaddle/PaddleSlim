@@ -22,6 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
+from .utils import compute_downsample_num
 
 __all__ = ["InceptionABlockSpace", "InceptionCBlockSpace"]
 ### TODO add asymmetric kernel of conv when paddle-lite support 
@@ -70,7 +71,7 @@ class InceptionABlockSpace(SearchSpaceBase):
         if self.block_mask != None:
             range_table_length = len(self.block_mask)
         else:
-            range_table_length = self.block_mum
+            range_table_length = self.block_num
 
         for i in range(range_table_length):
             range_table_base.append(len(self.filter_num))
@@ -107,7 +108,7 @@ class InceptionABlockSpace(SearchSpaceBase):
                      self.k_size[tokens[i * 9 + 7]], 2 if self.block_mask == 1
                      else 1, self.pool_type[tokens[i * 9 + 8]]))
         else:
-            repeat_num = self.block_num / self.downsample_num
+            repeat_num = int(self.block_num / self.downsample_num)
             num_minus = self.block_num % self.downsample_num
             ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
             for i in range(self.downsample_num):
@@ -136,7 +137,7 @@ class InceptionABlockSpace(SearchSpaceBase):
                          self.pool_type[tokens[kk * 9 + 8]]))
 
                 if self.downsample_num - i <= num_minus:
-                    j = self.downsample_num * repeat_num + i
+                    j = self.downsample_num * (repeat_num - 1) + i
                     self.bottleneck_params_list.append(
                         (self.filter_num[tokens[j * 9]],
                          self.filter_num[tokens[j * 9 + 1]],
@@ -304,7 +305,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
         if self.block_mask != None:
             range_table_length = len(self.block_mask)
         else:
-            range_table_length = self.block_mum
+            range_table_length = self.block_num
 
         for i in range(range_table_length):
             range_table_base.append(len(self.filter_num))
@@ -343,7 +344,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
                      self.k_size[tokens[i * 11 + 9]], 2 if self.block_mask == 1
                      else 1, self.pool_type[tokens[i * 11 + 10]]))
         else:
-            repeat_num = self.block_num / self.downsample_num
+            repeat_num = int(self.block_num / self.downsample_num)
             num_minus = self.block_num % self.downsample_num
             ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
             for i in range(self.downsample_num):
@@ -376,7 +377,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
                          self.pool_type[tokens[kk * 11 + 10]]))
 
                 if self.downsample_num - i <= num_minus:
-                    j = self.downsample_num * repeat_num + i
+                    j = self.downsample_num * (repeat_num - 1) + i
                     self.bottleneck_params_list.append(
                         (self.filter_num[tokens[j * 11]],
                          self.filter_num[tokens[j * 11 + 1]],

@@ -70,7 +70,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
         if self.block_mask != None:
             range_table_length = len(self.block_mask)
         else:
-            range_table_length = self.block_mum
+            range_table_length = self.block_num
 
         for i in range(range_table_length):
             range_table_base.append(len(self.multiply))
@@ -98,7 +98,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
                      if self.block_mask[i] == 1 else 1,
                      self.k_size[tokens[i * 4 + 3]]))
         else:
-            repeat_num = self.block_num / self.downsample_num
+            repeat_num = int(self.block_num / self.downsample_num)
             num_minus = self.block_num % self.downsample_num
             ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
             for i in range(self.downsample_num):
@@ -118,7 +118,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
                          self.k_size[tokens[kk * 4 + 3]]))
 
                 if self.downsample_num - i <= num_minus:
-                    j = self.downsample_num * repeat_num + i
+                    j = self.downsample_num * (repeat_num - 1) + i
                     self.bottleneck_params_list.append(
                         (self.multiply[tokens[j * 4]],
                          self.filter_num[tokens[j * 4 + 1]],
@@ -343,9 +343,9 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                      if self.block_mask[i] == 1 else 1,
                      self.k_size[tokens[i * 3 + 2]]))
         else:
-            repeat_num = self.block_num / self.downsample_num
+            repeat_num = int(self.block_num / self.downsample_num)
             num_minus = self.block_num % self.downsample_num
-            for i in range(self.block_num):
+            for i in range(self.downsample_num):
                 ### if block_num > downsample_num, add stride=1 block at last (block_num-downsample_num) layers
                 self.bottleneck_params_list.append(
                     (self.filter_num[tokens[i * 3]],
@@ -361,7 +361,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                          self.k_size[tokens[kk * 3 + 2]]))
 
                 if self.downsample_num - i <= num_minus:
-                    j = self.downsample_num * repeat_num + i
+                    j = self.downsample_num * (repeat_num - 1) + i
                     self.bottleneck_params_list.append(
                         (self.filter_num[tokens[j * 3]],
                          self.filter_num[tokens[j * 3 + 1]], 1,
@@ -399,7 +399,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
             if return_mid_layer:
                 return input, mid_layer
             else:
-                return input
+                return input,
 
         return net_arch
 
@@ -412,10 +412,17 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                              kernel_size,
                              name=None):
         num_groups = input.shape[1]
+
+        s_oc = int(num_filters1 * scale)
+        if s_oc > num_groups:
+            output_channel = s_oc - (s_oc % num_groups)
+        else:
+            output_channel = num_groups
+
         depthwise_conv = conv_bn_layer(
             input=input,
             filter_size=kernel_size,
-            num_filters=int(num_filters1 * scale),
+            num_filters=output_channel,
             stride=stride,
             num_groups=num_groups,
             use_cudnn=False,
