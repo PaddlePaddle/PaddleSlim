@@ -236,9 +236,9 @@ class MobileNetV1Space(SearchSpaceBase):
         depthwise_conv = conv_bn_layer(
             input=input,
             filter_size=kernel_size,
-            num_filters=int(num_filters1 * scale),
+            num_filters=output_channel,
             stride=stride,
-            num_groups=int(num_groups * scale),
+            num_groups=num_groups,
             use_cudnn=False,
             name=name + '_dw')
         pointwise_conv = conv_bn_layer(

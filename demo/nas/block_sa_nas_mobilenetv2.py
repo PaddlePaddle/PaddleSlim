@@ -16,6 +16,14 @@ import imagenet_reader
 
 _logger = get_logger(__name__, level=logging.INFO)
 
+reduce_rate = 0.85
+init_temperature = 10.24
+max_flops = 321208544
+server_address = ""
+port = 8909
+retain_epoch = 5
+
+
 def create_data_loader(image_shape):
     data_shape = [-1] + image_shape
     data = fluid.data(name='data', shape=data_shape, dtype='float32')
@@ -26,6 +34,7 @@ def create_data_loader(image_shape):
         use_double_buffer=True,
         iterable=True)
     return data_loader, data, label
+
 
 def conv_bn_layer(input,
                   filter_size,
@@ -49,22 +58,33 @@ def conv_bn_layer(input,
         bias_attr=False)
     bn_name = name + '_bn'
     return fluid.layers.batch_norm(
-               input=conv,
-               act = act,
-               param_attr=ParamAttr(name=bn_name + '_scale'),
-               bias_attr=ParamAttr(name=bn_name + '_offset'),
-               moving_mean_name=bn_name + '_mean',
-               moving_variance_name=bn_name + '_variance')
-
+        input=conv,
+        act=act,
+        param_attr=ParamAttr(name=bn_name + '_scale'),
+        bias_attr=ParamAttr(name=bn_name + '_offset'),
+        moving_mean_name=bn_name + '_mean',
+        moving_variance_name=bn_name + '_variance')
 
 
 def search_mobilenetv2_block(config, args, image_size):
     image_shape = [3, image_size, image_size]
     if args.is_server:
-        sa_nas = SANAS(config, server_addr=("", args.port), init_temperature=args.init_temperature, reduce_rate=args.reduce_rate, search_steps=args.search_steps, is_server=True)
+        sa_nas = SANAS(
+            config,
+            server_addr=("", port),
+            init_temperature=init_temperature,
+            reduce_rate=reduce_rate,
+            search_steps=args.search_steps,
+            is_server=True)
     else:
-        sa_nas = SANAS(config, server_addr=(args.server_address, args.port), init_temperature=args.init_temperature, reduce_rate=args.reduce_rate, search_steps=args.search_steps, is_server=False)
-        
+        sa_nas = SANAS(
+            config,
+            server_addr=(server_address, port),
+            init_temperature=init_temperature,
+            reduce_rate=reduce_rate,
+            search_steps=args.search_steps,
+            is_server=False)
+
     for step in range(args.search_steps):
         archs = sa_nas.next_archs()[0]
 
@@ -73,10 +93,30 @@ def search_mobilenetv2_block(config, args, image_size):
         startup_program = fluid.Program()
         with fluid.program_guard(train_program, startup_program):
             train_loader, data, label = create_data_loader(image_shape)
-            data = conv_bn_layer(input=data, num_filters=32, filter_size=3, stride=2, padding='SAME', act='relu6', name='mobilenetv2_conv1')
+            data = conv_bn_layer(
+                input=data,
+                num_filters=32,
+                filter_size=3,
+                stride=2,
+                padding='SAME',
+                act='relu6',
+                name='mobilenetv2_conv1')
             data = archs(data)[0]
-            data = conv_bn_layer(input=data, num_filters=1280, filter_size=1, stride=1, padding='SAME', act='relu6', name='mobilenetv2_last_conv')
-            data = fluid.layers.pool2d(input=data, pool_size=7, pool_stride=1, pool_type='avg', global_pooling=True, name='mobilenetv2_last_pool')
+            data = conv_bn_layer(
+                input=data,
+                num_filters=1280,
+                filter_size=1,
+                stride=1,
+                padding='SAME',
+                act='relu6',
+                name='mobilenetv2_last_conv')
+            data = fluid.layers.pool2d(
+                input=data,
+                pool_size=7,
+                pool_stride=1,
+                pool_type='avg',
+                global_pooling=True,
+                name='mobilenetv2_last_pool')
             output = fluid.layers.fc(
                 input=data,
                 size=args.class_dim,
@@ -86,8 +126,10 @@ def search_mobilenetv2_block(config, args, image_size):
             softmax_out = fluid.layers.softmax(input=output, use_cudnn=False)
             cost = fluid.layers.cross_entropy(input=softmax_out, label=label)
             avg_cost = fluid.layers.mean(cost)
-            acc_top1 = fluid.layers.accuracy(input=softmax_out, label=label, k=1)
-            acc_top5 = fluid.layers.accuracy(input=softmax_out, label=label, k=5)
+            acc_top1 = fluid.layers.accuracy(
+                input=softmax_out, label=label, k=1)
+            acc_top5 = fluid.layers.accuracy(
+                input=softmax_out, label=label, k=5)
             test_program = train_program.clone(for_test=True)
 
             optimizer = fluid.optimizer.Momentum(
@@ -98,7 +140,7 @@ def search_mobilenetv2_block(config, args, image_size):
 
         current_flops = flops(train_program)
         print('step: {}, current_flops: {}'.format(step, current_flops))
-        if current_flops > args.max_flops:
+        if current_flops > max_flops:
             continue
 
         place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
@@ -132,12 +174,11 @@ def search_mobilenetv2_block(config, args, image_size):
             places=fluid.cuda_places() if args.use_gpu else fluid.cpu_places())
         test_loader.set_sample_list_generator(test_reader, places=place)
 
-
         build_strategy = fluid.BuildStrategy()
         train_compiled_program = fluid.CompiledProgram(
             train_program).with_data_parallel(
                 loss_name=avg_cost.name, build_strategy=build_strategy)
-        for epoch_id in range(args.retain_epoch):
+        for epoch_id in range(retain_epoch):
             for batch_id, data in enumerate(train_loader()):
                 fetches = [avg_cost.name]
                 s_time = time.time()
@@ -152,9 +193,7 @@ def search_mobilenetv2_block(config, args, image_size):
 
         reward = []
         for batch_id, data in enumerate(test_loader()):
-            test_fetches = [
-                avg_cost.name, acc_top1.name, acc_top5.name
-            ]
+            test_fetches = [avg_cost.name, acc_top1.name, acc_top5.name]
             batch_reward = exe.run(test_program,
                                    feed=data,
                                    fetch_list=test_fetches)
@@ -172,6 +211,7 @@ def search_mobilenetv2_block(config, args, image_size):
                 finally_reward[0], finally_reward[1], finally_reward[2]))
 
         sa_nas.reward(float(finally_reward[1]))
+
 
 if __name__ == '__main__':
 
@@ -191,15 +231,7 @@ if __name__ == '__main__':
         type=str,
         default='cifar10',
         choices=['cifar10', 'imagenet'],
-        help='server address.')
-    # controller
-    parser.add_argument(
-        '--reduce_rate', type=float, default=0.85, help='reduce rate.')
-    parser.add_argument(
-        '--init_temperature',
-        type=float,
-        default=10.24,
-        help='init temperature.')
+        help='dataset name.')
     parser.add_argument(
         '--is_server',
         type=ast.literal_eval,
@@ -207,20 +239,10 @@ if __name__ == '__main__':
         help='Whether to start a server.')
     # nas args
     parser.add_argument(
-        '--max_flops', type=int, default=592948064, help='reduce rate.')
-    parser.add_argument(
-        '--retain_epoch', type=int, default=5, help='train epoch before val.')
-    parser.add_argument(
-        '--end_epoch', type=int, default=500, help='end epoch present client.')
-    parser.add_argument(
         '--search_steps',
         type=int,
         default=100,
         help='controller server number.')
-    parser.add_argument(
-        '--server_address', type=str, default=None, help='server address.')
-    parser.add_argument(
-        '--port', type=int, default=8889, help='server port.')
     # optimizer args
     parser.add_argument(
         '--lr_strategy',
@@ -265,17 +287,12 @@ if __name__ == '__main__':
     elif args.data == 'imagenet':
         image_size = 224
     else:
-        raise NotImplemented(
+        raise NotImplementedError(
             'data must in [cifar10, imagenet], but received: {}'.format(
                 args.data))
 
     # block mask means block number, 1 mean downsample, 0 means the size of feature map don't change after this block
-    config_info = {
-        'input_size': None,
-        'output_size': None,
-        'block_num': None,
-        'block_mask': [0, 1, 1, 1, 1, 0, 1, 0]
-    }
+    config_info = {'block_mask': [0, 1, 1, 1, 1, 0, 1, 0]}
     config = [('MobileNetV2BlockSpace', config_info)]
 
     search_mobilenetv2_block(config, args, image_size)
