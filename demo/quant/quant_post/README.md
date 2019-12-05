@@ -3,32 +3,8 @@
 本示例介绍如何使用离线量化接口``paddleslim.quant.quant_post``来对训练好的分类模型进行离线量化, 该接口无需对模型进行训练就可得到量化模型，减少模型的存储空间和显存占用。
 
 ## 接口介绍
-```
-quant_post(executor,
-           model_dir,
-           quantize_model_path,
-           sample_generator,
-           model_filename=None,
-           params_filename=None,
-           batch_size=16,
-           batch_nums=None,
-           scope=None,
-           algo='KL',
-           quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"])
-```
 
-参数介绍：
-- executor (fluid.Executor): 执行模型的executor，可以在cpu或者gpu上执行。
-- model_dir（str): 需要量化的模型所在的文件夹。
-- quantize_model_path(str): 保存量化后的模型的路径
-- sample_generator(python generator): 读取数据样本，每次返回一个样本。
-- model_filename(str, optional): 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置``model_filename``为模型文件的名称，否则设置为``None``即可。默认值是``None``。
-- params_filename(str): 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置``params_filename``为参数文件的名称，否则设置为``None``即可。默认值是``None``。
-- batch_size(int): 每个batch的图片数量。默认值为16 。
-- batch_nums(int, optional): 迭代次数。如果设置为``None``，则会一直运行到``sample_generator`` 迭代结束， 否则，迭代次数为``batch_nums``, 也就是说参与对``Scale``进行校正的样本个数为 ``'batch_nums' * 'batch_size' ``.
-- scope(fluid.Scope, optional): 用来获取和写入``Variable``, 如果设置为``None``,则使用``fluid.global_scope()``. 默认值是``None``.
-- algo(str): 量化时使用的算法名称，可为``'KL'``或者``'direct'``。该参数仅针对激活值的量化，因为参数值的量化使用的方式为``'channel_wise_abs_max'``. 当``algo`` 设置为``'direct'``时，使用``'abs_max'``计算``Scale``值，当设置为``'KL'``时，则使用``KL``散度的方法来计算``Scale``值。默认值为``'KL'``。
-- quantizable_op_type(list[str]): 需要量化的``op``类型列表。默认值为``["conv2d", "depthwise_conv2d", "mul"]``。
+请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
 
 ## 分类模型的离线量化流程
 
