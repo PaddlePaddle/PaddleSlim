@@ -50,8 +50,9 @@ pip install paddleslim -i https://pypi.org/simple
 
 ## 使用
 
-- [API文档]()：API使用介绍，包括[蒸馏]()、[剪裁]()、[量化]()和[模型结构搜索]()。
-- [示例]()：基于mnist和cifar10等简单分类任务的模型压缩示例，您可以通过该部分快速体验和了解PaddleSlim的功能。
+- [API文档](doc/api_guide.md)：API使用介绍，包括[蒸馏]()、[剪裁]()、[量化]()和[模型结构搜索]()。
+- [示例](doc/demo_guide.md)：基于mnist和cifar10等简单分类任务的模型压缩示例，您可以通过该部分快速体验和了解PaddleSlim的功能。
+- [实践教程]()：经典模型的分析和压缩实验教程。
 - [模型库]()：经过压缩的分类、检测、语义分割模型，包括权重文件、网络结构文件和性能数据。
 - [Paddle检测库]()：介绍如何在检测库中使用PaddleSlim。
 - [Paddle分割库]()：介绍如何在分割库中使用PaddleSlim。
