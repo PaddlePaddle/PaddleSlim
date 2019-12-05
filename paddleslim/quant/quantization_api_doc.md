@@ -2,7 +2,7 @@
 
 ## 量化训练API
 
-
+### 量化配置
 ```
 quant_config_default = {
     'weight_quantize_type': 'abs_max',
@@ -39,9 +39,8 @@ quant_config_default = {
 - ``moving_rate(int)``: ``'moving_average_abs_max'``量化方式的衰减系数，默认 0.9。
 - ``quant_weight_only(bool)`` : 是否只量化参数，如果设为``True``，则激活不进行量化，默认``False``。目前暂不支持设置为``True``。 设置为``True``时，只量化参数，这种方式不能减少显存占用和加速，只能用来减少带宽。
 
-```
-paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)
-```
+
+### paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)
 功能：在``program``中加入量化和反量化``op``, 用于量化训练。具体如图所示：
 
 
@@ -53,6 +52,7 @@ paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)
 * ``for_test(bool)``: 如果``program``参数是一个测试``program``，``for_test``应设为``True``，否则设为``False``。
 
 **返回值：**
+
 含有量化和反量化``operator``的``program``
 * 当``for_test=False``，返回类型为``fluid.CompiledProgram``， **注意，此返回值不能用于保存参数**。
 * 当``for_test=True``，返回类型为``fluid.Program``。
@@ -63,9 +63,10 @@ paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)
 * 由于此接口会根据``program``的结构和量化配置来对``program``添加op，所以``Paddle``中一些通过``fuse op``来加速训练的策略不能使用。已知以下策略在使用量化时必须设为``False``： ``fuse_all_reduce_ops, sync_batch_norm``。
 * 如果传入的``program``中存在和任何op都没有连接的``Variable``，则会在量化的过程中被优化掉。
 
-```
-paddleslim.quant.convert(program, place, config, scope=None, save_int8=False)
-```
+
+
+### paddleslim.quant.convert(program, place, config, scope=None, save_int8=False)
+
 
 功能：把训练好的量化``program``，转换为可用于保存``inference model``的``program``。
 
