@@ -63,9 +63,11 @@ for block in program.blocks:
 
 **示例：**
 
+点击[AIStudio](https://aistudio.baidu.com/aistudio/projectDetail/200786)执行以下示例代码。
 ```
 
 import paddle.fluid as fluid
+from paddle.fluid.param_attr import ParamAttr
 from paddleslim.prune import Pruner
 
 def conv_bn_layer(input,
