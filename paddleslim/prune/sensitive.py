@@ -58,11 +58,10 @@ def sensitivity(program,
             if baseline is None:
                 baseline = eval_func(graph.program)
 
-            param_backup = {}
             pruner = Pruner()
             _logger.info("sensitive - param: {}; ratios: {}".format(name,
                                                                     ratio))
-            pruned_program = pruner.prune(
+            pruned_program, param_backup, _ = pruner.prune(
                 program=graph.program,
                 scope=scope,
                 params=[name],
@@ -70,7 +69,7 @@ def sensitivity(program,
                 place=place,
                 lazy=True,
                 only_graph=False,
-                param_backup=param_backup)
+                param_backup=True)
             pruned_metric = eval_func(pruned_program)
             loss = (baseline - pruned_metric) / baseline
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
@@ -118,7 +117,7 @@ def flops_sensitivity(program,
     baseline = None
     for name in sensitivities:
 
-        pruned_program = pruner.prune(
+        pruned_program, _, _ = pruner.prune(
             program=graph.program,
             scope=None,
             params=[name],
