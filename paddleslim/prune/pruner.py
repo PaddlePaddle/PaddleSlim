@@ -41,8 +41,8 @@ class Pruner():
               place=None,
               lazy=False,
               only_graph=False,
-              param_backup=None,
-              param_shape_backup=None):
+              param_backup=False,
+              param_shape_backup=False):
         """
         Pruning the given parameters.
         Args:
@@ -55,14 +55,18 @@ class Pruner():
                         False means cutting down the pruned elements. Default: False.
             only_graph(bool): True means only modifying the graph.
                               False means modifying graph and variables in scope. Default: False.
-            param_backup(dict): A dict to backup the values of parameters. Default: None.
-            param_shape_backup(dict): A dict to backup the shapes of parameters. Default: None.
+            param_backup(bool): Whether to return a dict to backup the values of parameters. Default: False.
+            param_shape_backup(bool): Whether to return a dict to backup the shapes of parameters. Default: False.
         Returns:
             Program: The pruned program.
+            param_backup: A dict to backup the values of parameters.
+            param_shape_backup: A dict to backup the shapes of parameters.
         """
 
         self.pruned_list = []
         graph = GraphWrapper(program.clone())
+        param_backup = {} if param_backup else None
+        param_shape_backup = {} if param_shape_backup else None
         self._prune_parameters(
             graph,
             scope,
@@ -77,7 +81,7 @@ class Pruner():
             if op.type() == 'depthwise_conv2d' or op.type(
             ) == 'depthwise_conv2d_grad':
                 op.set_attr('groups', op.inputs('Filter')[0].shape()[0])
-        return graph.program
+        return graph.program, param_backup, param_shape_backup
 
     def _prune_filters_by_ratio(self,
                                 scope,
@@ -531,6 +535,9 @@ class Pruner():
         self.pruned_list = [[], []]
         for param, ratio in zip(params, ratios):
             assert isinstance(param, str) or isinstance(param, unicode)
+            if param in self.pruned_list[0]:
+                _logger.info("Skip {}".format(param))
+                continue
             _logger.info("pruning param: {}".format(param))
             param = graph.var(param)
             self._forward_pruning_ralated_params(

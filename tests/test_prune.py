@@ -50,7 +50,7 @@ class TestPrune(unittest.TestCase):
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
-        main_program = pruner.prune(
+        main_program, _, _ = pruner.prune(
             main_program,
             scope,
             params=["conv4_weights"],
