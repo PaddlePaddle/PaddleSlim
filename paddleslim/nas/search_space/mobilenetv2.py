@@ -22,6 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
+from .utils import check_points
 
 __all__ = ["MobileNetV2Space"]
 
@@ -136,7 +137,7 @@ class MobileNetV2Space(SearchSpaceBase):
 
         def net_arch(input,
                      scale=1.0,
-                     return_block=[],
+                     return_block=None,
                      end_points=None,
                      output_stride=None):
             self.scale = scale

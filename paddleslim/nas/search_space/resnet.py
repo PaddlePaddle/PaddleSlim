@@ -22,17 +22,14 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
+from .util import check_points
 
 __all__ = ["ResNetSpace"]
 
 
 @SEARCHSPACE.register
 class ResNetSpace(SearchSpaceBase):
-    def __init__(self,
-                 input_size,
-                 output_size,
-                 block_num,
-                 block_mask=None):
+    def __init__(self, input_size, output_size, block_num, block_mask=None):
         super(ResNetSpace, self).__init__(input_size, output_size, block_num,
                                           block_mask)
         # self.filter_num1 ~ self.filter_num4 means convolution channel
@@ -91,7 +88,9 @@ class ResNetSpace(SearchSpaceBase):
         num_filters.append(filter4)
         depth.append(repeat4)
 
-        def net_arch(input):
+        def net_arch(input, return_block=None, end_points=None):
+            decode_ends = dict()
+
             conv = conv_bn_layer(
                 input=input,
                 filter_size=5,
@@ -99,14 +98,26 @@ class ResNetSpace(SearchSpaceBase):
                 stride=2,
                 act='relu',
                 name='resnet_conv0')
+            layer_count = 1
             for block in range(len(depth)):
                 for i in range(depth[block]):
+                    stride = 2 if i == 0 and block != 0 else 1
+                    if stride == 2:
+                        layer_count += 1
+                    if check_points((layer_count - 1), return_block):
+                        decode_ends[layer_count - 1] = conv
+
+                    if check_points((layer_count - 1), end_points):
+                        return conv, decode_ends
+
                     conv = self._bottleneck_block(
                         input=conv,
                         num_filters=num_filters[block],
-                        stride=2 if i == 0 and block != 0 else 1,
+                        stride=stride,
                         name='resnet_depth{}_block{}'.format(i, block))
 
+            if check_points(layer_count, end_points):
+                return conv, decode_ends
 
             return conv
 

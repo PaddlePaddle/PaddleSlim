@@ -14,6 +14,7 @@
 
 import math
 
+
 def compute_downsample_num(input_size, output_size):
     downsample_num = 0
     while input_size > output_size:
@@ -21,6 +22,17 @@ def compute_downsample_num(input_size, output_size):
         downsample_num += 1
 
     if input_size != output_size:
-        raise NotImplementedError('output_size must can downsample by input_size!!!')
+        raise NotImplementedError(
+            'output_size must can downsample by input_size!!!')
 
     return downsample_num
+
+
+def check_points(count, points):
+    if points is None:
+        return False
+    else:
+        if isinstance(points, list):
+            return (True if count in points else False)
+        else:
+            return (True if count == points else False)

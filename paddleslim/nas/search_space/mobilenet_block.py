@@ -22,7 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
-from .utils import compute_downsample_num
+from .utils import compute_downsample_num, check_points
 
 __all__ = ["MobileNetV1BlockSpace", "MobileNetV2BlockSpace"]
 
@@ -133,9 +133,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
                          self.repeat[tokens[i * 4 + 2]], 1,
                          self.k_size[tokens[i * 4 + 3]]))
 
-        def net_arch(input, return_mid_layer=False, return_block=[]):
-            assert isinstance(return_block,
-                              list), 'return_block must be a list.'
+        def net_arch(input, return_mid_layer=False, return_block=None):
             # all padding is 'SAME' in the conv2d, can compute the actual padding automatic. 
             # bottleneck sequences
             in_c = int(32 * self.scale)
@@ -148,7 +146,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
 
                 if s == 2:
                     layer_count += 1
-                if (layer_count - 1) in return_block:
+                if check_points((layer_count - 1), return_block):
                     mid_layer[layer_count - 1] = depthwise_conv
 
                 input, depthwise_conv = self._invresi_blocks(
@@ -162,7 +160,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
                     name='mobilenetv2_' + str(i + 1))
                 in_c = int(c * self.scale)
 
-            if layer_count in return_block:
+            if check_points(layer_count, return_block):
                 mid_layer[layer_count] = depthwise_conv
 
             if return_mid_layer:
@@ -374,9 +372,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                          self.filter_num[tokens[i * 3 + 1]], 1,
                          self.k_size[tokens[i * 3 + 2]]))
 
-        def net_arch(input, return_mid_layer=False, return_block=[]):
-            assert isinstance(return_block,
-                              list), 'return_block must be a list.'
+        def net_arch(input, return_mid_layer=False, return_block=None):
             mid_layer = dict()
             layer_count = 0
 
@@ -384,7 +380,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
                 filter_num1, filter_num2, stride, kernel_size = layer_setting
                 if stride == 2:
                     layer_count += 1
-                if (layer_count - 1) in return_block:
+                if check_points((layer_count - 1), return_block):
                     mid_layer[layer_count - 1] = input
 
                 input = self._depthwise_separable(

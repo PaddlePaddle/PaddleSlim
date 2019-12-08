@@ -22,7 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
-from .utils import compute_downsample_num
+from .utils import compute_downsample_num, check_points
 
 __all__ = ["ResNetBlockSpace"]
 
@@ -121,16 +121,14 @@ class ResNetBlockSpace(SearchSpaceBase):
                          self.repeat[tokens[i * 6 + 4]],
                          self.repeat[tokens[i * 6 + 5]], 1))
 
-        def net_arch(input, return_mid_layer=False, return_block=[]):
-            assert isinstance(return_block,
-                              list), 'return_block must be a list.'
+        def net_arch(input, return_mid_layer=False, return_block=None):
             layer_count = 0
             mid_layer = dict()
             for i, layer_setting in enumerate(self.bottleneck_params_list):
                 filter_num1, filter_num2, filter_num3, k_size, repeat1, repeat2, stride = layer_setting
                 if stride == 2:
                     layer_count += 1
-                if (layer_count - 1) in return_block:
+                if check_points((layer_count - 1), return_block):
                     mid_layer[layer_count - 1] = input
 
                 input = self._bottleneck_block(

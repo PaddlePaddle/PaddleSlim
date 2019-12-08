@@ -22,6 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
+from .utils import check_points
 
 __all__ = ["MobileNetV1Space"]
 
@@ -157,22 +158,13 @@ class MobileNetV1Space(SearchSpaceBase):
 
         def net_arch(input,
                      scale=1.0,
-                     return_block=[],
+                     return_block=None,
                      end_points=None,
                      output_stride=None):
             self.scale = scale
             _modify_bottle_params(output_stride)
 
             decode_ends = dict()
-
-            def check_points(count, points):
-                if points is None:
-                    return False
-                else:
-                    if isinstance(points, list):
-                        return (True if count in points else False)
-                    else:
-                        return (True if count == points else False)
 
             input = conv_bn_layer(
                 input=input,

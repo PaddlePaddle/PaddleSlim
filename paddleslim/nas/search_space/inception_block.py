@@ -22,7 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
-from .utils import compute_downsample_num
+from .utils import compute_downsample_num, check_points
 
 __all__ = ["InceptionABlockSpace", "InceptionCBlockSpace"]
 ### TODO add asymmetric kernel of conv when paddle-lite support 
@@ -162,9 +162,7 @@ class InceptionABlockSpace(SearchSpaceBase):
                          self.k_size[tokens[i * 9 + 7]], 1,
                          self.pool_type[tokens[i * 9 + 8]]))
 
-        def net_arch(input, return_mid_layer=False, return_block=[]):
-            assert isinstance(return_block,
-                              list), 'return_block must be a list.'
+        def net_arch(input, return_mid_layer=False, return_block=None):
             layer_count = 0
             mid_layer = dict()
             for i, layer_setting in enumerate(self.bottleneck_params_list):
@@ -174,7 +172,7 @@ class InceptionABlockSpace(SearchSpaceBase):
                 pool_type = 'avg' if layer_setting[9] == 0 else 'max'
                 if stride == 2:
                     layer_count += 1
-                if (layer_count - 1) in return_block:
+                if check_points((layer_count - 1), return_block):
                     mid_layer[layer_count - 1] = input
 
                 input = self._inceptionA(
@@ -406,9 +404,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
                          self.k_size[tokens[i * 11 + 9]], 1,
                          self.pool_type[tokens[i * 11 + 10]]))
 
-        def net_arch(input, return_mid_layer=False, return_block=[]):
-            assert isinstance(return_block,
-                              list), 'return_block must be a list.'
+        def net_arch(input, return_mid_layer=False, return_block=None):
             layer_count = 0
             mid_layer = dict()
             for i, layer_setting in enumerate(self.bottleneck_params_list):
@@ -418,7 +414,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
                 pool_type = 'avg' if layer_setting[11] == 0 else 'max'
                 if stride == 2:
                     layer_count += 1
-                if (layer_count - 1) in return_block:
+                if check_points((layer_count - 1) in return_block):
                     mid_layer[layer_count - 1] = input
 
                 input = self._inceptionC(
