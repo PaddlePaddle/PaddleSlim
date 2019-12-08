@@ -11,10 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import flops as flops_module
-from flops import *
-import model_size as model_size_module
-from model_size import *
-__all__ = []
-__all__ += flops_module.__all__
-__all__ += model_size_module.__all__
+from .flops import flops
+from .model_size import model_size
+
+__all__ = ['flops', 'model_size']

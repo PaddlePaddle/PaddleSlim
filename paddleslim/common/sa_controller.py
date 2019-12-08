@@ -18,7 +18,7 @@ import math
 import logging
 import numpy as np
 from .controller import EvolutionaryController
-from log_helper import get_logger
+from .log_helper import get_logger
 
 __all__ = ["SAController"]
 
