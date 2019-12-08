@@ -11,23 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pruner
-from pruner import *
-import auto_pruner
-from auto_pruner import *
-import controller_server
-from controller_server import *
-import controller_client
-from controller_client import *
-import sensitive_pruner
-from sensitive_pruner import *
-import sensitive
-from sensitive import *
+from .pruner import Pruner
+from .auto_pruner import AutoPruner
+from .controller_server import ControllerServer
+from .controller_client import ControllerClient
+from .sensitive_pruner import SensitivePruner
+from .sensitive import sensitivity, flops_sensitivity
 
-__all__ = []
-__all__ += pruner.__all__
-__all__ += auto_pruner.__all__
-__all__ += controller_server.__all__
-__all__ += controller_client.__all__
-__all__ += sensitive_pruner.__all__
-__all__ += sensitive.__all__
+__all__ = [
+    'Pruner', 'AutoPruner', 'ControllerServer', 'ControllerClient',
+    'SensitivePruner', 'sensitivity', 'flops_sensitivity'
+]

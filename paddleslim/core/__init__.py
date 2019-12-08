@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import graph_wrapper
-from .graph_wrapper import *
-from . import registry
-from .registry import *
+from .graph_wrapper import GraphWrapper, VarWrapper, OpWrapper
+from .registry import Registry
 
-__all__ = graph_wrapper.__all__
-__all__ += registry.__all__
+__all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper', 'Registry']

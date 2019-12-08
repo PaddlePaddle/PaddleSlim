@@ -28,4 +28,4 @@ class SearchSpaceFactory(object):
         """
         assert isinstance(config_lists, list), "configs must be a list"
 
-        return CombineSearchSpace(config_lists) 
+        return CombineSearchSpace(config_lists)
