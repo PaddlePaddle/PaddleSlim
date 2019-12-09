@@ -75,10 +75,8 @@ def sensitivity(program,
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))
 
-            for brother in pruner.pruned_list[0]:
-                if brother in sensitivities:
-                    sensitivities[name]['pruned_percent'].append(ratio)
-                    sensitivities[name]['loss'].append(loss)
+            sensitivities[name]['pruned_percent'].append(ratio)
+            sensitivities[name]['loss'].append(loss)
 
             _save_sensitivities(sensitivities, sensitivities_file)
 
