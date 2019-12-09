@@ -60,7 +60,7 @@ class SANAS(object):
         self._init_temperature = init_temperature
         self._is_server = is_server
         self._configs = configs
-        self._key = hashlib.md5(str(self._configs)).hexdigest()
+        self._key = hashlib.md5(str(self._configs).encode("utf-8")).hexdigest()
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
