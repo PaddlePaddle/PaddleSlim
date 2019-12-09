@@ -1,4 +1,6 @@
 
+## [模型分析](./analysis_api.md)
+
 ## [卷积通道剪裁](./prune_api.md)
 
 ## [蒸馏]()
