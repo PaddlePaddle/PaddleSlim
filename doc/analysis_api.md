@@ -139,3 +139,31 @@ with fluid.program_guard(main_program, startup_program):
 
 print("FLOPS: {}".format(model_size(main_program)))
 ```
+
+## TableLatencyEvaluator
+
+>paddleslim.analysis.TableLatencyEvaluator(table_file, delimiter=",") [源代码]()
+
+基于硬件延时表的模型延时评估器。
+
+**参数：**
+
+- **table_file(str):** 所使用的延时评估表的绝对路径。关于演示评估表格式请参考：[PaddleSlim硬件延时评估表格式](../paddleslim/analysis/table_latency.md)
+
+- **delimiter(str):** 硬件延时评估表中，操作信息之前所使用的分割符，默认为英文字符逗号。
+
+**返回值：**
+
+- **Evaluator:** 硬件延时评估器的实例。
+
+>paddleslim.analysis.TableLatencyEvaluator.latency(graph) [源代码]()
+
+获得指定网络的预估延时。
+
+**参数：**
+
+- **graph(Program):** 待预估的目标网络。
+
+**返回值：**
+
+- **latency:** 目标网络的预估延时。
