@@ -16,7 +16,7 @@
 
 - **flops(float):** 整个网络的FLOPS。
 
--**params2flops(dict):** 每层卷积对应的FLOPS，其中key为卷积层参数名称，value为FLOPS值。
+- **params2flops(dict):** 每层卷积对应的FLOPS，其中key为卷积层参数名称，value为FLOPS值。
 
 **示例：**
 
