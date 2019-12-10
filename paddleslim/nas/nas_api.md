@@ -133,8 +133,7 @@ for step in range(100):
         paddle.dataset.cifar.test10(cycle=False),
         batch_size=batch_size,
         drop_last=False)
-    train_feeder = fluid.DataFeeder(
-        [image, label], place, program=train_program)
+    train_feeder = fluid.DataFeeder([image, label], place, program=train_program)
     test_feeder = fluid.DataFeeder([image, label], place, program=test_program)
 
 
@@ -146,8 +145,7 @@ for step in range(100):
                            feed=train_feeder.feed(data),
                            fetch_list=fetches)[0]
             if batch_id % 10 == 0:
-                print(
-                    'TRAIN: steps: {}, epoch: {}, batch: {}, cost: {}'.format(step, epoch_id, batch_id, outs[0]))
+                print('TRAIN: steps: {}, epoch: {}, batch: {}, cost: {}'.format(step, epoch_id, batch_id, outs[0]))
 
     ### 开始预测，得到最终的测试结果作为score回传给sa_nas
     reward = []
@@ -161,10 +159,8 @@ for step in range(100):
         reward_avg = np.mean(np.array(batch_reward), axis=1)
         reward.append(reward_avg)
 
-        print(
-            'TEST: step: {}, batch: {}, avg_cost: {}, acc_top1: {}'.
-            format(step, batch_id, batch_reward[0],
-                   batch_reward[1]))
+        print('TEST: step: {}, batch: {}, avg_cost: {}, acc_top1: {}'.
+            format(step, batch_id, batch_reward[0],batch_reward[1]))
 
     finally_reward = np.mean(np.array(reward), axis=0)
     print(
