@@ -40,6 +40,15 @@ sanas = SANAS(config=config)
 **返回**
 返回一个模型结构实例。
 
+**示例代码：**
+```
+import paddle.fluid as fluid
+input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+archs = sanas.token2arch(tokens)
+for arch in archs:
+    output = arch(input)
+    input = output
+```
 ---
 
 >next_archs():
