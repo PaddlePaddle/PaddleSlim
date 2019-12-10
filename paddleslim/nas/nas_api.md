@@ -51,7 +51,7 @@ sanas = SANAS(config=config)
 **示例代码：**
 ```
 import paddle.fluid as fluid
-input = fluid.data(name='input', shape=[None, 1, 32, 32], dtype='float32')
+input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
 archs = sanas.next_archs()
 for arch in archs:
     output = arch(input)
@@ -64,7 +64,7 @@ for arch in archs:
 把当前模型结构的得分情况回传。
 
 **参数：**
-score<float>:** 当前模型的得分，分数越大越好。
+**score<float>:** 当前模型的得分，分数越大越好。
 
 **返回**
 模型结构更新成功或者失败，成功则返回`True`，失败则返回`False`。
@@ -72,7 +72,14 @@ score<float>:** 当前模型的得分，分数越大越好。
 
 **代码示例**
 ```python
-import paddleslim.nas.SANAS as SANAS
+import numpy as np
+import paddle
+import paddle.fluid as fluid
+from paddleslim.nas import SANAS
+from paddleslim.analysis import flops
+
+max_flops = 321208544
+batch_size = 256
 
 # 搜索空间配置
 config=[('MobileNetV2Space')] 
@@ -80,15 +87,91 @@ config=[('MobileNetV2Space')]
 # 实例化SANAS
 sa_nas = SANAS(config, server_addr=("", 8887), init_temperature=10.24, reduce_rate=0.85, search_steps=100, is_server=True)
 
-# 构造输入数据
-input = fluid.data(name='input', shape=[None, 1, 32, 32], dtype='float32')
-label = fluid.data(name='label', shape=[-1, 1], dtype='int64')
 for step in range(100):
     archs = sa_nas.next_archs()
-    for arch in archs:
-        input = arch(input)
+    train_program = fluid.Program()
+    test_program = fluid.Program()
+    startup_program = fluid.Program()
+    ### 构造训练program
+    with fluid.program_guard(train_program, startup_program):
+        image = fluid.data(name='image', shape=[None, 3, 32, 32], dtype='float32')
+        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
 
-    score = fluid.layer.
-    sa_nas.reward(score)
+        for arch in archs:
+            output = arch(image)
+        out = fluid.layers.fc(output, size=10, act="softmax") 
+        softmax_out = fluid.layers.softmax(input=out, use_cudnn=False)
+        cost = fluid.layers.cross_entropy(input=softmax_out, label=label)
+        avg_cost = fluid.layers.mean(cost)
+        acc_top1 = fluid.layers.accuracy(input=softmax_out, label=label, k=1)
+
+        ### 构造测试program
+        test_program = train_program.clone(for_test=True)
+        ### 定义优化器
+        sgd = fluid.optimizer.SGD(learning_rate=1e-3)
+        sgd.minimize(avg_cost)
+
+
+    ### 增加限制条件，如果没有则进行无限制搜索
+    if flops(train_program) > max_flops:
+        continue
+
+    ### 定义代码是在cpu上运行
+    place = fluid.CPUPlace()
+    exe = fluid.Executor(place)
+    exe.run(startup_program)
+
+    ### 定义训练输入数据
+    train_reader = paddle.batch(
+        paddle.reader.shuffle(
+            paddle.dataset.cifar.train10(cycle=False), buf_size=1024),
+        batch_size=batch_size,
+        drop_last=True)
+
+    ### 定义预测输入数据
+    test_reader = paddle.batch(
+        paddle.dataset.cifar.test10(cycle=False),
+        batch_size=batch_size,
+        drop_last=False)
+    train_feeder = fluid.DataFeeder(
+        [image, label], place, program=train_program)
+    test_feeder = fluid.DataFeeder([image, label], place, program=test_program)
+
+
+    ### 开始训练，每个搜索结果训练5个epoch
+    for epoch_id in range(5):
+        for batch_id, data in enumerate(train_reader()):
+            fetches = [avg_cost.name]
+            outs = exe.run(train_program,
+                           feed=train_feeder.feed(data),
+                           fetch_list=fetches)[0]
+            if batch_id % 10 == 0:
+                print(
+                    'TRAIN: steps: {}, epoch: {}, batch: {}, cost: {}'.format(step, epoch_id, batch_id, outs[0]))
+
+    ### 开始预测，得到最终的测试结果作为score回传给sa_nas
+    reward = []
+    for batch_id, data in enumerate(test_reader()):
+        test_fetches = [
+            avg_cost.name, acc_top1.name
+        ]
+        batch_reward = exe.run(test_program,
+                               feed=test_feeder.feed(data),
+                               fetch_list=test_fetches)
+        reward_avg = np.mean(np.array(batch_reward), axis=1)
+        reward.append(reward_avg)
+
+        print(
+            'TEST: step: {}, batch: {}, avg_cost: {}, acc_top1: {}'.
+            format(step, batch_id, batch_reward[0],
+                   batch_reward[1]))
+
+    finally_reward = np.mean(np.array(reward), axis=0)
+    print(
+        'FINAL TEST: avg_cost: {}, acc_top1: {}'.format(
+            finally_reward[0], finally_reward[1]))
+
+    ### 回传score
+    sa_nas.reward(float(finally_reward[1]))
 
 ```
