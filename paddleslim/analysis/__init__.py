@@ -15,9 +15,9 @@ import flops as flops_module
 from flops import *
 import model_size as model_size_module
 from model_size import *
-import lantency as lantency_module
-from lantency import *
+import latency as latency_module
+from latency import *
 __all__ = []
 __all__ += flops_module.__all__
 __all__ += model_size_module.__all__
-__all__ += lantency_module.__all__
+__all__ += latency_module.__all__
