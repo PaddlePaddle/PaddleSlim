@@ -13,5 +13,6 @@
 # limitations under the License.
 from .flops import flops
 from .model_size import model_size
+from .latency import LatencyEvaluator, TableLatencyEvaluator
 
-__all__ = ['flops', 'model_size']
+__all__ = ['flops', 'model_size', 'LatencyEvaluator', 'TableLatencyEvaluator']

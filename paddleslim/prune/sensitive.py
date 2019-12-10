@@ -33,11 +33,13 @@ def sensitivity(program,
                 param_names,
                 eval_func,
                 sensitivities_file=None,
-                step_size=0.2,
-                max_pruned_times=None):
+                pruned_ratios=None):
     scope = fluid.global_scope()
     graph = GraphWrapper(program)
     sensitivities = _load_sensitivities(sensitivities_file)
+
+    if pruned_ratios is None:
+        pruned_ratios = np.arange(0.1, 1, step=0.1)
 
     for name in param_names:
         if name not in sensitivities:
@@ -49,25 +51,17 @@ def sensitivity(program,
             }
     baseline = None
     for name in sensitivities:
-        ratio = step_size
-        pruned_times = 0
-        while ratio < 1:
-            if max_pruned_times is not None and pruned_times >= max_pruned_times:
-                break
-            ratio = round(ratio, 2)
+        for ratio in pruned_ratios:
             if ratio in sensitivities[name]['pruned_percent']:
                 _logger.debug('{}, {} has computed.'.format(name, ratio))
-                ratio += step_size
-                pruned_times += 1
                 continue
             if baseline is None:
                 baseline = eval_func(graph.program)
 
-            param_backup = {}
             pruner = Pruner()
             _logger.info("sensitive - param: {}; ratios: {}".format(name,
                                                                     ratio))
-            pruned_program = pruner.prune(
+            pruned_program, param_backup, _ = pruner.prune(
                 program=graph.program,
                 scope=scope,
                 params=[name],
@@ -75,21 +69,21 @@ def sensitivity(program,
                 place=place,
                 lazy=True,
                 only_graph=False,
-                param_backup=param_backup)
+                param_backup=True)
             pruned_metric = eval_func(pruned_program)
             loss = (baseline - pruned_metric) / baseline
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))
+
             sensitivities[name]['pruned_percent'].append(ratio)
             sensitivities[name]['loss'].append(loss)
+
             _save_sensitivities(sensitivities, sensitivities_file)
 
             # restore pruned parameters
             for param_name in param_backup.keys():
                 param_t = scope.find_var(param_name).get_tensor()
                 param_t.set(param_backup[param_name], place)
-            ratio += step_size
-            pruned_times += 1
     return sensitivities
 
 
@@ -121,7 +115,7 @@ def flops_sensitivity(program,
     baseline = None
     for name in sensitivities:
 
-        pruned_program = pruner.prune(
+        pruned_program, _, _ = pruner.prune(
             program=graph.program,
             scope=None,
             params=[name],
