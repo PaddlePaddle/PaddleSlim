@@ -32,10 +32,14 @@ _logger = get_logger(__name__, level=logging.INFO)
 class SensitivePruner(object):
     def __init__(self, place, eval_func, scope=None, checkpoints=None):
         """
-        Pruner used to prune parameters iteratively according to sensitivities of parameters in each step.
+        Pruner used to prune parameters iteratively according to sensitivities
+        of parameters in each step.
         Args:
-            place(fluid.CUDAPlace | fluid.CPUPlace): The device place where program execute.
-            eval_func(function): A callback function used to evaluate pruned program. The argument of this function is pruned program. And it return a score of given program.
+            place(fluid.CUDAPlace | fluid.CPUPlace): The device place where
+                program execute.
+            eval_func(function): A callback function used to evaluate pruned
+                program. The argument of this function is pruned program.
+                And it return a score of given program.
             scope(fluid.scope): The scope used to execute program.
         """
         self._eval_func = eval_func
