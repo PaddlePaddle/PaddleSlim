@@ -25,9 +25,9 @@ retain_epoch = 5
 
 
 def create_data_loader(image_shape):
-    data_shape = [-1] + image_shape
+    data_shape = [None] + image_shape
     data = fluid.data(name='data', shape=data_shape, dtype='float32')
-    label = fluid.data(name='label', shape=[-1, 1], dtype='int64')
+    label = fluid.data(name='label', shape=[None, 1], dtype='int64')
     data_loader = fluid.io.DataLoader.from_generator(
         feed_list=[data, label],
         capacity=1024,

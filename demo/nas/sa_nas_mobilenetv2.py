@@ -27,9 +27,9 @@ retain_epoch = 5
 
 
 def create_data_loader(image_shape):
-    data_shape = [-1] + image_shape
+    data_shape = [None] + image_shape
     data = fluid.data(name='data', shape=data_shape, dtype='float32')
-    label = fluid.data(name='label', shape=[-1, 1], dtype='int64')
+    label = fluid.data(name='label', shape=[None, 1], dtype='int64')
     data_loader = fluid.io.DataLoader.from_generator(
         feed_list=[data, label],
         capacity=1024,
@@ -47,11 +47,7 @@ def build_program(main_program,
     with fluid.program_guard(main_program, startup_program):
         data_loader, data, label = create_data_loader(image_shape)
         output = archs(data)
-        output = fluid.layers.fc(
-            input=output,
-            size=args.class_dim,
-            param_attr=ParamAttr(name='mobilenetv2_fc_weights'),
-            bias_attr=ParamAttr(name='mobilenetv2_fc_offset'))
+        output = fluid.layers.fc(input=output, size=args.class_dim)
 
         softmax_out = fluid.layers.softmax(input=output, use_cudnn=False)
         cost = fluid.layers.cross_entropy(input=softmax_out, label=label)
