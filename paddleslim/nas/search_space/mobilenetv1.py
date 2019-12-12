@@ -22,24 +22,16 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
+from .utils import check_points
 
 __all__ = ["MobileNetV1Space"]
 
 
 @SEARCHSPACE.register
 class MobileNetV1Space(SearchSpaceBase):
-    def __init__(self,
-                 input_size,
-                 output_size,
-                 block_num,
-                 block_mask,
-                 scale=1.0,
-                 class_dim=1000):
+    def __init__(self, input_size, output_size, block_num, block_mask):
         super(MobileNetV1Space, self).__init__(input_size, output_size,
                                                block_num, block_mask)
-        assert self.block_mask == None, 'MobileNetV1Space will use origin MobileNetV1 as seach space, so use input_size, output_size and block_num to search'
-        self.scale = scale
-        self.class_dim = class_dim
         # self.head_num means the channel of first convolution
         self.head_num = np.array([3, 4, 8, 12, 16, 24, 32])  # 7
         # self.filter_num1 ~ self.filtet_num9 means channel of the following convolution
@@ -67,9 +59,6 @@ class MobileNetV1Space(SearchSpaceBase):
         # self.repeat means repeat_num in forth downsample 
         self.repeat = np.array([1, 2, 3, 4, 5, 6])  #6
 
-        assert self.block_num < 6, 'MobileNetV1: block number must less than 6, but receive block number is {}'.format(
-            self.block_num)
-
     def init_tokens(self):
         """
         The initial token.
@@ -90,11 +79,7 @@ class MobileNetV1Space(SearchSpaceBase):
             8, 10, 0,  # 512, 1024, 3
             10, 10, 0]  # 1024, 1024, 3
         # yapf: enable
-        if self.block_num < 5:
-            self.token_len = 1 + (self.block_num * 2 - 1) * 3
-        else:
-            self.token_len = 2 + (self.block_num * 2 - 1) * 3
-        return base_init_tokens[:self.token_len]
+        return base_init_tokens
 
     def range_table(self):
         """
@@ -113,65 +98,92 @@ class MobileNetV1Space(SearchSpaceBase):
             len(self.filter_num8), len(self.filter_num9), len(self.k_size),
             len(self.filter_num9), len(self.filter_num9), len(self.k_size)]
         # yapf: enable
-        return base_range_table[:self.token_len]
+        return base_range_table
 
     def token2arch(self, tokens=None):
 
         if tokens is None:
             tokens = self.tokens()
 
-        bottleneck_param_list = []
+        self.bottleneck_param_list = []
 
-        if self.block_num >= 1:
-            # tokens[0] = 32
-            # 32, 64
-            bottleneck_param_list.append(
-                (self.filter_num1[tokens[1]], self.filter_num2[tokens[2]], 1,
-                 self.k_size[tokens[3]]))
-        if self.block_num >= 2:
-            # 64 128 128 128
-            bottleneck_param_list.append(
-                (self.filter_num2[tokens[4]], self.filter_num3[tokens[5]], 2,
-                 self.k_size[tokens[6]]))
-            bottleneck_param_list.append(
-                (self.filter_num3[tokens[7]], self.filter_num4[tokens[8]], 1,
-                 self.k_size[tokens[9]]))
-        if self.block_num >= 3:
-            # 128 256 256 256
-            bottleneck_param_list.append(
-                (self.filter_num4[tokens[10]], self.filter_num5[tokens[11]], 2,
-                 self.k_size[tokens[12]]))
-            bottleneck_param_list.append(
-                (self.filter_num5[tokens[13]], self.filter_num6[tokens[14]], 1,
-                 self.k_size[tokens[15]]))
-        if self.block_num >= 4:
-            # 256 512 (512 512) *  5
-            bottleneck_param_list.append(
-                (self.filter_num6[tokens[16]], self.filter_num7[tokens[17]], 2,
-                 self.k_size[tokens[18]]))
-            for i in range(self.repeat[tokens[19]]):
-                bottleneck_param_list.append(
-                    (self.filter_num7[tokens[20]],
-                     self.filter_num8[tokens[21]], 1, self.k_size[tokens[22]]))
-        if self.block_num >= 5:
-            # 512 1024 1024 1024
-            bottleneck_param_list.append(
-                (self.filter_num8[tokens[23]], self.filter_num9[tokens[24]], 2,
-                 self.k_size[tokens[25]]))
-            bottleneck_param_list.append(
-                (self.filter_num9[tokens[26]], self.filter_num9[tokens[27]], 1,
-                 self.k_size[tokens[28]]))
+        # tokens[0] = 32
+        # 32, 64
+        self.bottleneck_param_list.append(
+            (self.filter_num1[tokens[1]], self.filter_num2[tokens[2]], 1,
+             self.k_size[tokens[3]]))
+        # 64 128 128 128
+        self.bottleneck_param_list.append(
+            (self.filter_num2[tokens[4]], self.filter_num3[tokens[5]], 2,
+             self.k_size[tokens[6]]))
+        self.bottleneck_param_list.append(
+            (self.filter_num3[tokens[7]], self.filter_num4[tokens[8]], 1,
+             self.k_size[tokens[9]]))
+        # 128 256 256 256
+        self.bottleneck_param_list.append(
+            (self.filter_num4[tokens[10]], self.filter_num5[tokens[11]], 2,
+             self.k_size[tokens[12]]))
+        self.bottleneck_param_list.append(
+            (self.filter_num5[tokens[13]], self.filter_num6[tokens[14]], 1,
+             self.k_size[tokens[15]]))
+        # 256 512 (512 512) *  5
+        self.bottleneck_param_list.append(
+            (self.filter_num6[tokens[16]], self.filter_num7[tokens[17]], 2,
+             self.k_size[tokens[18]]))
+        for i in range(self.repeat[tokens[19]]):
+            self.bottleneck_param_list.append(
+                (self.filter_num7[tokens[20]], self.filter_num8[tokens[21]], 1,
+                 self.k_size[tokens[22]]))
+        # 512 1024 1024 1024
+        self.bottleneck_param_list.append(
+            (self.filter_num8[tokens[23]], self.filter_num9[tokens[24]], 2,
+             self.k_size[tokens[25]]))
+        self.bottleneck_param_list.append(
+            (self.filter_num9[tokens[26]], self.filter_num9[tokens[27]], 1,
+             self.k_size[tokens[28]]))
 
-        def net_arch(input):
+        def _modify_bottle_params(output_stride=None):
+            if output_stride is not None and output_stride % 2 != 0:
+                raise Exception("output stride must to be even number")
+            if output_stride is None:
+                return
+            else:
+                stride = 2
+                for i, layer_setting in enumerate(self.bottleneck_params_list):
+                    f1, f2, s, ks = layer_setting
+                    stride = stride * s
+                    if stride > output_stride:
+                        s = 1
+                    self.bottleneck_params_list[i] = (f1, f2, s, ks)
+
+        def net_arch(input,
+                     scale=1.0,
+                     return_block=None,
+                     end_points=None,
+                     output_stride=None):
+            self.scale = scale
+            _modify_bottle_params(output_stride)
+
+            decode_ends = dict()
+
             input = conv_bn_layer(
                 input=input,
                 filter_size=3,
                 num_filters=self.head_num[tokens[0]],
                 stride=2,
-                name='mobilenetv1')
+                name='mobilenetv1_conv1')
 
-            for i, layer_setting in enumerate(bottleneck_param_list):
+            layer_count = 1
+            for i, layer_setting in enumerate(self.bottleneck_param_list):
                 filter_num1, filter_num2, stride, kernel_size = layer_setting
+                if stride == 2:
+                    layer_count += 1
+                ### return_block and end_points means block num
+                if check_points((layer_count - 1), return_block):
+                    decode_ends[layer_count - 1] = input
+
+                if check_points((layer_count - 1), end_points):
+                    return input, decode_ends
                 input = self._depthwise_separable(
                     input=input,
                     num_filters1=filter_num1,
@@ -182,18 +194,15 @@ class MobileNetV1Space(SearchSpaceBase):
                     kernel_size=kernel_size,
                     name='mobilenetv1_{}'.format(str(i + 1)))
 
-            if self.output_size == 1:
-                print('NOTE: if output_size is 1, add fc layer in the end!!!')
-                input = fluid.layers.fc(
-                    input=input,
-                    size=self.class_dim,
-                    param_attr=ParamAttr(name='mobilenetv2_fc_weights'),
-                    bias_attr=ParamAttr(name='mobilenetv2_fc_offset'))
-            else:
-                assert self.output_size == input.shape[2], \
-                          ("output_size must EQUAL to input_size / (2^block_num)."
-                          "But receive input_size={}, output_size={}, block_num={}".format(
-                          self.input_size, self.output_size, self.block_num))
+            ### return_block and end_points means block num
+            if check_points(layer_count, end_points):
+                return input, decode_ends
+
+            input = fluid.layers.pool2d(
+                input=input,
+                pool_type='avg',
+                global_pooling=True,
+                name='mobilenetv1_last_pool')
 
             return input
 
@@ -208,12 +217,20 @@ class MobileNetV1Space(SearchSpaceBase):
                              scale,
                              kernel_size,
                              name=None):
+        num_groups = input.shape[1]
+
+        s_oc = int(num_filters1 * scale)
+        if s_oc > num_groups:
+            output_channel = s_oc - (s_oc % num_groups)
+        else:
+            output_channel = num_groups
+
         depthwise_conv = conv_bn_layer(
             input=input,
             filter_size=kernel_size,
-            num_filters=int(num_filters1 * scale),
+            num_filters=output_channel,
             stride=stride,
-            num_groups=int(num_groups * scale),
+            num_groups=num_groups,
             use_cudnn=False,
             name=name + '_dw')
         pointwise_conv = conv_bn_layer(
