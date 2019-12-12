@@ -15,11 +15,16 @@
 from .mobilenetv2 import MobileNetV2Space
 from .mobilenetv1 import MobileNetV1Space
 from .resnet import ResNetSpace
+from .mobilenet_block import MobileNetV1BlockSpace, MobileNetV2BlockSpace
+from .resnet_block import ResNetBlockSpace
+from .inception_block import InceptionABlockSpace, InceptionCBlockSpace
 from .search_space_registry import SEARCHSPACE
 from .search_space_factory import SearchSpaceFactory
 from .search_space_base import SearchSpaceBase
 
 __all__ = [
-    'MobileNetV1Space', 'MobileNetV2Space', 'ResNetSpace', 'SearchSpaceBase',
+    'MobileNetV1Space', 'MobileNetV2Space', 'ResNetSpace',
+    'MobileNetV1BlockSpace', 'MobileNetV2BlockSpace', 'ResNetBlockSpace',
+    'InceptionABlockSpace', 'InceptionCBlockSpace', 'SearchSpaceBase',
     'SearchSpaceFactory', 'SEARCHSPACE'
 ]
