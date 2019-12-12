@@ -20,7 +20,7 @@ import logging
 import numpy as np
 import json
 from .controller import EvolutionaryController
-from log_helper import get_logger
+from .log_helper import get_logger
 
 __all__ = ["SAController"]
 

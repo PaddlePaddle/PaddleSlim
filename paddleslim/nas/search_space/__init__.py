@@ -12,27 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mobilenetv2
-from .mobilenetv2 import *
-import mobilenet_block
-from .mobilenet_block import *
-import mobilenetv1
-from .mobilenetv1 import *
-import resnet
-from .resnet import *
-import resnet_block
-from .resnet_block import *
-import inception_block
-from .inception_block import *
-import search_space_registry
-from search_space_registry import *
-import search_space_factory
-from search_space_factory import *
-import search_space_base
-from search_space_base import *
+from .mobilenetv2 import MobileNetV2Space
+from .mobilenetv1 import MobileNetV1Space
+from .resnet import ResNetSpace
+from .mobilenet_block import MobileNetV1BlockSpace, MobileNetV2BlockSpace
+from .resnet_block import ResNetBlockSpace
+from .inception_block import InceptionABlockSpace, InceptionCBlockSpace
+from .search_space_registry import SEARCHSPACE
+from .search_space_factory import SearchSpaceFactory
+from .search_space_base import SearchSpaceBase
 
-__all__ = []
-__all__ += mobilenetv2.__all__
-__all__ += search_space_registry.__all__
-__all__ += search_space_factory.__all__
-__all__ += search_space_base.__all__
+__all__ = [
+    'MobileNetV1Space', 'MobileNetV2Space', 'ResNetSpace',
+    'MobileNetV1BlockSpace', 'MobileNetV2BlockSpace', 'ResNetBlockSpace',
+    'InceptionABlockSpace', 'InceptionCBlockSpace', 'SearchSpaceBase',
+    'SearchSpaceFactory', 'SEARCHSPACE'
+]

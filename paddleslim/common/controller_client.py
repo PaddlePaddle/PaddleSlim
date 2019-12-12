@@ -14,7 +14,7 @@
 
 import logging
 import socket
-from log_helper import get_logger
+from .log_helper import get_logger
 
 __all__ = ['ControllerClient']
 
