@@ -25,7 +25,10 @@ from ..prune import Pruner
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-__all__ = ["sensitivity", "flops_sensitivity"]
+__all__ = [
+    "sensitivity", "flops_sensitivity", "load_sensitivities",
+    "merge_sensitive", "get_ratios_by_loss"
+]
 
 
 def sensitivity(program,
@@ -36,23 +39,18 @@ def sensitivity(program,
                 pruned_ratios=None):
     scope = fluid.global_scope()
     graph = GraphWrapper(program)
-    sensitivities = _load_sensitivities(sensitivities_file)
+    sensitivities = load_sensitivities(sensitivities_file)
 
     if pruned_ratios is None:
         pruned_ratios = np.arange(0.1, 1, step=0.1)
 
     for name in param_names:
         if name not in sensitivities:
-            size = graph.var(name).shape()[0]
-            sensitivities[name] = {
-                'pruned_percent': [],
-                'loss': [],
-                'size': size
-            }
+            sensitivities[name] = {}
     baseline = None
     for name in sensitivities:
         for ratio in pruned_ratios:
-            if ratio in sensitivities[name]['pruned_percent']:
+            if ratio in sensitivities[name]:
                 _logger.debug('{}, {} has computed.'.format(name, ratio))
                 continue
             if baseline is None:
@@ -75,8 +73,7 @@ def sensitivity(program,
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))
 
-            sensitivities[name]['pruned_percent'].append(ratio)
-            sensitivities[name]['loss'].append(loss)
+            sensitivities[name][ratio] = loss
 
             _save_sensitivities(sensitivities, sensitivities_file)
 
@@ -98,16 +95,11 @@ def flops_sensitivity(program,
 
     scope = fluid.global_scope()
     graph = GraphWrapper(program)
-    sensitivities = _load_sensitivities(sensitivities_file)
+    sensitivities = load_sensitivities(sensitivities_file)
 
     for name in param_names:
         if name not in sensitivities:
-            size = graph.var(name).shape()[0]
-            sensitivities[name] = {
-                'pruned_percent': [],
-                'loss': [],
-                'size': size
-            }
+            sensitivities[name] = {}
     base_flops = flops(program)
     target_pruned_flops = base_flops * pruned_flops_rate
 
@@ -124,15 +116,16 @@ def flops_sensitivity(program,
             lazy=False,
             only_graph=True)
         param_flops = (base_flops - flops(pruned_program)) * 2
-        channel_size = sensitivities[name]["size"]
+        channel_size = graph.var(name).shape()[0]
         pruned_ratio = target_pruned_flops / float(param_flops)
+        pruned_ratio = round(pruned_ratio, 3)
         pruned_size = round(pruned_ratio * channel_size)
         pruned_ratio = 1 if pruned_size >= channel_size else pruned_ratio
 
-        if len(sensitivities[name]["pruned_percent"]) > 0:
-            _logger.debug('{} exist; pruned ratio: {}; excepted ratio: {}'.
-                          format(name, sensitivities[name]["pruned_percent"][
-                              0], pruned_ratio))
+        if len(sensitivities[name].keys()) > 0:
+            _logger.debug(
+                '{} exist; pruned ratio: {}; excepted ratio: {}'.format(
+                    name, sensitivities[name].keys(), pruned_ratio))
             continue
         if baseline is None:
             baseline = eval_func(graph.program)
@@ -155,8 +148,7 @@ def flops_sensitivity(program,
             loss = (baseline - pruned_metric) / baseline
         _logger.info("pruned param: {}; {}; loss={}".format(name, pruned_ratio,
                                                             loss))
-        sensitivities[name]['pruned_percent'].append(pruned_ratio)
-        sensitivities[name]['loss'].append(loss)
+        sensitivities[name][pruned_ratio] = loss
         _save_sensitivities(sensitivities, sensitivities_file)
 
         # restore pruned parameters
@@ -166,7 +158,30 @@ def flops_sensitivity(program,
     return sensitivities
 
 
-def _load_sensitivities(sensitivities_file):
+def merge_sensitive(sensitivities):
+    """
+    Merge sensitivities.
+    Args:
+      sensitivities(list<dict> | list<str>): The sensitivities to be merged. It cann be a list of sensitivities files or dict.
+
+    Returns:
+      sensitivities(dict): A dict with sensitivities.
+    """
+    assert len(sensitivities) > 0
+    if not isinstance(sensitivities[0], dict):
+        sensitivities = [pickle.load(open(sen, 'r')) for sen in sensitivities]
+
+    new_sensitivities = {}
+    for sen in sensitivities:
+        for param, losses in sen.items():
+            if param not in new_sensitivities:
+                new_sensitivities[param] = {}
+            for percent, loss in losses.items():
+                new_sensitivities[param][percent] = loss
+    return new_sensitivities
+
+
+def load_sensitivities(sensitivities_file):
     """
     Load sensitivities from file.
     """
@@ -177,17 +192,50 @@ def _load_sensitivities(sensitivities_file):
                 sensitivities = pickle.load(f)
             else:
                 sensitivities = pickle.load(f, encoding='bytes')
-
-    for param in sensitivities:
-        sensitivities[param]['pruned_percent'] = [
-            round(p, 2) for p in sensitivities[param]['pruned_percent']
-        ]
     return sensitivities
 
 
 def _save_sensitivities(sensitivities, sensitivities_file):
     """
-        Save sensitivities into file.
-        """
+    Save sensitivities into file.
+    """
     with open(sensitivities_file, 'wb') as f:
         pickle.dump(sensitivities, f)
+
+
+def get_ratios_by_loss(sensitivities, loss):
+    """
+    Get the max ratio of each parameter. The loss of accuracy must be less than given `loss`
+    when the single parameter was pruned by the max ratio. 
+    
+    Args:
+      
+      sensitivities(dict): The sensitivities used to generate a group of pruning ratios. The key of dict
+                           is name of parameters to be pruned. The value of dict is a list of tuple with
+                           format `(pruned_ratio, accuracy_loss)`.
+      loss(float): The threshold of accuracy loss.
+
+    Returns:
+
+      ratios(dict): A group of ratios. The key of dict is name of parameters while the value is the ratio to be pruned.
+    """
+    ratios = {}
+    for param, losses in sensitivities.items():
+        losses.sort()
+        for i in range(len(losses))[::-1]:
+            if losses[i][1] <= loss:
+                if i == (len(losses) - 1):
+                    ratios[param] = losses[i][0]
+                else:
+                    r0, l0 = losses[i]
+                    r1, l1 = losses[i + 1]
+                    d0 = loss - l0
+                    d1 = l1 - loss
+
+                    ratio = r0 + (loss - l0) * (r1 - r0) / (l1 - l0)
+                    ratios[param] = ratio
+                    if ratio > 1:
+                        print losses, ratio, (r1 - r0) / (l1 - l0), i
+
+                break
+    return ratios

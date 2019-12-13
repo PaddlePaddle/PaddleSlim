@@ -198,6 +198,10 @@ def compress(args):
         ratios=[0.33] * len(params),
         place=place)
 
+    for param in pruned_program[0].global_block().all_parameters():
+        if "weights" in param.name:
+            print param.name, param.shape
+    return
     _logger.info("fops after pruning: {}".format(flops(pruned_program)))
 
     for i in range(args.num_epochs):
