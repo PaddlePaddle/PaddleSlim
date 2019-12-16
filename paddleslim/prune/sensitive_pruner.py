@@ -20,7 +20,7 @@ import numpy as np
 import paddle.fluid as fluid
 from ..common import get_logger
 from .sensitive import sensitivity
-from .sensitive import flops_sensitivity
+from .sensitive import flops_sensitivity, get_ratios_by_loss
 from ..analysis import flops
 from .pruner import Pruner
 
@@ -153,8 +153,8 @@ class SensitivePruner(object):
                 sensitivities_file=sensitivities_file,
                 step_size=0.1)
         print sensitivities
-        _, ratios = self._get_ratios_by_sensitive(sensitivities, pruned_flops,
-                                                  eval_program)
+        _, ratios = self.get_ratios_by_sensitive(sensitivities, pruned_flops,
+                                                 eval_program)
 
         pruned_program = self._pruner.prune(
             train_program,
@@ -185,72 +185,49 @@ class SensitivePruner(object):
         topk_percents = [percents[param] for param in topk_parms]
         return topk_parms, topk_percents
 
-    def _get_ratios_by_sensitive(self, sensitivities, pruned_flops,
-                                 eval_program):
+    def get_ratios_by_sensitive(self, sensitivities, pruned_flops,
+                                eval_program):
         """
         Search a group of ratios for pruning target flops.
+
+        Args:
+
+          sensitivities(dict): The sensitivities used to generate a group of pruning ratios. The key of dict
+                               is name of parameters to be pruned. The value of dict is a list of tuple with
+                               format `(pruned_ratio, accuracy_loss)`.
+          pruned_flops(float): The percent of FLOPS to be pruned.
+          eval_program(Program): The program whose FLOPS is considered.
+
+        Return:
+
+          ratios(dict): A group of ratios. The key of dict is name of parameters while the value is the ratio to be pruned.
         """
-
-        def func(params, x):
-            a, b, c, d = params
-            return a * x * x * x + b * x * x + c * x + d
-
-        def error(params, x, y):
-            return func(params, x) - y
-
-        def slove_coefficient(x, y):
-            init_coefficient = [10, 10, 10, 10]
-            coefficient, loss = leastsq(error, init_coefficient, args=(x, y))
-            return coefficient
 
         min_loss = 0.
         max_loss = 0.
-
-        # step 1: fit curve by sensitivities
-        coefficients = {}
-        for param in sensitivities:
-            losses = np.array([0] * 5 + sensitivities[param]['loss'])
-            precents = np.array([0] * 5 + sensitivities[param][
-                'pruned_percent'])
-            coefficients[param] = slove_coefficient(precents, losses)
-            loss = np.max(losses)
-            max_loss = np.max([max_loss, loss])
-
         # step 2: Find a group of ratios by binary searching.
         base_flops = flops(eval_program)
-        ratios = []
+        ratios = None
         max_times = 20
         while min_loss < max_loss and max_times > 0:
             loss = (max_loss + min_loss) / 2
             _logger.info(
                 '-----------Try pruned ratios while acc loss={}-----------'.
                 format(loss))
-            ratios = []
-            # step 2.1: Get ratios according to current loss
-            for param in sensitivities:
-                coefficient = copy.deepcopy(coefficients[param])
-                coefficient[-1] = coefficient[-1] - loss
-                roots = np.roots(coefficient)
-                for root in roots:
-                    min_root = 1
-                    if np.isreal(root) and root > 0 and root < 1:
-                        selected_root = min(root.real, min_root)
-                ratios.append(selected_root)
+            ratios = self.get_ratios_by_loss(sensitivities, loss)
             _logger.info('Pruned ratios={}'.format(
-                [round(ratio, 3) for ratio in ratios]))
-            # step 2.2: Pruning by current ratios
-            param_shape_backup = {}
+                [round(ratio, 3) for ratio in ratios.values()]))
             pruned_program = self._pruner.prune(
                 eval_program,
                 None,  # scope
-                sensitivities.keys(),
-                ratios,
+                ratios.keys(),
+                ratios.values(),
                 None,  # place
                 only_graph=True)
             pruned_ratio = 1 - (float(flops(pruned_program)) / base_flops)
             _logger.info('Pruned flops: {:.4f}'.format(pruned_ratio))
 
-            # step 2.3: Check whether current ratios is enough
+            # Check whether current ratios is enough
             if abs(pruned_ratio - pruned_flops) < 0.015:
                 break
             if pruned_ratio > pruned_flops:
@@ -258,4 +235,4 @@ class SensitivePruner(object):
             else:
                 min_loss = loss
             max_times -= 1
-        return sensitivities.keys(), ratios
+        return ratios
