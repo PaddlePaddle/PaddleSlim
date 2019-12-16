@@ -6,19 +6,19 @@
 
 ## [蒸馏]()
 
-- [单进程蒸馏](./single_distiller_api_doc.md)
+- [单进程蒸馏](./single_distiller_api.md)
 
 - [通道剪裁](./prune_api.md)
 
-### [量化](./quantization_api_doc.md)
+### [量化](./quantization_api.md)
 
-- [量化训练](./quantization_api_doc.md#量化训练API)
+- [量化训练](./quantization_api.md#量化训练API)
 
-- [离线量化](./quantization_api_doc.md#离线量化API)
+- [离线量化](./quantization_api.md#离线量化API)
 
-- [embedding量化](./quantization_api_doc.md#Embedding量化API)
+- [embedding量化](./quantization_api.md#Embedding量化API)
 
 ## [小模型结构搜索]()
 
 - [nas API](./nas_api.md)
-- [SearchSpace](./search_space_doc.md)
+- [SearchSpace](./search_space.md)
