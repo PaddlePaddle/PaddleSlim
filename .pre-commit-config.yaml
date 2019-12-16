@@ -4,6 +4,10 @@ repos:
     hooks:
     -   id: remove-crlf
         files: .∗
+    -   id: forbid-tabs
+        files: \.(md|yml)$
+    -   id: remove-tabs
+        files: \.(md|yml)$
 -   repo: https://github.com/PaddlePaddle/mirrors-yapf.git
     sha: 0d79c0c469bab64f7229c9aca2b1186ef47f0e37
     hooks:
@@ -18,6 +22,9 @@ repos:
     -   id: detect-private-key
         files: .∗
     -   id: end-of-file-fixer
+        files: \.(md|yml)$
+    -   id: trailing-whitespace
+        files: \.(md|yml)$
 -   repo: local
     hooks:
     -   id: pylint-doc-string
