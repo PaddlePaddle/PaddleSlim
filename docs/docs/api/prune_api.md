@@ -332,3 +332,23 @@ print(sensitivities)
 - **sensitivities(dict)**敏感度信息。
 
 示例：
+
+## get_ratios_by_loss(sensitivities, loss)
+
+根据敏感度和精度损失阈值计算出一组剪切率。对于参数`w`, 其剪裁率为使精度损失低于`loss`的最大剪裁率。
+
+参数：
+
+- **sensitivities(dict):** 敏感度信息。
+
+- **loss:** 精度损失阈值。
+
+返回：
+
+- ratios(dict): 一组剪切率。`key`是待剪裁参数的名称。`value`是对应参数的剪裁率。
+
+示例：
+
+```
+
+```
