@@ -7,12 +7,12 @@ nav:
   - Embedding量化: tutorials/quant_embedding_demo.md
   - SA搜索: tutorials/nas_demo.md
 - API:
-  - 量化: api/quantization_api_doc.md
+  - 量化: api/quantization_api.md
   - 剪枝:  api/prune_api.md
   - 敏感度分析: api/analysis_api.md
-  - 蒸馏: api/single_distiller_api_doc.md
+  - 蒸馏: api/single_distiller_api.md
   - SA搜索: api/nas_api.md
-  - 搜索空间: api/search_space_doc.md
+  - 搜索空间: api/search_space.md
 
 theme: readthedocs
 
