@@ -9,6 +9,10 @@ demo中对teahcer模型和student模型的一层特征图添加了l2_loss的蒸�
 
 ## 量化
 
-### [量化训练demo文档](../demo/quant/quant_aware/README.md)
-### [离线量化demo文档](../demo/quant/quant_post/README.md)
-### [Embedding量化demo文档](../demo/quant/quant_embedding/README.md)
+### [量化训练demo文档](./quant_aware_demo.md)
+### [离线量化demo文档](./quant_post_demo.md)
+### [Embedding量化demo文档](./quant_embedding_demo.md)
+
+## NAS
+
+### [NAS示例](./nas_demo.md)
