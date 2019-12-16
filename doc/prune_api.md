@@ -175,17 +175,17 @@ for block in program.blocks:
 
 ```
 {"weight_0": 
-   {"loss": [0.22, 0.33],
-    "pruned_percent": [0.1, 0.2]
+   {0.1: 0.22,
+    0.2: 0.33
    },
  "weight_1":
-   {"loss": [0.21, 0.4],
-    "pruned_percent": [0.1, 0.2]
+   {0.1: 0.21,
+    0.2: 0.4
    }
 }
 ```
 
-其中，`weight_0`是卷积层参数的名称，`weight_0`对应的`loss[i]`为将`weight_0`裁掉`pruned_percent[i]`后的精度损失。
+其中，`weight_0`是卷积层参数的名称，sensitivities['weight_0']的`value`为剪裁比例，`value`为精度损失的比例。
 
 **示例：**
 
@@ -285,3 +285,50 @@ sensitivities = sensitivity(main_program,
 print(sensitivities)
 
 ```
+
+## merge_sensitive
+
+>merge_sensitive(sensitivities)
+
+合并多个敏感度信息。
+
+参数：
+
+- **sensitivities(list<dict> | list<str>):** 待合并的敏感度信息，可以是字典的列表，或者是存放敏感度信息的文件的路径列表。
+
+返回：
+
+- **sensitivities(dict)：** 合并后的敏感度信息。其格式为：
+
+```
+{"weight_0": 
+   {0.1: 0.22,
+    0.2: 0.33
+   },
+ "weight_1":
+   {0.1: 0.21,
+    0.2: 0.4
+   }
+}
+```
+
+其中，`weight_0`是卷积层参数的名称，sensitivities['weight_0']的`value`为剪裁比例，`value`为精度损失的比例。
+
+示例：
+
+
+## load_sensitivities
+
+>load_sensitivities(sensitivities_file)
+
+从文件中加载敏感度信息。
+
+参数：
+
+- **sensitivities_file(str):** 存放敏感度信息的本地文件.
+
+返回：
+
+- **sensitivities(dict)**敏感度信息。
+
+示例：
