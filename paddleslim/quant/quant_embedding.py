@@ -271,12 +271,10 @@ def _quant_embedding_log(graph, scope, place, config, var_name, op_node):
 
     def _quant_log(tensor_array, config):
         """
-        quant array using abs_max op
+        quant array using log op
         """
         bit_length = config['quantize_bits']
         assert bit_length == 8, 'log quantization only supports 8 bits'
-        word_dict_size = tensor_array.shape[0]
-        feat_dim = tensor_array.shape[1]
         log_and_quant = np.round(np.log2(np.abs(tensor_array)) /
                                  _inverval) * _inverval
         unique, counts = np.unique(log_and_quant, return_counts=True)
@@ -326,13 +324,11 @@ def _quant_embedding_log(graph, scope, place, config, var_name, op_node):
     # find embedding var node by 'var_name'
     embedding_node = graph._find_node_by_name(op_node.inputs, var_name)
     embedding_tensor = _get_var_tensor(scope, var_name)
-    if 'threshold' in config.keys():
-        embedding_tensor = _clip_tensor(embedding_tensor, config['threshold'])
 
     # get quantize dict and quanted tensor
     topk_num, quanted_tensor = _quant_log(embedding_tensor, config)
 
-    #create params must to use create_persistable_node
+    #create params must use create_persistable_node
     topk_num_var = graph.create_persistable_node(
         _get_dict_var_name(var_name),
         var_type=embedding_node.type(),
