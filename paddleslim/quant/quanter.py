@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import copy
+import logging
+
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.framework import IrGraph
@@ -23,6 +25,9 @@ from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
 from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 from paddle.fluid import core
+
+from ..common import get_logger
+_logger = get_logger(__name__, level=logging.INFO)
 
 WEIGHT_QUANTIZATION_TYPES = [
     'abs_max', 'channel_wise_abs_max', 'range_abs_max',
@@ -36,10 +41,10 @@ TRANSFORM_PASS_OP_TYPES = ['conv2d', 'depthwise_conv2d', 'mul']
 QUANT_DEQUANT_PASS_OP_TYPES = ['elementwise_add', 'pool2d']
 
 _quant_config_default = {
-    # weight quantize type, default is 'abs_max'
-    'weight_quantize_type': 'abs_max',
-    # activation quantize type, default is 'abs_max'
-    'activation_quantize_type': 'abs_max',
+    # weight quantize type, default is 'channel_wise_abs_max'
+    'weight_quantize_type': 'channel_wise_abs_max',
+    # activation quantize type, default is 'moving_average_abs_max'
+    'activation_quantize_type': 'moving_average_abs_max',
     # weight quantize bit num, default is 8
     'weight_bits': 8,
     # activation quantize bit num, default is 8
@@ -47,25 +52,21 @@ _quant_config_default = {
     # ops of name_scope in not_quant_pattern list, will not be quantized
     'not_quant_pattern': ['skip_quant'],
     # ops of type in quantize_op_types, will be quantized
-    'quantize_op_types':
-    ['conv2d', 'depthwise_conv2d', 'mul', 'elementwise_add', 'pool2d'],
+    'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
     # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
     'dtype': 'int8',
-    # window size for 'range_abs_max' quantization. defaulf is 10000
+    # window size for 'range_abs_max' quantization. defaulf is 1000
     'window_size': 10000,
     # The decay coefficient of moving average, default is 0.9
-    'moving_rate': 0.9,
-    # if set quant_weight_only True, then only quantize parameters of layers which need to be quantized,
-    # and activations will not be quantized.
-    'quant_weight_only': False
+    'moving_rate': 0.9
 }
 
 
 def _parse_configs(user_config):
     """
-    check user configs is valid, and set default value if user not config.
+    check if user's configs are valid.
     Args:
-        user_config(dict):the config of user.
+        user_config(dict): user's config.
     Return:
         configs(dict): final configs will be used.
     """
@@ -73,7 +74,7 @@ def _parse_configs(user_config):
     configs = copy.deepcopy(_quant_config_default)
     configs.update(user_config)
 
-    # check configs is valid
+    # check if configs is valid
     assert configs['weight_quantize_type'] in WEIGHT_QUANTIZATION_TYPES, \
         "Unknown weight_quantize_type: '%s'. It can only be " + " ".join(WEIGHT_QUANTIZATION_TYPES)
 
@@ -92,8 +93,8 @@ def _parse_configs(user_config):
     assert (configs['activation_bits'] >= 1 and configs['activation_bits'] <= 16), \
         "activation_bits should be between 1 and 16."
 
-    assert isinstance(configs['not_quant_pattern'], list), \
-        "not_quant_pattern must be a list"
+    assert isinstance(configs['not_quant_pattern'], (list, str)), \
+        "not_quant_pattern must be list or str"
 
     assert isinstance(configs['quantize_op_types'], list), \
         "quantize_op_types must be a list"
@@ -116,36 +117,31 @@ def _parse_configs(user_config):
     assert isinstance(configs['moving_rate'], float), \
         "moving_rate must be float value, The decay coefficient of moving average, default is 0.9."
 
-    assert isinstance(configs['quant_weight_only'], bool), \
-        "quant_weight_only must be bool value, if set quant_weight_only True, " \
-        "then only quantize parameters of layers which need to be quantized, " \
-        " and activations will not be quantized."
-
     return configs
 
 
-def quant_aware(program, place, config, scope=None, for_test=False):
+def quant_aware(program, place, config=None, scope=None, for_test=False):
     """
     add trainable quantization ops in program.
     Args:
-        program(fluid.Program): program
-        scope(fluid.Scope): the scope to store var, it's should be the value of program's scope, usually it's fluid.global_scope().
-        place(fluid.CPUPlace or fluid.CUDAPlace): place
-        config(dict): configs for quantization, default values are in quant_config_default dict.
-        for_test: if program is test program, for_test should be set True, else False.
+        program(fluid.Program): program to quant
+        place(fluid.CPUPlace or fluid.CUDAPlace): CPU or CUDA device
+        config(dict, optional): configs for quantization. if None, will use default config. Default is None.
+        scope(fluid.Scope): the scope to store var, it should be program's scope. if None, will use fluid.global_scope().
+            default is None.
+        for_test(bool): if program is test program, set True when program is for test, False when program is for train. Default is False.
     Return:
         fluid.Program: user can finetune this quantization program to enhance the accuracy.
     """
 
     scope = fluid.global_scope() if not scope else scope
-    assert isinstance(config, dict), "config must be dict"
+    if config is None:
+        config = _quant_config_default
+    else:
+        assert isinstance(config, dict), "config must be dict"
+        config = _parse_configs(config)
+    _logger.info("quant_aware config {}".format(config))
 
-    assert 'weight_quantize_type' in config.keys(
-    ), 'weight_quantize_type must be configured'
-    assert 'activation_quantize_type' in config.keys(
-    ), 'activation_quantize_type must be configured'
-
-    config = _parse_configs(config)
     main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
 
     transform_pass_ops = []
@@ -251,22 +247,34 @@ def quant_post(executor,
     post_training_quantization.save_quantized_model(quantize_model_path)
 
 
-def convert(program, place, config, scope=None, save_int8=False):
+def convert(program, place, config=None, scope=None, save_int8=False):
     """
-    add quantization ops in program. the program returned is not trainable.
+    change quantization ops order in program. return program that can used by Paddle-Lite.
     Args:
-        program(fluid.Program): program
-        scope(fluid.Scope): the scope to store var, when is None will use fluid.global_scope()
-        place(fluid.CPUPlace or fluid.CUDAPlace): place
-        config(dict): configs for quantization, default values are in quant_config_default dict.
-        save_int8: is export int8 freezed program.
+        program(fluid.Program): program that returned by quant_aware
+        place(fluid.CPUPlace or fluid.CUDAPlace): CPU or CUDA device
+        scope(fluid.Scope, optional):  the scope to store var, it should be program's scope. if None, will use fluid.global_scope().
+            default is None.
+        config(dict, optional): configs for convert. if set None, will use default config. Default is None.\
+                It must be same with config that used in 'quant_aware'.
+        save_int8: if return int8 freezed program. Int8 program can only be used to check size of model weights. \
+                It cannot be used in Fluid or Paddle-Lite.
     Return:
-        fluid.Program: freezed program which can be used for inference.
+        freezed_program(fluid.Program): freezed program which can be used for inference.
                        parameters is float32 type, but it's value in int8 range.
-        fluid.Program: freezed int8 program which can be used for inference.
-                       if save_int8 is False, this value is None.
+        freezed_program_int8(fluid.Program): freezed int8 program.
+        when save_int8 is False, return freezed_program.
+        when save_int8 is True, return freezed_program and freezed_program_int8
     """
     scope = fluid.global_scope() if not scope else scope
+
+    if config is None:
+        config = _quant_config_default
+    else:
+        assert isinstance(config, dict), "config must be dict"
+        config = _parse_configs(config)
+    _logger.info("convert config {}".format(config))
+
     test_graph = IrGraph(core.Graph(program.desc), for_test=True)
 
     # Freeze the graph after training by adjusting the quantize
