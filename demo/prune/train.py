@@ -8,7 +8,8 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-from paddleslim.prune import Pruner
+#from paddleslim.prune import Pruner
+from paddleslim.prune.walk_pruner import Pruner
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 sys.path.append(sys.path[0] + "/../")
@@ -183,7 +184,7 @@ def compress(args):
     _logger.info("fops before pruning: {}".format(
         flops(fluid.default_main_program())))
     pruner = Pruner()
-    pruned_val_program = pruner.prune(
+    pruned_val_program,_,_ = pruner.prune(
         val_program,
         fluid.global_scope(),
         params=params,
@@ -191,19 +192,19 @@ def compress(args):
         place=place,
         only_graph=True)
 
-    pruned_program = pruner.prune(
+    pruned_program,_,_ = pruner.prune(
         fluid.default_main_program(),
         fluid.global_scope(),
         params=params,
         ratios=[0.33] * len(params),
         place=place)
 
-    for param in pruned_program[0].global_block().all_parameters():
+    for param in pruned_program.global_block().all_parameters():
         if "weights" in param.name:
             print param.name, param.shape
-    return
     _logger.info("fops after pruning: {}".format(flops(pruned_program)))
 
+    return
     for i in range(args.num_epochs):
         train(i, pruned_program)
         if i % args.test_period == 0:
