@@ -7,21 +7,21 @@ PaddleSlim是PaddlePaddle框架的一个子模块，主要用于压缩图像领�
 ## 功能
 
 - 模型剪裁
-  - 支持通道均匀模型剪裁（uniform pruning)
-  - 基于敏感度的模型剪裁
-  - 基于进化算法的自动模型剪裁三种方式
+    - 支持通道均匀模型剪裁（uniform pruning)
+    - 基于敏感度的模型剪裁
+    - 基于进化算法的自动模型剪裁三种方式
 
 - 量化训练
-  - 在线量化训练（training aware）
-  - 离线量化（post training）
-  - 支持对权重全局量化和Channel-Wise量化
+    - 在线量化训练（training aware）
+    - 离线量化（post training）
+    - 支持对权重全局量化和Channel-Wise量化
 
-- 蒸馏
+- 知识蒸馏
 
 - 轻量神经网络结构自动搜索（Light-NAS）
-  - 支持基于进化算法的轻量神经网络结构自动搜索（Light-NAS）
-  - 支持 FLOPS / 硬件延时约束
-  - 支持多平台模型延时评估
+    - 支持基于进化算法的轻量神经网络结构自动搜索（Light-NAS）
+    - 支持 FLOPS / 硬件延时约束
+    - 支持多平台模型延时评估
 
 
 ## 安装
