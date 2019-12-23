@@ -80,18 +80,21 @@ class Pruner():
                 param_t = np.array(scope.find_var(param).get_tensor())
                 pruned_idx = self._cal_pruned_idx(param_t, ratio, axis=0)
             param = graph.var(param)
-            pruned_params.append((param, 0, pruned_idx))
+#            pruned_params.append((param, 0, pruned_idx))
             conv_op = param.outputs()[0]
             walker = conv2d_walker(conv_op,pruned_params=pruned_params, visited=visited)
             walker.prune(param, pruned_axis=0, pruned_idx=pruned_idx)
+
 #        print pruned_params
         for param, pruned_axis, pruned_idx in pruned_params:
+            print("{}\t{}\t{}".format(param.name(), pruned_axis, len(pruned_idx)))
             #param = graph.var(param)
             if param_shape_backup is not None:
                 origin_shape = copy.deepcopy(param.shape())
                 param_shape_backup[param.name()] = origin_shape
             new_shape = list(param.shape())
             new_shape[pruned_axis] -= len(pruned_idx) 
+            print("param: {}; from {} to {}".format(param.name(), param.shape(), new_shape))
             param.set_shape(new_shape)
             if not only_graph:
                 param_t = scope.find_var(param.name()).get_tensor()

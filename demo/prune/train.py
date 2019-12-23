@@ -179,18 +179,18 @@ def compress(args):
 
     params = []
     for param in fluid.default_main_program().global_block().all_parameters():
-        if "_sep_weights" in param.name:
+        if "weights" in param.name and "branch" in param.name:
             params.append(param.name)
     _logger.info("fops before pruning: {}".format(
         flops(fluid.default_main_program())))
     pruner = Pruner()
-    pruned_val_program,_,_ = pruner.prune(
-        val_program,
-        fluid.global_scope(),
-        params=params,
-        ratios=[0.33] * len(params),
-        place=place,
-        only_graph=True)
+#    pruned_val_program,_,_ = pruner.prune(
+#        val_program,
+#        fluid.global_scope(),
+#        params=params,
+#        ratios=[0.33] * len(params),
+#        place=place,
+#        only_graph=True)
 
     pruned_program,_,_ = pruner.prune(
         fluid.default_main_program(),
@@ -199,16 +199,16 @@ def compress(args):
         ratios=[0.33] * len(params),
         place=place)
 
-    for param in pruned_program.global_block().all_parameters():
-        if "weights" in param.name:
-            print param.name, param.shape
+#    for param in pruned_program.global_block().all_parameters():
+#        if "weights" in param.name and "branch" in param.name:
+#            print param.name, param.shape
     _logger.info("fops after pruning: {}".format(flops(pruned_program)))
 
     return
     for i in range(args.num_epochs):
         train(i, pruned_program)
-        if i % args.test_period == 0:
-            test(i, pruned_val_program)
+#        if i % args.test_period == 0:
+#            test(i, pruned_val_program)
 
 
 def main():

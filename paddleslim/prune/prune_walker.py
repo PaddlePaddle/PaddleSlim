@@ -53,16 +53,29 @@ class conv2d(PruneWorker):
 
         if var in self.op.inputs("Input"):
             assert pruned_axis == 1, "The Input of conv2d can only be pruned at axis 1, but got {}".format(pruned_axis)
+            if "res2a_branch2b_weights" == self.op.inputs("Filter")[0].name():
+                print("pruning res2a_branch2b_weights from input")
+            filter_var = self.op.inputs("Filter")[0]
+            key = "_".join([str(self.op.idx()), filter_var.name()])
+            self.visited[0][key] = True
             self.pruned_params.append((self.op.inputs("Filter")[0], 1, pruned_idx))
             
         elif var in self.op.inputs("Filter"):
             assert pruned_axis in [0,1]
+
+            self.pruned_params.append((var, pruned_axis, pruned_idx))
+
             if pruned_axis == 0:
                 if len(self.op.inputs("Bias")) > 0:                
                     self.pruned_params.append((self.op.inputs("Bias"), 1, pruned_idx))
                 output_var = self.op.outputs("Output")[0]
                 key = "_".join([str(self.op.idx()), output_var.name()])
                 self.visited[pruned_axis][key] = True
+
+
+                if "res2a_branch2b_weights" == var.name():
+                    print("derect pruning res2a_branch2b_weights, visit out: {}".format(key))
+
                 next_ops = output_var.outputs()
                 for op in next_ops:
                     self.prune_op(op, output_var, 1, pruned_idx)
@@ -76,6 +89,14 @@ class conv2d(PruneWorker):
                     self.prune_op(op, input_var, 1, pruned_idx)
         elif var in self.op.outputs("Output"):
             assert pruned_axis == 1
+            if "res2a_branch2b_weights" == self.op.inputs("Filter")[0].name():
+                print("pruning res2a_branch2b_weights from output: {}".format(var.name()))
+
+
+            filter_var = self.op.inputs("Filter")[0]
+            key = "_".join([str(self.op.idx()), filter_var.name()])
+            self.visited[0][key] = True
+
             self.pruned_params.append((self.op.inputs("Filter")[0], 0, pruned_idx))
             if len(self.op.inputs("Bias")) > 0:                
                 self.pruned_params.append((self.op.inputs("Bias")[0], 1, pruned_idx))
