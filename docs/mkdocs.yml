@@ -1,4 +1,5 @@
 site_name: PaddleSlim Docs
+repo_url: https://github.com/PaddlePaddle/PaddleSlim
 nav:
 - Home: index.md
 - 教程:
@@ -14,12 +15,33 @@ nav:
   - SA搜索: api/nas_api.md
   - 搜索空间: api/search_space.md
 
-theme: readthedocs
+theme:
+    name: readthedocs
+    highlightjs: true
 
 markdown_extensions:
-  - pymdownx.arithmatex
   - admonition
-  - codehilite
+  - codehilite:
+      guess_lang: true
+      linenums: true
+  - toc:
+      permalink: "#"
+  - footnotes
+  - meta
+  - def_list
+  - pymdownx.arithmatex
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist
+  - pymdownx.tilde
+
 extra_javascript:
   - mathjax-config.js
   - MathJax.js?config=TeX-AMS-MML_HTMLorMML
