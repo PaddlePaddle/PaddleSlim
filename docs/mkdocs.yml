@@ -1,0 +1,25 @@
+site_name: PaddleSlim Docs
+nav:
+- Home: index.md
+- 教程:
+  - 离线量化: tutorials/quant_post_demo.md
+  - 量化训练: tutorials/quant_aware_demo.md
+  - Embedding量化: tutorials/quant_embedding_demo.md
+  - SA搜索: tutorials/nas_demo.md
+- API:
+  - 量化: api/quantization_api.md
+  - 剪枝:  api/prune_api.md
+  - 敏感度分析: api/analysis_api.md
+  - 蒸馏: api/single_distiller_api.md
+  - SA搜索: api/nas_api.md
+  - 搜索空间: api/search_space.md
+
+theme: readthedocs
+
+markdown_extensions:
+  - pymdownx.arithmatex
+  - admonition
+  - codehilite
+extra_javascript:
+  - mathjax-config.js
+  - MathJax.js?config=TeX-AMS-MML_HTMLorMML

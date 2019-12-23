@@ -8,3 +8,4 @@ dist/
 *.tar
 *.tar.gz
 *.zip
+docs/site
