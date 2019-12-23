@@ -98,7 +98,8 @@ class SAController(EvolutionaryController):
             self._best_tokens = tokens
         _logger.info(
             "Controller - iter: {}; best_reward: {}, best tokens: {}, current_reward: {}; current tokens: {}".
-            format(self._iter, self._reward, self._tokens, reward, tokens))
+            format(self._iter, self._max_reward, self._best_tokens, reward,
+                   tokens))
 
         if self._checkpoints != None:
             self._save_checkpoint(self._checkpoints)
