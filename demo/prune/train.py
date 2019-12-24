@@ -50,9 +50,11 @@ def get_pruned_params(args, program):
             if "linear_weights" in param.name or "expand_weights" in param.name:
                 params.append(param.name)
     elif args.model == "ResNet34":
+        for param in program.global_block().all_parameters():
             if "weights" in param.name and "branch" in param.name:
                 params.append(param.name)
     elif args.model == "PVANet":
+        for param in program.global_block().all_parameters():
             if "conv_weights" in param.name:
                 params.append(param.name)
     return params
@@ -63,9 +65,9 @@ def piecewise_decay(args):
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = fluid.layers.piecewise_decay(boundaries=bd, values=lr)
-    optimizer = fluid.optimizer.Momentum(
+    optimizer = fluid.optimizer.Adam(
         learning_rate=learning_rate,
-        momentum=args.momentum_rate,
+#        momentum=args.momentum_rate,
         regularization=fluid.regularizer.L2Decay(args.l2_decay))
     return optimizer
 

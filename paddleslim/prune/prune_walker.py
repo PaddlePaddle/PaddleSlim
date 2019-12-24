@@ -488,12 +488,10 @@ class scale(PruneWorker):
         if var in self.op.inputs("X"):
             out_var  = self.op.outputs("Out")[0]
             for op in out_var.outputs():
-                print("forward from scale: {}".format(out_var.name()))
                 self.prune_op(op, out_var, pruned_axis, pruned_idx)
         elif var in self.op.outputs("Out"):
             in_var  = self.op.inputs("X")[0]
             for op in in_var.inputs():
-                print("back from scale: {}".format(in_var.name()))
                 self.prune_op(op, in_var, pruned_axis, pruned_idx)
 
 @PRUNE_WORKER.register
@@ -515,3 +513,25 @@ class momentum(PruneWorker):
             _logger.debug("pruning momentum, var:{}".format(var.name()))
             velocity_var = self.op.inputs("Velocity")[0]
             self.pruned_params.append((velocity_var, pruned_axis, pruned_idx))
+
+@PRUNE_WORKER.register
+class adam(PruneWorker):
+    def __init__(self, op, pruned_params, visited={}):
+        super(adam, self).__init__(op, pruned_params, visited)
+
+    def prune(self, var, pruned_axis, pruned_idx):
+    
+        key = "_".join([str(self.op.idx()), var.name()])
+        if pruned_axis not in self.visited:
+            self.visited[pruned_axis] = {}
+        if key in self.visited[pruned_axis]:
+            return
+        else:
+            self.visited[pruned_axis][key] = True
+
+        if var in self.op.inputs("Param"):
+            _logger.debug("pruning momentum, var:{}".format(var.name()))
+            moment1_var = self.op.inputs("Moment1")[0]
+            self.pruned_params.append((moment1_var, pruned_axis, pruned_idx))
+            moment2_var = self.op.inputs("Moment2")[0]
+            self.pruned_params.append((moment2_var, pruned_axis, pruned_idx))
