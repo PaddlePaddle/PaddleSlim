@@ -80,37 +80,44 @@ class Pruner():
                 param_t = np.array(scope.find_var(param).get_tensor())
                 pruned_idx = self._cal_pruned_idx(param_t, ratio, axis=0)
             param = graph.var(param)
-#            pruned_params.append((param, 0, pruned_idx))
             conv_op = param.outputs()[0]
             walker = conv2d_walker(conv_op,pruned_params=pruned_params, visited=visited)
             walker.prune(param, pruned_axis=0, pruned_idx=pruned_idx)
 
-#        print pruned_params
+        merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
-            print("{}\t{}\t{}".format(param.name(), pruned_axis, len(pruned_idx)))
-            #param = graph.var(param)
-            if param_shape_backup is not None:
-                origin_shape = copy.deepcopy(param.shape())
-                param_shape_backup[param.name()] = origin_shape
-            new_shape = list(param.shape())
-            new_shape[pruned_axis] -= len(pruned_idx) 
-#            print("param: {}; from {} to {}".format(param.name(), param.shape(), new_shape))
-            param.set_shape(new_shape)
-            if not only_graph:
-                param_t = scope.find_var(param.name()).get_tensor()
-                if param_backup is not None and (param.name() not in param_backup):
-                     param_backup[param.name()] = copy.deepcopy(np.array(param_t))
-                try:
-                    pruned_param = self._prune_tensor(
-                        np.array(param_t),
-                        pruned_idx,
-                        pruned_axis=pruned_axis,
-                        lazy=lazy)
-                except IndexError as e:
-                    _logger.error("Pruning {}, but get [{}]".format(param.name(
-                    ), e))
+            if param.name() not in merge_pruned_params:
+                merge_pruned_params[param.name()] = {}
+            if pruned_axis not in merge_pruned_params[param.name()]:
+                merge_pruned_params[param.name()][pruned_axis] = []
+            merge_pruned_params[param.name()][pruned_axis].append(pruned_idx)
 
-                param_t.set(pruned_param, place)
+        for param_name in merge_pruned_params:
+            for pruned_axis in merge_pruned_params[param_name]:
+                pruned_idx = np.concatenate(merge_pruned_params[param_name][pruned_axis])
+                param = graph.var(param_name)
+                _logger.debug("{}\t{}\t{}".format(param.name(), pruned_axis, len(pruned_idx)))
+                if param_shape_backup is not None:
+                    origin_shape = copy.deepcopy(param.shape())
+                    param_shape_backup[param.name()] = origin_shape
+                new_shape = list(param.shape())
+                new_shape[pruned_axis] -= len(pruned_idx) 
+                param.set_shape(new_shape)
+                if not only_graph:
+                    param_t = scope.find_var(param.name()).get_tensor()
+                    if param_backup is not None and (param.name() not in param_backup):
+                         param_backup[param.name()] = copy.deepcopy(np.array(param_t))
+                    try:
+                        pruned_param = self._prune_tensor(
+                            np.array(param_t),
+                            pruned_idx,
+                            pruned_axis=pruned_axis,
+                            lazy=lazy)
+                    except IndexError as e:
+                        _logger.error("Pruning {}, but get [{}]".format(param.name(
+                        ), e))
+                        
+                    param_t.set(pruned_param, place)
     
         return graph.program, param_backup, param_shape_backup
 

@@ -19,7 +19,7 @@ from ..common import get_logger
 
 __all__ = ["PRUNE_WORKER", "conv2d"]
 
-_logger = get_logger(__name__, level=logging.DEBUG)
+_logger = get_logger(__name__, level=logging.INFO)
 
 PRUNE_WORKER = Registry('prune_worker')
 
@@ -94,9 +94,6 @@ class conv2d(PruneWorker):
                     self.prune_op(op, input_var, 1, pruned_idx)
         elif var in self.op.outputs("Output"):
             assert pruned_axis == 1, "pruned_axis: {}; var: {}".format(pruned_axis, var.name())
-#            if "res2a_branch2b_weights" == self.op.inputs("Filter")[0].name():
-#                print("pruning res2a_branch2b_weights from output: {}".format(var.name()))
-
 
             filter_var = self.op.inputs("Filter")[0]
             key = "_".join([str(self.op.idx()), filter_var.name()])
@@ -414,16 +411,8 @@ class depthwise_conv2d(PruneWorker):
                 next_ops = output_var.outputs()
                 for op in next_ops:
                     self.prune_op(op, output_var, 1, pruned_idx)
-            
             for op in var.outputs():
                 self.prune_op(op, var, pruned_axis, pruned_idx)
-#            elif pruned_axis == 1:
-#                input_var = self.op.inputs("Input")[0]
-#                key = "_".join([str(self.op.idx()), input_var.name()])
-#                self.visited[pruned_axis][key] = True
-#                pre_ops = input_var.inputs()
-#                for op in pre_ops:
-#                    self.prune_op(op, input_var, 1, pruned_idx)
         elif var in self.op.outputs("Output"):
             assert pruned_axis == 1
             filter_var = self.op.inputs("Filter")[0]
