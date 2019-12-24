@@ -12,7 +12,7 @@
 近年来，定点量化使用更少的比特数（如8-bit、3-bit、2-bit等）表示神经网络的权重和激活已被验证是有效的。定点量化的优点包括低内存带宽、低功耗、低计算资源占用以及低模型存储需求等。
 
 <p align="center">
-<img src="https://github.com/PaddlePaddle/PaddleSlim//develop/docs/docs/images/algo/quan_table_0.png" height=258 width=600 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/images/algo/quan_table_0.png" height=258 width=600 hspace='10'/> <br />
 <strong>表1: 不同类型操作的开销对比</strong>
 </p>
 
