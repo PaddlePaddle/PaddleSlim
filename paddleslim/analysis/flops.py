@@ -18,17 +18,17 @@ from ..core import GraphWrapper
 __all__ = ["flops"]
 
 
-def flops(program, detail=False):
+def flops(program, detail=False, only_conv=True):
     """
     Get FLOPS of target graph.
     Args:
         program(Program): The program used to calculate FLOPS.
     """
     graph = GraphWrapper(program)
-    return _graph_flops(graph, detail=detail)
+    return _graph_flops(graph, detail=detail, only_conv=only_conv)
 
 
-def _graph_flops(graph, only_conv=False, detail=False):
+def _graph_flops(graph, only_conv=True, detail=False):
     assert isinstance(graph, GraphWrapper)
     flops = 0
     params2flops = {}
@@ -58,7 +58,7 @@ def _graph_flops(graph, only_conv=False, detail=False):
             y_shape = op.inputs("Y")[0].shape()
             if x_shape[0] == -1:
                 x_shape[0] = 1
-            flops += 2 * x_shape[0] * x_shape[1] * y_shape[1]
+            flops += x_shape[0] * x_shape[1] * y_shape[1] #* 2
 
         elif op.type() in ['relu', 'sigmoid', 'batch_norm'] and not only_conv:
             input_shape = list(op.inputs("X")[0].shape())

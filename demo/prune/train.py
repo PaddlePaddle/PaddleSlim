@@ -179,9 +179,10 @@ def compress(args):
 
     params = []
     for param in fluid.default_main_program().global_block().all_parameters():
-        if "weights" in param.name and "branch" in param.name:
+        #if "weights" in param.name and "branch" in param.name:
+        if "conv_weights" in param.name:
             params.append(param.name)
-    _logger.info("fops before pruning: {}".format(
+    _logger.info("FLOPs before pruning: {}".format(
         flops(fluid.default_main_program())))
     pruner = Pruner()
 #    pruned_val_program,_,_ = pruner.prune(
@@ -199,12 +200,12 @@ def compress(args):
         ratios=[0.33] * len(params),
         place=place)
 
-#    for param in pruned_program.global_block().all_parameters():
-#        if "weights" in param.name and "branch" in param.name:
-#            print param.name, param.shape
-    _logger.info("fops after pruning: {}".format(flops(pruned_program)))
-
-    return
+    for param in pruned_program.global_block().all_parameters():
+        if "weights" in param.name or "scale" in param.name:
+            shape = np.array(fluid.global_scope().find_var(param.name).get_tensor()).shape
+            print param.name, param.shape, shape
+    _logger.info("FLOPs after pruning: {}".format(flops(pruned_program)))
+    #return
     for i in range(args.num_epochs):
         train(i, pruned_program)
 #        if i % args.test_period == 0:

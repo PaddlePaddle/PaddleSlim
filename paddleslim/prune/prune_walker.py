@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import numpy as np
 from ..core import Registry
+from ..common import get_logger
 
 __all__ = ["PRUNE_WORKER", "conv2d"]
+
+_logger = get_logger(__name__, level=logging.DEBUG)
 
 PRUNE_WORKER = Registry('prune_worker')
 
@@ -28,11 +32,14 @@ class PruneWorker(object):
     def prune(self, var, pruned_aixs, pruned_idx):
         pass
 
-    def prune_op(self, op, var, pruned_aixs, pruned_idx):
+    def prune_op(self, op, var, pruned_aixs, pruned_idx, visited=None):
         if op.type().endswith("_grad"):
             return
+        if visited is not None:
+            self.visited = visited
         cls = PRUNE_WORKER.get(op.type())
         assert cls is not None , "The walker of {} is not registered.".format(op.type())
+        _logger.debug("\nfrom: {}\nto: {}\npruned_aixs: {}; var: {}".format(self.op, op, pruned_aixs, var.name()))
         walker = cls(op, pruned_params=self.pruned_params, visited=self.visited)
         walker.prune(var, pruned_aixs, pruned_idx)
 
@@ -52,18 +59,21 @@ class conv2d(PruneWorker):
            self.visited[pruned_axis][key] = True
 
         if var in self.op.inputs("Input"):
-            assert pruned_axis == 1, "The Input of conv2d can only be pruned at axis 1, but got {}".format(pruned_axis)
-            if "res2a_branch2b_weights" == self.op.inputs("Filter")[0].name():
-                print("pruning res2a_branch2b_weights from input")
+            assert pruned_axis == 1, "The Input of conv2d can only be pruned at axis 1, but got {}; var: {}".format(pruned_axis, var.name())
             filter_var = self.op.inputs("Filter")[0]
             key = "_".join([str(self.op.idx()), filter_var.name()])
-            self.visited[0][key] = True
-            self.pruned_params.append((self.op.inputs("Filter")[0], 1, pruned_idx))
-            
+            self.visited[1][key] = True
+            self.pruned_params.append((filter_var, 1, pruned_idx))
+            for op in filter_var.outputs():
+                self.prune_op(op, filter_var, 1, pruned_idx)
+             
         elif var in self.op.inputs("Filter"):
             assert pruned_axis in [0,1]
 
             self.pruned_params.append((var, pruned_axis, pruned_idx))
+
+            for op in var.outputs():
+                self.prune_op(op, var, pruned_axis, pruned_idx)
 
             if pruned_axis == 0:
                 if len(self.op.inputs("Bias")) > 0:                
@@ -71,11 +81,6 @@ class conv2d(PruneWorker):
                 output_var = self.op.outputs("Output")[0]
                 key = "_".join([str(self.op.idx()), output_var.name()])
                 self.visited[pruned_axis][key] = True
-
-
-                if "res2a_branch2b_weights" == var.name():
-                    print("derect pruning res2a_branch2b_weights, visit out: {}".format(key))
-
                 next_ops = output_var.outputs()
                 for op in next_ops:
                     self.prune_op(op, output_var, 1, pruned_idx)
@@ -88,16 +93,20 @@ class conv2d(PruneWorker):
                 for op in pre_ops:
                     self.prune_op(op, input_var, 1, pruned_idx)
         elif var in self.op.outputs("Output"):
-            assert pruned_axis == 1
-            if "res2a_branch2b_weights" == self.op.inputs("Filter")[0].name():
-                print("pruning res2a_branch2b_weights from output: {}".format(var.name()))
+            assert pruned_axis == 1, "pruned_axis: {}; var: {}".format(pruned_axis, var.name())
+#            if "res2a_branch2b_weights" == self.op.inputs("Filter")[0].name():
+#                print("pruning res2a_branch2b_weights from output: {}".format(var.name()))
 
 
             filter_var = self.op.inputs("Filter")[0]
             key = "_".join([str(self.op.idx()), filter_var.name()])
             self.visited[0][key] = True
 
-            self.pruned_params.append((self.op.inputs("Filter")[0], 0, pruned_idx))
+            self.pruned_params.append((filter_var, 0, pruned_idx))
+
+            for op in filter_var.outputs():
+                self.prune_op(op, filter_var, 0, pruned_idx)
+
             if len(self.op.inputs("Bias")) > 0:                
                 self.pruned_params.append((self.op.inputs("Bias")[0], 1, pruned_idx))
                 
@@ -122,6 +131,9 @@ class batch_norm(PruneWorker):
         else:
            self.visited[pruned_axis][key] = True
 
+        if (var not in self.op.outputs("Y")) and (var not in self.op.inputs("X")):
+            return
+
         if var in self.op.outputs("Y"):
             in_var = self.op.inputs("X")[0]
             key = "_".join([str(self.op.idx()), in_var.name()])
@@ -129,8 +141,13 @@ class batch_norm(PruneWorker):
             pre_ops = in_var.inputs()
             for op in pre_ops:
                 self.prune_op(op, in_var, pruned_axis, pruned_idx)
+        
         for param in ["Scale", "Bias", "Mean", "Variance"]: 
-            self.pruned_params.append((self.op.inputs(param)[0], 0, pruned_idx))
+            param_var = self.op.inputs(param)[0]
+            for op in param_var.outputs():
+                self.prune_op(op, param_var, 0, pruned_idx)
+            self.pruned_params.append((param_var, 0, pruned_idx))
+            
 
         out_var = self.op.outputs("Y")[0]
         key = "_".join([str(self.op.idx()), out_var.name()])
@@ -152,22 +169,32 @@ class elementwise_op(PruneWorker):
             return
         else:
            self.visited[pruned_axis][key] = True
+        axis = self.op.attr("axis")
+        if axis == -1: # TODO
+            axis = 0
         if var in self.op.outputs("Out"):
             for name in ["X", "Y"]:
+                actual_axis = pruned_axis
+                if name == "Y":
+                    actual_axis = pruned_axis - axis
                 in_var = self.op.inputs(name)[0]
                 pre_ops = in_var.inputs()
                 for op in pre_ops:
-                    self.prune_op(op, in_var, pruned_axis, pruned_idx)
+                    self.prune_op(op, in_var, actual_axis, pruned_idx)
 
         else:
             if var in self.op.inputs("X"):
                 in_var = self.op.inputs("Y")[0]
+
+                if in_var.is_parameter():
+                    self.pruned_params.append((in_var, pruned_axis - axis, pruned_idx))
                 pre_ops = in_var.inputs()
                 for op in pre_ops:
-                    self.prune_op(op, in_var, pruned_axis, pruned_idx)
+                    self.prune_op(op, in_var, pruned_axis - axis, pruned_idx)
             elif var in self.op.inputs("Y"):
                 in_var = self.op.inputs("X")[0]
                 pre_ops = in_var.inputs()
+                pruned_axis = pruned_axis + axis
                 for op in pre_ops:
                     self.prune_op(op, in_var, pruned_axis, pruned_idx)
     
@@ -227,6 +254,12 @@ class relu(activation):
     def __init__(self, op, pruned_params, visited):
         super(relu, self).__init__(op, pruned_params, visited)
 
+
+@PRUNE_WORKER.register
+class relu6(activation):
+    def __init__(self, op, pruned_params, visited):
+        super(relu6, self).__init__(op, pruned_params, visited)
+
 @PRUNE_WORKER.register
 class pool2d(activation):
     def __init__(self, op, pruned_params, visited):
@@ -278,24 +311,54 @@ class concat(PruneWorker):
             return
         else:
            self.visited[pruned_axis][key] = True
-
+        idx = []
+        axis = self.op.attr("axis")
         if var in self.op.outputs("Out"):
-             for in_var in self.op.inputs("X"):
-                pre_ops = in_var.inputs()
-                for op in pre_ops:
-                    self.prune_op(op, in_var, pruned_axis, pruned_idx)
-        elif var in self.op.inputs("X"):
-            for in_var in self.op.inputs("X"):
-                if in_var != var:
+             start = 0
+             if axis == pruned_axis: 
+                 for _, in_var in enumerate(self.op.inputs("X")):
+                    idx = []
+                    for i in pruned_idx:
+                        r_idx = i - start
+                        if r_idx < in_var.shape()[pruned_axis] and r_idx >= 0:
+                            idx.append(r_idx)
+                    start += in_var.shape()[pruned_axis]
+                    
                     pre_ops = in_var.inputs()
                     for op in pre_ops:
-                        self.prune_op(op, in_var, pruned_axis, pruned_idx)
-        out_var = self.op.outputs("Out")[0]
-        key = "_".join([str(self.op.idx()), out_var.name()])
-        self.visited[pruned_axis][key] = True
-        next_ops = out_var.outputs()
-        for op in next_ops:
-            self.prune_op(op, out_var, pruned_axis, pruned_idx)
+                        self.prune_op(op, in_var, pruned_axis, idx)
+                 idx = pruned_idx[:]
+             else:
+                 for _, in_var in enumerate(self.op.inputs("X")):
+                     pre_ops = in_var.inputs()
+                     for op in pre_ops:
+                         self.prune_op(op, in_var, pruned_axis, pruned_idx)
+        elif var in self.op.inputs("X"):
+            if axis == pruned_axis: 
+                idx = []
+                start = 0
+                for v in self.op.inputs("X"):
+                    if v.name() == var.name():
+                        idx = [i+start for i in pruned_idx]
+                    else:
+                        start += v.shape()[pruned_axis]
+    
+                out_var = self.op.outputs("Out")[0]
+                key = "_".join([str(self.op.idx()), out_var.name()])
+                self.visited[pruned_axis][key] = True
+                next_ops = out_var.outputs()
+                for op in next_ops:
+                    self.prune_op(op, out_var, pruned_axis, idx, visited={})
+            else:
+                for v in self.op.inputs("X"):
+                    for op in v.inputs():
+                        self.prune_op(op, v, pruned_axis, pruned_idx)
+                out_var = self.op.outputs("Out")[0]
+                key = "_".join([str(self.op.idx()), out_var.name()])
+                self.visited[pruned_axis][key] = True
+                next_ops = out_var.outputs()
+                for op in next_ops:
+                    self.prune_op(op, out_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
@@ -315,7 +378,17 @@ class depthwise_conv2d(PruneWorker):
 
         if var in self.op.inputs("Input"):
             assert pruned_axis == 1, "The Input of conv2d can only be pruned at axis 1, but got {}".format(pruned_axis)
-            self.pruned_params.append((self.op.inputs("Filter")[0], 0, pruned_idx))
+
+            filter_var = self.op.inputs("Filter")[0]
+            self.pruned_params.append((filter_var, 0, pruned_idx))
+            key = "_".join([str(self.op.idx()), filter_var.name()])
+            self.visited[0][key] = True
+
+            new_groups = filter_var.shape()[0] - len(pruned_idx)
+            self.op.set_attr("groups", new_groups)
+
+            for op in filter_var.outputs():
+                self.prune_op(op, filter_var, 0, pruned_idx)
 
             output_var = self.op.outputs("Output")[0]
             next_ops = output_var.outputs()
@@ -327,13 +400,23 @@ class depthwise_conv2d(PruneWorker):
             if pruned_axis == 0:
                 if len(self.op.inputs("Bias")) > 0:                
                     self.pruned_params.append((self.op.inputs("Bias"), 1, pruned_idx))
+
+                self.pruned_params.append((var, 0, pruned_idx))
+                new_groups = var.shape()[0] - len(pruned_idx)
+                self.op.set_attr("groups", new_groups)
+
+                for op in var.outputs():
+                    self.prune_op(op, var, 0, pruned_idx)
+
                 output_var = self.op.outputs("Output")[0]
                 key = "_".join([str(self.op.idx()), output_var.name()])
                 self.visited[pruned_axis][key] = True
                 next_ops = output_var.outputs()
                 for op in next_ops:
                     self.prune_op(op, output_var, 1, pruned_idx)
-
+            
+            for op in var.outputs():
+                self.prune_op(op, var, pruned_axis, pruned_idx)
 #            elif pruned_axis == 1:
 #                input_var = self.op.inputs("Input")[0]
 #                key = "_".join([str(self.op.idx()), input_var.name()])
@@ -343,7 +426,17 @@ class depthwise_conv2d(PruneWorker):
 #                    self.prune_op(op, input_var, 1, pruned_idx)
         elif var in self.op.outputs("Output"):
             assert pruned_axis == 1
-            self.pruned_params.append((self.op.inputs("Filter")[0], 0, pruned_idx))
+            filter_var = self.op.inputs("Filter")[0]
+            self.pruned_params.append((filter_var, 0, pruned_idx))
+            key = "_".join([str(self.op.idx()), filter_var.name()])
+            self.visited[0][key] = True
+
+            new_groups = filter_var.shape()[0] - len(pruned_idx)
+            op.set_attr("groups", new_groups)
+
+            for op in filter_var.outputs():
+                self.prune_op(op, filter_var, 0, pruned_idx)
+
             if len(self.op.inputs("Bias")) > 0:                
                 self.pruned_params.append((self.op.inputs("Bias")[0], 1, pruned_idx))
 
@@ -358,6 +451,7 @@ class depthwise_conv2d(PruneWorker):
             next_ops = output_var.outputs()
             for op in next_ops:
                 self.prune_op(op, output_var, 1, pruned_idx)
+        
 
 @PRUNE_WORKER.register
 class mul(PruneWorker):
@@ -381,6 +475,54 @@ class mul(PruneWorker):
             range_idx = np.array(range(feature_map_size))
             for i in pruned_idx:
                 idx += list(range_idx + i * feature_map_size) 
-            self.pruned_params.append((self.op.inputs("Y")[0], 0, idx))
+            param_var = self.op.inputs("Y")[0]
+            self.pruned_params.append((param_var, 0, idx))
+
+            for op in param_var.outputs():
+                self.prune_op(op, param_var, 0, pruned_idx)
             
 
+@PRUNE_WORKER.register
+class scale(PruneWorker):
+    def __init__(self, op, pruned_params, visited={}):
+        super(scale, self).__init__(op, pruned_params, visited)
+
+    def prune(self, var, pruned_axis, pruned_idx):
+        key = "_".join([str(self.op.idx()), var.name()])
+        if pruned_axis not in self.visited:
+            self.visited[pruned_axis] = {}
+        if key in self.visited[pruned_axis]:
+            return
+        else:
+           self.visited[pruned_axis][key] = True
+
+        if var in self.op.inputs("X"):
+            out_var  = self.op.outputs("Out")[0]
+            for op in out_var.outputs():
+                print("forward from scale: {}".format(out_var.name()))
+                self.prune_op(op, out_var, pruned_axis, pruned_idx)
+        elif var in self.op.outputs("Out"):
+            in_var  = self.op.inputs("X")[0]
+            for op in in_var.inputs():
+                print("back from scale: {}".format(in_var.name()))
+                self.prune_op(op, in_var, pruned_axis, pruned_idx)
+
+@PRUNE_WORKER.register
+class momentum(PruneWorker):
+    def __init__(self, op, pruned_params, visited={}):
+        super(momentum, self).__init__(op, pruned_params, visited)
+
+    def prune(self, var, pruned_axis, pruned_idx):
+    
+        key = "_".join([str(self.op.idx()), var.name()])
+        if pruned_axis not in self.visited:
+            self.visited[pruned_axis] = {}
+        if key in self.visited[pruned_axis]:
+            return
+        else:
+            self.visited[pruned_axis][key] = True
+
+        if var in self.op.inputs("Param"):
+            _logger.debug("pruning momentum, var:{}".format(var.name()))
+            velocity_var = self.op.inputs("Velocity")[0]
+            self.pruned_params.append((velocity_var, pruned_axis, pruned_idx))

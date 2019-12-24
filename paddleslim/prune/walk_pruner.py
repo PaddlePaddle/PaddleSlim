@@ -94,7 +94,7 @@ class Pruner():
                 param_shape_backup[param.name()] = origin_shape
             new_shape = list(param.shape())
             new_shape[pruned_axis] -= len(pruned_idx) 
-            print("param: {}; from {} to {}".format(param.name(), param.shape(), new_shape))
+#            print("param: {}; from {} to {}".format(param.name(), param.shape(), new_shape))
             param.set_shape(new_shape)
             if not only_graph:
                 param_t = scope.find_var(param.name()).get_tensor()
