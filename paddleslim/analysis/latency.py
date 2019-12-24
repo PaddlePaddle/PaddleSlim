@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from paddle.fluid import Program
+from ..core import GraphWrapper, OpWrapper
 __all__ = ["LatencyEvaluator", "TableLatencyEvaluator"]
 
 
@@ -28,33 +30,33 @@ class LatencyEvaluator(object):
         i = 0
         for op in graph.ops():
             if op.type() in ['conv2d', 'depthwise_conv2d']:
-                tmp = _conv_op_args(op)
+                tmp = self._conv_op_args(op)
             elif op.type() in [
                     'elementwise_add', 'elementwise_mul', 'elementwise_max'
             ]:
-                tmp = _eltwise_op_args(op)
+                tmp = self._eltwise_op_args(op)
             elif op.type() in [
                     'relu', 'prelu', 'sigmoid', 'relu6', 'elu', 'brelu',
                     'leaky_relu'
             ]:
-                tmp = _activation_op_args(op)
+                tmp = self._activation_op_args(op)
             elif op.type() == 'batch_norm':
-                tmp = _batch_norm_op_args(op)
+                tmp = self._batch_norm_op_args(op)
             elif op.type() == 'pool2d':
-                tmp = _pooling_op_args(op)
+                tmp = self._pooling_op_args(op)
             elif op.type() == 'batch_norm':
-                tmp = _batch_norm_op_args(op)
+                tmp = self._batch_norm_op_args(op)
             elif op.type() == 'softmax':
-                tmp = _softmax_op_args(op)
+                tmp = self._softmax_op_args(op)
             elif op.type() == 'mul':
-                tmp = _fc_op_args(op)
+                tmp = self._fc_op_args(op)
             else:
                 tmp = None
             if tmp:
                 ops.append(tmp)
         return ops
 
-    def _conv_op_args(op):
+    def _conv_op_args(self, op):
         assert isinstance(op, OpWrapper)
         tmp, res = [], []
         # op_name
@@ -69,11 +71,11 @@ class LatencyEvaluator(object):
         # batch size
         tmp.append(1)
         # channels, height, width
-        in_shapes = op.inputs('Input')[0].shape
+        in_shapes = op.inputs('Input')[0].shape()
         tmp = tmp + [int(in_shapes[1]), int(in_shapes[2]), int(in_shapes[3])]
 
         # output channels
-        w_shapes = op.inputs('Filter')[0].shape
+        w_shapes = op.inputs('Filter')[0].shape()
         tmp.append(int(w_shapes[0]))
 
         # group
@@ -104,7 +106,7 @@ class LatencyEvaluator(object):
         tmp = tmp + res
         return tmp
 
-    def _batch_norm_op_args(op):
+    def _batch_norm_op_args(self, op):
         tmp = []
         # op name
         tmp.append('batch_norm')
@@ -116,11 +118,11 @@ class LatencyEvaluator(object):
         # batch size
         tmp.append(1)
         # input channels, height, width
-        in_shapes = op.inputs("X")[0].shape
+        in_shapes = op.inputs("X")[0].shape()
         tmp = tmp + [int(in_shapes[1]), int(in_shapes[2]), int(in_shapes[3])]
         return tmp
 
-    def _eltwise_op_args(op):
+    def _eltwise_op_args(self, op):
         # op name
         tmp = ['eltwise']
         # elementwise type, TODO: add more ops
@@ -133,7 +135,7 @@ class LatencyEvaluator(object):
         # batch size
         tmp.append(1)
         # input channels, height, width 
-        in_shapes = op.inputs('X')[0].shape
+        in_shapes = op.inputs('X')[0].shape()
         while len(in_shapes) < 4:
             in_shapes = in_shapes + (1, )
 
@@ -141,14 +143,14 @@ class LatencyEvaluator(object):
             tmp.append(int(in_shapes[i]))
         return tmp
 
-    def _activation_op_args(op):
+    def _activation_op_args(self, op):
         tmp = []
         # activation type
         tmp.append(op.type())
         # batch size
         tmp.append(1)
         # input channels, height, width
-        in_shapes = op.inputs('X')[0].shape
+        in_shapes = op.inputs('X')[0].shape()
         while len(in_shapes) < 4:
             in_shapes = in_shapes + (1, )
 
@@ -156,7 +158,7 @@ class LatencyEvaluator(object):
             tmp.append(int(in_shapes[i]))
         return tmp
 
-    def _pooling_op_args(op):
+    def _pooling_op_args(self, op):
         tmp, res = [], []
         # op name
         tmp.append('pooling')
@@ -165,7 +167,7 @@ class LatencyEvaluator(object):
         # batch size
         tmp.append(1)
         # channels, height, width
-        in_shapes = op.inputs('X')[0].shape
+        in_shapes = op.inputs('X')[0].shape()
         tmp = tmp + [int(in_shapes[1]), int(in_shapes[2]), int(in_shapes[3])]
         # kernel size
         ksize = op.attr('ksize')
@@ -201,7 +203,7 @@ class LatencyEvaluator(object):
         tmp = tmp + res
         return tmp
 
-    def _softmax_op_args(op):
+    def _softmax_op_args(self, op):
         # op name
         tmp = ['softmax']
         # axis
@@ -209,7 +211,7 @@ class LatencyEvaluator(object):
         # batch size
         tmp.append(1)
         # input channels, height, width
-        in_shapes = op.inputs('X')[0].shape
+        in_shapes = op.inputs('X')[0].shape()
         while len(in_shapes) < 4:
             in_shapes = in_shapes + (1, )
 
@@ -218,7 +220,7 @@ class LatencyEvaluator(object):
 
         return tmp
 
-    def _fc_op_args(blocks, op):
+    def _fc_op_args(self, op):
         # op name
         tmp = ['conv']
         # flag bias
@@ -229,12 +231,12 @@ class LatencyEvaluator(object):
         tmp.append(1)
         # input channels, height, width
         channels = 1
-        in_shape = op.inputs('X')[0].shape
+        in_shape = op.inputs('X')[0].shape()
         for i in range(1, len(in_shape)):
             channels *= in_shape[i]
         tmp = tmp + [int(channels), 1, 1]
         # output channels
-        tmp.append(int(op.outputs('Out')[0].shape[1]))
+        tmp.append(int(op.outputs('Out')[0].shape()[1]))
         # groups, kernel size, padding, stride, dilation
         tmp = tmp + [1, 1, 0, 1, 1]
         return tmp
@@ -279,5 +281,6 @@ class TableLatencyEvaluator(LatencyEvaluator):
             graph = GraphWrapper(graph)
         assert isinstance(graph, GraphWrapper)
         for op in self._get_ops_from_graph(graph):
-            total_latency += self._op_latency(self._delimiter.join(op))
+            total_latency += self._op_latency(
+                self._delimiter.join(map(lambda x: str(x), op)))
         return total_latency

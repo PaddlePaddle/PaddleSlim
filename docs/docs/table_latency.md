@@ -81,7 +81,7 @@ op_type,active_type,n_in,c_in,h_in,w_in\tlatency
 **字段解释**
 
 - **op_type(str)** - 当前op类型。
-- **active_type (string)** - 激活函数类型，包含：relu, prelu, sigmoid, relu6, tanh。
+- **active_type (string|None)** - 激活函数类型，包含：relu, prelu, sigmoid, relu6, tanh。
 - **n_in (int)** - 输入 Tensor 的批尺寸 (batch size)。
 - **c_in (int)** - 输入 Tensor 的通道 (channel) 数。
 - **h_in (int)** - 输入 Tensor 的特征高度。
