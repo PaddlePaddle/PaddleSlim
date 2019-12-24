@@ -8,8 +8,7 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-#from paddleslim.prune import Pruner
-from paddleslim.prune.walk_pruner import Pruner
+from paddleslim.prune import Pruner
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 sys.path.append(sys.path[0] + "/../")
