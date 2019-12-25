@@ -135,6 +135,11 @@ class SANAS(object):
         return socket.gethostbyname(socket.gethostname())
 
     def tokens2arch(self, tokens):
+        """
+        Convert tokens to network architectures.
+        Returns:
+            list<function>: A list of functions that define networks.
+        """
         return self._search_space.token2arch(tokens)
 
     def next_archs(self):
