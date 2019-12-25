@@ -57,6 +57,11 @@ def get_pruned_params(args, program):
         for param in program.global_block().all_parameters():
             if "conv_weights" in param.name:
                 params.append(param.name)
+    elif args.model == "FastSCNN":
+        for param in program.global_block().all_parameters():
+            if "weights" in param.name and "depthwise" not in param.name and "dwise" not in param.name and param.name not in ["classifier/dsconv2/pointwise/weights", "classifier/weights", "fc_weights"]:
+                params.append(param.name)
+                print(param.name)
     return params
    
 

@@ -222,6 +222,8 @@ class activation(PruneWorker):
 
     def __init__(self, op, pruned_params, visited):
         super(activation, self).__init__(op, pruned_params, visited)
+        self.input_name = "X"
+        self.output_name = "Out"
 
     def prune(self, var, pruned_axis, pruned_idx):
         key = "_".join([str(self.op.idx()), var.name()])
@@ -232,25 +234,43 @@ class activation(PruneWorker):
         else:
            self.visited[pruned_axis][key] = True
         
-        if var in self.op.outputs("Out"):
-            in_var = self.op.inputs("X")[0]
+        if var in self.op.outputs(self.output_name):
+            in_var = self.op.inputs(self.input_name)[0]
             pre_ops = in_var.inputs()
             for op in pre_ops:
                 self.prune_op(op, in_var, pruned_axis, pruned_idx)
 
 
-        out_var = self.op.outputs("Out")[0]
+        out_var = self.op.outputs(self.output_name)[0]
         key = "_".join([str(self.op.idx()), out_var.name()])
         self.visited[pruned_axis][key] = True
         next_ops = out_var.outputs()
         for op in next_ops:
             self.prune_op(op, out_var, pruned_axis, pruned_idx)
 
+
+
+@PRUNE_WORKER.register
+class uniform_random_batch_size_like(activation):
+    def __init__(self, op, pruned_params, visited):
+        super(uniform_random_batch_size_like, self).__init__(op, pruned_params, visited)
+        self.input_name = "Input"
+        self.output_name = "Out"
+
+@PRUNE_WORKER.register
+class bilinear_interp(activation):
+    def __init__(self, op, pruned_params, visited):
+        super(bilinear_interp, self).__init__(op, pruned_params, visited)
+
 @PRUNE_WORKER.register
 class relu(activation):
     def __init__(self, op, pruned_params, visited):
         super(relu, self).__init__(op, pruned_params, visited)
 
+@PRUNE_WORKER.register
+class floor(activation):
+    def __init__(self, op, pruned_params, visited):
+        super(floor, self).__init__(op, pruned_params, visited)
 
 @PRUNE_WORKER.register
 class relu6(activation):
