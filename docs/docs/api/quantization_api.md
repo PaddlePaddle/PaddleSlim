@@ -191,6 +191,7 @@ paddleslim.quant.quant_embedding(program, place, config, scope=None)[[源代码]
 : 对``Embedding``参数进行量化。
 
 **参数:**
+
 - **program(fluid.Program)** - 需要量化的program
 - **scope(fluid.Scope, optional)** - 用来获取和写入``Variable``, 如果设置为``None``,则使用[*fluid.global_scope()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html).
 - **place(fluid.CPUPlace | fluid.CUDAPlace)** - 运行program的设备
