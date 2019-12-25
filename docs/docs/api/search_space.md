@@ -1,4 +1,4 @@
-## paddleslim.nas 提供的搜索空间：
+## paddleslim.nas 提供的搜索空间
 
 1. 根据原本模型结构构造搜索空间：
 
@@ -22,7 +22,7 @@
   2.5 InceptionCBlockSpace
 
 
-## 搜索空间的配置介绍：
+## 搜索空间的配置介绍
 
 **input_size(int|None)**：`input_size`表示输入feature map的大小。
 **output_size(int|None)**：`output_size`表示输出feature map的大小。
@@ -34,7 +34,7 @@
 2. `input_size`和`output_size`用来计算整个模型结构中reduction block数量。
 
 
-## 搜索空间示例：
+## 搜索空间示例
 
 1. 使用paddleslim中提供用原本的模型结构来构造搜索空间的话，仅需要指定搜索空间名字即可。例如：如果使用原本的MobileNetV2的搜索空间进行搜索的话，传入SANAS中的config直接指定为[('MobileNetV2Space')]。
 2. 使用paddleslim中提供的block搜索空间构造搜索空间：
@@ -42,7 +42,7 @@
   2.2 使用`block_mask`构造搜索空间。例如：传入SANAS的config可以指定为[('MobileNetV2BlockSpace', {'block_mask': [0, 1, 1, 1, 1, 0, 1, 0]})]。
 
 
-## 自定义搜索空间(search space):
+## 自定义搜索空间(search space)
 
 自定义搜索空间类需要继承搜索空间基类并重写以下几部分：
   1. 初始化的tokens(`init_tokens`函数)，可以设置为自己想要的tokens列表, tokens列表中的每个数字指的是当前数字在相应的搜索列表中的索引。例如本示例中若tokens=[0, 3, 5]，则代表当前模型结构搜索到的通道数为[8, 40, 128]。

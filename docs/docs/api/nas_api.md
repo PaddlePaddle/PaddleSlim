@@ -4,6 +4,7 @@ paddleslim.nas.SANAS(configs, server_addr, init_temperature, reduce_rate, search
 : SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火算法进行模型结构搜索的算法，一般用于离散搜索任务。
 
 **参数：**
+
 - **configs(list<tuple>)** 搜索空间配置列表，格式是`[(key, {input_size, output_size, block_num, block_mask})]`或者`[(key)]`（MobileNetV2、MobilenetV1和ResNet的搜索空间使用和原本网络结构相同的搜索空间，所以仅需指定`key`即可）, `input_size` 和`output_size`表示输入和输出的特征图的大小，`block_num`是指搜索网络中的block数量，`block_mask`是一组由0和1组成的列表，0代表不进行下采样的block，1代表下采样的block。 更多paddleslim提供的搜索空间配置可以参考。
 - **server_addr(tuple)** SANAS的地址，包括server的ip地址和端口号，如果ip地址为None或者为""的话则默认使用本机ip。默认：（"", 8881）。
 - **init_temperature(float)** 基于模拟退火进行搜索的初始温度。默认：100。
@@ -28,6 +29,7 @@ paddlesim.nas.SANAS.tokens2arch(tokens)
 : 通过一组token得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。
 
 **参数：**
+
 - **tokens(list):** 一组token。
 
 **返回：**
@@ -64,7 +66,8 @@ paddleslim.nas.SANAS.reward(score)
 : 把当前模型结构的得分情况回传。
 
 **参数：**
-**score<float>:** 当前模型的得分，分数越大越好。
+
+- **score<float>:** 当前模型的得分，分数越大越好。
 
 **返回：**
 模型结构更新成功或者失败，成功则返回`True`，失败则返回`False`。
