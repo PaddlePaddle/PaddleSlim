@@ -15,6 +15,7 @@ nav:
   - SA搜索: api/nas_api.md
   - 搜索空间: api/search_space.md
   - 硬件延时评估表: table_latency.md
+- 算法原理: algo/algo.md
 
 theme:
     name: readthedocs
@@ -42,7 +43,8 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tasklist
   - pymdownx.tilde
+  - mdx_math
 
 extra_javascript:
   - mathjax-config.js
-  - MathJax.js?config=TeX-AMS-MML_HTMLorMML
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML
