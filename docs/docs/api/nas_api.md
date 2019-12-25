@@ -1,7 +1,7 @@
 ## SANAS
-SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火算法进行模型结构搜索的算法，一般用于离散搜索任务。
 
 paddleslim.nas.SANAS(configs, server_addr, init_temperature, reduce_rate, search_steps, save_checkpoint, load_checkpoint, is_server)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/nas/sa_nas.py#L36)
+: SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火算法进行模型结构搜索的算法，一般用于离散搜索任务。
 
 **参数：**
 - **configs(list<tuple>)** 搜索空间配置列表，格式是`[(key, {input_size, output_size, block_num, block_mask})]`或者`[(key)]`（MobileNetV2、MobilenetV1和ResNet的搜索空间使用和原本网络结构相同的搜索空间，所以仅需指定`key`即可）, `input_size` 和`output_size`表示输入和输出的特征图的大小，`block_num`是指搜索网络中的block数量，`block_mask`是一组由0和1组成的列表，0代表不进行下采样的block，1代表下采样的block。 更多paddleslim提供的搜索空间配置可以参考。
@@ -25,7 +25,7 @@ sanas = SANAS(config=config)
 
 
 paddlesim.nas.SANAS.tokens2arch(tokens)
-通过一组token得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。
+: 通过一组token得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。
 
 **参数：**
 - **tokens(list):** 一组token。
@@ -43,8 +43,8 @@ for arch in archs:
     input = output
 ```
 
-paddleslim.nas.SANAS.next_archs():
-获取下一组模型结构。
+paddleslim.nas.SANAS.next_archs()
+: 获取下一组模型结构。
 
 **返回：**
 返回模型结构实例的列表，形式为list。
@@ -60,8 +60,8 @@ for arch in archs:
 ```
 
 
-paddleslim.nas.SANAS.reward(score):
-把当前模型结构的得分情况回传。
+paddleslim.nas.SANAS.reward(score)
+: 把当前模型结构的得分情况回传。
 
 **参数：**
 **score<float>:** 当前模型的得分，分数越大越好。
