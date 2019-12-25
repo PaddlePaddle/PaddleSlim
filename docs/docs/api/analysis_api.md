@@ -1,22 +1,19 @@
-# 模型分析API文档
-
 ## flops
+paddleslim.analysis.flops(program, detail=False) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/flops.py)
 
->paddleslim.analysis.flops(program, detail=False) [源代码]()
-
-获得指定网络的每秒浮点运算次数(FLOPS)。
+: 获得指定网络的每秒浮点运算次数(FLOPS)。
 
 **参数：**
 
-- **program(paddle.fluid.Program):**  待分析的目标网络。更多关于Program的介绍请参考：[Program概念介绍](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Program_cn.html#program)。
+- **program(paddle.fluid.Program)** - 待分析的目标网络。更多关于Program的介绍请参考：[Program概念介绍](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Program_cn.html#program)。
 
-- **detail(bool):** 是否返回每个卷积层的FLOPS。默认为False。
+- **detail(bool)** - 是否返回每个卷积层的FLOPS。默认为False。
 
 **返回值：**
 
-- **flops(float):** 整个网络的FLOPS。
+- **flops(float)** - 整个网络的FLOPS。
 
-- **params2flops(dict):** 每层卷积对应的FLOPS，其中key为卷积层参数名称，value为FLOPS值。
+- **params2flops(dict)** - 每层卷积对应的FLOPS，其中key为卷积层参数名称，value为FLOPS值。
 
 **示例：**
 
@@ -77,18 +74,17 @@ print("FLOPS: {}".format(flops(main_program)))
 ```
 
 ## model_size
-
->paddleslim.analysis.model_size(program) [源代码]()
+paddleslim.analysis.model_size(program) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/model_size.py)
 
 获得指定网络的参数数量。
 
 **参数：**
 
-- **program(paddle.fluid.Program):**  待分析的目标网络。更多关于Program的介绍请参考：[Program概念介绍](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Program_cn.html#program)。
+- **program(paddle.fluid.Program)** - 待分析的目标网络。更多关于Program的介绍请参考：[Program概念介绍](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Program_cn.html#program)。
 
 **返回值：**
 
-- **model_size(int):** 整个网络的参数数量。
+- **model_size(int)** - 整个网络的参数数量。
 
 **示例：**
 
@@ -141,29 +137,28 @@ print("FLOPS: {}".format(model_size(main_program)))
 ```
 
 ## TableLatencyEvaluator
+paddleslim.analysis.TableLatencyEvaluator(table_file, delimiter=",") [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/latency.py)
 
->paddleslim.analysis.TableLatencyEvaluator(table_file, delimiter=",") [源代码]()
-
-基于硬件延时表的模型延时评估器。
-
-**参数：**
-
-- **table_file(str):** 所使用的延时评估表的绝对路径。关于演示评估表格式请参考：[PaddleSlim硬件延时评估表格式](../paddleslim/analysis/table_latency.md)
-
-- **delimiter(str):** 硬件延时评估表中，操作信息之前所使用的分割符，默认为英文字符逗号。
-
-**返回值：**
-
-- **Evaluator:** 硬件延时评估器的实例。
-
->paddleslim.analysis.TableLatencyEvaluator.latency(graph) [源代码]()
-
-获得指定网络的预估延时。
+: 基于硬件延时表的模型延时评估器。
 
 **参数：**
 
-- **graph(Program):** 待预估的目标网络。
+- **table_file(str)** - 所使用的延时评估表的绝对路径。关于演示评估表格式请参考：[PaddleSlim硬件延时评估表格式](../paddleslim/analysis/table_latency.md)
+
+- **delimiter(str)** - 硬件延时评估表中，操作信息之前所使用的分割符，默认为英文字符逗号。
 
 **返回值：**
 
-- **latency:** 目标网络的预估延时。
+- **Evaluator** - 硬件延时评估器的实例。
+
+paddleslim.analysis.TableLatencyEvaluator.latency(graph) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/latency.py)
+
+: 获得指定网络的预估延时。
+
+**参数：**
+
+- **graph(Program)** - 待预估的目标网络。
+
+**返回值：**
+
+- **latency** - 目标网络的预估延时。
