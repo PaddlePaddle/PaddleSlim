@@ -1,19 +1,21 @@
-## flops
+## FLOPs
 paddleslim.analysis.flops(program, detail=False) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/flops.py)
 
-: 获得指定网络的每秒浮点运算次数(FLOPS)。
+: 获得指定网络的浮点运算次数(FLOPs)。
 
 **参数：**
 
 - **program(paddle.fluid.Program)** - 待分析的目标网络。更多关于Program的介绍请参考：[Program概念介绍](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Program_cn.html#program)。
 
-- **detail(bool)** - 是否返回每个卷积层的FLOPS。默认为False。
+- **detail(bool)** - 是否返回每个卷积层的FLOPs。默认为False。
+
+- **only_conv(bool)** - 如果设置为True，则仅计算卷积层和全连接层的FLOPs，即浮点数的乘加（multiplication-adds）操作次数。如果设置为False，则也会计算卷积和全连接层之外的操作的FLOPs。
 
 **返回值：**
 
-- **flops(float)** - 整个网络的FLOPS。
+- **flops(float)** - 整个网络的FLOPs。
 
-- **params2flops(dict)** - 每层卷积对应的FLOPS，其中key为卷积层参数名称，value为FLOPS值。
+- **params2flops(dict)** - 每层卷积对应的FLOPs，其中key为卷积层参数名称，value为FLOPs值。
 
 **示例：**
 
@@ -70,7 +72,7 @@ with fluid.program_guard(main_program, startup_program):
     conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
     conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
 
-print("FLOPS: {}".format(flops(main_program)))
+print("FLOPs: {}".format(flops(main_program)))
 ```
 
 ## model_size
@@ -133,7 +135,7 @@ with fluid.program_guard(main_program, startup_program):
     conv5 = conv_layer(sum2, 8, 3, "conv5")
     conv6 = conv_layer(conv5, 8, 3, "conv6")
 
-print("FLOPS: {}".format(model_size(main_program)))
+print("FLOPs: {}".format(model_size(main_program)))
 ```
 
 ## TableLatencyEvaluator
