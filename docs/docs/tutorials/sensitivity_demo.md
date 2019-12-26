@@ -1,7 +1,5 @@
-代码路径：https://github.com/wanghaoshuang/PaddleSlim/tree/develop/demo/sensitive
-
 该示例介绍如何分析卷积网络中各卷积层的敏感度，以及如何根据计算出的敏感度选择一组合适的剪裁率。
-该示例默认会自动下载并使用mnist数据。支持以下模型：
+该示例默认会自动下载并使用MNIST数据。支持以下模型：
 
 - MobileNetV1
 - MobileNetV2
@@ -17,7 +15,8 @@
 
 ## 2. 运行示例
 
-执行以下代码运行示例：
+
+在路径`PaddleSlim/demo/sensitive`下执行以下代码运行示例：
 
 ```
 export CUDA_VISIBLE_DEVICES=0
