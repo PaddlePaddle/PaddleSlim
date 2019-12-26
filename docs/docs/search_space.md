@@ -1,42 +1,39 @@
+## 搜索空间简介
+: 搜索空间是神经网络搜索中的一个概念。搜索空间是一系列模型结构的汇集, SANAS主要是利用模拟退火的思想在搜索空间中搜索到一个比较小的模型结构或者一个精度比较高的模型结构。
+
 ## paddleslim.nas 提供的搜索空间
 
-1. 根据原本模型结构构造搜索空间：
+##### 根据初始模型结构构造搜索空间
+1. MobileNetV2Space<br>
+&emsp; MobileNetV2的网络结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/mobilenet_v2.py#L29)，[论文](https://arxiv.org/abs/1801.04381)
 
-  1.1 MobileNetV2Space
+2. MobileNetV1Space<br>
+&emsp; MobilNetV1的网络结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/mobilenet_v1.py#L29)，[论文](https://arxiv.org/abs/1704.04861)
 
-  1.2 MobileNetV1Space
-
-  1.3 ResNetSpace
-
-
-2. 根据相应模型的block构造搜索空间
-
-  2.1 MobileNetV1BlockSpace
-
-  2.2 MobileNetV2BlockSpace
-
-  2.3 ResNetBlockSpace
-
-  2.4 InceptionABlockSpace
-
-  2.5 InceptionCBlockSpace
+3. ResNetSpace<br>
+&emsp; ResNetSpace的网络结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/resnet.py#L30)，[论文](https://arxiv.org/pdf/1512.03385.pdf)
 
 
-## 搜索空间的配置介绍
+##### 根据相应模型的block构造搜索空间
+1. MobileNetV1BlockSpace<br>
+&emsp; MobileNetV1Block的结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/mobilenet_v1.py#L173)
 
-**input_size(int|None)**：`input_size`表示输入feature map的大小。
-**output_size(int|None)**：`output_size`表示输出feature map的大小。
-**block_num(int|None)**：`block_num`表示搜索空间中block的数量。
-**block_mask(list|None)**：`block_mask`表示当前的block是一个reduction block还是一个normal block，是一组由0、1组成的列表，0表示当前block是normal block，1表示当前block是reduction block。如果设置了`block_mask`，则主要以`block_mask`为主要配置，`input_size`，`output_size`和`block_num`三种配置是无效的。
+2. MobileNetV2BlockSpace<br>
+&emsp; MobileNetV2Block的结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/mobilenet_v2.py#L174)
 
-**Note:**
-1. reduction block表示经过这个block之后的feature map大小下降为之前的一半，normal block表示经过这个block之后feature map大小不变。
-2. `input_size`和`output_size`用来计算整个模型结构中reduction block数量。
+3. ResNetBlockSpace<br>
+&emsp; ResNetBlock的结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/resnet.py#L148)
+
+4. InceptionABlockSpace<br>
+&emsp; InceptionABlock的结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/inception_v4.py#L140)
+
+5. InceptionCBlockSpace<br>
+&emsp; InceptionCBlock结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/inception_v4.py#L291)
 
 
 ## 搜索空间示例
 
-1. 使用paddleslim中提供用原本的模型结构来构造搜索空间的话，仅需要指定搜索空间名字即可。例如：如果使用原本的MobileNetV2的搜索空间进行搜索的话，传入SANAS中的config直接指定为[('MobileNetV2Space')]。
+1. 使用paddleslim中提供用初始的模型结构来构造搜索空间的话，仅需要指定搜索空间名字即可。例如：如果使用原本的MobileNetV2的搜索空间进行搜索的话，传入SANAS中的config直接指定为[('MobileNetV2Space')]。
 2. 使用paddleslim中提供的block搜索空间构造搜索空间：
   2.1 使用`input_size`, `output_size`和`block_num`来构造搜索空间。例如：传入SANAS的config可以指定为[('MobileNetV2BlockSpace', {'input_size': 224, 'output_size': 32, 'block_num': 10})]。
   2.2 使用`block_mask`构造搜索空间。例如：传入SANAS的config可以指定为[('MobileNetV2BlockSpace', {'block_mask': [0, 1, 1, 1, 1, 0, 1, 0]})]。
@@ -44,10 +41,10 @@
 
 ## 自定义搜索空间(search space)
 
-自定义搜索空间类需要继承搜索空间基类并重写以下几部分：
-  1. 初始化的tokens(`init_tokens`函数)，可以设置为自己想要的tokens列表, tokens列表中的每个数字指的是当前数字在相应的搜索列表中的索引。例如本示例中若tokens=[0, 3, 5]，则代表当前模型结构搜索到的通道数为[8, 40, 128]。
-  2. token中每个数字的搜索列表长度(`range_table`函数)，tokens中每个token的索引范围。
-  3. 根据token产生模型结构(`token2arch`函数)，根据搜索到的tokens列表产生模型结构。
+自定义搜索空间类需要继承搜索空间基类并重写以下几部分：<br>
+&emsp; 1. 初始化的tokens(`init_tokens`函数)，可以设置为自己想要的tokens列表, tokens列表中的每个数字指的是当前数字在相应的搜索列表中的索引。例如本示例中若tokens=[0, 3, 5]，则代表当前模型结构搜索到的通道数为[8, 40, 128]。<br>
+&emsp; 2. token中每个数字的搜索列表长度(`range_table`函数)，tokens中每个token的索引范围。<br>
+&emsp; 3. 根据token产生模型结构(`token2arch`函数)，根据搜索到的tokens列表产生模型结构。 <br>
 
 以新增reset block为例说明如何构造自己的search space。自定义的search space不能和已有的search space同名。
 

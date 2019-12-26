@@ -13,7 +13,7 @@ nav:
   - 敏感度分析: api/analysis_api.md
   - 蒸馏: api/single_distiller_api.md
   - SA搜索: api/nas_api.md
-  - 搜索空间: api/search_space.md
+  - 搜索空间: search_space.md
 - 算法原理: algo/algo.md
 
 theme:
