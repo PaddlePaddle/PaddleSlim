@@ -34,8 +34,8 @@
 ## 搜索空间示例
 
 1. 使用paddleslim中提供用初始的模型结构来构造搜索空间的话，仅需要指定搜索空间名字即可。例如：如果使用原本的MobileNetV2的搜索空间进行搜索的话，传入SANAS中的config直接指定为[('MobileNetV2Space')]。
-2. 使用paddleslim中提供的block搜索空间构造搜索空间：
-  2.1 使用`input_size`, `output_size`和`block_num`来构造搜索空间。例如：传入SANAS的config可以指定为[('MobileNetV2BlockSpace', {'input_size': 224, 'output_size': 32, 'block_num': 10})]。
+2. 使用paddleslim中提供的block搜索空间构造搜索空间：<br>
+  2.1 使用`input_size`, `output_size`和`block_num`来构造搜索空间。例如：传入SANAS的config可以指定为[('MobileNetV2BlockSpace', {'input_size': 224, 'output_size': 32, 'block_num': 10})]。<br>
   2.2 使用`block_mask`构造搜索空间。例如：传入SANAS的config可以指定为[('MobileNetV2BlockSpace', {'block_mask': [0, 1, 1, 1, 1, 0, 1, 0]})]。
 
 

@@ -89,3 +89,9 @@ paddleslim.nas.SANAS.reward(score)
 
 **返回：**
 模型结构更新成功或者失败，成功则返回`True`，失败则返回`False`。
+
+paddleslim.nas.SANAS.current_info()
+: 返回当前token和搜索过程中最好的token和reward。
+
+**返回：**
+搜索过程中最好的token，reward和当前训练的token，形式为dict。
