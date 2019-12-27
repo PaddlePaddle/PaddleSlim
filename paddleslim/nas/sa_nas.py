@@ -28,7 +28,7 @@ from ..common import ControllerServer
 from ..common import ControllerClient
 from .search_space import SearchSpaceFactory
 
-__all__ = ["SANAS"]
+__all__ = ["SANAS", "OneShotNAS"]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -134,7 +134,7 @@ class SANAS(object):
     def _get_host_ip(self):
         return socket.gethostbyname(socket.gethostname())
 
-    def tokens2arch(self, tokens):
+    def tokens2arch(self, tokens=None):
         return self._search_space.token2arch(tokens)
 
     def next_archs(self):
@@ -158,3 +158,21 @@ class SANAS(object):
         self._iter += 1
         return self._controller_client.update(self._current_tokens, score,
                                               self._iter)
+
+
+class OneShotNAS(SANAS):
+    def __init__(self,
+                 configs,
+                 server_addr=("", 8881),
+                 init_temperature=100,
+                 reduce_rate=0.85,
+                 search_steps=300,
+                 save_checkpoint='nas_checkpoint',
+                 load_checkpoint=None,
+                 is_server=False):
+        super(OneShotNAS, self).__init__(
+            configs, server_addr, init_temperature, reduce_rate, search_steps,
+            save_checkpoint, load_checkpoint, is_server)
+
+    def super_net(self):
+        return self._search_space.super_net()

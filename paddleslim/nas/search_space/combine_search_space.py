@@ -97,6 +97,9 @@ class CombineSearchSpace(object):
         space = cls(input_size, output_size, block_num, block_mask=block_mask)
         return space
 
+    def super_net(self):
+        return [space.super_net() for space in self.spaces]
+
     def init_tokens(self):
         """
         Combine init tokens.
