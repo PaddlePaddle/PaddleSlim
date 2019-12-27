@@ -9,11 +9,12 @@ nav:
   - SA搜索: tutorials/nas_demo.md
 - API:
   - 量化: api/quantization_api.md
-  - 剪枝:  api/prune_api.md
-  - 敏感度分析: api/analysis_api.md
+  - 剪枝与敏感度:  api/prune_api.md
+  - 模型分析: api/analysis_api.md
   - 蒸馏: api/single_distiller_api.md
   - SA搜索: api/nas_api.md
   - 搜索空间: search_space.md
+  - 硬件延时评估表: table_latency.md
 - 算法原理: algo/algo.md
 
 theme:
