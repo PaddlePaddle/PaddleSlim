@@ -10,7 +10,7 @@
 
 
 Note:<br>
-1. reduction block表示经过这个block之后的feature map大小下降为之前的一半，normal block表示经过这个block之后feature map大小不变。
+1. reduction block表示经过这个block之后的feature map大小下降为之前的一半，normal block表示经过这个block之后feature map大小不变。<br>
 2. `input_size`和`output_size`用来计算整个模型结构中reduction block数量。
 
 ## SANAS
