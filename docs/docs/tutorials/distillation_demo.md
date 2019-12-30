@@ -78,7 +78,7 @@ print("="*50+"teacher_model_vars"+"="*50)
 print(teacher_vars)
 ```
 
-### 4. 合并特征图（merge）
+### 4. 合并Program（merge）
 
 PaddlePaddle使用Program来描述计算图，为了同时计算student和teacher两个Program，这里需要将其两者合并（merge）为一个Program。
 
