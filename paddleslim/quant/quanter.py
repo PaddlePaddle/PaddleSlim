@@ -67,7 +67,7 @@ _quant_config_default = {
     'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
     # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
     'dtype': 'int8',
-    # window size for 'range_abs_max' quantization. defaulf is 1000
+    # window size for 'range_abs_max' quantization. defaulf is 10000
     'window_size': 10000,
     # The decay coefficient of moving average, default is 0.9
     'moving_rate': 0.9,

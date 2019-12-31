@@ -77,7 +77,7 @@ def compress(args):
     ############################################################################################################
     # 1. quantization configs
     ############################################################################################################
-    _quant_config_default = {
+    quant_config = {
         # weight quantize type, default is 'channel_wise_abs_max'
         'weight_quantize_type': 'channel_wise_abs_max',
         # activation quantize type, default is 'moving_average_abs_max'
