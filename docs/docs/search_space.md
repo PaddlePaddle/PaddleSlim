@@ -67,10 +67,11 @@ class ResNetBlockSpace2(SearchSpaceBase):
     def init_tokens(self):
         return [0] * 3 * len(self.block_mask)
 
-    ### 定义
+    ### 定义token的index的取值范围
     def range_table(self):
         return [len(self.filter_num)] * 3 * len(self.block_mask)
 
+    ### 把token转换成模型结构
     def token2arch(self, tokens=None):
         if tokens == None:
             tokens = self.init_tokens()

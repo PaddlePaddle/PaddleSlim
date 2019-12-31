@@ -1,4 +1,4 @@
-## 搜索空间的配置
+## 搜索空间参数的配置
 通过参数配置搜索空间。更多搜索空间的使用可以参考[search_space](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/search_space.md)
 
 **参数：**
