@@ -93,7 +93,7 @@ class SANAS(object):
                 premax_reward = scene['_max_reward']
                 prebest_tokens = scene['_best_tokens']
                 preiter = scene['_iter']
-                psearched = screen['_searched']
+                psearched = scene['_searched']
             else:
                 preinit_tokens = init_tokens
                 prereward = -1
@@ -114,7 +114,7 @@ class SANAS(object):
                 best_tokens=prebest_tokens,
                 constrain_func=None,
                 checkpoints=save_checkpoint,
-                searched = psearched)
+                searched=psearched)
 
             max_client_num = 100
             self._controller_server = ControllerServer(
