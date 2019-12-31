@@ -93,29 +93,32 @@ class SANAS(object):
                 premax_reward = scene['_max_reward']
                 prebest_tokens = scene['_best_tokens']
                 preiter = scene['_iter']
+                psearched = screen['_searched']
             else:
                 preinit_tokens = init_tokens
                 prereward = -1
                 premax_reward = -1
                 prebest_tokens = None
                 preiter = 0
+                psearched = None
 
-            controller = SAController(
+            self._controller = SAController(
                 range_table,
                 self._reduce_rate,
                 self._init_temperature,
-                max_try_times=None,
+                max_try_times=500,
                 init_tokens=preinit_tokens,
                 reward=prereward,
                 max_reward=premax_reward,
                 iters=preiter,
                 best_tokens=prebest_tokens,
                 constrain_func=None,
-                checkpoints=save_checkpoint)
+                checkpoints=save_checkpoint,
+                searched = psearched)
 
             max_client_num = 100
             self._controller_server = ControllerServer(
-                controller=controller,
+                controller=self._controller,
                 address=(server_ip, server_port),
                 max_client_num=max_client_num,
                 search_steps=search_steps,
@@ -136,6 +139,18 @@ class SANAS(object):
 
     def tokens2arch(self, tokens=None):
         return self._search_space.token2arch(tokens)
+
+    def current_info(self):
+        """
+        Get current information, including best tokens, best reward in all the search, and current token.
+        Returns:
+            dict<name, value>: a dictionary include best tokens, best reward and current reward.
+        """
+        current_dict = dict()
+        current_dict['best_tokens'] = self._controller.best_tokens
+        current_dict['best_reward'] = self._controller.max_reward
+        current_dict['current_tokens'] = self._controller.current_tokens
+        return current_dict
 
     def next_archs(self):
         """
