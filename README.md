@@ -4,12 +4,12 @@
 As a submodule of PaddlePaddle framework, PaddleSlim is an open-source library for deep model compression and architecture search. PaddleSlim supports current popular deep compression techniques such as pruning, quantization, and knowledge distillation. Further, it also automates the search of hyperparameters and the design of lightweight deep architectures. In the future, we will develop more practically useful compression techniques for industrial-level applications and transfer these techniques to models in NLP.
 
 ## Outline
-- [Key Features](#Key Features)
-- [Architecture of PaddleSlim](#Architecture of PaddleSlim)
-- [Methods](#Methods)
-- [Experimental Results](#Experimental Results)
+- Key Features
+- Architecture of PaddleSlim
+- Methods
+- Experimental Results
 
-##Key Features
+## Key Features
 
 The main key features of PaddleSlim are:
 
