@@ -90,6 +90,10 @@ def _parse_configs(user_config):
     configs = copy.deepcopy(_quant_config_default)
     configs.update(user_config)
 
+    assert isinstance(configs['for_tensorrt'], bool) and isinstance(
+        configs['is_full_quantize'],
+        bool), "'for_tensorrt' and 'is_full_quantize' must both be bool'"
+
     # check if configs is valid
     if configs['for_tensorrt']:
         weight_types = WEIGHT_QUANTIZATION_TYPES_TENSORRT
