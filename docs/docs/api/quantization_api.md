@@ -46,8 +46,8 @@ _quant_config_default = {
 
 **参数：**
 
-- **weight_quantize_type(str)** - 参数量化方式。可选``'abs_max'``,  ``'channel_wise_abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。如果使用``TensorRT``加载预测量化后的模型，请使用``'channel_wise_abs_max'``。 默认``'channel_wise_abs_max'``。
-- **activation_quantize_type(str)** - 激活量化方式，可选``'abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。如果使用``TensorRT``加载预测量化后的模型，请使用``'range_abs_max', 'moving_average_abs_max'``。，默认``'abs_max'``。
+- **weight_quantize_type(str)** - 参数量化方式。可选``'abs_max'``,  ``'channel_wise_abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。如果使用``TensorRT``加载量化后的模型来预测，请使用``'channel_wise_abs_max'``。 默认``'channel_wise_abs_max'``。
+- **activation_quantize_type(str)** - 激活量化方式，可选``'abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。如果使用``TensorRT``加载量化后的模型来预测，请使用``'range_abs_max', 'moving_average_abs_max'``。，默认``'abs_max'``。
 - **weight_bits(int)** - 参数量化bit数，默认8, 推荐设为8。
 - **activation_bits(int)** -  激活量化bit数，默认8， 推荐设为8。
 - **not_quant_pattern(str | list[str])** - 所有``name_scope``包含``'not_quant_pattern'``字符串的``op``，都不量化, 设置方式请参考[*fluid.name_scope*](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/name_scope_cn.html#name-scope)。
