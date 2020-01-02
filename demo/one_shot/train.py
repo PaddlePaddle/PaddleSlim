@@ -136,7 +136,8 @@ def test_mnist(reader, model, batch_size):
         avg_loss = fluid.layers.mean(loss)
         acc_set.append(float(acc.numpy()))
         avg_loss_set.append(float(avg_loss.numpy()))
-        print("Test - batch_id: []".format(batch_id))
+        if batch_id % 100 == 0:
+            print("Test - batch_id: {}".format(batch_id))
         # get test acc and loss
     acc_val_mean = np.array(acc_set).mean()
     avg_loss_val_mean = np.array(avg_loss_set).mean()
@@ -265,9 +266,9 @@ def search(args):
             model = MNIST(arch)  # modifyyyyyyyyyyyyyyyy
             model.eval()
             test_reader = paddle.batch(
-                paddle.dataset.mnist.test(), batch_size=1, drop_last=True)
+                paddle.dataset.mnist.test(), batch_size=64, drop_last=True)
 
-            _, acc = test_mnist(test_reader, model, 1)
+            _, acc = test_mnist(test_reader, model, 64)
             sa_nas.reward(acc)
 
 

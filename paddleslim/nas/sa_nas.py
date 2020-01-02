@@ -114,7 +114,7 @@ class SANAS(object):
                 best_tokens=prebest_tokens,
                 constrain_func=None,
                 checkpoints=save_checkpoint,
-                searched = psearched)
+                searched=psearched)
 
             max_client_num = 100
             self._controller_server = ControllerServer(
@@ -159,6 +159,7 @@ class SANAS(object):
             list<function>: A list of functions that define networks.
         """
         self._current_tokens = self._controller_client.next_tokens()
+        _logger.info("Next tokens: {}".format(self._current_tokens))
         archs = self._search_space.token2arch(self._current_tokens)
         return archs
 
