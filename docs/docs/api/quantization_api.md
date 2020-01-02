@@ -18,16 +18,19 @@ QUANT_DEQUANT_PASS_OP_TYPES = [
         "squeeze", "elementwise_sub", "relu", "relu6", "leaky_relu", "tanh", "swish"
     ]
 
-quant_config_default = {
-    'weight_quantize_type': 'abs_max',
-    'activation_quantize_type': 'abs_max',
+_quant_config_default = {
+    # weight quantize type, default is 'channel_wise_abs_max'
+    'weight_quantize_type': 'channel_wise_abs_max',
+    # activation quantize type, default is 'moving_average_abs_max'
+    'activation_quantize_type': 'moving_average_abs_max',
+    # weight quantize bit num, default is 8
     'weight_bits': 8,
+    # activation quantize bit num, default is 8
     'activation_bits': 8,
     # ops of name_scope in not_quant_pattern list, will not be quantized
     'not_quant_pattern': ['skip_quant'],
     # ops of type in quantize_op_types, will be quantized
-    'quantize_op_types':
-    ['conv2d', 'depthwise_conv2d', 'mul', 'elementwise_add', 'pool2d'],
+    'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
     # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
     'dtype': 'int8',
     # window size for 'range_abs_max' quantization. defaulf is 10000
@@ -43,8 +46,8 @@ quant_config_default = {
 
 **参数：**
 
-- **weight_quantize_type(str)** - 参数量化方式。可选``'abs_max'``,  ``'channel_wise_abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。 默认``'abs_max'``。
-- **activation_quantize_type(str)** - 激活量化方式，可选``'abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``，默认``'abs_max'``。
+- **weight_quantize_type(str)** - 参数量化方式。可选``'abs_max'``,  ``'channel_wise_abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。如果使用``TensorRT``加载预测量化后的模型，请使用``'channel_wise_abs_max'``。 默认``'channel_wise_abs_max'``。
+- **activation_quantize_type(str)** - 激活量化方式，可选``'abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。如果使用``TensorRT``加载预测量化后的模型，请使用``'range_abs_max', 'moving_average_abs_max'``。，默认``'abs_max'``。
 - **weight_bits(int)** - 参数量化bit数，默认8, 推荐设为8。
 - **activation_bits(int)** -  激活量化bit数，默认8， 推荐设为8。
 - **not_quant_pattern(str | list[str])** - 所有``name_scope``包含``'not_quant_pattern'``字符串的``op``，都不量化, 设置方式请参考[*fluid.name_scope*](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/name_scope_cn.html#name-scope)。
