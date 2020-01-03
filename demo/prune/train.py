@@ -39,6 +39,7 @@ add_arg('test_period',      int, 10,                 "Test period in epoches.")
 
 model_list = [m for m in dir(models) if "__" not in m]
 
+
 def get_pruned_params(args, program):
     params = []
     if args.model == "MobileNet":
@@ -59,20 +60,24 @@ def get_pruned_params(args, program):
                 params.append(param.name)
     elif args.model == "FastSCNN":
         for param in program.global_block().all_parameters():
-            if "weights" in param.name and "depthwise" not in param.name and "dwise" not in param.name and param.name not in ["classifier/dsconv2/pointwise/weights", "classifier/weights", "fc_weights"]:
+            if "weights" in param.name and "depthwise" not in param.name and "dwise" not in param.name and param.name not in [
+                    "classifier/dsconv2/pointwise/weights",
+                    "classifier/weights", "fc_weights"
+            ]:
                 params.append(param.name)
                 print(param.name)
     return params
-   
+
 
 def piecewise_decay(args):
     step = int(math.ceil(float(args.total_images) / args.batch_size))
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = fluid.layers.piecewise_decay(boundaries=bd, values=lr)
-    optimizer = fluid.optimizer.Adam(
+
+    optimizer = fluid.optimizer.Momentum(
         learning_rate=learning_rate,
-#        momentum=args.momentum_rate,
+        momentum=args.momentum_rate,
         regularization=fluid.regularizer.L2Decay(args.l2_decay))
     return optimizer
 
@@ -205,7 +210,7 @@ def compress(args):
     _logger.info("FLOPs before pruning: {}".format(
         flops(fluid.default_main_program())))
     pruner = Pruner()
-    pruned_val_program,_,_ = pruner.prune(
+    pruned_val_program, _, _ = pruner.prune(
         val_program,
         fluid.global_scope(),
         params=params,
@@ -213,7 +218,7 @@ def compress(args):
         place=place,
         only_graph=True)
 
-    pruned_program,_,_ = pruner.prune(
+    pruned_program, _, _ = pruner.prune(
         fluid.default_main_program(),
         fluid.global_scope(),
         params=params,
@@ -224,6 +229,8 @@ def compress(args):
         train(i, pruned_program)
         if i % args.test_period == 0:
             test(i, pruned_val_program)
+
+
 def main():
     args = parser.parse_args()
     print_arguments(args)

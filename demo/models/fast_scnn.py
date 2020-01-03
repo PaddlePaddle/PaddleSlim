@@ -1,5 +1,5 @@
 # coding: utf8
-# copyright (c) 2019 PaddlePaddle Authors. All Rights Reserve.
+# copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,10 +23,8 @@ from paddle.fluid.param_attr import ParamAttr
 from paddle.fluid.initializer import MSRA
 import contextlib
 
-bn_regularizer = fluid.regularizer.L2DecayRegularizer(regularization_coeff=0.0)
 name_scope = ""
 
-# from .pspnet import psp_module
 __all__ = ['FastSCNN']
 
 
@@ -34,9 +32,10 @@ __all__ = ['FastSCNN']
 def scope(name):
     global name_scope
     bk = name_scope
-    name_scope = name_scope + name + '/'
+    name_scope = name_scope + name + '_'
     yield
     name_scope = bk
+
 
 def conv_bn_layer(input,
                   filter_size,
@@ -71,12 +70,14 @@ def conv_bn_layer(input,
     else:
         return bn
 
+
 def separate_conv(input, channel, stride, filter, dilation=1, act=None):
     param_attr = fluid.ParamAttr(
         name=name_scope + 'weights',
         regularizer=fluid.regularizer.L2DecayRegularizer(
             regularization_coeff=0.0),
-        initializer=fluid.initializer.TruncatedNormal(loc=0.0, scale=0.33))
+        initializer=fluid.initializer.TruncatedNormal(
+            loc=0.0, scale=0.33))
     with scope('depthwise'):
         input = conv(
             input,
@@ -94,7 +95,8 @@ def separate_conv(input, channel, stride, filter, dilation=1, act=None):
     param_attr = fluid.ParamAttr(
         name=name_scope + 'weights',
         regularizer=None,
-        initializer=fluid.initializer.TruncatedNormal(loc=0.0, scale=0.06))
+        initializer=fluid.initializer.TruncatedNormal(
+            loc=0.0, scale=0.06))
     with scope('pointwise'):
         input = conv(
             input, channel, 1, 1, groups=1, padding=0, param_attr=param_attr)
@@ -112,11 +114,14 @@ def avg_pool(input, kernel, stride, padding=0):
         pool_padding=padding)
     return data
 
+
 def bn_relu(data):
     return fluid.layers.relu(bn(data))
 
+
 def relu(data):
     return fluid.layers.relu(data)
+
 
 def conv(*args, **kargs):
     kargs['param_attr'] = name_scope + 'weights'
@@ -129,6 +134,7 @@ def conv(*args, **kargs):
         kargs['bias_attr'] = False
     return fluid.layers.conv2d(*args, **kargs)
 
+
 def avg_pool(input, kernel, stride, padding=0):
     data = fluid.layers.pool2d(
         input,
@@ -138,7 +144,10 @@ def avg_pool(input, kernel, stride, padding=0):
         pool_padding=padding)
     return data
 
+
 def bn(*args, **kargs):
+    bn_regularizer = fluid.regularizer.L2DecayRegularizer(
+        regularization_coeff=0.0)
     with scope('BatchNorm'):
         return fluid.layers.batch_norm(
             *args,
@@ -150,12 +159,18 @@ def bn(*args, **kargs):
             moving_variance_name=name_scope + 'moving_variance',
             **kargs)
 
-def learning_to_downsample(x, dw_channels1=32, dw_channels2=48, out_channels=64):
+
+def learning_to_downsample(x,
+                           dw_channels1=32,
+                           dw_channels2=48,
+                           out_channels=64):
     x = relu(bn(conv(x, dw_channels1, 3, 2)))
     with scope('dsconv1'):
-        x = separate_conv(x, dw_channels2, stride=2, filter=3, act=fluid.layers.relu)
+        x = separate_conv(
+            x, dw_channels2, stride=2, filter=3, act=fluid.layers.relu)
     with scope('dsconv2'):
-        x = separate_conv(x, out_channels, stride=2, filter=3, act=fluid.layers.relu)
+        x = separate_conv(
+            x, out_channels, stride=2, filter=3, act=fluid.layers.relu)
     return x
 
 
@@ -168,7 +183,8 @@ def dropout2d(input, prob, is_train=False):
         return input
     channels = input.shape[1]
     keep_prob = 1.0 - prob
-    random_tensor = keep_prob + fluid.layers.uniform_random_batch_size_like(input, [-1, channels, 1, 1], min=0., max=1.)
+    random_tensor = keep_prob + fluid.layers.uniform_random_batch_size_like(
+        input, [-1, channels, 1, 1], min=0., max=1.)
     binary_tensor = fluid.layers.floor(random_tensor)
     output = input / keep_prob * binary_tensor
     return output
@@ -224,6 +240,7 @@ def inverted_residual_unit(input,
     else:
         return linear_out, depthwise_output
 
+
 def inverted_blocks(input, in_c, t, c, n, s, name=None):
     first_block, depthwise_output = inverted_residual_unit(
         input=input,
@@ -265,57 +282,58 @@ def psp_module(input, out_features):
     for size in sizes:
         psp_name = "psp" + str(size)
         with scope(psp_name):
-            pool = fluid.layers.adaptive_pool2d(input,
-                                                pool_size=[size, size],
-                                                pool_type='avg',
-                                                name=psp_name + '_adapool')
-            # pool = avg_pool(input, [h // size, w // size], [h // size, w // size])
-            # pool = avg_pool(input, [int(np.ceil(h / size)), int(np.ceil(w / size))], [h // size, w // size])
-            data = conv(pool, out_features,
-                        filter_size=1,
-                        bias_attr=False,
-                        name=psp_name + '_conv')
+            pool = fluid.layers.adaptive_pool2d(
+                input,
+                pool_size=[size, size],
+                pool_type='avg',
+                name=psp_name + '_adapool')
+            data = conv(
+                pool,
+                out_features,
+                filter_size=1,
+                bias_attr=False,
+                name=psp_name + '_conv')
             data_bn = bn(data, act='relu')
-            interp = fluid.layers.resize_bilinear(data_bn,
-                                                  out_shape=input.shape[2:],
-                                                  name=psp_name + '_interp', align_mode=0)
+            interp = fluid.layers.resize_bilinear(
+                data_bn,
+                out_shape=input.shape[2:],
+                name=psp_name + '_interp',
+                align_mode=0)
         cat_layers.append(interp)
-    cat_layers = [input] + cat_layers#[::-1]
+    cat_layers = [input] + cat_layers
     out = fluid.layers.concat(cat_layers, axis=1, name='psp_cat')
-    # print('out shape:', out.shape, len(cat_layers))
-    # psp_end_name = "psp_end"
-    # with scope(psp_end_name):
-    #     data = conv(cat,
-    #                 out_features,
-    #                 filter_size=3,
-    #                 padding=1,
-    #                 bias_attr=True,
-    #                 name=psp_end_name)
-    #     out = bn(data, act='relu')
-
     return out
 
-class FeatureFusionModule():
-    """Feature fusion module"""
 
-    def __init__(self, higher_in_channels, lower_in_channels, out_channels, scale_factor=4):
+class FeatureFusionModule():
+    """Feature fusion module
+    """
+
+    def __init__(self,
+                 higher_in_channels,
+                 lower_in_channels,
+                 out_channels,
+                 scale_factor=4):
         self.higher_in_channels = higher_in_channels
         self.lower_in_channels = lower_in_channels
         self.out_channels = out_channels
         self.scale_factor = scale_factor
 
     def net(self, higher_res_feature, lower_res_feature):
-        # h, w = lower_res_feature.shape[2:]
-        # h, w = h * 4, w * 4
-        # lower_res_feature = fluid.layers.resize_bilinear(lower_res_feature, [h, w], align_mode=0)
-        lower_res_feature = fluid.layers.resize_bilinear(lower_res_feature, scale=4, align_mode=0)
+        lower_res_feature = fluid.layers.resize_bilinear(
+            lower_res_feature, scale=4, align_mode=0)
 
         with scope('dwconv'):
-            lower_res_feature = relu(bn(conv(lower_res_feature, self.out_channels, 1)))#(lower_res_feature)
+            lower_res_feature = relu(
+                bn(conv(lower_res_feature, self.out_channels, 1)))
         with scope('conv_lower_res'):
-            lower_res_feature = bn(conv(lower_res_feature, self.out_channels, 1, bias_attr=True))
+            lower_res_feature = bn(
+                conv(
+                    lower_res_feature, self.out_channels, 1, bias_attr=True))
         with scope('conv_higher_res'):
-            higher_res_feature = bn(conv(higher_res_feature, self.out_channels, 1, bias_attr=True))
+            higher_res_feature = bn(
+                conv(
+                    higher_res_feature, self.out_channels, 1, bias_attr=True))
         out = higher_res_feature + lower_res_feature
 
         return relu(out)
@@ -324,8 +342,12 @@ class FeatureFusionModule():
 class GlobalFeatureExtractor():
     """Global feature extractor module"""
 
-    def __init__(self, in_channels=64, block_channels=(64, 96, 128), out_channels=128,
-                 t=6, num_blocks=(3, 3, 3)):
+    def __init__(self,
+                 in_channels=64,
+                 block_channels=(64, 96, 128),
+                 out_channels=128,
+                 t=6,
+                 num_blocks=(3, 3, 3)):
         self.in_channels = in_channels
         self.block_channels = block_channels
         self.out_channels = out_channels
@@ -333,12 +355,15 @@ class GlobalFeatureExtractor():
         self.num_blocks = num_blocks
 
     def net(self, x):
-        x, _ = inverted_blocks(x, self.in_channels, self.t, self.block_channels[0],
-                               self.num_blocks[0], 2, 'inverted_block_1')
-        x, _ = inverted_blocks(x, self.block_channels[0], self.t, self.block_channels[1],
-                               self.num_blocks[1], 2, 'inverted_block_2')
-        x, _ = inverted_blocks(x, self.block_channels[1], self.t, self.block_channels[2],
-                               self.num_blocks[2], 1, 'inverted_block_3')
+        x, _ = inverted_blocks(x, self.in_channels, self.t,
+                               self.block_channels[0], self.num_blocks[0], 2,
+                               'inverted_block_1')
+        x, _ = inverted_blocks(x, self.block_channels[0], self.t,
+                               self.block_channels[1], self.num_blocks[1], 2,
+                               'inverted_block_2')
+        x, _ = inverted_blocks(x, self.block_channels[1], self.t,
+                               self.block_channels[2], self.num_blocks[2], 1,
+                               'inverted_block_3')
         x = psp_module(x, self.block_channels[2] // 4)
         with scope('out'):
             x = relu(bn(conv(x, self.out_channels, 1)))
@@ -349,20 +374,29 @@ class Classifer():
     """Classifer"""
 
     def __init__(self, dw_channels, class_dim, stride=1):
-        # super(Classifer, self).__init__()
         self.dw_channels = dw_channels
         self.class_dim = class_dim
         self.stride = stride
 
     def net(self, x):
         with scope('dsconv1'):
-            x = separate_conv(x, self.dw_channels, stride=self.stride, filter=3, act=fluid.layers.relu)
+            x = separate_conv(
+                x,
+                self.dw_channels,
+                stride=self.stride,
+                filter=3,
+                act=fluid.layers.relu)
         with scope('dsconv2'):
-            x = separate_conv(x, self.dw_channels, stride=self.stride, filter=3, act=fluid.layers.relu)
-        print(x)
+            x = separate_conv(
+                x,
+                self.dw_channels,
+                stride=self.stride,
+                filter=3,
+                act=fluid.layers.relu)
         x = dropout2d(x, 0.1, is_train=True)
         x = conv(x, self.class_dim, 1, bias_attr=True)
         return x
+
 
 def aux_layer(x, class_dim):
     x = relu(bn(conv(x, 32, 3, padding=1)))
@@ -373,23 +407,23 @@ def aux_layer(x, class_dim):
 
 
 class FastSCNN():
-    def __init__(self):
-        pass
     def net(self, input, class_dim):
         size = input.shape[2:]
         classifier = Classifer(128, class_dim)
-        global_feature_extractor = GlobalFeatureExtractor(64, [64, 96, 128], 128, 6, [3, 3, 3])
+        global_feature_extractor = GlobalFeatureExtractor(64, [64, 96, 128],
+                                                          128, 6, [3, 3, 3])
         feature_fusion = FeatureFusionModule(64, 128, 128)
         with scope('learning_to_downsample'):
             higher_res_features = learning_to_downsample(input, 32, 48, 64)
         with scope('global_feature_extractor'):
-            lower_res_feature = global_feature_extractor.net(higher_res_features)
+            lower_res_feature = global_feature_extractor.net(
+                higher_res_features)
         with scope('feature_fusion'):
             x = feature_fusion.net(higher_res_features, lower_res_feature)
         with scope('classifier'):
             logit = classifier.net(x)
             logit = fluid.layers.resize_bilinear(logit, size, align_mode=0)
-   
+
         output = fluid.layers.fc(input=logit,
                                  size=class_dim,
                                  act='softmax',
