@@ -272,9 +272,21 @@ class bilinear_interp(activation):
 
 
 @PRUNE_WORKER.register
+class nearest_interp(activation):
+    def __init__(self, op, pruned_params, visited):
+        super(nearest_interp, self).__init__(op, pruned_params, visited)
+
+
+@PRUNE_WORKER.register
 class relu(activation):
     def __init__(self, op, pruned_params, visited):
         super(relu, self).__init__(op, pruned_params, visited)
+
+
+@PRUNE_WORKER.register
+class leaky_relu(activation):
+    def __init__(self, op, pruned_params, visited):
+        super(leaky_relu, self).__init__(op, pruned_params, visited)
 
 
 @PRUNE_WORKER.register
