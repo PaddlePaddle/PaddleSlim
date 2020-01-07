@@ -40,6 +40,7 @@ class SANAS(object):
                  init_temperature=100,
                  reduce_rate=0.85,
                  search_steps=300,
+                 init_tokens=None,
                  save_checkpoint='nas_checkpoint',
                  load_checkpoint=None,
                  is_server=False):
@@ -53,6 +54,7 @@ class SANAS(object):
             init_temperature(float): The init temperature used in simulated annealing search strategy.
             reduce_rate(float): The decay rate used in simulated annealing search strategy.
             search_steps(int): The steps of searching.
+            init_token(list): Init tokens user can set by yourself.
             save_checkpoint(string|None): The directory of checkpoint to save, if set to None, not save checkpoint. Default: 'nas_checkpoint'.
             load_checkpoint(string|None): The directory of checkpoint to load, if set to None, not load checkpoint. Default: None.
             is_server(bool): Whether current host is controller server. Default: True.
@@ -64,6 +66,7 @@ class SANAS(object):
         self._init_temperature = init_temperature
         self._is_server = is_server
         self._configs = configs
+        self._init_tokens = init_tokens
         self._key = hashlib.md5(str(self._configs).encode("utf-8")).hexdigest()
 
         server_ip, server_port = server_addr
@@ -75,7 +78,7 @@ class SANAS(object):
 
         # create controller server
         if self._is_server:
-            init_tokens = self._search_space.init_tokens()
+            init_tokens = self._search_space.init_tokens(self._init_tokens)
             range_table = self._search_space.range_table()
             range_table = (len(range_table) * [0], range_table)
             _logger.info("range table: {}".format(range_table))
@@ -114,7 +117,7 @@ class SANAS(object):
                 best_tokens=prebest_tokens,
                 constrain_func=None,
                 checkpoints=save_checkpoint,
-                searched = psearched)
+                searched=psearched)
 
             max_client_num = 100
             self._controller_server = ControllerServer(
@@ -159,6 +162,7 @@ class SANAS(object):
             list<function>: A list of functions that define networks.
         """
         self._current_tokens = self._controller_client.next_tokens()
+        _logger.info("current tokens: {}".format(self._current_tokens))
         archs = self._search_space.token2arch(self._current_tokens)
         return archs
 

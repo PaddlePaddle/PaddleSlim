@@ -35,7 +35,6 @@ class ControllerClient(object):
         """
         self.server_ip = server_ip
         self.server_port = server_port
-        self.socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._key = key
 
     def update(self, tokens, reward, iter):

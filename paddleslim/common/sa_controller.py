@@ -74,6 +74,7 @@ class SAController(EvolutionaryController):
         self._iter = iters
         self._checkpoints = checkpoints
         self._searched = searched if searched != None else dict()
+        self._current_token = init_tokens
 
     def __getstate__(self):
         d = {}
@@ -92,7 +93,7 @@ class SAController(EvolutionaryController):
 
     @property
     def current_tokens(self):
-        return self._tokens
+        return self._current_tokens
 
     def update(self, tokens, reward, iter):
         """
@@ -106,6 +107,7 @@ class SAController(EvolutionaryController):
             self._iter = iter
         self._searched[str(tokens)] = reward
         temperature = self._init_temperature * self._reduce_rate**self._iter
+        self._current_tokens = tokens
         if (reward > self._reward) or (np.random.random() <= math.exp(
             (reward - self._reward) / temperature)):
             self._reward = reward
@@ -117,6 +119,9 @@ class SAController(EvolutionaryController):
             "Controller - iter: {}; best_reward: {}, best tokens: {}, current_reward: {}; current tokens: {}".
             format(self._iter, self._max_reward, self._best_tokens, reward,
                    tokens))
+        _logger.debug(
+            'Controller - iter: {}, controller current tokens: {}, controller current reward: {}'.
+            format(self._iter, self._tokens, self._reward))
 
         if self._checkpoints != None:
             self._save_checkpoint(self._checkpoints)
