@@ -40,19 +40,19 @@
 
 | 模型 | 压缩方法 | Top-1/Top-5 Acc | 模型大小（MB） | 下载 |
 |:--:|:---:|:--:|:--:|:--:|
-|MobileNetV1|-|70.99%/89.68%| xx | [下载链接]() |
-|MobileNetV1|ResNet50_vd<sup>[1](#trans1)</sup> distill|xx%/xx%| xx | [下载链接]() |
-| MobileNetV2 | - |72.15%/90.65%| xx | [下载链接]() |
-| MobileNetV2 | ResNet50_vd<sup>[1](#trans1)</sup> distill |xx%/xx%| xx | [下载链接]() |
-|ResNet50|-|76.50%/93.00%| xx | [下载链接]() |
-|ResNet50|ResNet101<sup>[2](#trans2)</sup> distill|xx%/xx%| xx | [下载链接]() |
+| MobileNetV1 |                     -                      |  70.99%/89.68%  |       17       | [下载链接]() |
+|ResNet50_vd|-|79.12%/94.44%| 99 | [下载链接]() |
+|MobileNetV1|ResNet50_vd<sup>[1](#trans1)</sup> distill|72.77%/90.68%| 17 | [下载链接]() |
+| MobileNetV2 |                     -                      |  72.15%/90.65%  |       15       | [下载链接]() |
+| MobileNetV2 |            ResNet50_vd distill             |  74.28%/91.53%  |       15       | [下载链接]() |
+|  ResNet50   |                     -                      |  76.50%/93.00%  |       99       | [下载链接]() |
+|ResNet101|-|77.56%/93.64%| 173 | [下载链接]() |
+|  ResNet50   |             ResNet101 distill              |  77.29%/93.65%  |       99       | [下载链接]() |
 
 !!! note "Note"
-    <a name="trans1">[1]</a>：[ResNet50_vd](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_vd_pretrained.tar)预训练模型Top-1/Top-5准确率分别为79.12%/94.44%
 
-    带_vd后缀代表开启了Mixup训练，Mixup相关介绍参考[mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
-    
-    <a name="trans2">[2]</a>：[ResNet101](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar)预训练模型Top-1/Top-5准确率分别为77.56%/93.64%
+    <a name="trans1">[1]</a>：带_vd后缀代表该预训练模型使用了Mixup，Mixup相关介绍参考[mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
+
 
 ## 2. 目标检测
 
@@ -111,18 +111,15 @@
 数据集：Pasacl VOC & COCO 2017
 
 
-|        模型         |                    压缩方法                    |   数据集   | Image/GPU | 输入608 Box AP | 输入416 Box AP | 输入320 Box AP | 模型大小（MB） |     下载     |
-| :-----------------: | :--------------------------------------------: | :--------: | :-------: | :------------: | :------------: | :------------: | :------------: | :----------: |
-| MobileNet-V1-YOLOv3 |                       -                        | Pasacl VOC |     8     |      76.2      |      76.7      |      75.3      |       xx       | [下载链接]() |
-| MobileNet-V1-YOLOv3 | ResNet34-YOLOv3<sup>[3](#trans3)</sup> distill | Pasacl VOC |     8     |       xx       |       xx       |       xx       |       xx       | [下载链接]() |
-| MobileNet-V1-YOLOv3 |                       -                        |    COCO    |     8     |      29.3      |      29.3      |      27.1      |       xx       | [下载链接]() |
-| MobileNet-V1-YOLOv3 | ResNet34-YOLOv3<sup>[4](#trans4)</sup> distill |    COCO    |     8     |       xx       |       xx       |       xx       |       xx       | [下载链接]() |
+|        模型         |        压缩方法         |   数据集   | Image/GPU | 输入608 Box AP | 输入416 Box AP | 输入320 Box AP | 模型大小（MB） |     下载     |
+| :-----------------: | :---------------------: | :--------: | :-------: | :------------: | :------------: | :------------: | :------------: | :----------: |
+| MobileNet-V1-YOLOv3 |            -            | Pascal VOC |     8     |      76.2      |      76.7      |      75.3      |       94       | [下载链接]() |
+|   ResNet34-YOLOv3   |            -            | Pascal VOC |     8     |      82.6      |      81.9      |      80.1      |      162       | [下载链接]() |
+| MobileNet-V1-YOLOv3 | ResNet34-YOLOv3 distill | Pascal VOC |     8     |      79.0      |      78.2      |      75.5      |       94       | [下载链接]() |
+| MobileNet-V1-YOLOv3 |            -            |    COCO    |     8     |      29.3      |      29.3      |      27.0      |       95       | [下载链接]() |
+|   ResNet34-YOLOv3   |            -            |    COCO    |     8     |      36.2      |      34.3      |      31.4      |      163       | [下载链接]() |
+| MobileNet-V1-YOLOv3 | ResNet34-YOLOv3 distill |    COCO    |     8     |      31.4      |      30.0      |      27.1      |       95       | [下载链接]() |
 
-!!! note "Note"
-    <a name="trans3">[3]</a>：[ResNet34-YOLOv3-VOC]()预训练模型在608/416/320尺寸输入下的Box AP分别为82.6/81.9/80.1
-    
-
-    <a name="trans4">[4]</a>：[ResNet34-YOLOv3-COCO]()预训练模型在608/416/320尺寸输入下的Box AP分别为36.2/34.3/31.4
 
 ## 3. 图像分割
 
