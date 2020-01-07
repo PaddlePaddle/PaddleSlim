@@ -15,7 +15,9 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle.fluid as fluid
-from paddleslim.prune.walk_pruner import Pruner
+from paddleslim.prune import Pruner
+from paddleslim.core import GraphWrapper
+from paddleslim.prune import conv2d as conv2d_walker
 from layers import conv_bn_layer
 
 
@@ -49,31 +51,13 @@ class TestPrune(unittest.TestCase):
         exe = fluid.Executor(place)
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
-        pruner = Pruner()
-        main_program, _, _ = pruner.prune(
-            main_program,
-            scope,
-            params=["conv4_weights"],
-            ratios=[0.5],
-            place=place,
-            lazy=False,
-            only_graph=False,
-            param_backup=None,
-            param_shape_backup=None)
 
-        shapes = {
-            "conv1_weights": (4L, 3L, 3L, 3L),
-            "conv2_weights": (4L, 4L, 3L, 3L),
-            "conv3_weights": (8L, 4L, 3L, 3L),
-            "conv4_weights": (4L, 8L, 3L, 3L),
-            "conv5_weights": (8L, 4L, 3L, 3L),
-            "conv6_weights": (8L, 8L, 3L, 3L)
-        }
+        graph = GraphWrapper(main_program)
 
-        for param in main_program.global_block().all_parameters():
-            if "weights" in param.name:
-                print("param: {}; param shape: {}".format(param.name, param.shape))
-                self.assertTrue(param.shape == shapes[param.name])
+        conv_op = graph.var("conv4_weights").outputs()[0]
+        walker = conv2d_walker(conv_op, [])
+        walker.prune(graph.var("conv4_weights"), pruned_axis=0, pruned_idx=[])
+        print walker.pruned_params
 
 
 if __name__ == '__main__':

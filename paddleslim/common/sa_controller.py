@@ -142,7 +142,7 @@ class SAController(EvolutionaryController):
             _logger.debug("change index[{}] from {} to {}".format(
                 index, tokens[index], new_tokens[index]))
 
-            if self._searched.has_key(str(new_tokens)):
+            if str(new_tokens) in self._searched.keys():
                 _logger.debug('get next tokens including searched tokens: {}'.
                               format(new_tokens))
                 continue

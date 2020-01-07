@@ -96,7 +96,7 @@ class SANAS(object):
                 premax_reward = scene['_max_reward']
                 prebest_tokens = scene['_best_tokens']
                 preiter = scene['_iter']
-                psearched = screen['_searched']
+                psearched = scene['_searched']
             else:
                 preinit_tokens = init_tokens
                 prereward = -1
