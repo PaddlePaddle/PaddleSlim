@@ -136,9 +136,9 @@
 
 ### 3.2 剪裁
 
-|   模型    |     压缩方法      |     mIoU      | 模型体积（MB） | GFLOPs |     下载     |
-| :-------: | :---------------: | :-----------: | :------------: | :----: | :----------: |
-| fast-scnn |     baseline      |     69.64     |       11       | 14.41  | [下载链接]() |
-| fast-scnn | uniform  -17.07%  | 69.58 (-0.06) |      8.5       | 11.95  | [下载链接]() |
-| fast-scnn | sensitive -47.60% | 66.68 (-2.96) |      5.7       |  7.55  | [下载链接]() |
+|   模型    |     压缩方法      |     mIoU      | 模型体积（MB） | GFLOPs |                             下载                             |
+| :-------: | :---------------: | :-----------: | :------------: | :----: | :----------------------------------------------------------: |
+| fast-scnn |     baseline      |     69.64     |       11       | 14.41  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape.tar) |
+| fast-scnn | uniform  -17.07%  | 69.58 (-0.06) |      8.5       | 11.95  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_uniform-17.tar) |
+| fast-scnn | sensitive -47.60% | 66.68 (-2.96) |      5.7       |  7.55  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_sensitive-47.tar) |
 
