@@ -22,7 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
-from .utils import compute_downsample_num, check_points
+from .utils import compute_downsample_num, check_points, get_random_tokens
 
 __all__ = ["MobileNetV1BlockSpace", "MobileNetV2BlockSpace"]
 
@@ -60,10 +60,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
         self.scale = scale
 
     def init_tokens(self):
-        if self.block_mask != None:
-            return [0] * (len(self.block_mask) * 4)
-        else:
-            return [0] * (self.block_num * 4)
+        return get_random_tokens(self.range_table)
 
     def range_table(self):
         range_table_base = []
@@ -308,10 +305,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
         self.scale = scale
 
     def init_tokens(self):
-        if self.block_mask != None:
-            return [0] * (len(self.block_mask) * 3)
-        else:
-            return [0] * (self.block_num * 3)
+        return get_random_tokens(self.range_table)
 
     def range_table(self):
         range_table_base = []

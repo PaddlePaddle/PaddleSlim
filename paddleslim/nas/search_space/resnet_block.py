@@ -22,7 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
-from .utils import compute_downsample_num, check_points
+from .utils import compute_downsample_num, check_points, get_random_tokens
 
 __all__ = ["ResNetBlockSpace"]
 
@@ -40,14 +40,11 @@ class ResNetBlockSpace(SearchSpaceBase):
                 self.downsample_num, self.block_num)
         self.filter_num = np.array(
             [48, 64, 96, 128, 160, 192, 224, 256, 320, 384, 512, 640])
-        self.repeat = np.array([0, 1, 2])
+        self.repeat = np.array([0, 1, 2, 3, 4, 6, 7, 8, 10, 12, 14, 16])
         self.k_size = np.array([3, 5])
 
     def init_tokens(self):
-        if self.block_mask != None:
-            return [0] * (len(self.block_mask) * 6)
-        else:
-            return [0] * (self.block_num * 6)
+        return get_random_tokens(self.range_table)
 
     def range_table(self):
         range_table_base = []
