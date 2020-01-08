@@ -2,6 +2,7 @@ site_name: PaddleSlim Docs
 repo_url: https://github.com/PaddlePaddle/PaddleSlim
 nav:
 - Home: index.md
+- 模型库: model_zoo.md
 - 教程:
   - 离线量化: tutorials/quant_post_demo.md
   - 量化训练: tutorials/quant_aware_demo.md
