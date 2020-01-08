@@ -15,6 +15,7 @@
 import os
 import logging
 import socket
+import time
 from .log_helper import get_logger
 from threading import Thread
 from .lock_utils import lock, unlock
@@ -52,7 +53,8 @@ class ControllerServer(object):
         self._ip = address[0]
         self._key = key
         self._client_num = 0
-        self._client = set()
+        self._client = dict()
+        self._compare_time = 172800  ### 48 hours
 
     def start(self):
         self._socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -103,11 +105,31 @@ class ControllerServer(object):
                     reward = messages[2]
                     iter = messages[3]
                     client_name = messages[4]
-                    if client_name not in self._client:
-                        self._client.add(client_name)
+
+                    one_step_time = -1
+                    if client_name in self._client.keys():
+                        current_time = time.time() - self._client[client_name]
+                        if current_time > one_step_time:
+                            one_step_time = current_time
+                            self._compare_time = 2 * one_step_time
+
+                    if client_name not in self._client.keys():
+                        self._client[client_name] = time.time()
                         self._client_num += 1
-                    _logger.debug("client: {}, client_num: {}".format(
-                        self._client, self._client_num))
+
+                    self._client[client_name] = time.time()
+
+                    for key_client in self._client.keys():
+                        ### if a client not request token in 48 hours(172800s), we think this client was stoped.
+                        if (time.time() - self._client[key_client]
+                            ) > self._compare_time and len(self._client.keys(
+                            )) > 1:
+                            self._client.pop(key_client)
+                            self._client_num -= 1
+                    _logger.info(
+                        "client: {}, client_num: {}, compare_time: {}".format(
+                            self._client, self._client_num,
+                            self._compare_time))
                     tokens = [int(token) for token in tokens.split(",")]
                     self._controller.update(tokens,
                                             float(reward),
