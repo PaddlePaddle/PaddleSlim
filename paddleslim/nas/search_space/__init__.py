@@ -21,12 +21,9 @@ from .inception_block import InceptionABlockSpace, InceptionCBlockSpace
 from .search_space_registry import SEARCHSPACE
 from .search_space_factory import SearchSpaceFactory
 from .search_space_base import SearchSpaceBase
-import one_shot_nas
-from .one_shot_nas import *
 __all__ = [
     'MobileNetV1Space', 'MobileNetV2Space', 'ResNetSpace',
     'MobileNetV1BlockSpace', 'MobileNetV2BlockSpace', 'ResNetBlockSpace',
     'InceptionABlockSpace', 'InceptionCBlockSpace', 'SearchSpaceBase',
     'SearchSpaceFactory', 'SEARCHSPACE'
 ]
-__all__ += one_shot_nas.__all__

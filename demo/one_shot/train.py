@@ -24,7 +24,8 @@ from paddle.fluid.optimizer import AdamOptimizer
 from paddle.fluid.dygraph.nn import Conv2D, Pool2D, Linear
 from paddle.fluid.dygraph.base import to_variable
 
-from paddleslim.nas import OneShotNAS
+from paddleslim.nas.one_shot import SuperMnasnet
+from paddleslim.nas.one_shot import OneShotSearch
 
 
 def parse_args():
@@ -74,24 +75,13 @@ class SimpleImgConv(fluid.dygraph.Layer):
         return x
 
 
-sa_nas = OneShotNAS(
-    [('OneShotMnasnetSearchSpace', {
-        "input_size": 20,
-        "output_size": 20
-    })],
-    server_addr=("", 8805),
-    init_temperature=100,
-    reduce_rate=0.9,
-    search_steps=100,
-    is_server=True)
-
-
 class MNIST(fluid.dygraph.Layer):
-    def __init__(self, arch):
+    def __init__(self):
         super(MNIST, self).__init__()
 
         self._simple_img_conv_pool_1 = SimpleImgConv(1, 20, 2, act="relu")
-        self.arch = arch
+        self.arch = SuperMnasnet(
+            name_scope="super_net", input_channels=20, out_channels=20)
         self._simple_img_conv_pool_2 = SimpleImgConv(20, 50, 2, act="relu")
 
         self.pool_2_shape = 50 * 13 * 13
@@ -105,10 +95,10 @@ class MNIST(fluid.dygraph.Layer):
                     loc=0.0, scale=scale)),
             act="softmax")
 
-    def forward(self, inputs, label=None):
+    def forward(self, inputs, label=None, tokens=None):
         x = self._simple_img_conv_pool_1(inputs)
 
-        x = self.arch(x)  # addddddd
+        x = self.arch(x, tokens=tokens)  # addddddd
         x = self._simple_img_conv_pool_2(x)
         x = fluid.layers.reshape(x, shape=[-1, self.pool_2_shape])
         x = self._fc(x)
@@ -119,10 +109,13 @@ class MNIST(fluid.dygraph.Layer):
             return x
 
 
-def test_mnist(reader, model, batch_size):
+def test_mnist(model, tokens=None):
     acc_set = []
     avg_loss_set = []
-    for batch_id, data in enumerate(reader()):
+    batch_size = 64
+    test_reader = paddle.batch(
+        paddle.dataset.mnist.test(), batch_size=batch_size, drop_last=True)
+    for batch_id, data in enumerate(test_reader()):
         dy_x_data = np.array([x[0].reshape(1, 28, 28)
                               for x in data]).astype('float32')
         y_data = np.array(
@@ -142,7 +135,7 @@ def test_mnist(reader, model, batch_size):
     acc_val_mean = np.array(acc_set).mean()
     avg_loss_val_mean = np.array(avg_loss_set).mean()
 
-    return avg_loss_val_mean, acc_val_mean
+    return acc_val_mean
 
 
 def inference_mnist():
@@ -173,106 +166,72 @@ def inference_mnist():
         print("Inference result of image/infer_3.png is: %d" % lab[0][-1])
 
 
-def train_mnist(args):
+def train_mnist(args, model, tokens=None):
     epoch_num = args.epoch
     BATCH_SIZE = 64
 
-    place = fluid.CUDAPlace(0)
-    with fluid.dygraph.guard(place):
-        if args.ce:
-            seed = 33
-            np.random.seed(seed)
-            fluid.default_startup_program().random_seed = seed
-            fluid.default_main_program().random_seed = seed
+    adam = AdamOptimizer(
+        learning_rate=0.001, parameter_list=model.parameters())
 
-        if args.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
+    train_reader = paddle.batch(
+        paddle.dataset.mnist.train(), batch_size=BATCH_SIZE, drop_last=True)
+    if args.use_data_parallel:
+        train_reader = fluid.contrib.reader.distributed_batch_reader(
+            train_reader)
 
-        arch = sa_nas.super_net()[0]  # adddddddddddddd
+    for epoch in range(epoch_num):
+        for batch_id, data in enumerate(train_reader()):
+            dy_x_data = np.array([x[0].reshape(1, 28, 28)
+                                  for x in data]).astype('float32')
+            y_data = np.array(
+                [x[1] for x in data]).astype('int64').reshape(-1, 1)
 
-        mnist = MNIST(arch)  # modifyyyyyyyyyyyyyyyy
+            img = to_variable(dy_x_data)
+            label = to_variable(y_data)
+            label.stop_gradient = True
 
-        adam = AdamOptimizer(learning_rate=0.001)
-        if args.use_data_parallel:
-            mnist = fluid.dygraph.parallel.DataParallel(mnist, strategy)
+            cost, acc = model(img, label, tokens=tokens)
 
-        train_reader = paddle.batch(
-            paddle.dataset.mnist.train(),
-            batch_size=BATCH_SIZE,
-            drop_last=True)
-        if args.use_data_parallel:
-            train_reader = fluid.contrib.reader.distributed_batch_reader(
-                train_reader)
+            loss = fluid.layers.cross_entropy(cost, label)
+            avg_loss = fluid.layers.mean(loss)
 
-        test_reader = paddle.batch(
-            paddle.dataset.mnist.test(), batch_size=BATCH_SIZE, drop_last=True)
+            if args.use_data_parallel:
+                avg_loss = model.scale_loss(avg_loss)
+                avg_loss.backward()
+                model.apply_collective_grads()
+            else:
+                avg_loss.backward()
 
-        for epoch in range(epoch_num):
-            for batch_id, data in enumerate(train_reader()):
-                dy_x_data = np.array([x[0].reshape(1, 28, 28)
-                                      for x in data]).astype('float32')
-                y_data = np.array(
-                    [x[1] for x in data]).astype('int64').reshape(-1, 1)
+            adam.minimize(avg_loss)
+            # save checkpoint
+            model.clear_gradients()
+            if batch_id % 1 == 0:
+                print("Loss at epoch {} step {}: {:}".format(epoch, batch_id,
+                                                             avg_loss.numpy()))
 
-                img = to_variable(dy_x_data)
-                label = to_variable(y_data)
-                label.stop_gradient = True
+        model.eval()
+        test_acc = test_mnist(model, tokens=tokens)
+        model.train()
+        print("Loss at epoch {} , acc is: {}".format(epoch, test_acc))
 
-                cost, acc = mnist(img, label)
-
-                loss = fluid.layers.cross_entropy(cost, label)
-                avg_loss = fluid.layers.mean(loss)
-
-                if args.use_data_parallel:
-                    avg_loss = mnist.scale_loss(avg_loss)
-                    avg_loss.backward()
-                    mnist.apply_collective_grads()
-                else:
-                    avg_loss.backward()
-
-                adam.minimize(avg_loss)
-                # save checkpoint
-                mnist.clear_gradients()
-                if batch_id % 1 == 0:
-                    print("Loss at epoch {} step {}: {:}".format(
-                        epoch, batch_id, avg_loss.numpy()))
-
-            mnist.eval()
-            test_cost, test_acc = test_mnist(test_reader, mnist, BATCH_SIZE)
-            mnist.train()
-            if args.ce:
-                print("kpis\ttest_acc\t%s" % test_acc)
-                print("kpis\ttest_cost\t%s" % test_cost)
-            print("Loss at epoch {} , Test avg_loss is: {}, acc is: {}".format(
-                epoch, test_cost, test_acc))
-
-        save_parameters = (not args.use_data_parallel) or (
-            args.use_data_parallel and
-            fluid.dygraph.parallel.Env().local_rank == 0)
-        if save_parameters:
-            fluid.save_dygraph(mnist.state_dict(), "save_temp")
-            print("checkpoint saved")
-
-
-#        inference_mnist()
-
-
-def search(args):
-
-    place = fluid.CUDAPlace(0)
-    with fluid.dygraph.guard(place):
-        for step in range(100):
-            arch = sa_nas.next_archs()[0]  # adddddddddddddd
-            model = MNIST(arch)  # modifyyyyyyyyyyyyyyyy
-            model.eval()
-            test_reader = paddle.batch(
-                paddle.dataset.mnist.test(), batch_size=64, drop_last=True)
-
-            _, acc = test_mnist(test_reader, model, 64)
-            sa_nas.reward(acc)
+    save_parameters = (not args.use_data_parallel) or (
+        args.use_data_parallel and
+        fluid.dygraph.parallel.Env().local_rank == 0)
+    if save_parameters:
+        fluid.save_dygraph(model.state_dict(), "save_temp")
+        print("checkpoint saved")
 
 
 if __name__ == '__main__':
     args = parse_args()
-    #    train_mnist(args)
-    search(args)
+    place = fluid.CPUPlace()
+    with fluid.dygraph.guard(place):
+        model = MNIST()
+        # step 1: training super net
+        #train_mnist(args, model)
+        # step 2: search
+        best_tokens = OneShotSearch(model, test_mnist)
+    # step 3: final training
+    #    train_mnist(args, model, best_tokens)
+    # step 4: infer
+    #    inference_mnist(model, best_tokens)

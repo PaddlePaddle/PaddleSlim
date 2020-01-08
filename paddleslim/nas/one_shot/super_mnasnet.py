@@ -2,6 +2,7 @@ import paddle
 from paddle import fluid
 from paddle.fluid.layer_helper import LayerHelper
 import numpy as np
+from one_shot_nas import OneShotSuperNet
 
 __all__ = ['SuperMnasnet']
 
@@ -152,7 +153,7 @@ class AuxiliaryHead(fluid.dygraph.Layer):
         return inputs
 
 
-class SuperMnasnet(fluid.dygraph.Layer):
+class SuperMnasnet(OneShotSuperNet):
     def __init__(self,
                  name_scope,
                  input_channels=3,
@@ -165,7 +166,7 @@ class SuperMnasnet(fluid.dygraph.Layer):
         self.flops = 0
         self.repeat_times = repeat_times
         self.flops_calculated = False
-        self.last_archs = None
+        self.last_tokens = None
         self._conv = fluid.dygraph.Conv2D(
             input_channels, 32, 3, 1, 1, act=None, bias_attr=False)
         self._bn = fluid.dygraph.BatchNorm(32, act='relu6')
@@ -206,7 +207,18 @@ class SuperMnasnet(fluid.dygraph.Layer):
         if self.use_auxhead:
             self.auxhead = AuxiliaryHead(self.full_name(), 10)
 
-#        self.global_pooling = fluid.dygraph.Pool2D(2, "avg", 2, 0, True)
+    def init_tokens(self):
+        return [
+            3, 3, 6, 6, 6, 6, 3, 3, 3, 6, 6, 6, 3, 3, 3, 3, 6, 6, 3, 3, 3, 6,
+            6, 6, 3, 3, 3, 6, 6, 6, 3, 6, 6, 6, 6, 6
+        ]
+
+    def range_table(self):
+        max_v = [
+            6, 6, 10, 10, 10, 10, 6, 6, 6, 10, 10, 10, 6, 6, 6, 6, 10, 10, 6,
+            6, 6, 10, 10, 10, 6, 6, 6, 10, 10, 10, 6, 10, 10, 10, 10, 10
+        ]
+        return (len(max_v) * [0], max_v)
 
     def get_flops(self, input, output, op):
         if not self.flops_calculated:
@@ -216,12 +228,12 @@ class SuperMnasnet(fluid.dygraph.Layer):
                 flops /= op._groups
             self.flops += flops
 
-    def forward(self, inputs, archs):
-        if isinstance(archs, np.ndarray) and not (archs == self.last_archs).all()\
-           or not isinstance(archs, np.ndarray) and not archs == self.last_archs:
+    def forward_impl(self, inputs, tokens=None):
+        if isinstance(tokens, np.ndarray) and not (tokens == self.last_tokens).all()\
+           or not isinstance(tokens, np.ndarray) and not tokens == self.last_tokens:
             self.flops_calculated = False
             self.flops = 0
-        self.last_archs = archs
+        self.last_tokens = tokens
         x = self._bn(self._conv(inputs))
         self.get_flops(inputs, x, self._conv)
         sep_x = self._sep_conv_bn(self._sep_conv(x))
@@ -231,9 +243,9 @@ class SuperMnasnet(fluid.dygraph.Layer):
         x = proj_x
         for ind in range(len(self.block_list)):
             for b_ind, block in enumerate(self.block_list[ind]):
-                x = fluid.layers.dropout(block(x, archs[ind * 6 + b_ind]), 0.)
+                x = fluid.layers.dropout(block(x, tokens[ind * 6 + b_ind]), 0.)
                 if not self.flops_calculated:
-                    self.flops += block.flops[archs[ind * 6 + b_ind]]
+                    self.flops += block.flops[tokens[ind * 6 + b_ind]]
             if ind == len(self.block_list) * 2 // 3 - 1 and self.use_auxhead:
                 fc_aux = self.auxhead(x)
         final_x = self._final_bn(self._final_conv(x))
