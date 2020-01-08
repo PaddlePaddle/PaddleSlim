@@ -14,7 +14,7 @@ nav:
   - 模型分析: api/analysis_api.md
   - 知识蒸馏: api/single_distiller_api.md
   - SA搜索: api/nas_api.md
-  - 搜索空间: api/search_space.md
+  - 搜索空间: search_space.md
   - 硬件延时评估表: table_latency.md
 - 算法原理: algo/algo.md
 
