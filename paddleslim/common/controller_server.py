@@ -42,7 +42,8 @@ class ControllerServer(object):
             address(tuple): The address of current server binding with format (ip, port). Default: ('', 0).
                             which means setting ip automatically
             max_client_num(int): The maximum number of clients connecting to current server simultaneously. Default: 100.
-            search_steps(int): The total steps of searching. None means never stopping. Default: None 
+            search_steps(int|None): The total steps of searching. None means never stopping. Default: None 
+            key(str|None): Config information. Default: None.
         """
         self._controller = controller
         self._address = address
@@ -120,7 +121,7 @@ class ControllerServer(object):
                     self._client[client_name] = time.time()
 
                     for key_client in self._client.keys():
-                        ### if a client not request token in 48 hours(172800s), we think this client was stoped.
+                        ### if a client not request token in double train one tokens' time, we think this client was stoped.
                         if (time.time() - self._client[key_client]
                             ) > self._compare_time and len(self._client.keys(
                             )) > 1:

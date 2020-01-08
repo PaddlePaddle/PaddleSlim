@@ -36,6 +36,7 @@ class ControllerClient(object):
             server_ip(str): The ip that controller server listens on. None means getting the ip automatically. Default: None.
             server_port(int): The port that controller server listens on. 0 means getting usable port automatically. Default: 0.
             key(str): The key used to identify legal agent for controller server. Default: "light-nas"
+            client_name(str): Current client name, random generate for counting client number. Default: None.
         """
         self.server_ip = server_ip
         self.server_port = server_port
