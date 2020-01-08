@@ -18,6 +18,7 @@ import logging
 import numpy as np
 import json
 import hashlib
+import time
 import paddle.fluid as fluid
 from ..core import VarWrapper, OpWrapper, GraphWrapper
 from ..common import SAController
@@ -67,7 +68,10 @@ class SANAS(object):
         self._is_server = is_server
         self._configs = configs
         self._init_tokens = init_tokens
-        self._key = hashlib.md5(str(self._configs).encode("utf-8")).hexdigest()
+        self._client_name = hashlib.md5(str(time.time()).encode(
+            "utf-8")).hexdigest()
+        self._key = str(self._configs)
+        self._current_tokens = init_tokens
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
@@ -130,7 +134,10 @@ class SANAS(object):
             server_port = self._controller_server.port()
 
         self._controller_client = ControllerClient(
-            server_ip, server_port, key=self._key)
+            server_ip,
+            server_port,
+            key=self._key,
+            client_name=self._client_name)
 
         if is_server and load_checkpoint != None:
             self._iter = scene['_iter']

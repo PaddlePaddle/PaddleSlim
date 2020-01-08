@@ -34,7 +34,7 @@ class SAController(EvolutionaryController):
     def __init__(self,
                  range_table=None,
                  reduce_rate=0.85,
-                 init_temperature=1024,
+                 init_temperature=None,
                  max_try_times=300,
                  init_tokens=None,
                  reward=-1,
@@ -68,6 +68,13 @@ class SAController(EvolutionaryController):
         self._max_try_times = max_try_times
         self._reward = reward
         self._tokens = init_tokens
+
+        if init_temperature == None:
+            if init_tokens == None:
+                self._init_temperature = 10.0
+            else:
+                self._init_temperature = 1.0
+
         self._constrain_func = constrain_func
         self._max_reward = max_reward
         self._best_tokens = best_tokens
@@ -95,7 +102,7 @@ class SAController(EvolutionaryController):
     def current_tokens(self):
         return self._current_tokens
 
-    def update(self, tokens, reward, iter):
+    def update(self, tokens, reward, iter, client_num):
         """
         Update the controller according to latest tokens and reward.
         Args:
@@ -106,7 +113,8 @@ class SAController(EvolutionaryController):
         if iter > self._iter:
             self._iter = iter
         self._searched[str(tokens)] = reward
-        temperature = self._init_temperature * self._reduce_rate**self._iter
+        temperature = self._init_temperature * self._reduce_rate**(client_num *
+                                                                   self._iter)
         self._current_tokens = tokens
         if (reward > self._reward) or (np.random.random() <= math.exp(
             (reward - self._reward) / temperature)):

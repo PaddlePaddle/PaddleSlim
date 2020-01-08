@@ -51,6 +51,8 @@ class ControllerServer(object):
         self._port = address[1]
         self._ip = address[0]
         self._key = key
+        self._client_num = 0
+        self._client = set()
 
     def start(self):
         self._socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -93,15 +95,23 @@ class ControllerServer(object):
                     _logger.debug("recv message from {}: [{}]".format(addr,
                                                                       message))
                     messages = message.strip('\n').split("\t")
-                    if (len(messages) < 4) or (messages[0] != self._key):
+                    if (len(messages) < 5) or (messages[0] != self._key):
                         _logger.debug("recv noise from {}: [{}]".format(
                             addr, message))
                         continue
                     tokens = messages[1]
                     reward = messages[2]
                     iter = messages[3]
+                    client_name = messages[4]
+                    if client_name not in self._client:
+                        self._client.add(client_name)
+                        self._client_num += 1
+                    _logger.debug("client: {}, client_num: {}".format(
+                        self._client, self._client_num))
                     tokens = [int(token) for token in tokens.split(",")]
-                    self._controller.update(tokens, float(reward), int(iter))
+                    self._controller.update(tokens,
+                                            float(reward),
+                                            int(iter), int(self._client_num))
                     response = "ok"
                     conn.send(response.encode())
                     _logger.debug("send message to {}: [{}]".format(addr,
