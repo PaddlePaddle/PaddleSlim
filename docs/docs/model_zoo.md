@@ -28,10 +28,10 @@
 | MobileNetV1 | sensitive -30% |  70.4%/89.3% (-0.59%/-0.38%)  |       12       |  0.74  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-30.tar) |
 | MobileNetV1 | sensitive -50% | 69.8% / 88.9% (-1.19%/-0.78%) |       9        |  0.56  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-50.tar) |
 | MobileNetV2 |       -        |         72.15%/90.65%         |       15       |  0.59  | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
-| MobileNetV2 |  uniform -50%  | 65.79%/86.11%(-6.35%/-4.47%)  |       11       | 0.296  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
+| MobileNetV2 |  uniform -50%  | 65.79%/86.11% (-6.35%/-4.47%) |       11       | 0.296  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
 |  ResNet34   |       -        |         72.15%/90.65%         |       84       |  7.36  | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
-|  ResNet34   |  uniform -50%  | 70.99%/89.95%(-1.36%/-0.87%)  |       41       |  3.67  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
-|  ResNet34   |  auto -55.05%  | 70.24%/89.63%(-2.04%/-1.06%)  |       33       |  3.31  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
+|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-1.36%/-0.87%) |       41       |  3.67  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
+|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-2.04%/-1.06%) |       33       |  3.31  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
 
 
 
@@ -42,12 +42,12 @@
 |:--:|:---:|:--:|:--:|:--:|
 | MobileNetV1 |                     student                     |  70.99%/89.68%  |       17       | [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar) |
 |ResNet50_vd|teacher|79.12%/94.44%| 99 | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_vd_pretrained.tar) |
-|MobileNetV1|ResNet50_vd<sup>[1](#trans1)</sup> distill|72.77%/90.68%(+1.78%/+1.00%)| 17 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_distilled.tar) |
+|MobileNetV1|ResNet50_vd<sup>[1](#trans1)</sup> distill|72.77%/90.68% (+1.78%/+1.00%)| 17 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_distilled.tar) |
 | MobileNetV2 |                     student                     |  72.15%/90.65%  |       15       | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
-| MobileNetV2 |            ResNet50_vd distill             |  74.28%/91.53%(+2.13%/+0.88%)  |       15       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_distilled.tar) |
+| MobileNetV2 |            ResNet50_vd distill             |  74.28%/91.53% (+2.13%/+0.88%)  |       15       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_distilled.tar) |
 |  ResNet50   |                     student                     |  76.50%/93.00%  |       99       | [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_pretrained.tar) |
 |ResNet101|teacher|77.56%/93.64%| 173 | [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar) |
-|  ResNet50   |             ResNet101 distill              |  77.29%/93.65%(+0.79%/+0.65%)  |       99       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_distilled.tar) |
+|  ResNet50   |             ResNet101 distill              |  77.29%/93.65% (+0.79%/+0.65%)  |       99       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_distilled.tar) |
 
 !!! note "Note"
 
