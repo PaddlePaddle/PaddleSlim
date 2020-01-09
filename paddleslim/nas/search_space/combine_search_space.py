@@ -97,19 +97,19 @@ class CombineSearchSpace(object):
         space = cls(input_size, output_size, block_num, block_mask=block_mask)
         return space
 
-    def super_net(self):
-        return [space.super_net() for space in self.spaces]
-
-    def init_tokens(self):
+    def init_tokens(self, tokens=None):
         """
         Combine init tokens.
         """
-        tokens = []
-        self.single_token_num = []
-        for space in self.spaces:
-            tokens.extend(space.init_tokens())
-            self.single_token_num.append(len(space.init_tokens()))
-        return tokens
+        if tokens is None:
+            tokens = []
+            self.single_token_num = []
+            for space in self.spaces:
+                tokens.extend(space.init_tokens())
+                self.single_token_num.append(len(space.init_tokens()))
+            return tokens
+        else:
+            return tokens
 
     def range_table(self):
         """

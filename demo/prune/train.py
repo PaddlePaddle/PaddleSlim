@@ -40,11 +40,33 @@ add_arg('test_period',      int, 10,                 "Test period in epoches.")
 model_list = [m for m in dir(models) if "__" not in m]
 
 
+def get_pruned_params(args, program):
+    params = []
+    if args.model == "MobileNet":
+        for param in program.global_block().all_parameters():
+            if "_sep_weights" in param.name:
+                params.append(param.name)
+    elif args.model == "MobileNetV2":
+        for param in program.global_block().all_parameters():
+            if "linear_weights" in param.name or "expand_weights" in param.name:
+                params.append(param.name)
+    elif args.model == "ResNet34":
+        for param in program.global_block().all_parameters():
+            if "weights" in param.name and "branch" in param.name:
+                params.append(param.name)
+    elif args.model == "PVANet":
+        for param in program.global_block().all_parameters():
+            if "conv_weights" in param.name:
+                params.append(param.name)
+    return params
+
+
 def piecewise_decay(args):
     step = int(math.ceil(float(args.total_images) / args.batch_size))
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = fluid.layers.piecewise_decay(boundaries=bd, values=lr)
+
     optimizer = fluid.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
@@ -176,14 +198,11 @@ def compress(args):
                            end_time - start_time))
             batch_id += 1
 
-    params = []
-    for param in fluid.default_main_program().global_block().all_parameters():
-        if "_sep_weights" in param.name:
-            params.append(param.name)
-    _logger.info("fops before pruning: {}".format(
+    params = get_pruned_params(args, fluid.default_main_program())
+    _logger.info("FLOPs before pruning: {}".format(
         flops(fluid.default_main_program())))
     pruner = Pruner()
-    pruned_val_program = pruner.prune(
+    pruned_val_program, _, _ = pruner.prune(
         val_program,
         fluid.global_scope(),
         params=params,
@@ -191,19 +210,13 @@ def compress(args):
         place=place,
         only_graph=True)
 
-    pruned_program = pruner.prune(
+    pruned_program, _, _ = pruner.prune(
         fluid.default_main_program(),
         fluid.global_scope(),
         params=params,
         ratios=[0.33] * len(params),
         place=place)
-
-    for param in pruned_program[0].global_block().all_parameters():
-        if "weights" in param.name:
-            print param.name, param.shape
-    return
-    _logger.info("fops after pruning: {}".format(flops(pruned_program)))
-
+    _logger.info("FLOPs after pruning: {}".format(flops(pruned_program)))
     for i in range(args.num_epochs):
         train(i, pruned_program)
         if i % args.test_period == 0:

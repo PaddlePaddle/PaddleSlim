@@ -22,7 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
-from .utils import compute_downsample_num, check_points
+from .utils import compute_downsample_num, check_points, get_random_tokens
 
 __all__ = ["InceptionABlockSpace", "InceptionCBlockSpace"]
 ### TODO add asymmetric kernel of conv when paddle-lite support 
@@ -58,10 +58,7 @@ class InceptionABlockSpace(SearchSpaceBase):
         """
         The initial token.
         """
-        if self.block_mask != None:
-            return [0] * (len(self.block_mask) * 9)
-        else:
-            return [0] * (self.block_num * 9)
+        return get_random_tokens(self.range_table)
 
     def range_table(self):
         """
@@ -290,10 +287,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
         """
         The initial token.
         """
-        if self.block_mask != None:
-            return [0] * (len(self.block_mask) * 11)
-        else:
-            return [0] * (self.block_num * 11)
+        return get_random_tokens(self.range_table)
 
     def range_table(self):
         """
