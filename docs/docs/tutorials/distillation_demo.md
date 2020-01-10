@@ -86,7 +86,7 @@ merge过程操作较多，具体细节请参考[merge API文档](https://paddlep
 
 ```python
 data_name_map = {'data': 'image'}
-student_program = merge(teacher_program, student_program, data_name_map, place)
+merge(teacher_program, student_program, data_name_map, place)
 ```
 
 ### 5.添加蒸馏loss

@@ -1,7 +1,7 @@
 ## merge
-paddleslim.dist.merge(teacher_program, student_program, data_name_map, place, scope=fluid.global_scope(), name_prefix='teacher_') [[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py#L19) 
+paddleslim.dist.merge(teacher_program, student_program, data_name_map, place, scope=fluid.global_scope(), name_prefix='teacher_') [[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py#L19)
 
-: merge将两个paddle program（teacher_program, student_program）融合为一个program，并将融合得到的program返回。在融合的program中，可以为其中合适的teacher特征图和student特征图添加蒸馏损失函数，从而达到用teacher模型的暗知识（Dark Knowledge）指导student模型学习的目的。
+: merge将teacher_program融合到student_program中。在融合的program中，可以为其中合适的teacher特征图和student特征图添加蒸馏损失函数，从而达到用teacher模型的暗知识（Dark Knowledge）指导student模型学习的目的。
 
 **参数：**
 
@@ -12,7 +12,7 @@ paddleslim.dist.merge(teacher_program, student_program, data_name_map, place, sc
 - **scope**(Scope)-该参数表示程序使用的变量作用域，如果不指定将使用默认的全局作用域。默认值：[*fluid.global_scope()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/global_scope_cn.html#global-scope)
 - **name_prefix**(str)-merge操作将统一为teacher的[*Variables*](https://www.paddlepaddle.org.cn/documentation/docs/zh/1.3/api_guides/low_level/program.html#variable)添加的名称前缀name_prefix。默认值：'teacher_'
 
-**返回：** 由student_program和teacher_program merge得到的program
+**返回：** 无
 
 !!! note "Note"
     *data_name_map* 是 **teacher_var name到student_var name的映射**，如果写反可能无法正确进行merge
@@ -37,8 +37,8 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-main_program = dist.merge(teacher_program, student_program,
-		                  data_name_map, place)
+dist.merge(teacher_program, student_program,
+                          data_name_map, place)
 ```
 
 
@@ -76,10 +76,10 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-main_program = merge(teacher_program, student_program, data_name_map, place)
-with fluid.program_guard(main_program):
+merge(teacher_program, student_program, data_name_map, place)
+with fluid.program_guard(student_program):
     distillation_loss = dist.fsp_loss('teacher_t1.tmp_1', 'teacher_t2.tmp_1',
-			                          's1.tmp_1', 's2.tmp_1', main_program)
+                                      's1.tmp_1', 's2.tmp_1', main_program)
 ```
 
 
@@ -91,7 +91,7 @@ paddleslim.dist.l2_loss(teacher_var_name, student_var_name, program=fluid.defaul
 
 **参数：**
 
-- **teacher_var_name**(str): teacher_var的名称. 
+- **teacher_var_name**(str): teacher_var的名称.
 - **student_var_name**(str): student_var的名称.
 - **program**(Program): 用于蒸馏训练的fluid program。默认值：[*fluid.default_main_program()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/1.3/api_cn/fluid_cn.html#default-main-program)
 
@@ -116,10 +116,10 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-main_program = merge(teacher_program, student_program, data_name_map, place)
-with fluid.program_guard(main_program):
+merge(teacher_program, student_program, data_name_map, place)
+with fluid.program_guard(student_program):
     distillation_loss = dist.l2_loss('teacher_t2.tmp_1', 's2.tmp_1',
-			                         main_program)
+                                     main_program)
 ```
 
 
@@ -131,11 +131,11 @@ paddleslim.dist.soft_label_loss(teacher_var_name, student_var_name, program=flui
 
 **参数：**
 
-- **teacher_var_name**(str): teacher_var的名称. 
-- **student_var_name**(str): student_var的名称. 
+- **teacher_var_name**(str): teacher_var的名称.
+- **student_var_name**(str): student_var的名称.
 - **program**(Program): 用于蒸馏训练的fluid program。默认值：[*fluid.default_main_program()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/1.3/api_cn/fluid_cn.html#default-main-program)
-- **teacher_temperature**(float): 对teacher_var进行soft操作的温度值，温度值越大得到的特征图越平滑 
-- **student_temperature**(float): 对student_var进行soft操作的温度值，温度值越大得到的特征图越平滑 
+- **teacher_temperature**(float): 对teacher_var进行soft操作的温度值，温度值越大得到的特征图越平滑
+- **student_temperature**(float): 对student_var进行soft操作的温度值，温度值越大得到的特征图越平滑
 
 **返回：** 由teacher_var, student_var组合得到的soft_label_loss
 
@@ -158,10 +158,10 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-main_program = merge(teacher_program, student_program, data_name_map, place)
-with fluid.program_guard(main_program):
+merge(teacher_program, student_program, data_name_map, place)
+with fluid.program_guard(student_program):
     distillation_loss = dist.soft_label_loss('teacher_t2.tmp_1',
-			                                 's2.tmp_1', main_program, 1., 1.)
+                                             's2.tmp_1', main_program, 1., 1.)
 ```
 
 
@@ -173,7 +173,7 @@ paddleslim.dist.loss(loss_func, program=fluid.default_main_program(), **kwargs) 
 
 **参数：**
 
-- **loss_func**(python function): 自定义的损失函数，输入为teacher var和student var，输出为自定义的loss 
+- **loss_func**(python function): 自定义的损失函数，输入为teacher var和student var，输出为自定义的loss
 - **program**(Program): 用于蒸馏训练的fluid program。默认值：[*fluid.default_main_program()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/1.3/api_cn/fluid_cn.html#default-main-program)
 - **\**kwargs**: loss_func输入名与对应variable名称
 
@@ -198,15 +198,15 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-main_program = merge(teacher_program, student_program, data_name_map, place)
+merge(teacher_program, student_program, data_name_map, place)
 def adaptation_loss(t_var, s_var):
     teacher_channel = t_var.shape[1]
     s_hint = fluid.layers.conv2d(s_var, teacher_channel, 1)
     hint_loss = fluid.layers.reduce_mean(fluid.layers.square(s_hint - t_var))
     return hint_loss
-with fluid.program_guard(main_program):
+with fluid.program_guard(student_program):
     distillation_loss = dist.loss(main_program, adaptation_loss,
-			t_var='teacher_t2.tmp_1', s_var='s2.tmp_1')
+            t_var='teacher_t2.tmp_1', s_var='s2.tmp_1')
 ```
 
 !!! note "注意事项"
