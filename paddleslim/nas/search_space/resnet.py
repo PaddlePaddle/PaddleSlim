@@ -22,7 +22,7 @@ from paddle.fluid.param_attr import ParamAttr
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
-from .utils import check_points
+from .utils import check_points, get_random_tokens
 
 __all__ = ["ResNetSpace"]
 
@@ -47,8 +47,7 @@ class ResNetSpace(SearchSpaceBase):
         """
         The initial token.
         """
-        init_token_base = [0, 0, 0, 0, 0, 0, 0, 0]
-        return init_token_base
+        return [1, 1, 2, 2, 3, 4, 3, 1]
 
     def range_table(self):
         """

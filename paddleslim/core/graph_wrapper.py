@@ -93,6 +93,8 @@ class VarWrapper(object):
                 ops.append(op)
         return ops
 
+    def is_parameter(self):
+        return isinstance(self._var, Parameter)
 
 class OpWrapper(object):
     def __init__(self, op, graph):
