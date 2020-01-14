@@ -125,6 +125,7 @@ class Pruner():
 
                     param_t.set(pruned_param, place)
         graph.update_groups_of_conv()
+        graph.infer_shape()
         return graph.program, param_backup, param_shape_backup
 
     def _cal_pruned_idx(self, param, ratio, axis):
