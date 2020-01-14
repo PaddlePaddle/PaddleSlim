@@ -20,8 +20,7 @@ quant_config = {
     'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
     'dtype': 'int8',
     'window_size': 10000,
-    'moving_rate': 0.9,
-    'quant_weight_only': False
+    'moving_rate': 0.9
 }
 ```
 
@@ -49,7 +48,7 @@ compiled_train_prog = compiled_train_prog.with_data_parallel(
 ### 4. freeze program
 
 ```
-float_program, int8_program = convert(val_program, 
+float_program, int8_program = convert(val_program,
                                       place,
                                       quant_config,
                                       scope=None,

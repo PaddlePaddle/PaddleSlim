@@ -150,7 +150,9 @@ def compress(args):
     #    print(v.name, v.shape)
 
     exe.run(t_startup)
-    _download('http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_pretrained.tar', '.')
+    _download(
+        'http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_pretrained.tar',
+        '.')
     _decompress('./ResNet50_pretrained.tar')
     assert args.teacher_pretrained_model and os.path.exists(
         args.teacher_pretrained_model
@@ -168,21 +170,17 @@ def compress(args):
         predicate=if_exist)
 
     data_name_map = {'image': 'image'}
-    main = merge(
-        teacher_program,
-        student_program,
-        data_name_map,
-        place)
+    merge(teacher_program, student_program, data_name_map, place)
 
-    with fluid.program_guard(main, s_startup):
-        l2_loss = l2_loss("teacher_fc_0.tmp_0", "fc_0.tmp_0", main)
+    with fluid.program_guard(student_program, s_startup):
+        l2_loss = l2_loss("teacher_fc_0.tmp_0", "fc_0.tmp_0", student_program)
         loss = avg_cost + l2_loss
         opt = create_optimizer(args)
         opt.minimize(loss)
     exe.run(s_startup)
     build_strategy = fluid.BuildStrategy()
     build_strategy.fuse_all_reduce_ops = False
-    parallel_main = fluid.CompiledProgram(main).with_data_parallel(
+    parallel_main = fluid.CompiledProgram(student_program).with_data_parallel(
         loss_name=loss.name, build_strategy=build_strategy)
 
     for epoch_id in range(args.num_epochs):
@@ -190,9 +188,7 @@ def compress(args):
             loss_1, loss_2, loss_3 = exe.run(
                 parallel_main,
                 feed=data,
-                fetch_list=[
-                    loss.name, avg_cost.name, l2_loss.name
-                ])
+                fetch_list=[loss.name, avg_cost.name, l2_loss.name])
             if step_id % args.log_period == 0:
                 _logger.info(
                     "train_epoch {} step {} loss {:.6f}, class loss {:.6f}, l2 loss {:.6f}".

@@ -18,6 +18,7 @@ import logging
 import numpy as np
 import json
 import hashlib
+import time
 import paddle.fluid as fluid
 from ..core import VarWrapper, OpWrapper, GraphWrapper
 from ..common import SAController
@@ -37,12 +38,13 @@ class SANAS(object):
     def __init__(self,
                  configs,
                  server_addr=("", 8881),
-                 init_temperature=100,
+                 init_temperature=None,
                  reduce_rate=0.85,
                  search_steps=300,
+                 init_tokens=None,
                  save_checkpoint='nas_checkpoint',
                  load_checkpoint=None,
-                 is_server=False):
+                 is_server=True):
         """
         Search a group of ratios used to prune program.
         Args:
@@ -50,9 +52,10 @@ class SANAS(object):
                                   `key` is the name of search space with data type str. `input_size` and `output_size`  are
                                    input size and output size of searched sub-network. `block_num` is the number of blocks in searched network, `block_mask` is a list consists by 0 and 1, 0 means normal block, 1 means reduction block.
             server_addr(tuple): A tuple of server ip and server port for controller server. 
-            init_temperature(float): The init temperature used in simulated annealing search strategy.
-            reduce_rate(float): The decay rate used in simulated annealing search strategy.
-            search_steps(int): The steps of searching.
+            init_temperature(float|None): The init temperature used in simulated annealing search strategy. Default: None.
+            reduce_rate(float): The decay rate used in simulated annealing search strategy. Default: None.
+            search_steps(int): The steps of searching. Default: 300.
+            init_token(list): Init tokens user can set by yourself. Default: None.
             save_checkpoint(string|None): The directory of checkpoint to save, if set to None, not save checkpoint. Default: 'nas_checkpoint'.
             load_checkpoint(string|None): The directory of checkpoint to load, if set to None, not load checkpoint. Default: None.
             is_server(bool): Whether current host is controller server. Default: True.
@@ -64,7 +67,12 @@ class SANAS(object):
         self._init_temperature = init_temperature
         self._is_server = is_server
         self._configs = configs
-        self._key = hashlib.md5(str(self._configs).encode("utf-8")).hexdigest()
+        self._init_tokens = init_tokens
+        self._client_name = hashlib.md5(
+            str(time.time() + np.random.randint(1, 10000)).encode(
+                "utf-8")).hexdigest()
+        self._key = str(self._configs)
+        self._current_tokens = init_tokens
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
@@ -75,7 +83,7 @@ class SANAS(object):
 
         # create controller server
         if self._is_server:
-            init_tokens = self._search_space.init_tokens()
+            init_tokens = self._search_space.init_tokens(self._init_tokens)
             range_table = self._search_space.range_table()
             range_table = (len(range_table) * [0], range_table)
             _logger.info("range table: {}".format(range_table))
@@ -127,7 +135,10 @@ class SANAS(object):
             server_port = self._controller_server.port()
 
         self._controller_client = ControllerClient(
-            server_ip, server_port, key=self._key)
+            server_ip,
+            server_port,
+            key=self._key,
+            client_name=self._client_name)
 
         if is_server and load_checkpoint != None:
             self._iter = scene['_iter']
@@ -138,6 +149,11 @@ class SANAS(object):
         return socket.gethostbyname(socket.gethostname())
 
     def tokens2arch(self, tokens):
+        """
+        Convert tokens to network architectures.
+        Returns:
+            list<function>: A list of functions that define networks.
+        """
         return self._search_space.token2arch(tokens)
 
     def current_info(self):
@@ -159,6 +175,7 @@ class SANAS(object):
             list<function>: A list of functions that define networks.
         """
         self._current_tokens = self._controller_client.next_tokens()
+        _logger.info("current tokens: {}".format(self._current_tokens))
         archs = self._search_space.token2arch(self._current_tokens)
         return archs
 
