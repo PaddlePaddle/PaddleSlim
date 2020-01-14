@@ -1,16 +1,21 @@
-## OneShotSearch
->paddleslim.nas.one_shot.OneShotSearch(model, eval_func)
 
-从超级网络中搜索出一个最佳的子网络。
+## OneShotSearch
+paddleslim.nas.one_shot.OneShotSearch(model, eval_func)[代码]()
+
+: 从超级网络中搜索出一个最佳的子网络。
 
 **参数：**
+
 - **model(fluid.dygraph.layer):** 通过在`OneShotSuperNet`前后添加若该模块构建的动态图模块。因为`OneShotSuperNet`是一个超网络，所以`model`也是一个超网络。换句话说，在`model`模块的字模块中，至少有一个是`OneShotSuperNet`的实例。该方法从`model`超网络中搜索得到一个最佳的子网络。超网络`model`需要先被训练，具体细节请参考[OneShotSuperNet]()。
+
 - **eval_func:** 用于评估子网络性能的回调函数。该回调函数需要接受`model`为参数，并调用`model`的`forward`方法进行性能评估。
 
 **返回：**
+
 - **best_tokens:** 表示最佳子网络的编码信息（tokens）。
 
 **示例代码：**
+
 请参考[one-shot NAS示例]()
 
 
@@ -18,71 +23,93 @@
 
 用于`OneShot`搜索策略的超级网络的基类，所有超级网络的实现要继承该类。
 
->paddleslim.nas.one_shot.OneShotSuperNet(name_scope)
+paddleslim.nas.one_shot.OneShotSuperNet(name_scope)
 
-构造方法。
+: 构造方法。
 
 **参数：**
+
 - **name_scope:(str) **超级网络的命名空间。
 
 **返回：**
+
 - **super_net:** 一个`OneShotSuperNet`实例。
 
->init_tokens()
-获得当前超级网络的初始化子网络的编码，主要用于搜索。
+init_tokens()
+
+: 获得当前超级网络的初始化子网络的编码，主要用于搜索。
 
 **返回：**
+
 - **tokens(list<int>):** 一个子网络的编码。
 
->range_table()
-超级网络中各个子网络由一组整型数字编码表示，该方法返回编码每个位置的取值范围。
+range_table()
+
+: 超级网络中各个子网络由一组整型数字编码表示，该方法返回编码每个位置的取值范围。
 
 **返回：**
+
 - **range_table(tuple):** 子网络编码每一位的取值范围。`range_table`格式为`(min_values, max_values)`，其中，`min_values`为一个整型数组，表示每个编码位置可选取的最小值；`max_values`表示每个编码位置可选取的最大值。
 
->forward_impl(input, tokens)
+forward_impl(input, tokens)
 
-前向计算函数。`OneShotSuperNet`的子类需要实现该函数。
+: 前向计算函数。`OneShotSuperNet`的子类需要实现该函数。
 
 **参数：**
+
 - **input(Variable):** 超级网络的输入。
+
 - **tokens(list<int>):** 执行前向计算所用的子网络的编码。默认为`None`，即随机选取一个子网络执行前向。
 
 **返回：**
+
 - **output(Variable):** 前向计算的输出
 
->forward(self, input, tokens=None)
+forward(self, input, tokens=None)
 
-执行前向计算。
+: 执行前向计算。
 
 **参数：**
+
 - **input(Variable):** 超级网络的输入。
+
 - **tokens(list<int>):** 执行前向计算所用的子网络的编码。默认为`None`，即随机选取一个子网络执行前向。
 
 **返回：**
+
 - **output(Variable):** 前向计算的输出
 
 
->random_tokens()
+random_tokens()
 
-随机选取一个子网络，并返回其编码。
+: 随机选取一个子网络，并返回其编码。
 
 **返回：**
+
 - **tokens(list<int>):** 一个子网络的编码。
 
 ## SuperMnasnet
 
 在[Mnasnet](https://arxiv.org/abs/1807.11626)基础上修改得到的超级网络, 该类继承自`OneShotSuperNet`.
 
->paddleslim.nas.one_shot.SuperMnasnet(name_scope, input_channels=3, out_channels=1280, repeat_times=[6, 6, 6, 6, 6, 6], stride=[1, 1, 1, 1, 2, 1], channels=[16, 24, 40, 80, 96, 192, 320], use_auxhead=False)
+paddleslim.nas.one_shot.SuperMnasnet(name_scope, input_channels=3, out_channels=1280, repeat_times=[6, 6, 6, 6, 6, 6], stride=[1, 1, 1, 1, 2, 1], channels=[16, 24, 40, 80, 96, 192, 320], use_auxhead=False)
+
+: 构造函数。
 
 **参数：**
+
 - **name_scope(str):** 命名空间。
+
 - **input_channels(str):** 当前超级网络的输入的特征图的通道数量。
+
 - **out_channels(str):** 当前超级网络的输出的特征图的通道数量。
+
 - **repeat_times(list):** 每种`block`重复的次数。
+
 - **stride(list):** 一种`block`重复堆叠成`repeat_block`，`stride`表示每个`repeat_block`的下采样比例。
+
 - **channels(list):** channels[i]和channels[i+1]分别表示第i个`repeat_block`的输入特征图的通道数和输出特征图的通道数。
+
 - **use_auxhead(bool):** 是否使用辅助特征图。如果设置为`True`，则`SuperMnasnet`除了返回输出特征图，还还返回辅助特征图。默认为False.
 
 **返回：**
