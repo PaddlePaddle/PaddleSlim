@@ -38,7 +38,7 @@ add_arg('test_period',      int, 10,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 # yapf: enable
 
-model_list = [m for m in dir(models) if "__" not in m]
+model_list = models.__all__
 
 
 def get_pruned_params(args, program):

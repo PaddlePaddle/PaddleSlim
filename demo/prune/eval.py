@@ -28,7 +28,7 @@ add_arg('data',             str, "mnist",                 "Which data to use. 'm
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 # yapf: enable
 
-model_list = [m for m in dir(models) if "__" not in m]
+model_list = models.__all__
 
 
 def eval(args):
