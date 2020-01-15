@@ -35,9 +35,10 @@ add_arg('config_file',      str, None,                 "The config file for comp
 add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
+add_arg('model_path',       str, "./models",         "The path to save model.")
 # yapf: enable
 
-model_list = [m for m in dir(models) if "__" not in m]
+model_list = models.__all__
 
 
 def get_pruned_params(args, program):
@@ -221,6 +222,8 @@ def compress(args):
         train(i, pruned_program)
         if i % args.test_period == 0:
             test(i, pruned_val_program)
+            save_model(pruned_val_program,
+                       os.path.join(args.model_path, str(i)))
 
 
 def main():

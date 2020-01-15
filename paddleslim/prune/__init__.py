@@ -25,6 +25,8 @@ from .sensitive import *
 import sensitive
 from prune_walker import *
 import prune_walker
+from io import *
+import io
 
 __all__ = []
 
@@ -35,3 +37,4 @@ __all__ += controller_client.__all__
 __all__ += sensitive_pruner.__all__
 __all__ += sensitive.__all__
 __all__ += prune_walker.__all__
+__all__ += io.__all__
