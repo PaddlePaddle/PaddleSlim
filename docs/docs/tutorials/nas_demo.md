@@ -3,10 +3,10 @@
 本示例介绍如何使用网络结构搜索接口，搜索到一个更小或者精度更高的模型，该文档仅介绍paddleslim中SANAS的使用及如何利用SANAS得到模型结构，完整示例代码请参考sa_nas_mobilenetv2.py或者block_sa_nas_mobilenetv2.py。
 
 ## 接口介绍
-请参考。
+请参考<a href='../api/nas_api.md'>神经网络搜索API介绍</a>。
 
 ### 1. 配置搜索空间
-详细的搜索空间配置可以参考<a href='../../../paddleslim/nas/nas_api.md'>神经网络搜索API文档</a>。
+详细的搜索空间配置可以参考<a href='../search_space.md'>搜索空间</a>。
 ```
 config = [('MobileNetV2Space')]
 
@@ -53,7 +53,7 @@ with fluid.program_guard(train_program, startup_program):
     test_program = train_program.clone(for_test=True)
     sgd = fluid.optimizer.SGD(learning_rate=1e-3)
     sgd.minimize(avg_cost)
-    
+
 ```
 
 ### 5. 根据构造的训练program添加限制条件

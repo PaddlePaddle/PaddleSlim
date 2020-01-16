@@ -3,15 +3,10 @@
 
 **参数：**
 
-- **input_size(int|None)**：- `input_size`表示输入feature map的大小。
-- **output_size(int|None)**：- `output_size`表示输出feature map的大小。
+- **input_size(int|None)**：- `input_size`表示输入feature map的大小。`input_size`和`output_size`用来计算整个模型结构中下采样次数。
+- **output_size(int|None)**：- `output_size`表示输出feature map的大小。`input_size`和`output_size`用来计算整个模型结构中下采样次数。
 - **block_num(int|None)**：- `block_num`表示搜索空间中block的数量。
-- **block_mask(list|None)**：- `block_mask`是一组由0、1组成的列表，0表示当前block是normal block，1表示当前block是reduction block。如果设置了`block_mask`，则主要以`block_mask`为主要配置，`input_size`，`output_size`和`block_num`三种配置是无效的。
-
-
-!!! note "Note"
-  - reduction block表示经过这个block之后的feature map大小下降为之前的一半，normal block表示经过这个block之后feature map大小不变。<br>
-  - `input_size`和`output_size`用来计算整个模型结构中reduction block数量。
+- **block_mask(list|None)**：- `block_mask`是一组由0、1组成的列表，0表示当前block是normal block，1表示当前block是reduction block。reduction block表示经过这个block之后的feature map大小下降为之前的一半，normal block表示经过这个block之后feature map大小不变。如果设置了`block_mask`，则主要以`block_mask`为主要配置，`input_size`，`output_size`和`block_num`三种配置是无效的。
 
 ## SANAS
 
@@ -54,10 +49,7 @@ sanas = SANAS(config=config)
 
 
 paddlesim.nas.SANAS.tokens2arch(tokens)
-: 通过一组token得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。
-
-!!! note "Note"
-  - tokens是一个列表，token映射到搜索空间转换成相应的网络结构，一组token对应唯一的一个网络结构。
+: 通过一组token得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。tokens的形式是一个列表，tokens映射到搜索空间转换成相应的网络结构，一组token对应唯一的一个网络结构。
 
 **参数：**
 
