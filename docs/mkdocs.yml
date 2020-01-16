@@ -23,6 +23,9 @@ theme:
     name: readthedocs
     highlightjs: true
 
+extra_css:
+  - extra.css
+
 markdown_extensions:
   - admonition
   - codehilite:
