@@ -1,1 +1,4 @@
-.codehilite {width: 590px;}
+.codehilite {
+  width: 590px;
+  overflow: auto;
+}
