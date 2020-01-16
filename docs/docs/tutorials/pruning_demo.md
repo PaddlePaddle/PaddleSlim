@@ -17,7 +17,7 @@
 
 不同模型的参数命名不同，在剪裁前需要确定待裁卷积层的参数名称。可通过以下方法列出所有参数名：
 
-```
+```python
 for param in program.global_block().all_parameters():
     print("param name: {}; shape: {}".format(param.name, param.shape))
 ```
@@ -28,7 +28,7 @@ for param in program.global_block().all_parameters():
 
 通过以下命令启动裁剪任务：
 
-```
+```python
 export CUDA_VISIBLE_DEVICES=0
 python train.py
 ```

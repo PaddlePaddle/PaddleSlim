@@ -25,14 +25,14 @@
 
 ### 导出模型
 通过运行以下命令可将模型转化为离线量化接口可用的模型：
-```
+```bash
 python export_model.py --model "MobileNet" --pretrained_model ./pretrain/MobileNetV1_pretrained --data imagenet
 ```
 转化之后的模型存储在``inference_model/MobileNet/``文件夹下，可看到该文件夹下有``'model'``, ``'weights'``两个文件。
 
 ### 离线量化
 接下来对导出的模型文件进行离线量化，离线量化的脚本为[quant_post.py](./quant_post.py)，脚本中使用接口``paddleslim.quant.quant_post``对模型进行离线量化。运行命令为：
-```
+```bash
 python quant_post.py --model_path ./inference_model/MobileNet --save_path ./quant_model_train/MobileNet --model_filename model --params_filename weights
 ```
 
@@ -51,22 +51,22 @@ python quant_post.py --model_path ./inference_model/MobileNet --save_path ./quan
 使用[eval.py](./eval.py)脚本对量化前后的模型进行测试，得到模型的分类精度进行对比。
 
 首先测试量化前的模型的精度，运行以下命令：
-```
+```bash
 python eval.py --model_path ./inference_model/MobileNet --model_name model --params_name weights
 ```
 精度输出为:
-```
+```text
 top1_acc/top5_acc= [0.70913923 0.89548034]
 ```
 
 使用以下命令测试离线量化后的模型的精度：
 
-```
+```bash
 python eval.py --model_path ./quant_model_train/MobileNet
 ```
 
 精度输出为
-```
+```text
 top1_acc/top5_acc= [0.70141864 0.89086477]
 ```
 从以上精度对比可以看出，对``mobilenet``在``imagenet``上的分类模型进行离线量化后 ``top1``精度损失为``0.77%``， ``top5``精度损失为``0.46%``. 

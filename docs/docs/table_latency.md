@@ -32,7 +32,7 @@
 
 **格式**
 
-```
+```text
 op_type,flag_bias,flag_relu,n_in,c_in,h_in,w_in,c_out,groups,kernel,padding,stride,dilation\tlatency
 ```
 
@@ -57,7 +57,7 @@ op_type,flag_bias,flag_relu,n_in,c_in,h_in,w_in,c_out,groups,kernel,padding,stri
 
 **格式**
 
-```
+```text
 op_type,n_in,c_in,h_in,w_in\tlatency
 ```
 
@@ -74,7 +74,7 @@ op_type,n_in,c_in,h_in,w_in\tlatency
 
 **格式**
 
-```
+```text
 op_type,active_type,n_in,c_in,h_in,w_in\tlatency
 ```
 
@@ -92,7 +92,7 @@ op_type,active_type,n_in,c_in,h_in,w_in\tlatency
 
 **格式**
 
-```
+```text
 op_type,n_in,c_in,h_in,w_in\tlatency
 ```
 
@@ -109,7 +109,7 @@ op_type,n_in,c_in,h_in,w_in\tlatency
 
 **格式**
 
-```
+```text
 op_type,flag_global_pooling,n_in,c_in,h_in,w_in,kernel,padding,stride,ceil_mode,pool_type\tlatency
 ```
 
@@ -132,7 +132,7 @@ op_type,flag_global_pooling,n_in,c_in,h_in,w_in,kernel,padding,stride,ceil_mode,
 
 **格式**
 
-```
+```text
 op_type,axis,n_in,c_in,h_in,w_in\tlatency
 ```
 

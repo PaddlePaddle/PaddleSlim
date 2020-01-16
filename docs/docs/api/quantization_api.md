@@ -3,7 +3,7 @@
 ## 量化配置
 通过字典配置量化参数
 
-```
+```python
 TENSORRT_OP_TYPES = [
     'mul', 'conv2d', 'pool2d', 'depthwise_conv2d', 'elementwise_add',
     'leaky_relu'
