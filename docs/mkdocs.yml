@@ -25,9 +25,6 @@ theme:
 
 markdown_extensions:
   - admonition
-  - codehilite:
-      guess_lang: true
-      linenums: true
   - toc:
       permalink: "#"
   - footnotes
