@@ -96,6 +96,7 @@ class VarWrapper(object):
     def is_parameter(self):
         return isinstance(self._var, Parameter)
 
+
 class OpWrapper(object):
     def __init__(self, op, graph):
         assert isinstance(graph, GraphWrapper)
@@ -270,7 +271,10 @@ class GraphWrapper(object):
         """
         Get the variable by variable name.
         """
-        return VarWrapper(self.program.global_block().var(name), self)
+        for block in self.program.blocks:
+            if block.has_var(name):
+                return VarWrapper(block.var(name), self)
+        return None
 
     def clone(self, for_test=False):
         """
