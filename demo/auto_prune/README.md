@@ -54,10 +54,10 @@ python train_finetune.py --model "MobileNet" --pretrained_model "checkpoint/Mobi
 
 ### 3.1 一次裁剪
 
-在`paddleslim.prune.AutoPruner`接口的参数中，pruned_flops表示期望的最低flops剪切率
+在`paddleslim.prune.AutoPruner`接口的参数中，pruned_flops表示期望的最低flops剪切率。
 
 
 ### 3.2 多次迭代裁剪
 
-单次迭代的裁剪目标，建议不高于10%
-在load前次迭代结果时，需要删除checkpoint下learning_rate、@LR_DECAY_COUNTER@等文件，避免继承之前的learning_rate，影响finetune效果
+单次迭代的裁剪目标，建议不高于10%。
+在load前次迭代结果时，需要删除checkpoint下learning_rate、@LR_DECAY_COUNTER@等文件，避免继承之前的learning_rate，影响finetune效果。
