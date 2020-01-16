@@ -12,7 +12,7 @@ paddleslim.prune.Pruner(criterion="l1_norm")[源代码](https://github.com/Paddl
 
 **示例代码：**
 
-```
+```python
 from paddleslim.prune import Pruner
 pruner = Pruner()
 ```
@@ -28,7 +28,7 @@ paddleslim.prune.Pruner.prune(program, scope, params, ratios, place=None, lazy=F
 - **scope(paddle.fluid.Scope)** - 要裁剪的权重所在的`scope`，Paddle中用`scope`实例存放模型参数和运行时变量的值。Scope中的参数值会被`inplace`的裁剪。更多介绍请参考[Scope概念介绍]()
 
 - **params(list<str>)** - 需要被裁剪的卷积层的参数的名称列表。可以通过以下方式查看模型中所有参数的名称:
-```
+```python
 for block in program.blocks:
     for param in block.all_parameters():
         print("param: {}; shape: {}".format(param.name, param.shape))
@@ -57,7 +57,7 @@ for block in program.blocks:
 **示例：**
 
 点击[AIStudio](https://aistudio.baidu.com/aistudio/projectDetail/200786)执行以下示例代码。
-```
+```python
 
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
@@ -149,7 +149,7 @@ paddleslim.prune.sensitivity(program, place, param_names, eval_func, sensitiviti
 
 - **param_names(list<str>)** - 待分析的卷积层的参数的名称列表。可以通过以下方式查看模型中所有参数的名称:
 
-```
+```python
 for block in program.blocks:
     for param in block.all_parameters():
         print("param: {}; shape: {}".format(param.name, param.shape))
@@ -165,7 +165,7 @@ for block in program.blocks:
 
 - **sensitivities(dict)** - 存放敏感度信息的dict，其格式为：
 
-```
+```python
 {"weight_0":
    {0.1: 0.22,
     0.2: 0.33
@@ -183,7 +183,7 @@ for block in program.blocks:
 
 点击[AIStudio](https://aistudio.baidu.com/aistudio/projectdetail/201401)运行以下示例代码。
 
-```
+```python
 import paddle
 import numpy as np
 import paddle.fluid as fluid
@@ -291,7 +291,7 @@ paddleslim.prune.merge_sensitive(sensitivities)[源代码](https://github.com/Pa
 
 - **sensitivities(dict)** - 合并后的敏感度信息。其格式为：
 
-```
+```bash
 {"weight_0":
    {0.1: 0.22,
     0.2: 0.33

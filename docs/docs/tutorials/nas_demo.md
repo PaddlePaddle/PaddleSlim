@@ -7,13 +7,13 @@
 
 ### 1. 配置搜索空间
 详细的搜索空间配置可以参考<a href='../../../paddleslim/nas/nas_api.md'>神经网络搜索API文档</a>。
-```
+```python
 config = [('MobileNetV2Space')]
 
 ```
 
 ### 2. 利用搜索空间初始化SANAS实例
-```
+```python
 from paddleslim.nas import SANAS
 
 sa_nas = SANAS(
@@ -27,12 +27,12 @@ sa_nas = SANAS(
 ```
 
 ### 3. 根据实例化的NAS得到当前的网络结构
-```
+```python
 archs = sa_nas.next_archs()
 ```
 
 ### 4. 根据得到的网络结构和输入构造训练和测试program
-```
+```python
 import paddle.fluid as fluid
 
 train_program = fluid.Program()
@@ -57,7 +57,7 @@ with fluid.program_guard(train_program, startup_program):
 ```
 
 ### 5. 根据构造的训练program添加限制条件
-```
+```python
 from paddleslim.analysis import flops
 
 if flops(train_program) > 321208544:
@@ -65,6 +65,6 @@ if flops(train_program) > 321208544:
 ```
 
 ### 6. 回传score
-```
+```python
 sa_nas.reward(score)
 ```

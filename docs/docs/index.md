@@ -32,7 +32,7 @@ PaddleSlim是PaddlePaddle框架的一个子模块，主要用于压缩图像领�
 - 安装develop版本
 
 
-```
+```bash
 git clone https://github.com/PaddlePaddle/PaddleSlim.git
 cd PaddleSlim
 python setup.py install
@@ -40,7 +40,7 @@ python setup.py install
 
 - 安装官方发布的最新版本
 
-```
+```bash
 pip install paddleslim -i https://pypi.org/simple
 ```
 
