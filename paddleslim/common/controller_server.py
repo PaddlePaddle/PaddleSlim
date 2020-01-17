@@ -18,7 +18,7 @@ import socket
 import time
 from .log_helper import get_logger
 from threading import Thread
-from .lock_utils import lock, unlock
+from .lock import lock, unlock
 
 __all__ = ['ControllerServer']
 
