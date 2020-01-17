@@ -1,11 +1,4 @@
-﻿## 目录
-
-- [量化原理介绍](#1-quantization-aware-training量化介绍)
-- [剪裁原理介绍](#2-卷积核剪裁原理)
-- [蒸馏原理介绍](#3-蒸馏)
-- [轻量级模型结构搜索原理介绍](#4-轻量级模型结构搜索)
-
-## 1. Quantization Aware Training量化介绍
+﻿## 1. Quantization Aware Training量化介绍
 
 ### 1.1 背景
 

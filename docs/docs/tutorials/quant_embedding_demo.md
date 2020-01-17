@@ -1,23 +1,23 @@
 # Embedding量化示例
 
-本示例介绍如何使用Embedding量化的接口 [paddleslim.quant.quant_embedding]() 。``quant_embedding``接口将网络中的Embedding参数从``float32``类型量化到 ``8-bit``整数类型，在几乎不损失模型精度的情况下减少模型的存储空间和显存占用。
+本示例介绍如何使用Embedding量化的接口 [paddleslim.quant.quant_embedding](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/) 。``quant_embedding``接口将网络中的Embedding参数从``float32``类型量化到 ``8-bit``整数类型，在几乎不损失模型精度的情况下减少模型的存储空间和显存占用。
 
 
-接口介绍请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
+接口介绍请参考 [量化API文档](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/)。
 
 该接口对program的修改：
 
 量化前:
 
 <p align="center">
-<img src="./image/before.png" height=200 width=100 hspace='10'/> <br />
+<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/demo/quant/quant_embedding/image/before.png" height=200 width=100 hspace='10'/> <br />
 <strong>图1：量化前的模型结构</strong>
 </p>
 
 量化后：
 
 <p align="center">
-<img src="./image/after.png" height=300 width=300 hspace='10'/> <br />
+<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/demo/quant/quant_embedding/image/after.png" height=300 width=300 hspace='10'/> <br />
 <strong>图2: 量化后的模型结构</strong>
 </p>
 

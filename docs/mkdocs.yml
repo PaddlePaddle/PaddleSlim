@@ -1,5 +1,6 @@
 site_name: PaddleSlim Docs
-repo_url: https://github.com/PaddlePaddle/PaddleSlim
+repo_url: https://github.com/PaddlePaddle/PaddleSlim/
+edit_uri: blob/develop/docs/docs
 nav:
 - Home: index.md
 - 模型库: model_zoo.md

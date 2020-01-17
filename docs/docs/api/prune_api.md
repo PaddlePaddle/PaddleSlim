@@ -1,6 +1,6 @@
 
 ## Pruner
-paddleslim.prune.Pruner(criterion="l1_norm")[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L28)
+paddleslim.prune.Pruner(criterion="l1_norm")[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L28)
 
 : 对卷积网络的通道进行一次剪裁。剪裁一个卷积层的通道，是指剪裁该卷积层输出的通道。卷积层的权重形状为`[output_channel, input_channel, kernel_size, kernel_size]`，通过剪裁该权重的第一纬度达到剪裁输出通道数的目的。
 
@@ -17,7 +17,7 @@ from paddleslim.prune import Pruner
 pruner = Pruner()
 ```
 
-paddleslim.prune.Pruner.prune(program, scope, params, ratios, place=None, lazy=False, only_graph=False, param_backup=False, param_shape_backup=False)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L36)
+paddleslim.prune.Pruner.prune(program, scope, params, ratios, place=None, lazy=False, only_graph=False, param_backup=False, param_shape_backup=False)[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L36)
 
 : 对目标网络的一组卷积层的权重进行裁剪。
 
@@ -25,7 +25,7 @@ paddleslim.prune.Pruner.prune(program, scope, params, ratios, place=None, lazy=F
 
 - **program(paddle.fluid.Program)** - 要裁剪的目标网络。更多关于Program的介绍请参考：[Program概念介绍](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Program_cn.html#program)。
 
-- **scope(paddle.fluid.Scope)** - 要裁剪的权重所在的`scope`，Paddle中用`scope`实例存放模型参数和运行时变量的值。Scope中的参数值会被`inplace`的裁剪。更多介绍请参考[Scope概念介绍]()
+- **scope(paddle.fluid.Scope)** - 要裁剪的权重所在的`scope`，Paddle中用`scope`实例存放模型参数和运行时变量的值。Scope中的参数值会被`inplace`的裁剪。更多介绍请参考[scope_guard](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/scope_guard_cn.html#scope-guard)
 
 - **params(list<str>)** - 需要被裁剪的卷积层的参数的名称列表。可以通过以下方式查看模型中所有参数的名称:
 ```
@@ -36,7 +36,7 @@ for block in program.blocks:
 
 - **ratios(list<float>)** - 用于裁剪`params`的剪切率，类型为列表。该列表长度必须与`params`的长度一致。
 
-- **place(paddle.fluid.Place)** - 待裁剪参数所在的设备位置，可以是`CUDAPlace`或`CPUPlace`。[Place概念介绍]()
+- **place(paddle.fluid.Place)** - 待裁剪参数所在的设备位置，可以是[CUDAPlace](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/CUDAPlace_cn.html#cudaplace)或[CPUPlace](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/CPUPlace_cn.html#cpuplace)。
 
 - **lazy(bool)** - `lazy`为True时，通过将指定通道的参数置零达到裁剪的目的，参数的`shape保持不变`；`lazy`为False时，直接将要裁的通道的参数删除，参数的`shape`会发生变化。
 
@@ -137,7 +137,7 @@ for param in main_program.global_block().all_parameters():
 ---
 
 ## sensitivity
-paddleslim.prune.sensitivity(program, place, param_names, eval_func, sensitivities_file=None, pruned_ratios=None) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L34)
+paddleslim.prune.sensitivity(program, place, param_names, eval_func, sensitivities_file=None, pruned_ratios=None) [[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L34)
 
 : 计算网络中每个卷积层的敏感度。每个卷积层的敏感度信息统计方法为：依次剪掉当前卷积层不同比例的输出通道数，在测试集上计算剪裁后的精度损失。得到敏感度信息后，可以通过观察或其它方式确定每层卷积的剪裁率。
 
@@ -145,7 +145,7 @@ paddleslim.prune.sensitivity(program, place, param_names, eval_func, sensitiviti
 
 - **program(paddle.fluid.Program)** - 待评估的目标网络。更多关于Program的介绍请参考：[Program概念介绍](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Program_cn.html#program)。
 
-- **place(paddle.fluid.Place)** - 待分析的参数所在的设备位置，可以是`CUDAPlace`或`CPUPlace`。[Place概念介绍]()
+- **place(paddle.fluid.Place)** - 待分析的参数所在的设备位置，可以是[CUDAPlace](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/CUDAPlace_cn.html#cudaplace)或[CPUPlace](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/CPUPlace_cn.html#cpuplace)。
 
 - **param_names(list<str>)** - 待分析的卷积层的参数的名称列表。可以通过以下方式查看模型中所有参数的名称:
 
@@ -279,7 +279,7 @@ print(sensitivities)
 ```
 
 ## merge_sensitive
-paddleslim.prune.merge_sensitive(sensitivities)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L161)
+paddleslim.prune.merge_sensitive(sensitivities)[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L161)
 
 : 合并多个敏感度信息。
 
@@ -309,7 +309,7 @@ paddleslim.prune.merge_sensitive(sensitivities)[源代码](https://github.com/Pa
 
 
 ## load_sensitivities
-paddleslim.prune.load_sensitivities(sensitivities_file)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L184)
+paddleslim.prune.load_sensitivities(sensitivities_file)[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L184)
 
 : 从文件中加载敏感度信息。
 
@@ -325,7 +325,7 @@ paddleslim.prune.load_sensitivities(sensitivities_file)[源代码](https://githu
 
 
 ## get_ratios_by_loss
-paddleslim.prune.get_ratios_by_loss(sensitivities, loss)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L206)
+paddleslim.prune.get_ratios_by_loss(sensitivities, loss)[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L206)
 
 : 根据敏感度和精度损失阈值计算出一组剪切率。对于参数`w`, 其剪裁率为使精度损失低于`loss`的最大剪裁率。
 

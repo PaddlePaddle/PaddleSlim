@@ -1,5 +1,5 @@
 ## FLOPs
-paddleslim.analysis.flops(program, detail=False) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/flops.py)
+paddleslim.analysis.flops(program, detail=False) [[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/flops.py)
 
 : 获得指定网络的浮点运算次数(FLOPs)。
 
@@ -76,9 +76,9 @@ print("FLOPs: {}".format(flops(main_program)))
 ```
 
 ## model_size
-paddleslim.analysis.model_size(program) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/model_size.py)
+paddleslim.analysis.model_size(program) [[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/model_size.py)
 
-获得指定网络的参数数量。
+: 获得指定网络的参数数量。
 
 **参数：**
 
@@ -139,13 +139,13 @@ print("FLOPs: {}".format(model_size(main_program)))
 ```
 
 ## TableLatencyEvaluator
-paddleslim.analysis.TableLatencyEvaluator(table_file, delimiter=",") [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/latency.py)
+paddleslim.analysis.TableLatencyEvaluator(table_file, delimiter=",") [[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/latency.py)
 
 : 基于硬件延时表的模型延时评估器。
 
 **参数：**
 
-- **table_file(str)** - 所使用的延时评估表的绝对路径。关于演示评估表格式请参考：[PaddleSlim硬件延时评估表格式](../paddleslim/analysis/table_latency.md)
+- **table_file(str)** - 所使用的延时评估表的绝对路径。关于演示评估表格式请参考：[PaddleSlim硬件延时评估表格式](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/table_latency.md)
 
 - **delimiter(str)** - 硬件延时评估表中，操作信息之前所使用的分割符，默认为英文字符逗号。
 
@@ -153,7 +153,7 @@ paddleslim.analysis.TableLatencyEvaluator(table_file, delimiter=",") [源代码]
 
 - **Evaluator** - 硬件延时评估器的实例。
 
-paddleslim.analysis.TableLatencyEvaluator.latency(graph) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/latency.py)
+paddleslim.analysis.TableLatencyEvaluator.latency(graph) [[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/analysis/latency.py)
 
 : 获得指定网络的预估延时。
 
