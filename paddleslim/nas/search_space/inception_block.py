@@ -175,7 +175,7 @@ class InceptionABlockSpace(SearchSpaceBase):
                 input = self._inceptionA(
                     input,
                     A_tokens=filter_nums,
-                    filter_size=filter_size,
+                    filter_size=int(filter_size),
                     stride=stride,
                     pool_type=pool_type,
                     name='inceptionA_{}'.format(i + 1))
@@ -408,13 +408,13 @@ class InceptionCBlockSpace(SearchSpaceBase):
                 pool_type = 'avg' if layer_setting[11] == 0 else 'max'
                 if stride == 2:
                     layer_count += 1
-                if check_points((layer_count - 1) in return_block):
+                if check_points((layer_count - 1), return_block):
                     mid_layer[layer_count - 1] = input
 
                 input = self._inceptionC(
                     input,
                     C_tokens=filter_nums,
-                    filter_size=filter_size,
+                    filter_size=int(filter_size),
                     stride=stride,
                     pool_type=pool_type,
                     name='inceptionC_{}'.format(i + 1))
