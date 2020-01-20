@@ -14,7 +14,7 @@ import paddle.fluid as fluid
 sys.path.append(sys.path[0] + "/../")
 import models
 from utility import add_arguments, print_arguments, _download, _decompress
-from paddleslim.dist.single_distiller import merge, l2_loss, soft_label_loss, fsp_loss
+from paddleslim.dist import merge, l2_loss, soft_label_loss, fsp_loss
 
 logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
 _logger = logging.getLogger(__name__)
