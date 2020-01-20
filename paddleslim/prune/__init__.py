@@ -16,11 +16,7 @@ from __future__ import absolute_import
 from .pruner import *
 from ..prune import pruner
 from .auto_pruner import *
-from ..prune import auto_pruner
-from .controller_server import *
-from ..prune import controller_server
-from .controller_client import *
-from ..prune import controller_client
+import auto_pruner
 from .sensitive_pruner import *
 from ..prune import sensitive_pruner
 from .sensitive import *
@@ -34,8 +30,6 @@ __all__ = []
 
 __all__ += pruner.__all__
 __all__ += auto_pruner.__all__
-__all__ += controller_server.__all__
-__all__ += controller_client.__all__
 __all__ += sensitive_pruner.__all__
 __all__ += sensitive.__all__
 __all__ += prune_walker.__all__

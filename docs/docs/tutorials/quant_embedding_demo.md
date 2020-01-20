@@ -81,7 +81,7 @@ mv text data/
 词典格式: 词<空格>词频。注意低频词用'UNK'表示
 
 可以按格式自建词典，如果自建词典跳过第一步。
-```
+```text
 the 1061396
 of 593677
 and 416629
@@ -126,7 +126,7 @@ sh cluster_train.sh
 ```
 
 本示例中按照单机多线程训练的命令进行训练，训练完毕后，可看到在当前文件夹下保存模型的路径为:     ``v1_cpu5_b100_lr1dir``, 运行 ``ls v1_cpu5_b100_lr1dir``可看到该文件夹下保存了训练的10个epoch的模型文件。
-```
+```text
 pass-0  pass-1  pass-2  pass-3  pass-4  pass-5  pass-6  pass-7  pass-8  pass-9
 ```
 
@@ -145,7 +145,7 @@ wget https://paddlerec.bj.bcebos.com/word2vec/test_mid_dir.tar
 python infer.py --infer_epoch --test_dir data/test_mid_dir --dict_path data/test_build_dict_word_to_id_ --batch_size 20000 --model_dir v1_cpu5_b100_lr1dir/  --start_index 0 --last_index 9
 ```
 运行该预测命令, 可看到如下输出
-```
+```text
 ('start index: ', 0, ' last_index:', 9)
 ('vocab_size:', 63642)
 step:1 249
@@ -173,7 +173,7 @@ epoch:9          acc:0.153
 ## 量化``基于skip-gram的word2vector模型``
 
 量化配置为:
-```
+```python
 config = {
         'params_name': 'emb',
         'quantize_type': 'abs_max'
@@ -188,7 +188,7 @@ python infer.py --infer_epoch --test_dir data/test_mid_dir --dict_path data/test
 
 运行输出为:
 
-```
+```text
 ('start index: ', 0, ' last_index:', 9)
 ('vocab_size:', 63642)
 quant_embedding config {'quantize_type': 'abs_max', 'params_name': 'emb', 'quantize_bits': 8, 'dtype': 'int8'}

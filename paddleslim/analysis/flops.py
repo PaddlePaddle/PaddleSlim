@@ -66,7 +66,6 @@ def _graph_flops(graph, only_conv=True, detail=False):
             y_shape = op.inputs("Y")[0].shape()
             if x_shape[0] == -1:
                 x_shape[0] = 1
-            flops += x_shape[0] * x_shape[1] * y_shape[1]
 
             op_flops = x_shape[0] * x_shape[1] * y_shape[1]
             flops += op_flops

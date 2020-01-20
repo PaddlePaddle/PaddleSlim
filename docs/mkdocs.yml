@@ -24,11 +24,12 @@ theme:
     name: readthedocs
     highlightjs: true
 
+extra_css:
+  - extra.css
+
 markdown_extensions:
   - admonition
-  - codehilite:
-      guess_lang: true
-      linenums: true
+  - codehilite
   - toc:
       permalink: "#"
   - footnotes
