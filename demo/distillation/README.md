@@ -30,3 +30,9 @@ data: imagenet
 ```shell
 CUDA_VISIBLE_DEVICES=0,1,2,3 python distill.py
 ```
+
+### 3. 训练结果
+
+对比不使用蒸馏策略的基线模型(Top-1/Top-5: 70.99%/89.68%)，
+
+经过120轮的蒸馏训练，MobileNet模型的Top-1/Top-5准确率达到72.77%/90.68%, Top-1/Top-5性能提升+1.78%/+1.00%
