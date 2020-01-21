@@ -114,7 +114,7 @@ class SANAS(object):
                 range_table,
                 self._reduce_rate,
                 self._init_temperature,
-                max_try_times=500,
+                max_try_times=50000,
                 init_tokens=preinit_tokens,
                 reward=prereward,
                 max_reward=premax_reward,
