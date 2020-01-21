@@ -29,7 +29,7 @@ paddleslim.nas.SANAS(configs, server_addr=("", 8881), init_temperature=None, red
 一个SANAS类的实例
 
 **示例代码：**
-```
+```python
 from paddleslim.nas import SANAS
 config = [('MobileNetV2Space')]
 sanas = SANAS(config=config)
@@ -59,7 +59,7 @@ paddlesim.nas.SANAS.tokens2arch(tokens)
 根据传入的token得到一个模型结构实例。
 
 **示例代码：**
-```
+```python
 import paddle.fluid as fluid
 input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
 archs = sanas.token2arch(tokens)
@@ -75,7 +75,7 @@ paddleslim.nas.SANAS.next_archs()
 返回模型结构实例的列表，形式为list。
 
 **示例代码：**
-```
+```python
 import paddle.fluid as fluid
 input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
 archs = sanas.next_archs()

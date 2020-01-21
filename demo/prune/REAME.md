@@ -17,7 +17,7 @@
 
 不同模型的参数命名不同，在剪裁前需要确定待裁卷积层的参数名称。可通过以下方法列出所有参数名：
 
-```python
+```
 for param in program.global_block().all_parameters():
     print("param name: {}; shape: {}".format(param.name, param.shape))
 ```
@@ -28,10 +28,12 @@ for param in program.global_block().all_parameters():
 
 通过以下命令启动裁剪任务：
 
-```python
+```
 export CUDA_VISIBLE_DEVICES=0
 python train.py
 ```
+
+在本示例中，每训练一轮就会保存一个模型到文件系统。
 
 执行`python train.py --help`查看更多选项。
 
@@ -39,4 +41,17 @@ python train.py
 
 1. 在接口`paddle.Pruner.prune`的参数中，`params`和`ratios`的长度需要一样。
 
+## 加载和评估模型
 
+本节介绍如何加载训练过程中保存的模型。
+
+执行以下代码加载模型并评估模型在测试集上的指标。
+
+```
+python eval.py \
+--model "mobilenet" \
+--data "mnist" \
+--model_path "./models/0"
+```
+
+在脚本`eval.py`中，使用`paddleslim.prune.load_model`接口加载剪裁得到的模型。

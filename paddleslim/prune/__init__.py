@@ -15,23 +15,20 @@ from .pruner import *
 import pruner
 from .auto_pruner import *
 import auto_pruner
-from .controller_server import *
-import controller_server
-from .controller_client import *
-import controller_client
 from .sensitive_pruner import *
 import sensitive_pruner
 from .sensitive import *
 import sensitive
 from prune_walker import *
 import prune_walker
+from io import *
+import io
 
 __all__ = []
 
 __all__ += pruner.__all__
 __all__ += auto_pruner.__all__
-__all__ += controller_server.__all__
-__all__ += controller_client.__all__
 __all__ += sensitive_pruner.__all__
 __all__ += sensitive.__all__
 __all__ += prune_walker.__all__
+__all__ += io.__all__
