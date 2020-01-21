@@ -23,7 +23,7 @@ _logger.setLevel(logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64*4,                 "Minibatch size.")
+add_arg('batch_size',       int,  64,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('total_images',     int,  1281167,              "Training image number.")
 add_arg('image_shape',      str,  "3,224,224",         "Input image size")
@@ -32,12 +32,12 @@ add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay 
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
 add_arg('num_epochs',       int,  120,               "The number of total epochs.")
-add_arg('data',             str, "cifar10",                 "Which data to use. 'cifar10' or 'imagenet'")
+add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'")
 add_arg('log_period',       int, 20,                 "Log period in batches.")
 add_arg('model',            str,  "MobileNet",          "Set the network to use.")
 add_arg('pretrained_model', str,  None,                "Whether to use pretrained model.")
-add_arg('teacher_model',    str,  "ResNet50",          "Set the teacher network to use.")
-add_arg('teacher_pretrained_model', str,  "./ResNet50_pretrained",                "Whether to use pretrained model.")
+add_arg('teacher_model',    str,  "ResNet50_vd",          "Set the teacher network to use.")
+add_arg('teacher_pretrained_model', str,  "./ResNet50_vd_pretrained",                "Whether to use pretrained model.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
 # yapf: enable
 
@@ -45,7 +45,12 @@ model_list = [m for m in dir(models) if "__" not in m]
 
 
 def piecewise_decay(args):
-    step = int(math.ceil(float(args.total_images) / args.batch_size))
+    if args.use_gpu:
+        devices_num = fluid.core.get_cuda_device_count()
+    else:
+        devices_num = int(os.environ.get('CPU_NUM', 1))
+    step = int(math.ceil(float(args.total_images) /
+                         args.batch_size)) * devices_num
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = fluid.layers.piecewise_decay(boundaries=bd, values=lr)
@@ -53,18 +58,23 @@ def piecewise_decay(args):
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
         regularization=fluid.regularizer.L2Decay(args.l2_decay))
-    return optimizer
+    return learning_rate, optimizer
 
 
 def cosine_decay(args):
-    step = int(math.ceil(float(args.total_images) / args.batch_size))
+    if cfg.use_gpu:
+        devices_num = fluid.core.get_cuda_device_count()
+    else:
+        devices_num = int(os.environ.get('CPU_NUM', 1))
+    step = int(math.ceil(float(args.total_images) /
+                         args.batch_size)) * devices_num
     learning_rate = fluid.layers.cosine_decay(
         learning_rate=args.lr, step_each_epoch=step, epochs=args.num_epochs)
     optimizer = fluid.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
         regularization=fluid.regularizer.L2Decay(args.l2_decay))
-    return optimizer
+    return learning_rate, optimizer
 
 
 def create_optimizer(args):
@@ -118,9 +128,6 @@ def compress(args):
             avg_cost = fluid.layers.mean(x=cost)
             acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
             acc_top5 = fluid.layers.accuracy(input=out, label=label, k=5)
-    #print("="*50+"student_model_params"+"="*50)
-    #for v in student_program.list_vars():
-    #    print(v.name, v.shape)
 
     place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
     exe = fluid.Executor(place)
@@ -145,23 +152,19 @@ def compress(args):
                 name='image', shape=image_shape, dtype='float32')
             predict = teacher_model.net(image, class_dim=class_dim)
 
-    #print("="*50+"teacher_model_params"+"="*50)
-    #for v in teacher_program.list_vars():
-    #    print(v.name, v.shape)
-
     exe.run(t_startup)
-    _download(
-        'http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_pretrained.tar',
-        '.')
-    _decompress('./ResNet50_pretrained.tar')
+    if not os.path.exists(args.teacher_pretrained_model):
+        _download(
+            'http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_vd_pretrained.tar',
+            '.')
+        _decompress('./ResNet50_vd_pretrained.tar')
     assert args.teacher_pretrained_model and os.path.exists(
         args.teacher_pretrained_model
     ), "teacher_pretrained_model should be set when teacher_model is not None."
 
     def if_exist(var):
         return os.path.exists(
-            os.path.join(args.teacher_pretrained_model, var.name)
-        ) and var.name != 'fc_0.w_0' and var.name != 'fc_0.b_0'
+            os.path.join(args.teacher_pretrained_model, var.name))
 
     fluid.io.load_vars(
         exe,
@@ -173,9 +176,10 @@ def compress(args):
     merge(teacher_program, student_program, data_name_map, place)
 
     with fluid.program_guard(student_program, s_startup):
-        l2_loss = l2_loss("teacher_fc_0.tmp_0", "fc_0.tmp_0", student_program)
-        loss = avg_cost + l2_loss
-        opt = create_optimizer(args)
+        distill_loss = soft_label_loss("teacher_fc_0.tmp_0", "fc_0.tmp_0",
+                                       student_program)
+        loss = avg_cost + distill_loss
+        lr, opt = create_optimizer(args)
         opt.minimize(loss)
     exe.run(s_startup)
     build_strategy = fluid.BuildStrategy()
@@ -185,14 +189,17 @@ def compress(args):
 
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):
-            loss_1, loss_2, loss_3 = exe.run(
+            lr_np, loss_1, loss_2, loss_3 = exe.run(
                 parallel_main,
                 feed=data,
-                fetch_list=[loss.name, avg_cost.name, l2_loss.name])
+                fetch_list=[
+                    lr.name, loss.name, avg_cost.name, distill_loss.name
+                ])
             if step_id % args.log_period == 0:
                 _logger.info(
-                    "train_epoch {} step {} loss {:.6f}, class loss {:.6f}, l2 loss {:.6f}".
-                    format(epoch_id, step_id, loss_1[0], loss_2[0], loss_3[0]))
+                    "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
+                    format(epoch_id, step_id, lr_np[0], loss_1[0], loss_2[0],
+                           loss_3[0]))
         val_acc1s = []
         val_acc5s = []
         for step_id, data in enumerate(valid_loader):
