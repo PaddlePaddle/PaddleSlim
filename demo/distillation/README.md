@@ -25,7 +25,7 @@ data: imagenet
 
 ### 2. 启动训练
 
-在配置好IMAGENET数据集后，用以下命令启动训练即可:
+在配置好ImageNet数据集后，用以下命令启动训练即可:
 
 ```shell
 CUDA_VISIBLE_DEVICES=0,1,2,3 python distill.py
@@ -36,3 +36,5 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python distill.py
 对比不使用蒸馏策略的基线模型(Top-1/Top-5: 70.99%/89.68%)，
 
 经过120轮的蒸馏训练，MobileNet模型的Top-1/Top-5准确率达到72.77%/90.68%, Top-1/Top-5性能提升+1.78%/+1.00%
+
+详细实验数据请参见[PaddleSlim模型库蒸馏部分](https://paddlepaddle.github.io/PaddleSlim/model_zoo/#13)
