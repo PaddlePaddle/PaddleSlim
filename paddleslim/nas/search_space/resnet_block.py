@@ -45,7 +45,7 @@ class ResNetBlockSpace(SearchSpaceBase):
         self.k_size = np.array([3, 5])
 
     def init_tokens(self):
-        return get_random_tokens(self.range_table)
+        return get_random_tokens(self.range_table())
 
     def range_table(self):
         range_table_base = []

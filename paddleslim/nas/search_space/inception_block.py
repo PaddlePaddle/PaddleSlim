@@ -58,7 +58,7 @@ class InceptionABlockSpace(SearchSpaceBase):
         """
         The initial token.
         """
-        return get_random_tokens(self.range_table)
+        return get_random_tokens(self.range_table())
 
     def range_table(self):
         """
@@ -287,7 +287,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
         """
         The initial token.
         """
-        return get_random_tokens(self.range_table)
+        return get_random_tokens(self.range_table())
 
     def range_table(self):
         """

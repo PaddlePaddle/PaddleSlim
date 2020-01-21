@@ -60,7 +60,7 @@ class MobileNetV2BlockSpace(SearchSpaceBase):
         self.scale = scale
 
     def init_tokens(self):
-        return get_random_tokens(self.range_table)
+        return get_random_tokens(self.range_table())
 
     def range_table(self):
         range_table_base = []
@@ -307,7 +307,7 @@ class MobileNetV1BlockSpace(SearchSpaceBase):
         self.scale = scale
 
     def init_tokens(self):
-        return get_random_tokens(self.range_table)
+        return get_random_tokens(self.range_table())
 
     def range_table(self):
         range_table_base = []
