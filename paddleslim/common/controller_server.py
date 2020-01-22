@@ -90,10 +90,18 @@ class ControllerServer(object):
                     (self._search_steps))) and not self._closed:
                 conn, addr = self._socket_server.accept()
                 message = conn.recv(1024).decode()
+                _logger.debug(message)
                 if message.strip("\n") == "next_tokens":
                     tokens = self._controller.next_tokens()
                     tokens = ",".join([str(token) for token in tokens])
                     conn.send(tokens.encode())
+                elif message.strip("\n") == "current_info":
+                    current_info = dict()
+                    current_info['best_tokens'] = self._controller.best_tokens
+                    current_info['best_reward'] = self._controller.max_reward
+                    current_info[
+                        'current_tokens'] = self._controller.current_tokens
+                    conn.send(str(current_info).encode())
                 else:
                     _logger.debug("recv message from {}: [{}]".format(addr,
                                                                       message))

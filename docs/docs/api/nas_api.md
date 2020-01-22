@@ -32,7 +32,7 @@ paddleslim.nas.SANAS(configs, server_addr=("", 8881), init_temperature=None, red
 ```python
 from paddleslim.nas import SANAS
 config = [('MobileNetV2Space')]
-sanas = SANAS(config=config)
+sanas = SANAS(configs=config)
 ```
 
 !!! note "Note"
@@ -46,6 +46,33 @@ sanas = SANAS(config=config)
   - 初始化温度和退火率的设置: <br>
     - 如果原本就有一个较好的初始化token，想要基于这个较好的token来进行搜索的话，SA算法可以处于一个较为稳定的状态进行搜索r这种情况下初始温度可以设置的低一些，例如设置为1.0，退火率设置的大一些，例如设置为0.85。如果想要基于这个较好的token利用贪心算法进行搜索，即只有当本轮token训练得到的score大于SA算法中保存的score，SA算法才接收本轮token，则退火率可设置为一个极小的数字，例如设置为0.85 ** 10。<br>
     - 初始化token如果是随机生成的话，代表初始化token是一个比较差的token，SA算法可以处于一种不稳定的阶段进行搜索，尽可能的随机探索所有可能得token，从而找到一个较好的token。初始温度可以设置的高一些，例如设置为1000，退火率相对设置的小一些。
+
+
+paddleslim.nas.SANAS.next_archs()
+: 获取下一组模型结构。
+
+**返回：**
+返回模型结构实例的列表，形式为list。
+
+**示例代码：**
+```python
+import paddle.fluid as fluid
+input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+archs = sanas.next_archs()
+for arch in archs:
+    output = arch(input)
+    input = output
+```
+
+paddleslim.nas.SANAS.reward(score)
+: 把当前模型结构的得分情况回传。
+
+**参数：**
+
+- **score<float>:** - 当前模型的得分，分数越大越好。
+
+**返回：**
+模型结构更新成功或者失败，成功则返回`True`，失败则返回`False`。
 
 
 paddlesim.nas.SANAS.tokens2arch(tokens)
@@ -67,33 +94,6 @@ for arch in archs:
     output = arch(input)
     input = output
 ```
-
-paddleslim.nas.SANAS.next_archs()
-: 获取下一组模型结构。
-
-**返回：**
-返回模型结构实例的列表，形式为list。
-
-**示例代码：**
-```python
-import paddle.fluid as fluid
-input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
-archs = sanas.next_archs()
-for arch in archs:
-    output = arch(input)
-    input = output
-```
-
-
-paddleslim.nas.SANAS.reward(score)
-: 把当前模型结构的得分情况回传。
-
-**参数：**
-
-- **score<float>:** - 当前模型的得分，分数越大越好。
-
-**返回：**
-模型结构更新成功或者失败，成功则返回`True`，失败则返回`False`。
 
 paddleslim.nas.SANAS.current_info()
 : 返回当前token和搜索过程中最好的token和reward。
