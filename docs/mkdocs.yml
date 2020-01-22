@@ -8,7 +8,7 @@ nav:
   - 量化训练: tutorials/quant_aware_demo.md
   - Embedding量化: tutorials/quant_embedding_demo.md
   - SA搜索: tutorials/nas_demo.md
-    - 搜索空间: search_space.md
+  - 搜索空间: search_space.md
   - 知识蒸馏: tutorials/distillation_demo.md
 - API:
   - 量化: api/quantization_api.md

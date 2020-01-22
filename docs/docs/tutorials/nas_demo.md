@@ -3,12 +3,13 @@
 本示例介绍如何使用网络结构搜索接口，搜索到一个更小或者精度更高的模型，该文档仅介绍paddleslim中SANAS的使用及如何利用SANAS得到模型结构，完整示例代码请参考sa_nas_mobilenetv2.py或者block_sa_nas_mobilenetv2.py。
 
 ## 接口介绍
-请参考<a href='../api/nas_api.md'>神经网络搜索API介绍</a>。
+请参考[神经网络搜索API介绍](https://paddlepaddle.github.io/PaddleSlim/api/nas_api/)。
 
 ### 1. 配置搜索空间
 
-详细的搜索空间配置可以参考<a href='../search_space.md'>搜索空间</a>。
-```
+详细的搜索空间配置可以参考[搜索空间介绍](https://paddlepaddle.github.io/PaddleSlim/search_space/)。
+
+```python
 config = [('MobileNetV2Space')]
 
 ```
