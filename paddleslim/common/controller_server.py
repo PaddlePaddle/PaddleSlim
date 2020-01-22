@@ -135,7 +135,7 @@ class ControllerServer(object):
                             )) > 1:
                             self._client.pop(key_client)
                             self._client_num -= 1
-                    _logger.info(
+                    _logger.debug(
                         "client: {}, client_num: {}, compare_time: {}".format(
                             self._client, self._client_num,
                             self._compare_time))
