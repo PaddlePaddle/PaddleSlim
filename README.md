@@ -68,11 +68,16 @@ We encapsulate each compression and search method to a compression strategy clas
 
 ### Knowledge Distillation
 
-- PaddleSlim supports the following losses added on any paired layers between teacher and student models:
-  - Flow of the solution procedure (FSP) loss.
-  - L2 loss.
+- Naive knowledge distillation: transfers dark knowledge by merging the teacher and student model into the same Program, and supports the following losses added on any paired layers between teacher and student models:
+  - Flow of the solution procedure (FSP) loss;
+  - L2 loss;
   - Softmax with cross-entropy loss.
 
+- Paddle large-scale scalable knowledge distillation framework [Pantheon](paddleslim/pantheon):  a universal solution for knowledge distillation, more flexible than the naive knowledge distillation,  and easier to scale to the large-scale application.
+  - Decouple the teacher and student models --- they run in different processes in the same or different nodes, and transfer knowledge via TCP/IP ports or local files;
+  - Friendly to assemble multiple teacher models and each of them can work in either online or offline mode independently;
+  - Merge knowledge from different teachers and make batch data for the student model automatically;
+  - Support the large-scale knowledge prediction of teacher models on multiple devices.
 ### Lightweight Network Architecture Search (Light-NAS)
 
 - PaddleSlim provides Simulated Annealing (SA)-based lightweight network architecture search method.
