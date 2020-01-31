@@ -160,7 +160,7 @@ distillation by following two simple steps.
 
 ```python
 
-from pantheon import Teacher
+from paddleslim.pantheon import Teacher
 ...
 
 teacher = Teacher(out_path=args.out_path, out_port=args.out_port)
@@ -181,7 +181,7 @@ teacher.start_knowledge_service(
    and get knowledge description and data generator for the student model
 
 ```python
-from pantheon import Student
+from paddleslim.pantheon import Student
 ...
 
 student = Student(merge_strategy={"result": "sum"})
@@ -210,7 +210,7 @@ The toy "knowledge distillation" system can be launched in three different modes
  The two teachers work in offline mode, and start them with given local file paths.
 
  ```shell
-export PYTHONPATH=../:$PYTHONPATH
+export PYTHONPATH=../../:$PYTHONPATH
 export CUDA_VISIBLE_DEVICES=0,1
 nohup python -u run_teacher1.py --use_cuda true --out_path teacher1_offline.dat > teacher1_offline.log 2>&1&
 export CUDA_VISIBLE_DEVICES=2
@@ -219,6 +219,7 @@ nohup python -u run_teacher2.py --use_cuda true --out_path teacher2_offline.dat 
  After the two executions both finished, start the student model with the two generated knowledge files.
 
  ```shell
+export PYTHONPATH=../../:$PYTHONPATH
  python -u run_student.py \
         --in_path0 teacher1_offline.dat \
         --in_path1 teacher2_offline.dat
@@ -230,7 +231,7 @@ nohup python -u run_teacher2.py --use_cuda true --out_path teacher2_offline.dat 
 The two teachers work in online mode, and start them with given TCP/IP ports. Please make sure that the ICP/IP ports are available.
 
 ```shell
-export PYTHONPATH=../:$PYTHONPATH
+export PYTHONPATH=../../:$PYTHONPATH
 export CUDA_VISIBLE_DEVICES=0
 nohup python -u run_teacher1.py --use_cuda true --out_port 8080  > teacher1_online.log 2>&1&
 export CUDA_VISIBLE_DEVICES=1,2
@@ -239,7 +240,7 @@ nohup python -u run_teacher2.py --use_cuda true --out_port 8081  > teacher2_onli
 Start the student model with the IP addresses that can reach the ports of the two teacher models, e.g., in the same node
 
 ```shell
-export PYTHONPATH=../:$PYTHONPATH
+export PYTHONPATH=../../:$PYTHONPATH
 python -u run_student.py \
          --in_address0 127.0.0.1:8080 \
          --in_address1 127.0.0.1:8081 \

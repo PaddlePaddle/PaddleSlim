@@ -31,7 +31,7 @@ from threading import Thread
 
 import paddle.fluid as fluid
 
-from pantheon.utils import convert_dtype, EndSignal, SyncSignal, StartSignal, public_authkey
+from paddleslim.pantheon.utils import convert_dtype, EndSignal, SyncSignal, StartSignal, public_authkey
 
 __all__ = ["Teacher"]
 

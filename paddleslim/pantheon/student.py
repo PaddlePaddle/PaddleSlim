@@ -26,7 +26,7 @@ from multiprocessing.managers import BaseManager
 
 from threading import Thread
 
-from pantheon.utils import EndSignal, SyncSignal, StartSignal, public_authkey
+from paddleslim.pantheon.utils import EndSignal, SyncSignal, StartSignal, public_authkey
 
 __all__ = ["Student"]
 
