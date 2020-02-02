@@ -131,11 +131,14 @@ class Student(object):
 
                 def get_cmd():
                     cmd, end_recved = None, False
-                    if not cmd_queue.empty():
-                        cmd = cmd_queue.get()
-                        cmd_queue.task_done()
-                        if isinstance(cmd, EndSignal):
-                            end_recved = True
+                    try:
+                        if not cmd_queue.empty():
+                            cmd = cmd_queue.get()
+                            cmd_queue.task_done()
+                            if isinstance(cmd, EndSignal):
+                                end_recved = True
+                    except IOError:
+                        end_recved = True
                     return cmd, end_recved
 
                 # wait for the sync in start
@@ -169,7 +172,7 @@ class Student(object):
                             try:
                                 data = pickle.load(fin)
                                 out_queue.put(data)
-                                cmd, end_recved = get_cmd()
+                                _, end_recved = get_cmd()
                             except EOFError:
                                 break
                     if end_recved:
@@ -450,5 +453,8 @@ class Student(object):
     def __del__(self):
         for i, path in enumerate(self._in_paths):
             if path:
-                self._cmd_queues[i].put(EndSignal())
-                self._cmd_queues[i].join()
+                try:
+                    self._cmd_queues[i].put(EndSignal())
+                    self._cmd_queues[i].join()
+                except:
+                    pass
