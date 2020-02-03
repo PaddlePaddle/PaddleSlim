@@ -11,18 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import absolute_import
 from .pruner import *
-import pruner
+from ..prune import pruner
 from .auto_pruner import *
 import auto_pruner
 from .sensitive_pruner import *
-import sensitive_pruner
+from ..prune import sensitive_pruner
 from .sensitive import *
-import sensitive
-from prune_walker import *
-import prune_walker
+from ..prune import sensitive
+from .prune_walker import *
+from ..prune import prune_walker
 from io import *
-import io
+from ..prune import io
 
 __all__ = []
 
