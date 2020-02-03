@@ -211,7 +211,9 @@ class Student(object):
                 queue.join()
 
     def start(self):
-        """End teachers' registration and synchronize with all of them."""
+        """
+        End teachers' registration and synchronize with all of them.
+        """
 
         if self._started:
             raise ValueError(
@@ -236,12 +238,13 @@ class Student(object):
         return knowledge
 
     def send(self, data, teacher_ids=None):
-        """ Send data to teachers.
+        """ 
+        Send data to teachers.
 
-            Args:
-                data: A Python data object.
-                teacher_ids (list|None): A list of teacher ids to send data. If 
-                    set to None, send the data to all teachers. Default None.
+        Args:
+            data: A Python data object.
+            teacher_ids (list|None): A list of teacher ids to send data. If 
+                set to None, send the data to all teachers. Default None.
         """
         if not self._started:
             raise ValueError("The method start() should be called first!")

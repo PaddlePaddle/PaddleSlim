@@ -14,7 +14,8 @@ nav:
   - 量化: api/quantization_api.md
   - 剪枝与敏感度:  api/prune_api.md
   - 模型分析: api/analysis_api.md
-  - 知识蒸馏: api/single_distiller_api.md
+  - 简单知识蒸馏: api/single_distiller_api.md
+  - 大规模可扩展知识蒸馏框架 Pantheon: api/pantheon_api.md
   - SA搜索: api/nas_api.md
   - 硬件延时评估表: table_latency.md
 - 算法原理: algo/algo.md
