@@ -241,7 +241,7 @@ class Student(object):
             Args:
                 data: A Python data object.
                 teacher_ids (list|None): A list of teacher ids to send data. If 
-                    set to None, send the data to all teachers.
+                    set to None, send the data to all teachers. Default None.
         """
         if not self._started:
             raise ValueError("The method start() should be called first!")
@@ -257,10 +257,14 @@ class Student(object):
                       "offline mode.".format(i))
 
     def recv(self, teacher_id):
-        """Receive data from one teacher.
+        """
+        Receive data from one teacher.
        
-            Args:
-                teacher_id (int): The id of teacher that receives data from.
+        Args:
+            teacher_id (int): The id of teacher that receives data from.
+
+        Return:
+            The received data object.
         """
         if not self._started:
             raise ValueError("The method start() should be called first!")
@@ -274,8 +278,12 @@ class Student(object):
                              "offline.".format(teacher_id))
 
     def get_knowledge_desc(self):
-        """ Get description for knowledge, including shape, data type and lod 
-            level for each schema.
+        """ 
+        Get description for knowledge, including shape, data type and lod 
+        level for each schema.
+
+        Return:
+            dict: Knowledge description.
         """
         if not self._started:
             raise ValueError("The method start() should be called first!")
@@ -305,20 +313,33 @@ class Student(object):
         return self._knowledge_desc
 
     def get_knowledge_qsize(self):
-        """Get the real-time size of knowledge queue."""
+        """
+        Get the real-time size of knowledge queue. If this size is denoted as 
+        **qsize**, it means that there are **qsize** batch knowledge data 
+        already pushed into knowledge queue and waiting for the knowledge 
+        generator to pop out. It's dynamic and limited up to 100, the capacity 
+        of the knowledge queue.
+        
+        Return:
+            int: The real-time size of knowledge queue.
+        """
         if not self._started:
             raise ValueError("The method start() should be called first!")
 
         return self._knowledge_queue.qsize()
 
     def get_knowledge_generator(self, batch_size, drop_last=False):
-        """ Get the generator for knowledge data, return None if last generator 
-            doesn't finish yet.
+        """ 
+        Get the generator for knowledge data, return None if last generator 
+        doesn't finish yet.
 
         Args:
             batch_size (int): The batch size of returned knowledge data.
             drop_last (bool): Whether to drop the last batch if its size is less 
                               than batch size.
+
+        Return:
+            func: The wrapper of knowledge data generator.
         """
         if not self._started:
             raise ValueError("The method start() should be called first!")

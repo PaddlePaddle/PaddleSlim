@@ -78,13 +78,13 @@ class MixedDataReader(object):
 class Teacher(object):
     """
     The class defined for the teacher model. Generate knowledge data and 
-    send them to the student model.
+    transfer them to the student model.
 
     Args:
-        out_path (str|None): The path to dump knowledge for offline learning.
-        out_port (int|None): The IP port number to send knowledge for online 
-            learning, should be unique when launching multiple teachers in 
-            the same machine.
+        out_path (str|None): The path to dump knowledge for offline mode.
+        out_port (int|None): The IP port number to send out knowledge for 
+            online mode, should be unique when launching multiple teachers in 
+            the same node.
     """
 
     def __init__(self, out_path=None, out_port=None):
@@ -131,8 +131,9 @@ class Teacher(object):
         return manager
 
     def start(self):
-        """ Start teacher service, sychronize with student and launch the thread 
-            to monitor commands from student. 
+        """ 
+        Start teacher service, sychronize with student and launch the thread 
+        to monitor commands from student. 
         """
         if self._started:
             raise ValueError(
@@ -178,7 +179,12 @@ class Teacher(object):
                 break
 
     def send(self, data):
-        """Send one data object to student."""
+        """
+        Send one data object to student.
+        
+        Args:
+            data (Python data): The data to be sent, can be any type of Python data object. 
+        """
         if not self._started:
             raise ValueError("The method start() should be called first!")
 
@@ -188,7 +194,12 @@ class Teacher(object):
         self._t2s_queue.put(data)
 
     def recv(self):
-        """ Recieve one data object from student. """
+        """
+        Recieve one data object from student. 
+
+        Return:
+            The received data, can be any type of Python data object.
+        """
         if not self._started:
             raise ValueError("The method start() should be called first!")
 
@@ -201,7 +212,13 @@ class Teacher(object):
         return data
 
     def dump(self, knowledge):
-        """Dump one batch knowledge data into output file."""
+        """
+        Dump one batch knowledge data into output file, only used in the 
+        offline mode.
+
+        Args:
+            knowledge (dict): The knowledge data to be dumped.  
+        """
         if not self._started:
             raise ValueError("The method start() should be called first!")
 
@@ -242,9 +259,10 @@ class Teacher(object):
                                 times=1):
         """
         Start the knowledge service to generate and transfer knowledge data.
-        The devices to execute knowledge prediction will be determined by 
-        environment variable 'CUDA_VISIBLE_DEVICES' in GPU mode and by 
-        'CPU_NUM' (default 1) in CPU mode. Only supported in static graph. 
+        In GPU mode, the devices to execute knowledge prediction will be 
+        determined by environment variable **FLAGS_selected_gpus**, or by 
+        **CUDA_VISIBLE_DEVICES** if it is not set, and by **CPU_NUM** (default 
+        1) in CPU mode. Only supported in static graph. 
 
         Args:
             feed_list (list): A list of feed Variables or their names for the 
