@@ -4,11 +4,12 @@ nav:
 - Home: index.md
 - 模型库: model_zoo.md
 - 教程:
+  - 图像分类模型通道剪裁-快速开始: tutorials/pruning_tutorial.md
   - 离线量化: tutorials/quant_post_demo.md
   - 量化训练: tutorials/quant_aware_demo.md
   - Embedding量化: tutorials/quant_embedding_demo.md
   - SA搜索: tutorials/nas_demo.md
-  - 搜索空间: tutorials/search_space.md
+  - 搜索空间: search_space.md
   - 知识蒸馏: tutorials/distillation_demo.md
 - API:
   - 量化: api/quantization_api.md
