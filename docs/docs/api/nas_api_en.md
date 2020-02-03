@@ -83,4 +83,38 @@ sanas.reward(float(score))
 ```
 
 paddlesim.nas.SANAS.tokens2arch(tokens)
-: get corresponding model by tokens, use final token
+: get corresponding model by tokens, use final tokens to train final experiment usually. `tokens` is a list, a list of token corresponds a model architecture.
+
+**Args:**
+
+- **tokens(list):** - a list of token. The length and range based on search space.
+
+**Return:**
+a model architecture instance according to tokens.
+
+**Example:**
+```python
+import paddle.fluid as fluid
+from paddleslim.nas import SANAS
+config = [('MobileNetV2Space')]
+sanas = SANAS(configs=config)
+input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+tokens = ([0] * 25)
+archs = sanas.tokens2arch(tokens)[0]
+print(archs(input))
+```
+
+paddleslim.nas.SANAS.current_info()
+: get current token and best token and reward in search.
+
+**Return:**
+A dictionary including current token, best token and reward in search.
+
+**Example:**
+```python
+import paddle.fluid as fluid
+from paddleslim.nas import SANAS
+config = [('MobileNetV2Space')]
+sanas = SANAS(configs=config)
+print(sanas.current_info())
+```
