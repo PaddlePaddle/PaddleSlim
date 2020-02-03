@@ -15,6 +15,8 @@
 import argparse
 from paddleslim.pantheon import Student
 
+from utils import str2bool
+
 
 def parse_args():
     parser = argparse.ArgumentParser(__doc__)
@@ -40,7 +42,7 @@ def parse_args():
         help="Input file path for teacher 1. (default: %(default)s)")
     parser.add_argument(
         "--test_send_recv",
-        type=bool,
+        type=str2bool,
         default=False,
         help="Whether to test send/recv interfaces. (default: %(default)s)")
     parser.add_argument(

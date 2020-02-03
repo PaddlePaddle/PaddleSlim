@@ -2,6 +2,10 @@ import numpy as np
 import argparse
 
 
+def str2bool(v):
+    return v.lower() in ("true", "t", "1")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument(
@@ -16,12 +20,12 @@ def parse_args():
         help="The file path to dump knowledge data. (default: %(default)s)")
     parser.add_argument(
         "--use_cuda",
-        type=bool,
+        type=str2bool,
         default=False,
         help="Whether to use GPU for prediction. (default: %(default)s)")
     parser.add_argument(
         "--test_send_recv",
-        type=bool,
+        type=str2bool,
         default=False,
         help="Whether to test send/recv interfaces. (default: %(default)s)")
     parser.add_argument(
