@@ -64,7 +64,7 @@ class SensitivePruner(object):
 
         exe = fluid.Executor(self._place)
         checkpoints = self._checkpoints if checkpoints is None else checkpoints
-        print("check points: {}".format(checkpoints))
+        _logger.info("check points: {}".format(checkpoints))
         main_program = None
         eval_program = None
         if checkpoints is not None:
@@ -87,8 +87,9 @@ class SensitivePruner(object):
                 with fluid.scope_guard(self._scope):
                     fluid.io.load_persistables(exe, latest_ck_path,
                                                main_program, "__params__")
-                print("load checkpoint from: {}".format(latest_ck_path))
-                print("flops of eval program: {}".format(flops(eval_program)))
+                _logger.info("load checkpoint from: {}".format(latest_ck_path))
+                _logger.info("flops of eval program: {}".format(
+                    flops(eval_program)))
         return main_program, eval_program, self._iter
 
     def greedy_prune(self,
@@ -108,7 +109,7 @@ class SensitivePruner(object):
                 self._eval_func,
                 sensitivities_file=sensitivities_file,
                 pruned_flops_rate=pruned_flops_rate)
-        print sensitivities
+        _logger.info(sensitivities)
         params, ratios = self._greedy_ratio_by_sensitive(sensitivities, topk)
 
         _logger.info("Pruning: {} by {}".format(params, ratios))
@@ -152,7 +153,7 @@ class SensitivePruner(object):
                 self._eval_func,
                 sensitivities_file=sensitivities_file,
                 step_size=0.1)
-        print sensitivities
+        _logger.info(sensitivities)
         _, ratios = self.get_ratios_by_sensitive(sensitivities, pruned_flops,
                                                  eval_program)
 

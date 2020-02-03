@@ -15,9 +15,10 @@
 import os
 import logging
 import socket
+import time
 from .log_helper import get_logger
 from threading import Thread
-from .lock_utils import lock, unlock
+from .lock import lock, unlock
 
 __all__ = ['ControllerServer']
 
@@ -41,7 +42,8 @@ class ControllerServer(object):
             address(tuple): The address of current server binding with format (ip, port). Default: ('', 0).
                             which means setting ip automatically
             max_client_num(int): The maximum number of clients connecting to current server simultaneously. Default: 100.
-            search_steps(int): The total steps of searching. None means never stopping. Default: None 
+            search_steps(int|None): The total steps of searching. None means never stopping. Default: None 
+            key(str|None): Config information. Default: None.
         """
         self._controller = controller
         self._address = address
@@ -51,6 +53,9 @@ class ControllerServer(object):
         self._port = address[1]
         self._ip = address[0]
         self._key = key
+        self._client_num = 0
+        self._client = dict()
+        self._compare_time = 172800  ### 48 hours
 
     def start(self):
         self._socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -85,23 +90,59 @@ class ControllerServer(object):
                     (self._search_steps))) and not self._closed:
                 conn, addr = self._socket_server.accept()
                 message = conn.recv(1024).decode()
+                _logger.debug(message)
                 if message.strip("\n") == "next_tokens":
                     tokens = self._controller.next_tokens()
                     tokens = ",".join([str(token) for token in tokens])
                     conn.send(tokens.encode())
+                elif message.strip("\n") == "current_info":
+                    current_info = dict()
+                    current_info['best_tokens'] = self._controller.best_tokens
+                    current_info['best_reward'] = self._controller.max_reward
+                    current_info[
+                        'current_tokens'] = self._controller.current_tokens
+                    conn.send(str(current_info).encode())
                 else:
                     _logger.debug("recv message from {}: [{}]".format(addr,
                                                                       message))
                     messages = message.strip('\n').split("\t")
-                    if (len(messages) < 4) or (messages[0] != self._key):
+                    if (len(messages) < 5) or (messages[0] != self._key):
                         _logger.debug("recv noise from {}: [{}]".format(
                             addr, message))
                         continue
                     tokens = messages[1]
                     reward = messages[2]
                     iter = messages[3]
+                    client_name = messages[4]
+
+                    one_step_time = -1
+                    if client_name in self._client.keys():
+                        current_time = time.time() - self._client[client_name]
+                        if current_time > one_step_time:
+                            one_step_time = current_time
+                            self._compare_time = 2 * one_step_time
+
+                    if client_name not in self._client.keys():
+                        self._client[client_name] = time.time()
+                        self._client_num += 1
+
+                    self._client[client_name] = time.time()
+
+                    for key_client in self._client.keys():
+                        ### if a client not request token in double train one tokens' time, we think this client was stoped.
+                        if (time.time() - self._client[key_client]
+                            ) > self._compare_time and len(self._client.keys(
+                            )) > 1:
+                            self._client.pop(key_client)
+                            self._client_num -= 1
+                    _logger.debug(
+                        "client: {}, client_num: {}, compare_time: {}".format(
+                            self._client, self._client_num,
+                            self._compare_time))
                     tokens = [int(token) for token in tokens.split(",")]
-                    self._controller.update(tokens, float(reward), int(iter))
+                    self._controller.update(tokens,
+                                            float(reward),
+                                            int(iter), int(self._client_num))
                     response = "ok"
                     conn.send(response.encode())
                     _logger.debug("send message to {}: [{}]".format(addr,
