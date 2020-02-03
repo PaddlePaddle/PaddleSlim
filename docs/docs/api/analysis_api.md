@@ -19,7 +19,7 @@ paddleslim.analysis.flops(program, detail=False) [源代码](https://github.com/
 
 **示例：**
 
-```
+```python
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
 from paddleslim.analysis import flops
@@ -90,7 +90,7 @@ paddleslim.analysis.model_size(program) [源代码](https://github.com/PaddlePad
 
 **示例：**
 
-```
+```python
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
 from paddleslim.analysis import model_size

@@ -10,7 +10,7 @@
 
 ### 1. 配置量化参数
 
-```
+```python
 quant_config = {
     'weight_quantize_type': 'abs_max',
     'activation_quantize_type': 'moving_average_abs_max',
@@ -27,7 +27,7 @@ quant_config = {
 
 ### 2. 对训练和测试program插入可训练量化op
 
-```
+```python
 val_program = quant_aware(val_program, place, quant_config, scope=None, for_test=True)
 
 compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, for_test=False)
@@ -35,7 +35,7 @@ compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, f
 
 ### 3.关掉指定build策略
 
-```
+```python
 build_strategy = fluid.BuildStrategy()
 build_strategy.fuse_all_reduce_ops = False
 build_strategy.sync_batch_norm = False
@@ -48,7 +48,7 @@ compiled_train_prog = compiled_train_prog.with_data_parallel(
 
 ### 4. freeze program
 
-```
+```python
 float_program, int8_program = convert(val_program, 
                                       place,
                                       quant_config,
@@ -58,7 +58,7 @@ float_program, int8_program = convert(val_program,
 
 ### 5.保存预测模型
 
-```
+```python
 fluid.io.save_inference_model(
     dirname=float_path,
     feeded_var_names=[image.name],

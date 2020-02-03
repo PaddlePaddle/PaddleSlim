@@ -157,7 +157,7 @@ class AutoPruner(object):
 
     def _constrain_func(self, tokens):
         ratios = self._tokens2ratios(tokens)
-        pruned_program = self._pruner.prune(
+        pruned_program, _, _ = self._pruner.prune(
             self._program,
             self._scope,
             self._params,
@@ -183,7 +183,7 @@ class AutoPruner(object):
             Program: The pruned program.
         """
         self._current_ratios = self._next_ratios()
-        pruned_program = self._pruner.prune(
+        pruned_program, _, _ = self._pruner.prune(
             program,
             self._scope,
             self._params,
@@ -193,7 +193,7 @@ class AutoPruner(object):
             param_backup=self._param_backup)
         pruned_val_program = None
         if eval_program is not None:
-            pruned_val_program = self._pruner.prune(
+            pruned_val_program, _, _ = self._pruner.prune(
                 program,
                 self._scope,
                 self._params,

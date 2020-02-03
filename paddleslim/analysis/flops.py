@@ -36,7 +36,7 @@ def flops(program, only_conv=True, detail=False):
     return _graph_flops(graph, only_conv=only_conv, detail=detail)
 
 
-def _graph_flops(graph, only_conv=False, detail=False):
+def _graph_flops(graph, only_conv=True, detail=False):
     assert isinstance(graph, GraphWrapper)
     flops = 0
     params2flops = {}
@@ -71,7 +71,8 @@ def _graph_flops(graph, only_conv=False, detail=False):
             flops += op_flops
             params2flops[op.inputs("Y")[0].name()] = op_flops
 
-        elif op.type() in ['relu', 'sigmoid', 'batch_norm', 'relu6'] and not only_conv:
+        elif op.type() in ['relu', 'sigmoid', 'batch_norm', 'relu6'
+                           ] and not only_conv:
             input_shape = list(op.inputs("X")[0].shape())
             if input_shape[0] == -1:
                 input_shape[0] = 1

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import math
+import numpy as np
 
 
 def compute_downsample_num(input_size, output_size):
@@ -36,3 +37,11 @@ def check_points(count, points):
             return (True if count in points else False)
         else:
             return (True if count == points else False)
+
+
+def get_random_tokens(range_table):
+    tokens = []
+    for idx, max_value in enumerate(range_table):
+        tokens_idx = int(np.floor(range_table[idx] * np.random.rand(1)))
+        tokens.append(tokens_idx)
+    return tokens
