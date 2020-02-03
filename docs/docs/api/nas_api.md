@@ -16,10 +16,10 @@ paddleslim.nas.SANAS(configs, server_addr=("", 8881), init_temperature=None, red
 **参数：**
 
 - **configs(list<tuple>)** - 搜索空间配置列表，格式是`[(key, {input_size, output_size, block_num, block_mask})]`或者`[(key)]`（MobileNetV2、MobilenetV1和ResNet的搜索空间使用和原本网络结构相同的搜索空间，所以仅需指定`key`即可）, `input_size` 和`output_size`表示输入和输出的特征图的大小，`block_num`是指搜索网络中的block数量，`block_mask`是一组由0和1组成的列表，0代表不进行下采样的block，1代表下采样的block。 更多paddleslim提供的搜索空间配置可以参考[Search Space](../search_space.md)。
-- **server_addr(tuple)** - SANAS的地址，包括server的ip地址和端口号，如果ip地址为None或者为""的话则默认使用本机ip。默认：（"", 8881）。
-- **init_temperature(float)** - 基于模拟退火进行搜索的初始温度。如果init_template为None而且init_tokens为None，则默认初始温度为10.0，如果init_template为None且init_tokens不为None，则默认初始温度为1.0。详细的温度设置可以参考下面的Note。默认：None。
+- **server_addr(tuple)** - 服务器端的地址，包括server的ip地址和端口号，如果`is_server = True`而且ip地址为None或者为""的话则默认使用本机ip。默认：（"", 8881）。
+- **init_temperature(float)** - 基于模拟退火进行搜索的初始温度。如果`init_temperature`为None而且`init_tokens`为None，则默认初始温度为10.0，如果`init_temperature`为None且`init_tokens`不为None，则默认初始温度为1.0。详细的温度设置可以参考下面的Note。默认：None。
 - **reduce_rate(float)** - 基于模拟退火进行搜索的衰减率。详细的退火率设置可以参考下面的Note。默认：0.85。
-- **init_tokens(list|None)** - 初始化token，若init_tokens为空，则SA算法随机生成初始化tokens。默认：None。
+- **init_tokens(list|None)** - 初始化token，若`init_tokens`为None，则SA算法随机生成初始化tokens。默认：None。
 - **search_steps(int)** - 搜索过程迭代的次数。默认：300。
 - **save_checkpoint(str|None)** - 保存checkpoint的文件目录，如果设置为None的话则不保存checkpoint。默认：`./nas_checkpoint`。
 - **load_checkpoint(str|None)** - 加载checkpoint的文件目录，如果设置为None的话则不加载checkpoint。默认：None。
@@ -37,7 +37,7 @@ sanas = SANAS(configs=config)
 
 !!! note "Note"
   - 初始化温度和退火率的意义: <br>
-    - SA算法内部会保存一个基础token（初始化token可以自己传入也可以随机生成）和基础score（初始化score为-1），下一个token会在当前SA算法保存的token的基础上产生。在SA的搜索过程中，如果本轮的token训练得到的score大于SA算法中保存的score，则本轮的token一定会被SA算法接收保存为下一轮token产生的基础token。<br>
+    - SA算法内部会保存一个基础token（初始化token是第一个基础token，可以自己传入也可以随机生成）和基础score（初始化score为-1），下一个token会在当前SA算法保存的token的基础上产生。在SA的搜索过程中，如果本轮的token训练得到的score大于SA算法中保存的score，则本轮的token一定会被SA算法接收保存为下一轮token产生的基础token。<br>
     - 初始温度越高表示SA算法当前处的阶段越不稳定，本轮的token训练得到的score小于SA算法中保存的score的话，本轮的token和score被SA算法接收的可能性越大。<br>
     - 初始温度越低表示SA算法当前处的阶段越稳定，本轮的token训练得到的score小于SA算法中保存的score的话，本轮的token和score被SA算法接收的可能性越小。<br>
     - 退火率越大，表示SA算法收敛的越慢，即SA算法越慢到稳定阶段。<br>
@@ -97,7 +97,7 @@ paddlesim.nas.SANAS.tokens2arch(tokens)
 
 **参数：**
 
-- **tokens(list):** - 一组tokens。tokens的长度和范取决于搜索空间。
+- **tokens(list):** - 一组tokens。tokens的长度和取值范围取决于搜索空间。
 
 **返回：**
 根据传入的token得到一个模型结构实例。
