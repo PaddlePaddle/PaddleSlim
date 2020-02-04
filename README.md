@@ -190,6 +190,7 @@ PaddleSlim是PaddlePaddle框架的一个子模块，主要用于压缩图像领�
 
 - 轻量神经网络结构自动搜索（Light-NAS）
   - 支持基于进化算法的轻量神经网络结构自动搜索（Light-NAS）
+  - 支持One-Shot网络结构自动搜索（Ont-Shot-NAS）
   - 支持 FLOPS / 硬件延时约束
   - 支持多平台模型延时评估
 
