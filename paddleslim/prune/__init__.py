@@ -16,7 +16,7 @@ from __future__ import absolute_import
 from .pruner import *
 from ..prune import pruner
 from .auto_pruner import *
-import auto_pruner
+from ..prune import auto_pruner
 from .sensitive_pruner import *
 from ..prune import sensitive_pruner
 from .sensitive import *
