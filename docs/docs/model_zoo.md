@@ -10,7 +10,7 @@
 |MobileNetV1|quant_post|70.18%/89.25% (-0.81%/-0.43%)| 4.4 | - | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_quant_post.tar) |
 |MobileNetV1|quant_aware|70.60%/89.57% (-0.39%/-0.11%)| 4.4 | -| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_quant_aware.tar) |
 | MobileNetV2 | - |72.15%/90.65%| 15 | - | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
-| MobileNetV2 | quant_post |71.15%/90.11% (-1%/-0.54%)| 4.0| -| | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_quant_post.tar) |
+| MobileNetV2 | quant_post | 71.15%/90.11% (-1%/-0.54%)| 4.0   | - | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_quant_post.tar) |
 | MobileNetV2 | quant_aware |72.05%/90.63% (-0.1%/-0.02%)| 4.0 | - | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_quant_aware.tar) |
 |ResNet50|-|76.50%/93.00%| 99 | 2.71 | [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_pretrained.tar) |
 |ResNet50|quant_post|76.33%/93.02% (-0.17%/+0.02%)| 25.1| 1.19 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_post.tar) |
