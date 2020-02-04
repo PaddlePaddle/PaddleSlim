@@ -37,15 +37,15 @@ sanas = SANAS(configs=config)
 
 !!! note "Note"
   - 初始化温度和退火率的意义: <br>
-    - SA算法内部会保存一个基础token（初始化token是第一个基础token，可以自己传入也可以随机生成）和基础score（初始化score为-1），下一个token会在当前SA算法保存的token的基础上产生。在SA的搜索过程中，如果本轮的token对应的模型训练得到的score大于SA算法中保存的score，则本轮的token一定会被SA算法接收保存为下一轮token产生的基础token；如果本轮的token对应的模型训练得到的score小于SA算法中保存的score，则本轮token会以一定概率被SA算法接收保存为下一轮token产生的基础token。<br>
-    - 初始温度越高表示SA算法当前处的阶段越不稳定，本轮的token训练得到的score小于SA算法中保存的score的话，本轮的token和score被SA算法接收的可能性越大。<br>
-    - 初始温度越低表示SA算法当前处的阶段越稳定，本轮的token训练得到的score小于SA算法中保存的score的话，本轮的token和score被SA算法接收的可能性越小。<br>
+    - SA算法内部会保存一个基础token（初始化token是第一个基础token，可以自己传入也可以随机生成）和基础score（初始化score为-1），下一个token会在当前SA算法保存的token的基础上产生。在SA的搜索过程中，如果本轮的token对应的模型训练得到的score大于SA算法中保存的基础token对应的score，则本轮的token一定会被SA算法接收保存为下一轮token产生的基础token；如果本轮的token对应的模型训练得到的score小于SA算法中保存的基础token对应的score，则本轮token会以一定概率被SA算法接收保存为下一轮token产生的基础token。<br>
+    - 初始温度越高表示SA算法当前处的阶段越不稳定，表明本轮的token训练得到的score小于SA算法中保存的score的话，本轮的token和score被SA算法接收的可能性越大。<br>
+    - 初始温度越低表示SA算法当前处的阶段越稳定，表明本轮的token训练得到的score小于SA算法中保存的score的话，本轮的token和score被SA算法接收的可能性越小。<br>
     - 退火率越大，表示SA算法收敛的越慢，即SA算法越慢到稳定阶段。<br>
     - 退火率越低，表示SA算法收敛的越快，即SA算法越快到稳定阶段。<br>
 
   - 初始化温度和退火率的设置: <br>
-    - 如果原本就有一个较好的初始化token，想要基于这个较好的token来进行搜索的话，SA算法可以处于一个较为稳定的状态进行搜索r这种情况下初始温度可以设置的低一些，例如设置为1.0，退火率设置的大一些，例如设置为0.85。如果想要基于这个较好的token利用贪心算法进行搜索，即只有当本轮token训练得到的score大于SA算法中保存的score，SA算法才接收本轮token，则退火率可设置为一个极小的数字，例如设置为0.85 ** 10。<br>
-    - 初始化token如果是随机生成的话，代表初始化token是一个比较差的token，SA算法可以处于一种不稳定的阶段进行搜索，尽可能的随机探索所有可能得token，从而找到一个较好的token。初始温度可以设置的高一些，例如设置为1000，退火率相对设置的小一些。
+    - 如果原本就有一个较好的初始化token，想要基于这个较好的token来进行搜索的话，SA算法可以处于一个较为稳定的状态进行搜索r，这种情况下初始温度可以设置的低一些，例如设置为1.0，退火率设置的大一些，例如设置为0.85。如果想要基于这个较好的token利用贪心算法进行搜索，即只有当本轮token训练得到的score大于SA算法中保存的score，SA算法才接收本轮token，则退火率可设置为一个极小的数字，例如设置为0.85 ** 10。<br>
+    - 初始化token如果是随机生成的话，代表初始化token是一个比较差的token，SA算法可以处于一种不稳定的阶段进行搜索，尽可能的随机探索所有可能得token，从而找到一个较好的token。初始温度可以设置的高一些，例如设置为1000.0，退火率相对设置的小一些。
 
 
 paddleslim.nas.SANAS.next_archs()
