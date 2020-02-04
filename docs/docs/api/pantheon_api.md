@@ -70,25 +70,25 @@ pantheon.Teacher.start\_knowledge\_service(feed\_list, schema, program, reader\_
  - **program (fluid.Program):** - Inference Program of the teacher model.
  - **reader\_config (dict):** - The config for data reader. Support all the three types of generators used by [fluid.io.PyReader](https://www.paddlepaddle.org.cn/documentation/docs/en/api/io/PyReader.html) and [fluid.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/en/api/io/DataLoader.html#dataloader), and their configs contain the key-value pair of the generator type and a generator object, plus other necessary argument pairs. See the following:
 
-   - 1) sample generator:
+     1) **sample generator:**
 
-         ```
-         reader_config={"sample_generator": some_sample_generator,
-                       "batch_size": batch_size, "drop_last": drop_last}
-         # drop_last set to True by default
-         ```
+     ```
+     reader_config={"sample_generator": some_sample_generator,
+                    "batch_size": batch_size, "drop_last": drop_last}
+     # drop_last set to True by default
+     ```
 
-   - 2) sample list generator:
+     2) **sample list generator:**
 
-        ```
-         reader_config={"sample_list_generator": some_sample_list_generator}
-        ```
+     ```
+     reader_config={"sample_list_generator": some_sample_list_generator}
+     ```
 
-   - 3) batch generator:
+     3) **batch generator:**
 
-        ```
-        reader_config={"batch_generator": some_batch_genrator}
-        ```
+     ```
+     reader_config={"batch_generator": some_batch_genrator}
+     ```
 
      The trial to parse config will be in the order of 1) -> 3), and any other unrelated keys in these configs will be ignored.
 
