@@ -1,14 +1,16 @@
 
 ## OneShotSearch
-paddleslim.nas.one_shot.OneShotSearch(model, eval_func)[代码]()
+paddleslim.nas.one_shot.OneShotSearch(model, eval_func, strategy='sa')[代码]()
 
 : 从超级网络中搜索出一个最佳的子网络。
 
 **参数：**
 
-- **model(fluid.dygraph.layer):** 通过在`OneShotSuperNet`前后添加若该模块构建的动态图模块。因为`OneShotSuperNet`是一个超网络，所以`model`也是一个超网络。换句话说，在`model`模块的字模块中，至少有一个是`OneShotSuperNet`的实例。该方法从`model`超网络中搜索得到一个最佳的子网络。超网络`model`需要先被训练，具体细节请参考[OneShotSuperNet]()。
+- **model(fluid.dygraph.layer):** 通过在`OneShotSuperNet`前后添加若该模块构建的动态图模块。因为`OneShotSuperNet`是一个超网络，所以`model`也是一个超网络。换句话说，在`model`模块的子模块中，至少有一个是`OneShotSuperNet`的实例。该方法从`model`超网络中搜索得到一个最佳的子网络。超网络`model`需要先被训练，具体细节请参考[OneShotSuperNet]()。
 
 - **eval_func:** 用于评估子网络性能的回调函数。该回调函数需要接受`model`为参数，并调用`model`的`forward`方法进行性能评估。
+
+- **strategy(str):** 搜索策略的名称。默认为'sa'， 当前仅支持'sa'.
 
 **返回：**
 
