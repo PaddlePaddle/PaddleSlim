@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import one_shot_nas
+from __future__ import absolute_import
+from ..one_shot import one_shot_nas
 from .one_shot_nas import *
-import super_mnasnet
-from super_mnasnet import *
+from ..one_shot import super_mnasnet
+from .super_mnasnet import *
 __all__ = []
 __all__ += one_shot_nas.__all__
 __all__ += super_mnasnet.__all__

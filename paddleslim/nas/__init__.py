@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from ..nas import search_space
 from .search_space import *
 from ..nas import sa_nas
-from sa_nas import *
+from .sa_nas import *
 
 __all__ = []
 __all__ += sa_nas.__all__
