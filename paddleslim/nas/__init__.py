@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import search_space
+from __future__ import absolute_import
+from ..nas import search_space
 from .search_space import *
-import sa_nas
+from ..nas import sa_nas
 from sa_nas import *
 
 __all__ = []
