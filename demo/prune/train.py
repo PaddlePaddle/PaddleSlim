@@ -208,7 +208,7 @@ def compress(args):
         val_program,
         fluid.global_scope(),
         params=params,
-        ratios=[FLAGS.pruned_ratio] * len(params),
+        ratios=[args.pruned_ratio] * len(params),
         place=place,
         only_graph=True)
 
@@ -216,7 +216,7 @@ def compress(args):
         fluid.default_main_program(),
         fluid.global_scope(),
         params=params,
-        ratios=[FLAGS.pruned_ratio] * len(params),
+        ratios=[args.pruned_ratio] * len(params),
         place=place)
     _logger.info("FLOPs after pruning: {}".format(flops(pruned_program)))
     for i in range(args.num_epochs):
