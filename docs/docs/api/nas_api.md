@@ -37,7 +37,7 @@ sanas = SANAS(configs=config)
 
 !!! note "Note"
   - 初始化温度和退火率的意义: <br>
-    - SA算法内部会保存一个基础token（初始化token是第一个基础token，可以自己传入也可以随机生成）和基础score（初始化score为-1），下一个token会在当前SA算法保存的token的基础上产生。在SA的搜索过程中，如果本轮的token训练得到的score大于SA算法中保存的score，则本轮的token一定会被SA算法接收保存为下一轮token产生的基础token。<br>
+    - SA算法内部会保存一个基础token（初始化token是第一个基础token，可以自己传入也可以随机生成）和基础score（初始化score为-1），下一个token会在当前SA算法保存的token的基础上产生。在SA的搜索过程中，如果本轮的token对应的模型训练得到的score大于SA算法中保存的score，则本轮的token一定会被SA算法接收保存为下一轮token产生的基础token；如果本轮的token对应的模型训练得到的score小于SA算法中保存的score，则本轮token会以一定概率被SA算法接收保存为下一轮token产生的基础token。<br>
     - 初始温度越高表示SA算法当前处的阶段越不稳定，本轮的token训练得到的score小于SA算法中保存的score的话，本轮的token和score被SA算法接收的可能性越大。<br>
     - 初始温度越低表示SA算法当前处的阶段越稳定，本轮的token训练得到的score小于SA算法中保存的score的话，本轮的token和score被SA算法接收的可能性越小。<br>
     - 退火率越大，表示SA算法收敛的越慢，即SA算法越慢到稳定阶段。<br>
