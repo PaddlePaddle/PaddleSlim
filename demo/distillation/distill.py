@@ -11,7 +11,7 @@ import argparse
 import functools
 import numpy as np
 import paddle.fluid as fluid
-sys.path.append(sys.path[0] + "/../")
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments, _download, _decompress
 from paddleslim.dist import merge, l2_loss, soft_label_loss, fsp_loss
@@ -49,8 +49,8 @@ def piecewise_decay(args):
         devices_num = fluid.core.get_cuda_device_count()
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
-    step = int(math.ceil(float(args.total_images) /
-                         args.batch_size)) * devices_num
+    step = int(
+        math.ceil(float(args.total_images) / args.batch_size) / devices_num)
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = fluid.layers.piecewise_decay(boundaries=bd, values=lr)
@@ -66,8 +66,8 @@ def cosine_decay(args):
         devices_num = fluid.core.get_cuda_device_count()
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
-    step = int(math.ceil(float(args.total_images) /
-                         args.batch_size)) * devices_num
+    step = int(
+        math.ceil(float(args.total_images) / args.batch_size) / devices_num)
     learning_rate = fluid.layers.cosine_decay(
         learning_rate=args.lr, step_each_epoch=step, epochs=args.num_epochs)
     optimizer = fluid.optimizer.Momentum(
