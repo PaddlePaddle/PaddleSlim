@@ -34,7 +34,6 @@ def merge(teacher_program,
                                                     paddle run on which device.
         scope(Scope): The input scope
         name_prefix(str): Name prefix added for all vars of the teacher program.
-    Return(Program): Merged program.
     """
     teacher_program = teacher_program.clone(for_test=True)
     for teacher_var in teacher_program.list_vars():
@@ -51,7 +50,7 @@ def merge(teacher_program,
                 old_var = scope.var(teacher_var.name).get_tensor()
                 renamed_var = scope.var(new_name).get_tensor()
                 renamed_var.set(np.array(old_var), place)
-    
+
                 # program var rename
                 renamed_var = teacher_program.global_block()._rename_var(
                     teacher_var.name, new_name)
@@ -84,11 +83,13 @@ def merge(teacher_program,
                     attrs[attr_name] = op.attr(attr_name)
                 student_program.global_block().append_op(
                     type=op.type, inputs=inputs, outputs=outputs, attrs=attrs)
-    return student_program
 
 
-def fsp_loss(teacher_var1_name, teacher_var2_name, student_var1_name,
-             student_var2_name, program=fluid.default_main_program()):
+def fsp_loss(teacher_var1_name,
+             teacher_var2_name,
+             student_var1_name,
+             student_var2_name,
+             program=fluid.default_main_program()):
     """
     Combine variables from student model and teacher model by fsp-loss.
     Args:
@@ -115,7 +116,8 @@ def fsp_loss(teacher_var1_name, teacher_var2_name, student_var1_name,
     return fsp_loss
 
 
-def l2_loss(teacher_var_name, student_var_name,
+def l2_loss(teacher_var_name,
+            student_var_name,
             program=fluid.default_main_program()):
     """
     Combine variables from student model and teacher model by l2-loss.

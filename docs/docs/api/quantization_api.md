@@ -3,30 +3,51 @@
 ## 量化配置
 通过字典配置量化参数
 
-```
-quant_config_default = {
-    'weight_quantize_type': 'abs_max',
-    'activation_quantize_type': 'abs_max',
+```python
+TENSORRT_OP_TYPES = [
+    'mul', 'conv2d', 'pool2d', 'depthwise_conv2d', 'elementwise_add',
+    'leaky_relu'
+]
+TRANSFORM_PASS_OP_TYPES = ['conv2d', 'depthwise_conv2d', 'mul']
+
+QUANT_DEQUANT_PASS_OP_TYPES = [
+        "pool2d", "elementwise_add", "concat", "softmax", "argmax", "transpose",
+        "equal", "gather", "greater_equal", "greater_than", "less_equal",
+        "less_than", "mean", "not_equal", "reshape", "reshape2",
+        "bilinear_interp", "nearest_interp", "trilinear_interp", "slice",
+        "squeeze", "elementwise_sub", "relu", "relu6", "leaky_relu", "tanh", "swish"
+    ]
+
+_quant_config_default = {
+    # weight quantize type, default is 'channel_wise_abs_max'
+    'weight_quantize_type': 'channel_wise_abs_max',
+    # activation quantize type, default is 'moving_average_abs_max'
+    'activation_quantize_type': 'moving_average_abs_max',
+    # weight quantize bit num, default is 8
     'weight_bits': 8,
+    # activation quantize bit num, default is 8
     'activation_bits': 8,
     # ops of name_scope in not_quant_pattern list, will not be quantized
     'not_quant_pattern': ['skip_quant'],
     # ops of type in quantize_op_types, will be quantized
-    'quantize_op_types':
-    ['conv2d', 'depthwise_conv2d', 'mul', 'elementwise_add', 'pool2d'],
+    'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
     # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
     'dtype': 'int8',
     # window size for 'range_abs_max' quantization. defaulf is 10000
     'window_size': 10000,
     # The decay coefficient of moving average, default is 0.9
     'moving_rate': 0.9,
+    # if True, 'quantize_op_types' will be TENSORRT_OP_TYPES
+    'for_tensorrt': False,
+    # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES
+    'is_full_quantize': False
 }
 ```
 
 **参数：**
 
-- **weight_quantize_type(str)** - 参数量化方式。可选``'abs_max'``,  ``'channel_wise_abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。 默认``'abs_max'``。
-- **activation_quantize_type(str)** - 激活量化方式，可选``'abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``，默认``'abs_max'``。
+- **weight_quantize_type(str)** - 参数量化方式。可选``'abs_max'``,  ``'channel_wise_abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。如果使用``TensorRT``加载量化后的模型来预测，请使用``'channel_wise_abs_max'``。 默认``'channel_wise_abs_max'``。
+- **activation_quantize_type(str)** - 激活量化方式，可选``'abs_max'``, ``'range_abs_max'``, ``'moving_average_abs_max'``。如果使用``TensorRT``加载量化后的模型来预测，请使用``'range_abs_max', 'moving_average_abs_max'``。，默认``'moving_average_abs_max'``。
 - **weight_bits(int)** - 参数量化bit数，默认8, 推荐设为8。
 - **activation_bits(int)** -  激活量化bit数，默认8， 推荐设为8。
 - **not_quant_pattern(str | list[str])** - 所有``name_scope``包含``'not_quant_pattern'``字符串的``op``，都不量化, 设置方式请参考[*fluid.name_scope*](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/name_scope_cn.html#name-scope)。
@@ -34,7 +55,12 @@ quant_config_default = {
 - **dtype(int8)** - 量化后的参数类型，默认 ``int8``, 目前仅支持``int8``。
 - **window_size(int)** -  ``'range_abs_max'``量化方式的``window size``，默认10000。
 - **moving_rate(int)** - ``'moving_average_abs_max'``量化方式的衰减系数，默认 0.9。
+- **for_tensorrt(bool)** - 量化后的模型是否使用``TensorRT``进行预测。如果是的话，量化op类型为：``TENSORRT_OP_TYPES``。默认值为False.
+- **is_full_quantize(bool)** - 是否量化所有可支持op类型。默认值为False.
 
+!!! note "注意事项"
+
+- 目前``Paddle-Lite``有int8 kernel来加速的op只有 ``['conv2d', 'depthwise_conv2d', 'mul']``, 其他op的int8 kernel将陆续支持。
 
 ## quant_aware
 paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py)
@@ -67,7 +93,7 @@ paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)
 
 
 
-## convert 
+## convert
 paddleslim.quant.convert(program, place, config, scope=None, save_int8=False)[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py)
 
 
@@ -135,7 +161,7 @@ inference_prog = quant.convert(quant_eval_program, place, config)
 更详细的用法请参考 <a href='https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_aware'>量化训练demo</a>。
 
 ## quant_post
-paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,sample_generator, model_filename=None, params_filename=None, batch_size=16,batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"])[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py)
+paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,sample_generator, model_filename=None, params_filename=None, batch_size=16,batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"], is_full_quantize=False, is_use_cache_file=False, cache_dir="./temp_post_training")[[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py)
 
 : 对保存在``${model_dir}``下的模型进行量化，使用``sample_generator``的数据进行参数校正。
 
@@ -152,6 +178,9 @@ paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,sample_gene
 - **scope(fluid.Scope, optional)** - 用来获取和写入``Variable``, 如果设置为``None``,则使用[*fluid.global_scope()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html). 默认值是``None``.
 - **algo(str)** - 量化时使用的算法名称，可为``'KL'``或者``'direct'``。该参数仅针对激活值的量化，因为参数值的量化使用的方式为``'channel_wise_abs_max'``. 当``algo`` 设置为``'direct'``时，使用校正数据的激活值的绝对值的最大值当作``Scale``值，当设置为``'KL'``时，则使用``KL``散度的方法来计算``Scale``值。默认值为``'KL'``。
 - **quantizable_op_type(list[str])** -  需要量化的``op``类型列表。默认值为``["conv2d", "depthwise_conv2d", "mul"]``。
+- **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。
+- **is_use_cache_file(bool)** - 是否使用硬盘对中间结果进行存储。如果为False, 则将中间结果存储在内存中。
+- **cache_dir(str)** - 如果 ``'is_use_cache_file'``为True, 则将中间结果存储在此参数设置的路径下。
 
 **返回**
 
@@ -159,7 +188,8 @@ paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,sample_gene
 
 !!! note "注意事项"
 
-因为该接口会收集校正数据的所有的激活值，所以使用的校正图片不能太多。``'KL'``散度的计算也比较耗时。
+- 因为该接口会收集校正数据的所有的激活值，当校正图片比较多时，请设置``'is_use_cache_file'``为True, 将中间结果存储在硬盘中。另外，``'KL'``散度的计算比较耗时。
+- 目前``Paddle-Lite``有int8 kernel来加速的op只有 ``['conv2d', 'depthwise_conv2d', 'mul']``, 其他op的int8 kernel将陆续支持。
 
 **代码示例**
 

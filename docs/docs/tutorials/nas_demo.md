@@ -3,17 +3,19 @@
 本示例介绍如何使用网络结构搜索接口，搜索到一个更小或者精度更高的模型，该文档仅介绍paddleslim中SANAS的使用及如何利用SANAS得到模型结构，完整示例代码请参考sa_nas_mobilenetv2.py或者block_sa_nas_mobilenetv2.py。
 
 ## 接口介绍
-请参考。
+请参考[神经网络搜索API介绍](https://paddlepaddle.github.io/PaddleSlim/api/nas_api/)。
 
 ### 1. 配置搜索空间
-详细的搜索空间配置可以参考<a href='../../../paddleslim/nas/nas_api.md'>神经网络搜索API文档</a>。
-```
+
+详细的搜索空间配置可以参考[搜索空间介绍](https://paddlepaddle.github.io/PaddleSlim/search_space/)。
+
+```python
 config = [('MobileNetV2Space')]
 
 ```
 
 ### 2. 利用搜索空间初始化SANAS实例
-```
+```python
 from paddleslim.nas import SANAS
 
 sa_nas = SANAS(
@@ -27,12 +29,12 @@ sa_nas = SANAS(
 ```
 
 ### 3. 根据实例化的NAS得到当前的网络结构
-```
+```python
 archs = sa_nas.next_archs()
 ```
 
 ### 4. 根据得到的网络结构和输入构造训练和测试program
-```
+```python
 import paddle.fluid as fluid
 
 train_program = fluid.Program()
@@ -53,11 +55,11 @@ with fluid.program_guard(train_program, startup_program):
     test_program = train_program.clone(for_test=True)
     sgd = fluid.optimizer.SGD(learning_rate=1e-3)
     sgd.minimize(avg_cost)
-    
+
 ```
 
 ### 5. 根据构造的训练program添加限制条件
-```
+```python
 from paddleslim.analysis import flops
 
 if flops(train_program) > 321208544:
@@ -65,6 +67,6 @@ if flops(train_program) > 321208544:
 ```
 
 ### 6. 回传score
-```
+```python
 sa_nas.reward(score)
 ```
