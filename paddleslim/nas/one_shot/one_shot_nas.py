@@ -19,7 +19,7 @@ from ...common import SAController
 __all__ = ['OneShotSuperNet', 'OneShotSearch']
 
 
-def OneShotSearch(model, eval_func, strategy='sa'):
+def OneShotSearch(model, eval_func, strategy='sa', search_steps=100):
     """
     Search a best tokens which represents a sub-network.
     Archs:
@@ -27,6 +27,7 @@ def OneShotSearch(model, eval_func, strategy='sa'):
                                     one instance of `OneShotSuperNet` at least.
         eval_func(function): A callback function which accept model and tokens as arguments.
         strategy(str): The name of strategy used to search. Default: 'sa'.
+        search_steps(int): The total steps for searching.
     Returns:
         tokens(list): The best tokens searched.
     """
@@ -43,7 +44,7 @@ def OneShotSearch(model, eval_func, strategy='sa'):
             range_table=super_net.range_table(),
             init_tokens=super_net.init_tokens())
     assert (controller is not None, "Unsupported searching strategy.")
-    for i in range(100):
+    for i in range(search_steps):
         tokens = contoller.next_tokens()
         reward = eval_func(model, tokens)
         contoller.update(tokens, reward, i)

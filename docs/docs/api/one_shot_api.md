@@ -1,6 +1,6 @@
 
 ## OneShotSearch
-paddleslim.nas.one_shot.OneShotSearch(model, eval_func, strategy='sa')[代码]()
+paddleslim.nas.one_shot.OneShotSearch(model, eval_func, strategy='sa', search_steps=100)[代码]()
 
 : 从超级网络中搜索出一个最佳的子网络。
 
@@ -11,6 +11,8 @@ paddleslim.nas.one_shot.OneShotSearch(model, eval_func, strategy='sa')[代码]()
 - **eval_func:** 用于评估子网络性能的回调函数。该回调函数需要接受`model`为参数，并调用`model`的`forward`方法进行性能评估。
 
 - **strategy(str):** 搜索策略的名称。默认为'sa'， 当前仅支持'sa'.
+
+- **search_steps(int):** 搜索轮次数。默认为100。
 
 **返回：**
 
