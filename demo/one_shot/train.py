@@ -124,7 +124,7 @@ def test_mnist(model, tokens=None):
         img = to_variable(dy_x_data)
         label = to_variable(y_data)
         label.stop_gradient = True
-        prediction, acc = model(img, label)
+        prediction, acc = model.forward(img, label, tokens=tokens)
         loss = fluid.layers.cross_entropy(input=prediction, label=label)
         avg_loss = fluid.layers.mean(loss)
         acc_set.append(float(acc.numpy()))
@@ -136,34 +136,6 @@ def test_mnist(model, tokens=None):
     avg_loss_val_mean = np.array(avg_loss_set).mean()
 
     return acc_val_mean
-
-
-def inference_mnist():
-    place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id) \
-        if args.use_data_parallel else fluid.CUDAPlace(0)
-    with fluid.dygraph.guard(place):
-        mnist_infer = MNIST()
-        # load checkpoint
-        model_dict, _ = fluid.load_dygraph("save_temp")
-        mnist_infer.set_dict(model_dict)
-        print("checkpoint loaded")
-
-        # start evaluate mode
-        mnist_infer.eval()
-
-        def load_image(file):
-            im = Image.open(file).convert('L')
-            im = im.resize((28, 28), Image.ANTIALIAS)
-            im = np.array(im).reshape(1, 1, 28, 28).astype(np.float32)
-            im = im / 255.0 * 2.0 - 1.0
-            return im
-
-        cur_dir = os.path.dirname(os.path.realpath(__file__))
-        tensor_img = load_image(cur_dir + '/image/infer_3.png')
-
-        results = mnist_infer(to_variable(tensor_img))
-        lab = np.argsort(results.numpy())
-        print("Inference result of image/infer_3.png is: %d" % lab[0][-1])
 
 
 def train_mnist(args, model, tokens=None):
@@ -190,7 +162,7 @@ def train_mnist(args, model, tokens=None):
             label = to_variable(y_data)
             label.stop_gradient = True
 
-            cost, acc = model(img, label, tokens=tokens)
+            cost, acc = model.forward(img, label, tokens=tokens)
 
             loss = fluid.layers.cross_entropy(cost, label)
             avg_loss = fluid.layers.mean(loss)
@@ -233,5 +205,3 @@ if __name__ == '__main__':
         best_tokens = OneShotSearch(model, test_mnist)
     # step 3: final training
     #    train_mnist(args, model, best_tokens)
-    # step 4: infer
-    #    inference_mnist(model, best_tokens)

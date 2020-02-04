@@ -19,12 +19,14 @@ from ...common import SAController
 __all__ = ['OneShotSuperNet', 'OneShotSearch']
 
 
-def OneShotSearch(model, eval_func):
+def OneShotSearch(model, eval_func, strategy='sa'):
     """
     Search a best tokens which represents a sub-network.
     Archs:
         model(fluid.dygraph.Layer): A dynamic graph module whose sub-modules should contain
                                     one instance of `OneShotSuperNet` at least.
+        eval_func(function): A callback function which accept model and tokens as arguments.
+        strategy(str): The name of strategy used to search. Default: 'sa'.
     Returns:
         tokens(list): The best tokens searched.
     """
@@ -35,10 +37,12 @@ def OneShotSearch(model, eval_func):
             super_net = layer
             break
     assert super_net is not None
-
-    contoller = SAController(
-        range_table=super_net.range_table(),
-        init_tokens=super_net.init_tokens())
+    controller = None
+    if strategy == "sa":
+        contoller = SAController(
+            range_table=super_net.range_table(),
+            init_tokens=super_net.init_tokens())
+    assert (controller is not None, "Unsupported searching strategy.")
     for i in range(100):
         tokens = contoller.next_tokens()
         reward = eval_func(model, tokens)
@@ -75,7 +79,7 @@ class OneShotSuperNet(fluid.dygraph.Layer):
         """
         raise NotImplementedError('Abstract method.')
 
-    def forward_impl(self, *inputs, **kwargs):
+    def _forward_impl(self, *inputs, **kwargs):
         """
         Defines the computation performed at every call.
         Should be overridden by all subclasses.
@@ -99,10 +103,10 @@ class OneShotSuperNet(fluid.dygraph.Layer):
             output(varaible): The output of super net.
         """
         if tokens == None:
-            tokens = self.random_tokens()
-        return self.forward_impl(input, tokens=tokens)
+            tokens = self._random_tokens()
+        return self._forward_impl(input, tokens=tokens)
 
-    def random_tokens(self):
+    def _random_tokens(self):
         tokens = []
         for min_v, max_v in zip(self.range_table()[0], self.range_table()[1]):
             tokens.append(np.random.randint(min_v, max_v))

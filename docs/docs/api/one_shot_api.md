@@ -51,7 +51,7 @@ range_table()
 
 - **range_table(tuple):** 子网络编码每一位的取值范围。`range_table`格式为`(min_values, max_values)`，其中，`min_values`为一个整型数组，表示每个编码位置可选取的最小值；`max_values`表示每个编码位置可选取的最大值。
 
-forward_impl(input, tokens)
+_forward_impl(input, tokens)
 
 : 前向计算函数。`OneShotSuperNet`的子类需要实现该函数。
 
@@ -80,7 +80,7 @@ forward(self, input, tokens=None)
 - **output(Variable):** 前向计算的输出
 
 
-random_tokens()
+_random_tokens()
 
 : 随机选取一个子网络，并返回其编码。
 

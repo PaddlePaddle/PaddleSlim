@@ -228,7 +228,7 @@ class SuperMnasnet(OneShotSuperNet):
                 flops /= op._groups
             self.flops += flops
 
-    def forward_impl(self, inputs, tokens=None):
+    def _forward_impl(self, inputs, tokens=None):
         if isinstance(tokens, np.ndarray) and not (tokens == self.last_tokens).all()\
            or not isinstance(tokens, np.ndarray) and not tokens == self.last_tokens:
             self.flops_calculated = False
