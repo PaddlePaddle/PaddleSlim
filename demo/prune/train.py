@@ -8,7 +8,7 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-from paddleslim.prune import Pruner
+from paddleslim.prune import Pruner, save_model
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 sys.path.append(sys.path[0] + "/../")
@@ -208,7 +208,7 @@ def compress(args):
         val_program,
         fluid.global_scope(),
         params=params,
-        ratios=[FLAGS.pruned_ratio] * len(params),
+        ratios=[args.pruned_ratio] * len(params),
         place=place,
         only_graph=True)
 
@@ -216,14 +216,14 @@ def compress(args):
         fluid.default_main_program(),
         fluid.global_scope(),
         params=params,
-        ratios=[FLAGS.pruned_ratio] * len(params),
+        ratios=[args.pruned_ratio] * len(params),
         place=place)
     _logger.info("FLOPs after pruning: {}".format(flops(pruned_program)))
     for i in range(args.num_epochs):
         train(i, pruned_program)
         if i % args.test_period == 0:
             test(i, pruned_val_program)
-            save_model(pruned_val_program,
+            save_model(exe, pruned_val_program,
                        os.path.join(args.model_path, str(i)))
 
 

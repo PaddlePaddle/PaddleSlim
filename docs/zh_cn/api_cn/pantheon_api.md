@@ -67,30 +67,30 @@ pantheon.Teacher.start\_knowledge\_service(feed\_list, schema, program, reader\_
 
  - **feed\_list (list):** - A list of feed Variables or their names for the
                               input teacher Program.
- - **schema (dict):** - A dictionary to specify keys and fetched Variables  
+ - **schema (dict):** - A dict to specify keys and fetched Variables  
                         to generate knowledge.
  - **program (fluid.Program):** - Inference Program of the teacher model.
  - **reader\_config (dict):** - The config for data reader. Support all the three types of generators used by [fluid.io.PyReader](https://www.paddlepaddle.org.cn/documentation/docs/en/api/io/PyReader.html) and [fluid.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/en/api/io/DataLoader.html#dataloader), and their configs contain the key-value pair of the generator type and a generator object, plus other necessary argument pairs. See the following:
 
-   - 1) sample generator:
+     1) **sample generator:**
 
-         ```
-         reader_config={"sample_generator": some_sample_generator,
-                       "batch_size": batch_size, "drop_last": drop_last}
-         # drop_last set to True by default
-         ```
+     ```
+     reader_config={"sample_generator": some_sample_generator,
+                    "batch_size": batch_size, "drop_last": drop_last}
+     # drop_last set to True by default
+     ```
 
-   - 2) sample list generator:
+     2) **sample list generator:**
 
-        ```
-         reader_config={"sample_list_generator": some_sample_list_generator}
-        ```
+     ```
+     reader_config={"sample_list_generator": some_sample_list_generator}
+     ```
 
-   - 3) batch generator:
+     3) **batch generator:**
 
-        ```
-        reader_config={"batch_generator": some_batch_genrator}
-        ```
+     ```
+     reader_config={"batch_generator": some_batch_genrator}
+     ```
 
      The trial to parse config will be in the order of 1) -> 3), and any other unrelated keys in these configs will be ignored.
 
@@ -98,7 +98,7 @@ pantheon.Teacher.start\_knowledge\_service(feed\_list, schema, program, reader\_
 - **buf\_size (int):** The size of buffers for data reader and knowledge
                             writer on each device.
 - **times (int):** The maximum repeated serving times, default 1. Whenever
-                         the public method **get\_knowledge\_generator()** in Student
+                         the public method **get\_knowledge\_generator()** in **Student**
                          object called once, the serving times will be added one,
                          until reaching the maximum and ending the service.
 
@@ -154,7 +154,7 @@ pantheon.Student(merge_strategy=None) [source](https://github.com/PaddlePaddle/P
 
  **Args:**
 
- - **merge\_strategy (dict|None):** - A dictionary whose keys are the common schemas shared by different teachers, and each corresponding value specifies the merging strategy for different schemas respectively, supporting **sum** and **mean** now.
+ - **merge\_strategy (dict|None):** - A dict whose keys are the common schemas shared by different teachers, and each corresponding value specifies the merging strategy for different schemas respectively, supporting **sum** and **mean** now.
 
 **Return:** An object of class Student.
 
@@ -166,7 +166,7 @@ pantheon.Student.register\_teacher(in\_path=None, in\_address=None) [source](htt
 **Args:**
 
 - **in\_path (str|None):** The input file path. Default None.
-- **in\_address (str|None):** The input IP address, in the format "\<IP address\>:\<IP port\>" (e.g. "127.0.0.1:8080"). Default None.
+- **in\_address (str|None):** The input IP address, in the format "&lt;IP\_address&gt;:&lt;IP\_port&gt;" (e.g. "127.0.0.1:8080"). Default None.
 
 **Return:**  None
 
@@ -241,8 +241,6 @@ pantheon.Student.get\_knowledge\_generator(batch\_size, drop\_last=False) [sourc
 - The wrapper of knowledge data generator.
 
 **Examples:**
-
-Note: this example should be run with the example of class **Teacher**.
 
 ```python
 from paddleslim.pantheon import Student
