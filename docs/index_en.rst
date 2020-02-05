@@ -3,16 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-中文文档
+Welcome to use PaddleSlim.
 ========
 
 .. toctree::
    :maxdepth: 1
 
-   intro.md
-   install.md
-   quick_start/index
-   tutorials/index
-   api_cn/index
-   model_zoo.md
-   algo/algo.md
+   intro_en.md
+   install_en.md
+   quick_start/index_en
+   tutorials/index_en
+   api_en/index_en
+   model_zoo_en.md

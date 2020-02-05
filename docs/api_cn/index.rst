@@ -7,8 +7,7 @@ API文档
 ======================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
 
    analysis_api.md
    nas_api.md
@@ -17,3 +16,5 @@ API文档
    prune_api.md
    quantization_api.md
    single_distiller_api.md
+   search_space.md
+   table_latency.md
