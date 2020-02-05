@@ -92,7 +92,7 @@ sanas.reward(float(score))
 ```
 
 
-paddlesim.nas.SANAS.tokens2arch(tokens)
+paddleslim.nas.SANAS.tokens2arch(tokens)
 : 通过一组tokens得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。tokens的形式是一个列表，tokens映射到搜索空间转换成相应的网络结构，一组tokens对应唯一的一个网络结构。
 
 **参数：**
