@@ -1,3 +1,5 @@
+# 简单蒸馏
+
 ## merge
 paddleslim.dist.merge(teacher_program, student_program, data_name_map, place, scope=fluid.global_scope(), name_prefix='teacher_') [[源代码]](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py#L19)
 

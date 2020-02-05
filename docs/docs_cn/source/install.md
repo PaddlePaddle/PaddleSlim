@@ -1,4 +1,4 @@
-## 安装
+# 安装
 
 安装PaddleSlim前，请确认已正确安装Paddle1.6版本或更新版本。Paddle安装请参考：[Paddle安装教程](https://www.paddlepaddle.org.cn/install/quick)。
 

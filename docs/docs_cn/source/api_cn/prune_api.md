@@ -1,3 +1,4 @@
+# 卷积层通道剪裁
 
 ## Pruner
 paddleslim.prune.Pruner(criterion="l1_norm")[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L28)
