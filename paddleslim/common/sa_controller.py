@@ -81,7 +81,7 @@ class SAController(EvolutionaryController):
         self._iter = iters
         self._checkpoints = checkpoints
         self._searched = searched if searched != None else dict()
-        self._current_token = init_tokens
+        self._current_tokens = init_tokens
 
     def __getstate__(self):
         d = {}

@@ -18,7 +18,7 @@
 
 在路径`PaddleSlim/demo/sensitive`下执行以下代码运行示例：
 
-```
+```bash
 export CUDA_VISIBLE_DEVICES=0
 python train.py --model "MobileNetV1"
 ```
@@ -37,7 +37,7 @@ python train.py --model "MobileNetV1"
 
 代码如下：
 
-```
+```python
 # 进程1
 sensitivity(
     val_program,
@@ -48,7 +48,7 @@ sensitivity(
     pruned_ratios=[0.1, 0.2, 0.3, 0.4])
 ```
 
-```
+```python
 # 进程2
 sensitivity(
     val_program,
@@ -64,7 +64,7 @@ sensitivity(
 
 如果用户通过上一节多进程的方式生成了多个存储敏感度信息的文件，可以通过`paddleslim.prune.merge_sensitive`将其合并，合并后的敏感度信息存储在一个`dict`中。代码如下：
 
-```
+```python
 sens = merge_sensitive(["./sensitivities_0.data", "./sensitivities_1.data"])
 ```
 
@@ -72,7 +72,7 @@ sens = merge_sensitive(["./sensitivities_0.data", "./sensitivities_1.data"])
 
 调用`paddleslim.prune.get_ratios_by_loss`接口计算一组剪裁率。
 
-```
+```python
 ratios = get_ratios_by_loss(sens, 0.01)
 ```
 

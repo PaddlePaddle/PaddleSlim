@@ -8,6 +8,8 @@
 
 - [单进程蒸馏](./single_distiller_api.md)
 
+- [大规模可扩展知识蒸馏框架 Pantheon](./pantheon_api.md)
+
 - [通道剪裁](./prune_api.md)
 
 ### [量化](./quantization_api.md)

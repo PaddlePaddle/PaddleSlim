@@ -114,7 +114,7 @@ class SANAS(object):
                 range_table,
                 self._reduce_rate,
                 self._init_temperature,
-                max_try_times=500,
+                max_try_times=50000,
                 init_tokens=preinit_tokens,
                 reward=prereward,
                 max_reward=premax_reward,
@@ -162,10 +162,7 @@ class SANAS(object):
         Returns:
             dict<name, value>: a dictionary include best tokens, best reward and current reward.
         """
-        current_dict = dict()
-        current_dict['best_tokens'] = self._controller.best_tokens
-        current_dict['best_reward'] = self._controller.max_reward
-        current_dict['current_tokens'] = self._controller.current_tokens
+        current_dict = self._controller_client.request_current_info()
         return current_dict
 
     def next_archs(self):

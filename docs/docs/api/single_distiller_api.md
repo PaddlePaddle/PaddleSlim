@@ -76,10 +76,10 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-merge(teacher_program, student_program, data_name_map, place)
+dist.merge(teacher_program, student_program, data_name_map, place)
 with fluid.program_guard(student_program):
     distillation_loss = dist.fsp_loss('teacher_t1.tmp_1', 'teacher_t2.tmp_1',
-                                      's1.tmp_1', 's2.tmp_1', main_program)
+                                      's1.tmp_1', 's2.tmp_1', student_program)
 ```
 
 
@@ -116,10 +116,10 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-merge(teacher_program, student_program, data_name_map, place)
+dist.merge(teacher_program, student_program, data_name_map, place)
 with fluid.program_guard(student_program):
     distillation_loss = dist.l2_loss('teacher_t2.tmp_1', 's2.tmp_1',
-                                     main_program)
+                                     student_program)
 ```
 
 
@@ -158,10 +158,10 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-merge(teacher_program, student_program, data_name_map, place)
+dist.merge(teacher_program, student_program, data_name_map, place)
 with fluid.program_guard(student_program):
     distillation_loss = dist.soft_label_loss('teacher_t2.tmp_1',
-                                             's2.tmp_1', main_program, 1., 1.)
+                                             's2.tmp_1', student_program, 1., 1.)
 ```
 
 
@@ -198,14 +198,14 @@ with fluid.program_guard(teacher_program):
 data_name_map = {'y':'x'}
 USE_GPU = False
 place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
-merge(teacher_program, student_program, data_name_map, place)
+dist.merge(teacher_program, student_program, data_name_map, place)
 def adaptation_loss(t_var, s_var):
     teacher_channel = t_var.shape[1]
     s_hint = fluid.layers.conv2d(s_var, teacher_channel, 1)
     hint_loss = fluid.layers.reduce_mean(fluid.layers.square(s_hint - t_var))
     return hint_loss
 with fluid.program_guard(student_program):
-    distillation_loss = dist.loss(main_program, adaptation_loss,
+    distillation_loss = dist.loss(adaptation_loss, student_program,
             t_var='teacher_t2.tmp_1', s_var='s2.tmp_1')
 ```
 

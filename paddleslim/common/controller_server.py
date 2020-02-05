@@ -18,7 +18,7 @@ import socket
 import time
 from .log_helper import get_logger
 from threading import Thread
-from .lock_utils import lock, unlock
+from .lock import lock, unlock
 
 __all__ = ['ControllerServer']
 
@@ -90,10 +90,18 @@ class ControllerServer(object):
                     (self._search_steps))) and not self._closed:
                 conn, addr = self._socket_server.accept()
                 message = conn.recv(1024).decode()
+                _logger.debug(message)
                 if message.strip("\n") == "next_tokens":
                     tokens = self._controller.next_tokens()
                     tokens = ",".join([str(token) for token in tokens])
                     conn.send(tokens.encode())
+                elif message.strip("\n") == "current_info":
+                    current_info = dict()
+                    current_info['best_tokens'] = self._controller.best_tokens
+                    current_info['best_reward'] = self._controller.max_reward
+                    current_info[
+                        'current_tokens'] = self._controller.current_tokens
+                    conn.send(str(current_info).encode())
                 else:
                     _logger.debug("recv message from {}: [{}]".format(addr,
                                                                       message))
@@ -127,7 +135,7 @@ class ControllerServer(object):
                             )) > 1:
                             self._client.pop(key_client)
                             self._client_num -= 1
-                    _logger.info(
+                    _logger.debug(
                         "client: {}, client_num: {}, compare_time: {}".format(
                             self._client, self._client_num,
                             self._compare_time))
