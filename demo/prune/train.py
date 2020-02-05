@@ -36,6 +36,7 @@ add_arg('data',             str, "mnist",                 "Which data to use. 'm
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
+add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
 # yapf: enable
 
 model_list = models.__all__
@@ -207,7 +208,7 @@ def compress(args):
         val_program,
         fluid.global_scope(),
         params=params,
-        ratios=[0.33] * len(params),
+        ratios=[FLAGS.pruned_ratio] * len(params),
         place=place,
         only_graph=True)
 
@@ -215,7 +216,7 @@ def compress(args):
         fluid.default_main_program(),
         fluid.global_scope(),
         params=params,
-        ratios=[0.33] * len(params),
+        ratios=[FLAGS.pruned_ratio] * len(params),
         place=place)
     _logger.info("FLOPs after pruning: {}".format(flops(pruned_program)))
     for i in range(args.num_epochs):
