@@ -356,7 +356,7 @@
 | :----------------------------: | :---------: | :----: | :-------: | :------------: | :------------: | :------------: | :------------: | :----------: |:----------: |
 |      MobileNet-V1-YOLOv3       |      -      |  COCO  |     8     |      29.3      |      29.3      |      27.1      |       95       |  - | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1.tar) |
 |      MobileNet-V1-YOLOv3       | quant_post  |  COCO  |     8     |     27.9 (-1.4)|	28.0 (-1.3)	  |    26.0 (-1.0) |       25       | -  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenetv1_coco_quant_post.tar) |
-|      MobileNet-V1-YOLOv3       | quant_aware |  COCO  |     8     |     28.1 (-1.2)|  28.2 (-1.1)	  |    25.8 (-1.2) |       26.3     | -  | [下载链接]() |
+|      MobileNet-V1-YOLOv3       | quant_aware |  COCO  |     8     |     28.1 (-1.2)|  28.2 (-1.1)	  |    25.8 (-1.2) |       26.3     | -  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_coco_quant_aware.tar) |
 |      R34-YOLOv3                |      -      |  COCO  |     8     |      36.2      |      34.3      |      31.4      |       162       |  - | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r34.tar) |
 |      R34-YOLOv3                | quant_post  |  COCO  |     8     | 35.7 (-0.5)    |      -         |      -         |       42.7      |  - | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r34_coco_quant_post.tar) |
 |      R34-YOLOv3                | quant_aware |  COCO  |     8     |  35.2 (-1.0)   | 33.3 (-1.0)    |     30.3 (-1.1)|       44       |  - | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r34_coco_quant_aware.tar) |
@@ -421,7 +421,7 @@
 
 |          模型          |  压缩方法   |     mIoU      | 模型体积（MB） |                             下载                             |
 | :--------------------: | :---------: | :-----------: | :------------: | :----------------------------------------------------------: |
-| DeepLabv3+/MobileNetv1 |      -      |     63.26     |      6.6       |                         [下载链接]()                         |
+| DeepLabv3+/MobileNetv1 |      -      |     63.26     |      6.6       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/deeplabv3_mobilenetv1.tar )                         |
 | DeepLabv3+/MobileNetv1 | quant_post  | 58.63 (-4.63) |      1.8       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/deeplabv3_mobilenetv1_2049x1025_quant_post.tar) |
 | DeepLabv3+/MobileNetv1 | quant_aware | 62.03 (-1.23) |      1.8       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/deeplabv3_mobilenetv1_2049x1025_quant_aware.tar) |
 | DeepLabv3+/MobileNetv2 |      -      |     69.81     |      7.4       | [下载链接](https://paddleseg.bj.bcebos.com/models/mobilenet_cityscapes.tgz) |
