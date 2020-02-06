@@ -21,12 +21,13 @@ import numpy as np
 
 def compute_op_num(program):
     params = {}
+    ch_list = []
     for block in program.blocks:
         for param in block.all_parameters():
             if len(param.shape) == 4: 
-                print(param.name, param.shape)
                 params[param.name] = param.shape
-    return params
+                ch_list.append(int(param.shape[0]))
+    return params, ch_list
 
 class TestSANAS(unittest.TestCase):
     def setUp(self):
@@ -44,6 +45,27 @@ class TestSANAS(unittest.TestCase):
         self.multiply = np.array([1, 2, 3, 4, 5, 6])
         self.repeat = np.array([1, 2, 3, 4, 5, 6])
 
+    def check_chnum_convnum(self, program):
+        current_tokens = self.sanas.current_info()['current_tokens']
+        channel_exp = self.multiply[current_tokens[0]]
+        filter_num = self.filter_num[current_tokens[1]]
+        repeat_num = self.repeat[current_tokens[2]]
+
+        conv_list, ch_pro = compute_op_num(program)
+        ### assert conv number
+        self.assertTrue((repeat_num * 3) ==  len(conv_list), "the number of conv is NOT match, the number compute from token: {}, actual conv number: {}".format(repeat_num * 3, len(conv_list)))
+
+        ### assert number of channels
+        ch_token = []
+        init_ch_num = 32
+        for i in range(repeat_num):
+            ch_token.append(init_ch_num * channel_exp)
+            ch_token.append(init_ch_num * channel_exp)
+            ch_token.append(filter_num)
+            init_ch_num = filter_num
+
+        self.assertTrue(str(ch_token) == str(ch_pro), "channel num is WRONG, channel num from token is {}, channel num come fom program is {}".format(str(ch_token), str(ch_pro)))
+
     def test_all_function(self):
         ### unittest for next_archs
         next_program = fluid.Program()
@@ -56,21 +78,19 @@ class TestSANAS(unittest.TestCase):
             for arch in archs:
                 output = arch(inputs)
                 inputs = output
-        current_tokens = self.sanas.current_info()['current_tokens']
-        print("current_token", current_tokens)
-
-        conv_list = compute_op_num(next_program)
-        print(len(conv_list))
-        ### assert conv number
-        print(current_tokens[2])
-        print(self.repeat[current_tokens[2]])
-        self.assertTrue((self.repeat[current_tokens[2]] * 3) ==  len(conv_list), "the number of conv is NOT match, the number compute from token: {}, actual conv number: {}".format(self.repeat[current_tokens[2]] * 3, len(conv_list)))
+        self.check_chnum_convnum(next_program)
 
         ### unittest for reward
         self.assertTrue(self.sanas.reward(float(1.0)), "reward is False")
 
         ### uniitest for tokens2arch
-        arch = self.sanas.tokens2arch(self.sanas.current_info()['current_tokens'])
+        with fluid.program_guard(token2arch_program, startup_program):
+            inputs = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+            arch = self.sanas.tokens2arch(self.sanas.current_info()['current_tokens'])
+            for arch in archs:
+                output = arch(inputs)
+                inputs = output
+        self.check_chnum_convnum(token2arch_program)
 
         ### unittest for current_info
         current_info = self.sanas.current_info()
