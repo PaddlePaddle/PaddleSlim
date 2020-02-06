@@ -5,6 +5,7 @@ nav:
 - 模型库: model_zoo.md
 - 教程:
   - 图像分类模型通道剪裁-快速开始: tutorials/pruning_tutorial.md
+  - 图像分类模型通道剪裁-敏感度分析: tutorials/image_classification_sensitivity_analysis_tutorial.md
   - 离线量化: tutorials/quant_post_demo.md
   - 量化训练: tutorials/quant_aware_demo.md
   - Embedding量化: tutorials/quant_embedding_demo.md
