@@ -20,7 +20,6 @@ import json
 import hashlib
 import time
 import paddle.fluid as fluid
-from ..core import VarWrapper, OpWrapper, GraphWrapper
 from ..common import SAController
 from ..common import get_logger
 from ..analysis import flops
