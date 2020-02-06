@@ -84,6 +84,7 @@ sphinx-apidoc -M -o api_en/ ../../paddleslim
 
 如果有新增`package`，请将其天剑到`./api_en/index_en.rst`文件中。
 
+
 ### 2.2.2 编译文档
 
 与2.1节步骤一样。
@@ -121,3 +122,7 @@ git add -u
 git commit -m "update pages"
 git push origin gh-pages
 ```
+
+# 4. 其它
+
+英文API文档格式请参考：https://wanghaoshuang.github.io/PaddleSlim/api_en/paddleslim.analysis.html
