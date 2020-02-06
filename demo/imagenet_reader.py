@@ -156,8 +156,8 @@ def _reader_creator(file_list,
                 for line in lines:
                     if mode == 'train' or mode == 'val':
                         img_path, label = line.split()
-                        img_path = os.path.join(data_dir + "/" + mode,
-                                                img_path)
+                        img_path = os.path.join(
+                            os.path.join(data_dir, mode), img_path)
                         yield img_path, int(label)
                     elif mode == 'test':
                         img_path = os.path.join(data_dir, line)
