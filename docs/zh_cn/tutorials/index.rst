@@ -6,5 +6,5 @@
    :maxdepth: 2
    :caption: Contents:
 
-   sensitivity_tutorial.md
+   image_classification_sensitivity_analysis_tutorial.md
     
