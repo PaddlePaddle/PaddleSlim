@@ -66,6 +66,7 @@ class ControllerServer(object):
         _logger.info("ControllerServer - listen on: [{}:{}]".format(
             self._ip, self._port))
         thread = Thread(target=self.run)
+        thread.setDaemon(True)
         thread.start()
         return str(thread)
 

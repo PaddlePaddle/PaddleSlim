@@ -115,7 +115,6 @@ class SAController(EvolutionaryController):
         self._searched[str(tokens)] = reward
         temperature = self._init_temperature * self._reduce_rate**(client_num *
                                                                    self._iter)
-        self._current_tokens = tokens
         if (reward > self._reward) or (np.random.random() <= math.exp(
             (reward - self._reward) / temperature)):
             self._reward = reward
@@ -164,8 +163,7 @@ class SAController(EvolutionaryController):
             )
             sys.exit()
 
-        if self._constrain_func is None or self._max_try_times is None:
-            return new_tokens
+        self._current_tokens = new_tokens
 
         return new_tokens
 
