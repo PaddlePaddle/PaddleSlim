@@ -28,8 +28,7 @@ def flops(program, only_conv=True, detail=False):
         detail(bool): Whether to return detail of each convolution layer.
     
     Returns:
-        FLOPs(int): The FLOPs of target network.
-        details(dict): The key is the parameter name of convlution layer and the value is the FLOPs of each convolution layer. If `detail` is true, then return a tuple in format `(FLOPs, details)`, otherwise it will just return `FlOPs`
+        int|tuple: If `detail` is true, then return a tuple in format `(FLOPs, details)`, otherwise it will just return `FlOPs`. The details is a dict whose key is the parameter name of convlution layer and value is the FLOPs of each convolution layer. 
     """
     graph = GraphWrapper(program)
     return _graph_flops(graph, only_conv=only_conv, detail=detail)
