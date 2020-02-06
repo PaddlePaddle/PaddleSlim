@@ -11,52 +11,70 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import sys
-sys.path.append("../")
 import unittest
 import paddle.fluid as fluid
 from paddleslim.nas import SANAS
-from paddleslim.nas import SearchSpaceFactory
 from paddleslim.analysis import flops
+import numpy as np
 
+def compute_op_num(program):
+    params = {}
+    for block in program.blocks:
+        for param in block.all_parameters():
+            if len(param.shape) == 4: 
+                print(param.name, param.shape)
+                params[param.name] = param.shape
+    return params
 
 class TestSANAS(unittest.TestCase):
-    def test_nas(self):
+    def setUp(self):
+        self.init_test_case()
+        port = np.random.randint(8337, 8773)
+        self.sanas = SANAS(configs=self.configs, server_addr=("", port), save_checkpoint=None)
 
-        factory = SearchSpaceFactory()
-        config0 = {'input_size': 224, 'output_size': 7, 'block_num': 5}
-        config1 = {'input_size': 7, 'output_size': 1, 'block_num': 2}
-        configs = [('MobileNetV2Space', config0), ('ResNetSpace', config1)]
+    def init_test_case(self):
+        self.configs=[('MobileNetV2BlockSpace', {'block_mask':[0]})]
+        self.filter_num = np.array([
+            3, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96, 128, 144, 160, 192, 224,
+            256, 320, 384, 512
+        ])
+        self.k_size = np.array([3, 5])
+        self.multiply = np.array([1, 2, 3, 4, 5, 6])
+        self.repeat = np.array([1, 2, 3, 4, 5, 6])
 
-        space = factory.get_search_space([('MobileNetV2Space', config0)])
-        origin_arch = space.token2arch()[0]
+    def test_all_function(self):
+        ### unittest for next_archs
+        next_program = fluid.Program()
+        startup_program = fluid.Program()
+        token2arch_program = fluid.Program()
 
-        main_program = fluid.Program()
-        s_program = fluid.Program()
-        with fluid.program_guard(main_program, s_program):
-            input = fluid.data(
-                name="input", shape=[None, 3, 224, 224], dtype="float32")
-            origin_arch(input)
-        base_flops = flops(main_program)
+        with fluid.program_guard(next_program, startup_program):
+            inputs = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+            archs = self.sanas.next_archs()
+            for arch in archs:
+                output = arch(inputs)
+                inputs = output
+        current_tokens = self.sanas.current_info()['current_tokens']
+        print("current_token", current_tokens)
 
-        search_steps = 3
-        sa_nas = SANAS(
-            configs,
-            search_steps=search_steps,
-            server_addr=("", 0),
-            is_server=True)
+        conv_list = compute_op_num(next_program)
+        print(len(conv_list))
+        ### assert conv number
+        print(current_tokens[2])
+        print(self.repeat[current_tokens[2]])
+        self.assertTrue((self.repeat[current_tokens[2]] * 3) ==  len(conv_list), "the number of conv is NOT match, the number compute from token: {}, actual conv number: {}".format(self.repeat[current_tokens[2]] * 3, len(conv_list)))
 
-        for i in range(search_steps):
-            archs = sa_nas.next_archs()
-            main_program = fluid.Program()
-            s_program = fluid.Program()
-            with fluid.program_guard(main_program, s_program):
-                input = fluid.data(
-                    name="input", shape=[None, 3, 224, 224], dtype="float32")
-                archs[0](input)
-            sa_nas.reward(1)
-            self.assertTrue(flops(main_program) < base_flops)
+        ### unittest for reward
+        self.assertTrue(self.sanas.reward(float(1.0)), "reward is False")
 
+        ### uniitest for tokens2arch
+        arch = self.sanas.tokens2arch(self.sanas.current_info()['current_tokens'])
+
+        ### unittest for current_info
+        current_info = self.sanas.current_info()
+        self.assertTrue(isinstance(current_info, dict), "the type of current info must be dict, but now is {}".format(type(current_info)))
 
 if __name__ == '__main__':
     unittest.main()
