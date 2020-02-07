@@ -1,9 +1,10 @@
 # 卷积层通道剪裁
 
 ## Pruner
-paddleslim.prune.Pruner(criterion="l1_norm")[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L28)
 
-: 对卷积网络的通道进行一次剪裁。剪裁一个卷积层的通道，是指剪裁该卷积层输出的通道。卷积层的权重形状为`[output_channel, input_channel, kernel_size, kernel_size]`，通过剪裁该权重的第一纬度达到剪裁输出通道数的目的。
+>paddleslim.prune.Pruner(criterion="l1_norm")[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L28)
+
+对卷积网络的通道进行一次剪裁。剪裁一个卷积层的通道，是指剪裁该卷积层输出的通道。卷积层的权重形状为`[output_channel, input_channel, kernel_size, kernel_size]`，通过剪裁该权重的第一纬度达到剪裁输出通道数的目的。
 
 **参数：**
 
@@ -18,9 +19,9 @@ from paddleslim.prune import Pruner
 pruner = Pruner()
 ```
 
-paddleslim.prune.Pruner.prune(program, scope, params, ratios, place=None, lazy=False, only_graph=False, param_backup=False, param_shape_backup=False)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L36)
+>paddleslim.prune.Pruner.prune(program, scope, params, ratios, place=None, lazy=False, only_graph=False, param_backup=False, param_shape_backup=False)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/pruner.py#L36)
 
-: 对目标网络的一组卷积层的权重进行裁剪。
+对目标网络的一组卷积层的权重进行裁剪。
 
 **参数：**
 
@@ -138,9 +139,10 @@ for param in main_program.global_block().all_parameters():
 ---
 
 ## sensitivity
-paddleslim.prune.sensitivity(program, place, param_names, eval_func, sensitivities_file=None, pruned_ratios=None) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L34)
 
-: 计算网络中每个卷积层的敏感度。每个卷积层的敏感度信息统计方法为：依次剪掉当前卷积层不同比例的输出通道数，在测试集上计算剪裁后的精度损失。得到敏感度信息后，可以通过观察或其它方式确定每层卷积的剪裁率。
+>paddleslim.prune.sensitivity(program, place, param_names, eval_func, sensitivities_file=None, pruned_ratios=None) [源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L34)
+
+计算网络中每个卷积层的敏感度。每个卷积层的敏感度信息统计方法为：依次剪掉当前卷积层不同比例的输出通道数，在测试集上计算剪裁后的精度损失。得到敏感度信息后，可以通过观察或其它方式确定每层卷积的剪裁率。
 
 **参数：**
 
@@ -280,9 +282,10 @@ print(sensitivities)
 ```
 
 ## merge_sensitive
-paddleslim.prune.merge_sensitive(sensitivities)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L161)
 
-: 合并多个敏感度信息。
+>paddleslim.prune.merge_sensitive(sensitivities)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L161)
+
+合并多个敏感度信息。
 
 参数：
 
@@ -332,9 +335,10 @@ print(sensitivities)
 ```
 
 ## load_sensitivities
-paddleslim.prune.load_sensitivities(sensitivities_file)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L184)
 
-: 从文件中加载敏感度信息。
+>paddleslim.prune.load_sensitivities(sensitivities_file)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L184)
+
+从文件中加载敏感度信息。
 
 参数：
 
@@ -366,9 +370,10 @@ print(sensitivities)
 ```
 
 ## get_ratios_by_loss
-paddleslim.prune.get_ratios_by_loss(sensitivities, loss)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L206)
 
-: 根据敏感度和精度损失阈值计算出一组剪切率。对于参数`w`, 其剪裁率为使精度损失低于`loss`的最大剪裁率。
+>paddleslim.prune.get_ratios_by_loss(sensitivities, loss)[源代码](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/sensitive.py#L206)
+
+根据敏感度和精度损失阈值计算出一组剪切率。对于参数`w`, 其剪裁率为使精度损失低于`loss`的最大剪裁率。
 
 参数：
 
