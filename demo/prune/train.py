@@ -8,7 +8,7 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-from paddleslim.prune import Pruner
+from paddleslim.prune import Pruner, save_model
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 sys.path.append(sys.path[0] + "/../")
@@ -223,7 +223,7 @@ def compress(args):
         train(i, pruned_program)
         if i % args.test_period == 0:
             test(i, pruned_val_program)
-            save_model(pruned_val_program,
+            save_model(exe, pruned_val_program,
                        os.path.join(args.model_path, str(i)))
 
 

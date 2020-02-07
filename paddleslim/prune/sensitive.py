@@ -222,6 +222,7 @@ def get_ratios_by_loss(sensitivities, loss):
     ratios = {}
     for param, losses in sensitivities.items():
         losses = losses.items()
+        losses = list(losses)
         losses.sort()
         for i in range(len(losses))[::-1]:
             if losses[i][1] <= loss:
