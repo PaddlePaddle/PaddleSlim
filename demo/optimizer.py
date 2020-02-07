@@ -99,8 +99,8 @@ def exponential_decay_with_warmup(learning_rate,
                                           (step_each_epoch * warmup_epoch))
             fluid.layers.assign(input=decayed_lr, output=lr)
         with switch.default():
-            div_res = (global_step - warmup_epoch * step_each_epoch
-                       ) / decay_epochs
+            div_res = (
+                global_step - warmup_epoch * step_each_epoch) / decay_epochs
             div_res = ops.floor(div_res)
             decayed_lr = learning_rate * (decay_rate**div_res)
             fluid.layers.assign(input=decayed_lr, output=lr)

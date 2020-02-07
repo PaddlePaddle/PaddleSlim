@@ -34,12 +34,12 @@ add_arg('config_file',      str, None,                 "The config file for comp
 
 model_list = [m for m in dir(models) if "__" not in m]
 ratiolist = [
-#    [0.06, 0.0, 0.09, 0.03, 0.09, 0.02, 0.05, 0.03, 0.0, 0.07, 0.07, 0.05, 0.08],
-#    [0.08, 0.02, 0.03, 0.13, 0.1, 0.06, 0.03, 0.04, 0.14, 0.02, 0.03, 0.02, 0.01],
-        ]
+    #    [0.06, 0.0, 0.09, 0.03, 0.09, 0.02, 0.05, 0.03, 0.0, 0.07, 0.07, 0.05, 0.08],
+    #    [0.08, 0.02, 0.03, 0.13, 0.1, 0.06, 0.03, 0.04, 0.14, 0.02, 0.03, 0.02, 0.01],
+]
 
 
-def save_model(args, exe, train_prog, eval_prog,info):
+def save_model(args, exe, train_prog, eval_prog, info):
     model_path = os.path.join(args.model_save_dir, args.model, str(info))
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
@@ -58,17 +58,17 @@ def piecewise_decay(args):
         regularization=fluid.regularizer.L2Decay(args.l2_decay))
     return optimizer
 
+
 def cosine_decay(args):
     step = int(math.ceil(float(args.total_images) / args.batch_size))
     learning_rate = fluid.layers.cosine_decay(
-        learning_rate=args.lr,
-        step_each_epoch=step,
-        epochs=args.num_epochs)
+        learning_rate=args.lr, step_each_epoch=step, epochs=args.num_epochs)
     optimizer = fluid.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
         regularization=fluid.regularizer.L2Decay(args.l2_decay))
     return optimizer
+
 
 def create_optimizer(args):
     if args.lr_strategy == "piecewise_decay":
@@ -76,11 +76,13 @@ def create_optimizer(args):
     elif args.lr_strategy == "cosine_decay":
         return cosine_decay(args)
 
+
 def compress(args):
-    class_dim=1000
-    image_shape="3,224,224"
+    class_dim = 1000
+    image_shape = "3,224,224"
     image_shape = [int(m) for m in image_shape.split(",")]
-    assert args.model in model_list, "{} is not in lists: {}".format(args.model, model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(
+        args.model, model_list)
     image = fluid.layers.data(name='image', shape=image_shape, dtype='float32')
     label = fluid.layers.data(name='label', shape=[1], dtype='int64')
     # model definition
@@ -98,10 +100,13 @@ def compress(args):
     exe.run(fluid.default_startup_program())
 
     if args.pretrained_model:
+
         def if_exist(var):
-            exist =  os.path.exists(os.path.join(args.pretrained_model, var.name))
-            print("exist",exist)
+            exist = os.path.exists(
+                os.path.join(args.pretrained_model, var.name))
+            print("exist", exist)
             return exist
+
         #fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
     val_reader = paddle.batch(reader.val(), batch_size=args.batch_size)
@@ -109,7 +114,8 @@ def compress(args):
         reader.train(), batch_size=args.batch_size, drop_last=True)
 
     train_feeder = feeder = fluid.DataFeeder([image, label], place)
-    val_feeder = feeder = fluid.DataFeeder([image, label], place, program=val_program)
+    val_feeder = feeder = fluid.DataFeeder(
+        [image, label], place, program=val_program)
 
     def test(epoch, program):
         batch_id = 0
@@ -117,80 +123,99 @@ def compress(args):
         acc_top5_ns = []
         for data in val_reader():
             start_time = time.time()
-            acc_top1_n, acc_top5_n = exe.run(program,
-                                           feed=train_feeder.feed(data),
-                                           fetch_list=[acc_top1.name, acc_top5.name])
+            acc_top1_n, acc_top5_n = exe.run(
+                program,
+                feed=train_feeder.feed(data),
+                fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
-            print("Eval epoch[{}] batch[{}] - acc_top1: {}; acc_top5: {}; time: {}".format(epoch, batch_id, np.mean(acc_top1_n), np.mean(acc_top5_n), end_time-start_time))
+            print(
+                "Eval epoch[{}] batch[{}] - acc_top1: {}; acc_top5: {}; time: {}".
+                format(epoch, batch_id,
+                       np.mean(acc_top1_n),
+                       np.mean(acc_top5_n), end_time - start_time))
             acc_top1_ns.append(np.mean(acc_top1_n))
             acc_top5_ns.append(np.mean(acc_top5_n))
             batch_id += 1
 
-        print("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".format(epoch, np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
-
+        print("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".format(
+            epoch,
+            np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
 
     def train(epoch, program):
 
         build_strategy = fluid.BuildStrategy()
         exec_strategy = fluid.ExecutionStrategy()
         train_program = fluid.compiler.CompiledProgram(
-                                   program).with_data_parallel(
-                                   loss_name=avg_cost.name,
-                                   build_strategy=build_strategy,
-                                   exec_strategy=exec_strategy)
+            program).with_data_parallel(
+                loss_name=avg_cost.name,
+                build_strategy=build_strategy,
+                exec_strategy=exec_strategy)
 
         batch_id = 0
         for data in train_reader():
             start_time = time.time()
-            loss_n, acc_top1_n, acc_top5_n,lr_n = exe.run(train_program,
-                                               feed=train_feeder.feed(data),
-                                               fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name,"learning_rate"])
+            loss_n, acc_top1_n, acc_top5_n, lr_n = exe.run(
+                train_program,
+                feed=train_feeder.feed(data),
+                fetch_list=[
+                    avg_cost.name, acc_top1.name, acc_top5.name,
+                    "learning_rate"
+                ])
             end_time = time.time()
             loss_n = np.mean(loss_n)
             acc_top1_n = np.mean(acc_top1_n)
             acc_top5_n = np.mean(acc_top5_n)
             lr_n = np.mean(lr_n)
-            print("epoch[{}]-batch[{}] - loss: {}; acc_top1: {}; acc_top5: {};lrn: {}; time: {}".format(epoch, batch_id, loss_n, acc_top1_n, acc_top5_n, lr_n,end_time-start_time))
+            print(
+                "epoch[{}]-batch[{}] - loss: {}; acc_top1: {}; acc_top5: {};lrn: {}; time: {}".
+                format(epoch, batch_id, loss_n, acc_top1_n, acc_top5_n, lr_n,
+                       end_time - start_time))
             batch_id += 1
 
     params = []
     for param in fluid.default_main_program().global_block().all_parameters():
         #if "_weights" in  param.name and "conv1_weights" not in param.name:
-        if "_sep_weights" in  param.name:
+        if "_sep_weights" in param.name:
             params.append(param.name)
-    print("fops before pruning: {}".format(flops(fluid.default_main_program())))
+    print("fops before pruning: {}".format(
+        flops(fluid.default_main_program())))
     pruned_program_iter = fluid.default_main_program()
     pruned_val_program_iter = val_program
     for ratios in ratiolist:
         pruner = Pruner()
-        pruned_val_program_iter = pruner.prune(pruned_val_program_iter,
-                                  fluid.global_scope(),
-                                  params=params,
-                                  ratios=ratios,
-                                  place=place,
-                                  only_graph=True)
+        pruned_val_program_iter = pruner.prune(
+            pruned_val_program_iter,
+            fluid.global_scope(),
+            params=params,
+            ratios=ratios,
+            place=place,
+            only_graph=True)
 
-
-        pruned_program_iter = pruner.prune(pruned_program_iter,
-                                  fluid.global_scope(),
-                                  params=params,
-                                  ratios=ratios,
-                                  place=place)
+        pruned_program_iter = pruner.prune(
+            pruned_program_iter,
+            fluid.global_scope(),
+            params=params,
+            ratios=ratios,
+            place=place)
         print("fops after pruning: {}".format(flops(pruned_program_iter)))
-
     """ do not inherit learning rate """
-    if(os.path.exists(args.pretrained_model + "/learning_rate")):
-      os.remove( args.pretrained_model + "/learning_rate")
-    if(os.path.exists(args.pretrained_model + "/@LR_DECAY_COUNTER@")):
-      os.remove( args.pretrained_model + "/@LR_DECAY_COUNTER@")
-    fluid.io.load_vars(exe, args.pretrained_model , main_program = pruned_program_iter,  predicate=if_exist)
+    if (os.path.exists(args.pretrained_model + "/learning_rate")):
+        os.remove(args.pretrained_model + "/learning_rate")
+    if (os.path.exists(args.pretrained_model + "/@LR_DECAY_COUNTER@")):
+        os.remove(args.pretrained_model + "/@LR_DECAY_COUNTER@")
+    fluid.io.load_vars(
+        exe,
+        args.pretrained_model,
+        main_program=pruned_program_iter,
+        predicate=if_exist)
 
     pruned_program = pruned_program_iter
     pruned_val_program = pruned_val_program_iter
     for i in range(args.num_epochs):
         train(i, pruned_program)
         test(i, pruned_val_program)
-        save_model(args,exe,pruned_program,pruned_val_program,i)
+        save_model(args, exe, pruned_program, pruned_val_program, i)
+
 
 def main():
     args = parser.parse_args()

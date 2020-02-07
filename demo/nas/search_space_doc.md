@@ -3,22 +3,22 @@
 1. 根据原本模型结构构造搜索空间：
 
   1.1 MobileNetV2Space
-  
+
   1.2 MobileNetV1Space
-  
+
   1.3 ResNetSpace
 
 
 2. 根据相应模型的block构造搜索空间
 
   2.1 MobileNetV1BlockSpace
-  
+
   2.2 MobileNetV2BlockSpace
-  
+
   2.3 ResNetBlockSpace
-  
+
   2.4 InceptionABlockSpace
-  
+
   2.5 InceptionCBlockSpace
 
 
@@ -29,7 +29,7 @@
 **block_num(int|None)**：`block_num`表示搜索空间中block的数量。
 **block_mask(list|None)**：`block_mask`表示当前的block是一个reduction block还是一个normal block，是一组由0、1组成的列表，0表示当前block是normal block，1表示当前block是reduction block。如果设置了`block_mask`，则主要以`block_mask`为主要配置，`input_size`，`output_size`和`block_num`三种配置是无效的。
 
-**Note:** 
+**Note:**
 1. reduction block表示经过这个block之后的feature map大小下降为之前的一半，normal block表示经过这个block之后feature map大小不变。
 2. `input_size`和`output_size`用来计算整个模型结构中reduction block数量。
 
@@ -80,7 +80,7 @@ class ResNetBlockSpace2(SearchSpaceBase):
 
         self.bottleneck_params_list = []
         for i in range(len(self.block_mask)):
-            self.bottleneck_params_list.append(self.filter_num[tokens[i * 3 + 0]], 
+            self.bottleneck_params_list.append(self.filter_num[tokens[i * 3 + 0]],
                                                self.filter_num[tokens[i * 3 + 1]],
                                                self.filter_num[tokens[i * 3 + 2]],
                                                2 if self.block_mask[i] == 1 else 1)
@@ -113,4 +113,4 @@ class ResNetBlockSpace2(SearchSpaceBase):
         conv = fluid.layers.conv2d(input, num_filters, filter_size, stride, name=name+'_conv')
         bn = fluid.layers.batch_norm(conv, act=act, name=name+'_bn')
         return bn
-``` 
+```

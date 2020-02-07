@@ -41,9 +41,10 @@ add_arg('test_period',      int, 10,                 "Test period in epoches.")
 
 model_list = [m for m in dir(models) if "__" not in m]
 ratiolist = [
-#    [0.06, 0.0, 0.09, 0.03, 0.09, 0.02, 0.05, 0.03, 0.0, 0.07, 0.07, 0.05, 0.08],
-#    [0.08, 0.02, 0.03, 0.13, 0.1, 0.06, 0.03, 0.04, 0.14, 0.02, 0.03, 0.02, 0.01],
-        ]
+    #    [0.06, 0.0, 0.09, 0.03, 0.09, 0.02, 0.05, 0.03, 0.0, 0.07, 0.07, 0.05, 0.08],
+    #    [0.08, 0.02, 0.03, 0.13, 0.1, 0.06, 0.03, 0.04, 0.14, 0.02, 0.03, 0.02, 0.01],
+]
+
 
 def piecewise_decay(args):
     step = int(math.ceil(float(args.total_images) / args.batch_size))
@@ -194,21 +195,26 @@ def compress(args):
 
     for ratios in ratiolist:
         pruner = Pruner()
-        pruned_val_program_iter = pruner.prune(pruned_val_program_iter,
-                                  fluid.global_scope(),
-                                  params=params,
-                                  ratios=ratios,
-                                  place=place,
-                                  only_graph=True)
+        pruned_val_program_iter = pruner.prune(
+            pruned_val_program_iter,
+            fluid.global_scope(),
+            params=params,
+            ratios=ratios,
+            place=place,
+            only_graph=True)
 
-
-        pruned_program_iter = pruner.prune(pruned_program_iter,
-                                  fluid.global_scope(),
-                                  params=params,
-                                  ratios=ratios,
-                                  place=place)
+        pruned_program_iter = pruner.prune(
+            pruned_program_iter,
+            fluid.global_scope(),
+            params=params,
+            ratios=ratios,
+            place=place)
         print("fops after pruning: {}".format(flops(pruned_program_iter)))
-    fluid.io.load_vars(exe, args.pretrained_model , main_program = pruned_program_iter,  predicate=if_exist)
+    fluid.io.load_vars(
+        exe,
+        args.pretrained_model,
+        main_program=pruned_program_iter,
+        predicate=if_exist)
 
     pruner = AutoPruner(
         pruned_val_program_iter,
@@ -236,8 +242,6 @@ def compress(args):
             train(i, pruned_program)
         score = test(0, pruned_val_program)
         pruner.reward(score)
-
-
 
 
 def main():
