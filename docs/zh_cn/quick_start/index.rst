@@ -3,8 +3,7 @@
 ========
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
 
    pruning_tutorial.md
    distillation_tutorial.md

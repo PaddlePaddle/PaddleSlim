@@ -17,3 +17,4 @@
    api_cn/index
    model_zoo.md
    algo/algo.md
+   how_to_build_docs.md

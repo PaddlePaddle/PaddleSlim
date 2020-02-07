@@ -10,12 +10,11 @@ API文档
    :maxdepth: 1
 
    analysis_api.rst
-   analysis_api.md
-   nas_api.md
-   one_shot_api.md
+   nas_api.rst
+   one_shot_api.rst
    pantheon_api.md
-   prune_api.md
-   quantization_api.md
-   single_distiller_api.md
+   prune_api.rst
+   quantization_api.rst
+   single_distiller_api.rst
    search_space.md
    table_latency.md
