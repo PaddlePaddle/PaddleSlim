@@ -9,6 +9,7 @@ API文档
 .. toctree::
    :maxdepth: 1
 
+   analysis_api.rst
    analysis_api.md
    nas_api.md
    one_shot_api.md
