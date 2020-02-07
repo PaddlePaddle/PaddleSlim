@@ -9,4 +9,5 @@
    distillation_tutorial.md
    quant_aware_tutorial.md
    quant_post_tutorial.md
+   nas_tutorial.md
     
