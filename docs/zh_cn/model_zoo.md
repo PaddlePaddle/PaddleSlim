@@ -18,7 +18,7 @@
 |ResNet50|quant_post|76.33%/93.02% (-0.17%/+0.02%)| 25.1| 1.19 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_post.tar) |
 |ResNet50|quant_aware|	76.48%/93.11% (-0.02%/+0.11%)| 25.1 | 1.17 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_awre.tar) |
 
-
+分类模型Lite时延(ms)
 
 | 设备    | 模型类型    | 压缩策略      | armv7 Thread 1 | armv7 Thread 2 | armv7 Thread 4 | armv8 Thread 1 | armv8 Thread 2 | armv8 Thread 4 |
 | ------- | ----------- | ------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- |
@@ -172,7 +172,7 @@
 | DeepLabv3+/MobileNetv2 | quant_post  | 67.59 (-2.22) |      2.1       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/deeplabv3_mobilenetv2_2049x1025_quant_post.tar) |
 | DeepLabv3+/MobileNetv2 | quant_aware | 68.33 (-1.48) |      2.1       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/deeplabv3_mobilenetv2_2049x1025_quant_aware.tar) |
 
-
+图像分割模型Lite时延(ms), 输入尺寸769x769
 
 | 设备    | 模型类型               | 压缩策略      | armv7 Thread 1 | armv7 Thread 2 | armv7 Thread 4 | armv8 Thread 1 | armv8 Thread 2 | armv8 Thread 4 |
 | ------- | ---------------------- | ------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- |
