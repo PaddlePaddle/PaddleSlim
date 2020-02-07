@@ -1,4 +1,4 @@
-# 图像分类模型离线量化-快速开始
+ # 图像分类模型离线量化-快速开始
 
 该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/api/quantization_api.md)。 该示例包含以下步骤：
 
@@ -30,6 +30,7 @@ exe, train_program, val_program, inputs, outputs = \
 ```
 
 ## 3. 训练模型
+该章节介绍了如何定义输入数据和如何训练和测试分类模型。先训练分类模型的原因是离线量化需要一个训练好的模型。
 
 ### 3.1 定义输入数据
 
@@ -47,7 +48,8 @@ train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
 ```
 
 ### 3.2 训练和测试
-先定义训练和测试函数
+先定义训练和测试函数。在训练函数中执行了一个epoch的训练，因为MNIST数据集数据较少，一个epoch就可将top1精度训练到95%以上。
+
 
 
 ```python
@@ -58,7 +60,7 @@ def train(prog):
         if iter % 100 == 0:
             print('train', acc1.mean(), acc5.mean(), loss.mean())
         iter += 1
-
+        
 def test(prog, outputs=outputs):
     iter = 0
     res = [[], []]
@@ -72,36 +74,23 @@ def test(prog, outputs=outputs):
     print('final test result', np.array(res[0]).mean(), np.array(res[1]).mean())
 ```
 
-训练分类网络
+调用``train``函数训练分类网络，``train_program``是在第2步：构建网络中定义的。
 
 
 ```python
 train(train_program)
 ```
 
-    ('train', 0.109375, 0.5625, 2.6159298)
-    ('train', 0.953125, 1.0, 0.18042225)
-    ('train', 0.9609375, 1.0, 0.15906152)
-    ('train', 0.96875, 0.9921875, 0.1544011)
-    ('train', 0.9609375, 1.0, 0.12998523)
 
-
-测试分类网络
+调用``test``函数测试分类网络，``val_program``是在第2步：构建网络中定义的。
 
 
 ```python
 test(val_program)
 ```
 
-    ('test', 0.9453125, 1.0, 0.15452775)
-    ('test', 0.9609375, 1.0, 0.081429556)
-    ('test', 0.9921875, 1.0, 0.05349218)
-    ('test', 0.9609375, 1.0, 0.14042228)
-    ('test', 0.9375, 1.0, 0.20278816)
-    ('final test result', 0.9669638, 0.998965)
 
-
-保存inference model
+保存inference model，将训练好的分类模型保存在``'./inference_model'``下，后续进行离线量化时将加载保存在此处的模型。
 
 
 ```python
@@ -113,18 +102,9 @@ fluid.io.save_inference_model(dirname='./inference_model',
         main_program=val_program)
 ```
 
-
-
-
-    [u'save_infer_model/scale_0',
-     u'save_infer_model/scale_1',
-     u'save_infer_model/scale_2']
-
-
-
 ## 4. 离线量化
 
-使用10个batch的数据进行参数校正
+调用离线量化接口，加载文件夹``'./inference_model'``训练好的分类模型，并使用10个batch的数据进行参数校正。此过程无需训练，只需跑前向过程来计算量化所需参数。离线量化后的模型保存在文件夹``'./quant_post_model'``下。
 
 
 ```python
@@ -136,19 +116,8 @@ slim.quant.quant_post(
         batch_nums=10)
 ```
 
-    2020-02-05 03:33:41,164-INFO: run batch: 0
-    2020-02-05 03:33:41,164-INFO: run batch: 0
-    2020-02-05 03:33:41,452-INFO: run batch: 5
-    2020-02-05 03:33:41,452-INFO: run batch: 5
-    2020-02-05 03:33:41,582-INFO: all run batch: 10
-    2020-02-05 03:33:41,582-INFO: all run batch: 10
-    2020-02-05 03:33:41,585-INFO: calculate scale factor ...
-    2020-02-05 03:33:41,585-INFO: calculate scale factor ...
-    2020-02-05 03:33:53,840-INFO: update the program ...
-    2020-02-05 03:33:53,840-INFO: update the program ...
 
-
-加载量化后的模型进行测试
+加载保存在文件夹``'./quant_post_model'``下的量化后的模型进行测试，可看到精度和``3.2 训练和测试``中得到的测试精度相近，因此离线量化过程对于此分类模型几乎无损。
 
 
 ```python
@@ -157,10 +126,3 @@ quant_post_prog, feed_target_names, fetch_targets = fluid.io.load_inference_mode
         executor=exe)
 test(quant_post_prog, fetch_targets)
 ```
-
-    ('test', 0.9375, 1.0, 0.18027544)
-    ('test', 0.984375, 1.0, 0.085289225)
-    ('test', 0.984375, 1.0, 0.05745204)
-    ('test', 0.9609375, 0.9921875, 0.13197306)
-    ('test', 0.9375, 1.0, 0.22449243)
-    ('final test result', 0.96285725, 0.9987814)
