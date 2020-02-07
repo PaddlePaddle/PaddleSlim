@@ -33,7 +33,8 @@ class TestPrune(unittest.TestCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
-        self.assertTrue(1597440 == flops(main_program))
+        print flops(main_program)
+        self.assertTrue(792576 == flops(main_program))
 
 
 if __name__ == '__main__':
