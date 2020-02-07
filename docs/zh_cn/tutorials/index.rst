@@ -7,4 +7,5 @@
    :caption: Contents:
 
    image_classification_sensitivity_analysis_tutorial.md
+   image_classification_nas_quick_start.ipynb
     

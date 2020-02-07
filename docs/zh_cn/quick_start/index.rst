@@ -7,4 +7,5 @@
    :caption: Contents:
 
    pruning_tutorial.md
+   nas_tutorial.md
     
