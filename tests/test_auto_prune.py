@@ -51,19 +51,15 @@ class TestPrune(unittest.TestCase):
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
 
-        pruned_flops = 0.5
         pruner = AutoPruner(
-            main_program,
             scope,
             place,
             params=["conv4_weights"],
             init_ratios=[0.5],
-            pruned_flops=0.5,
-            pruned_latency=None,
             server_addr=("", 0),
             init_temperature=100,
             reduce_rate=0.85,
-            max_try_number=300,
+            max_try_times=300,
             max_client_num=10,
             search_steps=2,
             max_ratios=[0.9],
@@ -71,12 +67,12 @@ class TestPrune(unittest.TestCase):
             key="auto_pruner")
 
         base_flops = flops(main_program)
-        program = pruner.prune(main_program)
-        self.assertTrue(flops(program) <= base_flops * (1 - pruned_flops))
+        program, _ = pruner.prune(main_program)
+        self.assertTrue(flops(program) <= base_flops)
         pruner.reward(1)
 
-        program = pruner.prune(main_program)
-        self.assertTrue(flops(program) <= base_flops * (1 - pruned_flops))
+        program, _ = pruner.prune(main_program)
+        self.assertTrue(flops(program) <= base_flops)
         pruner.reward(1)
 
 

@@ -41,7 +41,6 @@ class SAController(EvolutionaryController):
                  max_reward=-1,
                  iters=0,
                  best_tokens=None,
-                 constrain_func=None,
                  checkpoints=None,
                  searched=None):
         """Initialize.
@@ -55,7 +54,6 @@ class SAController(EvolutionaryController):
             max_reward(float): The max reward in the search of sanas, in general, best tokens get max reward. Default: -1.
             iters(int): The iteration of sa controller. Default: 0.
             best_tokens(list<int>): The best tokens in the search of sanas, in general, best tokens get max reward. Default: None.
-            constrain_func(function): The callback function used to check whether the tokens meet constraint. None means there is no constraint. Default: None.
             checkpoints(str): if checkpoint is None, donnot save checkpoints, else save scene to checkpoints file.
             searched(dict<list, float>): remember tokens which are searched.
         """
@@ -75,7 +73,6 @@ class SAController(EvolutionaryController):
             else:
                 self._init_temperature = 1.0
 
-        self._constrain_func = constrain_func
         self._max_reward = max_reward
         self._best_tokens = best_tokens
         self._iter = iters
@@ -86,8 +83,7 @@ class SAController(EvolutionaryController):
     def __getstate__(self):
         d = {}
         for key in self.__dict__:
-            if key != "_constrain_func":
-                d[key] = self.__dict__[key]
+            d[key] = self.__dict__[key]
         return d
 
     @property

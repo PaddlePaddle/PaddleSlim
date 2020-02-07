@@ -32,13 +32,10 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 class AutoPruner(object):
     def __init__(self,
-                 program,
                  scope,
                  place,
-                 params=[],
+                 params=None,
                  init_ratios=None,
-                 pruned_flops=0.5,
-                 pruned_latency=None,
                  server_addr=("", 0),
                  init_temperature=100,
                  reduce_rate=0.85,
@@ -52,7 +49,6 @@ class AutoPruner(object):
         """
         Search a group of ratios used to prune program.
         Args:
-            program(Program): The program to be pruned.
             scope(Scope): The scope to be pruned.
             place(fluid.Place): The device place of parameters.
             params(list<str>): The names of parameters to be pruned.
@@ -61,8 +57,6 @@ class AutoPruner(object):
                 The length of `init_ratios` should be equal to length of params when `init_ratios` is a list. 
                 If it is a scalar, all the parameters in `params` will be pruned by uniform ratio.
                 None means get a group of init ratios by `pruned_flops` of `pruned_latency`. Default: None.
-            pruned_flops(float): The percent of FLOPS to be pruned. Default: None.
-            pruned_latency(float): The percent of latency to be pruned. Default: None.
             server_addr(tuple): A tuple of server ip and server port for controller server. 
             init_temperature(float): The init temperature used in simulated annealing search strategy.
             reduce_rate(float): The decay rate used in simulated annealing search strategy.
@@ -81,13 +75,11 @@ class AutoPruner(object):
             is_server(bool): Whether current host is controller server. Default: True.
         """
 
-        self._program = program
         self._scope = scope
         self._place = place
         self._params = params
         self._init_ratios = init_ratios
-        self._pruned_flops = pruned_flops
-        self._pruned_latency = pruned_latency
+        assert (params is not None and init_ratios is not None)
         self._reduce_rate = reduce_rate
         self._init_temperature = init_temperature
         self._max_try_times = max_try_times
@@ -96,24 +88,11 @@ class AutoPruner(object):
         self._range_table = self._get_range_table(min_ratios, max_ratios)
 
         self._pruner = Pruner()
-        if self._pruned_flops:
-            self._base_flops = flops(program)
-            self._max_flops = self._base_flops * (1 - self._pruned_flops)
-            _logger.info(
-                "AutoPruner - base flops: {}; pruned_flops: {}; max_flops: {}".
-                format(self._base_flops, self._pruned_flops, self._max_flops))
-        if self._pruned_latency:
-            self._base_latency = latency(program)
-
-        if self._init_ratios is None:
-            self._init_ratios = self._get_init_ratios(
-                self, _program, self._params, self._pruned_flops,
-                self._pruned_latency)
         init_tokens = self._ratios2tokens(self._init_ratios)
         _logger.info("range table: {}".format(self._range_table))
         controller = SAController(self._range_table, self._reduce_rate,
                                   self._init_temperature, self._max_try_times,
-                                  init_tokens, self._constrain_func)
+                                  init_tokens)
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
@@ -141,9 +120,6 @@ class AutoPruner(object):
     def _get_host_ip(self):
         return socket.gethostbyname(socket.gethostname())
 
-    def _get_init_ratios(self, program, params, pruned_flops, pruned_latency):
-        pass
-
     def _get_range_table(self, min_ratios, max_ratios):
         assert isinstance(min_ratios, list) or isinstance(min_ratios, float)
         assert isinstance(max_ratios, list) or isinstance(max_ratios, float)
@@ -154,25 +130,6 @@ class AutoPruner(object):
         min_tokens = self._ratios2tokens(min_ratios)
         max_tokens = self._ratios2tokens(max_ratios)
         return (min_tokens, max_tokens)
-
-    def _constrain_func(self, tokens):
-        ratios = self._tokens2ratios(tokens)
-        pruned_program, _, _ = self._pruner.prune(
-            self._program,
-            self._scope,
-            self._params,
-            ratios,
-            place=self._place,
-            only_graph=True)
-        current_flops = flops(pruned_program)
-        result = current_flops < self._max_flops
-        if not result:
-            _logger.info("Failed try ratios: {}; flops: {}; max_flops: {}".
-                         format(ratios, current_flops, self._max_flops))
-        else:
-            _logger.info("Success try ratios: {}; flops: {}; max_flops: {}".
-                         format(ratios, current_flops, self._max_flops))
-        return result
 
     def prune(self, program, eval_program=None):
         """
