@@ -22,11 +22,8 @@ before_install:
   - docker pull paddlepaddle/paddle:latest
 
 script:
-  - exit_code=0
-  - .travis/precommit.sh || exit_code=((exitcode|? ))
-  - docker run -i --rm -v "$PWD:/py_unittest" paddlepaddle/paddle:latest /bin/bash -c
-    'cd /py_unittest; sh .travis/unittest.sh' || exit_code=((exitcode|? ))
-  - if [ $exit_code -eq 0  ]; then true; else exit 1; fi;
+  - bash .travis/precommit.sh
+  - if [ $? -eq 0  ]; then true; else exit 1; fi;
 
 notifications:
   email:
