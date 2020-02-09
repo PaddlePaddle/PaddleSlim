@@ -158,17 +158,21 @@ def _parse_configs(user_config):
 
 
 def quant_aware(program, place, config=None, scope=None, for_test=False):
-    """
-    add trainable quantization ops in program.
+    """Add quantization ops and inverse quantization ops to "program" for quantization training or testing.
+
     Args:
-        program(fluid.Program): program to quant
-        place(fluid.CPUPlace or fluid.CUDAPlace): CPU or CUDA device
-        config(dict, optional): configs for quantization. if None, will use default config. Default is None.
-        scope(fluid.Scope): the scope to store var, it should be program's scope. if None, will use fluid.global_scope().
-            default is None.
-        for_test(bool): if program is test program, set True when program is for test, False when program is for train. Default is False.
-    Return:
-        fluid.Program: user can finetune this quantization program to enhance the accuracy.
+        program(fluid.Program): training or testing ``program``.
+        place(fluid.CPUPlace or fluid.CUDAPlace): This parameter indicates the device where 'executor' is executed.
+        config(dict, optional): configs for quantization. if None, will use default config. Default: None.
+        scope(fluid.Scope): the scope to store var, it should be program's scope. The ``scope`` used to store the ``variable``,
+        this value should be same as the ``scope`` of the ``program``.  In general, 
+        it is [*fluid.global_scope*](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html)。
+        If this value setted as ``None``, then will use [*fluid.global_scope*](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html)，
+        Default is ``None``.
+        for_test(bool): If the 'program' parameter is set to a test program, this parameter should be set to ``True``. Otherwise, set to ``False``.Default: False
+    
+    Returns:
+        fluid.CompiledProgram | fluid.Program: Program with quantization and dequantization ``operators``
     """
 
     scope = fluid.global_scope() if not scope else scope
@@ -251,11 +255,11 @@ def quant_post(executor,
         sample_generator(Python Generator): The sample generator provides 
             calibrate data for DataLoader, and it only returns a sample every time.
         model_filename(str, optional): The name of model file. If parameters 
-            are saved in separate files, set it as 'None'. Default is 'None'.
+            are saved in separate files, set it as 'None'. Default: 'None'.
         params_filename(str, optional): The name of params file.
                 When all parameters are saved in a single file, set it 
                 as filename. If parameters are saved in separate files, 
-                set it as 'None'. Default is 'None'.
+                set it as 'None'. Default : 'None'.
         batch_size(int, optional): The batch size of DataLoader, default is 16.
         batch_nums(int, optional): If batch_nums is not None, the number of calibrate 
                         data is 'batch_size*batch_nums'. If batch_nums is None, use all data
@@ -264,15 +268,16 @@ def quant_post(executor,
                         and save variables. If scope is None, will use fluid.global_scope().
         algo(str, optional): If algo=KL, use KL-divergenc method to 
                         get the more precise scale factor. If algo='direct', use 
-                        abs_max method to get the scale factor. Default is 'KL'.
+                        abs_max method to get the scale factor. Default: 'KL'.
         quantizable_op_type(list[str], optional): The list of op types
-                        that will be quantized. Default is ["conv2d", "depthwise_conv2d", 
+                        that will be quantized. Default: ["conv2d", "depthwise_conv2d", 
                         "mul"].
         is_full_quantize(bool): if True, apply quantization to all supported quantizable op type.
                         If False, only apply quantization to the input quantizable_op_type. Default is False.
         is_use_cache_file(bool): If False, all temp data will be saved in memory. If True,
-                                all temp data will be saved to disk. Defalut is False.
+                                all temp data will be saved to disk. Defalut: False.
         cache_dir(str): When 'is_use_cache_file' is True, temp data will be save in 'cache_dir'. Default is './temp_post_training'.
+    
     Returns:
         None
     """
@@ -296,22 +301,21 @@ def quant_post(executor,
 
 def convert(program, place, config=None, scope=None, save_int8=False):
     """
-    change quantization ops order in program. return program that can used by Paddle-Lite.
+    convert quantized and well-trained ``program`` to final  quantized ``program`` that can be used to  save ``inference model``.
+    
     Args:
-        program(fluid.Program): program that returned by quant_aware
-        place(fluid.CPUPlace or fluid.CUDAPlace): CPU or CUDA device
-        scope(fluid.Scope, optional):  the scope to store var, it should be program's scope. if None, will use fluid.global_scope().
-            default is None.
-        config(dict, optional): configs for convert. if set None, will use default config. Default is None.\
-                It must be same with config that used in 'quant_aware'.
-        save_int8: if return int8 freezed program. Int8 program can only be used to check size of model weights. \
-                It cannot be used in Fluid or Paddle-Lite.
-    Return:
-        freezed_program(fluid.Program): freezed program which can be used for inference.
-                       parameters is float32 type, but it's value in int8 range.
-        freezed_program_int8(fluid.Program): freezed int8 program.
-        when save_int8 is False, return freezed_program.
-        when save_int8 is True, return freezed_program and freezed_program_int8
+        program(fluid.Program): quantized and well-trained ``test program``.
+        place(fluid.CPUPlace or fluid.CUDAPlace): This parameter represents the executor run on which device.
+        config(dict, optional): configs for convert. if set None, will use default config. 
+        It must be same with config that used in 'quant_aware'. Default: None.
+        scope(fluid.Scope, optional):  Scope records the mapping between variable names and variables, similar to brackets in programming languages. Usually users can use [*fluid.global_scope*](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html). When ``None`` will use [*fluid.global_scope()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html). Default: ``None``.
+        save_int8: - Whether to return ``program`` which model parameters' dtype is ``int8``. 
+        This parameter can only be used to get model size. Default: ``False``.
+
+    Returns:
+        Tuple : freezed program which can be used for inference.
+        when save_int8 is False, return freezed_program(fluid.Program).
+        when save_int8 is True, return freezed_program(fluid.Program) and freezed_program_int8(fluid.Program)
     """
     scope = fluid.global_scope() if not scope else scope
 
