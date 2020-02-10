@@ -1,6 +1,6 @@
 # Training-aware Quantization of image classification model - quick start
 
-This tutorial shows how to do training-aware quantization using [API](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/api/quantization_api.md) in PaddleSlim. We use MobileNetV1 to train image classification model as example. The tutorial contains follow sections: 
+This tutorial shows how to do training-aware quantization using [API](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/api/quantization_api.md) in PaddleSlim. We use MobileNetV1 to train image classification model as example. The tutorial contains follow sections:
 
 1. Necessary imports
 2. Model architecture
@@ -60,7 +60,7 @@ def train(prog):
         if iter % 100 == 0:
             print('train iter={}, top1={}, top5={}, loss={}'.format(iter, acc1.mean(), acc5.mean(), loss.mean()))
         iter += 1
-        
+
 def test(prog):
     iter = 0
     res = [[], []]
@@ -105,7 +105,7 @@ Finetune the model after quantization. Test model after one epoch training.
 train(quant_program)
 ```
 
-Test model after quantization. The top1 and top5 accuracy are close to result in ``3.2 training model and testing``. We preform the training-aware quantization without loss in this image classification model.
+Test model after quantization. The top1 and top5 accuracy are close to result in ``3.2 training model and testing``. We preform the training-aware quantization without loss on this image classification model.
 
 ```python
 test(val_quant_program)
@@ -114,7 +114,7 @@ test(val_quant_program)
 
 ## 6. Save model after quantization
 
-The model in ``4. Quantization`` after calling ``slim.quant.quant_aware`` API is only suitable to train. To get the inference model, we should use [slim.quant.convert](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#convert) API to change model architecture and use  fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/io_cn/save_inference_model_cn.html#save-inference-model) to save model. ``float_prog``'s parameters are float32 dtype but in int8's range which can be used in ``fluid`` or ``paddle-lite``. ``paddle-lite`` will change the parameters' dtype from float32 to int8 first when loading the inference model. ``int8_prog``'s parameters are int8 dtype and we can get model size after quantization by saving it. ``int8_prog`` cannot be used in ``fluid`` or ``paddle-lite``.
+The model in ``4. Quantization`` after calling ``slim.quant.quant_aware`` API is only suitable to train. To get the inference model, we should use [slim.quant.convert](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#convert) API to change model architecture and use [fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/io_cn/save_inference_model_cn.html#save-inference-model) to save model. ``float_prog``'s parameters are float32 dtype but in int8's range which can be used in ``fluid`` or ``paddle-lite``. ``paddle-lite`` will change the parameters' dtype from float32 to int8 first when loading the inference model. ``int8_prog``'s parameters are int8 dtype and we can get model size after quantization by saving it. ``int8_prog`` cannot be used in ``fluid`` or ``paddle-lite``.
 
 
 ```python
