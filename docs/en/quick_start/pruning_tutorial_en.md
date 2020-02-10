@@ -10,7 +10,7 @@ by a demo of MobileNetV1 model on MNIST dataset. This tutorial following workflo
 
 ## 1. Import dependency
 
-PaddleSlim dependents on Paddle1.7. Please ensure that you have installed paddle correctly. Import Paddle and PaddleSlim as below,
+PaddleSlim dependents on Paddle1.7. Please ensure that you have installed paddle correctly. Import Paddle and PaddleSlim as below:
 
 ```
 import paddle
@@ -69,7 +69,7 @@ print("FLOPs: {}".format(FLOPs))
 
 ### 4.1 Define dataset
 
-To make you easily run this demo, it will training on MNIST dataset. The package `paddle.dataset.mnist` of Paddle dfine the downloading and reading of MNIST dataset.
+To make you easily run this demo, it will training on MNIST dataset. The package `paddle.dataset.mnist` of Paddle defines the downloading and reading of MNIST dataset.
 Define training data reader and test data reader as below：
 
 ```
