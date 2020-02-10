@@ -19,8 +19,9 @@ def save_model(exe, graph, dirname):
     Save weights of model and information of shapes into filesystem.
 
     Args:
-      - graph(Program|Graph): The graph to be saved.
-      - dirname(str): The directory that the model saved into.
+        exe(paddle.fluid.Executor): The executor used to save model.
+        graph(Program|Graph): The graph to be saved.
+        dirname(str): The directory that the model saved into.
     """
     assert graph is not None and dirname is not None
     graph = GraphWrapper(graph) if isinstance(graph, Program) else graph
@@ -46,8 +47,8 @@ def load_model(exe, graph, dirname):
     Load weights of model and information of shapes from filesystem.
 
     Args:
-      - graph(Program|Graph): The graph to be saved.
-      - dirname(str): The directory that the model saved into.
+        graph(Program|Graph): The graph to be updated by loaded information..
+        dirname(str): The directory that the model will be loaded.
     """
     assert graph is not None and dirname is not None
     graph = GraphWrapper(graph) if isinstance(graph, Program) else graph
