@@ -62,41 +62,36 @@ class SANAS(object):
                                       Default: None.
         is_server(bool): Whether current host is controller server. Default: True.
 
-    **NOTE:** 
-        Why need to set initial temperature and reduce rate:
+    .. note::
+        - Why need to set initial temperature and reduce rate:
 
-        SA algorithm preserve a base token(initial token is the first base token, can be set by 
-        yourself or random generate) and base score(initial score is -1), next token will be 
-        generated based on base token. During the search, if the score which is obtained by the 
-        model corresponding to the token is greater than the score which is saved in SA corresponding to 
-        base token, current token saved as base token certainly; if score which is obtained by the model 
-        corresponding to the token is less than the score which is saved in SA correspinding to base token, 
-        current token saved as base token with a certain probability.
+          - SA algorithm preserve a base token(initial token is the first base token, can be set by 
+            yourself or random generate) and base score(initial score is -1), next token will be 
+            generated based on base token. During the search, if the score which is obtained by the 
+            model corresponding to the token is greater than the score which is saved in SA corresponding to 
+            base token, current token saved as base token certainly; if score which is obtained by the model 
+            corresponding to the token is less than the score which is saved in SA correspinding to base token, 
+            current token saved as base token with a certain probability.
+          - For initial temperature, higher is more unstable, it means that SA has a strong possibility to save 
+            current token as base token if current score is smaller than base score saved in SA.
+          - For initial temperature, lower is more stable, it means that SA has a small possibility to save 
+            current token as base token if current score is smaller than base score saved in SA.
+          - For reduce rate, higher means SA algorithm has slower convergence.
+          - For reduce rate, lower means SA algorithm has faster convergence.
 
-        For initial temperature, higher is more unstable, it means that SA has a strong possibility to save 
-        current token as base token if current score is smaller than base score saved in SA.
+        - How to set initial temperature and reduce rate:
 
-        For initial temperature, lower is more stable, it means that SA has a small possibility to save 
-        current token as base token if current score is smaller than base score saved in SA.
+          - If there is a better initial token, and want to search based on this token, we suggest start search 
+            experiment in the steady state of the SA algorithm, initial temperature can be set to a small value, 
+            such as 1.0, and reduce rate can be set to a large value, such as 0.85. If you want to start search 
+            experiment based on the better token with greedy algorithm, which only saved current token as base 
+            token if current score higher than base score saved in SA algorithm, reduce rate can be set to a 
+            extremely small value, such as 0.85 ** 10.
 
-        For reduce rate, higher means SA algorithm has slower convergence.
-
-        For reduce rate, lower means SA algorithm has faster convergence.
-
-
-        How to set initial temperature and reduce rate:
-
-        If there is a better initial token, and want to search based on this token, we suggest start search 
-        experiment in the steady state of the SA algorithm, initial temperature can be set to a small value, 
-        such as 1.0, and reduce rate can be set to a large value, such as 0.85. If you want to start search 
-        experiment based on the better token with greedy algorithm, which only saved current token as base 
-        token if current score higher than base score saved in SA algorithm, reduce rate can be set to a 
-        extremely small value, such as 0.85 ** 10.
-
-        If initial token is generated randomly, it means initial token is a worse token, we suggest start 
-        search experiment in the unstable state of the SA algorithm, explore all random tokens as much as 
-        possible, and get a better token. Initial temperature can be set a higher value, such as 1000.0, 
-        and reduce rate can be set to a small value.
+          - If initial token is generated randomly, it means initial token is a worse token, we suggest start 
+            search experiment in the unstable state of the SA algorithm, explore all random tokens as much as 
+            possible, and get a better token. Initial temperature can be set a higher value, such as 1000.0, 
+            and reduce rate can be set to a small value.
     """
 
     def __init__(self,

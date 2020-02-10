@@ -1,4 +1,4 @@
-Search Space
+search space
 ========
 Search Space used in neural architecture search. Search Space is a collection of model architecture, the purpose of SANAS is to get a model which FLOPs or latency is smaller or percision is higher.
 

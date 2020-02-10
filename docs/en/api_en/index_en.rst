@@ -15,5 +15,5 @@ API Documents
    paddleslim.quant.rst
    paddleslim.nas.rst
    paddleslim.nas.one_shot.rst
-   search_space_en.rst
    paddleslim.pantheon.rst
+   search_space_en.rst

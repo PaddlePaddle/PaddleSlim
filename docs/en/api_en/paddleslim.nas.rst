@@ -1,11 +1,6 @@
 paddleslim\.nas package
 =======================
 
-.. automodule:: paddleslim.nas
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 Subpackages
 -----------
 
