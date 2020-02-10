@@ -35,7 +35,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 class SANAS(object):
     """
-    Search a group of ratios used to prune program.
+    SANAS(Simulated Annealing Neural Architecture Search) is a neural architecture search algorithm based on simulated annealing, used in discrete search task generally.
 
     Args:
         configs(list<tuple>): A list of search space configuration with format [(key, {input_size, output_size, block_num, block_mask})]. `key` is the name of search space with data type str. `input_size` and `output_size`  are input size and output size of searched sub-network. `block_num` is the number of blocks in searched network, `block_mask` is a list consists by 0 and 1, 0 means normal block, 1 means reduction block.
@@ -62,6 +62,7 @@ For initial temperature, lower is more stable, it means that SA has a small poss
         If there is a better initial token, and want to search based on this token, we suggest start search experiment in the steady state of the SA algorithm, initial temperature can be set to a small value, such as 1.0, and reduce rate can be set to a large value, such as 0.85. If you want to start search experiment based on the better token with greedy algorithm, which only saved current token as base token if current score higher than base score saved in SA algorithm, reduce rate can be set to a extremely small value, such as 0.85 ** 10.
         If initial token is generated randomly, it means initial token is a worse token, we suggest start search experiment in the unstable state of the SA algorithm, explore all random tokens as much as possible, and get a better token. Initial temperature can be set a higher value, such as 1000.0, and reduce rate can be set to a small value.
     """
+
     def __init__(self,
                  configs,
                  server_addr=("", 8881),
