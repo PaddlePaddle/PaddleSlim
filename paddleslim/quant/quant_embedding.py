@@ -233,19 +233,19 @@ def _quant_embedding_abs_max(graph, scope, place, config):
 
 
 def quant_embedding(program, place, config, scope=None):
-    """quant lookup_table op parameters
+    """quantize lookup_table op parameters
 
     Args:
         program(fluid.Program): infer program
-        scope(fluid.Scope): Scope records the mapping between variable names and variables, similar to brackets in programming languages. Usually users can use [ *fluid.global_scope()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html). When ``None`` will use [*fluid.global_scope()*](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html). Default : ``None``.
+        scope(fluid.Scope): Scope records the mapping between variable names and variables, similar to brackets in programming languages. Usually users can use `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . When ``None`` will use `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_. Default : ``None``.
         place(fluid.CPUPlace or fluid.CUDAPlace): This parameter represents the executor run on which device.
-        config(dict): config to quant. The keys are 'params_name', 'quantize_type', \
+        config(dict): config to quantize. The keys are 'params_name', 'quantize_type', \
                 'quantize_bits', 'dtype', 'threshold'. \
-                'params_name': parameter name to quant, must be set.
-                'quantize_type': quantize type, supported types are ['abs_max']. default is "abs_max".
-                'quantize_bits': quantize bits, supported bits are [8].  default is 8.
-                'dtype': quantize dtype, supported dtype are ['int8']. default is 'int8'.
-                'threshold': threshold to clip tensor before quant. When threshold is not set, \
+                ``params_name`` is parameter name to quantize, must be set.
+                ``quantize_type`` is  quantize type, supported types are ['abs_max'], default is "abs_max".
+                ``quantize_bits`` supported bits are [8] and default is 8.
+                ``dtype`` is quantize dtype, supported dtype are ['int8'], default is 'int8'.
+                ``threshold`` is threshold to clip tensor before quant. When threshold is not set, \
                         tensor will not be clipped.
 
     Returns:
