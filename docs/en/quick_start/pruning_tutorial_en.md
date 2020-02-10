@@ -1,18 +1,16 @@
-#  Pruning of image classification model - quick start
+# Channel Pruning for Image Classification
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的卷积通道剪裁接口]()。
-该示例包含以下步骤：
+In this tutorial, you will learn how to use channel pruning API of PaddleSlim
+by a demo of MobileNetV1 model on MNIST dataset. This tutorial following workflow:
 
-1. 导入依赖
-2. 构建模型
-3. 剪裁
-4. 训练剪裁后的模型
+1. Import dependency
+2. Build model
+3. Prune model
+4. Train pruned model
 
-以下章节依次次介绍每个步骤的内容。
+## 1. Import dependency
 
-## 1. 导入依赖
-
-PaddleSlim依赖Paddle1.7版本，请确认已正确安装Paddle，然后按以下方式导入Paddle和PaddleSlim:
+PaddleSlim dependents on Paddle1.7. Please ensure that you have installed paddle correctly. Import Paddle and PaddleSlim as below,
 
 ```
 import paddle
@@ -20,31 +18,32 @@ import paddle.fluid as fluid
 import paddleslim as slim
 ```
 
-## 2. 构建网络
+## 2. Build Model
 
-该章节构造一个用于对MNIST数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[1, 28, 28]`，输出类别数为10。
-为了方便展示示例，我们在`paddleslim.models`下预定义了用于构建分类模型的方法，执行以下代码构建分类模型：
+This section will build a classsification model based `MobileNetV1` for MNIST task. The shape of the input is `[1, 28, 28]` and the output number is 10.
+
+To make the code simple, we define a function in package `paddleslim.models` to build classification model.
+Excute following code to build a model,
 
 ```
 exe, train_program, val_program, inputs, outputs =
     slim.models.image_classification("MobileNet", [1, 28, 28], 10, use_gpu=False)
 ```
 
->注意：paddleslim.models下的API并非PaddleSlim常规API，是为了简化示例而封装预定义的一系列方法，比如：模型结构的定义、Program的构建等。
+>Note：The functions in paddleslim.models is just used in tutorials or demos.
 
-## 3. 剪裁卷积层通道
+## 3. Prune model
 
-### 3.1 计算剪裁之前的FLOPs
+### 3.1 Compute FLOPs bofore pruning
 
 ```
 FLOPs = slim.analysis.flops(train_program)
 print("FLOPs: {}".format(FLOPs))
 ```
 
-### 3.2 剪裁
+### 3.2 Pruning
 
-我们这里对参数名为`conv2_1_sep_weights`和`conv2_2_sep_weights`的卷积层进行剪裁，分别剪掉20%和30%的通道数。
-代码如下所示：
+The section will prune the parameters named `conv2_1_sep_weights` and `conv2_2_sep_weights` by 20% and 30%.
 
 ```
 pruner = slim.prune.Pruner()
@@ -56,21 +55,22 @@ pruned_program, _, _ = pruner.prune(
         place=fluid.CPUPlace())
 ```
 
-以上操作会修改`train_program`中对应卷积层参数的定义，同时对`fluid.global_scope()`中存储的参数数组进行裁剪。
+It will change the shapes of parameters defined in `train_program`. And the parameters` values stored in `fluid.global_scope()` will be pruned.
 
-### 3.3 计算剪裁之后的FLOPs
+
+### 3.3 Compute FLOPs after pruning
 
 ```
 FLOPs = paddleslim.analysis.flops(train_program)
 print("FLOPs: {}".format(FLOPs))
 ```
 
-## 4. 训练剪裁后的模型
+## 4. Train pruned model
 
-### 4.1 定义输入数据
+### 4.1 Define dataset
 
-为了快速执行该示例，我们选取简单的MNIST数据，Paddle框架的`paddle.dataset.mnist`包定义了MNIST数据的下载和读取。
-代码如下：
+To make you easily run this demo, it will training on MNIST dataset. The package `paddle.dataset.mnist` of Paddle dfine the downloading and reading of MNIST dataset.
+Define training data reader and test data reader as below：
 
 ```
 import paddle.dataset.mnist as reader
@@ -79,8 +79,9 @@ train_reader = paddle.batch(
 train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
 ```
 
-### 4.2 执行训练
-以下代码执行了一个`epoch`的训练：
+### 4.2 Training
+
+Excute following code to run an `epoch` training:
 
 ```
 for data in train_reader():
