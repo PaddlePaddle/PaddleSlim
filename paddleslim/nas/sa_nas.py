@@ -35,32 +35,68 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 class SANAS(object):
     """
-    SANAS(Simulated Annealing Neural Architecture Search) is a neural architecture search algorithm based on simulated annealing, used in discrete search task generally.
+    SANAS(Simulated Annealing Neural Architecture Search) is a neural architecture search algorithm 
+    based on simulated annealing, used in discrete search task generally.
 
     Args:
-        configs(list<tuple>): A list of search space configuration with format [(key, {input_size, output_size, block_num, block_mask})]. `key` is the name of search space with data type str. `input_size` and `output_size`  are input size and output size of searched sub-network. `block_num` is the number of blocks in searched network, `block_mask` is a list consists by 0 and 1, 0 means normal block, 1 means reduction block.
-        server_addr(tuple): Server address, including ip and port of server. If ip is None or "", will use host ip if is_server = True. Default: ("", 8881).
-        init_temperature(float): Initial temperature in SANAS. If init_temperature and init_tokens are None, default initial temperature is 10.0, if init_temperature is None and init_tokens is not None, default initial temperature is 1.0. The detail configuration about the init_temperature please reference Note. Default: None.
-        reduce_rate(float): Reduce rate in SANAS. The detail configuration about the reduce_rate please reference Note. Default: 0.85.
+        configs(list<tuple>): A list of search space configuration with format [(key, {input_size, 
+                              output_size, block_num, block_mask})]. `key` is the name of search space 
+                              with data type str. `input_size` and `output_size`  are input size and 
+                              output size of searched sub-network. `block_num` is the number of blocks 
+                              in searched network, `block_mask` is a list consists by 0 and 1, 0 means 
+                              normal block, 1 means reduction block.
+        server_addr(tuple): Server address, including ip and port of server. If ip is None or "", will 
+                            use host ip if is_server = True. Default: ("", 8881).
+        init_temperature(float): Initial temperature in SANAS. If init_temperature and init_tokens are None, 
+                                 default initial temperature is 10.0, if init_temperature is None and 
+                                 init_tokens is not None, default initial temperature is 1.0. The detail 
+                                 configuration about the init_temperature please reference Note. Default: None.
+        reduce_rate(float): Reduce rate in SANAS. The detail configuration about the reduce_rate please 
+                            reference Note. Default: 0.85.
         search_steps(int): The steps of searching. Default: 300.
-        init_tokens(list|None): Initial token. If init_tokens is None, SANAS will random generate initial tokens. Default: None.
-        save_checkpoint(string|None): The directory of checkpoint to save, if set to None, not save checkpoint. Default: 'nas_checkpoint'.
-        load_checkpoint(string|None): The directory of checkpoint to load, if set to None, not load checkpoint. Default: None.
+        init_tokens(list|None): Initial token. If init_tokens is None, SANAS will random generate initial 
+                                tokens. Default: None.
+        save_checkpoint(string|None): The directory of checkpoint to save, if set to None, not save checkpoint.
+                                      Default: 'nas_checkpoint'.
+        load_checkpoint(string|None): The directory of checkpoint to load, if set to None, not load checkpoint. 
+                                      Default: None.
         is_server(bool): Whether current host is controller server. Default: True.
 
     **NOTE:** 
         Why need to set initial temperature and reduce rate:
 
-        SA algorithm preserve a base token(initial token is the first base token, can be set by yourself or random generate) and base score(initial score is -1), next token will be generated based on base token. During the search, if the score which is obtained by the model corresponding to the token is greater than the score which is saved in SA corresponding to base token, current token saved as base token certainly; if score which is obtained by the model corresponding to the token is less than the score which is saved in SA correspinding to base token, current token saved as base token with a certain probability.
-        For initial temperature, higher is more unstable, it means that SA has a strong possibility to save current token as base token if current score is smaller than base score saved in SA.
-For initial temperature, lower is more stable, it means that SA has a small possibility to save current token as base token if current score is smaller than base score saved in SA.
+        SA algorithm preserve a base token(initial token is the first base token, can be set by 
+        yourself or random generate) and base score(initial score is -1), next token will be 
+        generated based on base token. During the search, if the score which is obtained by the 
+        model corresponding to the token is greater than the score which is saved in SA corresponding to 
+        base token, current token saved as base token certainly; if score which is obtained by the model 
+        corresponding to the token is less than the score which is saved in SA correspinding to base token, 
+        current token saved as base token with a certain probability.
+
+        For initial temperature, higher is more unstable, it means that SA has a strong possibility to save 
+        current token as base token if current score is smaller than base score saved in SA.
+
+        For initial temperature, lower is more stable, it means that SA has a small possibility to save 
+        current token as base token if current score is smaller than base score saved in SA.
+
         For reduce rate, higher means SA algorithm has slower convergence.
+
         For reduce rate, lower means SA algorithm has faster convergence.
+
 
         How to set initial temperature and reduce rate:
 
-        If there is a better initial token, and want to search based on this token, we suggest start search experiment in the steady state of the SA algorithm, initial temperature can be set to a small value, such as 1.0, and reduce rate can be set to a large value, such as 0.85. If you want to start search experiment based on the better token with greedy algorithm, which only saved current token as base token if current score higher than base score saved in SA algorithm, reduce rate can be set to a extremely small value, such as 0.85 ** 10.
-        If initial token is generated randomly, it means initial token is a worse token, we suggest start search experiment in the unstable state of the SA algorithm, explore all random tokens as much as possible, and get a better token. Initial temperature can be set a higher value, such as 1000.0, and reduce rate can be set to a small value.
+        If there is a better initial token, and want to search based on this token, we suggest start search 
+        experiment in the steady state of the SA algorithm, initial temperature can be set to a small value, 
+        such as 1.0, and reduce rate can be set to a large value, such as 0.85. If you want to start search 
+        experiment based on the better token with greedy algorithm, which only saved current token as base 
+        token if current score higher than base score saved in SA algorithm, reduce rate can be set to a 
+        extremely small value, such as 0.85 ** 10.
+
+        If initial token is generated randomly, it means initial token is a worse token, we suggest start 
+        search experiment in the unstable state of the SA algorithm, explore all random tokens as much as 
+        possible, and get a better token. Initial temperature can be set a higher value, such as 1000.0, 
+        and reduce rate can be set to a small value.
     """
 
     def __init__(self,
