@@ -1,6 +1,6 @@
 # Post-training Quantization of image classification model - quick start
 
-This tutorial shows how to do post training quantization using [API](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/api/quantization_api.md) in PaddleSlim. We use MobileNetV1 to train image classification model as example. The tutorial contains follow sections: 
+This tutorial shows how to do post training quantization using [API](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/api/quantization_api.md) in PaddleSlim. We use MobileNetV1 to train image classification model as example. The tutorial contains follow sections:
 
 1. Necessary imports
 2. Model architecture
@@ -31,7 +31,7 @@ exe, train_program, val_program, inputs, outputs = \
 
 ## 3. Train normal model
 
-The section shows how to define model inputs, train and test model. The reason for training the normal image classification model first is that the post training quantization is performed on the well-trained model. 
+The section shows how to define model inputs, train and test model. The reason for training the normal image classification model first is that the post training quantization is performed on the well-trained model.
 
 ### 3.1 input data definition
 
@@ -58,7 +58,7 @@ def train(prog):
         if iter % 100 == 0:
             print('train', acc1.mean(), acc5.mean(), loss.mean())
         iter += 1
-        
+
 def test(prog, outputs=outputs):
     iter = 0
     res = [[], []]
@@ -110,9 +110,6 @@ slim.quant.quant_post(
         sample_generator=reader.test(),
         batch_nums=10)
 ```
-
-
-加载保存在文件夹``'./quant_post_model'``下的量化后的模型进行测试，可看到精度和``3.2 训练和测试``中得到的测试精度相近，因此离线量化过程对于此分类模型几乎无损。
 
 Load the model after post training quantization in ``'./quant_post_model'`` and run ``test`` function. The top1 and top5 accuracy are close to result in ``3.2 training model and testing``. We preform the post training quantization without loss on this image classification model.
 
