@@ -25,6 +25,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 def cached_reader(reader, sampled_rate, cache_path, cached_id):
     """
     Sample partial data from reader and cache them into local file system.
+
     Args:
         reader: Iterative data source.
         sampled_rate(float): The sampled rate used to sample partial data for evaluation. None means using all data in eval_reader. default: None.

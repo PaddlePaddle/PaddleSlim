@@ -26,12 +26,14 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class Pruner():
+    """The pruner used to prune channels of convolution.
+
+    Args:
+        criterion(str): the criterion used to sort channels for pruning. It only supports 'l1_norm' currently.
+
+    """
+
     def __init__(self, criterion="l1_norm"):
-        """
-        Args:
-            criterion(str): the criterion used to sort channels for pruning.
-                            It only supports 'l1_norm' currently.
-        """
         self.criterion = criterion
 
     def prune(self,
@@ -44,9 +46,10 @@ class Pruner():
               only_graph=False,
               param_backup=False,
               param_shape_backup=False):
-        """
-        Pruning the given parameters.
+        """Pruning the given parameters.
+
         Args:
+
             program(fluid.Program): The program to be pruned.
             scope(fluid.Scope): The scope storing paramaters to be pruned.
             params(list<str>): A list of parameter names to be pruned.
@@ -58,10 +61,9 @@ class Pruner():
                               False means modifying graph and variables in scope. Default: False.
             param_backup(bool): Whether to return a dict to backup the values of parameters. Default: False.
             param_shape_backup(bool): Whether to return a dict to backup the shapes of parameters. Default: False.
+
         Returns:
-            Program: The pruned program.
-            param_backup: A dict to backup the values of parameters.
-            param_shape_backup: A dict to backup the shapes of parameters.
+            tuple: ``(pruned_program, param_backup, param_shape_backup)``. ``pruned_program`` is the pruned program. ``param_backup`` is a dict to backup the values of parameters. ``param_shape_backup`` is a dict to backup the shapes of parameters.
         """
 
         self.pruned_list = []
@@ -131,6 +133,7 @@ class Pruner():
     def _cal_pruned_idx(self, param, ratio, axis):
         """
         Calculate the index to be pruned on axis by given pruning ratio.
+
         Args:
             name(str): The name of parameter to be pruned.
             param(np.array): The data of parameter to be pruned.
@@ -138,6 +141,7 @@ class Pruner():
             axis(int): The axis to be used for pruning given parameter.
                        If it is None, the value in self.pruning_axis will be used.
                        default: None.
+
         Returns:
             list<int>: The indexes to be pruned on axis.
         """
@@ -151,6 +155,7 @@ class Pruner():
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
         """
         Pruning a array by indexes on given axis.
+
         Args:
             tensor(numpy.array): The target array to be pruned.
             pruned_idx(list<int>): The indexes to be pruned.
@@ -158,6 +163,7 @@ class Pruner():
             lazy(bool): True means setting the pruned elements to zero.
                         False means remove the pruned elements from memory.
                         default: False.
+
         Returns:
             numpy.array: The pruned array.
         """

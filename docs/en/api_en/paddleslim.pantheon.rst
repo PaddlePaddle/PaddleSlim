@@ -1,5 +1,5 @@
-paddleslim.pantheon package
-===========================
+paddleslim\.pantheon package
+============================
 
 .. automodule:: paddleslim.pantheon
     :members:
@@ -9,24 +9,24 @@ paddleslim.pantheon package
 Submodules
 ----------
 
-paddleslim.pantheon.student module
-----------------------------------
+paddleslim\.pantheon\.student module
+------------------------------------
 
 .. automodule:: paddleslim.pantheon.student
     :members:
     :undoc-members:
     :show-inheritance:
 
-paddleslim.pantheon.teacher module
-----------------------------------
+paddleslim\.pantheon\.teacher module
+------------------------------------
 
 .. automodule:: paddleslim.pantheon.teacher
     :members:
     :undoc-members:
     :show-inheritance:
 
-paddleslim.pantheon.utils module
---------------------------------
+paddleslim\.pantheon\.utils module
+----------------------------------
 
 .. automodule:: paddleslim.pantheon.utils
     :members:

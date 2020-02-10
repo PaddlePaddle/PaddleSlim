@@ -1,5 +1,5 @@
-paddleslim.nas package
-======================
+paddleslim\.nas package
+=======================
 
 .. automodule:: paddleslim.nas
     :members:
@@ -16,8 +16,8 @@ Subpackages
 Submodules
 ----------
 
-paddleslim.nas.sa\_nas module
------------------------------
+paddleslim\.nas\.sa\_nas module
+-------------------------------
 
 .. automodule:: paddleslim.nas.sa_nas
     :members:

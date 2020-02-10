@@ -1,5 +1,5 @@
-paddleslim.dist package
-=======================
+paddleslim\.dist package
+========================
 
 .. automodule:: paddleslim.dist
     :members:
@@ -9,8 +9,8 @@ paddleslim.dist package
 Submodules
 ----------
 
-paddleslim.dist.single\_distiller module
-----------------------------------------
+paddleslim\.dist\.single\_distiller module
+------------------------------------------
 
 .. automodule:: paddleslim.dist.single_distiller
     :members:

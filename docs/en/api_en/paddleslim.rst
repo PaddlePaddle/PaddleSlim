@@ -24,8 +24,8 @@ Subpackages
 Submodules
 ----------
 
-paddleslim.version module
--------------------------
+paddleslim\.version module
+--------------------------
 
 .. automodule:: paddleslim.version
     :members:
