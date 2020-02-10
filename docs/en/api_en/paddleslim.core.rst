@@ -1,5 +1,5 @@
-paddleslim.core package
-=======================
+paddleslim\.core package
+========================
 
 .. automodule:: paddleslim.core
     :members:
@@ -9,16 +9,16 @@ paddleslim.core package
 Submodules
 ----------
 
-paddleslim.core.graph\_wrapper module
--------------------------------------
+paddleslim\.core\.graph\_wrapper module
+---------------------------------------
 
 .. automodule:: paddleslim.core.graph_wrapper
     :members:
     :undoc-members:
     :show-inheritance:
 
-paddleslim.core.registry module
--------------------------------
+paddleslim\.core\.registry module
+---------------------------------
 
 .. automodule:: paddleslim.core.registry
     :members:
