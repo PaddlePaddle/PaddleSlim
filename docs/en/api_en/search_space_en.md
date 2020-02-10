@@ -1,9 +1,11 @@
-## Search Space
-: Search Space used in neural architecture search. Search Space is a collection of model architecture, the purpose of SANAS is to get a model which FLOPs or latency is smaller or percision is higher.
+Search Space
+========
+Search Space used in neural architecture search. Search Space is a collection of model architecture, the purpose of SANAS is to get a model which FLOPs or latency is smaller or percision is higher.
 
-## search space which paddleslim.nas provided
+search space which paddleslim.nas provided
+-------
 
-#### Based on origin model architecture
+Based on origin model architecture:
 1. MobileNetV2Space<br>
 &emsp; MobileNetV2's architecture can reference: [code](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/mobilenet_v2.py#L29), [paper](https://arxiv.org/abs/1801.04381)
 
@@ -14,7 +16,7 @@
 &emsp; ResNetSpace's architecture can reference: [code](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/resnet.py#L30), [paper](https://arxiv.org/pdf/1512.03385.pdf)
 
 
-#### Based on block from different model
+Based on block from different model:
 1. MobileNetV1BlockSpace<br>
 &emsp; MobileNetV1Block's architecture can reference: [code](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/mobilenet_v1.py#L173)
 
@@ -31,13 +33,15 @@
 &emsp; InceptionCBlock's architecture can reference: [code](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/inception_v4.py#L291)
 
 
-## How to use search space
+How to use search space
+--------
 1. Only need to specify the name of search space if use the space based on origin model architecture, such as configs for class SANAS is [('MobileNetV2Space')] if you want to use origin MobileNetV2 as search space.
 2. Use search space paddleslim.nas provided based on block:<br>
   2.1 Use `input_size`, `output_size` and `block_num` to construct search space, such as configs for class SANAS is ('MobileNetV2BlockSpace', {'input_size': 224, 'output_size': 32, 'block_num': 10})].<br>
   2.2 Use `block_mask` to construct search space, such as configs for class SANAS is [('MobileNetV2BlockSpace', {'block_mask': [0, 1, 1, 1, 1, 0, 1, 0]})].
 
-## How to write yourself search space
+How to write yourself search space
+--------
 If you want to write yourself search space, you need to inherit base class named SearchSpaceBase and overwrite following functions:<br>
 &emsp; 1. Function to get initial tokens(function `init_tokens`), set the initial tokens which you want, every token in tokens means index of search list, such as if tokens=[0, 3, 5], it means the list of channel of current model architecture is [8, 40, 128].
 &emsp; 2. Function about the length of every token in tokens(function `range_table`), range of every token in tokens.

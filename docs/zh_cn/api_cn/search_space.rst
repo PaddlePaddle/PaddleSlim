@@ -1,9 +1,12 @@
-## 搜索空间简介
-: 搜索空间是神经网络搜索中的一个概念。搜索空间是一系列模型结构的汇集, SANAS主要是利用模拟退火的思想在搜索空间中搜索到一个比较小的模型结构或者一个精度比较高的模型结构。
+搜索空间
+=========
+搜索空间是神经网络搜索中的一个概念。搜索空间是一系列模型结构的汇集, SANAS主要是利用模拟退火的思想在搜索空间中搜索到一个比较小的模型结构或者一个精度比较高的模型结构。
 
-## paddleslim.nas 提供的搜索空间
+paddleslim.nas 提供的搜索空间
+--------
 
-##### 根据初始模型结构构造搜索空间
+根据初始模型结构构造搜索空间:
+
 1. MobileNetV2Space<br>
 &emsp; MobileNetV2的网络结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/mobilenet_v2.py#L29)，[论文](https://arxiv.org/abs/1801.04381)
 
@@ -14,7 +17,7 @@
 &emsp; ResNetSpace的网络结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/resnet.py#L30)，[论文](https://arxiv.org/pdf/1512.03385.pdf)
 
 
-##### 根据相应模型的block构造搜索空间
+根据相应模型的block构造搜索空间:
 1. MobileNetV1BlockSpace<br>
 &emsp; MobileNetV1Block的结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/mobilenet_v1.py#L173)
 
@@ -31,7 +34,8 @@
 &emsp; InceptionCBlock结构可以参考：[代码](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/models/inception_v4.py#L291)
 
 
-## 搜索空间使用示例
+搜索空间使用示例
+--------
 
 1. 使用paddleslim中提供用初始的模型结构来构造搜索空间的话，仅需要指定搜索空间名字即可。例如：如果使用原本的MobileNetV2的搜索空间进行搜索的话，传入SANAS中的configs直接指定为[('MobileNetV2Space')]。
 2. 使用paddleslim中提供的block搜索空间构造搜索空间：<br>
@@ -39,7 +43,8 @@
   2.2 使用`block_mask`构造搜索空间。例如：传入SANAS的configs可以指定为[('MobileNetV2BlockSpace', {'block_mask': [0, 1, 1, 1, 1, 0, 1, 0]})]。
 
 
-## 自定义搜索空间(search space)
+自定义搜索空间(search space)
+--------
 
 自定义搜索空间类需要继承搜索空间基类并重写以下几部分：<br>
 &emsp; 1. 初始化的tokens(`init_tokens`函数)，可以设置为自己想要的tokens列表, tokens列表中的每个数字指的是当前数字在相应的搜索列表中的索引。例如本示例中若tokens=[0, 3, 5]，则代表当前模型结构搜索到的通道数为[8, 40, 128]。<br>

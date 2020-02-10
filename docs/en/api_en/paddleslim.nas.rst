@@ -12,7 +12,6 @@ Subpackages
 .. toctree::
 
     paddleslim.nas.one_shot
-    paddleslim.nas.search_space
 
 Submodules
 ----------
