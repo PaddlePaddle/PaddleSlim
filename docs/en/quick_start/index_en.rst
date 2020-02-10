@@ -6,4 +6,6 @@ Quick Start
    :maxdepth: 1
 
    pruning_tutorial_en.md
+   quant_aware_tutorial_en.md
+   quant_post_tutorial_en.md
     
