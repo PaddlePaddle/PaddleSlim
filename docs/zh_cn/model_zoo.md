@@ -18,39 +18,297 @@
 |ResNet50|quant_post|76.33%/93.02% (-0.17%/+0.02%)| 25.1| 1.19 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_post.tar) |
 |ResNet50|quant_aware|	76.48%/93.11% (-0.02%/+0.11%)| 25.1 | 1.17 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_awre.tar) |
 
-分类模型Lite时延(ms)
-
-| 设备    | 模型类型    | 压缩策略      | armv7 Thread 1 | armv7 Thread 2 | armv7 Thread 4 | armv8 Thread 1 | armv8 Thread 2 | armv8 Thread 4 |
-| ------- | ----------- | ------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- |
-| 高通835 | MobileNetV1 | FP32 baseline | 96.1942        | 53.2058        | 32.4468        | 88.4955        | 47.95          | 27.5189        |
-| 高通835 | MobileNetV1 | quant_aware   | 60.8186        | 32.1931        | 16.4275        | 56.4311        | 29.5446        | 15.1053        |
-| 高通835 | MobileNetV1 | quant_post    | 60.5615        | 32.4016        | 16.6596        | 56.5266        | 29.7178        | 15.1459        |
-| 高通835 | MobileNetV2 | FP32 baseline | 65.715         | 38.1346        | 25.155         | 61.3593        | 36.2038        | 22.849         |
-| 高通835 | MobileNetV2 | quant_aware   | 48.3655        | 30.2021        | 21.9303        | 46.1487        | 27.3146        | 18.3053        |
-| 高通835 | MobileNetV2 | quant_post    | 48.3495        | 30.3069        | 22.1506        | 45.8715        | 27.4105        | 18.2223        |
-| 高通835 | ResNet50    | FP32 baseline | 526.811        | 319.6486       | 205.8345       | 506.1138       | 335.1584       | 214.8936       |
-| 高通835 | ResNet50    | quant_aware   | 475.4538       | 256.8672       | 139.699        | 461.7344       | 247.9506       | 145.9847       |
-| 高通835 | ResNet50    | quant_post    | 476.0507       | 256.5963       | 139.7266       | 461.9176       | 248.3795       | 149.353        |
-| 高通855 | MobileNetV1 | FP32 baseline | 33.5086        | 19.5773        | 11.7534        | 31.3474        | 18.5382        | 10.0811        |
-| 高通855 | MobileNetV1 | quant_aware   | 36.7067        | 21.628         | 11.0372        | 14.0238        | 8.199          | 4.2588         |
-| 高通855 | MobileNetV1 | quant_post    | 37.0498        | 21.7081        | 11.0779        | 14.0947        | 8.1926         | 4.2934         |
-| 高通855 | MobileNetV2 | FP32 baseline | 25.0396        | 15.2862        | 9.6609         | 22.909         | 14.1797        | 8.8325         |
-| 高通855 | MobileNetV2 | quant_aware   | 28.1583        | 18.3317        | 11.8103        | 16.9158        | 11.1606        | 7.4148         |
-| 高通855 | MobileNetV2 | quant_post    | 28.1631        | 18.3917        | 11.8333        | 16.9399        | 11.1772        | 7.4176         |
-| 高通855 | ResNet50    | FP32 baseline | 185.3705       | 113.0825       | 87.0741        | 177.7367       | 110.0433       | 74.4114        |
-| 高通855 | ResNet50    | quant_aware   | 327.6883       | 202.4536       | 106.243        | 243.5621       | 150.0542       | 78.4205        |
-| 高通855 | ResNet50    | quant_post    | 328.2683       | 201.9937       | 106.744        | 242.6397       | 150.0338       | 79.8659        |
-| 麒麟970 | MobileNetV1 | FP32 baseline | 101.2455       | 56.4053        | 35.6484        | 94.8985        | 51.7251        | 31.9511        |
-| 麒麟970 | MobileNetV1 | quant_aware   | 62.5012        | 32.1863        | 16.6018        | 57.7477        | 29.2116        | 15.0703        |
-| 麒麟970 | MobileNetV1 | quant_post    | 62.4412        | 32.2585        | 16.6215        | 57.825         | 29.2573        | 15.1206        |
-| 麒麟970 | MobileNetV2 | FP32 baseline | 70.4176        | 42.0795        | 25.1939        | 68.9597        | 39.2145        | 22.6617        |
-| 麒麟970 | MobileNetV2 | quant_aware   | 52.9961        | 31.5323        | 22.1447        | 49.4858        | 28.0856        | 18.7287        |
-| 麒麟970 | MobileNetV2 | quant_post    | 53.0961        | 31.7987        | 21.8334        | 49.383         | 28.2358        | 18.3642        |
-| 麒麟970 | ResNet50    | FP32 baseline | 586.8943       | 344.0858       | 228.2293       | 573.3344       | 351.4332       | 225.8006       |
-| 麒麟970 | ResNet50    | quant_aware   | 488.361        | 260.1697       | 142.416        | 479.5668       | 249.8485       | 138.1742       |
-| 麒麟970 | ResNet50    | quant_post    | 489.6188       | 258.3279       | 142.6063       | 480.0064       | 249.5339       | 138.5284       |
-
-
+<table border=0 cellpadding=0 cellspacing=0 width=861 style='border-collapse:
+ collapse;table-layout:fixed;width:644pt'>
+ <col width=87 style='width:65pt'>
+ <col width=124 style='mso-width-source:userset;mso-width-alt:3968;width:93pt'>
+ <col width=128 style='mso-width-source:userset;mso-width-alt:4096;width:96pt'>
+ <col width=87 span=6 style='width:65pt'>
+ <tr height=21 style='height:16.0pt'>
+  <td colspan=3 height=21 class=xl63 width=339 style='height:16.0pt;width:254pt'>分类模型Lite时延(ms)</td>
+  <td colspan=3 class=xl63 width=261 style='width:195pt'>armv7</td>
+  <td colspan=3 class=xl63 width=261 style='width:195pt'>armv8</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>设备</td>
+  <td class=xl63>模型类型</td>
+  <td class=xl63>压缩策略</td>
+  <td class=xl63>Thread 1</td>
+  <td class=xl63>Thread 2</td>
+  <td class=xl63>Thread 4</td>
+  <td class=xl63>Thread 1</td>
+  <td class=xl63>Thread 2</td>
+  <td class=xl63>Thread 4</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=9 height=189 class=xl63 style='height:144.0pt'>高通835</td>
+  <td rowspan=3 class=xl63>MobileNetV1</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>96.1942</td>
+  <td class=xl63>53.2058</td>
+  <td class=xl63>32.4468</td>
+  <td class=xl63>88.4955</td>
+  <td class=xl63>47.95</td>
+  <td class=xl63>27.5189</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>60.8186</td>
+  <td class=xl63>32.1931</td>
+  <td class=xl63>16.4275</td>
+  <td class=xl63>56.4311</td>
+  <td class=xl63>29.5446</td>
+  <td class=xl63>15.1053</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>60.5615</td>
+  <td class=xl63>32.4016</td>
+  <td class=xl63>16.6596</td>
+  <td class=xl63>56.5266</td>
+  <td class=xl63>29.7178</td>
+  <td class=xl63>15.1459</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl63 style='height:48.0pt'>MobileNetV2</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>65.715</td>
+  <td class=xl63>38.1346</td>
+  <td class=xl63>25.155</td>
+  <td class=xl63>61.3593</td>
+  <td class=xl63>36.2038</td>
+  <td class=xl63>22.849</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>48.3655</td>
+  <td class=xl63>30.2021</td>
+  <td class=xl63>21.9303</td>
+  <td class=xl63>46.1487</td>
+  <td class=xl63>27.3146</td>
+  <td class=xl63>18.3053</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>48.3495</td>
+  <td class=xl63>30.3069</td>
+  <td class=xl63>22.1506</td>
+  <td class=xl63>45.8715</td>
+  <td class=xl63>27.4105</td>
+  <td class=xl63>18.2223</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl63 style='height:48.0pt'>ResNet50</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>526.811</td>
+  <td class=xl63>319.6486</td>
+  <td class=xl63>205.8345</td>
+  <td class=xl63>506.1138</td>
+  <td class=xl63>335.1584</td>
+  <td class=xl63>214.8936</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>475.4538</td>
+  <td class=xl63>256.8672</td>
+  <td class=xl63>139.699</td>
+  <td class=xl63>461.7344</td>
+  <td class=xl63>247.9506</td>
+  <td class=xl63>145.9847</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>476.0507</td>
+  <td class=xl63>256.5963</td>
+  <td class=xl63>139.7266</td>
+  <td class=xl63>461.9176</td>
+  <td class=xl63>248.3795</td>
+  <td class=xl63>149.353</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=9 height=189 class=xl63 style='height:144.0pt'>高通855</td>
+  <td rowspan=3 class=xl63>MobileNetV1</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>33.5086</td>
+  <td class=xl63>19.5773</td>
+  <td class=xl63>11.7534</td>
+  <td class=xl63>31.3474</td>
+  <td class=xl63>18.5382</td>
+  <td class=xl63>10.0811</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>36.7067</td>
+  <td class=xl63>21.628</td>
+  <td class=xl63>11.0372</td>
+  <td class=xl63>14.0238</td>
+  <td class=xl63>8.199</td>
+  <td class=xl63>4.2588</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>37.0498</td>
+  <td class=xl63>21.7081</td>
+  <td class=xl63>11.0779</td>
+  <td class=xl63>14.0947</td>
+  <td class=xl63>8.1926</td>
+  <td class=xl63>4.2934</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl63 style='height:48.0pt'>MobileNetV2</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>25.0396</td>
+  <td class=xl63>15.2862</td>
+  <td class=xl63>9.6609</td>
+  <td class=xl63>22.909</td>
+  <td class=xl63>14.1797</td>
+  <td class=xl63>8.8325</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>28.1583</td>
+  <td class=xl63>18.3317</td>
+  <td class=xl63>11.8103</td>
+  <td class=xl63>16.9158</td>
+  <td class=xl63>11.1606</td>
+  <td class=xl63>7.4148</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>28.1631</td>
+  <td class=xl63>18.3917</td>
+  <td class=xl63>11.8333</td>
+  <td class=xl63>16.9399</td>
+  <td class=xl63>11.1772</td>
+  <td class=xl63>7.4176</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl63 style='height:48.0pt'>ResNet50</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>185.3705</td>
+  <td class=xl63>113.0825</td>
+  <td class=xl63>87.0741</td>
+  <td class=xl63>177.7367</td>
+  <td class=xl63>110.0433</td>
+  <td class=xl63>74.4114</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>327.6883</td>
+  <td class=xl63>202.4536</td>
+  <td class=xl63>106.243</td>
+  <td class=xl63>243.5621</td>
+  <td class=xl63>150.0542</td>
+  <td class=xl63>78.4205</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>328.2683</td>
+  <td class=xl63>201.9937</td>
+  <td class=xl63>106.744</td>
+  <td class=xl63>242.6397</td>
+  <td class=xl63>150.0338</td>
+  <td class=xl63>79.8659</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=9 height=189 class=xl63 style='height:144.0pt'>麒麟970</td>
+  <td rowspan=3 class=xl63>MobileNetV1</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>101.2455</td>
+  <td class=xl63>56.4053</td>
+  <td class=xl63>35.6484</td>
+  <td class=xl63>94.8985</td>
+  <td class=xl63>51.7251</td>
+  <td class=xl63>31.9511</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>62.5012</td>
+  <td class=xl63>32.1863</td>
+  <td class=xl63>16.6018</td>
+  <td class=xl63>57.7477</td>
+  <td class=xl63>29.2116</td>
+  <td class=xl63>15.0703</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>62.4412</td>
+  <td class=xl63>32.2585</td>
+  <td class=xl63>16.6215</td>
+  <td class=xl63>57.825</td>
+  <td class=xl63>29.2573</td>
+  <td class=xl63>15.1206</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl63 style='height:48.0pt'>MobileNetV2</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>70.4176</td>
+  <td class=xl63>42.0795</td>
+  <td class=xl63>25.1939</td>
+  <td class=xl63>68.9597</td>
+  <td class=xl63>39.2145</td>
+  <td class=xl63>22.6617</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>52.9961</td>
+  <td class=xl63>31.5323</td>
+  <td class=xl63>22.1447</td>
+  <td class=xl63>49.4858</td>
+  <td class=xl63>28.0856</td>
+  <td class=xl63>18.7287</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>53.0961</td>
+  <td class=xl63>31.7987</td>
+  <td class=xl63>21.8334</td>
+  <td class=xl63>49.383</td>
+  <td class=xl63>28.2358</td>
+  <td class=xl63>18.3642</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl63 style='height:48.0pt'>ResNet50</td>
+  <td class=xl63>FP32 baseline</td>
+  <td class=xl63>586.8943</td>
+  <td class=xl63>344.0858</td>
+  <td class=xl63>228.2293</td>
+  <td class=xl63>573.3344</td>
+  <td class=xl63>351.4332</td>
+  <td class=xl63>225.8006</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_aware</td>
+  <td class=xl63>488.361</td>
+  <td class=xl63>260.1697</td>
+  <td class=xl63>142.416</td>
+  <td class=xl63>479.5668</td>
+  <td class=xl63>249.8485</td>
+  <td class=xl63>138.1742</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl63 style='height:16.0pt'>quant_post</td>
+  <td class=xl63>489.6188</td>
+  <td class=xl63>258.3279</td>
+  <td class=xl63>142.6063</td>
+  <td class=xl63>480.0064</td>
+  <td class=xl63>249.5339</td>
+  <td class=xl63>138.5284</td>
+ </tr>
+ <![if supportMisalignedColumns]>
+ <tr height=0 style='display:none'>
+  <td width=87 style='width:65pt'></td>
+  <td width=124 style='width:93pt'></td>
+  <td width=128 style='width:96pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+ </tr>
+ <![endif]>
+</table>
 
 
 
@@ -172,32 +430,216 @@
 | DeepLabv3+/MobileNetv2 | quant_post  | 67.59 (-2.22) |      2.1       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/deeplabv3_mobilenetv2_2049x1025_quant_post.tar) |
 | DeepLabv3+/MobileNetv2 | quant_aware | 68.33 (-1.48) |      2.1       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/deeplabv3_mobilenetv2_2049x1025_quant_aware.tar) |
 
-图像分割模型Lite时延(ms), 输入尺寸769x769
+<br/>
 
-| 设备    | 模型类型               | 压缩策略      | armv7 Thread 1 | armv7 Thread 2 | armv7 Thread 4 | armv8 Thread 1 | armv8 Thread 2 | armv8 Thread 4 |
-| ------- | ---------------------- | ------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- |
-| 高通835 | Deeplabv3- MobileNetV1 | FP32 baseline | 1227.9894      | 734.1922       | 527.9592       | 1109.96        | 699.3818       | 479.0818       |
-| 高通835 | Deeplabv3- MobileNetV1 | quant_aware   | 848.6544       | 512.785        | 382.9915       | 752.3573       | 455.0901       | 307.8808       |
-| 高通835 | Deeplabv3- MobileNetV1 | quant_post    | 840.2323       | 510.103        | 371.9315       | 748.9401       | 452.1745       | 309.2084       |
-| 高通835 | Deeplabv3-MobileNetV2  | FP32 baseline | 1282.8126      | 793.2064       | 653.6538       | 1193.9908      | 737.1827       | 593.4522       |
-| 高通835 | Deeplabv3-MobileNetV2  | quant_aware   | 976.0495       | 659.0541       | 513.4279       | 892.1468       | 582.9847       | 484.7512       |
-| 高通835 | Deeplabv3-MobileNetV2  | quant_post    | 981.44         | 658.4969       | 538.6166       | 885.3273       | 586.1284       | 484.0018       |
-| 高通855 | Deeplabv3- MobileNetV1 | FP32 baseline | 568.8748       | 339.8578       | 278.6316       | 420.6031       | 281.3197       | 217.5222       |
-| 高通855 | Deeplabv3- MobileNetV1 | quant_aware   | 608.7578       | 347.2087       | 260.653        | 241.2394       | 177.3456       | 143.9178       |
-| 高通855 | Deeplabv3- MobileNetV1 | quant_post    | 609.0142       | 347.3784       | 259.9825       | 239.4103       | 180.1894       | 139.9178       |
-| 高通855 | Deeplabv3-MobileNetV2  | FP32 baseline | 639.4425       | 390.1851       | 322.7014       | 477.7667       | 339.7411       | 262.2847       |
-| 高通855 | Deeplabv3-MobileNetV2  | quant_aware   | 703.7275       | 497.689        | 417.1296       | 394.3586       | 300.2503       | 239.9204       |
-| 高通855 | Deeplabv3-MobileNetV2  | quant_post    | 705.7589       | 474.4076       | 427.2951       | 394.8352       | 297.4035       | 264.6724       |
-| 麒麟970 | Deeplabv3- MobileNetV1 | FP32 baseline | 1682.1792      | 1437.9774      | 1181.0246      | 1261.6739      | 1068.6537      | 690.8225       |
-| 麒麟970 | Deeplabv3- MobileNetV1 | quant_aware   | 1062.3394      | 1248.1014      | 878.3157       | 774.6356       | 710.6277       | 528.5376       |
-| 麒麟970 | Deeplabv3- MobileNetV1 | quant_post    | 1109.1917      | 1339.6218      | 866.3587       | 771.5164       | 716.5255       | 500.6497       |
-| 麒麟970 | Deeplabv3-MobileNetV2  | FP32 baseline | 1771.1301      | 1746.0569      | 1222.4805      | 1448.9739      | 1192.4491      | 760.606        |
-| 麒麟970 | Deeplabv3-MobileNetV2  | quant_aware   | 1320.2905      | 921.4522       | 676.0732       | 1145.8801      | 821.5685       | 590.1713       |
-| 麒麟970 | Deeplabv3-MobileNetV2  | quant_post    | 1320.386       | 918.5328       | 672.2481       | 1020.753       | 820.094        | 591.4114       |
-
-
-
-
+<table border=0 cellpadding=0 cellspacing=0 width=841 style='border-collapse:
+ collapse;table-layout:fixed;width:629pt'>
+ <col width=87 style='width:65pt'>
+ <col width=105 style='mso-width-source:userset;mso-width-alt:3370;width:79pt'>
+ <col width=127 style='mso-width-source:userset;mso-width-alt:4053;width:95pt'>
+ <col width=87 span=6 style='width:65pt'>
+ <tr height=21 style='height:16.0pt'>
+  <td colspan=3 height=21 class=xl65 width=319 style='height:16.0pt;width:239pt'>图像分割模型Lite时延(ms),
+  输入尺寸769x769</td>
+  <td colspan=3 class=xl65 width=261 style='width:195pt'>armv7</td>
+  <td colspan=3 class=xl65 width=261 style='width:195pt'>armv8</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>设备</td>
+  <td class=xl65>模型类型</td>
+  <td class=xl65>压缩策略</td>
+  <td class=xl65>Thread 1</td>
+  <td class=xl65>Thread 2</td>
+  <td class=xl65>Thread 4</td>
+  <td class=xl65>Thread 1</td>
+  <td class=xl65>Thread 2</td>
+  <td class=xl65>Thread 4</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=6 height=126 class=xl65 style='height:96.0pt'>高通835</td>
+  <td rowspan=3 class=xl66 width=105 style='width:79pt'>Deeplabv3- MobileNetV1</td>
+  <td class=xl65>FP32 baseline</td>
+  <td class=xl65>1227.9894</td>
+  <td class=xl65>734.1922</td>
+  <td class=xl65>527.9592</td>
+  <td class=xl65>1109.96</td>
+  <td class=xl65>699.3818</td>
+  <td class=xl65>479.0818</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_aware</td>
+  <td class=xl65>848.6544</td>
+  <td class=xl65>512.785</td>
+  <td class=xl65>382.9915</td>
+  <td class=xl65>752.3573</td>
+  <td class=xl65>455.0901</td>
+  <td class=xl65>307.8808</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_post</td>
+  <td class=xl65>840.2323</td>
+  <td class=xl65>510.103</td>
+  <td class=xl65>371.9315</td>
+  <td class=xl65>748.9401</td>
+  <td class=xl65>452.1745</td>
+  <td class=xl65>309.2084</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl66 width=105 style='height:48.0pt;width:79pt'>Deeplabv3-MobileNetV2</td>
+  <td class=xl65>FP32 baseline</td>
+  <td class=xl65>1282.8126</td>
+  <td class=xl65>793.2064</td>
+  <td class=xl65>653.6538</td>
+  <td class=xl65>1193.9908</td>
+  <td class=xl65>737.1827</td>
+  <td class=xl65>593.4522</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_aware</td>
+  <td class=xl65>976.0495</td>
+  <td class=xl65>659.0541</td>
+  <td class=xl65>513.4279</td>
+  <td class=xl65>892.1468</td>
+  <td class=xl65>582.9847</td>
+  <td class=xl65>484.7512</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_post</td>
+  <td class=xl65>981.44</td>
+  <td class=xl65>658.4969</td>
+  <td class=xl65>538.6166</td>
+  <td class=xl65>885.3273</td>
+  <td class=xl65>586.1284</td>
+  <td class=xl65>484.0018</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=6 height=126 class=xl65 style='height:96.0pt'>高通855</td>
+  <td rowspan=3 class=xl66 width=105 style='width:79pt'>Deeplabv3-MobileNetV1</td>
+  <td class=xl65>FP32 baseline</td>
+  <td class=xl65>568.8748</td>
+  <td class=xl65>339.8578</td>
+  <td class=xl65>278.6316</td>
+  <td class=xl65>420.6031</td>
+  <td class=xl65>281.3197</td>
+  <td class=xl65>217.5222</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_aware</td>
+  <td class=xl65>608.7578</td>
+  <td class=xl65>347.2087</td>
+  <td class=xl65>260.653</td>
+  <td class=xl65>241.2394</td>
+  <td class=xl65>177.3456</td>
+  <td class=xl65>143.9178</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_post</td>
+  <td class=xl65>609.0142</td>
+  <td class=xl65>347.3784</td>
+  <td class=xl65>259.9825</td>
+  <td class=xl65>239.4103</td>
+  <td class=xl65>180.1894</td>
+  <td class=xl65>139.9178</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl66 width=105 style='height:48.0pt;width:79pt'>Deeplabv3-MobileNetV2</td>
+  <td class=xl65>FP32 baseline</td>
+  <td class=xl65>639.4425</td>
+  <td class=xl65>390.1851</td>
+  <td class=xl65>322.7014</td>
+  <td class=xl65>477.7667</td>
+  <td class=xl65>339.7411</td>
+  <td class=xl65>262.2847</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_aware</td>
+  <td class=xl65>703.7275</td>
+  <td class=xl65>497.689</td>
+  <td class=xl65>417.1296</td>
+  <td class=xl65>394.3586</td>
+  <td class=xl65>300.2503</td>
+  <td class=xl65>239.9204</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_post</td>
+  <td class=xl65>705.7589</td>
+  <td class=xl65>474.4076</td>
+  <td class=xl65>427.2951</td>
+  <td class=xl65>394.8352</td>
+  <td class=xl65>297.4035</td>
+  <td class=xl65>264.6724</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=6 height=126 class=xl65 style='height:96.0pt'>麒麟970</td>
+  <td rowspan=3 class=xl66 width=105 style='width:79pt'>Deeplabv3-MobileNetV1</td>
+  <td class=xl65>FP32 baseline</td>
+  <td class=xl65>1682.1792</td>
+  <td class=xl65>1437.9774</td>
+  <td class=xl65>1181.0246</td>
+  <td class=xl65>1261.6739</td>
+  <td class=xl65>1068.6537</td>
+  <td class=xl65>690.8225</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_aware</td>
+  <td class=xl65>1062.3394</td>
+  <td class=xl65>1248.1014</td>
+  <td class=xl65>878.3157</td>
+  <td class=xl65>774.6356</td>
+  <td class=xl65>710.6277</td>
+  <td class=xl65>528.5376</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_post</td>
+  <td class=xl65>1109.1917</td>
+  <td class=xl65>1339.6218</td>
+  <td class=xl65>866.3587</td>
+  <td class=xl65>771.5164</td>
+  <td class=xl65>716.5255</td>
+  <td class=xl65>500.6497</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td rowspan=3 height=63 class=xl66 width=105 style='height:48.0pt;width:79pt'>Deeplabv3-MobileNetV2</td>
+  <td class=xl65>FP32 baseline</td>
+  <td class=xl65>1771.1301</td>
+  <td class=xl65>1746.0569</td>
+  <td class=xl65>1222.4805</td>
+  <td class=xl65>1448.9739</td>
+  <td class=xl65>1192.4491</td>
+  <td class=xl65>760.606</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_aware</td>
+  <td class=xl65>1320.2905</td>
+  <td class=xl65>921.4522</td>
+  <td class=xl65>676.0732</td>
+  <td class=xl65>1145.8801</td>
+  <td class=xl65>821.5685</td>
+  <td class=xl65>590.1713</td>
+ </tr>
+ <tr height=21 style='height:16.0pt'>
+  <td height=21 class=xl65 style='height:16.0pt'>quant_post</td>
+  <td class=xl65>1320.386</td>
+  <td class=xl65>918.5328</td>
+  <td class=xl65>672.2481</td>
+  <td class=xl65>1020.753</td>
+  <td class=xl65>820.094</td>
+  <td class=xl65>591.4114</td>
+ </tr>
+ <![if supportMisalignedColumns]>
+ <tr height=0 style='display:none'>
+  <td width=87 style='width:65pt'></td>
+  <td width=105 style='width:79pt'></td>
+  <td width=127 style='width:95pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+  <td width=87 style='width:65pt'></td>
+ </tr>
+ <![endif]>
+</table>
 
 ### 3.2 剪裁
 
