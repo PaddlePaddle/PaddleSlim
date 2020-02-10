@@ -125,7 +125,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
    
    **参数：**
    
-   - **tokens(list):** - 一组tokens。tokens的长度和范取决于搜索空间。
+   - **tokens(list):** - 一组tokens。tokens的长度和范围取决于搜索空间。
    
    **返回：**
    根据传入的token得到一个模型结构实例。
