@@ -1,4 +1,4 @@
-# PaddleSlim文档构建与发布教程
+# 文档构建与发布教程
 
 ## 1. 文档构成
 
@@ -70,7 +70,16 @@ make html
 
 以上命令生成`html`文件到路径`./build/html/`。
 
-## 2.2 编译英文文档
+
+## 2.2 预览文档
+
+进入`PaddleSlim/docs/zh_cn/build/html`路径下。
+执行`python -m SimpleHTTPServer 8883`。
+假设当前机器IP为`server_ip`。
+
+通过浏览器查看链接`server_ip:8883`即可预览文档。
+
+## 2.3 编译英文文档
 
 进入路径`PaddleSlim/docs/en`
 
@@ -123,6 +132,6 @@ git commit -m "update pages"
 git push origin gh-pages
 ```
 
-# 4. 其它
+## 4. 其它
 
 英文API文档格式请参考：https://wanghaoshuang.github.io/PaddleSlim/api_en/paddleslim.analysis.html
