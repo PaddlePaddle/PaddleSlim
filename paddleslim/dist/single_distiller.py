@@ -29,14 +29,16 @@ def merge(teacher_program,
         teacher_program(Program): The input teacher model paddle program 
         student_program(Program): The input student model paddle program
         data_map_map(dict): Mapping of teacher input interface name and student
-        input interface name, where *key* of dict is the input name of
-        teacher_program, and *value* is the input name of student_program.
+                            input interface name, where key of dict is the
+                            input name of teacher_program, and value is the
+                            input name of student_program.
         place(fluid.CPUPlace()|fluid.CUDAPlace(N)): This parameter represents
                                                     paddle run on which device.
-        scope(Scope): This parameter indicates the variable scope used by the
-        program. If not specified, the default global scope will be used.
-        Default: None
+        scope(Scope): This parameter indicates the variable scope used by
+                      the program. If not specified, the default global scope
+                      will be used. Default: None
         name_prefix(str): Name prefix added for all vars of the teacher program.
+                          Default: 'teacher_'
 
     Returns:
         None
@@ -164,9 +166,9 @@ def soft_label_loss(teacher_var_name,
         program(Program): The input distiller program. If not specified,
                           the default program will be used. Default: None
         teacher_temperature(float): Temperature used to divide
-            teacher_feature_map before softmax. default: 1.0
+            teacher_feature_map before softmax. Default: 1.0
         student_temperature(float): Temperature used to divide 
-            student_feature_map before softmax. default: 1.0
+            student_feature_map before softmax. Default: 1.0
 
     Returns:
         Variable: l2 distiller loss.
