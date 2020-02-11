@@ -19,18 +19,16 @@ __all__ = ["flops"]
 
 
 def flops(program, only_conv=True, detail=False):
-    """
-    Get FLOPS of target graph.
+    """Get FLOPs of target graph.
+
     Args:
         program(Program): The program used to calculate FLOPS.
         only_conv(bool): Just return number of mul-adds in convolution and FC layer if `only_conv` is true.
                          default: True.
         detail(bool): Whether to return detail of each convolution layer.
     
-    Return:
-        If `detail` is true, then return a tuple in format `(FLOPs, details)`, otherwise it will just return `FlOPs`
-        FLOPs(int): The FLOPs of target network.
-        details(dict): The key is the parameter name of convlution layer and the value is the FLOPs of each convolution layer.
+    Returns:
+        int|tuple: If `detail` is true, then return a tuple in format `(FLOPs, details)`, otherwise it will just return `FlOPs`. The details is a dict whose key is the parameter name of convlution layer and value is the FLOPs of each convolution layer. 
     """
     graph = GraphWrapper(program)
     return _graph_flops(graph, only_conv=only_conv, detail=detail)
@@ -66,7 +64,6 @@ def _graph_flops(graph, only_conv=True, detail=False):
             y_shape = op.inputs("Y")[0].shape()
             if x_shape[0] == -1:
                 x_shape[0] = 1
-            flops += x_shape[0] * x_shape[1] * y_shape[1]
 
             op_flops = x_shape[0] * x_shape[1] * y_shape[1]
             flops += op_flops

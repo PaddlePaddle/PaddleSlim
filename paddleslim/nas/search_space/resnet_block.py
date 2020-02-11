@@ -32,9 +32,10 @@ class ResNetBlockSpace(SearchSpaceBase):
     def __init__(self, input_size, output_size, block_num, block_mask=None):
         super(ResNetBlockSpace, self).__init__(input_size, output_size,
                                                block_num, block_mask)
-        # use input_size and output_size to compute self.downsample_num
-        self.downsample_num = compute_downsample_num(self.input_size,
-                                                     self.output_size)
+        if self.block_mask == None:
+            # use input_size and output_size to compute self.downsample_num
+            self.downsample_num = compute_downsample_num(self.input_size,
+                                                         self.output_size)
         if self.block_num != None:
             assert self.downsample_num <= self.block_num, 'downsample numeber must be LESS THAN OR EQUAL TO block_num, but NOW: downsample numeber is {}, block_num is {}'.format(
                 self.downsample_num, self.block_num)
@@ -44,7 +45,7 @@ class ResNetBlockSpace(SearchSpaceBase):
         self.k_size = np.array([3, 5])
 
     def init_tokens(self):
-        return get_random_tokens(self.range_table)
+        return get_random_tokens(self.range_table())
 
     def range_table(self):
         range_table_base = []
@@ -133,7 +134,7 @@ class ResNetBlockSpace(SearchSpaceBase):
                     num_filters1=filter_num1,
                     num_filters2=filter_num3,
                     num_filters3=filter_num3,
-                    kernel_size=k_size,
+                    kernel_size=int(k_size),
                     repeat1=repeat1,
                     repeat2=repeat2,
                     stride=stride,

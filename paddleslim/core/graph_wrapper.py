@@ -72,6 +72,7 @@ class VarWrapper(object):
     def inputs(self):
         """
         Get all the operators that use this variable as output.
+
         Returns:
             list<OpWrapper>: A list of operators.
         """
@@ -84,6 +85,7 @@ class VarWrapper(object):
     def outputs(self):
         """
         Get all the operators that use this variable as input.
+
         Returns:
             list<OpWrapper>: A list of operators.
         """
@@ -95,6 +97,7 @@ class VarWrapper(object):
 
     def is_parameter(self):
         return isinstance(self._var, Parameter)
+
 
 class OpWrapper(object):
     def __init__(self, op, graph):
@@ -195,18 +198,19 @@ class GraphWrapper(object):
     """
     It is a wrapper of paddle.fluid.framework.IrGraph with some special functions
     for paddle slim framework.
+
+    Args:
+        program(framework.Program): A program with 
+        in_nodes(dict): A dict to indicate the input nodes of the graph.
+                        The key is user-defined and human-readable name.
+                        The value is the name of Variable.
+        out_nodes(dict): A dict to indicate the input nodes of the graph.
+                        The key is user-defined and human-readable name.
+                        The value is the name of Variable.
     """
 
     def __init__(self, program=None, in_nodes=[], out_nodes=[]):
         """
-        Args:
-            program(framework.Program): A program with 
-            in_nodes(dict): A dict to indicate the input nodes of the graph.
-                            The key is user-defined and human-readable name.
-                            The value is the name of Variable.
-            out_nodes(dict): A dict to indicate the input nodes of the graph.
-                            The key is user-defined and human-readable name.
-                            The value is the name of Variable.
         """
         super(GraphWrapper, self).__init__()
         self.program = Program() if program is None else program
@@ -225,6 +229,7 @@ class GraphWrapper(object):
     def all_parameters(self):
         """
         Get all the parameters in this graph.
+
         Returns:
             list<VarWrapper>: A list of VarWrapper instances.
         """
@@ -237,6 +242,7 @@ class GraphWrapper(object):
     def is_parameter(self, var):
         """
         Whether the given variable is parameter.
+
         Args:
             var(VarWrapper): The given varibale.
         """
@@ -245,6 +251,7 @@ class GraphWrapper(object):
     def is_persistable(self, var):
         """
         Whether the given variable is persistable.
+
         Args:
             var(VarWrapper): The given varibale.
         """
@@ -270,11 +277,15 @@ class GraphWrapper(object):
         """
         Get the variable by variable name.
         """
-        return VarWrapper(self.program.global_block().var(name), self)
+        for block in self.program.blocks:
+            if block.has_var(name):
+                return VarWrapper(block.var(name), self)
+        return None
 
     def clone(self, for_test=False):
         """
         Clone a new graph from current graph.
+
         Returns:
             (GraphWrapper): The wrapper of a new graph.
         """
@@ -291,8 +302,10 @@ class GraphWrapper(object):
     def pre_ops(self, op):
         """
         Get all the previous operators of target operator.
+
         Args:
-            op(OpWrapper): Target operator..
+            op(OpWrapper): Target operator.
+
         Returns:
             list<OpWrapper>: A list of operators.
         """
@@ -306,8 +319,10 @@ class GraphWrapper(object):
     def next_ops(self, op):
         """
         Get all the next operators of target operator.
+
         Args:
-            op(OpWrapper): Target operator..
+            op(OpWrapper): Target operator.
+
         Returns:
             list<OpWrapper>: A list of operators.
         """

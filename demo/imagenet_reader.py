@@ -14,8 +14,7 @@ DATA_DIM = 224
 THREAD = 16
 BUF_SIZE = 10240
 
-#DATA_DIR = './data/ILSVRC2012/'
-DATA_DIR = './data/'
+DATA_DIR = './data/ILSVRC2012/'
 DATA_DIR = os.path.join(os.path.split(os.path.realpath(__file__))[0], DATA_DIR)
 
 img_mean = np.array([0.485, 0.456, 0.406]).reshape((3, 1, 1))
@@ -157,8 +156,8 @@ def _reader_creator(file_list,
                 for line in lines:
                     if mode == 'train' or mode == 'val':
                         img_path, label = line.split()
-                        img_path = os.path.join(data_dir + "/" + mode,
-                                                img_path)
+                        img_path = os.path.join(
+                            os.path.join(data_dir, mode), img_path)
                         yield img_path, int(label)
                     elif mode == 'test':
                         img_path = os.path.join(data_dir, line)

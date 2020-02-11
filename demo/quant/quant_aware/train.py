@@ -8,8 +8,8 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-sys.path.append(sys.path[0] + "../../../")
-sys.path.append(sys.path[0] + "../../")
+sys.path.append(sys.path[0] + "/../../../")
+sys.path.append(sys.path[0] + "/../../")
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 from paddleslim.quant import quant_aware, quant_post, convert
@@ -37,7 +37,7 @@ parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], 
 add_arg('config_file',      str, None,                 "The config file for compression with yaml format.")
 add_arg('data',             str, "imagenet",             "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
-add_arg('test_period',      int, 10,                 "Test period in epoches.")
+add_arg('checkpoint_dir',         str, "output",           "checkpoint save dir")
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -192,16 +192,6 @@ def compress(args):
         return np.mean(np.array(acc_top1_ns))
 
     def train(epoch, compiled_train_prog):
-        build_strategy = fluid.BuildStrategy()
-        build_strategy.memory_optimize = False
-        build_strategy.enable_inplace = False
-        build_strategy.fuse_all_reduce_ops = False
-        build_strategy.sync_batch_norm = False
-        exec_strategy = fluid.ExecutionStrategy()
-        compiled_train_prog = compiled_train_prog.with_data_parallel(
-            loss_name=avg_cost.name,
-            build_strategy=build_strategy,
-            exec_strategy=exec_strategy)
 
         batch_id = 0
         for data in train_reader():
@@ -221,14 +211,41 @@ def compress(args):
                            end_time - start_time))
             batch_id += 1
 
+    build_strategy = fluid.BuildStrategy()
+    build_strategy.memory_optimize = False
+    build_strategy.enable_inplace = False
+    build_strategy.fuse_all_reduce_ops = False
+    build_strategy.sync_batch_norm = False
+    exec_strategy = fluid.ExecutionStrategy()
+    compiled_train_prog = compiled_train_prog.with_data_parallel(
+        loss_name=avg_cost.name,
+        build_strategy=build_strategy,
+        exec_strategy=exec_strategy)
+
     ############################################################################################################
     # train loop
     ############################################################################################################
+    best_acc1 = 0.0
+    best_epoch = 0
     for i in range(args.num_epochs):
         train(i, compiled_train_prog)
-        if i % args.test_period == 0:
-            test(i, val_program)
+        acc1 = test(i, val_program)
+        fluid.io.save_persistables(
+            exe,
+            dirname=os.path.join(args.checkpoint_dir, str(i)),
+            main_program=val_program)
+        if acc1 > best_acc1:
+            best_acc1 = acc1
+            best_epoch = i
+            fluid.io.save_persistables(
+                exe,
+                dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+                main_program=val_program)
 
+    fluid.io.load_persistables(
+        exe,
+        dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+        main_program=val_program)
     ############################################################################################################
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
@@ -237,7 +254,8 @@ def compress(args):
     float_program, int8_program = convert(val_program, place, quant_config, \
                                                         scope=None, \
                                                         save_int8=True)
-
+    print("eval best_model after convert")
+    final_acc1 = test(best_epoch, float_program)
     ############################################################################################################
     # 4. Save inference model
     ############################################################################################################
