@@ -22,9 +22,9 @@ def merge(teacher_program,
           place,
           scope=fluid.global_scope(),
           name_prefix='teacher_'):
-    """
-    Merge teacher program into student program and add a uniform prefix to the
+    """Merge teacher program into student program and add a uniform prefix to the
     names of all vars in teacher program
+
     Args:
         teacher_program(Program): The input teacher model paddle program 
         student_program(Program): The input student model paddle program
@@ -34,6 +34,9 @@ def merge(teacher_program,
                                                     paddle run on which device.
         scope(Scope): The input scope
         name_prefix(str): Name prefix added for all vars of the teacher program.
+
+    Returns:
+        None
     """
     teacher_program = teacher_program.clone(for_test=True)
     for teacher_var in teacher_program.list_vars():
@@ -90,8 +93,8 @@ def fsp_loss(teacher_var1_name,
              student_var1_name,
              student_var2_name,
              program=fluid.default_main_program()):
-    """
-    Combine variables from student model and teacher model by fsp-loss.
+    """Combine variables from student model and teacher model by fsp-loss.
+
     Args:
         teacher_var1_name(str): The name of teacher_var1.
         teacher_var2_name(str): The name of teacher_var2. Except for the
@@ -103,7 +106,9 @@ def fsp_loss(teacher_var1_name,
             be consistent with student_var1.
         program(Program): The input distiller program.
                           default: fluid.default_main_program()
-    Return(Variable): fsp distiller loss.
+
+    Returns:
+        Variable: fsp distiller loss.
     """
     teacher_var1 = program.global_block().var(teacher_var1_name)
     teacher_var2 = program.global_block().var(teacher_var2_name)
@@ -119,14 +124,16 @@ def fsp_loss(teacher_var1_name,
 def l2_loss(teacher_var_name,
             student_var_name,
             program=fluid.default_main_program()):
-    """
-    Combine variables from student model and teacher model by l2-loss.
+    """Combine variables from student model and teacher model by l2-loss.
+
     Args:
         teacher_var_name(str): The name of teacher_var.
         student_var_name(str): The name of student_var.
         program(Program): The input distiller program.
                           default: fluid.default_main_program() 
-    Return(Variable): l2 distiller loss.
+
+    Returns: 
+        Variable: l2 distiller loss.
     """
     student_var = program.global_block().var(student_var_name)
     teacher_var = program.global_block().var(teacher_var_name)
@@ -140,8 +147,8 @@ def soft_label_loss(teacher_var_name,
                     program=fluid.default_main_program(),
                     teacher_temperature=1.,
                     student_temperature=1.):
-    """
-    Combine variables from student model and teacher model by soft-label-loss.
+    """Combine variables from student model and teacher model by soft-label-loss.
+
     Args:
         teacher_var_name(str): The name of teacher_var.
         student_var_name(str): The name of student_var.
@@ -151,7 +158,9 @@ def soft_label_loss(teacher_var_name,
             teacher_feature_map before softmax. default: 1.0
         student_temperature(float): Temperature used to divide 
             student_feature_map before softmax. default: 1.0
-    Return(Variable): l2 distiller loss.
+
+    Returns:
+        Variable: l2 distiller loss.
     """
     student_var = program.global_block().var(student_var_name)
     teacher_var = program.global_block().var(teacher_var_name)
@@ -165,13 +174,15 @@ def soft_label_loss(teacher_var_name,
 
 
 def loss(loss_func, program=fluid.default_main_program(), **kwargs):
-    """
-    Combine variables from student model and teacher model by self defined loss.
+    """Combine variables from student model and teacher model by self defined loss.
+
     Args:
         program(Program): The input distiller program.
                           default: fluid.default_main_program() 
         loss_func(function): The user self defined loss function. 
-    Return(Variable): self defined distiller loss.
+
+    Returns: 
+        Variable: self defined distiller loss.
     """
     func_parameters = {}
     for item in kwargs.items():
