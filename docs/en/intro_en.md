@@ -2,23 +2,27 @@
 
 # Introduction
 
-PaddleSlim是PaddlePaddle框架的一个子模块，主要用于压缩图像领域模型。在PaddleSlim中，不仅实现了目前主流的网络剪枝、量化、蒸馏三种压缩策略，还实现了超参数搜索和小模型网络结构搜索功能。在后续版本中，会添加更多的压缩策略，以及完善对NLP领域模型的支持。
+As a submodule of PaddlePaddle framework, PaddleSlim is an open-source library for deep model compression and architecture search. PaddleSlim supports current popular deep compression techniques such as pruning, quantization, and knowledge distillation. Further, it also automates the search of hyperparameters and the design of lightweight deep architectures. In the future, we will develop more practically useful compression techniques for industrial-level applications and transfer these techniques to models in NLP.
 
-## 功能
 
-- 模型剪裁
-  - 支持通道均匀模型剪裁（uniform pruning)
-  - 基于敏感度的模型剪裁
-  - 基于进化算法的自动模型剪裁三种方式
+## Methods
 
-- 量化训练
-  - 在线量化训练（training aware）
-  - 离线量化（post training）
-  - 支持对权重全局量化和Channel-Wise量化
+- Pruning
+  - Uniform pruning
+  - Sensitivity-based pruning
+  - Automated model pruning
 
-- 蒸馏
+- Quantization
+  - Training-aware quantization: Quantize models with hyperparameters dynamically estimated from small batches of samples.
+  - Training-aware quantization: Quantize models with the same hyperparameters estimated from training data.
+  - Support global quantization of weights and Channel-Wise quantization
 
-- 轻量神经网络结构自动搜索（Light-NAS）
-  - 支持基于进化算法的轻量神经网络结构自动搜索（Light-NAS）
-  - 支持 FLOPS / 硬件延时约束
-  - 支持多平台模型延时评估
+- Knowledge Distillation
+  - Single-process knowledge distillation
+  - Multi-process distributed knowledge distillation
+
+- Network Architecture Search（NAS）
+  - Simulated Annealing (SA)-based lightweight network architecture search method.（Light-NAS）
+  - One-Shot network structure automatic search. (One-Shot-NAS)
+  - PaddleSlim supports FLOPs and latency constrained search.
+  - PaddleSlim supports the latency estimation on different hardware and platforms.
