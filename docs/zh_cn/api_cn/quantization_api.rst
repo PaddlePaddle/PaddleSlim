@@ -174,7 +174,7 @@ convert
 quant_post
 ---------------
 
-.. py:function:: paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,sample_generator, model_filename=None, params_filename=None, batch_size=16,batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"], is_full_quantize=False, is_use_cache_file=False, cache_dir="./temp_post_training")
+.. py:function:: paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,sample_generator, model_filename=None, params_filename=None, batch_size=16,batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, is_use_cache_file=False, cache_dir="./temp_post_training")
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
 
@@ -194,6 +194,8 @@ quant_post
 - **algo(str)** - 量化时使用的算法名称，可为 ``'KL'`` 或者 ``'direct'`` 。该参数仅针对激活值的量化，因为参数值的量化使用的方式为 ``'channel_wise_abs_max'`` . 当 ``algo`` 设置为 ``'direct'`` 时，使用校正数据的激活值的绝对值的最大值当作 ``Scale`` 值，当设置为 ``'KL'`` 时，则使用KL散度的方法来计算 ``Scale`` 值。默认值为 ``'KL'`` 。
 - **quantizable_op_type(list[str])** -  需要量化的 ``op`` 类型列表。默认值为 ``["conv2d", "depthwise_conv2d", "mul"]`` 。
 - **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。
+- **weight_bits(int)** - weight的量化比特位数。
+- **activation_bits(int)** - 激活值的量化比特位数。
 - **is_use_cache_file(bool)** - 是否使用硬盘对中间结果进行存储。如果为False, 则将中间结果存储在内存中。
 - **cache_dir(str)** - 如果 ``'is_use_cache_file'`` 为True, 则将中间结果存储在此参数设置的路径下。
 
