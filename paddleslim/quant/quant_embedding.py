@@ -31,12 +31,12 @@ _logger = get_logger(__name__, level=logging.INFO)
 __all__ = ['quant_embedding']
 
 SUPPORT_QUANTIZE_TYPES = ['abs_max', 'log']
-SUPPORT_OP_TYPES = ['lookup_table', 'fused_embedding_seq_pool']
+SUPPORT_OP_TYPES = ['lookup_table', 'fused_embedding_seq_pool', 'pyramid_hash']
 SUPPORT_QUANTIZE_BITS = [8]
 SUPPORT_DTYPE = ['int8']
 
 _default_single_config = {
-    "quantize_type": "log",
+    "quantize_type": "abs_max",
     "quantize_bits": 8,
     "dtype": "int8"
 }
@@ -230,6 +230,7 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
         var_type=embedding_node.type(),
         shape=[1],
         var_dtype=core.VarDesc.VarType.FP32)
+    print(_get_scale_var_name(var_name))
     quant_tensor_var = graph.create_persistable_node(
         _get_quant_var_name(var_name),
         var_type=embedding_node.type(),
@@ -245,7 +246,8 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
     # insert dequantize_abs_max op
     for op_node in embedding_node.outputs:
         graph.update_input_link(embedding_node, quant_tensor_var, op_node)
-        var_node = op_node.outputs[0]
+        out_name = op_node.output('Out')[0]
+        var_node = graph._find_node_by_name(op_node.outputs, out_name)
         _insert_dequant_abs_max_op(graph, scope, var_node, scale_var, config)
 
     # free float embedding params memory
@@ -362,7 +364,9 @@ def _quant_embedding_log(graph, scope, place, config, var_name,
     # insert dequantize_log op
     for op_node in embedding_node.outputs:
         graph.update_input_link(embedding_node, quant_tensor_var, op_node)
-        var_node = op_node.outputs[0]
+        out_name = op_node.output('Out')[0]
+        var_node = graph._find_node_by_name(op_node.outputs, out_name)
+
         _insert_dequant_log_op(graph, scope, var_node, topk_num_var, config)
 
     # free float embedding params memory
@@ -458,19 +462,16 @@ def quant_embedding(program, place, config=None, scope=None):
             weight_name = op.input('W')[0]
             if weight_name in quantize_params_map.values():
                 continue
-            embedding_node = graph._find_node_by_name(op.inputs,
-                                                      op.input('W')[0])
+            embedding_node = graph._find_node_by_name(op.inputs, weight_name)
             for op_node in embedding_node.outputs:
                 if op_node.name() == 'fused_embedding_seq_pool':
                     _split_embedding_seq_pool(graph, op_node)
             if config[op_type]['quantize_type'] == 'abs_max':
                 _quant_embedding_abs_max(graph, scope, place, config[op_type],
                                          weight_name, embedding_node)
-                pass
             elif config[op_type]['quantize_type'] == 'log':
                 _quant_embedding_log(graph, scope, place, config[op_type],
                                      weight_name, embedding_node)
-                pass
             quantize_params_map[weight_name] = _get_quant_var_name(weight_name)
     for op in all_op:
         if op.name() == 'fused_embedding_seq_pool':
