@@ -76,8 +76,8 @@ We encapsulate each compression and search method to a compression strategy clas
 - **Paddle large-scale scalable knowledge distillation framework [Pantheon](paddleslim/pantheon)**. This is a universal solution for knowledge distillation, which is more flexible than the naive knowledge distillation, and easier to scale to large-scale applications. The advantages of pantheon are:
   - It decouples the teacher and student models. The teacher and student models run in different processes in the same or different nodes, and transfer knowledge via TCP/IP ports or local files;
   - It is friendly to assemble multiple teacher models and each of them can work in either online or offline mode independently;
-  - It can combine the knowledge of different teachers and generate batch data (including knowledge of multi-teachers and the original inputs) for the student model automatically;
-  - It supports the large-scale knowledge distillation of teacher models on multiple devices.
+  - It can combine the knowledge of different teachers and automatically generate min-batch data (including distilled knowledge of multi-teachers and the original inputs) for the student model;
+  - It supports the large-scale knowledge extraction of teacher models on multiple devices.
 
 ### Lightweight Network Architecture Search (Light-NAS)
 
