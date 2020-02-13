@@ -16,7 +16,7 @@
 | MobileNetV2 | quant_aware |72.05%/90.63% (-0.1%/-0.02%)| 4.0 | - | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_quant_aware.tar) |
 |ResNet50|-|76.50%/93.00%| 99 | 2.71 | [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_pretrained.tar) |
 |ResNet50|quant_post|76.33%/93.02% (-0.17%/+0.02%)| 25.1| 1.19 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_post.tar) |
-|ResNet50|quant_aware|	76.48%/93.11% (-0.02%/+0.11%)| 25.1 | 1.17 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_awre.tar) |
+|ResNet50|quant_aware|    76.48%/93.11% (-0.02%/+0.11%)| 25.1 | 1.17 | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_awre.tar) |
 
 分类模型Lite时延(ms)
 
@@ -89,6 +89,12 @@
 
     <a name="trans1">[1]</a>：带_vd后缀代表该预训练模型使用了Mixup，Mixup相关介绍参考[mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
 
+### 1.4 搜索
+
+| 模型 | 压缩方法 | Top-1/Top-5 Acc | 模型体积（MB） | GFLOPs | 下载 |
+|:--:|:---:|:--:|:--:|:--:|:--:|
+| MobileNetV2 |       -        |            72.15%/90.65%           |     15      |  0.59  | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
+| MobileNetV2 |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [下载链接]() |
 
 ## 2. 目标检测
 
@@ -99,8 +105,8 @@
 |              模型              |  压缩方法   | 数据集 | Image/GPU | 输入608 Box AP | 输入416 Box AP | 输入320 Box AP | 模型体积（MB） |   TensorRT时延(V100, ms) |  下载     |
 | :----------------------------: | :---------: | :----: | :-------: | :------------: | :------------: | :------------: | :------------: | :----------: |:----------: |
 |      MobileNet-V1-YOLOv3       |      -      |  COCO  |     8     |      29.3      |      29.3      |      27.1      |       95       |  - | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1.tar) |
-|      MobileNet-V1-YOLOv3       | quant_post  |  COCO  |     8     |     27.9 (-1.4)|	28.0 (-1.3)	  |    26.0 (-1.0) |       25       | -  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenetv1_coco_quant_post.tar) |
-|      MobileNet-V1-YOLOv3       | quant_aware |  COCO  |     8     |     28.1 (-1.2)|  28.2 (-1.1)	  |    25.8 (-1.2) |       26.3     | -  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_coco_quant_aware.tar) |
+|      MobileNet-V1-YOLOv3       | quant_post  |  COCO  |     8     |     27.9 (-1.4)|    28.0 (-1.3)      |    26.0 (-1.0) |       25       | -  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenetv1_coco_quant_post.tar) |
+|      MobileNet-V1-YOLOv3       | quant_aware |  COCO  |     8     |     28.1 (-1.2)|  28.2 (-1.1)      |    25.8 (-1.2) |       26.3     | -  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_coco_quant_aware.tar) |
 |      R34-YOLOv3                |      -      |  COCO  |     8     |      36.2      |      34.3      |      31.4      |       162       |  - | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r34.tar) |
 |      R34-YOLOv3                | quant_post  |  COCO  |     8     | 35.7 (-0.5)    |      -         |      -         |       42.7      |  - | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r34_coco_quant_post.tar) |
 |      R34-YOLOv3                | quant_aware |  COCO  |     8     |  35.2 (-1.0)   | 33.3 (-1.0)    |     30.3 (-1.1)|       44       |  - | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r34_coco_quant_aware.tar) |
@@ -156,6 +162,20 @@
 |   ResNet34-YOLOv3   |            -            |    COCO    |     8     |      36.2      |      34.3      |      31.4      |      163       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r34.tar) |
 | MobileNet-V1-YOLOv3 | ResNet34-YOLOv3 distill |    COCO    |     8     |  31.4 (+2.1)   |  30.0 (+0.7)   |  27.1 (+0.1)   |       95       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenetv1_coco_distilled.tar) |
 
+
+### 2.4 搜索
+
+数据集：WIDER-FACE
+
+|      模型      |  压缩方法   | Image/GPU | 输入尺寸 |        Easy/Medium/Hard         | 模型体积（KB） |    硬件延时（ms）|                         下载                             |
+| :------------: | :---------: | :-------: | :------: | :-----------------------------: | :------------: | :------------: | :----------------------------------------------------------: |
+|   BlazeFace    |      -      |     8     |   640    |         91.5/89.2/79.7          |      815       |       71.862     | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_original.tar) |
+| BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
+| BlazeFace-NAS1 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [下载链接]() |
+
+!!! note "Note"
+
+    <a name="trans1">[1]</a>: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。
 
 ## 3. 图像分割
 
