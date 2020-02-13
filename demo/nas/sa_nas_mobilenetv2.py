@@ -172,6 +172,8 @@ def test_search_result(tokens, image_size, args, config):
     sa_nas = SANAS(
         config,
         server_addr=(args.server_address, args.port),
+        init_temperature=args.init_temperature,
+        reduce_rate=args.reduce_rate,
         search_steps=args.search_steps,
         is_server=True)
 

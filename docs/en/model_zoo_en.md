@@ -188,7 +188,6 @@ Dataset: WIDER-FACE
 Note: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。The config of BlazeFace-NASV2 is in [there](https://github.com/PaddlePaddle/PaddleDetection/blob/master/configs/face_detection/blazeface_nas_v2.yml).
 
 ## 3. Image Segmentation
-
 Dataset：Cityscapes
 
 ### 3.1 Quantization
