@@ -128,7 +128,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
    - **tokens(list):** - 一组tokens。tokens的长度和范围取决于搜索空间。
    
    **返回：**
-   根据传入的token得到一个模型结构实例。
+   根据传入的token得到一个模型结构实例列表。
    
    **示例代码：**
 
@@ -153,8 +153,10 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
    **示例代码：**
 
    .. code-block:: python
+
       import paddle.fluid as fluid
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       sanas = SANAS(configs=config)
       print(sanas.current_info())
+

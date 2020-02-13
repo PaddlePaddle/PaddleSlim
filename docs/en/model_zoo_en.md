@@ -16,7 +16,7 @@ Dataset：ImageNet1000
 | MobileNetV2 | quant_aware |72.05%/90.63% (-0.1%/-0.02%)| 4.0 | - | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_quant_aware.tar) |
 |ResNet50|-|76.50%/93.00%| 99 | 2.71 | [model](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet50_pretrained.tar) |
 |ResNet50|quant_post|76.33%/93.02% (-0.17%/+0.02%)| 25.1| 1.19 | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_post.tar) |
-|ResNet50|quant_aware|	76.48%/93.11% (-0.02%/+0.11%)| 25.1 | 1.17 | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_awre.tar) |
+|ResNet50|quant_aware|    76.48%/93.11% (-0.02%/+0.11%)| 25.1 | 1.17 | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_quant_awre.tar) |
 
 PaddleLite latency(ms)
 
@@ -90,6 +90,13 @@ PaddleLite latency(ms)
     <a name="trans1">[1]</a>：The `_vd` suffix indicates that the pre-trained model uses Mixup. Please refer to the detailed introduction: [mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
 
 
+### 1.4 NAS
+
+| Model | Method | Top-1/Top-5 Acc | Volume（MB） | GFLOPs | Download |
+|:--:|:---:|:--:|:--:|:--:|:--:|
+| MobileNetV2 |       -        |            72.15%/90.65%           |     15      |  0.59  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
+| MobileNetV2 |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [model](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
+
 ## 2. Object Detection
 
 ### 2.1 Quantization
@@ -99,8 +106,8 @@ Dataset： COCO 2017
 |              Model              |  Method  | Dataset | Image/GPU | Input 608 Box AP | Input 416 Box AP | Input 320 Box AP | Model Size（MB） | TensorRT latency(V100, ms) |  Download  |
 | :----------------------------: | :---------: | :----: | :-------: | :------------: | :------------: | :------------: | :------------: | :----------: |:----------: |
 |      MobileNet-V1-YOLOv3       |      -      |  COCO  |     8     |      29.3      |      29.3      |      27.1      |       95       |  - | [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1.tar) |
-|      MobileNet-V1-YOLOv3       | quant_post  |  COCO  |     8     |     27.9 (-1.4)|	28.0 (-1.3)	  |    26.0 (-1.0) |       25       | -  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenetv1_coco_quant_post.tar) |
-|      MobileNet-V1-YOLOv3       | quant_aware |  COCO  |     8     |     28.1 (-1.2)|  28.2 (-1.1)	  |    25.8 (-1.2) |       26.3     | -  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_coco_quant_aware.tar) |
+|      MobileNet-V1-YOLOv3       | quant_post  |  COCO  |     8     |     27.9 (-1.4)|    28.0 (-1.3)      |    26.0 (-1.0) |       25       | -  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenetv1_coco_quant_post.tar) |
+|      MobileNet-V1-YOLOv3       | quant_aware |  COCO  |     8     |     28.1 (-1.2)|  28.2 (-1.1)      |    25.8 (-1.2) |       26.3     | -  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_coco_quant_aware.tar) |
 |      R34-YOLOv3                |      -      |  COCO  |     8     |      36.2      |      34.3      |      31.4      |       162       |  - | [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r34.tar) |
 |      R34-YOLOv3                | quant_post  |  COCO  |     8     | 35.7 (-0.5)    |      -         |      -         |       42.7      |  - | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r34_coco_quant_post.tar) |
 |      R34-YOLOv3                | quant_aware |  COCO  |     8     |  35.2 (-1.0)   | 33.3 (-1.0)    |     30.3 (-1.1)|       44       |  - | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r34_coco_quant_aware.tar) |
@@ -157,8 +164,22 @@ Dataset：Pasacl VOC & COCO 2017
 | MobileNet-V1-YOLOv3 | ResNet34-YOLOv3 distill |    COCO    |     8     |   31.4 (+2.1)    |   30.0 (+0.7)    |   27.1 (+0.1)    |        95        | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenetv1_coco_distilled.tar) |
 
 
-## 3. Image Segmentation 
+### 2.4 NAS
 
+Dataset: WIDER-FACE
+
+|      Model      |  Method   | Image/GPU | Input size |        Easy/Medium/Hard         |  volume（KB） |    latency（ms）|                         Download                             |
+| :------------: | :---------: | :-------: | :------: | :-----------------------------: | :------------: | :------------: | :----------------------------------------------------------: |
+|   BlazeFace    |      -      |     8     |   640    |         91.5/89.2/79.7          |      815       |       71.862     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_original.tar) |
+| BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
+| BlazeFace-NAS1 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
+
+!!! note "Note"
+
+    <a name="trans1">[1]</a>: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。
+
+
+## 3. Image Segmentation
 Dataset：Cityscapes
 
 ### 3.1 Quantization
