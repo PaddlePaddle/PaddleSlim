@@ -151,7 +151,7 @@ class Teacher(object):
             self._t2s_queue = None
             self._cmd_queue = None
 
-        self._out_file = open(self._out_path, "w") if self._out_path else None
+        self._out_file = open(self._out_path, "wb") if self._out_path else None
         if self._out_file:
             return
 
