@@ -55,6 +55,13 @@
 
     <a name="trans1">[1]</a>：带_vd后缀代表该预训练模型使用了Mixup，Mixup相关介绍参考[mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
 
+### 1.4 NAS
+
+| Model | Method | Top-1/Top-5 Acc | Volume（MB） | GFLOPs | Download |
+|:--:|:---:|:--:|:--:|:--:|:--:|
+| MobileNetV2 |       -        |            72.15%/90.65%           |     15      |  0.59  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
+| MobileNetV2 |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [model](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
+
 
 ## 2. 目标检测
 
@@ -119,6 +126,20 @@
 | MobileNet-V1-YOLOv3 |            -            |    COCO    |     8     |      29.3      |      29.3      |      27.0      |       95       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1.tar) |
 |   ResNet34-YOLOv3   |            -            |    COCO    |     8     |      36.2      |      34.3      |      31.4      |      163       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r34.tar) |
 | MobileNet-V1-YOLOv3 | ResNet34-YOLOv3 distill |    COCO    |     8     |  31.4 (+2.1)   |  30.0 (+0.7)   |  27.1 (+0.1)   |       95       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenetv1_coco_distilled.tar) |
+
+### 2.4 NAS
+
+Dataset: WIDER-FACE
+
+|      Model      |  Method   | Image/GPU | Input size |        Easy/Medium/Hard         |  volume（KB） |    latency（ms）|                         Download                             |
+| :------------: | :---------: | :-------: | :------: | :-----------------------------: | :------------: | :------------: | :----------------------------------------------------------: |
+|   BlazeFace    |      -      |     8     |   640    |         91.5/89.2/79.7          |      815       |       71.862     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_original.tar) |
+| BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
+| BlazeFace-NAS1 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
+
+!!! note "Note"
+
+    <a name="trans1">[1]</a>: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。
 
 
 ## 3. 图像分割
