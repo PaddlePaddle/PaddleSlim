@@ -158,7 +158,7 @@ class Student(object):
 
                     if end_recved:
                         break
-                    with open(in_path, 'r') as fin:
+                    with open(in_path, 'rb') as fin:
                         # get knowledge desc
                         desc = pickle.load(fin)
                         out_queue.put(desc)
