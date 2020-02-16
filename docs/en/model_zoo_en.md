@@ -94,8 +94,19 @@ PaddleLite latency(ms)
 
 | Model | Method | Top-1/Top-5 Acc | Volume（MB） | GFLOPs | Download |
 |:--:|:---:|:--:|:--:|:--:|:--:|
-| MobileNetV2 |       -        |            72.15%/90.65%           |     15      |  0.59  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
-| MobileNetV2 |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [model](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
+|   MobileNetV2   |       -        |            72.15%/90.65%           |     15      |  0.59  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
+| MobileNetV2_NAS |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [model](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
+
+Dataset: Cifar10
+| Model | Method |  Acc  | Volume（MB） | Download |
+|-----:|:---:|:--:|:--:|:--:|:--:|
+|           Darts           |       97.135%        |        3.767         |  -   |
+| Darts_SA(Based on Darts)  |   97.276%(+0.141%)   |    3.344(-11.2%)     |     |
+
+!!! note "Note"
+
+    <a name="trans1">[1]</a>: The token of MobileNetV2_NAS is [4, 4, 5, 1, 1, 2, 1, 1, 0, 2, 6, 2, 0, 3, 4, 5, 0, 4, 5, 5, 1, 4, 8, 0, 0]. The token of Darts_SA is [5, 5, 0, 5, 5, 10, 7, 7, 5, 7, 7, 11, 10, 12, 10, 0, 5, 3, 10, 8].
+
 
 ## 2. Object Detection
 
@@ -172,11 +183,11 @@ Dataset: WIDER-FACE
 | :------------: | :---------: | :-------: | :------: | :-----------------------------: | :------------: | :------------: | :----------------------------------------------------------: |
 |   BlazeFace    |      -      |     8     |   640    |         91.5/89.2/79.7          |      815       |       71.862     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_original.tar) |
 | BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
-| BlazeFace-NAS1 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
+| BlazeFace-NASV2 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
 
 !!! note "Note"
 
-    <a name="trans1">[1]</a>: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。
+    <a name="trans1">[1]</a>: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。The config of BlazeFace-NASV2 is in [there](https://github.com/PaddlePaddle/PaddleDetection/blob/master/configs/face_detection/blazeface_nas_v2.yml).
 
 
 ## 3. Image Segmentation
