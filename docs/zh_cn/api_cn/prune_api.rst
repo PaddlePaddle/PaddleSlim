@@ -378,7 +378,7 @@ load_sensitivities
      }
   }
   sensitivities_file = "sensitive_api_demo.data"
-  with open(sensitivities_file, 'w') as f:
+  with open(sensitivities_file, 'wb') as f:
       pickle.dump(sen, f)
   sensitivities = load_sensitivities(sensitivities_file)
   print(sensitivities)
