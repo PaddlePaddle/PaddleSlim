@@ -98,10 +98,10 @@ PaddleLite latency(ms)
 | MobileNetV2_NAS |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [model](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
 
 Dataset: Cifar10
-| Model | Method |  Acc  | Volume（MB） | Download |
-|-----:|:---:|:--:|:--:|:--:|:--:|
-|           Darts           |       97.135%        |        3.767         |  -   |
-| Darts_SA(Based on Darts)  |   97.276%(+0.141%)   |    3.344(-11.2%)     |     |
+| Model | Method |  Acc  |  Params（MB） | Download |
+|:---:|:--:|:--:|:--:|:--:|
+|           Darts           |   -   |     97.135%        |        3.767         |  -   |
+| Darts_SA(Based on Darts)  | SANAS |  97.276%(+0.141%)   |    3.344(-11.2%)     |     |
 
 !!! note "Note"
 

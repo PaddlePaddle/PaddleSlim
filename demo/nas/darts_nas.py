@@ -246,6 +246,70 @@ def search(config, args, image_size, is_server=True):
         sa_nas.reward(float(valid_top1_list[-1] + valid_top1_list[-2]) / 2)
 
 
+def final_test(config, args, image_size, token=None):
+    assert token != None, "If you want to start a final experiment, you must input a token."
+    sa_nas = SANAS(
+        config, server_addr=(args.server_address, args.port), is_server=True)
+
+    image_shape = [3, image_size, image_size]
+    archs = sa_nas.tokens2arch(token)[0]
+
+    train_program = fluid.Program()
+    test_program = fluid.Program()
+    startup_program = fluid.Program()
+    train_fetch_list, train_loader = build_program(
+        train_program,
+        startup_program,
+        image_shape,
+        archs,
+        args,
+        is_train=True)
+
+    current_params = count_parameters_in_MB(
+        train_program.global_block().all_parameters(), 'cifar10')
+    _logger.info('current_params: {}M'.format(current_params))
+    test_fetch_list, test_loader = build_program(
+        test_program,
+        startup_program,
+        image_shape,
+        archs,
+        args,
+        is_train=False)
+    test_program = test_program.clone(for_test=True)
+
+    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
+    exe = fluid.Executor(place)
+    exe.run(startup_program)
+
+    train_reader = reader.train_valid(
+        batch_size=args.batch_size, is_train=True, is_shuffle=True, args=args)
+    valid_reader = reader.train_valid(
+        batch_size=args.batch_size,
+        is_train=False,
+        is_shuffle=False,
+        args=args)
+
+    train_loader.set_batch_generator(train_reader, places=place)
+    test_loader.set_batch_generator(valid_reader, places=place)
+
+    build_strategy = fluid.BuildStrategy()
+    train_compiled_program = fluid.CompiledProgram(
+        train_program).with_data_parallel(
+            loss_name=train_fetch_list[0].name, build_strategy=build_strategy)
+
+    valid_top1_list = []
+    for epoch_id in range(args.retain_epoch):
+        train_top1 = train(train_compiled_program, exe, epoch_id, train_loader,
+                           train_fetch_list, args)
+        _logger.info("TRAIN: step: {}, Epoch {}, train_acc {:.6f}".format(
+            step, epoch_id, train_top1))
+        valid_top1 = valid(test_program, exe, epoch_id, test_loader,
+                           test_fetch_list, args)
+        _logger.info("TEST: Epoch {}, valid_acc {:.6f}".format(epoch_id,
+                                                               valid_top1))
+        valid_top1_list.append(valid_top1)
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
@@ -258,8 +322,6 @@ if __name__ == '__main__':
     parser.add_argument(
         '--batch_size', type=int, default=96, help='batch size.')
     parser.add_argument(
-        '--class_dim', type=int, default=1000, help='classify number.')
-    parser.add_argument(
         '--is_server',
         type=ast.literal_eval,
         default=True,
@@ -269,6 +331,7 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8881, help='server port')
     parser.add_argument(
         '--retain_epoch', type=int, default=30, help='epoch for each token.')
+    parser.add_argument('--token', type=int, nargs='+', help='final token.')
     parser.add_argument(
         '--search_steps',
         type=int,
@@ -281,4 +344,7 @@ if __name__ == '__main__':
 
     config = [('DartsSpace')]
 
-    search(config, args, image_size, is_server=args.is_server)
+    if args.token == None:
+        search(config, args, image_size, is_server=args.is_server)
+    else:
+        final_test(config, args, image_size, token=args.token)
