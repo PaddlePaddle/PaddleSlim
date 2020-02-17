@@ -39,8 +39,7 @@ export CUDA_VISIBLE_DEVICES=0
 python train.py \
 --model "MobileNet" \
 --pruned_ratio 0.31 \
---data "imagenet" \
---pretrained_model "./MobileNetV1_pretrained"
+--data "mnist"
 ```
 
 其中，`model`用于指定待裁剪的模型。`pruned_ratio`用于指定各个卷积层通道数被裁剪的比例。`data`选项用于指定使用的数据集。
