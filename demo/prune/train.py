@@ -136,6 +136,8 @@ def compress(args):
             return os.path.exists(
                 os.path.join(args.pretrained_model, var.name))
 
+        _logger.info("Load pretrained model from {}".format(
+            args.pretrained_model))
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
     val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
@@ -199,6 +201,8 @@ def compress(args):
                     format(epoch, batch_id, loss_n, acc_top1_n, acc_top5_n,
                            end_time - start_time))
             batch_id += 1
+
+    test(0, val_program)
 
     params = get_pruned_params(args, fluid.default_main_program())
     _logger.info("FLOPs before pruning: {}".format(
