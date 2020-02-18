@@ -79,8 +79,8 @@ class Pruner():
                 pruned_num = int(round(param_v.shape()[0] * ratio))
                 pruned_idx = [0] * pruned_num
             else:
-                param_t = np.array(scope.find_var(param).get_tensor())
-                pruned_idx = self._cal_pruned_idx(param_t, ratio, axis=0)
+                pruned_idx = self._cal_pruned_idx(
+                    graph, scope, param, ratio, axis=0)
             param = graph.var(param)
             conv_op = param.outputs()[0]
             walker = conv2d_walker(
@@ -130,7 +130,7 @@ class Pruner():
         graph.infer_shape()
         return graph.program, param_backup, param_shape_backup
 
-    def _cal_pruned_idx(self, param, ratio, axis):
+    def _cal_pruned_idx(self, graph, scope, param, ratio, axis):
         """
         Calculate the index to be pruned on axis by given pruning ratio.
 
@@ -145,11 +145,21 @@ class Pruner():
         Returns:
             list<int>: The indexes to be pruned on axis.
         """
-        prune_num = int(round(param.shape[axis] * ratio))
-        reduce_dims = [i for i in range(len(param.shape)) if i != axis]
         if self.criterion == 'l1_norm':
-            criterions = np.sum(np.abs(param), axis=tuple(reduce_dims))
-        pruned_idx = criterions.argsort()[:prune_num]
+            param_t = np.array(scope.find_var(param).get_tensor())
+            prune_num = int(round(param_t.shape[axis] * ratio))
+            reduce_dims = [i for i in range(len(param_t.shape)) if i != axis]
+            criterions = np.sum(np.abs(param_t), axis=tuple(reduce_dims))
+            pruned_idx = criterions.argsort()[:prune_num]
+        elif self.criterion == "slim_prune":
+            param_var = graph.var(param)
+            conv_op = param_var.outputs()[0]
+            conv_output = conv_op.outputs("Output")[0]
+            bn_op = conv_output.outputs()[0]
+            bn_scale_param = bn_op.inputs("Scale")[0].name()
+            bn_scale_np = np.array(scope.find_var(bn_scale_param).get_tensor())
+            prune_num = int(round(bn_scale_np.shape[axis] * ratio))
+            pruned_idx = np.abs(bn_scale_np).argsort()[:prune_num]
         return pruned_idx
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
