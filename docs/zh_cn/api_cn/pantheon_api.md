@@ -100,7 +100,8 @@ pantheon.Teacher.start\_knowledge\_service(feed\_list, schema, program, reader\_
 - **times (int):** The maximum repeated serving times, default 1. Whenever
                          the public method **get\_knowledge\_generator()** in **Student**
                          object called once, the serving times will be added one,
-                         until reaching the maximum and ending the service.
+                         until reaching the maximum and ending the service. Only
+                         valid in online mode, and will be ignored in offline mode.
 
 **Return:** None
 
