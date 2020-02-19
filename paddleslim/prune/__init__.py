@@ -25,6 +25,8 @@ from .prune_walker import *
 from ..prune import prune_walker
 from .prune_io import *
 from ..prune import prune_io
+from .group_param import *
+from ..prune import group_param
 
 __all__ = []
 
@@ -34,3 +36,4 @@ __all__ += sensitive_pruner.__all__
 __all__ += sensitive.__all__
 __all__ += prune_walker.__all__
 __all__ += prune_io.__all__
+__all__ += group_param.__all__
