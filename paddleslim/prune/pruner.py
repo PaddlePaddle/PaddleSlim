@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import sys
 import numpy as np
 import paddle.fluid as fluid
 import copy
@@ -151,15 +152,20 @@ class Pruner():
             reduce_dims = [i for i in range(len(param_t.shape)) if i != axis]
             criterions = np.sum(np.abs(param_t), axis=tuple(reduce_dims))
             pruned_idx = criterions.argsort()[:prune_num]
-        elif self.criterion == "slim_prune":
+        elif self.criterion == "batch_norm_scale":
             param_var = graph.var(param)
             conv_op = param_var.outputs()[0]
             conv_output = conv_op.outputs("Output")[0]
             bn_op = conv_output.outputs()[0]
-            bn_scale_param = bn_op.inputs("Scale")[0].name()
-            bn_scale_np = np.array(scope.find_var(bn_scale_param).get_tensor())
-            prune_num = int(round(bn_scale_np.shape[axis] * ratio))
-            pruned_idx = np.abs(bn_scale_np).argsort()[:prune_num]
+            if bn_op is not None:
+                bn_scale_param = bn_op.inputs("Scale")[0].name()
+                bn_scale_np = np.array(
+                    scope.find_var(bn_scale_param).get_tensor())
+                prune_num = int(round(bn_scale_np.shape[axis] * ratio))
+                pruned_idx = np.abs(bn_scale_np).argsort()[:prune_num]
+            else:
+                raise SystemExit(
+                    "Can't find BatchNorm op after Conv op in Network.")
         return pruned_idx
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):

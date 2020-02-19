@@ -38,7 +38,7 @@ add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
-add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used.")
+add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used, support l1_norm and batch_norm_scale.")
 # yapf: enable
 
 model_list = models.__all__
