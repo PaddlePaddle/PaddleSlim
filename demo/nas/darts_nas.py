@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append('..')
 import numpy as np
@@ -301,13 +302,18 @@ def final_test(config, args, image_size, token=None):
     for epoch_id in range(args.retain_epoch):
         train_top1 = train(train_compiled_program, exe, epoch_id, train_loader,
                            train_fetch_list, args)
-        _logger.info("TRAIN: step: {}, Epoch {}, train_acc {:.6f}".format(
-            step, epoch_id, train_top1))
+        _logger.info("TRAIN: Epoch {}, train_acc {:.6f}".format(epoch_id,
+                                                                train_top1))
         valid_top1 = valid(test_program, exe, epoch_id, test_loader,
                            test_fetch_list, args)
         _logger.info("TEST: Epoch {}, valid_acc {:.6f}".format(epoch_id,
                                                                valid_top1))
         valid_top1_list.append(valid_top1)
+
+        output_dir = os.path.join('darts_output', str(epoch_id))
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        fluid.io.save_persistables(exe, output_dir, main_program=train_program)
 
 
 if __name__ == '__main__':
