@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .quanter import quant_aware, quant_post, convert
+from .quanter import quant_aware, convert
 from .quant_embedding import quant_embedding
