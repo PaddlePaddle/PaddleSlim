@@ -8,6 +8,7 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
+sys.path.append("../../")
 from paddleslim.prune import Pruner, save_model
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
@@ -37,6 +38,7 @@ add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
+add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used, support l1_norm and batch_norm_scale.")
 # yapf: enable
 
 model_list = models.__all__
@@ -207,7 +209,7 @@ def compress(args):
     params = get_pruned_params(args, fluid.default_main_program())
     _logger.info("FLOPs before pruning: {}".format(
         flops(fluid.default_main_program())))
-    pruner = Pruner()
+    pruner = Pruner(args.criterion)
     pruned_val_program, _, _ = pruner.prune(
         val_program,
         fluid.global_scope(),
