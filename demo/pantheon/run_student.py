@@ -80,8 +80,8 @@ def run(args):
     student.start()
 
     if args.test_send_recv:
-        for t in xrange(2):
-            for i in xrange(3):
+        for t in range(2):
+            for i in range(3):
                 print(student.recv(t))
         student.send("message from student!")
 
