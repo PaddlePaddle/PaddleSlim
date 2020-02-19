@@ -19,4 +19,5 @@ from paddleslim import nas
 from paddleslim import analysis
 from paddleslim import dist
 from paddleslim import quant
-__all__ = ['models', 'prune', 'nas', 'analysis', 'dist', 'quant']
+from paddleslim import pantheon
+__all__ = ['models', 'prune', 'nas', 'analysis', 'dist', 'quant', 'pantheon']
