@@ -13,7 +13,7 @@ The illustration below shows an application of Pantheon, where the sudent model 
 ## Prerequisites
 
 - Python 2.7.x or 3.x
-- PaddlePaddle >= 1.6.0
+- PaddlePaddle >= 1.7.0
 
 ## APIs
 
