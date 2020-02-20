@@ -27,7 +27,11 @@ from .prune_io import *
 from ..prune import prune_io
 from .group_param import *
 from ..prune import group_param
+from .criterion import *
+from ..prune import criterion
 
+from .importance_sort import *
+from ..prune import importance_sort
 __all__ = []
 
 __all__ += pruner.__all__
@@ -37,3 +41,5 @@ __all__ += sensitive.__all__
 __all__ += prune_walker.__all__
 __all__ += prune_io.__all__
 __all__ += group_param.__all__
+__all__ += criterion.__all__
+__all__ += importance_sort.__all__
