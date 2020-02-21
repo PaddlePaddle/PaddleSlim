@@ -92,9 +92,7 @@ PaddleLite版本： v2.3
 |ResNet101|teacher|77.56%/93.64%| 173 | [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar) |
 |  ResNet50   |             ResNet101 distill              |  77.29%/93.65% (+0.79%/+0.65%)  |       99       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_distilled.tar) |
 
-!!! note "Note"
-
-    <a name="trans1">[1]</a>：带_vd后缀代表该预训练模型使用了Mixup，Mixup相关介绍参考[mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
+注意：带"_vd"后缀代表该预训练模型使用了Mixup，Mixup相关介绍参考[mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
 
 ### 1.4 搜索
 
@@ -180,9 +178,7 @@ PaddleLite版本： v2.3
 | BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
 | BlazeFace-NAS1 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
 
-!!! note "Note"
-
-    <a name="trans1">[1]</a>: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。
+>Note: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。
 
 ## 3. 图像分割
 

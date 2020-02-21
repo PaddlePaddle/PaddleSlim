@@ -50,10 +50,6 @@ PaddleLite latency(ms)
 | Kirin 970 | ResNet50    | quant_aware   | 488.361        | 260.1697       | 142.416        | 479.5668       | 249.8485       | 138.1742       |
 | Kirin 970 | ResNet50    | quant_post    | 489.6188       | 258.3279       | 142.6063       | 480.0064       | 249.5339       | 138.5284       |
 
-
-
-
-
 ### 1.2 Pruning
 
 PaddleLite:
@@ -90,9 +86,7 @@ PaddleLite version: v2.3
 |ResNet101|teacher|77.56%/93.64%| 173 | [model](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar) |
 |  ResNet50   |             ResNet101 distill              |  77.29%/93.65% (+0.79%/+0.65%)  |       99       | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_distilled.tar) |
 
-!!! note "Note"
-
-    <a name="trans1">[1]</a>：The `_vd` suffix indicates that the pre-trained model uses Mixup. Please refer to the detailed introduction: [mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
+Note: The `_vd` suffix indicates that the pre-trained model uses Mixup. Please refer to the detailed introduction: [mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
 
 
 ### 1.4 NAS
@@ -179,9 +173,7 @@ Dataset: WIDER-FACE
 | BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
 | BlazeFace-NAS1 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
 
-!!! note "Note"
-
-    <a name="trans1">[1]</a>: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。
+Note: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。
 
 
 ## 3. Image Segmentation
