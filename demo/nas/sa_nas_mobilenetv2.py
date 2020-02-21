@@ -38,19 +38,22 @@ def build_program(main_program,
                   args,
                   is_test=False):
     with fluid.program_guard(main_program, startup_program):
-        data_loader, data, label = create_data_loader(image_shape)
-        output = archs(data)
-        output = fluid.layers.fc(input=output, size=args.class_dim)
+        with fluid.unique_name.guard():
+            data_loader, data, label = create_data_loader(image_shape)
+            output = archs(data)
+            output = fluid.layers.fc(input=output, size=args.class_dim)
 
-        softmax_out = fluid.layers.softmax(input=output, use_cudnn=False)
-        cost = fluid.layers.cross_entropy(input=softmax_out, label=label)
-        avg_cost = fluid.layers.mean(cost)
-        acc_top1 = fluid.layers.accuracy(input=softmax_out, label=label, k=1)
-        acc_top5 = fluid.layers.accuracy(input=softmax_out, label=label, k=5)
+            softmax_out = fluid.layers.softmax(input=output, use_cudnn=False)
+            cost = fluid.layers.cross_entropy(input=softmax_out, label=label)
+            avg_cost = fluid.layers.mean(cost)
+            acc_top1 = fluid.layers.accuracy(
+                input=softmax_out, label=label, k=1)
+            acc_top5 = fluid.layers.accuracy(
+                input=softmax_out, label=label, k=5)
 
-        if is_test == False:
-            optimizer = create_optimizer(args)
-            optimizer.minimize(avg_cost)
+            if is_test == False:
+                optimizer = create_optimizer(args)
+                optimizer.minimize(avg_cost)
     return data_loader, avg_cost, acc_top1, acc_top5
 
 

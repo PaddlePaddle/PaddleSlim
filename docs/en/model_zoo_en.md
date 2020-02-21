@@ -100,8 +100,8 @@ PaddleLite latency(ms)
 Dataset: Cifar10
 | Model | Method |  Acc  |  Params（MB） | Download |
 |:---:|:--:|:--:|:--:|:--:|
-|           Darts           |   -   |     97.135%        |        3.767         |  -   |
-| Darts_SA(Based on Darts)  | SANAS |  97.276%(+0.141%)   |    3.344(-11.2%)     |     |
+|           Darts           |   -   |     97.135%         |        3.767         |  -  |
+| Darts_SA(Based on Darts)  | SANAS |  97.276%(+0.141%)   |    3.344(-11.2%)     |  -  |
 
 !!! note "Note"
 
