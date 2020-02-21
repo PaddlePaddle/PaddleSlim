@@ -23,7 +23,6 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 - 定点量化
   - 在线量化训练（training aware）
   - 离线量化（post training）
-  - embedding层log域量化
 
 - 知识蒸馏
   - 支持单进程知识蒸馏
