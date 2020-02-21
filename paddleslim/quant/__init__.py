@@ -24,7 +24,7 @@ try:
     from .quanter import quant_aware, quant_post, convert
 except Exception as e:
     _logger.warning(
-        "If you want use training-aware and post training quantization, "
+        "If you want to use training-aware and post-training quantization, "
         "please use Paddle >= 1.7.0 or develop version")
 
 from .quant_embedding import quant_embedding
