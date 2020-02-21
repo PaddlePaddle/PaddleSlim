@@ -12,5 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .quanter import quant_aware, quant_post, convert
+import logging
+
+import paddle.fluid as fluid
+from ..common import get_logger
+
+_logger = get_logger(__name__, level=logging.INFO)
+
+try:
+    fluid.require_version('1.7.0')
+    from .quanter import quant_aware, quant_post, convert
+except Exception as e:
+    _logger.warning(
+        "If you want use training-aware and post training quantization, "
+        "please use Paddle >= 1.7.0 or develop version")
+
 from .quant_embedding import quant_embedding
