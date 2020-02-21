@@ -36,10 +36,10 @@ class MedianStop(EarlyStopBase):
     Args:
         strategy<str>: the stategy of search.
         start_epoch<int>: which step to start early stop algorithm.
-        mode<str>: bigger is better or smaller is better, chooice in ['maximize', 'minmize']. Default: maximize.
+        mode<str>: bigger is better or smaller is better, chooice in ['maxmize', 'minimize']. Default: maxmize.
     """
 
-    def __init__(self, strategy, start_epoch, mode='maximize'):
+    def __init__(self, strategy, start_epoch, mode='maxmize'):
         self._start_epoch = start_epoch
         self._running_history = dict()
         self._strategy = strategy
@@ -47,8 +47,8 @@ class MedianStop(EarlyStopBase):
         self._is_server = self._strategy._is_server
         self._manager = self._start_manager()
         assert self._mode in [
-            'maximize', 'minmize'
-        ], 'mode of MedianStop must be \'maximize\' or \'minmize\', but received mode is {}'.format(
+            'maxmize', 'minimize'
+        ], 'mode of MedianStop must be \'maxmize\' or \'minimize\', but received mode is {}'.format(
             self._mode)
 
     def _start_manager(self):
@@ -166,7 +166,7 @@ class MedianStop(EarlyStopBase):
         if res_same_step:
             res_same_step.sort()
 
-            if self._mode == 'maximize' and result < res_same_step[(
+            if self._mode == 'maxmize' and result < res_same_step[(
                     len(res_same_step) - 1) // 2]:
                 status = "BAD"
 
