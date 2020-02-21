@@ -1,5 +1,5 @@
 
-使用文档：https://paddlepaddle.github.io/PaddleSlim
+文档：https://paddlepaddle.github.io/PaddleSlim
 
 # PaddleSlim
 
@@ -36,9 +36,22 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
   - 支持多平台模型延时评估
   - 支持用户自定义搜索算法和搜索空间
 
+## 安装
+
+依赖：
+
+Paddle >= 1.7.0
+
+```bash
+pip install paddleslim -i https://pypi.org/simple
+```
 
 ## 使用
 
+- [快速开始](docs/zh_cn/quick_start)：通过简单示例介绍如何快速使用PaddleSlim。
+- [进阶教程](docs/zh_cn/tutorials)：PaddleSlim高阶教程。
+- [模型库](docs/zh_cn/model_zoo.md)：各个压缩策略在图像分类、目标检测和图像语义分割模型上的实验结论，包括模型精度、预测速度和可供下载的预训练模型。
+- [API文档](https://paddlepaddle.github.io/PaddleSlim/api_cn/index.html)
 - [Paddle检测库](https://github.com/PaddlePaddle/PaddleDetection/tree/master/slim)：介绍如何在检测库中使用PaddleSlim。
 - [Paddle分割库](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/slim)：介绍如何在分割库中使用PaddleSlim。
 - [PaddleLite](https://paddlepaddle.github.io/Paddle-Lite/)：介绍如何使用预测库PaddleLite部署PaddleSlim产出的模型。
