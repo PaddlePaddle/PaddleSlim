@@ -56,21 +56,26 @@ PaddleLite latency(ms)
 
 ### 1.2 Pruning
 
+PaddleLite:
 
-| Model | Method | Top-1/Top-5 Acc | Model Size（MB） | GFLOPs | Download |
-|:--:|:---:|:--:|:--:|:--:|:--:|
-| MobileNetV1 |    Baseline    |         70.99%/89.68%         |       17       |  1.11  | [model](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar) |
-| MobileNetV1 |  uniform -50%  | 69.4%/88.66% (-1.59%/-1.02%)  |       9        |  0.56  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_uniform-50.tar) |
-| MobileNetV1 | sensitive -30% |  70.4%/89.3% (-0.59%/-0.38%)  |       12       |  0.74  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-30.tar) |
-| MobileNetV1 | sensitive -50% | 69.8% / 88.9% (-1.19%/-0.78%) |       9        |  0.56  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-50.tar) |
-| MobileNetV2 |       -        |         72.15%/90.65%         |       15       |  0.59  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
-| MobileNetV2 |  uniform -50%  | 65.79%/86.11% (-6.35%/-4.47%) |       11       | 0.296  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
-|  ResNet34   |       -        |         72.15%/90.65%         |       84       |  7.36  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
-|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-1.36%/-0.87%) |       41       |  3.67  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
-|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-2.04%/-1.06%) |       33       |  3.31  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
+env: Qualcomm SnapDragon 845 + armv8
+
+criterion: time cost in Thread1/Thread2/Thread4
+
+PaddleLite version: v2.3
 
 
-
+|Model | Method | Top-1/Top-5 Acc | ModelSize(MB) | GFLOPs |PaddleLite cost(ms)|TensorRT speed(FPS)| download |
+|:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
+| MobileNetV1 |    Baseline    |         70.99%/89.68%         |       17       |  1.11  |66.052\35.8014\19.5762|-| [download](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar) |
+| MobileNetV1 |  uniform -50%  | 69.4%/88.66% (-1.59%/-1.02%)  |       9        |  0.56  | 33.5636\18.6834\10.5076|-|[download](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_uniform-50.tar) |
+| MobileNetV1 | sensitive -30% |  70.4%/89.3% (-0.59%/-0.38%)  |       12       |  0.74  | 46.5958\25.3098\13.6982|-|[download](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-30.tar) |
+| MobileNetV1 | sensitive -50% | 69.8% / 88.9% (-1.19%/-0.78%) |       9        |  0.56  |37.9892\20.7882\11.3144|-| [download](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-50.tar) |
+| MobileNetV2 |       -        |         72.15%/90.65%         |       15       |  0.59  |41.7874\23.375\13.3998|-| [download](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
+| MobileNetV2 |  uniform -50%  | 65.79%/86.11% (-6.35%/-4.47%) |       11       | 0.296  |23.8842\13.8698\8.5572|-| [download](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
+|  ResNet34   |       -        |         72.15%/90.65%         |       84       |  7.36  |217.808\139.943\96.7504|342.32| [download](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
+|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-1.36%/-0.87%) |       41       |  3.67  |114.787\75.0332\51.8438|452.41| [download](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
+|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-2.04%/-1.06%) |       33       |  3.31  |105.924\69.3222\48.0246|457.25| [download](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
 
 ### 1.3 Distillation
 
