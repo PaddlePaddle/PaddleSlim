@@ -102,9 +102,7 @@ Dataset: Cifar10
 |           Darts           |   -   |     97.135%         |        3.767         |  -  |
 | Darts_SA(Based on Darts)  | SANAS |  97.276%(+0.141%)   |    3.344(-11.2%)     |  -  |
 
-!!! note "Note"
-
-    <a name="trans1">[1]</a>: The token of MobileNetV2_NAS is [4, 4, 5, 1, 1, 2, 1, 1, 0, 2, 6, 2, 0, 3, 4, 5, 0, 4, 5, 5, 1, 4, 8, 0, 0]. The token of Darts_SA is [5, 5, 0, 5, 5, 10, 7, 7, 5, 7, 7, 11, 10, 12, 10, 0, 5, 3, 10, 8].
+Note: The token of MobileNetV2_NAS is [4, 4, 5, 1, 1, 2, 1, 1, 0, 2, 6, 2, 0, 3, 4, 5, 0, 4, 5, 5, 1, 4, 8, 0, 0]. The token of Darts_SA is [5, 5, 0, 5, 5, 10, 7, 7, 5, 7, 7, 11, 10, 12, 10, 0, 5, 3, 10, 8].
 
 
 ## 2. Object Detection
