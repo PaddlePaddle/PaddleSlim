@@ -37,6 +37,7 @@
 
 ### 2. 引入依赖包并定义全局变量
 ```python
+import numpy as np
 import paddle
 import paddle.fluid as fluid
 from paddleslim.nas import SANAS
@@ -170,9 +171,9 @@ def train(main_prog, exe, epoch_id, train_loader, fetch_list):
         top1.append(top1_v)
         top5.append(top5_v)
         if step_id % 10 == 0:
-            _logger.info(
+            print(
                 "Train Epoch {}, Step {}, Lr {:.8f}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
-                format(epoch_id, step_id, LR[0], np.mean(loss), np.mean(top1), np.mean(top5)))
+                format(epoch_id, step_id, lr[0], np.mean(loss), np.mean(top1), np.mean(top5)))
     return np.mean(top1)
 ```
 
@@ -189,7 +190,7 @@ def valid(main_prog, exe, epoch_id, valid_loader, fetch_list):
         top1.append(top1_v)
         top5.append(top5_v)
         if step_id % 10 == 0:
-            _logger.info(
+            print(
                 "Valid Epoch {}, Step {}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
                 format(epoch_id, step_id, np.mean(loss), np.mean(top1), np.mean(top5)))
     return np.mean(top1)
@@ -237,8 +238,8 @@ exe.run(startup_program)
 ```python
 train_reader = paddle.batch(paddle.reader.shuffle(paddle.dataset.cifar.train10(cycle=False), buf_size=1024), batch_size=BATCH_SIZE, drop_last=True)
 test_reader = paddle.batch(paddle.dataset.cifar.test10(cycle=False), batch_size=BATCH_SIZE, drop_last=False)
-train_loader.set_batch_generator(train_reader, places=place)
-test_loader.set_batch_generator(test_reader, places=place)
+train_loader.set_sample_list_generator(train_reader, places=place)
+test_loader.set_sample_list_generator(test_reader, places=place)
 ```
 
 #### 9.6 启动训练和评估
