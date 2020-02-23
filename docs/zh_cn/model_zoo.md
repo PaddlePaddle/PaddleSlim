@@ -96,10 +96,24 @@ PaddleLite版本： v2.3
 
 ### 1.4 搜索
 
+数据集: ImageNet1000
+
 | 模型 | 压缩方法 | Top-1/Top-5 Acc | 模型体积（MB） | GFLOPs | 下载 |
 |:--:|:---:|:--:|:--:|:--:|:--:|
 | MobileNetV2 |       -        |            72.15%/90.65%           |     15      |  0.59  | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
 | MobileNetV2 |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [下载链接](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
+
+数据集: Cifar10
+| 模型 |压缩方法 |  Acc  | 模型参数（MB） | 下载 |
+|:---:|:--:|:--:|:--:|:--:|
+|          Darts               |    -    |     97.135%        |        3.767        |  -  |
+| Darts_SA(基于Darts搜索空间)  |  SANAS  | 97.276%(+0.141%)   |    3.344(-11.2%)    |  -  |
+
+!!! note "Note"
+
+    <a name="trans1">[1]</a>: MobileNetV2_NAS 的token是：[4, 4, 5, 1, 1, 2, 1, 1, 0, 2, 6, 2, 0, 3, 4, 5, 0, 4, 5, 5, 1, 4, 8, 0, 0]. Darts_SA的token是：[5, 5, 0, 5, 5, 10, 7, 7, 5, 7, 7, 11, 10, 12, 10, 0, 5, 3, 10, 8].
+
+
 
 ## 2. 目标检测
 
@@ -176,9 +190,9 @@ PaddleLite版本： v2.3
 | :------------: | :---------: | :-------: | :------: | :-----------------------------: | :------------: | :------------: | :----------------------------------------------------------: |
 |   BlazeFace    |      -      |     8     |   640    |         91.5/89.2/79.7          |      815       |       71.862     | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_original.tar) |
 | BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
-| BlazeFace-NAS1 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
+| BlazeFace-NASV2 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
 
->Note: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。
+Note: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。BlazeFace-NASV2的详细配置在[这里](https://github.com/PaddlePaddle/PaddleDetection/blob/master/configs/face_detection/blazeface_nas_v2.yml).
 
 ## 3. 图像分割
 
