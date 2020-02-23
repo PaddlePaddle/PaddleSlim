@@ -85,12 +85,12 @@ class MedianStop(EarlyStopBase):
            status<str>: the status of this experiment.
         """
         _logger.debug('the status of this experiment is {}'.format(status))
+        completed_avg_history = dict()
         if exp_name in self._running_history:
             if status == "GOOD":
                 count = 0
                 history_sum = 0
                 result = []
-                completed_avg_history = dict()
                 for res in self._running_history[exp_name]:
                     count += 1
                     history_sum += res
@@ -98,7 +98,7 @@ class MedianStop(EarlyStopBase):
                 completed_avg_history[exp_name] = result
             self._running_history.pop(exp_name)
 
-        if completed_avg_history:
+        if len(completed_avg_history) > 0:
             while True:
                 try:
                     new_dict = self._manager.get_completed_history()
