@@ -9,7 +9,6 @@ import argparse
 import ast
 import logging
 import paddle.fluid as fluid
-from paddleslim.analysis import flops
 from paddleslim.nas import SANAS
 from paddleslim.common import get_logger
 import darts_cifar10_reader as reader
@@ -116,7 +115,6 @@ def train(main_prog, exe, epoch_id, train_loader, fetch_list, args):
             for device_id in range(devices_num):
                 image = data[device_id]['image']
                 label = data[device_id]['label']
-                num_cells = 4
                 drop_path_prob = np.array(
                     [[drop_path_probility * epoch_id / args.retain_epoch]
                      for i in range(args.batch_size)]).astype(np.float32)
@@ -214,18 +212,12 @@ def search(config, args, image_size, is_server=True):
         exe.run(startup_program)
 
         train_reader = reader.train_valid(
-            batch_size=args.batch_size,
-            is_train=True,
-            is_shuffle=True,
-            args=args)
-        valid_reader = reader.train_valid(
-            batch_size=args.batch_size,
-            is_train=False,
-            is_shuffle=False,
-            args=args)
+            batch_size=args.batch_size, is_train=True, is_shuffle=True)
+        test_reader = reader.train_valid(
+            batch_size=args.batch_size, is_train=False, is_shuffle=False)
 
         train_loader.set_batch_generator(train_reader, places=place)
-        test_loader.set_batch_generator(valid_reader, places=place)
+        test_loader.set_batch_generator(test_reader, places=place)
 
         build_strategy = fluid.BuildStrategy()
         train_compiled_program = fluid.CompiledProgram(
@@ -284,14 +276,14 @@ def final_test(config, args, image_size, token=None):
 
     train_reader = reader.train_valid(
         batch_size=args.batch_size, is_train=True, is_shuffle=True, args=args)
-    valid_reader = reader.train_valid(
+    test_reader = reader.train_valid(
         batch_size=args.batch_size,
         is_train=False,
         is_shuffle=False,
         args=args)
 
     train_loader.set_batch_generator(train_reader, places=place)
-    test_loader.set_batch_generator(valid_reader, places=place)
+    test_loader.set_batch_generator(test_reader, places=place)
 
     build_strategy = fluid.BuildStrategy()
     train_compiled_program = fluid.CompiledProgram(

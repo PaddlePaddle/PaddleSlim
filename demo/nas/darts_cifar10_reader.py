@@ -51,7 +51,7 @@ cutout = True
 cutout_length = 16
 
 
-def preprocess(sample, is_training, args):
+def preprocess(sample, is_training):
     image_array = sample.reshape(IMAGE_DEPTH, IMAGE_SIZE, IMAGE_SIZE)
     rgb_array = np.transpose(image_array, (1, 2, 0))
     img = Image.fromarray(rgb_array, 'RGB')
@@ -84,18 +84,18 @@ def preprocess(sample, is_training, args):
     return img
 
 
-def reader_generator(datasets, batch_size, is_training, is_shuffle, args):
-    def read_batch(datasets, args):
+def reader_generator(datasets, batch_size, is_training, is_shuffle):
+    def read_batch(datasets):
         if is_shuffle:
             random.shuffle(datasets)
         for im, label in datasets:
-            im = preprocess(im, is_training, args)
+            im = preprocess(im, is_training)
             yield im, [int(label)]
 
     def reader():
         batch_data = []
         batch_label = []
-        for data in read_batch(datasets, args):
+        for data in read_batch(datasets):
             batch_data.append(data[0])
             batch_label.append(data[1])
             if len(batch_data) == batch_size:
@@ -109,7 +109,7 @@ def reader_generator(datasets, batch_size, is_training, is_shuffle, args):
     return reader
 
 
-def cifar10_reader(file_name, data_name, is_shuffle, args):
+def cifar10_reader(file_name, data_name, is_shuffle):
     with tarfile.open(file_name, mode='r') as f:
         names = [
             each_item.name for each_item in f if data_name in each_item.name
@@ -133,47 +133,11 @@ def cifar10_reader(file_name, data_name, is_shuffle, args):
     return datasets
 
 
-def train_search(batch_size, train_portion, is_shuffle, args):
-    datasets = cifar10_reader(
-        paddle.dataset.common.download(CIFAR10_URL, 'cifar', CIFAR10_MD5),
-        'data_batch', is_shuffle, args)
-    split_point = int(np.floor(train_portion * len(datasets)))
-    train_datasets = datasets[:split_point]
-    val_datasets = datasets[split_point:]
-    train_readers = []
-    val_readers = []
-    n = int(math.ceil(len(train_datasets) // num_workers)
-            ) if use_multiprocess else len(train_datasets)
-    train_datasets_lists = [
-        train_datasets[i:i + n] for i in range(0, len(train_datasets), n)
-    ]
-    val_datasets_lists = [
-        val_datasets[i:i + n] for i in range(0, len(val_datasets), n)
-    ]
-
-    for pid in range(len(train_datasets_lists)):
-        train_readers.append(
-            reader_generator(train_datasets_lists[pid], batch_size, True, True,
-                             args))
-        val_readers.append(
-            reader_generator(val_datasets_lists[pid], batch_size, True, True,
-                             args))
-    if use_multiprocess:
-        reader = [
-            paddle.reader.multiprocess_reader(train_readers, False),
-            paddle.reader.multiprocess_reader(val_readers, False)
-        ]
-    else:
-        reader = [train_readers[0], val_readers[0]]
-
-    return reader
-
-
-def train_valid(batch_size, is_train, is_shuffle, args):
+def train_valid(batch_size, is_train, is_shuffle):
     name = 'data_batch' if is_train else 'test_batch'
     datasets = cifar10_reader(
         paddle.dataset.common.download(CIFAR10_URL, 'cifar', CIFAR10_MD5),
-        name, is_shuffle, args)
+        name, is_shuffle)
     n = int(math.ceil(len(datasets) //
                       num_workers)) if use_multiprocess else len(datasets)
     datasets_lists = [datasets[i:i + n] for i in range(0, len(datasets), n)]
@@ -181,7 +145,7 @@ def train_valid(batch_size, is_train, is_shuffle, args):
     for pid in range(len(datasets_lists)):
         multi_readers.append(
             reader_generator(datasets_lists[pid], batch_size, is_train,
-                             is_shuffle, args))
+                             is_shuffle))
     if use_multiprocess:
         reader = paddle.reader.multiprocess_reader(multi_readers, False)
     else:
