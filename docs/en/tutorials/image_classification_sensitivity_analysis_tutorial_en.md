@@ -245,9 +245,9 @@ Get accuracy of pruned model on test dataset:
 test(pruned_val_program)
 ```
 
-### 8.4 Training pretrained model
+### 8.4 Training pruned model
 
-Training pretrained model:
+Training pruned model:
 
 
 ```python
