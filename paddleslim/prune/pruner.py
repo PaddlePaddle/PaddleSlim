@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import sys
 import numpy as np
 import paddle.fluid as fluid
 import copy
@@ -26,12 +27,14 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class Pruner():
+    """The pruner used to prune channels of convolution.
+
+    Args:
+        criterion(str): the criterion used to sort channels for pruning. It only supports 'l1_norm' currently.
+
+    """
+
     def __init__(self, criterion="l1_norm"):
-        """
-        Args:
-            criterion(str): the criterion used to sort channels for pruning.
-                            It only supports 'l1_norm' currently.
-        """
         self.criterion = criterion
 
     def prune(self,
@@ -44,9 +47,10 @@ class Pruner():
               only_graph=False,
               param_backup=False,
               param_shape_backup=False):
-        """
-        Pruning the given parameters.
+        """Pruning the given parameters.
+
         Args:
+
             program(fluid.Program): The program to be pruned.
             scope(fluid.Scope): The scope storing paramaters to be pruned.
             params(list<str>): A list of parameter names to be pruned.
@@ -58,10 +62,9 @@ class Pruner():
                               False means modifying graph and variables in scope. Default: False.
             param_backup(bool): Whether to return a dict to backup the values of parameters. Default: False.
             param_shape_backup(bool): Whether to return a dict to backup the shapes of parameters. Default: False.
+
         Returns:
-            Program: The pruned program.
-            param_backup: A dict to backup the values of parameters.
-            param_shape_backup: A dict to backup the shapes of parameters.
+            tuple: ``(pruned_program, param_backup, param_shape_backup)``. ``pruned_program`` is the pruned program. ``param_backup`` is a dict to backup the values of parameters. ``param_shape_backup`` is a dict to backup the shapes of parameters.
         """
 
         self.pruned_list = []
@@ -77,8 +80,8 @@ class Pruner():
                 pruned_num = int(round(param_v.shape()[0] * ratio))
                 pruned_idx = [0] * pruned_num
             else:
-                param_t = np.array(scope.find_var(param).get_tensor())
-                pruned_idx = self._cal_pruned_idx(param_t, ratio, axis=0)
+                pruned_idx = self._cal_pruned_idx(
+                    graph, scope, param, ratio, axis=0)
             param = graph.var(param)
             conv_op = param.outputs()[0]
             walker = conv2d_walker(
@@ -128,9 +131,10 @@ class Pruner():
         graph.infer_shape()
         return graph.program, param_backup, param_shape_backup
 
-    def _cal_pruned_idx(self, param, ratio, axis):
+    def _cal_pruned_idx(self, graph, scope, param, ratio, axis):
         """
         Calculate the index to be pruned on axis by given pruning ratio.
+
         Args:
             name(str): The name of parameter to be pruned.
             param(np.array): The data of parameter to be pruned.
@@ -138,19 +142,36 @@ class Pruner():
             axis(int): The axis to be used for pruning given parameter.
                        If it is None, the value in self.pruning_axis will be used.
                        default: None.
+
         Returns:
             list<int>: The indexes to be pruned on axis.
         """
-        prune_num = int(round(param.shape[axis] * ratio))
-        reduce_dims = [i for i in range(len(param.shape)) if i != axis]
         if self.criterion == 'l1_norm':
-            criterions = np.sum(np.abs(param), axis=tuple(reduce_dims))
-        pruned_idx = criterions.argsort()[:prune_num]
+            param_t = np.array(scope.find_var(param).get_tensor())
+            prune_num = int(round(param_t.shape[axis] * ratio))
+            reduce_dims = [i for i in range(len(param_t.shape)) if i != axis]
+            criterions = np.sum(np.abs(param_t), axis=tuple(reduce_dims))
+            pruned_idx = criterions.argsort()[:prune_num]
+        elif self.criterion == "batch_norm_scale":
+            param_var = graph.var(param)
+            conv_op = param_var.outputs()[0]
+            conv_output = conv_op.outputs("Output")[0]
+            bn_op = conv_output.outputs()[0]
+            if bn_op is not None:
+                bn_scale_param = bn_op.inputs("Scale")[0].name()
+                bn_scale_np = np.array(
+                    scope.find_var(bn_scale_param).get_tensor())
+                prune_num = int(round(bn_scale_np.shape[axis] * ratio))
+                pruned_idx = np.abs(bn_scale_np).argsort()[:prune_num]
+            else:
+                raise SystemExit(
+                    "Can't find BatchNorm op after Conv op in Network.")
         return pruned_idx
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
         """
         Pruning a array by indexes on given axis.
+
         Args:
             tensor(numpy.array): The target array to be pruned.
             pruned_idx(list<int>): The indexes to be pruned.
@@ -158,6 +179,7 @@ class Pruner():
             lazy(bool): True means setting the pruned elements to zero.
                         False means remove the pruned elements from memory.
                         default: False.
+
         Returns:
             numpy.array: The pruned array.
         """

@@ -68,10 +68,16 @@ We encapsulate each compression and search method to a compression strategy clas
 
 ### Knowledge Distillation
 
-- PaddleSlim supports the following losses added on any paired layers between teacher and student models:
-  - Flow of the solution procedure (FSP) loss.
-  - L2 loss.
+- **Naive knowledge distillation**: transfers dark knowledge by merging the teacher and student model into the same Program, and supports the following losses added on any paired layers between teacher and student models:
+  - Flow of the solution procedure (FSP) loss;
+  - L2 loss;
   - Softmax with cross-entropy loss.
+
+- **Paddle large-scale scalable knowledge distillation framework [Pantheon](paddleslim/pantheon)**:  a universal solution for knowledge distillation, more flexible than the naive knowledge distillation,  and easier to scale to the large-scale applications.
+  - Decouple the teacher and student models --- they run in different processes in the same or different nodes, and transfer knowledge via TCP/IP ports or local files;
+  - Friendly to assemble multiple teacher models and each of them can work in either online or offline mode independently;
+  - Merge knowledge from different teachers and make batch data for the student model automatically;
+  - Support the large-scale knowledge prediction of teacher models on multiple devices.
 
 ### Lightweight Network Architecture Search (Light-NAS)
 
@@ -186,10 +192,13 @@ PaddleSlim是PaddlePaddle框架的一个子模块，主要用于压缩图像领�
   - 离线量化（post training）
   - 支持对权重全局量化和Channel-Wise量化
 
-- 蒸馏
+- 知识蒸馏
+  - 支持单进程知识蒸馏
+  - 支持多进程分布式知识蒸馏
 
-- 轻量神经网络结构自动搜索（Light-NAS）
+- 神经网络结构自动搜索（NAS）
   - 支持基于进化算法的轻量神经网络结构自动搜索（Light-NAS）
+  - 支持One-Shot网络结构自动搜索（Ont-Shot-NAS）
   - 支持 FLOPS / 硬件延时约束
   - 支持多平台模型延时评估
 
@@ -220,12 +229,12 @@ pip install paddleslim -i https://pypi.org/simple
 
 ## 使用
 
-- [API文档](doc/api_guide.md)：API使用介绍，包括[蒸馏]()、[剪裁]()、[量化]()和[模型结构搜索]()。
-- [示例](doc/demo_guide.md)：基于mnist和cifar10等简单分类任务的模型压缩示例，您可以通过该部分快速体验和了解PaddleSlim的功能。
-- [实践教程]()：经典模型的分析和压缩实验教程。
-- [模型库]()：经过压缩的分类、检测、语义分割模型，包括权重文件、网络结构文件和性能数据。
-- [Paddle检测库]()：介绍如何在检测库中使用PaddleSlim。
-- [Paddle分割库]()：介绍如何在分割库中使用PaddleSlim。
-- [PaddleLite]()：介绍如何使用预测库PaddleLite部署PaddleSlim产出的模型。
+- [API文档](https://paddlepaddle.github.io/PaddleSlim/)：API使用介绍，包括[蒸馏](https://paddlepaddle.github.io/PaddleSlim/api/single_distiller_api/)、[剪裁](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/)、[量化](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/)和[模型结构搜索](https://paddlepaddle.github.io/PaddleSlim/api/nas_api/)。
+- [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo)：基于mnist和cifar10等简单分类任务的模型压缩示例，您可以通过该部分快速体验和了解PaddleSlim的功能。
+- [实践教程](https://paddlepaddle.github.io/PaddleSlim/)：经典模型的分析和压缩实验教程。
+- [模型库](https://paddlepaddle.github.io/PaddleSlim/model_zoo/)：经过压缩的分类、检测、语义分割模型，包括权重文件、网络结构文件和性能数据。
+- [Paddle检测库](https://github.com/PaddlePaddle/PaddleDetection/tree/master/slim)：介绍如何在检测库中使用PaddleSlim。
+- [Paddle分割库](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/slim)：介绍如何在分割库中使用PaddleSlim。
+- [PaddleLite](https://paddlepaddle.github.io/Paddle-Lite/)：介绍如何使用预测库PaddleLite部署PaddleSlim产出的模型。
 
 ## 贡献与反馈
