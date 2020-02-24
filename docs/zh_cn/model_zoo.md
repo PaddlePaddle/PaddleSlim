@@ -152,20 +152,29 @@ PaddleLite版本： v2.3
 
 ### 2.2 剪裁
 
+
 数据集：Pasacl VOC & COCO 2017
 
-|              模型              |     压缩方法      |   数据集   | Image/GPU | 输入608 Box AP | 输入416 Box AP | 输入320 Box AP | 模型体积(MB) | GFLOPs (608*608) |                             下载                             |
-| :----------------------------: | :---------------: | :--------: | :-------: | :------------: | :------------: | :------------: | :----------: | :--------------: | :----------------------------------------------------------: |
-|      MobileNet-V1-YOLOv3       |     Baseline      | Pascal VOC |     8     |      76.2      |      76.7      |      75.3      |      94      |      40.49       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1_voc.tar) |
-|      MobileNet-V1-YOLOv3       | sensitive -52.88% | Pascal VOC |     8     |  77.6 (+1.4)   |   77.7 (1.0)   |  75.5 (+0.2)   |      31      |      19.08       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_v1_voc_prune.tar) |
-|      MobileNet-V1-YOLOv3       |         -         |    COCO    |     8     |      29.3      |      29.3      |      27.0      |      95      |      41.35       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1.tar) |
-|      MobileNet-V1-YOLOv3       | sensitive -51.77% |    COCO    |     8     |  26.0 (-3.3)   |  25.1 (-4.2)   |  22.6 (-4.4)   |      32      |      19.94       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_v1_prune.tar) |
-|         R50-dcn-YOLOv3         |         -         |    COCO    |     8     |      39.1      |       -        |       -        |     177      |      89.60       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r50vd_dcn.tar) |
-|         R50-dcn-YOLOv3         | sensitive -9.37%  |    COCO    |     8     |  39.3 (+0.2)   |       -        |       -        |     150      |      81.20       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_prune.tar) |
-|         R50-dcn-YOLOv3         | sensitive -24.68% |    COCO    |     8     |  37.3 (-1.8)   |       -        |       -        |     113      |      67.48       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_prune578.tar) |
-| R50-dcn-YOLOv3 obj365_pretrain |         -         |    COCO    |     8     |      41.4      |       -        |       -        |     177      |      89.60       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r50vd_dcn_obj365_pretrained_coco.tar) |
-| R50-dcn-YOLOv3 obj365_pretrain | sensitive -9.37%  |    COCO    |     8     |  40.5 (-0.9)   |       -        |       -        |     150      |      81.20       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_obj365_pretrained_coco_prune.tar) |
-| R50-dcn-YOLOv3 obj365_pretrain | sensitive -24.68% |    COCO    |     8     |  37.8 (-3.3)   |       -        |       -        |     113      |      67.48       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_obj365_pretrained_coco_prune578.tar) |
+PaddleLite推理耗时说明：
+
+环境：Qualcomm SnapDragon 845 + armv8
+
+速度指标：Thread1/Thread2/Thread4耗时
+
+PaddleLite版本： v2.3
+
+|              模型              |     压缩方法      |   数据集   | Image/GPU | 输入608 Box AP | 输入416 Box AP | 输入320 Box AP | 模型体积(MB) | GFLOPs (608*608) | PaddleLite推理耗时 | TensorRT推理速度(FPS) | 下载 |
+| :----------------------------: | :---------------: | :--------: | :-------: | :------------: | :------------: | :------------: | :----------: | :--------------: | :--------------: | :--------------: | :-----------------------------------: |
+|      MobileNet-V1-YOLOv3       |     Baseline      | Pascal VOC |     8     |      76.2      |      76.7      |      75.3      |      94      |      40.49       | 374.083\236.649\143.476|-| [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1_voc.tar) |
+|      MobileNet-V1-YOLOv3       | sensitive -52.88% | Pascal VOC |     8     |  77.6 (+1.4)   |   77.7 (1.0)   |  75.5 (+0.2)   |      31      |      19.08       | 172.322\98.623\55.937 |-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_v1_voc_prune.tar) |
+|      MobileNet-V1-YOLOv3       |         -         |    COCO    |     8     |      29.3      |      29.3      |      27.0      |      95      |      41.35       |-|-| [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1.tar) |
+|      MobileNet-V1-YOLOv3       | sensitive -51.77% |    COCO    |     8     |  26.0 (-3.3)   |  25.1 (-4.2)   |  22.6 (-4.4)   |      32      |      19.94       |-|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_v1_prune.tar) |
+|         R50-dcn-YOLOv3         |         -         |    COCO    |     8     |      39.1      |       -        |       -        |     177      |      89.60       |-|-| [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r50vd_dcn.tar) |
+|         R50-dcn-YOLOv3         | sensitive -9.37%  |    COCO    |     8     |  39.3 (+0.2)   |       -        |       -        |     150      |      81.20       |-|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_prune.tar) |
+|         R50-dcn-YOLOv3         | sensitive -24.68% |    COCO    |     8     |  37.3 (-1.8)   |       -        |       -        |     113      |      67.48       |-|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_prune578.tar) |
+| R50-dcn-YOLOv3 obj365_pretrain |         -         |    COCO    |     8     |      41.4      |       -        |       -        |     177      |      89.60       |-|-| [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r50vd_dcn_obj365_pretrained_coco.tar) |
+| R50-dcn-YOLOv3 obj365_pretrain | sensitive -9.37%  |    COCO    |     8     |  40.5 (-0.9)   |       -        |       -        |     150      |      81.20       |-|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_obj365_pretrained_coco_prune.tar) |
+| R50-dcn-YOLOv3 obj365_pretrain | sensitive -24.68% |    COCO    |     8     |  37.8 (-3.3)   |       -        |       -        |     113      |      67.48       |-|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_obj365_pretrained_coco_prune578.tar) |
 
 ### 2.3 蒸馏
 
@@ -238,8 +247,16 @@ Note: 硬件延时时间是利用提供的硬件延时表得到的，硬件延�
 
 ### 3.2 剪裁
 
-|   模型    |     压缩方法      |     mIoU      | 模型体积（MB） | GFLOPs |                             下载                             |
-| :-------: | :---------------: | :-----------: | :------------: | :----: | :----------------------------------------------------------: |
-| fast-scnn |     baseline      |     69.64     |       11       | 14.41  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape.tar) |
-| fast-scnn | uniform  -17.07%  | 69.58 (-0.06) |      8.5       | 11.95  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_uniform-17.tar) |
-| fast-scnn | sensitive -47.60% | 66.68 (-2.96) |      5.7       |  7.55  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_sensitive-47.tar) |
+PaddleLite推理耗时说明：
+
+环境：Qualcomm SnapDragon 845 + armv8
+
+速度指标：Thread1/Thread2/Thread4耗时
+
+PaddleLite版本： v2.3
+
+|   模型    |     压缩方法      |     mIoU      | 模型体积（MB） | GFLOPs | PaddleLite推理耗时 | TensorRT推理速度(FPS) |                             下载                             |
+| :-------: | :---------------: | :-----------: | :------------: | :----: | :------------: | :----: | :--------------------------------------: |
+| fast-scnn |     baseline      |     69.64     |       11       | 14.41  | 1226.36\682.96\415.664 |-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape.tar) |
+| fast-scnn | uniform  -17.07%  | 69.58 (-0.06) |      8.5       | 11.95  | 1140.37\656.612\415.888 |-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_uniform-17.tar) |
+| fast-scnn | sensitive -47.60% | 66.68 (-2.96) |      5.7       |  7.55  | 866.693\494.467\291.748 |-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_sensitive-47.tar) |
