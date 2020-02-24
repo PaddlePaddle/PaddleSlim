@@ -17,3 +17,4 @@ API Documents
    paddleslim.nas.one_shot.rst
    paddleslim.pantheon.rst
    search_space_en.rst
+   table_latency_en.md
