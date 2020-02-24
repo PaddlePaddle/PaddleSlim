@@ -1,6 +1,6 @@
 # 模型库
 
-## 1. 图象分类
+## 1. 图像分类
 
 数据集：ImageNet1000类
 
@@ -57,19 +57,26 @@
 ### 1.2 剪裁
 
 
-| 模型 | 压缩方法 | Top-1/Top-5 Acc | 模型体积（MB） | GFLOPs | 下载 |
-|:--:|:---:|:--:|:--:|:--:|:--:|
-| MobileNetV1 |    Baseline    |         70.99%/89.68%         |       17       |  1.11  | [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar) |
-| MobileNetV1 |  uniform -50%  | 69.4%/88.66% (-1.59%/-1.02%)  |       9        |  0.56  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_uniform-50.tar) |
-| MobileNetV1 | sensitive -30% |  70.4%/89.3% (-0.59%/-0.38%)  |       12       |  0.74  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-30.tar) |
-| MobileNetV1 | sensitive -50% | 69.8% / 88.9% (-1.19%/-0.78%) |       9        |  0.56  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-50.tar) |
-| MobileNetV2 |       -        |         72.15%/90.65%         |       15       |  0.59  | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
-| MobileNetV2 |  uniform -50%  | 65.79%/86.11% (-6.35%/-4.47%) |       11       | 0.296  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
-|  ResNet34   |       -        |         72.15%/90.65%         |       84       |  7.36  | [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
-|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-1.36%/-0.87%) |       41       |  3.67  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
-|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-2.04%/-1.06%) |       33       |  3.31  | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
+PaddleLite推理耗时说明：
+
+环境：Qualcomm SnapDragon 845 + armv8
+
+速度指标：Thread1/Thread2/Thread4耗时
+
+PaddleLite版本： v2.3
 
 
+| 模型 | 压缩方法 | Top-1/Top-5 Acc | 模型体积（MB） | GFLOPs |PaddleLite推理耗时|TensorRT推理速度(FPS)| 下载 |
+|:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
+| MobileNetV1 |    Baseline    |         70.99%/89.68%         |       17       |  1.11  |66.052\35.8014\19.5762|-| [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar) |
+| MobileNetV1 |  uniform -50%  | 69.4%/88.66% (-1.59%/-1.02%)  |       9        |  0.56  | 33.5636\18.6834\10.5076|-|[下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_uniform-50.tar) |
+| MobileNetV1 | sensitive -30% |  70.4%/89.3% (-0.59%/-0.38%)  |       12       |  0.74  | 46.5958\25.3098\13.6982|-|[下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-30.tar) |
+| MobileNetV1 | sensitive -50% | 69.8% / 88.9% (-1.19%/-0.78%) |       9        |  0.56  |37.9892\20.7882\11.3144|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-50.tar) |
+| MobileNetV2 |       -        |         72.15%/90.65%         |       15       |  0.59  |41.7874\23.375\13.3998|-| [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
+| MobileNetV2 |  uniform -50%  | 65.79%/86.11% (-6.35%/-4.47%) |       11       | 0.296  |23.8842\13.8698\8.5572|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
+|  ResNet34   |       -        |         72.15%/90.65%         |       84       |  7.36  |217.808\139.943\96.7504|342.32| [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
+|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-1.36%/-0.87%) |       41       |  3.67  |114.787\75.0332\51.8438|452.41| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
+|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-2.04%/-1.06%) |       33       |  3.31  |105.924\69.3222\48.0246|457.25| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
 
 
 ### 1.3 蒸馏
@@ -85,9 +92,7 @@
 |ResNet101|teacher|77.56%/93.64%| 173 | [下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar) |
 |  ResNet50   |             ResNet101 distill              |  77.29%/93.65% (+0.79%/+0.65%)  |       99       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_distilled.tar) |
 
-!!! note "Note"
-
-    <a name="trans1">[1]</a>：带_vd后缀代表该预训练模型使用了Mixup，Mixup相关介绍参考[mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
+注意：带"_vd"后缀代表该预训练模型使用了Mixup，Mixup相关介绍参考[mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
 
 ### 1.4 搜索
 
@@ -99,6 +104,7 @@
 | MobileNetV2 |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [下载链接](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
 
 数据集: Cifar10
+
 | 模型 |压缩方法 |  Acc  | 模型参数（MB） | 下载 |
 |:---:|:--:|:--:|:--:|:--:|
 |          Darts               |    -    |     97.135%        |        3.767        |  -  |
@@ -106,8 +112,6 @@
 
 
 Note: MobileNetV2_NAS 的token是：[4, 4, 5, 1, 1, 2, 1, 1, 0, 2, 6, 2, 0, 3, 4, 5, 0, 4, 5, 5, 1, 4, 8, 0, 0]. Darts_SA的token是：[5, 5, 0, 5, 5, 10, 7, 7, 5, 7, 7, 11, 10, 12, 10, 0, 5, 3, 10, 8].
-
-
 
 ## 2. 目标检测
 
