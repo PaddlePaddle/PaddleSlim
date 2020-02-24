@@ -1,3 +1,4 @@
+中文 | [English](README.md)
 
 文档：https://paddlepaddle.github.io/PaddleSlim
 
