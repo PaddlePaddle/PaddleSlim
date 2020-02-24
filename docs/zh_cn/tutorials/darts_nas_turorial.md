@@ -1,4 +1,4 @@
-# SANAS进阶版实验教程
+# SANAS进阶版实验教程-压缩DARTS产出模型
 
 ## 收益情况
 利用DARTS搜索出来的最终模型结构（以下简称为DARTS_model）构造相应的搜索空间，根据PaddleSlim提供的SANAS搜索方法进行搜索实验，最终得到的模型结构（以下简称为DARTS_SA）相比DARTS_model的精度提升<font color=green>0.141%</font>，模型大小下降<font color=green>11.2%</font>。
