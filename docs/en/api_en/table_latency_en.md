@@ -1,23 +1,23 @@
 # Table about hardware lantency
 
-The table about hardware latency is used to evaluate the inference time in special environment and forecast. The following text used to introduce the format that PaddleSlim support.
+The table about hardware latency is used to evaluate the inference time in special environment and inference engine. The following text used to introduce the format that PaddleSlim support.
 
 ## Introduce
 
 The table about hardware latency saved all possible operations, one operation in the table including type and parameters, such as: type can be `conv2d`, and corresponding parameters can be the size of feature map, number of kernel, and the size of kernel.
-The latency of every operation depends on hardware and forecast.
+The latency of every operation depends on hardware and inference engine.
 
-## Whole format
+## Overview format
 The table about hardware latency saved in the way of file or multi-line string.
 The first line of the table about hardware latency saved the information about version, every line in the following represents a operation and its latency.
 
 ## Version
 
-The information about version split by comma in the english format, and the detail is hardware, forecast and timestamp.
+The information about version split by comma in the english format, and the detail is hardware, inference engine and timestamp.
 
 - ** hardware: ** Used to mark the environment of hardware, including type of architecture, version and so on.
 
-- ** forecast: ** Used to mark forecast, including the name of forecast, version, optimize options and so on.
+- ** inference engine: ** Used to mark inference engine, including the name of inference engine, version, optimize options and so on.
 
 - ** timestamp: ** Used to mark the time of this table created.
 
