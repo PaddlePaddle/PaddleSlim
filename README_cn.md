@@ -75,7 +75,7 @@ pip install paddleslim -i https://pypi.org/simple
 
 |        压缩方法           | mAP(baseline: 76.2%)         | 模型大小(baseline: 94MB)      |
 | :---------------------:   | :------------: | :------------:|
-| 知识蒸馏(ResNet34-YOLOv3) | [+2.8%]()      |       -       |
+| 知识蒸馏(ResNet34-YOLOv3) | [+2.8%](#)      |       -       |
 | 剪裁 FLOPs -52.88%        | [+1.4%]()      | [-67.76%]()   |
 |知识蒸馏(ResNet34-YOLOv3)+剪裁(FLOPs-69.57%)| [+2.6%]()|[-67.00%]()|
 
