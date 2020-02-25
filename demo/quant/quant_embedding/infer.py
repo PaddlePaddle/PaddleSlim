@@ -10,7 +10,6 @@ import paddle.fluid as fluid
 import paddle
 import net
 import utils
-sys.path.append(sys.path[0] + "/../../../")
 from paddleslim.quant import quant_embedding
 
 

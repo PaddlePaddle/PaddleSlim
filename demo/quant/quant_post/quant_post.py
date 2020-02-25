@@ -9,10 +9,9 @@ import time
 import numpy as np
 import paddle.fluid as fluid
 
-sys.path.append(sys.path[0] + "/../../../")
 from paddleslim.common import get_logger
 from paddleslim.quant import quant_post
-sys.path.append(sys.path[0] + "/../../")
+sys.path.append(os.path.join("..", ".."))
 from utility import add_arguments, print_arguments
 import imagenet_reader as reader
 _logger = get_logger(__name__, level=logging.INFO)

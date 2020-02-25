@@ -20,7 +20,7 @@ import functools
 
 import paddle
 import paddle.fluid as fluid
-sys.path.append('../../')
+sys.path.append(os.path.join("..", ".."))
 import imagenet_reader as reader
 from utility import add_arguments, print_arguments
 
