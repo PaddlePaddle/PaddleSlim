@@ -12,7 +12,7 @@ sys.path.append(sys.path[0] + "/../../../")
 sys.path.append(sys.path[0] + "/../../")
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-from paddleslim.quant import quant_aware, quant_post, convert
+from paddleslim.quant import quant_aware, convert
 import models
 from utility import add_arguments, print_arguments
 
