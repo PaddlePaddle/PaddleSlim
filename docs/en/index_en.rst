@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to use PaddleSlim.
-========
+Index
+==============
 
 .. toctree::
    :maxdepth: 1
@@ -16,3 +16,5 @@ Welcome to use PaddleSlim.
    tutorials/index_en
    api_en/index_en
    model_zoo_en.md
+
+.. mdinclude:: intro_en.md
