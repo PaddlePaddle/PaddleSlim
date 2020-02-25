@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-欢迎使用PaddleSlim
+首页
 ==================
 
 .. toctree::
@@ -17,3 +17,5 @@
    api_cn/index
    model_zoo.md
    algo/algo.md
+
+.. mdinclude:: ./intro.md
