@@ -7,5 +7,10 @@
    :caption: Contents:
 
    image_classification_sensitivity_analysis_tutorial.md
-   image_classification_nas_quick_start.ipynb
-    
+   darts_nas_turorial.md
+   paddledetection_slim_distillation_tutorial.md
+   paddledetection_slim_nas_tutorial.md
+   paddledetection_slim_pruing_tutorial.md
+   paddledetection_slim_prune_dist_tutorial.md
+   paddledetection_slim_quantization_tutorial.md
+   paddledetection_slim_sensitivy_tutorial.md
