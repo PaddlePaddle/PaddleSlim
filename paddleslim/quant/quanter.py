@@ -44,8 +44,8 @@ _quant_config_default = {
     'weight_bits': 8,
     # activation quantize bit num, default is 8
     'activation_bits': 8,
-    # ops of name_scope in not_quant_pattern list, will not be quantized
-    'not_quant_pattern': ['skip_quant'],
+    # ops of name_scope in not_quant_pattern , will not be quantized
+    'not_quant_pattern': 'skip_quant',
     # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
     'dtype': 'int8',
     # window size for 'range_abs_max' quantization. defaulf is 10000
@@ -86,7 +86,7 @@ def _parse_configs(user_config):
     assert (configs['activation_bits'] >= 1 and configs['activation_bits'] <= 16), \
         "activation_bits should be between 1 and 16."
 
-    assert isinstance(configs['not_quant_pattern'], list), \
+    assert isinstance(configs['not_quant_pattern'], str), \
         "not_quant_pattern must be a list"
 
     assert isinstance(configs['dtype'], str), \
@@ -178,6 +178,8 @@ def convert(program, place, config=None, scope=None, save_int8=False):
     freeze_pass = QuantizationFreezePass(
         scope=scope,
         place=place,
+        weight_bits=config['weight_bits'],
+        activation_bits=config['activation_bits'],
         weight_quantize_type=config['weight_quantize_type'])
     freeze_pass.apply(test_graph)
     freezed_program = test_graph.to_program()
