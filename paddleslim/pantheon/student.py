@@ -298,8 +298,9 @@ class Student(object):
             for idx, queue in enumerate(self._teacher_knowledge_queues):
                 desc = queue.get()
                 queue.task_done()
-                if idx > 0 and (set(knowledge_desc.keys()) & set(desc.keys())
-                                != set(self._common_schema)):
+                inter_desc = set(knowledge_desc.keys()) & set(desc.keys())
+                if idx > 0 and (
+                        not inter_desc.issubset(set(self._common_schema))):
                     raise ValueError(
                         "Teacher {} has the same schema with other existed "
                         "teachers not in the merge_strategy.".format(idx))
