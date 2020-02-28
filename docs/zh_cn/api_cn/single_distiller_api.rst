@@ -103,7 +103,7 @@ l2_loss
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py#L118>`_
 
-: l2_loss为program内的teacher var和student var添加l2 loss
+l2_loss为program内的teacher var和student var添加l2 loss
 
 **参数：**
 
@@ -192,7 +192,7 @@ loss
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py#L165>`_
 
-: loss函数支持对任意多对teacher_var和student_var使用自定义损失函数
+loss函数支持对任意多对teacher_var和student_var使用自定义损失函数
 
 **参数：**
 
