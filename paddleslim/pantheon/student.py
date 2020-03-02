@@ -235,7 +235,16 @@ class Student(object):
                     knowledge[k] = result
                 elif self._merge_strategy[k] == "mean":
                     knowledge[k] = result / len(tensors)
-        return knowledge
+        return [knowledge]
+
+    def _split_knowledge(self, knowledge):
+        knowledge_list = []
+        for tensor_id in range(len(list(knowledge.values())[0])):
+            split_knowledge = {}
+            for k, tensors in knowledge.items():
+                split_knowledge[k] = tensors[tensor_id]
+            knowledge_list.append(split_knowledge)
+        return knowledge_list
 
     def send(self, data, teacher_ids=None):
         """ 
@@ -299,11 +308,6 @@ class Student(object):
                 desc = queue.get()
                 queue.task_done()
                 inter_desc = set(knowledge_desc.keys()) & set(desc.keys())
-                if idx > 0 and (
-                        not inter_desc.issubset(set(self._common_schema))):
-                    raise ValueError(
-                        "Teacher {} has the same schema with other existed "
-                        "teachers not in the merge_strategy.".format(idx))
                 knowledge_desc.update(desc)
 
             print("Knowledge merging strategy: {}".format(
@@ -439,8 +443,12 @@ class Student(object):
                             end_received[idx] = 1
                 if sum(end_received) == len(queues):
                     break
-                knowledge = self._merge_knowledge(knowledge)
-                out_queue.put(knowledge)
+                if self._merge_strategy is not None:
+                    knowledge = self._merge_knowledge(knowledge)
+                else:
+                    knowledge = self._split_knowledge(knowledge)
+                for k in knowledge:
+                    out_queue.put(k)
             out_queue.put(EndSignal())
             out_queue.join()
 
