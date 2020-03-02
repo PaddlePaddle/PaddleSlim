@@ -310,6 +310,13 @@ class Student(object):
                 inter_desc = set(knowledge_desc.keys()) & set(desc.keys())
                 knowledge_desc.update(desc)
 
+            if self._merge_strategy.keys(
+            ) is not None and self._merge_strategy.keys(
+            ) != knowledge_desc.keys():
+                raise ValueError(
+                    "You can fuse all or none of the schemas, but you can't merge only a part of them: {}.".
+                    format(self._merge_strategy))
+
             print("Knowledge merging strategy: {}".format(
                 self._merge_strategy))
             print("Knowledge description after merging:")
