@@ -28,6 +28,7 @@ import copy
 import multiprocessing
 from multiprocessing.managers import BaseManager
 from threading import Thread
+from tqdm import tqdm
 
 import paddle.fluid as fluid
 
@@ -94,6 +95,7 @@ class Teacher(object):
 
         self._out_path = out_path
         self._out_port = out_port
+        self._manager = None
         # knowledge description
         self._knowledge_desc = {}
 
@@ -248,6 +250,84 @@ class Teacher(object):
                                                self._knowledge_desc))
 
         self._out_file.write(pickle.dumps(knowledge))
+
+    def profile(self, feed_list, program, batch_size, exe):
+        """
+        Analyze the average time consuming of the teacher program computation.
+
+        Args:
+            feed_list (list): A list of feed Variables or their names for the 
+                              input program.
+            program (fluid.Program): Inference program for the teacher model.
+            batch_size (int): The input batch size of teacher model.
+            exe (fluid.Executor): The executor to run the input program.
+        """
+        if not isinstance(program, fluid.Program):
+            raise ValueError(
+                "Input argument 'program' should be a fluid Program!")
+        self._program = program._inference_optimize(prune_read_op=True)
+
+        if not isinstance(feed_list, list):
+            raise ValueError("Input argument 'feed_list' should be a list!")
+        else:
+            self._feed_list = []
+            for feed in feed_list:
+                if isinstance(feed, fluid.framework.Variable):
+                    self._feed_list.append(feed)
+                elif isinstance(feed, str) or isinstance(feed, unicode):
+                    self._feed_list.append(self._program.global_block().var(
+                        feed))
+                else:
+                    raise ValueError(
+                        "Input 'feed_list' should consist of feed "
+                        "Variables or their names!")
+
+        if batch_size <= 0:
+            raise ValueError("batch size must be positive!")
+        self._batch_size = batch_size
+
+        if not isinstance(exe, fluid.Executor):
+            raise ValueError("Input argument should be a fluid Executor!")
+        self._exe = exe
+
+        if isinstance(self._exe.place, fluid.CUDAPlace):
+            places = fluid.cuda_places()
+        else:
+            places = fluid.cpu_places()
+        dev_count = len(places)
+
+        compiled_program = fluid.compiler.CompiledProgram(
+            self._program).with_data_parallel()
+
+        data = {}
+        for v in self._feed_list:
+            shape = list(v.shape)
+            shape[0] = int(self._batch_size / dev_count)
+            dtype = convert_dtype(v.dtype)
+            data[v.name] = np.zeros(shape, dtype=dtype)
+        data = [data for i in range(dev_count)]
+        step_id = 0
+        print(
+            time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) +
+            "  Teacher begins to profile ...")
+        begin_time, end_time = 0, 0
+        steps = 20
+        profile_window = 10
+        for step_id in tqdm(range(steps)):
+            self._exe.run(compiled_program, feed=data),
+            if step_id == steps - profile_window - 1:
+                begin_time = time.time()
+            elif step_id == steps - 1:
+                end_time = time.time()
+        avg_latency = (end_time - begin_time) / 10
+        complexity = avg_latency * dev_count
+        print(
+            time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) +
+            "  Teacher profile done")
+        print(
+            time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) +
+            "  Model complexity score {:.3f} is suggested. Please allocate "
+            "appropriate computing resources to it".format(complexity))
 
     def start_knowledge_service(self,
                                 feed_list,
