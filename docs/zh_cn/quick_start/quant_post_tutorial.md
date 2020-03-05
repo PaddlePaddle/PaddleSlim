@@ -1,6 +1,6 @@
  # 图像分类模型离线量化-快速开始
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/api/quantization_api.md)。 该示例包含以下步骤：
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[离线量化接口](https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-post)。 该示例包含以下步骤：
 
 1. 导入依赖
 2. 构建模型
@@ -19,7 +19,7 @@ import numpy as np
 ```
 
 ## 2. 构建网络
-该章节构造一个用于对MNIST数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[1, 28, 28]`，输出类别数为10。               为了方便展示示例，我们在`paddleslim.models`下预定义了用于构建分类模型的方法，执行以下代码构建分类模型：
+该章节构造一个用于对MNIST数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[1, 28, 28]`，输出类别数为10。为了方便展示示例，我们在`paddleslim.models`下预定义了用于构建分类模型的方法，执行以下代码构建分类模型：
 
 >注意：paddleslim.models下的API并非PaddleSlim常规API，是为了简化示例而封装预定义的一系列方法，比如：模型结构的定义、Program的构建等。
 
@@ -60,7 +60,7 @@ def train(prog):
         if iter % 100 == 0:
             print('train', acc1.mean(), acc5.mean(), loss.mean())
         iter += 1
-        
+
 def test(prog, outputs=outputs):
     iter = 0
     res = [[], []]

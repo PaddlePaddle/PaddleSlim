@@ -68,7 +68,7 @@ def eval(args):
     val_feeder = feeder = fluid.DataFeeder(
         [image, label], place, program=val_program)
 
-    load_model(val_program, "./model/mobilenetv1_prune_50")
+    load_model(exe, val_program, args.model_path)
 
     batch_id = 0
     acc_top1_ns = []
