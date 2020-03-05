@@ -14,14 +14,14 @@
 近年来，定点量化使用更少的比特数（如8-bit、3-bit、2-bit等）表示神经网络的权重和激活已被验证是有效的。定点量化的优点包括低内存带宽、低功耗、低计算资源占用以及低模型存储需求等。
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/quan_table_0.png" height=258 width=600 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/quan_table_0.png" height=258 width=600 hspace='10'/> <br />
 <strong>表1: 不同类型操作的开销对比</strong>
 </p>
 
 由表1可知，低精度定点数操作的硬件面积大小及能耗比高精度浮点数要少几个数量级。 使用定点量化可带来4倍的模型压缩、4倍的内存带宽提升，以及更高效的cache利用(很多硬件设备，内存访问是主要能耗)。除此之外，计算速度也会更快(通常具有2x-3x的性能提升)。由表2可知，在很多场景下，定点量化操作对精度并不会造成损失。另外，定点量化对神经网络于嵌入式设备上的推断来说是极其重要的。
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/quan_table_1.png" height=155 width=500 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/quan_table_1.png" height=155 width=500 hspace='10'/> <br />
 <strong>表2：模型量化前后精度对比</strong>
 </p>
 
@@ -45,7 +45,7 @@ $q = scale * r + b$
 前向传播过程采用模拟量化的方式，具体描述如下：
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/quan_forward.png" height=433 width=335 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/quan_forward.png" height=433 width=335 hspace='10'/> <br />
 <strong>图1：基于模拟量化训练的前向过程</strong>
 </p>
 
@@ -69,7 +69,7 @@ $$
 上述公式表明反量化操作可以被移动到`GEMM`之前，即先对$Xq$和$Wq$执行反量化操作再做`GEMM`操作。因此，前向传播的工作流亦可表示为如下方式：
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/quan_fwd_1.png" height=435 width=341 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/quan_fwd_1.png" height=435 width=341 hspace='10'/> <br />
 <strong>图2：基于模拟量化训练前向过程的等价工作流</strong>
 </p>
 
@@ -79,7 +79,7 @@ $$
 由图3可知，权重更新所需的梯度值可以由量化后的权重和量化后的激活求得。反向传播过程中的所有输入和输出均为32-bit浮点型数据。注意，梯度更新操作需要在原始权重上进行，即计算出的梯度将被加到原始权重上而非量化后或反量化后的权重上。
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/quan_bwd.png" height=300 width=650 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/quan_bwd.png" height=300 width=650 hspace='10'/> <br />
 <strong>图3：基于模拟量化训练的反向传播和权重更新过程</strong>
 </p>
 
@@ -127,7 +127,7 @@ $$ Vt = (1 - k) * V + k * V_{t-1} $$
 
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/pruning_0.png" height=200 width=600 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/pruning_0.png" height=200 width=600 hspace='10'/> <br />
 <strong>图4</strong>
 </p>
 
@@ -139,7 +139,7 @@ $$ Vt = (1 - k) * V + k * V_{t-1} $$
 减去被删除的一行：greedy pruning
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/pruning_1.png" height=200 width=450 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/pruning_1.png" height=200 width=450 hspace='10'/> <br />
 <strong>图5</strong>
 </p>
 
@@ -149,7 +149,7 @@ $$ Vt = (1 - k) * V + k * V_{t-1} $$
 
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/pruning_2.png" height=240 width=600 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/pruning_2.png" height=240 width=600 hspace='10'/> <br />
 <strong>图6</strong>
 </p>
 
@@ -176,7 +176,7 @@ $$ Vt = (1 - k) * V + k * V_{t-1} $$
 #### 敏感度的理解
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/pruning_3.png" height=200 width=400 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/pruning_3.png" height=200 width=400 hspace='10'/> <br />
 <strong>图7</strong>
 </p>
 
@@ -189,7 +189,7 @@ $$ Vt = (1 - k) * V + k * V_{t-1} $$
 用户给定一个模型整体的剪裁率，我们通过移动**图5**中的黑色实线来找到一组满足条件的且合法的剪裁率。
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/pruning_4.png" height=200 width=400 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/pruning_4.png" height=200 width=400 hspace='10'/> <br />
 <strong>图8</strong>
 </p>
 
@@ -211,7 +211,7 @@ Fast Optimization, Network Minimization and Transfer Learning](http://openaccess
    相比传统的蒸馏方法直接用小模型去拟合大模型的输出，该方法用小模型去拟合大模型不同层特征之间的转换关系，其用一个FSP矩阵（特征的内积）来表示不同层特征之间的关系，大模型和小模型不同层之间分别获得多个FSP矩阵，然后使用L2 loss让小模型的对应层FSP矩阵和大模型对应层的FSP矩阵尽量一致，具体如下图所示。这种方法的优势，通俗的解释是，比如将蒸馏类比成teacher（大模型）教student（小模型）解决一个问题，传统的蒸馏是直接告诉小模型问题的答案，让小模型学习，而学习FSP矩阵是让小模型学习解决问题的中间过程和方法，因此其学到的信息更多。
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/distillation_0.png" height=300 width=600 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/distillation_0.png" height=300 width=600 hspace='10'/> <br />
 <strong>图9</strong>
 </p>
 
@@ -258,7 +258,7 @@ e^{\frac{(r_k-r)}{T_k}} & r_k < r\\
 因为要搜索出在移动端运行速度快的模型，我们参考了MobileNetV2中的Linear Bottlenecks和Inverted residuals结构，搜索每一个Inverted residuals中的具体参数，包括kernelsize、channel扩张倍数、重复次数、channels number。如图10所示：
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/PaddlePaddle/PaddleSlim/develop/docs/docs/images/algo/light-nas-block.png" height=300 width=600 hspace='10'/> <br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.0.1/docs/images/algo/light-nas-block.png" height=300 width=600 hspace='10'/> <br />
 <strong>图10</strong>
 </p>
 

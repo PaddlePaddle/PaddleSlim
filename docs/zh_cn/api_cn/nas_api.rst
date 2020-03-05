@@ -5,7 +5,7 @@ SA-NAS
 ----------------------
 
 
-通过参数配置搜索空间。更多搜索空间的使用可以参考: [search_space](../search_space.md)
+通过参数配置搜索空间。更多搜索空间的使用可以参考: `search_space <https://paddlepaddle.github.io/PaddleSlim/api_cn/search_space.html>`_
 
 **参数：**
 
