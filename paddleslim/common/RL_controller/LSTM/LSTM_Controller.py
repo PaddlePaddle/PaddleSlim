@@ -38,13 +38,13 @@ class lstm_cell(RNNCell):
 @RLCONTROLLER.register
 class LSTM(RLBaseController):
     def __init__(self, **kwargs):
-        self.lstm_num_layers = kwargs['lstm_num_layers']
-        self.hidden_size = kwargs['hidden_size']
-        self.temperature = kwargs['temperature']
-        self.range_tables = kwargs['range_tables']
+        self.lstm_num_layers = kwargs.get('lstm_num_layers')
+        self.hidden_size = kwargs.get('hidden_size')
+        self.temperature = kwargs.get('temperature')
+        self.range_tables = kwargs.get('range_tables')
         self.total_token_num = sum(self.range_tables)
-        self.with_entropy = kwargs[
-            'with_entropy'] if 'with_entroy' in kwargs else False
+        self.with_entropy = kwargs.get(
+            'with_entropy') if 'with_entroy' in kwargs else False
 
     def _lstm(self, inputs, hidden, is_embed, token_idx):
         if not is_embed:
@@ -73,19 +73,19 @@ class LSTM(RLBaseController):
 
             ### don't have this op
             #action = np.random.multinomial(1, np_probs)
-            action = 4
-            #index = fluid.layers.stack(probs, axis=0)
+            action = fluid.layers.sampling_id(probs)
+            index = fluid.layers.stack(probs, axis=0)
             #print(log_probs, index)
-            #seleted_log_prob = fluid.layers.gather_nd(log_probs, index)
+            seleted_log_prob = fluid.layers.gather_nd(log_probs, index)
 
-            actions.append(action)
-            #actions.append(action[:, 0])
+            #actions.append(action)
+            actions.append(action[:, 0])
             entropies.append(entropy)
-            #log_probs.append(selected_log_prob)
-            log_probs = None
+            log_probs.append(selected_log_prob)
+            #log_probs = None
 
-            inputs = action + sum(self.range_tables[:idx])
-            #inputs = action[:, 0] + sum(self.range_tables[:idx])
+            #inputs = action + sum(self.range_tables[:idx])
+            inputs = action[:, 0] + sum(self.range_tables[:idx])
 
         tokens = []
         for idx in range(self.batch_size):
@@ -129,9 +129,9 @@ class LSTM(RLBaseController):
                         loss = -1 * log_prob * avg_reward
                         optimizer = fluid.optimizer.Adam(learning_rate=0.1)
                         optimizer.minimize(loss)
-                return (inputs, hidden, rewards), loss
+                return (inputs, hidden, rewards), tokens, loss
 
-        return (inputs, hidden), loss
+        return (inputs, hidden), tokens, loss
 
     def _create_input(self, inputs, is_test=True, actual_rewards=None):
         feed_dict = dict()
@@ -149,3 +149,51 @@ class LSTM(RLBaseController):
             feed_dict[rewards] = actual_rewards
 
         return feed_dict
+
+    def next_tokens(self, num_archs=1):
+        """ sample next tokens according current parameter and inputs"""
+        main_program = fluid.Program()
+        startup_program = fluid.Program()
+        inputs, tokens, loss = self._build_program(
+            main_program, startup_program, is_test=True, batch_size=batch_size)
+
+        place = fluid.CUDAPlace(0) if self.args.use_gpu else fluid.CPUPlace()
+        exe = fluid.Executor(place)
+        exe.run(startup_program)
+
+        build_strategy = fluid.BuildStrategy()
+        compiled_program = fluid.CompiledProgram(
+            main_program).with_data_parallel(
+                loss.name, build_strategy=build_strategy)
+        feed_dict = self._create_input(inputs)
+
+        token = exe.run(compiled_program, feed=feed_dict, fetch_list=[tokens])
+        return token
+
+    def update(self, rewards):
+        """train controller according reward"""
+        main_program = fluid.Program()
+        startup_program = fluid.Program()
+        inputs, tokens, loss = self._build_program(main_program,
+                                                   startup_program)
+
+        place = fluid.CUDAPlace(0) if self.args.use_gpu else fluid.CPUPlace()
+        exe = fluid.Executor(place)
+        exe.run(startup_program)
+
+        feed_dict = self._create_input(
+            inputs, is_test=False, actual_rewards=reward)
+
+        build_strategy = fluid.BuildStrategy()
+        compiled_program = fluid.CompiledProgram(
+            main_program).with_data_parallel(
+                loss.name, build_strategy=build_strategy)
+
+        token = exe.run(compiled_program, feed=feed_dict, fetch_list=[tokens])
+        if token == self.token:
+            return False
+        else:
+            return True
+
+    def _save_controller(self, program):
+        fluid.save(program, self.save_controller)

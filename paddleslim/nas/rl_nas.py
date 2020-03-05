@@ -40,17 +40,24 @@ class RLNAS(object):
                  key,
                  configs,
                  args,
+                 server_addr=("", 8881),
+                 is_server=True,
                  save_controller=None,
                  load_controller=None,
                  **kwargs):
+        if not is_server:
+            assert server_addr[
+                0] != "", "You should set the IP and port of server when is_server is False."
+
         factory = SearchSpaceFactory()
         self._search_space = factory.get_search_space(configs)
         self.range_tables = self._search_space.range_table()
 
-        cls = RLCONTROLLER.get(key.upper())
-        kwargs['range_tables'] = self.range_tables
-        self.controller = cls(**kwargs)
-        self.controller.init(args)
+        if is_server:
+            cls = RLCONTROLLER.get(key.upper())
+            kwargs['range_tables'] = self.range_tables
+            self.controller = cls(**kwargs)
+            self.controller.init(args)
         self._current_tokens = None
         self.save_controller = save_controller
         self.load_controller = load_controller
