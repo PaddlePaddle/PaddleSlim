@@ -194,9 +194,6 @@ class SANAS(object):
             return socket.gethostbyname(socket.gethostname())
         except:
             return socket.gethostbyname('localhost')
-        finally:
-            err = "CANNOT get host ip"
-            _logger.error(err)
 
     def tokens2arch(self, tokens):
         """
