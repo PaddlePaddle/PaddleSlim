@@ -51,15 +51,15 @@
 
 - **weight_quantize_type(str)** - 参数量化方式。可选 ``'abs_max'`` ,  ``'channel_wise_abs_max'`` , ``'range_abs_max'`` , ``'moving_average_abs_max'`` 。如果使用 ``TensorRT`` 加载量化后的模型来预测，请使用 ``'channel_wise_abs_max'`` 。 默认 ``'channel_wise_abs_max'`` 。
 - **activation_quantize_type(str)** - 激活量化方式，可选 ``'abs_max'`` ,  ``'range_abs_max'`` ,  ``'moving_average_abs_max'`` 。如果使用 ``TensorRT`` 加载量化后的模型来预测，请使用 ``'range_abs_max', 'moving_average_abs_max'`` 。，默认 ``'moving_average_abs_max'`` 。
-- **weight_bits(int)** - 参数量化bit数，默认8, 推荐设为8。
-- **activation_bits(int)** -  激活量化bit数，默认8， 推荐设为8。
-- **not_quant_pattern(str | list[str])** - 所有 ``name_scope`` 包含 ``'not_quant_pattern'`` 字符串的 ``op`` ，都不量化, 设置方式请参考 `fluid.name_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/name_scope_cn.html#name-scope>`_ 。
-- **quantize_op_types(list[str])** -  需要进行量化的 ``op`` 类型，目前支持 ``'conv2d', 'depthwise_conv2d', 'mul'``  。
+- **weight_bits(int)** - 参数量化bit数，默认8, 可选1-8，推荐设为8，因为量化后的数据类型是 ``int8`` 。
+- **activation_bits(int)** -  激活量化bit数，默认8，可选1-8，推荐设为8，因为量化后的数据类型是 ``int8`` 。
+- **not_quant_pattern(str | list[str])** - 所有 ``name_scope`` 包含 ``'not_quant_pattern'`` 字符串的 op ，都不量化, 设置方式请参考 `fluid.name_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/name_scope_cn.html#name-scope>`_ 。
+- **quantize_op_types(list[str])** -  需要进行量化的 op 类型，目前支持 ``'conv2d', 'depthwise_conv2d', 'mul'``  。
 - **dtype(int8)** - 量化后的参数类型，默认 ``int8`` , 目前仅支持 ``int8`` 。
 - **window_size(int)** -  ``'range_abs_max'`` 量化方式的 ``window size`` ，默认10000。
 - **moving_rate(int)** - ``'moving_average_abs_max'`` 量化方式的衰减系数，默认 0.9。
 - **for_tensorrt(bool)** - 量化后的模型是否使用 ``TensorRT`` 进行预测。如果是的话，量化op类型为： ``TENSORRT_OP_TYPES`` 。默认值为False.
-- **is_full_quantize(bool)** - 是否量化所有可支持op类型。默认值为False.
+- **is_full_quantize(bool)** - 是否量化所有可支持op类型。可量化op为 ``TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES`` 。 默认值为False.
 
 .. :note::
 
@@ -192,12 +192,12 @@ quant_post
 - **batch_nums(int, optional)** - 迭代次数。如果设置为``None``，则会一直运行到``sample_generator`` 迭代结束， 否则，迭代次数为``batch_nums``, 也就是说参与对 ``Scale`` 进行校正的样本个数为 ``'batch_nums' * 'batch_size'`` .
 - **scope(fluid.Scope, optional)** - 用来获取和写入 ``Variable`` , 如果设置为 ``None`` ,则使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . 默认值是``None``.
 - **algo(str)** - 量化时使用的算法名称，可为 ``'KL'`` 或者 ``'direct'`` 。该参数仅针对激活值的量化，因为参数值的量化使用的方式为 ``'channel_wise_abs_max'`` . 当 ``algo`` 设置为 ``'direct'`` 时，使用校正数据的激活值的绝对值的最大值当作 ``Scale`` 值，当设置为 ``'KL'`` 时，则使用KL散度的方法来计算 ``Scale`` 值。默认值为 ``'KL'`` 。
-- **quantizable_op_type(list[str])** -  需要量化的 ``op`` 类型列表。默认值为 ``["conv2d", "depthwise_conv2d", "mul"]`` 。
-- **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。
-- **weight_bits(int)** - weight的量化比特位数。
-- **activation_bits(int)** - 激活值的量化比特位数。
-- **is_use_cache_file(bool)** - 是否使用硬盘对中间结果进行存储。如果为False, 则将中间结果存储在内存中。
-- **cache_dir(str)** - 如果 ``'is_use_cache_file'`` 为True, 则将中间结果存储在此参数设置的路径下。
+- **quantizable_op_type(list[str])** -  需要量化的 op 类型列表。默认值为 ``["conv2d", "depthwise_conv2d", "mul"]`` 。
+- **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。如果设置为True, 则按照 `量化配置 <#id2>`_  中 ``QUANT_DEQUANT_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES`` 定义的op进行量化。  
+- **weight_bits(int)** - weight的量化比特位数, 默认值为8。
+- **activation_bits(int)** - 激活值的量化比特位数, 默认值为8。
+- **is_use_cache_file(bool)** - 是否使用硬盘对中间结果进行存储。如果为False, 则将中间结果存储在内存中。默认值为False。
+- **cache_dir(str)** - 如果 ``'is_use_cache_file'`` 为True, 则将中间结果存储在此参数设置的路径下。默认值为 ``./temp_post_training``  。
 
 **返回**
 
@@ -293,4 +293,4 @@ fluid.Program
    config = {'params_name': 'emb', 'quantize_type': 'abs_max'}
    quant_program = quant.quant_embedding(infer_program, place, config)
 
-更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_embedding'>`_ 
+更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_embedding>`_ 
