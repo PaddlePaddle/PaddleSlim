@@ -3,6 +3,7 @@ import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid import ParamAttr
 from paddle.fluid.layers import RNNCell, LSTMCell, rnn
+from paddle.fluid.contrib.layers import basic_lstm
 from ..RLbase_controller import RLBaseController
 from ..utils import RLCONTROLLER
 
@@ -31,6 +32,7 @@ class lstm_cell(RNNCell):
             new_states.append(new_state)
         return out, new_states
 
+    @property
     def state_shape(self):
         return [cell.state_shape for cell in self.lstm_cells]
 
@@ -46,28 +48,35 @@ class LSTM(RLBaseController):
         self.with_entropy = kwargs.get(
             'with_entropy') if 'with_entroy' in kwargs else False
 
-    def _lstm(self, inputs, hidden, is_embed, token_idx):
-        if not is_embed:
-            inputs = fluid.embedding(self.total_token_num, self.hidden_size)
-        cell = lstm_cell(self.lstm_num_layers, self.hidden_size)
+    def _lstm(self, inputs, hidden, cell, is_embed, token_idx):
+        #if not is_embed:
+        #    #inputs = fluid.embedding(self.total_token_num, self.hidden_size)
+        #    inputs_1 = fluid.embedding(inputs, self.hidden_size)
+        #else:
+        inputs_1 = inputs
+        #print("---------------------", token_idx)
+        #print("======================", inputs_1)
+        cells = lstm_cell(self.lstm_num_layers, self.hidden_size)
         #output, new_hidden = inputs, inputs 
-        output, new_hidden = rnn(cell=cell,
-                                 inputs=inputs,
-                                 initial_states=(inputs, hidden))
-        logits = fluid.layers.fc(new_hidden, self.range_tables[token_idx])
+        output, new_hidden = rnn(cell=cells,
+                                 inputs=inputs_1,
+                                 initial_states=([[cell, hidden]]))
+        logits = fluid.layers.fc(new_hidden[0], self.range_tables[token_idx])
 
         logits = logits / self.temperature
         return logits, output, new_hidden
 
-    def _network(self, inputs, hidden):
+    def _network(self, inputs, hidden, cell):
         actions = []
         entropies = []
         log_probs = []
+        all_h = []
         for idx in range(len(self.range_tables)):
             logits, output, hidden = self._lstm(
-                inputs, hidden, is_embed=(idx == 0), token_idx=idx)
+                inputs, hidden, cell, is_embed=(idx == 0), token_idx=idx)
+            all_h.append(hidden[-1])
             probs = fluid.layers.softmax(logits, axis=1)
-            log_probs = fluid.layers.log(probs)
+            log_prob = fluid.layers.log(probs)
             entropy = -1 * fluid.layers.sum(
                 (log_prob * probs), axis=1) if self.with_entropy else None
 
@@ -75,17 +84,19 @@ class LSTM(RLBaseController):
             #action = np.random.multinomial(1, np_probs)
             action = fluid.layers.sampling_id(probs)
             index = fluid.layers.stack(probs, axis=0)
-            #print(log_probs, index)
-            seleted_log_prob = fluid.layers.gather_nd(log_probs, index)
+            #seleted_log_prob = fluid.layers.gather_nd(log_prob, index)
+            selected_log_prob = log_prob
 
-            #actions.append(action)
-            actions.append(action[:, 0])
+            actions.append(action)
+            #actions.append(action[:, 0])
             entropies.append(entropy)
             log_probs.append(selected_log_prob)
             #log_probs = None
 
-            #inputs = action + sum(self.range_tables[:idx])
-            inputs = action[:, 0] + sum(self.range_tables[:idx])
+            #print("-----------------------", all_h, action)
+            inputs = fluid.layers.gather(
+                all_h[:-1], action)  #action + sum(self.range_tables[:idx])
+            #inputs = action[:, 0] + sum(self.range_tables[:idx])
 
         tokens = []
         for idx in range(self.batch_size):
@@ -111,10 +122,14 @@ class LSTM(RLBaseController):
         with fluid.program_guard(main_program, startup_program):
             with fluid.unique_name.guard('Controller'):
                 inputs = fluid.data(
-                    name='inputs', shape=[None, self.hidden_size])
+                    name='inputs',
+                    shape=[None, self.batch_size, self.hidden_size],
+                    dtype='float32')
                 hidden = fluid.data(
                     name='hidden', shape=[None, self.hidden_size])
-                tokens, log_probs, entropies = self._network(inputs, hidden)
+                cell = fluid.data(name='cell', shape=[None, self.hidden_size])
+                tokens, log_probs, entropies = self._network(inputs, hidden,
+                                                             cell)
 
                 if is_test == False:
                     rewards = fluid.data(name='rewards', shape=[None, 1])
@@ -155,7 +170,7 @@ class LSTM(RLBaseController):
         main_program = fluid.Program()
         startup_program = fluid.Program()
         inputs, tokens, loss = self._build_program(
-            main_program, startup_program, is_test=True, batch_size=batch_size)
+            main_program, startup_program, is_test=True, batch_size=num_archs)
 
         place = fluid.CUDAPlace(0) if self.args.use_gpu else fluid.CPUPlace()
         exe = fluid.Executor(place)

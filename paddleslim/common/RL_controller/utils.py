@@ -12,8 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 from ...core import Registry
 
-__all__ = ["RLCONTROLLER"]
+__all__ = ["RLCONTROLLER", "action_mapping"]
 
 RLCONTROLLER = Registry('RLController')
+
+
+def action_mapping(actions, range_table):
+    actions = (actions - (-1.0)) * (range_table / np.asarray(2.0))
+    return actions.astype('int64')

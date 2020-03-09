@@ -1,1 +1,1 @@
-from LSTM_Controller import *
+from .LSTM_Controller import *

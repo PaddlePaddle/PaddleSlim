@@ -53,29 +53,28 @@ class RLNAS(object):
         self._search_space = factory.get_search_space(configs)
         self.range_tables = self._search_space.range_table()
 
-        if is_server:
-            cls = RLCONTROLLER.get(key.upper())
-            kwargs['range_tables'] = self.range_tables
-            self.controller = cls(**kwargs)
-            self.controller.init(args)
+        cls = RLCONTROLLER.get(key.upper())
+        kwargs['range_tables'] = self.range_tables
+        self.controller = cls(**kwargs)
+
         self._current_tokens = None
         self.save_controller = save_controller
         self.load_controller = load_controller
 
-    def next_archs(self):
+    def next_archs(self, states=None):
         """ Get next archs"""
-        self._current_tokens = self.controller.next_tokens()
+        self._current_tokens = self.controller.next_tokens(states)
         archs = self._search_space.token2arch(self._current_tokens)
 
         return archs
 
-    def reward(self, score):
+    def reward(self, rewards, **kwargs):
         """ reward the score and to train controller """
-        return self.controller.update(tokens=None, reward=score)
+        return self.controller.update(rewards, **kwargs)
 
-    def final_archs(self, num_archs=1):
+    def final_archs(self, batch_states):
         """Get finally architecture"""
-        final_tokens = self.controller.next_tokens(num_archs=num_archs)
+        final_tokens = self.controller.next_tokens(batch_states)
         archs = []
         for token in final_tokens:
             arch = self._search_space.token2arch(token)
