@@ -5,6 +5,7 @@ from paddle import fluid
 from ..utils import RLCONTROLLER, action_mapping
 from ..RLbase_controller import RLBaseController
 from .ddpg_model import DefaultDDPGModel as default_ddpg_model
+from .noise import AdaptiveNoiseSpec as default_noise
 from parl.utils import ReplayMemory
 
 __all__ = ['DDPG']
@@ -71,7 +72,7 @@ class DDPG(RLBaseController):
         self.act_dim = kwargs.get('act_dim')
         self.model = kwargs.get(
             'model') if 'model' in kwargs else default_ddpg_model
-        self.range_tables = kwargs.get('range_tables')
+        self.range_tables = kwargs.get('range_tables') - np.asarray(1)
         self.actor_lr = kwargs.get(
             'actor_lr') if 'actor_lr' in kwargs else 1e-4
         self.critic_lr = kwargs.get(
@@ -84,8 +85,14 @@ class DDPG(RLBaseController):
             'reward_scale') if 'reward_scale' in kwargs else 0.1
         self.batch_size = kwargs.get(
             'controller_batch_size') if 'controller_batch_size' in kwargs else 1
+        self.actions_noise = kwargs.get(
+            'actions_noise') if 'actions_noise' in kwargs else default_noise
+        self.action_dist = 0.0
 
         model = self.model(self.act_dim)
+
+        if self.actions_noise:
+            self.actions_noise = self.actions_noise()
 
         algorithm = parl.algorithms.DDPG(
             model,
@@ -99,13 +106,28 @@ class DDPG(RLBaseController):
     def next_tokens(self, states):
         batch_states = np.expand_dims(states, axis=0)
         actions = self.agent.predict(batch_states.astype('float32'))
-        actions = action_mapping(actions, self.range_tables)
-        actions = np.squeeze(actions)
-        return actions
+        ### add noise to action
+        if self.actions_noise:
+            actions_noise = np.clip(
+                np.random.normal(
+                    actions, scale=self.actions_noise.stdev_curr),
+                -1.0,
+                1.0)
+            self.action_dist = np.mean(np.abs(actions_noise - actions))
+        else:
+            actions_noise = actions
+        actions_noise = action_mapping(actions_noise, self.range_tables)
+        actions_noise = np.squeeze(actions_noise)
+        return actions_noise
+
+    def _update_noise(self, actions_dist):
+        self.actions_noise.update(actions_dist)
 
     def update(self, rewards, states, actions, states_next, terminal):
         self.rpm.append(states, actions, self.reward_scale * rewards,
                         states_next, terminal)
+        if self.actions_noise:
+            self._update_noise(self.action_dist)
         if self.rpm.size() > self.memory_size:
             states, actions, rewards, states_next, terminal = rpm.sample_batch(
                 self.batch_size)
