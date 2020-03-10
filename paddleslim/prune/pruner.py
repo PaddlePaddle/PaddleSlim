@@ -15,6 +15,7 @@
 import logging
 import sys
 import numpy as np
+from functools import reduce
 import paddle.fluid as fluid
 import copy
 from ..core import VarWrapper, OpWrapper, GraphWrapper
@@ -152,6 +153,27 @@ class Pruner():
             reduce_dims = [i for i in range(len(param_t.shape)) if i != axis]
             criterions = np.sum(np.abs(param_t), axis=tuple(reduce_dims))
             pruned_idx = criterions.argsort()[:prune_num]
+        elif self.criterion == 'geometry_median':
+            param_t = np.array(scope.find_var(param).get_tensor())
+            prune_num = int(round(param_t.shape[axis] * ratio))
+
+            def get_distance_sum(param, out_idx):
+                w = param.view()
+                reduce_dims = reduce(lambda x, y: x * y, param.shape[1:])
+                w.shape = param.shape[0], reduce_dims
+                selected_filter = np.tile(w[out_idx], (w.shape[0], 1))
+                x = w - selected_filter
+                x = np.sqrt(np.sum(x * x, -1))
+                return x.sum()
+
+            dist_sum_list = []
+            for out_i in range(param_t.shape[0]):
+                dist_sum = get_distance_sum(param_t, out_i)
+                dist_sum_list.append((dist_sum, out_i))
+            min_gm_filters = sorted(
+                dist_sum_list, key=lambda x: x[0])[:prune_num]
+            pruned_idx = [x[1] for x in min_gm_filters]
+
         elif self.criterion == "batch_norm_scale":
             param_var = graph.var(param)
             conv_op = param_var.outputs()[0]
