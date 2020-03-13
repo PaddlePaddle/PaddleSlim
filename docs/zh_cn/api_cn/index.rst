@@ -16,5 +16,5 @@ API文档
    prune_api.rst
    quantization_api.rst
    single_distiller_api.rst
-   search_space.rst
+   search_space.md
    table_latency.md

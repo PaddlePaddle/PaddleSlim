@@ -158,7 +158,7 @@ class Student(object):
 
                     if end_recved:
                         break
-                    with open(in_path, 'r') as fin:
+                    with open(in_path, 'rb') as fin:
                         # get knowledge desc
                         desc = pickle.load(fin)
                         out_queue.put(desc)
@@ -222,7 +222,7 @@ class Student(object):
         self._started = True
 
     def _merge_knowledge(self, knowledge):
-        for k, tensors in knowledge.items():
+        for k, tensors in list(knowledge.items()):
             if len(tensors) == 0:
                 del knowledge[k]
             elif len(tensors) == 1:
@@ -298,8 +298,9 @@ class Student(object):
             for idx, queue in enumerate(self._teacher_knowledge_queues):
                 desc = queue.get()
                 queue.task_done()
-                if idx > 0 and (set(knowledge_desc.keys()) & set(desc.keys())
-                                != set(self._common_schema)):
+                inter_desc = set(knowledge_desc.keys()) & set(desc.keys())
+                if idx > 0 and (
+                        not inter_desc.issubset(set(self._common_schema))):
                     raise ValueError(
                         "Teacher {} has the same schema with other existed "
                         "teachers not in the merge_strategy.".format(idx))
@@ -308,7 +309,7 @@ class Student(object):
             print("Knowledge merging strategy: {}".format(
                 self._merge_strategy))
             print("Knowledge description after merging:")
-            for schema, desc in knowledge_desc.items():
+            for schema, desc in list(knowledge_desc.items()):
                 print("{}: {}".format(schema, desc))
 
             self._knowledge_desc = knowledge_desc
@@ -426,13 +427,13 @@ class Student(object):
             end_received = [0] * len(queues)
             while True:
                 knowledge = OrderedDict(
-                    [(k, []) for k, v in self._knowledge_desc.items()])
+                    [(k, []) for k, v in list(self._knowledge_desc.items())])
                 for idx, receiver in enumerate(data_receivers):
                     if not end_received[idx]:
                         batch_samples = receiver.next(
                         ) if six.PY2 else receiver.__next__()
                         if not isinstance(batch_samples, EndSignal):
-                            for k, v in batch_samples.items():
+                            for k, v in list(batch_samples.items()):
                                 knowledge[k].append(v)
                         else:
                             end_received[idx] = 1

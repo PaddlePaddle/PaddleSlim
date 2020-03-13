@@ -4,5 +4,5 @@ Aadvanced Tutorials
 .. toctree::
    :maxdepth: 1
 
-   sensitivity_tutorial_en.md
+   image_classification_sensitivity_analysis_tutorial_en.md
     

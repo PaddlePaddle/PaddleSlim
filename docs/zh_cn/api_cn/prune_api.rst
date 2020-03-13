@@ -12,7 +12,7 @@ Pruner
 
 **参数：**
 
-- **criterion** - 评估一个卷积层内通道重要性所参考的指标。目前仅支持 ``l1_norm`` 。默认为 ``l1_norm`` 。
+- **criterion** - 评估一个卷积层内通道重要性所参考的指标。目前支持 ``l1_norm`` 和 ``batch_norm_scale``  。默认为 ``l1_norm`` 。若该参数设为 ``batch_norm_scale`` , 则表示剪枝算法将根据卷积层后连接的BatchNorm层的Scale参数的绝对值大小作为评估卷积层内通道重要性所参考的指标。 在初始化Pruner()类实例时，若没有传入该参数，则表示Pruner()使用criterion默认参数值 ``l1_norm`` ；可以显示地传入criterion的值以改变剪枝算法的剪枝策略。
 
 **返回：** 一个Pruner类的实例
 
@@ -21,8 +21,7 @@ Pruner
 .. code-block:: python
 
    from paddleslim.prune import Pruner
-   pruner = Pruner()
-
+   pruner = Pruner()       
 ..
  
    .. py:method:: paddleslim.prune.Pruner.prune(program, scope, params, ratios, place=None, lazy=False, only_graph=False, param_backup=False, param_shape_backup=False)
@@ -378,7 +377,7 @@ load_sensitivities
      }
   }
   sensitivities_file = "sensitive_api_demo.data"
-  with open(sensitivities_file, 'w') as f:
+  with open(sensitivities_file, 'wb') as f:
       pickle.dump(sen, f)
   sensitivities = load_sensitivities(sensitivities_file)
   print(sensitivities)
