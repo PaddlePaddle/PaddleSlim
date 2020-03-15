@@ -24,8 +24,8 @@ from ..common.RL_controller.utils import RLCONTROLLER
 from ..common import get_logger
 from ..analysis import flops
 
-from ..common import ControllerServer
-from ..common import ControllerClient
+from ..common import Server
+from ..common import Client
 from .search_space import SearchSpaceFactory
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -42,6 +42,7 @@ class RLNAS(object):
                  args,
                  server_addr=("", 8881),
                  is_server=True,
+                 search_steps=300,
                  save_controller=None,
                  load_controller=None,
                  **kwargs):
@@ -49,32 +50,58 @@ class RLNAS(object):
             assert server_addr[
                 0] != "", "You should set the IP and port of server when is_server is False."
 
+        self._configs = configs
         factory = SearchSpaceFactory()
         self._search_space = factory.get_search_space(configs)
         self.range_tables = self._search_space.range_table()
 
         cls = RLCONTROLLER.get(key.upper())
+
+        server_ip, server_port = server_addr
+        if server_ip == None or server_ip == "":
+            server_ip = self._get_host_ip()
+
         kwargs['range_tables'] = self.range_tables
-        self.controller = cls(**kwargs)
+        self._controller = cls(**kwargs)
+
+        if is_server:
+            max_client_num = 300
+            self._controller_server = Server(
+                controller=self._controller, address=(server_ip, server_port))
+            self._controller_server.start()
+
+        self._client_name = hashlib.md5(
+            str(time.time() + np.random.randint(1, 10000)).encode(
+                "utf-8")).hexdigest()
+        self._controller_client = Client(
+            controller=self._controller,
+            address=(server_ip, server_port),
+            client_name=self._client_name)
 
         self._current_tokens = None
         self.save_controller = save_controller
         self.load_controller = load_controller
 
+    def _get_host_ip(self):
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except:
+            return socket.gethostbyname('localhost')
+
     def next_archs(self, states=None):
         """ Get next archs"""
-        self._current_tokens = self.controller.next_tokens(states)
+        self._current_tokens = self._controller_client.next_tokens(states)
         archs = self._search_space.token2arch(self._current_tokens)
 
         return archs
 
     def reward(self, rewards, **kwargs):
         """ reward the score and to train controller """
-        return self.controller.update(rewards, **kwargs)
+        return self._controller_client.update(rewards, **kwargs)
 
     def final_archs(self, batch_states):
         """Get finally architecture"""
-        final_tokens = self.controller.next_tokens(batch_states)
+        final_tokens = self._controller_client.next_tokens(batch_states)
         archs = []
         for token in final_tokens:
             arch = self._search_space.token2arch(token)

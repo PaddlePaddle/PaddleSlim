@@ -116,10 +116,11 @@ class LSTM(RLBaseController):
                     if self.weight_entropy is not None:
                         avg_rewards += self.weight_entropy * self.sample_entropies
 
-                    self.baseline -= (1.0 - self.decay) * (
-                        self.baseline - avg_rewards)
-                    loss = self.sample_log_probs * (
-                        avg_rewards - self.baseline)
+                    loss = avg_rewards
+                    #self.baseline = self.baseline - (1.0 - self.decay) * (
+                    #    self.baseline - avg_rewards)
+                    #loss = self.sample_log_probs * (
+                    #    avg_rewards - self.baseline)
                     optimizer = fluid.optimizer.Adam(learning_rate=0.1)
                     optimizer.minimize(loss)
                     return (inputs, hidden, rewards), tokens, loss
@@ -150,7 +151,7 @@ class LSTM(RLBaseController):
 
         return feed_dict
 
-    def next_tokens(self, num_archs=1):
+    def next_tokens(self, num_archs=1, params_dict=None):
         """ sample next tokens according current parameter and inputs"""
         main_program = fluid.Program()
         startup_program = fluid.Program()
@@ -160,6 +161,10 @@ class LSTM(RLBaseController):
         place = fluid.CUDAPlace(0)  #if self.args.use_gpu else fluid.CPUPlace()
         exe = fluid.Executor(place)
         exe.run(startup_program)
+
+        for var in main_program.global_block().all_parameters():
+            fluid.global_scope().find_var(var.name).get_tensor().set(
+                params_dict[var.name], place)
 
         feed_dict = self._create_input(inputs)
 
@@ -176,11 +181,10 @@ class LSTM(RLBaseController):
                     each_token[idx] = [int(token)]
             batch_tokens.append(each_token[idx])
 
-        return np.squeeze(
-            batch_tokens
-        )  ### return batch config type [[]], but search space receive []
+        ### return batch config type [[]], but search space receive []
+        return np.squeeze(batch_tokens)
 
-    def update(self, rewards):
+    def update(self, rewards, params_dict):
         """train controller according reward"""
         main_program = fluid.Program()
         startup_program = fluid.Program()
@@ -191,6 +195,12 @@ class LSTM(RLBaseController):
         exe = fluid.Executor(place)
         exe.run(startup_program)
 
+        fetch_list = []
+        for var in main_program.global_block().all_parameters():
+            fluid.global_scope().find_var(var.name).get_tensor().set(
+                params_dict[var.name], place)
+            fetch_list.append(var.name)
+
         feed_dict = self._create_input(
             inputs, is_test=False, actual_rewards=rewards)
 
@@ -199,7 +209,9 @@ class LSTM(RLBaseController):
             main_program).with_data_parallel(
                 loss.name, build_strategy=build_strategy)
 
-        exe.run(compiled_program, feed=feed_dict)
-
-    def _save_controller(self, program):
-        fluid.save(program, self.save_controller)
+        outs = exe.run(
+            compiled_program,
+            feed=feed_dict,
+            fetch_list=['ControllerControllerLSTMCell/BasicLSTMUnit_0.w_0'])
+        #for i, o in enumerate(outs):
+        print(fetch_list[0], np.sum(np.abs(outs[0])))

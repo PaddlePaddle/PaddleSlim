@@ -33,8 +33,8 @@ class RLBaseController(object):
     def update(self, *args, **kwargs):
         raise NotImplementedError('Abstract method.')
 
-    def _save_controller(self, program, output_dir):
+    def save_controller(self, program, output_dir):
         fluid.save(program, output_dir)
 
-    def _load_controller(self, program, load_dir):
+    def load_controller(self, program, load_dir):
         fluid.load(program, load_dir)

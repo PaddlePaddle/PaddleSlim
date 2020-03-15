@@ -123,7 +123,8 @@ class DDPG(RLBaseController):
     def _update_noise(self, actions_dist):
         self.actions_noise.update(actions_dist)
 
-    def update(self, rewards, states, actions, states_next, terminal):
+    def update(self, rewards, params_dict, states, actions, states_next,
+               terminal):
         self.rpm.append(states, actions, self.reward_scale * rewards,
                         states_next, terminal)
         if self.actions_noise:
