@@ -1,4 +1,6 @@
 import paddle.fluid as fluid
+import sys
+sys.path.append("../")
 import paddleslim.quant as quant
 import unittest
 
@@ -24,8 +26,7 @@ class TestQuantEmbedding(unittest.TestCase):
         exe = fluid.Executor(place)
         exe.run(fluid.default_startup_program())
 
-        config = {'params_name': 'emb', 'quantize_type': 'abs_max'}
-        quant_program = quant.quant_embedding(infer_program, place, config)
+        quant_program = quant.quant_embedding(infer_program, place)
 
 
 if __name__ == '__main__':
