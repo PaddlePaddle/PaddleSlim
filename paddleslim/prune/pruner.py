@@ -17,13 +17,10 @@ import sys
 import numpy as np
 import paddle.fluid as fluid
 import copy
-from ..core import GraphWrapper
-try:
-    from ..core import DyGraph
-except Exception as e:
-    pass
-from .prune_walker import conv2d as conv2d_walker
-from .dy_prune_walker import Conv2d as dy_conv2d_walker
+from ..core import VarWrapper, OpWrapper, GraphWrapper
+from .group_param import collect_convs
+from .criterion import l1_norm
+from .importance_sort import channel_score_sort, batch_norm_scale
 from ..common import get_logger
 
 __all__ = ["Pruner"]
@@ -35,12 +32,21 @@ class Pruner():
     """The pruner used to prune channels of convolution.
 
     Args:
-        criterion(str): the criterion used to sort channels for pruning. It only supports 'l1_norm' currently.
+        criterion(str|function): the criterion used to sort channels for pruning.
+        channel_sortor(str|function): 
 
     """
 
-    def __init__(self, criterion="l1_norm"):
+    def __init__(self, criterion="l1_norm", channel_sortor="channel_score"):
         self.criterion = criterion
+        self.channel_sortor = channel_sortor
+        if criterion == "l1_norm":
+            self.criterion = l1_norm
+
+        if channel_sortor == "channel_score":
+            self.channel_sortor = channel_score_sort
+        elif channel_sortor == "batch_norm_scale":
+            self.channel_sortor = batch_norm_scale_sort
 
     def prune(self,
               graph,
@@ -86,26 +92,40 @@ class Pruner():
         visited = {}
         pruned_params = []
         for param, ratio in zip(params, ratios):
+            group = collect_convs([param], graph)[0]  # [(name, axis)]
             if only_graph:
+
                 param_v = graph.var(param)
                 pruned_num = int(round(param_v.shape()[0] * ratio))
                 pruned_idx = [0] * pruned_num
+                for name, aixs in group:
+                    pruned_params.append((name, axis, pruned_idx))
+
             else:
-                pruned_idx = self._cal_pruned_idx(
-                    graph, scope, param, ratio, axis=0)
-            param = graph.var(param)
-            conv_op = param.outputs()[0]
-            walker = conv2d_walker(
-                conv_op, pruned_params=pruned_params, visited=visited)
-            walker.prune(param, pruned_axis=0, pruned_idx=pruned_idx)
+
+                group_values = []
+                for name, axis in group:
+                    values = np.array(scope.find_var(name).get_tensor())
+                    group_values.append((name, values, axis))
+
+                scores = self.criterion(
+                    group_with_values)  # [(name, axis, score)]
+
+                group_idx = self.channel_sortor(
+                    scores, graph=graph)  # [(name, axis, soted_idx)]
+                for param, pruned_axis, pruned_idx in group_idx:
+                    pruned_num = len(pruned_idx) * ratio
+                    pruned_params.append((
+                        param, pruned_axis,
+                        pruned_idx[:pruned_num]))  # [(name, axis, pruned_idx)]
 
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
-            if param.name() not in merge_pruned_params:
-                merge_pruned_params[param.name()] = {}
-            if pruned_axis not in merge_pruned_params[param.name()]:
-                merge_pruned_params[param.name()][pruned_axis] = []
-            merge_pruned_params[param.name()][pruned_axis].append(pruned_idx)
+            if param not in merge_pruned_params:
+                merge_pruned_params[param] = {}
+            if pruned_axis not in merge_pruned_params[param]:
+                merge_pruned_params[param][pruned_axis] = []
+            merge_pruned_params[param][pruned_axis].append(pruned_idx)
 
         for param_name in merge_pruned_params:
             for pruned_axis in merge_pruned_params[param_name]:
