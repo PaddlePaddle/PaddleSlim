@@ -116,7 +116,7 @@ class LSTM(RLBaseController):
                     if self.weight_entropy is not None:
                         avg_rewards += self.weight_entropy * self.sample_entropies
 
-                    loss = avg_rewards
+                    loss = self.sample_log_probs * avg_rewards
                     #self.baseline = self.baseline - (1.0 - self.decay) * (
                     #    self.baseline - avg_rewards)
                     #loss = self.sample_log_probs * (
@@ -195,11 +195,10 @@ class LSTM(RLBaseController):
         exe = fluid.Executor(place)
         exe.run(startup_program)
 
-        fetch_list = []
-        for var in main_program.global_block().all_parameters():
-            fluid.global_scope().find_var(var.name).get_tensor().set(
-                params_dict[var.name], place)
-            fetch_list.append(var.name)
+        #for var in main_program.global_block().all_parameters():
+        #    fluid.global_scope().find_var(var.name).get_tensor().set(
+        #        params_dict[var.name], place)
+        self.set_params(main_program, params_dict, place)
 
         feed_dict = self._create_input(
             inputs, is_test=False, actual_rewards=rewards)
@@ -209,9 +208,11 @@ class LSTM(RLBaseController):
             main_program).with_data_parallel(
                 loss.name, build_strategy=build_strategy)
 
-        outs = exe.run(
-            compiled_program,
-            feed=feed_dict,
-            fetch_list=['ControllerControllerLSTMCell/BasicLSTMUnit_0.w_0'])
-        #for i, o in enumerate(outs):
-        print(fetch_list[0], np.sum(np.abs(outs[0])))
+        fetch_list = tokens
+        outs = exe.run(compiled_program, feed=feed_dict, fetch_list=fetch_list)
+        tokens = []
+        for o in outs:
+            tokens.append(o[0])
+        print('tokens: ', tokens)
+        params_dict = self.get_params(main_program)
+        return params_dict

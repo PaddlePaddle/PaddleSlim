@@ -11,6 +11,7 @@ else:
 import logging
 import numpy as np
 import atexit
+import multiprocessing as mp
 from multiprocessing.managers import BaseManager
 import paddle.fluid as fluid
 from .log_helper import get_logger
@@ -21,6 +22,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 PublicAuthKey = u'AbcXyz3'
 
 client_queue = Queue.Queue(300)
+current_client = list()
 client_dict = dict()
 params_dict = dict()
 
@@ -29,6 +31,7 @@ class Server(object):
     def __init__(self,
                  controller,
                  address,
+                 is_sync=False,
                  load_controller=None,
                  save_controller=None,
                  args=None):
@@ -37,7 +40,9 @@ class Server(object):
         self._args = args
         self._save_controller = save_controller
         self._load_controller = load_controller
-        self._manager = None
+        self._is_sync = is_sync
+        #self._client_queue = Queue.Queue(300)
+        #self.lock = mp.Lock()
         #atexit.register(self.before_exit)
 
     def _start_manager(self):
@@ -53,9 +58,14 @@ class Server(object):
             global client_dict
             return client_dict
 
+        def get_current_client():
+            global current_client
+            return current_client
+
         BaseManager.register('get_client_queue', callable=get_client_queue)
         BaseManager.register('get_params_dict', callable=get_params_dict)
         BaseManager.register('get_client_dict', callable=get_client_dict)
+        BaseManager.register('get_current_client', callable=get_current_client)
         manager = BaseManager(
             address=self._address, authkey=PublicAuthKey.encode())
         manager.start()
@@ -63,7 +73,6 @@ class Server(object):
 
     def start(self):
         self._manager = self._start_manager()
-        self._client_queue = self._manager.get_client_queue()
         self._params_dict = self._manager.get_params_dict()
 
         self.main_program = fluid.Program()
@@ -90,9 +99,24 @@ class Server(object):
                 var.name).get_tensor())
 
         self._params_dict.update(var_dict)
+
+        #self.run_sync()
         #thread = Thread(target = )
         #thread.setDaemon(True)
         #thread.start()
+
+    def run_sync(self):
+        pass
+
+    def run_async(self):
+        try:
+            self._client_queue = self._manager.get_client_queue()
+            self._current_client = self._manager.get_current_client()
+            self._current_client.clear()
+            if not self._client_queue.empty():
+                self._current_client = self._client_queue.get()
+        except:
+            pass
 
     def before_exit(self):
         params_dict = self._manager.get_params_dict()
@@ -117,5 +141,6 @@ class Server(object):
                                              self._save_controller)
 
     def __del__(self):
+        #self.before_exit()
         if self._manager:
             self._manager.shutdown()

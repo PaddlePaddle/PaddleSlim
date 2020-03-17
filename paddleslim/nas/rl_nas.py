@@ -42,7 +42,7 @@ class RLNAS(object):
                  args,
                  server_addr=("", 8881),
                  is_server=True,
-                 search_steps=300,
+                 is_sync=False,
                  save_controller=None,
                  load_controller=None,
                  **kwargs):
@@ -67,7 +67,9 @@ class RLNAS(object):
         if is_server:
             max_client_num = 300
             self._controller_server = Server(
-                controller=self._controller, address=(server_ip, server_port))
+                controller=self._controller,
+                address=(server_ip, server_port),
+                is_sync=is_sync)
             self._controller_server.start()
 
         self._client_name = hashlib.md5(

@@ -16,6 +16,7 @@
 import os
 import sys
 import logging
+import numpy as np
 import paddle.fluid as fluid
 from ..log_helper import get_logger
 
@@ -38,3 +39,15 @@ class RLBaseController(object):
 
     def load_controller(self, program, load_dir):
         fluid.load(program, load_dir)
+
+    def get_params(self, program):
+        var_dict = {}
+        for var in program.global_block().all_parameters():
+            var_dict[var.name] = np.array(fluid.global_scope().find_var(
+                var.name).get_tensor())
+        return var_dict
+
+    def set_params(self, program, params_dict, place):
+        for var in program.global_block().all_parameters():
+            fluid.global_scope().find_var(var.name).get_tensor().set(
+                params_dict[var.name], place)
