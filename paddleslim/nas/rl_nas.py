@@ -54,6 +54,8 @@ class RLNAS(object):
         factory = SearchSpaceFactory()
         self._search_space = factory.get_search_space(configs)
         self.range_tables = self._search_space.range_table()
+        self.save_controller = save_controller
+        self.load_controller = load_controller
 
         cls = RLCONTROLLER.get(key.upper())
 
@@ -69,7 +71,9 @@ class RLNAS(object):
             self._controller_server = Server(
                 controller=self._controller,
                 address=(server_ip, server_port),
-                is_sync=is_sync)
+                is_sync=is_sync,
+                save_controller=self.save_controller,
+                load_controller=self.load_controller)
             self._controller_server.start()
 
         self._client_name = hashlib.md5(
@@ -81,8 +85,6 @@ class RLNAS(object):
             client_name=self._client_name)
 
         self._current_tokens = None
-        self.save_controller = save_controller
-        self.load_controller = load_controller
 
     def _get_host_ip(self):
         try:

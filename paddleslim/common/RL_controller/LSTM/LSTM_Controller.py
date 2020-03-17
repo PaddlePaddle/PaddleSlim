@@ -49,8 +49,8 @@ class LSTM(RLBaseController):
             'weight_entropy') if 'weight_entroy' in kwargs else None
         self.tanh_constant = kwargs.get(
             'tanh_constant') if 'tanh_constant' in kwargs else None
-        self.sample_entropy = 0.0
-        self.sample_log_probs = 0.0
+        #self.sample_entropy = fluid.layers.create_tensor(dtype='float32', name='sample_entropy', persistable=True) #0.0
+        #self.sample_log_probs = fluid.layers.create_tensor(dtype='float32', name='sample_log_probs', persistable=True) #0.0
         self.baseline = 0.0
 
         self.max_range_table = max(self.range_tables) + 1
@@ -65,6 +65,8 @@ class LSTM(RLBaseController):
 
     def _network(self, inputs, hidden, cell):
         actions = []
+        sample_entropies = []
+        sample_log_probs = []
 
         for idx in range(len(self.range_tables)):
             logits, output, states = self._lstm(
@@ -73,11 +75,13 @@ class LSTM(RLBaseController):
             probs = fluid.layers.softmax(logits, axis=1)
             action = fluid.layers.sampling_id(probs)
             log_prob = fluid.layers.cross_entropy(probs, action)
-            self.sample_log_probs += fluid.layers.reduce_sum(log_prob)
+            sample_log_probs.append(log_prob)
+            #self.sample_log_probs += fluid.layers.reduce_sum(log_prob)
 
             entropy = log_prob * fluid.layers.exp(-1 * log_prob)
             entropy.stop_gradient = True
-            self.sample_entropy = fluid.layers.reduce_sum(entropy)
+            sample_entropies.append(entropy)
+            #self.sample_entropy = fluid.layers.reduce_sum(entropy)
 
             action_emb = fluid.layers.cast(action, dtype=np.int64)
             emb_w = fluid.layers.create_parameter(
@@ -88,6 +92,9 @@ class LSTM(RLBaseController):
             inputs = fluid.layers.gather(emb_w, action_emb)
 
             actions.append(action)
+
+        sample_log_probs = fluid.layers.stack(sample_log_probs)
+        self.sample_log_probs = fluid.layers.reduce_sum(sample_log_probs)
 
         return actions
 
@@ -116,7 +123,7 @@ class LSTM(RLBaseController):
                     if self.weight_entropy is not None:
                         avg_rewards += self.weight_entropy * self.sample_entropies
 
-                    loss = self.sample_log_probs * avg_rewards
+                    loss = avg_rewards * self.sample_log_probs
                     #self.baseline = self.baseline - (1.0 - self.decay) * (
                     #    self.baseline - avg_rewards)
                     #loss = self.sample_log_probs * (
@@ -195,9 +202,6 @@ class LSTM(RLBaseController):
         exe = fluid.Executor(place)
         exe.run(startup_program)
 
-        #for var in main_program.global_block().all_parameters():
-        #    fluid.global_scope().find_var(var.name).get_tensor().set(
-        #        params_dict[var.name], place)
         self.set_params(main_program, params_dict, place)
 
         feed_dict = self._create_input(

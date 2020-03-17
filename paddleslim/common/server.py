@@ -10,9 +10,11 @@ else:
     import queue as Queue
 import logging
 import numpy as np
-import atexit
+import time
 import multiprocessing as mp
+from multiprocessing import Lock, RLock, Process
 from multiprocessing.managers import BaseManager
+from threading import Thread
 import paddle.fluid as fluid
 from .log_helper import get_logger
 
@@ -23,6 +25,7 @@ PublicAuthKey = u'AbcXyz3'
 
 client_queue = Queue.Queue(300)
 current_client = list()
+lock = RLock()
 client_dict = dict()
 params_dict = dict()
 
@@ -41,9 +44,6 @@ class Server(object):
         self._save_controller = save_controller
         self._load_controller = load_controller
         self._is_sync = is_sync
-        #self._client_queue = Queue.Queue(300)
-        #self.lock = mp.Lock()
-        #atexit.register(self.before_exit)
 
     def _start_manager(self):
         def get_client_queue():
@@ -62,10 +62,15 @@ class Server(object):
             global current_client
             return current_client
 
+        def get_lock():
+            global lock
+            return lock
+
         BaseManager.register('get_client_queue', callable=get_client_queue)
         BaseManager.register('get_params_dict', callable=get_params_dict)
         BaseManager.register('get_client_dict', callable=get_client_dict)
         BaseManager.register('get_current_client', callable=get_current_client)
+        BaseManager.register('get_lock', callable=get_lock)
         manager = BaseManager(
             address=self._address, authkey=PublicAuthKey.encode())
         manager.start()
@@ -74,6 +79,7 @@ class Server(object):
     def start(self):
         self._manager = self._start_manager()
         self._params_dict = self._manager.get_params_dict()
+        self._lock = self._manager.get_lock()
 
         self.main_program = fluid.Program()
         self.startup_program = fluid.Program()
@@ -91,24 +97,27 @@ class Server(object):
             ), "controller checkpoint is not exist, please check your directory: {}".format(
                 self._load_controller)
             self._controller.load_controller(self.main_program,
-                                             self.load_controller)
+                                             self._load_controller)
 
-        var_dict = dict()
-        for var in self.main_program.global_block().all_parameters():
-            var_dict[var.name] = np.array(fluid.global_scope().find_var(
-                var.name).get_tensor())
+        var_dict = self._controller.get_params(self.main_program)
 
         self._params_dict.update(var_dict)
 
-        #self.run_sync()
-        #thread = Thread(target = )
-        #thread.setDaemon(True)
-        #thread.start()
+        t = Thread(
+            target=self.before_exit, args=(
+                self.main_program,
+                self.place, ))
+        t.setDaemon(True)
+        t.start()
 
     def run_sync(self):
         pass
 
     def run_async(self):
+        lock = self._manager.get_lock()
+        current_client = self._manager.get_current_client()
+        params_dict = self._manager.get_params_dict()
+
         try:
             self._client_queue = self._manager.get_client_queue()
             self._current_client = self._manager.get_current_client()
@@ -118,29 +127,28 @@ class Server(object):
         except:
             pass
 
-    def before_exit(self):
-        params_dict = self._manager.get_params_dict()
+    def before_exit(self, program, place):
+        while True:
+            if int(time.time()) % 100 == 0:
+                params_dict = self._manager.get_params_dict()
 
-        def list2dict(lists):
-            res_dict = dict()
-            for l in lists:
-                tmp_dict = dict()
-                tmp_dict[l[0]] = l[1]
-                res_dict.update(tmp_dict)
-            return res_dict
+                def list2dict(lists):
+                    res_dict = dict()
+                    for l in lists:
+                        tmp_dict = dict()
+                        tmp_dict[l[0]] = l[1]
+                        res_dict.update(tmp_dict)
+                    return res_dict
 
-        params_dict = list2dict(self._params_dict.items())
-        #print(params_dict)
+                params_dict = list2dict(self._params_dict.items())
 
-        for var in self.main_program.global_block().all_parameters():
-            fluid.global_scope().find_var(var.name).get_tensor().set(
-                params_dict[var.name], self.place)
+                self._controller.set_params(self.main_program, params_dict,
+                                            fluid.CUDAPlace(0))
 
-        if self._save_controller:
-            self._controller.save_controller(self.main_program,
-                                             self._save_controller)
+                if self._save_controller:
+                    self._controller.save_controller(self.main_program,
+                                                     self._save_controller)
 
     def __del__(self):
-        #self.before_exit()
         if self._manager:
             self._manager.shutdown()

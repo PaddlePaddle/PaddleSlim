@@ -38,6 +38,7 @@ class Client(object):
         BaseManager.register('get_client_queue')
         BaseManager.register('get_params_dict')
         BaseManager.register('get_client_dict')
+        BaseManager.register('get_lock')
 
         manager = BaseManager(
             address=self._address, authkey=PublicAuthKey.encode())
@@ -59,32 +60,48 @@ class Client(object):
         return res_dict
 
     def next_tokens(self, status):
-        try:
+        lock = self._manager.get_lock()
+        lock.acquire()
+        print('next_tokens: start lock', self._client_name,
+              time.asctime(time.localtime(time.time())), lock)
+        params_dict = self._manager.get_params_dict()
+        while len(params_dict.items()) == 0:
             params_dict = self._manager.get_params_dict()
-        except Exception as err:
-            _logger.error(
-                "next_tokens: get parameter from server error: {}".format(err))
-            pid = os.getpid()
-            os.kill(pid, signal.SIGKILL)
+        lock.release()
+        print("next_tokens: lock release", self._client_name,
+              time.asctime(time.localtime(time.time())), lock)
         params_dict = self.list2dict(params_dict.items())
         tokens = self._controller.next_tokens(status, params_dict)
 
         return tokens
 
     def update(self, rewards, **kwargs):
+        print(rewards)
         self._client[self._client_name] = rewards
+        client_dict = self._manager.get_client_dict()
+        client_dict.update(self._client)
+        lock = self._manager.get_lock()
+        print("wait ...", lock)
+        lock.acquire()
+        print('update: start lock', self._client_name,
+              time.asctime(time.localtime(time.time())), lock)
+
+        params_dict = self._manager.get_params_dict()
+        while len(params_dict.items()) == 0:
+            params_dict = self._manager.get_params_dict()
+        np_params_dict = self.list2dict(params_dict.items())
 
         try:
-            client_dict = self._manager.get_client_dict()
-            client_dict.update(self._client)
-            params_dict = self._manager.get_params_dict()
+            current_params_dict = self._controller.update(
+                rewards, np_params_dict, **kwargs)
         except Exception as err:
+            lock.release()
             _logger.error("update: get parameter from server error: {}".format(
                 err))
             pid = os.getpid()
             os.kill(pid, signal.SIGKILL)
 
-        np_params_dict = self.list2dict(params_dict.items())
-        current_params_dict = self._controller.update(rewards, np_params_dict,
-                                                      **kwargs)
         params_dict = current_params_dict
+        lock.release()
+        print("update: lock release", self._client_name,
+              time.asctime(time.localtime(time.time())), lock)
