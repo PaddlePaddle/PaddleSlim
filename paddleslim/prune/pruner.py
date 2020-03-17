@@ -17,8 +17,13 @@ import sys
 import numpy as np
 import paddle.fluid as fluid
 import copy
-from ..core import VarWrapper, OpWrapper, GraphWrapper
+from ..core import GraphWrapper
+try:
+    from ..core import DyGraph
+except Exception as e:
+    pass
 from .prune_walker import conv2d as conv2d_walker
+from .dy_prune_walker import Conv2d as dy_conv2d_walker
 from ..common import get_logger
 
 __all__ = ["Pruner"]
@@ -38,7 +43,7 @@ class Pruner():
         self.criterion = criterion
 
     def prune(self,
-              program,
+              graph,
               scope,
               params,
               ratios,
@@ -68,7 +73,13 @@ class Pruner():
         """
 
         self.pruned_list = []
-        graph = GraphWrapper(program.clone())
+        if isinstance(graph, fluid.Program):
+            graph = GraphWrapper(program.clone())
+        elif isinstance(graph, torch.nn.Module):
+            graph = DyGraph(graph)
+            conv2d_walker = dy_conv2d_walker
+        else:
+            raise NotImplementedError('The type of graph is not supported.')
         param_backup = {} if param_backup else None
         param_shape_backup = {} if param_shape_backup else None
 

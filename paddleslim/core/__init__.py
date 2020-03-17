@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .graph_wrapper import GraphWrapper, VarWrapper, OpWrapper
+from .graph_wrapper import GraphWrapper
 from .registry import Registry
 
-__all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper', 'Registry']
+__all__ = ['GraphWrapper', 'Registry']
+
+try:
+    from .dy_graph import DyGraph
+    __all__ += ['DyGraph']
+except Exception as e:
+    pass
