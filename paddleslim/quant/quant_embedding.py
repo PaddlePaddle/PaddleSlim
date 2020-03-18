@@ -203,7 +203,6 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
             threshold = config['threshold']
         else:
             abs_array = np.max(np.abs(array))
-            print(abs_array)
             if abs_array < 1.0:
                 return array
             threshold = np.percentile(np.abs(array), 99.99)
