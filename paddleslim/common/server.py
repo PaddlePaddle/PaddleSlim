@@ -1,7 +1,3 @@
-#collection parameters + Lock
-#
-#from multiprocessing import Lock
-
 import os
 import six
 if six.PY2:
@@ -12,8 +8,9 @@ import logging
 import numpy as np
 import time
 import multiprocessing as mp
-from multiprocessing import Lock, RLock, Process
+from multiprocessing import RLock, Process
 from multiprocessing.managers import BaseManager
+from ctypes import c_bool, c_ulong
 from threading import Thread
 import paddle.fluid as fluid
 from .log_helper import get_logger
@@ -24,9 +21,9 @@ _logger = get_logger(__name__, level=logging.INFO)
 PublicAuthKey = u'AbcXyz3'
 
 client_queue = Queue.Queue(300)
-current_client = list()
-lock = RLock()
-client_dict = dict()
+update_lock = RLock()
+max_update_times = Queue.Queue(1)
+client_list = Queue.Queue()
 params_dict = dict()
 
 
@@ -54,23 +51,24 @@ class Server(object):
             global params_dict
             return params_dict
 
-        def get_client_dict():
-            global client_dict
-            return client_dict
+        def get_client_list():
+            global client_list
+            return client_list
 
-        def get_current_client():
-            global current_client
-            return current_client
+        def get_update_lock():
+            global update_lock
+            return update_lock
 
-        def get_lock():
-            global lock
-            return lock
+        def get_max_update_times():
+            global max_update_times
+            return max_update_times
 
         BaseManager.register('get_client_queue', callable=get_client_queue)
         BaseManager.register('get_params_dict', callable=get_params_dict)
-        BaseManager.register('get_client_dict', callable=get_client_dict)
-        BaseManager.register('get_current_client', callable=get_current_client)
-        BaseManager.register('get_lock', callable=get_lock)
+        BaseManager.register('get_client_list', callable=get_client_list)
+        BaseManager.register(
+            'get_max_update_times', callable=get_max_update_times)
+        BaseManager.register('get_update_lock', callable=get_update_lock)
         manager = BaseManager(
             address=self._address, authkey=PublicAuthKey.encode())
         manager.start()
@@ -79,7 +77,8 @@ class Server(object):
     def start(self):
         self._manager = self._start_manager()
         self._params_dict = self._manager.get_params_dict()
-        self._lock = self._manager.get_lock()
+        max_update_times = self._manager.get_max_update_times()
+        max_update_times.put(0)
 
         self.main_program = fluid.Program()
         self.startup_program = fluid.Program()
@@ -103,33 +102,13 @@ class Server(object):
 
         self._params_dict.update(var_dict)
 
-        t = Thread(
-            target=self.before_exit, args=(
-                self.main_program,
-                self.place, ))
-        t.setDaemon(True)
-        t.start()
+        listen = Thread(target=self._save_params, args=())
+        listen.setDaemon(True)
+        listen.start()
 
-    def run_sync(self):
-        pass
-
-    def run_async(self):
-        lock = self._manager.get_lock()
-        current_client = self._manager.get_current_client()
-        params_dict = self._manager.get_params_dict()
-
-        try:
-            self._client_queue = self._manager.get_client_queue()
-            self._current_client = self._manager.get_current_client()
-            self._current_client.clear()
-            if not self._client_queue.empty():
-                self._current_client = self._client_queue.get()
-        except:
-            pass
-
-    def before_exit(self, program, place):
+    def _save_params(self):
         while True:
-            if int(time.time()) % 100 == 0:
+            if int(time.time()) % 3600 == 0:
                 params_dict = self._manager.get_params_dict()
 
                 def list2dict(lists):
@@ -143,7 +122,7 @@ class Server(object):
                 params_dict = list2dict(self._params_dict.items())
 
                 self._controller.set_params(self.main_program, params_dict,
-                                            fluid.CUDAPlace(0))
+                                            self.place)
 
                 if self._save_controller:
                     self._controller.save_controller(self.main_program,

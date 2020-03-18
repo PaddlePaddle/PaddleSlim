@@ -81,6 +81,7 @@ class RLNAS(object):
                 "utf-8")).hexdigest()
         self._controller_client = Client(
             controller=self._controller,
+            is_sync=is_sync,
             address=(server_ip, server_port),
             client_name=self._client_name)
 
