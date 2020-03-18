@@ -1,6 +1,4 @@
 import paddle.fluid as fluid
-import sys
-sys.path.append("../")
 import paddleslim.quant as quant
 import unittest
 
