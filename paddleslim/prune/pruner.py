@@ -172,9 +172,9 @@ class Pruner():
                 dist_sum_list.append((dist_sum, out_i))
             min_gm_filters = sorted(
                 dist_sum_list, key=lambda x: x[0])[:prune_num]
-            pruned_idx = [x[1] for x in min_gm_filters]
+            pruned_idx = np.array([x[1] for x in min_gm_filters])
 
-        elif self.criterion == "batch_norm_scale":
+        elif self.criterion == "batch_norm_scale" or self.criterion == "optimal_threshold":
             param_var = graph.var(param)
             conv_op = param_var.outputs()[0]
             conv_output = conv_op.outputs("Output")[0]
@@ -183,8 +183,28 @@ class Pruner():
                 bn_scale_param = bn_op.inputs("Scale")[0].name()
                 bn_scale_np = np.array(
                     scope.find_var(bn_scale_param).get_tensor())
-                prune_num = int(round(bn_scale_np.shape[axis] * ratio))
-                pruned_idx = np.abs(bn_scale_np).argsort()[:prune_num]
+                if self.criterion == "batch_norm_scale":
+                    prune_num = int(round(bn_scale_np.shape[axis] * ratio))
+                    pruned_idx = np.abs(bn_scale_np).argsort()[:prune_num]
+                elif self.criterion == "optimal_threshold":
+
+                    def get_optimal_threshold(weight, percent=0.001):
+                        weight[weight < 1e-18] = 1e-18
+                        weight_sorted = np.sort(weight)
+                        weight_square = weight_sorted**2
+                        total_sum = weight_square.sum()
+                        acc_sum = 0
+                        for i in range(weight_square.size):
+                            acc_sum += weight_square[i]
+                            if acc_sum / total_sum > percent:
+                                break
+                        th = (weight_sorted[i - 1] + weight_sorted[i]
+                              ) / 2 if i > 0 else 0
+                        return th
+
+                    optimal_th = get_optimal_threshold(bn_scale_np, 0.12)
+                    pruned_idx = np.squeeze(
+                        np.argwhere(bn_scale_np < optimal_th))
             else:
                 raise SystemExit(
                     "Can't find BatchNorm op after Conv op in Network.")
