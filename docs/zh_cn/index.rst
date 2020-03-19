@@ -15,6 +15,7 @@
    quick_start/index
    tutorials/index
    api_cn/index
+   FAQ/index
    model_zoo.md
    algo/algo.md
 
