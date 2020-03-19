@@ -31,6 +31,13 @@ class VarWrapper(object):
         self._is_parameter = is_parameter
         self._tensor = tensor
 
+    def data(self):
+        return np.array(self._tensor.data)
+
+    def set_data(self, data, place=None):
+        assert self._tensor is not None
+        self._tensor.data = self._tensor.new_tensor(data)
+
     def __eq__(self, v):
         """
         Overwrite this function for ...in... syntax in python.
@@ -198,78 +205,92 @@ class DyGraph(object):
         """
         super(DyGraph, self).__init__()
         self.module = module
-        self._graph = torch.jit.trace(self.module,
-                                      torch.rand(input_shape)).graph
-        print self._graph
-        self.children = {}
-        for name, child in self.module.named_children():
-            self.children[name] = child
+        traced = torch.jit.trace(self.module, torch.rand(input_shape))
 
-        self.id2child = {}
-        for node in self._graph.nodes():
-            if "prim::GetAttr" == node.kind() and "self.1" == node.inputsAt(
-                    0).debugName():
-                #                    print dir(node)
-                self.id2child[node.output().debugName()] = node["name"]
+        self._trace_graph(traced, input=None, nodes={}, vars={})
 
-        print self.id2child
+#        self._graph = traced.graph
+#        for name,child in traced.named_modules():
+#            print name, child.graph
+#        print dir(traced)
+#        print self._graph
+#        self.children = {}
+#        for name, child in self.module.named_modules():
+#            self.children[name] = child
+##            print "child: {}".format(name)
+#
+#        self.id2child = {}
+#        for node in self._graph.nodes():
+#            if "prim::GetAttr" == node.kind() and "self.1" == node.inputsAt(
+#                    0).debugName():
+#                print node.output().graph
+#                self.id2child[node.output().debugName()] = node["name"]
+#
+#        print self.id2child
+#
+#        self.vars = {}
+#        self.nodes = {}
+#        for node in self._graph.nodes():
+#            if "prim::CallMethod" == node.kind() and "forward" == node["name"]:
+#                module_id = node.inputsAt(0).debugName()
+#                node_id = node.output().debugName() + "-" + module_id
+#                in_var_id = node.inputsAt(1).debugName()
+#                out_var_id = node.output().debugName()
+#                if node_id not in self.nodes:
+#                    self.nodes[node_id] = OpWrapper(node_id,
+#                                                    self.id2child[module_id])
+#                    self.nodes[node_id].module = self.children[self.id2child[
+#                        module_id]]
+#
+#                for param_id, param in self.nodes[
+#                        node_id].module.named_parameters():
+#                    param_id = ".".join([self.id2child[module_id], param_id])
+#                    if param_id not in self.vars:
+#                        self.vars[param_id] = VarWrapper(
+#                            param_id, is_parameter=True, tensor=param)
+#                        self.nodes[node_id].all_inputs().append(self.vars[
+#                            param_id])
+#                        self.vars[param_id].outputs().append(self.nodes[
+#                            node_id])
+#
+#                if in_var_id not in self.vars:
+#                    self.vars[in_var_id] = VarWrapper(in_var_id)
+#                if out_var_id not in self.vars:
+#                    self.vars[out_var_id] = VarWrapper(out_var_id)
+#                self.nodes[node_id].all_inputs().append(self.vars[in_var_id])
+#                self.nodes[node_id].all_outputs().append(self.vars[out_var_id])
+#                self.vars[in_var_id].outputs().append(self.nodes[node_id])
+#                self.vars[out_var_id].inputs().append(self.nodes[node_id])
+#            elif node.kind().startswith("aten::"):
+#                #                print dir(node)
+#                node_id = node.output().debugName() + "-" + node.kind()
+#                #                node_id = node.debugName()
+#                if node_id not in self.nodes:
+#                    self.nodes[node_id] = OpWrapper(node_id, node.kind())
+#
+##                    self.nodes[node_id].type = node.kind()
+#                for input in node.inputs():
+#                    in_var_id = input.debugName()
+#                    if in_var_id not in self.vars:
+#                        self.vars[in_var_id] = VarWrapper(in_var_id)
+#                    self.vars[in_var_id].outputs().append(self.nodes[node_id])
+#                    self.nodes[node_id].all_inputs().append(self.vars[
+#                        in_var_id])
+#
+#                for output in node.outputs():
+#                    out_var_id = output.debugName()
+#                    if out_var_id not in self.vars:
+#                        self.vars[out_var_id] = VarWrapper(out_var_id)
+#                    self.vars[out_var_id].inputs().append(self.nodes[node_id])
+#                    self.nodes[node_id].all_outputs().append(self.vars[
+#                        out_var_id])
 
-        self.vars = {}
-        self.nodes = {}
-        for node in self._graph.nodes():
-            if "prim::CallMethod" == node.kind() and "forward" == node["name"]:
-                module_id = node.inputsAt(0).debugName()
-                node_id = node.output().debugName() + "-" + module_id
-                in_var_id = node.inputsAt(1).debugName()
-                out_var_id = node.output().debugName()
-                if node_id not in self.nodes:
-                    self.nodes[node_id] = OpWrapper(node_id,
-                                                    self.id2child[module_id])
-                    self.nodes[node_id].module = self.children[self.id2child[
-                        module_id]]
-
-                for param_id, param in self.nodes[
-                        node_id].module.named_parameters():
-                    param_id = ".".join([self.id2child[module_id], param_id])
-                    if param_id not in self.vars:
-                        self.vars[param_id] = VarWrapper(
-                            param_id, is_parameter=True, tensor=param)
-                        self.nodes[node_id].all_inputs().append(self.vars[
-                            param_id])
-                        self.vars[param_id].outputs().append(self.nodes[
-                            node_id])
-
-                if in_var_id not in self.vars:
-                    self.vars[in_var_id] = VarWrapper(in_var_id)
-                if out_var_id not in self.vars:
-                    self.vars[out_var_id] = VarWrapper(out_var_id)
-                self.nodes[node_id].all_inputs().append(self.vars[in_var_id])
-                self.nodes[node_id].all_outputs().append(self.vars[out_var_id])
-                self.vars[in_var_id].outputs().append(self.nodes[node_id])
-                self.vars[out_var_id].inputs().append(self.nodes[node_id])
-            elif node.kind().startswith("aten::"):
-                #                print dir(node)
-                node_id = node.output().debugName() + "-" + node.kind()
-                #                node_id = node.debugName()
-                if node_id not in self.nodes:
-                    self.nodes[node_id] = OpWrapper(node_id, node.kind())
-
-#                    self.nodes[node_id].type = node.kind()
-                for input in node.inputs():
-                    in_var_id = input.debugName()
-                    if in_var_id not in self.vars:
-                        self.vars[in_var_id] = VarWrapper(in_var_id)
-                    self.vars[in_var_id].outputs().append(self.nodes[node_id])
-                    self.nodes[node_id].all_inputs().append(self.vars[
-                        in_var_id])
-
-                for output in node.outputs():
-                    out_var_id = output.debugName()
-                    if out_var_id not in self.vars:
-                        self.vars[out_var_id] = VarWrapper(out_var_id)
-                    self.vars[out_var_id].inputs().append(self.nodes[node_id])
-                    self.nodes[node_id].all_outputs().append(self.vars[
-                        out_var_id])
+    def _trace_graph(self, traced, input=None, nodes={}, vars={}):
+        inputs = [i for i in traced.graph.inputs()]
+        print inputs[1]
+        input_id = inputs[1].debugName()
+        if input is None and input_id not in vars:
+            vars[input_id] = VarWrapper(input_id)
 
     def all_parameters(self):
         """
@@ -388,19 +409,14 @@ class DyGraph(object):
         Update the shape of parameters in the graph according to tensors in scope.
         It is used after loading pruned parameters from file.
         """
-        for param in self.all_parameters():
-            tensor_shape = np.array(
-                scope.find_var(param.name()).get_tensor()).shape
-            param.set_shape(tensor_shape)
+        pass
 
     def infer_shape(self):
         """
         Update the groups of convolution layer according to current filters.
         It is used after loading pruned parameters from file.
         """
-        for op in self.ops():
-            if op.type() != 'conditional_block':
-                op._op.desc.infer_shape(op._op.block.desc)
+        pass
 
     def update_groups_of_conv(self):
         for op in self.ops():

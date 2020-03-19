@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from paddle.fluid import Program
-from ..core import GraphWrapper, OpWrapper
+from ..core import GraphWrapper
 __all__ = ["LatencyEvaluator", "TableLatencyEvaluator"]
 
 
@@ -65,7 +65,6 @@ class LatencyEvaluator(object):
         return ops
 
     def _conv_op_args(self, op):
-        assert isinstance(op, OpWrapper)
         tmp, res = [], []
         # op_name
         tmp.append('conv')

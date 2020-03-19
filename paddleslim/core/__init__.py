@@ -17,8 +17,9 @@ from .registry import Registry
 
 __all__ = ['GraphWrapper', 'Registry']
 
-try:
-    from .dy_graph import DyGraph
-    __all__ += ['DyGraph']
-except Exception as e:
-    pass
+#try:
+from .dy_graph import DyGraph
+__all__ += ['DyGraph']
+#except Exception as e:
+#    print e
+#    pass

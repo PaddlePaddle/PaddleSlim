@@ -17,7 +17,7 @@ import logging
 import numpy as np
 import paddle.fluid as fluid
 from .pruner import Pruner
-from ..core import VarWrapper, OpWrapper, GraphWrapper
+from ..core import GraphWrapper
 from ..common import SAController
 from ..common import get_logger
 from ..analysis import flops

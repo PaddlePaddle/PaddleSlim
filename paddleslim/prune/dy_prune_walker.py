@@ -108,7 +108,7 @@ class Conv2d(PruneWorker):
             if pruned_axis == 0:
                 if len(self.op.all_inputs()) > 2:  # has bias
                     self.pruned_params.append(
-                        (self.op.all_inputs()[1], channel_axis, pruned_idx))
+                        (self.op.all_inputs()[1], 0, pruned_idx))
                 output_var = self.op.all_outputs()[0]
                 self._visit(output_var, channel_axis)
                 next_ops = output_var.outputs()
@@ -135,7 +135,7 @@ class Conv2d(PruneWorker):
 
             if len(self.op.all_inputs()) > 2:
                 self.pruned_params.append(
-                    (self.op.all_inputs()[1], channel_axis, pruned_idx))
+                    (self.op.all_inputs()[1], 0, pruned_idx))
 
             output_var = self.op.all_outputs()[0]
             next_ops = output_var.outputs()

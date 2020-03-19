@@ -58,7 +58,6 @@ def channel_score_sort(group, graph):
        list: sorted indexes
 
     """
-    assert (isinstance(graph, GraphWrapper))
     name, axis, score = group[
         0]  # sort channels by the first convolution's score
     sorted_idx = score.argsort()

@@ -17,11 +17,13 @@ import sys
 import numpy as np
 import paddle.fluid as fluid
 import copy
-from ..core import VarWrapper, OpWrapper, GraphWrapper
+from ..core import GraphWrapper
+from ..core import DyGraph
 from .group_param import collect_convs
 from .criterion import l1_norm
-from .importance_sort import channel_score_sort, batch_norm_scale
+from .importance_sort import channel_score_sort, batch_norm_scale_sort
 from ..common import get_logger
+import torch
 
 __all__ = ["Pruner"]
 
@@ -57,7 +59,8 @@ class Pruner():
               lazy=False,
               only_graph=False,
               param_backup=False,
-              param_shape_backup=False):
+              param_shape_backup=False,
+              input_shape=None):
         """Pruning the given parameters.
 
         Args:
@@ -82,8 +85,11 @@ class Pruner():
         if isinstance(graph, fluid.Program):
             graph = GraphWrapper(program.clone())
         elif isinstance(graph, torch.nn.Module):
-            graph = DyGraph(graph)
-            conv2d_walker = dy_conv2d_walker
+            assert (
+                input_shape is not None,
+                "input_shape can not be None while graph is instance of torch.nn.Module"
+            )
+            graph = DyGraph(graph, input_shape)
         else:
             raise NotImplementedError('The type of graph is not supported.')
         param_backup = {} if param_backup else None
@@ -93,6 +99,7 @@ class Pruner():
         pruned_params = []
         for param, ratio in zip(params, ratios):
             group = collect_convs([param], graph)[0]  # [(name, axis)]
+            print "group: {}".format(group)
             if only_graph:
 
                 param_v = graph.var(param)
@@ -105,16 +112,17 @@ class Pruner():
 
                 group_values = []
                 for name, axis in group:
-                    values = np.array(scope.find_var(name).get_tensor())
+                    values = graph.var(name).data()
                     group_values.append((name, values, axis))
 
-                scores = self.criterion(
-                    group_with_values)  # [(name, axis, score)]
-
+                scores = self.criterion(group_values)  # [(name, axis, score)]
+                print "scores: {}".format(scores)
                 group_idx = self.channel_sortor(
                     scores, graph=graph)  # [(name, axis, soted_idx)]
+                print "group_idx: {}".format(group_idx)
                 for param, pruned_axis, pruned_idx in group_idx:
-                    pruned_num = len(pruned_idx) * ratio
+                    pruned_num = int(round(len(pruned_idx) * ratio))
+                    print pruned_num
                     pruned_params.append((
                         param, pruned_axis,
                         pruned_idx[:pruned_num]))  # [(name, axis, pruned_idx)]
@@ -142,7 +150,7 @@ class Pruner():
                     new_shape[pruned_axis] -= len(pruned_idx)
                     param.set_shape(new_shape)
                 if not only_graph:
-                    param_t = scope.find_var(param.name()).get_tensor()
+                    param_t = graph.var(param_name).data()
                     if param_backup is not None and (
                             param.name() not in param_backup):
                         param_backup[param.name()] = copy.deepcopy(
@@ -157,10 +165,13 @@ class Pruner():
                         _logger.error("Pruning {}, but get [{}]".format(
                             param.name(), e))
 
-                    param_t.set(pruned_param, place)
+                    graph.var(param_name).set_data(pruned_param, place=place)
         graph.update_groups_of_conv()
         graph.infer_shape()
-        return graph.program, param_backup, param_shape_backup
+        if isinstance(graph, DyGraph):
+            return graph.module, param_backup, param_shape_backup
+        else:
+            return graph.program, param_backup, param_shape_backup
 
     def _cal_pruned_idx(self, graph, scope, param, ratio, axis):
         """

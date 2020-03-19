@@ -14,7 +14,10 @@
 # limitations under the License.
 
 from ..core import GraphWrapper
+from ..core import DyGraph
+import paddle.fluid as fluid
 from .prune_walker import conv2d as conv2d_walker
+from .dy_prune_walker import Conv2d as dy_conv2d_walker
 
 __all__ = ["collect_convs"]
 
@@ -48,8 +51,10 @@ def collect_convs(params, graph):
        list<list<tuple>>: The groups.
 
     """
-    if not isinstance(graph, GraphWrapper):
+    if isinstance(graph, fluid.Program):
         graph = GraphWrapper(graph)
+    elif isinstance(graph, DyGraph):
+        conv2d_walker = dy_conv2d_walker
     groups = []
     for param in params:
         visited = {}
