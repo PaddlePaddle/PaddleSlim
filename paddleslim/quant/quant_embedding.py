@@ -314,7 +314,7 @@ def quant_embedding(program, place, config=None, scope=None):
     Returns:
         None
     """
-    config = {} if config is None else config
+    config = config or {}
     config = _merge_config(copy.deepcopy(_default_config), config)
     scope = fluid.global_scope() if scope is None else scope
 
