@@ -1,6 +1,6 @@
 ---
 # weight quantize type, default is "channel_wise_abs_max"
-weight_quantize_type: "channel_wise_abs_max"
+weight_quantize_type: "moving_average_abs_max"
 # activation quantize type, default is "moving_average_abs_max"
 activation_quantize_type: "moving_average_abs_max"
 # weight quantize bit num, default is 8
@@ -11,7 +11,7 @@ activation_bits: 8
 not_quant_pattern: ["skip_quant"]
 # ops of type in quantize_op_types, will be quantized
 #quantize_op_types: ["conv2d", "depthwise_conv2d", "mul"]
-quantize_op_types: ["conv2d", "depthwise_conv2d", "mul"]
+quantize_op_types: ["conv2d", "depthwise_conv2d", "mul", "pool2d", "elementwise_add"]
 # data type after quantization, such as "uint8", "int8", etc. default is "int8"
 dtype: "int8"
 # window size for "range_abs_max" quantization. defaulf is 10000
@@ -19,4 +19,4 @@ window_size: 10000
 # The decay coefficient of moving average, default is 0.9
 moving_rate: 0.9
 # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPE        
-is_full_quantize: True
+is_full_quantize: False
