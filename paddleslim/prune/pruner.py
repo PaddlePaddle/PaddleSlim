@@ -79,7 +79,11 @@ class Pruner():
             if only_graph:
                 param_v = graph.var(param)
                 pruned_num = int(round(param_v.shape()[0] * ratio))
-                pruned_idx = [0] * pruned_num
+                if self.criterion == "optimal_threshold":
+                    pruned_idx = self._cal_pruned_idx(
+                        graph, scope, param, ratio, axis=0)
+                else:
+                    pruned_idx = [0] * pruned_num
             else:
                 pruned_idx = self._cal_pruned_idx(
                     graph, scope, param, ratio, axis=0)
@@ -202,7 +206,7 @@ class Pruner():
                               ) / 2 if i > 0 else 0
                         return th
 
-                    optimal_th = get_optimal_threshold(bn_scale_np, 0.12)
+                    optimal_th = get_optimal_threshold(bn_scale_np, ratio)
                     pruned_idx = np.squeeze(
                         np.argwhere(bn_scale_np < optimal_th))
             else:
