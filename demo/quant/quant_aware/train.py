@@ -148,6 +148,9 @@ def compress(args):
     exe = fluid.Executor(place)
     exe.run(fluid.default_startup_program())
 
+    assert os.path.exists(
+        args.pretrained_model), "pretrained_model doesn't exist"
+
     if args.pretrained_model:
 
         def if_exist(var):
@@ -241,11 +244,11 @@ def compress(args):
                 exe,
                 dirname=os.path.join(args.checkpoint_dir, 'best_model'),
                 main_program=val_program)
-
-    fluid.io.load_persistables(
-        exe,
-        dirname=os.path.join(args.checkpoint_dir, 'best_model'),
-        main_program=val_program)
+    if os.path.exists(os.path.join(args.checkpoint_dir, 'best_model')):
+        fluid.io.load_persistables(
+            exe,
+            dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+            main_program=val_program)
     ############################################################################################################
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
