@@ -10,7 +10,7 @@
 
 本示例为在MobileNetV2的搜索空间上搜索FLOPs更小的模型。
 ## 1 搜索空间配置
-默认搜索空间为`MobileNetV2`，详细的搜索空间配置请参考<a href='../../docs/zh_cn/api_cn/search_space.rst'>搜索空间配置文档</a>。
+默认搜索空间为`MobileNetV2`，详细的搜索空间配置请参考<a href='../../docs/zh_cn/api_cn/search_space.md'>搜索空间配置文档</a>。
 
 ## 2 启动训练
 
