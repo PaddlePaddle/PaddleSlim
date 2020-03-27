@@ -24,7 +24,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,   8,                 "Minibatch size.")
+add_arg('batch_size',       int,   128,                 "Minibatch size.")
 add_arg('use_gpu',          bool, False,                "Whether to use GPU or not.")
 add_arg('model',            str,  "ResNet50",                "The target model.")
 add_arg('pretrained_model', str,  "/home/li/models/pretrained_models_zoo/ResNet50_pretrained",                "Whether to use pretrained model.")
@@ -35,7 +35,7 @@ add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay 
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
 add_arg('num_epochs',       int,  1,               "The number of total epochs.")
-add_arg('total_images',     int,  48,               "The number of total training images.")
+add_arg('total_images',     int,  50000,               "The number of total training images.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
 add_arg('config_file',      str, "./config.yaml",                 "The config file for compression with yaml format.")
 add_arg('data',             str, "imagenet",             "Which data to use. 'mnist' or 'imagenet'")
@@ -113,9 +113,8 @@ def compress(args):
         image_shape = "1,28,28"
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_reader = reader.train(
-            data_dir="/home/li/data/ILSVRC2012/small/train/")
-        val_reader = reader.val(data_dir="/home/li/data/ILSVRC2012/small/val/")
+        train_reader = reader.train(data_dir="/home/li/data/ILSVRC2012/")
+        val_reader = reader.val(data_dir="/home/li/data/ILSVRC2012/")
         class_dim = 1000
         image_shape = "3,224,224"
     else:
