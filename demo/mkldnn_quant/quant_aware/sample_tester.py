@@ -1,4 +1,4 @@
-#   copyright (c) 2019 paddlepaddle authors. all rights reserved.
+#   copyright (c) 2020 paddlepaddle authors. all rights reserved.
 #
 # licensed under the apache license, version 2.0 (the "license");
 # you may not use this file except in compliance with the license.
@@ -194,7 +194,7 @@ class SampleTester(unittest.TestCase):
                 labels = np.array([x[1] for x in data]).astype('int64')
 
                 if (with_accuracy_layer == False):
-                    # QAT INT8 models do not have accuracy measuring layers
+                    # models that do not have accuracy measuring layers
                     start = time.time()
                     out = exe.run(inference_program,
                                   feed={feed_target_names[0]: images},
@@ -205,7 +205,7 @@ class SampleTester(unittest.TestCase):
                     batch_acc1, batch_acc5 = self._get_batch_accuracy(out[0],
                                                                       labels)
                 else:
-                    # FP32 models have accuracy measuring layers
+                    # models have accuracy measuring layers
                     labels = labels.reshape([-1, 1])
                     start = time.time()
                     out = exe.run(inference_program,
@@ -250,7 +250,7 @@ class SampleTester(unittest.TestCase):
             return
 
         infer_model_path = test_case_args.infer_model
-        assert infer_model_path, 'The FP32 model path cannot be empty. Please, use the --infer_model option.'
+        assert infer_model_path, 'The model path cannot be empty. Please, use the --infer_model option.'
         data_path = test_case_args.infer_data
         assert data_path, 'The dataset path cannot be empty. Please, use the --infer_data option.'
         batch_size = test_case_args.batch_size
