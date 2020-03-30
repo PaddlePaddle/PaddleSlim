@@ -1,3 +1,17 @@
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import six
 import time
@@ -62,7 +76,7 @@ class Client(object):
             res_dict.update(tmp_dict)
         return res_dict
 
-    def next_tokens(self, status):
+    def next_tokens(self, status, is_inference=False):
         lock = None
         if self._is_sync and self._update_times != 0:
             ### sync mode, next token must wait all client update params if this client is not added now.
@@ -90,7 +104,9 @@ class Client(object):
         if lock != None:
             lock.release()
         self.params_dict = self.list2dict(params_dict.items())
-        tokens = self._controller.next_tokens(status, self.params_dict)
+        tokens = self._controller.next_tokens(
+            status, self.params_dict, is_inference=is_inference)
+        _logger.info("current token is: {}".format(tokens))
 
         return tokens
 
@@ -115,7 +131,12 @@ class Client(object):
             current_params_dict = self._controller.update(
                 rewards, self.params_dict, **kwargs)
         except Exception as err:
-            lock.release()
+            _logger.error("get information from server error: {}".format(err))
+            self._manager.get_client_list().get()
+            try:
+                lock.release()
+            except:
+                pass
             pid = os.getpid()
             os.kill(pid, signal.SIGTERM)
 
@@ -149,3 +170,4 @@ class Client(object):
         client_queue = self._manager.get_client_queue()
         client_queue.put(self._client_name)
         lock.release()
+        _logger.info("current rewards update done")

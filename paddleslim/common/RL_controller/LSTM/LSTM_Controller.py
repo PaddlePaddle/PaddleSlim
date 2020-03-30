@@ -1,10 +1,24 @@
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid import ParamAttr
 from paddle.fluid.layers import RNNCell, LSTMCell, rnn
 from paddle.fluid.contrib.layers import basic_lstm
-from ..RLbase_controller import RLBaseController
+from ...controller import RLBaseController
 from ..utils import RLCONTROLLER
 
 
@@ -39,184 +53,213 @@ class lstm_cell(RNNCell):
 
 @RLCONTROLLER.register
 class LSTM(RLBaseController):
-    def __init__(self, **kwargs):
+    def __init__(self, use_gpu=False, **kwargs):
+        self.use_gpu = use_gpu
         self.lstm_num_layers = kwargs.get('lstm_num_layers')
         self.hidden_size = kwargs.get('hidden_size')
-        self.temperature = kwargs.get('temperature')
         self.range_tables = kwargs.get('range_tables')
-        self.decay = kwargs.get('decay') if 'decay' in kwargs else 0.99
-        self.weight_entropy = kwargs.get(
-            'weight_entropy') if 'weight_entroy' in kwargs else None
-        self.tanh_constant = kwargs.get(
-            'tanh_constant') if 'tanh_constant' in kwargs else None
-        #self.sample_entropy = fluid.layers.create_tensor(dtype='float32', name='sample_entropy', persistable=True) #0.0
-        #self.sample_log_probs = fluid.layers.create_tensor(dtype='float32', name='sample_log_probs', persistable=True) #0.0
-        self.baseline = 0.0
+        self.temperature = kwargs.get('temperature') or None
+        self.tanh_constant = kwargs.get('tanh_constant') or None
+        self.decay = kwargs.get('decay') or 0.99
+        self.weight_entropy = kwargs.get('weight_entropy') or None
+        self.controller_batch_size = kwargs.get('controller_batch_size') or 1
 
         self.max_range_table = max(self.range_tables) + 1
 
+        self._create_parameter()
+        self._build_program()
+
+        self.place = fluid.CUDAPlace(0) if self.use_gpu else fluid.CPUPlace()
+        self.exe = fluid.Executor(self.place)
+        self.exe.run(fluid.default_startup_program())
+
+        self.param_dict = self.get_params(self.learn_program)
+
     def _lstm(self, inputs, hidden, cell, token_idx):
         cells = lstm_cell(self.lstm_num_layers, self.hidden_size)
-        output, new_states = cells.call(inputs, states=([[cell, hidden]]))
+        output, new_states = cells.call(inputs, states=([[hidden, cell]]))
         logits = fluid.layers.fc(new_states[0], self.range_tables[token_idx])
 
-        logits = logits / self.temperature
+        if self.temperature is not None:
+            logits = logits / self.temperature
+        if self.tanh_constant is not None:
+            logits = self.tanh_constant * fluid.layers.tanh(logits)
+
         return logits, output, new_states
 
-    def _network(self, inputs, hidden, cell):
+    def _create_parameter(self):
+        self.emb_w = fluid.layers.create_parameter(
+            name='emb_w',
+            shape=(self.max_range_table, self.hidden_size),
+            dtype='float32',
+            default_initializer=uniform_initializer(1.0))
+
+        self.g_emb = fluid.layers.create_parameter(
+            name='emb_g',
+            shape=(self.controller_batch_size, self.hidden_size),
+            dtype='float32',
+            default_initializer=uniform_initializer(1.0))
+        self.baseline = fluid.layers.create_global_var(
+            shape=[1],
+            value=0.0,
+            dtype='float32',
+            persistable=True,
+            name='baseline')
+        self.baseline.stop_gradient = True
+
+    def _network(self, hidden, cell, init_actions=None, is_inference=False):
         actions = []
-        sample_entropies = []
+        entropies = []
         sample_log_probs = []
 
-        for idx in range(len(self.range_tables)):
-            logits, output, states = self._lstm(
-                inputs, hidden, cell, token_idx=idx)
-            hidden, cell = np.squeeze(states)
-            probs = fluid.layers.softmax(logits, axis=1)
-            action = fluid.layers.sampling_id(probs)
-            log_prob = fluid.layers.cross_entropy(probs, action)
-            sample_log_probs.append(log_prob)
-            #self.sample_log_probs += fluid.layers.reduce_sum(log_prob)
+        with fluid.unique_name.guard('Controller'):
+            self._create_parameter()
+            inputs = self.g_emb
 
-            entropy = log_prob * fluid.layers.exp(-1 * log_prob)
-            entropy.stop_gradient = True
-            sample_entropies.append(entropy)
-            #self.sample_entropy = fluid.layers.reduce_sum(entropy)
+            for idx in range(len(self.range_tables)):
+                logits, output, states = self._lstm(
+                    inputs, hidden, cell, token_idx=idx)
+                hidden, cell = np.squeeze(states)
+                probs = fluid.layers.softmax(logits, axis=1)
+                if is_inference:
+                    action = fluid.layers.argmax(probs, axis=1)
+                else:
+                    if init_actions:
+                        action = fluid.layers.slice(
+                            init_actions,
+                            axes=[1],
+                            starts=[idx],
+                            ends=[idx + 1])
+                        action.stop_gradient = True
+                    else:
+                        action = fluid.layers.sampling_id(probs)
+                actions.append(action)
+                log_prob = fluid.layers.cross_entropy(probs, action)
+                sample_log_probs.append(log_prob)
 
-            action_emb = fluid.layers.cast(action, dtype=np.int64)
-            emb_w = fluid.layers.create_parameter(
-                name='emb_w',
-                shape=(self.max_range_table, self.hidden_size),
-                dtype='float32',
-                default_initializer=fluid.initializer.Xavier())
-            inputs = fluid.layers.gather(emb_w, action_emb)
+                entropy = log_prob * fluid.layers.exp(-1 * log_prob)
+                entropy.stop_gradient = True
+                entropies.append(entropy)
 
-            actions.append(action)
+                action_emb = fluid.layers.cast(action, dtype=np.int64)
+                inputs = fluid.layers.gather(self.emb_w, action_emb)
 
-        sample_log_probs = fluid.layers.stack(sample_log_probs)
-        self.sample_log_probs = fluid.layers.reduce_sum(sample_log_probs)
+            sample_log_probs = fluid.layers.stack(sample_log_probs)
+            self.sample_log_probs = fluid.layers.reduce_sum(sample_log_probs)
+
+            entropies = fluid.layers.stack(entropies)
+            self.sample_entropies = fluid.layers.reduce_sum(entropies)
 
         return actions
 
-    def _build_program(self,
-                       main_program,
-                       startup_program,
-                       is_test=False,
-                       batch_size=1):
-        self.batch_size = batch_size
-        with fluid.program_guard(main_program, startup_program):
-            with fluid.unique_name.guard('Controller'):
-                inputs = fluid.data(
-                    name='inputs',
-                    shape=[None, self.hidden_size],
-                    dtype='float32')
-                hidden = fluid.data(
-                    name='hidden', shape=[None, self.hidden_size])
-                cell = fluid.data(name='cell', shape=[None, self.hidden_size])
-                tokens = self._network(inputs, hidden, cell)
+    def _build_program(self, is_inference=False):
+        self.pred_program = fluid.Program()
+        self.learn_program = fluid.Program()
+        with fluid.program_guard(self.pred_program):
+            self.g_emb = fluid.layers.create_parameter(
+                name='emb_g',
+                shape=(self.controller_batch_size, self.hidden_size),
+                dtype='float32',
+                default_initializer=uniform_initializer(1.0))
+            hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
+            cell = fluid.data(name='cell', shape=[None, self.hidden_size])
+            self.tokens = self._network(
+                hidden, cell, is_inference=is_inference)
 
-                if is_test == False:
-                    rewards = fluid.data(name='rewards', shape=[None])
+        with fluid.program_guard(self.learn_program):
+            hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
+            cell = fluid.data(name='cell', shape=[None, self.hidden_size])
+            init_actions = fluid.data(
+                name='init_actions',
+                shape=[None, len(self.range_tables)],
+                dtype='int64')
+            self._network(hidden, cell, init_actions=init_actions)
 
-                    avg_rewards = fluid.layers.reduce_mean(rewards)
+            rewards = fluid.data(name='rewards', shape=[None])
+            self.rewards = fluid.layers.reduce_mean(rewards)
 
-                    if self.weight_entropy is not None:
-                        avg_rewards += self.weight_entropy * self.sample_entropies
+            if self.weight_entropy is not None:
+                self.rewards += self.weight_entropy * self.sample_entropies
 
-                    loss = avg_rewards * self.sample_log_probs
-                    #self.baseline = self.baseline - (1.0 - self.decay) * (
-                    #    self.baseline - avg_rewards)
-                    #loss = self.sample_log_probs * (
-                    #    avg_rewards - self.baseline)
-                    optimizer = fluid.optimizer.Adam(learning_rate=0.1)
-                    optimizer.minimize(loss)
-                    return (inputs, hidden, rewards), tokens, loss
+            self.sample_log_probs = fluid.layers.reduce_sum(
+                self.sample_log_probs)
 
-        return (inputs, hidden), tokens
+            fluid.layers.assign(self.baseline - (1.0 - self.decay) *
+                                (self.baseline - self.rewards), self.baseline)
+            self.loss = self.sample_log_probs * (self.rewards - self.baseline)
+            fluid.clip.set_gradient_clip(
+                clip=fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0))
+            optimizer = fluid.optimizer.Adam(learning_rate=1e-3)
+            optimizer.minimize(self.loss)
 
-    def _create_input(self, inputs, is_test=True, actual_rewards=None):
+    def _create_input(self, is_test=True, actual_rewards=None):
         feed_dict = dict()
-        np_inputs = np.random.random(
-            (self.batch_size, self.hidden_size)).astype('float32')
         np_init_hidden = np.zeros(
-            (self.batch_size, self.hidden_size)).astype('float32')
+            (self.num_archs, self.hidden_size)).astype('float32')
         np_init_cell = np.zeros(
-            (self.batch_size, self.hidden_size)).astype('float32')
+            (self.num_archs, self.hidden_size)).astype('float32')
 
-        assert (len(inputs) == 2 or len(inputs) == 3), ""
-
-        feed_dict["inputs"] = np_inputs
         feed_dict["hidden"] = np_init_hidden
         feed_dict["cell"] = np_init_cell
 
         if is_test == False:
-            assert actual_rewards != None, "if you want to update controller, you must inputs a reward"
-            if isinstance(actual_rewards, np.float):
+            if isinstance(actual_rewards, np.float32):
+                assert actual_rewards != None, "if you want to update controller, you must inputs a reward"
                 actual_rewards = np.expand_dims(actual_rewards, axis=0)
+            elif isinstance(actual_rewards, np.float) or isinstance(
+                    actual_rewards, np.float64):
+                actual_rewards = np.float32(actual_rewards)
+                assert actual_rewards != None, "if you want to update controller, you must inputs a reward"
+                actual_rewards = np.expand_dims(actual_rewards, axis=0)
+            else:
+                assert actual_rewards.all(
+                ) != None, "if you want to update controller, you must inputs a reward"
+                actual_rewards = actual_rewards.astype(np.float32)
 
             feed_dict['rewards'] = actual_rewards
+            feed_dict['init_actions'] = np.array(self.init_tokens)
 
         return feed_dict
 
-    def next_tokens(self, num_archs=1, params_dict=None):
+    def next_tokens(self, num_archs=1, params_dict=None, is_inference=False):
         """ sample next tokens according current parameter and inputs"""
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        inputs, tokens = self._build_program(
-            main_program, startup_program, is_test=True, batch_size=num_archs)
+        self.num_archs = num_archs
 
-        place = fluid.CUDAPlace(0)  #if self.args.use_gpu else fluid.CPUPlace()
-        exe = fluid.Executor(place)
-        exe.run(startup_program)
+        self.set_params(self.pred_program, params_dict, self.place)
 
-        for var in main_program.global_block().all_parameters():
-            fluid.global_scope().find_var(var.name).get_tensor().set(
-                params_dict[var.name], place)
+        feed_dict = self._create_input()
 
-        feed_dict = self._create_input(inputs)
+        if is_inference:
+            self._build_program(is_inference=True)
 
-        actions = exe.run(main_program, feed=feed_dict, fetch_list=tokens)
+        actions = self.exe.run(self.pred_program,
+                               feed=feed_dict,
+                               fetch_list=self.tokens)
 
         batch_tokens = []
-        for idx in range(self.batch_size):
+        for idx in range(self.num_archs):
             each_token = {}
             for i, action in enumerate(actions):
-                token = action[idx]  #.asscalar()
+                token = action[idx]
                 if idx in each_token:
                     each_token[idx].append(int(token))
                 else:
                     each_token[idx] = [int(token)]
             batch_tokens.append(each_token[idx])
 
-        ### return batch config type [[]], but search space receive []
-        return np.squeeze(batch_tokens)
+        self.init_tokens = batch_tokens
+        return batch_tokens
 
-    def update(self, rewards, params_dict):
+    def update(self, rewards, params_dict=None):
         """train controller according reward"""
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        inputs, tokens, loss = self._build_program(main_program,
-                                                   startup_program)
+        self.set_params(self.learn_program, params_dict, self.place)
 
-        place = fluid.CUDAPlace(0)  #if self.args.use_gpu else fluid.CPUPlace()
-        exe = fluid.Executor(place)
-        exe.run(startup_program)
+        feed_dict = self._create_input(is_test=False, actual_rewards=rewards)
 
-        self.set_params(main_program, params_dict, place)
-
-        feed_dict = self._create_input(
-            inputs, is_test=False, actual_rewards=rewards)
-
-        build_strategy = fluid.BuildStrategy()
-        compiled_program = fluid.CompiledProgram(
-            main_program).with_data_parallel(
-                loss.name, build_strategy=build_strategy)
-
-        fetch_list = tokens
-        outs = exe.run(compiled_program, feed=feed_dict, fetch_list=fetch_list)
-        tokens = []
-        for o in outs:
-            tokens.append(o[0])
-        print('tokens: ', tokens)
-        params_dict = self.get_params(main_program)
+        loss = self.exe.run(self.learn_program,
+                            feed=feed_dict,
+                            fetch_list=[self.loss])
+        print("Controller: current reward is {}, loss is {}".format(rewards,
+                                                                    loss))
+        params_dict = self.get_params(self.learn_program)
         return params_dict

@@ -1,9 +1,23 @@
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 import parl
 from parl import layers
 from paddle import fluid
 from ..utils import RLCONTROLLER, action_mapping
-from ..RLbase_controller import RLBaseController
+from ...controller import RLBaseController
 from .ddpg_model import DefaultDDPGModel as default_ddpg_model
 from .noise import AdaptiveNoiseSpec as default_noise
 from parl.utils import ReplayMemory
@@ -67,7 +81,8 @@ class DDPGAgent(parl.Agent):
 
 @RLCONTROLLER.register
 class DDPG(RLBaseController):
-    def __init__(self, **kwargs):
+    def __init__(self, use_gpu=False, **kwargs):
+        self.use_gpu = use_gpu
         self.obs_dim = kwargs.get('obs_dim')
         self.act_dim = kwargs.get('act_dim')
         self.model = kwargs.get(
@@ -88,6 +103,7 @@ class DDPG(RLBaseController):
         self.actions_noise = kwargs.get(
             'actions_noise') if 'actions_noise' in kwargs else default_noise
         self.action_dist = 0.0
+        self.place = fluid.CUDAPlace(0) if self.use_gpu else fluid.CPUPlace()
 
         model = self.model(self.act_dim)
 
@@ -103,11 +119,16 @@ class DDPG(RLBaseController):
         self.agent = DDPGAgent(algorithm, self.obs_dim, self.act_dim)
         self.rpm = ReplayMemory(self.memory_size, self.obs_dim, self.act_dim)
 
-    def next_tokens(self, states):
-        batch_states = np.expand_dims(states, axis=0)
-        actions = self.agent.predict(batch_states.astype('float32'))
+        self.pred_program = self.agent.pred_program
+        self.learn_program = self.agent.learn_program
+        self.param_dict = self.get_params(self.learn_program)
+
+    def next_tokens(self, obs, params_dict, is_inference=False):
+        batch_obs = np.expand_dims(obs, axis=0)
+        self.set_params(self.pred_program, params_dict, self.place)
+        actions = self.agent.predict(batch_obs.astype('float32'))
         ### add noise to action
-        if self.actions_noise:
+        if self.actions_noise and is_inference == False:
             actions_noise = np.clip(
                 np.random.normal(
                     actions, scale=self.actions_noise.stdev_curr),
@@ -117,19 +138,20 @@ class DDPG(RLBaseController):
         else:
             actions_noise = actions
         actions_noise = action_mapping(actions_noise, self.range_tables)
-        actions_noise = np.squeeze(actions_noise)
         return actions_noise
 
     def _update_noise(self, actions_dist):
         self.actions_noise.update(actions_dist)
 
-    def update(self, rewards, params_dict, states, actions, states_next,
-               terminal):
-        self.rpm.append(states, actions, self.reward_scale * rewards,
-                        states_next, terminal)
+    def update(self, rewards, params_dict, obs, actions, obs_next, terminal):
+        self.set_params(self.learn_program, params_dict, self.place)
+        self.rpm.append(obs, actions, self.reward_scale * rewards, obs_next,
+                        terminal)
         if self.actions_noise:
             self._update_noise(self.action_dist)
         if self.rpm.size() > self.memory_size:
-            states, actions, rewards, states_next, terminal = rpm.sample_batch(
+            obs, actions, rewards, obs_next, terminal = rpm.sample_batch(
                 self.batch_size)
-        self.agent.learn(states, actions, rewards, states_next, terminal)
+        self.agent.learn(obs, actions, rewards, obs_next, terminal)
+        params_dict = self.get_params(self.learn_program)
+        return params_dict

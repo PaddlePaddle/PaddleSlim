@@ -23,5 +23,6 @@ from .client import Client
 
 __all__ = [
     'EvolutionaryController', 'SAController', 'get_logger', 'ControllerServer',
-    'ControllerClient', 'lock', 'unlock', 'cached_reader', 'Server', 'Client'
+    'ControllerClient', 'lock', 'unlock', 'cached_reader', 'Server', 'Client',
+    'RLBaseController'
 ]

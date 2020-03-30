@@ -22,7 +22,6 @@ import time
 import paddle.fluid as fluid
 from ..common.RL_controller.utils import RLCONTROLLER
 from ..common import get_logger
-from ..analysis import flops
 
 from ..common import Server
 from ..common import Client
@@ -34,12 +33,32 @@ __all__ = ['RLNAS']
 
 
 class RLNAS(object):
-    """ Controller with Reinforencement Learning """
+    """ 
+    Controller with Reinforcement Learning. 
+    Args:
+        key(string): The actual reinforcement learning method.
+        configs(list<tuple>): A list of search space configuration with format [(key, {input_size,
+                              output_size, block_num, block_mask})]. `key` is the name of search space
+                              with data type str. `input_size` and `output_size`  are input size and
+                              output size of searched sub-network. `block_num` is the number of blocks
+                              in searched network, `block_mask` is a list consists by 0 and 1, 0 means
+                              normal block, 1 means reduction block.
+        use_gpu(bool): Whether to use gpu in controller. Default: False.
+        server_addr(tuple): Server address, including ip and port of server. If ip is None or "", will
+                            use host ip if is_server = True. Default: ("", 8881).
+        is_server(bool): Whether current host is controller server. Default: True.
+        is_sync(bool): Whether to update controller in synchronous mode. Default: False.
+        save_controller(string|None): The directory of controller to save, if set to None, not save checkpoint.
+                                      Default: None.
+        load_controller(string|None): The directory of controller to load, if set to None, not load checkpoint.
+                                      Default: None.
+        **kwargs: Additional keyword arguments. 
+    """
 
     def __init__(self,
                  key,
                  configs,
-                 args,
+                 use_gpu=False,
                  server_addr=("", 8881),
                  is_server=True,
                  is_sync=False,
@@ -64,7 +83,7 @@ class RLNAS(object):
             server_ip = self._get_host_ip()
 
         kwargs['range_tables'] = self.range_tables
-        self._controller = cls(**kwargs)
+        self._controller = cls(use_gpu=use_gpu, **kwargs)
 
         if is_server:
             max_client_num = 300
@@ -93,23 +112,49 @@ class RLNAS(object):
         except:
             return socket.gethostbyname('localhost')
 
-    def next_archs(self, states=None):
-        """ Get next archs"""
-        self._current_tokens = self._controller_client.next_tokens(states)
-        archs = self._search_space.token2arch(self._current_tokens)
+    def next_archs(self, obs=None):
+        """ 
+        Get next archs
+        Args:
+            obs(int|list<np.array>): observations in env.
+        """
+        archs = []
+        self._current_tokens = self._controller_client.next_tokens(obs)
+        for token in self._current_tokens:
+            archs.append(self._search_space.token2arch(token))
 
         return archs
 
     def reward(self, rewards, **kwargs):
-        """ reward the score and to train controller """
+        """ 
+        reward the score and to train controller
+        Args:
+            rewards(float|list<float>): rewards get by tokens.
+            **kwargs: Additional keyword arguments. 
+        """
         return self._controller_client.update(rewards, **kwargs)
 
-    def final_archs(self, batch_states):
-        """Get finally architecture"""
-        final_tokens = self._controller_client.next_tokens(batch_states)
+    def final_archs(self, batch_obs):
+        """
+        Get finally architecture
+        Args:
+            batch_obs(int|list<np.array>): obs in env.
+        """
+        final_tokens = self._controller_client.next_tokens(
+            batch_obs, is_inference=True)
         archs = []
         for token in final_tokens:
             arch = self._search_space.token2arch(token)
             archs.append(arch)
 
         return archs
+
+    def tokens2arch(self, tokens):
+        """
+        Convert tokens to model architectures.
+        Args
+            tokens<list>: A list of token. The length and range based on search space.:
+        Returns:
+            list<function>: A model architecture instance according to tokens.
+        """
+        return self._search_space.token2arch(tokens)

@@ -1,12 +1,29 @@
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import six
 if six.PY2:
+    import cPickle as pickle
     import Queue
 else:
+    import pickle
     import queue as Queue
 import logging
 import numpy as np
 import time
+import pickle
 import multiprocessing as mp
 from multiprocessing import RLock, Process
 from multiprocessing.managers import BaseManager
@@ -80,35 +97,32 @@ class Server(object):
         max_update_times = self._manager.get_max_update_times()
         max_update_times.put(0)
 
-        self.main_program = fluid.Program()
-        self.startup_program = fluid.Program()
-        self._controller._build_program(self.main_program,
-                                        self.startup_program)
-
-        self.place = fluid.CUDAPlace(
-            0)  # if self.args.controller_use_gpu else fluid.CPUPlace()
-        exe = fluid.Executor(self.place)
-        exe.run(self.startup_program)
+        param_dict = self._controller.param_dict
 
         if self._load_controller:
             assert os.path.exists(
                 self._load_controller
             ), "controller checkpoint is not exist, please check your directory: {}".format(
                 self._load_controller)
-            self._controller.load_controller(self.main_program,
-                                             self._load_controller)
 
-        var_dict = self._controller.get_params(self.main_program)
+            with open(
+                    os.path.join(self._load_controller, 'rlnas.json'),
+                    'rb') as f:
+                param_dict = pickle.load(f)
 
-        self._params_dict.update(var_dict)
+        self._params_dict.update(param_dict)
 
         listen = Thread(target=self._save_params, args=())
         listen.setDaemon(True)
         listen.start()
 
     def _save_params(self):
+        ### save params per 3600s
         while True:
             if int(time.time()) % 3600 == 0:
+                print(
+                    "============================save params========================="
+                )
                 params_dict = self._manager.get_params_dict()
 
                 def list2dict(lists):
@@ -120,14 +134,16 @@ class Server(object):
                     return res_dict
 
                 params_dict = list2dict(self._params_dict.items())
-
-                self._controller.set_params(self.main_program, params_dict,
-                                            self.place)
-
                 if self._save_controller:
-                    self._controller.save_controller(self.main_program,
-                                                     self._save_controller)
+                    if not os.path.exists(self._save_controller):
+                        os.makedirs(self._save_controller)
+                    with open(
+                            os.path.join(self._save_controller, 'rlnas.json'),
+                            'wb') as f:
+                        pickle.dump(params_dict, f)
 
     def __del__(self):
-        if self._manager:
+        try:
             self._manager.shutdown()
+        except:
+            pass
