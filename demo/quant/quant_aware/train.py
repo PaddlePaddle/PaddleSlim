@@ -10,12 +10,15 @@ import numpy as np
 import paddle.fluid as fluid
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
+#sys.path.append("../../../")
+sys.path.append("/cv/workspace/PaddleSlim/")
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 from paddleslim.quant import quant_aware, quant_post, convert
 import models
 from utility import add_arguments, print_arguments
-
+sys.path.append('./')
+from dsq import *
 quantization_model_save_dir = './quantization_models/'
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -138,21 +141,41 @@ def compress(args):
     #    According to the weight and activation quantization type, the graph will be added
     #    some fake quantize operators and fake dequantize operators.
     ############################################################################################################
+    func = dsq
     val_program = quant_aware(
-        val_program, place, quant_config, scope=None, for_test=True)
+        val_program,
+        place,
+        quant_config,
+        scope=None,
+        for_test=True,
+        quantize_func=func)
     compiled_train_prog = quant_aware(
-        train_prog, place, quant_config, scope=None, for_test=False)
+        train_prog,
+        place,
+        quant_config,
+        scope=None,
+        for_test=False,
+        quantize_func=func)
     opt = create_optimizer(args)
     opt.minimize(avg_cost)
 
     exe = fluid.Executor(place)
     exe.run(fluid.default_startup_program())
-
+    fluid.io.save_inference_model(
+        dirname='./dsq_inference',
+        feeded_var_names=['image'],
+        target_vars=[out],
+        executor=exe,
+        main_program=val_program,
+        model_filename='__model__',
+        params_filename='__params__')
     if args.pretrained_model:
 
         def if_exist(var):
-            return os.path.exists(
-                os.path.join(args.pretrained_model, var.name))
+            res = os.path.exists(os.path.join(args.pretrained_model, var.name))
+            if res:
+                print(var.name)
+            return res
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
@@ -162,7 +185,7 @@ def compress(args):
 
     train_feeder = feeder = fluid.DataFeeder([image, label], place)
     val_feeder = feeder = fluid.DataFeeder(
-        [image, label], place, program=val_program)
+        [image, label], place, program=train_prog)
 
     def test(epoch, program):
         batch_id = 0

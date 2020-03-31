@@ -157,7 +157,12 @@ def _parse_configs(user_config):
     return configs
 
 
-def quant_aware(program, place, config=None, scope=None, for_test=False):
+def quant_aware(program,
+                place,
+                config=None,
+                scope=None,
+                for_test=False,
+                quantize_func=None):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
@@ -205,7 +210,8 @@ def quant_aware(program, place, config=None, scope=None, for_test=False):
             window_size=config['window_size'],
             moving_rate=config['moving_rate'],
             quantizable_op_type=transform_pass_ops,
-            skip_pattern=config['not_quant_pattern'])
+            skip_pattern=config['not_quant_pattern'],
+            quantize_func=quantize_func)
 
         transform_pass.apply(main_graph)
 
