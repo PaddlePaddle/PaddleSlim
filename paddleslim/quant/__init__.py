@@ -21,7 +21,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 try:
     fluid.require_version('1.7.0')
-    from .quanter import quant_aware, quant_post, convert
+    from .quanter import quant_aware, quant_post, convert, quant_post_only_weight
 except Exception as e:
     _logger.warning(
         "If you want to use training-aware and post-training quantization, "
