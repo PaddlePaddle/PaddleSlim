@@ -133,14 +133,14 @@ class Server(object):
                         res_dict.update(tmp_dict)
                     return res_dict
 
-                params_dict = list2dict(self._params_dict.items())
+                save_params_dict = list2dict(params_dict.items())
                 if self._save_controller:
                     if not os.path.exists(self._save_controller):
                         os.makedirs(self._save_controller)
                     with open(
                             os.path.join(self._save_controller, 'rlnas.json'),
                             'wb') as f:
-                        pickle.dump(params_dict, f)
+                        pickle.dump(save_params_dict, f)
 
     def __del__(self):
         try:

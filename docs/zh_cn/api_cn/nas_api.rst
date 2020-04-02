@@ -195,6 +195,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 
 
   `DDPG`算法的附加参数：
+  注意：使用`DDPG`算法的话必须安装parl。安装方法: pip install parl
 
   - obs_dim(int): observation的维度。
   - model(class，optional): DDPG算法中使用的具体的模型，一般是个类，包含actor_model和critic_model，需要实现两个方法，一个是policy用来获得策略，另一个是value，需要获得Q值。可以参考默认的model` <>_`实现您自己的model。默认：`default_ddpg_model`.
