@@ -5,7 +5,7 @@ SA-NAS
 ----------------------
 
 
-通过参数配置搜索空间。更多搜索空间的使用可以参考: [search_space](../search_space.md)
+通过参数配置搜索空间。更多搜索空间的使用可以参考: `search_space <https://paddlepaddle.github.io/PaddleSlim/api_cn/search_space.html>`_
 
 **参数：**
 
@@ -119,7 +119,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       sanas.reward(float(score))
    
    
-   .. py:methd:: tokens2arch(tokens)
+   .. py:method:: tokens2arch(tokens)
 
    通过一组tokens得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。tokens的形式是一个列表，tokens映射到搜索空间转换成相应的网络结构，一组tokens对应唯一的一个网络结构。
    
@@ -128,7 +128,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
    - **tokens(list):** - 一组tokens。tokens的长度和范围取决于搜索空间。
    
    **返回：**
-   根据传入的token得到一个模型结构实例。
+   根据传入的token得到一个模型结构实例列表。
    
    **示例代码：**
 
@@ -153,8 +153,10 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
    **示例代码：**
 
    .. code-block:: python
+
       import paddle.fluid as fluid
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       sanas = SANAS(configs=config)
       print(sanas.current_info())
+

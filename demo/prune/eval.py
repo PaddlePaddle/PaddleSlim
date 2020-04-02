@@ -8,6 +8,7 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
+sys.path.append("../../")
 from paddleslim.prune import load_model
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
@@ -68,7 +69,7 @@ def eval(args):
     val_feeder = feeder = fluid.DataFeeder(
         [image, label], place, program=val_program)
 
-    load_model(val_program, "./model/mobilenetv1_prune_50")
+    load_model(exe, val_program, args.model_path)
 
     batch_id = 0
     acc_top1_ns = []

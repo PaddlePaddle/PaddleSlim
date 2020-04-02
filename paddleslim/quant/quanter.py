@@ -238,6 +238,8 @@ def quant_post(executor,
                algo='KL',
                quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
                is_full_quantize=False,
+               weight_bits=8,
+               activation_bits=8,
                is_use_cache_file=False,
                cache_dir="./temp_post_training"):
     """
@@ -274,6 +276,8 @@ def quant_post(executor,
         quantizable_op_type(list[str], optional): The list of op types
                         that will be quantized. Default: ["conv2d", "depthwise_conv2d", 
                         "mul"].
+        weight_bits(int, optional): quantization bit number for weights.
+        activation_bits(int): quantization bit number for activation.
         is_full_quantize(bool): if True, apply quantization to all supported quantizable op type.
                         If False, only apply quantization to the input quantizable_op_type. Default is False.
         is_use_cache_file(bool): If False, all temp data will be saved in memory. If True,
@@ -295,6 +299,8 @@ def quant_post(executor,
         algo=algo,
         quantizable_op_type=quantizable_op_type,
         is_full_quantize=is_full_quantize,
+        weight_bits=weight_bits,
+        activation_bits=activation_bits,
         is_use_cache_file=is_use_cache_file,
         cache_dir=cache_dir)
     post_training_quantization.quantize()

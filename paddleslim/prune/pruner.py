@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import logging
+import sys
 import numpy as np
+from functools import reduce
 import paddle.fluid as fluid
 import copy
 from ..core import VarWrapper, OpWrapper, GraphWrapper
@@ -77,10 +79,14 @@ class Pruner():
             if only_graph:
                 param_v = graph.var(param)
                 pruned_num = int(round(param_v.shape()[0] * ratio))
-                pruned_idx = [0] * pruned_num
+                if self.criterion == "optimal_threshold":
+                    pruned_idx = self._cal_pruned_idx(
+                        graph, scope, param, ratio, axis=0)
+                else:
+                    pruned_idx = [0] * pruned_num
             else:
-                param_t = np.array(scope.find_var(param).get_tensor())
-                pruned_idx = self._cal_pruned_idx(param_t, ratio, axis=0)
+                pruned_idx = self._cal_pruned_idx(
+                    graph, scope, param, ratio, axis=0)
             param = graph.var(param)
             conv_op = param.outputs()[0]
             walker = conv2d_walker(
@@ -130,7 +136,7 @@ class Pruner():
         graph.infer_shape()
         return graph.program, param_backup, param_shape_backup
 
-    def _cal_pruned_idx(self, param, ratio, axis):
+    def _cal_pruned_idx(self, graph, scope, param, ratio, axis):
         """
         Calculate the index to be pruned on axis by given pruning ratio.
 
@@ -145,11 +151,67 @@ class Pruner():
         Returns:
             list<int>: The indexes to be pruned on axis.
         """
-        prune_num = int(round(param.shape[axis] * ratio))
-        reduce_dims = [i for i in range(len(param.shape)) if i != axis]
         if self.criterion == 'l1_norm':
-            criterions = np.sum(np.abs(param), axis=tuple(reduce_dims))
-        pruned_idx = criterions.argsort()[:prune_num]
+            param_t = np.array(scope.find_var(param).get_tensor())
+            prune_num = int(round(param_t.shape[axis] * ratio))
+            reduce_dims = [i for i in range(len(param_t.shape)) if i != axis]
+            criterions = np.sum(np.abs(param_t), axis=tuple(reduce_dims))
+            pruned_idx = criterions.argsort()[:prune_num]
+        elif self.criterion == 'geometry_median':
+            param_t = np.array(scope.find_var(param).get_tensor())
+            prune_num = int(round(param_t.shape[axis] * ratio))
+
+            def get_distance_sum(param, out_idx):
+                w = param.view()
+                reduce_dims = reduce(lambda x, y: x * y, param.shape[1:])
+                w.shape = param.shape[0], reduce_dims
+                selected_filter = np.tile(w[out_idx], (w.shape[0], 1))
+                x = w - selected_filter
+                x = np.sqrt(np.sum(x * x, -1))
+                return x.sum()
+
+            dist_sum_list = []
+            for out_i in range(param_t.shape[0]):
+                dist_sum = get_distance_sum(param_t, out_i)
+                dist_sum_list.append((dist_sum, out_i))
+            min_gm_filters = sorted(
+                dist_sum_list, key=lambda x: x[0])[:prune_num]
+            pruned_idx = np.array([x[1] for x in min_gm_filters])
+
+        elif self.criterion == "batch_norm_scale" or self.criterion == "optimal_threshold":
+            param_var = graph.var(param)
+            conv_op = param_var.outputs()[0]
+            conv_output = conv_op.outputs("Output")[0]
+            bn_op = conv_output.outputs()[0]
+            if bn_op is not None:
+                bn_scale_param = bn_op.inputs("Scale")[0].name()
+                bn_scale_np = np.array(
+                    scope.find_var(bn_scale_param).get_tensor())
+                if self.criterion == "batch_norm_scale":
+                    prune_num = int(round(bn_scale_np.shape[axis] * ratio))
+                    pruned_idx = np.abs(bn_scale_np).argsort()[:prune_num]
+                elif self.criterion == "optimal_threshold":
+
+                    def get_optimal_threshold(weight, percent=0.001):
+                        weight[weight < 1e-18] = 1e-18
+                        weight_sorted = np.sort(weight)
+                        weight_square = weight_sorted**2
+                        total_sum = weight_square.sum()
+                        acc_sum = 0
+                        for i in range(weight_square.size):
+                            acc_sum += weight_square[i]
+                            if acc_sum / total_sum > percent:
+                                break
+                        th = (weight_sorted[i - 1] + weight_sorted[i]
+                              ) / 2 if i > 0 else 0
+                        return th
+
+                    optimal_th = get_optimal_threshold(bn_scale_np, ratio)
+                    pruned_idx = np.squeeze(
+                        np.argwhere(bn_scale_np < optimal_th))
+            else:
+                raise SystemExit(
+                    "Can't find BatchNorm op after Conv op in Network.")
         return pruned_idx
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):

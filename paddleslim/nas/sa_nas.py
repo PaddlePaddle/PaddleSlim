@@ -190,7 +190,10 @@ class SANAS(object):
             self._iter = 0
 
     def _get_host_ip(self):
-        return socket.gethostbyname(socket.gethostname())
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except:
+            return socket.gethostbyname('localhost')
 
     def tokens2arch(self, tokens):
         """
