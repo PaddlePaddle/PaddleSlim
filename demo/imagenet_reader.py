@@ -100,7 +100,11 @@ def distort_color(img):
 def process_image(sample, mode, color_jitter, rotate):
     img_path = sample[0]
 
-    img = Image.open(img_path)
+    try:
+        img = Image.open(img_path)
+    except:
+        print(img_path, "not exists!")
+        return None
     if mode == 'train':
         if rotate: img = rotate_image(img)
         img = random_crop(img, DATA_DIM)
