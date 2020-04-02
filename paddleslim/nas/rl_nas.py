@@ -36,7 +36,7 @@ class RLNAS(object):
     """ 
     Controller with Reinforcement Learning. 
     Args:
-        key(string): The actual reinforcement learning method.
+        key(str): The actual reinforcement learning method. Current support in paddleslim is `LSTM` and `DDPG`.
         configs(list<tuple>): A list of search space configuration with format [(key, {input_size,
                               output_size, block_num, block_mask})]. `key` is the name of search space
                               with data type str. `input_size` and `output_size`  are input size and
@@ -48,9 +48,9 @@ class RLNAS(object):
                             use host ip if is_server = True. Default: ("", 8881).
         is_server(bool): Whether current host is controller server. Default: True.
         is_sync(bool): Whether to update controller in synchronous mode. Default: False.
-        save_controller(string|None): The directory of controller to save, if set to None, not save checkpoint.
+        save_controller(str|None): The directory of controller to save, if set to None, not save checkpoint.
                                       Default: None.
-        load_controller(string|None): The directory of controller to load, if set to None, not load checkpoint.
+        load_controller(str|None): The directory of controller to load, if set to None, not load checkpoint.
                                       Default: None.
         **kwargs: Additional keyword arguments. 
     """
@@ -82,8 +82,9 @@ class RLNAS(object):
         if server_ip == None or server_ip == "":
             server_ip = self._get_host_ip()
 
-        kwargs['range_tables'] = self.range_tables
-        self._controller = cls(use_gpu=use_gpu, **kwargs)
+        self._controller = cls(range_tables=self.range_tables,
+                               use_gpu=use_gpu,
+                               **kwargs)
 
         if is_server:
             max_client_num = 300
@@ -116,7 +117,7 @@ class RLNAS(object):
         """ 
         Get next archs
         Args:
-            obs(int|list<np.array>): observations in env.
+            obs(int|np.array): observations in env.
         """
         archs = []
         self._current_tokens = self._controller_client.next_tokens(obs)
@@ -138,7 +139,7 @@ class RLNAS(object):
         """
         Get finally architecture
         Args:
-            batch_obs(int|list<np.array>): obs in env.
+            batch_obs(int|np.array): observations in env.
         """
         final_tokens = self._controller_client.next_tokens(
             batch_obs, is_inference=True)

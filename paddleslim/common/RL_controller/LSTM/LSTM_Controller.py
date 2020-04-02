@@ -53,11 +53,11 @@ class lstm_cell(RNNCell):
 
 @RLCONTROLLER.register
 class LSTM(RLBaseController):
-    def __init__(self, use_gpu=False, **kwargs):
+    def __init__(self, range_tables, use_gpu=False, **kwargs):
         self.use_gpu = use_gpu
-        self.lstm_num_layers = kwargs.get('lstm_num_layers')
-        self.hidden_size = kwargs.get('hidden_size')
-        self.range_tables = kwargs.get('range_tables')
+        self.range_tables = range_tables
+        self.lstm_num_layers = kwargs.get('lstm_num_layers') or 1
+        self.hidden_size = kwargs.get('hidden_size') or 100
         self.temperature = kwargs.get('temperature') or None
         self.tanh_constant = kwargs.get('tanh_constant') or None
         self.decay = kwargs.get('decay') or 0.99

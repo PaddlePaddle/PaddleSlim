@@ -81,13 +81,13 @@ class DDPGAgent(parl.Agent):
 
 @RLCONTROLLER.register
 class DDPG(RLBaseController):
-    def __init__(self, use_gpu=False, **kwargs):
+    def __init__(self, range_tables, use_gpu=False, **kwargs):
         self.use_gpu = use_gpu
+        self.range_tables = range_tables - np.asarray(1)
+        self.act_dim = len(self.range_tables)
         self.obs_dim = kwargs.get('obs_dim')
-        self.act_dim = kwargs.get('act_dim')
         self.model = kwargs.get(
             'model') if 'model' in kwargs else default_ddpg_model
-        self.range_tables = kwargs.get('range_tables') - np.asarray(1)
         self.actor_lr = kwargs.get(
             'actor_lr') if 'actor_lr' in kwargs else 1e-4
         self.critic_lr = kwargs.get(

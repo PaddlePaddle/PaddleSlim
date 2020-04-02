@@ -13,8 +13,11 @@ from paddleslim.common.RL_controller import RLBaseController
 ### 注意: 类名一定要全部大写
 @RLCONTROLLER.register
 class LSTM(RLBaseController):
-    def __init__(self, args, **kwargs):
-        self.args = args
+    def __init__(self, range_tables, use_gpu=False, **kwargs):
+        ### range_tables 表示tokens的取值范围
+        self.range_tables = range_tables
+        ### use_gpu 表示是否使用gpu来训练controller
+        self.use_gpu = use_gpu
         ### 定义一些强化学习算法中需要的参数
         ...
         ### 构造相应的program, _build_program这个函数会构造两个program，一个是pred_program，一个是learn_program， 并初始化参数
