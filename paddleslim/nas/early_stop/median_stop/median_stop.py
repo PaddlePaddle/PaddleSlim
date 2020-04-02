@@ -34,7 +34,7 @@ class MedianStop(EarlyStopBase):
     """
     Median Stop, reference:
     Args:
-        strategy<str>: the stategy of search.
+        strategy<class instance>: the stategy of search.
         start_epoch<int>: which step to start early stop algorithm.
         mode<str>: bigger is better or smaller is better, chooice in ['maxmize', 'minimize']. Default: maxmize.
     """
