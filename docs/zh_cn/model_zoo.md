@@ -74,9 +74,9 @@ PaddleLite版本： v2.3
 | MobileNetV1 | sensitive -50% | 69.8% / 88.9% (-1.19%/-0.78%) |       9        |  0.56  |37.9892\20.7882\11.3144|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-50.tar) |
 | MobileNetV2 |       -        |         72.15%/90.65%         |       15       |  0.59  |41.7874\23.375\13.3998|-| [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
 | MobileNetV2 |  uniform -50%  | 65.79%/86.11% (-6.35%/-4.47%) |       11       | 0.296  |23.8842\13.8698\8.5572|-| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
-|  ResNet34   |       -        |         72.15%/90.65%         |       84       |  7.36  |217.808\139.943\96.7504|342.32| [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
-|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-1.36%/-0.87%) |       41       |  3.67  |114.787\75.0332\51.8438|452.41| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
-|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-2.04%/-1.06%) |       33       |  3.31  |105.924\69.3222\48.0246|457.25| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
+|  ResNet34   |       -        |         74.57%/92.14%         |       84       |  7.36  |217.808\139.943\96.7504|342.32| [下载链接](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
+|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-3.58%/-2.19%) |       41       |  3.67  |114.787\75.0332\51.8438|452.41| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
+|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-4.33%/-2.51%) |       33       |  3.31  |105.924\69.3222\48.0246|457.25| [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
 
 
 ### 1.3 蒸馏
