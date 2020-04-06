@@ -72,6 +72,7 @@ def run(args):
         program=program,
         reader_config=reader_config,
         exe=exe,
+        use_fp16=True,
         times=args.serving_times)
 
 
