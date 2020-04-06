@@ -203,7 +203,7 @@ $$ Vt = (1 - k) * V + k * V_{t-1} $$
 
 ## 3. 蒸馏
 
-   一般情况下，模型参数量越多，结构越复杂，其性能越好，但参数也越允余，运算量和资源消耗也越大；模型蒸馏是将复杂网络中的有用信息将复杂网络中的有用信息提取出来提取出来，迁移到一个更小的网络中去，在我们的工具包中，支持两种蒸馏的方法。
+   一般情况下，模型参数量越多，结构越复杂，其性能越好，但参数也越允余，运算量和资源消耗也越大；模型蒸馏将复杂网络中的有用信息提取出来提取出来，迁移到一个更小的网络中去，在我们的工具包中，支持两种蒸馏的方法。
     第一种是传统的蒸馏方法（参考论文：[Distilling the Knowledge in a Neural Network](https://arxiv.org/pdf/1503.02531.pdf)）
    使用复杂的网络作为teacher模型去监督训练一个参数量和运算量更少的student模型。teacher模型可以是一个或者多个提前训练好的高性能模型。student模型的训练有两个目标：一个是原始的目标函数，为student模型输出的类别概率和label的交叉熵，记为hard-target；另一个是student模型输出的类别概率和teacher模型输出的类别概率的交叉熵，记为soft target，这两个loss加权后得到最终的训练loss，共同监督studuent模型的训练。
    第二种是基于FSP的蒸馏方法（参考论文：[A Gift from Knowledge Distillation: Fast Optimization, Network Minimization and Transfer Learning](http://openaccess.thecvf.com/content_cvpr_2017/papers/Yim_A_Gift_From_CVPR_2017_paper.pdf)）
