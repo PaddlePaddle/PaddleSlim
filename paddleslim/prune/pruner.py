@@ -15,12 +15,13 @@
 import logging
 import sys
 import numpy as np
+from functools import reduce
 import paddle.fluid as fluid
 import copy
 from ..core import VarWrapper, OpWrapper, GraphWrapper
 from .group_param import collect_convs
-from .criterion import l1_norm
-from .importance_sort import channel_score_sort, batch_norm_scale
+from .criterion import CRITERION
+from .idx_selector import IDX_SELECTOR
 from ..common import get_logger
 
 __all__ = ["Pruner"]
@@ -33,20 +34,25 @@ class Pruner():
 
     Args:
         criterion(str|function): the criterion used to sort channels for pruning.
-        channel_sortor(str|function): 
+        idx_selector(str|function): 
 
     """
 
-    def __init__(self, criterion="l1_norm", channel_sortor="channel_score"):
+    def __init__(self,
+                 criterion="l1_norm",
+                 idx_selector="default_idx_selector"):
         self.criterion = criterion
         self.channel_sortor = channel_sortor
-        if criterion == "l1_norm":
-            self.criterion = l1_norm
+        if isinstance(criterion, str):
+            self.criterion = CRITERION.get(criterion)
+        else:
+            self.criterion = criterion
+        if isinstance(idx_selector, str):
+            self.idx_selector = IDX_SELECTOR.get(idx_selector)
+        else:
+            self.idx_selector = idx_selector
 
-        if channel_sortor == "channel_score":
-            self.channel_sortor = channel_score_sort
-        elif channel_sortor == "batch_norm_scale":
-            self.channel_sortor = batch_norm_scale_sort
+        self.pruned_weights = False
 
     def prune(self,
               program,
@@ -87,7 +93,7 @@ class Pruner():
         pruned_params = []
         for param, ratio in zip(params, ratios):
             group = collect_convs([param], graph)[0]  # [(name, axis)]
-            if only_graph:
+            if only_graph and self.idx_selector.__name__ == "default_idx_selector":
 
                 param_v = graph.var(param)
                 pruned_num = int(round(param_v.shape()[0] * ratio))
@@ -96,22 +102,17 @@ class Pruner():
                     pruned_params.append((name, axis, pruned_idx))
 
             else:
-
+                assert ((not self.pruned_weights),
+                        "The weights have been pruned once.")
                 group_values = []
                 for name, axis in group:
                     values = np.array(scope.find_var(name).get_tensor())
                     group_values.append((name, values, axis))
 
-                scores = self.criterion(
-                    group_with_values)  # [(name, axis, score)]
+                scores = self.criterion(group_with_values,
+                                        graph)  # [(name, axis, score)]
 
-                group_idx = self.channel_sortor(
-                    scores, graph=graph)  # [(name, axis, soted_idx)]
-                for param, pruned_axis, pruned_idx in group_idx:
-                    pruned_num = len(pruned_idx) * ratio
-                    pruned_params.append((
-                        param, pruned_axis,
-                        pruned_idx[:pruned_num]))  # [(name, axis, pruned_idx)]
+                pruned_params = self.idx_selector(scores)
 
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
@@ -154,44 +155,8 @@ class Pruner():
                     param_t.set(pruned_param, place)
         graph.update_groups_of_conv()
         graph.infer_shape()
+        self.pruned_weights = (not only_graph)
         return graph.program, param_backup, param_shape_backup
-
-    def _cal_pruned_idx(self, graph, scope, param, ratio, axis):
-        """
-        Calculate the index to be pruned on axis by given pruning ratio.
-
-        Args:
-            name(str): The name of parameter to be pruned.
-            param(np.array): The data of parameter to be pruned.
-            ratio(float): The ratio to be pruned.
-            axis(int): The axis to be used for pruning given parameter.
-                       If it is None, the value in self.pruning_axis will be used.
-                       default: None.
-
-        Returns:
-            list<int>: The indexes to be pruned on axis.
-        """
-        if self.criterion == 'l1_norm':
-            param_t = np.array(scope.find_var(param).get_tensor())
-            prune_num = int(round(param_t.shape[axis] * ratio))
-            reduce_dims = [i for i in range(len(param_t.shape)) if i != axis]
-            criterions = np.sum(np.abs(param_t), axis=tuple(reduce_dims))
-            pruned_idx = criterions.argsort()[:prune_num]
-        elif self.criterion == "batch_norm_scale":
-            param_var = graph.var(param)
-            conv_op = param_var.outputs()[0]
-            conv_output = conv_op.outputs("Output")[0]
-            bn_op = conv_output.outputs()[0]
-            if bn_op is not None:
-                bn_scale_param = bn_op.inputs("Scale")[0].name()
-                bn_scale_np = np.array(
-                    scope.find_var(bn_scale_param).get_tensor())
-                prune_num = int(round(bn_scale_np.shape[axis] * ratio))
-                pruned_idx = np.abs(bn_scale_np).argsort()[:prune_num]
-            else:
-                raise SystemExit(
-                    "Can't find BatchNorm op after Conv op in Network.")
-        return pruned_idx
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
         """

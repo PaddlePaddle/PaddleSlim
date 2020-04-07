@@ -100,7 +100,11 @@ def distort_color(img):
 def process_image(sample, mode, color_jitter, rotate):
     img_path = sample[0]
 
-    img = Image.open(img_path)
+    try:
+        img = Image.open(img_path)
+    except:
+        print(img_path, "not exists!")
+        return None
     if mode == 'train':
         if rotate: img = rotate_image(img)
         img = random_crop(img, DATA_DIM)
@@ -156,8 +160,7 @@ def _reader_creator(file_list,
                 for line in lines:
                     if mode == 'train' or mode == 'val':
                         img_path, label = line.split()
-                        img_path = os.path.join(
-                            os.path.join(data_dir, mode), img_path)
+                        img_path = os.path.join(data_dir, img_path)
                         yield img_path, int(label)
                     elif mode == 'test':
                         img_path = os.path.join(data_dir, line)

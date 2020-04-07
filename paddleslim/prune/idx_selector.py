@@ -17,23 +17,20 @@
 import logging
 from ..core import GraphWrapper
 from ..common import get_logger
+from ..core import Registry
 
-__all__ = ["channel_score_sort", "batch_norm_scale_sort"]
+__all__ = ["IDX_SELECTOR"]
+
+IDX_SELECTOR = Registry('idx_selector')
 
 
-def channel_score_sort(group, graph):
-    """Sort channels of convolution by importance.
+@IDX_SELECTOR.register
+def default_idx_selector(group, ratio):
+    """Get the pruned indexes by given ratio.
 
-    This function return a list of parameters' sorted indexes on given axis.
+    This function return a list of parameters' pruned indexes on given axis.
     Each element of list is a tuple with format (name, axis, indexes) in which 'name' is parameter's name
-    and 'axis' is the axis pruning on and `indexes` is sorted indexes.
-
-    The sorted indexes is computed by below steps:
-
-    step1: Find the first convolution layer in given group.
-    step2: Get the scores of first convolution's channels.
-    step3: Get sorted indexes by calling scores.argsort().
-    step4: All the parameters in group share the same sorted indexes computed in step3.
+    and 'axis' is the axis pruning on and `indexes` is indexes to be pruned.
 
     Args:
        group(list): A group of parameters. The first parameter of the group is convolution layer's weight
@@ -50,37 +47,32 @@ def channel_score_sort(group, graph):
                     `[0.7, 0.5, 0.6]` are the importance sores of each output channel in "conv1_weights"
                     while axis is 0.
      
-
-       graph(GraphWrapper): The graph is an auxiliary for sorting. It won't be used in this function.
-
     Returns:
 
-       list: sorted indexes
+       list: pruned indexes
 
     """
     assert (isinstance(graph, GraphWrapper))
     name, axis, score = group[
         0]  # sort channels by the first convolution's score
     sorted_idx = score.argsort()
+
+    pruned_num = len(sorted_idx) * ratio
+    pruned_idx = sorted_idx[:pruned_num]
+
     idxs = []
     for name, axis, score in group:
-        idxs.append((name, axis, sorted_idx))
+        idxs.append((name, axis, pruned_idx))
     return idxs
 
 
-def batch_norm_scale_sort(group, graph):
-    """Sort channels of convolution by scales in batch norm layer.
+@IDX_SELECTOR.register
+def optimal_threshold(group, ratio):
+    """Get the pruned indexes by given ratio.
 
-    This function return a list of parameters' sorted indexes on given axis.
+    This function return a list of parameters' pruned indexes on given axis.
     Each element of list is a tuple with format (name, axis, indexes) in which 'name' is parameter's name
-    and 'axis' is the axis pruning on and `indexes` is sorted indexes.
-
-    The sorted indexes is computed by below steps:
-
-    step1: Find the batch norm layer after the first convolution in given group.
-    step2: Get the scales of the batch norm layer.
-    step3: Get sorted indexes by calling `scales.argsort()`.
-    step4: All the parameters in group share the same sorted indexes computed in step3.
+    and 'axis' is the axis pruning on and `indexes` is indexes to be pruned.
 
     Args:
        group(list): A group of parameters. The first parameter of the group is convolution layer's weight
@@ -97,37 +89,29 @@ def batch_norm_scale_sort(group, graph):
                     `[0.7, 0.5, 0.6]` are the importance sores of each output channel in "conv1_weights"
                     while axis is 0.
      
-
-       graph(GraphWrapper): The graph is an auxiliary for sorting. It is used to find
-                            the batch norm layer after given convolution layer.
-
     Returns:
-       list: sorted indexes
+
+       list: pruned indexes
+
     """
     assert (isinstance(graph, GraphWrapper))
-    # step1: Get first convolution
-    conv_weight, axis, score = group[0]
-    param_var = graph.var(conv_weight)
-    conv_op = param_var.outputs()[0]
+    name, axis, score = group[
+        0]  # sort channels by the first convolution's score
 
-    # step2: Get bn layer after first convolution
-    conv_output = conv_op.outputs("Output")[0]
-    bn_op = conv_output.outputs()[0]
-    if bn_op is not None:
-        bn_scale_param = bn_op.inputs("Scale")[0].name()
-    else:
-        raise SystemExit("Can't find BatchNorm op after Conv op in Network.")
-
-    # steps3: Find score of bn and compute sorted indexes 
-    sorted_idx = None
-    for name, axis, score in group:
-        if name == bn_scale_param:
-            sorted_idx = score.argsort()
+    score[scoew < 1e-18] = 1e-18
+    score_sorted = np.sort(score)
+    score_square = score_sorted**2
+    total_sum = score_square.sum()
+    acc_sum = 0
+    for i in range(score_square.size):
+        acc_sum += score_square[i]
+        if acc_sum / total_sum > ratio:
             break
+    th = (score_sorted[i - 1] + score_sorted[i]) / 2 if i > 0 else 0
 
-    # step4: Share the sorted indexes with all the parameter in group
+    pruned_idx = np.squeeze(np.argwhere(score < th))
+
     idxs = []
-    if sorted_idx is not None:
-        for name, axis, score in group:
-            idxs.append((name, axis, sorted_idx))
+    for name, axis, score in group:
+        idxs.append((name, axis, pruned_idx))
     return idxs

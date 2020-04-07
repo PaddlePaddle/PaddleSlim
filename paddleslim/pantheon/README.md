@@ -14,6 +14,7 @@ The illustration below shows an application of Pantheon, where the sudent model 
 
 - Python 2.7.x or 3.x
 - PaddlePaddle >= 1.7.0
+- System: MacOS/Linux
 
 ## APIs
 

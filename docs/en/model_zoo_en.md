@@ -50,27 +50,28 @@ PaddleLite latency(ms)
 | Kirin 970 | ResNet50    | quant_aware   | 488.361        | 260.1697       | 142.416        | 479.5668       | 249.8485       | 138.1742       |
 | Kirin 970 | ResNet50    | quant_post    | 489.6188       | 258.3279       | 142.6063       | 480.0064       | 249.5339       | 138.5284       |
 
-
-
-
-
 ### 1.2 Pruning
 
+PaddleLite:
 
-| Model | Method | Top-1/Top-5 Acc | Model Size（MB） | GFLOPs | Download |
-|:--:|:---:|:--:|:--:|:--:|:--:|
-| MobileNetV1 |    Baseline    |         70.99%/89.68%         |       17       |  1.11  | [model](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar) |
-| MobileNetV1 |  uniform -50%  | 69.4%/88.66% (-1.59%/-1.02%)  |       9        |  0.56  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_uniform-50.tar) |
-| MobileNetV1 | sensitive -30% |  70.4%/89.3% (-0.59%/-0.38%)  |       12       |  0.74  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-30.tar) |
-| MobileNetV1 | sensitive -50% | 69.8% / 88.9% (-1.19%/-0.78%) |       9        |  0.56  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-50.tar) |
-| MobileNetV2 |       -        |         72.15%/90.65%         |       15       |  0.59  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
-| MobileNetV2 |  uniform -50%  | 65.79%/86.11% (-6.35%/-4.47%) |       11       | 0.296  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
-|  ResNet34   |       -        |         72.15%/90.65%         |       84       |  7.36  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
-|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-1.36%/-0.87%) |       41       |  3.67  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
-|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-2.04%/-1.06%) |       33       |  3.31  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
+env: Qualcomm SnapDragon 845 + armv8
+
+criterion: time cost in Thread1/Thread2/Thread4
+
+PaddleLite version: v2.3
 
 
-
+|Model | Method | Top-1/Top-5 Acc | ModelSize(MB) | GFLOPs |PaddleLite cost(ms)|TensorRT speed(FPS)| download |
+|:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
+| MobileNetV1 |    Baseline    |         70.99%/89.68%         |       17       |  1.11  |66.052\35.8014\19.5762|-| [download](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar) |
+| MobileNetV1 |  uniform -50%  | 69.4%/88.66% (-1.59%/-1.02%)  |       9        |  0.56  | 33.5636\18.6834\10.5076|-|[download](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_uniform-50.tar) |
+| MobileNetV1 | sensitive -30% |  70.4%/89.3% (-0.59%/-0.38%)  |       12       |  0.74  | 46.5958\25.3098\13.6982|-|[download](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-30.tar) |
+| MobileNetV1 | sensitive -50% | 69.8% / 88.9% (-1.19%/-0.78%) |       9        |  0.56  |37.9892\20.7882\11.3144|-| [download](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-50.tar) |
+| MobileNetV2 |       -        |         72.15%/90.65%         |       15       |  0.59  |41.7874\23.375\13.3998|-| [download](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
+| MobileNetV2 |  uniform -50%  | 65.79%/86.11% (-6.35%/-4.47%) |       11       | 0.296  |23.8842\13.8698\8.5572|-| [download](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV2_uniform-50.tar) |
+|  ResNet34   |       -        |         74.57%/92.14%         |       84       |  7.36  |217.808\139.943\96.7504|342.32| [download](https://paddle-imagenet-models-name.bj.bcebos.com/ResNet34_pretrained.tar) |
+|  ResNet34   |  uniform -50%  | 70.99%/89.95% (-3.58%/-2.19%) |       41       |  3.67  |114.787\75.0332\51.8438|452.41| [download](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_uniform-50.tar) |
+|  ResNet34   |  auto -55.05%  | 70.24%/89.63% (-4.33%/-2.51%) |       33       |  3.31  |105.924\69.3222\48.0246|457.25| [download](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet34_auto-55.tar) |
 
 ### 1.3 Distillation
 
@@ -85,17 +86,24 @@ PaddleLite latency(ms)
 |ResNet101|teacher|77.56%/93.64%| 173 | [model](http://paddle-imagenet-models-name.bj.bcebos.com/ResNet101_pretrained.tar) |
 |  ResNet50   |             ResNet101 distill              |  77.29%/93.65% (+0.79%/+0.65%)  |       99       | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/ResNet50_distilled.tar) |
 
-!!! note "Note"
-
-    <a name="trans1">[1]</a>：The `_vd` suffix indicates that the pre-trained model uses Mixup. Please refer to the detailed introduction: [mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
+Note: The `_vd` suffix indicates that the pre-trained model uses Mixup. Please refer to the detailed introduction: [mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412)
 
 
 ### 1.4 NAS
 
 | Model | Method | Top-1/Top-5 Acc | Volume（MB） | GFLOPs | Download |
 |:--:|:---:|:--:|:--:|:--:|:--:|
-| MobileNetV2 |       -        |            72.15%/90.65%           |     15      |  0.59  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
-| MobileNetV2 |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [model](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
+|   MobileNetV2   |       -        |            72.15%/90.65%           |     15      |  0.59  | [model](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV2_pretrained.tar) |
+| MobileNetV2_NAS |     SANAS      |  71.518%/90.208% (-0.632%/-0.442%) |     14      | 0.295  | [model](https://paddlemodels.cdn.bcebos.com/PaddleSlim/MobileNetV2_sanas.tar) |
+
+Dataset: Cifar10
+| Model | Method |  Acc  |  Params（MB） | Download |
+|:---:|:--:|:--:|:--:|:--:|
+|           Darts           |   -   |     97.135%         |        3.767         |  -  |
+| Darts_SA(Based on Darts)  | SANAS |  97.276%(+0.141%)   |    3.344(-11.2%)     |  -  |
+
+Note: The token of MobileNetV2_NAS is [4, 4, 5, 1, 1, 2, 1, 1, 0, 2, 6, 2, 0, 3, 4, 5, 0, 4, 5, 5, 1, 4, 8, 0, 0]. The token of Darts_SA is [5, 5, 0, 5, 5, 10, 7, 7, 5, 7, 7, 11, 10, 12, 10, 0, 5, 3, 10, 8].
+
 
 ## 2. Object Detection
 
@@ -136,18 +144,26 @@ Dataset：WIDER-FACE
 
 Dataset：Pasacl VOC & COCO 2017
 
-|             Model              |      Method       |  Dataset   | Image/GPU | Input 608 Box AP | Input 416 Box AP | Input 320 Box AP | Model Size(MB) | GFLOPs (608*608) |                           Download                           |
-| :----------------------------: | :---------------: | :--------: | :-------: | :--------------: | :--------------: | :--------------: | :------------: | :--------------: | :----------------------------------------------------------: |
-|      MobileNet-V1-YOLOv3       |     Baseline      | Pascal VOC |     8     |       76.2       |       76.7       |       75.3       |       94       |      40.49       | [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1_voc.tar) |
-|      MobileNet-V1-YOLOv3       | sensitive -52.88% | Pascal VOC |     8     |   77.6 (+1.4)    |    77.7 (1.0)    |   75.5 (+0.2)    |       31       |      19.08       | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_v1_voc_prune.tar) |
-|      MobileNet-V1-YOLOv3       |         -         |    COCO    |     8     |       29.3       |       29.3       |       27.0       |       95       |      41.35       | [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1.tar) |
-|      MobileNet-V1-YOLOv3       | sensitive -51.77% |    COCO    |     8     |   26.0 (-3.3)    |   25.1 (-4.2)    |   22.6 (-4.4)    |       32       |      19.94       | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_v1_prune.tar) |
-|         R50-dcn-YOLOv3         |         -         |    COCO    |     8     |       39.1       |        -         |        -         |      177       |      89.60       | [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r50vd_dcn.tar) |
-|         R50-dcn-YOLOv3         | sensitive -9.37%  |    COCO    |     8     |   39.3 (+0.2)    |        -         |        -         |      150       |      81.20       | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_prune.tar) |
-|         R50-dcn-YOLOv3         | sensitive -24.68% |    COCO    |     8     |   37.3 (-1.8)    |        -         |        -         |      113       |      67.48       | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_prune578.tar) |
-| R50-dcn-YOLOv3 obj365_pretrain |         -         |    COCO    |     8     |       41.4       |        -         |        -         |      177       |      89.60       | [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r50vd_dcn_obj365_pretrained_coco.tar) |
-| R50-dcn-YOLOv3 obj365_pretrain | sensitive -9.37%  |    COCO    |     8     |   40.5 (-0.9)    |        -         |        -         |      150       |      81.20       | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_obj365_pretrained_coco_prune.tar) |
-| R50-dcn-YOLOv3 obj365_pretrain | sensitive -24.68% |    COCO    |     8     |   37.8 (-3.3)    |        -         |        -         |      113       |      67.48       | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_obj365_pretrained_coco_prune578.tar) |
+PaddleLite:
+
+env: Qualcomm SnapDragon 845 + armv8
+
+criterion: time cost in Thread1/Thread2/Thread4
+
+PaddleLite version: v2.3
+
+|             Model              |      Method       |  Dataset   | Image/GPU | Input 608 Box AP | Input 416 Box AP | Input 320 Box AP | Model Size(MB) | GFLOPs (608*608) | PaddleLite cost(ms)(608*608) | TensorRT speed(FPS)(608*608) |              Download                           |
+| :----------------------------: | :---------------: | :--------: | :-------: | :--------------: | :--------------: | :--------------: | :------------: | :--------------: | :--------------: | :--------------: | :----------------------------: |
+|      MobileNet-V1-YOLOv3       |     Baseline      | Pascal VOC |     8     |       76.2       |       76.7       |       75.3       |       94       |      40.49       | 1238\796.943\520.101 |60.40| [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1_voc.tar) |
+|      MobileNet-V1-YOLOv3       | sensitive -52.88% | Pascal VOC |     8     |   77.6 (+1.4)    |    77.7 (1.0)    |   75.5 (+0.2)    |       31       |      19.08       | 602.497\353.759\222.427 |99.36| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_v1_voc_prune.tar) |
+|      MobileNet-V1-YOLOv3       |         -         |    COCO    |     8     |       29.3       |       29.3       |       27.0       |       95       |      41.35       |-|-| [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_mobilenet_v1.tar) |
+|      MobileNet-V1-YOLOv3       | sensitive -51.77% |    COCO    |     8     |   26.0 (-3.3)    |   25.1 (-4.2)    |   22.6 (-4.4)    |       32       |      19.94       |-|73.93| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_mobilenet_v1_prune.tar) |
+|         R50-dcn-YOLOv3         |         -         |    COCO    |     8     |       39.1       |        -         |        -         |      177       |      89.60       |-|27.68| [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r50vd_dcn.tar) |
+|         R50-dcn-YOLOv3         | sensitive -9.37%  |    COCO    |     8     |   39.3 (+0.2)    |        -         |        -         |      150       |      81.20       |-|30.08| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_prune.tar) |
+|         R50-dcn-YOLOv3         | sensitive -24.68% |    COCO    |     8     |   37.3 (-1.8)    |        -         |        -         |      113       |      67.48       |-|34.32| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_prune578.tar) |
+| R50-dcn-YOLOv3 obj365_pretrain |         -         |    COCO    |     8     |       41.4       |        -         |        -         |      177       |      89.60       |-|-| [model](https://paddlemodels.bj.bcebos.com/object_detection/yolov3_r50vd_dcn_obj365_pretrained_coco.tar) |
+| R50-dcn-YOLOv3 obj365_pretrain | sensitive -9.37%  |    COCO    |     8     |   40.5 (-0.9)    |        -         |        -         |      150       |      81.20       |-|-| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_obj365_pretrained_coco_prune.tar) |
+| R50-dcn-YOLOv3 obj365_pretrain | sensitive -24.68% |    COCO    |     8     |   37.8 (-3.3)    |        -         |        -         |      113       |      67.48       |-|-| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/yolov3_r50vd_dcn_obj365_pretrained_coco_prune578.tar) |
 
 ### 2.3 Distillation
 
@@ -172,11 +188,9 @@ Dataset: WIDER-FACE
 | :------------: | :---------: | :-------: | :------: | :-----------------------------: | :------------: | :------------: | :----------------------------------------------------------: |
 |   BlazeFace    |      -      |     8     |   640    |         91.5/89.2/79.7          |      815       |       71.862     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_original.tar) |
 | BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
-| BlazeFace-NAS1 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
+| BlazeFace-NASV2 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [model](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
 
-!!! note "Note"
-
-    <a name="trans1">[1]</a>: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。
+Note: latency is based on latency_855.txt, the file is test on 855 by PaddleLite。The config of BlazeFace-NASV2 is in [there](https://github.com/PaddlePaddle/PaddleDetection/blob/master/configs/face_detection/blazeface_nas_v2.yml).
 
 
 ## 3. Image Segmentation
@@ -222,8 +236,16 @@ Image segmentation model PaddleLite latency (ms), input size 769x769
 
 ### 3.2 Pruning
 
-|   Model   |      Method       |     mIoU      | Model Size（MB） | GFLOPs |                           Download                           |
-| :-------: | :---------------: | :-----------: | :--------------: | :----: | :----------------------------------------------------------: |
-| fast-scnn |     baseline      |     69.64     |        11        | 14.41  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape.tar) |
-| fast-scnn | uniform  -17.07%  | 69.58 (-0.06) |       8.5        | 11.95  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_uniform-17.tar) |
-| fast-scnn | sensitive -47.60% | 66.68 (-2.96) |       5.7        |  7.55  | [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_sensitive-47.tar) |
+PaddleLite:
+
+env: Qualcomm SnapDragon 845 + armv8
+
+criterion: time cost in Thread1/Thread2/Thread4
+
+PaddleLite version: v2.3
+
+|   Model   |      Method       |     mIoU      | Model Size（MB） | GFLOPs | PaddleLite cost(ms) | TensorRT speed(FPS) |          Download        |
+| :-------: | :---------------: | :-----------: | :--------------: | :----: | :--------------: | :----: |  :-------------------: |
+| fast-scnn |     baseline      |     69.64     |        11        | 14.41  | 1226.36\682.96\415.664 |39.53| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape.tar) |
+| fast-scnn | uniform  -17.07%  | 69.58 (-0.06) |       8.5        | 11.95  | 1140.37\656.612\415.888 |42.01| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_uniform-17.tar) |
+| fast-scnn | sensitive -47.60% | 66.68 (-2.96) |       5.7        |  7.55  | 866.693\494.467\291.748 |51.48| [model](https://paddlemodels.bj.bcebos.com/PaddleSlim/fast_scnn_cityscape_sensitive-47.tar) |
