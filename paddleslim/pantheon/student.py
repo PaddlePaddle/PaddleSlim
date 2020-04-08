@@ -28,7 +28,7 @@ from multiprocessing.managers import BaseManager
 
 from threading import Thread
 
-from paddleslim.pantheon.utils import EndSignal, SyncSignal, StartSignal, public_authkey
+from paddleslim.pantheon.utils import EndSignal, SyncSignal, StartSignal, public_authkey, convert_dtype
 
 __all__ = ["Student"]
 
@@ -114,7 +114,60 @@ class Student(object):
                 except:
                     time.sleep(1.0)
 
-            knowledge_queue = manager.get_knowledge_queue()
+            def merge(knowledge_queues):
+                num = len(knowledge_queues)
+                if num == 1:
+                    return knowledge_queues[0]
+                local_queues = [Queue.Queue(100) for _ in range(num)]
+
+                def receive(queue, local_queue):
+                    while True:
+                        data = queue.get()
+                        queue.task_done()
+                        local_queue.put(data)
+                        if isinstance(data, EndSignal):
+                            break
+
+                knowledge_queue = Queue.Queue(100)
+
+                def gather(local_queues, knowledge_queue):
+                    num = len(local_queues)
+                    end_received = False
+                    while True:
+                        for i in range(num):
+                            data = local_queues[i].get()
+                            local_queues[i].task_done()
+                            if isinstance(data, SyncSignal) and i > 0:
+                                continue
+                            elif isinstance(data, EndSignal):
+                                end_received = True
+                            knowledge_queue.put(data)
+                        if end_received:
+                            break
+
+                # threads to receive knowledge from the online teacher
+                for i in range(num):
+                    p = Thread(
+                        target=receive,
+                        args=(knowledge_queues[i], local_queues[i]))
+                    p.daemon = True
+                    p.start()
+                # thread to gather data from different local queues
+                p = Thread(target=gather, args=(local_queues, knowledge_queue))
+                p.daemon = True
+                p.start()
+                return knowledge_queue
+
+            # get knowledge queues
+            knowledge_queues, idx = [], 0
+            while True:
+                q = manager.get_knowledge_queue(idx)
+                if hasattr(q, "get"):
+                    knowledge_queues.append(q)
+                    idx += 1
+                else:
+                    break
+            knowledge_queue = merge(knowledge_queues)
             self._t2s_queues.append(manager.get_t2s_queue())
             self._s2t_queues.append(manager.get_s2t_queue())
             self._cmd_queues.append(manager.get_cmd_queue())
@@ -237,6 +290,10 @@ class Student(object):
                     knowledge[k] = result
                 elif self._merge_strategy[k] == "mean":
                     knowledge[k] = result / len(tensors)
+            # cast back to original data type if necessary
+            tgt_dtype = self._knowledge_desc[k]["dtype"]
+            if str(knowledge[k].dtype) != tgt_dtype:
+                knowledge[k] = knowledge[k].astype(tgt_dtype)
         return knowledge
 
     def send(self, data, teacher_ids=None):
@@ -383,11 +440,23 @@ class Student(object):
                     [batches[i][key] for i in range(len(batches))])
             return ret_batch
 
-        def listen(in_queue, out_queue, batch_size):
+        def listen(knowledge_queue, out_queue):
+            """
+            listen on the knowledge queue for one teacher, get knowledge data
+            and put it into a local queue (out_queue). 
+            """
+            while True:
+                data = knowledge_queue.get()
+                knowledge_queue.task_done()
+                out_queue.put(data)
+                if isinstance(data, EndSignal):
+                    break
+
+        def make_new_batch(in_queue, out_queue, batch_size):
             """ 
-            listen on the knowledge queue for one teacher, get knowledge 
-            data and make a new batch data in the batch size of student, 
-            then put it into the intermediate queue (out_queue).
+            Get knowledge data from a local queue and make a new batch data in 
+            the batch size of student, then put it into the intermediate 
+            queue (out_queue).
             """
             batches, num_samples = [], 0
             while True:
@@ -467,17 +536,25 @@ class Student(object):
                 queue.put(StartSignal())
                 queue.join()
 
-        # launch multiple threads to listen on all knowledge queues
-        med_queues = [Queue.Queue(100) for i in range(self._num_teachers)]
+        # launch threads to listen on all knowledge queues
+        local_queues = [Queue.Queue(100) for i in range(self._num_teachers)]
         for i in range(self._num_teachers):
             listen_thread = Thread(
                 target=listen,
-                args=(self._teacher_knowledge_queues[i], med_queues[i],
-                      self._batch_size))
+                args=(self._teacher_knowledge_queues[i], local_queues[i]))
             listen_thread.dameon = True
             listen_thread.start()
 
-        # launch another thread to merge knowledge
+        # launch threads to make new batch for student
+        med_queues = [Queue.Queue(100) for i in range(self._num_teachers)]
+        for i in range(self._num_teachers):
+            listen_thread = Thread(
+                target=make_new_batch,
+                args=(local_queues[i], med_queues[i], self._batch_size))
+            listen_thread.dameon = True
+            listen_thread.start()
+
+        # launch another thread to merge knowledge from different teachers.
         merge_thread = Thread(
             target=gather_and_merge, args=(med_queues, self._knowledge_queue))
         merge_thread.dameon = True
