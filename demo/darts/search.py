@@ -50,7 +50,8 @@ add_arg('trainset_num',      int,   50000,           "images number of trainset.
 add_arg('model_save_dir',    str,   'search_cifar', "The path to save model.")
 add_arg('grad_clip',         float, 5,               "Gradient clipping.")
 add_arg('arch_learning_rate',float, 3e-4,            "Learning rate for arch encoding.")
-add_arg('method',            str,   'DARTS',      "The search method you would like to use")
+add_arg('method',            str,   'DARTS',         "The search method you would like to use")
+add_arg('epochs_no_archopt', int,   0,               "Epochs not optimize the arch params")
 add_arg('cutout_length',     int,   16,              "Cutout length.")
 add_arg('cutout',            ast.literal_eval,  False, "Whether use cutout.")
 add_arg('unrolled',          ast.literal_eval,  False, "Use one-step unrolled validation loss")
@@ -84,8 +85,9 @@ def main(args):
             num_imgs=args.trainset_num,
             arch_learning_rate=args.arch_learning_rate,
             unrolled=args.unrolled,
-            method=args.method,
             num_epochs=args.epochs,
+            epochs_no_archopt=args.epochs_no_archopt,
+            use_gpu=args.use_gpu,
             use_data_parallel=args.use_data_parallel,
             log_freq=args.log_freq)
         searcher.train()

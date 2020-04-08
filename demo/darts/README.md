@@ -18,7 +18,7 @@
 ``` bash
 python search.py                       # DARTS一阶近似搜索方法
 python search.py --unrolled=True       # DARTS的二阶近似搜索方法
-python search.py --method='PC-DARTS'   # PC-DARTS搜索方法
+python search.py --method='PC-DARTS' --batch_size=256 --learning_rate=0.1 --arch_learning_rate=6e-4 --epochs_no_archopt=15   # PC-DARTS搜索方法
 ```
 
 模型结构随搜索轮数的变化如图1所示。需要注意的是，图中准确率Acc并不代表该结构最终准确率，为了获得当前结构的最佳准确率，请对得到的genotype做网络结构评估训练。
