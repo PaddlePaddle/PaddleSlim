@@ -26,8 +26,6 @@ from ...common import AvgrageMeter, get_logger
 from .architect import Architect
 logger = get_logger(__name__, level=logging.INFO)
 
-SUPPORTED_METHODS = ["PC-DARTS", "DARTS"]
-
 
 def count_parameters_in_MB(all_params):
     parameters_number = 0
@@ -47,8 +45,8 @@ class DARTSearch(object):
                  num_imgs=50000,
                  arch_learning_rate=3e-4,
                  unrolled='False',
-                 method='DARTS',
                  num_epochs=50,
+                 epochs_no_archopt=0,
                  use_gpu=True,
                  use_data_parallel=False,
                  log_freq=50):
@@ -60,9 +58,7 @@ class DARTSearch(object):
         self.num_imgs = num_imgs
         self.arch_learning_rate = arch_learning_rate
         self.unrolled = unrolled
-        self.method = method
-        assert (self.method in SUPPORTED_METHODS
-                ), "Currently only support PC-DARTS, DARTS two methods"
+        self.epochs_no_archopt = epochs_no_archopt
         self.num_epochs = num_epochs
         self.use_gpu = use_gpu
         self.use_data_parallel = use_data_parallel
@@ -94,7 +90,7 @@ class DARTSearch(object):
             valid_label.stop_gradient = True
             n = train_image.shape[0]
 
-            if not (self.method == "PC-DARTS" and epoch < 15):
+            if epoch >= self.epochs_no_archopt:
                 architect.step(train_image, train_label, valid_image,
                                valid_label)
 
