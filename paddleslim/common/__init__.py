@@ -18,8 +18,9 @@ from .controller_server import ControllerServer
 from .controller_client import ControllerClient
 from .lock import lock, unlock
 from .cached_reader import cached_reader
+from .meter import AvgrageMeter
 
 __all__ = [
     'EvolutionaryController', 'SAController', 'get_logger', 'ControllerServer',
-    'ControllerClient', 'lock', 'unlock', 'cached_reader'
+    'ControllerClient', 'lock', 'unlock', 'cached_reader', 'AvgrageMeter'
 ]
