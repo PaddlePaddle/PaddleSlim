@@ -81,7 +81,7 @@ def main(args):
             valid_reader,
             learning_rate=args.learning_rate,
             batchsize=args.batch_size,
-            num_imgs=50000,
+            num_imgs=args.trainset_num,
             arch_learning_rate=args.arch_learning_rate,
             unrolled=args.unrolled,
             method=args.method,
