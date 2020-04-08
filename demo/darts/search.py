@@ -21,13 +21,6 @@ import sys
 import ast
 import argparse
 import functools
-import numpy as np
-np.set_printoptions(formatter={'float': '{: 0.5f}'.format})
-
-import logging
-FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-logger = logging.getLogger(__name__)
 
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable

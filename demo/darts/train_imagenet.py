@@ -16,6 +16,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
+import sys
 import ast
 import argparse
 import functools
@@ -28,12 +30,14 @@ logger = logging.getLogger(__name__)
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable
 from model import NetworkImageNet as Network
+from paddleslim.common import AvgrageMeter
 import genotypes
 import reader
-import utility
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
+from utility import add_arguments, print_arguments
 
 parser = argparse.ArgumentParser(description=__doc__)
-add_arg = functools.partial(utility.add_arguments, argparser=parser)
+add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
 add_arg('use_multiprocess',  bool,  True,            "Whether use multiprocess reader.")
@@ -56,9 +60,8 @@ add_arg('auxiliary_weight',  float, 0.4,             "Weight for auxiliary loss.
 add_arg('drop_path_prob',    float, 0.0,             "Drop path probability.")
 add_arg('dropout',           float, 0.0,             "Dropout probability.")
 add_arg('grad_clip',         float, 5,               "Gradient clipping.")
-add_arg('image_shape',       str,   '3,224,224',     "Input image size")
 add_arg('label_smooth',      float, 0.1,             "Label smoothing.")
-add_arg('arch',              str,   'DARTS_V3',      "Which architecture to use")
+add_arg('arch',              str,   'DARTS_V2',      "Which architecture to use")
 add_arg('report_freq',       int,   100,             'Report frequency')
 add_arg('use_data_parallel', ast.literal_eval,  False, "The flag indicating whether to use data parallel mode to train the model.")
 # yapf: enable
@@ -75,9 +78,9 @@ def cross_entropy_label_smooth(preds, targets, epsilon):
 
 
 def train(model, train_reader, optimizer, epoch, args):
-    objs = utility.AvgrageMeter()
-    top1 = utility.AvgrageMeter()
-    top5 = utility.AvgrageMeter()
+    objs = AvgrageMeter()
+    top1 = AvgrageMeter()
+    top5 = AvgrageMeter()
     model.train()
 
     for step_id, data in enumerate(train_reader()):
@@ -123,9 +126,9 @@ def train(model, train_reader, optimizer, epoch, args):
 
 
 def valid(model, valid_reader, epoch, args):
-    objs = utility.AvgrageMeter()
-    top1 = utility.AvgrageMeter()
-    top5 = utility.AvgrageMeter()
+    objs = AvgrageMeter()
+    top1 = AvgrageMeter()
+    top5 = AvgrageMeter()
     model.eval()
 
     for step_id, data in enumerate(valid_reader()):
@@ -164,9 +167,6 @@ def main(args):
             layers=args.layers,
             auxiliary=args.auxiliary,
             genotype=genotype)
-
-        logger.info("param size = {:.6f}MB".format(
-            utility.count_parameters_in_MB(model.parameters())))
 
         step_per_epoch = int(args.trainset_num / args.batch_size)
         learning_rate = fluid.dygraph.ExponentialDecay(
@@ -233,7 +233,6 @@ def main(args):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    utility.print_arguments(args)
-    utility.check_cuda(args.use_gpu)
+    print_arguments(args)
 
     main(args)
