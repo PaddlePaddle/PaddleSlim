@@ -22,14 +22,14 @@ def dsq(x, bit=8, name=None):
     def phi_function(x, mi, alpha, delta):
         s = 1 / (1 - alpha)
         k = fluid.layers.log(2 / alpha - 1) * (1 / delta)
-        x = (fluid.layers.tanh((x - mi) * k)) * s
-        return x
+        res = (fluid.layers.tanh((x - mi) * k)) * s
+        return res
 
     def dequantize(x, lower_bound, delta, interval):
 
         # save mem
-        x = ((x + 1) / 2 + interval) * delta + lower_bound
-        return x
+        res = ((x + 1) / 2 + interval) * delta + lower_bound
+        return res
 
     helper = LayerHelper("dsq", **locals())
     dtype = 'float32'
@@ -60,23 +60,24 @@ def dsq(x, bit=8, name=None):
     cur_max = fluid.layers.reduce_max(x)
     cur_min = fluid.layers.reduce_min(x)
     delta = (cur_max - cur_min) / bit_range
-    interval = (x - cur_min) // delta
+    interval = (x - cur_min) / delta
+    interval = fluid.layers.floor(interval)
     mi = (interval + 0.5) * delta + cur_min
-    x = phi_function(x, mi, alpha_param, delta)
+    phi_x = phi_function(x, mi, alpha_param, delta)
     out_var = fluid.default_main_program().current_block().create_var(
-        dtype=dtype, shape=x.shape)
+        dtype=dtype, shape=phi_x.shape)
     fluid.layers.py_func(
         func=dsq_round,
-        x=x,
+        x=phi_x,
         out=out_var,
         backward_func=dsq_round_back,
-        skip_vars_in_backward_input=[x, out_var])
+        skip_vars_in_backward_input=[phi_x, out_var])
     x = dequantize(out_var, cur_min, delta, interval)
 
-    return x
+    return x, delta, x
 
 
-def dsq1(x, name=None):
+def pact(x, name=None):
     helper = LayerHelper("dsq1", **locals())
     dtype = 'float32'
     '''
