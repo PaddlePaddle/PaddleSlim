@@ -41,8 +41,6 @@ class Pruner():
     def __init__(self,
                  criterion="l1_norm",
                  idx_selector="default_idx_selector"):
-        self.criterion = criterion
-        self.channel_sortor = channel_sortor
         if isinstance(criterion, str):
             self.criterion = CRITERION.get(criterion)
         else:
@@ -98,7 +96,7 @@ class Pruner():
                 param_v = graph.var(param)
                 pruned_num = int(round(param_v.shape()[0] * ratio))
                 pruned_idx = [0] * pruned_num
-                for name, aixs in group:
+                for name, axis in group:
                     pruned_params.append((name, axis, pruned_idx))
 
             else:
@@ -109,10 +107,10 @@ class Pruner():
                     values = np.array(scope.find_var(name).get_tensor())
                     group_values.append((name, values, axis))
 
-                scores = self.criterion(group_with_values,
+                scores = self.criterion(group_values,
                                         graph)  # [(name, axis, score)]
 
-                pruned_params = self.idx_selector(scores)
+                pruned_params.extend(self.idx_selector(scores, ratio))
 
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
