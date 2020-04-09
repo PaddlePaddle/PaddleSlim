@@ -74,21 +74,15 @@ def dsq(x, bit=8, name=None):
         skip_vars_in_backward_input=[phi_x, out_var])
     x = dequantize(out_var, cur_min, delta, interval)
 
-    return x, delta, x
+    return x
 
 
 def pact(x, name=None):
     helper = LayerHelper("dsq1", **locals())
     dtype = 'float32'
-    '''
     u_param_attr = fluid.ParamAttr(
-            initializer=fluid.initializer.ConstantInitializer(value=10))
+        initializer=fluid.initializer.ConstantInitializer(value=10))
     u_param = helper.create_parameter(
-        attr=u_param_attr,
-        shape=[1],
-        dtype=dtype)
-    '''
-    upper = fluid.layers.create_global_var(
-        shape=[1], value=10, dtype='float32', persistable=True)
-    x = x - fluid.layers.relu(x - upper)
+        attr=u_param_attr, shape=[1], dtype=dtype)
+    x = x - fluid.layers.relu(x - u_param)
     return x

@@ -22,6 +22,7 @@ try:
     fluid.require_version('1.7.0')
     from .quanter import quant_aware, quant_post, convert
 except Exception as e:
+    print(e)
     _logger.warning(
         "If you want to use training-aware and post-training quantization, "
         "please use Paddle >= 1.7.0 or develop version")

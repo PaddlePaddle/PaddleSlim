@@ -162,7 +162,10 @@ def quant_aware(program,
                 config=None,
                 scope=None,
                 for_test=False,
-                quantize_func=None):
+                weight_quantize_func=None,
+                act_quantize_func=None,
+                weight_preprocess_func=None,
+                act_preprocess_func=None):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
@@ -211,7 +214,10 @@ def quant_aware(program,
             moving_rate=config['moving_rate'],
             quantizable_op_type=transform_pass_ops,
             skip_pattern=config['not_quant_pattern'],
-            quantize_func=quantize_func)
+            weight_quantize_func=weight_quantize_func,
+            act_quantize_func=act_quantize_func,
+            weight_preprocess_func=weight_preprocess_func,
+            act_preprocess_func=act_preprocess_func)
 
         transform_pass.apply(main_graph)
 

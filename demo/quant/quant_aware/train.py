@@ -30,7 +30,7 @@ add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
 add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
-add_arg('lr',               float,  0.0001,               "The learning rate used to fine-tune pruned model.")
+add_arg('lr',               float,  0.01,               "The learning rate used to fine-tune pruned model.")
 add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
@@ -148,14 +148,14 @@ def compress(args):
         quant_config,
         scope=None,
         for_test=True,
-        quantize_func=func)
+        act_quantize_func=func)
     compiled_train_prog = quant_aware(
         train_prog,
         place,
         quant_config,
         scope=None,
         for_test=False,
-        quantize_func=func)
+        act_quantize_func=func)
     opt = create_optimizer(args)
     opt.minimize(avg_cost)
 
@@ -173,8 +173,6 @@ def compress(args):
 
         def if_exist(var):
             res = os.path.exists(os.path.join(args.pretrained_model, var.name))
-            if res:
-                print(var.name)
             return res
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
