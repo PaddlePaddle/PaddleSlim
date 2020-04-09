@@ -19,7 +19,12 @@ def dsq(x, bit=8, name=None):
         x = x - fluid.layers.relu(x - upper)
         return x
 
+    def clip_alpha(alpha):
+        alpha = x - fluid.layers.relu(alpha - 2)
+        return alpha
+
     def phi_function(x, mi, alpha, delta):
+        alpha = clip_alpha(alpha)
         s = 1 / (1 - alpha)
         k = fluid.layers.log(2 / alpha - 1) * (1 / delta)
         res = (fluid.layers.tanh((x - mi) * k)) * s
