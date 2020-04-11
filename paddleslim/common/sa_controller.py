@@ -113,7 +113,7 @@ class SAController(EvolutionaryController):
 
         return self._current_tokens
 
-    def update(self, tokens, reward, iter, client_num):
+    def update(self, tokens, reward, iter, client_num=1):
         """
         Update the controller according to latest tokens and reward.
 

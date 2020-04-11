@@ -106,6 +106,7 @@ Usually, the public methods of these two classes work in the pairwise way. Their
     <br>&nbsp;&nbsp;&nbsp;&nbsp;reader_config,
     <br>&nbsp;&nbsp;&nbsp;&nbsp;exe,
     <br>&nbsp;&nbsp;&nbsp;&nbsp;buf_size=10,
+    <br>&nbsp;&nbsp;&nbsp;&nbsp;use_fp16=False,
     <br>&nbsp;&nbsp;&nbsp;&nbsp;times=1)</td>
     <td><strong>get_knowledge_desc</strong>()</td>
     <td><center>✅</center></td>
@@ -213,6 +214,7 @@ The toy "knowledge distillation" system can be launched in three different modes
  ```shell
 export PYTHONPATH=../../:$PYTHONPATH
 export CUDA_VISIBLE_DEVICES=0,1
+export NUM_POSTPROCESS_THREADS=10 # default 8
 nohup python -u run_teacher1.py --use_cuda true --out_path teacher1_offline.dat > teacher1_offline.log 2>&1&
 export CUDA_VISIBLE_DEVICES=2
 nohup python -u run_teacher2.py --use_cuda true --out_path teacher2_offline.dat > teacher2_offline.log 2>&1&

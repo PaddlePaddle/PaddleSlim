@@ -17,8 +17,11 @@ from .search_space import *
 from ..nas import sa_nas
 from .sa_nas import *
 from .rl_nas import *
+from ..nas import darts
+from .darts import *
 
 __all__ = []
 __all__ += sa_nas.__all__
 __all__ += search_space.__all__
 __all__ += rl_nas.__all__
+__all__ += darts.__all__

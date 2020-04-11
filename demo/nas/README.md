@@ -6,11 +6,11 @@
 本示例默认使用cifar10数据，cifar10数据会根据调用的paddle接口自动下载，无需额外准备。
 
 ## 接口介绍
-请参考<a href='../../docs/docs/api/nas_api.md'>神经网络搜索API文档</a>。
+请参考<a href='../../docs/zh_cn/api_cn/nas_api.rst'>神经网络搜索API文档</a>。
 
 本示例为在MobileNetV2的搜索空间上搜索FLOPs更小的模型。
 ## 1 搜索空间配置
-默认搜索空间为`MobileNetV2`，详细的搜索空间配置请参考<a href='../../docs/docs/search_space.md'>搜索空间配置文档</a>。
+默认搜索空间为`MobileNetV2`，详细的搜索空间配置请参考<a href='../../docs/zh_cn/api_cn/search_space.md'>搜索空间配置文档</a>。
 
 ## 2 启动训练
 

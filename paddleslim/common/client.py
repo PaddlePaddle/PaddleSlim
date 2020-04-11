@@ -40,7 +40,7 @@ class Client(object):
     def _connect_server(self):
         self._ctx = zmq.Context()
         self._client_socket = self._ctx.socket(zmq.REQ)
-        ### NOTE: exit client if server is dead if there are better solutions
+        ### NOTE: change the method to exit client when server is dead if there are better solutions
         self._client_socket.setsockopt(zmq.RCVTIMEO,
                                        ConnectMessage.TIMEOUT * 1000)
         client_address = "{}:{}".format(self._ip, self._port)

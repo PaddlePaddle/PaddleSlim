@@ -4,7 +4,7 @@
 
 ## 接口介绍
 
-请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
+请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-aware'>量化API文档</a>。
 
 ## 分类模型的量化训练流程
 
