@@ -15,11 +15,38 @@
 import numpy as np
 from ...core import Registry
 
-__all__ = ["RLCONTROLLER", "action_mapping"]
+__all__ = [
+    "RLCONTROLLER", "action_mapping", "add_grad", "compute_grad",
+    "ConnectMessage"
+]
 
 RLCONTROLLER = Registry('RLController')
+
+
+class ConnectMessage:
+    INIT = 'INIT'
+    INIT_DONE = 'INIT_DONE'
+    GET_WEIGHT = 'GET_WEIGHT'
+    UPDATE_WEIGHT = 'UPDATE_WEIGHT'
+    OK = 'OK'
+    WAIT = 'WAIT'
+    WAIT_PARAMS = 'WAIT_PARAMS'
+    EXIT = 'EXIT'
+    TIMEOUT = 10
 
 
 def action_mapping(actions, range_table):
     actions = (actions - (-1.0)) * (range_table / np.asarray(2.0))
     return actions.astype('int64')
+
+
+def add_grad(dict1, dict2):
+    for key, value in dict1.items():
+        dict1[key] += dict2[key]
+    return dict1
+
+
+def compute_grad(dict1, dict2):
+    for key, value in dict1.items():
+        dict1[key] -= dict2[key]
+    return dict1

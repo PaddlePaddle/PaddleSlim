@@ -12,36 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import zmq
+import socket
+import signal
 import six
+import os
 if six.PY2:
     import cPickle as pickle
-    import Queue
 else:
     import pickle
-    import queue as Queue
 import logging
-import numpy as np
 import time
-import pickle
-import multiprocessing as mp
-from multiprocessing import RLock, Process
-from multiprocessing.managers import BaseManager
-from ctypes import c_bool, c_ulong
-from threading import Thread
-import paddle.fluid as fluid
+import threading
+import cloudpickle
 from .log_helper import get_logger
-
-__all__ = ['Server']
+from .RL_controller.utils import add_grad, ConnectMessage
 
 _logger = get_logger(__name__, level=logging.INFO)
-PublicAuthKey = u'AbcXyz3'
-
-client_queue = Queue.Queue(300)
-update_lock = RLock()
-max_update_times = Queue.Queue(1)
-client_list = Queue.Queue()
-params_dict = dict()
 
 
 class Server(object):
@@ -50,54 +37,40 @@ class Server(object):
                  address,
                  is_sync=False,
                  load_controller=None,
-                 save_controller=None,
-                 args=None):
+                 save_controller=None):
         self._controller = controller
         self._address = address
-        self._args = args
-        self._save_controller = save_controller
-        self._load_controller = load_controller
+        self._ip = self._address[0]
+        self._port = self._address[1]
         self._is_sync = is_sync
+        self._done = False
+        self._load_controller = load_controller
+        self._save_controller = save_controller
+        ### key-value : client_name-update_times
+        self._client_dict = dict()
+        self._client = list()
+        self._lock = threading.Lock()
+        self._server_alive = True
+        self._max_update_times = 0
 
-    def _start_manager(self):
-        def get_client_queue():
-            global client_queue
-            return client_queue
-
-        def get_params_dict():
-            global params_dict
-            return params_dict
-
-        def get_client_list():
-            global client_list
-            return client_list
-
-        def get_update_lock():
-            global update_lock
-            return update_lock
-
-        def get_max_update_times():
-            global max_update_times
-            return max_update_times
-
-        BaseManager.register('get_client_queue', callable=get_client_queue)
-        BaseManager.register('get_params_dict', callable=get_params_dict)
-        BaseManager.register('get_client_list', callable=get_client_list)
-        BaseManager.register(
-            'get_max_update_times', callable=get_max_update_times)
-        BaseManager.register('get_update_lock', callable=get_update_lock)
-        manager = BaseManager(
-            address=self._address, authkey=PublicAuthKey.encode())
-        manager.start()
-        return manager
+    def close(self):
+        self._server_alive = False
+        _logger.info("server closed")
+        pid = os.getpid()
+        os.kill(pid, signal.SIGTERM)
 
     def start(self):
-        self._manager = self._start_manager()
-        self._params_dict = self._manager.get_params_dict()
-        max_update_times = self._manager.get_max_update_times()
-        max_update_times.put(0)
-
-        param_dict = self._controller.param_dict
+        self._ctx = zmq.Context()
+        ### main socket
+        self._server_socket = self._ctx.socket(zmq.REP)
+        server_address = "{}:{}".format(self._ip, self._port)
+        self._server_socket.bind("tcp://{}".format(server_address))
+        self._server_socket.linger = 0
+        _logger.info("ControllerServer - listen on: [{}]".format(
+            server_address))
+        thread = threading.Thread(target=self.run, args=())
+        thread.setDaemon(True)
+        thread.start()
 
         if self._load_controller:
             assert os.path.exists(
@@ -106,44 +79,133 @@ class Server(object):
                 self._load_controller)
 
             with open(
-                    os.path.join(self._load_controller, 'rlnas.json'),
+                    os.path.join(self._load_controller, 'rlnas.params'),
                     'rb') as f:
-                param_dict = pickle.load(f)
+                self._params_dict = pickle.load(f)
+            _logger.info("Load params done")
 
-        self._params_dict.update(param_dict)
+        else:
+            self._params_dict = self._controller.param_dict
 
-        listen = Thread(target=self._save_params, args=())
-        listen.setDaemon(True)
-        listen.start()
+        if self._is_sync:
+            self._wait_socket = self._ctx.socket(zmq.REP)
+            self._wait_port = self._wait_socket.bind_to_random_port(
+                addr="tcp://*")
+            self._wait_socket_linger = 0
+            wait_thread = threading.Thread(
+                target=self._wait_for_params, args=())
+            wait_thread.setDaemon(True)
+            wait_thread.start()
 
-    def _save_params(self):
-        ### save params per 3600s
-        while True:
-            if int(time.time()) % 3600 == 0:
-                print(
-                    "============================save params========================="
-                )
-                params_dict = self._manager.get_params_dict()
-
-                def list2dict(lists):
-                    res_dict = dict()
-                    for l in lists:
-                        tmp_dict = dict()
-                        tmp_dict[l[0]] = l[1]
-                        res_dict.update(tmp_dict)
-                    return res_dict
-
-                save_params_dict = list2dict(params_dict.items())
-                if self._save_controller:
-                    if not os.path.exists(self._save_controller):
-                        os.makedirs(self._save_controller)
-                    with open(
-                            os.path.join(self._save_controller, 'rlnas.json'),
-                            'wb') as f:
-                        pickle.dump(save_params_dict, f)
-
-    def __del__(self):
+    def _wait_for_params(self):
         try:
-            self._manager.shutdown()
-        except:
-            pass
+            while self._server_alive:
+                message = self._wait_socket.recv_multipart()
+                cmd = message[0]
+                client_name = message[1]
+                if cmd == ConnectMessage.WAIT_PARAMS:
+                    _logger.debug("Server: wait for params")
+                    self._lock.acquire()
+                    self._wait_socket.send_multipart([
+                        ConnectMessage.OK
+                        if self._done else ConnectMessage.WAIT
+                    ])
+                    if self._done and client_name in self._client:
+                        self._client.remove(client_name)
+                    if len(self._client) == 0:
+                        self.save_params()
+                        self._done = False
+                    self._lock.release()
+                else:
+                    _logger.error("Error message {}".format(message))
+                    raise NotImplementedError
+        except Exception as err:
+            logger.error(err)
+
+    def run(self):
+        try:
+            while self._server_alive:
+                try:
+                    sum_params_dict = dict()
+                    message = self._server_socket.recv_multipart()
+                    cmd = message[0]
+                    client_name = message[1]
+                    if cmd == ConnectMessage.INIT:
+                        self._server_socket.send_multipart(
+                            [ConnectMessage.INIT_DONE])
+                        _logger.debug("Server: init client {}".format(
+                            client_name))
+                        self._client_dict[client_name] = 0
+                    elif cmd == ConnectMessage.GET_WEIGHT:
+                        self._lock.acquire()
+                        _logger.debug("Server: get weight {}".format(
+                            client_name))
+                        self._server_socket.send_multipart(
+                            [cloudpickle.dumps(self._params_dict)])
+                        _logger.debug("Server: send params done {}".format(
+                            client_name))
+                        self._lock.release()
+                    elif cmd == ConnectMessage.UPDATE_WEIGHT:
+                        _logger.info("Server: update {}".format(client_name))
+                        params_dict_grad = cloudpickle.loads(message[2])
+                        if self._is_sync:
+                            if not sum_params_dict:
+                                sum_params_dict = self._params_dict
+                            self._lock.acquire()
+                            sum_params_dict = add_grad(sum_params_dict,
+                                                       params_dict_grad)
+                            self._client.append(client_name)
+                            self._lock.release()
+
+                            if len(self._client) == len(
+                                    self._client_dict.items()):
+                                self._done = True
+
+                            self._server_socket.send_multipart([
+                                ConnectMessage.WAIT,
+                                cloudpickle.dumps(self._wait_port)
+                            ])
+                        else:
+                            self._lock.acquire()
+                            self._params_dict = add_grad(self._params_dict,
+                                                         params_dict_grad)
+                            self._client_dict[client_name] += 1
+                            if self._client_dict[
+                                    client_name] > self._max_update_times:
+                                self._max_update_times = self._client_dict[
+                                    client_name]
+                            self._lock.release()
+                            self.save_params()
+                            self._server_socket.send_multipart(
+                                [ConnectMessage.OK])
+
+                    elif cmd == ConnectMessage.EXIT:
+                        self._client_dict.pop(client_name)
+                        if client_name in self._client:
+                            self._client.remove(client_name)
+                        self._server_socket.send_multipart(
+                            [ConnectMessage.EXIT])
+                except zmq.error.Again as e:
+                    _logger.error(e)
+            self.close()
+
+        except Exception as err:
+            _logger.error(err)
+        finally:
+            self._server_socket.close(0)
+            if self._is_sync:
+                self._wait_socket.close(0)
+            self.close()
+
+    def save_params(self):
+        if self._save_controller:
+            if not os.path.exists(self._save_controller):
+                os.makedirs(self._save_controller)
+            output_dir = self._save_controller
+        else:
+            os.makedirs('./.rlnas_controller')
+            output_dir = './.rlnas_controller'
+
+        with open(os.path.join(output_dir, 'rlnas.params'), 'wb') as f:
+            pickle.dump(self._params_dict, f)
+        _logger.info("Save params done")
