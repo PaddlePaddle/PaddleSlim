@@ -120,6 +120,7 @@ class RLNAS(object):
         """
         archs = []
         self._current_tokens = self._controller_client.next_tokens(obs)
+        _logger.info("current tokens: {}".format(self._current_tokens))
         for token in self._current_tokens:
             archs.append(self._search_space.token2arch(token))
 
@@ -142,6 +143,7 @@ class RLNAS(object):
         """
         final_tokens = self._controller_client.next_tokens(
             batch_obs, is_inference=True)
+        _logger.info("Final tokens: {}".format(final_tokens))
         archs = []
         for token in final_tokens:
             arch = self._search_space.token2arch(token)

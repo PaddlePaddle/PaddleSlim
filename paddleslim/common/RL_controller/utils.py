@@ -41,12 +41,14 @@ def action_mapping(actions, range_table):
 
 
 def add_grad(dict1, dict2):
+    dict3 = dict()
     for key, value in dict1.items():
-        dict1[key] += dict2[key]
-    return dict1
+        dict3[key] = dict1[key] + dict2[key]
+    return dict3
 
 
 def compute_grad(dict1, dict2):
+    dict3 = dict()
     for key, value in dict1.items():
-        dict1[key] -= dict2[key]
-    return dict1
+        dict3[key] = dict1[key] - dict2[key]
+    return dict3

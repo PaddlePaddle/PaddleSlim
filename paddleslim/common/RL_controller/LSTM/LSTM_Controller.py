@@ -13,14 +13,17 @@
 # limitations under the License.
 
 import math
+import logging
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid import ParamAttr
 from paddle.fluid.layers import RNNCell, LSTMCell, rnn
 from paddle.fluid.contrib.layers import basic_lstm
 from ...controller import RLBaseController
+from ...log_helper import get_logger
 from ..utils import RLCONTROLLER
 
+_logger = get_logger(__name__, level=logging.INFO)
 
 uniform_initializer = lambda x: fluid.initializer.UniformInitializer(low=-x, high=x)
 
@@ -161,6 +164,10 @@ class LSTM(RLBaseController):
                 shape=(self.controller_batch_size, self.hidden_size),
                 dtype='float32',
                 default_initializer=uniform_initializer(1.0))
+
+            fluid.layers.assign(
+                fluid.layers.uniform_random(shape=self.g_emb.shape),
+                self.g_emb)
             hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
             cell = fluid.data(name='cell', shape=[None, self.hidden_size])
             self.tokens = self._network(
@@ -186,7 +193,8 @@ class LSTM(RLBaseController):
 
             fluid.layers.assign(self.baseline - (1.0 - self.decay) *
                                 (self.baseline - self.rewards), self.baseline)
-            self.loss = self.sample_log_probs * (self.rewards - self.baseline)
+            self.loss = -1.0 * self.sample_log_probs * (
+                self.rewards - self.baseline)
             fluid.clip.set_gradient_clip(
                 clip=fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0))
             optimizer = fluid.optimizer.Adam(learning_rate=1e-3)
@@ -195,9 +203,9 @@ class LSTM(RLBaseController):
     def _create_input(self, is_test=True, actual_rewards=None):
         feed_dict = dict()
         np_init_hidden = np.zeros(
-            (self.num_archs, self.hidden_size)).astype('float32')
+            (self.controller_batch_size, self.hidden_size)).astype('float32')
         np_init_cell = np.zeros(
-            (self.num_archs, self.hidden_size)).astype('float32')
+            (self.controller_batch_size, self.hidden_size)).astype('float32')
 
         feed_dict["hidden"] = np_init_hidden
         feed_dict["cell"] = np_init_cell
@@ -227,28 +235,36 @@ class LSTM(RLBaseController):
 
         self.set_params(self.pred_program, params_dict, self.place)
 
+        batch_tokens = []
         feed_dict = self._create_input()
 
-        if is_inference:
-            self._build_program(is_inference=True)
+        for _ in range(
+                int(np.ceil(float(num_archs) / self.controller_batch_size))):
+            if is_inference:
+                self._build_program(is_inference=True)
 
-        actions = self.exe.run(self.pred_program,
-                               feed=feed_dict,
-                               fetch_list=self.tokens)
+            actions = self.exe.run(self.pred_program,
+                                   feed=feed_dict,
+                                   fetch_list=self.tokens)
 
-        batch_tokens = []
-        for idx in range(self.num_archs):
-            each_token = {}
-            for i, action in enumerate(actions):
-                token = action[idx]
-                if idx in each_token:
-                    each_token[idx].append(int(token))
-                else:
-                    each_token[idx] = [int(token)]
-            batch_tokens.append(each_token[idx])
+            for idx in range(self.controller_batch_size):
+                each_token = {}
+                for i, action in enumerate(actions):
+                    token = action[idx]
+                    if idx in each_token:
+                        each_token[idx].append(int(token))
+                    else:
+                        each_token[idx] = [int(token)]
+                batch_tokens.append(each_token[idx])
 
         self.init_tokens = batch_tokens
-        return batch_tokens
+        mod_token = (self.controller_batch_size -
+                     (num_archs % self.controller_batch_size)
+                     ) % self.controller_batch_size
+        if mod_token != 0:
+            return batch_tokens[:-mod_token]
+        else:
+            return batch_tokens
 
     def update(self, rewards, params_dict=None):
         """train controller according reward"""
@@ -259,7 +275,7 @@ class LSTM(RLBaseController):
         loss = self.exe.run(self.learn_program,
                             feed=feed_dict,
                             fetch_list=[self.loss])
-        print("Controller: current reward is {}, loss is {}".format(rewards,
-                                                                    loss))
+        _logger.info("Controller: current reward is {}, loss is {}".format(
+            rewards, loss))
         params_dict = self.get_params(self.learn_program)
         return params_dict
