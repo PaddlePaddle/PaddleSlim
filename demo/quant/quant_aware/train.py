@@ -43,7 +43,7 @@ add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('checkpoint_dir',         str, "output",           "checkpoint save dir")
 # yapf: enable
 
-model_list = [m for m in dir(models) if "__" not in m]
+model_list = models.model_list
 
 
 def piecewise_decay(args):
@@ -148,6 +148,7 @@ def compress(args):
         quant_config,
         scope=None,
         for_test=True,
+        weight_quantize_func=func,
         act_quantize_func=func)
     compiled_train_prog = quant_aware(
         train_prog,
@@ -155,6 +156,7 @@ def compress(args):
         quant_config,
         scope=None,
         for_test=False,
+        weight_quantize_func=func,
         act_quantize_func=func)
     opt = create_optimizer(args)
     opt.minimize(avg_cost)
