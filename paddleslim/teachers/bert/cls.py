@@ -144,11 +144,11 @@ class BERTClassifier(Layer):
             max_seq_len=512,
             warmup_proportion=0.1,
             use_data_parallel=False,
-            learning_rate=0.0001,
+            learning_rate=0.00005,
             weight_decay=0.01,
             lr_scheduler="linear_warmup_decay",
             skip_steps=10,
-            save_steps=10000,
+            save_steps=1000,
             checkpoints="checkpoints"):
 
         processor = self.processors[self.task_name](
