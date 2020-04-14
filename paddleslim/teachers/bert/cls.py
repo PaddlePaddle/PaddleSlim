@@ -204,7 +204,7 @@ class BERTClassifier(Layer):
                 data_ids)
 
             optimizer.optimization(
-                losses[-1],
+                total_loss,
                 use_data_parallel=use_data_parallel,
                 model=self.cls_model)
             self.cls_model.clear_gradients()
