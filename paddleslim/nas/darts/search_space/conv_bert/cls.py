@@ -37,7 +37,7 @@ from .model.cls import ClsModelLayer
 from .optimization import Optimizer
 from .utils.init import init_from_static_model
 
-__all__ = ["BERTClassifier"]
+__all__ = ["ConvBERTClassifier"]
 
 
 def create_data(batch):
@@ -53,13 +53,13 @@ def create_data(batch):
     return src_ids, position_ids, sentence_ids, input_mask, labels
 
 
-class BERTClassifier(Layer):
+class ConvBERTClassifier(Layer):
     def __init__(self,
                  num_labels,
                  task_name="mnli",
                  model_path=None,
                  use_cuda=True):
-        super(BERTClassifier, self).__init__()
+        super(ConvBERTClassifier, self).__init__()
         self.task_name = task_name.lower()
         BERT_BASE_PATH = "./data/pretrained_models/uncased_L-12_H-768_A-12/"
         bert_config_path = BERT_BASE_PATH + "/bert_config.json"
@@ -85,12 +85,6 @@ class BERTClassifier(Layer):
 
         self.cls_model = ClsModelLayer(
             self.bert_config, num_labels, return_pooled_out=True)
-
-        if self.init_pretraining_params:
-            print("Load pre-trained model from %s" %
-                  self.init_pretraining_params)
-            init_from_static_model(self.init_pretraining_params,
-                                   self.cls_model, self.bert_config)
 
         if model_path is not None:
             #restore the model

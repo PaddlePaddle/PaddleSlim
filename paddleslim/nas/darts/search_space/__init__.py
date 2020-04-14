@@ -13,11 +13,8 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-from ..darts import train_search
-from .train_search import *
-from ..darts import search_space
-from .search_space import *
+from ..search_space import conv_bert
+from .conv_bert import *
 
 __all__ = []
-__all__ += train_search.__all__
-__all__ += search_space.__all__
+__all__ += conv_bert.__all__

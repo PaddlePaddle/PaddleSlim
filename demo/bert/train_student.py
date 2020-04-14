@@ -1,14 +1,14 @@
 import paddle.fluid as fluid
-from paddleslim.teachers.bert import BERTClassifier
+from paddleslim.nas.darts.search_space import ConvBERTClassifier
 
 place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
 
 with fluid.dygraph.guard(place):
 
-    bert = BERTClassifier(3)
+    bert = ConvBERTClassifier(3)
     bert.fit("./data/glue_data/MNLI/",
              5,
              batch_size=16,
-             use_data_parallel=True,
+             use_data_parallel=False,
              learning_rate=0.00005,
              save_steps=1000)
