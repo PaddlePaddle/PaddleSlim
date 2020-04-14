@@ -104,9 +104,9 @@ class Student(object):
             manager = BaseManager(
                 address=(ip, int(port)), authkey=public_authkey.encode())
 
-            # Wait for teacher model started to establish connection
             print("Connecting to {}, with public key {} ...".format(
                 in_address, public_authkey))
+            # Wait for teacher model started to establish connection
             while True:
                 try:
                     manager.connect()
@@ -545,8 +545,8 @@ class Student(object):
                 queue.put(StartSignal())
                 queue.join()
 
-        # launch threads to listen on all knowledge queues
         local_queues = [Queue.Queue(100) for i in range(self._num_teachers)]
+        # launch threads to listen on all knowledge queues
         for i in range(self._num_teachers):
             listen_thread = Thread(
                 target=listen,
@@ -554,8 +554,8 @@ class Student(object):
             listen_thread.dameon = True
             listen_thread.start()
 
-        # launch threads to make new batch for student
         med_queues = [Queue.Queue(100) for i in range(self._num_teachers)]
+        # launch threads to make new batch for student
         for i in range(self._num_teachers):
             listen_thread = Thread(
                 target=make_new_batch,
@@ -569,7 +569,6 @@ class Student(object):
         merge_thread.dameon = True
         merge_thread.start()
 
-        # yield knowledge data
         def wrapper():
             while True:
                 knowledge = self._knowledge_queue.get()

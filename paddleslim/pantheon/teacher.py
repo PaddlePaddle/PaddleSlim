@@ -585,7 +585,6 @@ class Teacher(object):
               "  Teacher begins to serve ...")
 
         data_reader = MixedDataReader(data_loader, dev_count)
-        # For online mode, send knowledge description every time
         for repeated in range(self._times):
             make_knowledge(worker=know_maker, args=(self._use_fp16, ))
             if self._knowledge_queues:
@@ -594,6 +593,7 @@ class Teacher(object):
                     if self._sync_required:
                         for q in self._knowledge_queues:
                             q.put(SyncSignal())
+                        # For online mode, send knowledge description every sync
                         know_make_queue.put(self._knowledge_desc)
                         self._sync_required = False
                     if self._data_required:
