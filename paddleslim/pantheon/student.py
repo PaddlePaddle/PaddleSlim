@@ -122,27 +122,37 @@ class Student(object):
 
                 def receive(queue, local_queue):
                     while True:
-                        data = queue.get()
-                        queue.task_done()
-                        local_queue.put(data)
-                        if isinstance(data, EndSignal):
+                        try:
+                            data = queue.get()
+                            queue.task_done()
+                            local_queue.put(data)
+                        except EOFError:
                             break
 
                 knowledge_queue = Queue.Queue(100)
 
                 def gather(local_queues, knowledge_queue):
                     num = len(local_queues)
-                    end_received = False
+                    end_received = [0] * num
                     while True:
-                        for i in range(num):
-                            data = local_queues[i].get()
-                            local_queues[i].task_done()
-                            if isinstance(data, SyncSignal) and i > 0:
-                                continue
-                            elif isinstance(data, EndSignal):
-                                end_received = True
-                            knowledge_queue.put(data)
-                        if end_received:
+                        try:
+                            for i in range(num):
+                                data = local_queues[i].get()
+                                local_queues[i].task_done()
+
+                                if isinstance(data, SyncSignal):
+                                    if i == 0:
+                                        knowledge_queue.put(data)
+                                elif isinstance(data, EndSignal):
+                                    end_received[i] = 1
+                                    if i == 0:
+                                        knowledge_queue.put(data)
+                                    if sum(end_received) == num:
+                                        end_received = [0] * num
+                                        break
+                                else:
+                                    knowledge_queue.put(data)
+                        except EOFError:
                             break
 
                 # threads to receive knowledge from the online teacher
@@ -419,7 +429,6 @@ class Student(object):
                   "Return None.")
             return None
         self._is_knowledge_gen_locked = True
-
         self.get_knowledge_desc()
 
         def split_batch(batch, num):

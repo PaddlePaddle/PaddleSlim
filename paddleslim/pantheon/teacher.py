@@ -122,6 +122,7 @@ class WorkerParallel(object):
                 else:
                     for q in self._local_in_queues:
                         q.put(EndSignal())
+                    break
 
         t = Thread(target=func)
         t.daemon = True
@@ -138,13 +139,18 @@ class WorkerParallel(object):
 
     def _gather(self):
         def func():
+            end_received = False
             while True:
                 for idx, q in enumerate(self._local_out_queues):
                     data = q.get()
                     q.task_done()
-                    if isinstance(data, EndSignal) and idx > 0:
-                        continue
+                    if isinstance(data, EndSignal):
+                        end_received = True
+                        if idx > 0:
+                            continue
                     self._out_queue.put(data)
+                if end_received:
+                    break
 
         t = Thread(target=func)
         t.daemon = True
@@ -539,6 +545,8 @@ class Teacher(object):
                 else:
                     # forward other types of data directly (maybe knowledge desc or EndSignal)
                     out_queue.put(data)
+                    if isinstance(data, EndSignal):
+                        break
 
         know_make_queue = Queue.Queue(self._buf_size)
         if self._out_file:
@@ -569,8 +577,6 @@ class Teacher(object):
                                             know_make_queue,
                                             self._knowledge_queues)
 
-        make_knowledge(worker=know_maker, args=(self._use_fp16, ))
-
         compiled_program = fluid.compiler.CompiledProgram(
             self._program).with_data_parallel()
 
@@ -581,6 +587,7 @@ class Teacher(object):
         data_reader = MixedDataReader(data_loader, dev_count)
         # For online mode, send knowledge description every time
         for repeated in range(self._times):
+            make_knowledge(worker=know_maker, args=(self._use_fp16, ))
             if self._knowledge_queues:
                 # wait for the accessing of knowledge desc and data
                 while True:
@@ -601,17 +608,11 @@ class Teacher(object):
                     data_reader.multi_dev_generator()):
                 if self._sync_required:
                     break
-                tic = time.time()
                 outputs = self._exe.run(compiled_program,
                                         feed=dev_batches,
                                         fetch_list=schema_in_fetch_vars)
-                toc = time.time()
-                print("teacher predict time = {}".format(toc - tic))
                 know_make_queue.put((dev_batches, outputs))
-                #out_buf_queue.put(know)
-                tic = time.time()
 
-                print("teacher out time = {}".format(tic - toc))
                 num_batches_sent += dev_count
                 if num_batches_sent % (100 * dev_count) == 0:
                     log = "Processed {} batch samples.".format(
@@ -641,18 +642,18 @@ class Teacher(object):
                     outputs = copy.deepcopy(output)
             if dev_batches or outputs:
                 know_make_queue.put((dev_batches, outputs))
-                #out_buf_queue.put(know)
                 num_batches_sent += (index + 1)
 
             print("Processed {} batch samples in total.".format(
                 num_batches_sent))
-
             know_make_queue.put(EndSignal())
             know_make_queue.join()
 
-        if self._knowledge_queues:
-            for q in self._knowledge_queues:
-                q.join()
+            if self._knowledge_queues:
+                for q in self._knowledge_queues:
+                    q.join()
+            if self._out_file:
+                offline_write_queue.join()
         print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) +
               "  Teacher ends serving.")
 
