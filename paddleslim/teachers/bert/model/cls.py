@@ -45,18 +45,24 @@ class ClsModelLayer(Layer):
         self.is_training = is_training
         self.use_fp16 = use_fp16
         self.loss_scaling = loss_scaling
+        self.n_layers = config['num_hidden_layers']
 
         self.bert_layer = BertModelLayer(
             config=self.config, return_pooled_out=True, use_fp16=self.use_fp16)
 
-        self.cls_fc = Linear(
-            input_dim=self.config["hidden_size"],
-            output_dim=num_labels,
-            param_attr=fluid.ParamAttr(
-                name="cls_out_w",
-                initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
-            bias_attr=fluid.ParamAttr(
-                name="cls_out_b", initializer=fluid.initializer.Constant(0.)))
+        self.cls_fc = list()
+        for i in range(self.n_layers):
+            fc = Linear(
+                input_dim=self.config["hidden_size"],
+                output_dim=num_labels,
+                param_attr=fluid.ParamAttr(
+                    name="cls_out_%d_w" % i,
+                    initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
+                bias_attr=fluid.ParamAttr(
+                    name="cls_out_%d_b" % i,
+                    initializer=fluid.initializer.Constant(0.)))
+            fc = self.add_sublayer("cls_fc_%d" % i, fc)
+            self.cls_fc.append(fc)
 
     def forward(self, data_ids):
         """
@@ -73,13 +79,13 @@ class ClsModelLayer(Layer):
         logits = []
         losses = []
         accuracys = []
-        for next_sent_feat in next_sent_feats:
+        for next_sent_feat, fc in zip(next_sent_feats, self.cls_fc):
 
             cls_feat = fluid.layers.dropout(
                 x=next_sent_feat,
                 dropout_prob=0.1,
                 dropout_implementation="upscale_in_train")
-            logit = self.cls_fc(cls_feat)
+            logit = fc(cls_feat)
             logits.append(logit)
 
             ce_loss, probs = fluid.layers.softmax_with_cross_entropy(
