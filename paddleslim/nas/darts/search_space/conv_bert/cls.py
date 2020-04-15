@@ -101,6 +101,7 @@ class AdaBERTClassifier(Layer):
 
             t_probs = fluid.layers.softmax(t_logits)
             s_probs = fluid.layers.softmax(s_logits)
+            t_probs.stop_gradient = False
             kd_loss = t_probs * fluid.layers.log(s_probs / T)
             kd_loss = fluid.layers.reduce_sum(kd_loss, dim=1)
             kd_loss = fluid.layers.reduce_mean(kd_loss, dim=0)
@@ -113,5 +114,5 @@ class AdaBERTClassifier(Layer):
         ce_loss = fluid.layers.mean(x=ce_loss)
 
         e_loss = 1  # to be done
-        loss = (1 - gamma) * ce_loss + gamma * kd_loss + beta * e_loss
+        loss = (1 - gamma) * ce_loss - gamma * kd_loss + beta * e_loss
         return loss

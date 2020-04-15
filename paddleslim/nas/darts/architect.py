@@ -49,25 +49,23 @@ class Architect(object):
                     self.network_weight_decay),
                 parameter_list=self.unrolled_model_params)
 
-    def step(self, input_train, target_train, input_valid, target_valid):
+    def step(self, train_data, valid_data):
         if self.unrolled:
-            params_grads = self._backward_step_unrolled(
-                input_train, target_train, input_valid, target_valid)
+            params_grads = self._backward_step_unrolled(train_data, valid_data)
             self.optimizer.apply_gradients(params_grads)
         else:
-            loss = self._backward_step(input_valid, target_valid)
+            loss = self._backward_step(valid_data)
             self.optimizer.minimize(loss)
         self.optimizer.clear_gradients()
 
-    def _backward_step(self, input_valid, target_valid):
-        loss = self.model._loss(input_valid, target_valid)
+    def _backward_step(self, valid_data):
+        loss = self.model.loss(valid_data)
         loss.backward()
         return loss
 
-    def _backward_step_unrolled(self, input_train, target_train, input_valid,
-                                target_valid):
-        self._compute_unrolled_model(input_train, target_train)
-        unrolled_loss = self.unrolled_model._loss(input_valid, target_valid)
+    def _backward_step_unrolled(self, train_data, valid_data):
+        self._compute_unrolled_model(train_data)
+        unrolled_loss = self.unrolled_model.loss(valid_data)
 
         unrolled_loss.backward()
         vector = [
@@ -81,23 +79,22 @@ class Architect(object):
         ]
         self.unrolled_model.clear_gradients()
 
-        implicit_grads = self._hessian_vector_product(vector, input_train,
-                                                      target_train)
+        implicit_grads = self._hessian_vector_product(vector, train_data)
         for (p, g), ig in zip(arch_params_grads, implicit_grads):
             new_g = g - (ig * self.unrolled_optimizer.current_step_lr())
             g.value().get_tensor().set(new_g.numpy(), self.place)
         return arch_params_grads
 
-    def _compute_unrolled_model(self, input, target):
+    def _compute_unrolled_model(self, data):
         for x, y in zip(self.unrolled_model.parameters(),
                         self.model.parameters()):
             x.value().get_tensor().set(y.numpy(), self.place)
-        loss = self.unrolled_model._loss(input, target)
+        loss = self.unrolled_model._loss(data)
         loss.backward()
         self.unrolled_optimizer.minimize(loss)
         self.unrolled_model.clear_gradients()
 
-    def _hessian_vector_product(self, vector, input, target, r=1e-2):
+    def _hessian_vector_product(self, vector, data, r=1e-2):
         R = r * fluid.layers.rsqrt(
             fluid.layers.sum([
                 fluid.layers.reduce_sum(fluid.layers.square(v)) for v in vector
@@ -111,7 +108,7 @@ class Architect(object):
         for param, grad in zip(model_params, vector):
             param_p = param + grad * R
             param.value().get_tensor().set(param_p.numpy(), self.place)
-        loss = self.model._loss(input, target)
+        loss = self.model.loss(data)
         loss.backward()
         grads_p = [
             to_variable(param._grad_ivar().numpy())
@@ -123,7 +120,7 @@ class Architect(object):
             param.value().get_tensor().set(param_n.numpy(), self.place)
         self.model.clear_gradients()
 
-        loss = self.model._loss(input, target)
+        loss = self.model.loss(data)
         loss.backward()
         grads_n = [
             to_variable(param._grad_ivar().numpy())
