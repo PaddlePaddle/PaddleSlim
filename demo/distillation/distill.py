@@ -164,8 +164,12 @@ def compress(args):
     ), "teacher_pretrained_model should be set when teacher_model is not None."
 
     def if_exist(var):
-        return os.path.exists(
+        exist = os.path.exists(
             os.path.join(args.teacher_pretrained_model, var.name))
+        if args.data == "cifar10" and (var.name == 'fc_0.w_0' or
+                                       var.name == 'fc_0.b_0'):
+            exist = False
+        return exist
 
     fluid.io.load_vars(
         exe,

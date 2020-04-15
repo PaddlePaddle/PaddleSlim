@@ -236,6 +236,7 @@ $$
 T_k = T_0*\theta^k
 $$
 
+$$
 \begin{equation}
 P(r_k) =
 \begin{cases}
@@ -243,6 +244,7 @@ e^{\frac{(r_k-r)}{T_k}} & r_k < r\\
 1 & r_k>=r
 \end{cases}
 \end{equation}
+$$
 
 在第k次迭代，搜到的网络为$N_k$, 对$N_k$训练若干epoch后，在测试集上得到reward为$r_k$, 以概率$P(r_k)$接受$r_k$，即执行$r=r_k$。$r$在搜索过程起始时被初始化为0. $T_0$为初始化温度，$\theta$为温度衰减系数，$T_k$为第k次迭代的温度。
 
