@@ -26,6 +26,7 @@ import paddle.fluid as fluid
 from paddle.fluid.dygraph import Linear, Layer
 
 from .bert import BertModelLayer
+from paddleslim.teachers.bert import BERTClassifier
 
 
 class ClsModelLayer(Layer):

@@ -30,207 +30,88 @@ import numpy as np
 import multiprocessing
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.dygraph import to_variable, Layer
+from paddle.fluid.dygraph import to_variable, Layer, Linear
 from .reader.cls import *
-from .model.bert import BertConfig
-from .model.cls import ClsModelLayer
+from .model.bert import BertModelLayer
 from .optimization import Optimizer
 from .utils.init import init_from_static_model
+from paddleslim.teachers.bert import BERTClassifier
 
-__all__ = ["ConvBERTClassifier"]
-
-
-def create_data(batch):
-    """
-    convert data to variable
-    """
-    src_ids = to_variable(batch[0], "src_ids")
-    position_ids = to_variable(batch[1], "position_ids")
-    sentence_ids = to_variable(batch[2], "sentence_ids")
-    input_mask = to_variable(batch[3], "input_mask")
-    labels = to_variable(batch[4], "labels")
-    labels.stop_gradient = True
-    return src_ids, position_ids, sentence_ids, input_mask, labels
+__all__ = ["AdaBERTClassifier"]
 
 
-class ConvBERTClassifier(Layer):
-    def __init__(self,
-                 num_labels,
-                 task_name="mnli",
-                 model_path=None,
-                 use_cuda=True):
-        super(ConvBERTClassifier, self).__init__()
-        self.task_name = task_name.lower()
-        BERT_BASE_PATH = "./data/pretrained_models/uncased_L-12_H-768_A-12/"
-        bert_config_path = BERT_BASE_PATH + "/bert_config.json"
-        self.vocab_path = BERT_BASE_PATH + "/vocab.txt"
-        self.init_pretraining_params = BERT_BASE_PATH + "/dygraph_params/"
-        self.do_lower_case = True
-        self.bert_config = BertConfig(bert_config_path)
+class AdaBERTClassifier(Layer):
+    def __init__(self, num_labels, n_layer=12, emb_size=768):
+        super(AdaBERTClassifier, self).__init__()
+        self._n_layer = n_layer
+        self._num_labels = num_labels
+        self._emb_size = emb_size
+        self.teacher = BERTClassifier(num_labels)
+        self.student = BertModelLayer(
+            n_layer=self._n_layer, emb_size=self._emb_size)
 
-        if use_cuda:
-            self.dev_count = fluid.core.get_cuda_device_count()
-        else:
-            self.dev_count = int(
-                os.environ.get('CPU_NUM', multiprocessing.cpu_count()))
+        self.cls_fc = list()
+        for i in range(self._n_layer):
+            fc = Linear(
+                input_dim=self._emb_size,
+                output_dim=self._num_labels,
+                param_attr=fluid.ParamAttr(
+                    name="s_cls_out_%d_w" % i,
+                    initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
+                bias_attr=fluid.ParamAttr(
+                    name="s_cls_out_%d_b" % i,
+                    initializer=fluid.initializer.Constant(0.)))
+            fc = self.add_sublayer("cls_fc_%d" % i, fc)
+            self.cls_fc.append(fc)
 
-        self.trainer_count = fluid.dygraph.parallel.Env().nranks
+    def forward(self, data_ids):
+        src_ids = data_ids[0]
+        position_ids = data_ids[1]
+        sentence_ids = data_ids[2]
+        return self.student(src_ids, position_ids, sentence_ids)
 
-        self.processors = {
-            'xnli': XnliProcessor,
-            'cola': ColaProcessor,
-            'mrpc': MrpcProcessor,
-            'mnli': MnliProcessor,
-        }
+    def arch_parameters(self):
+        return self.student.arch_parameters()
 
-        self.cls_model = ClsModelLayer(
-            self.bert_config, num_labels, return_pooled_out=True)
+    def genotype(self):
+        return self.arch_parameters()
 
-        if model_path is not None:
-            #restore the model
-            print("Load params from %s" % model_path)
-            model_dict, _ = fluid.load_dygraph(model_path)
-            self.cls_model.load_dict(model_dict)
+    def loss(self, data_ids, beta=0.5, gamma=0.5):
+        T = 1.0
+        src_ids = data_ids[0]
+        position_ids = data_ids[1]
+        sentence_ids = data_ids[2]
+        input_mask = data_ids[3]
+        labels = data_ids[4]
+        enc_outputs, next_sent_feats = self.student(src_ids, position_ids,
+                                                    sentence_ids)
 
-    def forward(self, input):
-        return self.cls_model(input)
+        self.teacher.eval()
+        total_loss, logits, losses, accuracys, num_seqs = self.teacher(
+            data_ids)
 
-    def test(self, data_dir, batch_size=64, max_seq_len=512):
+        kd_losses = []
+        for t_logits, t_loss, s_sent_feat, fc in zip(
+                logits, losses, next_sent_feats, self.cls_fc):
+            s_sent_feat = fluid.layers.dropout(
+                x=s_sent_feat,
+                dropout_prob=0.1,
+                dropout_implementation="upscale_in_train")
+            s_logits = fc(s_sent_feat)
 
-        processor = self.processors[self.task_name](
-            data_dir=data_dir,
-            vocab_path=self.vocab_path,
-            max_seq_len=max_seq_len,
-            do_lower_case=self.do_lower_case,
-            in_tokens=False)
+            t_probs = fluid.layers.softmax(t_logits)
+            s_probs = fluid.layers.softmax(s_logits)
+            kd_loss = t_probs * fluid.layers.log(s_probs / T)
+            kd_loss = fluid.layers.reduce_sum(kd_loss, dim=1)
+            kd_loss = fluid.layers.reduce_mean(kd_loss, dim=0)
+            kd_loss = kd_loss / t_loss
+            kd_losses.append(kd_loss)
 
-        test_data_generator = processor.data_generator(
-            batch_size=batch_size, phase='dev', epoch=1, shuffle=False)
+        kd_loss = fluid.layers.sum(kd_losses)
 
-        self.cls_model.eval()
-        total_cost, final_acc, avg_acc, total_num_seqs = [], [], [], []
-        for batch in test_data_generator():
-            data_ids = create_data(batch)
+        ce_loss = fluid.layers.cross_entropy(s_probs, labels)
+        ce_loss = fluid.layers.mean(x=ce_loss)
 
-            total_loss, _, _, np_acces, np_num_seqs = self.cls_model(data_ids)
-
-            np_loss = total_loss.numpy()
-            np_acc = np_acces[-1].numpy()
-            np_avg_acc = np.mean([acc.numpy() for acc in np_acces])
-            np_num_seqs = np_num_seqs.numpy()
-
-            total_cost.extend(np_loss * np_num_seqs)
-            final_acc.extend(np_acc * np_num_seqs)
-            avg_acc.extend(np_avg_acc * np_num_seqs)
-            total_num_seqs.extend(np_num_seqs)
-
-        print("[evaluation] classifier[-1] average acc: %f; average acc: %f" %
-              (np.sum(final_acc) / np.sum(total_num_seqs),
-               np.sum(avg_acc) / np.sum(total_num_seqs)))
-        self.cls_model.train()
-
-    def fit(self,
-            data_dir,
-            epoch,
-            batch_size=64,
-            use_cuda=True,
-            max_seq_len=512,
-            warmup_proportion=0.1,
-            use_data_parallel=False,
-            learning_rate=0.00005,
-            weight_decay=0.01,
-            lr_scheduler="linear_warmup_decay",
-            skip_steps=10,
-            save_steps=1000,
-            checkpoints="checkpoints"):
-
-        processor = self.processors[self.task_name](
-            data_dir=data_dir,
-            vocab_path=self.vocab_path,
-            max_seq_len=max_seq_len,
-            do_lower_case=self.do_lower_case,
-            in_tokens=False,
-            random_seed=5512)
-        shuffle_seed = 1 if self.trainer_count > 1 else None
-
-        train_data_generator = processor.data_generator(
-            batch_size=batch_size,
-            phase='train',
-            epoch=epoch,
-            dev_count=self.trainer_count,
-            shuffle=True,
-            shuffle_seed=shuffle_seed)
-        num_train_examples = processor.get_num_examples(phase='train')
-        max_train_steps = epoch * num_train_examples // batch_size // self.trainer_count
-        warmup_steps = int(max_train_steps * warmup_proportion)
-
-        print("Device count: %d" % self.dev_count)
-        print("Trainer count: %d" % self.trainer_count)
-        print("Num train examples: %d" % num_train_examples)
-        print("Max train steps: %d" % max_train_steps)
-        print("Num warmup steps: %d" % warmup_steps)
-
-        if use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-
-        optimizer = Optimizer(
-            warmup_steps=warmup_steps,
-            num_train_steps=max_train_steps,
-            learning_rate=learning_rate,
-            model_cls=self.cls_model,
-            weight_decay=weight_decay,
-            scheduler=lr_scheduler,
-            loss_scaling=1.0,
-            parameter_list=self.cls_model.parameters())
-
-        if use_data_parallel:
-            self.cls_model = fluid.dygraph.parallel.DataParallel(
-                self.cls_model, strategy)
-            train_data_generator = fluid.contrib.reader.distributed_batch_reader(
-                train_data_generator)
-
-        steps = 0
-        time_begin = time.time()
-
-        for batch in train_data_generator():
-            data_ids = create_data(batch)
-            total_loss, logits, losses, accuracys, num_seqs = self.cls_model(
-                data_ids)
-
-            optimizer.optimization(
-                losses[-1],
-                use_data_parallel=use_data_parallel,
-                model=self.cls_model)
-            self.cls_model.clear_gradients()
-
-            if steps != 0 and steps % skip_steps == 0:
-                time_end = time.time()
-                used_time = time_end - time_begin
-                current_example, current_epoch = processor.get_train_progress()
-                localtime = time.asctime(time.localtime(time.time()))
-                print(
-                    "%s, epoch: %s, steps: %s, dy_graph loss: %f, acc: %f, speed: %f steps/s"
-                    % (localtime, current_epoch, steps, total_loss.numpy(),
-                       accuracys[-1].numpy(), skip_steps / used_time))
-                time_begin = time.time()
-
-            if steps != 0 and steps % save_steps == 0 and fluid.dygraph.parallel.Env(
-            ).local_rank == 0:
-
-                self.test(data_dir, batch_size=64, max_seq_len=512)
-
-                save_path = os.path.join(checkpoints,
-                                         "steps" + "_" + str(steps))
-                fluid.save_dygraph(self.cls_model.state_dict(), save_path)
-                fluid.save_dygraph(optimizer.optimizer.state_dict(), save_path)
-                print("Save model parameters and optimizer status at %s" %
-                      save_path)
-
-            steps += 1
-
-        if fluid.dygraph.parallel.Env().local_rank == 0:
-            save_path = os.path.join(checkpoints, "final")
-            fluid.save_dygraph(self.cls_model.state_dict(), save_path)
-            fluid.save_dygraph(optimizer.optimizer.state_dict(), save_path)
-            print("Save model parameters and optimizer status at %s" %
-                  save_path)
+        e_loss = 1  # to be done
+        loss = (1 - gamma) * ce_loss + gamma * kd_loss + beta * e_loss
+        return loss
