@@ -137,6 +137,7 @@ def _reader_creator(file_list,
         try:
             with open(file_list) as flist:
                 full_lines = [line.strip() for line in flist]
+                full_lines = full_lines[0:2000]
                 if shuffle:
                     np.random.shuffle(full_lines)
                 if mode == 'train' and os.getenv('PADDLE_TRAINING_ROLE'):

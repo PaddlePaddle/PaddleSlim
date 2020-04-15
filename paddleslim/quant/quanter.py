@@ -235,6 +235,7 @@ def quant_aware(program,
         quant_program = main_graph.to_program()
     else:
         quant_program = fluid.CompiledProgram(main_graph.graph)
+        #quant_program = main_graph.to_program()
     return quant_program
 
 

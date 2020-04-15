@@ -65,6 +65,7 @@ def dsq(x, bit=8, name=None):
     interval = fluid.layers.floor(interval)
     mi = (interval + 0.5) * delta + cur_min
     phi_x = phi_function(x, mi, alpha_param, delta)
+    '''
     out_var = fluid.default_main_program().current_block().create_var(
         dtype=dtype, shape=phi_x.shape)
     fluid.layers.py_func(
@@ -73,7 +74,8 @@ def dsq(x, bit=8, name=None):
         out=out_var,
         backward_func=dsq_round_back,
         skip_vars_in_backward_input=[phi_x, out_var])
-    x = dequantize(out_var, cur_min, delta, interval)
+    '''
+    x = dequantize(phi_x, cur_min, delta, interval)
 
     return x
 
@@ -82,7 +84,8 @@ def pact(x, name=None):
     helper = LayerHelper("dsq1", **locals())
     dtype = 'float32'
     u_param_attr = fluid.ParamAttr(
-        initializer=fluid.initializer.ConstantInitializer(value=10))
+        initializer=fluid.initializer.ConstantInitializer(value=8),
+        regularizer=fluid.regularizer.L2DecayRegularizer(0.01))
     u_param = helper.create_parameter(
         attr=u_param_attr, shape=[1], dtype=dtype)
     x = x - fluid.layers.relu(x - u_param)

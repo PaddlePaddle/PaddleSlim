@@ -141,23 +141,19 @@ def compress(args):
     #    According to the weight and activation quantization type, the graph will be added
     #    some fake quantize operators and fake dequantize operators.
     ############################################################################################################
-    func = dsq
+    func = pact
     val_program = quant_aware(
-        val_program,
-        place,
-        quant_config,
-        scope=None,
-        for_test=True,
-        weight_quantize_func=func,
-        act_quantize_func=func)
+        val_program, place, quant_config, scope=None, for_test=True)
+    #     act_preprocess_func=func)
+    #     act_quantize_func=func)
     compiled_train_prog = quant_aware(
         train_prog,
         place,
         quant_config,
         scope=None,
         for_test=False,
-        weight_quantize_func=func,
-        act_quantize_func=func)
+        act_preprocess_func=func)
+    #act_quantize_func=func)
     opt = create_optimizer(args)
     opt.minimize(avg_cost)
 
@@ -195,7 +191,7 @@ def compress(args):
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(
                 program,
-                feed=train_feeder.feed(data),
+                feed=val_feeder.feed(data),
                 fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
             if batch_id % args.log_period == 0:
@@ -264,19 +260,23 @@ def compress(args):
                 exe,
                 dirname=os.path.join(args.checkpoint_dir, 'best_model'),
                 main_program=val_program)
-
     fluid.io.load_persistables(
         exe,
         dirname=os.path.join(args.checkpoint_dir, 'best_model'),
         main_program=val_program)
+    for var in program.list_vars():
+        if var.persistable:
+            array = np.array(fluid.global_scope().find_var(var.name)
+                             .get_tensor())
+            print(var.name, array)
     ############################################################################################################
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
     ############################################################################################################
     float_program, int8_program = convert(val_program, place, quant_config, \
-                                                        scope=None, \
-                                                        save_int8=True)
+                                                       scope=None, \
+                                                       save_int8=True)
     print("eval best_model after convert")
     final_acc1 = test(best_epoch, float_program)
     ############################################################################################################
