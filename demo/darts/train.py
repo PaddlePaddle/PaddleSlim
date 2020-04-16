@@ -21,6 +21,7 @@ import sys
 import ast
 import argparse
 import functools
+import numpy as np
 
 import logging
 FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
@@ -64,6 +65,14 @@ add_arg('arch',              str,   'DARTS_V2',         "Which architecture to u
 add_arg('report_freq',       int,   50,              'Report frequency')
 add_arg('use_data_parallel', ast.literal_eval,  False, "The flag indicating whether to use data parallel mode to train the model.")
 # yapf: enable
+
+
+def count_parameters_in_MB(all_params):
+    parameters_number = 0
+    for param in all_params:
+        if param.trainable and 'aux' not in param.name:
+            parameters_number += np.prod(param.shape)
+    return parameters_number / 1e6
 
 
 def train(model, train_reader, optimizer, epoch, drop_path_prob, args):
@@ -144,9 +153,6 @@ def main(args):
         if args.use_data_parallel else fluid.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
-        if args.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-
         genotype = eval("genotypes.%s" % args.arch)
         model = Network(
             C=args.init_channels,
@@ -154,6 +160,9 @@ def main(args):
             layers=args.layers,
             auxiliary=args.auxiliary,
             genotype=genotype)
+
+        logger.info("param size = {:.6f}MB".format(
+            count_parameters_in_MB(model.parameters())))
 
         step_per_epoch = int(args.trainset_num / args.batch_size)
         learning_rate = fluid.dygraph.CosineDecay(args.learning_rate,
@@ -165,6 +174,7 @@ def main(args):
             parameter_list=model.parameters())
 
         if args.use_data_parallel:
+            strategy = fluid.dygraph.parallel.prepare_context()
             model = fluid.dygraph.parallel.DataParallel(model, strategy)
 
         train_loader = fluid.io.DataLoader.from_generator(
@@ -188,12 +198,12 @@ def main(args):
             is_train=False,
             is_shuffle=False,
             args=args)
-        train_loader.set_batch_generator(train_reader, places=place)
-        valid_loader.set_batch_generator(valid_reader, places=place)
-
         if args.use_data_parallel:
             train_reader = fluid.contrib.reader.distributed_batch_reader(
                 train_reader)
+
+        train_loader.set_batch_generator(train_reader, places=place)
+        valid_loader.set_batch_generator(valid_reader, places=place)
 
         save_parameters = (not args.use_data_parallel) or (
             args.use_data_parallel and

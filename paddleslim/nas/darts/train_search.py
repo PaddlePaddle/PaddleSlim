@@ -149,17 +149,18 @@ class DARTSearch(object):
         return top1.avg[0]
 
     def train(self):
-        if self.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
+
         model_parameters = [
             p for p in self.model.parameters()
             if p.name not in [a.name for a in self.model.arch_parameters()]
         ]
         logger.info("param size = {:.6f}MB".format(
             count_parameters_in_MB(model_parameters)))
+
         step_per_epoch = int(self.num_imgs * 0.5 / self.batchsize)
         if self.unrolled:
             step_per_epoch *= 2
+
         learning_rate = fluid.dygraph.CosineDecay(
             self.learning_rate, step_per_epoch, self.num_epochs)
         optimizer = fluid.optimizer.MomentumOptimizer(
@@ -169,8 +170,6 @@ class DARTSearch(object):
             parameter_list=model_parameters)
 
         if self.use_data_parallel:
-            self.model = fluid.dygraph.parallel.DataParallel(self.model,
-                                                             strategy)
             self.train_reader = fluid.contrib.reader.distributed_batch_reader(
                 self.train_reader)
             self.valid_reader = fluid.contrib.reader.distributed_batch_reader(
@@ -190,9 +189,16 @@ class DARTSearch(object):
         train_loader.set_batch_generator(self.train_reader, places=self.place)
         valid_loader.set_batch_generator(self.valid_reader, places=self.place)
 
-        architect = Architect(self.model, learning_rate,
-                              self.arch_learning_rate, self.place,
-                              self.unrolled)
+        base_model = self.model
+        architect = Architect(
+            model=self.model,
+            eta=learning_rate,
+            arch_learning_rate=self.arch_learning_rate,
+            place=self.place,
+            unrolled=self.unrolled,
+            parallel=self.use_data_parallel)
+
+        self.model = architect.get_model()
 
         save_parameters = (not self.use_data_parallel) or (
             self.use_data_parallel and
@@ -201,7 +207,7 @@ class DARTSearch(object):
         for epoch in range(self.num_epochs):
             logger.info('Epoch {}, lr {:.6f}'.format(
                 epoch, optimizer.current_step_lr()))
-            genotype = self.model.genotype()
+            genotype = base_model.genotype()
             logger.info('genotype = %s', genotype)
 
             train_top1 = self.train_one_epoch(train_loader, valid_loader,

@@ -33,6 +33,7 @@ from model import NetworkImageNet as Network
 from paddleslim.common import AvgrageMeter
 import genotypes
 import reader
+from train import count_parameters_in_MB
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from utility import add_arguments, print_arguments
 
@@ -157,9 +158,6 @@ def main(args):
         if args.use_data_parallel else fluid.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
-        if args.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-
         genotype = eval("genotypes.%s" % args.arch)
         model = Network(
             C=args.init_channels,
@@ -167,6 +165,9 @@ def main(args):
             layers=args.layers,
             auxiliary=args.auxiliary,
             genotype=genotype)
+
+        logger.info("param size = {:.6f}MB".format(
+            count_parameters_in_MB(model.parameters())))
 
         step_per_epoch = int(args.trainset_num / args.batch_size)
         learning_rate = fluid.dygraph.ExponentialDecay(
@@ -181,6 +182,7 @@ def main(args):
             parameter_list=model.parameters())
 
         if args.use_data_parallel:
+            strategy = fluid.dygraph.parallel.prepare_context()
             model = fluid.dygraph.parallel.DataParallel(model, strategy)
 
         train_loader = fluid.io.DataLoader.from_generator(
@@ -201,13 +203,12 @@ def main(args):
         valid_reader = fluid.io.batch(
             reader.imagenet_reader(args.data_dir, 'val'),
             batch_size=args.batch_size)
-
-        train_loader.set_sample_list_generator(train_reader, places=place)
-        valid_loader.set_sample_list_generator(valid_reader, places=place)
-
         if args.use_data_parallel:
             train_reader = fluid.contrib.reader.distributed_batch_reader(
                 train_reader)
+
+        train_loader.set_sample_list_generator(train_reader, places=place)
+        valid_loader.set_sample_list_generator(valid_reader, places=place)
 
         save_parameters = (not args.use_data_parallel) or (
             args.use_data_parallel and
