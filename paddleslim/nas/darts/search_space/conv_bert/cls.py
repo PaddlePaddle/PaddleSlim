@@ -83,23 +83,34 @@ class AdaBERTClassifier(Layer):
         sentence_ids = data_ids[2]
         input_mask = data_ids[3]
         labels = data_ids[4]
-        enc_outputs, next_sent_feats = self.student(src_ids, position_ids,
-                                                    sentence_ids)
+        flops = []
+        model_size = []
+        enc_outputs, next_sent_feats, k_i = self.student(
+            src_ids,
+            position_ids,
+            sentence_ids,
+            flops=flops,
+            model_size=model_size)
 
         self.teacher.eval()
-        total_loss, logits, losses, accuracys, num_seqs = self.teacher(
+        total_loss, t_logits, t_losses, accuracys, num_seqs = self.teacher(
             data_ids)
 
+        # define kd loss
         kd_losses = []
-        for t_logits, t_loss, s_sent_feat, fc in zip(
-                logits, losses, next_sent_feats, self.cls_fc):
+        for i in range(len(next_sent_feats)):
+            j = np.ceil(i * (len(next_sent_feats) / len(logits)))
+            t_logit = t_logits[j]
+            t_loss = t_losses[j]
+            s_sent_feat = next_sent_feats[i]
+            fc = self.cls_fc[i]
             s_sent_feat = fluid.layers.dropout(
                 x=s_sent_feat,
                 dropout_prob=0.1,
                 dropout_implementation="upscale_in_train")
             s_logits = fc(s_sent_feat)
 
-            t_probs = fluid.layers.softmax(t_logits)
+            t_probs = fluid.layers.softmax(t_logit)
             s_probs = fluid.layers.softmax(s_logits)
             t_probs.stop_gradient = False
             kd_loss = t_probs * fluid.layers.log(s_probs / T)
@@ -110,9 +121,16 @@ class AdaBERTClassifier(Layer):
 
         kd_loss = fluid.layers.sum(kd_losses)
 
+        # define ce loss
         ce_loss = fluid.layers.cross_entropy(s_probs, labels)
-        ce_loss = fluid.layers.mean(x=ce_loss)
+        ce_loss = fluid.layers.mean(x=ce_loss) * k_i
 
-        e_loss = 1  # to be done
+        # define e loss
+        model_size = fluid.layers.sum(model_size)
+        flops = fluid.layers.sum(flops)
+        e_loss = (len(next_sent_feats) * k_i / self._n_layer) * (
+            flops + model_size)
+
+        # define total loss
         loss = (1 - gamma) * ce_loss - gamma * kd_loss + beta * e_loss
         return loss

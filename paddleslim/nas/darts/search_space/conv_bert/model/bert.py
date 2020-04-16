@@ -85,7 +85,12 @@ class BertModelLayer(Layer):
     def arch_parameters(self):
         return [self._encoder.alphas]
 
-    def forward(self, src_ids, position_ids, sentence_ids):
+    def forward(self,
+                src_ids,
+                position_ids,
+                sentence_ids,
+                flops=[],
+                model_size=[]):
         """
         forward
         """
@@ -96,7 +101,8 @@ class BertModelLayer(Layer):
         emb_out = src_emb + pos_emb
         emb_out = emb_out + sent_emb
 
-        enc_outputs = self._encoder(emb_out)
+        enc_outputs, k_i = self._encoder(
+            emb_out, flops=flops, model_size=model_size)
 
         if not self.return_pooled_out:
             return enc_outputs
@@ -109,4 +115,4 @@ class BertModelLayer(Layer):
                 next_sent_feat, shape=[-1, self._emb_size])
             next_sent_feats.append(next_sent_feat)
 
-        return enc_outputs, next_sent_feats
+        return enc_outputs, next_sent_feats, k_i

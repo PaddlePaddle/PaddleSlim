@@ -29,6 +29,33 @@ PRIMITIVES = [
     'dil_conv_7', 'avg_pool_3', 'max_pool_3', 'none', 'skip_connect'
 ]
 
+input_size = 128 * 768
+
+FLOPs = {
+    'std_conv_3': input_size * 3 * 1,
+    'std_conv_5': input_size * 5 * 1,
+    'std_conv_7': input_size * 7 * 1,
+    'dil_conv_3': input_size * 3 * 1,
+    'dil_conv_5': input_size * 5 * 1,
+    'dil_conv_7': input_size * 7 * 1,
+    'avg_pool_3': input_size * 3 * 1,
+    'max_pool_3': input_size * 3 * 1,
+    'none': 0,
+    'skip_connect': 0,
+}
+
+ModelSize = {
+    'std_conv_3': 3 * 1,
+    'std_conv_5': 5 * 1,
+    'std_conv_7': 7 * 1,
+    'dil_conv_3': 3 * 1,
+    'dil_conv_5': 5 * 1,
+    'dil_conv_7': 7 * 1,
+    'avg_pool_3': 0,
+    'max_pool_3': 0,
+    'none': 0,
+    'skip_connect': 0,
+}
 
 OPS = {
     'std_conv_3': lambda : ConvBN(1, 1, filter_size=3, dilation=1),
@@ -50,9 +77,11 @@ class MixedOp(fluid.dygraph.Layer):
         ops = [OPS[primitive]() for primitive in PRIMITIVES]
         self._ops = fluid.dygraph.LayerList(ops)
 
-    def forward(self, x, weights):
+    def forward(self, x, weights, flops=[], model_size=[]):
         for i in range(len(self._ops)):
             if weights[i] != 0:
+                flops.append(FLOPs.values()[i] * weights[i])
+                model_size.append(ModelSize.values()[i] * weights[i])
                 return self._ops[i](x) * weights[i]
 
 
@@ -132,13 +161,16 @@ class Cell(fluid.dygraph.Layer):
                 ops.append(op)
         self._ops = fluid.dygraph.LayerList(ops)
 
-    def forward(self, s0, s1, weights, weights2=None):
+    def forward(self, s0, s1, weights, weights2=None, flops=[], model_size=[]):
 
         states = [s0, s1]
         offset = 0
         for i in range(self._steps):
             s = fluid.layers.sums([
-                self._ops[offset + j](h, weights[offset + j])
+                self._ops[offset + j](h,
+                                      weights[offset + j],
+                                      flops=flops,
+                                      model_size=model_size)
                 for j, h in enumerate(states)
             ])
             offset += len(states)
@@ -173,7 +205,13 @@ class EncoderLayer(Layer):
             default_initializer=NormalInitializer(
                 loc=0.0, scale=1e-3))
 
-    def forward(self, enc_input):
+        self.k = fluid.layers.create_parameter(
+            shape=[1, self._n_layer],
+            dtype="float32",
+            default_initializer=NormalInitializer(
+                loc=0.0, scale=1e-3))
+
+    def forward(self, enc_input, flops=[], model_size=[]):
         """
         forward
         :param enc_input:
@@ -184,12 +222,20 @@ class EncoderLayer(Layer):
                                    [-1, 1, enc_input.shape[1], self._d_model])
 
         alphas = gumbel_softmax(self.alphas)
+        k = gumbel_softmax(self.k)
 
         outputs = []
         s0 = s1 = tmp
-        for i, cell in enumerate(self._cells):
-            s0, s1 = s1, cell(s0, s1, alphas)
+        for i in range(self._n_layer):
+            s0, s1 = s1, self._cells[i](s0,
+                                        s1,
+                                        alphas,
+                                        flops=flops,
+                                        model_size=model_size)
             enc_output = fluid.layers.reshape(
                 s1, [-1, enc_input.shape[1], self._d_model])
             outputs.append(enc_output)
-        return outputs
+            if k[i] != 0:
+                outputs[-1] = outputs[-1] * k[i]
+                break
+        return outputs, k[i]
