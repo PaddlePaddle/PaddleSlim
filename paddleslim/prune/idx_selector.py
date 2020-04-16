@@ -52,12 +52,11 @@ def default_idx_selector(group, ratio):
        list: pruned indexes
 
     """
-    assert (isinstance(graph, GraphWrapper))
     name, axis, score = group[
         0]  # sort channels by the first convolution's score
     sorted_idx = score.argsort()
 
-    pruned_num = len(sorted_idx) * ratio
+    pruned_num = int(round(len(sorted_idx) * ratio))
     pruned_idx = sorted_idx[:pruned_num]
 
     idxs = []
@@ -94,7 +93,6 @@ def optimal_threshold(group, ratio):
        list: pruned indexes
 
     """
-    assert (isinstance(graph, GraphWrapper))
     name, axis, score = group[
         0]  # sort channels by the first convolution's score
 
