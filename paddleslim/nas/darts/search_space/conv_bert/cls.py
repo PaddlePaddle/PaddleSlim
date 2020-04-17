@@ -41,12 +41,20 @@ __all__ = ["AdaBERTClassifier"]
 
 
 class AdaBERTClassifier(Layer):
-    def __init__(self, num_labels, n_layer=12, emb_size=768):
+    def __init__(self, num_labels, n_layer=8, emb_size=768,
+                 teacher_model=None):
         super(AdaBERTClassifier, self).__init__()
         self._n_layer = n_layer
         self._num_labels = num_labels
         self._emb_size = emb_size
-        self.teacher = BERTClassifier(num_labels)
+        print(
+            "----------------------load teacher model and test----------------------------------------"
+        )
+        self.teacher = BERTClassifier(num_labels, model_path=teacher_model)
+        #        self.teacher.test("/work/PaddleSlim/demo/bert/data/glue_data/MNLI/")
+        print(
+            "----------------------finish load teacher model and test----------------------------------------"
+        )
         self.student = BertModelLayer(
             n_layer=self._n_layer, emb_size=self._emb_size)
 
@@ -76,7 +84,7 @@ class AdaBERTClassifier(Layer):
     def genotype(self):
         return self.arch_parameters()
 
-    def loss(self, data_ids, beta=0.5, gamma=0.5):
+    def loss(self, data_ids, beta=4, gamma=0.8):
         T = 1.0
         src_ids = data_ids[0]
         position_ids = data_ids[1]
@@ -98,10 +106,20 @@ class AdaBERTClassifier(Layer):
 
         # define kd loss
         kd_losses = []
+
+        kd_weights = []
         for i in range(len(next_sent_feats)):
-            j = np.ceil(i * (len(next_sent_feats) / len(logits)))
+            j = int(np.ceil(i * (float(len(t_logits)) / len(next_sent_feats))))
+            kd_weights.append(t_losses[j].numpy())
+        kd_weights = 1 / np.array(kd_weights)
+
+        kd_weights = np.exp(kd_weights - np.max(kd_weights))
+
+        kd_weights = kd_weights / kd_weights.sum(axis=0)
+
+        for i in range(len(next_sent_feats)):
+            j = int(np.ceil(i * (float(len(t_logits)) / len(next_sent_feats))))
             t_logit = t_logits[j]
-            t_loss = t_losses[j]
             s_sent_feat = next_sent_feats[i]
             fc = self.cls_fc[i]
             s_sent_feat = fluid.layers.dropout(
@@ -115,22 +133,25 @@ class AdaBERTClassifier(Layer):
             t_probs.stop_gradient = False
             kd_loss = t_probs * fluid.layers.log(s_probs / T)
             kd_loss = fluid.layers.reduce_sum(kd_loss, dim=1)
-            kd_loss = fluid.layers.reduce_mean(kd_loss, dim=0)
-            kd_loss = kd_loss / t_loss
+            kd_loss = kd_loss * kd_weights[i]
             kd_losses.append(kd_loss)
 
         kd_loss = fluid.layers.sum(kd_losses)
+        kd_loss = fluid.layers.reduce_mean(kd_loss, dim=0)
 
         # define ce loss
         ce_loss = fluid.layers.cross_entropy(s_probs, labels)
-        ce_loss = fluid.layers.mean(x=ce_loss) * k_i
+        ce_loss = fluid.layers.reduce_mean(ce_loss) * k_i
 
         # define e loss
-        model_size = fluid.layers.sum(model_size)
-        flops = fluid.layers.sum(flops)
+        model_size = fluid.layers.sum(
+            model_size) / self.student.max_model_size()
+        flops = fluid.layers.sum(flops) / self.student.max_flops()
         e_loss = (len(next_sent_feats) * k_i / self._n_layer) * (
             flops + model_size)
-
         # define total loss
         loss = (1 - gamma) * ce_loss - gamma * kd_loss + beta * e_loss
+        print("ce_loss: {}; kd_loss: {}; e_loss: {}".format((
+            1 - gamma) * ce_loss.numpy(), -gamma * kd_loss.numpy(), beta *
+                                                            e_loss.numpy()))
         return loss

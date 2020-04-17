@@ -19,6 +19,7 @@ from __future__ import print_function
 __all__ = ['DARTSearch']
 
 import logging
+from itertools import izip
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable
@@ -75,10 +76,8 @@ class DARTSearch(object):
         objs = AvgrageMeter()
         self.model.train()
 
-        for step_id, (
-                train_data,
-                valid_data) in enumerate(zip(train_loader(), valid_loader())):
-
+        step_id = 0
+        for train_data, valid_data in izip(train_loader(), valid_loader()):
             if epoch >= self.epochs_no_archopt:
                 architect.step(train_data, valid_data)
 
@@ -95,11 +94,13 @@ class DARTSearch(object):
             optimizer.minimize(loss, grad_clip)
             self.model.clear_gradients()
 
-            objs.update(loss.numpy(), self.batchsize)
+            batch_size = train_data[0].shape[0]
+            objs.update(loss.numpy(), batch_size)
 
             if step_id % self.log_freq == 0:
                 logger.info("Train Epoch {}, Step {}, loss {:.6f}".format(
                     epoch, step_id, objs.avg[0]))
+            step_id += 1
         return objs.avg[0]
 
     def valid_one_epoch(self, valid_loader, epoch):

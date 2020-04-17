@@ -64,8 +64,8 @@ OPS = {
     'dil_conv_3': lambda : ConvBN(1, 1, filter_size=3, dilation=2),
     'dil_conv_5': lambda : ConvBN(1, 1, filter_size=5, dilation=2),
     'dil_conv_7': lambda : ConvBN(1, 1, filter_size=7, dilation=2),
-    'avg_pool_3': lambda : Pool2D(pool_size=(3, 1), pool_type='avg'),
-    'max_pool_3': lambda : Pool2D(pool_size=(3, 1), pool_type='max'),
+    'avg_pool_3': lambda : Pool2D(pool_size=(3, 1), pool_padding=(1, 0), pool_type='avg'),
+    'max_pool_3': lambda : Pool2D(pool_size=(3, 1), pool_padding=(1, 0), pool_type='max'),
     'none': lambda : Zero(),
     'skip_connect': lambda : Identity(),
 }
@@ -76,10 +76,13 @@ class MixedOp(fluid.dygraph.Layer):
         super(MixedOp, self).__init__()
         ops = [OPS[primitive]() for primitive in PRIMITIVES]
         self._ops = fluid.dygraph.LayerList(ops)
+        self.max_flops = max([FLOPs[primitive] for primitive in PRIMITIVES])
+        self.max_model_size = max(
+            [ModelSize[primitive] for primitive in PRIMITIVES])
 
     def forward(self, x, weights, flops=[], model_size=[]):
         for i in range(len(self._ops)):
-            if weights[i] != 0:
+            if weights[i].numpy() != 0:
                 flops.append(FLOPs.values()[i] * weights[i])
                 model_size.append(ModelSize.values()[i] * weights[i])
                 return self._ops[i](x) * weights[i]
@@ -135,8 +138,8 @@ class ConvBN(fluid.dygraph.Layer):
         self.conv_layer = Conv2D(
             in_ch,
             out_ch, [filter_size, 1],
-            dilation=dilation,
-            padding=[(filter_size - 1) // 2, 0],
+            dilation=[dilation, 1],
+            padding=[(filter_size - 1) * dilation // 2, 0],
             param_attr=conv_param,
             bias_attr=False,
             act=None,
@@ -154,10 +157,14 @@ class Cell(fluid.dygraph.Layer):
         super(Cell, self).__init__()
         self._steps = steps
 
+        self.max_flops = 0
+        self.max_model_size = 0
         ops = []
         for i in range(self._steps):
             for j in range(2 + i):
                 op = MixedOp()
+                self.max_flops += op.max_flops
+                self.max_model_size += op.max_model_size
                 ops.append(op)
         self._ops = fluid.dygraph.LayerList(ops)
 
@@ -191,10 +198,16 @@ class EncoderLayer(Layer):
         self._n_layer = n_layer
         self._d_model = d_model
         self._steps = 3
+        self.max_flops = 0
+        self.max_model_size = 0
 
         cells = []
         for i in range(n_layer):
-            cells.append(Cell(steps=self._steps))
+            cell = Cell(steps=self._steps)
+            cells.append(cell)
+            self.max_flops += cell.max_flops
+            self.max_model_size += cell.max_model_size
+
         self._cells = fluid.dygraph.LayerList(cells)
 
         k = sum(1 for i in range(self._steps) for n in range(2 + i))
@@ -222,7 +235,7 @@ class EncoderLayer(Layer):
                                    [-1, 1, enc_input.shape[1], self._d_model])
 
         alphas = gumbel_softmax(self.alphas)
-        k = gumbel_softmax(self.k)
+        k = fluid.layers.reshape(gumbel_softmax(self.k), [-1])
 
         outputs = []
         s0 = s1 = tmp
@@ -235,7 +248,7 @@ class EncoderLayer(Layer):
             enc_output = fluid.layers.reshape(
                 s1, [-1, enc_input.shape[1], self._d_model])
             outputs.append(enc_output)
-            if k[i] != 0:
+            if k[i].numpy() != 0:
                 outputs[-1] = outputs[-1] * k[i]
-                break
-        return outputs, k[i]
+                return outputs, k[i]
+        return None

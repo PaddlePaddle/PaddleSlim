@@ -14,7 +14,7 @@ def main():
     max_seq_len = 512
     do_lower_case = True
     batch_size = 32
-    epoch = 3
+    epoch = 30
 
     processor = MnliProcessor(
         data_dir=data_dir,
@@ -23,8 +23,6 @@ def main():
         do_lower_case=do_lower_case,
         in_tokens=False)
 
-    valid_reader = processor.data_generator(
-        batch_size=batch_size, phase='dev', epoch=epoch, shuffle=False)
     train_reader = processor.data_generator(
         batch_size=batch_size,
         phase='train',
@@ -32,13 +30,22 @@ def main():
         dev_count=1,
         shuffle=True)
 
+    val_reader = processor.data_generator(
+        batch_size=batch_size,
+        phase='train',
+        epoch=epoch,
+        dev_count=1,
+        shuffle=True)
+
     with fluid.dygraph.guard(place):
-        model = AdaBERTClassifier(3)
+        model = AdaBERTClassifier(
+            3,
+            teacher_model="/work/PaddleSlim/demo/bert_1/checkpoints/steps_23000"
+        )
         searcher = DARTSearch(
             model,
             train_reader,
-            valid_reader,
-            learning_rate=0.001,
+            val_reader,
             batchsize=batch_size,
             num_epochs=epoch,
             log_freq=10)

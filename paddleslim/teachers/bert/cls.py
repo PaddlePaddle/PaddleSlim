@@ -86,17 +86,20 @@ class BERTClassifier(Layer):
         self.cls_model = ClsModelLayer(
             self.bert_config, num_labels, return_pooled_out=True)
 
-        if self.init_pretraining_params:
-            print("Load pre-trained model from %s" %
-                  self.init_pretraining_params)
-            init_from_static_model(self.init_pretraining_params,
-                                   self.cls_model, self.bert_config)
-
         if model_path is not None:
             #restore the model
             print("Load params from %s" % model_path)
             model_dict, _ = fluid.load_dygraph(model_path)
             self.cls_model.load_dict(model_dict)
+        elif self.init_pretraining_params:
+            print("Load pre-trained model from %s" %
+                  self.init_pretraining_params)
+            init_from_static_model(self.init_pretraining_params,
+                                   self.cls_model, self.bert_config)
+        else:
+            raise Exception(
+                "You should load pretrained model for training this teacher model."
+            )
 
     def forward(self, input):
         return self.cls_model(input)

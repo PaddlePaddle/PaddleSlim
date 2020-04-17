@@ -82,6 +82,12 @@ class BertModelLayer(Layer):
         self._encoder = EncoderLayer(
             n_layer=self._n_layer, d_model=self._emb_size)
 
+    def max_flops(self):
+        return self._encoder.max_flops
+
+    def max_model_size(self):
+        return self._encoder.max_model_size
+
     def arch_parameters(self):
         return [self._encoder.alphas]
 
