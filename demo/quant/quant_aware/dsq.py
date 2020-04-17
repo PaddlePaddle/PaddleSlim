@@ -81,9 +81,10 @@ def dsq(x, bit=8, name=None):
 
 
 def pact(x, name=None):
-    helper = LayerHelper("dsq1", **locals())
+    helper = LayerHelper("pact", **locals())
     dtype = 'float32'
     u_param_attr = fluid.ParamAttr(
+        name='pact',
         initializer=fluid.initializer.ConstantInitializer(value=8),
         regularizer=fluid.regularizer.L2DecayRegularizer(0.01))
     u_param = helper.create_parameter(

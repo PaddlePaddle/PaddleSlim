@@ -10,8 +10,8 @@ import numpy as np
 import paddle.fluid as fluid
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
-#sys.path.append("../../../")
-sys.path.append("/cv/workspace/PaddleSlim/")
+sys.path.append("../../../")
+#sys.path.append("/cv/workspace/PaddleSlim/")
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 from paddleslim.quant import quant_aware, quant_post, convert
@@ -143,8 +143,12 @@ def compress(args):
     ############################################################################################################
     func = pact
     val_program = quant_aware(
-        val_program, place, quant_config, scope=None, for_test=True)
-    #     act_preprocess_func=func)
+        val_program,
+        place,
+        quant_config,
+        scope=None,
+        for_test=True,
+        act_preprocess_func=func)
     #     act_quantize_func=func)
     compiled_train_prog = quant_aware(
         train_prog,
@@ -232,6 +236,12 @@ def compress(args):
                     "epoch[{}]-batch[{}] - loss: {}; acc_top1: {}; acc_top5: {}; time: {}".
                     format(epoch, batch_id, loss_n, acc_top1_n, acc_top5_n,
                            end_time - start_time))
+                for var in val_program.list_vars():
+                    if ('pact' in var.name or 'conv4_depthwise_weights' in
+                            var.name) and var.persistable:
+                        array = np.array(fluid.global_scope().find_var(
+                            var.name).get_tensor())
+                        print(var.name, array[0])
             batch_id += 1
 
     build_strategy = fluid.BuildStrategy()
