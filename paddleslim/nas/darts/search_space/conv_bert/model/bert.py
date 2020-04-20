@@ -28,17 +28,21 @@ from .transformer_encoder import EncoderLayer
 
 class BertModelLayer(Layer):
     def __init__(self,
-                 emb_size=768,
+                 emb_size=128,
+                 hidden_size=768,
                  n_layer=12,
                  voc_size=30522,
                  max_position_seq_len=512,
                  sent_types=2,
                  return_pooled_out=True,
                  initializer_range=1.0,
+                 conv_type="conv_bn",
+                 search_layer=True,
                  use_fp16=False):
         super(BertModelLayer, self).__init__()
 
         self._emb_size = emb_size
+        self._hidden_size = hidden_size
         self._n_layer = n_layer
         self._voc_size = voc_size
         self._max_position_seq_len = max_position_seq_len
@@ -50,6 +54,8 @@ class BertModelLayer(Layer):
         self._sent_emb_name = "s_sent_embedding"
         self._dtype = "float16" if use_fp16 else "float32"
 
+        self._conv_type = conv_type
+        self._search_layer = search_layer
         self._param_initializer = fluid.initializer.TruncatedNormal(
             scale=initializer_range)
 
@@ -71,16 +77,24 @@ class BertModelLayer(Layer):
                 name=self._sent_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
-        self.pooled_fc = Linear(
+        self._emb_fac = Linear(
             input_dim=self._emb_size,
-            output_dim=self._emb_size,
+            output_dim=self._hidden_size,
+            param_attr=fluid.ParamAttr(name="s_emb_factorization"))
+
+        self.pooled_fc = Linear(
+            input_dim=self._hidden_size,
+            output_dim=self._hidden_size,
             param_attr=fluid.ParamAttr(
                 name="s_pooled_fc.w_0", initializer=self._param_initializer),
             bias_attr="s_pooled_fc.b_0",
             act="tanh")
 
         self._encoder = EncoderLayer(
-            n_layer=self._n_layer, d_model=self._emb_size)
+            n_layer=self._n_layer,
+            hidden_size=self._hidden_size,
+            conv_type=self._conv_type,
+            search_layer=self._search_layer)
 
     def max_flops(self):
         return self._encoder.max_flops
@@ -89,7 +103,7 @@ class BertModelLayer(Layer):
         return self._encoder.max_model_size
 
     def arch_parameters(self):
-        return [self._encoder.alphas]
+        return [self._encoder.alphas, self._encoder.k]
 
     def forward(self,
                 src_ids,
@@ -107,6 +121,8 @@ class BertModelLayer(Layer):
         emb_out = src_emb + pos_emb
         emb_out = emb_out + sent_emb
 
+        emb_out = self._emb_fac(emb_out)
+
         enc_outputs, k_i = self._encoder(
             emb_out, flops=flops, model_size=model_size)
 
@@ -118,7 +134,7 @@ class BertModelLayer(Layer):
                 input=enc_output, axes=[1], starts=[0], ends=[1])
             next_sent_feat = self.pooled_fc(next_sent_feat)
             next_sent_feat = fluid.layers.reshape(
-                next_sent_feat, shape=[-1, self._emb_size])
+                next_sent_feat, shape=[-1, self._hidden_size])
             next_sent_feats.append(next_sent_feat)
 
         return enc_outputs, next_sent_feats, k_i

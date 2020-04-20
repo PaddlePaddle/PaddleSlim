@@ -41,27 +41,44 @@ __all__ = ["AdaBERTClassifier"]
 
 
 class AdaBERTClassifier(Layer):
-    def __init__(self, num_labels, n_layer=8, emb_size=768,
+    def __init__(self,
+                 num_labels,
+                 n_layer=8,
+                 emb_size=128,
+                 hidden_size=768,
+                 gamma=0.8,
+                 beta=4,
+                 conv_type="conv_bn",
+                 search_layer=True,
                  teacher_model=None):
         super(AdaBERTClassifier, self).__init__()
         self._n_layer = n_layer
         self._num_labels = num_labels
         self._emb_size = emb_size
+        self._hidden_size = hidden_size
+        self._gamma = gamma
+        self._beta = beta
+        self._conv_type = conv_type
+        self._search_layer = search_layer
         print(
             "----------------------load teacher model and test----------------------------------------"
         )
         self.teacher = BERTClassifier(num_labels, model_path=teacher_model)
-        #        self.teacher.test("/work/PaddleSlim/demo/bert/data/glue_data/MNLI/")
+        self.teacher.test("/work/PaddleSlim/demo/bert/data/glue_data/MNLI/")
         print(
             "----------------------finish load teacher model and test----------------------------------------"
         )
         self.student = BertModelLayer(
-            n_layer=self._n_layer, emb_size=self._emb_size)
+            n_layer=self._n_layer,
+            emb_size=self._emb_size,
+            hidden_size=self._hidden_size,
+            conv_type=self._conv_type,
+            search_layer=self._search_layer)
 
         self.cls_fc = list()
         for i in range(self._n_layer):
             fc = Linear(
-                input_dim=self._emb_size,
+                input_dim=self._hidden_size,
                 output_dim=self._num_labels,
                 param_attr=fluid.ParamAttr(
                     name="s_cls_out_%d_w" % i,
@@ -84,7 +101,14 @@ class AdaBERTClassifier(Layer):
     def genotype(self):
         return self.arch_parameters()
 
-    def loss(self, data_ids, beta=4, gamma=0.8):
+    def new(self):
+        model_new = AdaBERTClassifier(
+            3,
+            teacher_model="/work/PaddleSlim/demo/bert_1/checkpoints/steps_23000"
+        )
+        return model_new
+
+    def loss(self, data_ids):
         T = 1.0
         src_ids = data_ids[0]
         position_ids = data_ids[1]
@@ -130,7 +154,7 @@ class AdaBERTClassifier(Layer):
 
             t_probs = fluid.layers.softmax(t_logit)
             s_probs = fluid.layers.softmax(s_logits)
-            t_probs.stop_gradient = False
+            t_probs.stop_gradient = True
             kd_loss = t_probs * fluid.layers.log(s_probs / T)
             kd_loss = fluid.layers.reduce_sum(kd_loss, dim=1)
             kd_loss = kd_loss * kd_weights[i]
@@ -144,14 +168,16 @@ class AdaBERTClassifier(Layer):
         ce_loss = fluid.layers.reduce_mean(ce_loss) * k_i
 
         # define e loss
-        model_size = fluid.layers.sum(
-            model_size) / self.student.max_model_size()
+        model_size = fluid.layers.sum(model_size)
+        #        print("model_size: {}".format(model_size.numpy()/1e6))
+        model_size = model_size / self.student.max_model_size()
         flops = fluid.layers.sum(flops) / self.student.max_flops()
         e_loss = (len(next_sent_feats) * k_i / self._n_layer) * (
             flops + model_size)
         # define total loss
-        loss = (1 - gamma) * ce_loss - gamma * kd_loss + beta * e_loss
-        print("ce_loss: {}; kd_loss: {}; e_loss: {}".format((
-            1 - gamma) * ce_loss.numpy(), -gamma * kd_loss.numpy(), beta *
-                                                            e_loss.numpy()))
-        return loss
+        loss = (1 - self._gamma
+                ) * ce_loss - self._gamma * kd_loss + self._beta * e_loss
+        #        print("ce_loss: {}; kd_loss: {}; e_loss: {}".format((
+        #            1 - gamma) * ce_loss.numpy(), -gamma * kd_loss.numpy(), beta *
+        #                                                            e_loss.numpy()))
+        return loss, ce_loss, kd_loss, e_loss

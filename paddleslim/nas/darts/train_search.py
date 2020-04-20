@@ -74,6 +74,9 @@ class DARTSearch(object):
     def train_one_epoch(self, train_loader, valid_loader, architect, optimizer,
                         epoch):
         objs = AvgrageMeter()
+        ce_losses = AvgrageMeter()
+        kd_losses = AvgrageMeter()
+        e_losses = AvgrageMeter()
         self.model.train()
 
         step_id = 0
@@ -81,7 +84,7 @@ class DARTSearch(object):
             if epoch >= self.epochs_no_archopt:
                 architect.step(train_data, valid_data)
 
-            loss = self.model.loss(train_data)
+            loss, ce_loss, kd_loss, e_loss = self.model.loss(train_data)
 
             if self.use_data_parallel:
                 loss = self.model.scale_loss(loss)
@@ -96,10 +99,18 @@ class DARTSearch(object):
 
             batch_size = train_data[0].shape[0]
             objs.update(loss.numpy(), batch_size)
+            ce_losses.update(ce_loss.numpy(), batch_size)
+            kd_losses.update(kd_loss.numpy(), batch_size)
+            e_losses.update(e_loss.numpy(), batch_size)
 
             if step_id % self.log_freq == 0:
-                logger.info("Train Epoch {}, Step {}, loss {:.6f}".format(
-                    epoch, step_id, objs.avg[0]))
+                #logger.info("Train Epoch {}, Step {}, loss {:.6f}; ce: {:.6f}; kd: {:.6f}; e: {:.6f}".format(
+                #    epoch, step_id, objs.avg[0], ce_losses.avg[0], kd_losses.avg[0], e_losses.avg[0]))
+                logger.info(
+                    "Train Epoch {}, Step {}, loss {}; ce: {}; kd: {}; e: {}".
+                    format(epoch, step_id,
+                           loss.numpy(),
+                           ce_loss.numpy(), kd_loss.numpy(), e_loss.numpy()))
             step_id += 1
         return objs.avg[0]
 

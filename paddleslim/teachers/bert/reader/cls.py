@@ -144,6 +144,14 @@ class DataProcessor(object):
         elif phase == 'test':
             examples = self.get_test_examples(self.data_dir)
             self.num_examples['test'] = len(examples)
+        elif phase == 'search_train':
+            examples = self.get_train_examples(self.data_dir)
+            self.num_examples['search_train'] = len(examples) / 2
+            examples = examples[:self.num_examples['search_train']]
+        elif phase == 'search_valid':
+            examples = self.get_train_examples(self.data_dir)
+            self.num_examples['search_valid'] = len(examples) / 2
+            examples = examples[self.num_examples['search_train']:]
         else:
             raise ValueError(
                 "Unknown phase, which should be in ['train', 'dev', 'test'].")
@@ -154,10 +162,10 @@ class DataProcessor(object):
                     if shuffle_seed is not None:
                         np.random.seed(shuffle_seed)
                     np.random.shuffle(examples)
-                if phase == 'train':
+                if phase == 'train' or phase == 'search_train':
                     self.current_train_epoch = epoch_index
                 for (index, example) in enumerate(examples):
-                    if phase == 'train':
+                    if phase == 'train' or phase == "search_train":
                         self.current_train_example = index + 1
                     feature = self.convert_example(
                         index, example,

@@ -60,8 +60,8 @@ class Architect(object):
 
     def _backward_step(self, valid_data):
         loss = self.model.loss(valid_data)
-        loss.backward()
-        return loss
+        loss[0].backward()
+        return loss[0]
 
     def _backward_step_unrolled(self, train_data, valid_data):
         self._compute_unrolled_model(train_data)
