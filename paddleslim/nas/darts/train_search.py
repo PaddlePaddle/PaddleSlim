@@ -16,8 +16,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-__all__ = ['DARTSearch']
+__all__ = ['DARTSearch', 'count_parameters_in_MB']
 
+import os
 import logging
 import numpy as np
 import paddle.fluid as fluid
@@ -40,19 +41,21 @@ class DARTSearch(object):
                  model,
                  train_reader,
                  valid_reader,
+                 place,
                  learning_rate=0.025,
                  batchsize=64,
                  num_imgs=50000,
                  arch_learning_rate=3e-4,
-                 unrolled='False',
+                 unrolled=False,
                  num_epochs=50,
                  epochs_no_archopt=0,
-                 use_gpu=True,
                  use_data_parallel=False,
+                 save_dir='./',
                  log_freq=50):
         self.model = model
         self.train_reader = train_reader
         self.valid_reader = valid_reader
+        self.place = place,
         self.learning_rate = learning_rate
         self.batchsize = batchsize
         self.num_imgs = num_imgs
@@ -60,14 +63,8 @@ class DARTSearch(object):
         self.unrolled = unrolled
         self.epochs_no_archopt = epochs_no_archopt
         self.num_epochs = num_epochs
-        self.use_gpu = use_gpu
         self.use_data_parallel = use_data_parallel
-        if not self.use_gpu:
-            self.place = fluid.CPUPlace()
-        elif not self.use_data_parallel:
-            self.place = fluid.CUDAPlace(0)
-        else:
-            self.place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
+        self.save_dir = save_dir
         self.log_freq = log_freq
 
     def train_one_epoch(self, train_loader, valid_loader, architect, optimizer,
@@ -157,7 +154,9 @@ class DARTSearch(object):
         logger.info("param size = {:.6f}MB".format(
             count_parameters_in_MB(model_parameters)))
 
-        step_per_epoch = int(self.num_imgs * 0.5 / self.batchsize)
+        device_num = fluid.dygraph.parallel.Env().nranks
+        step_per_epoch = int(self.num_imgs * 0.5 /
+                             (self.batchsize * device_num))
         if self.unrolled:
             step_per_epoch *= 2
 
@@ -219,4 +218,6 @@ class DARTSearch(object):
                 logger.info("Epoch {}, valid_acc {:.6f}".format(epoch,
                                                                 valid_top1))
             if save_parameters:
-                fluid.save_dygraph(self.model.state_dict(), "./weights")
+                fluid.save_dygraph(
+                    self.model.state_dict(),
+                    os.path.join(self.save_dir, str(epoch), "params"))
