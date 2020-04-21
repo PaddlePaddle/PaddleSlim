@@ -24,6 +24,7 @@ import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable
 from ...common import AvgrageMeter, get_logger
 from .architect import Architect
+from .get_genotype import get_genotype
 logger = get_logger(__name__, level=logging.INFO)
 
 
@@ -201,7 +202,7 @@ class DARTSearch(object):
         for epoch in range(self.num_epochs):
             logger.info('Epoch {}, lr {:.6f}'.format(
                 epoch, optimizer.current_step_lr()))
-            genotype = self.model.genotype()
+            genotype = get_genotype(self.model)
             logger.info('genotype = %s', genotype)
 
             train_top1 = self.train_one_epoch(train_loader, valid_loader,
