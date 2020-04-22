@@ -193,7 +193,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
     - tanh_constant(float, optional): 是否在计算每个token过程中做tanh激活，并乘上`tanh_constant`值。 默认：None。
     - decay(float, optional): LSTM中记录rewards的baseline的平滑率。默认：0.99.
     - weight_entropy(float, optional): 在更新controller参数时是否为接收到的rewards加上计算token过程中的带权重的交叉熵值。默认：None。
-    - controller_batch_size(int, optional): controller的batch_size，即每运行一次controller可以拿到几个token。默认：1.
+    - controller_batch_size(int, optional): controller的batch_size，即每运行一次controller可以拿到几组token。默认：1.
 
 
   - **`DDPG`算法的附加参数：**
@@ -201,7 +201,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
     **注意：** 使用`DDPG`算法的话必须安装parl。安装方法: `pip install parl`
 
     - obs_dim(int): observation的维度。
-    - model(class，optional): DDPG算法中使用的具体的模型，一般是个类，包含actor_model和critic_model，需要实现两个方法，一个是policy用来获得策略，另一个是value，需要获得Q值。可以参考默认的`default_model <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/common/RL_controller/DDPG/ddpg_model.py>`_ 实现您自己的model。默认：`default_ddpg_model`.
+    - model(class，optional): DDPG算法中使用的具体的模型，一般是个类，包含actor_model和critic_model，需要实现两个方法，一个是policy用来获得策略，另一个是value，需要获得Q值。可以参考默认的 `default_model <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/common/RL_controller/DDPG/ddpg_model.py>`_  实现您自己的model。默认：`default_ddpg_model`.
     - actor_lr(float, optional): actor网络的学习率。默认：1e-4.
     - critic_lr(float, optional): critic网络的学习率。默认：1e-3.
     - gamma(float, optional): 接收到rewards之后的折扣因子。默认：0.99.
@@ -244,7 +244,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   config = [('MobileNetV2Space')]
   rlnas = RLNAS(key='lstm', configs=config)
   input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
-  archs = rlnas.next_archs(1)
+  archs = rlnas.next_archs(1)[0]
   for arch in archs:
       output = arch(input)
       input = output
@@ -293,9 +293,10 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   rlnas = RLNAS(key='lstm', configs=config)
-  archs = rlnas.final_archs(10)
+  archs = rlnas.final_archs(1)
+  print(archs)
 
-.. py:methd:: tokens2arch(tokens)
+.. py:method:: tokens2arch(tokens):
 
 通过一组tokens得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。tokens的形式是一个列表，tokens映射到搜索空间转换成相应的网络结构，一组tokens对应唯一的一个网络结构。
 
@@ -311,11 +312,11 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 .. code-block:: python
 
   import paddle.fluid as fluid
-  from paddleslim.nas import SANAS
+  from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   rlnas = RLNAS(key='lstm', configs=config)
   input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
   tokens = ([0] * 25)
-  archs = sanas.tokens2arch(tokens)[0]
+  archs = rlnas.tokens2arch(tokens)[0]
   print(archs(input))
 

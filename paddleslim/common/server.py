@@ -202,7 +202,8 @@ class Server(object):
                 os.makedirs(self._save_controller)
             output_dir = self._save_controller
         else:
-            os.makedirs('./.rlnas_controller')
+            if not os.path.exists('./.rlnas_controller'):
+                os.makedirs('./.rlnas_controller')
             output_dir = './.rlnas_controller'
 
         with open(os.path.join(output_dir, 'rlnas.params'), 'wb') as f:

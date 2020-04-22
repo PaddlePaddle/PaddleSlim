@@ -56,7 +56,9 @@ MedianStop是利用历史较好实验的中间结果来判断当前实验是否�
   config = [('MobileNetV2Space')]
   sanas = SANAS(config, server_addr=("", 8732), save_checkpoint=None)
   earlystop = MedianStop(sanas, 2)
+  ### 假设网络中计算出来的loss是1.0，实际使用时需要获取真实的loss或者rewards。
   avg_loss = 1.0
   
+  ### 假设我们要获取的是当前实验第7个epoch的状态，实际使用时需要传入真实要获取的steps和实验真实所处的epochs。
   status = earlystop.get_status(steps, avg_loss, epochs)
   print(status)
