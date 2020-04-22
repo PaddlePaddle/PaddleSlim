@@ -15,7 +15,7 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle.fluid as fluid
-from paddleslim.prune.walk_pruner import Pruner
+from paddleslim.prune import Pruner
 from layers import conv_bn_layer
 
 
@@ -72,7 +72,8 @@ class TestPrune(unittest.TestCase):
 
         for param in main_program.global_block().all_parameters():
             if "weights" in param.name:
-                print("param: {}; param shape: {}".format(param.name, param.shape))
+                print("param: {}; param shape: {}".format(param.name,
+                                                          param.shape))
                 self.assertTrue(param.shape == shapes[param.name])
 
 
