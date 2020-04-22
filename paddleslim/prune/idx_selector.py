@@ -96,7 +96,7 @@ def optimal_threshold(group, ratio):
     name, axis, score = group[
         0]  # sort channels by the first convolution's score
 
-    score[scoew < 1e-18] = 1e-18
+    score[score < 1e-18] = 1e-18
     score_sorted = np.sort(score)
     score_square = score_sorted**2
     total_sum = score_square.sum()

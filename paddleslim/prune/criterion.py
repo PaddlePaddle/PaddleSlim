@@ -17,7 +17,7 @@
 import logging
 import numpy as np
 from ..common import get_logger
-from ..core import Registry
+from ..core import Registry, GraphWrapper
 
 __all__ = ["l1_norm", "CRITERION"]
 
@@ -61,13 +61,16 @@ def geometry_median(group, graph):
     channel_num = value.shape[0]
     w.shape = value.shape[0], np.product(value.shape[1:])
     x = w.repeat(channel_num, axis=0)
-    y = np.tile(channel_num, (channel_num, 1))
+    y = np.zeros_like(x)
+    for i in range(channel_num):
+        y[i * channel_num:(i + 1) * channel_num] = np.tile(channel_num,
+                                                           (channel_num, 1))
     tmp = np.sqrt(np.sum((x - y)**2, -1))
     tmp = tmp.reshape((channel_num, channel_num))
     tmp = np.sum(tmp, -1)
 
     for name, value, axis in group:
-        scores.append(name, axis, tmp)
+        scores.append((name, axis, tmp))
     return scores
 
 
