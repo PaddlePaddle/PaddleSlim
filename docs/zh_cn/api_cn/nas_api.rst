@@ -167,11 +167,13 @@ RLNAS
 
 .. py:class:: paddleslim.nas.RLNAS(key, configs, use_gpu=False, server_addr=("", 8881), is_server=True, is_sync=False, save_controller=None, load_controller=None, **kwargs)
 
-`源代码 <> `_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/nas/rl_nas.py>`_
 
 RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习算法进行模型结构搜索的算法。
 
-- **key<str>** - 使用的强化学习Controller名称，目前paddleslim支持的有`LSTM`和`DDPG`，自定义强化学习Controller请参考 ` 自定义强化学习Controller <> `_
+**参数：**
+
+- **key<str>** - 使用的强化学习Controller名称，目前paddleslim支持的有`LSTM`和`DDPG`，自定义强化学习Controller请参考 `自定义强化学习Controller <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/custom_rl_controller.md>`_
 - **configs(list<tuple>)** - 搜索空间配置列表，格式是 ``[(key, {input_size, output_size, block_num, block_mask})]`` 或者 ``[(key)]`` （MobileNetV2、MobilenetV1和ResNet的搜索空间使用和原本网络结构相同的搜索空间，所以仅需指定 ``key`` 即可）, ``input_size`` 和 ``output_size`` 表示输入和输出的特征图的大小， ``block_num`` 是指搜索网络中的block数量， ``block_mask`` 是一组由0和1组成的列表，0代表不进行下采样的block，1代表下采样的block。 更多paddleslim提供的搜索空间配置可以参考[Search Space](../search_space.md)。
 - **use_gpu(bool)** - 是否使用GPU来训练Controller。默认：False。
 - **server_addr(tuple)** - RLNAS中Controller的地址，包括server的ip地址和端口号，如果ip地址为None或者为""的话则默认使用本机ip。默认：（"", 8881）。
@@ -183,30 +185,31 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 
 .. note::
 
-  `LSTM`算法的附加参数：
+  - **`LSTM`算法的附加参数：**
 
-  - lstm_num_layers(int, optional): - Controller中堆叠的LSTM的层数。默认：1.
-  - hidden_size(int, optional): - LSTM中隐藏层的大小。默认：100.
-  - temperature(float, optional): - 是否在计算每个token过程中做温度平均。默认：None.
-  - tanh_constant(float, optional): 是否在计算每个token过程中做tanh激活，并乘上`tanh_constant`值。 默认：None。
-  - decay(float, optional): LSTM中记录rewards的baseline的平滑率。默认：0.99.
-  - weight_entropy(float, optional): 在更新controller参数时是否为接收到的rewards加上计算token过程中的带权重的交叉熵值。默认：None。
-  - controller_batch_size(int, optional): controller的batch_size，即每运行一次controller可以拿到几个token。默认：1.
+    - lstm_num_layers(int, optional): - Controller中堆叠的LSTM的层数。默认：1.
+    - hidden_size(int, optional): - LSTM中隐藏层的大小。默认：100.
+    - temperature(float, optional): - 是否在计算每个token过程中做温度平均。默认：None.
+    - tanh_constant(float, optional): 是否在计算每个token过程中做tanh激活，并乘上`tanh_constant`值。 默认：None。
+    - decay(float, optional): LSTM中记录rewards的baseline的平滑率。默认：0.99.
+    - weight_entropy(float, optional): 在更新controller参数时是否为接收到的rewards加上计算token过程中的带权重的交叉熵值。默认：None。
+    - controller_batch_size(int, optional): controller的batch_size，即每运行一次controller可以拿到几个token。默认：1.
 
 
-  `DDPG`算法的附加参数：
-  注意：使用`DDPG`算法的话必须安装parl。安装方法: pip install parl
+  - **`DDPG`算法的附加参数：**
 
-  - obs_dim(int): observation的维度。
-  - model(class，optional): DDPG算法中使用的具体的模型，一般是个类，包含actor_model和critic_model，需要实现两个方法，一个是policy用来获得策略，另一个是value，需要获得Q值。可以参考默认的model` <>_`实现您自己的model。默认：`default_ddpg_model`.
-  - actor_lr(float, optional): actor网络的学习率。默认：1e-4.
-  - critic_lr(float, optional): critic网络的学习率。默认：1e-3.
-  - gamma(float, optional): 接收到rewards之后的折扣因子。默认：0.99.
-  - tau(float, optional): DDPG中把models的参数同步累积到target_model上时的折扣因子。默认：0.001.
-  - memory_size(int, optional): DDPG中记录历史信息的池子大小。默认：10.
-  - reward_scale(float, optional): 记录历史信息时，对rewards信息进行的折扣因子。默认：0.1.
-  - controller_batch_size(int, optional): controller的batch_size，即每运行一次controller可以拿到几个token。默认：1.
-  - actions_noise(class, optional): 通过DDPG拿到action之后添加的噪声，设置为False或者None时不添加噪声。默认：default_noise.
+    **注意：** 使用`DDPG`算法的话必须安装parl。安装方法: `pip install parl`
+
+    - obs_dim(int): observation的维度。
+    - model(class，optional): DDPG算法中使用的具体的模型，一般是个类，包含actor_model和critic_model，需要实现两个方法，一个是policy用来获得策略，另一个是value，需要获得Q值。可以参考默认的`default_model <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/common/RL_controller/DDPG/ddpg_model.py>`_ 实现您自己的model。默认：`default_ddpg_model`.
+    - actor_lr(float, optional): actor网络的学习率。默认：1e-4.
+    - critic_lr(float, optional): critic网络的学习率。默认：1e-3.
+    - gamma(float, optional): 接收到rewards之后的折扣因子。默认：0.99.
+    - tau(float, optional): DDPG中把models的参数同步累积到target_model上时的折扣因子。默认：0.001.
+    - memory_size(int, optional): DDPG中记录历史信息的池子大小。默认：10.
+    - reward_scale(float, optional): 记录历史信息时，对rewards信息进行的折扣因子。默认：0.1.
+    - controller_batch_size(int, optional): controller的batch_size，即每运行一次controller可以拿到几个token。默认：1.
+    - actions_noise(class, optional): 通过DDPG拿到action之后添加的噪声，设置为False或者None时不添加噪声。默认：default_noise.
 ..
 
 **返回：**
@@ -221,94 +224,98 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
    rlnas = RLNAS(key='lstm', configs=config)
 
 
-  .. py:method:: next_archs(obs=None)
-  获取下一组模型结构。
+.. py:method:: next_archs(obs=None)
 
-  **参数：**
+获取下一组模型结构。
 
-  - **obs<int|np.array>** - 需要获取的模型结构数量或者当前模型的observations。
+**参数：**
 
-  **返回：**
-  返回模型结构实例的列表，形式为list。
-   
-  **示例代码：**
+- **obs<int|np.array>** - 需要获取的模型结构数量或者当前模型的observations。
 
-  .. code-block:: python
-    import paddle.fluid as fluid
-    from paddleslim.nas import RLNAS
-    config = [('MobileNetV2Space')]
-    rlnas = RLNAS(key='lstm', configs=config)
-    input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
-    archs = rlnas.next_archs(1)
-    for arch in archs:
-        output = arch(input)
-        input = output
-    print(output)
+**返回：**
+返回模型结构实例的列表，形式为list。
+ 
+**示例代码：**
 
-  .. py:method:: reward(rewards, **kwargs):
+.. code-block:: python
 
-  把当前模型结构的rewards回传。
+  import paddle.fluid as fluid
+  from paddleslim.nas import RLNAS
+  config = [('MobileNetV2Space')]
+  rlnas = RLNAS(key='lstm', configs=config)
+  input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+  archs = rlnas.next_archs(1)
+  for arch in archs:
+      output = arch(input)
+      input = output
+  print(output)
 
-  **参数：**
+.. py:method:: reward(rewards, **kwargs):
 
-  - **rewards<float|list<float>>:** - 当前模型的rewards，分数越大越好。
-  - **\*\*kwargs:** - 附加的参数，取决于具体的强化学习算法。
+把当前模型结构的rewards回传。
 
-  **示例代码：**
+**参数：**
 
-  .. code-block:: python
-    import paddle.fluid as fluid
-    from paddleslim.nas import RLNAS
-    config = [('MobileNetV2Space')]
-    rlnas = RLNAS(key='lstm', configs=config)
-    rlnas.next_archs(1)
-    rlnas.reward(1.0)
+- **rewards<float|list<float>>:** - 当前模型的rewards，分数越大越好。
+- **\*\*kwargs:** - 附加的参数，取决于具体的强化学习算法。
 
-  .. note::
+**示例代码：**
+
+.. code-block:: python
+
+  import paddle.fluid as fluid
+  from paddleslim.nas import RLNAS
+  config = [('MobileNetV2Space')]
+  rlnas = RLNAS(key='lstm', configs=config)
+  rlnas.next_archs(1)
+  rlnas.reward(1.0)
+
+.. note::
   reward这一步必须在`next_token`之后执行。
 ..
 
-  .. py:method:: final_archs(batch_obs):
+.. py:method:: final_archs(batch_obs):
 
-  获取最终的模型结构。一般在controller训练完成之后会获取几十个模型结构进行完整的实验。
+获取最终的模型结构。一般在controller训练完成之后会获取几十个模型结构进行完整的实验。
 
-  **参数：**
+**参数：**
 
-  - **obs<int|np.array>** - 需要获取的模型结构数量或者当前模型的observations。
+- **obs<int|np.array>** - 需要获取的模型结构数量或者当前模型的observations。
 
-  **返回：**
-  返回模型结构实例的列表，形式为list。
-   
-  **示例代码：**
+**返回：**
+返回模型结构实例的列表，形式为list。
+ 
+**示例代码：**
 
-  .. code-block:: python
-    import paddle.fluid as fluid
-    from paddleslim.nas import RLNAS
-    config = [('MobileNetV2Space')]
-    rlnas = RLNAS(key='lstm', configs=config)
-    archs = rlnas.final_archs(10)
-  
-  .. py:methd:: tokens2arch(tokens)
+.. code-block:: python
 
-  通过一组tokens得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。tokens的形式是一个列表，tokens映射到搜索空间转换成相应的网络结构，一组tokens对应唯一的一个网络结构。
-  
-  **参数：**
-  
-  - **tokens(list):** - 一组tokens。tokens的长度和范围取决于搜索空间。
-  
-  **返回：**
-  根据传入的token得到一个模型结构实例列表。
-  
-  **示例代码：**
+  import paddle.fluid as fluid
+  from paddleslim.nas import RLNAS
+  config = [('MobileNetV2Space')]
+  rlnas = RLNAS(key='lstm', configs=config)
+  archs = rlnas.final_archs(10)
 
-  .. code-block:: python
+.. py:methd:: tokens2arch(tokens)
 
-    import paddle.fluid as fluid
-    from paddleslim.nas import SANAS
-    config = [('MobileNetV2Space')]
-    rlnas = RLNAS(key='lstm', configs=config)
-    input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
-    tokens = ([0] * 25)
-    archs = sanas.tokens2arch(tokens)[0]
-    print(archs(input))
-  
+通过一组tokens得到实际的模型结构，一般用来把搜索到最优的token转换为模型结构用来做最后的训练。tokens的形式是一个列表，tokens映射到搜索空间转换成相应的网络结构，一组tokens对应唯一的一个网络结构。
+
+**参数：**
+
+- **tokens(list):** - 一组tokens。tokens的长度和范围取决于搜索空间。
+
+**返回：**
+根据传入的token得到一个模型结构实例列表。
+
+**示例代码：**
+
+.. code-block:: python
+
+  import paddle.fluid as fluid
+  from paddleslim.nas import SANAS
+  config = [('MobileNetV2Space')]
+  rlnas = RLNAS(key='lstm', configs=config)
+  input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+  tokens = ([0] * 25)
+  archs = sanas.tokens2arch(tokens)[0]
+  print(archs(input))
+
