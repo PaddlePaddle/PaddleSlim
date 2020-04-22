@@ -1,4 +1,4 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -11,17 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import absolute_import
-from ..nas import search_space
-from .search_space import *
-from ..nas import sa_nas
-from .sa_nas import *
-from .rl_nas import *
-from ..nas import darts
-from .darts import *
 
-__all__ = []
-__all__ += sa_nas.__all__
-__all__ += search_space.__all__
-__all__ += rl_nas.__all__
-__all__ += darts.__all__
+import logging
+from ..log_helper import get_logger
+_logger = get_logger(__name__, level=logging.INFO)
+try:
+    import parl
+    from .DDPG import *
+except ImportError as e:
+    _logger.warn(
+        "If you want to use DDPG in RLNAS, please pip intall parl first. Now states: {}".
+        format(e))
+
+from .LSTM import *
+from .utils import *
