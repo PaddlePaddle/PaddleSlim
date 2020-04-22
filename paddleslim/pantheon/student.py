@@ -104,9 +104,9 @@ class Student(object):
             manager = BaseManager(
                 address=(ip, int(port)), authkey=public_authkey.encode())
 
-            # Wait for teacher model started to establish connection
             print("Connecting to {}, with public key {} ...".format(
                 in_address, public_authkey))
+            # Wait for teacher model started to establish connection
             while True:
                 try:
                     manager.connect()
@@ -122,27 +122,37 @@ class Student(object):
 
                 def receive(queue, local_queue):
                     while True:
-                        data = queue.get()
-                        queue.task_done()
-                        local_queue.put(data)
-                        if isinstance(data, EndSignal):
+                        try:
+                            data = queue.get()
+                            queue.task_done()
+                            local_queue.put(data)
+                        except EOFError:
                             break
 
                 knowledge_queue = Queue.Queue(100)
 
                 def gather(local_queues, knowledge_queue):
                     num = len(local_queues)
-                    end_received = False
+                    end_received = [0] * num
                     while True:
-                        for i in range(num):
-                            data = local_queues[i].get()
-                            local_queues[i].task_done()
-                            if isinstance(data, SyncSignal) and i > 0:
-                                continue
-                            elif isinstance(data, EndSignal):
-                                end_received = True
-                            knowledge_queue.put(data)
-                        if end_received:
+                        try:
+                            for i in range(num):
+                                data = local_queues[i].get()
+                                local_queues[i].task_done()
+
+                                if isinstance(data, SyncSignal):
+                                    if i == 0:
+                                        knowledge_queue.put(data)
+                                elif isinstance(data, EndSignal):
+                                    end_received[i] = 1
+                                    if i == 0:
+                                        knowledge_queue.put(data)
+                                    if sum(end_received) == num:
+                                        end_received = [0] * num
+                                        break
+                                else:
+                                    knowledge_queue.put(data)
+                        except EOFError:
                             break
 
                 # threads to receive knowledge from the online teacher
@@ -419,7 +429,6 @@ class Student(object):
                   "Return None.")
             return None
         self._is_knowledge_gen_locked = True
-
         self.get_knowledge_desc()
 
         def split_batch(batch, num):
@@ -536,8 +545,8 @@ class Student(object):
                 queue.put(StartSignal())
                 queue.join()
 
-        # launch threads to listen on all knowledge queues
         local_queues = [Queue.Queue(100) for i in range(self._num_teachers)]
+        # launch threads to listen on all knowledge queues
         for i in range(self._num_teachers):
             listen_thread = Thread(
                 target=listen,
@@ -545,8 +554,8 @@ class Student(object):
             listen_thread.dameon = True
             listen_thread.start()
 
-        # launch threads to make new batch for student
         med_queues = [Queue.Queue(100) for i in range(self._num_teachers)]
+        # launch threads to make new batch for student
         for i in range(self._num_teachers):
             listen_thread = Thread(
                 target=make_new_batch,
@@ -560,7 +569,6 @@ class Student(object):
         merge_thread.dameon = True
         merge_thread.start()
 
-        # yield knowledge data
         def wrapper():
             while True:
                 knowledge = self._knowledge_queue.get()

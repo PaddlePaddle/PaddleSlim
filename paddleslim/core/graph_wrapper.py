@@ -46,7 +46,7 @@ class VarWrapper(object):
         """
         Overwrite this function for ...in... syntax in python.
         """
-        return self._var.name == v._var.name
+        return (v is not None) and self._var.name == v._var.name
 
     def name(self):
         """

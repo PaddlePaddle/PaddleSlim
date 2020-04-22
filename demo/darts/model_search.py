@@ -22,7 +22,6 @@ from paddle.fluid.initializer import NormalInitializer, MSRAInitializer, Constan
 from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
-from genotypes import Genotype
 from operations import *
 
 
@@ -147,6 +146,7 @@ class Network(fluid.dygraph.Layer):
         self._layers = layers
         self._steps = steps
         self._multiplier = multiplier
+        self._primitives = PRIMITIVES
         self._method = method
 
         c_cur = stem_multiplier * c_in
@@ -238,7 +238,7 @@ class Network(fluid.dygraph.Layer):
 
     def _initialize_alphas(self):
         k = sum(1 for i in range(self._steps) for n in range(2 + i))
-        num_ops = len(PRIMITIVES)
+        num_ops = len(self._primitives)
         self.alphas_normal = fluid.layers.create_parameter(
             shape=[k, num_ops],
             dtype="float32",
@@ -268,58 +268,3 @@ class Network(fluid.dygraph.Layer):
 
     def arch_parameters(self):
         return self._arch_parameters
-
-    def genotype(self):
-        def _parse(weights, weights2=None):
-            gene = []
-            n = 2
-            start = 0
-            for i in range(self._steps):
-                end = start + n
-                W = weights[start:end].copy()
-                if self._method == "PC-DARTS":
-                    W2 = weights2[start:end].copy()
-                    for j in range(n):
-                        W[j, :] = W[j, :] * W2[j]
-                edges = sorted(range(i + 2), key=lambda x: -max(W[x][k] for k in range(len(W[x])) if k != PRIMITIVES.index('none')))[:2]
-                for j in edges:
-                    k_best = None
-                    for k in range(len(W[j])):
-                        if k != PRIMITIVES.index('none'):
-                            if k_best is None or W[j][k] > W[j][k_best]:
-                                k_best = k
-                    gene.append((PRIMITIVES[k_best], j))
-                start = end
-                n += 1
-            return gene
-
-        weightsr2 = None
-        weightsn2 = None
-        if self._method == "PC-DARTS":
-            n = 3
-            start = 2
-            weightsr2 = fluid.layers.softmax(self.betas_reduce[0:2])
-            weightsn2 = fluid.layers.softmax(self.betas_normal[0:2])
-            for i in range(self._steps - 1):
-                end = start + n
-                tw2 = fluid.layers.softmax(self.betas_reduce[start:end])
-                tn2 = fluid.layers.softmax(self.betas_normal[start:end])
-                start = end
-                n += 1
-                weightsr2 = fluid.layers.concat([weightsr2, tw2])
-                weightsn2 = fluid.layers.concat([weightsn2, tn2])
-            weightsr2 = weightsr2.numpy()
-            weightsn2 = weightsn2.numpy()
-
-        gene_normal = _parse(
-            fluid.layers.softmax(self.alphas_normal).numpy(), weightsn2)
-        gene_reduce = _parse(
-            fluid.layers.softmax(self.alphas_reduce).numpy(), weightsr2)
-
-        concat = range(2 + self._steps - self._multiplier, self._steps + 2)
-        genotype = Genotype(
-            normal=gene_normal,
-            normal_concat=concat,
-            reduce=gene_reduce,
-            reduce_concat=concat)
-        return genotype
