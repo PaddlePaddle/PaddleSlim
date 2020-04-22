@@ -18,12 +18,12 @@ from .resnet import ResNetSpace
 from .mobilenet_block import MobileNetV1BlockSpace, MobileNetV2BlockSpace
 from .resnet_block import ResNetBlockSpace
 from .inception_block import InceptionABlockSpace, InceptionCBlockSpace
+from .darts_space import DartsSpace
 from .search_space_registry import SEARCHSPACE
 from .search_space_factory import SearchSpaceFactory
 from .search_space_base import SearchSpaceBase
-
 __all__ = [
-    'MobileNetV1Space', 'MobileNetV2Space', 'ResNetSpace',
+    'MobileNetV1Space', 'MobileNetV2Space', 'ResNetSpace', 'DartsSpace',
     'MobileNetV1BlockSpace', 'MobileNetV2BlockSpace', 'ResNetBlockSpace',
     'InceptionABlockSpace', 'InceptionCBlockSpace', 'SearchSpaceBase',
     'SearchSpaceFactory', 'SEARCHSPACE'
