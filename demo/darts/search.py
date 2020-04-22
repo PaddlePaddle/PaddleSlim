@@ -35,7 +35,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
 add_arg('log_freq',          int,   50,              "Log frequency.")
-add_arg('use_multiprocess',  bool,  True,            "Whether use multiprocess reader.")
+add_arg('use_multiprocess',  bool,  False,            "Whether use multiprocess reader.")
 add_arg('num_workers',       int,   4,               "The multiprocess reader number.")
 add_arg('data',              str,   'dataset/cifar10',"The dir of dataset.")
 add_arg('batch_size',        int,   64,              "Minibatch size.")

@@ -29,15 +29,15 @@ python search.py --method='PC-DARTS' --batch_size=256 --learning_rate=0.1 --arch
 图1: 在CIFAR10数据集上进行搜索的模型结构变化，上半部分为reduction cell，下半部分为normal cell
 </p>
 
-使用三种搜索方法得到的结构Genotype已添加到了genotypes.py文件中，`DARTS_V1`、`DARTS_V2`和`PC-DARTS`分别代表使用DARTS一阶、二阶近似方法和PC-DARTS搜索方法得到的网络结构。
+使用三种搜索方法得到的结构Genotype已添加到了genotypes.py文件中，`DARTS_V1`、`DARTS_V2`和`PC_DARTS`分别代表使用DARTS一阶、二阶近似方法和PC-DARTS搜索方法得到的网络结构。
 
 ## 网络结构评估训练
 
 在得到搜索结构Genotype之后，可以对其进行评估训练，从而获得它在特定数据集上的真实性能
 
 ```bash
-python train.py --arch='PC-DARTS'            # 在CIFAR10数据集上对搜索到的结构评估训练
-python train_imagenet.py --arch='PC-DARTS'   # 在ImageNet数据集上对搜索得到的结构评估训练
+python train.py --arch='PC_DARTS'            # 在CIFAR10数据集上对搜索到的结构评估训练
+python train_imagenet.py --arch='PC_DARTS'   # 在ImageNet数据集上对搜索得到的结构评估训练
 ```
 
 对搜索到的`DARTS_V1`、`DARTS_V2`和`PC-DARTS`做评估训练的结果如下：
@@ -83,7 +83,7 @@ def train_search(batch_size, train_portion, is_shuffle, args):
 使用以下命令对搜索得到的Genotype结构进行可视化观察
 
 ```python
-python visualize.py PC-DARTS
+python visualize.py PC_DARTS
 ```
 
-`PC-DARTS`代表某个Genotype结构，需要预先添加到genotype.py中
+`PC_DARTS`代表某个Genotype结构，需要预先添加到genotype.py中

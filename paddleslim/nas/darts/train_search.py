@@ -108,8 +108,7 @@ class DARTSearch(object):
             else:
                 loss.backward()
 
-            grad_clip = fluid.dygraph_grad_clip.GradClipByGlobalNorm(5)
-            optimizer.minimize(loss, grad_clip)
+            optimizer.minimize(loss)
             self.model.clear_gradients()
 
             objs.update(loss.numpy(), n)
@@ -163,11 +162,14 @@ class DARTSearch(object):
             step_per_epoch *= 2
         learning_rate = fluid.dygraph.CosineDecay(
             self.learning_rate, step_per_epoch, self.num_epochs)
+
+        clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0)
         optimizer = fluid.optimizer.MomentumOptimizer(
             learning_rate,
             0.9,
             regularization=fluid.regularizer.L2DecayRegularizer(3e-4),
-            parameter_list=model_parameters)
+            parameter_list=model_parameters,
+            grad_clip=clip)
 
         if self.use_data_parallel:
             self.model = fluid.dygraph.parallel.DataParallel(self.model,
