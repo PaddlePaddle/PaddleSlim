@@ -108,9 +108,7 @@ def train(model, train_reader, optimizer, epoch, args):
         else:
             loss.backward()
 
-        grad_clip = fluid.dygraph_grad_clip.GradClipByGlobalNorm(
-            args.grad_clip)
-        optimizer.minimize(loss, grad_clip=grad_clip)
+        optimizer.minimize(loss)
         model.clear_gradients()
 
         n = image.shape[0]
@@ -174,11 +172,14 @@ def main(args):
             step_per_epoch,
             args.decay_rate,
             staircase=True)
+
+        clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=args.grad_clip)
         optimizer = fluid.optimizer.MomentumOptimizer(
             learning_rate,
             momentum=args.momentum,
             regularization=fluid.regularizer.L2Decay(args.weight_decay),
-            parameter_list=model.parameters())
+            parameter_list=model.parameters(),
+            grad_clip=clip)
 
         if args.use_data_parallel:
             model = fluid.dygraph.parallel.DataParallel(model, strategy)
