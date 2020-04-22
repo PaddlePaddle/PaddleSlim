@@ -18,3 +18,4 @@ API文档
    single_distiller_api.rst
    search_space.md
    table_latency.md
+   early_stop.rst
