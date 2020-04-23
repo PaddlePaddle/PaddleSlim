@@ -91,6 +91,8 @@ class Pruner():
         pruned_params = []
         for param, ratio in zip(params, ratios):
             group = collect_convs([param], graph, visited)[0]  # [(name, axis)]
+            if group is None or len(group) == 0:
+                continue
             if only_graph and self.idx_selector.__name__ == "default_idx_selector":
 
                 param_v = graph.var(param)
