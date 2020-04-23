@@ -19,7 +19,7 @@ from .prune_walker import conv2d as conv2d_walker
 __all__ = ["collect_convs"]
 
 
-def collect_convs(params, graph):
+def collect_convs(params, graph, visited={}):
     """Collect convolution layers of graph into groups. The layers in the same group is relative on pruning operation.
     A group is a list of tuple with format (param_name, axis) in which `param_name` is the name of parameter and `axis` is the axis to be pruned on.
 
@@ -52,7 +52,6 @@ def collect_convs(params, graph):
         graph = GraphWrapper(graph)
     groups = []
     for param in params:
-        visited = {}
         pruned_params = []
         param = graph.var(param)
         conv_op = param.outputs()[0]
