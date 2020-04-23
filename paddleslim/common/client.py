@@ -19,7 +19,11 @@ import socket
 import logging
 import time
 import threading
-import cloudpickle
+import six
+if six.PY2:
+    import cPickle as pickle
+else:
+    import pickle
 from .log_helper import get_logger
 from .RL_controller.utils import compute_grad, ConnectMessage
 
@@ -77,7 +81,7 @@ class Client(object):
                 "CANNOT recv params from server in next_archs, Please check whether the server is alive!!! {}".
                 format(e))
             os._exit(0)
-        self._params_dict = cloudpickle.loads(message[0])
+        self._params_dict = pickle.loads(message[0])
         tokens = self._controller.next_tokens(
             obs, params_dict=self._params_dict, is_inference=is_inference)
         _logger.debug("Client: client_name is {}, current token is {}".format(
@@ -92,7 +96,7 @@ class Client(object):
         _logger.debug("Client: update weight {}".format(self._client_name))
         self._client_socket.send_multipart([
             ConnectMessage.UPDATE_WEIGHT, self._client_name,
-            cloudpickle.dumps(params_grad)
+            pickle.dumps(params_grad)
         ])
         _logger.debug("Client: update done {}".format(self._client_name))
 
@@ -107,7 +111,7 @@ class Client(object):
         if message[0] == ConnectMessage.WAIT:
             _logger.debug("Client: self.init_wait: {}".format(self.init_wait))
             if not self.init_wait:
-                wait_port = cloudpickle.loads(message[1])
+                wait_port = pickle.loads(message[1])
                 wait_signal = self._connect_wait_socket(wait_port)
                 self.init_wait = True
             else:

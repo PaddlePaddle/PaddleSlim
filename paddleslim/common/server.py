@@ -24,7 +24,6 @@ else:
 import logging
 import time
 import threading
-import cloudpickle
 from .log_helper import get_logger
 from .RL_controller.utils import add_grad, ConnectMessage
 
@@ -141,13 +140,13 @@ class Server(object):
                         _logger.debug("Server: get weight {}".format(
                             client_name))
                         self._server_socket.send_multipart(
-                            [cloudpickle.dumps(self._params_dict)])
+                            [pickle.dumps(self._params_dict)])
                         _logger.debug("Server: send params done {}".format(
                             client_name))
                         self._lock.release()
                     elif cmd == ConnectMessage.UPDATE_WEIGHT:
                         _logger.info("Server: update {}".format(client_name))
-                        params_dict_grad = cloudpickle.loads(message[2])
+                        params_dict_grad = pickle.loads(message[2])
                         if self._is_sync:
                             if not sum_params_dict:
                                 sum_params_dict = self._params_dict
@@ -163,7 +162,7 @@ class Server(object):
 
                             self._server_socket.send_multipart([
                                 ConnectMessage.WAIT,
-                                cloudpickle.dumps(self._wait_port)
+                                pickle.dumps(self._wait_port)
                             ])
                         else:
                             self._lock.acquire()
@@ -203,9 +202,10 @@ class Server(object):
                 os.makedirs(self._save_controller)
             output_dir = self._save_controller
         else:
-            os.makedirs('./.rlnas_controller')
+            if not os.path.exists('./.rlnas_controller'):
+                os.makedirs('./.rlnas_controller')
             output_dir = './.rlnas_controller'
 
         with open(os.path.join(output_dir, 'rlnas.params'), 'wb') as f:
             pickle.dump(self._params_dict, f)
-        _logger.info("Save params done")
+        _logger.debug("Save params done")
