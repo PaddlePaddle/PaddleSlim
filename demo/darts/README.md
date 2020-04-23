@@ -21,6 +21,14 @@ python search.py --unrolled=True       # DARTS的二阶近似搜索方法
 python search.py --method='PC-DARTS' --batch_size=256 --learning_rate=0.1 --arch_learning_rate=6e-4 --epochs_no_archopt=15   # PC-DARTS搜索方法
 ```
 
+也可以使用多卡进行模型结构搜索，启动命令如下:
+
+```bash
+python -m paddle.distributed.launch --selected_gpus=0,1,2,3 --log_dir ./mylog search.py --use_data_parallel 1
+```
+
+因为使用多卡训练总的BatchSize会扩大n倍，为了获得与单卡相当的准确率效果，请相应的将初始学习率扩大n倍。
+
 模型结构随搜索轮数的变化如图1所示。需要注意的是，图中准确率Acc并不代表该结构最终准确率，为了获得当前结构的最佳准确率，请对得到的genotype做网络结构评估训练。
 
 ![networks](images/networks.gif)
@@ -39,6 +47,15 @@ python search.py --method='PC-DARTS' --batch_size=256 --learning_rate=0.1 --arch
 python train.py --arch='PC_DARTS'            # 在CIFAR10数据集上对搜索到的结构评估训练
 python train_imagenet.py --arch='PC_DARTS'   # 在ImageNet数据集上对搜索得到的结构评估训练
 ```
+
+同样，也支持用多卡进行评估训练：
+
+```python
+python -m paddle.distributed.launch --selected_gpus=0,1,2,3  --log_dir ./mylog train.py --use_data_parallel 1 --arch='DARTS_V2'
+python -m paddle.distributed.launch --selected_gpus=0,1,2,3  --log_dir ./mylog train_imagenet.py --use_data_parallel 1 --arch='DARTS_V2'
+```
+
+同理，使用多卡训练总的BatchSize会扩大n倍，为了获得与单卡相当的准确率效果，请相应的将初始学习率扩大n倍。
 
 对搜索到的`DARTS_V1`、`DARTS_V2`和`PC-DARTS`做评估训练的结果如下：
 
