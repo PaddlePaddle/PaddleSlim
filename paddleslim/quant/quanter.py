@@ -367,16 +367,15 @@ def convert(program, place, config=None, scope=None, save_int8=False):
         return freezed_program
 
 
-def quant_post_only_weight(
-        model_dir,
-        save_model_dir,
-        model_filename=None,
-        params_filename=None,
-        save_model_filename=None,
-        save_params_filename=None,
-        quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
-        weight_bits=8,
-        generate_test_model=False):
+def quant_post_only_weight(model_dir,
+                           save_model_dir,
+                           model_filename=None,
+                           params_filename=None,
+                           save_model_filename=None,
+                           save_params_filename=None,
+                           quantizable_op_type=["conv2d", "mul"],
+                           weight_bits=8,
+                           generate_test_model=False):
     '''
     In order to reduce the size of model, this api quantizes the weight
     of some ops from float32 to int8/16. In the inference stage, the 
@@ -420,4 +419,5 @@ def quant_post_only_weight(
         save_model_filename=save_model_filename,
         save_params_filename=save_params_filename,
         quantizable_op_type=quantizable_op_type,
-        weight_bits=weight_bits)
+        weight_bits=weight_bits,
+        generate_test_model=generate_test_model)
