@@ -236,6 +236,8 @@ def compress(args):
                     "epoch[{}]-batch[{}] - loss: {}; acc_top1: {}; acc_top5: {}; time: {}".
                     format(epoch, batch_id, loss_n, acc_top1_n, acc_top5_n,
                            end_time - start_time))
+
+            if batch_id % 100 == 0:
                 for var in val_program.list_vars():
                     if ('pact' in var.name or 'conv4_depthwise_weights' in
                             var.name) and var.persistable:
