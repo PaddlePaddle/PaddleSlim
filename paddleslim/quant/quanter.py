@@ -376,7 +376,7 @@ def quant_post_only_weight(
         save_params_filename=None,
         quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
         weight_bits=8,
-        threshold_rate=0.0):
+        generate_test_model=False):
     '''
     In order to reduce the size of model, this api quantizes the weight
     of some ops from float32 to int8/16. In the inference stage, the 
@@ -405,12 +405,10 @@ def quant_post_only_weight(
                 Default is ["conv2d", "depthwise_conv2d", "mul"].
         weight_bits(int, optional): The bits for the quantized weight, 
                 and it should be 8 or 16. Default is 8.
-        threshold_rate(float, optional): This api uses abs_max methd to 
-                quantize the weight from float32 to int8/16, and the abs max 
-                value is important for quantization diff. When the abs_max 
-                value is far away from the center of the numerical distribution, 
-                we can set threshold_rate between 1e-6 and 1e-8, so the abs max 
-                value will be optimized. Default is 0.0.
+        generate_test_model(bool, optional): If set generate_test_model 
+                as True, it saves a fake quantized model, in which the weights 
+                are quantized and dequantized. We can use PaddlePaddle to load 
+                the fake quantized model and test the accuracy on GPU or CPU.
     '''
 
     weight_quant = WeightQuantization(
@@ -422,5 +420,4 @@ def quant_post_only_weight(
         save_model_filename=save_model_filename,
         save_params_filename=save_params_filename,
         quantizable_op_type=quantizable_op_type,
-        weight_bits=weight_bits,
-        threshold_rate=threshold_rate)
+        weight_bits=weight_bits)
