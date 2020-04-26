@@ -25,6 +25,7 @@ from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
 from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 from paddle.fluid import core
+from paddle.fluid.contrib.slim.quantization import WeightQuantization
 
 from ..common import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
@@ -364,3 +365,59 @@ def convert(program, place, config=None, scope=None, save_int8=False):
         return freezed_program, freezed_program_int8
     else:
         return freezed_program
+
+
+def quant_post_only_weight(model_dir,
+                           save_model_dir,
+                           model_filename=None,
+                           params_filename=None,
+                           save_model_filename=None,
+                           save_params_filename=None,
+                           quantizable_op_type=["conv2d", "mul"],
+                           weight_bits=8,
+                           generate_test_model=False):
+    '''
+    In order to reduce the size of model, this api quantizes the weight
+    of some ops from float32 to int8/16. In the inference stage, the 
+    quantized weight will be dequantized to float32 again.
+        
+    Args:
+        model_dir(str): The path of the fp32 model that will be quantized,
+                    and the model and params files are under the path.
+        save_model_dir(str): The path to save the quantized model.
+        model_filename(str, optional): The name of file used to load the inference
+                    program. If it is None, the default filename '__model__' will be used. Default is 'None'.
+        params_filename(str, optional): The name of file used to load all parameters. When all parameters were saved 
+                in a single binary file, set it as the real filename. If parameters were saved in separate files,
+                set it as 'None'. Default is 'None'.
+        save_model_dir(str): The path used to save the quantized model.
+        save_model_filename(str, optional): The name of file to 
+                save the inference program. If it is None, the default 
+                filename '__model__' will be used. Default is 'None'.
+        save_params_filename(str, optional): The name of file to 
+                save all parameters. If it is None, parameters were 
+                saved in separate files. If it is not None, all 
+                parameters were saved in a single binary file.
+        quantizable_op_type(list[str], optional): The list of ops 
+                that will be quantized, and the quantized ops should be
+                contained in ["conv2d", "depthwise_conv2d", "mul"]. 
+                Default is ["conv2d", "depthwise_conv2d", "mul"].
+        weight_bits(int, optional): The bits for the quantized weight, 
+                and it should be 8 or 16. Default is 8.
+        generate_test_model(bool, optional): If set generate_test_model 
+                as True, it saves a fake quantized model, in which the weights 
+                are quantized and dequantized. We can use PaddlePaddle to load 
+                the fake quantized model and test the accuracy on GPU or CPU.
+    '''
+
+    weight_quant = WeightQuantization(
+        model_dir=model_dir,
+        model_filename=model_filename,
+        params_filename=params_filename)
+    weight_quant.quantize_weight_to_int(
+        save_model_dir=save_model_dir,
+        save_model_filename=save_model_filename,
+        save_params_filename=save_params_filename,
+        quantizable_op_type=quantizable_op_type,
+        weight_bits=weight_bits,
+        generate_test_model=generate_test_model)
