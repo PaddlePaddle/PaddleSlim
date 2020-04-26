@@ -39,10 +39,13 @@ export CUDA_VISIBLE_DEVICES=0
 python train.py \
 --model "MobileNet" \
 --pruned_ratio 0.31 \
---data "mnist"
+--data "mnist"  \
+--criterion "l1_norm"
 ```
 
-其中，`model`用于指定待裁剪的模型。`pruned_ratio`用于指定各个卷积层通道数被裁剪的比例。`data`选项用于指定使用的数据集。
+其中，`model`用于指定待裁剪的模型。`pruned_ratio`用于指定各个卷积层通道数被裁剪的比例。`data`选项用于指定使用的数据集。`criterion` 选项用于指定所使用的剪裁算法策略，
+现在支持`l1_norm`, `bn_scale`, `geometry_median`。默认为`l1_norm`。可以设置该参数以改变剪裁算法策略。该目录下的四个shell脚本文件是在ResNet34, MobileNetV1, MobileNetV2
+等三个模型上进行的四组`criterion`设置为`geometry_median`的实验，可以直接运行脚本文件启动剪裁实验。
 
 执行`python train.py --help`查看更多选项。
 
