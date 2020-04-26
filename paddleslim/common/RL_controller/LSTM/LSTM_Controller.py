@@ -193,8 +193,7 @@ class LSTM(RLBaseController):
 
             fluid.layers.assign(self.baseline - (1.0 - self.decay) *
                                 (self.baseline - self.rewards), self.baseline)
-            self.loss = -1.0 * self.sample_log_probs * (
-                self.rewards - self.baseline)
+            self.loss = self.sample_log_probs * (self.rewards - self.baseline)
             fluid.clip.set_gradient_clip(
                 clip=fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0))
             optimizer = fluid.optimizer.Adam(learning_rate=1e-3)
