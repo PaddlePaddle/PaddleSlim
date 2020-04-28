@@ -293,15 +293,13 @@ def quant_post(executor,
         activation_bits(int): quantization bit number for activation.
 	activation_quantize_type(str): quantization type for activation,
                 now support 'range_abs_max', 'moving_average_abs_max' and 'abs_max'.
-                This param only specifies the fake ops in saving quantized model.
+                This parameter only specifies the fake ops in quantized model.
                 If it is 'range_abs_max' or 'moving_average_abs_max', we save the scale
-                obtained by post training quantization in fake ops. Note that, if it
+                obtained by post training quantization in fake ops. If it
                 is 'abs_max', the scale will not be saved in fake ops.
         weight_quantize_type(str): quantization type for weights,
-                support 'abs_max' and 'channel_wise_abs_max'. This param only specifies
-                the fake ops in saving quantized model, and we save the scale obtained
-                by post training quantization in fake ops. Compared to 'abs_max',
-                the model accuracy is usually higher when it is 'channel_wise_abs_max'.
+                support 'abs_max' and 'channel_wise_abs_max'. Compared to 'abs_max',
+                the model accuracy is usually higher when using 'channel_wise_abs_max'.
         is_full_quantize(bool): if True, apply quantization to all supported quantizable op type.
                         If False, only apply quantization to the input quantizable_op_type. Default is False.
         is_use_cache_file(bool): If False, all temp data will be saved in memory. If True,
