@@ -4,7 +4,7 @@
 
 ## 依赖项
 
-> PaddlePaddle >= 1.7.0, graphviz >= 0.11.1
+PaddlePaddle >= 1.8.0, PaddleSlim >= 1.1.0, graphviz >= 0.11.1
 
 ## 数据集
 
