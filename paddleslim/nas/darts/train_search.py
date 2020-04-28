@@ -178,15 +178,17 @@ class DARTSearch(object):
                 self.valid_reader)
 
         train_loader = fluid.io.DataLoader.from_generator(
-            capacity=64,
+            capacity=1024,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=True)
         valid_loader = fluid.io.DataLoader.from_generator(
-            capacity=64,
+            capacity=1024,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=True)
 
         train_loader.set_batch_generator(self.train_reader, places=self.place)
         valid_loader.set_batch_generator(self.valid_reader, places=self.place)

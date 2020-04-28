@@ -170,15 +170,17 @@ def main(args):
             model = fluid.dygraph.parallel.DataParallel(model, strategy)
 
         train_loader = fluid.io.DataLoader.from_generator(
-            capacity=64,
+            capacity=1024,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=True)
         valid_loader = fluid.io.DataLoader.from_generator(
-            capacity=64,
+            capacity=1024,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=True)
 
         train_reader = reader.train_valid(
             batch_size=args.batch_size,
