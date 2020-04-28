@@ -264,8 +264,8 @@ def quant_post(executor,
             ``fluid.io.save_inference_model``.
         batch_generator(Python Generator): The batch generator provides 
                 calibrate data for DataLoader, and it returns a batch every
-                time. Note that, sample_generator and batch_generator, only one
-                should be set. Beisdes, batch_generator supports lod tensor.
+                time. For sample_generator and batch_generator, only one
+                can be set. Beisdes, batch_generator supports lod tensor.
         sample_generator(Python Generator): The sample generator provides 
             calibrate data for DataLoader, and it only returns a sample every time.
         model_filename(str, optional): The name of model file. If parameters 
@@ -274,6 +274,9 @@ def quant_post(executor,
                 When all parameters are saved in a single file, set it 
                 as filename. If parameters are saved in separate files, 
                 set it as 'None'. Default : 'None'.
+        save_model_filename(str): The name of model file to save the quantized inference program.  Default: '__model__'.
+        save_params_filename(str): The name of file to save all related parameters. 
+                If it is set None, parameters will be saved in separate files. Default: '__params__'.
         batch_size(int, optional): The batch size of DataLoader, default is 16.
         batch_nums(int, optional): If batch_nums is not None, the number of calibrate 
                         data is 'batch_size*batch_nums'. If batch_nums is None, use all data
