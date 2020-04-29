@@ -28,3 +28,4 @@ except Exception as e:
         "please use Paddle >= 1.7.0 or develop version")
 
 from .quant_embedding import quant_embedding
+from .helper import draw_var_distribution_hist
