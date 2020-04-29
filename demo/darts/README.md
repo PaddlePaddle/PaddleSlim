@@ -2,6 +2,28 @@
 
 本示例介绍如何使用PaddlePaddle进行可微分架构搜索，可以直接使用[DARTS](https://arxiv.org/abs/1806.09055)和[PC-DARTS](https://arxiv.org/abs/1907.05737)两种方法，也支持自定义修改后使用其他可微分架构搜索算法。
 
+本示例目录结构如下：
+```
+├── genotypes.py 搜索过程得到的模型结构Genotypes
+│
+├── model.py 对搜索得到的子网络组网
+│
+├── model_search.py 对搜索前的超网络组网
+│
+├── operations.py 用于搜索的多种运算符组合
+│
+├── reader.py 数据读取与增广部分
+│
+├── search.py 模型结构搜索入口
+│
+├── train.py CIFAR10数据集评估训练入口
+│
+├── train_imagenet.py ImageNet数据集评估训练入口
+│
+├── visualize.py 模型结构可视化入口
+
+```
+
 ## 依赖项
 
 PaddlePaddle >= 1.8.0, PaddleSlim >= 1.1.0, graphviz >= 0.11.1
