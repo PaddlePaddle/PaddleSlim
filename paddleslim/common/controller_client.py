@@ -24,6 +24,11 @@ _logger = get_logger(__name__, level=logging.INFO)
 class ControllerClient(object):
     """
     Controller client.
+    Args:
+        server_ip(str): The ip that controller server listens on. None means getting the ip automatically. Default: None.
+        server_port(int): The port that controller server listens on. 0 means getting usable port automatically. Default: 0.
+        key(str): The key used to identify legal agent for controller server. Default: "light-nas"
+        client_name(str): Current client name, random generate for counting client number. Default: None.
     """
 
     def __init__(self,
@@ -32,11 +37,6 @@ class ControllerClient(object):
                  key=None,
                  client_name=None):
         """
-        Args:
-            server_ip(str): The ip that controller server listens on. None means getting the ip automatically. Default: None.
-            server_port(int): The port that controller server listens on. 0 means getting usable port automatically. Default: 0.
-            key(str): The key used to identify legal agent for controller server. Default: "light-nas"
-            client_name(str): Current client name, random generate for counting client number. Default: None.
         """
         self.server_ip = server_ip
         self.server_port = server_port
@@ -46,9 +46,11 @@ class ControllerClient(object):
     def update(self, tokens, reward, iter):
         """
         Update the controller according to latest tokens and reward.
+
         Args:
             tokens(list<int>): The tokens generated in last step.
             reward(float): The reward of tokens.
+            iter(int): The iteration number of current client.
         """
         socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socket_client.connect((self.server_ip, self.server_port))
@@ -56,7 +58,7 @@ class ControllerClient(object):
         socket_client.send("{}\t{}\t{}\t{}\t{}".format(
             self._key, tokens, reward, iter, self._client_name).encode())
         response = socket_client.recv(1024).decode()
-        if response.strip('\n').split("\t") == "ok":
+        if "ok" in response.strip('\n').split("\t"):
             return True
         else:
             return False
@@ -71,3 +73,13 @@ class ControllerClient(object):
         tokens = socket_client.recv(1024).decode()
         tokens = [int(token) for token in tokens.strip("\n").split(",")]
         return tokens
+
+    def request_current_info(self):
+        """
+        Request for current information.
+        """
+        socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socket_client.connect((self.server_ip, self.server_port))
+        socket_client.send("current_info".encode())
+        current_info = socket_client.recv(1024).decode()
+        return eval(current_info)
