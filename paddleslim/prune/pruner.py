@@ -90,7 +90,9 @@ class Pruner():
         visited = {}
         pruned_params = []
         for param, ratio in zip(params, ratios):
-            group = collect_convs([param], graph)[0]  # [(name, axis)]
+            group = collect_convs([param], graph, visited)[0]  # [(name, axis)]
+            if group is None or len(group) == 0:
+                continue
             if only_graph and self.idx_selector.__name__ == "default_idx_selector":
 
                 param_v = graph.var(param)
@@ -126,8 +128,9 @@ class Pruner():
                     pruned_axis])
                 param = graph.var(param_name)
                 if not lazy:
-                    _logger.debug("{}\t{}\t{}".format(param.name(
-                    ), pruned_axis, len(pruned_idx)))
+                    _logger.debug("{}\t{}\t{}\t{}".format(
+                        param.name(), pruned_axis,
+                        param.shape()[pruned_axis], len(pruned_idx)))
                     if param_shape_backup is not None:
                         origin_shape = copy.deepcopy(param.shape())
                         param_shape_backup[param.name()] = origin_shape

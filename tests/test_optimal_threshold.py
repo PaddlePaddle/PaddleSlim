@@ -49,7 +49,8 @@ class TestPrune(unittest.TestCase):
         exe = fluid.Executor(place)
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
-        criterion = 'optimal_threshold'
+        criterion = 'bn_scale'
+        idx_selector = 'optimal_threshold'
         pruner = Pruner(criterion)
         main_program, _, _ = pruner.prune(
             main_program,

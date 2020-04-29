@@ -24,6 +24,7 @@ import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable
 from ...common import AvgrageMeter, get_logger
 from .architect import Architect
+from .get_genotype import get_genotype
 logger = get_logger(__name__, level=logging.INFO)
 
 
@@ -107,8 +108,7 @@ class DARTSearch(object):
             else:
                 loss.backward()
 
-            grad_clip = fluid.dygraph_grad_clip.GradClipByGlobalNorm(5)
-            optimizer.minimize(loss, grad_clip)
+            optimizer.minimize(loss)
             self.model.clear_gradients()
 
             objs.update(loss.numpy(), n)
@@ -162,11 +162,14 @@ class DARTSearch(object):
             step_per_epoch *= 2
         learning_rate = fluid.dygraph.CosineDecay(
             self.learning_rate, step_per_epoch, self.num_epochs)
+
+        clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0)
         optimizer = fluid.optimizer.MomentumOptimizer(
             learning_rate,
             0.9,
             regularization=fluid.regularizer.L2DecayRegularizer(3e-4),
-            parameter_list=model_parameters)
+            parameter_list=model_parameters,
+            grad_clip=clip)
 
         if self.use_data_parallel:
             self.model = fluid.dygraph.parallel.DataParallel(self.model,
@@ -201,7 +204,7 @@ class DARTSearch(object):
         for epoch in range(self.num_epochs):
             logger.info('Epoch {}, lr {:.6f}'.format(
                 epoch, optimizer.current_step_lr()))
-            genotype = self.model.genotype()
+            genotype = get_genotype(self.model)
             logger.info('genotype = %s', genotype)
 
             train_top1 = self.train_one_epoch(train_loader, valid_loader,

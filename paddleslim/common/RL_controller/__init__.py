@@ -1,4 +1,4 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -13,18 +13,15 @@
 # limitations under the License.
 
 import logging
-
-import paddle.fluid as fluid
-from ..common import get_logger
-
+from ..log_helper import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
 try:
-    fluid.require_version('2.0.0')
-    from .quanter import quant_aware, quant_post, convert, quant_post_only_weight
-except Exception as e:
-    print(e)
-    _logger.warning(
-        "If you want to use training-aware and post-training quantization, "
-        "please use Paddle >= 1.7.0 or develop version")
+    import parl
+    from .DDPG import *
+except ImportError as e:
+    _logger.warn(
+        "If you want to use DDPG in RLNAS, please pip intall parl first. Now states: {}".
+        format(e))
 
-from .quant_embedding import quant_embedding
+from .LSTM import *
+from .utils import *
