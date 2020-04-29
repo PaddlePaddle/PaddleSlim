@@ -41,14 +41,20 @@ def draw_var_distribution_hist(program,
     
     Args:
         program(fluid.Program): program to analyze.
-        var_names(list): name of variables to analyze. When there is activation name in var_names, you should set executor, one of batch_generator and data_loader, feed_list.
+        var_names(list): name of variables to analyze. When there is activation name in var_names, 
+            you should set executor, one of batch_generator and data_loader, feed_list.
         executor(fluid.Executor, optional): The executor to run program. Default is None.
-        batch_generator(Python Generator, optional):The batch generator provides calibrate data for DataLoader, and it returns a batch every time. For data_loader and batch_generator, only one can be set. Default is None.
-        data_loader(fluid.io.DataLoader, optional): The data_loader provides calibrate data to run program. Default is None.
-        feed_vars(list): feed variables for program. When you use batch_generator to provide data, you should set feed_vars. Default is None.
+        batch_generator(Python Generator, optional): The batch generator provides calibrate data for DataLoader,
+            and it returns a batch every time. For data_loader and batch_generator, 
+            only one can be set. Default is None.
+        data_loader(fluid.io.DataLoader, optional): The data_loader provides calibrate data to run program. 
+            Default is None.
+        feed_vars(list): feed variables for program. When you use batch_generator to provide data, 
+            you should set feed_vars. Default is None.
         fetch_list(list): fetch list for program. Default is None.
-        scope(fluid.Scope, optional): The scope to run program, use it to load variables. If scope is None, will use fluid.global_scope().
-        pdf_save_dir(str): dirname to save pdf. Default is  'tmp_pdf'
+        scope(fluid.Scope, optional): The scope to run program, use it to load variables. 
+            If scope is None, will use fluid.global_scope().
+        pdf_save_dir(str): dirname to save pdf. Default is 'tmp_pdf'
     
     Returns:
         dict: numpy array of variables that name in var_names
