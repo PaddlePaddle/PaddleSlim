@@ -60,14 +60,14 @@ class MedianStop(EarlyStopBase):
                 'get_completed_history', callable=return_completed_history)
             base_manager = BaseManager(
                 address=(self._server_ip, self._server_port),
-                authkey=PublicAuthKey)
+                authkey=PublicAuthKey.encode())
 
             base_manager.start()
         else:
             BaseManager.register('get_completed_history')
             base_manager = BaseManager(
                 address=(self._server_ip, self._server_port),
-                authkey=PublicAuthKey)
+                authkey=PublicAuthKey.encode())
             base_manager.connect()
         return base_manager
 
