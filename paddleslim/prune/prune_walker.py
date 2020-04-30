@@ -71,8 +71,11 @@ class PruneWorker(object):
         if visited is not None:
             self.visited = visited
         cls = PRUNE_WORKER.get(op.type())
-        assert cls is not None, "The walker of {} is not registered.".format(
-            op.type())
+        if cls is None:
+            _logger.warn(
+                "{} op will be pruned by default walker to keep the shapes of input and output being same because its walker is not registered.".
+                format(op.type()))
+            cls = PRUNE_WORKER.get("default_walker")
         _logger.debug("\nfrom: {}\nto: {}\npruned_axis: {}; var: {}".format(
             self.op, op, pruned_axis, var.name()))
         walker = cls(op,
@@ -236,6 +239,7 @@ class elementwise_mul(elementwise_op):
         super(elementwise_mul, self).__init__(op, pruned_params, visited)
 
 
+@PRUNE_WORKER.register
 class activation(PruneWorker):
     def __init__(self, op, pruned_params, visited):
         super(activation, self).__init__(op, pruned_params, visited)
@@ -254,6 +258,27 @@ class activation(PruneWorker):
         next_ops = out_var.outputs()
         for op in next_ops:
             self._prune_op(op, out_var, pruned_axis, pruned_idx)
+
+
+@PRUNE_WORKER.register
+class default_walker(PruneWorker):
+    def __init__(self, op, pruned_params, visited):
+        super(default_walker, self).__init__(op, pruned_params, visited)
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        if var in self.op.all_outputs():
+            for in_var in self.op.inputs():
+                if len(in_var.shape()) == len(var.shape()):
+                    pre_ops = in_var.inputs()
+                    for op in pre_ops:
+                        self._prune_op(op, in_var, pruned_axis, pruned_idx)
+
+        for out_var in self.op.all_outputs():
+            if len(out_var.shape()) == len(var.shape()):
+                self._visit(out_var, pruned_axis)
+                next_ops = out_var.outputs()
+                for op in next_ops:
+                    self._prune_op(op, out_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
