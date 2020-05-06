@@ -2,14 +2,7 @@
 
 ## 简介
 
-Lexical Analysis of Chinese，简称 LAC，是一个联合的词法分析模型，在单个模型中完成中文分词、词性标注、专名识别任务。我们在自建的数据集上对分词、词性标注、专名识别进行整体的评估效果。我们使用经过finetune的 [ERNIE](https://github.com/PaddlePaddle/LARK/tree/develop/ERNIE) 模型作为Teacher模型，使用xxx作为Student模型，使用Pantheon框架进行在线蒸馏。对比baselines的效果如下：
-
-|模型|Precision|Recall|F1-score|
-|:-:|:-:|:-:|:-:|
-|Lexical Analysis|89.2%|89.4%|89.3%|
-|BERT finetuned|90.2%|90.4%|90.3%|
-|ERNIE finetuned|91.7%|91.7%|91.7%|
-|ERNIE Distilled| | | |
+Lexical Analysis of Chinese，简称 LAC，是一个联合的词法分析模型，在单个模型中完成中文分词、词性标注、专名识别任务。我们在自建的数据集上对分词、词性标注、专名识别进行整体的评估效果。我们使用经过finetune的 [ERNIE](https://github.com/PaddlePaddle/LARK/tree/develop/ERNIE) 模型作为Teacher模型，使用xxx作为Student模型，使用Pantheon框架进行在线蒸馏。
 
 #### 1. 下载训练数据集
 
