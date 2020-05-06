@@ -23,7 +23,7 @@ import paddle
 from paddle import fluid
 
 from dataloader.casia import CASIA_Face
-from dataloader.lfw import LFW
+from dataloader.LFW import LFW
 from lfw_eval import parseList, evaluation_10_fold
 from models.slimfacenet import SlimFaceNet
 
