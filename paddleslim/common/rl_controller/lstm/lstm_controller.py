@@ -224,7 +224,8 @@ class LSTM(RLBaseController):
                 actual_rewards = actual_rewards.astype(np.float32)
 
             feed_dict['rewards'] = actual_rewards
-            feed_dict['init_actions'] = np.array(self.init_tokens)
+            feed_dict['init_actions'] = np.array(self.init_tokens).astype(
+                'int64')
 
         return feed_dict
 
