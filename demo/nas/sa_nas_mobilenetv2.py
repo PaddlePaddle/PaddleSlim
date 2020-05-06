@@ -177,7 +177,7 @@ def test_search_result(tokens, image_size, args, config):
 
     image_shape = [3, image_size, image_size]
 
-    archs = sa_nas.tokens2arch(tokens)
+    archs = sa_nas.tokens2arch(tokens)[0]
 
     train_program = fluid.Program()
     test_program = fluid.Program()
