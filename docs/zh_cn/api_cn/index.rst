@@ -12,6 +12,7 @@ API文档
    analysis_api.rst
    nas_api.rst
    one_shot_api.rst
+   darts.rst
    pantheon_api.md
    prune_api.rst
    quantization_api.rst
