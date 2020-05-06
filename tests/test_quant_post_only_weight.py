@@ -16,7 +16,7 @@ sys.path.append("../")
 import unittest
 import paddle
 import paddle.fluid as fluid
-from paddleslim.quant import quant_post
+from paddleslim.quant import quant_post_only_weight
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
@@ -26,7 +26,7 @@ from paddle.fluid import core
 import numpy as np
 
 
-class TestQuantAwareCase1(unittest.TestCase):
+class TestQuantPostOnlyWeightCase1(unittest.TestCase):
     def test_accuracy(self):
         image = fluid.layers.data(
             name='image', shape=[1, 28, 28], dtype='float32')
@@ -97,19 +97,14 @@ class TestQuantAwareCase1(unittest.TestCase):
             model_filename='model',
             params_filename='params')
 
-        quant_post(
-            exe,
-            './test_quant_post',
-            './test_quant_post_inference',
-            sample_generator=paddle.dataset.mnist.test(),
+        quant_post_only_weight(
+            model_dir='./test_quant_post',
+            save_model_dir='./test_quant_post_inference',
             model_filename='model',
             params_filename='params',
-            batch_nums=10)
+            generate_test_model=True)
         quant_post_prog, feed_target_names, fetch_targets = fluid.io.load_inference_model(
-            dirname='./test_quant_post_inference',
-            executor=exe,
-            model_filename='__model__',
-            params_filename='__params__')
+            dirname='./test_quant_post_inference/test_model', executor=exe)
         top1_2, top5_2 = test(quant_post_prog, fetch_targets)
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
         print("after quantization: top1: {}, top5: {}".format(top1_2, top5_2))

@@ -39,6 +39,7 @@ PaddleSlim also provides auxiliary and primitive API for developer and researche
   - Neural architecture search based on evolution strategy.
   - Support distributed search.
   - One-Shot neural architecture search.
+  - Differentiable Architecture Search.
   - Support FLOPs and latency constrained search.
   - Support the latency estimation on different hardware and platforms.
 

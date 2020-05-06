@@ -126,6 +126,10 @@ class RLNAS(object):
 
         return archs
 
+    @property
+    def tokens(self):
+        return self._current_tokens
+
     def reward(self, rewards, **kwargs):
         """ 
         reward the score and to train controller
@@ -143,6 +147,7 @@ class RLNAS(object):
         """
         final_tokens = self._controller_client.next_tokens(
             batch_obs, is_inference=True)
+        self._current_tokens = final_tokens
         _logger.info("Final tokens: {}".format(final_tokens))
         archs = []
         for token in final_tokens:

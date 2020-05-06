@@ -65,7 +65,8 @@ class Server(object):
         server_address = "{}:{}".format(self._ip, self._port)
         self._server_socket.bind("tcp://{}".format(server_address))
         self._server_socket.linger = 0
-        _logger.info("ControllerServer - listen on: [{}]".format(
+        _logger.info("ControllerServer Start!!!")
+        _logger.debug("ControllerServer - listen on: [{}]".format(
             server_address))
         thread = threading.Thread(target=self.run, args=())
         thread.setDaemon(True)
@@ -100,19 +101,20 @@ class Server(object):
         try:
             while self._server_alive:
                 message = self._wait_socket.recv_multipart()
-                cmd = message[0]
-                client_name = message[1]
+                cmd = pickle.loads(message[0])
+                client_name = pickle.loads(message[1])
                 if cmd == ConnectMessage.WAIT_PARAMS:
                     _logger.debug("Server: wait for params")
                     self._lock.acquire()
                     self._wait_socket.send_multipart([
-                        ConnectMessage.OK
-                        if self._done else ConnectMessage.WAIT
+                        pickle.dumps(ConnectMessage.OK)
+                        if self._done else pickle.dumps(ConnectMessage.WAIT)
                     ])
                     if self._done and client_name in self._client:
                         self._client.remove(client_name)
                     if len(self._client) == 0:
-                        self.save_params()
+                        if self._save_controller != False:
+                            self.save_params()
                         self._done = False
                     self._lock.release()
                 else:
@@ -127,11 +129,11 @@ class Server(object):
                 try:
                     sum_params_dict = dict()
                     message = self._server_socket.recv_multipart()
-                    cmd = message[0]
-                    client_name = message[1]
+                    cmd = pickle.loads(message[0])
+                    client_name = pickle.loads(message[1])
                     if cmd == ConnectMessage.INIT:
                         self._server_socket.send_multipart(
-                            [ConnectMessage.INIT_DONE])
+                            [pickle.dumps(ConnectMessage.INIT_DONE)])
                         _logger.debug("Server: init client {}".format(
                             client_name))
                         self._client_dict[client_name] = 0
@@ -161,7 +163,7 @@ class Server(object):
                                 self._done = True
 
                             self._server_socket.send_multipart([
-                                ConnectMessage.WAIT,
+                                pickle.dumps(ConnectMessage.WAIT),
                                 pickle.dumps(self._wait_port)
                             ])
                         else:
@@ -174,16 +176,17 @@ class Server(object):
                                 self._max_update_times = self._client_dict[
                                     client_name]
                             self._lock.release()
-                            self.save_params()
+                            if self._save_controller != False:
+                                self.save_params()
                             self._server_socket.send_multipart(
-                                [ConnectMessage.OK])
+                                [pickle.dumps(ConnectMessage.OK)])
 
                     elif cmd == ConnectMessage.EXIT:
                         self._client_dict.pop(client_name)
                         if client_name in self._client:
                             self._client.remove(client_name)
                         self._server_socket.send_multipart(
-                            [ConnectMessage.EXIT])
+                            [pickle.dumps(ConnectMessage.EXIT)])
                 except zmq.error.Again as e:
                     _logger.error(e)
             self.close()
