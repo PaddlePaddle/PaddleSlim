@@ -29,6 +29,14 @@ logger = get_logger(__name__, level=logging.INFO)
 
 
 def count_parameters_in_MB(all_params):
+    """Count the parameters in the target list.
+    Args:
+        all_params(list): List of Variables.
+
+    Returns:
+        float: The total count(MB) of target parameter list.
+    """
+
     parameters_number = 0
     for param in all_params:
         if param.trainable and 'aux' not in param.name:
@@ -37,6 +45,24 @@ def count_parameters_in_MB(all_params):
 
 
 class DARTSearch(object):
+    """Used for Differentiable ARchiTecture Search(DARTS)
+
+    Args:
+        model(Paddle DyGraph model): Super Network for Search.
+        train_reader(Python Generator): Generator to provide training data.
+        valid_reader(Python Generator): Generator to provide validation  data.
+        place(fluid.CPUPlace()|fluid.CUDAPlace(N)): This parameter represents the executor run on which device.
+        learning_rate(float): Model parameter initial learning rate. Default: 0.025.
+        batch_size(int): Minibatch size. Default: 64.
+        arch_learning_rate(float): Learning rate for arch encoding. Default: 3e-4.
+        unrolled(bool): Use one-step unrolled validation loss. Default: False.
+        num_epochs(int): Epoch number. Default: 50.
+        epochs_no_archopt(int): Epochs skip architecture optimize at begining. Default: 50.
+        use_data_parallel(bool): Whether to use data parallel mode. Default: False.
+        log_freq(int): Log frequency.. Default: 50.
+
+    """
+
     def __init__(self,
                  model,
                  train_reader,
@@ -149,6 +175,10 @@ class DARTSearch(object):
         return top1.avg[0]
 
     def train(self):
+        """Start search process.
+
+        """
+
         if self.use_data_parallel:
             strategy = fluid.dygraph.parallel.prepare_context()
         model_parameters = [
