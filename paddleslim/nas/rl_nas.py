@@ -20,7 +20,7 @@ import json
 import hashlib
 import time
 import paddle.fluid as fluid
-from ..common.RL_controller.utils import RLCONTROLLER
+from ..common.rl_controller.utils import RLCONTROLLER
 from ..common import get_logger
 
 from ..common import Server
