@@ -57,9 +57,9 @@ class DARTSearch(object):
         arch_learning_rate(float): Learning rate for arch encoding. Default: 3e-4.
         unrolled(bool): Use one-step unrolled validation loss. Default: False.
         num_epochs(int): Epoch number. Default: 50.
-        epochs_no_archopt(int): Epochs skip architecture optimize at begining. Default: 50.
+        epochs_no_archopt(int): Epochs skip architecture optimize at begining. Default: 0.
         use_data_parallel(bool): Whether to use data parallel mode. Default: False.
-        log_freq(int): Log frequency.. Default: 50.
+        log_freq(int): Log frequency. Default: 50.
 
     """
 
