@@ -1,4 +1,3 @@
-# ================================================================
 #   Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -15,6 +14,12 @@
 #!/bin/bash
 export CUDA_VISIBLE_DEVICES=0
 export LD_LIBRARY_PATH='PATH to CUDA and CUDNN'
-python train_eval.py --action test \
+export FLAGS_fraction_of_gpu_memory_to_use=1.0
+export FLAGS_fast_eager_deletion_mode=1
+export FLAGS_eager_delete_tensor_gb=0.0
+python -u train_eval.py \
     --train_data_dir=/PATH_TO_CASIA_Dataset \
-    --test_data_dir=/PATH_TO_lfw \
+    --test_data_dir=/PATH_TO_LFW \
+    --arch=0,1,5,1,0,2,1,2,0,1,2,1,1,0,1 \
+    --action final \
+    --scale=0.6

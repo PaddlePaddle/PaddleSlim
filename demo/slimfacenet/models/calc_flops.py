@@ -1,8 +1,22 @@
+#   Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from collections import OrderedDict
 from prettytable import PrettyTable
 import distutils.util
 import numpy as np
 import six
+
 
 def summary(main_prog):
     '''
@@ -18,20 +32,16 @@ def summary(main_prog):
     for one_b in main_prog.blocks:
         block_vars = one_b.vars
         for one_op in one_b.ops:
-            # if str(one_op.type).find('quantize') > -1:
-            #     is_quantize = True
             op_info = OrderedDict()
             spf_res = _summary_model(block_vars, one_op)
             if spf_res is None:
                 continue
-            # TODO: get the operator name
             op_info['type'] = one_op.type
             op_info['input_shape'] = spf_res[0][1:]
             op_info['out_shape'] = spf_res[1][1:]
             op_info['PARAMs'] = spf_res[2]
             op_info['FLOPs'] = spf_res[3]
             collected_ops_list.append(op_info)
-
 
     summary_table, total = _format_summary(collected_ops_list)
     _print_summary(summary_table, total)
@@ -56,7 +66,6 @@ def _summary_model(block_vars, one_op):
         out_data_shape = block_vars[one_op.output("Output")[0]].shape
         c_out, c_in, k_h, k_w = k_arg_shape
         _, c_out_, h_out, w_out = out_data_shape
-        #assert c_out == c_out_, 'shape error!'
         k_groups = one_op.attr("groups")
         kernel_ops = k_h * k_w * (in_data_shape[1] / k_groups)
         try:
@@ -70,10 +79,6 @@ def _summary_model(block_vars, one_op):
         if one_op.type == 'depthwise_conv2d':
             pass
 
-        # var_name = block_vars[one_op.input("Filter")[0]].name
-        # if var_name.endswith('.int8'):
-        #     flops /= 2.0
-
     elif one_op.type == 'pool2d':
         in_data_shape = block_vars[one_op.input("X")[0]].shape
         out_data_shape = block_vars[one_op.output("Out")[0]].shape
@@ -86,19 +91,12 @@ def _summary_model(block_vars, one_op):
         k_arg_shape = block_vars[one_op.input("Y")[0]].shape
         in_data_shape = block_vars[one_op.input("X")[0]].shape
         out_data_shape = block_vars[one_op.output("Out")[0]].shape
-        # TODO: fc has mul ops
-        # add attr to mul op, tell us whether it belongs to 'fc'
-        # this's not the best way
         if 'fc' not in one_op.output("Out")[0]:
             return None
         k_in, k_out = k_arg_shape
         # bias in sum op
         params = k_in * k_out + 1
         flops = k_in * k_out
-
-        # var_name = block_vars[one_op.input("Y")[0]].name
-        # if var_name.endswith('.int8'):
-        #     flops /= 2.0
 
     elif one_op.type in ['sigmoid', 'tanh', 'relu', 'leaky_relu', 'prelu']:
         in_data_shape = block_vars[one_op.input("X")[0]].shape
@@ -172,15 +170,17 @@ def _print_summary(summary_table, total):
     flops = total['flops']
     print(summary_table)
     print('Total PARAMs: {}({:.4f}M)'.format(
-        sum(parmas), sum(parmas) / (10.0 ** 6)))
-    print('Total FLOPs: {}({:.4f}G)'.format(sum(flops), sum(flops) / 10.0 ** 6))
-    print('Total MAdds: {}({:.4f}G)'.format(sum(flops)/2, sum(flops) / 10.0 ** 6 / 2))
+        sum(parmas), sum(parmas) / (10.0**6)))
+    print('Total FLOPs: {}({:.4f}G)'.format(sum(flops), sum(flops) / 10.0**6))
+    print('Total MAdds: {}({:.4f}G)'.format(
+        sum(flops) / 2, sum(flops) / 10.0**6 / 2))
     print(
         "Notice: \n now supported ops include [Conv, DepthwiseConv, FC(mul), BatchNorm, Pool, Activation(sigmoid, tanh, relu, leaky_relu, prelu)]"
     )
 
 
-def get_batch_dt_res(nmsed_out_v, data, contiguous_category_id_to_json_id, batch_size):
+def get_batch_dt_res(nmsed_out_v, data, contiguous_category_id_to_json_id,
+                     batch_size):
     dts_res = []
     lod = nmsed_out_v[0].lod()[0]
     nmsed_out_v = np.array(nmsed_out_v[0])
