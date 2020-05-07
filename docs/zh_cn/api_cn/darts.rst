@@ -97,7 +97,7 @@ DARTSearch
         model = SuperNet()
         train_reader = batch_generator_creator()
         valid_reader = batch_generator_creator()
-        searcher = DARTSearch(model, train_reader, valid_reader, unrolled=False)
+        searcher = DARTSearch(model, train_reader, valid_reader, place)
         searcher.train()
 
 ..

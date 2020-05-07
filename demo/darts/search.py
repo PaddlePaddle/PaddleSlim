@@ -80,6 +80,7 @@ def main(args):
             model,
             train_reader,
             valid_reader,
+            place,
             learning_rate=args.learning_rate,
             batchsize=args.batch_size,
             num_imgs=args.trainset_num,
@@ -87,8 +88,8 @@ def main(args):
             unrolled=args.unrolled,
             num_epochs=args.epochs,
             epochs_no_archopt=args.epochs_no_archopt,
-            use_gpu=args.use_gpu,
             use_data_parallel=args.use_data_parallel,
+            save_dir=args.model_save_dir,
             log_freq=args.log_freq)
         searcher.train()
 
