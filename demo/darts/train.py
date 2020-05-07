@@ -19,13 +19,14 @@ from __future__ import print_function
 import os
 import sys
 import ast
+import logging
 import argparse
 import functools
-import logging
 
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable
 from paddleslim.common import AvgrageMeter, get_logger
+from paddleslim.nas.darts import count_parameters_in_MB
 
 import genotypes
 import reader
@@ -140,9 +141,6 @@ def main(args):
         if args.use_data_parallel else fluid.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
-        if args.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-
         genotype = eval("genotypes.%s" % args.arch)
         model = Network(
             C=args.init_channels,
@@ -151,7 +149,12 @@ def main(args):
             auxiliary=args.auxiliary,
             genotype=genotype)
 
-        step_per_epoch = int(args.trainset_num / args.batch_size)
+        logger.info("param size = {:.6f}MB".format(
+            count_parameters_in_MB(model.parameters())))
+
+        device_num = fluid.dygraph.parallel.Env().nranks
+        step_per_epoch = int(args.trainset_num /
+                             (args.batch_size * device_num))
         learning_rate = fluid.dygraph.CosineDecay(args.learning_rate,
                                                   step_per_epoch, args.epochs)
         clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=args.grad_clip)
@@ -163,18 +166,21 @@ def main(args):
             grad_clip=clip)
 
         if args.use_data_parallel:
+            strategy = fluid.dygraph.parallel.prepare_context()
             model = fluid.dygraph.parallel.DataParallel(model, strategy)
 
         train_loader = fluid.io.DataLoader.from_generator(
-            capacity=64,
+            capacity=1024,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=True)
         valid_loader = fluid.io.DataLoader.from_generator(
-            capacity=64,
+            capacity=1024,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=True)
 
         train_reader = reader.train_valid(
             batch_size=args.batch_size,
@@ -186,12 +192,12 @@ def main(args):
             is_train=False,
             is_shuffle=False,
             args=args)
-        train_loader.set_batch_generator(train_reader, places=place)
-        valid_loader.set_batch_generator(valid_reader, places=place)
-
         if args.use_data_parallel:
             train_reader = fluid.contrib.reader.distributed_batch_reader(
                 train_reader)
+
+        train_loader.set_batch_generator(train_reader, places=place)
+        valid_loader.set_batch_generator(valid_reader, places=place)
 
         save_parameters = (not args.use_data_parallel) or (
             args.use_data_parallel and
