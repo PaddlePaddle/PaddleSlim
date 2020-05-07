@@ -176,8 +176,6 @@ class DARTSearch(object):
 
         """
 
-        if self.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
         model_parameters = [
             p for p in self.model.parameters()
             if p.name not in [a.name for a in self.model.arch_parameters()]
