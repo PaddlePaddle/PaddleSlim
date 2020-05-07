@@ -72,7 +72,7 @@ python train_imagenet.py --arch='PC_DARTS'   # 在ImageNet数据集上对搜索�
 
 同样，也支持用多卡进行评估训练, 以4卡为例(GPU id: 0-3), 启动命令如下：
 
-```python
+```bash
 python -m paddle.distributed.launch --selected_gpus=0,1,2,3  --log_dir ./mylog train.py --use_data_parallel 1 --arch='DARTS_V2'
 python -m paddle.distributed.launch --selected_gpus=0,1,2,3  --log_dir ./mylog train_imagenet.py --use_data_parallel 1 --arch='DARTS_V2'
 ```
