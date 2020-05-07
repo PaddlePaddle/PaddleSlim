@@ -25,7 +25,7 @@ if six.PY2:
 else:
     import pickle
 from .log_helper import get_logger
-from .RL_controller.utils import compute_grad, ConnectMessage
+from .rl_controller.utils import compute_grad, ConnectMessage
 
 _logger = get_logger(__name__, level=logging.INFO)
 

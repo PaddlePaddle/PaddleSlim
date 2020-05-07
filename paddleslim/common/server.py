@@ -25,7 +25,7 @@ import logging
 import time
 import threading
 from .log_helper import get_logger
-from .RL_controller.utils import add_grad, ConnectMessage
+from .rl_controller.utils import add_grad, ConnectMessage
 
 _logger = get_logger(__name__, level=logging.INFO)
 

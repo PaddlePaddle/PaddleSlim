@@ -3,8 +3,8 @@
 首先导入必要的依赖:
 ```python
 ### 引入强化学习Controller基类函数和注册类函数
-from paddleslim.common.RL_controller.utils import RLCONTROLLER
-from paddleslim.common.RL_controller import RLBaseController
+from paddleslim.common.rl_controller.utils import RLCONTROLLER
+from paddleslim.common.rl_controller import RLBaseController
 ```
 
 通过装饰器的方式把自定义强化学习Controller注册到PaddleSlim，继承基类之后需要重写基类中的`next_tokens`和`update`两个函数。注意：本示例仅说明一些必不可少的步骤，并不能直接运行，完整代码请参考[这里]()
