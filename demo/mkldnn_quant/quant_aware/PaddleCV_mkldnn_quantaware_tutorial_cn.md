@@ -17,7 +17,7 @@
 
 | 选项        | 值           | 说明  |
 | ------------- |:-------------:| -----:|
-| WITH_MKL      | ON | 本测试请打开MKL |
+| WITH_MKL      | ON | 本测试请打开MKL   |
 | WITH_MKLDNN   | ON | 本测试请打开MKLDNN |
 
 - 从Paddle官网下载发布的[预测库](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)。请选择`ubuntu14.04_cpu_avx_mkl` 最新发布版或者develop版。
@@ -52,7 +52,9 @@ python train_image_classification.py --model=ResNet50 --pretrained_model=$PATH_T
 - **pretrained_model:** 加载预训练模型路径，默认值为空
 - **batch_size：** 训练batch大小，默认值128
 - **num_epochs:** 训练回合数，默认值: 1
+- **train_images** 每个epoch训练的图片数量，用户可以使用小数据集，节省训练时间。
 - **config_file:** 配置文件位置，默认值`./config.yaml`.
+- **use_gpu:** 使用GPU训练，默认值为`False`
 
 如果用户需要更改量化策略，可以更改 `config.yaml` 配置。目前我们建议使用以下配置。
 ```
@@ -72,51 +74,15 @@ config = {
 python save_qat_model.py --qat_model_path=/PATH/TO/SAVE/FLOAT32/QAT/MODEL --int8_model_save_path=/PATH/TO/SAVE/INT8/MODEL --fp32_model_save_path=/PATH/TO/SAVE/FLOAT32/MODEL --quantized_ops="conv2d,pool2d"
 ```
 **参数说明：**
-- **qat_model_path:** 为FP32 QAT-> INT8 转化过程的输入模型路径。请设置为上一步在线训练保存的QAT FLOAT32模型所在路径。
-- **fp32_model_save_path:** 可选。如果设置，则将QAT FP32模型经过DNNL优化后保存成FP32模型路径。
-- **int8_model_save_path:** 可选。如果设置，则为QAT模型转化并经过DNNL优化量化后的INT8模型路径。
-- **quantized_ops:** 最终INT8模型中使用量化op的列表，用户设置时需要注意：
-  - 只能选择目前已经支持DNNL量化的op可以在列表中。目前支持的DNNL量化op列表是`conv2d`, `depthwise_conv2d`, `mul`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`, `concat`。
-  - 所有列表中的即将使用量化op的op的scales不能为空. 否则，量化过程会报错。
-  - 有时，量化所有可量化的Op不一定性能最优，这也是为什么我们提供参数给用户选择量化op的原因。比如，如果一个op是单个的INT8 op,不可以与之前的和之后的op融合，那么为了量化这个op，需要先做quantize,然后运行这个INT8 op,再dequantize, 这样的过程可能导致最终性能不如保持该op为fp32 op。
-  - 一个找到最优配置的方法是，用户观察这个模型一共用到了哪些可量化的op，然后选出不同的`quantized_ops`组合，多运行几次。 比如，对于图像分类模型来说，我们发现对于图像分类任务， `--quantized_ops=“conv2d, pool2d"`量化后性能最优。对于NLP任务，如Ernie模型， `--quantized_ops="fc,reshape2,transpose2,matmul"`量化后最优。
+- **qat_model_path:** 为输入参数，必填。为量化训练后的quant模型或者原始FP32模型。如果传入quant模型，则必须设置int8_model_save_path，将转化保存INT8模型；如果传入原始FP32模型，则必须设置fp32_model_save_path，将保存经过多个fuses优化后的FP32模型。
+- **int8_model_save_path:** 可选。如果设置，则将训练后的quant模型转化并经过DNNL优化量化后的INT8模型路径。注意：qat_model_path必须传入量化训练后的含有fake quant/dequant ops的quant模型
+- **fp32_model_save_path:** 可选。如果设置，则将原始FP32模型经过DNNL优化后保存成fuse优化后的FP32模型路径。注意：此时qat_model_path必须传入原始FP32模型（而不是训练后的含有fake quant/dequant ops的模型）
+- **ops_to_quantize:** 必填。最终INT8模型中使用量化op的列表。图像分类模型设置`--ops_to_quantize=“conv2d, pool2d"`量化后性能最优。自然语言处理模型，如Ernie模型，设置`--ops_to_quantize="fc,reshape2,transpose2,matmul"`量化后最优。用户必须手动设置，因为不是量化所有可量化的op就能达到最优速度的。
+  用户设置时需要注意：
+  - 只能选择目前支持DNNL量化的op。目前支持DNNL量化op列表是`conv2d`, `depthwise_conv2d`, `mul`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`, `concat`。
+  - 量化所有可量化的Op不一定性能最优，所以用户要手动输入。比如，如果一个op是单个的INT8 op, 不可以与之前的和之后的op融合，那么为了量化这个op，需要先做quantize，然后运行INT8 op, 再dequantize, 这样可能导致最终性能不如保持该op为fp32 op。由于用户模型未知，这里不给出默认设置，只给出图像分类和NLP任务的给出参数建议。
+  - 一个有效找到最优配置的方法是，用户观察这个模型一共用到了哪些可量化的op，选出不同的`ops_to_quantize`组合，多运行几次。
 
-这个脚本的`qat_model_path`为输入模型，来自上一步中的在线训练量化保存的模型。`fp32_model_save_path`和`int8_model_save_path`为输出模型。如果用户设置了`fp32_model_save_path`路径，则会产出QAT FLOAT32 模型经过DNNL优化后的模型（包括移除fake ops, 使用DNNL kernel和fuses等），调用的优化过程如下，预测速度会比原QAT模型快。如果用户设置了`int8_model_save_path`,则会经过收集scales，反量化成FP32模型，再进行fuse等，再进行DNNL量化。
-
-* save_qat_model 将QAT转化FP32模型, 使用`Qat2Int8MkldnnPass` apply_fp32
-```
-    def apply_fp32(self, graph):
-        graph = self._gather_weight_scales_from_fake(graph)
-        graph = self._gather_output_scales_from_attr(graph)
-        graph = self._gather_input_scales_from_fake(graph)
-        graph = self._remove_fake_ops(graph)
-        graph = self._dequantize_weights(graph)
-        graph = self._optimize_fp32_graph(graph)
-        graph = self._remove_unused_var_nodes(graph)
-        graph = self._cleanup(graph)
-        return graph
-```
-* save_qat_model 将QAT转化INT8模型,使用`Qat2Int8MkldnnPass` apply
-```
-    def apply(self, graph):
-        assert isinstance(graph,
-                          IrGraph), 'graph must be the instance of IrGraph.'
-
-        graph = self._gather_weight_scales_from_fake(graph)
-        graph = self._gather_output_scales_from_attr(graph)
-        graph = self._gather_input_scales_from_fake(graph)
-        graph = self._remove_fake_ops(graph)
-        graph = self._dequantize_weights(graph)
-        graph = self._optimize_fp32_graph(graph)
-        graph = self._compute_weight_scales(graph)
-        graph = self._update_relu_output_scales(graph)
-        graph = self._propagate_scales(graph)
-        graph = self._set_dummy_out_scales(graph)
-        graph = self._quantize_fp32_graph(graph)
-        graph = self._optimize_int8_graph(graph)
-        graph = self._cleanup(graph)
-        return graph
-```
 ## 4. 预测
 
 ### 4.1 数据预处理转化

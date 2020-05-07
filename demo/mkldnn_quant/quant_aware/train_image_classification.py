@@ -39,7 +39,7 @@ add_arg('config_file',      str, "./config.yaml",                 "The config fi
 add_arg('data',             str, "imagenet",             "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('checkpoint_dir',         str, "output",           "checkpoint save dir")
-# yapf: enable
+# yapf: enable -D v1.7  
 
 model_list = [m for m in dir(models) if "__" not in m]
 

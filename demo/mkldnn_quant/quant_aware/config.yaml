@@ -18,5 +18,5 @@ dtype: "int8"
 window_size: 10000
 # The decay coefficient of moving average, default is 0.9
 moving_rate: 0.9
-# if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPE        
+# if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPE      
 is_full_quantize: False
