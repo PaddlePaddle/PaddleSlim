@@ -21,8 +21,7 @@ from paddle.fluid.dygraph.base import to_variable
 
 
 class Architect(object):
-    def __init__(self, model, eta, arch_learning_rate, place, unrolled,
-                 parallel):
+    def __init__(self, model, eta, arch_learning_rate, unrolled, parallel):
         self.network_momentum = 0.9
         self.network_weight_decay = 3e-4
         self.eta = eta
@@ -33,7 +32,6 @@ class Architect(object):
             0.999,
             regularization=fluid.regularizer.L2Decay(1e-3),
             parameter_list=self.model.arch_parameters())
-        self.place = place
         self.unrolled = unrolled
         self.parallel = parallel
         if self.unrolled:
@@ -110,13 +108,14 @@ class Architect(object):
                                                       target_train)
         for (p, g), ig in zip(arch_params_grads, implicit_grads):
             new_g = g - (ig * self.unrolled_optimizer.current_step_lr())
-            g.value().get_tensor().set(new_g.numpy(), self.place)
+            fluid.layers.assign(new_g.detach(), g)
         return arch_params_grads
 
     def _compute_unrolled_model(self, input, target):
         for x, y in zip(self.unrolled_model.parameters(),
                         self.model.parameters()):
-            x.value().get_tensor().set(y.numpy(), self.place)
+            fluid.layers.assign(y.detach(), x)
+
         loss = self.unrolled_model._loss(input, target)
         if self.parallel:
             loss = self.parallel_unrolled_model.scale_loss(loss)
@@ -141,7 +140,7 @@ class Architect(object):
         ]
         for param, grad in zip(model_params, vector):
             param_p = param + grad * R
-            param.value().get_tensor().set(param_p.numpy(), self.place)
+            fluid.layers.assign(param_p.detach(), param)
         loss = self.model._loss(input, target)
         if self.parallel:
             loss = self.parallel_model.scale_loss(loss)
@@ -157,7 +156,7 @@ class Architect(object):
 
         for param, grad in zip(model_params, vector):
             param_n = param - grad * R * 2
-            param.value().get_tensor().set(param_n.numpy(), self.place)
+            fluid.layers.assign(param_n.detach(), param)
         self.model.clear_gradients()
 
         loss = self.model._loss(input, target)
@@ -174,7 +173,7 @@ class Architect(object):
         ]
         for param, grad in zip(model_params, vector):
             param_o = param + grad * R
-            param.value().get_tensor().set(param_o.numpy(), self.place)
+            fluid.layers.assign(param_o.detach(), param)
         self.model.clear_gradients()
         arch_grad = [(p - n) / (2 * R) for p, n in zip(grads_p, grads_n)]
         return arch_grad

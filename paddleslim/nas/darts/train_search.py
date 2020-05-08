@@ -227,7 +227,6 @@ class DARTSearch(object):
             model=self.model,
             eta=learning_rate,
             arch_learning_rate=self.arch_learning_rate,
-            place=self.place,
             unrolled=self.unrolled,
             parallel=self.use_data_parallel)
 
