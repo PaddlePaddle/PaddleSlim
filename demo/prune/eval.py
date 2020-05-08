@@ -8,11 +8,10 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-sys.path.append("../../")
 from paddleslim.prune import load_model
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-sys.path.append(sys.path[0] + "/../")
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments
 
