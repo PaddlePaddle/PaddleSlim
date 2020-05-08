@@ -31,6 +31,39 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class AutoPruner(object):
+    """
+    Search a group of ratios used to prune program.
+
+    Args:
+        program(Program): The program to be pruned.
+        scope(Scope): The scope to be pruned.
+        place(fluid.Place): The device place of parameters.
+        params(list<str>): The names of parameters to be pruned.
+        init_ratios(list<float>|float): Init ratios used to pruned parameters in `params`.
+            List means ratios used for pruning each parameter in `params`.
+            The length of `init_ratios` should be equal to length of params when `init_ratios` is a list. 
+            If it is a scalar, all the parameters in `params` will be pruned by uniform ratio.
+            None means get a group of init ratios by `pruned_flops` of `pruned_latency`. Default: None.
+        pruned_flops(float): The percent of FLOPS to be pruned. Default: None.
+        pruned_latency(float): The percent of latency to be pruned. Default: None.
+        server_addr(tuple): A tuple of server ip and server port for controller server. 
+        init_temperature(float): The init temperature used in simulated annealing search strategy.
+        reduce_rate(float): The decay rate used in simulated annealing search strategy.
+        max_try_times(int): The max number of trying to generate legal tokens.
+        max_client_num(int): The max number of connections of controller server.
+        search_steps(int): The steps of searching.
+        max_ratios(float|list<float>): Max ratios used to pruned parameters in `params`.
+            List means max ratios for each parameter in `params`.
+            The length of `max_ratios` should be equal to length of params when `max_ratios` is a list.
+            If it is a scalar, it will used for all the parameters in `params`.
+        min_ratios(float|list<float>): Min ratios used to pruned parameters in `params`.
+            List means min ratios for each parameter in `params`.
+            The length of `min_ratios` should be equal to length of params when `min_ratios` is a list.
+            If it is a scalar, it will used for all the parameters in `params`.
+        key(str): Identity used in communication between controller server and clients.
+        is_server(bool): Whether current host is controller server. Default: True.
+        """
+
     def __init__(self,
                  program,
                  scope,
@@ -49,37 +82,6 @@ class AutoPruner(object):
                  min_ratios=[0],
                  key="auto_pruner",
                  is_server=True):
-        """
-        Search a group of ratios used to prune program.
-        Args:
-            program(Program): The program to be pruned.
-            scope(Scope): The scope to be pruned.
-            place(fluid.Place): The device place of parameters.
-            params(list<str>): The names of parameters to be pruned.
-            init_ratios(list<float>|float): Init ratios used to pruned parameters in `params`.
-                List means ratios used for pruning each parameter in `params`.
-                The length of `init_ratios` should be equal to length of params when `init_ratios` is a list. 
-                If it is a scalar, all the parameters in `params` will be pruned by uniform ratio.
-                None means get a group of init ratios by `pruned_flops` of `pruned_latency`. Default: None.
-            pruned_flops(float): The percent of FLOPS to be pruned. Default: None.
-            pruned_latency(float): The percent of latency to be pruned. Default: None.
-            server_addr(tuple): A tuple of server ip and server port for controller server. 
-            init_temperature(float): The init temperature used in simulated annealing search strategy.
-            reduce_rate(float): The decay rate used in simulated annealing search strategy.
-            max_try_times(int): The max number of trying to generate legal tokens.
-            max_client_num(int): The max number of connections of controller server.
-            search_steps(int): The steps of searching.
-            max_ratios(float|list<float>): Max ratios used to pruned parameters in `params`.
-                List means max ratios for each parameter in `params`.
-                The length of `max_ratios` should be equal to length of params when `max_ratios` is a list.
-                If it is a scalar, it will used for all the parameters in `params`.
-            min_ratios(float|list<float>): Min ratios used to pruned parameters in `params`.
-                List means min ratios for each parameter in `params`.
-                The length of `min_ratios` should be equal to length of params when `min_ratios` is a list.
-                If it is a scalar, it will used for all the parameters in `params`.
-            key(str): Identity used in communication between controller server and clients.
-            is_server(bool): Whether current host is controller server. Default: True.
-        """
 
         self._program = program
         self._scope = scope
@@ -157,7 +159,7 @@ class AutoPruner(object):
 
     def _constrain_func(self, tokens):
         ratios = self._tokens2ratios(tokens)
-        pruned_program = self._pruner.prune(
+        pruned_program, _, _ = self._pruner.prune(
             self._program,
             self._scope,
             self._params,
@@ -177,13 +179,15 @@ class AutoPruner(object):
     def prune(self, program, eval_program=None):
         """
         Prune program with latest tokens generated by controller.
+
         Args:
             program(fluid.Program): The program to be pruned.
+
         Returns:
-            Program: The pruned program.
+            paddle.fluid.Program: The pruned program.
         """
         self._current_ratios = self._next_ratios()
-        pruned_program = self._pruner.prune(
+        pruned_program, _, _ = self._pruner.prune(
             program,
             self._scope,
             self._params,
@@ -193,7 +197,7 @@ class AutoPruner(object):
             param_backup=self._param_backup)
         pruned_val_program = None
         if eval_program is not None:
-            pruned_val_program = self._pruner.prune(
+            pruned_val_program, _, _ = self._pruner.prune(
                 program,
                 self._scope,
                 self._params,
@@ -208,8 +212,9 @@ class AutoPruner(object):
     def reward(self, score):
         """
         Return reward of current pruned program.
+
         Args:
-            score(float): The score of pruned program.
+            float: The score of pruned program.
         """
         self._restore(self._scope)
         self._param_backup = {}
