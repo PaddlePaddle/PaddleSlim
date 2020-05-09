@@ -62,6 +62,7 @@ class LSTM(RLBaseController):
         self.lstm_num_layers = kwargs.get('lstm_num_layers') or 1
         self.hidden_size = kwargs.get('hidden_size') or 100
         self.temperature = kwargs.get('temperature') or None
+        self.controller_lr = kwargs.get('controller_lr') or 1e-4
         self.tanh_constant = kwargs.get('tanh_constant') or None
         self.decay = kwargs.get('decay') or 0.99
         self.weight_entropy = kwargs.get('weight_entropy') or None
@@ -91,12 +92,6 @@ class LSTM(RLBaseController):
         return logits, output, new_states
 
     def _create_parameter(self):
-        self.emb_w = fluid.layers.create_parameter(
-            name='emb_w',
-            shape=(self.max_range_table, self.hidden_size),
-            dtype='float32',
-            default_initializer=uniform_initializer(1.0))
-
         self.g_emb = fluid.layers.create_parameter(
             name='emb_g',
             shape=(self.controller_batch_size, self.hidden_size),
@@ -133,11 +128,16 @@ class LSTM(RLBaseController):
                             axes=[1],
                             starts=[idx],
                             ends=[idx + 1])
+                        action = fluid.layers.squeeze(action, axes=[1])
                         action.stop_gradient = True
                     else:
                         action = fluid.layers.sampling_id(probs)
                 actions.append(action)
-                log_prob = fluid.layers.cross_entropy(probs, action)
+                log_prob = fluid.layers.softmax_with_cross_entropy(
+                    logits,
+                    fluid.layers.reshape(
+                        action, shape=[fluid.layers.shape(action), 1]),
+                    axis=1)
                 sample_log_probs.append(log_prob)
 
                 entropy = log_prob * fluid.layers.exp(-1 * log_prob)
@@ -145,10 +145,16 @@ class LSTM(RLBaseController):
                 entropies.append(entropy)
 
                 action_emb = fluid.layers.cast(action, dtype=np.int64)
-                inputs = fluid.layers.gather(self.emb_w, action_emb)
+                inputs = fluid.embedding(
+                    action_emb,
+                    size=(self.max_range_table, self.hidden_size),
+                    param_attr=fluid.ParamAttr(
+                        name='emb_w', initializer=uniform_initializer(1.0)))
 
-            sample_log_probs = fluid.layers.stack(sample_log_probs)
-            self.sample_log_probs = fluid.layers.reduce_sum(sample_log_probs)
+            #sample_log_probs = fluid.layers.stack(sample_log_probs)
+            #self.sample_log_probs = fluid.layers.reduce_sum(sample_log_probs)
+            self.sample_log_probs = fluid.layers.concat(
+                sample_log_probs, axis=0)
 
             entropies = fluid.layers.stack(entropies)
             self.sample_entropies = fluid.layers.reduce_sum(entropies)
@@ -196,7 +202,9 @@ class LSTM(RLBaseController):
             self.loss = self.sample_log_probs * (self.rewards - self.baseline)
             fluid.clip.set_gradient_clip(
                 clip=fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0))
-            optimizer = fluid.optimizer.Adam(learning_rate=1e-3)
+            lr = fluid.layers.exponential_decay(
+                self.controller_lr, decay_steps=1000, decay_rate=0.8)
+            optimizer = fluid.optimizer.Adam(learning_rate=lr)
             optimizer.minimize(self.loss)
 
     def _create_input(self, is_test=True, actual_rewards=None):
