@@ -1,5 +1,6 @@
 # Distillation example: Chinese lexical analysis
-We demonstrated how to use the Pantheon framework for online distillation of the Chinese lexical analysis model with sample dataset. The effect of large-scale online distillation can refer to the paddle mode of [jieba](https://github.com/fxsjy/jieba).
+We demonstrated how to use the Pantheon framework for online distillation of the Chinese lexical analysis model with sample dataset. The effect of large-scale online distillation is shown below:
+![distill_res](./distill.png)
 
 ## Introduction
 

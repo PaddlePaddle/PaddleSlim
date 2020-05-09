@@ -1,5 +1,6 @@
 # 蒸馏样例：中文词法分析
-我们在样例数据集上，对中文词法分析模型，演示了如何使用Pantheon框架进行在线蒸馏。大规模在线蒸馏的效果可以参考 [jieba](https://github.com/fxsjy/jieba) 中的paddle模式。
+我们在样例数据集上，对中文词法分析模型，演示了如何使用Pantheon框架进行在线蒸馏。大规模在线蒸馏的效果如下图所示：
+![distill_res](./distill.png)
 
 ## 简介
 
