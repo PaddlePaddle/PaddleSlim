@@ -42,6 +42,7 @@ python search.py                       # DARTS一阶近似搜索方法
 python search.py --unrolled=True       # DARTS的二阶近似搜索方法
 python search.py --method='PC-DARTS' --batch_size=256 --learning_rate=0.1 --arch_learning_rate=6e-4 --epochs_no_archopt=15   # PC-DARTS搜索方法
 ```
+如果您使用的是docker环境，请确保共享内存足够使用多进程的dataloader，如果碰到共享内存问题，请设置`--use_multiprocess=False`
 
 也可以使用多卡进行模型结构搜索，以4卡为例(GPU id: 0-3), 启动命令如下:
 
