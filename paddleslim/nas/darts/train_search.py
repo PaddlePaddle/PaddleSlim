@@ -59,6 +59,7 @@ class DARTSearch(object):
         unrolled(bool): Use one-step unrolled validation loss. Default: False.
         num_epochs(int): Epoch number. Default: 50.
         epochs_no_archopt(int): Epochs skip architecture optimize at begining. Default: 0.
+        use_multiprocess(bool): Whether to use multiprocess in dataloader. Default: False.
         use_data_parallel(bool): Whether to use data parallel mode. Default: False.
         log_freq(int): Log frequency. Default: 50.
 
@@ -76,6 +77,7 @@ class DARTSearch(object):
                  unrolled=False,
                  num_epochs=50,
                  epochs_no_archopt=0,
+                 use_multiprocess=False,
                  use_data_parallel=False,
                  save_dir='./',
                  log_freq=50):
@@ -90,6 +92,7 @@ class DARTSearch(object):
         self.unrolled = unrolled
         self.epochs_no_archopt = epochs_no_archopt
         self.num_epochs = num_epochs
+        self.use_multiprocess = use_multiprocess
         self.use_data_parallel = use_data_parallel
         self.save_dir = save_dir
         self.log_freq = log_freq
@@ -207,17 +210,17 @@ class DARTSearch(object):
                 self.valid_reader)
 
         train_loader = fluid.io.DataLoader.from_generator(
-            capacity=1024,
+            capacity=64,
             use_double_buffer=True,
             iterable=True,
             return_list=True,
-            use_multiprocess=True)
+            use_multiprocess=self.use_multiprocess)
         valid_loader = fluid.io.DataLoader.from_generator(
-            capacity=1024,
+            capacity=64,
             use_double_buffer=True,
             iterable=True,
             return_list=True,
-            use_multiprocess=True)
+            use_multiprocess=self.use_multiprocess)
 
         train_loader.set_batch_generator(self.train_reader, places=self.place)
         valid_loader.set_batch_generator(self.valid_reader, places=self.place)
