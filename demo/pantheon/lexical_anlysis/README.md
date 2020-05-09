@@ -1,6 +1,13 @@
 # Distillation example: Chinese lexical analysis
 We demonstrated how to use the Pantheon framework for online distillation of the Chinese lexical analysis model with sample dataset. The effect of large-scale online distillation is shown below:
-![distill_res](./distill.png)
+| model | self-built | msr_gold |
+| ------ | ------ | ------ |
+| LAC-2labels | 0.96130 | 0.88234 |
+| jieba_HMM | 0.93913 | 0.91052 |
+| jieba_basic | 0.94039 | 0.91174 |
+| THULAC | 0.91199 | 0.93310 |
+| LAC-57labels | 0.97842 | 0.94896 |
+| distill_lac | 0.98129 | 0.95002 |
 
 ## Introduction
 
