@@ -1,9 +1,9 @@
 # Distillation example: Chinese lexical analysis
-We demonstrated how to use the Pantheon framework for online distillation of the Chinese lexical analysis model with sample dataset. The effect of large-scale online distillation can refer to the paddle mode of [jieba] (https://github.com/fxsjy/jieba).
+We demonstrated how to use the Pantheon framework for online distillation of the Chinese lexical analysis model with sample dataset. The effect of large-scale online distillation can refer to the paddle mode of [jieba](https://github.com/fxsjy/jieba).
 
 ## Introduction
 
-Lexical Analysis of Chinese, or LAC for short, is a lexical analysis model that completes the tasks of Chinese word segmentation, part-of-speech tagging, and named entity recognition in a single model. We conduct an overall evaluation of word segmentation, part-of-speech tagging, and named entity recognition on a self-built dataset. We use the finetuned [ERNIE] (https://github.com/PaddlePaddle/LARK/tree/develop/ERNIE) model as the Teacher model and GRU as the Student model, which are needed by the Pantheon framework for online distillation.
+Lexical Analysis of Chinese, or LAC for short, is a lexical analysis model that completes the tasks of Chinese word segmentation, part-of-speech tagging, and named entity recognition in a single model. We conduct an overall evaluation of word segmentation, part-of-speech tagging, and named entity recognition on a self-built dataset. We use the finetuned [ERNIE](https://github.com/PaddlePaddle/LARK/tree/develop/ERNIE) model as the Teacher model and GRU as the Student model, which are needed by the Pantheon framework for online distillation.
 
 #### 1. Download the training data set
 
