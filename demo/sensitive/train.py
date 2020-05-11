@@ -11,7 +11,7 @@ import paddle.fluid as fluid
 from paddleslim.prune import merge_sensitive, get_ratios_by_loss
 from paddleslim.prune import sensitivity
 from paddleslim.common import get_logger
-sys.path.append(sys.path[0] + "/../")
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments
 

@@ -271,7 +271,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--batch_size', type=int, default=256, help='batch size.')
     parser.add_argument(
-        '--class_dim', type=int, default=1000, help='classify number.')
+        '--class_dim', type=int, default=10, help='classify number.')
     parser.add_argument(
         '--data',
         type=str,
