@@ -29,7 +29,7 @@ class TestDARTS(unittest.TestCase):
                 self.stem = fluid.dygraph.nn.Conv2D(
                     num_channels=1, num_filters=3, filter_size=3, padding=1)
                 self.classifier = fluid.dygraph.nn.Linear(
-                    input_dim=3072, output_dim=10)
+                    input_dim=2352, output_dim=10)
                 self._multiplier = 4
                 self._primitives = [
                     'none', 'max_pool_3x3', 'avg_pool_3x3', 'skip_connect',
@@ -63,24 +63,33 @@ class TestDARTS(unittest.TestCase):
                 return fluid.layers.reduce_mean(
                     fluid.layers.softmax_with_cross_entropy(logits, label))
 
-        def batch_generator_creator():
-            def __reader__():
-                for _ in range(100):
-                    batch_image = np.random.random(
-                        size=[64, 1, 32, 32]).astype('float32')
-                    batch_label = np.random.random(
-                        size=[64, 1]).astype('int64')
-                    yield batch_image, batch_label
+        def batch_generator(reader):
+            def wrapper():
+                batch_data = []
+                batch_label = []
+                for sample in reader():
+                    image = np.array(sample[0]).reshape(1, 28, 28)
+                    label = np.array(sample[1]).reshape(1)
+                    batch_data.append(image)
+                    batch_label.append(label)
+                    if len(batch_data) == 128:
+                        batch_data = np.array(batch_data, dtype='float32')
+                        batch_label = np.array(batch_label, dtype='int64')
+                        yield [batch_data, batch_label]
+                        batch_data = []
+                        batch_label = []
 
-            return __reader__
+            return wrapper
 
         place = fluid.CUDAPlace(0)
         with fluid.dygraph.guard(place):
             model = SuperNet()
-            train_reader = batch_generator_creator()
-            valid_reader = batch_generator_creator()
+            trainset = paddle.dataset.mnist.train()
+            validset = paddle.dataset.mnist.test()
+            train_reader = batch_generator(trainset)
+            valid_reader = batch_generator(validset)
             searcher = DARTSearch(
-                model, train_reader, valid_reader, place, num_epochs=1)
+                model, train_reader, valid_reader, place, num_epochs=5)
             searcher.train()
 
 
