@@ -1,4 +1,4 @@
-#   Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+#   Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import paddle
 from paddle import fluid
 
 from dataloader.casia import CASIA_Face
-from dataloader.LFW import LFW
-from lfw_eval import parseList, evaluation_10_fold
+from dataloader.lfw import LFW
+from lfw_eval import parse_filelist, evaluation_10_fold
 from models.slimfacenet import SlimFaceNet
 
 
@@ -176,7 +176,7 @@ def build_program(program, startup, args, is_train=True):
                 out = (loss, acc, global_lr, reader)
 
             else:
-                nl, nr, flods, flags = parseList(args.test_data_dir)
+                nl, nr, flods, flags = parse_filelist(args.test_data_dir)
                 test_dataset = LFW(nl, nr)
                 test_reader = paddle.batch(
                     test_dataset.reader,
@@ -322,7 +322,7 @@ def main():
              model_filename=None,
              params_filename=None,
              executor=exe)
-        nl, nr, flods, flags = parseList(args.test_data_dir)
+        nl, nr, flods, flags = parse_filelist(args.test_data_dir)
         test_dataset = LFW(nl, nr)
         test_reader = paddle.batch(
             test_dataset.reader,
