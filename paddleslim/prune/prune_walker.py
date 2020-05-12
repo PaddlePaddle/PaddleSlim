@@ -267,7 +267,7 @@ class default_walker(PruneWorker):
 
     def _prune(self, var, pruned_axis, pruned_idx):
         if var in self.op.all_outputs():
-            for in_var in self.op.inputs():
+            for in_var in self.op.all_inputs():
                 if len(in_var.shape()) == len(var.shape()):
                     pre_ops = in_var.inputs()
                     for op in pre_ops:
