@@ -24,6 +24,8 @@ from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
 from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
 from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
+from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
+from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
 from paddle.fluid import core
 from paddle.fluid.contrib.slim.quantization import WeightQuantization
 
@@ -220,6 +222,10 @@ def quant_aware(program, place, config=None, scope=None, for_test=False):
             quantizable_op_type=quant_dequant_ops)
         quant_dequant_pass.apply(main_graph)
 
+    out_scale_training_pass = OutScaleForTrainingPass(
+        scope=scope, place=place, moving_rate=config['moving_rate'])
+    out_scale_training_pass.apply(main_graph)
+
     if for_test:
         quant_program = main_graph.to_program()
     else:
@@ -363,8 +369,10 @@ def convert(program, place, config=None, scope=None, save_int8=False):
         assert isinstance(config, dict), "config must be dict"
         config = _parse_configs(config)
     _logger.info("convert config {}".format(config))
-
     test_graph = IrGraph(core.Graph(program.desc), for_test=True)
+
+    out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
+    out_scale_infer_pass.apply(test_graph)
 
     # Freeze the graph after training by adjusting the quantize
     # operators' order for the inference.
