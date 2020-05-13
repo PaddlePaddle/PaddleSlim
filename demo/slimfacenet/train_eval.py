@@ -152,21 +152,19 @@ def build_program(program, startup, args, is_train=True):
                 arch=arch)
 
             if is_train:
-                image = fluid.layers.data(
-                    name='image', shape=[-1, 3, 112, 112], dtype='float32')
-                label = fluid.layers.data(
-                    name='label', shape=[-1, 1], dtype='int64')
+                image = fluid.data(
+                    name='image', shape=[-1, 3, 112, 96], dtype='float32')
+                label = fluid.data(name='label', shape=[-1, 1], dtype='int64')
                 train_reader = paddle.batch(
                     train_dataset.reader,
                     batch_size=args.train_batchsize // num_trainers,
                     drop_last=False)
-                reader = fluid.io.PyReader(
+                reader = fluid.io.DataLoader.from_generator(
                     feed_list=[image, label],
                     capacity=64,
                     iterable=True,
                     return_list=False)
-                reader.decorate_sample_list_generator(
-                    train_reader, places=places)
+                reader.set_sample_list_generator(train_reader, places=places)
 
                 model.extract_feature = False
                 loss, acc = model.net(image, label)
@@ -182,35 +180,33 @@ def build_program(program, startup, args, is_train=True):
                     test_dataset.reader,
                     batch_size=args.test_batchsize,
                     drop_last=False)
-                image_test = fluid.layers.data(
-                    name='image_test',
-                    shape=[-1, 3, 112, 112],
-                    dtype='float32')
-                image_test1 = fluid.layers.data(
+                image_test = fluid.data(
+                    name='image_test', shape=[-1, 3, 112, 96], dtype='float32')
+                image_test1 = fluid.data(
                     name='image_test1',
-                    shape=[-1, 3, 112, 112],
+                    shape=[-1, 3, 112, 96],
                     dtype='float32')
-                image_test2 = fluid.layers.data(
+                image_test2 = fluid.data(
                     name='image_test2',
-                    shape=[-1, 3, 112, 112],
+                    shape=[-1, 3, 112, 96],
                     dtype='float32')
-                image_test3 = fluid.layers.data(
+                image_test3 = fluid.data(
                     name='image_test3',
-                    shape=[-1, 3, 112, 112],
+                    shape=[-1, 3, 112, 96],
                     dtype='float32')
-                image_test4 = fluid.layers.data(
+                image_test4 = fluid.data(
                     name='image_test4',
-                    shape=[-1, 3, 112, 112],
+                    shape=[-1, 3, 112, 96],
                     dtype='float32')
-                reader = fluid.io.PyReader(
+                reader = fluid.io.DataLoader.from_generator(
                     feed_list=[
                         image_test1, image_test2, image_test3, image_test4
                     ],
                     capacity=64,
                     iterable=True,
                     return_list=False)
-                reader.decorate_sample_list_generator(test_reader,
-                                                      fluid.core.CPUPlace())
+                reader.set_sample_list_generator(test_reader,
+                                                 fluid.core.CPUPlace())
 
                 model.extract_feature = True
                 feature = model.net(image_test)
@@ -229,10 +225,11 @@ def main():
         default='slimfacenet',
         type=str,
         help='slimfacenet/slimfacenet_v1')
-    parser.add_argument('--scale', default=0.6, type=float, help='scale ratio')
+    parser.add_argument(
+        '--scale', default=0.75, type=float, help='scale ratio')
     parser.add_argument(
         '--arch',
-        default='1,1,0,1,1,1,1,0,1,0,1,3,2,2,3',
+        default='1,0,1,3,0,3,1,1,1,1,0,0,2,5,3',
         type=str,
         help='arch')
     parser.add_argument(
@@ -328,23 +325,22 @@ def main():
             test_dataset.reader,
             batch_size=args.test_batchsize,
             drop_last=False)
-        image_test = fluid.layers.data(
+        image_test = fluid.data(
             name='image_test', shape=[-1, 3, 112, 96], dtype='float32')
-        image_test1 = fluid.layers.data(
+        image_test1 = fluid.data(
             name='image_test1', shape=[-1, 3, 112, 96], dtype='float32')
-        image_test2 = fluid.layers.data(
+        image_test2 = fluid.data(
             name='image_test2', shape=[-1, 3, 112, 96], dtype='float32')
-        image_test3 = fluid.layers.data(
+        image_test3 = fluid.data(
             name='image_test3', shape=[-1, 3, 112, 96], dtype='float32')
-        image_test4 = fluid.layers.data(
+        image_test4 = fluid.data(
             name='image_test4', shape=[-1, 3, 112, 96], dtype='float32')
-        reader = fluid.io.PyReader(
+        reader = fluid.io.DataLoader.from_generator(
             feed_list=[image_test1, image_test2, image_test3, image_test4],
             capacity=64,
             iterable=True,
             return_list=False)
-        reader.decorate_sample_list_generator(test_reader,
-                                              fluid.core.CPUPlace())
+        reader.set_sample_list_generator(test_reader, fluid.core.CPUPlace())
         test_out = (fetch_targets, reader, flods, flags)
         print('fetch_targets[0]: ', fetch_targets[0])
         print('feed_target_names: ', feed_target_names)

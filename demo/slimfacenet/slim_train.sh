@@ -1,4 +1,3 @@
-#   Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 # ================================================================
 #   Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #
@@ -16,9 +15,6 @@
 #!/bin/bash
 export CUDA_VISIBLE_DEVICES=0
 export LD_LIBRARY_PATH='PATH to CUDA and CUDNN'
-export FLAGS_fraction_of_gpu_memory_to_use=1.0
-export FLAGS_fast_eager_deletion_mode=1
-export FLAGS_eager_delete_tensor_gb=0.0
 SCALE=$1
 ARCH=$2
 python -u train_eval.py \

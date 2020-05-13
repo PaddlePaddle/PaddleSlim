@@ -1,4 +1,3 @@
-#   Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 # ================================================================
 #   Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #

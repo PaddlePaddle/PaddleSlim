@@ -1,4 +1,3 @@
-#   Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 # ================================================================
 #   Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #
@@ -350,7 +349,7 @@ class SlimFaceNet():
 
 
 if __name__ == "__main__":
-    x = fluid.layers.data(name='x', shape=[3, 112, 112], dtype='float32')
+    x = fluid.data(name='x', shape=[-1, 3, 112, 112], dtype='float32')
     print(x.shape)
     model = SlimFaceNet(10000, [1, 3, 3, 1, 1, 0, 0, 1, 0, 1, 1, 0, 5, 5, 3])
     y = model.net(x)
