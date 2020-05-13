@@ -71,7 +71,7 @@ quant_aware
 
 .. py:function:: paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
 
 在 program 中加入量化和反量化op, 用于量化训练。
 
@@ -107,7 +107,7 @@ convert
 
 .. py:function:: paddleslim.quant.convert(program, place, config, scope=None, save_int8=False)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
 
 
 把训练好的量化 program ，转换为可用于保存 ``inference model`` 的 program 。
@@ -171,25 +171,28 @@ convert
    
    inference_prog = quant.convert(quant_eval_program, place, config)
 
-更详细的用法请参考 `量化训练demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_aware>`_ 。
+更详细的用法请参考 `量化训练demo <https://github.com/PaddlePaddle/PaddleSlim/tree/release/1.1.0/demo/quant/quant_aware>`_ 。
 
 quant_post
 ---------------
 
-.. py:function:: paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,sample_generator, model_filename=None, params_filename=None, batch_size=16,batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, is_use_cache_file=False, cache_dir="./temp_post_training")
+.. py:function:: paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='__model__', save_params_filename='__params__', batch_size=16,batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"], is_full_quantize=False, weight_bits=8, activation_bits=8,activation_quantize_type='range_abs_max',weight_quantize_type='channel_wise_abs_max',is_use_cache_file=False, cache_dir="./temp_post_training")
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
 
-对保存在 ``${model_dir}`` 下的模型进行量化，使用 ``sample_generator`` 的数据进行参数校正。
+对保存在 ``${model_dir}`` 下的模型进行量化，使用 ``sample_generator`` 或者 ``batch_generator`` 的数据进行参数校正。
 
 **参数:**
 
 - **executor (fluid.Executor)** - 执行模型的executor，可以在cpu或者gpu上执行。
 - **model_dir（str)** - 需要量化的模型所在的文件夹。
 - **quantize_model_path(str)** - 保存量化后的模型的路径
+- **batch_generator(python generator)** - 读取数据样本，每次返回一个batch的数据。和 `sample_generator` 只能设置一个。
 - **sample_generator(python generator)** - 读取数据样本，每次返回一个样本。
 - **model_filename(str, optional)** - 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
 - **params_filename(str)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
+- **save_model_filename(str)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``__model__`` 。
+- **save_params_filename(str)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``__params__`` 。
 - **batch_size(int)** - 每个batch的图片数量。默认值为16 。
 - **batch_nums(int, optional)** - 迭代次数。如果设置为 ``None`` ，则会一直运行到 ``sample_generator`` 迭代结束， 否则，迭代次数为 ``batch_nums``, 也就是说参与对 ``Scale`` 进行校正的样本个数为 ``'batch_nums' * 'batch_size'`` .
 - **scope(fluid.Scope, optional)** - 用来获取和写入 ``Variable`` , 如果设置为 ``None`` ,则使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . 默认值是 ``None`` .
@@ -198,6 +201,8 @@ quant_post
 - **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。如果设置为True, 则按照 `量化配置 <#id2>`_  中 ``QUANT_DEQUANT_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES`` 定义的op进行量化。  
 - **weight_bits(int)** - weight的量化比特位数, 默认值为8。
 - **activation_bits(int)** - 激活值的量化比特位数, 默认值为8。
+- **weight_quantize_type(int)** - weight的量化方式，可选 `abs_max` 或者 `channel_wise_abs_max` ,通常情况下选 `channel_wise_abs_max` 模型量化精度更高。
+- **activation_quantize_type(int)** - 激活值的量化方式, 可选 `range_abs_max` 和 `moving_average_abs_max` 。设置激活量化方式不会影响计算scale的算法，只是影响在保存模型时使用哪种operator。
 - **is_use_cache_file(bool)** - 是否使用硬盘对中间结果进行存储。如果为False, 则将中间结果存储在内存中。默认值为False。
 - **cache_dir(str)** - 如果 ``'is_use_cache_file'`` 为True, 则将中间结果存储在此参数设置的路径下。默认值为 ``./temp_post_training``  。
 
@@ -237,14 +242,14 @@ quant_post
            batch_nums=10)
 
 
-更详细的用法请参考 `离线量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post>`_ 。
+更详细的用法请参考 `离线量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/release/1.1.0/demo/quant/quant_post>`_ 。
 
 quant_embedding
 -------------------
 
 .. py:function:: paddleslim.quant.quant_embedding(program, place, config, scope=None)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quant_embedding.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quant_embedding.py>`_
 
 对 ``Embedding`` 参数进行量化。
 
@@ -253,12 +258,11 @@ quant_embedding
 - **program(fluid.Program)** - 需要量化的program
 - **scope(fluid.Scope, optional)** - 用来获取和写入 ``Variable``, 如果设置为 ``None``,则使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ .
 - **place(fluid.CPUPlace | fluid.CUDAPlace)** - 运行program的设备
-- **config(dict)** - 定义量化的配置。可以配置的参数有：
-    - ``'params_name'`` (str, required): 需要进行量化的参数名称，此参数必须设置。
-    - ``'quantize_type'`` (str, optional): 量化的类型，目前支持的类型是 ``'abs_max'``, 待支持的类型有 ``'log', 'product_quantization'`` 。 默认值是 ``'abs_max'`` .
+- **config(dict, optional)** - 定义量化的配置。可以配置的参数有 `'quantize_op_types'`, 指定需要量化的op，如果不指定，则设为 `['lookup_table', 'fused_embedding_seq_pool', 'pyramid_hash']` ,目前仅支持这三种op。对于每个op，可指定以下配置， ：
+    - ``'quantize_type'`` (str, optional): 量化的类型，目前支持的类型是 ``'abs_max', 'log'``, 默认值是 ``'abs_max'`` .
     - ``'quantize_bits'`` （int, optional): 量化的bit数，目前支持的bit数为8。默认值是8.
     - ``'dtype'`` (str, optional): 量化之后的数据类型， 目前支持的是 ``'int8'``. 默认值是 ``int8`` 。
-    - ``'threshold'`` (float, optional): 量化之前将根据此阈值对需要量化的参数值进行 ``clip``. 如果不设置，则跳过 ``clip`` 过程直接量化。
+    举个配置例子，可以是 `{'quantize_op_types': ['lookup_table'], 'lookup_table': {'quantize_type': 'abs_max'}}` 。
 
 **返回**
 
@@ -292,7 +296,12 @@ fluid.Program
    exe = fluid.Executor(place)
    exe.run(fluid.default_startup_program())
    
-   config = {'params_name': 'emb', 'quantize_type': 'abs_max'}
+   config = {
+            'quantize_op_types': ['lookup_table'], 
+            'lookup_table': {
+                'quantize_type': 'abs_max'
+                }
+            }
    quant_program = quant.quant_embedding(infer_program, place, config)
 
-更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_embedding>`_ 
+更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/release/1.1.0/demo/quant/quant_embedding>`_ 
