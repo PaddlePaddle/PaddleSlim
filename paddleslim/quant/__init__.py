@@ -25,6 +25,6 @@ try:
 except Exception as e:
     _logger.warning(
         "If you want to use training-aware and post-training quantization, "
-        "please use Paddle >= 1.7.0 or develop version")
+        "please use Paddle >= 2.0.0 or develop version")
 
 from .quant_embedding import quant_embedding
