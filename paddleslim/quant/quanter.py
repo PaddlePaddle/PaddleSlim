@@ -387,8 +387,7 @@ def convert(program, place, config=None, scope=None, save_int8=False):
     freezed_program = test_graph.to_program()
 
     if save_int8:
-        convert_int8_pass = ConvertToInt8Pass(
-            scope=fluid.global_scope(), place=place)
+        convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
         convert_int8_pass.apply(test_graph)
         freezed_program_int8 = test_graph.to_program()
         return freezed_program, freezed_program_int8
