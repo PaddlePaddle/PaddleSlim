@@ -1,13 +1,13 @@
 # Distillation example: Chinese lexical analysis
 We demonstrated how to use the Pantheon framework for online distillation of the Chinese lexical analysis model with sample dataset. The effect of large-scale online distillation is shown below:
-| model | self-built | msr_gold |
-| ------ | ------ | ------ |
-| LAC-2labels | 0.96130 | 0.88234 |
-| jieba_HMM | 0.93913 | 0.91052 |
-| jieba_basic | 0.94039 | 0.91174 |
-| THULAC | 0.91199 | 0.93310 |
-| LAC-57labels | 0.97842 | 0.94896 |
-| distill_lac | 0.98129 | 0.95002 |
+| model | Precision | Recall | F1-score|
+| ------ | ------ | ------ | ------ |
+| BiGRU | 89.2 | 89.4 | 89.3 |
+| BERT fine-tuned | 90.2 | 90.4 | 90.3 |
+| ERNIE fine-tuned | 91.7 | 91.7 | 91.7 |
+| DistillBiGRU | 90.20  | 90.52 | 90.36 |
+
+BiGRU is to train a BiGRU based LAC model from scratch; BERT fine-tuned is to fine-tune LAC task on BERT base model; ERNIE fine-tuned is to fine-tune LAC task on BERT base model; DistillBiGRU is trained through large-scale online distillation with ERNIE fine-tuned as teacher model.
 
 ## Introduction
 

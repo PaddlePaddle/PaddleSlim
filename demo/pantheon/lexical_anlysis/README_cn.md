@@ -1,14 +1,14 @@
 # 蒸馏样例：中文词法分析
 我们在样例数据集上，对中文词法分析模型，演示了如何使用Pantheon框架进行在线蒸馏。大规模在线蒸馏的效果如下图所示：
 
-| 模型 | 自有数据集 | msr_gold |
-| ------ | ------ | ------ |
-| LAC-2labels | 0.96130 | 0.88234 |
-| jieba_HMM | 0.93913 | 0.91052 |
-| jieba_basic | 0.94039 | 0.91174 |
-| THULAC | 0.91199 | 0.93310 |
-| LAC-57labels | 0.97842 | 0.94896 |
-| distill_lac | 0.98129 | 0.95002 |
+| 模型 | 精度 | 召回率 | F1值|
+| ------ | ------ | ------ | ------ |
+| BiGRU | 89.2 | 89.4 | 89.3 |
+| BERT fine-tuned | 90.2 | 90.4 | 90.3 |
+| ERNIE fine-tuned | 91.7 | 91.7 | 91.7 |
+| DistillBiGRU | 90.20  | 90.52 | 90.36 |
+
+BiGRU 是使用双向GRU网络从头训练LAC任务；BERT fine-tuned 是在BERT base模型上微调LAC任务；ERNIE fine-tuned 是在ERNIE base模型上微调LAC任务；DistillBiGRU 是使用ERNIE fine-tuned模型作为teacher模型，通过大规模蒸馏训练LAC任务。
 
 ## 简介
 
