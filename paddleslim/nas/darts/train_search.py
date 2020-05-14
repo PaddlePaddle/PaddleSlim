@@ -206,8 +206,6 @@ class DARTSearch(object):
         if self.use_data_parallel:
             self.train_reader = fluid.contrib.reader.distributed_batch_reader(
                 self.train_reader)
-            self.valid_reader = fluid.contrib.reader.distributed_batch_reader(
-                self.valid_reader)
 
         train_loader = fluid.io.DataLoader.from_generator(
             capacity=64,

@@ -19,8 +19,8 @@ from paddleslim.dist import merge, l2_loss
 from layers import conv_bn_layer
 
 
-class TestMerge(unittest.TestCase):
-    def test_merge(self):
+class TestL2Loss(unittest.TestCase):
+    def test_l2_loss(self):
         student_main = fluid.Program()
         student_startup = fluid.Program()
         with fluid.program_guard(student_main, student_startup):
