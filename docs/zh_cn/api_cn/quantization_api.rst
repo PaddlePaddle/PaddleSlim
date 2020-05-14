@@ -176,7 +176,7 @@ convert
 quant_post
 ---------------
 
-.. py:function:: paddleslim.quant.quant_post(executor, model_dir, quantize_model_path,batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='__model__', save_params_filename='__params__', batch_size=16,batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"], is_full_quantize=False, weight_bits=8, activation_bits=8,activation_quantize_type='range_abs_max',weight_quantize_type='channel_wise_abs_max',is_use_cache_file=False, cache_dir="./temp_post_training")
+.. py:function:: paddleslim.quant.quant_post(executor, model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='__model__', save_params_filename='__params__', batch_size=16, batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', is_use_cache_file=False, cache_dir="./temp_post_training")
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
 
@@ -201,8 +201,8 @@ quant_post
 - **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。如果设置为True, 则按照 `量化配置 <#id2>`_  中 ``QUANT_DEQUANT_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES`` 定义的op进行量化。  
 - **weight_bits(int)** - weight的量化比特位数, 默认值为8。
 - **activation_bits(int)** - 激活值的量化比特位数, 默认值为8。
-- **weight_quantize_type(int)** - weight的量化方式，可选 `abs_max` 或者 `channel_wise_abs_max` ,通常情况下选 `channel_wise_abs_max` 模型量化精度更高。
-- **activation_quantize_type(int)** - 激活值的量化方式, 可选 `range_abs_max` 和 `moving_average_abs_max` 。设置激活量化方式不会影响计算scale的算法，只是影响在保存模型时使用哪种operator。
+- **weight_quantize_type(str)** - weight的量化方式，可选 `abs_max` 或者 `channel_wise_abs_max` ,通常情况下选 `channel_wise_abs_max` 模型量化精度更高。
+- **activation_quantize_type(str)** - 激活值的量化方式, 可选 `range_abs_max` 和 `moving_average_abs_max` 。设置激活量化方式不会影响计算scale的算法，只是影响在保存模型时使用哪种operator。
 - **is_use_cache_file(bool)** - 是否使用硬盘对中间结果进行存储。如果为False, 则将中间结果存储在内存中。默认值为False。
 - **cache_dir(str)** - 如果 ``'is_use_cache_file'`` 为True, 则将中间结果存储在此参数设置的路径下。默认值为 ``./temp_post_training``  。
 
@@ -247,7 +247,7 @@ quant_post
 quant_embedding
 -------------------
 
-.. py:function:: paddleslim.quant.quant_embedding(program, place, config, scope=None)
+.. py:function:: paddleslim.quant.quant_embedding(program, place, config=None, scope=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quant_embedding.py>`_
 
@@ -258,11 +258,7 @@ quant_embedding
 - **program(fluid.Program)** - 需要量化的program
 - **scope(fluid.Scope, optional)** - 用来获取和写入 ``Variable``, 如果设置为 ``None``,则使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ .
 - **place(fluid.CPUPlace | fluid.CUDAPlace)** - 运行program的设备
-- **config(dict, optional)** - 定义量化的配置。可以配置的参数有 `'quantize_op_types'`, 指定需要量化的op，如果不指定，则设为 `['lookup_table', 'fused_embedding_seq_pool', 'pyramid_hash']` ,目前仅支持这三种op。对于每个op，可指定以下配置， ：
-    - ``'quantize_type'`` (str, optional): 量化的类型，目前支持的类型是 ``'abs_max', 'log'``, 默认值是 ``'abs_max'`` .
-    - ``'quantize_bits'`` （int, optional): 量化的bit数，目前支持的bit数为8。默认值是8.
-    - ``'dtype'`` (str, optional): 量化之后的数据类型， 目前支持的是 ``'int8'``. 默认值是 ``int8`` 。
-    举个配置例子，可以是 `{'quantize_op_types': ['lookup_table'], 'lookup_table': {'quantize_type': 'abs_max'}}` 。
+- **config(dict, optional)** - 定义量化的配置。可以配置的参数有 `'quantize_op_types'`, 指定需要量化的op，如果不指定，则设为 `['lookup_table', 'fused_embedding_seq_pool', 'pyramid_hash']` ,目前仅支持这三种op。对于每个op，可指定以下配置： ``'quantize_type'`` (str, optional): 量化的类型，目前支持的类型是 ``'abs_max', 'log'``, 默认值是 ``'abs_max'`` 。 ``'quantize_bits'`` （int, optional): 量化的bit数，目前支持的bit数为8。默认值是8. ``'dtype'`` (str, optional): 量化之后的数据类型， 目前支持的是 ``'int8'``. 默认值是 ``int8`` 。举个配置例子，可以是 `{'quantize_op_types': ['lookup_table'], 'lookup_table': {'quantize_type': 'abs_max'}}` 。
 
 **返回**
 
