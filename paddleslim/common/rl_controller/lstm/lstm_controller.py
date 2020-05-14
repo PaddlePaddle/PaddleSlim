@@ -151,8 +151,6 @@ class LSTM(RLBaseController):
                     param_attr=fluid.ParamAttr(
                         name='emb_w', initializer=uniform_initializer(1.0)))
 
-            #sample_log_probs = fluid.layers.stack(sample_log_probs)
-            #self.sample_log_probs = fluid.layers.reduce_sum(sample_log_probs)
             self.sample_log_probs = fluid.layers.concat(
                 sample_log_probs, axis=0)
 
