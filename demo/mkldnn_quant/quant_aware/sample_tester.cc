@@ -40,11 +40,11 @@ DEFINE_bool(with_accuracy_layer,
             true,
             "label is required in the input of the inference model");
 DEFINE_bool(use_profile, false, "Do profile or not");
-static void SetConfig(paddle::AnalysisConfig *cfg) {
-  cfg->SetModel(FLAGS_infer_model);
+DEFINE_bool(optimize_fp32_model, false, "If you set optimize_fp32_model to true, test will use analysis config and do fuses for fp32 models");
+
+static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
   cfg->DisableGpu();
   cfg->SwitchIrOptim();
-  cfg->SwitchSpecifyInputNames();
   cfg->SetCpuMathLibraryNumThreads(FLAGS_num_threads);
   cfg->EnableMKLDNN();
   if(FLAGS_use_profile){
@@ -296,14 +296,17 @@ int main(int argc, char *argv[]) {
   google::InitGoogleLogging(*argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   paddle::AnalysisConfig cfg;
-  SetConfig(&cfg);
+  cfg.SetModel(FLAGS_infer_model);
+  if (FLAGS_optimize_fp32_model){
+    SetIrOptimConfig(&cfg);
+  }
   // read data from file and prepare batches with test data
   std::vector<std::vector<paddle::PaddleTensor>> input_slots_all;
   std::vector<std::vector<paddle::PaddleTensor>> outputs;
   std::vector<paddle::PaddleTensor> labels_gt;  // optional
   SetInput(&input_slots_all, &labels_gt);       // iterations*batch_size
   auto predictor = CreatePredictor(
-      reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg), true);
+      reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg), FLAGS_optimize_fp32_model);
   PredictionRun(predictor.get(), input_slots_all, &outputs, FLAGS_num_threads);
   auto acc_pair = CalculateAccuracy(outputs, labels_gt);
   LOG(INFO) <<"Top1 acc " << std::fixed << std::setw(6)

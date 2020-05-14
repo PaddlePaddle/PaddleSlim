@@ -43,40 +43,20 @@ import numpy as np
 ## 2. 训练并保存QAT FLOAT32模型
 首先，用户在此处链接下载我们已经预训练好的模型：[预训练模型下载](https://github.com/PaddlePaddle/models/blob/develop/PaddleCV/image_classification/README.md)。
 
-使用量化训练方法产出量化模型，并且保存QAT FLOAT32模型的脚本。量化训练流程可以参考 [分类模型的离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)和 量化API(https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/)。在本示例中，你可以直接运行：
-```
-python train_image_classification.py --model=ResNet50 --pretrained_model=$PATH_TO_ResNet50_pretrained --data=imagenet --data_dir=/PATH/TO/ILSVRC2012/ --save_float32_qat_dir=/PATH/TO/SAVE/FLOAT32/QAT/MODEL
-```
-**训练阶段参数说明：**
-- **model：** 模型名称，默认值`ResNet50`
-- **pretrained_model:** 加载预训练模型路径，默认值为空
-- **batch_size：** 训练batch大小，默认值128
-- **num_epochs:** 训练回合数，默认值: 1
-- **train_images** 每个epoch训练的图片数量，用户可以使用小数据集，节省训练时间。
-- **config_file:** 配置文件位置，默认值`./config.yaml`.
-- **use_gpu:** 使用GPU训练，默认值为`False`
+使用量化训练方法产出量化模型，并且保存QAT FLOAT32模型的脚本。量化训练流程可以参考 [分类模型的离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
 
-如果用户需要更改量化策略，可以更改 `config.yaml` 配置。目前我们建议使用以下配置。
-```
-config = {
-        'weight_quantize_type': 'channel_wise_abs_max',
-        'activation_quantize_type': 'moving_average_abs_max',
-        'quantize_op_types': ['depthwise_conv2d', 'mul', 'conv2d','matmul']
-    }
-```
-**`config.yaml` 参数说明：**
+**训练过程中config参数说明：**
 - **quantize_op_types:** 目前支持 `depthwise_conv2d`, `mul`, `conv2d`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`的量化。但是训练阶段插入fake quantize/dequantize op时，只需在前四种op前后插入fake quantize/dequantize ops，后面四种op `matmul`, `transpose2`, `reshape2`, `pool2d`, 由于输入输出scale不变，将从前后方op的输入输出scales获得scales,所以`quantize_op_types` 参数只需要 `depthwise_conv2d`, `mul`, `conv2d`, `matmul` 即可
 - **其他参数:** 请参考 [PaddleSlim quant_aware API](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#quant_aware)
 
 ## 3. 转化FP32 QAT模型为DNNL优化后的INT8模型
-上一步中训练后保存的模型是float32 qat模型。我们还需要移除fake quantize/dequantize op，fuse一些op，并且完全转化成 INT8 模型。需要使用Paddle所在目录运行下面的脚本，脚本在官网的位置为[save_qat_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_qat_model.py)。复制脚本到本案例所在目录下并执行如下命令：
+上一步中训练后保存了float32 qat模型。为了部署在CPU上，我们使用保存的float qat模型，通过一个转化脚本，移除fake quantize/dequantize op，fuse一些op，并且完全转化成 INT8 模型。需要使用Paddle所在目录运行下面的脚本，脚本在官网的位置为[save_qat_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_qat_model.py)。复制脚本到本案例所在目录下并执行如下命令：
 ```
-python save_qat_model.py --qat_model_path=/PATH/TO/SAVE/FLOAT32/QAT/MODEL --int8_model_save_path=/PATH/TO/SAVE/INT8/MODEL --fp32_model_save_path=/PATH/TO/SAVE/FLOAT32/MODEL --quantized_ops="conv2d,pool2d"
+python save_qat_model.py --qat_model_path=/PATH/TO/SAVE/FLOAT32/QAT/MODEL --int8_model_save_path=/PATH/TO/SAVE/INT8/MODEL -quantized_ops="conv2d,pool2d"
 ```
 **参数说明：**
-- **qat_model_path:** 为输入参数，必填。为量化训练后的quant模型或者原始FP32模型。如果传入quant模型，则必须设置int8_model_save_path，将转化保存INT8模型；如果传入原始FP32模型，则必须设置fp32_model_save_path，将保存经过多个fuses优化后的FP32模型。
-- **int8_model_save_path:** 可选。如果设置，则将训练后的quant模型转化并经过DNNL优化量化后的INT8模型路径。注意：qat_model_path必须传入量化训练后的含有fake quant/dequant ops的quant模型
-- **fp32_model_save_path:** 可选。如果设置，则将原始FP32模型经过DNNL优化后保存成fuse优化后的FP32模型路径。注意：此时qat_model_path必须传入原始FP32模型（而不是训练后的含有fake quant/dequant ops的模型）
+- **qat_model_path:** 为输入参数，必填。为量化训练后的quant模型。
+- **int8_model_save_path:** quant模型经过DNNL优化量化后保存的INT8模型路径。注意：qat_model_path必须传入量化训练后的含有fake quant/dequant ops的quant模型
 - **ops_to_quantize:** 必填。最终INT8模型中使用量化op的列表。图像分类模型设置`--ops_to_quantize=“conv2d, pool2d"`量化后性能最优。自然语言处理模型，如Ernie模型，设置`--ops_to_quantize="fc,reshape2,transpose2,matmul"`量化后最优。用户必须手动设置，因为不是量化所有可量化的op就能达到最优速度的。
   用户设置时需要注意：
   - 只能选择目前支持DNNL量化的op。目前支持DNNL量化op列表是`conv2d`, `depthwise_conv2d`, `mul`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`, `concat`。
@@ -119,13 +99,16 @@ val/ILSVRC2012_val_00000002.jpg 0
 
 ### 4.2 编译运行预测
 #### 编译应用
-在样例所在目录下，执
+样例所在目录为PaddleSlim下`demo/mkldnn_quant/quant_aware/`,样例`sample_tester.cc`和编译所需`cmake`文件夹都在这个目录下。
 ```
+cd /PATH/TO/PaddleSlim
+cd demo/mkldnn_quant/quant_aware
 mkdir build
 cd build
-cmake -DUSE_GPU=OFF -DPADDLE_ROOT=$PADDLE_ROOT ..
+cmake -DPADDLE_ROOT=$PADDLE_ROOT ..
 make -j
 ```
+如果你从官网下载解压了[预测库](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)到当前目录下，这里`-DPADDLE_ROOT`可以不设置，因为`DPADDLE_ROOT`默认位置为`demo/mkldnn_quant/quant_aware/fluid_inference`
 
 #### 运行测试
 ```
@@ -134,7 +117,7 @@ export KMP_AFFINITY=granularity=fine,compact,1,0
 export KMP_BLOCKTIME=1
 # Turbo Boost was set to OFF using the command
 echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
-# In the file run.sh, set `MODEL_DIR` to `/PATH/TO/SAVE/FLOAT32/QAT/MODEL`或者`/PATH/TO/SAVE/INT8/MODEL`
+# In the file run.sh, set `MODEL_DIR` to `/PATH/TO/FLOAT32/MODEL`或者`/PATH/TO/SAVE/INT8/MODEL`
 # In the file run.sh, set `DATA_FILE` to `/PATH/TO/SAVE/BINARY/FILE`
 # For 1 thread performance:
 ./run.sh
@@ -149,9 +132,30 @@ echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 - **iterations:** 预测多少batches。默认为0，表示预测infer_data中所有batches (image numbers/batch size)
 - **num_threads:** 预测使用CPU 线程数，默认为单核一个线程。
 - **with_accuracy_layer:** 由于这个测试是Image Classification通用的测试，既可以测试float32模型也可以INT8模型，模型可以包含或者不包含label层，设置此参数更改。
+- **optimize_fp32_model** 是否优化测试FP32模型。样例可以测试保存的INT8模型，也可以优化（fuses等）并测试优化后的FP32模型。默认为False，表示测试转化好的INT8模型，此处无需优化。
 - **use_profile:** 由Paddle预测库中提供，设置用来进行性能分析。默认值为false。
 
 你可以直接修改`run.sh`中的MODEL_DIR和DATA_DIR后，即可执行`./run.sh`进行CPU预测。
+
+### 4.3 用户编写自己的测试：
+如果用户编写自己的测试：
+1.  只测试INT8模型
+    如果用户测试转化好的INT8模型，使用 paddle::NativeConfig 即可测试
+2. 测试FP32模型
+   如果用户要测试PF32模型，可以使用AnalysisConfig对原始FP32模型先优化（fuses等）再测试。AnalysisConfig配置设置如下：
+```
+static void SetConfig(paddle::AnalysisConfig *cfg) {
+  cfg->SetModel(FLAGS_infer_model);  // 必须。表示需要测试的模型
+  cfg->DisableGpu();      // 必须。部署在CPU上预测，必须Disablegpu
+  cfg->EnableMKLDNN();  //必须。表示使用MKLDNN算子，将比 native 快
+  cfg->SwitchIrOptim();   // 如果传入FP32原始，这个配置设置为true将优化加速模型（如进行fuses等）
+  cfg->SetCpuMathLibraryNumThreads(FLAGS_num_threads);  //默认设置为1。表示多线程运行
+  if(FLAGS_use_profile){
+      cfg->EnableProfile();  // 可选。如果设置use_profile，运行结束将展现各个算子所占用时间
+  }
+}
+```
+在我们提供的样例中，只要设置`optimize_fp32_model`为true即可。
 
 ## 5. QAT量化图像分类模型在 Xeon(R) 6271 和 Xeon(R) 6148 上的精度和性能
 
