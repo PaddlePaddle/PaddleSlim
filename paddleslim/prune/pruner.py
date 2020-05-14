@@ -90,6 +90,11 @@ class Pruner():
         visited = {}
         pruned_params = []
         for param, ratio in zip(params, ratios):
+            if graph.var(param) is None:
+                _logger.warn(
+                    "Variable[{}] to be pruned is not in current graph.".
+                    format(param))
+                continue
             group = collect_convs([param], graph, visited)[0]  # [(name, axis)]
             if group is None or len(group) == 0:
                 continue
