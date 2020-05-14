@@ -27,7 +27,7 @@ CUDA_VISIBLE_DEVICES=0 python block_sa_nas_mobilenetv2.py
 
 # RLNAS网络结构搜索示例
 
-本示例介绍如何使用RLNAS接口进行网络结构搜索，该示例介绍paddleslim中RLNAS的使用，完整示例代码请参考rl_nas_mobilenetv2.py。
+本示例介绍如何使用RLNAS接口进行网络结构搜索，该示例介绍paddleslim中RLNAS的使用，完整示例代码请参考rl_nas_mobilenetv2.py或者parl_nas_mobilenetv2.py。
 
 ## 数据准备
 本示例默认使用cifar10数据，cifar10数据会根据调用的paddle接口自动下载，无需额外准备。
@@ -41,7 +41,12 @@ CUDA_VISIBLE_DEVICES=0 python block_sa_nas_mobilenetv2.py
 
 ## 2 启动训练
 
-### 启动基于MobileNetV2初始模型结构构造搜索空间的实验
+### 2.1 启动基于MobileNetV2初始模型结构构造搜索空间，强化学习算法为lstm的搜索实验
 ```shell
 CUDA_VISIBLE_DEVICES=0 python rl_nas_mobilenetv2.py
+```
+
+### 2.2 启动基于MobileNetV2初始模型结构构造搜索空间，强化学习算法为ddpg的搜索实验
+```shell
+CUDA_VISIBLE_DEVICES=0 python parl_nas_mobilenetv2.py
 ```

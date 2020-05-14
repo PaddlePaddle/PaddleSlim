@@ -15,13 +15,13 @@
 6. 定义造program的函数
 7. 定义训练函数
 8. 定义预测函数
-9. 启动搜索
-  9.1 获取下一个模型结构
-  9.2 构造相应的训练和预测program
-  9.3 添加搜索限制
-  9.4 定义环境
-  9.5 定义输入数据
-  9.6 启动训练和评估
+9. 启动搜索  
+  9.1 获取下一个模型结构  
+  9.2 构造相应的训练和预测program  
+  9.3 添加搜索限制  
+  9.4 定义环境  
+  9.5 定义输入数据  
+  9.6 启动训练和评估  
   9.7 回传当前模型的得分reward
 10. 利用demo下的脚本启动搜索
 11. 利用demo下的脚本启动最终实验
@@ -33,7 +33,7 @@
 
 按照通道数来区分DARTS_model中block的话，则DARTS_model中共有3个block，第一个block仅包含6个normal cell，之后的两个block每个block都包含和一个reduction cell和6个normal cell，共有20个cell。在构造搜索空间的时候我们定义每个cell中的所有卷积操作都使用相同的通道数，共有20位token。
 
-完整的搜索空间可以参考[基于DARTS_model的搜索空间](../../../paddleslim/nas/search_space/darts_space.py)
+完整的搜索空间可以参考[基于DARTS_model的搜索空间](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/nas/search_space/darts_space.py)
 
 ### 2. 引入依赖包并定义全局变量
 ```python
@@ -232,9 +232,9 @@ exe.run(startup_program)
 ```
 
 #### 9.5 定义输入数据
-由于本示例中对cifar10中的图片进行了一些额外的预处理操作，和[快速开始](../quick_start/nas_tutorial.md)示例中的reader不同，所以需要自定义cifar10的reader，不能直接调用paddle中封装好的`paddle.dataset.cifar10`的reader。自定义cifar10的reader文件位于[demo/nas](../../../demo/nas/darts_cifar10_reader.py)中。
+由于本示例中对cifar10中的图片进行了一些额外的预处理操作，和[快速开始](https://paddlepaddle.github.io/PaddleSlim/quick_start/nas_tutorial.html)示例中的reader不同，所以需要自定义cifar10的reader，不能直接调用paddle中封装好的`paddle.dataset.cifar10`的reader。自定义cifar10的reader文件位于[demo/nas](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/nas/darts_cifar10_reader.py)中。
 
-**注意：**本示例为了简化代码直接调用`paddle.dataset.cifar10`定义训练数据和预测数据，实际训练需要使用自定义cifar10的reader。
+**注意：**本示例为了简化代码直接调用`paddle.dataset.cifar10`定义训练数据和预测数据，实际训练需要使用自定义cifar10文件中的reader。
 ```python
 train_reader = paddle.batch(paddle.reader.shuffle(paddle.dataset.cifar.train10(cycle=False), buf_size=1024), batch_size=BATCH_SIZE, drop_last=True)
 test_reader = paddle.batch(paddle.dataset.cifar.test10(cycle=False), batch_size=BATCH_SIZE, drop_last=False)
@@ -261,14 +261,14 @@ sa_nas.reward(float(valid_top1_list[-1] + valid_top1_list[-2]) / 2)
 
 ### 10. 利用demo下的脚本启动搜索
 
-搜索文件位于: [darts_sanas_demo](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/nas/sanas_darts_nas.py)，搜索过程中限制模型参数量为不大于3.77M。
+搜索文件位于: [darts_sanas_demo](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/nas/sanas_darts_space.py)，搜索过程中限制模型参数量为不大于3.77M。
 ```python
 cd demo/nas/
 python darts_nas.py
 ```
 
 ### 11. 利用demo下的脚本启动最终实验
-最终实验文件位于: [darts_sanas_demo](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/nas/sanas_darts_nas.py)，最终实验需要训练600epoch。以下示例输入token为`[5, 5, 0, 5, 5, 10, 7, 7, 5, 7, 7, 11, 10, 12, 10, 0, 5, 3, 10, 8]`。
+最终实验文件位于: [darts_sanas_demo](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/nas/sanas_darts_space.py)，最终实验需要训练600epoch。以下示例输入token为`[5, 5, 0, 5, 5, 10, 7, 7, 5, 7, 7, 11, 10, 12, 10, 0, 5, 3, 10, 8]`。
 ```python
 cd demo/nas/
 python darts_nas.py --token 5 5 0 5 5 10 7 7 5 7 7 11 10 12 10 0 5 3 10 8 --retain_epoch 600
