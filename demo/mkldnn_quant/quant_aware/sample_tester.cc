@@ -29,28 +29,18 @@ limitations under the License. */
 #include <paddle/fluid/platform/profiler.h>
 #endif
 
-DEFINE_string(infer_model, "", "model directory");
-DEFINE_string(infer_data, "", "input data path");
-DEFINE_int32(batch_size, 50, "batch size");
+DEFINE_string(infer_model, "", "path to the model");
+DEFINE_string(infer_data, "", "path to the input data");
+DEFINE_int32(batch_size, 50, "inference batch size");
 DEFINE_int32(iterations,
-             2,
-             "number of batches to process, by default test whole set");
-DEFINE_int32(num_threads, 1, "num_threads");
+             0,
+             "number of batches to process. 0 means testing whole dataset");
+DEFINE_int32(num_threads, 1, "num of threads to run in parallel");
 DEFINE_bool(with_accuracy_layer,
             true,
-            "label is required in the input of the inference model");
-DEFINE_bool(use_profile, false, "Do profile or not");
-DEFINE_bool(optimize_fp32_model, false, "If you set optimize_fp32_model to true, test will use analysis config and do fuses for fp32 models");
-
-static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
-  cfg->DisableGpu();
-  cfg->SwitchIrOptim();
-  cfg->SetCpuMathLibraryNumThreads(FLAGS_num_threads);
-  cfg->EnableMKLDNN();
-  if(FLAGS_use_profile){
-      cfg->EnableProfile();
-  }
-}
+            "Set with_accuracy_layer to true if provided model has accuracy layer and requires label input");
+DEFINE_bool(use_profile, false, "Set use_profile to true to get profile information");
+DEFINE_bool(optimize_fp32_model, false, "If optimize_fp32_model is set to true, fp32 model will be optimized");
 
 struct Timer {
   std::chrono::high_resolution_clock::time_point start;
@@ -176,18 +166,6 @@ static void PrintTime(int batch_size,
             << "ms, fps: " << 1000.f / sample_latency << " ======";
 }
 
-std::unique_ptr<paddle::PaddlePredictor> CreatePredictor(
-    const paddle::PaddlePredictor::Config *config, bool use_analysis = true) {
-  const auto *analysis_config =
-      reinterpret_cast<const paddle::AnalysisConfig *>(config);
-  if (use_analysis) {
-    return paddle::CreatePaddlePredictor<paddle::AnalysisConfig>(
-        *analysis_config);
-  }
-  auto native_config = analysis_config->ToNativeConfig();
-  return paddle::CreatePaddlePredictor<paddle::NativeConfig>(native_config);
-}
-
 void PredictionRun(paddle::PaddlePredictor *predictor,
                    const std::vector<std::vector<paddle::PaddleTensor>> &inputs,
                    std::vector<std::vector<paddle::PaddleTensor>> *outputs,
@@ -237,7 +215,7 @@ std::pair<float, float> CalculateAccuracy(
       << "if with_accuracy set to false, labels_gt must be not empty";
   std::vector<float> acc1_ss;
   std::vector<float> acc5_ss;
-  if (!with_accuracy) {
+  if (!with_accuracy) { // model with_accuracy_layer = false
     float *result_array;    // for one batch 50*1000
     int64_t *batch_labels;  // 50*1
     LOG_IF(ERROR, outputs.size() != labels_gt.size())
@@ -291,26 +269,41 @@ std::pair<float, float> CalculateAccuracy(
   return std::make_pair(acc1_ss_avg, acc5_ss_avg);
 }
 
+std::unique_ptr<paddle::PaddlePredictor> CreatePredictor(
+    std::string infer_model, int num_threads, bool use_analysis) {
+  paddle::AnalysisConfig *analysis_cfg;
+  analysis_cfg->SetCpuMathLibraryNumThreads(FLAGS_num_threads);
+  analysis_cfg->SetModel(FLAGS_infer_model);
+  if(!use_analysis){
+    auto native_config = analysis_cfg->ToNativeConfig();
+    return paddle::CreatePaddlePredictor<paddle::NativeConfig>(native_config);
+  }
+  else{
+    analysis_cfg->DisableGpu();
+    analysis_cfg->SwitchIrOptim();
+    analysis_cfg->EnableMKLDNN();
+    if(FLAGS_use_profile){
+      analysis_cfg->EnableProfile();
+    }
+    const auto *analysis_config = reinterpret_cast<const paddle::AnalysisConfig *>(analysis_cfg);
+    return paddle::CreatePaddlePredictor<paddle::AnalysisConfig>(*analysis_config);
+  }
+}
+
 int main(int argc, char *argv[]) {
   // InitFLAGS(argc, argv);
   google::InitGoogleLogging(*argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  paddle::AnalysisConfig cfg;
-  cfg.SetModel(FLAGS_infer_model);
-  if (FLAGS_optimize_fp32_model){
-    SetIrOptimConfig(&cfg);
-  }
-  // read data from file and prepare batches with test data
+
   std::vector<std::vector<paddle::PaddleTensor>> input_slots_all;
   std::vector<std::vector<paddle::PaddleTensor>> outputs;
   std::vector<paddle::PaddleTensor> labels_gt;  // optional
   SetInput(&input_slots_all, &labels_gt);       // iterations*batch_size
-  auto predictor = CreatePredictor(
-      reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg), FLAGS_optimize_fp32_model);
+  auto predictor = CreatePredictor(FLAGS_infer_model, FLAGS_num_threads, FLAGS_optimize_fp32_model);
   PredictionRun(predictor.get(), input_slots_all, &outputs, FLAGS_num_threads);
   auto acc_pair = CalculateAccuracy(outputs, labels_gt);
-  LOG(INFO) <<"Top1 acc " << std::fixed << std::setw(6)
+  LOG(INFO) <<"Top1 accuracy: " << std::fixed << std::setw(6)
             <<std::setprecision(4) << acc_pair.first;
-  LOG(INFO) <<"Top5 acc " << std::fixed << std::setw(6)
+  LOG(INFO) <<"Top5 accuracy: " << std::fixed << std::setw(6)
             <<std::setprecision(4) << acc_pair.second;
 }
