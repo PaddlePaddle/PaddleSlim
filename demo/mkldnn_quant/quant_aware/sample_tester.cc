@@ -269,37 +269,43 @@ std::pair<float, float> CalculateAccuracy(
   return std::make_pair(acc1_ss_avg, acc5_ss_avg);
 }
 
+static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
+  cfg->DisableGpu();
+  cfg->SwitchIrOptim();
+  cfg->EnableMKLDNN();
+  if(FLAGS_use_profile){
+      cfg->EnableProfile();
+  }
+}
+
 std::unique_ptr<paddle::PaddlePredictor> CreatePredictor(
-    std::string infer_model, int num_threads, bool use_analysis) {
-  paddle::AnalysisConfig *analysis_cfg;
-  analysis_cfg->SetCpuMathLibraryNumThreads(FLAGS_num_threads);
-  analysis_cfg->SetModel(FLAGS_infer_model);
-  if(!use_analysis){
-    auto native_config = analysis_cfg->ToNativeConfig();
-    return paddle::CreatePaddlePredictor<paddle::NativeConfig>(native_config);
+    const paddle::PaddlePredictor::Config *config, bool use_analysis = true) {
+  const auto *analysis_config =
+      reinterpret_cast<const paddle::AnalysisConfig *>(config);
+  if (use_analysis) {
+    return paddle::CreatePaddlePredictor<paddle::AnalysisConfig>(
+        *analysis_config);
   }
-  else{
-    analysis_cfg->DisableGpu();
-    analysis_cfg->SwitchIrOptim();
-    analysis_cfg->EnableMKLDNN();
-    if(FLAGS_use_profile){
-      analysis_cfg->EnableProfile();
-    }
-    const auto *analysis_config = reinterpret_cast<const paddle::AnalysisConfig *>(analysis_cfg);
-    return paddle::CreatePaddlePredictor<paddle::AnalysisConfig>(*analysis_config);
-  }
+  auto native_config = analysis_config->ToNativeConfig();
+  return paddle::CreatePaddlePredictor<paddle::NativeConfig>(native_config);
 }
 
 int main(int argc, char *argv[]) {
   // InitFLAGS(argc, argv);
   google::InitGoogleLogging(*argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  paddle::AnalysisConfig cfg;
+  cfg.SetModel(FLAGS_infer_model);
+  cfg.SetCpuMathLibraryNumThreads(FLAGS_num_threads);
+  if (FLAGS_optimize_fp32_model){
+    SetIrOptimConfig(&cfg);
+  }
 
   std::vector<std::vector<paddle::PaddleTensor>> input_slots_all;
   std::vector<std::vector<paddle::PaddleTensor>> outputs;
   std::vector<paddle::PaddleTensor> labels_gt;  // optional
   SetInput(&input_slots_all, &labels_gt);       // iterations*batch_size
-  auto predictor = CreatePredictor(FLAGS_infer_model, FLAGS_num_threads, FLAGS_optimize_fp32_model);
+  auto predictor = CreatePredictor(reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg), FLAGS_optimize_fp32_model);
   PredictionRun(predictor.get(), input_slots_all, &outputs, FLAGS_num_threads);
   auto acc_pair = CalculateAccuracy(outputs, labels_gt);
   LOG(INFO) <<"Top1 accuracy: " << std::fixed << std::setw(6)
