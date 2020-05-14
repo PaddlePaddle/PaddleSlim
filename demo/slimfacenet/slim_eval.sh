@@ -14,7 +14,6 @@
 # limitations under the License.
 #!/bin/bash
 export CUDA_VISIBLE_DEVICES=0
-export LD_LIBRARY_PATH='PATH to CUDA and CUDNN'
 python train_eval.py --action test \
     --train_data_dir=/PATH_TO_CASIA_Dataset \
     --test_data_dir=/PATH_TO_lfw \

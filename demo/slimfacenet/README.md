@@ -4,8 +4,8 @@
 
 当前示例支持以下人脸识别模型：
 
-- `slimfacenet`
-
+- `SlimFaceNet_A_x0_60`
+- `SlimFaceNet_B_x0_75`
 
 ## 1. 数据准备
 
@@ -24,19 +24,29 @@
 通过以下命令启动训练任务：
 
 ```
-sh slim_train.sh 0.75 1,0,1,3,0,3,1,1,1,1,0,0,2,5,3
+sh slim_train.sh
 或者
 export CUDA_VISIBLE_DEVICES=0
-export LD_LIBRARY_PATH='PATH to CUDA and CUDNN'
 python -u train_eval.py \
-    --arch=1,0,1,3,0,3,1,1,1,1,0,0,2,5,3 \
-    --action final \
-    --scale=0.75
+    --action train \
+    --model=SlimFaceNet_A_x0_60
 ```
 
-其中，`arch`=1,0,1,3,0,3,1,1,1,1,0,0,2,5,3为`slimfacenet`搜索空间中的一个模型结构，`scale`=0.75为通道数的缩放系数，
-在每个`scale`下搜索空间中都共有6**15(约4700亿)种不同的模型结构。
+其中，SlimFaceNet_A_x0_60是`slimfacenet`搜索空间中的一个模型结构，通道数的缩放系数为0.6，
+在每个缩放系数下搜索空间中都共有6**15(约4700亿)种不同的模型结构。模型训练好之后会保存在`./out_inference/`
 
+
+## 4. 将float32模型量化为int8模型
+
+通过以下命令启动训练任务：
+
+```
+sh slim_quant.sh
+或者
+export CUDA_VISIBLE_DEVICES=0
+python -u train_eval.py --action quant
+```
+执行完之后量化模型会保存在`./quant_model/`, 注当前阶段量化模型还是是按float32保存的，转paddlelite后会变为int8
 
 ## 4. 加载和评估量化模型
 
@@ -45,7 +55,7 @@ python -u train_eval.py \
 执行以下代码加载模型并评估模型在测试集上的指标。
 
 ```
-将量化模型放在./quant_model/
+将量化模型默认地址在`./quant_model/`
 sh slim_eval.sh
 或者
 export CUDA_VISIBLE_DEVICES=0

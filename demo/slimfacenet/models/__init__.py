@@ -1,1 +1,0 @@
-from .slimfacenet import SlimFaceNet

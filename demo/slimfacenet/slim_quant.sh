@@ -14,8 +14,6 @@
 # limitations under the License.
 #!/bin/bash
 export CUDA_VISIBLE_DEVICES=0
-python -u train_eval.py \
+python train_eval.py --action quant \
     --train_data_dir=/PATH_TO_CASIA_Dataset \
-    --test_data_dir=/PATH_TO_LFW \
-    --action train \
-    --model=SlimFaceNet_A_x0_60
+    --test_data_dir=/PATH_TO_lfw \

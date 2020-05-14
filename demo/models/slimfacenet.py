@@ -348,6 +348,24 @@ class SlimFaceNet():
         return output
 
 
+def SlimFaceNet_A_x0_60(class_dim=None, scale=0.6, arch=None):
+    scale = 0.6
+    arch = [0, 1, 5, 1, 0, 2, 1, 2, 0, 1, 2, 1, 1, 0, 1]
+    return SlimFaceNet(class_dim=class_dim, scale=scale, arch=arch)
+
+
+def SlimFaceNet_B_x0_75(class_dim=None, scale=0.6, arch=None):
+    scale = 0.75
+    arch = [1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 3, 2, 2, 3]
+    return SlimFaceNet(class_dim=class_dim, scale=scale, arch=arch)
+
+
+def SlimFaceNet_C_x0_75(class_dim=None, scale=0.6, arch=None):
+    scale = 0.75
+    arch = [1, 1, 2, 1, 0, 2, 1, 0, 1, 0, 1, 1, 2, 2, 3]
+    return SlimFaceNet(class_dim=class_dim, scale=scale, arch=arch)
+
+
 if __name__ == "__main__":
     x = fluid.data(name='x', shape=[-1, 3, 112, 112], dtype='float32')
     print(x.shape)

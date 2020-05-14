@@ -25,7 +25,8 @@ from paddle import fluid
 from dataloader.casia import CASIA_Face
 from dataloader.lfw import LFW
 from lfw_eval import parse_filelist, evaluation_10_fold
-from models.slimfacenet import SlimFaceNet
+from paddleslim import models
+from paddleslim.quant import quant_post
 
 
 def now():
@@ -96,9 +97,8 @@ def test(test_exe, test_program, test_out, args):
     result = {'fl': featureLs, 'fr': featureRs, 'fold': flods, 'flag': flags}
     scipy.io.savemat(args.feature_save_dir, result)
     ACCs = evaluation_10_fold(args.feature_save_dir)
-    print('eval arch {}'.format(args.arch))
     with open(os.path.join(args.save_ckpt, 'log.txt'), 'a+') as f:
-        f.writelines('eval arch {}\n'.format(args.arch))
+        f.writelines('eval model {}\n'.format(args.model))
     for i in range(len(ACCs)):
         print('{}    {}'.format(i + 1, ACCs[i] * 100))
         with open(os.path.join(args.save_ckpt, 'log.txt'), 'a+') as f:
@@ -126,13 +126,18 @@ def train(exe, train_program, train_out, test_program, test_out, args):
                 '{}  Epoch: {:^4d} step: {:^4d} loss: {:.6f}, acc: {:.6f}, lr: {}'.
                 format(now(), epoch_id, batch_id, avg_loss, avg_acc,
                        float(np.mean(np.array(global_lr)))))
-
         if batch_id % args.save_frequency == 0:
             model_path = os.path.join(args.save_ckpt, str(epoch_id))
             fluid.io.save_persistables(
                 executor=exe, dirname=model_path, main_program=train_program)
-
             test(exe, test_program, test_out, args)
+    out_feature, test_reader, flods, flags = test_out
+    fluid.io.save_inference_model(
+        executor=exe,
+        dirname='./out_inference',
+        feeded_var_names=['image_test'],
+        target_vars=[out_feature],
+        main_program=test_program)
 
 
 def build_program(program, startup, args, is_train=True):
@@ -145,11 +150,8 @@ def build_program(program, startup, args, is_train=True):
     with fluid.program_guard(main_program=program, startup_program=startup):
         with fluid.unique_name.guard():
             # Model construction
-            arch = [int(a) for a in args.arch.strip().split(',')]
-            model = SlimFaceNet(
-                class_dim=train_dataset.class_nums,
-                scale=args.scale,
-                arch=arch)
+            model = models.__dict__[args.model](
+                class_dim=train_dataset.class_nums)
 
             if is_train:
                 image = fluid.data(
@@ -215,23 +217,31 @@ def build_program(program, startup, args, is_train=True):
             return out
 
 
+def quant_val_reader_batch():
+    nl, nr, flods, flags = parse_filelist(args.test_data_dir)
+    test_dataset = LFW(nl, nr)
+    test_reader = paddle.batch(
+        test_dataset.reader, batch_size=1, drop_last=False)
+    shuffle_reader = fluid.io.shuffle(test_reader, 1)
+
+    def _reader():
+        while True:
+            for idx, data in enumerate(shuffle_reader()):
+                yield np.expand_dims(data[0][0], axis=0)
+
+    return _reader
+
+
 def main():
     global args
     parser = argparse.ArgumentParser(description='PaddlePaddle SlimFaceNet')
     parser.add_argument(
-        '--action', default='final', type=str, help='test/final')
+        '--action', default='train', type=str, help='train/test/quant')
     parser.add_argument(
         '--model',
-        default='slimfacenet',
+        default='SlimFaceNet_B_x0_75',
         type=str,
-        help='slimfacenet/slimfacenet_v1')
-    parser.add_argument(
-        '--scale', default=0.75, type=float, help='scale ratio')
-    parser.add_argument(
-        '--arch',
-        default='1,0,1,3,0,3,1,1,1,1,0,0,2,5,3',
-        type=str,
-        help='arch')
+        help='SlimFaceNet_A_x0_60/SlimFaceNet_C_x0_75/SlimFaceNet_B_x0_75')
     parser.add_argument(
         '--use_gpu', default=1, type=int, help='Use GPU or not, 0 is not used')
     parser.add_argument(
@@ -290,6 +300,7 @@ def main():
         args.save_ckpt = 'output'
     if not os.path.exists(args.save_ckpt):
         subprocess.call(['mkdir', '-p', args.save_ckpt])
+
     shutil.copyfile(__file__, os.path.join(args.save_ckpt, 'train.py'))
     shutil.copyfile('models/slimfacenet.py',
                     os.path.join(args.save_ckpt, 'model.py'))
@@ -297,12 +308,12 @@ def main():
         f.writelines(str(args) + '\n')
         f.writelines('num_trainers: {}'.format(num_trainers) + '\n')
 
-    if args.action == 'final':
+    if args.action == 'train':
         train_program = fluid.Program()
     test_program = fluid.Program()
     startup_program = fluid.Program()
 
-    if args.action == 'final':
+    if args.action == 'train':
         train_out = build_program(train_program, startup_program, args, True)
     test_out = build_program(test_program, startup_program, args, False)
     test_program = test_program.clone(for_test=True)
@@ -310,9 +321,19 @@ def main():
     exe = fluid.Executor(place)
     exe.run(startup_program)
 
-    if args.action == 'final':
+    if args.action == 'train':
         train(exe, train_program, train_out, test_program, test_out, args)
-    if args.action == 'test':
+    elif args.action == 'quant':
+        quant_post(
+            executor=exe,
+            model_dir='./out_inference/',
+            quantize_model_path='./quant_model/',
+            sample_generator=quant_val_reader_batch(),
+            model_filename=None,  #'model',
+            params_filename=None,  #'params',
+            batch_size=100,
+            batch_nums=10)
+    elif args.action == 'test':
         [inference_program, feed_target_names,
          fetch_targets] = fluid.io.load_inference_model(
              dirname='./quant_model/',
