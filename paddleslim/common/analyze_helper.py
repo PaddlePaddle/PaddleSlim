@@ -27,15 +27,15 @@ from ..common import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
 
 
-def draw_var_distribution_hist(program,
-                               var_names,
-                               executor=None,
-                               batch_generator=None,
-                               data_loader=None,
-                               feed_vars=None,
-                               fetch_list=None,
-                               scope=None,
-                               pdf_save_dir='tmp_pdf'):
+def pdf(program,
+        var_names,
+        executor=None,
+        batch_generator=None,
+        data_loader=None,
+        feed_vars=None,
+        fetch_list=None,
+        scope=None,
+        pdf_save_dir='tmp_pdf'):
     """
     Draw hist for distributtion of variables in that name is in var_names
     
@@ -62,27 +62,30 @@ def draw_var_distribution_hist(program,
     scope = fluid.global_scope() if scope is None else scope
     assert isinstance(var_names, list), 'var_names is a list of variable name'
     real_names = []
+    weight_only = True
     for var in program.list_vars():
         if var.name in var_names:
-            var.persistable = True
+            if var.persistable == False:
+                weight_only = False
+                var.persistable = True
             real_names.append(var.name)
-    weight_only = False
-    if batch_generator is not None:
-        assert feed_vars is not None, "When using batch_generator, feed_vars must be set"
-        dataloader = fluid.io.DataLoader.from_generator(
-            feed_list=feed_vars, capacity=512, iterable=True)
-        dataloader.set_batch_generator(batch_generator, executor.place)
-    elif data_loader is not None:
-        dataloader = data_loader
-    else:
-        _logger.info(
-            "When both batch_generator and data_loader is None, var_names can only include weight names"
-        )
-        weight_only = True
 
-    if not weight_only:
-        assert executor is not None, "when one of batch_generator and data_loader is set, executor must be set"
-        assert fetch_list is not None, "when one of batch_generator and data_loader is set, executor must be set"
+    if weight_only == False:
+        if batch_generator is not None:
+            assert feed_vars is not None, "When using batch_generator, feed_vars must be set"
+            dataloader = fluid.io.DataLoader.from_generator(
+                feed_list=feed_vars, capacity=512, iterable=True)
+            dataloader.set_batch_generator(batch_generator, executor.place)
+        elif data_loader is not None:
+            dataloader = data_loader
+        else:
+            _logger.info(
+                "When both batch_generator and data_loader is None, var_names can only include weight names"
+            )
+            return
+
+        assert executor is not None, "when var_names include activations'name, executor must be set"
+        assert fetch_list is not None, "when var_names include activations'name,, executor must be set"
 
         for data in dataloader:
             executor.run(program=program,
