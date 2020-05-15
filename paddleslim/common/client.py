@@ -99,7 +99,7 @@ class Client(object):
         assert self._params_dict != None, "Please call next_token to get token first, then call update"
         current_params_dict = self._controller.update(
             rewards, self._params_dict, **kwargs)
-        params_grad = compute_grad(self._params_dict, current_params_dict)
+        params_grad = compute_grad(current_params_dict, self._params_dict)
         _logger.debug("Client: update weight {}".format(self._client_name))
         self._client_socket.send_multipart([
             pickle.dumps(ConnectMessage.UPDATE_WEIGHT),
