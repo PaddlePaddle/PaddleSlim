@@ -45,7 +45,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'recommonmark',
     'sphinx_markdown_tables',
-    'm2r',
+#    'm2r',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
