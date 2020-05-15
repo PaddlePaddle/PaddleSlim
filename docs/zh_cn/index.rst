@@ -9,7 +9,6 @@
 .. toctree::
    :maxdepth: 1
 
-   index_en
    intro.md
    install.md
    quick_start/index
