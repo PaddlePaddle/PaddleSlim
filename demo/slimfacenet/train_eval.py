@@ -20,7 +20,8 @@ import scipy.io
 import numpy as np
 
 import paddle
-from paddle import fluid
+import paddle.fluid as fluid
+import paddle.fluid.compiler as compiler
 
 from dataloader.casia import CASIA_Face
 from dataloader.lfw import LFW
@@ -114,12 +115,16 @@ def test(test_exe, test_program, test_out, args):
 def train(exe, train_program, train_out, test_program, test_out, args):
     loss, acc, global_lr, train_reader = train_out
     fetch_list_train = [loss.name, acc.name, global_lr.name]
-    train_exe = fluid.ParallelExecutor(
-        use_cuda=True, loss_name=loss.name, main_program=train_program)
+    build_strategy = fluid.BuildStrategy()
+    build_strategy.fuse_all_optimizer_ops = True
+    compiled_prog = compiler.CompiledProgram(
+        train_program, build_strategy=build_strategy).with_data_parallel(
+            loss_name=loss.name, build_strategy=build_strategy)
     for epoch_id in range(args.start_epoch, args.total_epoch):
         for batch_id, data in enumerate(train_reader()):
-            loss, acc, global_lr = train_exe.run(feed=data,
-                                                 fetch_list=fetch_list_train)
+            loss, acc, global_lr = exe.run(compiled_prog,
+                                           feed=data,
+                                           fetch_list=fetch_list_train)
             avg_loss = np.mean(np.array(loss))
             avg_acc = np.mean(np.array(acc))
             print(
@@ -207,8 +212,10 @@ def build_program(program, startup, args, is_train=True):
                     capacity=64,
                     iterable=True,
                     return_list=False)
-                reader.set_sample_list_generator(test_reader,
-                                                 fluid.core.CPUPlace())
+                reader.set_sample_list_generator(
+                    test_reader,
+                    places=fluid.cuda_places()
+                    if args.use_gpu else fluid.CPUPlace())
 
                 model.extract_feature = True
                 feature = model.net(image_test)
@@ -245,11 +252,6 @@ def main():
     parser.add_argument(
         '--use_gpu', default=1, type=int, help='Use GPU or not, 0 is not used')
     parser.add_argument(
-        '--use_multiGPU',
-        default=0,
-        type=int,
-        help='Use multi GPU or not, 0 is not used')
-    parser.add_argument(
         '--lr_strategy',
         default='piecewise_decay',
         type=str,
@@ -285,7 +287,6 @@ def main():
         '--save_frequency', default=1, type=int, help='save_frequency')
     parser.add_argument(
         '--save_ckpt', default='output', type=str, help='save_ckpt')
-    parser.add_argument('--resume', default='', type=str, help='resume')
     parser.add_argument(
         '--feature_save_dir',
         default='result.mat',
@@ -301,9 +302,6 @@ def main():
     if not os.path.exists(args.save_ckpt):
         subprocess.call(['mkdir', '-p', args.save_ckpt])
 
-    shutil.copyfile(__file__, os.path.join(args.save_ckpt, 'train.py'))
-    shutil.copyfile('models/slimfacenet.py',
-                    os.path.join(args.save_ckpt, 'model.py'))
     with open(os.path.join(args.save_ckpt, 'log.txt'), 'w+') as f:
         f.writelines(str(args) + '\n')
         f.writelines('num_trainers: {}'.format(num_trainers) + '\n')
@@ -361,7 +359,9 @@ def main():
             capacity=64,
             iterable=True,
             return_list=False)
-        reader.set_sample_list_generator(test_reader, fluid.core.CPUPlace())
+        reader.set_sample_list_generator(
+            test_reader,
+            places=fluid.cuda_places() if args.use_gpu else fluid.CPUPlace())
         test_out = (fetch_targets, reader, flods, flags)
         print('fetch_targets[0]: ', fetch_targets[0])
         print('feed_target_names: ', feed_target_names)

@@ -23,7 +23,7 @@ from paddle import fluid
 
 from dataloader.casia import CASIA_Face
 from dataloader.lfw import LFW
-from models.slimfacenet import SlimFaceNet
+from paddleslim import models
 
 
 def parse_filelist(root):
@@ -163,8 +163,8 @@ if __name__ == "__main__":
             test_dataset.reader,
             batch_size=args.test_batchsize,
             drop_last=False)
-        net = SlimFaceNet(train_dataset.class_nums, args.img_shape)
 
+        net = models.__dict__[args.model](class_dim=train_dataset.class_nums)
         if args.resume:
             assert os.path.exists(args.resume + ".pdparams"
                                   ), "Given dir {}.pdparams not exist.".format(
