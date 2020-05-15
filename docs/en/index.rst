@@ -15,5 +15,3 @@ Index
    tutorials/index_en
    api_en/index_en
    model_zoo_en.md
-
-.. mdinclude:: intro_en.md
