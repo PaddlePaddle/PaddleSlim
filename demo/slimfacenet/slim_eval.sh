@@ -1,4 +1,5 @@
-# Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
+# ================================================================
+#   Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -11,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from __future__ import absolute_import
-from .util import image_classification
-from .slimfacenet import SlimFaceNet_A_x0_60, SlimFaceNet_B_x0_75, SlimFaceNet_C_x0_75
-
-__all__ = ["image_classification"]
+#!/bin/bash
+export CUDA_VISIBLE_DEVICES=0
+python train_eval.py --action test \
+    --train_data_dir=/PATH_TO_CASIA_Dataset \
+    --test_data_dir=/PATH_TO_lfw \
