@@ -1,6 +1,6 @@
 # PaddleSlim
 
-中文 | [English](README.md)
+中文 | [English](README_en.md)
 
 [![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)](https://paddleslim.readthedocs.io/en/latest/)
 [![Documentation Status](https://img.shields.io/badge/中文文档-最新-brightgreen.svg)](https://paddleslim.readthedocs.io/zh_CN/latest/)
@@ -253,3 +253,10 @@ pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 | RK3288  | [-23%]()    | +0.07%    |
 | Android cellphone  | [-20%]()    | +0.16% |
 | iPhone 6s   | [-17%]()    | +0.32%  |
+
+## 许可证书
+本项目的发布受[Apache 2.0 license](LICENSE)许可认证。
+
+## 如何贡献代码
+
+我们非常欢迎你可以为PaddleSlim提供代码，也十分感谢你的反馈。
