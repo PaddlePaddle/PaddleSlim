@@ -9,12 +9,12 @@
 4. 定义输入数据函数
 5. 定义训练函数
 6. 定义评估函数
-7. 启动搜索实验
-  7.1 获取模型结构
-  7.2 构造program
-  7.3 定义输入数据
-  7.4 训练模型
-  7.5 评估模型
+7. 启动搜索实验  
+  7.1 获取模型结构  
+  7.2 构造program  
+  7.3 定义输入数据  
+  7.4 训练模型  
+  7.5 评估模型  
   7.6 回传当前模型的得分
 8. 完整示例
 
@@ -53,7 +53,7 @@ def build_program(archs):
         acc_top1 = fluid.layers.accuracy(input=softmax_out, label=label, k=1)
         acc_top5 = fluid.layers.accuracy(input=softmax_out, label=label, k=5)
         test_program = fluid.default_main_program().clone(for_test=True)
-            
+
         optimizer = fluid.optimizer.Adam(learning_rate=0.1)
         optimizer.minimize(avg_cost)
 
@@ -77,7 +77,7 @@ def input_data(inputs):
 ## 5. 定义训练函数
 根据训练program和训练数据进行训练。
 ```python
-def start_train(program, data_reader, data_feeder): 
+def start_train(program, data_reader, data_feeder):
     outputs = [avg_cost.name, acc_top1.name, acc_top5.name]
     for data in data_reader():
         batch_reward = exe.run(program, feed=data_feeder.feed(data), fetch_list = outputs)
@@ -146,7 +146,7 @@ for step in range(3):
     current_flops = slim.analysis.flops(train_program)
     if current_flops > 321208544:
         continue
-    
+
     for epoch in range(7):
         start_train(train_program, train_reader, train_feeder)
 
