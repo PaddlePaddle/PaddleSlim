@@ -1,8 +1,11 @@
+# PaddleSlim
+
 中文 | [English](README.md)
 
-文档：https://paddlepaddle.github.io/PaddleSlim
-
-# PaddleSlim
+[![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)]()
+[![Documentation Status](https://img.shields.io/badge/中文文档-最新-brightgreen.svg)]()
+[![Release](https://img.shields.io/github/release/PaddlePaddle/Paddle.svg)](https://github.com/PaddlePaddle/PaddleSlim/releases)
+[![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
 
 PaddleSlim是一个模型压缩工具库，包含模型剪裁、定点量化、知识蒸馏、超参搜索和模型结构搜索等一系列模型压缩策略。
 
