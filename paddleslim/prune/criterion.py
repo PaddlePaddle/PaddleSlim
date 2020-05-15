@@ -57,17 +57,21 @@ def geometry_median(group, graph):
     scores = []
     name, value, axis = group[0]
     assert (len(value.shape) == 4)
-    w = value.view()
-    channel_num = value.shape[0]
-    w.shape = value.shape[0], np.product(value.shape[1:])
-    x = w.repeat(channel_num, axis=0)
-    y = np.zeros_like(x)
-    for i in range(channel_num):
-        y[i * channel_num:(i + 1) * channel_num] = np.tile(w[i],
-                                                           (channel_num, 1))
-    tmp = np.sqrt(np.sum((x - y)**2, -1))
-    tmp = tmp.reshape((channel_num, channel_num))
-    tmp = np.sum(tmp, -1)
+
+    def get_distance_sum(value, out_idx):
+        w = value.view()
+        w.shape = value.shape[0], np.product(value.shape[1:])
+        selected_filter = np.tile(w[out_idx], (w.shape[0], 1))
+        x = w - selected_filter
+        x = np.sqrt(np.sum(x * x, -1))
+        return x.sum()
+
+    dist_sum_list = []
+    for out_i in range(value.shape[0]):
+        dist_sum = get_distance_sum(value, out_i)
+        dist_sum_list.append(dist_sum)
+
+    tmp = np.array(dist_sum_list)
 
     for name, value, axis in group:
         scores.append((name, axis, tmp))
