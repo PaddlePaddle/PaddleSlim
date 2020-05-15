@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .controller import EvolutionaryController
+from .controller import EvolutionaryController, RLBaseController
 from .sa_controller import SAController
 from .log_helper import get_logger
 from .controller_server import ControllerServer

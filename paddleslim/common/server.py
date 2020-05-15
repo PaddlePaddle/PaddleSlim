@@ -161,6 +161,8 @@ class Server(object):
                             if len(self._client) == len(
                                     self._client_dict.items()):
                                 self._done = True
+                                self._params_dict = sum_params_dict
+                                del sum_params_dict
 
                             self._server_socket.send_multipart([
                                 pickle.dumps(ConnectMessage.WAIT),

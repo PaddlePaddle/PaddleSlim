@@ -41,24 +41,24 @@ class DDPGAgent(parl.Agent):
         self.learn_program = fluid.Program()
 
         with fluid.program_guard(self.pred_program):
-            obs = layers.data(
-                name='obs', shape=[self.obs_dim], dtype='float32')
+            obs = fluid.data(
+                name='obs', shape=[None, self.obs_dim], dtype='float32')
             self.pred_act = self.alg.predict(obs)
 
         with fluid.program_guard(self.learn_program):
-            obs = layers.data(
-                name='obs', shape=[self.obs_dim], dtype='float32')
-            act = layers.data(
-                name='act', shape=[self.act_dim], dtype='float32')
-            reward = layers.data(name='reward', shape=[], dtype='float32')
-            next_obs = layers.data(
-                name='next_obs', shape=[self.obs_dim], dtype='float32')
-            terminal = layers.data(name='terminal', shape=[], dtype='bool')
+            obs = fluid.data(
+                name='obs', shape=[None, self.obs_dim], dtype='float32')
+            act = fluid.data(
+                name='act', shape=[None, self.act_dim], dtype='float32')
+            reward = fluid.data(name='reward', shape=[None], dtype='float32')
+            next_obs = fluid.data(
+                name='next_obs', shape=[None, self.obs_dim], dtype='float32')
+            terminal = fluid.data(
+                name='terminal', shape=[None, 1], dtype='bool')
             _, self.critic_cost = self.alg.learn(obs, act, reward, next_obs,
                                                  terminal)
 
     def predict(self, obs):
-        obs = np.expand_dims(obs, axis=0)
         act = self.fluid_executor.run(self.pred_program,
                                       feed={'obs': obs},
                                       fetch_list=[self.pred_act])[0]
