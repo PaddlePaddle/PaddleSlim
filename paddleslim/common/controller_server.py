@@ -26,8 +26,14 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class ControllerServer(object):
-    """
-    The controller wrapper with a socket server to handle the request of search agent.
+    """The controller wrapper with a socket server to handle the request of search agent.
+    Args:
+        controller(slim.searcher.Controller): The controller used to generate tokens.
+        address(tuple): The address of current server binding with format (ip, port). Default: ('', 0).
+                        which means setting ip automatically
+        max_client_num(int): The maximum number of clients connecting to current server simultaneously. Default: 100.
+        search_steps(int|None): The total steps of searching. None means never stopping. Default: None 
+        key(str|None): Config information. Default: None.
     """
 
     def __init__(self,
@@ -37,13 +43,6 @@ class ControllerServer(object):
                  search_steps=None,
                  key=None):
         """
-        Args:
-            controller(slim.searcher.Controller): The controller used to generate tokens.
-            address(tuple): The address of current server binding with format (ip, port). Default: ('', 0).
-                            which means setting ip automatically
-            max_client_num(int): The maximum number of clients connecting to current server simultaneously. Default: 100.
-            search_steps(int|None): The total steps of searching. None means never stopping. Default: None 
-            key(str|None): Config information. Default: None.
         """
         self._controller = controller
         self._address = address
@@ -63,9 +62,11 @@ class ControllerServer(object):
         self._socket_server.listen(self._max_client_num)
         self._port = self._socket_server.getsockname()[1]
         self._ip = self._socket_server.getsockname()[0]
-        _logger.info("ControllerServer - listen on: [{}:{}]".format(
+        _logger.info("ControllerServer Start!!!")
+        _logger.debug("ControllerServer - listen on: [{}:{}]".format(
             self._ip, self._port))
         thread = Thread(target=self.run)
+        thread.setDaemon(True)
         thread.start()
         return str(thread)
 
@@ -83,6 +84,8 @@ class ControllerServer(object):
         return self._ip
 
     def run(self):
+        """Start the server.
+        """
         _logger.info("Controller Server run...")
         try:
             while ((self._search_steps is None) or

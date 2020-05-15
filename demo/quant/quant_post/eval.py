@@ -20,7 +20,8 @@ import functools
 
 import paddle
 import paddle.fluid as fluid
-sys.path.append('../../')
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import imagenet_reader as reader
 from utility import add_arguments, print_arguments
 
