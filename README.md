@@ -1,8 +1,10 @@
-中文 | [English](README_en.md)
-
-文档：https://paddlepaddle.github.io/PaddleSlim
-
 # PaddleSlim
+
+中文 | [English](README.md)
+
+[![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)]()
+[![Documentation Status](https://img.shields.io/badge/中文文档-最新-brightgreen.svg)]()
+[![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
 
 PaddleSlim是一个模型压缩工具库，包含模型剪裁、定点量化、知识蒸馏、超参搜索和模型结构搜索等一系列模型压缩策略。
 
@@ -16,25 +18,135 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 
 ## 功能
 
-- 模型剪裁
-  - 卷积通道均匀剪裁
-  - 基于敏感度的卷积通道剪裁
-  - 基于进化算法的自动剪裁
+<table style="width:100%;" cellpadding="2" cellspacing="0" border="1" bordercolor="#000000">
+	<tbody>
+		<tr>
+			<td style="text-align:center;">
+				<span style="font-size:18px;">功能模块</span>
+			</td>
+			<td style="text-align:center;">
+				<span style="font-size:18px;">算法</span>
+			</td>
+			<td style="text-align:center;">
+				<span style="font-size:18px;">教程</span><span style="font-size:18px;">与文档</span>
+			</td>
+		</tr>
+		<tr>
+			<td style="text-align:center;">
+				<span style="font-size:12px;">剪裁</span><span style="font-size:12px;"></span><br />
+			</td>
+			<td>
+				<p>
+					<br />
+				</p>
+				<ul>
+					<li>
+						卷积通道剪裁 <a href="https://arxiv.org/abs/1608.08710" target="_blank">Pruning Filters for Efficient ConvNets</a> 
+					</li>
+					<li>
+						自动剪裁 <a href="https://arxiv.org/abs/1802.03494" target="_blank">AMC: AutoML for Model Compression and Acceleration on Mobile Devices</a> 
+					</li>
+				</ul>
+				<ul>
+					<li>
+						FPGM剪裁 <a href="https://arxiv.org/abs/1811.00250" target="_blank">Filter Pruning via Geometric Median for Deep Convolutional Neural Networks Acceleration</a> 
+					</li>
+					<li>
+						基于batch nrom scale的剪裁方法&nbsp;<span style="background-color:#FFFDFA;"><a href="https://openreview.net/forum?id=HJ94fqApW" target="_blank">Rethinking the Smaller-Norm-Less-Informative Assumption in Channel Pruning of Convolution Layers</a></span><span style="font-family:&quot;color:#2C3A4A;font-size:2rem;background-color:#FFFDFA;"><a href="https://openreview.net/forum?id=HJ94fqApW" target="_blank">&nbsp;</a><a href="https://openreview.net/forum?id=HJ94fqApW" target="_blank"><span id="__kindeditor_bookmark_end_147__"></span></a></span> 
+					</li>
+				</ul>
+			</td>
+			<td>
+				<br />
+			</td>
+		</tr>
+		<tr>
+			<td style="text-align:center;">
+				量化
+			</td>
+			<td>
+				<ul>
+					<li>
+						量化训练（QAT）<a href="https://arxiv.org/abs/1806.08342" target="_blank">Quantizing deep convolutional networks for efficient inference: A whitepaper</a> 
+					</li>
+					<li>
+						离线量化（Post Training）<a href="http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf" target="_blank">原理</a> 
+					</li>
+					<li>
+						Embedding量化&nbsp;
+					</li>
+					<li>
+						DSQ: <a href="https://arxiv.org/abs/1908.05033" target="_blank">Differentiable Soft Quantization: Bridging Full-Precision and Low-Bit Neural Networks</a> 
+					</li>
+					<li>
+						PACT:&nbsp; <a href="https://arxiv.org/abs/1805.06085" target="_blank">PACT: Parameterized Clipping Activation for Quantized Neural Networks</a> 
+					</li>
+				</ul>
+			</td>
+			<td>
+				<br />
+			</td>
+		</tr>
+		<tr>
+			<td style="text-align:center;">
+				蒸馏
+			</td>
+			<td>
+				<ul>
+					<li>
+						知识蒸馏 <a href="https://arxiv.org/abs/1503.02531" target="_blank">Distilling the Knowledge in a Neural Network</a> 
+					</li>
+					<li>
+						FSP蒸馏&nbsp;<a href="http://openaccess.thecvf.com/content_cvpr_2017/papers/Yim_A_Gift_From_CVPR_2017_paper.pdf" target="_blank">A Gift from Knowledge Distillation:
+Fast Optimization, Network Minimization and Transfer Learning</a> 
+					</li>
+				</ul>
+				<ul>
+					<li>
+						YOLO蒸馏&nbsp;<a href="http://openaccess.thecvf.com/content_ECCVW_2018/papers/11133/Mehta_Object_detection_at_200_Frames_Per_Second_ECCVW_2018_paper.pdf" target="_blank">Object detection at 200 Frames Per Second</a> 
+					</li>
+					<li>
+						DML蒸馏 <a href="https://arxiv.org/abs/1706.00384" target="_blank">Deep Mutual Learning</a> 
+					</li>
+				</ul>
+			</td>
+			<td>
+				<br />
+			</td>
+		</tr>
+		<tr>
+			<td style="text-align:center;">
+				模型结构搜索(NAS)
+			</td>
+			<td>
+				<ul>
+					<li>
+						Simulate Anneal NAS 原理
+					</li>
+					<li>
+						DARTS <a href="https://arxiv.org/abs/1806.09055" target="_blank">DARTS: Differentiable Architecture Search</a> 
+					</li>
+				</ul>
+				<ul>
+					<li>
+						PC-DARTS <a href="https://arxiv.org/abs/1907.05737" target="_blank">PC-DARTS: Partial Channel Connections for Memory-Efficient Architecture Search</a> 
+					</li>
+					<li>
+						OneShot&nbsp;
+					</li>
+				</ul>
+				<p>
+					<br />
+				</p>
+			</td>
+			<td>
+				<br />
+			</td>
+		</tr>
+	</tbody>
+</table>
+<br />
 
-- 定点量化
-  - 在线量化训练（training aware）
-  - 离线量化（post training）
-
-- 知识蒸馏
-  - 支持单进程知识蒸馏
-  - 支持多进程分布式知识蒸馏
-
-- 神经网络结构自动搜索（NAS）
-  - 支持基于进化算法的轻量神经网络结构自动搜索
-  - 支持One-Shot网络结构自动搜索
-  - 支持 FLOPS / 硬件延时约束
-  - 支持多平台模型延时评估
-  - 支持用户自定义搜索算法和搜索空间
 
 ## 安装
 
