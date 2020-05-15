@@ -248,7 +248,7 @@ def main():
         '--model',
         default='SlimFaceNet_B_x0_75',
         type=str,
-        help='SlimFaceNet_A_x0_60/SlimFaceNet_C_x0_75/SlimFaceNet_B_x0_75')
+        help='SlimFaceNet_B_x0_75/SlimFaceNet_C_x0_75/SlimFaceNet_A_x0_60')
     parser.add_argument(
         '--use_gpu', default=1, type=int, help='Use GPU or not, 0 is not used')
     parser.add_argument(

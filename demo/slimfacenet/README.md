@@ -29,7 +29,7 @@ sh slim_train.sh
 export CUDA_VISIBLE_DEVICES=0
 python -u train_eval.py \
     --action train \
-    --model=SlimFaceNet_A_x0_60
+    --model=SlimFaceNet_B_x0_75
 ```
 
 其中，SlimFaceNet_A_x0_60是`slimfacenet`搜索空间中的一个模型结构，通道数的缩放系数为0.6，

@@ -18,4 +18,4 @@ python -u train_eval.py \
     --train_data_dir=/PATH_TO_CASIA_Dataset \
     --test_data_dir=/PATH_TO_LFW \
     --action train \
-    --model=SlimFaceNet_A_x0_60
+    --model=SlimFaceNet_B_x0_75
