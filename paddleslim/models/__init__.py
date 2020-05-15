@@ -14,5 +14,6 @@
 
 from __future__ import absolute_import
 from .util import image_classification
+from .slimfacenet import SlimFaceNet_A_x0_60, SlimFaceNet_B_x0_75, SlimFaceNet_C_x0_75
 
 __all__ = ["image_classification"]
