@@ -362,7 +362,7 @@ def SlimFaceNet_B_x0_75(class_dim=None, scale=0.6, arch=None):
 
 def SlimFaceNet_C_x0_75(class_dim=None, scale=0.6, arch=None):
     scale = 0.75
-    arch = [1, 1, 2, 1, 0, 2, 1, 0, 1, 0, 1, 1, 2, 2, 3]
+    arch = [1, 3, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 5, 5, 5]
     return SlimFaceNet(class_dim=class_dim, scale=scale, arch=arch)
 
 
