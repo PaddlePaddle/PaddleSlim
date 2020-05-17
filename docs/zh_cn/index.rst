@@ -17,5 +17,6 @@
    FAQ/index
    model_zoo.md
    algo/algo.md
+   CHANGELOG.md
 
 .. mdinclude:: ./intro.md
