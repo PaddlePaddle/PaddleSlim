@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #!/bin/bash
-export CUDA_VISIBLE_DEVICES=7
+export CUDA_VISIBLE_DEVICES=0
 python train_eval.py --action quant \
     --train_data_dir=./CASIA/ \
     --test_data_dir=./lfw/ \
