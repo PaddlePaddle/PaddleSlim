@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #!/bin/bash
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=6
 python -u train_eval.py \
-    --train_data_dir=/PATH_TO_CASIA_Dataset \
-    --test_data_dir=/PATH_TO_LFW \
+    --train_data_dir=./CASIA/ \
+    --test_data_dir=./lfw/ \
     --action train \
     --model=SlimFaceNet_B_x0_75
