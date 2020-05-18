@@ -68,7 +68,7 @@ def compress(args):
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
+    val_reader = paddle.io.batch(val_reader, batch_size=args.batch_size)
 
     val_feeder = feeder = fluid.DataFeeder(
         [image, label], place, program=val_program)

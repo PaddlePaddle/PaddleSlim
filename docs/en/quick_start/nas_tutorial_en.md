@@ -1,11 +1,11 @@
-# Nerual Architecture Search for Image Classification 
+# Nerual Architecture Search for Image Classification
 
 This tutorial shows how to use [API](../api/nas_api.md) about SANAS in PaddleSlim. We start experiment based on MobileNetV2 as example. The tutorial contains follow section.
 
 1. necessary imports
 2. initial SANAS instance
 3. define function about building program
-4. define function about input data 
+4. define function about input data
 5. define function about training
 6. define funciton about evaluation
 7. start search
@@ -52,7 +52,7 @@ def build_program(archs):
         acc_top1 = fluid.layers.accuracy(input=softmax_out, label=label, k=1)
         acc_top5 = fluid.layers.accuracy(input=softmax_out, label=label, k=5)
         test_program = fluid.default_main_program().clone(for_test=True)
-            
+
         optimizer = fluid.optimizer.Adam(learning_rate=0.1)
         optimizer.minimize(avg_cost)
 
@@ -62,13 +62,13 @@ def build_program(archs):
     return exe, train_program, test_program, (data, label), avg_cost, acc_top1, acc_top5
 ```
 
-## 4. define function about input data 
-The dataset we used is cifar10, and `paddle.dataset.cifar` in Paddle including the download and pre-read about cifar. 
+## 4. define function about input data
+The dataset we used is cifar10, and `paddle.dataset.cifar` in Paddle including the download and pre-read about cifar.
 ```python
 def input_data(inputs):
-    train_reader = paddle.batch(paddle.reader.shuffle(paddle.dataset.cifar.train10(cycle=False), buf_size=1024),batch_size=256)
+    train_reader = paddle.io.batch(paddle.reader.shuffle(paddle.dataset.cifar.train10(cycle=False), buf_size=1024),batch_size=256)
     train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
-    eval_reader = paddle.batch(paddle.dataset.cifar.test10(cycle=False), batch_size=256)
+    eval_reader = paddle.io.batch(paddle.dataset.cifar.test10(cycle=False), batch_size=256)
     eval_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
     return train_reader, train_feeder, eval_reader, eval_feeder
 ```
@@ -76,7 +76,7 @@ def input_data(inputs):
 ## 5. define function about training
 Start training.
 ```python
-def start_train(program, data_reader, data_feeder): 
+def start_train(program, data_reader, data_feeder):
     outputs = [avg_cost.name, acc_top1.name, acc_top5.name]
     for data in data_reader():
         batch_reward = exe.run(program, feed=data_feeder.feed(data), fetch_list = outputs)
@@ -145,7 +145,7 @@ for step in range(3):
     current_flops = slim.analysis.flops(train_program)
     if current_flops > 321208544:
         continue
-    
+
     for epoch in range(7):
         start_train(train_program, train_reader, train_feeder)
 
