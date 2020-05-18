@@ -112,9 +112,9 @@ class TestQuantAwareCase2(unittest.TestCase):
         exe = fluid.Executor(place)
         exe.run(fluid.default_startup_program())
         feeder = fluid.DataFeeder([image, label], place, program=main_prog)
-        train_reader = paddle.io.batch(
+        train_reader = paddle.fluid.io.batch(
             paddle.dataset.mnist.train(), batch_size=64)
-        eval_reader = paddle.io.batch(
+        eval_reader = paddle.fluid.io.batch(
             paddle.dataset.mnist.test(), batch_size=64)
 
         def train(program):

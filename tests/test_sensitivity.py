@@ -44,7 +44,7 @@ class TestSensitivity(unittest.TestCase):
         exe = fluid.Executor(place)
         exe.run(startup_program)
 
-        val_reader = paddle.io.batch(
+        val_reader = paddle.fluid.io.batch(
             paddle.dataset.mnist.test(), batch_size=128)
 
         def eval_func(program, scope):

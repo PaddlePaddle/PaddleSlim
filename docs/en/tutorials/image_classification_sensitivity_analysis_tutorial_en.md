@@ -45,9 +45,9 @@ Show as below：
 
 ```python
 import paddle.dataset.mnist as reader
-train_reader = paddle.io.batch(
+train_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
-test_reader = paddle.io.batch(
+test_reader = paddle.fluid.io.batch(
         reader.test(), batch_size=128, drop_last=True)
 data_feeder = fluid.DataFeeder(inputs, place)
 ```

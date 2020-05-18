@@ -236,8 +236,8 @@ exe.run(startup_program)
 
 **注意：**本示例为了简化代码直接调用`paddle.dataset.cifar10`定义训练数据和预测数据，实际训练需要使用自定义cifar10文件中的reader。
 ```python
-train_reader = paddle.io.batch(paddle.reader.shuffle(paddle.dataset.cifar.train10(cycle=False), buf_size=1024), batch_size=BATCH_SIZE, drop_last=True)
-test_reader = paddle.io.batch(paddle.dataset.cifar.test10(cycle=False), batch_size=BATCH_SIZE, drop_last=False)
+train_reader = paddle.fluid.io.batch(paddle.reader.shuffle(paddle.dataset.cifar.train10(cycle=False), buf_size=1024), batch_size=BATCH_SIZE, drop_last=True)
+test_reader = paddle.fluid.io.batch(paddle.dataset.cifar.test10(cycle=False), batch_size=BATCH_SIZE, drop_last=False)
 train_loader.set_sample_list_generator(train_reader, places=place)
 test_loader.set_sample_list_generator(test_reader, places=place)
 ```

@@ -66,9 +66,9 @@ def build_program(archs):
 The dataset we used is cifar10, and `paddle.dataset.cifar` in Paddle including the download and pre-read about cifar.
 ```python
 def input_data(inputs):
-    train_reader = paddle.io.batch(paddle.reader.shuffle(paddle.dataset.cifar.train10(cycle=False), buf_size=1024),batch_size=256)
+    train_reader = paddle.fluid.io.batch(paddle.reader.shuffle(paddle.dataset.cifar.train10(cycle=False), buf_size=1024),batch_size=256)
     train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
-    eval_reader = paddle.io.batch(paddle.dataset.cifar.test10(cycle=False), batch_size=256)
+    eval_reader = paddle.fluid.io.batch(paddle.dataset.cifar.test10(cycle=False), batch_size=256)
     eval_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
     return train_reader, train_feeder, eval_reader, eval_feeder
 ```

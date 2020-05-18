@@ -137,22 +137,22 @@ def search_mobilenetv2_block(config, args, image_size):
         exe.run(startup_program)
 
         if args.data == 'cifar10':
-            train_reader = paddle.io.batch(
+            train_reader = paddle.fluid.io.batch(
                 paddle.reader.shuffle(
                     paddle.dataset.cifar.train10(cycle=False), buf_size=1024),
                 batch_size=args.batch_size,
                 drop_last=True)
 
-            test_reader = paddle.io.batch(
+            test_reader = paddle.fluid.io.batch(
                 paddle.dataset.cifar.test10(cycle=False),
                 batch_size=args.batch_size,
                 drop_last=False)
         elif args.data == 'imagenet':
-            train_reader = paddle.io.batch(
+            train_reader = paddle.fluid.io.batch(
                 imagenet_reader.train(),
                 batch_size=args.batch_size,
                 drop_last=True)
-            test_reader = paddle.io.batch(
+            test_reader = paddle.fluid.io.batch(
                 imagenet_reader.val(),
                 batch_size=args.batch_size,
                 drop_last=False)
