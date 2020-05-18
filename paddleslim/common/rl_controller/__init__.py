@@ -20,7 +20,7 @@ try:
     from .ddpg import *
 except ImportError as e:
     _logger.warn(
-        "If you want to use DDPG in RLNAS, please pip intall parl first. Now states: {}".
+        "If you want to use DDPG in RLNAS, please pip install parl first. Now states: {}".
         format(e))
 
 from .lstm import *

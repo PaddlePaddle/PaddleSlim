@@ -65,8 +65,10 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
             is_sync=False,
             server_addr=(args.server_address, args.port),
             controller_batch_size=1,
+            controller_decay_steps=1000,
+            controller_decay_rate=0.8,
             lstm_num_layers=1,
-            hidden_size=100,
+            hidden_size=10,
             temperature=1.0)
     else:
         ### start a client
@@ -78,6 +80,9 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
             lstm_num_layers=1,
             hidden_size=10,
             temperature=1.0,
+            controller_batch_size=1,
+            controller_decay_steps=1000,
+            controller_decay_rate=0.8,
             is_server=False)
 
     image_shape = [3, image_size, image_size]

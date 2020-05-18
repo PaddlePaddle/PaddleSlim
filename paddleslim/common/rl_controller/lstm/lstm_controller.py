@@ -63,6 +63,8 @@ class LSTM(RLBaseController):
         self.hidden_size = kwargs.get('hidden_size') or 100
         self.temperature = kwargs.get('temperature') or None
         self.controller_lr = kwargs.get('controller_lr') or 1e-4
+        self.decay_steps = kwargs.get('controller_decay_steps') or None
+        self.decay_rate = kwargs.get('controller_decay_rate') or None
         self.tanh_constant = kwargs.get('tanh_constant') or None
         self.decay = kwargs.get('decay') or 0.99
         self.weight_entropy = kwargs.get('weight_entropy') or None
@@ -198,11 +200,15 @@ class LSTM(RLBaseController):
             fluid.layers.assign(self.baseline - (1.0 - self.decay) *
                                 (self.baseline - self.rewards), self.baseline)
             self.loss = self.sample_log_probs * (self.rewards - self.baseline)
-            fluid.clip.set_gradient_clip(
-                clip=fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0))
-            lr = fluid.layers.exponential_decay(
-                self.controller_lr, decay_steps=1000, decay_rate=0.8)
-            optimizer = fluid.optimizer.Adam(learning_rate=lr)
+            clip = fluid.clip.GradientClipByNorm(clip_norm=5.0)
+            if self.decay_steps is not None:
+                lr = fluid.layers.exponential_decay(
+                    self.controller_lr,
+                    decay_steps=self.decay_steps,
+                    decay_rate=self.decay_rate)
+            else:
+                lr = self.controller_lr
+            optimizer = fluid.optimizer.Adam(learning_rate=lr, grad_clip=clip)
             optimizer.minimize(self.loss)
 
     def _create_input(self, is_test=True, actual_rewards=None):
