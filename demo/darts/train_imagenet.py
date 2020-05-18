@@ -68,7 +68,7 @@ add_arg('use_data_parallel', ast.literal_eval,  False, "The flag indicating whet
 
 def cross_entropy_label_smooth(preds, targets, epsilon):
     preds = fluid.layers.softmax(preds)
-    targets_one_hot = fluid.layers.one_hot(input=targets, depth=args.class_num)
+    targets_one_hot = fluid.one_hot(input=targets, depth=args.class_num)
     targets_smooth = fluid.layers.label_smooth(
         targets_one_hot, epsilon=epsilon, dtype="float32")
     loss = fluid.layers.cross_entropy(
