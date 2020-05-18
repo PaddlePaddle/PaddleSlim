@@ -8,9 +8,9 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-sys.path.append(sys.path[0] + "/../../../")
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
-sys.path.append(sys.path[0] + "/../../")
 import models
 from utility import add_arguments, print_arguments
 
