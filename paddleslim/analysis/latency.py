@@ -1,3 +1,5 @@
+"""Define latency evaluators that evaluate the performance of mode on devices.
+"""
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -18,11 +20,19 @@ __all__ = ["LatencyEvaluator", "TableLatencyEvaluator"]
 
 
 class LatencyEvaluator(object):
-    def __init__(self):
-        pass
+    """Base class of latency evaluator.
+    """
 
     def latency(self, graph):
-        pass
+        """Get latency of graph. It is an abstract method.
+
+        Args:
+            graph(GrapWrapper | Program): The graph to be evaluated.
+
+        Returns:
+            latency(float): The latency of given graph on current evaluator.
+        """
+        raise NotImplementedError('Abstract method.')
 
     def _get_ops_from_graph(self, graph, only_conv):
         assert isinstance(graph, GraphWrapper)
@@ -241,13 +251,14 @@ class LatencyEvaluator(object):
 
 
 class TableLatencyEvaluator(LatencyEvaluator):
+    """The evaluator used to get graph's latency on some devices and infer engines.
+
+    Args:
+      table_file(str): The path of file that records the devices latency of operators.
+      delimiter(str): The delimiter used in `table_file`.
+    """
+
     def __init__(self, table_file, delimiter=","):
-        """
-        The evaluator used to get graph's latency on some devices and infer engines.
-        Args:
-          - table_file(str): The path of file that records the devices latency of operators.
-          - delimiter(str): The delimiter used in `table_file`.
-        """
         self._table = self._load_table(table_file)
         self._delimiter = delimiter
 
@@ -267,11 +278,12 @@ class TableLatencyEvaluator(LatencyEvaluator):
         return self._table[op_str]
 
     def latency(self, graph, only_conv=True):
-        """
-        Get latency of target graph.
+        """Get latency of target graph.
+
         Args:
-            - graph(GrapWrapper | Program): The graph to be evaluated.
-            - only_conv(bool): only evaluated convolution layer if `only_conv` is true. Default: True.
+            graph(GrapWrapper | Program): The graph to be evaluated.
+            only_conv(bool): only evaluated convolution layer if `only_conv` is true. Default: True.
+
         Returns:
             latency(float): The latency of given graph on current evaluator.
         """

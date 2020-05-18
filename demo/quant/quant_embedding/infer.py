@@ -80,7 +80,12 @@ def infer_epoch(args, vocab_size, test_reader, use_cuda, i2w):
                     dirname=model_path,
                     main_program=copy_program)
                 if args.emb_quant:
-                    config = {'params_name': 'emb', 'quantize_type': 'abs_max'}
+                    config = {
+                        'quantize_op_types': 'lookup_table',
+                        'lookup_table': {
+                            'quantize_type': 'abs_max'
+                        },
+                    }
                     copy_program = quant_embedding(copy_program, place, config)
                     fluid.io.save_persistables(
                         exe,

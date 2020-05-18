@@ -19,6 +19,7 @@ __all__ = ['SearchSpaceBase']
 
 _logger = get_logger(__name__, level=logging.INFO)
 
+
 class SearchSpaceBase(object):
     """Controller for Neural Architecture Search.
     """
@@ -55,4 +56,8 @@ class SearchSpaceBase(object):
         Return:
             model arch 
         """
+        raise NotImplementedError('Abstract method.')
+
+    def super_net(self):
+        """This function is just used in one shot NAS strategy. Return a super graph."""
         raise NotImplementedError('Abstract method.')
