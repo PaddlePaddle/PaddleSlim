@@ -50,9 +50,10 @@ class TestQuantPostOnlyWeightCase1(unittest.TestCase):
         exe = fluid.Executor(place)
         exe.run(fluid.default_startup_program())
         feeder = fluid.DataFeeder([image, label], place, program=main_prog)
-        train_reader = paddle.batch(
+        train_reader = paddle.io.batch(
             paddle.dataset.mnist.train(), batch_size=64)
-        eval_reader = paddle.batch(paddle.dataset.mnist.test(), batch_size=64)
+        eval_reader = paddle.io.batch(
+            paddle.dataset.mnist.test(), batch_size=64)
 
         def train(program):
             iter = 0

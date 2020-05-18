@@ -159,7 +159,7 @@ if __name__ == "__main__":
         train_dataset = CASIA_Face(root=args.train_data_dir)
         nl, nr, flods, flags = parse_filelist(args.test_data_dir)
         test_dataset = LFW(nl, nr)
-        test_reader = paddle.batch(
+        test_reader = paddle.io.batch(
             test_dataset.reader,
             batch_size=args.test_batchsize,
             drop_last=False)

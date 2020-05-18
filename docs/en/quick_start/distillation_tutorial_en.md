@@ -100,7 +100,7 @@ The package `paddle.dataset.mnist` of Paddle define the downloading and reading 
 Define training data reader and test data reader as below：
 
 ```python
-train_reader = paddle.batch(
+train_reader = paddle.io.batch(
     paddle.dataset.mnist.train(), batch_size=128, drop_last=True)
 train_feeder = fluid.DataFeeder(['image', 'label'], fluid.CPUPlace(), student_program)
 ```
