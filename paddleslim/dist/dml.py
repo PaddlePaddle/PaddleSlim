@@ -38,8 +38,7 @@ class DML(fluid.dygraph.Layer):
         return [m.full_name() for m in self.model]
 
     def forward(self, input):
-        outputs = [m(input) for m in self.model]
-        return outputs
+        return [m(input) for m in self.model]
 
     def opt(self, optimizer):
         assert len(
@@ -63,22 +62,27 @@ class DML(fluid.dygraph.Layer):
         assert len(
             logits
         ) == self.model_num, "The number of logits must match the number of models"
+        if self.model_num == 1:
+            return []
         kl_losses = []
         for i in range(self.model_num):
-            cur_model_kl_loss = 0
-            for j in range(len(logits)):
+            cur_kl_loss = 0
+            for j in range(self.model_num):
                 if i != j:
                     x = F.log_softmax(logits[i], axis=1)
                     y = fluid.layers.softmax(logits[j], axis=1)
-                    cur_model_kl_loss += fluid.layers.kldiv_loss(
+                    cur_kl_loss += fluid.layers.kldiv_loss(
                         x, y, reduction='batchmean')
-            kl_losses.append(cur_model_kl_loss / (len(logits) - 1))
+            kl_losses.append(cur_kl_loss / (self.model_num - 1))
         return kl_losses
 
     def loss(self, logits, labels):
         gt_losses = self.ce_loss(logits, labels)
         kl_losses = self.kl_loss(logits)
-        return [a + b for a, b in zip(gt_losses, kl_losses)]
+        if self.model_num > 1:
+            return [a + b for a, b in zip(gt_losses, kl_losses)]
+        else:
+            return gt_losses
 
     def acc(self, logits, labels, k):
         accs = [

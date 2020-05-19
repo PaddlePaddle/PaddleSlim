@@ -36,7 +36,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
-add_arg('log_freq',          int,   20,              "Log frequency.")
+add_arg('log_freq',          int,   100,              "Log frequency.")
 add_arg('batch_size',        int,   256,             "Minibatch size.")
 add_arg('init_lr',           float, 0.1,             "The start learning rate.")
 add_arg('use_gpu',           bool,  True,            "Whether use GPU.")
@@ -72,7 +72,6 @@ def create_optimizer(models, args):
 def create_reader(place, args):
     train_reader = reader.train_valid(
         batch_size=args.batch_size, is_train=True, is_shuffle=True)
-
     valid_reader = reader.train_valid(
         batch_size=args.batch_size, is_train=False, is_shuffle=False)
     if args.use_parallel:
@@ -112,9 +111,9 @@ def train(train_loader, dml_model, dml_optimizer, args):
             costs[i].update(losses[i].numpy(), batch_size)
         model_names = dml_model.full_name()
         if step_id % args.log_freq == 0:
-            log_msg = "Train Step {} ".format(step_id)
+            log_msg = "Train Step {}".format(step_id)
             for model_id, (cost, acc) in enumerate(zip(costs, accs)):
-                log_msg += " {} loss: {:.6f} acc: {:.6f}".format(
+                log_msg += ", {} loss: {:.6f} acc: {:.6f}".format(
                     model_names[model_id], cost.avg[0], acc.avg[0])
             logger.info(log_msg)
     return costs, accs
@@ -140,9 +139,9 @@ def valid(valid_loader, dml_model, args):
             costs[i].update(losses[i].numpy(), batch_size)
         model_names = dml_model.full_name()
         if step_id % args.log_freq == 0:
-            log_msg = "Valid Step {} ".format(step_id)
+            log_msg = "Valid Step{} ".format(step_id)
             for model_id, (cost, acc) in enumerate(zip(costs, accs)):
-                log_msg += " {} loss: {:.6f} acc: {:.6f}".format(
+                log_msg += ", {} loss: {:.6f} acc: {:.6f}".format(
                     model_names[model_id], cost.avg[0], acc.avg[0])
             logger.info(log_msg)
     return costs, accs
@@ -177,9 +176,10 @@ def main(args):
         best_valid_acc = [0] * dml_model.model_num
         for epoch_id in range(args.epochs):
             current_step_lr = dml_optimizer.get_lr()
-            lr_msg = "Epoch {},".format(epoch_id)
+            lr_msg = "Epoch {}".format(epoch_id)
             for model_id, lr in enumerate(current_step_lr):
-                lr_msg += " model {} lr: {:.6f}".format(model_id, lr)
+                lr_msg += ", {} lr: {:.6f}".format(
+                    dml_model.full_name()[model_id], lr)
             logger.info(lr_msg)
             train_losses, train_accs = train(train_loader, dml_model,
                                              dml_optimizer, args)
@@ -193,7 +193,7 @@ def main(args):
                             os.path.join(args.model_save_dir,
                                          dml_model.full_name()[i],
                                          "best_model"))
-                summery_msg = "Epoch {} {}: valid_loss {:.6f} valid_acc {:.6f} best_valid_acc {:.6f}"
+                summery_msg = "Epoch {} {}: valid_loss {:.6f}, valid_acc {:.6f}, best_valid_acc {:.6f}"
                 logger.info(
                     summery_msg.format(epoch_id,
                                        dml_model.full_name()[i], valid_losses[
