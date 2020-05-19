@@ -57,7 +57,7 @@ class PrePostProcessLayer(Layer):
             elif cmd == "d":  # add dropout
                 if dropout_rate:
                     self.functors.append(lambda x: fluid.layers.dropout(
-                        x, dropout_prob=dropout_rate, is_test=False))
+                        x, dropout_prob=dropout_rate, is_test=True))
                     self.exec_order += "d"
 
     def forward(self, x, residual=None):
@@ -111,8 +111,8 @@ class PositionwiseFeedForwardLayer(Layer):
             hidden = fluid.layers.dropout(
                 hidden,
                 dropout_prob=self._dropout_rate,
-                upscale_in_train="upscale_in_train",
-                is_test=False)
+                #                upscale_in_train="upscale_in_train",
+                is_test=True)
         out = self._h2o(hidden)
         return out
 
@@ -218,13 +218,13 @@ class MultiHeadAttentionLayer(Layer):
         #alpha=self._d_model**-0.5)
         if attn_bias is not None:
             product += attn_bias
-        weights = fluid.layers.softmax(product)
+        weights = fluid.layers.softmax(product)  # 48
         if self._dropout_rate:
             weights_droped = fluid.layers.dropout(
                 weights,
                 dropout_prob=self._dropout_rate,
-                dropout_implementation="upscale_in_train",
-                is_test=False)
+                #                dropout_implementation="upscale_in_train",
+                is_test=True)
             out = fluid.layers.matmul(weights_droped, transpose_v)
         else:
             out = fluid.layers.matmul(weights, transpose_v)

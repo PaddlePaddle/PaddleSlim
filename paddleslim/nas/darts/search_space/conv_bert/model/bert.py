@@ -110,10 +110,9 @@ class BertModelLayer(Layer):
                 position_ids,
                 sentence_ids,
                 flops=[],
-                model_size=[]):
-        """
-        forward
-        """
+                model_size=[],
+                alphas=None,
+                k=None):
         src_emb = self._src_emb(src_ids)
         pos_emb = self._pos_emb(position_ids)
         sent_emb = self._sent_emb(sentence_ids)
@@ -122,9 +121,8 @@ class BertModelLayer(Layer):
         emb_out = emb_out + sent_emb
 
         emb_out = self._emb_fac(emb_out)
-
         enc_outputs, k_i = self._encoder(
-            emb_out, flops=flops, model_size=model_size)
+            emb_out, flops=flops, model_size=model_size, alphas=alphas, k=k)
 
         if not self.return_pooled_out:
             return enc_outputs

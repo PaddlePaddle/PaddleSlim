@@ -16,8 +16,9 @@ __all__ = ['AvgrageMeter']
 
 
 class AvgrageMeter(object):
-    def __init__(self):
+    def __init__(self, format="{}"):
         self.reset()
+        self._format = format
 
     def reset(self):
         self.avg = 0
@@ -28,3 +29,6 @@ class AvgrageMeter(object):
         self.sum += val * n
         self.cnt += n
         self.avg = self.sum / self.cnt
+
+    def __repr__(self):
+        return self._format.format(self.avg)

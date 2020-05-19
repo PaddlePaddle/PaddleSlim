@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+from collections import Iterable
 
 import paddle
 import paddle.fluid as fluid
@@ -25,13 +26,13 @@ from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer, Conv2D, Ba
 from paddle.fluid.initializer import NormalInitializer
 
 GConv_PRIMITIVES = [
-    'std_gconv_3', 'std_gconv_5', 'std_gconv_7', 'dil_gconv_3', 'dil_gconv_5',
-    'dil_gconv_7', 'avg_pool_3', 'max_pool_3', 'none', 'skip_connect'
+    'none', 'std_gconv_3', 'std_gconv_5', 'std_gconv_7', 'dil_gconv_3',
+    'dil_gconv_5', 'dil_gconv_7', 'avg_pool_3', 'max_pool_3', 'skip_connect'
 ]
 
 ConvBN_PRIMITIVES = [
-    'std_conv_bn_3', 'std_conv_bn_5', 'std_conv_bn_7', 'dil_conv_bn_3',
-    'dil_conv_bn_5', 'dil_conv_bn_7', 'avg_pool_3', 'max_pool_3', 'none',
+    'none', 'std_conv_bn_3', 'std_conv_bn_5', 'std_conv_bn_7', 'dil_conv_bn_3',
+    'dil_conv_bn_5', 'dil_conv_bn_7', 'avg_pool_3', 'max_pool_3',
     'skip_connect'
 ]
 
@@ -117,7 +118,11 @@ class MixedOp(fluid.dygraph.Layer):
 
     def forward(self, x, weights, flops=[], model_size=[]):
         for i in range(len(self._ops)):
-            if weights[i].numpy() != 0:
+            if isinstance(weights, Iterable):
+                weights_i = weights[i]
+            else:
+                weights_i = weights[i].numpy()
+            if weights_i != 0:
                 flops.append(FLOPs.values()[i] * weights[i])
                 model_size.append(ModelSize.values()[i] * weights[i])
                 return self._ops[i](x) * weights[i]
@@ -166,6 +171,7 @@ class ConvBNRelu(fluid.dygraph.Layer):
                  use_cudnn=True,
                  name=None):
         super(ConvBNRelu, self).__init__()
+        self._name = name
         conv_std = (2.0 /
                     (filter_size[0] * filter_size[1] * out_c * in_c))**0.5
         conv_param = fluid.ParamAttr(
@@ -187,7 +193,7 @@ class ConvBNRelu(fluid.dygraph.Layer):
     def forward(self, inputs):
         conv = self.conv(inputs)
         bn = self.bn(conv)
-        return bn
+        return conv
 
 
 class GateConv(fluid.dygraph.Layer):
@@ -261,24 +267,30 @@ class Cell(fluid.dygraph.Layer):
         states = [s0, s1]
         offset = 0
         for i in range(self._steps):
-            s = fluid.layers.sums([
-                self._ops[offset + j](h,
-                                      weights[offset + j],
-                                      flops=flops,
-                                      model_size=model_size)
-                for j, h in enumerate(states)
-            ])
+            edges = []
+            for j, h in enumerate(states):
+                edge = self._ops[offset + j](h,
+                                             weights[offset + j],
+                                             flops=flops,
+                                             model_size=model_size)
+                edges.append(edge)
+            s = edges[0]
+            for n in range(1, len(edges)):
+                s = s + edges[n]
+#            s = fluid.layers.sums(edges)
             offset += len(states)
             states.append(s)
-        out = fluid.layers.sum(states[-self._steps:])
+
+        states = states[-self._steps:]
+        out = states[0]
+        for n in range(1, len(states)):
+            out = out + states[n]
+
+#        out = fluid.layers.sums(states[-self._steps:])
         return out
 
 
 class EncoderLayer(Layer):
-    """
-    encoder
-    """
-
     def __init__(self,
                  n_layer,
                  hidden_size=768,
@@ -342,15 +354,17 @@ class EncoderLayer(Layer):
             default_initializer=NormalInitializer(
                 loc=0.0, scale=1e-3))
 
-    def forward(self, enc_input, flops=[], model_size=[]):
+    def forward(self, enc_input, flops=[], model_size=[], alphas=None, k=None):
         tmp = fluid.layers.reshape(
             enc_input, [-1, 1, enc_input.shape[1],
                         self._hidden_size])  #(bs, 1, seq_len, hidden_size)
 
         tmp = self.conv0(tmp)  # (bs, hidden_size, seq_len, 1)
 
-        alphas = gumbel_softmax(self.alphas)
-        k = fluid.layers.reshape(gumbel_softmax(self.k), [-1])
+        if alphas is None:
+            alphas = gumbel_softmax(self.alphas)
+        if k is None:
+            k = fluid.layers.reshape(gumbel_softmax(self.k), [-1])
 
         outputs = []
         s0 = s1 = tmp
@@ -364,7 +378,11 @@ class EncoderLayer(Layer):
                 enc_output, [-1, enc_output.shape[1],
                              self._hidden_size])  # (bs, seq_len, hidden_size)
             outputs.append(enc_output)
-            if self._search_layer and k[i].numpy() != 0:
+            if isinstance(k, Iterable):
+                k_i = k[i]
+            else:
+                k_i = k[i].numpy()
+            if k_i != 0:
                 outputs[-1] = outputs[-1] * k[i]
                 return outputs, k[i]
         return outputs, 1.0

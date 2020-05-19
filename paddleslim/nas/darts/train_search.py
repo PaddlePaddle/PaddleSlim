@@ -18,10 +18,12 @@ from __future__ import print_function
 
 __all__ = ['DARTSearch']
 
+import math
 import logging
 from itertools import izip
 import numpy as np
 import paddle.fluid as fluid
+from paddle.fluid.framework import Variable
 from paddle.fluid.dygraph.base import to_variable
 from ...common import AvgrageMeter, get_logger
 from .architect import Architect
@@ -41,6 +43,7 @@ class DARTSearch(object):
                  model,
                  train_reader,
                  valid_reader,
+                 test_reader=None,
                  learning_rate=0.025,
                  batchsize=64,
                  num_imgs=50000,
@@ -54,6 +57,7 @@ class DARTSearch(object):
         self.model = model
         self.train_reader = train_reader
         self.valid_reader = valid_reader
+        self.test_reader = test_reader
         self.learning_rate = learning_rate
         self.batchsize = batchsize
         self.num_imgs = num_imgs
@@ -82,10 +86,13 @@ class DARTSearch(object):
         step_id = 0
         for train_data, valid_data in izip(train_loader(), valid_loader()):
             if epoch >= self.epochs_no_archopt:
-                architect.step(train_data, valid_data)
+                alphas_grad = architect.step(train_data, valid_data)
 
             loss, ce_loss, kd_loss, e_loss = self.model.loss(train_data)
-
+            if math.isnan(e_loss.numpy()):
+                print("alphas_grad: {}".format(alphas_grad))
+                print("alphas: {}".format(self.model.arch_parameters()[0]
+                                          .numpy()))
             if self.use_data_parallel:
                 loss = self.model.scale_loss(loss)
                 loss.backward()
@@ -93,67 +100,55 @@ class DARTSearch(object):
             else:
                 loss.backward()
 
-            grad_clip = fluid.dygraph_grad_clip.GradClipByGlobalNorm(5)
-            optimizer.minimize(loss, grad_clip)
+#            grad_clip = fluid.dygraph_grad_clip.GradClipByGlobalNorm(5)
+#            optimizer.minimize(loss, grad_clip)
+            optimizer.minimize(loss)
+
             self.model.clear_gradients()
 
             batch_size = train_data[0].shape[0]
             objs.update(loss.numpy(), batch_size)
+
+            e_loss = e_loss.numpy() if isinstance(e_loss, Variable) else e_loss
             ce_losses.update(ce_loss.numpy(), batch_size)
             kd_losses.update(kd_loss.numpy(), batch_size)
-            e_losses.update(e_loss.numpy(), batch_size)
+            e_losses.update(e_loss, batch_size)
 
             if step_id % self.log_freq == 0:
-                #logger.info("Train Epoch {}, Step {}, loss {:.6f}; ce: {:.6f}; kd: {:.6f}; e: {:.6f}".format(
-                #    epoch, step_id, objs.avg[0], ce_losses.avg[0], kd_losses.avg[0], e_losses.avg[0]))
                 logger.info(
                     "Train Epoch {}, Step {}, loss {}; ce: {}; kd: {}; e: {}".
                     format(epoch, step_id,
                            loss.numpy(),
-                           ce_loss.numpy(), kd_loss.numpy(), e_loss.numpy()))
+                           ce_loss.numpy(), kd_loss.numpy(), e_loss))
             step_id += 1
         return objs.avg[0]
 
     def valid_one_epoch(self, valid_loader, epoch):
-        objs = AvgrageMeter()
-        top1 = AvgrageMeter()
-        top5 = AvgrageMeter()
         self.model.eval()
-
+        meters = {}
         for step_id, valid_data in enumerate(valid_loader):
-            image = to_variable(image)
-            label = to_variable(label)
-            n = image.shape[0]
-            logits = self.model(image)
-            prec1 = fluid.layers.accuracy(input=logits, label=label, k=1)
-            prec5 = fluid.layers.accuracy(input=logits, label=label, k=5)
-            loss = fluid.layers.reduce_mean(
-                fluid.layers.softmax_with_cross_entropy(logits, label))
-            objs.update(loss.numpy(), n)
-            top1.update(prec1.numpy(), n)
-            top5.update(prec5.numpy(), n)
+            ret = self.model.valid(valid_data)
+            for key, value in ret.items():
+                if key not in meters:
+                    meters[key] = AvgrageMeter()
+                meters[key].update(value, 1)
 
             if step_id % self.log_freq == 0:
-                logger.info(
-                    "Valid Epoch {}, Step {}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
-                    format(epoch, step_id, objs.avg[0], top1.avg[0], top5.avg[
-                        0]))
-        return top1.avg[0]
+                logger.info("Valid Epoch {}, Step {}, {}".format(
+                    epoch, step_id, meters))
 
     def train(self):
         if self.use_data_parallel:
             strategy = fluid.dygraph.parallel.prepare_context()
-        model_parameters = [
-            p for p in self.model.parameters()
-            if p.name not in [a.name for a in self.model.arch_parameters()]
-        ]
-        logger.info("param size = {:.6f}MB".format(
+        model_parameters = self.model.model_parameters()
+        logger.info("parameter size in super net: {:.6f}M".format(
             count_parameters_in_MB(model_parameters)))
         step_per_epoch = int(self.num_imgs * 0.5 / self.batchsize)
         if self.unrolled:
             step_per_epoch *= 2
         learning_rate = fluid.dygraph.CosineDecay(
             self.learning_rate, step_per_epoch, self.num_epochs)
+
         optimizer = fluid.optimizer.MomentumOptimizer(
             learning_rate,
             0.9,
@@ -167,6 +162,9 @@ class DARTSearch(object):
                 self.train_reader)
             self.valid_reader = fluid.contrib.reader.distributed_batch_reader(
                 self.valid_reader)
+            if self.test_reader is not None:
+                self.test_reader = fluid.contrib.reader.distributed_batch_reader(
+                    self.test_reader)
 
         train_loader = fluid.io.DataLoader.from_generator(
             capacity=64,
@@ -181,6 +179,17 @@ class DARTSearch(object):
 
         train_loader.set_batch_generator(self.train_reader, places=self.place)
         valid_loader.set_batch_generator(self.valid_reader, places=self.place)
+
+        if self.test_reader is not None:
+            test_loader = fluid.io.DataLoader.from_generator(
+                capacity=64,
+                use_double_buffer=True,
+                iterable=True,
+                return_list=True)
+            test_loader.set_batch_generator(
+                self.test_reader, places=self.place)
+        else:
+            test_loader = valid_loader
 
         architect = Architect(self.model, learning_rate,
                               self.arch_learning_rate, self.place,
@@ -199,8 +208,8 @@ class DARTSearch(object):
             self.train_one_epoch(train_loader, valid_loader, architect,
                                  optimizer, epoch)
 
-            if epoch == self.num_epochs - 1:
-                #                valid_top1 = self.valid_one_epoch(valid_loader, epoch)
-                logger.info("Epoch {}, valid_acc {:.6f}".format(epoch, 1))
-            if save_parameters:
-                fluid.save_dygraph(self.model.state_dict(), "./weights")
+
+#            if epoch == self.num_epochs - 1:
+#                self.valid_one_epoch(test_loader, epoch)
+#            if save_parameters:
+#                fluid.save_dygraph(self.model.state_dict(), "./weights")

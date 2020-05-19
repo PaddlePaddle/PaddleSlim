@@ -50,7 +50,9 @@ class AdaBERTClassifier(Layer):
                  beta=4,
                  conv_type="conv_bn",
                  search_layer=True,
-                 teacher_model=None):
+                 teacher_model=None,
+                 alphas=None,
+                 k=None):
         super(AdaBERTClassifier, self).__init__()
         self._n_layer = n_layer
         self._num_labels = num_labels
@@ -60,6 +62,8 @@ class AdaBERTClassifier(Layer):
         self._beta = beta
         self._conv_type = conv_type
         self._search_layer = search_layer
+        self._alphas = alphas
+        self._k = k
         print(
             "----------------------load teacher model and test----------------------------------------"
         )
@@ -86,20 +90,36 @@ class AdaBERTClassifier(Layer):
                 bias_attr=fluid.ParamAttr(
                     name="s_cls_out_%d_b" % i,
                     initializer=fluid.initializer.Constant(0.)))
-            fc = self.add_sublayer("cls_fc_%d" % i, fc)
+            fc = self.add_sublayer("s_cls_fc_%d" % i, fc)
             self.cls_fc.append(fc)
 
-    def forward(self, data_ids):
+    def forward(self, data_ids, alphas=None, k=None):
         src_ids = data_ids[0]
         position_ids = data_ids[1]
         sentence_ids = data_ids[2]
-        return self.student(src_ids, position_ids, sentence_ids)
+        return self.student(
+            src_ids,
+            position_ids,
+            sentence_ids,
+            alphas=self._alphas,
+            k=self._k)
 
     def arch_parameters(self):
         return self.student.arch_parameters()
 
+    def model_parameters(self):
+
+        model_parameters = [
+            p for p in self.student.parameters()
+            if p.name not in [a.name for a in self.arch_parameters()]
+        ]
+        return model_parameters
+
     def genotype(self):
-        return self.arch_parameters()
+        alphas = self.arch_parameters()[0].numpy()
+        alphas = [np.argmax(edge) for edge in alphas]
+        k = np.argmax(self.arch_parameters()[1].numpy())
+        return "layers: {}; edges: {} ".format(k, alphas)
 
     def new(self):
         model_new = AdaBERTClassifier(
@@ -107,6 +127,43 @@ class AdaBERTClassifier(Layer):
             teacher_model="/work/PaddleSlim/demo/bert_1/checkpoints/steps_23000"
         )
         return model_new
+
+    def valid(self, data_ids):
+        src_ids = data_ids[0]
+        position_ids = data_ids[1]
+        sentence_ids = data_ids[2]
+        input_mask = data_ids[3]
+        labels = data_ids[4]
+        flops = []
+        model_size = []
+        alphas = self.arch_parameters()[0].numpy(
+        ) if self._alphas is None else self._alphas
+        k = self.arch_parameters()[1].numpy() if self._k is None else self._k
+
+        print(alphas.shape)
+        print(k.shape)
+
+        enc_outputs, next_sent_feats, k_i = self.student(
+            src_ids,
+            position_ids,
+            sentence_ids,
+            flops=flops,
+            model_size=model_size,
+            alphas=alphas,
+            k=k)
+
+        logits = self.cls_fc[-1](next_sent_feats[-1])
+        probs = fluid.layers.softmax(logits)
+        accuracy = fluid.layers.accuracy(input=probs, label=labels)
+
+        model_size = np.sum(model_size)
+        flops = np.sum(flops)
+        ret = {
+            "accuracy": accuracy.numpy(),
+            "model_size(MB)": model_size / 1e6,
+            "FLOPs(M)": flops / 1e6
+        }
+        return ret
 
     def loss(self, data_ids):
         T = 1.0
@@ -117,16 +174,19 @@ class AdaBERTClassifier(Layer):
         labels = data_ids[4]
         flops = []
         model_size = []
+        self.teacher.eval()
+        total_loss, t_logits, t_losses, accuracys, num_seqs = self.teacher(
+            data_ids)
+        self.teacher.train()
+
         enc_outputs, next_sent_feats, k_i = self.student(
             src_ids,
             position_ids,
             sentence_ids,
             flops=flops,
-            model_size=model_size)
-
-        self.teacher.eval()
-        total_loss, t_logits, t_losses, accuracys, num_seqs = self.teacher(
-            data_ids)
+            model_size=model_size,
+            alphas=self._alphas,
+            k=self._k)
 
         # define kd loss
         kd_losses = []
@@ -140,21 +200,16 @@ class AdaBERTClassifier(Layer):
         kd_weights = np.exp(kd_weights - np.max(kd_weights))
 
         kd_weights = kd_weights / kd_weights.sum(axis=0)
-
+        s_probs = None
         for i in range(len(next_sent_feats)):
             j = int(np.ceil(i * (float(len(t_logits)) / len(next_sent_feats))))
             t_logit = t_logits[j]
             s_sent_feat = next_sent_feats[i]
             fc = self.cls_fc[i]
-            s_sent_feat = fluid.layers.dropout(
-                x=s_sent_feat,
-                dropout_prob=0.1,
-                dropout_implementation="upscale_in_train")
             s_logits = fc(s_sent_feat)
-
+            t_logit.stop_gradient = True
             t_probs = fluid.layers.softmax(t_logit)
             s_probs = fluid.layers.softmax(s_logits)
-            t_probs.stop_gradient = True
             kd_loss = t_probs * fluid.layers.log(s_probs / T)
             kd_loss = fluid.layers.reduce_sum(kd_loss, dim=1)
             kd_loss = kd_loss * kd_weights[i]
@@ -167,17 +222,28 @@ class AdaBERTClassifier(Layer):
         ce_loss = fluid.layers.cross_entropy(s_probs, labels)
         ce_loss = fluid.layers.reduce_mean(ce_loss) * k_i
 
+        len_model_size = len(model_size)
         # define e loss
-        model_size = fluid.layers.sum(model_size)
-        #        print("model_size: {}".format(model_size.numpy()/1e6))
+        if self._alphas is not None:
+            flops = np.sum(flops)
+            model_size = np.sum(model_size)
+        else:
+            flops = fluid.layers.sum(flops)
+            model_size = fluid.layers.sum(model_size)
         model_size = model_size / self.student.max_model_size()
-        flops = fluid.layers.sum(flops) / self.student.max_flops()
-        e_loss = (len(next_sent_feats) * k_i / self._n_layer) * (
-            flops + model_size)
+        flops = flops / self.student.max_flops()
+        e_loss = (flops + model_size) * (len(next_sent_feats) * k_i /
+                                         self._n_layer)
+        print(
+            "len(next_sent_feats): {}; k_i: {}; flops: {}; model_size: {}; len: {}".
+            format(
+                len(next_sent_feats), k_i,
+                flops.numpy(), model_size.numpy(), len_model_size))
         # define total loss
         loss = (1 - self._gamma
                 ) * ce_loss - self._gamma * kd_loss + self._beta * e_loss
-        #        print("ce_loss: {}; kd_loss: {}; e_loss: {}".format((
-        #            1 - gamma) * ce_loss.numpy(), -gamma * kd_loss.numpy(), beta *
-        #                                                            e_loss.numpy()))
         return loss, ce_loss, kd_loss, e_loss
+
+
+#        loss = ce_loss + self._beta * e_loss 
+#        return loss, ce_loss, ce_loss, e_loss

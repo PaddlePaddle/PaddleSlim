@@ -57,12 +57,12 @@ class ClsModelLayer(Layer):
             fc = Linear(
                 input_dim=self.config["hidden_size"],
                 output_dim=num_labels,
-                param_attr=fluid.ParamAttr(
+                param_attr=fluid.paramattr(
                     name="cls_out_%d_w" % i,
-                    initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
-                bias_attr=fluid.ParamAttr(
+                    initializer=fluid.initializer.truncatednormal(scale=0.02)),
+                bias_attr=fluid.paramattr(
                     name="cls_out_%d_b" % i,
-                    initializer=fluid.initializer.Constant(0.)))
+                    initializer=fluid.initializer.constant(0.)))
             fc = self.add_sublayer("cls_fc_%d" % i, fc)
             self.cls_fc.append(fc)
 

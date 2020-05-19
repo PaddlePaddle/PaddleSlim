@@ -56,7 +56,10 @@ class Architect(object):
         else:
             loss = self._backward_step(valid_data)
             self.optimizer.minimize(loss)
+
+#        print("alphas gradient: {}".format(self.model.arch_parameters()[0].gradient()))
         self.optimizer.clear_gradients()
+        return self.model.arch_parameters()[0].gradient()
 
     def _backward_step(self, valid_data):
         loss = self.model.loss(valid_data)
