@@ -79,7 +79,7 @@ if __name__ == '__main__':
         dataset = CASIA_Face(root=data_dir)
         print(len(dataset))
         print(dataset.class_nums)
-        trainloader = paddle.batch(
+        trainloader = paddle.fluid.io.batch(
             dataset.reader, batch_size=1, drop_last=False)
         for i in range(10):
             for data in trainloader():

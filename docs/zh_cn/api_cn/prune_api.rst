@@ -270,7 +270,7 @@ sensitivity
    exe = fluid.Executor(place)
    exe.run(startup_program)
    
-   val_reader = paddle.batch(reader.test(), batch_size=128)
+   val_reader = paddle.fluid.io.batch(reader.test(), batch_size=128)
    val_feeder = feeder = fluid.DataFeeder(
            [image, label], place, program=main_program)
    

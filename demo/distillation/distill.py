@@ -133,9 +133,9 @@ def compress(args):
     place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
     exe = fluid.Executor(place)
 
-    train_reader = paddle.batch(
+    train_reader = paddle.fluid.io.batch(
         train_reader, batch_size=args.batch_size, drop_last=True)
-    val_reader = paddle.batch(
+    val_reader = paddle.fluid.io.batch(
         val_reader, batch_size=args.batch_size, drop_last=True)
     val_program = student_program.clone(for_test=True)
 
