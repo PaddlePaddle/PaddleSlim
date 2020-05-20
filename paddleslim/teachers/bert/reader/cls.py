@@ -151,7 +151,7 @@ class DataProcessor(object):
         elif phase == 'search_valid':
             examples = self.get_train_examples(self.data_dir)
             self.num_examples['search_valid'] = len(examples) / 2
-            examples = examples[self.num_examples['search_train']:]
+            examples = examples[self.num_examples['search_valid']:]
         else:
             raise ValueError(
                 "Unknown phase, which should be in ['train', 'dev', 'test'].")
