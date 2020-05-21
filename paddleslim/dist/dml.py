@@ -55,7 +55,8 @@ class DML(fluid.dygraph.Layer):
         for i in range(self.model_num):
             ce_losses.append(
                 fluid.layers.mean(
-                    fluid.layers.cross_entropy(logits[i], labels)))
+                    fluid.layers.softmax_with_cross_entropy(logits[i],
+                                                            labels)))
         return ce_losses
 
     def kl_loss(self, logits):
