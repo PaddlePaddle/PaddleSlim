@@ -123,6 +123,8 @@ slim.quant.quant_post(
 ```python
 quant_post_prog, feed_target_names, fetch_targets = fluid.io.load_inference_model(
         dirname='./quant_post_model',
+        model_filename='__model__',
+        params_filename='__params__',
         executor=exe)
 test(quant_post_prog, fetch_targets)
 ```
