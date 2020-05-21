@@ -23,8 +23,8 @@ python -m paddle.distributed.launch --selected_gpus=0,1,2,3 --log_dir ./mylog dm
 
 如果想进一步提升实验结果可以尝试[更多优化tricks](https://arxiv.org/abs/1812.01187), 或进一步增加一次DML训练的模型数量。
 
-| Dataset | Net1 | Net2 |  Independent | DML |
-| ------ | ------ | ------ | ------ | ------ |
-| CIFAR100 | MobileNet | MobileNet | 73.65 | 76.32 |
-| CIFAR100 | ResNet50 | ResNet50 | 76.52 | 76.86 |
-| CIFAR100 | MobileNet | ResNet50 | 73.65/76.52 | 74.16/76.85 |
+| 数据集 | 网络模型 |  单独训练准确率 | 深度互学习准确率 |
+| ------ | ------ | ------ | ------ |
+| CIFAR100 | MobileNet X 2 | 73.65% | 76.34% (+2.69%) |
+| CIFAR100 | MobileNet X 4 | 73.65% | 76.56% (+2.91%) |
+| CIFAR100 | MobileNet + ResNet50 | 73.65%/76.52% | 76.00%/77.80% (+2.35%/+1.28%) |
