@@ -62,7 +62,7 @@ top1_acc/top5_acc= [0.70913923 0.89548034]
 使用以下命令测试离线量化后的模型的精度：
 
 ```
-python eval.py --model_path ./quant_model_train/MobileNet
+python eval.py --model_path ./quant_model_train/MobileNet --model_name __model__ --params_name __params__
 ```
 
 精度输出为
