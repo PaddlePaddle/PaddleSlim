@@ -336,6 +336,8 @@ def main():
             sample_generator=quant_val_reader_batch(),
             model_filename=None,  #'model',
             params_filename=None,  #'params',
+            save_model_filename=None,  #'model',
+            save_params_filename=None,  #'params',
             batch_size=100,
             batch_nums=10)
     elif args.action == 'test':

@@ -1,7 +1,7 @@
 # slimfacenet使用示例
 
 本示例将演示如何训练`slimfacenet`及评测`slimfacenet`量化模型。
-
+本示例依赖：Paddle 1.8 PaddleSlim 1.1.1
 当前示例支持以下人脸识别模型：
 
 - `SlimFaceNet_A_x0_60`
