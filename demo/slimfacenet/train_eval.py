@@ -233,9 +233,7 @@ def quant_val_reader_batch():
     test_dataset = LFW(nl, nr)
     test_reader = paddle.batch(
         test_dataset.reader, batch_size=1, drop_last=False)
-    shuffle_index = args.seed if args.seed else np.random.randint(1000)
-    print('shuffle_index: {}'.format(shuffle_index))
-    shuffle_reader = fluid.io.shuffle(test_reader, shuffle_index)
+    shuffle_reader = fluid.io.shuffle(test_reader, 3)
 
     def _reader():
         while True:
@@ -289,7 +287,6 @@ def main():
         '--start_epoch', default=0, type=int, help='start_epoch')
     parser.add_argument(
         '--total_epoch', default=80, type=int, help='total_epoch')
-    parser.add_argument('--seed', default=None, type=int, help='shuffle seed')
     parser.add_argument(
         '--save_frequency', default=1, type=int, help='save_frequency')
     parser.add_argument(
@@ -336,8 +333,10 @@ def main():
             sample_generator=quant_val_reader_batch(),
             model_filename=None,  #'model',
             params_filename=None,  #'params',
-            batch_size=100,
-            batch_nums=10)
+            save_model_filename=None,  #'model',
+            save_params_filename=None,  #'params',
+            batch_size=np.random.randint(80, 160),
+            batch_nums=np.random.randint(4, 10))
     elif args.action == 'test':
         [inference_program, feed_target_names,
          fetch_targets] = fluid.io.load_inference_model(
