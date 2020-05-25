@@ -16,5 +16,4 @@
 export CUDA_VISIBLE_DEVICES=0
 python train_eval.py --action quant \
     --train_data_dir=./CASIA/ \
-    --test_data_dir=./lfw/ \
-    --seed=1
+    --test_data_dir=./lfw/ 
