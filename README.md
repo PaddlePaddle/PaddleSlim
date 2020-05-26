@@ -22,13 +22,13 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 	<tbody>
 		<tr>
 			<td style="text-align:center;">
-				<span style="font-size:18px;">功能模块</span> 
+				<span style="font-size:18px;">功能模块</span>
 			</td>
 			<td style="text-align:center;">
-				<span style="font-size:18px;">算法</span> 
+				<span style="font-size:18px;">算法</span>
 			</td>
 			<td style="text-align:center;">
-				<span style="font-size:18px;">教程</span><span style="font-size:18px;">与文档</span> 
+				<span style="font-size:18px;">教程</span><span style="font-size:18px;">与文档</span>
 			</td>
 		</tr>
 		<tr>
@@ -51,7 +51,7 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 					</li>
 					<li>
 						<span style="background-color:#FFFDFA;">Opt Slim Pruner:&nbsp;<a href="https://arxiv.org/pdf/1708.06519.pdf" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">Ye Y , You G , Fwu J K , et al. Channel Pruning via Optimal Thresholding[J]. 2020.</span></a><br />
-</span> 
+</span>
 					</li>
 				</ul>
 			</td>
@@ -88,7 +88,7 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 						Quantization Aware Training:&nbsp;<a href="https://arxiv.org/abs/1806.08342" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">Krishnamoorthi R . Quantizing deep convolutional networks for efficient inference: A whitepaper[J]. 2018.</span></a>
 					</li>
 					<li>
-						Post Training&nbsp;<span>Quantization&nbsp;</span><a href="http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf" target="_blank">原理</a> 
+						Post Training&nbsp;<span>Quantization&nbsp;</span><a href="http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf" target="_blank">原理</a>
 					</li>
 					<li>
 						Embedding&nbsp;<span>Quantization:&nbsp;<a href="https://arxiv.org/pdf/1603.01025.pdf" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">Miyashita D , Lee E H , Murmann B . Convolutional Neural Networks using Logarithmic Data Representation[J]. 2016.</span></a></span>
@@ -201,6 +201,29 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 ```bash
 pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
+### 量化和Paddle版本的对应关系
+
+如果在ARM和GPU上预测，每个版本都可以，如果在CPU上预测，请选择Paddle 2.0对应的PaddleSlim 1.1.0版本
+
+- Paddle 1.7 系列版本，需要安装PaddleSlim 1.0.1版本
+
+```bash
+pip install paddleslim==1.0.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+- Paddle 1.8 系列版本，需要安装PaddleSlim 1.1.1版本
+
+```bash
+pip install paddleslim==1.1.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+- Paddle 2.0 系列版本，需要安装PaddleSlim 1.1.0版本
+
+```bash
+pip install paddleslim==1.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+
 
 ## 使用
 
