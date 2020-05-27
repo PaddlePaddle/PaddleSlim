@@ -169,7 +169,7 @@ def build_program(program, startup, args, is_train=True):
                 image = fluid.data(
                     name='image', shape=[-1, 3, 112, 96], dtype='float32')
                 label = fluid.data(name='label', shape=[-1, 1], dtype='int64')
-                train_reader = paddle.batch(
+                train_reader = fluid.io.batch(
                     train_dataset.reader,
                     batch_size=args.train_batchsize // num_trainers,
                     drop_last=False)
@@ -190,7 +190,7 @@ def build_program(program, startup, args, is_train=True):
             else:
                 nl, nr, flods, flags = parse_filelist(args.test_data_dir)
                 test_dataset = LFW(nl, nr)
-                test_reader = paddle.batch(
+                test_reader = fluid.io.batch(
                     test_dataset.reader,
                     batch_size=args.test_batchsize,
                     drop_last=False)
@@ -234,7 +234,7 @@ def build_program(program, startup, args, is_train=True):
 def quant_val_reader_batch():
     nl, nr, flods, flags = parse_filelist(args.test_data_dir)
     test_dataset = LFW(nl, nr)
-    test_reader = paddle.batch(
+    test_reader = fluid.io.batch(
         test_dataset.reader, batch_size=1, drop_last=False)
     shuffle_reader = fluid.io.shuffle(test_reader, 3)
 
@@ -351,7 +351,7 @@ def main():
              executor=exe)
         nl, nr, flods, flags = parse_filelist(args.test_data_dir)
         test_dataset = LFW(nl, nr)
-        test_reader = paddle.batch(
+        test_reader = fluid.io.batch(
             test_dataset.reader,
             batch_size=args.test_batchsize,
             drop_last=False)
