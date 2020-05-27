@@ -34,7 +34,7 @@ import numpy as np
 
 #### 2.1 量化训练
 
-量化训练流程可以参考 [分类模型的离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
+量化训练流程可以参考 [分类模型的量化训练流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
 
 **注意量化训练过程中config参数：**
 - **quantize_op_types:** 目前CPU上支持量化 `depthwise_conv2d`, `mul`, `conv2d`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`。但是训练阶段插入fake quantize/dequantize op时，只需在前四种op前后插入fake quantize/dequantize ops，因为后面四种op `matmul`, `transpose2`, `reshape2`, `pool2d`的输入输出scale不变，将从前后方op的输入输出scales获得scales,所以`quantize_op_types` 参数只需要 `depthwise_conv2d`, `mul`, `conv2d`, `matmul` 即可。
