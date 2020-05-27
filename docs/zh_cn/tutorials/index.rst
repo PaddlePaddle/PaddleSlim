@@ -6,6 +6,7 @@
    :maxdepth: 1
 
    image_classification_sensitivity_analysis_tutorial.md
+   image_classification_mkldnn_quant_aware_tutorial.md
    darts_nas_turorial.md
    paddledetection_slim_distillation_tutorial.md
    paddledetection_slim_nas_tutorial.md
