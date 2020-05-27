@@ -11,7 +11,7 @@ import argparse
 import functools
 import numpy as np
 import paddle.fluid as fluid
-sys.path.append(sys.path[0] + "/../")
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments, _download, _decompress
 from paddleslim.dist import merge, l2_loss, soft_label_loss, fsp_loss
@@ -25,6 +25,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
 add_arg('batch_size',       int,  64,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
+add_arg('save_inference',   bool, False,                "Whether to save inference model.")
 add_arg('total_images',     int,  1281167,              "Training image number.")
 add_arg('image_shape',      str,  "3,224,224",         "Input image size")
 add_arg('lr',               float,  0.1,               "The learning rate used to fine-tune pruned model.")
@@ -49,8 +50,8 @@ def piecewise_decay(args):
         devices_num = fluid.core.get_cuda_device_count()
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
-    step = int(math.ceil(float(args.total_images) /
-                         args.batch_size)) * devices_num
+    step = int(
+        math.ceil(float(args.total_images) / args.batch_size) / devices_num)
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = fluid.layers.piecewise_decay(boundaries=bd, values=lr)
@@ -66,8 +67,8 @@ def cosine_decay(args):
         devices_num = fluid.core.get_cuda_device_count()
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
-    step = int(math.ceil(float(args.total_images) /
-                         args.batch_size)) * devices_num
+    step = int(
+        math.ceil(float(args.total_images) / args.batch_size) / devices_num)
     learning_rate = fluid.layers.cosine_decay(
         learning_rate=args.lr, step_each_epoch=step, epochs=args.num_epochs)
     optimizer = fluid.optimizer.Momentum(
@@ -132,9 +133,9 @@ def compress(args):
     place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
     exe = fluid.Executor(place)
 
-    train_reader = paddle.batch(
+    train_reader = paddle.fluid.io.batch(
         train_reader, batch_size=args.batch_size, drop_last=True)
-    val_reader = paddle.batch(
+    val_reader = paddle.fluid.io.batch(
         val_reader, batch_size=args.batch_size, drop_last=True)
     val_program = student_program.clone(for_test=True)
 
@@ -163,8 +164,12 @@ def compress(args):
     ), "teacher_pretrained_model should be set when teacher_model is not None."
 
     def if_exist(var):
-        return os.path.exists(
+        exist = os.path.exists(
             os.path.join(args.teacher_pretrained_model, var.name))
+        if args.data == "cifar10" and (var.name == 'fc_0.w_0' or
+                                       var.name == 'fc_0.b_0'):
+            exist = False
+        return exist
 
     fluid.io.load_vars(
         exe,
@@ -214,6 +219,10 @@ def compress(args):
                     "valid_epoch {} step {} loss {:.6f}, top1 {:.6f}, top5 {:.6f}".
                     format(epoch_id, step_id, val_loss[0], val_acc1[0],
                            val_acc5[0]))
+        if args.save_inference:
+            fluid.io.save_inference_model(
+                os.path.join("./saved_models", str(epoch_id)), ["image"],
+                [out], exe, student_program)
         _logger.info("epoch {} top1 {:.6f}, top5 {:.6f}".format(
             epoch_id, np.mean(val_acc1s), np.mean(val_acc5s)))
 

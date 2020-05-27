@@ -8,8 +8,8 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-sys.path.append(sys.path[0] + "/../../../")
-sys.path.append(sys.path[0] + "/../../")
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 from paddleslim.quant import quant_aware, quant_post, convert
@@ -148,6 +148,9 @@ def compress(args):
     exe = fluid.Executor(place)
     exe.run(fluid.default_startup_program())
 
+    assert os.path.exists(
+        args.pretrained_model), "pretrained_model doesn't exist"
+
     if args.pretrained_model:
 
         def if_exist(var):
@@ -156,8 +159,8 @@ def compress(args):
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
-    train_reader = paddle.batch(
+    val_reader = paddle.fluid.io.batch(val_reader, batch_size=args.batch_size)
+    train_reader = paddle.fluid.io.batch(
         train_reader, batch_size=args.batch_size, drop_last=True)
 
     train_feeder = feeder = fluid.DataFeeder([image, label], place)
@@ -241,11 +244,11 @@ def compress(args):
                 exe,
                 dirname=os.path.join(args.checkpoint_dir, 'best_model'),
                 main_program=val_program)
-
-    fluid.io.load_persistables(
-        exe,
-        dirname=os.path.join(args.checkpoint_dir, 'best_model'),
-        main_program=val_program)
+    if os.path.exists(os.path.join(args.checkpoint_dir, 'best_model')):
+        fluid.io.load_persistables(
+            exe,
+            dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+            main_program=val_program)
     ############################################################################################################
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.

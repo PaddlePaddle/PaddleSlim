@@ -4,13 +4,13 @@
 
 ## 接口介绍
 
-请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
+请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-post'>量化API文档</a>。
 
 ## 分类模型的离线量化流程
 
 ### 准备数据
 
-在``demo``文件夹下创建``data``文件夹，将``ImageNet``数据集解压在``data``文件夹下，解压后``data``文件夹下应包含以下文件：
+在``demo``文件夹下创建``data``文件夹，将``ImageNet``数据集解压在``data``文件夹下，解压后``data/ILSVRC2012``文件夹下应包含以下文件：
 - ``'train'``文件夹，训练图片
 - ``'train_list.txt'``文件
 - ``'val'``文件夹，验证图片
@@ -62,7 +62,7 @@ top1_acc/top5_acc= [0.70913923 0.89548034]
 使用以下命令测试离线量化后的模型的精度：
 
 ```
-python eval.py --model_path ./quant_model_train/MobileNet
+python eval.py --model_path ./quant_model_train/MobileNet --model_name __model__ --params_name __params__
 ```
 
 精度输出为
