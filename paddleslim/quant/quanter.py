@@ -160,7 +160,17 @@ def _parse_configs(user_config):
     return configs
 
 
-def quant_aware(program, place, config=None, scope=None, for_test=False):
+def quant_aware(program,
+                place,
+                config=None,
+                scope=None,
+                for_test=False,
+                weight_quantize_func=None,
+                act_quantize_func=None,
+                weight_preprocess_func=None,
+                act_preprocess_func=None,
+                optimizer_func=None,
+                exe=None):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
@@ -175,7 +185,32 @@ def quant_aware(program, place, config=None, scope=None, for_test=False):
             `fluid.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.              When ``None`` will use `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . Default: ``None``.
         for_test(bool): If the 'program' parameter is a test program, this parameter should be set to ``True``. 
             Otherwise, set to ``False``.Default: False
-    
+       weight_quantize_func(function): Function that defines how to quantize weight. Using this
+                can quickly test if user's quantization method works or not. In this function, user should
+                both define quantization function and dequantization function, that is, the function's input
+                is non-quantized weight and function returns dequantized weight. If None, will use
+                quantization op defined by 'weight_quantize_type'.
+                Default is None.
+        act_quantize_func(function): Function that defines how to quantize activation. Using this
+                can quickly test if user's quantization method works or not. In this function, user should
+                both define quantization and dequantization process, that is, the function's input
+                is non-quantized activation and function returns dequantized activation. If None, will use 
+                quantization op defined by 'activation_quantize_type'.
+                Default is None.
+        weight_preprocess_func(function): Function that defines how to preprocess weight before quantization. Using this
+                can quickly test if user's preprocess method works or not. The function's input
+                is non-quantized weight and function returns processed weight to be quantized. If None, the weight will
+                be quantized directly.
+                Default is None.
+        act_preprocess_func(function): Function that defines how to preprocess activation before quantization. Using this
+                can quickly test if user's preprocess method works or not. The function's input
+                is non-quantized activation and function returns processed activation to be quantized. If None, the activation will
+                be quantized directly.
+                Default is None.
+        optimizer_func(function): Fuction return a optimizer. When 'is_test' is False and user want to use self-defined 
+            quantization function and preprocess function, this function must be set. Default is None.
+        exe(Fluid.Executor): If user want to use self-defined quantization function and preprocess function, exe must be set for
+                initialization. Default is None.
     Returns:
         fluid.CompiledProgram | fluid.Program: Program with quantization and dequantization ``operators``
     """
@@ -208,7 +243,14 @@ def quant_aware(program, place, config=None, scope=None, for_test=False):
             window_size=config['window_size'],
             moving_rate=config['moving_rate'],
             quantizable_op_type=transform_pass_ops,
-            skip_pattern=config['not_quant_pattern'])
+            skip_pattern=config['not_quant_pattern'],
+            weight_quantize_func=weight_quantize_func,
+            act_quantize_func=act_quantize_func,
+            weight_preprocess_func=weight_preprocess_func,
+            act_preprocess_func=act_preprocess_func,
+            optimizer_func=optimizer_func,
+            for_test=for_test,
+            exe=exe)
 
         transform_pass.apply(main_graph)
 
