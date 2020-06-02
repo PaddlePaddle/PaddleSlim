@@ -315,7 +315,7 @@ quant_post_only_weight
 **参数:**
 
 - **model_dir(str)** - 需要量化的模型的存储路径。
-- **save_model_dir(str)** - 量化后的模型的存储。
+- **save_model_dir(str)** - 量化后的模型的存储路径。
 - **model_filename(str, optional)** - 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
 - **params_filename(str, optional)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
 - **save_model_filename(str, optional)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 None 。
