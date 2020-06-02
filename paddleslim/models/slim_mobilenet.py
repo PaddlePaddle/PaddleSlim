@@ -158,8 +158,6 @@ class SlimMobileNet():
                       name=None,
                       use_cudnn=True,
                       res_last_bn_init=False):
-        print(input.shape[1], num_filters, filter_size, stride, padding,
-              num_groups, act)
         conv = fluid.layers.conv2d(
             input=input,
             num_filters=num_filters,
@@ -210,7 +208,6 @@ class SlimMobileNet():
             act='relu',
             param_attr=ParamAttr(name=name + '_1_weights'),
             bias_attr=ParamAttr(name=name + '_1_offset'))
-        print('se', conv1.shape[1], num_mid_filter, 1, 1, 0, 1, 'relu')
         conv2 = fluid.layers.conv2d(
             input=conv1,
             filter_size=1,
@@ -218,7 +215,6 @@ class SlimMobileNet():
             act='hard_sigmoid',
             param_attr=ParamAttr(name=name + '_2_weights'),
             bias_attr=ParamAttr(name=name + '_2_offset'))
-        print('se', conv2.shape[1], num_out_filter, 1, 1, 0, 1, 'hard_sigmoid')
         scale = fluid.layers.elementwise_mul(x=input, y=conv2, axis=0)
         return scale
 
@@ -274,7 +270,6 @@ class SlimMobileNet():
         if num_in_filter != num_out_filter or stride != 1:
             return conv2
         else:
-            print('short_cut')
             return fluid.layers.elementwise_add(x=input, y=conv2, act=None)
 
 
