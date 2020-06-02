@@ -190,7 +190,7 @@ quant_post
 - **batch_generator(python generator)** - 读取数据样本，每次返回一个batch的数据。和 `sample_generator` 只能设置一个。
 - **sample_generator(python generator)** - 读取数据样本，每次返回一个样本。
 - **model_filename(str, optional)** - 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
-- **params_filename(str)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
+- **params_filename(str, optional)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
 - **save_model_filename(str)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``__model__`` 。
 - **save_params_filename(str)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``__params__`` 。
 - **batch_size(int)** - 每个batch的图片数量。默认值为16 。
@@ -317,9 +317,9 @@ quant_post_only_weight
 - **model_dir(str)** - 需要量化的模型的存储路径。
 - **save_model_dir(str)** - 量化后的模型的存储。
 - **model_filename(str, optional)** - 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
-- **params_filename(str)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
-- **save_model_filename(str)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``__model__`` 。
-- **save_params_filename(str)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``__params__`` 。
+- **params_filename(str, optional)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
+- **save_model_filename(str, optional)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 None 。
+- **save_params_filename(str, optional)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 None 。
 - **quantizable_op_type(list[str])** -  需要量化的 op 类型列表。可选范围为 ``["conv2d", "depthwise_conv2d", "mul"]`` 。 默认值是 ``["conv2d", "mul"]`` 。
 - **weight_bits(int)** - weight的量化比特位数, 可选8或者16。 默认值为8。
 - **generate_test_model(bool)** - 如果为True, 则会保存一个fake quantized模型，这个模型可用PaddlePaddle加载测试精度。默认为False.
