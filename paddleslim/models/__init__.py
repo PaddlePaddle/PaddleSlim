@@ -15,5 +15,5 @@
 from __future__ import absolute_import
 from .util import image_classification
 from .slimfacenet import SlimFaceNet_A_x0_60, SlimFaceNet_B_x0_75, SlimFaceNet_C_x0_75
-
+from .slim_mobilenet import SlimMobileNet_v1, SlimMobileNet_v2, SlimMobileNet_v3, SlimMobileNet_v4, SlimMobileNet_v5
 __all__ = ["image_classification"]
