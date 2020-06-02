@@ -6,8 +6,8 @@
 
 流程步骤如下：
 - 产出量化模型：使用PaddleSlim训练产出量化模型，注意模型的weights的值应该在INT8范围内，但是类型仍为float型。
-- CPU转换量化模型：在CPU上使用DNNL转化量化模型为真正的INT8模型
-- CPU部署预测：在CPU上部署demo应用并预测
+- CPU转换量化模型：在CPU上使用DNNL转化量化模型为真正的INT8模型。
+- CPU部署预测：在CPU上部署demo应用并预测。
 
 ## 1. 准备
 
@@ -37,7 +37,7 @@ import numpy as np
 量化训练流程可以参考 [分类模型的量化训练流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
 
 **注意量化训练过程中config参数：**
-- **quantize_op_types:** 目前CPU上支持量化 `depthwise_conv2d`, `mul`, `conv2d`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`。但是训练阶段插入fake quantize/dequantize op时，只需在前四种op前后插入fake quantize/dequantize ops，因为后面四种op `matmul`, `transpose2`, `reshape2`, `pool2d`的输入输出scale不变，将从前后方op的输入输出scales获得scales,所以`quantize_op_types` 参数只需要 `depthwise_conv2d`, `mul`, `conv2d`, `matmul` 即可。
+- **quantize_op_types:** 目前CPU上支持量化 `depthwise_conv2d`, `mul`, `conv2d`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`。但是训练阶段插入fake quantize/dequantize op时，只需在前四种op前后插入fake quantize/dequantize ops，因为后面四种op `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`的输入输出scales可以从前后方其他op的输入输出scales获取,所以`quantize_op_types` 参数只需要 `depthwise_conv2d`, `mul`, `conv2d`, `matmul` 即可。
 - **其他参数:** 请参考 [PaddleSlim quant_aware API](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#quant_aware)
 
 #### 2.2 静态离线量化
@@ -47,16 +47,18 @@ import numpy as np
 ## 3. 转化产出的量化模型为DNNL优化后的INT8模型
 为了部署在CPU上，我们将保存的quant模型，通过一个转化脚本，移除fake quantize/dequantize op，fuse一些op，并且完全转化成 INT8 模型。需要使用Paddle所在目录运行下面的脚本，脚本在官网的位置为[save_qat_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_qat_model.py)。复制脚本到demo所在目录下(`/PATH_TO_PaddleSlim/demo/mkldnn_quant/quant_aware/`)并执行如下命令：
 ```
-python save_qat_model.py --qat_model_path=/PATH/TO/SAVE/FLOAT32/QAT/MODEL --int8_model_save_path=/PATH/TO/SAVE/INT8/MODEL -ops_to_quantize="conv2d,pool2d"
+python save_qat_model.py --qat_model_path=/PATH/TO/SAVE/FLOAT32/QAT/MODEL --int8_model_save_path=/PATH/TO/SAVE/INT8/MODEL
 ```
 **参数说明：**
 - **qat_model_path:** 为输入参数，必填。为量化训练产出的quant模型。
-- **int8_model_save_path:** 将quant模型经过DNNL优化量化后保存的最终INT8模型路径。注意：qat_model_path必须传入量化训练后的含有fake quant/dequant ops的quant模型
-- **ops_to_quantize:** 必填，不可以不设置。表示最终INT8模型中使用量化op的列表。图像分类模型请设置`--ops_to_quantize=“conv2d, pool2d"`。自然语言处理模型，如Ernie模型，请设置`--ops_to_quantize="fc,reshape2,transpose2,matmul"`。用户必须手动设置，因为不是量化所有可量化的op就能达到最优速度。
+- **int8_model_save_path:** 将quant模型经过DNNL优化量化后保存的最终INT8模型输出路径。注意：qat_model_path必须传入PaddleSlim量化产出的含有fake quant/dequant ops的quant模型。
+- **ops_to_quantize:** 以逗号隔开的指定的需要量化的op类型列表。可选，默认为空，空表示量化所有可量化的op。目前，对于Benchmark中列出的图像分类和自然语言处理模型中，量化所有可量化的op可以获得最好的精度和性能，因此建议用户不设置这个参数。
+- **--op_ids_to_skip:** 以逗号隔开的op id号列表，可选，默认为空。这个列表中的op号将不量化，采用FP32类型。要获取特定op的ID，请先使用`--debug`选项运行脚本，并打开生成的文件`qat_int8_cpu_quantize_placement_pass.dot`，找出不需量化的op, ID号在Op名称后面的括号中。
+- **--debug:** 添加此选项可在每个转换步骤之后生成一系列包含模型图的* .dot文件。 有关DOT格式的说明，请参见[DOT](https://graphviz.gitlab.io/_pages/doc/info/lang.html)。要打开`* .dot`文件，请使用系统上可用的任何Graphviz工具（例如Linux上的`xdot`工具或Windows上的`dot`工具有关文档，请参见[Graphviz](http://www.graphviz.org/documentation/)。
   注意：
-  - 目前支持DNNL量化op列表是`conv2d`, `depthwise_conv2d`, `mul`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`, `concat`，只能从这个列表中选择。
-  - 量化所有可量化的Op不一定性能最优，所以用户要手动输入。比如，如果一个op是单个的INT8 op, 不可以与之前的和之后的op融合，那么为了量化这个op，需要先做quantize，然后运行INT8 op, 再dequantize, 这样可能导致最终性能不如保持该op为fp32 op。由于用户模型未知，这里不给出默认设置。图像分类和NLP任务的设置建议已给出。
-  - 一个有效找到最优配置的方法是，用户观察这个模型一共用到了哪些可量化的op，选出不同的`ops_to_quantize`组合，多运行几次。
+  - 目前支持DNNL量化的op列表是`conv2d`, `depthwise_conv2d`, `mul`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`,`scale`, `concat`。
+  - 如果设置 `--op_ids_to_skip`,只需要传入所有量化op中想要保持FP32类型的op ID号即可。
+  - 有时量化全部op不一定得到最优性能。例如：如果一个op是单个的INT8 op, 之前和之后的op都为float32 op,那么为了量化这个op，需要先做quantize，然后运行INT8 op, 再dequantize, 这样可能导致最终性能不如保持该op为fp32 op。如果用户使用默认设置性能较差，可以观察这个模型是否有单独的INT8 op，选出不同的`ops_to_quantize`组合，也可以通过`--op_ids_to_skip`排除部分可量化op ID，多运行几次获得最佳设置。
 
 ## 4. 预测
 
@@ -95,8 +97,10 @@ val/ILSVRC2012_val_00000002.jpg 0
 ### 4.2 部署预测
 
 #### 部署前提
-- 只有使用AVX512系列CPU服务器才能获得性能提升。用户可以通过在命令行红输入`lscpu`查看本机支持指令。
-- 在支持`avx512_vnni`的CPU服务器上，INT8精度最高，性能提升最快。
+- 用户可以通过在命令行红输入`lscpu`查看本机支持指令。
+- 在支持`avx512_vnni`的CPU服务器上，INT8精度最高
+- 在支持`avx512`的CPU服务器上（Casecade Lake, Model name: Intel(R) Xeon(R) Gold X2XX），INT8性能提升为FP32模型的3~4倍。
+- 在不支持`avx512`但是支持`avx2`指令的CPU服务器上（SkyLake, Model name：Intel(R) Xeon(R) Gold X1XX），INT8性能为FP32性能的1.5倍左右。
 
 #### 准备预测推理库
 
@@ -113,6 +117,7 @@ val/ILSVRC2012_val_00000002.jpg 0
 cd /PATH/TO/PaddleSlim
 cd demo/mkldnn_quant/quant_aware
 mkdir build
+cmake -DPADDLE_ROOT=$PADDLE_ROOT ..
 cd build
 make -j
 ```
@@ -140,8 +145,7 @@ echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 - **iterations:** 预测多少batches。默认为0，表示预测infer_data中所有batches (image numbers/batch size)
 - **num_threads:** 预测使用CPU 线程数，默认为单核一个线程。
 - **with_accuracy_layer:** 由于这个测试是Image Classification通用的测试，既可以测试float32模型也可以INT8模型，模型可以包含或者不包含label层，设置此参数更改。
-- **optimize_fp32_model** 是否优化测试FP32模型。样例可以测试保存的INT8模型，也可以优化（fuses等）并测试优化后的FP32模型。默认为False，表示测试转化好的INT8模型，此处无需优化。
-- **use_profile:** 由Paddle预测库中提供，设置用来进行性能分析。默认值为false。
+- **optimize_fp32_model** 是否优化测试FP32模型。样例可以测试保存的INT8模型，也可以优化（fuses等）并测试优化后的FP32模型。默认为false，表示测试转化好的INT8模型，不做优化。
 
 你可以直接修改`/PATH_TO_PaddleSlim/demo/mkldnn_quant/quant_aware/`目录下的`run.sh`中的MODEL_DIR和DATA_DIR，即可执行`./run.sh`进行CPU预测。
 
@@ -162,11 +166,10 @@ static void SetConfig(paddle::AnalysisConfig *cfg) {
       cfg->EnableProfile();  // 可选。如果设置use_profile，运行结束将展现各个算子所占用时间
   }
 }
-
 ```
-在我们提供的样例中，只要设置`optimize_fp32_model`为true,`infer_model`传入原始FP32模型，AnalysisConfig的上述设置将被执行，传入的FP32模型将被DNNL优化加速（包括fuses等）。
-如果infer_model传入INT8模型，则optimize_fp32_model将不起作用，因为INT8模型已经被优化量化。
-如果infer_model传入PaddleSlim产出的模型，optimize_fp32_model也不起作用，因为quant模型包含fake quantize/dequantize ops,无法fuse,无法优化。
+- 在我们提供的样例中，只要设置`optimize_fp32_model`为true,`infer_model`传入原始FP32模型，AnalysisConfig的上述设置将被执行，传入的FP32模型将被DNNL优化加速（包括fuses等）。
+- 如果infer_model传入INT8模型，则optimize_fp32_model将不起任何作用，因为INT8模型已经被优化量化。
+- 如果infer_model传入PaddleSlim产出的quant模型，optimize_fp32_model即使设置为true不起作用，因为quant模型包含fake quantize/dequantize ops,无法fuse,无法优化。
 
 ## 5. 精度和性能数据
 INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性能](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/docs/zh_cn/tutorials/image_classification_mkldnn_quant_aware_tutorial.md)
@@ -174,4 +177,4 @@ INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性�
 ## FAQ
 
 - 自然语言处理模型在CPU上的部署和预测参考样例[ERNIE 模型 QAT INT8 精度与性能复现](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c%2B%2B/ernie/mkldnn)
-- 具体DNNL优化原理可以查看[SLIM QAT for INT8 DNNL](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/QAT_mkldnn_int8_readme.md)。
+- 具体DNNL量化原理可以查看[SLIM QAT for INT8 DNNL](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/QAT_mkldnn_int8_readme.md)。
