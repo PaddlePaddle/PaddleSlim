@@ -3,7 +3,7 @@ from itertools import izip
 import paddle.fluid as fluid
 from paddleslim.teachers.bert.reader.cls import *
 from paddleslim.nas.darts.search_space import AdaBERTClassifier
-from paddleslim.nas.darts.architect import Architect
+from paddleslim.nas.darts.architect_for_bert import Architect
 
 import logging
 from paddleslim.common import AvgrageMeter, get_logger

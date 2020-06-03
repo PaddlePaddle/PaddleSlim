@@ -1,4 +1,4 @@
-# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved
+# Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ from paddle.fluid.dygraph.base import to_variable
 
 
 class Architect(object):
-    def __init__(self, model, eta, arch_learning_rate, unrolled, parallel):
+    def __init__(self, model, eta, arch_learning_rate, place, unrolled):
         self.network_momentum = 0.9
-        self.network_weight_decay = 3e-4
+        self.network_weight_decay = 1e-3
         self.eta = eta
         self.model = model
         self.optimizer = fluid.optimizer.Adam(
@@ -32,8 +32,8 @@ class Architect(object):
             0.999,
             regularization=fluid.regularizer.L2Decay(1e-3),
             parameter_list=self.model.arch_parameters())
+        self.place = place
         self.unrolled = unrolled
-        self.parallel = parallel
         if self.unrolled:
             self.unrolled_model = self.model.new()
             self.unrolled_model_params = [
@@ -49,50 +49,25 @@ class Architect(object):
                     self.network_weight_decay),
                 parameter_list=self.unrolled_model_params)
 
-        if self.parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-            self.parallel_model = fluid.dygraph.parallel.DataParallel(
-                self.model, strategy)
-            if self.unrolled:
-                self.parallel_unrolled_model = fluid.dygraph.parallel.DataParallel(
-                    self.unrolled_model, strategy)
-
-    def get_model(self):
-        return self.parallel_model if self.parallel else self.model
-
-    def step(self, input_train, target_train, input_valid, target_valid):
+    def step(self, train_data, valid_data):
         if self.unrolled:
-            params_grads = self._backward_step_unrolled(
-                input_train, target_train, input_valid, target_valid)
+            params_grads = self._backward_step_unrolled(train_data, valid_data)
             self.optimizer.apply_gradients(params_grads)
         else:
-            loss = self._backward_step(input_valid, target_valid)
+            loss = self._backward_step(valid_data)
             self.optimizer.minimize(loss)
         self.optimizer.clear_gradients()
 
-    def _backward_step(self, input_valid, target_valid):
-        loss = self.model._loss(input_valid, target_valid)
-        if self.parallel:
-            loss = self.parallel_model.scale_loss(loss)
-            loss.backward()
-            self.parallel_model.apply_collective_grads()
-        else:
-            loss.backward()
-        return loss
+    def _backward_step(self, valid_data):
+        loss = self.model.loss(valid_data)
+        loss[0].backward()
+        return loss[0]
 
-    def _backward_step_unrolled(self, input_train, target_train, input_valid,
-                                target_valid):
-        self._compute_unrolled_model(input_train, target_train)
-        unrolled_loss = self.unrolled_model._loss(input_valid, target_valid)
+    def _backward_step_unrolled(self, train_data, valid_data):
+        self._compute_unrolled_model(train_data)
+        unrolled_loss = self.unrolled_model.loss(valid_data)
 
-        if self.parallel:
-            unrolled_loss = self.parallel_unrolled_model.scale_loss(
-                unrolled_loss)
-            unrolled_loss.backward()
-            self.parallel_unrolled_model.apply_collective_grads()
-        else:
-            unrolled_loss.backward()
-
+        unrolled_loss.backward()
         vector = [
             to_variable(param._grad_ivar().numpy())
             for param in self.unrolled_model_params
@@ -104,30 +79,22 @@ class Architect(object):
         ]
         self.unrolled_model.clear_gradients()
 
-        implicit_grads = self._hessian_vector_product(vector, input_train,
-                                                      target_train)
+        implicit_grads = self._hessian_vector_product(vector, train_data)
         for (p, g), ig in zip(arch_params_grads, implicit_grads):
             new_g = g - (ig * self.unrolled_optimizer.current_step_lr())
-            fluid.layers.assign(new_g.detach(), g)
+            g.value().get_tensor().set(new_g.numpy(), self.place)
         return arch_params_grads
 
-    def _compute_unrolled_model(self, input, target):
+    def _compute_unrolled_model(self, data):
         for x, y in zip(self.unrolled_model.parameters(),
                         self.model.parameters()):
-            fluid.layers.assign(y.detach(), x)
-
-        loss = self.unrolled_model._loss(input, target)
-        if self.parallel:
-            loss = self.parallel_unrolled_model.scale_loss(loss)
-            loss.backward()
-            self.parallel_unrolled_model.apply_collective_grads()
-        else:
-            loss.backward()
-
+            x.value().get_tensor().set(y.numpy(), self.place)
+        loss = self.unrolled_model._loss(data)
+        loss.backward()
         self.unrolled_optimizer.minimize(loss)
         self.unrolled_model.clear_gradients()
 
-    def _hessian_vector_product(self, vector, input, target, r=1e-2):
+    def _hessian_vector_product(self, vector, data, r=1e-2):
         R = r * fluid.layers.rsqrt(
             fluid.layers.sum([
                 fluid.layers.reduce_sum(fluid.layers.square(v)) for v in vector
@@ -140,15 +107,9 @@ class Architect(object):
         ]
         for param, grad in zip(model_params, vector):
             param_p = param + grad * R
-            fluid.layers.assign(param_p.detach(), param)
-        loss = self.model._loss(input, target)
-        if self.parallel:
-            loss = self.parallel_model.scale_loss(loss)
-            loss.backward()
-            self.parallel_model.apply_collective_grads()
-        else:
-            loss.backward()
-
+            param.value().get_tensor().set(param_p.numpy(), self.place)
+        loss = self.model.loss(data)
+        loss.backward()
         grads_p = [
             to_variable(param._grad_ivar().numpy())
             for param in self.model.arch_parameters()
@@ -156,24 +117,18 @@ class Architect(object):
 
         for param, grad in zip(model_params, vector):
             param_n = param - grad * R * 2
-            fluid.layers.assign(param_n.detach(), param)
+            param.value().get_tensor().set(param_n.numpy(), self.place)
         self.model.clear_gradients()
 
-        loss = self.model._loss(input, target)
-        if self.parallel:
-            loss = self.parallel_model.scale_loss(loss)
-            loss.backward()
-            self.parallel_model.apply_collective_grads()
-        else:
-            loss.backward()
-
+        loss = self.model.loss(data)
+        loss.backward()
         grads_n = [
             to_variable(param._grad_ivar().numpy())
             for param in self.model.arch_parameters()
         ]
         for param, grad in zip(model_params, vector):
             param_o = param + grad * R
-            fluid.layers.assign(param_o.detach(), param)
+            param.value().get_tensor().set(param_o.numpy(), self.place)
         self.model.clear_gradients()
         arch_grad = [(p - n) / (2 * R) for p, n in zip(grads_p, grads_n)]
         return arch_grad
