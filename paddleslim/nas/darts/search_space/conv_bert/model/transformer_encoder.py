@@ -278,19 +278,22 @@ class EncoderLayer(Layer):
             bias_attr=ParamAttr(initializer=MSRA()))
 
         self.use_fixed_gumbel = use_fixed_gumbel
-        self.gumbel_alphas = gumbel_softmax(self.alphas)
+        self.gumbel_alphas = gumbel_softmax(self.alphas).detach()
 
-    def forward(self, enc_input, flops=[], model_size=[]):
-        tmp = fluid.layers.reshape(
-            enc_input, [-1, 1, enc_input.shape[1], enc_input.shape[2]])
-        # (bs, 1, seq_len, hidden_size)
-
-        tmp = self.stem(tmp)
-        # (bs, n_channel, seq_len, 1)
+    def forward(self, enc_input_0, enc_input_1, flops=[], model_size=[]):
         alphas = self.gumbel_alphas if self.use_fixed_gumbel else gumbel_softmax(
             self.alphas)
 
-        s0 = s1 = tmp
+        s0 = fluid.layers.reshape(
+            enc_input_0, [-1, 1, enc_input_0.shape[1], enc_input_0.shape[2]])
+        s1 = fluid.layers.reshape(
+            enc_input_1, [-1, 1, enc_input_1.shape[1], enc_input_1.shape[2]])
+        # (bs, 1, seq_len, hidden_size)
+
+        s0 = self.stem(s0)
+        s1 = self.stem(s1)
+        # (bs, n_channel, seq_len, 1)
+
         for i in range(self._n_layer):
             s0, s1 = s1, self._cells[i](s0, s1, alphas)
         # (bs, n_channel, seq_len, 1)
