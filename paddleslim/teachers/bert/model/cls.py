@@ -64,6 +64,9 @@ class ClsModelLayer(Layer):
             fc = self.add_sublayer("cls_fc_%d" % i, fc)
             self.cls_fc.append(fc)
 
+    def emb_names(self):
+        return self.bert_layer.emb_names()
+
     def forward(self, data_ids):
         """
         forward

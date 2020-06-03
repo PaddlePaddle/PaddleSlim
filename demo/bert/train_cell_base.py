@@ -44,7 +44,7 @@ def train_one_epoch(model, architect, train_loader, valid_loader, optimizer,
 
     step_id = 0
     for train_data, valid_data in izip(train_loader(), valid_loader):
-        architect.step(train_data, valid_data)
+        #        architect.step(train_data, valid_data)
         loss, acc = model_loss(model, train_data)
 
         if use_data_parallel:
@@ -54,8 +54,7 @@ def train_one_epoch(model, architect, train_loader, valid_loader, optimizer,
         else:
             loss.backward()
 
-        grad_clip = fluid.dygraph_grad_clip.GradClipByGlobalNorm(5.0)
-        optimizer.minimize(loss, grad_clip=grad_clip)
+        optimizer.minimize(loss)
         model.clear_gradients()
 
         batch_size = train_data[0].shape[0]
@@ -161,10 +160,12 @@ def main():
             if p.name not in [a.name for a in model.arch_parameters()]
         ]
 
+        grad_clip = fluid.clip.GradientClipByGlobalNorm(5.0)
         optimizer = fluid.optimizer.MomentumOptimizer(
             learning_rate,
             0.9,
             regularization=fluid.regularizer.L2DecayRegularizer(3e-4),
+            grad_clip=grad_clip,
             parameter_list=model_parameters)
 
         train_loader = fluid.io.DataLoader.from_generator(

@@ -43,7 +43,8 @@ class BertModelLayer(Layer):
                  conv_type="conv_bn",
                  search_layer=False,
                  use_fp16=False,
-                 use_fixed_gumbel=False):
+                 use_fixed_gumbel=False,
+                 gumbel_alphas=None):
         super(BertModelLayer, self).__init__()
 
         self._emb_size = emb_size
@@ -56,9 +57,9 @@ class BertModelLayer(Layer):
 
         self.use_fixed_gumbel = use_fixed_gumbel
 
-        self._word_emb_name = "word_embedding"
-        self._pos_emb_name = "pos_embedding"
-        self._sent_emb_name = "sent_embedding"
+        self._word_emb_name = "s_word_embedding"
+        self._pos_emb_name = "s_pos_embedding"
+        self._sent_emb_name = "s_sent_embedding"
         self._dtype = "float16" if use_fp16 else "float32"
 
         self._conv_type = conv_type
@@ -93,7 +94,12 @@ class BertModelLayer(Layer):
             n_layer=self._n_layer,
             hidden_size=self._hidden_size,
             search_layer=self._search_layer,
-            use_fixed_gumbel=self.use_fixed_gumbel)
+            use_fixed_gumbel=self.use_fixed_gumbel,
+            gumbel_alphas=gumbel_alphas)
+
+    def emb_names(self):
+        return self._src_emb.parameters() + self._pos_emb.parameters(
+        ) + self._sent_emb.parameters()
 
     def max_flops(self):
         return self._encoder.max_flops
@@ -123,6 +129,7 @@ class BertModelLayer(Layer):
         emb_out = self._emb_fac(emb_out)
         # (bs, seq_len, 768)
 
-        enc_output = self._encoder(emb_out, flops=flops, model_size=model_size)
+        enc_outputs = self._encoder(
+            emb_out, flops=flops, model_size=model_size)
 
-        return enc_output
+        return enc_outputs
