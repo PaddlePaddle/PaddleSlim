@@ -23,7 +23,7 @@ from paddle.fluid.dygraph.base import to_variable
 class Architect(object):
     def __init__(self, model, eta, arch_learning_rate, place, unrolled):
         self.network_momentum = 0.9
-        self.network_weight_decay = 3e-4
+        self.network_weight_decay = 1e-3
         self.eta = eta
         self.model = model
         self.optimizer = fluid.optimizer.Adam(

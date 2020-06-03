@@ -23,11 +23,8 @@ import paddle
 import paddle.fluid as fluid
 from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer, Conv2D, BatchNorm, Pool2D, to_variable
 from paddle.fluid.initializer import NormalInitializer
-
-GConv_PRIMITIVES = [
-    'std_gconv_3', 'std_gconv_5', 'std_gconv_7', 'dil_gconv_3', 'dil_gconv_5',
-    'dil_gconv_7', 'avg_pool_3', 'max_pool_3', 'none', 'skip_connect'
-]
+from paddle.fluid import ParamAttr
+from paddle.fluid.initializer import MSRA, ConstantInitializer
 
 ConvBN_PRIMITIVES = [
     'std_conv_bn_3', 'std_conv_bn_5', 'std_conv_bn_7', 'dil_conv_bn_3',
@@ -35,92 +32,79 @@ ConvBN_PRIMITIVES = [
     'skip_connect'
 ]
 
-channel = 768
-input_size = 128 * 1
-
-FLOPs = {
-    'std_conv_bn_3': input_size * (channel**2) * 3,
-    'std_conv_bn_5': input_size * (channel**2) * 5,
-    'std_conv_bn_7': input_size * (channel**2) * 7,
-    'dil_conv_bn_3': input_size * (channel**2) * 3,
-    'dil_conv_bn_5': input_size * (channel**2) * 5,
-    'dil_conv_bn_7': input_size * (channel**2) * 7,
-    'std_gconv_3': input_size * (channel**2) * 3,
-    'std_gconv_5': input_size * (channel**2) * 5,
-    'std_gconv_7': input_size * (channel**2) * 7,
-    'dil_gconv_3': input_size * (channel**2) * 3,
-    'dil_gconv_5': input_size * (channel**2) * 5,
-    'dil_gconv_7': input_size * (channel**2) * 7,
-    'avg_pool_3': input_size * channel * 3 * 1,
-    'max_pool_3': input_size * channel * 3 * 1,
-    'none': 0,
-    'skip_connect': 0,
-}
-
-ModelSize = {
-    'std_conv_bn_3': (channel**2) * 3 * 1,
-    'std_conv_bn_5': (channel**2) * 5 * 1,
-    'std_conv_bn_7': (channel**2) * 7 * 1,
-    'dil_conv_bn_3': (channel**2) * 3 * 1,
-    'dil_conv_bn_5': (channel**2) * 5 * 1,
-    'dil_conv_bn_7': (channel**2) * 7 * 1,
-    'std_gconv_3': (channel**2) * 3 * 1,
-    'std_gconv_5': (channel**2) * 5 * 1,
-    'std_gconv_7': (channel**2) * 7 * 1,
-    'dil_gconv_3': (channel**2) * 3 * 1,
-    'dil_gconv_5': (channel**2) * 5 * 1,
-    'dil_gconv_7': (channel**2) * 7 * 1,
-    'avg_pool_3': 0,
-    'max_pool_3': 0,
-    'none': 0,
-    'skip_connect': 0,
-}
-
 
 OPS = {
-    'std_gconv_3': lambda n_channel, name: GateConv(n_channel, n_channel, filter_size=[3, 1], dilation=1, name=name),
-    'std_gconv_5': lambda n_channel, name: GateConv(n_channel, n_channel, filter_size=[5, 1], dilation=1, name=name),
-    'std_gconv_7': lambda n_channel, name: GateConv(n_channel, n_channel, filter_size=[7, 1], dilation=1, name=name),
-    'dil_gconv_3': lambda n_channel, name: GateConv(n_channel, n_channel, filter_size=[3, 1], dilation=2, name=name),
-    'dil_gconv_5': lambda n_channel, name: GateConv(n_channel, n_channel, filter_size=[5, 1], dilation=2, name=name),
-    'dil_gconv_7': lambda n_channel, name: GateConv(n_channel, n_channel, filter_size=[7, 1], dilation=2, name=name),
-    'std_conv_bn_3': lambda n_channel, name: ConvBNRelu(n_channel, n_channel, filter_size=[3, 1], dilation=1, name=name),
-    'std_conv_bn_5': lambda n_channel, name: ConvBNRelu(n_channel, n_channel, filter_size=[5, 1], dilation=1, name=name),
-    'std_conv_bn_7': lambda n_channel, name: ConvBNRelu(n_channel, n_channel, filter_size=[7, 1], dilation=1, name=name),
-    'dil_conv_bn_3': lambda n_channel, name: ConvBNRelu(n_channel, n_channel, filter_size=[3, 1], dilation=2, name=name),
-    'dil_conv_bn_5': lambda n_channel, name: ConvBNRelu(n_channel, n_channel, filter_size=[5, 1], dilation=2, name=name),
-    'dil_conv_bn_7': lambda n_channel, name: ConvBNRelu(n_channel, n_channel, filter_size=[7, 1], dilation=2, name=name),
+    'std_conv_bn_3': lambda n_channel, name: ReluConvBN(n_channel, n_channel, filter_size=[3, 1], dilation=1, name=name),
+    'std_conv_bn_5': lambda n_channel, name: ReluConvBN(n_channel, n_channel, filter_size=[5, 1], dilation=1, name=name),
+    'std_conv_bn_7': lambda n_channel, name: ReluConvBN(n_channel, n_channel, filter_size=[7, 1], dilation=1, name=name),
+    'dil_conv_bn_3': lambda n_channel, name: ReluConvBN(n_channel, n_channel, filter_size=[3, 1], dilation=2, name=name),
+    'dil_conv_bn_5': lambda n_channel, name: ReluConvBN(n_channel, n_channel, filter_size=[5, 1], dilation=2, name=name),
+    'dil_conv_bn_7': lambda n_channel, name: ReluConvBN(n_channel, n_channel, filter_size=[7, 1], dilation=2, name=name),
 
-    'avg_pool_3': lambda n_channel, name: Pool2D(pool_size=(3, 1), pool_padding=(1, 0), pool_type='avg'),
-    'max_pool_3': lambda n_channel, name: Pool2D(pool_size=(3, 1), pool_padding=(1, 0), pool_type='max'),
+    'avg_pool_3': lambda n_channel, name: Pool2D(pool_size=(3,1), pool_padding=(1, 0), pool_type='avg'),
+    'max_pool_3': lambda n_channel, name: Pool2D(pool_size=(3,1), pool_padding=(1, 0), pool_type='max'),
     'none': lambda n_channel, name: Zero(),
     'skip_connect': lambda n_channel, name: Identity(),
 }
 
 
 class MixedOp(fluid.dygraph.Layer):
-    def __init__(self, n_channel, name=None, conv_type="conv_bn"):
+    def __init__(self, n_channel, name=None):
         super(MixedOp, self).__init__()
-        if conv_type == "conv_bn":
-            PRIMITIVES = ConvBN_PRIMITIVES
-        elif conv_type == "gconv":
-            PRIMITIVES = GConv_PRIMITIVES
-        ops = [
-            OPS[primitive](n_channel, name
-                           if name is None else name + "/" + primitive)
-            for primitive in PRIMITIVES
-        ]
-        self._ops = fluid.dygraph.LayerList(ops)
-        self.max_flops = max([FLOPs[primitive] for primitive in PRIMITIVES])
-        self.max_model_size = max(
-            [ModelSize[primitive] for primitive in PRIMITIVES])
+        PRIMITIVES = ConvBN_PRIMITIVES
+        # ops = [
+        #     OPS[primitive](n_channel, name
+        #                    if name is None else name + "/" + primitive)
+        #     for primitive in PRIMITIVES
+        # ]
+        ops = []
+        for primitive in PRIMITIVES:
+            op = OPS[primitive](n_channel, name
+                                if name is None else name + "/" + primitive)
+            if 'pool' in primitive:
+                gama = ParamAttr(
+                    initializer=fluid.initializer.Constant(value=1),
+                    trainable=False)
+                beta = ParamAttr(
+                    initializer=fluid.initializer.Constant(value=0),
+                    trainable=False)
+                BN = BatchNorm(n_channel, param_attr=gama, bias_attr=beta)
+                op = fluid.dygraph.Sequential(op, BN)
+            ops.append(op)
 
-    def forward(self, x, weights, flops=[], model_size=[]):
+        self._ops = fluid.dygraph.LayerList(ops)
+
+    def forward(self, x, weights):
+        #out = weights[0] * self._ops[0](x)
+        # out = fluid.layers.sums(
+        #    [weights[i] * op(x) for i, op in enumerate(self._ops)])
+        # return out
+
         for i in range(len(self._ops)):
             if weights[i].numpy() != 0:
-                flops.append(FLOPs.values()[i] * weights[i])
-                model_size.append(ModelSize.values()[i] * weights[i])
                 return self._ops[i](x) * weights[i]
+
+
+def gumbel_softmax(logits, temperature=1, hard=True, eps=1e-10):
+    #U = np.random.uniform(0, 1, logits.shape)
+    #U = - to_variable(
+    #    np.log(-np.log(U + eps) + eps).astype("float32"))
+    U = np.random.gumbel(0, 1, logits.shape).astype("float32")
+
+    logits = logits + to_variable(U)
+    logits = logits / temperature
+    logits = fluid.layers.softmax(logits)
+
+    if hard:
+        maxes = fluid.layers.reduce_max(logits, dim=1, keep_dim=True)
+        hard = fluid.layers.cast((logits == maxes), logits.dtype)
+        # out = hard - logits.detach() + logits
+        tmp = hard - logits
+        tmp.stop_gradient = True
+        out = tmp + logits
+    else:
+        out = logits
+    return out
 
 
 class Zero(fluid.dygraph.Layer):
@@ -140,137 +124,81 @@ class Identity(fluid.dygraph.Layer):
         return x
 
 
-def gumbel_softmax(logits, temperature=0.1, hard=True, eps=1e-20):
-
-    U = np.random.uniform(0, 1, logits.shape)
-    logits = logits - to_variable(
-        np.log(-np.log(U + eps) + eps).astype("float32"))
-    logits = logits / temperature
-    logits = fluid.layers.softmax(logits)
-    if hard:
-        maxes = fluid.layers.reduce_max(logits, dim=1, keep_dim=True)
-        hard = fluid.layers.cast((logits == maxes), logits.dtype)
-        tmp = hard - logits
-        tmp.stop_gradient = True
-        out = tmp + logits
-    return out
-
-
-class ConvBNRelu(fluid.dygraph.Layer):
+class ReluConvBN(fluid.dygraph.Layer):
     def __init__(self,
                  in_c=768,
                  out_c=768,
                  filter_size=[3, 1],
                  dilation=1,
-                 is_test=False,
+                 stride=1,
+                 affine=False,
                  use_cudnn=True,
                  name=None):
-        super(ConvBNRelu, self).__init__()
-        conv_std = (2.0 /
-                    (filter_size[0] * filter_size[1] * out_c * in_c))**0.5
+        super(ReluConvBN, self).__init__()
+        #conv_std = (2.0 /
+        #            (filter_size[0] * filter_size[1] * out_c * in_c))**0.5
         conv_param = fluid.ParamAttr(
             name=name if name is None else (name + "_conv.weights"),
-            initializer=fluid.initializer.Normal(0.0, conv_std))
+            initializer=fluid.initializer.MSRA())
 
         self.conv = Conv2D(
             in_c,
             out_c,
             filter_size,
             dilation=[dilation, 1],
+            stride=stride,
             padding=[(filter_size[0] - 1) * dilation // 2, 0],
             param_attr=conv_param,
             act=None,
             bias_attr=False,
             use_cudnn=use_cudnn)
-        self.bn = BatchNorm(out_c, act="relu", is_test=False)
+
+        gama = ParamAttr(
+            initializer=fluid.initializer.Constant(value=1), trainable=affine)
+        beta = ParamAttr(
+            initializer=fluid.initializer.Constant(value=0), trainable=affine)
+
+        self.bn = BatchNorm(out_c, param_attr=gama, bias_attr=beta)
 
     def forward(self, inputs):
+        inputs = fluid.layers.relu(inputs)
         conv = self.conv(inputs)
         bn = self.bn(conv)
         return bn
 
 
-class GateConv(fluid.dygraph.Layer):
-    def __init__(self,
-                 in_c=768,
-                 out_c=768,
-                 filter_size=[3, 1],
-                 dilation=1,
-                 is_test=False,
-                 use_cudnn=True,
-                 name=None):
-        super(GateConv, self).__init__()
-        conv_std = (2.0 /
-                    (filter_size[0] * filter_size[1] * out_c * in_c))**0.5
-        conv_param = fluid.ParamAttr(
-            name=name if name is None else (name + "_conv.weights"),
-            initializer=fluid.initializer.Normal(0.0, conv_std))
-
-        gate_param = fluid.ParamAttr(
-            name=name if name is None else (name + "_conv_gate.weights"),
-            initializer=fluid.initializer.Normal(0.0, conv_std))
-
-        self.conv = Conv2D(
-            in_c,
-            out_c,
-            filter_size,
-            dilation=[dilation, 1],
-            padding=[(filter_size[0] - 1) * dilation // 2, 0],
-            param_attr=conv_param,
-            act=None,
-            use_cudnn=use_cudnn)
-
-        self.gate = Conv2D(
-            in_c,
-            out_c,
-            filter_size,
-            dilation=[dilation, 1],
-            padding=[(filter_size[0] - 1) * dilation // 2, 0],
-            param_attr=gate_param,
-            act="sigmoid",
-            use_cudnn=use_cudnn)
-
-    def forward(self, inputs):
-        conv = self.conv(inputs)
-        gate = self.gate(inputs)
-        return conv * gate
-
-
 class Cell(fluid.dygraph.Layer):
-    def __init__(self, steps, n_channel, name=None, conv_type="conv_bn"):
+    def __init__(self, steps, n_channel, name=None):
         super(Cell, self).__init__()
         self._steps = steps
+        self.preprocess0 = ReluConvBN(in_c=n_channel, out_c=n_channel)
+        self.preprocess1 = ReluConvBN(in_c=n_channel, out_c=n_channel)
 
-        self.max_flops = 0
-        self.max_model_size = 0
         ops = []
         for i in range(self._steps):
             for j in range(2 + i):
                 op = MixedOp(
                     n_channel,
                     name=name
-                    if name is None else "%s/step%d_edge%d" % (name, i, j),
-                    conv_type=conv_type)
-                self.max_flops += op.max_flops
-                self.max_model_size += op.max_model_size
+                    if name is None else "%s/step%d_edge%d" % (name, i, j))
                 ops.append(op)
         self._ops = fluid.dygraph.LayerList(ops)
 
-    def forward(self, s0, s1, weights, weights2=None, flops=[], model_size=[]):
+    def forward(self, s0, s1, weights):
+        s0 = self.preprocess0(s0)
+        s1 = self.preprocess1(s1)
 
         states = [s0, s1]
         offset = 0
         for i in range(self._steps):
             s = fluid.layers.sums([
-                self._ops[offset + j](h,
-                                      weights[offset + j],
-                                      flops=flops,
-                                      model_size=model_size)
+                self._ops[offset + j](h, weights[offset + j])
                 for j, h in enumerate(states)
             ])
             offset += len(states)
             states.append(s)
-        out = fluid.layers.sum(states[-self._steps:])
+        out = fluid.layers.sums(states[-self._steps:])
+        #out = fluid.layers.concat(input=states[-self._steps:], axis=1)
         return out
 
 
@@ -283,48 +211,38 @@ class EncoderLayer(Layer):
                  n_layer,
                  hidden_size=768,
                  name="encoder",
-                 conv_type="conv_bn",
-                 search_layer=True):
+                 search_layer=True,
+                 use_fixed_gumbel=False):
         super(EncoderLayer, self).__init__()
-        cells = []
         self._n_layer = n_layer
         self._hidden_size = hidden_size
+        self._n_channel = 256
         self._steps = 3
-        self._search_layer = search_layer
-        self.max_flops = 0
-        self.max_model_size = 0
-        if conv_type == "conv_bn":
-            self._n_ops = len(ConvBN_PRIMITIVES)
-            self.conv0 = ConvBNRelu(
-                in_c=1,
-                out_c=self._hidden_size,
-                filter_size=[3, self._hidden_size],
-                dilation=1,
-                is_test=False,
-                use_cudnn=True,
-                name="conv0")
+        self._n_ops = len(ConvBN_PRIMITIVES)
+        self.use_fixed_gumbel = use_fixed_gumbel
 
-        elif conv_type == "gconv":
-            self._n_ops = len(GConv_PRIMITIVES)
-            self.conv0 = GateConv(
-                in_c=1,
-                out_c=self._hidden_size,
+        self.stem = fluid.dygraph.Sequential(
+            Conv2D(
+                num_channels=1,
+                num_filters=self._n_channel,
                 filter_size=[3, self._hidden_size],
-                dilation=1,
-                is_test=False,
-                use_cudnn=True,
-                name="conv0")
+                padding=[1, 0],
+                param_attr=fluid.ParamAttr(initializer=MSRA()),
+                bias_attr=False),
+            BatchNorm(
+                num_channels=self._n_channel,
+                param_attr=fluid.ParamAttr(
+                    initializer=fluid.initializer.Constant(value=1)),
+                bias_attr=fluid.ParamAttr(
+                    initializer=fluid.initializer.Constant(value=0))))
 
         cells = []
         for i in range(n_layer):
             cell = Cell(
                 steps=self._steps,
-                n_channel=self._hidden_size,
-                name="%s/layer_%d" % (name, i),
-                conv_type=conv_type)
+                n_channel=self._n_channel,
+                name="%s/layer_%d" % (name, i))
             cells.append(cell)
-            self.max_flops += cell.max_flops
-            self.max_model_size += cell.max_model_size
 
         self._cells = fluid.dygraph.LayerList(cells)
 
@@ -336,35 +254,50 @@ class EncoderLayer(Layer):
             default_initializer=NormalInitializer(
                 loc=0.0, scale=1e-3))
 
-        self.k = fluid.layers.create_parameter(
-            shape=[1, self._n_layer],
-            dtype="float32",
-            default_initializer=NormalInitializer(
-                loc=0.0, scale=1e-3))
+        # self.k = fluid.layers.create_parameter(
+        #     shape=[1, self._n_layer],
+        #     dtype="float32",
+        #     default_initializer=NormalInitializer(
+        #         loc=0.0, scale=1e-3))
+
+        self.BN = BatchNorm(
+            num_channels=self._n_channel,
+            param_attr=fluid.ParamAttr(
+                initializer=fluid.initializer.Constant(value=1),
+                trainable=False),
+            bias_attr=fluid.ParamAttr(
+                initializer=fluid.initializer.Constant(value=0),
+                trainable=False))
+
+        self.pool2d_avg = Pool2D(pool_type='avg', global_pooling=True)
+
+        self.out = Linear(
+            self._n_channel,
+            3,
+            param_attr=ParamAttr(initializer=MSRA()),
+            bias_attr=ParamAttr(initializer=MSRA()))
+
+        self.use_fixed_gumbel = use_fixed_gumbel
+        self.gumbel_alphas = gumbel_softmax(self.alphas)
 
     def forward(self, enc_input, flops=[], model_size=[]):
         tmp = fluid.layers.reshape(
-            enc_input, [-1, 1, enc_input.shape[1],
-                        self._hidden_size])  #(bs, 1, seq_len, hidden_size)
+            enc_input, [-1, 1, enc_input.shape[1], enc_input.shape[2]])
+        # (bs, 1, seq_len, hidden_size)
 
-        tmp = self.conv0(tmp)  # (bs, hidden_size, seq_len, 1)
+        tmp = self.stem(tmp)
+        # (bs, n_channel, seq_len, 1)
+        alphas = self.gumbel_alphas if self.use_fixed_gumbel else gumbel_softmax(
+            self.alphas)
 
-        alphas = gumbel_softmax(self.alphas)
-        k = fluid.layers.reshape(gumbel_softmax(self.k), [-1])
-
-        outputs = []
         s0 = s1 = tmp
         for i in range(self._n_layer):
-            s0, s1 = s1, self._cells[i](
-                s0, s1, alphas, flops=flops,
-                model_size=model_size)  # (bs, hidden_size, seq_len, 1)
-            enc_output = fluid.layers.transpose(
-                s1, [0, 2, 1, 3])  # (bs, seq_len, hidden_size, 1)
-            enc_output = fluid.layers.reshape(
-                enc_output, [-1, enc_output.shape[1],
-                             self._hidden_size])  # (bs, seq_len, hidden_size)
-            outputs.append(enc_output)
-            if self._search_layer and k[i].numpy() != 0:
-                outputs[-1] = outputs[-1] * k[i]
-                return outputs, k[i]
-        return outputs, 1.0
+            s0, s1 = s1, self._cells[i](s0, s1, alphas)
+        # (bs, n_channel, seq_len, 1)
+
+        s1 = self.BN(s1)
+
+        outputs = self.pool2d_avg(s1)
+        outputs = fluid.layers.reshape(outputs, shape=[-1, 0])
+        outputs = self.out(outputs)
+        return outputs

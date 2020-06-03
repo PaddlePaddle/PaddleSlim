@@ -17,12 +17,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import six
 import json
 import numpy as np
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, to_variable, Layer, guard
+from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
+from paddle.fluid import ParamAttr
+from paddle.fluid.initializer import MSRA
 from .transformer_encoder import EncoderLayer
 
 
@@ -37,8 +41,9 @@ class BertModelLayer(Layer):
                  return_pooled_out=True,
                  initializer_range=1.0,
                  conv_type="conv_bn",
-                 search_layer=True,
-                 use_fp16=False):
+                 search_layer=False,
+                 use_fp16=False,
+                 use_fixed_gumbel=False):
         super(BertModelLayer, self).__init__()
 
         self._emb_size = emb_size
@@ -49,9 +54,11 @@ class BertModelLayer(Layer):
         self._sent_types = sent_types
         self.return_pooled_out = return_pooled_out
 
-        self._word_emb_name = "s_word_embedding"
-        self._pos_emb_name = "s_pos_embedding"
-        self._sent_emb_name = "s_sent_embedding"
+        self.use_fixed_gumbel = use_fixed_gumbel
+
+        self._word_emb_name = "word_embedding"
+        self._pos_emb_name = "pos_embedding"
+        self._sent_emb_name = "sent_embedding"
         self._dtype = "float16" if use_fp16 else "float32"
 
         self._conv_type = conv_type
@@ -82,19 +89,11 @@ class BertModelLayer(Layer):
             output_dim=self._hidden_size,
             param_attr=fluid.ParamAttr(name="s_emb_factorization"))
 
-        self.pooled_fc = Linear(
-            input_dim=self._hidden_size,
-            output_dim=self._hidden_size,
-            param_attr=fluid.ParamAttr(
-                name="s_pooled_fc.w_0", initializer=self._param_initializer),
-            bias_attr="s_pooled_fc.b_0",
-            act="tanh")
-
         self._encoder = EncoderLayer(
             n_layer=self._n_layer,
             hidden_size=self._hidden_size,
-            conv_type=self._conv_type,
-            search_layer=self._search_layer)
+            search_layer=self._search_layer,
+            use_fixed_gumbel=self.use_fixed_gumbel)
 
     def max_flops(self):
         return self._encoder.max_flops
@@ -103,7 +102,7 @@ class BertModelLayer(Layer):
         return self._encoder.max_model_size
 
     def arch_parameters(self):
-        return [self._encoder.alphas, self._encoder.k]
+        return [self._encoder.alphas]  #, self._encoder.k]
 
     def forward(self,
                 src_ids,
@@ -122,19 +121,8 @@ class BertModelLayer(Layer):
         emb_out = emb_out + sent_emb
 
         emb_out = self._emb_fac(emb_out)
+        # (bs, seq_len, 768)
 
-        enc_outputs, k_i = self._encoder(
-            emb_out, flops=flops, model_size=model_size)
+        enc_output = self._encoder(emb_out, flops=flops, model_size=model_size)
 
-        if not self.return_pooled_out:
-            return enc_outputs
-        next_sent_feats = []
-        for enc_output in enc_outputs:
-            next_sent_feat = fluid.layers.slice(
-                input=enc_output, axes=[1], starts=[0], ends=[1])
-            next_sent_feat = self.pooled_fc(next_sent_feat)
-            next_sent_feat = fluid.layers.reshape(
-                next_sent_feat, shape=[-1, self._hidden_size])
-            next_sent_feats.append(next_sent_feat)
-
-        return enc_outputs, next_sent_feats, k_i
+        return enc_output
