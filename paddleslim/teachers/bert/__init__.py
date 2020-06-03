@@ -1,4 +1,4 @@
-# Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -13,11 +13,8 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-from ..darts import train_search
-from .train_search import *
-from ..darts import search_space
-from .search_space import *
+from ..bert import cls
+from .cls import *
 
 __all__ = []
-__all__ += train_search.__all__
-__all__ += search_space.__all__
+__all__ += cls.__all__
