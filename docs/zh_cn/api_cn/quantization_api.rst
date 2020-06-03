@@ -54,7 +54,7 @@
 - **weight_bits(int)** - 参数量化bit数，默认8, 可选1-8，推荐设为8，因为量化后的数据类型是 ``int8`` 。
 - **activation_bits(int)** -  激活量化bit数，默认8，可选1-8，推荐设为8，因为量化后的数据类型是 ``int8`` 。
 - **not_quant_pattern(str | list[str])** - 所有 ``name_scope`` 包含 ``'not_quant_pattern'`` 字符串的 op ，都不量化, 设置方式请参考 `fluid.name_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/name_scope_cn.html#name-scope>`_ 。
-- **quantize_op_types(list[str])** -  需要进行量化的 op 类型，目前支持 ``'conv2d', 'depthwise_conv2d', 'mul'``  。
+- **quantize_op_types(list[str])** -  需要进行量化的 op 类型，可选的op类型为 ``TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES`` 。
 - **dtype(int8)** - 量化后的参数类型，默认 ``int8`` , 目前仅支持 ``int8`` 。
 - **window_size(int)** -  ``'range_abs_max'`` 量化方式的 ``window size`` ，默认10000。
 - **moving_rate(int)** - ``'moving_average_abs_max'`` 量化方式的衰减系数，默认 0.9。
@@ -190,7 +190,7 @@ quant_post
 - **batch_generator(python generator)** - 读取数据样本，每次返回一个batch的数据。和 `sample_generator` 只能设置一个。
 - **sample_generator(python generator)** - 读取数据样本，每次返回一个样本。
 - **model_filename(str, optional)** - 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
-- **params_filename(str)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
+- **params_filename(str, optional)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
 - **save_model_filename(str)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``__model__`` 。
 - **save_params_filename(str)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``__params__`` 。
 - **batch_size(int)** - 每个batch的图片数量。默认值为16 。
@@ -301,3 +301,54 @@ fluid.Program
    quant_program = quant.quant_embedding(infer_program, place, config)
 
 更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/release/1.1.0/demo/quant/quant_embedding>`_ 
+
+
+quant_post_only_weight
+-------------------
+
+.. py:function:: paddleslim.quant.quant_post_only_weight(model_dir, save_model_dir, model_filename=None, params_filename=None, save_model_filename=None, save_params_filename=None, quantizable_op_type=["conv2d", "mul"], weight_bits=8, generate_test_model=False)
+
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
+
+离线量化方法，只量化weight, 不需要输入数据。
+
+**参数:**
+
+- **model_dir(str)** - 需要量化的模型的存储路径。
+- **save_model_dir(str)** - 量化后的模型的存储路径。
+- **model_filename(str, optional)** - 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
+- **params_filename(str, optional)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
+- **save_model_filename(str, optional)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 None 。
+- **save_params_filename(str, optional)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 None 。
+- **quantizable_op_type(list[str])** -  需要量化的 op 类型列表。可选范围为 ``["conv2d", "depthwise_conv2d", "mul"]`` 。 默认值是 ``["conv2d", "mul"]`` 。
+- **weight_bits(int)** - weight的量化比特位数, 可选8或者16。 默认值为8。
+- **generate_test_model(bool)** - 如果为True, 则会保存一个fake quantized模型，这个模型可用PaddlePaddle加载测试精度。默认为False.
+
+**返回**
+
+无
+
+**返回类型**
+
+无
+
+**代码示例**
+
+.. warning::
+
+   此示例不能直接运行，因为需要加载 ``${model_dir}`` 下的模型，所以不能直接运行。
+
+.. code-block:: python
+
+   import paddle.fluid as fluid
+   import paddle.dataset.mnist as reader
+   from paddleslim.quant import quant_post_only_weight
+   
+   quant_post_only_weight(
+           model_dir='./model_path',
+           save_model_dir='./save_path',
+           model_filename='__model__',
+           params_filename='__params__',
+           save_model_filename='__model__',
+           save_params_filename='__params__')
+
