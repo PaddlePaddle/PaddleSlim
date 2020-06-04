@@ -141,7 +141,7 @@ class TestQuantAwareCase1(unittest.TestCase):
             for_test=False,
             act_preprocess_func=pact,
             optimizer_func=get_optimizer,
-            exe=exe)
+            executor=exe)
 
         quant_eval_prog = quant_aware(val_prog, place, config, for_test=True)
         train(quant_train_prog_pact)
