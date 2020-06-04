@@ -169,6 +169,7 @@ soft_label_loss出自论文 `Distilling the Knowledge in a Neural Network <https
 **使用示例：**
 
 .. code-block:: python
+
    import paddle.fluid as fluid
    import paddleslim.dist as dist
    student_program = fluid.Program()
