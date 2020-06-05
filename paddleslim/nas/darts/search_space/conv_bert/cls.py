@@ -53,7 +53,8 @@ class AdaBERTClassifier(Layer):
                  teacher_model=None,
                  data_dir=None,
                  use_fixed_gumbel=False,
-                 gumbel_alphas=None):
+                 gumbel_alphas=None,
+                 fix_emb=False):
         super(AdaBERTClassifier, self).__init__()
         self._n_layer = n_layer
         self._num_labels = num_labels
@@ -87,6 +88,8 @@ class AdaBERTClassifier(Layer):
         for s_emb, t_emb in zip(self.student.emb_names(),
                                 self.teacher.emb_names()):
             t_emb.stop_gradient = True
+            if fix_emb:
+                s_emb.stop_gradient = True
             print(
                 "Assigning embedding[{}] from teacher to embedding[{}] in student.".
                 format(t_emb.name, s_emb.name))
