@@ -6,13 +6,13 @@
 PACT(Parameterized Clipping Activation for Quantized Neural Networks)[论文地址](https://arxiv.org/abs/1805.06085)提出了在量化激活值之前去掉一些离群点来使量化精度提高。论文中给的PACT的公式是：
 
 <p align="center">
-<img src="./image/pact.png" height=400 width=420 hspace='10'/> <br />
+<img src="./image/pact.png" height=50 width=420 hspace='10'/> <br />
 </p>
 
 因为论文中的思想是将PACT公式代替ReLU激活函数，但是在实际使用中，将要进行量化的激活值不一定来自ReLU激活函数，有可能是其他函数，也有可能是来自elementwise op等，所以本demo中的方法是在激活值和量化op之间加入改进后的PACT方法，公式如下：
 
 <p align="center">
-<img src="./image/pact_our.png" height=400 width=420 hspace='10'/> <br />
+<img src="./image/pact_our.png" height=50 width=360 hspace='10'/> <br />
 </p>
 
 
@@ -97,7 +97,7 @@ cd ..
 使用该模型的原因是因为MobileNetV3这个使用ssld蒸馏之后的模型，激活值存在很多离群点，可有效地验证PACT的效果。下面的图是MobileNetV3的其中一个中间激活值分布的直方图:
 
 <p align="center">
-<img src="./image/activation_dist.png" height=400 width=420 hspace='10'/> <br />
+<img src="./image/activation_dist.png" height=400 width=500 hspace='10'/> <br />
 </p>
 图中直方图的横坐标的范围是激活值分布的最小值和最大值，从图中可以看出，最小值在-60左右，最大值在80左右，但是主要分布在-20到20之间。
 
