@@ -43,11 +43,11 @@ def l1_norm(group, graph):
        list: A list of tuple storing l1-norm on given axis.
     """
     scores = []
-    for name, value, axis in group:
+    for name, value, axis, pruned_idx in group:
 
         reduce_dims = [i for i in range(len(value.shape)) if i != axis]
         score = np.sum(np.abs(value), axis=tuple(reduce_dims))
-        scores.append((name, axis, score))
+        scores.append((name, axis, score, pruned_idx))
 
     return scores
 
@@ -55,7 +55,7 @@ def l1_norm(group, graph):
 @CRITERION.register
 def geometry_median(group, graph):
     scores = []
-    name, value, axis = group[0]
+    name, value, axis, _ = group[0]
     assert (len(value.shape) == 4)
 
     def get_distance_sum(value, out_idx):
@@ -73,8 +73,8 @@ def geometry_median(group, graph):
 
     tmp = np.array(dist_sum_list)
 
-    for name, value, axis in group:
-        scores.append((name, axis, tmp))
+    for name, value, axis, idx in group:
+        scores.append((name, axis, tmp, idx))
     return scores
 
 
@@ -97,7 +97,7 @@ def bn_scale(group, graph):
     assert (isinstance(graph, GraphWrapper))
 
     # step1: Get first convolution
-    conv_weight, value, axis = group[0]
+    conv_weight, value, axis, _ = group[0]
     param_var = graph.var(conv_weight)
     conv_op = param_var.outputs()[0]
 
@@ -111,12 +111,12 @@ def bn_scale(group, graph):
 
     # steps3: Find scale of bn
     score = None
-    for name, value, aixs in group:
+    for name, value, aixs, _ in group:
         if bn_scale_param == name:
             score = np.abs(value.reshape([-1]))
 
     scores = []
-    for name, value, axis in group:
-        scores.append((name, axis, score))
+    for name, value, axis, idx in group:
+        scores.append((name, axis, score, idx))
 
     return scores
