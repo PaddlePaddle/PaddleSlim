@@ -5,25 +5,16 @@
 ## 方法介绍
 PACT(Parameterized Clipping Activation for Quantized Neural Networks)[论文地址](https://arxiv.org/abs/1805.06085)提出了在量化激活值之前去掉一些离群点来使量化精度提高。论文中给的PACT的公式是：
 
-$$
-y = PACT(x) = 0.5(\left | x \right | - \left | x - \alpha \right | + \alpha) = \left\{\begin{matrix}
-0  & x \in (-\infty, 0) \\
-x & x \in [0, \alpha) \\
-\alpha & x \in [\alpha, +\infty)
-\end{matrix}\right.
-
-$$
+<p align="center">
+<img src="./image/pact.png" height=400 width=420 hspace='10'/> <br />
+</p>
 
 因为论文中的思想是将PACT公式代替ReLU激活函数，但是在实际使用中，将要进行量化的激活值不一定来自ReLU激活函数，有可能是其他函数，也有可能是来自elementwise op等，所以本demo中的方法是在激活值和量化op之间加入改进后的PACT方法，公式如下：
 
-$$
-y = PACT(x)  = \left\{\begin{matrix}
--\alpha  & x \in (-\infty, -\alpha) \\
-x & x \in [-\alpha, \alpha) \\
-\alpha & x \in [\alpha, +\infty)
-\end{matrix}\right.
+<p align="center">
+<img src="./image/pact_our.png" height=400 width=420 hspace='10'/> <br />
+</p>
 
-$$
 
 改进的原因是要量化的激活值不一定都是大于0，而量化时寻找的时激活值的最大值，所以小于0的值也要进行约束。
 
