@@ -1,4 +1,4 @@
-# 目标检测模型定点量化教程
+# 目标检测模型量化教程
 
 教程内容请参考：https://github.com/PaddlePaddle/PaddleDetection/blob/release/0.2/slim/quantization/README.md
 
@@ -7,7 +7,7 @@
 
 ### 训练策略
 
-- 量化策略`post`为使用离线量化得到的模型，`aware`为在线量化训练得到的模型。
+- 量化策略`post`为使用静态离线量化方法得到的模型，`aware`为在线量化训练方法得到的模型。
 
 ### YOLOv3 on COCO
 
