@@ -35,7 +35,7 @@ import numpy as np
 To generate fake quantized model with quant-aware strategy, refer to [Quant-aware training tutorial](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
 
 **The parameters during quant-aware training:**
-- **quantize_op_types:** In PaddlePaddle, CPU supports quantizable ops: `depthwise_conv2d`, `mul`, `conv2d`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`. However, when inserting fake quantize/dequantize op during training, you only need to insert fake quantize/dequantize ops before and after the first four ops, because the latter five ops: `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`, their input and output scales can be obtained from the scales of other ops before and after, so setting `quantize_op_types` parameter `depthwise_conv2d`, `mul`, `conv2d`, `matmul` is enough.
+- **quantize_op_types:** In PaddlePaddle, CPU supports quantizable ops: `depthwise_conv2d`, `conv2d`, `fc`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`. However, when inserting fake quantize/dequantize op during training, you only need to insert fake quantize/dequantize ops before and after the first four ops, because the latter five ops: `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`, their input and output scales can be obtained from the scales of other ops before and after, so setting `quantize_op_types` parameter `depthwise_conv2d`, `conv2d`, `fc`, `matmul` is enough.
 - **Other parameters:** Please refer to [PaddleSlim quant_aware API](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#quant_aware)
 
 #### 2.2 Post-training quantization
@@ -56,7 +56,7 @@ python save_quant_model.py --quant_model_path=/PATH/TO/SAVE/FLOAT32/quant/MODEL 
 - **--debug:** Generate models graph or not. Add this option to generate a series of *.dot files containing model drawings after each conversion step. For the description of DOT format, please refer to [DOT](https://graphviz.gitlab.io/_pages/doc/info/lang.html). To open the `*.dot` file, please use any Graphviz tool available on the system(such as the `xdot` tool on Linux or the `dot` tool on Windows. For Graphviz documentation, see [Graphviz](http://www. graphviz.org/documentation/).
   
 - **Note:**
-  - The DNNL supported quantizable ops are `conv2d`, `depthwise_conv2d`, `mul`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`, `scale`, `concat`.
+  - The DNNL supported quantizable ops are `conv2d`, `depthwise_conv2d`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`, `scale`, `concat`.
   - If you set `--op_ids_to_skip`, you only need to pass in all the quantized op ID number you want to keep FP32 type.
   - Sometimes quantizing all ops does not necessarily result in optimal performance. For example: If an op is a single INT8 op, before and after the op are float32 op, then in order to quantify this op, you need to do quantize first, then run INT8 op, and then dequantize, which may lead to the final performance is not as good as keeping the op fp32 op. If the user has poor performance using the default settings, you can observe whether this model has a separate INT8 op, select different combinations of `ops_to_quantize`, or you can exclude some quantiable op IDs through `--op_ids_to_skip`, and run several times to get the most Good settings.
 
