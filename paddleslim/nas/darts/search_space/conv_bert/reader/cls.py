@@ -17,8 +17,8 @@ import os
 import types
 import csv
 import numpy as np
-import tokenization
-from batching import prepare_batch_data
+from . import tokenization
+from .batching import prepare_batch_data
 
 
 class DataProcessor(object):
