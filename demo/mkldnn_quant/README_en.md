@@ -30,6 +30,8 @@ import numpy as np
 
 ## 2. Use PaddleSlim to generate a fake quantized model
 
+One can generate fake-quantized model with post-training or quant-aware strategy. If you simply want to verify the whole process, download fake-quantized model from [here](A quant model link that upload to luotao), its original FP32 model is [here](A fp32 model link that need to upload to luotao). If you want to quantize your own models please read following 2.1 and 2.2.
+
 #### 2.1 Quant-aware training
 
 To generate fake quantized model with quant-aware strategy, refer to [Quant-aware training tutorial](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)

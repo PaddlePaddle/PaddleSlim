@@ -30,7 +30,7 @@ import numpy as np
 
 ## 2. 用PaddleSlim产出量化模型
 
-使用PaddleSlim产出量化训练模型或者离线量化模型。
+用户可以使用PaddleSlim产出量化训练模型或者离线量化模型。如果用户只想要验证整个流程，可以从[这里](A link to) 下载fake-quantized model, 其对应的原始的FP32模型从[这里](A link to FP32 model)下载。如果用户要转化部署自己的模型，请2.1, 2.2的步骤生成fake-quantized model.
 
 #### 2.1 量化训练
 
