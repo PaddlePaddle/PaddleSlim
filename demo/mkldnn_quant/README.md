@@ -1,8 +1,8 @@
-# 图像分类INT8模型在CPU优化部署和预测
+# 图像分类INT8量化模型在CPU上的部署和预测
 
 ## 概述
 
-本文主要介绍在CPU上转化、部署和执行PaddleSlim产出的量化模型的流程。在Intel(R) Xeon(R) Gold 6271机器上，量化后的INT8模型为优化后FP32模型的3-4倍，而精度仅有极小下降。
+本文主要介绍在CPU上转化PaddleSlim产出的量化模型并部署和预测的流程。在Intel(R) Xeon(R) Gold 6271机器上，量化后的INT8模型为优化后FP32模型的3-4倍，而精度仅有极小下降。
 
 流程步骤如下：
 - 产出量化模型：使用PaddleSlim训练产出量化模型，注意模型的weights的值应该在INT8范围内，但是类型仍为float型。
@@ -30,7 +30,7 @@ import numpy as np
 
 ## 2. 用PaddleSlim产出量化模型
 
-用户可以使用PaddleSlim产出量化训练模型或者离线量化模型。如果用户只想要验证整个流程，可以从[这里](A link to) 下载fake-quantized model, 其对应的原始的FP32模型从[这里](A link to FP32 model)下载。如果用户要转化部署自己的模型，请2.1, 2.2的步骤生成fake-quantized model.
+用户可以使用PaddleSlim产出量化训练模型或者离线量化模型。如果用户只想要验证部署和预测流程，可以下载[mobilenetv2 post-training quant model](https://paddle-inference-dist.cdn.bcebos.com/quantizaiton/quant_post_models/mobilenetv2_quant_post.tgz), 其对应的原始的FP32模型下载[mobilenetv2 fp32](https://paddle-inference-dist.cdn.bcebos.com/quantizaiton/fp32_models/mobilenetv2.tgz)。如果用户要转化部署自己的模型，请根据下面2.1, 2.2的步骤生成fake-quantized model.
 
 #### 2.1 量化训练
 

@@ -7,7 +7,7 @@ This document describes the process of converting, deploying and executing the D
 The steps are as follows:
 - Generate fake quantized model: Use PaddleSlim to generate fake quantized model with strategy: Quant-aware training or post-training. Note that the parameters of the quantized ops will be in the range of INT8, but the type remain float32.
 - Converting fake quantized model to real INT8 model: Use the script to convert the quant model to DNNL INT8 model on the CPU.
-- Deployment and inference on CPU: Deploy the demo on CPUs and run the inference.
+- Deployment and inference on CPU: Deploy the demo on CPUs and run inference.
 
 ## 1. Preparation
 
@@ -30,7 +30,7 @@ import numpy as np
 
 ## 2. Use PaddleSlim to generate a fake quantized model
 
-One can generate fake-quantized model with post-training or quant-aware strategy. If you simply want to verify the whole process, download fake-quantized model from [here](A quant model link that upload to luotao), its original FP32 model is [here](A fp32 model link that need to upload to luotao). If you want to quantize your own models please read following 2.1 and 2.2.
+One can generate fake-quantized model with post-training or quant-aware strategy. If you simply want to verify the deployment and inference process, download [mobilenetv2 post-training quant model](https://paddle-inference-dist.cdn.bcebos.com/quantizaiton/quant_post_models/mobilenetv2_quant_post.tgz), its original FP32 model is [mobilenetv2 fp32 model](https://paddle-inference-dist.cdn.bcebos.com/quantizaiton/fp32_models/mobilenetv2.tgz). If you want to quantize your own models please read following 2.1 and 2.2.
 
 #### 2.1 Quant-aware training
 
