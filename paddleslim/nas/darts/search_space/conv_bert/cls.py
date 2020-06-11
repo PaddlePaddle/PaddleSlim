@@ -54,7 +54,8 @@ class AdaBERTClassifier(Layer):
                  data_dir=None,
                  use_fixed_gumbel=False,
                  gumbel_alphas=None,
-                 fix_emb=False):
+                 fix_emb=False,
+                 t=5.0):
         super(AdaBERTClassifier, self).__init__()
         self._n_layer = n_layer
         self._num_labels = num_labels
@@ -67,6 +68,7 @@ class AdaBERTClassifier(Layer):
         self._teacher_model = teacher_model
         self._data_dir = data_dir
         self.use_fixed_gumbel = use_fixed_gumbel
+        self.T = t
         print(
             "----------------------load teacher model and test----------------------------------------"
         )
@@ -124,6 +126,11 @@ class AdaBERTClassifier(Layer):
     def genotype(self):
         return self.arch_parameters()
 
+    def ce(self, logits):
+        logits = np.exp(logits - np.max(logits))
+        logits = logits / logits.sum(axis=0)
+        return logits
+
     def loss(self, data_ids):
         src_ids = data_ids[0]
         position_ids = data_ids[1]
@@ -146,20 +153,20 @@ class AdaBERTClassifier(Layer):
         for i in range(len(s_logits)):
             j = int(np.ceil(i * (float(len(t_logits)) / len(s_logits))))
             kd_weights.append(t_losses[j].numpy())
-        kd_weights = 1 / np.array(kd_weights)
 
-        kd_weights = np.exp(kd_weights - np.max(kd_weights))
-
-        kd_weights = kd_weights / kd_weights.sum(axis=0)
+        kd_weights = np.array(kd_weights)
+        kd_weights = self.ce(-kd_weights)
         s_probs = None
         for i in range(len(s_logits)):
             j = int(np.ceil(i * (float(len(t_logits)) / len(s_logits))))
             t_logit = t_logits[j]
             s_logit = s_logits[i]
             t_logit.stop_gradient = True
-            t_probs = fluid.layers.softmax(t_logit)
+            t_probs = fluid.layers.softmax(t_logit / self.T)
             s_probs = fluid.layers.softmax(s_logit)
-            kd_loss = t_probs * fluid.layers.log(s_probs / 1.0)
+            #kd_loss = -t_probs * fluid.layers.log(s_probs)
+            kd_loss = fluid.layers.cross_entropy(
+                input=s_probs, label=t_probs, soft_label=True)
             kd_loss = fluid.layers.reduce_sum(kd_loss, dim=1)
             kd_loss = fluid.layers.mean(kd_loss)
             #            print("kd_loss[{}] = {}; kd_weights[{}] = {}".format(i, kd_loss.numpy(), i, kd_weights[i]))
@@ -179,6 +186,6 @@ class AdaBERTClassifier(Layer):
         accuracy = fluid.layers.accuracy(
             input=probs, label=labels, total=num_seqs)
 
-        loss = (1 - self._gamma) * ce_loss - self._gamma * kd_loss
+        loss = (1 - self._gamma) * ce_loss + self._gamma * kd_loss
         #        return ce_loss, accuracy, None, None
         return loss, accuracy, ce_loss, kd_loss
