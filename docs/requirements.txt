@@ -1,4 +1,5 @@
-mkdocs
-markdown
-python-markdown-math
-pymdown-extensions
+sphinx
+recommonmark
+sphinx_markdown_tables
+sphinx_rtd_theme
+m2r

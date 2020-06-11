@@ -11,7 +11,7 @@ import paddle.fluid as fluid
 from paddleslim.prune import merge_sensitive, get_ratios_by_loss
 from paddleslim.prune import sensitivity
 from paddleslim.common import get_logger
-sys.path.append(sys.path[0] + "/../")
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments
 
@@ -68,7 +68,7 @@ def compress(args):
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
+    val_reader = paddle.fluid.io.batch(val_reader, batch_size=args.batch_size)
 
     val_feeder = feeder = fluid.DataFeeder(
         [image, label], place, program=val_program)
