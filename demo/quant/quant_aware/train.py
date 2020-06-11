@@ -12,7 +12,7 @@ sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-from paddleslim.quant import quant_aware, quant_post, convert
+from paddleslim.quant import quant_aware, convert
 import models
 from utility import add_arguments, print_arguments
 

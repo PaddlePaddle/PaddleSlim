@@ -1,11 +1,11 @@
- # 图像分类模型离线量化-快速开始
+ # 图像分类模型静态离线量化-快速开始
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[离线量化接口](https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-post)。 该示例包含以下步骤：
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[静态离线量化接口](../api_cn/quantization_api.html#quant-post-static)。 该示例包含以下步骤：
 
 1. 导入依赖
 2. 构建模型
 3. 训练模型
-4. 离线量化
+4. 静态离线量化
 
 ## 1. 导入依赖
 PaddleSlim依赖Paddle1.7版本，请确认已正确安装Paddle，然后按以下方式导入Paddle和PaddleSlim:
@@ -90,7 +90,7 @@ test(val_program)
 ```
 
 
-保存inference model，将训练好的分类模型保存在``'./inference_model'``下，后续进行离线量化时将加载保存在此处的模型。
+保存inference model，将训练好的分类模型保存在``'./inference_model'``下，后续进行静态离线量化时将加载保存在此处的模型。
 
 
 ```python
@@ -102,29 +102,29 @@ fluid.io.save_inference_model(dirname='./inference_model',
         main_program=val_program)
 ```
 
-## 4. 离线量化
+## 4. 静态离线量化
 
-调用离线量化接口，加载文件夹``'./inference_model'``训练好的分类模型，并使用10个batch的数据进行参数校正。此过程无需训练，只需跑前向过程来计算量化所需参数。离线量化后的模型保存在文件夹``'./quant_post_model'``下。
+调用静态离线量化接口，加载文件夹``'./inference_model'``训练好的分类模型，并使用10个batch的数据进行参数校正。此过程无需训练，只需跑前向过程来计算量化所需参数。静态离线量化后的模型保存在文件夹``'./quant_post_static_model'``下。
 
 
 ```python
-slim.quant.quant_post(
+slim.quant.quant_post_static(
         executor=exe,
         model_dir='./inference_model',
-        quantize_model_path='./quant_post_model',
+        quantize_model_path='./quant_post_static_model',
         sample_generator=reader.test(),
         batch_nums=10)
 ```
 
 
-加载保存在文件夹``'./quant_post_model'``下的量化后的模型进行测试，可看到精度和``3.2 训练和测试``中得到的测试精度相近，因此离线量化过程对于此分类模型几乎无损。
+加载保存在文件夹``'./quant_post_static_model'``下的量化后的模型进行测试，可看到精度和``3.2 训练和测试``中得到的测试精度相近，因此静态离线量化过程对于此分类模型几乎无损。
 
 
 ```python
-quant_post_prog, feed_target_names, fetch_targets = fluid.io.load_inference_model(
-        dirname='./quant_post_model',
+quant_post_static_prog, feed_target_names, fetch_targets = fluid.io.load_inference_model(
+        dirname='./quant_post_static_model',
         model_filename='__model__',
         params_filename='__params__',
         executor=exe)
-test(quant_post_prog, fetch_targets)
+test(quant_post_static_prog, fetch_targets)
 ```

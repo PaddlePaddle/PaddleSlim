@@ -1,10 +1,10 @@
-# 离线量化示例
+# 静态离线量化示例
 
-本示例介绍如何使用离线量化接口``paddleslim.quant.quant_post``来对训练好的分类模型进行离线量化, 该接口无需对模型进行训练就可得到量化模型，减少模型的存储空间和显存占用。
+本示例介绍如何使用离线量化接口``paddleslim.quant.quant_post_static``来对训练好的分类模型进行离线量化, 该接口无需对模型进行训练就可得到量化模型，减少模型的存储空间和显存占用。
 
 ## 接口介绍
 
-请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-post'>量化API文档</a>。
+请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-post-static'>量化API文档</a>。
 
 ## 分类模型的离线量化流程
 
@@ -30,10 +30,10 @@ python export_model.py --model "MobileNet" --pretrained_model ./pretrain/MobileN
 ```
 转化之后的模型存储在``inference_model/MobileNet/``文件夹下，可看到该文件夹下有``'model'``, ``'weights'``两个文件。
 
-### 离线量化
-接下来对导出的模型文件进行离线量化，离线量化的脚本为[quant_post.py](./quant_post.py)，脚本中使用接口``paddleslim.quant.quant_post``对模型进行离线量化。运行命令为：
+### 静态离线量化
+接下来对导出的模型文件进行静态离线量化，静态离线量化的脚本为[quant_post.py](./quant_post.py)，脚本中使用接口``paddleslim.quant.quant_post_static``对模型进行离线量化。运行命令为：
 ```
-python quant_post.py --model_path ./inference_model/MobileNet --save_path ./quant_model_train/MobileNet --model_filename model --params_filename weights
+python quant_post_static.py --model_path ./inference_model/MobileNet --save_path ./quant_model_train/MobileNet --model_filename model --params_filename weights
 ```
 
 - ``model_path``: 需要量化的模型坐在的文件夹
