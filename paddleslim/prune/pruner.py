@@ -123,15 +123,12 @@ class Pruner():
 
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
-            print("{}\t{}\t{}".format(param, pruned_axis, len(pruned_idx)))
             if param not in merge_pruned_params:
                 merge_pruned_params[param] = {}
             if pruned_axis not in merge_pruned_params[param]:
                 merge_pruned_params[param][pruned_axis] = []
             merge_pruned_params[param][pruned_axis].append(pruned_idx)
 
-        print("param name: stage.0.conv_layer.conv.weights; idx: {}".format(
-            merge_pruned_params["stage.0.conv_layer.conv.weights"][1]))
         for param_name in merge_pruned_params:
             for pruned_axis in merge_pruned_params[param_name]:
                 pruned_idx = np.concatenate(merge_pruned_params[param_name][
