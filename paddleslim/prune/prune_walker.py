@@ -77,9 +77,10 @@ class PruneWorker(object):
             if op.type() in SKIP_OPS:
                 _logger.warn("Skip operator [{}]".format(op.type()))
                 return
-            _logger.warn(
-                "{} op will be pruned by default walker to keep the shapes of input and output being same because its walker is not registered.".
-                format(op.type()))
+
+#            _logger.warn(
+#                "{} op will be pruned by default walker to keep the shapes of input and output being same because its walker is not registered.".
+#                format(op.type()))
             cls = PRUNE_WORKER.get("default_walker")
         _logger.debug("\nfrom: {}\nto: {}\npruned_axis: {}; var: {}".format(
             self.op, op, pruned_axis, var.name()))
@@ -263,6 +264,8 @@ class elementwise_op(PruneWorker):
                 if name == "Y":
                     actual_axis = pruned_axis - axis
                 in_var = self.op.inputs(name)[0]
+                if len(in_var.shape()) == 1 and in_var.shape()[0] == 1:
+                    continue
                 pre_ops = in_var.inputs()
                 for op in pre_ops:
                     self._prune_op(op, in_var, actual_axis, pruned_idx)
@@ -270,19 +273,21 @@ class elementwise_op(PruneWorker):
         else:
             if var in self.op.inputs("X"):
                 in_var = self.op.inputs("Y")[0]
-
-                if in_var.is_parameter():
-                    self.pruned_params.append(
-                        (in_var, pruned_axis - axis, pruned_idx))
-                pre_ops = in_var.inputs()
-                for op in pre_ops:
-                    self._prune_op(op, in_var, pruned_axis - axis, pruned_idx)
+                if not (len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
+                    if in_var.is_parameter():
+                        self.pruned_params.append(
+                            (in_var, pruned_axis - axis, pruned_idx))
+                    pre_ops = in_var.inputs()
+                    for op in pre_ops:
+                        self._prune_op(op, in_var, pruned_axis - axis,
+                                       pruned_idx)
             elif var in self.op.inputs("Y"):
                 in_var = self.op.inputs("X")[0]
-                pre_ops = in_var.inputs()
-                pruned_axis = pruned_axis + axis
-                for op in pre_ops:
-                    self._prune_op(op, in_var, pruned_axis, pruned_idx)
+                if not (len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
+                    pre_ops = in_var.inputs()
+                    pruned_axis = pruned_axis + axis
+                    for op in pre_ops:
+                        self._prune_op(op, in_var, pruned_axis, pruned_idx)
 
         out_var = self.op.outputs("Out")[0]
         self._visit(out_var, pruned_axis)

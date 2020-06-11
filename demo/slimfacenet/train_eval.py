@@ -27,7 +27,7 @@ from dataloader.casia import CASIA_Face
 from dataloader.lfw import LFW
 from lfw_eval import parse_filelist, evaluation_10_fold
 from paddleslim import models
-from paddleslim.quant import quant_post
+from paddleslim.quant import quant_post_static
 
 
 def now():
@@ -331,7 +331,7 @@ def main():
     if args.action == 'train':
         train(exe, train_program, train_out, test_program, test_out, args)
     elif args.action == 'quant':
-        quant_post(
+        quant_post_static(
             executor=exe,
             model_dir='./out_inference/',
             quantize_model_path='./quant_model/',

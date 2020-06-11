@@ -20,7 +20,6 @@ __all__ = ['DARTSearch', 'count_parameters_in_MB']
 
 import os
 import logging
-from itertools import izip
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable
@@ -107,7 +106,7 @@ class DARTSearch(object):
         self.model.train()
 
         step_id = 0
-        for train_data, valid_data in izip(train_loader(), valid_loader()):
+        for train_data, valid_data in zip(train_loader(), valid_loader()):
             if epoch >= self.epochs_no_archopt:
                 architect.step(train_data, valid_data)
 

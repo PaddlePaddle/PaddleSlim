@@ -15,7 +15,7 @@
    tutorials/index
    api_cn/index
    FAQ/index
-   model_zoo.md
+   model_zoo/index
    algo/algo.md
    CHANGELOG.md
 

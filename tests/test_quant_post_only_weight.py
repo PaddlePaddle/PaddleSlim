@@ -16,7 +16,7 @@ sys.path.append("../")
 import unittest
 import paddle
 import paddle.fluid as fluid
-from paddleslim.quant import quant_post_only_weight
+from paddleslim.quant import quant_post_dynamic
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
@@ -90,7 +90,7 @@ class TestQuantPostOnlyWeightCase1(unittest.TestCase):
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
         fluid.io.save_inference_model(
-            dirname='./test_quant_post',
+            dirname='./test_quant_post_dynamic',
             feeded_var_names=[image.name, label.name],
             target_vars=[avg_cost, acc_top1, acc_top5],
             main_program=val_prog,
@@ -98,7 +98,7 @@ class TestQuantPostOnlyWeightCase1(unittest.TestCase):
             model_filename='model',
             params_filename='params')
 
-        quant_post_only_weight(
+        quant_post_dynamic(
             model_dir='./test_quant_post',
             save_model_dir='./test_quant_post_inference',
             model_filename='model',
