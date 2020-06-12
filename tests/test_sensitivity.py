@@ -17,7 +17,7 @@ import unittest
 import numpy
 import paddle
 import paddle.fluid as fluid
-from paddleslim.analysis import sensitivity
+from paddleslim.prune import sensitivity
 from layers import conv_bn_layer
 
 
@@ -47,13 +47,12 @@ class TestSensitivity(unittest.TestCase):
         val_reader = paddle.fluid.io.batch(
             paddle.dataset.mnist.test(), batch_size=128)
 
-        def eval_func(program, scope):
+        def eval_func(program):
             feeder = fluid.DataFeeder(
                 feed_list=['image', 'label'], place=place, program=program)
             acc_set = []
             for data in val_reader():
                 acc_np = exe.run(program=program,
-                                 scope=scope,
                                  feed=feeder.feed(data),
                                  fetch_list=[acc_top1])
                 acc_set.append(float(acc_np[0]))
@@ -61,8 +60,7 @@ class TestSensitivity(unittest.TestCase):
             print("acc_val_mean: {}".format(acc_val_mean))
             return acc_val_mean
 
-        sensitivity(eval_program,
-                    fluid.global_scope(), place, ["conv4_weights"], eval_func,
+        sensitivity(eval_program, place, ["conv4_weights"], eval_func,
                     "./sensitivities_file")
 
 

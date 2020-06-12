@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import numpy as np
-import scipy.misc
+import six
+if six.PY2:
+    import scipy.misc as imgreader
+else:
+    import imageio as imgreader
 import os
 import paddle
 from paddle import fluid
@@ -54,7 +58,7 @@ class CASIA_Face(object):
             target = self.label_list[index]
 
             try:
-                img = scipy.misc.imread(img_path)
+                img = imgreader.imread(img_path)
             except:
                 continue
 

@@ -1,4 +1,4 @@
-# CPU部署预测INT8模型
+# CPU上部署量化模型教程
 
 在Intel(R) Xeon(R) Gold 6271机器上，经过量化和DNNL加速，INT8模型在单线程上性能为原FP32模型的3~4倍；在 Intel(R) Xeon(R) Gold 6148，单线程性能为原FP32模型的1.5倍，而精度仅有极小下降。图像分类量化的样例教程请参考[图像分类INT8模型在CPU优化部署和预测](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/mkldnn_quant/quant_aware/PaddleCV_mkldnn_quantaware_tutorial_cn.md)。自然语言处理模型的量化请参考[ERNIE INT8 模型精度与性能复现](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c%2B%2B/ernie/mkldnn)
 

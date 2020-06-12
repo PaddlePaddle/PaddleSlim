@@ -274,7 +274,7 @@ def quant_aware(program,
     return quant_program
 
 
-def quant_post(executor,
+def quant_post_static(executor,
                model_dir,
                quantize_model_path,
                batch_generator=None,
@@ -296,10 +296,10 @@ def quant_post(executor,
                is_use_cache_file=False,
                cache_dir="./temp_post_training"):
     """
-    The function utilizes post training quantization method to quantize the 
-    fp32 model. It uses calibrate data to calculate the scale factor of 
-    quantized variables, and inserts fake quantization and dequantization 
-    operators to obtain the quantized model.
+    The function utilizes static post training quantization method to
+    quantize the fp32 model. It uses calibrate data to calculate the
+    scale factor of quantized variables, and inserts fake quantization
+    and dequantization operators to obtain the quantized model.
 
     Args:
         executor(fluid.Executor): The executor to load, run and save the 
@@ -381,26 +381,40 @@ def quant_post(executor,
         model_filename=save_model_filename,
         params_filename=save_params_filename)
 
+# We have changed the quant_post to quant_post_static.
+# For compatibility, we keep quant_post api for now, and it will be
+# deprecated in the future.
+quant_post = quant_post_static
+
 
 def convert(program, place, config=None, scope=None, save_int8=False):
     """
-    convert quantized and well-trained ``program`` to final  quantized ``program`` that can be used to  save ``inference model``.
+    convert quantized and well-trained ``program`` to final  quantized
+    ``program``that can be used to  save ``inference model``.
     
     Args:
         program(fluid.Program): quantized and well-trained ``test program``.
-        place(fluid.CPUPlace or fluid.CUDAPlace): This parameter represents the executor run on which device.
-        config(dict, optional): configs for convert. if set None, will use default config. 
-            It must be same with config that used in 'quant_aware'. Default: None.
-        scope(fluid.Scope, optional):  Scope records the mapping between variable names and variables, 
-            similar to brackets in programming languages. Usually users can use 
-            `fluid.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.              When ``None`` will use `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . Default: ``None``.
-        save_int8: Whether to return ``program`` which model parameters' dtype is ``int8``. 
-            This parameter can only be used to get model size. Default: ``False``.
+        place(fluid.CPUPlace or fluid.CUDAPlace): This parameter represents
+                the executor run on which device.
+        config(dict, optional): configs for convert. if set None, will use
+                default config. It must be same with config that used in
+                'quant_aware'. Default is None.
+        scope(fluid.Scope, optional):  Scope records the mapping between
+                variable names and variables, similar to brackets in
+                programming languages. Usually users can use
+                `fluid.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.
+                When ``None`` will use 
+                `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_
+                . Default: ``None``.
+        save_int8: Whether to return ``program`` which model parameters'
+                dtype is ``int8``. This parameter can only be used to
+                get model size. Default: ``False``.
 
     Returns:
         Tuple : freezed program which can be used for inference.
-        when ``save_int8`` is False, return ``freezed_program(fluid.Program)``.
-        when ``save_int8`` is True, return ``freezed_program(fluid.Program)`` and ``freezed_program_int8(fluid.Program)``
+                when ``save_int8`` is False, return ``freezed_program(fluid.Program)``.
+                when ``save_int8`` is True, return ``freezed_program(fluid.Program)``
+                and ``freezed_program_int8(fluid.Program)``
     """
     scope = fluid.global_scope() if not scope else scope
 
@@ -436,7 +450,7 @@ def convert(program, place, config=None, scope=None, save_int8=False):
         return freezed_program
 
 
-def quant_post_only_weight(model_dir,
+def quant_post_dynamic(model_dir,
                            save_model_dir,
                            model_filename=None,
                            params_filename=None,
@@ -446,19 +460,26 @@ def quant_post_only_weight(model_dir,
                            weight_bits=8,
                            generate_test_model=False):
     '''
-    In order to reduce the size of model, this api quantizes the weight
-    of some ops from float32 to int8/16. In the inference stage, the 
-    quantized weight will be dequantized to float32 again.
+    The function utilizes static post training quantization method to
+    quantize the fp32 model. In details, it quantizes the weight of some
+    ops from float32 to int8/16. For the quantized model, there are two
+    kinds of calculation method in the reference stage. Firstly, the
+    quantized weight will be dequantized to float32, and then apply the
+    float32 calculation. Secondly, collect the quantized scales of the
+    inputs, and then apply the int8 calculation.
         
     Args:
         model_dir(str): The path of the fp32 model that will be quantized,
-                    and the model and params files are under the path.
+                and the model and params files are under the path.
         save_model_dir(str): The path to save the quantized model.
-        model_filename(str, optional): The name of file used to load the inference
-                    program. If it is None, the default filename '__model__' will be used. Default is 'None'.
-        params_filename(str, optional): The name of file used to load all parameters. When all parameters were saved 
-                in a single binary file, set it as the real filename. If parameters were saved in separate files,
-                set it as 'None'. Default is 'None'.
+        model_filename(str, optional): The name of file used to load the
+                inference program. If it is None, the default filename
+                '__model__' will be used. Default is 'None'.
+        params_filename(str, optional): The name of file used to load all
+                parameters. When all parameters were saved in a single
+                binary file, set it as the real filename. If parameters
+                were saved in separate files, set it as 'None'. Default is
+                'None'.
         save_model_dir(str): The path used to save the quantized model.
         save_model_filename(str, optional): The name of file to 
                 save the inference program. If it is None, the default 
@@ -483,6 +504,7 @@ def quant_post_only_weight(model_dir,
         model_dir=model_dir,
         model_filename=model_filename,
         params_filename=params_filename)
+
     weight_quant.quantize_weight_to_int(
         save_model_dir=save_model_dir,
         save_model_filename=save_model_filename,
@@ -490,3 +512,9 @@ def quant_post_only_weight(model_dir,
         quantizable_op_type=quantizable_op_type,
         weight_bits=weight_bits,
         generate_test_model=generate_test_model)
+
+
+# We have changed the quant_post_only_weight to quant_post_dynamic.
+# For compatibility, we keep quant_post_only_weight api for now,
+# and it will be deprecated in the future.
+quant_post_only_weight = quant_post_dynamic

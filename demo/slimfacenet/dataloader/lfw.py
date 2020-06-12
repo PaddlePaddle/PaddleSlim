@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import numpy as np
-import scipy.misc
-
+import six
+if six.PY2:
+    import scipy.misc as imgreader
+else:
+    import imageio as imgreader
 import paddle
 from paddle import fluid
 
@@ -33,10 +36,10 @@ class LFW(object):
                 return
             index = self.shuffle_idx.pop(0)
 
-            imgl = scipy.misc.imread(self.imgl_list[index])
+            imgl = imgreader.imread(self.imgl_list[index])
             if len(imgl.shape) == 2:
                 imgl = np.stack([imgl] * 3, 2)
-            imgr = scipy.misc.imread(self.imgr_list[index])
+            imgr = imgreader.imread(self.imgr_list[index])
             if len(imgr.shape) == 2:
                 imgr = np.stack([imgr] * 3, 2)
 

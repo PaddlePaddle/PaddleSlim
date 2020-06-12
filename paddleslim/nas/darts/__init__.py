@@ -15,6 +15,9 @@
 from __future__ import absolute_import
 from ..darts import train_search
 from .train_search import *
+from ..darts import search_space
+from .search_space import *
 
 __all__ = []
 __all__ += train_search.__all__
+__all__ += search_space.__all__
