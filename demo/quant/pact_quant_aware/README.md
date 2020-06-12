@@ -179,7 +179,7 @@ python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/Mob
 
 使用PACT量化训练
 ```
-python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/MobileNetV3_large_x1_0_ssld_pretrained --checkpoint_dir ./output/MobileNetV3_large_x1_0 --num_epochs 30 --lr 0.0001 --use_pact True --batch_size 128
+python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/MobileNetV3_large_x1_0_ssld_pretrained --checkpoint_dir ./output/MobileNetV3_large_x1_0 --num_epochs 30 --lr 0.0001 --use_pact True --batch_size 128 --lr_strategy=piecewise_decay --step_epochs 20 --l2_decay 1e-5
 ```
 
 输出结果为
@@ -195,4 +195,4 @@ python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/Mob
 2020-06-05 15:27:40,273-INFO: epoch[0]-batch[90] - loss: 1.5926772356; acc_top1: 0.6328125; acc_top5: 0.859375; time: 1.45620679855
 2020-06-05 15:27:55,660-INFO: epoch[0]-batch[100] - loss: 1.40280032158; acc_top1: 0.671875; acc_top5: 0.875; time: 1.50846099854
 ```
-可以看出loss值比较稳定，并且我们在实验时，可以得到top-1 77.6%的量化模型。
+可以看出loss值比较稳定，并且我们在实验时，可以得到top-1 77.5%的量化模型。除了上述命令中的配置外，还要设置为 `pact` 初始阈值为20。量化模型可点击[下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/mobilenetv3_pact_quant.tar)。

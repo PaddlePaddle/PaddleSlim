@@ -23,7 +23,7 @@ quant_post_dynamic
 
 .. py:function:: paddleslim.quant.quant_post_dynamic(model_dir, save_model_dir, model_filename=None, params_filename=None, save_model_filename=None, save_params_filename=None, quantizable_op_type=["conv2d", "mul"], weight_bits=8, generate_test_model=False)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
 
 动态离线量化，将模型中特定OP的权重从FP32类型量化成INT8/16类型。
 
@@ -99,7 +99,7 @@ quant_post_static
 
 .. py:function:: paddleslim.quant.quant_post_static(executor,model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='__model__', save_params_filename='__params__', batch_size=16, batch_nums=None, scope=None, algo='KL', quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', is_use_cache_file=False, cache_dir="./temp_post_training")
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
 
 静态离线量化，使用少量校准数据计算量化因子，可以快速得到量化模型。使用该量化模型进行预测，可以减少计算量、降低计算内存、减小模型大小。
 
@@ -184,7 +184,7 @@ quant_post_static
            batch_size=16,
            batch_nums=10)
 
-更详细的用法请参考 `离线量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/release/1.1.0/demo/quant/quant_post>`_ 。
+更详细的用法请参考 `离线量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post>`_ 。
 
 
 
@@ -192,9 +192,9 @@ quant_post_static
 quant_aware
 ------------
 
-.. py:function:: paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False)
+.. py:function:: paddleslim.quant.quant_aware(program, place, config, scope=None, for_test=False, weight_quantize_func=None, act_quantize_func=None, weight_preprocess_func=None, act_preprocess_func=None, optimizer_func=None, executor=None))
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
 
 在 program 中加入量化和反量化op, 用于量化训练。
 
@@ -206,6 +206,14 @@ quant_aware
 - **config(dict)** -  量化配置表。
 - **scope(fluid.Scope, optional)** -  传入用于存储 ``Variable`` 的 ``scope`` ，需要传入 ``program`` 所使用的 ``scope`` ，一般情况下，是 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ 。设置为 ``None`` 时将使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ ，默认值为 ``None`` 。
 - **for_test(bool)** -  如果 ``program`` 参数是一个测试 ``program`` ， ``for_test`` 应设为True，否则设为False 。
+-  **weight_quantize_func(function)** - 自定义对权重量化的函数，该函数的输入是待量化的权重，输出是反量化之后的权重，可以快速验证此量化函数是否有效。此参数设置后，将会替代量化配置中 `weight_quantize_type` 定义的方法，如果此参数不设置，将继续使用 `weight_quantize_type` 定义的方法。默认为None。
+- **act_quantize_func(function)** - 自定义对激活量化的函数，该函数的输入是待量化的激活，输出是反量化之后的激活，可以快速验证此量化函数是否有效。将会替代量化配置中 `activation_quantize_type` 定义的方法，如果此参数不设置，将继续使用 `activation_quantize_type` 定义的方法。默认为None.
+- **weight_preprocess_func(function)** - 自定义在对权重做量化之前，对权重进行处理的函数。此方法的意义在于网络中的参数不一定适合于直接量化，如果对参数分布先进行处理再进行量化，或许可以提高量化精度。默认为None.
+
+- **act_preprocess_func(function)** - 自定义在对激活做量化之前，对激活进行处理的函数。此方法的意义在于网络中的激活值不一定适合于直接量化，如果对激活值先进行处理再进行量化，或许可以提高量化精度。默认为None.
+
+- **optimizer_func(function)** - 该参数是一个返回optimizer的函数。定义的optimizer函数将用于定义上述自定义函数中的参数的优化参数。默认为None.
+- **executor(fluid.Executor)** - 用于初始化上述自定义函数中的变量。默认为None.
 
 **返回**
 
@@ -230,7 +238,7 @@ convert
 
 .. py:function:: paddleslim.quant.convert(program, place, config, scope=None, save_int8=False)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quanter.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
 
 
 把训练好的量化 program ，转换为可用于保存 ``inference model`` 的 program 。
@@ -294,7 +302,7 @@ convert
    
    inference_prog = quant.convert(quant_eval_program, place, config)
 
-更详细的用法请参考 `量化训练demo <https://github.com/PaddlePaddle/PaddleSlim/tree/release/1.1.0/demo/quant/quant_aware>`_ 。
+更详细的用法请参考 `量化训练demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_aware>`_ 。
 
 
 量化训练方法的参数配置
@@ -367,7 +375,7 @@ quant_embedding
 
 .. py:function:: paddleslim.quant.quant_embedding(program, place, config=None, scope=None)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/1.1.0/paddleslim/quant/quant_embedding.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quant_embedding.py>`_
 
 对 ``Embedding`` 参数进行量化。
 
@@ -418,6 +426,6 @@ fluid.Program
             }
    quant_program = quant.quant_embedding(infer_program, place, config)
 
-更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/release/1.1.0/demo/quant/quant_embedding>`_ 
+更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_embedding>`_ 
 
 

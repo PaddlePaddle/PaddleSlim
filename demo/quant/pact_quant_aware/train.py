@@ -76,9 +76,7 @@ def create_optimizer(args):
 
 
 def compress(args):
-    ############################################################################################################
     # 1. quantization configs
-    ############################################################################################################
     quant_config = {
         # weight quantize type, default is 'channel_wise_abs_max'
         'weight_quantize_type': 'channel_wise_abs_max',
@@ -142,12 +140,11 @@ def compress(args):
     exe = fluid.Executor(place)
     exe.run(fluid.default_startup_program())
 
-    ############################################################################################################
     # 2. quantization transform programs (training aware)
     #    Make some quantization transforms in the graph before training and testing.
     #    According to the weight and activation quantization type, the graph will be added
     #    some fake quantize operators and fake dequantize operators.
-    ############################################################################################################
+
     if args.use_pact:
         act_preprocess_func = pact
         optimizer_func = get_optimizer
