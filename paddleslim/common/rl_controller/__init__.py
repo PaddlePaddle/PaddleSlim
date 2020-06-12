@@ -19,9 +19,7 @@ try:
     import parl
     from .ddpg import *
 except ImportError as e:
-    _logger.warn(
-        "If you want to use DDPG in RLNAS, please pip install parl first. Now states: {}".
-        format(e))
+    pass
 
 from .lstm import *
 from .utils import *

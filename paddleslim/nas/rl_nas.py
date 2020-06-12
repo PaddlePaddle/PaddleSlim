@@ -76,6 +76,15 @@ class RLNAS(object):
         self.save_controller = save_controller
         self.load_controller = load_controller
 
+        if key.upper() in ['DDPG']:
+            try:
+                import parl
+            except ImportError as e:
+                _logger.error(
+                    "If you want to use DDPG in RLNAS, please pip install parl first. Now states: {}".
+                    format(e))
+                os._exit(1)
+
         cls = RLCONTROLLER.get(key.upper())
 
         server_ip, server_port = server_addr
