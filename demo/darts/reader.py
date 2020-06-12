@@ -37,8 +37,7 @@ IMAGE_DEPTH = 3
 CIFAR_MEAN = [0.49139968, 0.48215827, 0.44653124]
 CIFAR_STD = [0.24703233, 0.24348505, 0.26158768]
 
-URL_PREFIX = 'https://www.cs.toronto.edu/~kriz/'
-CIFAR10_URL = URL_PREFIX + 'cifar-10-python.tar.gz'
+CIFAR10_URL = 'https://dataset.bj.bcebos.com/cifar%2Fcifar-10-python.tar.gz'
 CIFAR10_MD5 = 'c58f30108f718f92721af3b95e74349a'
 
 paddle.dataset.common.DATA_HOME = "dataset/"
@@ -140,32 +139,10 @@ def train_search(batch_size, train_portion, is_shuffle, args):
     split_point = int(np.floor(train_portion * len(datasets)))
     train_datasets = datasets[:split_point]
     val_datasets = datasets[split_point:]
-    train_readers = []
-    val_readers = []
-    n = int(math.ceil(len(train_datasets) // args.num_workers)
-            ) if args.use_multiprocess else len(train_datasets)
-    train_datasets_lists = [
-        train_datasets[i:i + n] for i in range(0, len(train_datasets), n)
+    reader = [
+        reader_generator(train_datasets, batch_size, True, True, args),
+        reader_generator(val_datasets, batch_size, True, True, args)
     ]
-    val_datasets_lists = [
-        val_datasets[i:i + n] for i in range(0, len(val_datasets), n)
-    ]
-
-    for pid in range(len(train_datasets_lists)):
-        train_readers.append(
-            reader_generator(train_datasets_lists[pid], batch_size, True, True,
-                             args))
-        val_readers.append(
-            reader_generator(val_datasets_lists[pid], batch_size, True, True,
-                             args))
-    if args.use_multiprocess:
-        reader = [
-            paddle.reader.multiprocess_reader(train_readers, False),
-            paddle.reader.multiprocess_reader(val_readers, False)
-        ]
-    else:
-        reader = [train_readers[0], val_readers[0]]
-
     return reader
 
 
@@ -174,18 +151,8 @@ def train_valid(batch_size, is_train, is_shuffle, args):
     datasets = cifar10_reader(
         paddle.dataset.common.download(CIFAR10_URL, 'cifar', CIFAR10_MD5),
         name, is_shuffle, args)
-    n = int(math.ceil(len(datasets) // args.
-                      num_workers)) if args.use_multiprocess else len(datasets)
-    datasets_lists = [datasets[i:i + n] for i in range(0, len(datasets), n)]
-    multi_readers = []
-    for pid in range(len(datasets_lists)):
-        multi_readers.append(
-            reader_generator(datasets_lists[pid], batch_size, is_train,
-                             is_shuffle, args))
-    if args.use_multiprocess:
-        reader = paddle.reader.multiprocess_reader(multi_readers, False)
-    else:
-        reader = multi_readers[0]
+
+    reader = reader_generator(datasets, batch_size, is_train, is_shuffle, args)
     return reader
 
 

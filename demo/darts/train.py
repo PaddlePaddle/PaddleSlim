@@ -19,29 +19,27 @@ from __future__ import print_function
 import os
 import sys
 import ast
+import logging
 import argparse
 import functools
 
-import logging
-FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-logger = logging.getLogger(__name__)
-
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable
-from model import NetworkCIFAR as Network
-from paddleslim.common import AvgrageMeter
+from paddleslim.common import AvgrageMeter, get_logger
+from paddleslim.nas.darts import count_parameters_in_MB
+
 import genotypes
 import reader
+from model import NetworkCIFAR as Network
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from utility import add_arguments, print_arguments
+logger = get_logger(__name__, level=logging.INFO)
 
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
 add_arg('use_multiprocess',  bool,  True,            "Whether use multiprocess reader.")
-add_arg('num_workers',       int,   4,               "The multiprocess reader number.")
 add_arg('data',              str,   'dataset/cifar10',"The dir of dataset.")
 add_arg('batch_size',        int,   96,              "Minibatch size.")
 add_arg('learning_rate',     float, 0.025,           "The start learning rate.")
@@ -60,8 +58,8 @@ add_arg('auxiliary',         bool,  True,            'Use auxiliary tower.')
 add_arg('auxiliary_weight',  float, 0.4,             "Weight for auxiliary loss.")
 add_arg('drop_path_prob',    float, 0.2,             "Drop path probability.")
 add_arg('grad_clip',         float, 5,               "Gradient clipping.")
-add_arg('arch',              str,   'DARTS_V2',         "Which architecture to use")
-add_arg('report_freq',       int,   50,              'Report frequency')
+add_arg('arch',              str,   'DARTS_V2',      "Which architecture to use")
+add_arg('log_freq',          int,   50,              'Report frequency')
 add_arg('use_data_parallel', ast.literal_eval,  False, "The flag indicating whether to use data parallel mode to train the model.")
 # yapf: enable
 
@@ -95,9 +93,7 @@ def train(model, train_reader, optimizer, epoch, drop_path_prob, args):
         else:
             loss.backward()
 
-        grad_clip = fluid.dygraph_grad_clip.GradClipByGlobalNorm(
-            args.grad_clip)
-        optimizer.minimize(loss, grad_clip=grad_clip)
+        optimizer.minimize(loss)
         model.clear_gradients()
 
         n = image.shape[0]
@@ -105,7 +101,7 @@ def train(model, train_reader, optimizer, epoch, drop_path_prob, args):
         top1.update(prec1.numpy(), n)
         top5.update(prec5.numpy(), n)
 
-        if step_id % args.report_freq == 0:
+        if step_id % args.log_freq == 0:
             logger.info(
                 "Train Epoch {}, Step {}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
                 format(epoch, step_id, objs.avg[0], top1.avg[0], top5.avg[0]))
@@ -132,7 +128,7 @@ def valid(model, valid_reader, epoch, args):
         objs.update(loss.numpy(), n)
         top1.update(prec1.numpy(), n)
         top5.update(prec5.numpy(), n)
-        if step_id % args.report_freq == 0:
+        if step_id % args.log_freq == 0:
             logger.info(
                 "Valid Epoch {}, Step {}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
                 format(epoch, step_id, objs.avg[0], top1.avg[0], top5.avg[0]))
@@ -144,9 +140,6 @@ def main(args):
         if args.use_data_parallel else fluid.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
-        if args.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-
         genotype = eval("genotypes.%s" % args.arch)
         model = Network(
             C=args.init_channels,
@@ -155,28 +148,38 @@ def main(args):
             auxiliary=args.auxiliary,
             genotype=genotype)
 
-        step_per_epoch = int(args.trainset_num / args.batch_size)
+        logger.info("param size = {:.6f}MB".format(
+            count_parameters_in_MB(model.parameters())))
+
+        device_num = fluid.dygraph.parallel.Env().nranks
+        step_per_epoch = int(args.trainset_num /
+                             (args.batch_size * device_num))
         learning_rate = fluid.dygraph.CosineDecay(args.learning_rate,
                                                   step_per_epoch, args.epochs)
+        clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=args.grad_clip)
         optimizer = fluid.optimizer.MomentumOptimizer(
             learning_rate,
             momentum=args.momentum,
             regularization=fluid.regularizer.L2Decay(args.weight_decay),
-            parameter_list=model.parameters())
+            parameter_list=model.parameters(),
+            grad_clip=clip)
 
         if args.use_data_parallel:
+            strategy = fluid.dygraph.parallel.prepare_context()
             model = fluid.dygraph.parallel.DataParallel(model, strategy)
 
         train_loader = fluid.io.DataLoader.from_generator(
             capacity=64,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=args.use_multiprocess)
         valid_loader = fluid.io.DataLoader.from_generator(
             capacity=64,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=args.use_multiprocess)
 
         train_reader = reader.train_valid(
             batch_size=args.batch_size,
@@ -188,12 +191,12 @@ def main(args):
             is_train=False,
             is_shuffle=False,
             args=args)
-        train_loader.set_batch_generator(train_reader, places=place)
-        valid_loader.set_batch_generator(valid_reader, places=place)
-
         if args.use_data_parallel:
             train_reader = fluid.contrib.reader.distributed_batch_reader(
                 train_reader)
+
+        train_loader.set_batch_generator(train_reader, places=place)
+        valid_loader.set_batch_generator(valid_reader, places=place)
 
         save_parameters = (not args.use_data_parallel) or (
             args.use_data_parallel and

@@ -56,6 +56,30 @@ Paddle >= 1.7.0
 pip install paddleslim -i https://pypi.org/simple
 ```
 
+### quantization
+
+If you want to use quantization in PaddleSlim, please install PaddleSlim as follows.
+
+If you want to use quantized model in ARM and GPU, any PaddleSlim version is ok and you should install 1.1.0 for CPU.
+
+- For Paddle 1.7, install PaddleSlim 1.0.1
+
+```bash
+pip install paddleslim==1.0.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+- For Paddle 1.8，install PaddleSlim 1.1.1
+
+```bash
+pip install paddleslim==1.1.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+- For Paddle 2.0 ，install PaddleSlim 1.1.0
+
+```bash
+pip install paddleslim==1.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
 ## Usage
 
 - [QuickStart](https://paddlepaddle.github.io/PaddleSlim/quick_start/index_en.html): Introduce how to use PaddleSlim by simple examples.

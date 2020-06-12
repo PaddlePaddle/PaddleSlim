@@ -334,6 +334,7 @@ def _quant_embedding_log(graph, scope, place, config, var_name,
 
     # get quantize dict and quanted tensor
     topk_num, quanted_tensor = _quant_log(embedding_tensor, config)
+    topk_num = np.power(2, topk_num)
 
     #create params must use create_persistable_node
     topk_num_var = graph.create_persistable_node(

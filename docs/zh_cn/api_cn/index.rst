@@ -9,12 +9,8 @@ API文档
 .. toctree::
    :maxdepth: 1
 
-   analysis_api.rst
-   nas_api.rst
-   one_shot_api.rst
-   pantheon_api.md
-   prune_api.rst
-   quantization_api.rst
-   single_distiller_api.rst
-   search_space.md
-   table_latency.md
+   common_index.rst
+   quant_index.rst
+   prune_index.rst
+   distill_index.rst
+   nas_index.rst

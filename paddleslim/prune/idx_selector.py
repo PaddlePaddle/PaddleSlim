@@ -52,7 +52,7 @@ def default_idx_selector(group, ratio):
        list: pruned indexes
 
     """
-    name, axis, score = group[
+    name, axis, score, _ = group[
         0]  # sort channels by the first convolution's score
     sorted_idx = score.argsort()
 
@@ -60,8 +60,9 @@ def default_idx_selector(group, ratio):
     pruned_idx = sorted_idx[:pruned_num]
 
     idxs = []
-    for name, axis, score in group:
-        idxs.append((name, axis, pruned_idx))
+    for name, axis, score, offsets in group:
+        r_idx = [i + offsets[0] for i in pruned_idx]
+        idxs.append((name, axis, r_idx))
     return idxs
 
 
@@ -96,7 +97,7 @@ def optimal_threshold(group, ratio):
     name, axis, score = group[
         0]  # sort channels by the first convolution's score
 
-    score[scoew < 1e-18] = 1e-18
+    score[score < 1e-18] = 1e-18
     score_sorted = np.sort(score)
     score_square = score_sorted**2
     total_sum = score_square.sum()

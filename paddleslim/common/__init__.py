@@ -11,16 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .controller import EvolutionaryController
+from .controller import EvolutionaryController, RLBaseController
 from .sa_controller import SAController
 from .log_helper import get_logger
 from .controller_server import ControllerServer
 from .controller_client import ControllerClient
 from .lock import lock, unlock
 from .cached_reader import cached_reader
+from .server import Server
+from .client import Client
 from .meter import AvgrageMeter
+from .analyze_helper import pdf
 
 __all__ = [
     'EvolutionaryController', 'SAController', 'get_logger', 'ControllerServer',
-    'ControllerClient', 'lock', 'unlock', 'cached_reader', 'AvgrageMeter'
+    'ControllerClient', 'lock', 'unlock', 'cached_reader', 'AvgrageMeter',
+    'Server', 'Client', 'RLBaseController', 'pdf'
 ]

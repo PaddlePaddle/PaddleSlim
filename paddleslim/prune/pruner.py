@@ -90,25 +90,34 @@ class Pruner():
         visited = {}
         pruned_params = []
         for param, ratio in zip(params, ratios):
-            group = collect_convs([param], graph)[0]  # [(name, axis)]
+            _logger.info("pruning: {}".format(param))
+            if graph.var(param) is None:
+                _logger.warn(
+                    "Variable[{}] to be pruned is not in current graph.".
+                    format(param))
+                continue
+            group = collect_convs([param], graph,
+                                  visited)[0]  # [(name, axis, pruned_idx)]
+            if group is None or len(group) == 0:
+                continue
             if only_graph and self.idx_selector.__name__ == "default_idx_selector":
 
                 param_v = graph.var(param)
                 pruned_num = int(round(param_v.shape()[0] * ratio))
                 pruned_idx = [0] * pruned_num
-                for name, axis in group:
+                for name, axis, _ in group:
                     pruned_params.append((name, axis, pruned_idx))
 
             else:
                 assert ((not self.pruned_weights),
                         "The weights have been pruned once.")
                 group_values = []
-                for name, axis in group:
+                for name, axis, pruned_idx in group:
                     values = np.array(scope.find_var(name).get_tensor())
-                    group_values.append((name, values, axis))
+                    group_values.append((name, values, axis, pruned_idx))
 
-                scores = self.criterion(group_values,
-                                        graph)  # [(name, axis, score)]
+                scores = self.criterion(
+                    group_values, graph)  # [(name, axis, score, pruned_idx)]
 
                 pruned_params.extend(self.idx_selector(scores, ratio))
 
@@ -126,8 +135,9 @@ class Pruner():
                     pruned_axis])
                 param = graph.var(param_name)
                 if not lazy:
-                    _logger.debug("{}\t{}\t{}".format(param.name(
-                    ), pruned_axis, len(pruned_idx)))
+                    _logger.debug("{}\t{}\t{}\t{}".format(
+                        param.name(), pruned_axis,
+                        param.shape()[pruned_axis], len(pruned_idx)))
                     if param_shape_backup is not None:
                         origin_shape = copy.deepcopy(param.shape())
                         param_shape_backup[param.name()] = origin_shape

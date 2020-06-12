@@ -125,7 +125,7 @@ place = fluid.CPUPlace()
 exe = fluid.Executor(place)
 exe.run(startup)
 
-train_reader = paddle.batch(
+train_reader = paddle.fluid.io.batch(
         paddle.dataset.cifar.train10(), batch_size=32)
 
 teacher = Teacher(out_path="example_knowledge.dat", # offline mode

@@ -1,6 +1,6 @@
 # 图像分类模型量化训练-快速开始
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[量化训练接口](https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html)。 该示例包含以下步骤：
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[量化训练接口](../api_cn/quantization_api.html)。 该示例包含以下步骤：
 
 1. 导入依赖
 2. 构建模型
@@ -42,9 +42,9 @@ exe, train_program, val_program, inputs, outputs = \
 
 ```python
 import paddle.dataset.mnist as reader
-train_reader = paddle.batch(
+train_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
-test_reader = paddle.batch(
+test_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
 train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
 ```

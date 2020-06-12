@@ -25,7 +25,7 @@ author = u'paddleslim'
 # The short X.Y version
 version = u''
 # The full version, including alpha/beta/rc tags
-release = u'1.0'
+release = u''
 
 # -- General configuration ---------------------------------------------------
 
@@ -45,7 +45,6 @@ extensions = [
     'sphinx.ext.napoleon',
     'recommonmark',
     'sphinx_markdown_tables',
-    'm2r',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

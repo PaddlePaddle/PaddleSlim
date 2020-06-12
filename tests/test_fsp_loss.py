@@ -19,8 +19,8 @@ from paddleslim.dist import merge, fsp_loss
 from layers import conv_bn_layer
 
 
-class TestMerge(unittest.TestCase):
-    def test_merge(self):
+class TestFSPLoss(unittest.TestCase):
+    def test_fsp_loss(self):
         student_main = fluid.Program()
         student_startup = fluid.Program()
         with fluid.program_guard(student_main, student_startup):
