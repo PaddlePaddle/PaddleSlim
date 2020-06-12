@@ -23,22 +23,39 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
-add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
-add_arg('model',            str,  "MobileNet",                "The target model.")
-add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
-add_arg('lr',               float,  0.0001,               "The learning rate used to fine-tune pruned model.")
-add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
-add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
-add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
-add_arg('num_epochs',       int,  1,               "The number of total epochs.")
-add_arg('total_images',     int,  1281167,               "The number of total training images.")
-parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
-add_arg('config_file',      str, None,                 "The config file for compression with yaml format.")
-add_arg('data',             str, "imagenet",             "Which data to use. 'mnist' or 'imagenet'")
-add_arg('log_period',       int, 10,                 "Log period in batches.")
-add_arg('checkpoint_dir',         str, "output",           "checkpoint save dir")
-add_arg('use_pact',          bool, True,                "Whether to use PACT or not.")
+add_arg('batch_size',       int,  64 * 4,
+        "Minibatch size.")
+add_arg('use_gpu',          bool, True,
+        "Whether to use GPU or not.")
+add_arg('model',            str,  "MobileNet",
+        "The target model.")
+add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",
+        "Whether to use pretrained model.")
+add_arg('lr',               float,  0.0001,
+        "The learning rate used to fine-tune pruned model.")
+add_arg('lr_strategy',      str,  "piecewise_decay",
+        "The learning rate decay strategy.")
+add_arg('l2_decay',         float,  3e-5,
+        "The l2_decay parameter.")
+add_arg('momentum_rate',    float,  0.9,
+        "The value of momentum_rate.")
+add_arg('num_epochs',       int,  1,
+        "The number of total epochs.")
+add_arg('total_images',     int,  1281167,
+        "The number of total training images.")
+parser.add_argument('--step_epochs', nargs='+', type=int,
+        default=[30, 60, 90],
+        help="piecewise decay step")
+add_arg('config_file',      str, None,
+        "The config file for compression with yaml format.")
+add_arg('data',             str, "imagenet",
+        "Which data to use. 'mnist' or 'imagenet'")
+add_arg('log_period',       int, 10,
+        "Log period in batches.")
+add_arg('checkpoint_dir',         str, "output",
+        "checkpoint save dir")
+add_arg('use_pact',          bool, True,
+        "Whether to use PACT or not.")
 
 # yapf: enable
 
@@ -260,9 +277,7 @@ def compress(args):
         build_strategy=build_strategy,
         exec_strategy=exec_strategy)
 
-    ############################################################################################################
     # train loop
-    ############################################################################################################
     best_acc1 = 0.0
     best_epoch = 0
     for i in range(args.num_epochs):
@@ -284,19 +299,15 @@ def compress(args):
             exe,
             dirname=os.path.join(args.checkpoint_dir, 'best_model'),
             main_program=val_program)
-    ############################################################################################################
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
-    ############################################################################################################
     float_program, int8_program = convert(val_program, place, quant_config, \
                                                         scope=None, \
                                                         save_int8=True)
     print("eval best_model after convert")
     final_acc1 = test(best_epoch, float_program)
-    ############################################################################################################
     # 4. Save inference model
-    ############################################################################################################
     model_path = os.path.join(quantization_model_save_dir, args.model,
                               'act_' + quant_config['activation_quantize_type']
                               + '_w_' + quant_config['weight_quantize_type'])
