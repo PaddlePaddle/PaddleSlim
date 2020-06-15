@@ -144,7 +144,6 @@ class AdaBERTClassifier(Layer):
         self.teacher.eval()
         total_loss, t_logits, t_losses, accuracys, num_seqs = self.teacher(
             data_ids)
-        self.teacher.train()
 
         # define kd loss
         kd_losses = []
