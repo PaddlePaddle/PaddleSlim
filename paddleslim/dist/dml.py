@@ -18,7 +18,6 @@ from __future__ import print_function
 
 import copy
 import paddle.fluid as fluid
-import paddle.nn.functional as F
 
 
 class DML(fluid.dygraph.Layer):
@@ -70,7 +69,7 @@ class DML(fluid.dygraph.Layer):
             cur_kl_loss = 0
             for j in range(self.model_num):
                 if i != j:
-                    x = F.log_softmax(logits[i], axis=1)
+                    x = fluid.layers.log_softmax(logits[i], axis=1)
                     y = fluid.layers.softmax(logits[j], axis=1)
                     cur_kl_loss += fluid.layers.kldiv_loss(
                         x, y, reduction='batchmean')
