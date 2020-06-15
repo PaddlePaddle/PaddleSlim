@@ -9,7 +9,7 @@
 - `SlimFaceNet_A_x0_60`
 - `SlimFaceNet_B_x0_75`
 
-为了对齐论文，LFW指标为112*96输入下的结果；结合业务场景，Flops和speed为112*112输入下的结果，延时为RK3288上的延时。
+为了对齐论文，LFW指标为112x96输入下的结果；结合业务场景，Flops和speed为112x112输入下的结果，延时为RK3288上的延时。
 
 |Method|LFW|Flops|speed|
 |------|-----|-----|-----|
