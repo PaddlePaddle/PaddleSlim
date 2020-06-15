@@ -110,7 +110,7 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 						<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/quick_start/quant_aware_tutorial.md" target="_blank">量化训练快速开始示例</a>
 					</li>
 					<li>
-						<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/quick_start/quant_post_tutorial.md" target="_blank">离线量化快速开始示例</a>
+						<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/quick_start/quant_post_static_tutorial.md" target="_blank">静态离线量化快速开始示例</a>
 					</li>
 					<li>
 						<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/paddledetection_slim_quantization_tutorial.md" target="_blank">检测模型量化教程</a>

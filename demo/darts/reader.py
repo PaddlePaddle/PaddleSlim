@@ -37,8 +37,7 @@ IMAGE_DEPTH = 3
 CIFAR_MEAN = [0.49139968, 0.48215827, 0.44653124]
 CIFAR_STD = [0.24703233, 0.24348505, 0.26158768]
 
-URL_PREFIX = 'https://www.cs.toronto.edu/~kriz/'
-CIFAR10_URL = URL_PREFIX + 'cifar-10-python.tar.gz'
+CIFAR10_URL = 'https://dataset.bj.bcebos.com/cifar%2Fcifar-10-python.tar.gz'
 CIFAR10_MD5 = 'c58f30108f718f92721af3b95e74349a'
 
 paddle.dataset.common.DATA_HOME = "dataset/"

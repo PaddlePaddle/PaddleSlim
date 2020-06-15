@@ -300,12 +300,18 @@ class EncoderLayer(Layer):
 
         print("gumbel_alphas: {}".format(self.gumbel_alphas))
 
-    def forward(self, enc_input, flops=[], model_size=[]):
-        tmp = fluid.layers.reshape(
-            enc_input, [-1, 1, enc_input.shape[1], enc_input.shape[2]])
+    def forward(self, enc_input_0, enc_input_1, flops=[], model_size=[]):
+        alphas = self.gumbel_alphas if self.use_fixed_gumbel else gumbel_softmax(
+            self.alphas)
+
+        s0 = fluid.layers.reshape(
+            enc_input_0, [-1, 1, enc_input_0.shape[1], enc_input_0.shape[2]])
+        s1 = fluid.layers.reshape(
+            enc_input_1, [-1, 1, enc_input_1.shape[1], enc_input_1.shape[2]])
         # (bs, 1, seq_len, hidden_size)
 
-        tmp = self.stem(tmp)
+        s0 = self.stem(s0)
+        s1 = self.stem(s1)
         # (bs, n_channel, seq_len, 1)
         if self.use_fixed_gumbel:
             alphas = self.gumbel_alphas

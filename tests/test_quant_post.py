@@ -16,7 +16,7 @@ sys.path.append("../")
 import unittest
 import paddle
 import paddle.fluid as fluid
-from paddleslim.quant import quant_post
+from paddleslim.quant import quant_post_static
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
@@ -98,7 +98,7 @@ class TestQuantAwareCase1(unittest.TestCase):
             model_filename='model',
             params_filename='params')
 
-        quant_post(
+        quant_post_static(
             exe,
             './test_quant_post',
             './test_quant_post_inference',

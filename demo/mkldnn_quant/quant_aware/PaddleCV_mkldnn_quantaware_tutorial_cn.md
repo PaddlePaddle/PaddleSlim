@@ -40,9 +40,9 @@ import numpy as np
 - **quantize_op_types:** 目前CPU上支持量化 `depthwise_conv2d`, `mul`, `conv2d`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`。但是训练阶段插入fake quantize/dequantize op时，只需在前四种op前后插入fake quantize/dequantize ops，因为后面四种op `matmul`, `transpose2`, `reshape2`, `pool2d`的输入输出scale不变，将从前后方op的输入输出scales获得scales,所以`quantize_op_types` 参数只需要 `depthwise_conv2d`, `mul`, `conv2d`, `matmul` 即可。
 - **其他参数:** 请参考 [PaddleSlim quant_aware API](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#quant_aware)
 
-#### 2.2 离线量化
+#### 2.2 静态离线量化
 
-离线量化模型产出可以参考[分类模型的离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_post_demo/#_1)
+静态离线量化模型产出可以参考[分类模型的静态离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_post_demo/#_1)
 
 ## 3. 转化产出的量化模型为DNNL优化后的INT8模型
 为了部署在CPU上，我们将保存的quant模型，通过一个转化脚本，移除fake quantize/dequantize op，fuse一些op，并且完全转化成 INT8 模型。需要使用Paddle所在目录运行下面的脚本，脚本在官网的位置为[save_qat_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_qat_model.py)。复制脚本到demo所在目录下(`/PATH_TO_PaddleSlim/demo/mkldnn_quant/quant_aware/`)并执行如下命令：
