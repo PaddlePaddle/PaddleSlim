@@ -14,7 +14,7 @@
 |Method|LFW|Flops|speed|
 |------|-----|-----|-----|
 |MobileNetV2|98.58%|277M|270ms|
-|MobileFaceNet|99.18%|224|102ms|
+|MobileFaceNet|99.18%|224M|102ms|
 |SlimFaceNet_A_x0_60|99.21%|128M|63ms|
 |SlimFaceNet_B_x0_75|99.22%|151M|70ms|
 |SlimFaceNet_A_x0_60_quant|99.17%|32M|42ms|
