@@ -9,6 +9,17 @@
 - `SlimFaceNet_A_x0_60`
 - `SlimFaceNet_B_x0_75`
 
+为了对齐论文，LFW指标为112*96输入下的结果；结合业务场景，Flops和speed为112*112输入下的结果，延时为RK3288上的延时。
+
+|Method|LFW|Flops|speed|
+|------|-----|-----|-----|
+|MobileNetV2|98.58%|277M|270ms|
+|MobileFaceNet|99.18%||224|102ms|
+|SlimFaceNet_A_x0_60|99.21%|128M|63ms|
+|SlimFaceNet_B_x0_75|99.22%|151M|70ms|
+|SlimFaceNet_A_x0_60_quant|99.17%|32M|42ms|
+|SlimFaceNet_B_x0_75_quant|99.21%|38M|45ms|
+
 ## 1. 数据准备
 
 本示例支持`CASIA`和`lfw`两种公开数据集默认情况：
