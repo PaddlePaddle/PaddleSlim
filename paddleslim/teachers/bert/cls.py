@@ -101,6 +101,9 @@ class BERTClassifier(Layer):
                 "You should load pretrained model for training this teacher model."
             )
 
+    def emb_names(self):
+        return self.cls_model.emb_names()
+
     def forward(self, input):
         return self.cls_model(input)
 
