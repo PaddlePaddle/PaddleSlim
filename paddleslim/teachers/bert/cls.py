@@ -58,14 +58,22 @@ class BERTClassifier(Layer):
                  num_labels,
                  task_name="mnli",
                  model_path=None,
-                 use_cuda=True):
+                 use_cuda=True,
+                 return_pooled_out=True,
+                 bert_config=None,
+                 init_pretraining_params=None,
+                 name=""):
         super(BERTClassifier, self).__init__()
         self.task_name = task_name.lower()
         BERT_BASE_PATH = "./data/pretrained_models/uncased_L-12_H-768_A-12/"
         bert_config_path = BERT_BASE_PATH + "/bert_config.json"
+        if bert_config is not None:
+            bert_config_path = bert_config
+
         self.vocab_path = BERT_BASE_PATH + "/vocab.txt"
-        self.init_pretraining_params = BERT_BASE_PATH + "/dygraph_params/"
+        self.init_pretraining_params = init_pretraining_params
         self.do_lower_case = True
+        print("Load bert config from: [{}]".format(bert_config_path))
         self.bert_config = BertConfig(bert_config_path)
 
         if use_cuda:
@@ -84,7 +92,10 @@ class BERTClassifier(Layer):
         }
 
         self.cls_model = ClsModelLayer(
-            self.bert_config, num_labels, return_pooled_out=True)
+            self.bert_config,
+            num_labels,
+            return_pooled_out=return_pooled_out,
+            name=name)
 
         if model_path is not None:
             #restore the model
@@ -96,10 +107,6 @@ class BERTClassifier(Layer):
                   self.init_pretraining_params)
             init_from_static_model(self.init_pretraining_params,
                                    self.cls_model, self.bert_config)
-        else:
-            raise Exception(
-                "You should load pretrained model for training this teacher model."
-            )
 
     def emb_names(self):
         return self.cls_model.emb_names()
@@ -120,25 +127,20 @@ class BERTClassifier(Layer):
             batch_size=batch_size, phase='dev', epoch=1, shuffle=False)
 
         self.cls_model.eval()
-        total_cost, final_acc, avg_acc, total_num_seqs = [], [], [], []
+        final_acc, total_num_seqs = [], []
         for batch in test_data_generator():
             data_ids = create_data(batch)
 
-            total_loss, _, _, np_acces, np_num_seqs = self.cls_model(data_ids)
+            _, _, np_acc, np_num_seq = self.cls_model(data_ids)
 
-            np_loss = total_loss.numpy()
-            np_acc = np_acces[-1].numpy()
-            np_avg_acc = np.mean([acc.numpy() for acc in np_acces])
-            np_num_seqs = np_num_seqs.numpy()
+            np_acc = np_acc.numpy()
+            np_num_seq = np_num_seq.numpy()
 
-            total_cost.extend(np_loss * np_num_seqs)
-            final_acc.extend(np_acc * np_num_seqs)
-            avg_acc.extend(np_avg_acc * np_num_seqs)
-            total_num_seqs.extend(np_num_seqs)
+            final_acc.extend(np_acc * np_num_seq)
+            total_num_seqs.extend(np_num_seq)
 
-        print("[evaluation] classifier[-1] average acc: %f; average acc: %f" %
-              (np.sum(final_acc) / np.sum(total_num_seqs),
-               np.sum(avg_acc) / np.sum(total_num_seqs)))
+        print("[evaluation] average acc: %f" %
+              (np.sum(final_acc) / np.sum(total_num_seqs)))
         self.cls_model.train()
 
     def fit(self,

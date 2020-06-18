@@ -56,7 +56,8 @@ class BertModelLayer(Layer):
     bert
     """
 
-    def __init__(self, config, return_pooled_out=True, use_fp16=False):
+    def __init__(self, config, return_pooled_out=True, use_fp16=False,
+                 name=""):
         super(BertModelLayer, self).__init__()
 
         self._emb_size = config['hidden_size']
@@ -70,9 +71,9 @@ class BertModelLayer(Layer):
         self._attention_dropout = config['attention_probs_dropout_prob']
         self.return_pooled_out = return_pooled_out
 
-        self._word_emb_name = "word_embedding"
-        self._pos_emb_name = "pos_embedding"
-        self._sent_emb_name = "sent_embedding"
+        self._word_emb_name = name + "word_embedding"
+        self._pos_emb_name = name + "pos_embedding"
+        self._sent_emb_name = name + "sent_embedding"
         self._dtype = "float16" if use_fp16 else "float32"
 
         self._param_initializer = fluid.initializer.TruncatedNormal(
@@ -100,12 +101,13 @@ class BertModelLayer(Layer):
             input_dim=self._emb_size,
             output_dim=self._emb_size,
             param_attr=fluid.ParamAttr(
-                name="pooled_fc.w_0", initializer=self._param_initializer),
-            bias_attr="pooled_fc.b_0",
+                name=name + "pooled_fc.w_0",
+                initializer=self._param_initializer),
+            bias_attr=name + "pooled_fc.b_0",
             act="tanh")
 
         self.pre_process_layer = PrePostProcessLayer(
-            "nd", self._emb_size, self._prepostprocess_dropout, "")
+            "nd", self._emb_size, self._prepostprocess_dropout, name=name)
 
         self._encoder = EncoderLayer(
             hidden_act=self._hidden_act,
@@ -120,7 +122,8 @@ class BertModelLayer(Layer):
             relu_dropout=0,
             preprocess_cmd="",
             postprocess_cmd="dan",
-            param_initializer=self._param_initializer)
+            param_initializer=self._param_initializer,
+            name=name)
 
     def emb_names(self):
         return self._src_emb.parameters() + self._pos_emb.parameters(

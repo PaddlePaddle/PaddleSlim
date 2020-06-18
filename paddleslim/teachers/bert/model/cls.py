@@ -39,27 +39,31 @@ class ClsModelLayer(Layer):
                  is_training=True,
                  return_pooled_out=True,
                  loss_scaling=1.0,
-                 use_fp16=False):
+                 use_fp16=False,
+                 name=""):
         super(ClsModelLayer, self).__init__()
         self.config = config
         self.is_training = is_training
         self.use_fp16 = use_fp16
         self.loss_scaling = loss_scaling
         self.n_layers = config['num_hidden_layers']
+        self.return_pooled_out = return_pooled_out
 
         self.bert_layer = BertModelLayer(
-            config=self.config, return_pooled_out=True, use_fp16=self.use_fp16)
-
+            config=self.config,
+            return_pooled_out=True,
+            use_fp16=self.use_fp16,
+            name=name)
         self.cls_fc = list()
         for i in range(self.n_layers):
             fc = Linear(
                 input_dim=self.config["hidden_size"],
                 output_dim=num_labels,
                 param_attr=fluid.ParamAttr(
-                    name="cls_out_%d_w" % i,
+                    name="%scls_out_%d_w" % (name, i),
                     initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
                 bias_attr=fluid.ParamAttr(
-                    name="cls_out_%d_b" % i,
+                    name="%scls_out_%d_b" % (name, i),
                     initializer=fluid.initializer.Constant(0.)))
             fc = self.add_sublayer("cls_fc_%d" % i, fc)
             self.cls_fc.append(fc)
@@ -79,6 +83,18 @@ class ClsModelLayer(Layer):
 
         enc_outputs, next_sent_feats = self.bert_layer(
             src_ids, position_ids, sentence_ids, input_mask)
+
+        if not self.return_pooled_out:
+            cls_feat = fluid.layers.dropout(
+                x=next_sent_feats[-1],
+                dropout_prob=0.1,
+                dropout_implementation="upscale_in_train")
+            logits = self.cls_fc[-1](cls_feat)
+            probs = fluid.layers.softmax(logits)
+            num_seqs = fluid.layers.create_tensor(dtype='int64')
+            accuracy = fluid.layers.accuracy(
+                input=probs, label=labels, total=num_seqs)
+            return enc_outputs, logits, accuracy, num_seqs
         logits = []
         losses = []
         accuracys = []
