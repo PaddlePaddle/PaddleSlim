@@ -13,11 +13,20 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-from paddleslim import models
-from paddleslim import prune
-from paddleslim import nas
-from paddleslim import analysis
+
+__all__ = []
+try:
+    from paddleslim import models
+    from paddleslim import prune
+    from paddleslim import nas
+    from paddleslim import analysis
+    from paddleslim import quant
+    from paddleslim import pantheon
+    __all__ += ['models', 'prune', 'nas', 'analysis', 'quant', 'pantheon']
+except ImportError:
+    print(
+        "PaddlePaddle is not installed in your env. So you can not use some APIs."
+    )
+
 from paddleslim import dist
-from paddleslim import quant
-from paddleslim import pantheon
-__all__ = ['models', 'prune', 'nas', 'analysis', 'dist', 'quant', 'pantheon']
+__all__ += ['dist']

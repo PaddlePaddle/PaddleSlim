@@ -12,5 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .single_distiller import merge, fsp_loss, l2_loss, soft_label_loss, loss
+try:
+    from .single_distiller import merge, fsp_loss, l2_loss, soft_label_loss, loss
+except ImportError:
+    print("Paddle is not installed.")
 from .dml import DML
