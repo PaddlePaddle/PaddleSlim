@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+from collections import Iterable
 
 import paddle
 import paddle.fluid as fluid
@@ -81,7 +82,13 @@ class MixedOp(fluid.dygraph.Layer):
         # return out
 
         for i in range(len(self._ops)):
-            if weights[i].numpy() != 0:
+
+            if isinstance(weights, Iterable):
+                weights_i = weights[i]
+            else:
+                weights_i = weights[i].numpy()
+
+            if weights_i != 0:
                 return self._ops[i](x) * weights[i]
 
 
@@ -212,7 +219,8 @@ class EncoderLayer(Layer):
                  hidden_size=768,
                  name="encoder",
                  search_layer=True,
-                 use_fixed_gumbel=False):
+                 use_fixed_gumbel=False,
+                 gumbel_alphas=None):
         super(EncoderLayer, self).__init__()
         self._n_layer = n_layer
         self._hidden_size = hidden_size
@@ -259,26 +267,38 @@ class EncoderLayer(Layer):
         #     dtype="float32",
         #     default_initializer=NormalInitializer(
         #         loc=0.0, scale=1e-3))
-
-        self.BN = BatchNorm(
-            num_channels=self._n_channel,
-            param_attr=fluid.ParamAttr(
-                initializer=fluid.initializer.Constant(value=1),
-                trainable=False),
-            bias_attr=fluid.ParamAttr(
-                initializer=fluid.initializer.Constant(value=0),
-                trainable=False))
-
         self.pool2d_avg = Pool2D(pool_type='avg', global_pooling=True)
+        self.bns = []
+        self.outs = []
+        for i in range(self._n_layer):
 
-        self.out = Linear(
-            self._n_channel,
-            3,
-            param_attr=ParamAttr(initializer=MSRA()),
-            bias_attr=ParamAttr(initializer=MSRA()))
+            bn = BatchNorm(
+                num_channels=self._n_channel,
+                param_attr=fluid.ParamAttr(
+                    initializer=fluid.initializer.Constant(value=1),
+                    trainable=False),
+                bias_attr=fluid.ParamAttr(
+                    initializer=fluid.initializer.Constant(value=0),
+                    trainable=False))
+            self.bns.append(bn)
+
+            out = Linear(
+                self._n_channel,
+                3,
+                param_attr=ParamAttr(initializer=MSRA()),
+                bias_attr=ParamAttr(initializer=MSRA()))
+            self.outs.append(out)
 
         self.use_fixed_gumbel = use_fixed_gumbel
-        self.gumbel_alphas = gumbel_softmax(self.alphas).detach()
+        self.gumbel_alphas = gumbel_softmax(self.alphas)
+        if gumbel_alphas is not None:
+            self.gumbel_alphas = np.array(gumbel_alphas).reshape(
+                self.alphas.shape)
+        else:
+            self.gumbel_alphas = gumbel_softmax(self.alphas)
+            self.gumbel_alphas.stop_gradient = True
+
+        print("gumbel_alphas: {}".format(self.gumbel_alphas))
 
     def forward(self, enc_input_0, enc_input_1, flops=[], model_size=[]):
         alphas = self.gumbel_alphas if self.use_fixed_gumbel else gumbel_softmax(
@@ -293,14 +313,19 @@ class EncoderLayer(Layer):
         s0 = self.stem(s0)
         s1 = self.stem(s1)
         # (bs, n_channel, seq_len, 1)
+        if self.use_fixed_gumbel:
+            alphas = self.gumbel_alphas
+        else:
+            alphas = gumbel_softmax(self.alphas)
 
+        s0 = s1 = tmp
+        outputs = []
         for i in range(self._n_layer):
             s0, s1 = s1, self._cells[i](s0, s1, alphas)
-        # (bs, n_channel, seq_len, 1)
-
-        s1 = self.BN(s1)
-
-        outputs = self.pool2d_avg(s1)
-        outputs = fluid.layers.reshape(outputs, shape=[-1, 0])
-        outputs = self.out(outputs)
+            tmp = self.bns[i](s1)
+            tmp = self.pool2d_avg(tmp)
+            # (bs, n_channel, seq_len, 1)
+            tmp = fluid.layers.reshape(tmp, shape=[-1, 0])
+            tmp = self.outs[i](tmp)
+            outputs.append(tmp)
         return outputs

@@ -58,7 +58,8 @@ def collect_convs(params, graph, visited={}):
         walker = conv2d_walker(
             conv_op, pruned_params=pruned_params, visited=visited)
         walker.prune(param, pruned_axis=0, pruned_idx=[0])
-        groups.append(pruned_params)
+        if len(pruned_params) > 0:
+            groups.append(pruned_params)
     visited = set()
     uniq_groups = []
     for group in groups:
