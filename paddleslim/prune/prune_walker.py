@@ -542,7 +542,7 @@ class depthwise_conv2d(PruneWorker):
             self._visit(filter_var, 0)
 
             new_groups = filter_var.shape()[0] - len(pruned_idx)
-            op.set_attr("groups", new_groups)
+            self.op.set_attr("groups", new_groups)
 
             for op in filter_var.outputs():
                 self._prune_op(op, filter_var, 0, pruned_idx)
