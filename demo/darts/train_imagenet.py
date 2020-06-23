@@ -19,13 +19,15 @@ from __future__ import print_function
 import os
 import sys
 import ast
+import logging
 import argparse
 import functools
-import logging
 
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.base import to_variable
 from paddleslim.common import AvgrageMeter, get_logger
+from paddleslim.nas.darts import count_parameters_in_MB
+
 import genotypes
 import reader
 from model import NetworkImageNet as Network
@@ -66,7 +68,7 @@ add_arg('use_data_parallel', ast.literal_eval,  False, "The flag indicating whet
 
 def cross_entropy_label_smooth(preds, targets, epsilon):
     preds = fluid.layers.softmax(preds)
-    targets_one_hot = fluid.layers.one_hot(input=targets, depth=args.class_num)
+    targets_one_hot = fluid.one_hot(input=targets, depth=args.class_num)
     targets_smooth = fluid.layers.label_smooth(
         targets_one_hot, epsilon=epsilon, dtype="float32")
     loss = fluid.layers.cross_entropy(
@@ -152,9 +154,6 @@ def main(args):
         if args.use_data_parallel else fluid.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
-        if args.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-
         genotype = eval("genotypes.%s" % args.arch)
         model = Network(
             C=args.init_channels,
@@ -163,7 +162,12 @@ def main(args):
             auxiliary=args.auxiliary,
             genotype=genotype)
 
-        step_per_epoch = int(args.trainset_num / args.batch_size)
+        logger.info("param size = {:.6f}MB".format(
+            count_parameters_in_MB(model.parameters())))
+
+        device_num = fluid.dygraph.parallel.Env().nranks
+        step_per_epoch = int(args.trainset_num /
+                             (args.batch_size * device_num))
         learning_rate = fluid.dygraph.ExponentialDecay(
             args.learning_rate,
             step_per_epoch,
@@ -179,6 +183,7 @@ def main(args):
             grad_clip=clip)
 
         if args.use_data_parallel:
+            strategy = fluid.dygraph.parallel.prepare_context()
             model = fluid.dygraph.parallel.DataParallel(model, strategy)
 
         train_loader = fluid.io.DataLoader.from_generator(
@@ -199,20 +204,19 @@ def main(args):
         valid_reader = fluid.io.batch(
             reader.imagenet_reader(args.data_dir, 'val'),
             batch_size=args.batch_size)
-
-        train_loader.set_sample_list_generator(train_reader, places=place)
-        valid_loader.set_sample_list_generator(valid_reader, places=place)
-
         if args.use_data_parallel:
             train_reader = fluid.contrib.reader.distributed_batch_reader(
                 train_reader)
+
+        train_loader.set_sample_list_generator(train_reader, places=place)
+        valid_loader.set_sample_list_generator(valid_reader, places=place)
 
         save_parameters = (not args.use_data_parallel) or (
             args.use_data_parallel and
             fluid.dygraph.parallel.Env().local_rank == 0)
         best_top1 = 0
         for epoch in range(args.epochs):
-            logging.info('Epoch {}, lr {:.6f}'.format(
+            logger.info('Epoch {}, lr {:.6f}'.format(
                 epoch, optimizer.current_step_lr()))
             train_top1, train_top5 = train(model, train_loader, optimizer,
                                            epoch, args)

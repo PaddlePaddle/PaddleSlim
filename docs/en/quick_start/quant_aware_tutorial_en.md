@@ -41,9 +41,9 @@ To speed up training process, we select MNIST dataset to train image classificat
 
 ```python
 import paddle.dataset.mnist as reader
-train_reader = paddle.batch(
+train_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
-test_reader = paddle.batch(
+test_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
 train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
 ```

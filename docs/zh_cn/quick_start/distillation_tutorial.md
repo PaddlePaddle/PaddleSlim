@@ -101,7 +101,7 @@ exe.run(student_startup)
 为了快速执行该示例，我们选取简单的MNIST数据，Paddle框架的`paddle.dataset.mnist`包定义了MNIST数据的下载和读取。 代码如下：
 
 ```python
-train_reader = paddle.batch(
+train_reader = paddle.fluid.io.batch(
     paddle.dataset.mnist.train(), batch_size=128, drop_last=True)
 train_feeder = fluid.DataFeeder(['image', 'label'], fluid.CPUPlace(), student_program)
 ```

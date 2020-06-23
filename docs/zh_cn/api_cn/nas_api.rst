@@ -179,7 +179,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 - **server_addr(tuple)** - RLNAS中Controller的地址，包括server的ip地址和端口号，如果ip地址为None或者为""的话则默认使用本机ip。默认：（"", 8881）。
 - **is_server(bool)** - 当前实例是否要启动一个server。默认：True。
 - **is_sync(bool)** - 是否使用同步模式更新Controller，该模式仅在多client下有差别。默认：False。
-- **save_controller(str|None)** - 保存Controller的checkpoint的文件目录，如果设置为None的话则不保存checkpoint。默认：None 。
+- **save_controller(str|None|False)** - 保存Controller的checkpoint的文件目录，如果设置为None的话则保存checkpoint到默认路径 ``./.rlnas_controller`` ，如果设置为False的话则不保存checkpoint。默认：None 。
 - **load_controller(str|None)** - 加载Controller的checkpoint的文件目录，如果设置为None的话则不加载checkpoint。默认：None。
 - **\*\*kwargs** - 附加的参数，由具体强化学习算法决定，`LSTM`和`DDPG`的附加参数请参考note。
 
@@ -194,6 +194,9 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
     - decay(float, optional): LSTM中记录rewards的baseline的平滑率。默认：0.99.
     - weight_entropy(float, optional): 在更新controller参数时是否为接收到的rewards加上计算token过程中的带权重的交叉熵值。默认：None。
     - controller_batch_size(int, optional): controller的batch_size，即每运行一次controller可以拿到几组token。默认：1.
+    - controller_lr(float, optional): controller的学习率，默认：1e-4。
+    - controller_decay_steps(int, optional): controller学习率下降步长，设置为None的时候学习率不下降。默认：None。
+    - controller_decay_rate(float, optional): controller学习率衰减率，默认：None。
 
 
   - **`DDPG`算法的附加参数：**

@@ -19,7 +19,8 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 
 - 定点量化
   - 在线量化训练（training aware）
-  - 离线量化（post training）
+  - 静态离线量化（static post training）
+  - 动态离线量化（dynamic post training）
 
 - 知识蒸馏
   - 支持单进程知识蒸馏
@@ -28,6 +29,7 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 - 神经网络结构自动搜索（NAS）
   - 支持基于进化算法的轻量神经网络结构自动搜索
   - 支持One-Shot网络结构自动搜索
+  - 支持基于梯度的DARTS网络结构自动搜索
   - 支持 FLOPS / 硬件延时约束
   - 支持多平台模型延时评估
   - 支持用户自定义搜索算法和搜索空间

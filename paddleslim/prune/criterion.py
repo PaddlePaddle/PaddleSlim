@@ -43,11 +43,11 @@ def l1_norm(group, graph):
        list: A list of tuple storing l1-norm on given axis.
     """
     scores = []
-    for name, value, axis in group:
+    for name, value, axis, pruned_idx in group:
 
         reduce_dims = [i for i in range(len(value.shape)) if i != axis]
         score = np.sum(np.abs(value), axis=tuple(reduce_dims))
-        scores.append((name, axis, score))
+        scores.append((name, axis, score, pruned_idx))
 
     return scores
 
@@ -55,22 +55,26 @@ def l1_norm(group, graph):
 @CRITERION.register
 def geometry_median(group, graph):
     scores = []
-    name, value, axis = group[0]
+    name, value, axis, _ = group[0]
     assert (len(value.shape) == 4)
-    w = value.view()
-    channel_num = value.shape[0]
-    w.shape = value.shape[0], np.product(value.shape[1:])
-    x = w.repeat(channel_num, axis=0)
-    y = np.zeros_like(x)
-    for i in range(channel_num):
-        y[i * channel_num:(i + 1) * channel_num] = np.tile(w[i],
-                                                           (channel_num, 1))
-    tmp = np.sqrt(np.sum((x - y)**2, -1))
-    tmp = tmp.reshape((channel_num, channel_num))
-    tmp = np.sum(tmp, -1)
 
-    for name, value, axis in group:
-        scores.append((name, axis, tmp))
+    def get_distance_sum(value, out_idx):
+        w = value.view()
+        w.shape = value.shape[0], np.product(value.shape[1:])
+        selected_filter = np.tile(w[out_idx], (w.shape[0], 1))
+        x = w - selected_filter
+        x = np.sqrt(np.sum(x * x, -1))
+        return x.sum()
+
+    dist_sum_list = []
+    for out_i in range(value.shape[0]):
+        dist_sum = get_distance_sum(value, out_i)
+        dist_sum_list.append(dist_sum)
+
+    tmp = np.array(dist_sum_list)
+
+    for name, value, axis, idx in group:
+        scores.append((name, axis, tmp, idx))
     return scores
 
 
@@ -93,7 +97,7 @@ def bn_scale(group, graph):
     assert (isinstance(graph, GraphWrapper))
 
     # step1: Get first convolution
-    conv_weight, value, axis = group[0]
+    conv_weight, value, axis, _ = group[0]
     param_var = graph.var(conv_weight)
     conv_op = param_var.outputs()[0]
 
@@ -107,12 +111,12 @@ def bn_scale(group, graph):
 
     # steps3: Find scale of bn
     score = None
-    for name, value, aixs in group:
+    for name, value, aixs, _ in group:
         if bn_scale_param == name:
             score = np.abs(value.reshape([-1]))
 
     scores = []
-    for name, value, axis in group:
-        scores.append((name, axis, score))
+    for name, value, axis, idx in group:
+        scores.append((name, axis, score, idx))
 
     return scores

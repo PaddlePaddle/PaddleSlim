@@ -9,14 +9,14 @@
 .. toctree::
    :maxdepth: 1
 
-   index_en
    intro.md
    install.md
    quick_start/index
    tutorials/index
    api_cn/index
    FAQ/index
-   model_zoo.md
+   model_zoo/index
    algo/algo.md
+   CHANGELOG.md
 
 .. mdinclude:: ./intro.md

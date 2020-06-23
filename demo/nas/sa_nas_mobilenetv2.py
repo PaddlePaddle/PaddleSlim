@@ -102,22 +102,22 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
         exe.run(startup_program)
 
         if args.data == 'cifar10':
-            train_reader = paddle.batch(
+            train_reader = paddle.fluid.io.batch(
                 paddle.reader.shuffle(
                     paddle.dataset.cifar.train10(cycle=False), buf_size=1024),
                 batch_size=args.batch_size,
                 drop_last=True)
 
-            test_reader = paddle.batch(
+            test_reader = paddle.fluid.io.batch(
                 paddle.dataset.cifar.test10(cycle=False),
                 batch_size=args.batch_size,
                 drop_last=False)
         elif args.data == 'imagenet':
-            train_reader = paddle.batch(
+            train_reader = paddle.fluid.io.batch(
                 imagenet_reader.train(),
                 batch_size=args.batch_size,
                 drop_last=True)
-            test_reader = paddle.batch(
+            test_reader = paddle.fluid.io.batch(
                 imagenet_reader.val(),
                 batch_size=args.batch_size,
                 drop_last=False)
@@ -177,7 +177,7 @@ def test_search_result(tokens, image_size, args, config):
 
     image_shape = [3, image_size, image_size]
 
-    archs = sa_nas.tokens2arch(tokens)
+    archs = sa_nas.tokens2arch(tokens)[0]
 
     train_program = fluid.Program()
     test_program = fluid.Program()
@@ -197,22 +197,22 @@ def test_search_result(tokens, image_size, args, config):
     exe.run(startup_program)
 
     if args.data == 'cifar10':
-        train_reader = paddle.batch(
+        train_reader = paddle.fluid.io.batch(
             paddle.reader.shuffle(
                 paddle.dataset.cifar.train10(cycle=False), buf_size=1024),
             batch_size=args.batch_size,
             drop_last=True)
 
-        test_reader = paddle.batch(
+        test_reader = paddle.fluid.io.batch(
             paddle.dataset.cifar.test10(cycle=False),
             batch_size=args.batch_size,
             drop_last=False)
     elif args.data == 'imagenet':
-        train_reader = paddle.batch(
+        train_reader = paddle.fluid.io.batch(
             imagenet_reader.train(),
             batch_size=args.batch_size,
             drop_last=True)
-        test_reader = paddle.batch(
+        test_reader = paddle.fluid.io.batch(
             imagenet_reader.val(), batch_size=args.batch_size, drop_last=False)
 
     train_loader.set_sample_list_generator(
@@ -271,7 +271,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--batch_size', type=int, default=256, help='batch size.')
     parser.add_argument(
-        '--class_dim', type=int, default=1000, help='classify number.')
+        '--class_dim', type=int, default=10, help='classify number.')
     parser.add_argument(
         '--data',
         type=str,

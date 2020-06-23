@@ -13,3 +13,4 @@
 # limitations under the License.
 
 from .single_distiller import merge, fsp_loss, l2_loss, soft_label_loss, loss
+from .dml import DML

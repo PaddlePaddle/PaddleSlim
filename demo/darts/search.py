@@ -35,9 +35,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
 add_arg('log_freq',          int,   50,              "Log frequency.")
-add_arg('use_multiprocess',  bool,  False,            "Whether use multiprocess reader.")
-add_arg('num_workers',       int,   4,               "The multiprocess reader number.")
-add_arg('data',              str,   'dataset/cifar10',"The dir of dataset.")
+add_arg('use_multiprocess',  bool,  True,            "Whether use multiprocess reader.")
 add_arg('batch_size',        int,   64,              "Minibatch size.")
 add_arg('learning_rate',     float, 0.025,            "The start learning rate.")
 add_arg('momentum',          float, 0.9,             "Momentum.")
@@ -80,6 +78,7 @@ def main(args):
             model,
             train_reader,
             valid_reader,
+            place,
             learning_rate=args.learning_rate,
             batchsize=args.batch_size,
             num_imgs=args.trainset_num,
@@ -87,8 +86,9 @@ def main(args):
             unrolled=args.unrolled,
             num_epochs=args.epochs,
             epochs_no_archopt=args.epochs_no_archopt,
-            use_gpu=args.use_gpu,
+            use_multiprocess=args.use_multiprocess,
             use_data_parallel=args.use_data_parallel,
+            save_dir=args.model_save_dir,
             log_freq=args.log_freq)
         searcher.train()
 

@@ -57,7 +57,7 @@ class TestPrune(unittest.TestCase):
         conv_op = graph.var("conv4_weights").outputs()[0]
         walker = conv2d_walker(conv_op, [])
         walker.prune(graph.var("conv4_weights"), pruned_axis=0, pruned_idx=[])
-        print walker.pruned_params
+        print(walker.pruned_params)
 
 
 if __name__ == '__main__':

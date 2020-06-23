@@ -20,7 +20,7 @@ import json
 import hashlib
 import time
 import paddle.fluid as fluid
-from ..common.RL_controller.utils import RLCONTROLLER
+from ..common.rl_controller.utils import RLCONTROLLER
 from ..common import get_logger
 
 from ..common import Server
@@ -76,6 +76,15 @@ class RLNAS(object):
         self.save_controller = save_controller
         self.load_controller = load_controller
 
+        if key.upper() in ['DDPG']:
+            try:
+                import parl
+            except ImportError as e:
+                _logger.error(
+                    "If you want to use DDPG in RLNAS, please pip install parl first. Now states: {}".
+                    format(e))
+                os._exit(1)
+
         cls = RLCONTROLLER.get(key.upper())
 
         server_ip, server_port = server_addr
@@ -126,6 +135,10 @@ class RLNAS(object):
 
         return archs
 
+    @property
+    def tokens(self):
+        return self._current_tokens
+
     def reward(self, rewards, **kwargs):
         """ 
         reward the score and to train controller
@@ -143,6 +156,7 @@ class RLNAS(object):
         """
         final_tokens = self._controller_client.next_tokens(
             batch_obs, is_inference=True)
+        self._current_tokens = final_tokens
         _logger.info("Final tokens: {}".format(final_tokens))
         archs = []
         for token in final_tokens:

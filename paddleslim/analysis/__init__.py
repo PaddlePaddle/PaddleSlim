@@ -11,8 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .flops import flops
+from .flops import flops, dygraph_flops
 from .model_size import model_size
 from .latency import LatencyEvaluator, TableLatencyEvaluator
 
-__all__ = ['flops', 'model_size', 'LatencyEvaluator', 'TableLatencyEvaluator']
+__all__ = [
+    'dygraph_flops', 'flops', 'model_size', 'LatencyEvaluator',
+    'TableLatencyEvaluator'
+]

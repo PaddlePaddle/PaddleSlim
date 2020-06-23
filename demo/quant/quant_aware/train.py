@@ -12,7 +12,7 @@ sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-from paddleslim.quant import quant_aware, quant_post, convert
+from paddleslim.quant import quant_aware, convert
 import models
 from utility import add_arguments, print_arguments
 
@@ -159,8 +159,8 @@ def compress(args):
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
-    train_reader = paddle.batch(
+    val_reader = paddle.fluid.io.batch(val_reader, batch_size=args.batch_size)
+    train_reader = paddle.fluid.io.batch(
         train_reader, batch_size=args.batch_size, drop_last=True)
 
     train_feeder = feeder = fluid.DataFeeder([image, label], place)

@@ -25,7 +25,7 @@ if six.PY2:
 else:
     import pickle
 from .log_helper import get_logger
-from .RL_controller.utils import compute_grad, ConnectMessage
+from .rl_controller.utils import compute_grad, ConnectMessage
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -49,31 +49,38 @@ class Client(object):
                                        ConnectMessage.TIMEOUT * 1000)
         client_address = "{}:{}".format(self._ip, self._port)
         self._client_socket.connect("tcp://{}".format(client_address))
-        self._client_socket.send_multipart(
-            [ConnectMessage.INIT, self._client_name])
+        self._client_socket.send_multipart([
+            pickle.dumps(ConnectMessage.INIT), pickle.dumps(self._client_name)
+        ])
         message = self._client_socket.recv_multipart()
-        if message[0] != ConnectMessage.INIT_DONE:
+        if pickle.loads(message[0]) != ConnectMessage.INIT_DONE:
             _logger.error("Client {} init failure, Please start it again".
                           format(self._client_name))
             pid = os.getpid()
             os.kill(pid, signal.SIGTERM)
-        _logger.info("Client {}: connect to server {}".format(
+        _logger.info("Client {}: connect to server success!!!".format(
+            self._client_name))
+        _logger.debug("Client {}: connect to server {}".format(
             self._client_name, client_address))
 
     def _connect_wait_socket(self, port):
         self._wait_socket = self._ctx.socket(zmq.REQ)
         wait_address = "{}:{}".format(self._ip, port)
         self._wait_socket.connect("tcp://{}".format(wait_address))
-        self._wait_socket.send_multipart(
-            [ConnectMessage.WAIT_PARAMS, self._client_name])
+        self._wait_socket.send_multipart([
+            pickle.dumps(ConnectMessage.WAIT_PARAMS),
+            pickle.dumps(self._client_name)
+        ])
         message = self._wait_socket.recv_multipart()
-        return message[0]
+        return pickle.loads(message[0])
 
     def next_tokens(self, obs, is_inference=False):
         _logger.debug("Client: requests for weight {}".format(
             self._client_name))
-        self._client_socket.send_multipart(
-            [ConnectMessage.GET_WEIGHT, self._client_name])
+        self._client_socket.send_multipart([
+            pickle.dumps(ConnectMessage.GET_WEIGHT),
+            pickle.dumps(self._client_name)
+        ])
         try:
             message = self._client_socket.recv_multipart()
         except zmq.error.Again as e:
@@ -92,11 +99,11 @@ class Client(object):
         assert self._params_dict != None, "Please call next_token to get token first, then call update"
         current_params_dict = self._controller.update(
             rewards, self._params_dict, **kwargs)
-        params_grad = compute_grad(self._params_dict, current_params_dict)
+        params_grad = compute_grad(current_params_dict, self._params_dict)
         _logger.debug("Client: update weight {}".format(self._client_name))
         self._client_socket.send_multipart([
-            ConnectMessage.UPDATE_WEIGHT, self._client_name,
-            pickle.dumps(params_grad)
+            pickle.dumps(ConnectMessage.UPDATE_WEIGHT),
+            pickle.dumps(self._client_name), pickle.dumps(params_grad)
         ])
         _logger.debug("Client: update done {}".format(self._client_name))
 
@@ -108,29 +115,33 @@ class Client(object):
                 format(e))
             os._exit(0)
 
-        if message[0] == ConnectMessage.WAIT:
+        if pickle.loads(message[0]) == ConnectMessage.WAIT:
             _logger.debug("Client: self.init_wait: {}".format(self.init_wait))
             if not self.init_wait:
                 wait_port = pickle.loads(message[1])
                 wait_signal = self._connect_wait_socket(wait_port)
                 self.init_wait = True
             else:
-                wait_signal = message[0]
+                wait_signal = pickle.loads(message[0])
             while wait_signal != ConnectMessage.OK:
                 time.sleep(1)
-                self._wait_socket.send_multipart(
-                    [ConnectMessage.WAIT_PARAMS, self._client_name])
+                self._wait_socket.send_multipart([
+                    pickle.dumps(ConnectMessage.WAIT_PARAMS),
+                    pickle.dumps(self._client_name)
+                ])
                 wait_signal = self._wait_socket.recv_multipart()
-                wait_signal = wait_signal[0]
+                wait_signal = pickle.loads(wait_signal[0])
                 _logger.debug("Client: {} {}".format(self._client_name,
                                                      wait_signal))
 
-        return message[0]
+        return pickle.loads(message[0])
 
     def __del__(self):
         try:
-            self._client_socket.send_multipart(
-                [ConnectMessage.EXIT, self._client_name])
+            self._client_socket.send_multipart([
+                pickle.dumps(ConnectMessage.EXIT),
+                pickle.dumps(self._client_name)
+            ])
             _ = self._client_socket.recv_multipart()
         except:
             pass

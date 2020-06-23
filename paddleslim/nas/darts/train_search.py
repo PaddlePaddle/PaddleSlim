@@ -16,8 +16,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-__all__ = ['DARTSearch']
+__all__ = ['DARTSearch', 'count_parameters_in_MB']
 
+import os
 import logging
 import numpy as np
 import paddle.fluid as fluid
@@ -29,6 +30,14 @@ logger = get_logger(__name__, level=logging.INFO)
 
 
 def count_parameters_in_MB(all_params):
+    """Count the parameters in the target list.
+    Args:
+        all_params(list): List of Variables.
+
+    Returns:
+        float: The total count(MB) of target parameter list.
+    """
+
     parameters_number = 0
     for param in all_params:
         if param.trainable and 'aux' not in param.name:
@@ -37,23 +46,45 @@ def count_parameters_in_MB(all_params):
 
 
 class DARTSearch(object):
+    """Used for Differentiable ARchiTecture Search(DARTS)
+
+    Args:
+        model(Paddle DyGraph model): Super Network for Search.
+        train_reader(Python Generator): Generator to provide training data.
+        valid_reader(Python Generator): Generator to provide validation  data.
+        place(fluid.CPUPlace()|fluid.CUDAPlace(N)): This parameter represents the executor run on which device.
+        learning_rate(float): Model parameter initial learning rate. Default: 0.025.
+        batch_size(int): Minibatch size. Default: 64.
+        arch_learning_rate(float): Learning rate for arch encoding. Default: 3e-4.
+        unrolled(bool): Use one-step unrolled validation loss. Default: False.
+        num_epochs(int): Epoch number. Default: 50.
+        epochs_no_archopt(int): Epochs skip architecture optimize at begining. Default: 0.
+        use_multiprocess(bool): Whether to use multiprocess in dataloader. Default: False.
+        use_data_parallel(bool): Whether to use data parallel mode. Default: False.
+        log_freq(int): Log frequency. Default: 50.
+
+    """
+
     def __init__(self,
                  model,
                  train_reader,
                  valid_reader,
+                 place,
                  learning_rate=0.025,
                  batchsize=64,
                  num_imgs=50000,
                  arch_learning_rate=3e-4,
-                 unrolled='False',
+                 unrolled=False,
                  num_epochs=50,
                  epochs_no_archopt=0,
-                 use_gpu=True,
+                 use_multiprocess=False,
                  use_data_parallel=False,
+                 save_dir='./',
                  log_freq=50):
         self.model = model
         self.train_reader = train_reader
         self.valid_reader = valid_reader
+        self.place = place,
         self.learning_rate = learning_rate
         self.batchsize = batchsize
         self.num_imgs = num_imgs
@@ -61,14 +92,9 @@ class DARTSearch(object):
         self.unrolled = unrolled
         self.epochs_no_archopt = epochs_no_archopt
         self.num_epochs = num_epochs
-        self.use_gpu = use_gpu
+        self.use_multiprocess = use_multiprocess
         self.use_data_parallel = use_data_parallel
-        if not self.use_gpu:
-            self.place = fluid.CPUPlace()
-        elif not self.use_data_parallel:
-            self.place = fluid.CUDAPlace(0)
-        else:
-            self.place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
+        self.save_dir = save_dir
         self.log_freq = log_freq
 
     def train_one_epoch(self, train_loader, valid_loader, architect, optimizer,
@@ -116,6 +142,8 @@ class DARTSearch(object):
             top5.update(prec5.numpy(), n)
 
             if step_id % self.log_freq == 0:
+                #logger.info("Train Epoch {}, Step {}, loss {:.6f}; ce: {:.6f}; kd: {:.6f}; e: {:.6f}".format(
+                #    epoch, step_id, objs.avg[0], ce_losses.avg[0], kd_losses.avg[0], e_losses.avg[0]))
                 logger.info(
                     "Train Epoch {}, Step {}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
                     format(epoch, step_id, objs.avg[0], top1.avg[0], top5.avg[
@@ -149,17 +177,23 @@ class DARTSearch(object):
         return top1.avg[0]
 
     def train(self):
-        if self.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
+        """Start search process.
+
+        """
+
         model_parameters = [
             p for p in self.model.parameters()
             if p.name not in [a.name for a in self.model.arch_parameters()]
         ]
         logger.info("param size = {:.6f}MB".format(
             count_parameters_in_MB(model_parameters)))
-        step_per_epoch = int(self.num_imgs * 0.5 / self.batchsize)
+
+        device_num = fluid.dygraph.parallel.Env().nranks
+        step_per_epoch = int(self.num_imgs * 0.5 /
+                             (self.batchsize * device_num))
         if self.unrolled:
             step_per_epoch *= 2
+
         learning_rate = fluid.dygraph.CosineDecay(
             self.learning_rate, step_per_epoch, self.num_epochs)
 
@@ -172,30 +206,34 @@ class DARTSearch(object):
             grad_clip=clip)
 
         if self.use_data_parallel:
-            self.model = fluid.dygraph.parallel.DataParallel(self.model,
-                                                             strategy)
             self.train_reader = fluid.contrib.reader.distributed_batch_reader(
                 self.train_reader)
-            self.valid_reader = fluid.contrib.reader.distributed_batch_reader(
-                self.valid_reader)
 
         train_loader = fluid.io.DataLoader.from_generator(
             capacity=64,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=self.use_multiprocess)
         valid_loader = fluid.io.DataLoader.from_generator(
             capacity=64,
             use_double_buffer=True,
             iterable=True,
-            return_list=True)
+            return_list=True,
+            use_multiprocess=self.use_multiprocess)
 
         train_loader.set_batch_generator(self.train_reader, places=self.place)
         valid_loader.set_batch_generator(self.valid_reader, places=self.place)
 
-        architect = Architect(self.model, learning_rate,
-                              self.arch_learning_rate, self.place,
-                              self.unrolled)
+        base_model = self.model
+        architect = Architect(
+            model=self.model,
+            eta=learning_rate,
+            arch_learning_rate=self.arch_learning_rate,
+            unrolled=self.unrolled,
+            parallel=self.use_data_parallel)
+
+        self.model = architect.get_model()
 
         save_parameters = (not self.use_data_parallel) or (
             self.use_data_parallel and
@@ -204,7 +242,8 @@ class DARTSearch(object):
         for epoch in range(self.num_epochs):
             logger.info('Epoch {}, lr {:.6f}'.format(
                 epoch, optimizer.current_step_lr()))
-            genotype = get_genotype(self.model)
+
+            genotype = get_genotype(base_model)
             logger.info('genotype = %s', genotype)
 
             train_top1 = self.train_one_epoch(train_loader, valid_loader,
@@ -216,4 +255,6 @@ class DARTSearch(object):
                 logger.info("Epoch {}, valid_acc {:.6f}".format(epoch,
                                                                 valid_top1))
             if save_parameters:
-                fluid.save_dygraph(self.model.state_dict(), "./weights")
+                fluid.save_dygraph(
+                    self.model.state_dict(),
+                    os.path.join(self.save_dir, str(epoch), "params"))
