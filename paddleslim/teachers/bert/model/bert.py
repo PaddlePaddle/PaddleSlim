@@ -122,6 +122,10 @@ class BertModelLayer(Layer):
             postprocess_cmd="dan",
             param_initializer=self._param_initializer)
 
+    def emb_names(self):
+        return self._src_emb.parameters() + self._pos_emb.parameters(
+        ) + self._sent_emb.parameters()
+
     def forward(self, src_ids, position_ids, sentence_ids, input_mask):
         """
         forward

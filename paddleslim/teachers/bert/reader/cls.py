@@ -16,6 +16,7 @@ import io
 import os
 import types
 import csv
+import random
 import numpy as np
 from . import tokenization
 from .batching import prepare_batch_data
@@ -110,9 +111,9 @@ class DataProcessor(object):
 
     def get_num_examples(self, phase):
         """Get number of examples for train, dev or test."""
-        if phase not in ['train', 'dev', 'test']:
-            raise ValueError(
-                "Unknown phase, which should be in ['train', 'dev', 'test'].")
+        #if phase not in ['train', 'dev', 'test']:
+        #    raise ValueError(
+        #        "Unknown phase, which should be in ['train', 'dev', 'test'].")
         return self.num_examples[phase]
 
     def get_train_progress(self):
@@ -135,6 +136,8 @@ class DataProcessor(object):
           epoch: int. Total epoches to generate data.
           shuffle: bool. Whether to shuffle examples.
         """
+        search_examples = self.get_train_examples(self.data_dir)
+        random.shuffle(search_examples)
         if phase == 'train':
             examples = self.get_train_examples(self.data_dir)
             self.num_examples['train'] = len(examples)
@@ -145,13 +148,13 @@ class DataProcessor(object):
             examples = self.get_test_examples(self.data_dir)
             self.num_examples['test'] = len(examples)
         elif phase == 'search_train':
-            examples = self.get_train_examples(self.data_dir)
-            self.num_examples['search_train'] = len(examples) / 2
-            examples = examples[:self.num_examples['search_train']]
+            #examples = self.get_train_examples(self.data_dir)
+            self.num_examples['search_train'] = len(search_examples) / 2
+            examples = search_examples[:self.num_examples['search_train']]
         elif phase == 'search_valid':
-            examples = self.get_train_examples(self.data_dir)
-            self.num_examples['search_valid'] = len(examples) / 2
-            examples = examples[self.num_examples['search_train']:]
+            #examples = self.get_train_examples(self.data_dir)
+            self.num_examples['search_valid'] = len(search_examples) / 2
+            examples = search_examples[self.num_examples['search_valid']:]
         else:
             raise ValueError(
                 "Unknown phase, which should be in ['train', 'dev', 'test'].")
@@ -340,7 +343,7 @@ class MnliProcessor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+            self._read_tsv(os.path.join(data_dir, "train_aug.tsv")), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""

@@ -31,6 +31,7 @@ import multiprocessing
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.dygraph import to_variable, Layer, Linear
+from paddle.fluid.dygraph.base import to_variable
 from .reader.cls import *
 from .model.bert import BertModelLayer
 from .optimization import Optimizer
@@ -65,14 +66,17 @@ class AdaBERTClassifier(Layer):
         self._teacher_model = teacher_model
         self._data_dir = data_dir
         self.use_fixed_gumbel = use_fixed_gumbel
-        #print(
-        #    "----------------------load teacher model and test----------------------------------------"
-        #)
-        #self.teacher = BERTClassifier(num_labels, model_path=self._teacher_model)
+        self.T = 1.0
+        print(
+            "----------------------load teacher model and test----------------------------------------"
+        )
+        self.teacher = BERTClassifier(
+            num_labels, model_path=self._teacher_model)
+        self.teacher.eval()
         #self.teacher.test(self._data_dir)
-        #print(
-        #    "----------------------finish load teacher model and test----------------------------------------"
-        #)
+        print(
+            "----------------------finish load teacher model and test----------------------------------------"
+        )
         self.student = BertModelLayer(
             n_layer=self._n_layer,
             emb_size=self._emb_size,
@@ -81,46 +85,84 @@ class AdaBERTClassifier(Layer):
             search_layer=self._search_layer,
             use_fixed_gumbel=self.use_fixed_gumbel)
 
-        self.cls_fc = list()
-        for i in range(self._n_layer):
-            fc = Linear(
-                input_dim=self._hidden_size,
-                output_dim=self._num_labels,
-                param_attr=fluid.ParamAttr(
-                    name="s_cls_out_%d_w" % i,
-                    initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
-                bias_attr=fluid.ParamAttr(
-                    name="s_cls_out_%d_b" % i,
-                    initializer=fluid.initializer.Constant(0.)))
-            fc = self.add_sublayer("cls_fc_%d" % i, fc)
-            self.cls_fc.append(fc)
+        fix_emb = False
+        for s_emb, t_emb in zip(self.student.emb_names(),
+                                self.teacher.emb_names()):
+            t_emb.stop_gradient = True
+            if fix_emb:
+                s_emb.stop_gradient = True
+            print(
+                "Assigning embedding[{}] from teacher to embedding[{}] in student.".
+                format(t_emb.name, s_emb.name))
+            fluid.layers.assign(input=t_emb, output=s_emb)
+            print(
+                "Assigned embedding[{}] from teacher to embedding[{}] in student.".
+                format(t_emb.name, s_emb.name))
 
-    def forward(self, data_ids):
+    def forward(self, data_ids, epoch):
         src_ids = data_ids[0]
         position_ids = data_ids[1]
         sentence_ids = data_ids[2]
-        return self.student(src_ids, position_ids, sentence_ids)
+        return self.student(src_ids, position_ids, sentence_ids, epoch)
 
     def arch_parameters(self):
         return self.student.arch_parameters()
 
-    def genotype(self):
-        return self.arch_parameters()
+    def ce(self, logits):
+        logits = np.exp(logits - np.max(logits))
+        logits = logits / logits.sum(axis=0)
+        return logits
 
-    def loss(self, data_ids):
+    def loss(self, data_ids, epoch):
         src_ids = data_ids[0]
         position_ids = data_ids[1]
         sentence_ids = data_ids[2]
         input_mask = data_ids[3]
         labels = data_ids[4]
 
-        enc_output = self.student(
-            src_ids, position_ids, sentence_ids, flops=[], model_size=[])
+        s_logits = self.student(src_ids, position_ids, sentence_ids, epoch)
 
-        ce_loss, probs = fluid.layers.softmax_with_cross_entropy(
-            logits=enc_output, label=labels, return_softmax=True)
-        loss = fluid.layers.mean(x=ce_loss)
-        num_seqs = fluid.layers.create_tensor(dtype='int64')
-        accuracy = fluid.layers.accuracy(
-            input=probs, label=labels, total=num_seqs)
-        return loss, accuracy
+        t_enc_outputs, t_logits, t_losses, t_accs, _ = self.teacher(data_ids)
+
+        #define kd loss
+        kd_weights = []
+        for i in range(len(s_logits)):
+            j = int(np.ceil(i * (float(len(t_logits)) / len(s_logits))))
+            kd_weights.append(t_losses[j].numpy())
+
+        kd_weights = np.array(kd_weights)
+        kd_weights = np.squeeze(kd_weights)
+        kd_weights = to_variable(kd_weights)
+        kd_weights = fluid.layers.softmax(-kd_weights)
+
+        kd_losses = []
+        for i in range(len(s_logits)):
+            j = int(np.ceil(i * (float(len(t_logits)) / len(s_logits))))
+            t_logit = t_logits[j]
+            s_logit = s_logits[i]
+            t_logit.stop_gradient = True
+            t_probs = fluid.layers.softmax(t_logit)  # P_j^T
+            s_probs = fluid.layers.softmax(s_logit / self.T)  #P_j^S
+            #kd_loss = -t_probs * fluid.layers.log(s_probs)
+            kd_loss = fluid.layers.cross_entropy(
+                input=s_probs, label=t_probs, soft_label=True)
+            kd_loss = fluid.layers.reduce_mean(kd_loss)
+            kd_loss = fluid.layers.scale(kd_loss, scale=kd_weights[i])
+            kd_losses.append(kd_loss)
+        kd_loss = fluid.layers.sum(kd_losses)
+
+        losses = []
+        for logit in s_logits:
+            ce_loss, probs = fluid.layers.softmax_with_cross_entropy(
+                logits=logit, label=labels, return_softmax=True)
+            loss = fluid.layers.mean(x=ce_loss)
+            losses.append(loss)
+
+            num_seqs = fluid.layers.create_tensor(dtype='int64')
+            accuracy = fluid.layers.accuracy(
+                input=probs, label=labels, total=num_seqs)
+        ce_loss = fluid.layers.sum(losses)
+
+        total_loss = (1 - self._gamma) * ce_loss + self._gamma * kd_loss
+
+        return total_loss, accuracy, ce_loss, kd_loss, s_logits
