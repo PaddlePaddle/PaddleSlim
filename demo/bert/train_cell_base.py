@@ -213,20 +213,17 @@ def main():
             capacity=512,
             use_double_buffer=True,
             iterable=True,
-            return_list=True,
-            use_multiprocess=True)
+            return_list=True)
         valid_loader = fluid.io.DataLoader.from_generator(
             capacity=512,
             use_double_buffer=True,
             iterable=True,
-            return_list=True,
-            use_multiprocess=True)
+            return_list=True)
         dev_loader = fluid.io.DataLoader.from_generator(
             capacity=512,
             use_double_buffer=True,
             iterable=True,
-            return_list=True,
-            use_multiprocess=True)
+            return_list=True)
 
         train_loader.set_batch_generator(train_reader, places=place)
         valid_loader.set_batch_generator(valid_reader, places=place)
