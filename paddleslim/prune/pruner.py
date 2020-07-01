@@ -49,9 +49,11 @@ class Pruner():
             self.idx_selector = IDX_SELECTOR.get(idx_selector)
         else:
             self.idx_selector = idx_selector
-
-        self.pruned_weights = False
-
+        a = 1;
+        if a == 1:
+            self.pruned_weights = False
+        else:
+            self.pruned_weights = False
     def prune(self,
               program,
               scope,
