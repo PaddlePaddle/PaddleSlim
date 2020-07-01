@@ -209,15 +209,52 @@ class DataProcessor(object):
                     return_input_mask=True,
                     return_max_len=False,
                     return_num_token=False)
+
                 if len(all_dev_batches) < dev_count:
                     all_dev_batches.append(batch_data)
 
                 if len(all_dev_batches) == dev_count:
                     for batch in all_dev_batches:
+                        batch = self.split_seq_pair(batch)
                         yield batch
                     all_dev_batches = []
 
         return wrapper
+
+    def split_seq_pair(self, data_ids):
+        src_ids = data_ids[0]
+        sentence_ids = data_ids[2]
+
+        ids = np.squeeze(src_ids)
+        sids = np.squeeze(sentence_ids)
+        batchsize = ids.shape[0]
+
+        ids_0 = ids[((sids == 0) & (ids != 0))]
+        seqlen_0 = ((sids == 0) & (ids != 0)).astype(np.int64).sum(1)
+        y_0 = np.concatenate([np.arange(s) for s in seqlen_0])
+        x_0 = np.concatenate([
+            np.ones(
+                [s], dtype=np.int64) * i for i, s in enumerate(seqlen_0)
+        ])
+        ids0 = np.zeros([batchsize, seqlen_0.max()], dtype=np.int64)
+        ids0[(x_0, y_0)] = ids_0
+
+        ids_1 = ids[(sids == 1) & (ids != 0)]
+        seqlen_1 = ((sids == 1) & (ids != 0)).astype(np.int64).sum(1)
+        y_1 = np.concatenate([np.arange(s) for s in seqlen_1])
+        x_1 = np.concatenate([
+            np.ones(
+                [s], dtype=np.int64) * i for i, s in enumerate(seqlen_1)
+        ])
+        ids1 = np.zeros([batchsize, seqlen_1.max()], dtype=np.int64)
+        ids1[(x_1, y_1)] = ids_1
+
+        msl = max(seqlen_0.max(), seqlen_1.max())
+        ids0 = np.pad(ids0, [[0, 0], [0, msl - seqlen_0.max()]],
+                      mode='constant')
+        ids1 = np.pad(ids1, [[0, 0], [0, msl - seqlen_1.max()]],
+                      mode='constant')
+        return data_ids + [ids0, ids1]
 
 
 class InputExample(object):

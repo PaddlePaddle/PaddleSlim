@@ -108,48 +108,12 @@ class BertModelLayer(Layer):
     def arch_parameters(self):
         return [self._encoder.alphas]  #, self._encoder.k]
 
-    def forward(self,
-                src_ids,
-                position_ids,
-                sentence_ids,
-                epoch,
-                flops=[],
-                model_size=[]):
+    def forward(self, data_ids, epoch):
         """
         forward
         """
-        ids = np.squeeze(src_ids.numpy())
-        sids = np.squeeze(sentence_ids.numpy())
-        batchsize = ids.shape[0]
-
-        ids_0 = ids[((sids == 0) & (ids != 0))]
-        seqlen_0 = ((sids == 0) & (ids != 0)).astype(np.int64).sum(1)
-        y_0 = np.concatenate([np.arange(s) for s in seqlen_0])
-        x_0 = np.concatenate([
-            np.ones(
-                [s], dtype=np.int64) * i for i, s in enumerate(seqlen_0)
-        ])
-        ids0 = np.zeros([batchsize, seqlen_0.max()], dtype=np.int64)
-        ids0[(x_0, y_0)] = ids_0
-
-        ids_1 = ids[(sids == 1) & (ids != 0)]
-        seqlen_1 = ((sids == 1) & (ids != 0)).astype(np.int64).sum(1)
-        y_1 = np.concatenate([np.arange(s) for s in seqlen_1])
-        x_1 = np.concatenate([
-            np.ones(
-                [s], dtype=np.int64) * i for i, s in enumerate(seqlen_1)
-        ])
-        ids1 = np.zeros([batchsize, seqlen_1.max()], dtype=np.int64)
-        ids1[(x_1, y_1)] = ids_1
-
-        msl = max(seqlen_0.max(), seqlen_1.max())
-        ids0 = np.pad(ids0, [[0, 0], [0, msl - seqlen_0.max()]],
-                      mode='constant')
-        ids1 = np.pad(ids1, [[0, 0], [0, msl - seqlen_1.max()]],
-                      mode='constant')
-
-        ids0 = fluid.dygraph.to_variable(ids0)
-        ids1 = fluid.dygraph.to_variable(ids1)
+        ids0 = data_ids[5]
+        ids1 = data_ids[6]
 
         src_emb_0 = self._src_emb(ids0)
         src_emb_1 = self._src_emb(ids1)
@@ -157,7 +121,6 @@ class BertModelLayer(Layer):
         emb_out_1 = self._emb_fac(src_emb_1)
         # (bs, seq_len, hidden_size)
 
-        enc_outputs = self._encoder(
-            emb_out_0, emb_out_1, epoch, flops=flops, model_size=model_size)
+        enc_outputs = self._encoder(emb_out_0, emb_out_1, epoch)
 
         return enc_outputs

@@ -70,14 +70,13 @@ class MixedOp(fluid.dygraph.Layer):
         self._ops = fluid.dygraph.LayerList(ops)
 
     def forward(self, x, weights, index):
-        out = fluid.layers.sums(
-            [weights[i] * op(x) for i, op in enumerate(self._ops)])
-        return out
+        # out = fluid.layers.sums(
+        #     [weights[i] * op(x) for i, op in enumerate(self._ops)])
+        # return out
 
-        # causebug in multi-gpus
-        #for i in range(len(self._ops)):
-        #    if weights[i].numpy() != 0:
-        #        return self._ops[i](x) * weights[i]
+        for i in range(len(self._ops)):
+            if weights[i].numpy() != 0:
+                return self._ops[i](x) * weights[i]
 
 
 def gumbel_softmax(logits, epoch, temperature=1.0, hard=True, eps=1e-10):

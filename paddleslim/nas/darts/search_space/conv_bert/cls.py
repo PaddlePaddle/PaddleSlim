@@ -114,13 +114,13 @@ class AdaBERTClassifier(Layer):
         return logits
 
     def loss(self, data_ids, epoch):
-        src_ids = data_ids[0]
-        position_ids = data_ids[1]
-        sentence_ids = data_ids[2]
-        input_mask = data_ids[3]
+        # src_ids = data_ids[0]
+        # position_ids = data_ids[1]
+        # sentence_ids = data_ids[2]
+        # input_mask = data_ids[3]
         labels = data_ids[4]
 
-        s_logits = self.student(src_ids, position_ids, sentence_ids, epoch)
+        s_logits = self.student(data_ids, epoch)
 
         t_enc_outputs, t_logits, t_losses, t_accs, _ = self.teacher(data_ids)
 
