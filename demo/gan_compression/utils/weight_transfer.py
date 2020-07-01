@@ -1,3 +1,17 @@
+#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, InstanceNorm
 from models.modules import SeparableConv2D, MobileResnetBlock, ResnetBlock
@@ -151,25 +165,3 @@ def load_pretrained_weight(model1, model2, netA, netB, ngf1, ngf2):
                 index = transfer(m1, m2, index)
     else:
         raise NotImplementedError('Unknown model [%s]!' % model1)
-
-
-class Test(fluid.dygraph.Layer):
-    def __init__(self):
-        super(Test, self).__init__()
-        self.net1 = SeparableConv2D(
-            num_channels=4, num_filters=6, filter_size=3)
-
-    def forward(self, x):
-        out = self.net1(x)
-        return out
-
-
-if __name__ == '__main__':
-    data = np.random.random((1, 4, 6, 6)).astype('float32')
-    with fluid.dygraph.guard():
-        net1 = Test()
-        net2 = Test()
-        net_1 = net1(to_variable(data))
-        net_2 = net2(to_variable(data))
-        model1 = model2 = 'mobile_resnet_9blocks'
-        load_pretrained_weight(model1, model2, net1, net2, 4, 4)

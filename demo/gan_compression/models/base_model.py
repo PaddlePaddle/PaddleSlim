@@ -1,3 +1,17 @@
+#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import paddle.fluid as fluid
 
@@ -5,10 +19,10 @@ import paddle.fluid as fluid
 class BaseModel(fluid.dygraph.Layer):
     @staticmethod
     def add_special_cfgs(parser):
-        pass
+        raise NotImplementedError
 
     def set_input(self, inputs):
-        pass
+        raise NotImplementedError
 
     def setup(self):
         self.load_network()
@@ -29,10 +43,10 @@ class BaseModel(fluid.dygraph.Layer):
                 fluid.save_dygraph(net.state_dict(), save_path)
 
     def forward(self):
-        pass
+        raise NotImplementedError
 
     def optimize_parameter(self):
-        pass
+        raise NotImplementedError
 
     def get_current_loss(self):
         loss_dict = {}
@@ -55,7 +69,7 @@ class BaseModel(fluid.dygraph.Layer):
                     param.stop_gradient = stop_grad
 
     def evaluate_model(self):
-        pass
+        raise NotImplementedError
 
     def profile(self):
-        pass
+        raise NotImplementedError

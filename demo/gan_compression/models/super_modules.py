@@ -1,3 +1,17 @@
+#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import paddle.fluid as fluid
 import paddle.fluid.dygraph_utils as dygraph_utils
 from paddle.fluid.data_feeder import check_variable_and_dtype, check_type
@@ -6,8 +20,6 @@ from paddle.fluid.framework import in_dygraph_mode
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose
 import paddle.fluid.core as core
 import numpy as np
-
-use_cudnn = False
 
 
 class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
@@ -249,7 +261,6 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
                 bias_attr=bias_attr)
         ])
         if norm_layer == InstanceNorm:
-            #self.conv.extend([SuperInstanceNorm(num_channels * scale_factor)])
             self.conv.extend([
                 SuperInstanceNorm(
                     num_channels * scale_factor,
