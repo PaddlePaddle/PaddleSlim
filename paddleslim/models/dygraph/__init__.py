@@ -15,5 +15,6 @@
 from __future__ import absolute_import
 from .mobilenet import MobileNetV1
 from .resnet import ResNet
+from .modules import SeparableConv2D, MobileResnetBlock, ResnetBlock
 
-__all__ = ["MobileNetV1", "ResNet"]
+__all__ = ["MobileNetV1", "ResNet", "SeparableConv2", "MobileResnetBlock", "ResnetBlock"]

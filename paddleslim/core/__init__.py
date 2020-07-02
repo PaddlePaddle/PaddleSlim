@@ -14,5 +14,6 @@
 
 from .graph_wrapper import GraphWrapper, VarWrapper, OpWrapper
 from .registry import Registry
+from .layers import SuperInstanceNorm, SuperConv2D, SuperConv2DTranspose, SuperSeparableConv2D
 
-__all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper', 'Registry']
+__all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper', 'Registry', 'SuperInstanceNorm', 'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D']
