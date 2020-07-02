@@ -27,7 +27,11 @@ import ast
 import time
 import argparse
 import numpy as np
-import multiprocessing
+import multiprocessing as mp
+from multiprocessing import Process, Queue
+import pickle
+import random
+from random import shuffle
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.dygraph import to_variable, Layer
@@ -50,6 +54,7 @@ def create_data(batch):
     input_mask = to_variable(batch[3], "input_mask")
     labels = to_variable(batch[4], "labels")
     labels.stop_gradient = True
+    #    print("src_ids: {}; position_ids: {}; sentence_ids: {}; input_mask: {}; labels: {}".format(batch[0].shape, batch[1].shape, batch[2].shape, batch[3].shape, batch[4].shape))
     return src_ids, position_ids, sentence_ids, input_mask, labels
 
 
@@ -83,6 +88,7 @@ class BERTClassifier(Layer):
                 os.environ.get('CPU_NUM', multiprocessing.cpu_count()))
 
         self.trainer_count = fluid.dygraph.parallel.Env().nranks
+        self.batch_size = 64
 
         self.processors = {
             'xnli': XnliProcessor,
@@ -90,14 +96,17 @@ class BERTClassifier(Layer):
             'mrpc': MrpcProcessor,
             'mnli': MnliProcessor,
         }
-
+        self.num_labels = num_labels
+        self.return_pooled_out = return_pooled_out
+        self.name = name
         self.cls_model = ClsModelLayer(
             self.bert_config,
-            num_labels,
-            return_pooled_out=return_pooled_out,
-            name=name)
+            self.num_labels,
+            return_pooled_out=self.return_pooled_out,
+            name=self.name)
 
         if model_path is not None:
+            self.model_path = model_path
             #restore the model
             print("Load params from %s" % model_path)
             model_dict, _ = fluid.load_dygraph(model_path)
@@ -113,6 +122,131 @@ class BERTClassifier(Layer):
 
     def forward(self, input):
         return self.cls_model(input)
+
+    def cache(self, data_dir, outfile=None, max_seq_len=128, start=0, end=-1):
+        print("start cache sample in {}~{}".format(start, end))
+        batch_size = 1
+        processor = self.processors[self.task_name](
+            data_dir=data_dir,
+            vocab_path=self.vocab_path,
+            max_seq_len=max_seq_len,
+            do_lower_case=self.do_lower_case,
+            in_tokens=False)
+
+        train_data_generator = processor.data_generator(
+            batch_size=batch_size, phase='train_aug', epoch=1, shuffle=False)
+        total_n = processor.get_num_examples('train') // batch_size
+        end = total_n if end == -1 else end
+
+        self.samples = []
+        n = 0
+        for batch in train_data_generator():
+            if n < start:
+                n += 1
+                continue
+            if n >= end:
+                break
+            src_ids = batch[0]
+            labels = batch[4]
+            a_ids = batch[5]
+            b_ids = batch[6]
+            data_ids = create_data(batch)
+
+            total_loss, logits, losses, _, _ = self.cls_model(data_ids)
+            logits = np.array([logit.numpy() for logit in logits]).transpose(
+                [1, 0, 2])
+            losses = np.array([loss.numpy() for loss in losses]).transpose(
+                [1, 0, 2])
+
+            self.samples.extend(zip(a_ids, b_ids, labels, logits, losses))
+            n += 1
+            if n % 100 == 0:
+                print("Current process {} in {}~{}".format(n, start, end))
+
+        if outfile:
+            with open(outfile, 'w') as f:
+                pickle.dump(self.samples, f)
+        return self.cache_reader()
+
+    def cache_reader(self, batch_size=256, data_file=None):
+        def pad_list(lst0, lst1):
+            max_len = max([max(map(len, lst0)), max(map(len, lst1))])
+            map(lambda x: x.extend([0] * (max_len - len(x))), lst0)
+            map(lambda x: x.extend([0] * (max_len - len(x))), lst1)
+            return np.array(lst0), np.array(lst1)
+
+        if data_file:
+            with open(data_file, 'r') as f:
+                self.samples = pickle.load(f)
+        print("Sorting samples")
+        self.samples.sort(key=lambda sample: len(sample[0]))
+        print("Sorted samples")
+
+        def batch_reader():
+
+            skip_num = random.randint(1, 256)
+            samples = self.samples[skip_num:] + self.samples[:skip_num]
+            batches = []
+            batch_a_ids = []
+            batch_b_ids = []
+            batch_labels = []
+            batch_logits = []
+            batch_losses = []
+            for a_ids, b_ids, labels, logits, losses in samples:
+                if len(batch_a_ids) == batch_size:
+                    batch_a_ids, batch_b_ids = pad_list(batch_a_ids,
+                                                        batch_b_ids)
+                    batches.append(
+                        (batch_a_ids, batch_b_ids, np.array(batch_labels),
+                         np.array(batch_logits), np.array(batch_losses)))
+                    batch_a_ids = []
+                    batch_b_ids = []
+                    batch_labels = []
+                    batch_logits = []
+                    batch_losses = []
+
+                else:
+                    batch_a_ids.append(list(a_ids))
+                    batch_b_ids.append(list(b_ids))
+                    batch_labels.append(labels)
+                    batch_logits.append(logits)
+                    batch_losses.append(losses)
+
+            shuffle(batches)
+            for batch in batches:
+                yield batch
+
+        def cache_reader():
+            batch_a_ids = []
+            batch_b_ids = []
+            batch_labels = []
+            batch_logits = []
+            batch_losses = []
+
+            shuffle(self.samples)
+            for a_ids, b_ids, labels, logits, losses in self.samples:
+                if len(batch_a_ids) == batch_size:
+                    batch_a_ids, batch_b_ids = pad_list(batch_a_ids,
+                                                        batch_b_ids)
+                    yield batch_a_ids, batch_b_ids, np.array(
+                        batch_labels), np.array(batch_logits), np.array(
+                            batch_losses)
+                    batch_a_ids = []
+                    batch_b_ids = []
+                    batch_labels = []
+                    batch_logits = []
+                    batch_losses = []
+
+                else:
+                    batch_a_ids.append(list(a_ids))
+                    batch_b_ids.append(list(b_ids))
+                    batch_labels.append(labels)
+                    batch_logits.append(logits)
+                    batch_losses.append(losses)
+
+#        return cache_reader
+
+        return batch_reader
 
     def test(self, data_dir, batch_size=64, max_seq_len=512):
 
@@ -130,10 +264,9 @@ class BERTClassifier(Layer):
         final_acc, total_num_seqs = [], []
         for batch in test_data_generator():
             data_ids = create_data(batch)
+            _, _, _, np_acc, np_num_seq = self.cls_model(data_ids)
 
-            _, _, np_acc, np_num_seq = self.cls_model(data_ids)
-
-            np_acc = np_acc.numpy()
+            np_acc = np_acc[-1].numpy()
             np_num_seq = np_num_seq.numpy()
 
             final_acc.extend(np_acc * np_num_seq)

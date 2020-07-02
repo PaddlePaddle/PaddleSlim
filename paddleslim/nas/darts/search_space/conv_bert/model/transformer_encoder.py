@@ -318,7 +318,6 @@ class EncoderLayer(Layer):
         else:
             alphas = gumbel_softmax(self.alphas)
 
-        s0 = s1 = tmp
         outputs = []
         for i in range(self._n_layer):
             s0, s1 = s1, self._cells[i](s0, s1, alphas)

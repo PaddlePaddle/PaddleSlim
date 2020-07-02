@@ -109,8 +109,8 @@ class ClsModelLayer(Layer):
 
             ce_loss, probs = fluid.layers.softmax_with_cross_entropy(
                 logits=logit, label=labels, return_softmax=True)
-            loss = fluid.layers.mean(x=ce_loss)
-            losses.append(loss)
+            #loss = fluid.layers.mean(x=ce_loss)
+            losses.append(ce_loss)
 
             if self.use_fp16 and self.loss_scaling > 1.0:
                 loss *= self.loss_scaling

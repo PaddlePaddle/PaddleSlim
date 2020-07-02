@@ -55,12 +55,11 @@ class AdaBERTClassifier(Layer):
         print(
             "----------------------load teacher model and test----------------------------------------"
         )
-        return_pooled_out = True
         self.teacher = BERTClassifier(
             num_labels,
             model_path=self._teacher_model,
             return_pooled_out=False)
-        self.teacher.test(self._data_dir)
+        #        self.teacher.test(self._data_dir)
         print(
             "----------------------finish load teacher model and test----------------------------------------"
         )
@@ -97,25 +96,12 @@ class AdaBERTClassifier(Layer):
         input_mask = data_ids[3]
         labels = data_ids[4]
 
-        self.teacher.eval()
-        t_enc_outputs, t_logits, _, _ = self.teacher(data_ids)
+        if self._gamma != 0:
+            self.teacher.eval()
+            t_enc_outputs, t_logits, _, _ = self.teacher(data_ids)
 
         self.student.train()
         s_enc_outputs, s_logits, _, _ = self.student(data_ids)
-
-        # define kd loss
-        ## The prediction layers distillation loss
-        t_logits = fluid.layers.softmax(t_logits / self.T)
-        t_logits.stop_gradient = True
-        kd_loss = fluid.layers.softmax_with_cross_entropy(
-            s_logits, t_logits, soft_label=True)
-        kd_loss = fluid.layers.mean(x=kd_loss)
-
-        ## The internal layers distillation loss
-        for s_v, t_v in zip(s_enc_outputs, t_enc_outputs):
-            t_v.stop_gradient = True
-            mse = fluid.layers.mse_loss(s_v, t_v)
-            kd_loss = kd_loss + mse
 
         ## ce loss of student
         ce_loss, probs = fluid.layers.softmax_with_cross_entropy(
@@ -125,6 +111,24 @@ class AdaBERTClassifier(Layer):
         accuracy = fluid.layers.accuracy(
             input=probs, label=labels, total=num_seqs)
 
-        loss = (1 - self._gamma) * ce_loss + self._gamma * kd_loss
+        if self._gamma != 0:
+            # define kd loss
+            ## The prediction layers distillation loss
+            t_logits = fluid.layers.softmax(t_logits / self.T)
+            t_logits.stop_gradient = True
+            kd_loss = fluid.layers.softmax_with_cross_entropy(
+                s_logits, t_logits, soft_label=True)
+            kd_loss = fluid.layers.mean(x=kd_loss)
+
+            ## The internal layers distillation loss
+            for s_v, t_v in zip(s_enc_outputs, t_enc_outputs):
+                t_v.stop_gradient = True
+                mse = fluid.layers.mse_loss(s_v, t_v)
+                kd_loss = kd_loss + mse
+
+            loss = (1 - self._gamma) * ce_loss + self._gamma * kd_loss
+        else:
+            loss = ce_loss
+            kd_loss = ce_loss
         #        return ce_loss, accuracy, None, None
         return loss, accuracy, ce_loss, kd_loss

@@ -79,7 +79,8 @@ class DataProcessor(object):
         """
         input_pos = list(range(len(feature.input_ids)))
         return [
-            feature.input_ids, feature.segment_ids, input_pos, feature.label_id
+            feature.input_ids, feature.segment_ids, input_pos,
+            feature.label_id, feature.ids_a, feature.ids_b
         ]
 
     def generate_batch_data(self,
@@ -184,7 +185,9 @@ class DataProcessor(object):
         def batch_reader(reader, batch_size, in_tokens):
             batch, total_token_num, max_len = [], 0, 0
             for instance in reader():
-                token_ids, sent_ids, pos_ids, label = instance[:4]
+                token_ids, sent_ids, pos_ids, label, ids_a, ids_b = instance[:
+                                                                             6]
+                #print("ids_a len: {}".format(len(ids_a)))
                 max_len = max(max_len, len(token_ids))
                 if in_tokens:
                     to_append = (len(batch) + 1) * max_len <= batch_size
@@ -265,11 +268,14 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 class InputFeatures(object):
     """A single set of features of data."""
 
-    def __init__(self, input_ids, input_mask, segment_ids, label_id):
+    def __init__(self, input_ids, input_mask, segment_ids, label_id, ids_a,
+                 ids_b):
         self.input_ids = input_ids
         self.input_mask = input_mask
         self.segment_ids = segment_ids
         self.label_id = label_id
+        self.ids_a = ids_a
+        self.ids_b = ids_b
 
 
 class XnliProcessor(DataProcessor):
@@ -500,7 +506,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         # Account for [CLS] and [SEP] with "- 2"
         if len(tokens_a) > max_seq_length - 2:
             tokens_a = tokens_a[0:(max_seq_length - 2)]
-
+    #print("tokens_a: {}; tokens_b: {}".format(len(tokens_a), len(tokens_b)))
     # The convention in BERT is:
     # (a) For sequence pairs:
     #  tokens:   [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
@@ -529,17 +535,23 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     tokens.append("[SEP]")
     segment_ids.append(0)
 
+    ids_a = None
+    ids_b = None
     if tokens_b:
         for token in tokens_b:
             tokens.append(token)
             segment_ids.append(1)
         tokens.append("[SEP]")
         segment_ids.append(1)
+        ids_a = tokenizer.convert_tokens_to_ids(["[CLS]"] + tokens_a +
+                                                ["[SEP]"])
+        ids_b = tokenizer.convert_tokens_to_ids(tokens_b + ["[SEP]"])
+        input_ids = ids_a + ids_b
+    else:
+        input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-    input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-    # The mask has 1 for real tokens and 0 for padding tokens. Only real
-    # tokens are attended to.
+# The mask has 1 for real tokens and 0 for padding tokens. Only real
+# tokens are attended to.
     input_mask = [1] * len(input_ids)
 
     label_id = label_map[example.label]
@@ -548,7 +560,9 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         input_ids=input_ids,
         input_mask=input_mask,
         segment_ids=segment_ids,
-        label_id=label_id)
+        label_id=label_id,
+        ids_a=ids_a,
+        ids_b=ids_b)
     return feature
 
 

@@ -93,11 +93,16 @@ def prepare_batch_data(insts,
     batch_src_ids = [inst[0] for inst in insts]
     batch_sent_ids = [inst[1] for inst in insts]
     batch_pos_ids = [inst[2] for inst in insts]
+
+    batch_a_ids = [inst[4] for inst in insts]
+    batch_b_ids = [inst[5] for inst in insts]
+
     labels_list = []
     # compatible with squad, whose example includes start/end positions, 
     # or unique id
 
-    for i in range(3, len(insts[0]), 1):
+    #for i in range(3, len(insts[0]), 1):
+    for i in range(3, 4, 1):
         labels = [inst[i] for inst in insts]
         labels = np.array(labels).astype("int64").reshape([-1, 1])
         labels_list.append(labels)
@@ -116,6 +121,13 @@ def prepare_batch_data(insts,
     # Second step: padding
     src_id, self_input_mask = pad_batch_data(
         out, pad_idx=pad_id, return_input_mask=True)
+
+    a_ids = pad_batch_data(
+        batch_a_ids, pad_idx=pad_id, return_input_mask=False)
+
+    b_ids = pad_batch_data(
+        batch_b_ids, pad_idx=pad_id, return_input_mask=False)
+
     pos_id = pad_batch_data(
         batch_pos_ids,
         pad_idx=pad_id,
@@ -133,7 +145,7 @@ def prepare_batch_data(insts,
         ] + labels_list
     else:
         return_list = [src_id, pos_id, sent_id, self_input_mask] + labels_list
-
+    return_list += [a_ids, b_ids]
     return return_list if len(return_list) > 1 else return_list[0]
 
 
