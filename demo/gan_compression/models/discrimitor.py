@@ -14,7 +14,7 @@
 import functools
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, BatchNorm
-from paddle.nn.layer import Leaky_ReLU, ReLU, Pad2D
+from paddle.nn.layer import LeakyReLU, ReLU, Pad2D
 
 
 class NLayerDiscriminator(fluid.dygraph.Layer):
@@ -31,7 +31,7 @@ class NLayerDiscriminator(fluid.dygraph.Layer):
         self.model = fluid.dygraph.LayerList([
             Conv2D(
                 input_channel, ndf, filter_size=kw, stride=2, padding=padw),
-            Leaky_ReLU(0.2)
+            LeakyReLU(0.2)
         ])
         nf_mult = 1
         nf_mult_prev = 1
@@ -45,19 +45,8 @@ class NLayerDiscriminator(fluid.dygraph.Layer):
                     filter_size=kw,
                     stride=2,
                     padding=padw,
-                    bias_attr=use_bias),
-                #norm_layer(ndf * nf_mult),
-                InstanceNorm(
-                    ndf * nf_mult,
-                    param_attr=fluid.ParamAttr(
-                        initializer=fluid.initializer.Constant(1.0),
-                        learning_rate=0.0,
-                        trainable=False),
-                    bias_attr=fluid.ParamAttr(
-                        initializer=fluid.initializer.Constant(0.0),
-                        learning_rate=0.0,
-                        trainable=False)),
-                Leaky_ReLU(0.2)
+                    bias_attr=use_bias), norm_layer(ndf * nf_mult),
+                LeakyReLU(0.2)
             ])
 
         nf_mult_prev = nf_mult
@@ -69,19 +58,7 @@ class NLayerDiscriminator(fluid.dygraph.Layer):
                 filter_size=kw,
                 stride=1,
                 padding=padw,
-                bias_attr=use_bias),
-            #norm_layer(ndf * nf_mult),
-            InstanceNorm(
-                ndf * nf_mult,
-                param_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.Constant(1.0),
-                    learning_rate=0.0,
-                    trainable=False),
-                bias_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.Constant(0.0),
-                    learning_rate=0.0,
-                    trainable=False)),
-            Leaky_ReLU(0.2)
+                bias_attr=use_bias), norm_layer(ndf * nf_mult), LeakyReLU(0.2)
         ])
 
         self.model.extend([

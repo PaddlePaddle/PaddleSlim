@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, InstanceNorm
-from models.modules import SeparableConv2D, MobileResnetBlock, ResnetBlock
 from paddle.fluid.dygraph.base import to_variable
-import numpy as np
+from paddleslim.models.dygraph.modules import SeparableConv2D, MobileResnetBlock, ResnetBlock
 
 
 ### CoutCinKhKw

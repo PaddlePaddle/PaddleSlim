@@ -48,7 +48,7 @@ def RandomHorizonFlip(img):
     return img
 
 
-class reader_creator:
+class ReaderCreator:
     def __init__(self, *args, **kwcfgs):
         raise NotImplementedError
 
@@ -56,7 +56,7 @@ class reader_creator:
         raise NotImplementedError
 
 
-class single_datareader(reader_creator):
+class SingleDatareader(ReaderCreator):
     def __init__(self, list_filename, cfgs, mode='TEST'):
         self.cfgs = cfgs
         self.mode = mode
@@ -114,7 +114,7 @@ class single_datareader(reader_creator):
         return reader
 
 
-class cycle_datareader(reader_creator):
+class CycleDatareader(ReaderCreator):
     def __init__(self, list_filename_A, list_filename_B, cfgs, mode='TRAIN'):
         self.cfgs = cfgs
         self.mode = mode
@@ -202,7 +202,7 @@ class cycle_datareader(reader_creator):
         return reader
 
 
-class data_reader(object):
+class DataReader(object):
     def __init__(self, cfgs, mode='TRAIN'):
         self.mode = mode
         self.cfgs = cfgs

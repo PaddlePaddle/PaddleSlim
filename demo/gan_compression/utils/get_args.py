@@ -44,10 +44,7 @@ class configs:
             default='resnet',
             help="generator network in supernet")
         parser.add_argument(
-            '--use_gpu',
-            type=ast.literal_eval,
-            default=True,
-            help='Whether to use GPU in train/test model.')
+            '--gpu_num', type=int, default='0', help='GPU number.')
         ### data
         parser.add_argument(
             '--batch_size', type=int, default=1, help="Minbatch size")

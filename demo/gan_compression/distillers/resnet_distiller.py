@@ -18,7 +18,6 @@ from paddle.fluid.dygraph.nn import Conv2D
 from .base_resnet_distiller import BaseResnetDistiller
 from utils import util
 from utils.weight_transfer import load_pretrained_weight
-from metric import compute_fid
 from models import loss
 from metric import get_fid
 
@@ -161,14 +160,13 @@ class ResnetDistiller(BaseResnetDistiller):
         fakes = []
         cnt = 0
         for i, data_i in enumerate(self.eval_dataloader):
-            id2name = self.name
             self.set_single_input(data_i)
             self.test()
             fakes.append(self.Sfake_B.detach().numpy())
             for j in range(len(self.Sfake_B)):
                 if cnt < 10:
-                    Sname = 'Sfake_' + str(id2name[i + j]) + '.png'
-                    Tname = 'Tfake_' + str(id2name[i + j]) + '.png'
+                    Sname = 'Sfake_' + str(i + j) + '.png'
+                    Tname = 'Tfake_' + str(i + j) + '.png'
                     Sfake_im = util.tensor2img(self.Sfake_B[j])
                     Tfake_im = util.tensor2img(self.Tfake_B[j])
                     util.save_image(Sfake_im, os.path.join(save_dir, Sname))

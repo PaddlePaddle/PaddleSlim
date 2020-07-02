@@ -149,14 +149,13 @@ class ResnetSupernet(BaseResnetDistiller):
             config = self.configs(config_name)
             fakes, names = [], []
             for i, data_i in enumerate(self.eval_dataloader):
-                id2name = self.name
                 self.set_single_input(data_i)
                 self.test(config)
                 fakes.append(self.Sfake_B.detach().numpy())
                 for j in range(len(self.Sfake_B)):
                     if i < 10:
-                        Sname = 'Sfake_' + str(id2name[i + j]) + '.png'
-                        Tname = 'Tfake_' + str(id2name[i + j]) + '.png'
+                        Sname = 'Sfake_' + str(i + j) + '.png'
+                        Tname = 'Tfake_' + str(i + j) + '.png'
                         Sfake_im = util.tensor2img(self.Sfake_B[j])
                         Tfake_im = util.tensor2img(self.Tfake_B[j])
                         util.save_image(Sfake_im,

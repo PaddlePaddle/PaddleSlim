@@ -2,8 +2,8 @@ import functools
 import paddle.fluid as fluid
 import paddle.tensor as tensor
 from paddle.fluid.dygraph.nn import BatchNorm, InstanceNorm, Dropout
-from paddle.nn.layer import Leaky_ReLU, ReLU, Pad2D
-from ..super_modules import SuperConv2D, SuperConv2DTranspose, SuperSeparableConv2D, SuperInstanceNorm
+from paddle.nn.layer import ReLU, Pad2D
+from paddleslim.core.layers import SuperConv2D, SuperConv2DTranspose, SuperSeparableConv2D, SuperInstanceNorm
 
 
 class SuperMobileResnetBlock(fluid.dygraph.Layer):

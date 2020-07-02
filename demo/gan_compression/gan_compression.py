@@ -23,8 +23,33 @@ from utils.get_args import configs
 class gan_compression:
     def __init__(self, cfgs, **kwargs):
         self.cfgs = cfgs
+        use_gpu, use_parallel = self._get_device()
+
+        if not use_gpu:
+            place = fluid.CPUPlace()
+        else:
+            if not use_parallel:
+                place = fluid.CUDAPlace(0)
+            else:
+                place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
+
+        setattr(self.cfgs, 'use_gpu', use_gpu)
+        setattr(self.cfgs, 'use_parallel', use_parallel)
+        setattr(self.cfgs, 'place', place)
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def _get_device(self):
+        num = self.cfgs.gpu_num
+
+        use_gpu, use_parallel = False, False
+        if num == -1:
+            use_gpu = False
+        else:
+            use_gpu = True
+            if num > 1:
+                use_parallel = True
+        return use_gpu, use_parallel
 
     def start_train(self):
         steps = self.cfgs.task.split('+')
@@ -32,9 +57,9 @@ class gan_compression:
             if step == 'mobile':
                 from models import create_model
             elif step == 'distiller':
-                from distiller import create_distiller as create_model
+                from distillers import create_distiller as create_model
             elif step == 'supernet':
-                from supernet import create_supernet as create_model
+                from supernets import create_supernet as create_model
             else:
                 raise NotImplementedError
 
@@ -65,8 +90,11 @@ class gan_compression:
                             message += '%s: %.3f ' % (k, v)
                         logging.info(message)
 
+                save_model = (not self.cfgs.use_parallel) or (
+                    self.cfgs.use_parallel and
+                    fluid.dygraph.parallel.Env().local_rank == 0)
                 if epoch_id % self.cfgs.save_freq == 0 or epoch_id == (
-                        epochs - 1):
+                        epochs - 1) and save_model:
                     model.evaluate_model(epoch_id)
                     model.save_network(epoch_id)
                     if epoch_id == (epochs - 1):

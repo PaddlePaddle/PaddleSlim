@@ -280,7 +280,6 @@ class CycleGAN(BaseModel):
         self.netG_B.eval()
         for direction in ['AtoB', 'BtoA']:
             eval_dataloader = getattr(self, 'eval_dataloader_' + direction)
-            id2name = getattr(self, 'name_' + direction)
             fakes = []
             cnt = 0
             for i, data_i in enumerate(eval_dataloader):
@@ -289,8 +288,7 @@ class CycleGAN(BaseModel):
                 fakes.append(self.fake_B.detach().numpy())
                 for j in range(len(self.fake_B)):
                     if cnt < 10:
-                        name = 'fake_' + direction + str(id2name[i +
-                                                                 j]) + '.png'
+                        name = 'fake_' + direction + str(i + j) + '.png'
                         save_path = os.path.join(save_dir, name)
                         fake_im = util.tensor2img(self.fake_B[j])
                         util.save_image(fake_im, save_path)

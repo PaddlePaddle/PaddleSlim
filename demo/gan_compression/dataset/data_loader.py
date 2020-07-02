@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import paddle.fluid as fluid
-from data_reader import data_reader
+from data_reader import DataReader
 
 
 def create_data(cfgs, direction='AtoB', eval_mode=False):
@@ -21,15 +21,17 @@ def create_data(cfgs, direction='AtoB', eval_mode=False):
         mode = 'TRAIN'
     else:
         mode = 'EVAL'
-    reader = data_reader(cfgs, mode=mode)
-    data, id2name = reader.make_data(direction)
-    loader = fluid.io.DataLoader.from_generator(
-        capacity=4, iterable=True, use_double_buffer=True)
+    reader = DataReader(cfgs, mode=mode)
+    dreader, id2name = reader.make_data(direction)
 
-    loader.set_batch_generator(
-        data,
-        places=fluid.CUDAPlace(0)
-        if cfgs.use_gpu else fluid.cpu_places())  ### fluid.cuda_places()
+    if cfgs.use_parallel:
+        dreader = fluid.contrib.reader.distributed_batch_reader(dreader)
+
+    #### id2name has something wrong when use_multiprocess
+    loader = fluid.io.DataLoader.from_generator(
+        capacity=4, return_list=True, use_multiprocess=cfgs.use_multiprocess)
+
+    loader.set_batch_generator(dreader, places=cfgs.place)
     return loader, id2name
 
 

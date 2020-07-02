@@ -2,10 +2,8 @@ import functools
 import paddle.fluid as fluid
 import paddle.tensor as tensor
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose
-from paddle.nn.layer import Leaky_ReLU, ReLU, Pad2D
-from .modules import SeparableConv2D, MobileResnetBlock
-
-use_cudnn = False
+from paddle.nn.layer import ReLU, Pad2D
+from paddleslim.models.dygraph.modules import SeparableConv2D, MobileResnetBlock
 
 
 class SubMobileResnetGenerator(fluid.dygraph.Layer):
