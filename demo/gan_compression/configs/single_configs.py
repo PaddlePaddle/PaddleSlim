@@ -1,3 +1,6 @@
+"""Based on https://github.com/mit-han-lab/gan-compression """
+
+
 class SingleConfigs:
     def __init__(self, config):
         self.attributes = ['n_channels']

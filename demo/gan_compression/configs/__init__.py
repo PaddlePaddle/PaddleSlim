@@ -1,3 +1,6 @@
+"""Based on https://github.com/mit-han-lab/gan-compression """
+
+
 def encode_config(config):
     return '_'.join([str(c) for c in config['channels']])
 

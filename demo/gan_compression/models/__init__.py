@@ -1,3 +1,5 @@
+"""Based on https://github.com/mit-han-lab/gan-compression """
+
 import importlib
 from .base_model import BaseModel
 

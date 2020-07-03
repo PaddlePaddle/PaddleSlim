@@ -25,25 +25,3 @@ class ImagePool():
                 return temp
             else:
                 return image
-
-
-#        return_images = []
-#        for img in image:
-#            img = img.detach()
-#            img = fluid.layers.unsqueeze(img, axes=0)
-#            if self.num_imgs < self.pool_size:
-#                self.num_imgs = self.num_imgs + 1
-#                self.images.append(img)
-#                return_images.append(img)
-#            else:
-#                p = random.uniform(0, 1)
-#                if p > 0.5:
-#                    random_id = random.randint(0, self.pool_size - 1)
-#                    temp = self.images[random_id]
-#                    self.images[random_id] = img
-#                    return_images.append(temp)
-#                else:
-#                    return_images.append(img)
-#
-#        return_images = fluid.layers.concat(return_images, axis=0)
-#        return return_images
