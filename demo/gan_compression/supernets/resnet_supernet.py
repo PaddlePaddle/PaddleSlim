@@ -89,7 +89,10 @@ class ResnetSupernet(BaseResnetDistiller):
         with fluid.dygraph.no_grad():
             self.Tfake_B = self.netG_teacher(self.real_A)
         self.Tfake_B.stop_gradient = True
-        self.netG_student.configs = config
+        if self.cfgs.use_parallel:
+            self.netG_student._layers.configs = config
+        else:
+            self.netG_student.configs = config
         self.Sfake_B = self.netG_student(self.real_A)
 
     def calc_distill_loss(self):
@@ -137,7 +140,8 @@ class ResnetSupernet(BaseResnetDistiller):
     def evaluate_model(self, step):
         ret = {}
         self.is_best = False
-        save_dir = os.path.join(self.cfgs.save_dir, 'eval', str(step))
+        save_dir = os.path.join(self.cfgs.save_dir, 'supernet', 'eval',
+                                str(step))
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         self.netG_student.eval()

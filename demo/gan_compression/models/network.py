@@ -18,6 +18,7 @@ from discrimitor import NLayerDiscriminator
 from generator.resnet_generator import ResnetGenerator
 from generator.mobile_generator import MobileResnetGenerator
 from generator.super_generator import SuperMobileResnetGenerator
+from generator.sub_mobile_generator import SubMobileResnetGenerator
 
 
 class Identity(fluid.dygraph.Layer):
@@ -85,6 +86,16 @@ def define_G(input_nc,
             input_nc,
             output_nc,
             ngf,
+            norm_layer=norm_layer,
+            dropout_rate=dropout_rate,
+            n_blocks=9)
+    elif netG == 'sub_mobile_resnet_9blocks':
+        assert self.cfgs.config_str is not None
+        config = decode_config(self.cfgs.config_str)
+        net = SubMobileResnetGenerator(
+            input_nc,
+            output_nc,
+            config,
             norm_layer=norm_layer,
             dropout_rate=dropout_rate,
             n_blocks=9)

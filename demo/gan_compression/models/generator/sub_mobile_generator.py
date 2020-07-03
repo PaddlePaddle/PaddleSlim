@@ -75,7 +75,7 @@ class SubMobileResnetGenerator(fluid.dygraph.Layer):
         for i in range(n_downsampling):
             out_c = config['channels'][offset + i]
             mult = 2**(n_downsampling - i)
-            output_size = (i + 1) * 128
+            output_size = (i + 1) * (self.cfgs.crop_size / 2)
             self.model.extend([
                 Conv2DTranspose(
                     in_c * mult,

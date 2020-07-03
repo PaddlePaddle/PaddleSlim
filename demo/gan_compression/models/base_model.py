@@ -24,7 +24,7 @@ class BaseModel(fluid.dygraph.Layer):
     def set_input(self, inputs):
         raise NotImplementedError
 
-    def setup(self):
+    def setup(self, model_weight=None):
         self.load_network()
 
     def load_network(self):

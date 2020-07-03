@@ -117,6 +117,9 @@ class ResnetDistiller(BaseResnetDistiller):
         self.loss_G = self.loss_G_gan + self.loss_G_recon + self.loss_G_distill
         self.loss_G.backward()
 
+        if self.cfgs.use_parallel:
+            self.netG_student.apply_collective_grads()
+
     def optimize_parameter(self):
         self.forward()
 
@@ -130,24 +133,27 @@ class ResnetDistiller(BaseResnetDistiller):
         self.optimizer_G.optimizer.minimize(self.loss_G)
         self.optimizer_G.optimizer.clear_gradients()
 
-    def load_networks(self):
-        load_pretrain = True
-        if self.cfgs.restore_pretrained_G_path is not None:
-            pretrained_G_path = self.cfgs.restore_pretrained_G_path
-        else:
-            pretrained_G_path = os.path.join(self.cfgs.save_dir, 'mobile',
-                                             'last_netG_B')
-            if not os.path.exists(os.path.join(pretrained_G_path, 'pdparams')):
-                load_pretrain = False
+    def load_networks(self, model_weight=None):
+        if self.cfgs.restore_pretrained_G_path != False:
+            if self.cfgs.restore_pretrained_G_path != None:
+                pretrained_G_path = self.cfgs.restore_pretrained_G_path
+                util.load_network(self.netG_pretrained, pretrained_G_path)
+            else:
+                assert len(
+                    model_weight
+                ) != 0, "restore_pretrained_G_path and model_weight can not be None at the same time, if you donnot want to load pretrained model, please set restore_pretrained_G_path=Fasle"
+                if self.cfgs.direction == 'AtoB':
+                    self.netG_pretrained.set_dict(model_weight['netG_A'])
+                else:
+                    self.netG_pretrained.set_dict(model_weight['netG_B'])
 
-        if load_pretrain:
-            util.load_network(self.netG_pretrained, pretrained_G_path)
             load_pretrained_weight(
-                self.cfgs.pretrained_netG, self.cfgs.student_netG,
+                self.cfgs.pretrained_netG, self.cfgs.distiller_student_netG,
                 self.netG_pretrained, self.netG_student,
                 self.cfgs.pretrained_ngf, self.cfgs.student_ngf)
             del self.netG_pretrained
-        super(ResnetDistiller, self).load_networks()
+
+        super(ResnetDistiller, self).load_networks(model_weight)
 
     def evaluate_model(self, step):
         ret = {}

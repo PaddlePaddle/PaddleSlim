@@ -88,16 +88,32 @@ class BaseResnetDistiller(BaseModel):
             self.netG_pretrained = network.define_G(
                 cfgs.input_nc, cfgs.output_nc, cfgs.pretrained_ngf,
                 cfgs.pretrained_netG, cfgs.norm_type, 0)
+            if self.cfgs.use_parallel:
+                self.netG_pretrained = fluid.dygraph.parallel.DataParallel(
+                    self.netG_pretrained, self.cfgs.strategy)
 
         self.netD = network.define_D(cfgs.output_nc, cfgs.ndf, cfgs.netD,
                                      cfgs.norm_type, cfgs.n_layer_D)
+
+        if self.cfgs.use_parallel:
+            self.netG_teacher = fluid.dygraph.parallel.DataParallel(
+                self.netG_teacher, self.cfgs.strategy)
+            self.netG_student = fluid.dygraph.parallel.DataParallel(
+                self.netG_student, self.cfgs.strategy)
+            self.netD = fluid.dygraph.parallel.DataParallel(self.netD,
+                                                            self.cfgs.strategy)
 
         self.netG_teacher.eval()
         self.netG_student.train()
         self.netD.train()
 
         ### [9, 12, 15, 18]
-        self.mapping_layers = ['model.%d' % i for i in range(9, 21, 3)]
+        self.mapping_layers = [
+            '_layers.model.%d' % i for i in range(9, 21, 3)
+        ] if self.cfgs.use_parallel else [
+            'model.%d' % i for i in range(9, 21, 3)
+        ]
+
         self.netAs = []
         self.Tacts, self.Sacts = {}, {}
 
@@ -157,8 +173,8 @@ class BaseResnetDistiller(BaseModel):
 
         self.is_best = False
 
-    def setup(self):
-        self.load_networks()
+    def setup(self, model_weight=None):
+        self.load_networks(model_weight)
 
         if self.cfgs.lambda_distill > 0:
 
@@ -183,30 +199,37 @@ class BaseResnetDistiller(BaseModel):
     def set_single_input(self, inputs):
         self.real_A = inputs[0]
 
-    def load_networks(self):
+    def load_networks(self, model_weight=None):
         if self.cfgs.restore_teacher_G_path is None:
+            assert len(
+                model_weight
+            ) != 0, "restore_teacher_G_path and model_weight cannot be None at the same time."
             if self.cfgs.direction == 'AtoB':
-                teacher_G_path = os.path.join(self.cfgs.save_dir, 'mobile',
-                                              'last_netG_A')
+                key = 'netG_A' if 'netG_A' in model_weight else 'netG_teacher'
+                self.netG_teacher.set_dict(model_weight[key])
             else:
-                teacher_G_path = os.path.join(self.cfgs.save_dir, 'mobile',
-                                              'last_netG_B')
+                key = 'netG_B' if 'netG_B' in model_weight else 'netG_teacher'
+                self.netG_teacher.set_dict(model_weight[key])
         else:
-            teacher_G_path = self.cfgs.restore_teacher_G_path
-
-        util.load_network(self.netG_teacher, teacher_G_path)
+            util.load_network(self.netG_teacher, self.cfgs.teacher_G_path)
 
         if self.cfgs.restore_student_G_path is not None:
             util.load_network(self.netG_student,
                               self.cfgs.restore_student_G_path)
         else:
             if self.task == 'supernet':
-                student_G_path = os.path.join(self.cfgs.save_dir, 'distiller',
-                                              'last_stu_netG')
-                util.load_network(self.netG_student, student_G_path)
+                self.netG_student.set_dict(model_weight['netG_student'])
 
         if self.cfgs.restore_D_path is not None:
             util.load_network(self.netD, self.cfgs.restore_D_path)
+        else:
+            if self.cfgs.direction == 'AtoB':
+                key = 'netD_A' if 'netD_A' in model_weight else 'netD'
+                self.netD.set_dict(model_weight[key])
+            else:
+                key = 'netD_B' if 'netD_B' in model_weight else 'netD'
+                self.netD.set_dict(model_weight[key])
+
         if self.cfgs.restore_A_path is not None:
             for i, netA in enumerate(self.netAs):
                 netA_path = '%s-%d.pth' % (self.cfgs.restore_A_path, i)
@@ -231,6 +254,9 @@ class BaseResnetDistiller(BaseModel):
 
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
         self.loss_D.backward()
+
+        if self.cfgs.use_parallel:
+            self.netD.apply_collective_grads()
 
     def calc_distill_loss(self):
         raise NotImplementedError

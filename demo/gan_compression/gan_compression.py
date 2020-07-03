@@ -53,7 +53,8 @@ class gan_compression:
 
     def start_train(self):
         steps = self.cfgs.task.split('+')
-        for step in steps:
+        model_weight = {}
+        for idx, step in enumerate(steps):
             if step == 'mobile':
                 from models import create_model
             elif step == 'distiller':
@@ -66,9 +67,16 @@ class gan_compression:
             print(
                 "============================= start train {} ==============================".
                 format(step))
-            fluid.enable_imperative()
+            fluid.enable_imperative(place=self.cfgs.place)
+
+            if self.cfgs.use_parallel and idx == 0:
+                strategy = fluid.dygraph.parallel.prepare_context()
+                setattr(self.cfgs, 'strategy', strategy)
+
             model = create_model(self.cfgs)
-            model.setup()
+            model.setup(model_weight)
+            ### clear model_weight every step
+            model_weight = {}
 
             _train_dataloader, _ = create_data(self.cfgs)
 
@@ -90,6 +98,11 @@ class gan_compression:
                             message += '%s: %.3f ' % (k, v)
                         logging.info(message)
 
+                if epoch_id == (epochs - 1):
+                    for name in model.model_names:
+                        model_weight[name] = model._sub_layers[
+                            name].state_dict()
+
                 save_model = (not self.cfgs.use_parallel) or (
                     self.cfgs.use_parallel and
                     fluid.dygraph.parallel.Env().local_rank == 0)
@@ -97,8 +110,6 @@ class gan_compression:
                         epochs - 1) and save_model:
                     model.evaluate_model(epoch_id)
                     model.save_network(epoch_id)
-                    if epoch_id == (epochs - 1):
-                        model.save_network('last')
             print("=" * 80)
 
 

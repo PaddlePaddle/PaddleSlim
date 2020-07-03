@@ -75,18 +75,18 @@ class SuperMobileResnetGenerator(fluid.dygraph.Layer):
                  input_channel,
                  output_nc,
                  ngf,
-                 norm_layer=BatchNorm,
+                 norm_layer=InstanceNorm,
                  dropout_rate=0,
                  n_blocks=6,
                  padding_type='reflect'):
         assert n_blocks >= 0
         super(SuperMobileResnetGenerator, self).__init__()
+        use_bias = norm_layer == InstanceNorm
+
         if norm_layer.func == InstanceNorm or norm_layer == InstanceNorm:
             norm_layer = SuperInstanceNorm
         else:
             raise NotImplementedError
-
-        use_bias = norm_layer == InstanceNorm
 
         self.model = fluid.dygraph.LayerList([])
         self.model.extend([

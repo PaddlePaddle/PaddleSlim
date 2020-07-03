@@ -94,7 +94,7 @@ class CycleGAN(BaseModel):
             'D_A', 'G_A', 'G_cycle_A', 'G_idt_A', 'D_B', 'G_B', 'G_cycle_B',
             'G_idt_B'
         ]
-        self.model_names = ['G_A', 'G_B', 'D_A', 'D_B']
+        self.model_names = ['netG_A', 'netG_B', 'netD_A', 'netD_B']
 
         self.netG_A = network.define_G(cfgs.input_nc, cfgs.output_nc, cfgs.ngf,
                                        cfgs.netG, cfgs.norm_type,
@@ -106,6 +106,16 @@ class CycleGAN(BaseModel):
                                        cfgs.norm_type, cfgs.n_layer_D)
         self.netD_B = network.define_D(cfgs.input_nc, cfgs.ndf, cfgs.netD,
                                        cfgs.norm_type, cfgs.n_layer_D)
+
+        if self.cfgs.use_parallel:
+            self.netG_A = fluid.dygraph.parallel.DataParallel(
+                self.netG_A, self.cfgs.strategy)
+            self.netG_B = fluid.dygraph.parallel.DataParallel(
+                self.netG_B, self.cfgs.strategy)
+            self.netD_A = fluid.dygraph.parallel.DataParallel(
+                self.netD_A, self.cfgs.strategy)
+            self.netD_B = fluid.dygraph.parallel.DataParallel(
+                self.netD_B, self.cfgs.strategy)
 
         if cfgs.lambda_identity > 0.0:
             assert (cfgs.input_nc == cfgs.output_nc)
@@ -159,12 +169,12 @@ class CycleGAN(BaseModel):
     def set_single_input(self, inputs):
         self.real_A = inputs[0]
 
-    def setup(self):
+    def setup(self, model_weight=None):
         self.load_network()
 
     def load_network(self):
         for name in self.model_names:
-            net = getattr(self, 'net' + name, None)
+            net = getattr(self, name, None)
             path = getattr(self.cfgs, 'restore_%s_path' % name, None)
             if path is not None:
                 util.load_network(net, path)
@@ -172,10 +182,10 @@ class CycleGAN(BaseModel):
     def save_network(self, epoch):
         for name in self.model_names:
             if isinstance(name, str):
-                save_filename = '%s_net%s' % (epoch, name)
+                save_filename = '%s_%s' % (epoch, name)
                 save_path = os.path.join(self.cfgs.save_dir, 'mobile',
                                          save_filename)
-                net = getattr(self, 'net' + name)
+                net = getattr(self, name)
                 fluid.save_dygraph(net.state_dict(), save_path)
 
     def forward(self):

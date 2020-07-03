@@ -1,5 +1,6 @@
 import functools
 import paddle.fluid as fluid
+import paddle.tensor as tensor
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose
 from paddle.nn.layer import ReLU, Pad2D
 from paddleslim.models.dygraph.modules import ResnetBlock
@@ -56,6 +57,7 @@ class ResnetGenerator(fluid.dygraph.Layer):
 
         for i in range(n_downsampling):
             mult = 2**(n_downsampling - i)
+            output_size = (i + 1) * (self.cfgs.crop_size / 2)
             self.model.extend([
                 Conv2DTranspose(
                     ngf * mult,
@@ -63,6 +65,7 @@ class ResnetGenerator(fluid.dygraph.Layer):
                     filter_size=3,
                     stride=2,
                     padding=1,
+                    output_size=output_size,
                     bias_attr=use_bias), Pad2D(
                         paddings=[0, 1, 0, 1], mode='constant', pad_value=0.0),
                 norm_layer(int(ngf * mult / 2)), ReLU()
@@ -72,7 +75,7 @@ class ResnetGenerator(fluid.dygraph.Layer):
         self.model.extend([Conv2D(ngf, output_nc, filter_size=7, padding=0)])
 
     def forward(self, inputs):
-        y = fluid.layers.clamp(inputs, min=-1.0, max=1.0)
+        y = tensor.clamp(inputs, min=-1.0, max=1.0)
         for sublayer in self.model:
             y = sublayer(y)
         y = fluid.layers.tanh(y)
