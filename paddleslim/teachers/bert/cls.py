@@ -176,15 +176,28 @@ class BERTClassifier(Layer):
             return np.array(lst0), np.array(lst1)
 
         if data_file:
-            with open(data_file, 'r') as f:
-                self.samples = pickle.load(f)
+            if os.path.isdir(data_file):
+                if self.samples is None:
+                    self.samples = []
+                for filename in os.listdir(data_file):
+                    f_path = os.path.join(data_file, filename)
+                    with open(os.path.join(f_path), 'r') as f:
+                        samples = pickle.load(f)
+                        self.samples += samples
+                        print("load {} samples from path: [{}]".format(
+                            len(samples), f_path))
+            else:
+                with open(data_file, 'r') as f:
+                    self.samples = pickle.load(f)
+
         print("Sorting samples")
         self.samples.sort(key=lambda sample: len(sample[0]))
         print("Sorted samples")
 
         def batch_reader():
 
-            skip_num = random.randint(1, 256)
+            #            skip_num = random.randint(1, 256)
+            skip_num = 0
             samples = self.samples[skip_num:] + self.samples[:skip_num]
             batches = []
             batch_a_ids = []
@@ -212,7 +225,7 @@ class BERTClassifier(Layer):
                     batch_logits.append(logits)
                     batch_losses.append(losses)
 
-            shuffle(batches)
+#            shuffle(batches)
             for batch in batches:
                 yield batch
 
