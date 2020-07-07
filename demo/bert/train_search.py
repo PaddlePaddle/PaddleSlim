@@ -13,41 +13,23 @@ from paddleslim.common import AvgrageMeter, get_logger
 logger = get_logger(__name__, level=logging.INFO)
 
 
-def count_parameters_in_MB(all_params):
-    parameters_number = 0
-    for param in all_params:
-        if param.trainable:
-            parameters_number += np.prod(param.shape)
-    return parameters_number / 1e6
+def valid_one_epoch(model, valid_loader, epoch, log_freq):
+    accs = AvgrageMeter()
+    ce_losses = AvgrageMeter()
+    model.student.eval()
 
+    step_id = 0
+    for valid_data in valid_loader():
+        try:
+            loss, acc, ce_loss, _, _ = model._layers.loss(valid_data, epoch)
+        except:
+            loss, acc, ce_loss, _, _ = model.loss(valid_data, epoch)
 
-def preprocess_data(data_generator, data_nums, phase, cached_data):
-    t = tqdm(total=data_nums)
-    data_list = []
-    for data in tqdm(data_generator()):
-        # data_var = []
-        # for d in data:
-        # tmp = fluid.core.LoDTensor()
-        # tmp.set(d, fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id))
-        # data_var.append(tmp)
-        data_list.append(data)
-        t.update(data[0].shape[0])
-    t.close()
-
-    logger.info("Saving {} data to {}".format(phase, cached_data + phase))
-    f = open(cached_data + phase, 'wb')
-    pickle.dump(data_list, f)
-    f.close()
-
-    return data_list
-
-
-def generator_reader(data_list):
-    def wrapper():
-        for d in data_list:
-            yield d
-
-    return wrapper
+        batch_size = valid_data[0].shape[0]
+        ce_losses.update(ce_loss.numpy(), batch_size)
+        accs.update(acc.numpy(), batch_size)
+        step_id += 1
+    return ce_losses.avg[0], accs.avg[0]
 
 
 def train_one_epoch(model, train_loader, valid_loader, optimizer,
@@ -57,19 +39,17 @@ def train_one_epoch(model, train_loader, valid_loader, optimizer,
     ce_losses = AvgrageMeter()
     kd_losses = AvgrageMeter()
     val_accs = AvgrageMeter()
-    model.train()
+    model.student.train()
 
     step_id = 0
     for train_data, valid_data in izip(train_loader(), valid_loader()):
-        #for train_data in train_loader():
         batch_size = train_data[0].shape[0]
-
-        # make sure arch on every gpu is same
-        np.random.seed(step_id * 2)
-        try:
+        # make sure arch on every gpu is same, otherwise an error will occurs
+        np.random.seed(step_id * 2 * (epoch + 1))
+        if use_data_parallel:
             total_loss, acc, ce_loss, kd_loss, _ = model._layers.loss(
                 train_data, epoch)
-        except:
+        else:
             total_loss, acc, ce_loss, kd_loss, _ = model.loss(train_data,
                                                               epoch)
 
@@ -86,12 +66,12 @@ def train_one_epoch(model, train_loader, valid_loader, optimizer,
         ce_losses.update(ce_loss.numpy(), batch_size)
         kd_losses.update(kd_loss.numpy(), batch_size)
 
-        # make sure arch on every gpu is same
-        np.random.seed(step_id * 2 + 1)
-        try:
+        # make sure arch on every gpu is same, otherwise an error will occurs
+        np.random.seed(step_id * 2 * (epoch + 1) + 1)
+        if use_data_parallel:
             arch_loss, _, _, _, arch_logits = model._layers.loss(valid_data,
                                                                  epoch)
-        except:
+        else:
             arch_loss, _, _, _, arch_logits = model.loss(valid_data, epoch)
 
         if use_data_parallel:
@@ -101,39 +81,20 @@ def train_one_epoch(model, train_loader, valid_loader, optimizer,
         else:
             arch_loss.backward()
         arch_optimizer.minimize(arch_loss)
-        arch_optimizer.clear_gradients()
+        model.clear_gradients()
         probs = fluid.layers.softmax(arch_logits[-1])
         val_acc = fluid.layers.accuracy(input=probs, label=valid_data[4])
         val_accs.update(val_acc.numpy(), batch_size)
 
         if step_id % log_freq == 0:
             logger.info(
-                "Train Epoch {}, Step {}, Lr {:.6f} total_loss {:.6f}; ce_loss {:.6f}, kd_loss {:.6f}, train_acc {:.6f}, valid_acc {:.6f};".
+                "Train Epoch {}, Step {}, Lr {:.6f} total_loss {:.6f}; ce_loss {:.6f}, kd_loss {:.6f}, train_acc {:.6f}, search_valid_acc {:.6f};".
                 format(epoch, step_id,
                        optimizer.current_step_lr(), total_losses.avg[
                            0], ce_losses.avg[0], kd_losses.avg[0], accs.avg[0],
                        val_accs.avg[0]))
-        step_id += 1
-
-
-def valid_one_epoch(model, valid_loader, epoch, log_freq):
-    accs = AvgrageMeter()
-    ce_losses = AvgrageMeter()
-    model.eval()
-
-    step_id = 0
-    for valid_data in valid_loader():
-        try:
-            loss, acc, ce_loss, _, _ = model._layers.loss(valid_data, epoch)
-        except:
-            loss, acc, ce_loss, _, _ = model.loss(valid_data, epoch)
-
-        batch_size = valid_data[0].shape[0]
-        ce_losses.update(ce_loss.numpy(), batch_size)
-        accs.update(acc.numpy(), batch_size)
 
         step_id += 1
-    return ce_losses.avg[0], accs.avg[0]
 
 
 def main():
@@ -145,33 +106,24 @@ def main():
     BERT_BASE_PATH = "./data/pretrained_models/uncased_L-12_H-768_A-12"
     vocab_path = BERT_BASE_PATH + "/vocab.txt"
     data_dir = "./data/glue_data/MNLI/"
-    cached_data = "./data/glue_data/MNLI/cached_data_"
     teacher_model_dir = "./data/teacher_model/steps_23000"
     do_lower_case = True
-    #num_samples = 392702
-    num_samples = 8016987
+    num_samples = 392702
+    # augmented dataset nums
+    # num_samples = 8016987
     max_seq_len = 128
-    # any modify of vocab/do_lower_case/max_seq_len requires update cached data
     batch_size = 128
     hidden_size = 768
     emb_size = 768
     max_layer = 8
     epoch = 80
     log_freq = 10
-
     device_num = fluid.dygraph.parallel.Env().nranks
-    search = True
 
-    if search:
-        use_fixed_gumbel = False
-        train_phase = "search_train"
-        val_phase = "search_valid"
-        step_per_epoch = int(num_samples / ((batch_size * 0.5) * device_num))
-    else:
-        use_fixed_gumbel = True
-        train_phase = "train"
-        val_phase = "dev"
-        step_per_epoch = int(num_samples / (batch_size * device_num))
+    use_fixed_gumbel = False
+    train_phase = "search_train"
+    val_phase = "search_valid"
+    step_per_epoch = int(num_samples * 0.5 / ((batch_size) * device_num))
 
     with fluid.dygraph.guard(place):
         model = AdaBERTClassifier(
@@ -205,69 +157,31 @@ def main():
             regularization=fluid.regularizer.L2Decay(1e-3),
             parameter_list=model.arch_parameters())
 
-        if os.path.exists(cached_data + "train") and os.path.exists(
-                cached_data + "valid") + os.path.exists(cached_data + "dev"):
-            f = open(cached_data + "train", 'rb')
-            logger.info("loading preprocessed train data from {}".format(
-                cached_data + "train"))
-            train_data_list = pickle.load(f)
-            f.close()
+        processor = MnliProcessor(
+            data_dir=data_dir,
+            vocab_path=vocab_path,
+            max_seq_len=max_seq_len,
+            do_lower_case=do_lower_case,
+            in_tokens=False)
 
-            f = open(cached_data + "valid", 'rb')
-            logger.info("loading preprocessed valid data from {}".format(
-                cached_data + "valid"))
-            valid_data_list = pickle.load(f)
-            f.close()
-
-            f = open(cached_data + "dev", 'rb')
-            logger.info("loading preprocessed dev data from {}".format(
-                cached_data + "dev"))
-            dev_data_list = pickle.load(f)
-            f.close()
-        else:
-            processor = MnliProcessor(
-                data_dir=data_dir,
-                vocab_path=vocab_path,
-                max_seq_len=max_seq_len,
-                do_lower_case=do_lower_case,
-                in_tokens=False)
-
-            train_reader = processor.data_generator(
-                batch_size=batch_size,
-                phase=train_phase,
-                epoch=1,
-                dev_count=1,
-                shuffle=True)
-            valid_reader = processor.data_generator(
-                batch_size=batch_size,
-                phase=val_phase,
-                epoch=1,
-                dev_count=1,
-                shuffle=True)
-            dev_reader = processor.data_generator(
-                batch_size=batch_size,
-                phase="dev",
-                epoch=1,
-                dev_count=1,
-                shuffle=False)
-
-            train_data_nums = processor.get_num_examples(train_phase)
-            valid_data_nums = processor.get_num_examples(val_phase)
-            dev_data_nums = processor.get_num_examples("dev")
-
-            logger.info("Preprocessing train data")
-            train_data_list = preprocess_data(train_reader, train_data_nums,
-                                              "train", cached_data)
-            logger.info("Preprocessing valid data")
-            valid_data_list = preprocess_data(valid_reader, valid_data_nums,
-                                              "valid", cached_data)
-            logger.info("Preprocessing dev data")
-            dev_data_list = preprocess_data(dev_reader, dev_data_nums, "dev",
-                                            cached_data)
-
-        train_reader = generator_reader(train_data_list)
-        valid_reader = generator_reader(valid_data_list)
-        dev_reader = generator_reader(dev_data_list)
+        train_reader = processor.data_generator(
+            batch_size=batch_size,
+            phase=train_phase,
+            epoch=1,
+            dev_count=1,
+            shuffle=True)
+        valid_reader = processor.data_generator(
+            batch_size=batch_size,
+            phase=val_phase,
+            epoch=1,
+            dev_count=1,
+            shuffle=True)
+        dev_reader = processor.data_generator(
+            batch_size=batch_size,
+            phase="dev",
+            epoch=1,
+            dev_count=1,
+            shuffle=False)
 
         if use_data_parallel:
             train_reader = fluid.contrib.reader.distributed_batch_reader(
@@ -304,12 +218,12 @@ def main():
                             arch_optimizer, epoch_id, use_data_parallel,
                             log_freq)
             loss, acc = valid_one_epoch(model, dev_loader, epoch_id, log_freq)
-            logger.info("Valid set2, ce_loss {:.6f}; acc: {:.6f};".format(loss,
-                                                                          acc))
+            logger.info("dev set, ce_loss {:.6f}; acc: {:.6f};".format(loss,
+                                                                       acc))
 
-            try:
+            if use_data_parallel:
                 print(model.student._encoder.alphas.numpy())
-            except:
+            else:
                 print(model._layers.student._encoder.alphas.numpy())
             print("=" * 100)
 

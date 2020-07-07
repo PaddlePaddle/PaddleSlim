@@ -72,6 +72,7 @@ class AdaBERTClassifier(Layer):
         )
         self.teacher = BERTClassifier(
             num_labels, model_path=self._teacher_model)
+        # global setting, will be overwritten when training(about 1% acc loss)
         self.teacher.eval()
         #self.teacher.test(self._data_dir)
         print(
@@ -100,24 +101,12 @@ class AdaBERTClassifier(Layer):
                 format(t_emb.name, s_emb.name))
 
     def forward(self, data_ids, epoch):
-        src_ids = data_ids[0]
-        position_ids = data_ids[1]
-        sentence_ids = data_ids[2]
-        return self.student(src_ids, position_ids, sentence_ids, epoch)
+        return self.student(data_ids, epoch)
 
     def arch_parameters(self):
         return self.student.arch_parameters()
 
-    def ce(self, logits):
-        logits = np.exp(logits - np.max(logits))
-        logits = logits / logits.sum(axis=0)
-        return logits
-
     def loss(self, data_ids, epoch):
-        # src_ids = data_ids[0]
-        # position_ids = data_ids[1]
-        # sentence_ids = data_ids[2]
-        # input_mask = data_ids[3]
         labels = data_ids[4]
 
         s_logits = self.student(data_ids, epoch)
