@@ -49,6 +49,7 @@ class AdaBERTClassifier(Layer):
                  hidden_size=768,
                  gamma=0.8,
                  beta=4,
+                 task_name='mnli',
                  conv_type="conv_bn",
                  search_layer=False,
                  teacher_model=None,
@@ -75,7 +76,7 @@ class AdaBERTClassifier(Layer):
             "----------------------load teacher model and test----------------------------------------"
         )
         self.teacher = BERTClassifier(
-            num_labels, model_path=self._teacher_model)
+            num_labels, task_name=task_name, model_path=self._teacher_model)
         # global setting, will be overwritten when training(about 1% acc loss)
         self.teacher.eval()
         self.teacher.test(self._data_dir)
@@ -83,6 +84,7 @@ class AdaBERTClassifier(Layer):
             "----------------------finish load teacher model and test----------------------------------------"
         )
         self.student = BertModelLayer(
+            num_labels=num_labels,
             n_layer=self._n_layer,
             emb_size=self._emb_size,
             hidden_size=self._hidden_size,

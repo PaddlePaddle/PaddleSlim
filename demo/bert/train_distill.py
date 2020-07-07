@@ -81,19 +81,32 @@ def main():
 
     BERT_BASE_PATH = "./data/pretrained_models/uncased_L-12_H-768_A-12"
     vocab_path = BERT_BASE_PATH + "/vocab.txt"
-    data_dir = "./data/glue_data/MNLI/"
-    teacher_model_dir = "./data/teacher_model/steps_23000"
+
     do_lower_case = True
-    num_samples = 392702
     # augmented dataset nums
     # num_samples = 8016987
+
     max_seq_len = 128
     batch_size = 192
     hidden_size = 768
     emb_size = 768
-    max_layer = 8
     epoch = 80
     log_freq = 10
+
+    task_name = 'mnli'
+
+    if task_name == 'mrpc':
+        data_dir = "./data/glue_data/MRPC/"
+        teacher_model_dir = "./data/teacher_model/mrpc"
+        num_samples = 3668
+        max_layer = 4
+        processor_func = MrpcProcessor
+    elif task_name == 'mnli':
+        data_dir = "./data/glue_data/MNLI/"
+        teacher_model_dir = "./data/teacher_model/step_23000"
+        num_samples = 392702
+        max_layer = 8
+        processor_func = MnliProcessor
 
     device_num = fluid.dygraph.parallel.Env().nranks
     use_fixed_gumbel = True
@@ -107,9 +120,10 @@ def main():
             np.random.seed(1)
             fluid.default_main_program().random_seed = 1
         model = AdaBERTClassifier(
-            3,
+            2,
             n_layer=max_layer,
             hidden_size=hidden_size,
+            task_name=task_name,
             emb_size=emb_size,
             teacher_model=teacher_model_dir,
             data_dir=data_dir,
@@ -130,7 +144,7 @@ def main():
             regularization=fluid.regularizer.L2DecayRegularizer(3e-4),
             parameter_list=model_parameters)
 
-        processor = MnliProcessor(
+        processor = processor_func(
             data_dir=data_dir,
             vocab_path=vocab_path,
             max_seq_len=max_seq_len,
@@ -172,12 +186,16 @@ def main():
             strategy = fluid.dygraph.parallel.prepare_context()
             model = fluid.dygraph.parallel.DataParallel(model, strategy)
 
+        best_valid_acc = 0
         for epoch_id in range(epoch):
             train_one_epoch(model, train_loader, optimizer, epoch_id,
                             use_data_parallel, log_freq)
             loss, acc = valid_one_epoch(model, dev_loader, epoch_id, log_freq)
-            logger.info("dev set, ce_loss {:.6f}; acc: {:.6f};".format(loss,
-                                                                       acc))
+            if acc > best_valid_acc:
+                best_valid_acc = acc
+            logger.info(
+                "dev set, ce_loss {:.6f}; acc {:.6f}, best_acc {:.6f};".format(
+                    loss, acc, best_valid_acc))
 
 
 if __name__ == '__main__':

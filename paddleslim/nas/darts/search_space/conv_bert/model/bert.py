@@ -32,6 +32,7 @@ from .transformer_encoder import EncoderLayer
 
 class BertModelLayer(Layer):
     def __init__(self,
+                 num_labels,
                  emb_size=128,
                  hidden_size=768,
                  n_layer=12,
@@ -91,6 +92,7 @@ class BertModelLayer(Layer):
             param_attr=fluid.ParamAttr(name="s_emb_factorization"))
 
         self._encoder = EncoderLayer(
+            num_labels=num_labels,
             n_layer=self._n_layer,
             hidden_size=self._hidden_size,
             search_layer=self._search_layer,

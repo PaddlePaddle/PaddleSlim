@@ -200,6 +200,7 @@ class EncoderLayer(Layer):
     """
 
     def __init__(self,
+                 num_labels,
                  n_layer,
                  hidden_size=768,
                  name="encoder",
@@ -276,7 +277,7 @@ class EncoderLayer(Layer):
                     trainable=False))
             out = Linear(
                 self._n_channel,
-                3,
+                num_labels,
                 param_attr=ParamAttr(initializer=MSRA()),
                 bias_attr=ParamAttr(initializer=MSRA()))
             self.bns.append(bn)

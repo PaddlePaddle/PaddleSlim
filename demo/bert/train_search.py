@@ -222,9 +222,9 @@ def main():
                                                                        acc))
 
             if use_data_parallel:
-                print(model.student._encoder.alphas.numpy())
-            else:
                 print(model._layers.student._encoder.alphas.numpy())
+            else:
+                print(model.student._encoder.alphas.numpy())
             print("=" * 100)
 
 
