@@ -45,6 +45,10 @@ class DataProcessor(object):
         self.num_examples = {'train': -1, 'dev': -1, 'test': -1}
         self.current_train_epoch = -1
 
+    def get_train_aug_examples(self, data_dir):
+        """Gets a collection of `InputExample`s for the train set."""
+        raise NotImplementedError()
+
     def get_train_examples(self, data_dir):
         """Gets a collection of `InputExample`s for the train set."""
         raise NotImplementedError()
@@ -111,9 +115,9 @@ class DataProcessor(object):
 
     def get_num_examples(self, phase):
         """Get number of examples for train, dev or test."""
-        #if phase not in ['train', 'dev', 'test']:
-        #    raise ValueError(
-        #        "Unknown phase, which should be in ['train', 'dev', 'test'].")
+        if phase not in ['train', 'dev', 'test', 'train_aug']:
+            raise ValueError(
+                "Unknown phase, which should be in ['train', 'dev', 'test'].")
         return self.num_examples[phase]
 
     def get_train_progress(self):
@@ -140,6 +144,9 @@ class DataProcessor(object):
         random.shuffle(search_examples)
         if phase == 'train':
             examples = self.get_train_examples(self.data_dir)
+            self.num_examples['train'] = len(examples)
+        elif phase == 'train_aug':
+            examples = self.get_train_aug_examples(self.data_dir)
             self.num_examples['train'] = len(examples)
         elif phase == 'dev':
             examples = self.get_dev_examples(self.data_dir)
@@ -376,6 +383,11 @@ class XnliProcessor(DataProcessor):
 
 class MnliProcessor(DataProcessor):
     """Processor for the MultiNLI data set (GLUE version)."""
+
+    def get_train_aug_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train_aug.tsv")), "train")
 
     def get_train_examples(self, data_dir):
         """See base class."""

@@ -53,7 +53,10 @@ class AdaBERTClassifier(Layer):
                  search_layer=False,
                  teacher_model=None,
                  data_dir=None,
-                 use_fixed_gumbel=False):
+                 use_fixed_gumbel=False,
+                 gumbel_alphas=None,
+                 fix_emb=False,
+                 t=5.0):
         super(AdaBERTClassifier, self).__init__()
         self._n_layer = n_layer
         self._num_labels = num_labels
@@ -66,7 +69,8 @@ class AdaBERTClassifier(Layer):
         self._teacher_model = teacher_model
         self._data_dir = data_dir
         self.use_fixed_gumbel = use_fixed_gumbel
-        self.T = 1.0
+
+        self.T = t
         print(
             "----------------------load teacher model and test----------------------------------------"
         )
@@ -74,7 +78,7 @@ class AdaBERTClassifier(Layer):
             num_labels, model_path=self._teacher_model)
         # global setting, will be overwritten when training(about 1% acc loss)
         self.teacher.eval()
-        #self.teacher.test(self._data_dir)
+        self.teacher.test(self._data_dir)
         print(
             "----------------------finish load teacher model and test----------------------------------------"
         )
@@ -84,7 +88,21 @@ class AdaBERTClassifier(Layer):
             hidden_size=self._hidden_size,
             conv_type=self._conv_type,
             search_layer=self._search_layer,
-            use_fixed_gumbel=self.use_fixed_gumbel)
+            use_fixed_gumbel=self.use_fixed_gumbel,
+            gumbel_alphas=gumbel_alphas)
+
+        for s_emb, t_emb in zip(self.student.emb_names(),
+                                self.teacher.emb_names()):
+            t_emb.stop_gradient = True
+            if fix_emb:
+                s_emb.stop_gradient = True
+            print(
+                "Assigning embedding[{}] from teacher to embedding[{}] in student.".
+                format(t_emb.name, s_emb.name))
+            fluid.layers.assign(input=t_emb, output=s_emb)
+            print(
+                "Assigned embedding[{}] from teacher to embedding[{}] in student.".
+                format(t_emb.name, s_emb.name))
 
         fix_emb = False
         for s_emb, t_emb in zip(self.student.emb_names(),
@@ -155,3 +173,4 @@ class AdaBERTClassifier(Layer):
         total_loss = (1 - self._gamma) * ce_loss + self._gamma * kd_loss
 
         return total_loss, accuracy, ce_loss, kd_loss, s_logits
+

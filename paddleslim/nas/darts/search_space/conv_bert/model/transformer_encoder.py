@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+from collections import Iterable
 
 import paddle
 import paddle.fluid as fluid
@@ -203,7 +204,8 @@ class EncoderLayer(Layer):
                  hidden_size=768,
                  name="encoder",
                  search_layer=True,
-                 use_fixed_gumbel=False):
+                 use_fixed_gumbel=False,
+                 gumbel_alphas=None):
         super(EncoderLayer, self).__init__()
         self._n_layer = n_layer
         self._hidden_size = hidden_size
@@ -260,8 +262,8 @@ class EncoderLayer(Layer):
             default_initializer=NormalInitializer(
                 loc=0.0, scale=1e-3))
 
-        self.pool2d_avg = Pool2D(pool_type='avg', global_pooling=True)
 
+        self.pool2d_avg = Pool2D(pool_type='avg', global_pooling=True)
         self.bns = []
         self.outs = []
         for i in range(self._n_layer):
@@ -303,6 +305,21 @@ class EncoderLayer(Layer):
 
     def forward(self, enc_input_0, enc_input_1, epoch, flops=[],
                 model_size=[]):
+=======
+            self.outs.append(out)
+
+        self.use_fixed_gumbel = use_fixed_gumbel
+        self.gumbel_alphas = gumbel_softmax(self.alphas)
+        if gumbel_alphas is not None:
+            self.gumbel_alphas = np.array(gumbel_alphas).reshape(
+                self.alphas.shape)
+        else:
+            self.gumbel_alphas = gumbel_softmax(self.alphas)
+            self.gumbel_alphas.stop_gradient = True
+
+        print("gumbel_alphas: {}".format(self.gumbel_alphas))
+
+    def forward(self, enc_input_0, enc_input_1, flops=[], model_size=[]):
         alphas = self.gumbel_alphas if self.use_fixed_gumbel else gumbel_softmax(
             self.alphas, epoch)
 

@@ -43,7 +43,8 @@ class BertModelLayer(Layer):
                  conv_type="conv_bn",
                  search_layer=False,
                  use_fp16=False,
-                 use_fixed_gumbel=False):
+                 use_fixed_gumbel=False,
+                 gumbel_alphas=None):
         super(BertModelLayer, self).__init__()
 
         self._emb_size = emb_size
@@ -93,7 +94,12 @@ class BertModelLayer(Layer):
             n_layer=self._n_layer,
             hidden_size=self._hidden_size,
             search_layer=self._search_layer,
-            use_fixed_gumbel=self.use_fixed_gumbel)
+            use_fixed_gumbel=self.use_fixed_gumbel,
+            gumbel_alphas=gumbel_alphas)
+
+    def emb_names(self):
+        return self._src_emb.parameters() + self._pos_emb.parameters(
+        ) + self._sent_emb.parameters()
 
     def emb_names(self):
         return self._src_emb.parameters() + self._pos_emb.parameters(
