@@ -91,19 +91,6 @@ class AdaBERTClassifier(Layer):
             use_fixed_gumbel=self.use_fixed_gumbel,
             gumbel_alphas=gumbel_alphas)
 
-        for s_emb, t_emb in zip(self.student.emb_names(),
-                                self.teacher.emb_names()):
-            t_emb.stop_gradient = True
-            if fix_emb:
-                s_emb.stop_gradient = True
-            print(
-                "Assigning embedding[{}] from teacher to embedding[{}] in student.".
-                format(t_emb.name, s_emb.name))
-            fluid.layers.assign(input=t_emb, output=s_emb)
-            print(
-                "Assigned embedding[{}] from teacher to embedding[{}] in student.".
-                format(t_emb.name, s_emb.name))
-
         fix_emb = False
         for s_emb, t_emb in zip(self.student.emb_names(),
                                 self.teacher.emb_names()):
@@ -173,4 +160,3 @@ class AdaBERTClassifier(Layer):
         total_loss = (1 - self._gamma) * ce_loss + self._gamma * kd_loss
 
         return total_loss, accuracy, ce_loss, kd_loss, s_logits
-
