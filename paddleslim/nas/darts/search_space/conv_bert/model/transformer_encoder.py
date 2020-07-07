@@ -300,6 +300,7 @@ class EncoderLayer(Layer):
         ]
         self.gumbel_alphas = to_variable(
             np.array(mrpc_arch).astype(np.float32))
+        self.gumbel_alphas.stop_gradient = True
         print("gumbel_alphas: \n", self.gumbel_alphas.numpy())
 
     def forward(self, enc_input_0, enc_input_1, epoch, flops=[],
