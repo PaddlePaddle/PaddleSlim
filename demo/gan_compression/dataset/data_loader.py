@@ -36,4 +36,4 @@ def create_data(cfgs, direction='AtoB', eval_mode=False):
 
 
 def create_eval_data(cfgs, direction='AtoB'):
-    return create_data(cfgs, eval_mode=True)
+    return create_data(cfgs, direction=direction, eval_mode=True)

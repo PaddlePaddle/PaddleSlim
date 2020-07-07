@@ -43,7 +43,7 @@ class gan_compression:
         num = self.cfgs.gpu_num
 
         use_gpu, use_parallel = False, False
-        if num == -1:
+        if num == 0:
             use_gpu = False
         else:
             use_gpu = True

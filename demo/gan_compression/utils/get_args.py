@@ -44,7 +44,7 @@ class configs:
             default='resnet',
             help="generator network in supernet")
         parser.add_argument(
-            '--gpu_num', type=int, default='0', help='GPU number.')
+            '--gpu_num', type=int, default='1', help='GPU number.')
         ### data
         parser.add_argument(
             '--batch_size', type=int, default=1, help="Minbatch size")
