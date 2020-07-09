@@ -58,7 +58,8 @@ class BERTClassifier(Layer):
                  num_labels,
                  task_name="mnli",
                  model_path=None,
-                 use_cuda=True):
+                 use_cuda=True,
+                 return_pooled_out=True):
         super(BERTClassifier, self).__init__()
         self.task_name = task_name.lower()
         BERT_BASE_PATH = "./data/pretrained_models/uncased_L-12_H-768_A-12/"
@@ -84,7 +85,7 @@ class BERTClassifier(Layer):
         }
 
         self.cls_model = ClsModelLayer(
-            self.bert_config, num_labels, return_pooled_out=True)
+            self.bert_config, num_labels, return_pooled_out=return_pooled_out)
 
         if model_path is not None:
             #restore the model
