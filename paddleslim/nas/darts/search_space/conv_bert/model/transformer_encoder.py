@@ -23,14 +23,15 @@ from collections import Iterable
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer, Conv2D, BatchNorm, Pool2D, to_variable
+from paddle.fluid.dygraph import to_variable
 from paddle.fluid.initializer import NormalInitializer
 from paddle.fluid import ParamAttr
 from paddle.fluid.initializer import MSRA, ConstantInitializer
 
 ConvBN_PRIMITIVES = [
     'std_conv_bn_3', 'std_conv_bn_5', 'std_conv_bn_7', 'dil_conv_bn_3',
-    'dil_conv_bn_5', 'dil_conv_bn_7', 'avg_pool_3', 'max_pool_3', 'none',
-    'skip_connect'
+    'dil_conv_bn_5', 'dil_conv_bn_7', 'avg_pool_3', 'max_pool_3',
+    'skip_connect', 'none'
 ]
 
 
@@ -53,11 +54,6 @@ class MixedOp(fluid.dygraph.Layer):
     def __init__(self, n_channel, name=None):
         super(MixedOp, self).__init__()
         PRIMITIVES = ConvBN_PRIMITIVES
-        # ops = [
-        #     OPS[primitive](n_channel, name
-        #                    if name is None else name + "/" + primitive)
-        #     for primitive in PRIMITIVES
-        # ]
         ops = []
         for primitive in PRIMITIVES:
             op = OPS[primitive](n_channel, name
@@ -76,26 +72,17 @@ class MixedOp(fluid.dygraph.Layer):
         self._ops = fluid.dygraph.LayerList(ops)
 
     def forward(self, x, weights):
-        #out = weights[0] * self._ops[0](x)
         # out = fluid.layers.sums(
-        #    [weights[i] * op(x) for i, op in enumerate(self._ops)])
+        #     [weights[i] * op(x) for i, op in enumerate(self._ops)])
         # return out
 
-        for i in range(len(self._ops)):
-
-            if isinstance(weights, Iterable):
-                weights_i = weights[i]
-            else:
-                weights_i = weights[i].numpy()
-
-            if weights_i != 0:
+        for i in range(len(weights.numpy())):
+            if weights[i].numpy() != 0:
                 return self._ops[i](x) * weights[i]
 
 
-def gumbel_softmax(logits, temperature=1, hard=True, eps=1e-10):
-    #U = np.random.uniform(0, 1, logits.shape)
-    #U = - to_variable(
-    #    np.log(-np.log(U + eps) + eps).astype("float32"))
+def gumbel_softmax(logits, epoch, temperature=1.0, hard=True, eps=1e-10):
+    temperature = temperature * (0.98**epoch)
     U = np.random.gumbel(0, 1, logits.shape).astype("float32")
 
     logits = logits + to_variable(U)
@@ -105,12 +92,12 @@ def gumbel_softmax(logits, temperature=1, hard=True, eps=1e-10):
     if hard:
         maxes = fluid.layers.reduce_max(logits, dim=1, keep_dim=True)
         hard = fluid.layers.cast((logits == maxes), logits.dtype)
-        # out = hard - logits.detach() + logits
-        tmp = hard - logits
-        tmp.stop_gradient = True
-        out = tmp + logits
+        out = hard - logits.detach() + logits
+        # tmp.stop_gradient = True
+        # out = tmp + logits
     else:
         out = logits
+
     return out
 
 
@@ -142,8 +129,6 @@ class ReluConvBN(fluid.dygraph.Layer):
                  use_cudnn=True,
                  name=None):
         super(ReluConvBN, self).__init__()
-        #conv_std = (2.0 /
-        #            (filter_size[0] * filter_size[1] * out_c * in_c))**0.5
         conv_param = fluid.ParamAttr(
             name=name if name is None else (name + "_conv.weights"),
             initializer=fluid.initializer.MSRA())
@@ -215,6 +200,7 @@ class EncoderLayer(Layer):
     """
 
     def __init__(self,
+                 num_labels,
                  n_layer,
                  hidden_size=768,
                  name="encoder",
@@ -224,12 +210,27 @@ class EncoderLayer(Layer):
         super(EncoderLayer, self).__init__()
         self._n_layer = n_layer
         self._hidden_size = hidden_size
-        self._n_channel = 256
+        self._n_channel = 128
         self._steps = 3
         self._n_ops = len(ConvBN_PRIMITIVES)
         self.use_fixed_gumbel = use_fixed_gumbel
 
-        self.stem = fluid.dygraph.Sequential(
+        self.stem0 = fluid.dygraph.Sequential(
+            Conv2D(
+                num_channels=1,
+                num_filters=self._n_channel,
+                filter_size=[3, self._hidden_size],
+                padding=[1, 0],
+                param_attr=fluid.ParamAttr(initializer=MSRA()),
+                bias_attr=False),
+            BatchNorm(
+                num_channels=self._n_channel,
+                param_attr=fluid.ParamAttr(
+                    initializer=fluid.initializer.Constant(value=1)),
+                bias_attr=fluid.ParamAttr(
+                    initializer=fluid.initializer.Constant(value=0))))
+
+        self.stem1 = fluid.dygraph.Sequential(
             Conv2D(
                 num_channels=1,
                 num_filters=self._n_channel,
@@ -262,16 +263,10 @@ class EncoderLayer(Layer):
             default_initializer=NormalInitializer(
                 loc=0.0, scale=1e-3))
 
-        # self.k = fluid.layers.create_parameter(
-        #     shape=[1, self._n_layer],
-        #     dtype="float32",
-        #     default_initializer=NormalInitializer(
-        #         loc=0.0, scale=1e-3))
         self.pool2d_avg = Pool2D(pool_type='avg', global_pooling=True)
         self.bns = []
         self.outs = []
         for i in range(self._n_layer):
-
             bn = BatchNorm(
                 num_channels=self._n_channel,
                 param_attr=fluid.ParamAttr(
@@ -280,52 +275,53 @@ class EncoderLayer(Layer):
                 bias_attr=fluid.ParamAttr(
                     initializer=fluid.initializer.Constant(value=0),
                     trainable=False))
-            self.bns.append(bn)
-
             out = Linear(
                 self._n_channel,
-                3,
+                num_labels,
                 param_attr=ParamAttr(initializer=MSRA()),
                 bias_attr=ParamAttr(initializer=MSRA()))
+            self.bns.append(bn)
             self.outs.append(out)
+        self._bns = fluid.dygraph.LayerList(self.bns)
+        self._outs = fluid.dygraph.LayerList(self.outs)
 
         self.use_fixed_gumbel = use_fixed_gumbel
-        self.gumbel_alphas = gumbel_softmax(self.alphas)
-        if gumbel_alphas is not None:
-            self.gumbel_alphas = np.array(gumbel_alphas).reshape(
-                self.alphas.shape)
-        else:
-            self.gumbel_alphas = gumbel_softmax(self.alphas)
-            self.gumbel_alphas.stop_gradient = True
+        #self.gumbel_alphas = gumbel_softmax(self.alphas, 0).detach()
 
-        print("gumbel_alphas: {}".format(self.gumbel_alphas))
+        mrpc_arch = [
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],  # std_conv7 0     # node 0
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],  # dil_conv5 1
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],  # std_conv7 0     # node 1
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],  # dil_conv5 1
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],  # zero 2
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],  # zero 0          # node2
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # std_conv3 1
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],  # zero 2
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]  # dil_conv3 3
+        ]
+        self.gumbel_alphas = to_variable(
+            np.array(mrpc_arch).astype(np.float32))
+        self.gumbel_alphas.stop_gradient = True
+        print("gumbel_alphas: \n", self.gumbel_alphas.numpy())
 
-    def forward(self, enc_input_0, enc_input_1, flops=[], model_size=[]):
+    def forward(self, enc_input_0, enc_input_1, epoch, flops=[],
+                model_size=[]):
         alphas = self.gumbel_alphas if self.use_fixed_gumbel else gumbel_softmax(
-            self.alphas)
+            self.alphas, epoch)
 
-        s0 = fluid.layers.reshape(
-            enc_input_0, [-1, 1, enc_input_0.shape[1], enc_input_0.shape[2]])
-        s1 = fluid.layers.reshape(
-            enc_input_1, [-1, 1, enc_input_1.shape[1], enc_input_1.shape[2]])
-        # (bs, 1, seq_len, hidden_size)
+        s0 = fluid.layers.unsqueeze(enc_input_0, [1])
+        s1 = fluid.layers.unsqueeze(enc_input_1, [1])
+        s0 = self.stem0(s0)
+        s1 = self.stem1(s1)
 
-        s0 = self.stem(s0)
-        s1 = self.stem(s1)
-        # (bs, n_channel, seq_len, 1)
-        if self.use_fixed_gumbel:
-            alphas = self.gumbel_alphas
-        else:
-            alphas = gumbel_softmax(self.alphas)
-
-        s0 = s1 = tmp
-        outputs = []
+        enc_outputs = []
         for i in range(self._n_layer):
             s0, s1 = s1, self._cells[i](s0, s1, alphas)
-            tmp = self.bns[i](s1)
-            tmp = self.pool2d_avg(tmp)
             # (bs, n_channel, seq_len, 1)
+            tmp = self._bns[i](s1)
+            tmp = self.pool2d_avg(tmp)
             tmp = fluid.layers.reshape(tmp, shape=[-1, 0])
-            tmp = self.outs[i](tmp)
-            outputs.append(tmp)
-        return outputs
+            tmp = self._outs[i](tmp)
+            enc_outputs.append(tmp)
+
+        return enc_outputs

@@ -46,6 +46,7 @@ class ClsModelLayer(Layer):
         self.use_fp16 = use_fp16
         self.loss_scaling = loss_scaling
         self.n_layers = config['num_hidden_layers']
+        self.return_pooled_out = return_pooled_out
 
         self.bert_layer = BertModelLayer(
             config=self.config, return_pooled_out=True, use_fp16=self.use_fp16)
@@ -79,11 +80,23 @@ class ClsModelLayer(Layer):
 
         enc_outputs, next_sent_feats = self.bert_layer(
             src_ids, position_ids, sentence_ids, input_mask)
+
+        if not self.return_pooled_out:
+            cls_feat = fluid.layers.dropout(
+                x=next_sent_feats[-1],
+                dropout_prob=0.1,
+                dropout_implementation="upscale_in_train")
+            logits = self.cls_fc[-1](cls_feat)
+            probs = fluid.layers.softmax(logits)
+            num_seqs = fluid.layers.create_tensor(dtype='int64')
+            accuracy = fluid.layers.accuracy(
+                input=probs, label=labels, total=num_seqs)
+            return enc_outputs, logits, accuracy, num_seqs
+
         logits = []
         losses = []
         accuracys = []
         for next_sent_feat, fc in zip(next_sent_feats, self.cls_fc):
-
             cls_feat = fluid.layers.dropout(
                 x=next_sent_feat,
                 dropout_prob=0.1,
