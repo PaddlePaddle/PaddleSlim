@@ -140,7 +140,7 @@ sanas.reward(float(finally_reward[1]))
 ```python
 for step in range(3):
     archs = sanas.next_archs()[0]
-    exe, train_program, eval_progarm, inputs, avg_cost, acc_top1, acc_top5 = build_program(archs)
+    exe, train_program, eval_program, inputs, avg_cost, acc_top1, acc_top5 = build_program(archs)
     train_reader, train_feeder, eval_reader, eval_feeder = input_data(inputs)
 
     current_flops = slim.analysis.flops(train_program)
