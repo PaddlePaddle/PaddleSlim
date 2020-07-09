@@ -18,13 +18,6 @@ import imagenet_reader
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-reduce_rate = 0.85
-init_temperature = 10.24
-max_flops = 321208544
-server_address = ""
-port = 8989
-retain_epoch = 5
-
 
 def create_data_loader(image_shape):
     data_shape = [None] + image_shape
@@ -45,19 +38,22 @@ def build_program(main_program,
                   args,
                   is_test=False):
     with fluid.program_guard(main_program, startup_program):
-        data_loader, data, label = create_data_loader(image_shape)
-        output = archs(data)
-        output = fluid.layers.fc(input=output, size=args.class_dim)
+        with fluid.unique_name.guard():
+            data_loader, data, label = create_data_loader(image_shape)
+            output = archs(data)
+            output = fluid.layers.fc(input=output, size=args.class_dim)
 
-        softmax_out = fluid.layers.softmax(input=output, use_cudnn=False)
-        cost = fluid.layers.cross_entropy(input=softmax_out, label=label)
-        avg_cost = fluid.layers.mean(cost)
-        acc_top1 = fluid.layers.accuracy(input=softmax_out, label=label, k=1)
-        acc_top5 = fluid.layers.accuracy(input=softmax_out, label=label, k=5)
+            softmax_out = fluid.layers.softmax(input=output, use_cudnn=False)
+            cost = fluid.layers.cross_entropy(input=softmax_out, label=label)
+            avg_cost = fluid.layers.mean(cost)
+            acc_top1 = fluid.layers.accuracy(
+                input=softmax_out, label=label, k=1)
+            acc_top5 = fluid.layers.accuracy(
+                input=softmax_out, label=label, k=5)
 
-        if is_test == False:
-            optimizer = create_optimizer(args)
-            optimizer.minimize(avg_cost)
+            if is_test == False:
+                optimizer = create_optimizer(args)
+                optimizer.minimize(avg_cost)
     return data_loader, avg_cost, acc_top1, acc_top5
 
 
@@ -66,18 +62,14 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
         ### start a server and a client
         sa_nas = SANAS(
             config,
-            server_addr=("", port),
-            init_temperature=init_temperature,
-            reduce_rate=reduce_rate,
+            server_addr=(args.server_address, args.port),
             search_steps=args.search_steps,
             is_server=True)
     else:
         ### start a client
         sa_nas = SANAS(
             config,
-            server_addr=(server_address, port),
-            init_temperature=init_temperature,
-            reduce_rate=reduce_rate,
+            server_addr=(args.server_address, args.port),
             search_steps=args.search_steps,
             is_server=False)
 
@@ -93,7 +85,7 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
 
         current_flops = flops(train_program)
         print('step: {}, current_flops: {}'.format(step, current_flops))
-        if current_flops > max_flops:
+        if current_flops > int(321208544):
             continue
 
         test_loader, test_avg_cost, test_acc_top1, test_acc_top5 = build_program(
@@ -110,22 +102,22 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
         exe.run(startup_program)
 
         if args.data == 'cifar10':
-            train_reader = paddle.batch(
+            train_reader = paddle.fluid.io.batch(
                 paddle.reader.shuffle(
                     paddle.dataset.cifar.train10(cycle=False), buf_size=1024),
                 batch_size=args.batch_size,
                 drop_last=True)
 
-            test_reader = paddle.batch(
+            test_reader = paddle.fluid.io.batch(
                 paddle.dataset.cifar.test10(cycle=False),
                 batch_size=args.batch_size,
                 drop_last=False)
         elif args.data == 'imagenet':
-            train_reader = paddle.batch(
+            train_reader = paddle.fluid.io.batch(
                 imagenet_reader.train(),
                 batch_size=args.batch_size,
                 drop_last=True)
-            test_reader = paddle.batch(
+            test_reader = paddle.fluid.io.batch(
                 imagenet_reader.val(),
                 batch_size=args.batch_size,
                 drop_last=False)
@@ -139,7 +131,7 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
         train_compiled_program = fluid.CompiledProgram(
             train_program).with_data_parallel(
                 loss_name=avg_cost.name, build_strategy=build_strategy)
-        for epoch_id in range(retain_epoch):
+        for epoch_id in range(args.retain_epoch):
             for batch_id, data in enumerate(train_loader()):
                 fetches = [avg_cost.name]
                 s_time = time.time()
@@ -179,15 +171,13 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
 def test_search_result(tokens, image_size, args, config):
     sa_nas = SANAS(
         config,
-        server_addr=("", 8887),
-        init_temperature=args.init_temperature,
-        reduce_rate=args.reduce_rate,
+        server_addr=(args.server_address, args.port),
         search_steps=args.search_steps,
         is_server=True)
 
     image_shape = [3, image_size, image_size]
 
-    archs = sa_nas.tokens2arch(tokens)
+    archs = sa_nas.tokens2arch(tokens)[0]
 
     train_program = fluid.Program()
     test_program = fluid.Program()
@@ -207,22 +197,22 @@ def test_search_result(tokens, image_size, args, config):
     exe.run(startup_program)
 
     if args.data == 'cifar10':
-        train_reader = paddle.batch(
+        train_reader = paddle.fluid.io.batch(
             paddle.reader.shuffle(
                 paddle.dataset.cifar.train10(cycle=False), buf_size=1024),
             batch_size=args.batch_size,
             drop_last=True)
 
-        test_reader = paddle.batch(
+        test_reader = paddle.fluid.io.batch(
             paddle.dataset.cifar.test10(cycle=False),
             batch_size=args.batch_size,
             drop_last=False)
     elif args.data == 'imagenet':
-        train_reader = paddle.batch(
+        train_reader = paddle.fluid.io.batch(
             imagenet_reader.train(),
             batch_size=args.batch_size,
             drop_last=True)
-        test_reader = paddle.batch(
+        test_reader = paddle.fluid.io.batch(
             imagenet_reader.val(), batch_size=args.batch_size, drop_last=False)
 
     train_loader.set_sample_list_generator(
@@ -234,7 +224,7 @@ def test_search_result(tokens, image_size, args, config):
     train_compiled_program = fluid.CompiledProgram(
         train_program).with_data_parallel(
             loss_name=avg_cost.name, build_strategy=build_strategy)
-    for epoch_id in range(retain_epoch):
+    for epoch_id in range(args.retain_epoch):
         for batch_id, data in enumerate(train_loader()):
             fetches = [avg_cost.name]
             s_time = time.time()
@@ -281,7 +271,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--batch_size', type=int, default=256, help='batch size.')
     parser.add_argument(
-        '--class_dim', type=int, default=1000, help='classify number.')
+        '--class_dim', type=int, default=10, help='classify number.')
     parser.add_argument(
         '--data',
         type=str,
@@ -298,6 +288,11 @@ if __name__ == '__main__':
         type=int,
         default=100,
         help='controller server number.')
+    parser.add_argument(
+        '--server_address', type=str, default="", help='server ip.')
+    parser.add_argument('--port', type=int, default=8881, help='server port')
+    parser.add_argument(
+        '--retain_epoch', type=int, default=5, help='epoch for each token.')
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate.')
     args = parser.parse_args()
     print(args)
