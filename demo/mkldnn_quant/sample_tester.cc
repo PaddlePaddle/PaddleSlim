@@ -40,7 +40,7 @@ DEFINE_bool(with_accuracy_layer,
             true,
             "Set with_accuracy_layer to true if provided model has accuracy layer and requires label input");
 DEFINE_bool(use_profile, false, "Set use_profile to true to get profile information");
-DEFINE_bool(optimize_fp32_model, false, "If optimize_fp32_model is set to true, fp32 model will be optimized");
+DEFINE_bool(use_analysis, false, "If use_analysis is set to true, the model will be optimized");
 
 struct Timer {
   std::chrono::high_resolution_clock::time_point start;
@@ -297,7 +297,7 @@ int main(int argc, char *argv[]) {
   paddle::AnalysisConfig cfg;
   cfg.SetModel(FLAGS_infer_model);
   cfg.SetCpuMathLibraryNumThreads(FLAGS_num_threads);
-  if (FLAGS_optimize_fp32_model){
+  if (FLAGS_use_analysis){
     SetIrOptimConfig(&cfg);
   }
 
@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
   std::vector<std::vector<paddle::PaddleTensor>> outputs;
   std::vector<paddle::PaddleTensor> labels_gt;  // optional
   SetInput(&input_slots_all, &labels_gt);       // iterations*batch_size
-  auto predictor = CreatePredictor(reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg), FLAGS_optimize_fp32_model);
+  auto predictor = CreatePredictor(reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg), FLAGS_use_analysis);
   PredictionRun(predictor.get(), input_slots_all, &outputs, FLAGS_num_threads);
   auto acc_pair = CalculateAccuracy(outputs, labels_gt);
   LOG(INFO) <<"Top1 accuracy: " << std::fixed << std::setw(6)
