@@ -31,7 +31,7 @@ class SeparableConv2D(fluid.dygraph.Layer):
                  use_bias=True,
                  scale_factor=1,
                  stddev=0.02,
-                 use_cudnn=use_cudnn):
+                 use_cudnn=False):
         super(SeparableConv2D, self).__init__()
 
         self.conv = fluid.dygraph.LayerList([
@@ -41,7 +41,7 @@ class SeparableConv2D(fluid.dygraph.Layer):
                 filter_size=filter_size,
                 stride=stride,
                 padding=padding,
-                use_cudnn=False,
+                use_cudnn=use_cudnn,
                 groups=num_channels,
                 param_attr=fluid.ParamAttr(
                     initializer=fluid.initializer.NormalInitializer(
