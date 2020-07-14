@@ -92,7 +92,7 @@ imagenet_user
 | |── ...
 └── val_list.txt
 ```
-Then, the content of val_list.txt should be as follows:
+Then, the contents of val_list.txt should be as follows:
 ```
 val/ILSVRC2012_val_00000001.jpg 0
 val/ILSVRC2012_val_00000002.jpg 0
@@ -104,7 +104,7 @@ note:
 ### 4.2 Deploying Inference demo
 
 #### Deployment premises
-- Users can check which instruction sets are supported by their machines' CPUs by issueing the command `lscpu`.
+- Users can check which instruction sets are supported by their machines' CPUs by issuing the command `lscpu`.
 - INT8 performance and accuracy is best on CPU servers which support `avx512_vnni` instruction set (e.g. Intel Cascade Lake CPUs: Intel(R) Xeon(R) Gold 6271, 6248 or other X2XX). INT8 inference performance is then 3-3.7 times better than for FP32.
 - On CPU servers that support `avx512` but do not support `avx512_vnni` instructions (SkyLake, Model name: Intel(R) Xeon(R) Gold X1XX, such as 6148), the performance of INT8 models is around 1.5 times faster than FP32 models.
 
@@ -117,7 +117,7 @@ Users can compile the Paddle inference library from the source code or download 
 - Users can also download the published [inference Library](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html). Please select `ubuntu14.04_cpu_avx_mkl` latest release or develop version. The downloaded library has to be decompressed and renamed into `fluid_inference` directory and placed in current directory (`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`) for the library to be available. Another option is to set the `PADDLE_ROOT` cmake variable to the `fluid_inference` directory location to link the tests with the Paddle inference library properly.
 
 #### Compile the application
-The source code file of the sample test (`sample_tester.cc`) and the `cmake` files are both located in `demo/mkldnn_quant/`directory.
+The source code file of the sample test (`sample_tester.cc`) and the `cmake` files are all located in `demo/mkldnn_quant/`directory.
 
 ```
 cd /PATH/TO/PaddleSlim
@@ -151,7 +151,7 @@ echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 - **iterations:** Batch iterations. The default is 0, which means predict all batches (image numbers/batch size) in infer_data
 - **num_threads:** Number of CPU threads used. The default value is 1.
 - **with_accuracy_layer:** The model is with accuracy layer or not. Default value false.
-- **use_analysis** Whether to use paddle::NativeConfig to optimize the model. Default value is false.
+- **use_analysis** Whether to use paddle::AnalysisConfig to optimize the model. Default value is false.
 
 One can directly modify MODEL_DIR and DATA_DIR in `run.sh` under `/PATH_TO_PaddleSlim/demo/mkldnn_quant/` directory, then execute `./run.sh` for CPU inference.
 
