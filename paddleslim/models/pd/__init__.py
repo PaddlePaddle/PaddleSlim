@@ -1,4 +1,4 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    from .single_distiller import merge, fsp_loss, l2_loss, soft_label_loss, loss
-except ImportError:
-    print("Paddle is not installed.")
-from .dml import DML
+from __future__ import absolute_import
+from .util import image_classification
+from .slimfacenet import SlimFaceNet_A_x0_60, SlimFaceNet_B_x0_75, SlimFaceNet_C_x0_75
+from .slim_mobilenet import SlimMobileNet_v1, SlimMobileNet_v2, SlimMobileNet_v3, SlimMobileNet_v4, SlimMobileNet_v5
+__all__ = ["image_classification"]
