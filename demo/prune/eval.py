@@ -11,7 +11,7 @@ import paddle.fluid as fluid
 from paddleslim.prune import load_model
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-sys.path.append(sys.path[0] + "/../")
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments
 
@@ -63,7 +63,7 @@ def eval(args):
     exe = fluid.Executor(place)
     exe.run(fluid.default_startup_program())
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
+    val_reader = paddle.fluid.io.batch(val_reader, batch_size=args.batch_size)
 
     val_feeder = feeder = fluid.DataFeeder(
         [image, label], place, program=val_program)

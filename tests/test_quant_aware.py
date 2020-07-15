@@ -112,9 +112,10 @@ class TestQuantAwareCase2(unittest.TestCase):
         exe = fluid.Executor(place)
         exe.run(fluid.default_startup_program())
         feeder = fluid.DataFeeder([image, label], place, program=main_prog)
-        train_reader = paddle.batch(
+        train_reader = paddle.fluid.io.batch(
             paddle.dataset.mnist.train(), batch_size=64)
-        eval_reader = paddle.batch(paddle.dataset.mnist.test(), batch_size=64)
+        eval_reader = paddle.fluid.io.batch(
+            paddle.dataset.mnist.test(), batch_size=64)
 
         def train(program):
             iter = 0
@@ -132,7 +133,7 @@ class TestQuantAwareCase2(unittest.TestCase):
         def test(program):
             iter = 0
             result = [[], [], []]
-            for data in train_reader():
+            for data in eval_reader():
                 cost, top1, top5 = exe.run(
                     program,
                     feed=feeder.feed(data),
@@ -161,7 +162,8 @@ class TestQuantAwareCase2(unittest.TestCase):
             main_prog, place, config, for_test=False)
         quant_eval_prog = quant_aware(val_prog, place, config, for_test=True)
         train(quant_train_prog)
-        quant_eval_prog = convert(quant_eval_prog, place, config)
+        quant_eval_prog, int8_prog = convert(
+            quant_eval_prog, place, config, save_int8=True)
         top1_2, top5_2 = test(quant_eval_prog)
         # values before quantization and after quantization should be close
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))

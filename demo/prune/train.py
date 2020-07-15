@@ -8,11 +8,10 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-sys.path.append("../../")
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from paddleslim.prune import Pruner, save_model
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-sys.path.append(sys.path[0] + "/../")
 import models
 from utility import add_arguments, print_arguments
 
@@ -39,6 +38,7 @@ add_arg('test_period',      int, 10,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
 add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used, support l1_norm and batch_norm_scale.")
+add_arg('save_inference',   bool, False,                "Whether to save inference model.")
 # yapf: enable
 
 model_list = models.__all__
@@ -142,8 +142,8 @@ def compress(args):
             args.pretrained_model))
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
-    train_reader = paddle.batch(
+    val_reader = paddle.fluid.io.batch(val_reader, batch_size=args.batch_size)
+    train_reader = paddle.fluid.io.batch(
         train_reader, batch_size=args.batch_size, drop_last=True)
 
     train_feeder = feeder = fluid.DataFeeder([image, label], place)
@@ -231,6 +231,13 @@ def compress(args):
             test(i, pruned_val_program)
             save_model(exe, pruned_val_program,
                        os.path.join(args.model_path, str(i)))
+        if args.save_inference:
+            infer_model_path = os.path.join(args.model_path, "infer_models",
+                                            str(i))
+            fluid.io.save_inference_model(infer_model_path, ["image"], [out],
+                                          exe, pruned_val_program)
+            _logger.info("Saved inference model into [{}]".format(
+                infer_model_path))
 
 
 def main():

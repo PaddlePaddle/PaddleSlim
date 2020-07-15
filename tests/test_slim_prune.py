@@ -49,7 +49,7 @@ class TestPrune(unittest.TestCase):
         exe = fluid.Executor(place)
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
-        criterion = 'batch_norm_scale'
+        criterion = 'bn_scale'
         pruner = Pruner(criterion)
         main_program, _, _ = pruner.prune(
             main_program,
@@ -63,12 +63,12 @@ class TestPrune(unittest.TestCase):
             param_shape_backup=None)
 
         shapes = {
-            "conv1_weights": (4L, 3L, 3L, 3L),
-            "conv2_weights": (4L, 4L, 3L, 3L),
-            "conv3_weights": (8L, 4L, 3L, 3L),
-            "conv4_weights": (4L, 8L, 3L, 3L),
-            "conv5_weights": (8L, 4L, 3L, 3L),
-            "conv6_weights": (8L, 8L, 3L, 3L)
+            "conv1_weights": (4, 3, 3, 3),
+            "conv2_weights": (4, 4, 3, 3),
+            "conv3_weights": (8, 4, 3, 3),
+            "conv4_weights": (4, 8, 3, 3),
+            "conv5_weights": (8, 4, 3, 3),
+            "conv6_weights": (8, 8, 3, 3)
         }
 
         for param in main_program.global_block().all_parameters():

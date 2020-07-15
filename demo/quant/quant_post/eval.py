@@ -20,7 +20,8 @@ import functools
 
 import paddle
 import paddle.fluid as fluid
-sys.path.append('../../')
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import imagenet_reader as reader
 from utility import add_arguments, print_arguments
 
@@ -45,7 +46,7 @@ def eval(args):
         exe,
         model_filename=args.model_name,
         params_filename=args.params_name)
-    val_reader = paddle.batch(reader.val(), batch_size=128)
+    val_reader = paddle.fluid.io.batch(reader.val(), batch_size=128)
     feeder = fluid.DataFeeder(
         place=place, feed_list=feed_target_names, program=val_program)
 
