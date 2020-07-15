@@ -2,11 +2,11 @@
 
 ## 概述
 
-本文主要介绍在CPU上转化PaddleSlim产出的量化模型并部署和预测的流程。在Intel(R) Xeon(R) Gold 6271机器上，量化后的INT8模型为优化后FP32模型的3~3.7倍，而精度仅有极小下降。
+本文主要介绍在CPU上转化PaddleSlim产出的量化模型并部署和预测的流程。在Casecade Lake机器上（例如Intel® Xeon® Gold 6271、6248，X2XX等），INT8模型进行推理的速度通常是FP32模型的3-3.7倍；在SkyLake机器（例如Intel® Xeon® Gold 6148、8180，X1XX等）上，使用INT8模型进行推理的速度通常是FP32模型的1.5倍。
 
 流程步骤如下：
-- 产出量化模型：使用PaddleSlim训练产出量化模型，注意模型的参数值应该在INT8范围内，但是类型仍为float型。
-- 在CPU上转换量化模型：在CPU上使用DNNL库转化量化模型为真正的INT8模型。
+- 产出量化模型：使用PaddleSlim训练并产出量化模型。注意模型中被量化的算子的参数值应该在INT8范围内，但是类型仍为float型。
+- 在CPU上转换量化模型：在CPU上使用DNNL库转化量化模型为INT8模型。
 - 在CPU上部署预测：在CPU上部署样例并进行预测。
 
 ## 1. 准备
@@ -30,19 +30,19 @@ import numpy as np
 
 ## 2. 用PaddleSlim产出量化模型
 
-用户可以使用PaddleSlim产出量化训练模型或者离线量化模型。如果用户只想要验证部署和预测流程，可以下载[mobilenetv2 post-training quant model](https://paddle-inference-dist.cdn.bcebos.com/quantizaiton/quant_post_models/mobilenetv2_quant_post.tgz), 其对应的原始的FP32模型下载[mobilenetv2 fp32](https://paddle-inference-dist.cdn.bcebos.com/quantizaiton/fp32_models/mobilenetv2.tgz)。如果用户要转化部署自己的模型，请根据下面2.1, 2.2的步骤生成fakely quantized model.
+用户可以使用PaddleSlim产出量化训练模型或者离线量化模型。如果用户只想要验证部署和预测流程，可以跳过 2.1 和 2.2, 直接下载[mobilenetv2 post-training quant model](https://paddle-inference-dist.cdn.bcebos.com/quantizaiton/quant_post_models/mobilenetv2_quant_post.tgz)以及其对应的原始的FP32模型[mobilenetv2 fp32](https://paddle-inference-dist.cdn.bcebos.com/quantizaiton/fp32_models/mobilenetv2.tgz)。如果用户要转化部署自己的模型，请根据下面2.1, 2.2的步骤产出量化模型。
 
 #### 2.1 量化训练
 
 量化训练流程可以参考 [分类模型的量化训练流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
 
 **量化训练过程中config参数：**
-- **quantize_op_types:** 目前CPU上量化支持的算子为 `depthwise_conv2d`, `conv2d`, `fc`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`。但在量化训练阶段插入fake_quantize/fake_dequantize 算子时，只需在前四种op前后插入fake_quantize/fake_dequantize 算子，因为后面四种算子 `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`的scales将从其他op的`out_threshold`属性获取，因此`quantize_op_types` 参数只需要设置为 `depthwise_conv2d`, `conv2d`, `fc`, `matmul` 即可。
+- **quantize_op_types:** 目前CPU上量化支持的算子为 `depthwise_conv2d`, `conv2d`, `fc`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`。但是在量化训练阶段插入fake_quantize/fake_dequantize算子时，只需在前四种op前后插入fake_quantize/fake_dequantize 算子，因为后面四种算子 `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`的scales将从其他op的`out_threshold`属性获取，因此`quantize_op_types`参数只需要设置为 `depthwise_conv2d`, `conv2d`, `fc`, `matmul` 即可。
 - **其他参数:** 请参考 [PaddleSlim quant_aware API](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#quant_aware)
 
-#### 2.2 静态离线量化
+#### 2.2 离线量化
 
-静态离线量化模型产出可以参考[分类模型的静态离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_post_demo/#_1)
+离线量化模型产出可以参考[分类模型的静态离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_post_demo/#_1)
 
 ## 3. 转化产出的量化模型为DNNL优化后的INT8模型
 为了部署在CPU上，我们将保存的quant模型，通过一个转化脚本，移除fake_quantize/fake_dequantize op，进行算子融合和优化并且转化为INT8模型。脚本在官网的位置为[save_quant_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py)。复制脚本到本样例所在目录(`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`)，并执行如下命令：
@@ -53,7 +53,7 @@ python save_quant_model.py --quant_model_path=/PATH/TO/SAVE/FLOAT32/QUANT/MODEL 
 - **quant_model_path:** 为输入参数，必填。为量化训练产出的quant模型。
 - **int8_model_save_path:** 将quant模型经过DNNL优化量化后保存的最终INT8模型输出路径。注意：quant_model_path必须传入PaddleSlim量化产出的含有fake_quant/fake_dequant ops的quant模型。
 - **ops_to_quantize:** 以逗号隔开的指定的需要量化的op类型列表。可选，默认为空，空表示量化所有可量化的op。目前，对于Benchmark中列出的图像分类和自然语言处理模型中，量化所有可量化的op可以获得最好的精度和性能，因此建议用户不设置这个参数。
-- **--op_ids_to_skip:** 以逗号隔开的op id号列表，可选，默认为空。这个列表中的op号将不量化，采用FP32类型。要获取特定op的ID，请先使用`--debug`选项运行脚本，并打开生成的文件`qat_int8_cpu_quantize_placement_pass.dot`，找出不需量化的op, ID号在Op名称后面的括号中。
+- **--op_ids_to_skip:** 以逗号隔开的op id号列表，可选，默认为空。这个列表中的op号将不量化，采用FP32类型。要获取特定op的ID，请先使用`--debug`选项运行脚本，并打开生成的文件`int8_<number>_cpu_quantize_placement_pass.dot`，找出不需量化的op, ID号在Op名称后面的括号中。
 - **--debug:** 添加此选项可在每个转换步骤之后生成一系列包含模型图的* .dot文件。 有关DOT格式的说明，请参见[DOT](https://graphviz.gitlab.io/_pages/doc/info/lang.html)。要打开`* .dot`文件，请使用系统上可用的任何Graphviz工具（例如Linux上的`xdot`工具或Windows上的`dot`工具有关文档，请参见[Graphviz](http://www.graphviz.org/documentation/)。
 - **注意：**
   - 目前支持DNNL量化的op列表是`conv2d`, `depthwise_conv2d`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`,`scale`, `concat`。
@@ -92,7 +92,7 @@ val/ILSVRC2012_val_00000002.jpg 0
 ```
 
 注意：
-- 为什么将数据集转化为二进制文件？因为paddle中的数据预处理（resize, crop等）都使用pythong.Image模块进行，训练出的模型也是基于Python预处理的图片，但是我们发现Python测试性能开销很大，导致预测性能下降。为了获得良好性能，在量化模型预测阶段，我们决定使用C++测试，而C++只支持Open-CV等库，Paddle不建议使用外部库，因此我们使用Python将图片预处理然后放入二进制文件，再在C++测试中读出。用户根据自己的需要，可以更改C++测试以使用open-cv库直接读数据并预处理，精度不会有太大下降。我们还提供了python测试`sample_tester.py`作为参考，与C++测试`sample_tester.cc`相比，用户可以看到Python测试更大的性能开销。
+- 为什么将数据集转化为二进制文件？因为paddle中的数据预处理（resize, crop等）都使用pythong.Image模块进行，训练出的模型也是基于Python预处理的图片，但是我们发现Python测试性能开销很大，导致预测性能下降。为了获得良好性能，在量化模型预测阶段，我们决定使用C++测试，而C++只支持Open-CV等库，Paddle不建议使用外部库，因此我们使用Python将图片预处理然后放入二进制文件，再在C++测试中读出。用户根据自己的需要，可以更改C++测试以直接读数据并预处理，精度不会有太大下降。我们还提供了python测试`sample_tester.py`作为参考，与C++测试`sample_tester.cc`相比，用户可以看到Python测试更大的性能开销。
 
 ### 4.2 部署预测
 
@@ -168,7 +168,7 @@ static void SetConfig(paddle::AnalysisConfig *cfg) {
 - 如果infer_model传入PaddleSlim产出的quant模型，`use_analysis`即使设置为true不起作用，因为quant模型包含fake_quantize/fake_dequantize ops,无法fuse,无法优化。
 
 ## 5. 精度和性能数据
-INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性能](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/docs/zh_cn/tutorials/image_classification_mkldnn_quant_aware_tutorial.md)
+INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性能](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/docs/zh_cn/tutorials/image_classification_mkldnn_quant_tutorial.md)
 
 ## FAQ
 

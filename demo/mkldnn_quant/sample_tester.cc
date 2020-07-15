@@ -149,6 +149,9 @@ void SetInput(std::vector<std::vector<paddle::PaddleTensor>> *inputs,
       labels_gt->push_back(std::move(labels));
     }
     inputs->push_back(std::move(tmp_vec));
+    if(i>0 && i % 100) {
+      LOG(INFO) << "Read " << i*100*FLAGS_batch_size << " samples";
+    }
   }
 }
 
