@@ -77,9 +77,8 @@ class TestQuantPostOnlyWeightCase1(unittest.TestCase):
                                            fetch_list=outputs)
                 iter += 1
                 if iter % 100 == 0:
-                    print(
-                        'eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
-                        format(iter, cost, top1, top5))
+                    print('eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
+                          format(iter, cost, top1, top5))
                 result[0].append(cost)
                 result[1].append(top1)
                 result[2].append(top5)
@@ -99,7 +98,7 @@ class TestQuantPostOnlyWeightCase1(unittest.TestCase):
             params_filename='params')
 
         quant_post_dynamic(
-            model_dir='./test_quant_post',
+            model_dir='./test_quant_post_dynamic',
             save_model_dir='./test_quant_post_inference',
             model_filename='model',
             params_filename='params',
