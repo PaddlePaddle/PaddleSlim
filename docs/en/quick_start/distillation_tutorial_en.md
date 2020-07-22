@@ -25,7 +25,7 @@ This tutorial trains and verifies distillation model on the MNIST dataset. The i
 Select `ResNet50` as the teacher to perform distillation training on the students of the` MobileNet` architecture.
 
 ```python
-model = models.__dict__['MobileNet']()
+model = slim.models.MobileNet()
 student_program = fluid.Program()
 student_startup = fluid.Program()
 with fluid.program_guard(student_program, student_startup):
@@ -42,7 +42,7 @@ with fluid.program_guard(student_program, student_startup):
 
 
 ```python
-teacher_model = models.__dict__['ResNet50']()
+model = slim.models.ResNet50()
 teacher_program = fluid.Program()
 teacher_startup = fluid.Program()
 with fluid.program_guard(teacher_program, teacher_startup):
