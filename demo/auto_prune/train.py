@@ -8,10 +8,10 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from paddleslim.prune import AutoPruner
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-sys.path.append(sys.path[0] + "/../")
 import models
 from utility import add_arguments, print_arguments
 
@@ -23,7 +23,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
-add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretained",                "Whether to use pretrained model.")
+add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
 add_arg('lr',               float,  0.1,               "The learning rate used to fine-tune pruned model.")
 add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
@@ -32,7 +32,7 @@ add_arg('num_epochs',       int,  120,               "The number of total epochs
 add_arg('total_images',     int,  1281167,               "The number of total training images.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
 add_arg('config_file',      str, None,                 "The config file for compression with yaml format.")
-add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'")
+add_arg('data',             str, "imagenet",                 "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
 # yapf: enable
