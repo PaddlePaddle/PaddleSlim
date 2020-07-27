@@ -33,8 +33,7 @@ _logger.setLevel(logging.INFO)
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--batch_size', type=int, default=1, help='Batch size.')
+    parser.add_argument('--batch_size', type=int, default=1, help='Batch size.')
     parser.add_argument(
         '--skip_batch_num',
         type=int,
@@ -46,8 +45,7 @@ def parse_args():
         type=str,
         default='',
         help='A path to an Inference model.')
-    parser.add_argument(
-        '--infer_data', type=str, default='', help='Data file.')
+    parser.add_argument('--infer_data', type=str, default='', help='Data file.')
     parser.add_argument(
         '--batch_num',
         type=int,
@@ -155,8 +153,8 @@ class SampleTester(unittest.TestCase):
         inference_scope = fluid.executor.global_scope()
         with fluid.scope_guard(inference_scope):
             if os.path.exists(os.path.join(model_path, '__model__')):
-                [inference_program, feed_target_names, fetch_targets
-                 ] = fluid.io.load_inference_model(model_path, exe)
+                [inference_program, feed_target_names,
+                 fetch_targets] = fluid.io.load_inference_model(model_path, exe)
             else:
                 [inference_program, feed_target_names,
                  fetch_targets] = fluid.io.load_inference_model(

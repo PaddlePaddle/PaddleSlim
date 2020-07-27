@@ -38,9 +38,14 @@ DEFINE_int32(iterations,
 DEFINE_int32(num_threads, 1, "num of threads to run in parallel");
 DEFINE_bool(with_accuracy_layer,
             true,
-            "Set with_accuracy_layer to true if provided model has accuracy layer and requires label input");
-DEFINE_bool(use_profile, false, "Set use_profile to true to get profile information");
-DEFINE_bool(optimize_fp32_model, false, "If optimize_fp32_model is set to true, fp32 model will be optimized");
+            "Set with_accuracy_layer to true if provided model has accuracy "
+            "layer and requires label input");
+DEFINE_bool(use_profile,
+            false,
+            "Set use_profile to true to get profile information");
+DEFINE_bool(use_analysis,
+            false,
+            "If use_analysis is set to true, the model will be optimized");
 
 struct Timer {
   std::chrono::high_resolution_clock::time_point start;
@@ -149,6 +154,9 @@ void SetInput(std::vector<std::vector<paddle::PaddleTensor>> *inputs,
       labels_gt->push_back(std::move(labels));
     }
     inputs->push_back(std::move(tmp_vec));
+    if (i > 0 && i % 100) {
+      LOG(INFO) << "Read " << i * 100 * FLAGS_batch_size << " samples";
+    }
   }
 }
 
@@ -157,7 +165,7 @@ static void PrintTime(int batch_size,
                       double batch_latency,
                       int epoch = 1) {
   double sample_latency = batch_latency / batch_size;
-  LOG(INFO) <<"Model: "<<FLAGS_infer_model;
+  LOG(INFO) << "Model: " << FLAGS_infer_model;
   LOG(INFO) << "====== num of threads: " << num_threads << " ======";
   LOG(INFO) << "====== batch size: " << batch_size << ", iterations: " << epoch;
   LOG(INFO) << "====== batch latency: " << batch_latency
@@ -215,7 +223,7 @@ std::pair<float, float> CalculateAccuracy(
       << "if with_accuracy set to false, labels_gt must be not empty";
   std::vector<float> acc1_ss;
   std::vector<float> acc5_ss;
-  if (!with_accuracy) { // model with_accuracy_layer = false
+  if (!with_accuracy) {     // model with_accuracy_layer = false
     float *result_array;    // for one batch 50*1000
     int64_t *batch_labels;  // 50*1
     LOG_IF(ERROR, outputs.size() != labels_gt.size())
@@ -273,8 +281,8 @@ static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
   cfg->DisableGpu();
   cfg->SwitchIrOptim();
   cfg->EnableMKLDNN();
-  if(FLAGS_use_profile){
-      cfg->EnableProfile();
+  if (FLAGS_use_profile) {
+    cfg->EnableProfile();
   }
 }
 
@@ -297,7 +305,7 @@ int main(int argc, char *argv[]) {
   paddle::AnalysisConfig cfg;
   cfg.SetModel(FLAGS_infer_model);
   cfg.SetCpuMathLibraryNumThreads(FLAGS_num_threads);
-  if (FLAGS_optimize_fp32_model){
+  if (FLAGS_use_analysis) {
     SetIrOptimConfig(&cfg);
   }
 
@@ -305,11 +313,13 @@ int main(int argc, char *argv[]) {
   std::vector<std::vector<paddle::PaddleTensor>> outputs;
   std::vector<paddle::PaddleTensor> labels_gt;  // optional
   SetInput(&input_slots_all, &labels_gt);       // iterations*batch_size
-  auto predictor = CreatePredictor(reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg), FLAGS_optimize_fp32_model);
+  auto predictor =
+      CreatePredictor(reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg),
+                      FLAGS_use_analysis);
   PredictionRun(predictor.get(), input_slots_all, &outputs, FLAGS_num_threads);
   auto acc_pair = CalculateAccuracy(outputs, labels_gt);
-  LOG(INFO) <<"Top1 accuracy: " << std::fixed << std::setw(6)
-            <<std::setprecision(4) << acc_pair.first;
-  LOG(INFO) <<"Top5 accuracy: " << std::fixed << std::setw(6)
-            <<std::setprecision(4) << acc_pair.second;
+  LOG(INFO) << "Top1 accuracy: " << std::fixed << std::setw(6)
+            << std::setprecision(4) << acc_pair.first;
+  LOG(INFO) << "Top5 accuracy: " << std::fixed << std::setw(6)
+            << std::setprecision(4) << acc_pair.second;
 }
