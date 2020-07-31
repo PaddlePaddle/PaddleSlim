@@ -193,6 +193,12 @@ class OpWrapper(object):
         """
         return self._op.attr(name)
 
+    def hasattr(self, name):
+        '''
+        Wheter this operator have target op.
+        '''
+        return hasattr(self._op, name)
+
 
 class GraphWrapper(object):
     """
@@ -375,6 +381,5 @@ class GraphWrapper(object):
 
     def update_groups_of_conv(self):
         for op in self.ops():
-            if op.type() == 'depthwise_conv2d' or op.type(
-            ) == 'depthwise_conv2d_grad':
+            if 'conv2d' in op.type() and op.attr('groups') >= op.inputs('Filter')[0].shape()[0]:
                 op.set_attr('groups', op.inputs('Filter')[0].shape()[0])
