@@ -166,9 +166,7 @@ class OpWrapper(object):
         """
         Get all the varibales by the output name.
         """
-        return [
-            self._graph.var(var_name) for var_name in self._op.output(name)
-        ]
+        return [self._graph.var(var_name) for var_name in self._op.output(name)]
 
     def set_attr(self, key, value):
         """
@@ -192,12 +190,6 @@ class OpWrapper(object):
             can be any valid attribute type.
         """
         return self._op.attr(name)
-
-    def hasattr(self, name):
-        '''
-        Wheter this operator have target op.
-        '''
-        return hasattr(self._op, name)
 
 
 class GraphWrapper(object):
@@ -366,8 +358,8 @@ class GraphWrapper(object):
         It is used after loading pruned parameters from file.
         """
         for param in self.all_parameters():
-            tensor_shape = np.array(
-                scope.find_var(param.name()).get_tensor()).shape
+            tensor_shape = np.array(scope.find_var(param.name()).get_tensor(
+            )).shape
             param.set_shape(tensor_shape)
 
     def infer_shape(self):
@@ -381,5 +373,6 @@ class GraphWrapper(object):
 
     def update_groups_of_conv(self):
         for op in self.ops():
-            if 'conv2d' in op.type() and op.attr('groups') >= op.inputs('Filter')[0].shape()[0]:
+            if 'conv2d' in op.type() and op.attr('groups') >= op.inputs(
+                    'Filter')[0].shape()[0]:
                 op.set_attr('groups', op.inputs('Filter')[0].shape()[0])
