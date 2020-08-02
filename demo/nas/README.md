@@ -1,5 +1,6 @@
 # SANAS网络结构搜索示例
 
+
 本示例介绍如何使用网络结构搜索接口，搜索到一个更小或者精度更高的模型，该示例介绍paddleslim中SANAS的使用及如何利用SANAS得到模型结构，完整示例代码请参考sa_nas_mobilenetv2.py或者block_sa_nas_mobilenetv2.py。
 
 ## 数据准备
