@@ -1,6 +1,7 @@
 """Contains common utility functions."""
 #  Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserve.
 #
+
 #Licensed under the Apache License, Version 2.0 (the "License");
 #you may not use this file except in compliance with the License.
 #You may obtain a copy of the License at
@@ -36,7 +37,8 @@ logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
 
-DOWNLOAD_RETRY_LIMIT=3
+DOWNLOAD_RETRY_LIMIT = 3
+
 
 def print_arguments(args):
     """Print argparse's arguments.
@@ -211,6 +213,7 @@ def _download(url, path, md5sum=None):
 
     return fullname
 
+
 def _md5check(fullname, md5sum=None):
     if md5sum is None:
         return True
@@ -224,9 +227,10 @@ def _md5check(fullname, md5sum=None):
 
     if calc_md5sum != md5sum:
         _logger.info("File {} md5 check failed, {}(calc) != "
-                    "{}(base)".format(fullname, calc_md5sum, md5sum))
+                     "{}(base)".format(fullname, calc_md5sum, md5sum))
         return False
     return True
+
 
 def _decompress(fname):
     """
@@ -260,6 +264,7 @@ def _decompress(fname):
 
     shutil.rmtree(fpath_tmp)
     os.remove(fname)
+
 
 def _move_and_merge_tree(src, dst):
     """
