@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import copy
 import json
 import logging
@@ -55,6 +56,8 @@ TENSORRT_OP_TYPES = [
     'leaky_relu'
 ]
 
+VARS_MAPPING_TABLE = './mapping_table_for_saving_inference_model'
+
 _quant_config_default = {
     # weight quantize type, default is 'channel_wise_abs_max'
     'weight_quantize_type': 'channel_wise_abs_max',
@@ -82,14 +85,14 @@ _quant_config_default = {
 
 
 def load_dict():
-    with open('mapping_table_for_saving_inference_model', 'r') as file:
+    with open(VARS_MAPPING_TABLE, 'r') as file:
         data = file.read()
         data = json.loads(data)
         return data
 
 
 def save_dict(table):
-    with open('mapping_table_for_saving_inference_model', 'w') as file:
+    with open(VARS_MAPPING_TABLE, 'w') as file:
         file.write(json.dumps(table))
 
 
@@ -284,9 +287,8 @@ def quant_aware(program,
         _logger.info(
             "When a preprocess_func is used in quant_aware, Need to save a mapping table to match variable names in the convert phase."
         )
-        _logger.info(
-            "The mapping table is saved as 'mapping_table_for_saving_inference_model'."
-        )
+        _logger.info("The mapping table is saved as '{}'.".format(
+            VARS_MAPPING_TABLE))
         save_dict(main_graph.out_node_mapping_table)
 
     if for_test:
@@ -462,7 +464,8 @@ def convert(program, place, config=None, scope=None, save_int8=False):
         activation_bits=config['activation_bits'],
         weight_quantize_type=config['weight_quantize_type'])
 
-    test_graph.out_node_mapping_table = load_dict()
+    if os.path.exists(VARS_MAPPING_TABLE):
+        test_graph.out_node_mapping_table = load_dict()
 
     freeze_pass.apply(test_graph)
     freezed_program = test_graph.to_program()
