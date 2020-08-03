@@ -26,6 +26,7 @@ from paddle.fluid.dygraph.base import to_variable
 from paddleslim.common import AvgrageMeter, get_logger
 from paddleslim.dist import DML
 from paddleslim.models.dygraph import MobileNetV1
+from paddleslim.models.dygraph import ResNet
 import cifar100_reader as reader
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from utility import add_arguments, print_arguments
@@ -37,6 +38,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
 add_arg('log_freq',          int,   100,              "Log frequency.")
+add_arg('models',            str,   "mobilenet-mobilenet",  "model.")
 add_arg('batch_size',        int,   256,             "Minibatch size.")
 add_arg('init_lr',           float, 0.1,             "The start learning rate.")
 add_arg('use_gpu',           bool,  True,            "Whether use GPU.")
@@ -155,10 +157,19 @@ def main(args):
         train_loader, valid_loader = create_reader(place, args)
 
         # 2. Define neural network
-        models = [
-            MobileNetV1(class_dim=args.class_num),
-            MobileNetV1(class_dim=args.class_num)
-        ]
+        if args.models == "mobilenet-mobilenet":
+            models = [
+                MobileNetV1(class_dim=args.class_num),
+                MobileNetV1(class_dim=args.class_num)
+            ]
+        elif args.models == "mobilenet-resnet50":
+            models = [
+                MobileNetV1(class_dim=args.class_num),
+                ResNet(class_dim=args.class_num)
+            ]
+        else:
+            logger.info("You can define the model as you wish")
+            return
         optimizers = create_optimizer(models, args)
 
         # 3. Use PaddleSlim DML strategy

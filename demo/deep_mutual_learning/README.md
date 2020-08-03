@@ -10,7 +10,10 @@
 
 ## 启动命令
 
+### 训练MobileNet-Mobilenet的组合
+
 单卡训练, 以0号GPU为例：
+
 ```bash
 CUDA_VISIBLE_DEVICES=0 python dml_train.py
 ```
@@ -19,6 +22,22 @@ CUDA_VISIBLE_DEVICES=0 python dml_train.py
 ```bash
 python -m paddle.distributed.launch --selected_gpus=0,1,2,3 --log_dir ./mylog dml_train.py --use_parallel=True --init_lr=0.4
 ```
+
+### 训练MobileNet-ResNet50的组合
+
+单卡训练, 以0号GPU为例：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python dml_train.py --models='mobilenet-resnet50'
+```
+
+多卡训练, 以0-3号GPU为例:
+
+```bash
+python -m paddle.distributed.launch --selected_gpus=0,1,2,3 --log_dir ./mylog dml_train.py --use_parallel=True --init_lr=0.4 --models='mobilenet-resnet50'
+```
+
+
 
 ## 实验结果
 
