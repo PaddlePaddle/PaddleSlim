@@ -78,13 +78,9 @@ def create_reader(place, args):
         train_reader = fluid.contrib.reader.distributed_batch_reader(
             train_reader)
     train_loader = fluid.io.DataLoader.from_generator(
-        capacity=1024,
-        return_list=True,
-        use_multiprocess=args.use_multiprocess)
+        capacity=1024, return_list=True, use_multiprocess=args.use_multiprocess)
     valid_loader = fluid.io.DataLoader.from_generator(
-        capacity=1024,
-        return_list=True,
-        use_multiprocess=args.use_multiprocess)
+        capacity=1024, return_list=True, use_multiprocess=args.use_multiprocess)
     train_loader.set_batch_generator(train_reader, places=place)
     valid_loader.set_batch_generator(valid_reader, places=place)
     return train_loader, valid_loader

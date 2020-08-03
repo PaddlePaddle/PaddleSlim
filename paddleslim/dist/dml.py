@@ -17,6 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
+import paddle
 import paddle.fluid as fluid
 
 
@@ -32,6 +33,7 @@ class DML(fluid.dygraph.Layer):
                 fluid.dygraph.parallel.DataParallel(m, strategy)
                 for m in self.model
             ]
+        self.log_softmax = paddle.nn.LogSoftmax(axis=1)
 
     def full_name(self):
         return [m.full_name() for m in self.model]
@@ -54,8 +56,7 @@ class DML(fluid.dygraph.Layer):
         for i in range(self.model_num):
             ce_losses.append(
                 fluid.layers.mean(
-                    fluid.layers.softmax_with_cross_entropy(logits[i],
-                                                            labels)))
+                    fluid.layers.softmax_with_cross_entropy(logits[i], labels)))
         return ce_losses
 
     def kl_loss(self, logits):
@@ -69,7 +70,7 @@ class DML(fluid.dygraph.Layer):
             cur_kl_loss = 0
             for j in range(self.model_num):
                 if i != j:
-                    x = fluid.layers.log_softmax(logits[i], axis=1)
+                    x = self.log_softmax(logits[i])
                     y = fluid.layers.softmax(logits[j], axis=1)
                     cur_kl_loss += fluid.layers.kldiv_loss(
                         x, y, reduction='batchmean')

@@ -102,8 +102,7 @@ def cifar100_reader(file_name, data_name, is_shuffle):
         for name in names:
             print("Reading file " + name)
             try:
-                batch = cPickle.load(
-                    f.extractfile(name), encoding='iso-8859-1')
+                batch = cPickle.load(f.extractfile(name), encoding='iso-8859-1')
             except:
                 batch = cPickle.load(f.extractfile(name))
             data = batch['data']
