@@ -44,7 +44,6 @@ add_arg('epochs',            int,   200,             "Epoch number.")
 add_arg('class_num',         int,   100,             "Class number of dataset.")
 add_arg('trainset_num',      int,   50000,           "Images number of trainset.")
 add_arg('model_save_dir',    str,   'saved_models',  "The path to save model.")
-add_arg('use_multiprocess',  bool,  True,            "Whether use multiprocess reader.")
 add_arg('use_parallel',      bool,  False,           "Whether to use data parallel mode to train the model.")
 # yapf: enable
 
@@ -78,9 +77,9 @@ def create_reader(place, args):
         train_reader = fluid.contrib.reader.distributed_batch_reader(
             train_reader)
     train_loader = fluid.io.DataLoader.from_generator(
-        capacity=1024, return_list=True, use_multiprocess=args.use_multiprocess)
+        capacity=1024, return_list=True)
     valid_loader = fluid.io.DataLoader.from_generator(
-        capacity=1024, return_list=True, use_multiprocess=args.use_multiprocess)
+        capacity=1024, return_list=True)
     train_loader.set_batch_generator(train_reader, places=place)
     valid_loader.set_batch_generator(valid_reader, places=place)
     return train_loader, valid_loader
