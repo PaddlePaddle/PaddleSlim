@@ -22,7 +22,7 @@ import paddle.fluid as fluid
 
 
 class DML(fluid.dygraph.Layer):
-    def __init__(self, model, use_parallel):
+    def __init__(self, model, use_parallel=False):
         super(DML, self).__init__()
         self.model = model
         self.use_parallel = use_parallel
