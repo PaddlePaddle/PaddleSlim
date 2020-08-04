@@ -1,21 +1,43 @@
 # 深度互学习DML(Deep Mutual Learning)
 本示例介绍如何使用PaddleSlim的深度互学习DML方法训练模型，算法原理请参考论文 [Deep Mutual Learning](https://arxiv.org/abs/1706.00384)
 
+![dml_architect](./images/dml_architect.png)
+
 ## 使用数据
+
 示例中使用cifar100数据集进行训练, 您可以在启动训练时等待自动下载，
 也可以在自行下载[数据集](https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz)之后，放在当前目录的`./dataset/cifar100`路径下
 
 ## 启动命令
 
+### 训练MobileNet-Mobilenet的组合
+
 单卡训练, 以0号GPU为例：
+
 ```bash
 CUDA_VISIBLE_DEVICES=0 python dml_train.py
 ```
 
 多卡训练, 以0-3号GPU为例:
 ```bash
-python -m paddle.distributed.launch --selected_gpus=0,1,2,3 --log_dir ./mylog dml_train.py --use_parallel=True
+python -m paddle.distributed.launch --selected_gpus=0,1,2,3 --log_dir ./mylog dml_train.py --use_parallel=True --init_lr=0.4
 ```
+
+### 训练MobileNet-ResNet50的组合
+
+单卡训练, 以0号GPU为例：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python dml_train.py --models='mobilenet-resnet50'
+```
+
+多卡训练, 以0-3号GPU为例:
+
+```bash
+python -m paddle.distributed.launch --selected_gpus=0,1,2,3 --log_dir ./mylog dml_train.py --use_parallel=True --init_lr=0.4 --models='mobilenet-resnet50'
+```
+
+
 
 ## 实验结果
 
