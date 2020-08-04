@@ -26,6 +26,7 @@ from paddle.fluid.dygraph.base import to_variable
 from paddleslim.common import AvgrageMeter, get_logger
 from paddleslim.dist import DML
 from paddleslim.models.dygraph import MobileNetV1
+from paddleslim.models.dygraph import ResNet
 import cifar100_reader as reader
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from utility import add_arguments, print_arguments
@@ -37,6 +38,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
 add_arg('log_freq',          int,   100,              "Log frequency.")
+add_arg('models',            str,   "mobilenet-mobilenet",  "model.")
 add_arg('batch_size',        int,   256,             "Minibatch size.")
 add_arg('init_lr',           float, 0.1,             "The start learning rate.")
 add_arg('use_gpu',           bool,  True,            "Whether use GPU.")
@@ -44,7 +46,6 @@ add_arg('epochs',            int,   200,             "Epoch number.")
 add_arg('class_num',         int,   100,             "Class number of dataset.")
 add_arg('trainset_num',      int,   50000,           "Images number of trainset.")
 add_arg('model_save_dir',    str,   'saved_models',  "The path to save model.")
-add_arg('use_multiprocess',  bool,  True,            "Whether use multiprocess reader.")
 add_arg('use_parallel',      bool,  False,           "Whether to use data parallel mode to train the model.")
 # yapf: enable
 
@@ -78,13 +79,9 @@ def create_reader(place, args):
         train_reader = fluid.contrib.reader.distributed_batch_reader(
             train_reader)
     train_loader = fluid.io.DataLoader.from_generator(
-        capacity=1024,
-        return_list=True,
-        use_multiprocess=args.use_multiprocess)
+        capacity=1024, return_list=True)
     valid_loader = fluid.io.DataLoader.from_generator(
-        capacity=1024,
-        return_list=True,
-        use_multiprocess=args.use_multiprocess)
+        capacity=1024, return_list=True)
     train_loader.set_batch_generator(train_reader, places=place)
     valid_loader.set_batch_generator(valid_reader, places=place)
     return train_loader, valid_loader
@@ -160,10 +157,19 @@ def main(args):
         train_loader, valid_loader = create_reader(place, args)
 
         # 2. Define neural network
-        models = [
-            MobileNetV1(class_dim=args.class_num),
-            MobileNetV1(class_dim=args.class_num)
-        ]
+        if args.models == "mobilenet-mobilenet":
+            models = [
+                MobileNetV1(class_dim=args.class_num),
+                MobileNetV1(class_dim=args.class_num)
+            ]
+        elif args.models == "mobilenet-resnet50":
+            models = [
+                MobileNetV1(class_dim=args.class_num),
+                ResNet(class_dim=args.class_num)
+            ]
+        else:
+            logger.info("You can define the model as you wish")
+            return
         optimizers = create_optimizer(models, args)
 
         # 3. Use PaddleSlim DML strategy
