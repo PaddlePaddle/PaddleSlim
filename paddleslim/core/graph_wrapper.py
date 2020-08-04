@@ -352,16 +352,6 @@ class GraphWrapper(object):
             ret += np.product(param.shape())
         return ret
 
-    def update_param_shape(self, scope):
-        """
-        Update the shape of parameters in the graph according to tensors in scope.
-        It is used after loading pruned parameters from file.
-        """
-        for param in self.all_parameters():
-            tensor_shape = np.array(scope.find_var(param.name()).get_tensor(
-            )).shape
-            param.set_shape(tensor_shape)
-
     def infer_shape(self):
         """
         Update the groups of convolution layer according to current filters.
