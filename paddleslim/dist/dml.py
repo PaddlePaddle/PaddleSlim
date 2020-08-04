@@ -20,9 +20,9 @@ import copy
 import paddle
 import paddle.fluid as fluid
 
+PADDLE_VERSION = 1.8
 try:
     from paddle.fluid.layers import log_softmax
-    PADDLE_VERSION = 1.8
 except:
     from paddle.nn import LogSoftmax
     PADDLE_VERSION = 2.0
