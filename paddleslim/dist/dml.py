@@ -33,7 +33,6 @@ class DML(fluid.dygraph.Layer):
                 fluid.dygraph.parallel.DataParallel(m, strategy)
                 for m in self.model
             ]
-        self.log_softmax = paddle.nn.LogSoftmax(axis=1)
 
     def full_name(self):
         return [m.full_name() for m in self.model]
@@ -70,7 +69,7 @@ class DML(fluid.dygraph.Layer):
             cur_kl_loss = 0
             for j in range(self.model_num):
                 if i != j:
-                    x = self.log_softmax(logits[i])
+                    x = fluid.layers.log_softmax(logits[i], axis=1)
                     y = fluid.layers.softmax(logits[j], axis=1)
                     cur_kl_loss += fluid.layers.kldiv_loss(
                         x, y, reduction='batchmean')
