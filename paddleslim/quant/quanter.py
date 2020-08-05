@@ -413,7 +413,7 @@ def quant_post_static(
 quant_post = quant_post_static
 
 
-def convert(program, place, config=None, scope=None, save_int8=False):
+def convert(program, place, config=None, scope=None):
     """
     convert quantized and well-trained ``program`` to final  quantized
     ``program``that can be used to  save ``inference model``.
@@ -470,13 +470,7 @@ def convert(program, place, config=None, scope=None, save_int8=False):
     freeze_pass.apply(test_graph)
     freezed_program = test_graph.to_program()
 
-    if save_int8:
-        convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
-        convert_int8_pass.apply(test_graph)
-        freezed_program_int8 = test_graph.to_program()
-        return freezed_program, freezed_program_int8
-    else:
-        return freezed_program
+    return freezed_program
 
 
 def quant_post_dynamic(model_dir,
