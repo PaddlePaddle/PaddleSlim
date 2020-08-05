@@ -140,9 +140,8 @@ class TestQuantAwareCase2(unittest.TestCase):
                     fetch_list=[avg_cost, acc_top1, acc_top5])
                 iter += 1
                 if iter % 100 == 0:
-                    print(
-                        'eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
-                        format(iter, cost, top1, top5))
+                    print('eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
+                          format(iter, cost, top1, top5))
                 result[0].append(cost)
                 result[1].append(top1)
                 result[2].append(top5)
@@ -158,12 +157,10 @@ class TestQuantAwareCase2(unittest.TestCase):
             'activation_quantize_type': 'moving_average_abs_max',
             'quantize_op_types': ['depthwise_conv2d', 'mul', 'conv2d'],
         }
-        quant_train_prog = quant_aware(
-            main_prog, place, config, for_test=False)
+        quant_train_prog = quant_aware(main_prog, place, config, for_test=False)
         quant_eval_prog = quant_aware(val_prog, place, config, for_test=True)
         train(quant_train_prog)
-        quant_eval_prog, int8_prog = convert(
-            quant_eval_prog, place, config, save_int8=True)
+        quant_eval_prog = convert(quant_eval_prog, place, config)
         top1_2, top5_2 = test(quant_eval_prog)
         # values before quantization and after quantization should be close
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
