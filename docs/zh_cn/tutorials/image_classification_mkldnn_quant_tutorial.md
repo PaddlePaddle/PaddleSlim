@@ -1,6 +1,6 @@
 # Intel CPU上部署量化模型教程
 
-在Intel Casecade Lake机器上（如：Intel(R) Xeon(R) Gold 6271），经过量化和DNNL加速，INT8模型在单线程上性能为FP32模型的3~3.7倍；在Intel SkyLake机器上（如：Intel(R) Xeon(R) Gold 6148），单线程性能为FP32模型的1.5倍，而精度仅有极小下降。图像分类量化的样例教程请参考[图像分类INT8模型在CPU优化部署和预测](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/mkldnn_quant/README.md)。自然语言处理模型的量化请参考[ERNIE INT8 模型精度与性能复现](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c%2B%2B/ernie/mkldnn)
+在Intel Casecade Lake机器上（如：Intel(R) Xeon(R) Gold 6271），经过量化和DNNL加速，INT8模型在单线程上性能为FP32模型的3~3.7倍；在Intel SkyLake机器上（如：Intel(R) Xeon(R) Gold 6148），单线程性能为FP32模型的1.5倍，而精度仅有极小下降。图像分类量化的样例教程请参考[图像分类INT8模型在CPU优化部署和预测](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/mkldnn_quant/)。自然语言处理模型的量化请参考[ERNIE INT8 模型精度与性能复现](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c%2B%2B/ernie/mkldnn)
 
 ## 图像分类INT8模型在 Xeon(R) 6271 上的精度和性能
 
