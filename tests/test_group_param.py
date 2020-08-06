@@ -42,6 +42,8 @@ class TestPrune(unittest.TestCase):
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
         groups = collect_convs(
             ["conv1_weights", "conv2_weights", "conv3_weights"], main_program)
+        while [] in groups:
+            groups.remove([])
         self.assertTrue(len(groups) == 2)
         self.assertTrue(len(groups[0]) == 18)
         self.assertTrue(len(groups[1]) == 6)
