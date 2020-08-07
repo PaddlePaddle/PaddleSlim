@@ -126,14 +126,14 @@ test(val_quant_program)
 
 ```python
 float_prog, int8_prog = slim.quant.convert(val_quant_program, exe.place, save_int8=True)
-target_vars = [float_prog.global_block().var(name) for name in outputs]
+target_vars = [float_prog.global_block().var(outputs[-1])]
 fluid.io.save_inference_model(dirname='./inference_model/float',
-        feeded_var_names=[var.name for var in inputs],
+        feeded_var_names=[inputs[0].name],
         target_vars=target_vars,
         executor=exe,
         main_program=float_prog)
 fluid.io.save_inference_model(dirname='./inference_model/int8',
-        feeded_var_names=[var.name for var in inputs],
+        feeded_var_names=[inputs[0].name],
         target_vars=target_vars,
         executor=exe,
         main_program=int8_prog)
