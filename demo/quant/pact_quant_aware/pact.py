@@ -16,8 +16,7 @@ def pact(x, name=None):
         initializer=fluid.initializer.ConstantInitializer(value=init_thres),
         regularizer=fluid.regularizer.L2Decay(0.0001),
         learning_rate=1)
-    u_param = helper.create_parameter(
-        attr=u_param_attr, shape=[1], dtype=dtype)
+    u_param = helper.create_parameter(attr=u_param_attr, shape=[1], dtype=dtype)
     x = fluid.layers.elementwise_sub(
         x, fluid.layers.relu(fluid.layers.elementwise_sub(x, u_param)))
     x = fluid.layers.elementwise_add(
@@ -27,4 +26,4 @@ def pact(x, name=None):
 
 
 def get_optimizer():
-    return fluid.optimizer.MomentumOptimizer(0.0001, 0.9)
+    return fluid.optimizer.MomentumOptimizer(0.01, 0.9)

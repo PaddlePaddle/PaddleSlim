@@ -179,7 +179,7 @@ python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/Mob
 
 使用PACT量化训练
 ```
-python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/MobileNetV3_large_x1_0_ssld_pretrained --checkpoint_dir ./output/MobileNetV3_large_x1_0 --num_epochs 30 --lr 0.0001 --use_pact True --batch_size 128 --lr_strategy=piecewise_decay --step_epochs 20 --l2_decay 1e-5
+python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/MobileNetV3_large_x1_0_ssld_pretrained --checkpoint_dir ./output/MobileNetV3_large_x1_0 --num_epochs 10 --lr 0.0001 --use_pact True --batch_size 128 --l2_decay 1e-5
 ```
 
 输出结果为
