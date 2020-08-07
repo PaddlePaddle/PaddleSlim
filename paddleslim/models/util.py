@@ -29,4 +29,4 @@ def image_classification(model, image_shape, class_num, use_gpu=False):
         exe = fluid.Executor(place)
         exe.run(fluid.default_startup_program())
     return exe, train_program, val_program, (image, label), (
-        acc_top1.name, acc_top5.name, avg_cost.name)
+        acc_top1.name, acc_top5.name, avg_cost.name, out.name)
