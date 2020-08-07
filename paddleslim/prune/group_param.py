@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from ..core import GraphWrapper
-from .prune_walker import conv2d as conv2d_walker
+from .prune_walker import PRUNE_WORKER
 
 __all__ = ["collect_convs"]
 
@@ -55,8 +55,9 @@ def collect_convs(params, graph, visited={}):
         pruned_params = []
         param = graph.var(param)
         conv_op = param.outputs()[0]
-        walker = conv2d_walker(
-            conv_op, pruned_params=pruned_params, visited=visited)
+
+        cls = PRUNE_WORKER.get(conv_op.type())
+        walker = cls(conv_op, pruned_params=pruned_params, visited=visited)
         walker.prune(param, pruned_axis=0, pruned_idx=[0])
         groups.append(pruned_params)
     visited = set()
