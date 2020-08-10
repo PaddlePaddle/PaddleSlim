@@ -53,8 +53,12 @@ add_arg('data',             str, "imagenet",
         "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,
         "Log period in batches.")
-add_arg('checkpoint_dir',         str, "output",
-        "checkpoint save dir")
+add_arg('checkpoint_dir',         str, None,
+        "checkpoint dir")
+add_arg('checkpoint_epoch',         int, None,
+        "checkpoint epoch")
+add_arg('output_dir',         str, "output/MobileNetV3_large_x1_0",
+        "model save dir")
 add_arg('use_pact',          bool, True,
         "Whether to use PACT or not.")
 
@@ -244,6 +248,7 @@ def compress(args):
                 compiled_train_prog,
                 feed=train_feeder.feed(data),
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
+
             end_time = time.time()
             loss_n = np.mean(loss_n)
             acc_top1_n = np.mean(acc_top1_n)
@@ -279,24 +284,37 @@ def compress(args):
     # train loop
     best_acc1 = 0.0
     best_epoch = 0
-    for i in range(args.num_epochs):
+
+    start_epoch = 0
+    if args.checkpoint_dir is not None:
+        ckpt_path = args.checkpoint_dir
+        assert args.checkpoint_epoch is not None, "checkpoint_epoch must be set"
+        start_epoch = args.checkpoint_epoch
+        fluid.io.load_persistables(
+            exe, dirname=args.checkpoint_dir, main_program=val_program)
+        start_step = start_epoch * int(
+            math.ceil(float(args.total_images) / args.batch_size))
+        v = fluid.global_scope().find_var('@LR_DECAY_COUNTER@').get_tensor()
+        v.set(np.array([start_step]).astype(np.float32), place)
+
+    for i in range(start_epoch, args.num_epochs):
         train(i, compiled_train_prog)
         acc1 = test(i, val_program)
         fluid.io.save_persistables(
             exe,
-            dirname=os.path.join(args.checkpoint_dir, str(i)),
+            dirname=os.path.join(args.output_dir, str(i)),
             main_program=val_program)
         if acc1 > best_acc1:
             best_acc1 = acc1
             best_epoch = i
             fluid.io.save_persistables(
                 exe,
-                dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+                dirname=os.path.join(args.output_dir, 'best_model'),
                 main_program=val_program)
-    if os.path.exists(os.path.join(args.checkpoint_dir, 'best_model')):
+    if os.path.exists(os.path.join(args.output_dir, 'best_model')):
         fluid.io.load_persistables(
             exe,
-            dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+            dirname=os.path.join(args.output_dir, 'best_model'),
             main_program=val_program)
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
