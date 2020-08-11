@@ -41,6 +41,9 @@ class TestPrune(unittest.TestCase):
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
 
+            conv7 = fluid.layers.conv2d_transpose(
+                input=conv6, num_filters=16, filter_size=2, stride=2)
+
         shapes = {}
         for param in main_program.global_block().all_parameters():
             shapes[param.name] = param.shape
@@ -53,8 +56,8 @@ class TestPrune(unittest.TestCase):
         main_program, _, _ = pruner.prune(
             main_program,
             scope,
-            params=["conv4_weights"],
-            ratios=[0.5],
+            params=["conv4_weights", "conv2d_transpose_0.w_0"],
+            ratios=[0.5, 0.6],
             place=place,
             lazy=False,
             only_graph=False,
@@ -67,11 +70,12 @@ class TestPrune(unittest.TestCase):
             "conv3_weights": (8, 4, 3, 3),
             "conv4_weights": (4, 8, 3, 3),
             "conv5_weights": (8, 4, 3, 3),
-            "conv6_weights": (8, 8, 3, 3)
+            "conv6_weights": (8, 8, 3, 3),
+            "conv2d_transpose_0.w_0": (8, 16, 2, 2),
         }
 
         for param in main_program.global_block().all_parameters():
-            if "weights" in param.name:
+            if param.name in shapes:
                 print("param: {}; param shape: {}".format(param.name,
                                                           param.shape))
                 self.assertTrue(param.shape == shapes[param.name])
