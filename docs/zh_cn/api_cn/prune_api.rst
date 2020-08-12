@@ -12,7 +12,8 @@ Pruner
 
 **参数：**
 
-- **criterion** - 评估一个卷积层内通道重要性所参考的指标。目前仅支持 ``l1_norm`` 。默认为 ``l1_norm`` 。
+- **criterion** - 评估一个卷积层内通道重要性所参考的指标。目前支持 ``l1_norm`` , ``bn_scale`` , ``geometry_median``  。默认为 ``l1_norm`` 。若该参数设为 ``bn_scale`` , 则表示剪枝算法将根据卷积层后连接的BatchNorm层的Scale参数的绝对值大小作为评估卷积层内通道重要性所参考的指标。若参数设为 ``geometry_median``, 则表示剪枝算法将基于卷基层内通道的几何中心作为评估卷积层内通道重要性参考指标。 在初始化Pruner()类实例时，若没有传入该参数，则表示Pruner()使用criterion默认参数值 ``l1_norm`` ；可以显示地传入criterion的值以改变剪枝算法的剪枝策略。
+- **idx_selector** - 基于卷积层内通道重要性分数，指示选择裁剪的卷积层内通道索引的策略。目前支持 ``default_idx_selector`` 和 ``optimal_threshold`` 两种选择策略。默认为 ``default_idx_selector`` 。 ``default_idx_selector`` 策略表示根据卷积层内通道的重要性分数进行选择要被裁剪的通道。 ``optimal_threshold`` 策略和 ``bn_scale`` 准则配合使用，即将 ``criterion`` 设置为 ``bn_scale`` ， 并将该参数设置为 ``optimal_threshold``,  表示根据卷积层后链接的BatchNorm层的Scale参数计算出要裁剪的最优裁剪阈值，并根据该阈值进行通道裁剪。在初始话Pruner()实例时，若没有传入该参数，则表示Pruner()使用idx_selector默认参数 ``default_idx_selector`` 。
 
 **返回：** 一个Pruner类的实例
 
@@ -21,8 +22,7 @@ Pruner
 .. code-block:: python
 
    from paddleslim.prune import Pruner
-   pruner = Pruner()
-
+   pruner = Pruner()       
 ..
  
    .. py:method:: paddleslim.prune.Pruner.prune(program, scope, params, ratios, place=None, lazy=False, only_graph=False, param_backup=False, param_shape_backup=False)
@@ -125,7 +125,16 @@ Pruner
       exe = fluid.Executor(place)
       scope = fluid.Scope()
       exe.run(startup_program, scope=scope)
+      # Initiallize Pruner() instance with default criterion and idx_selector
       pruner = Pruner()
+      # Set criterion
+      # criterion = 'geometry_median'
+      # pruner = Pruner(criterion=criterion)
+      # Set criterion and idx_selector
+      # criterion = 'bn_scale'
+      # idx_selector = 'optimal_threshold'
+      # pruner = Pruner(criterion=criterion, idx_selector=idx_selector)
+     
       main_program, _, _ = pruner.prune(
           main_program,
           scope,
@@ -261,7 +270,7 @@ sensitivity
    exe = fluid.Executor(place)
    exe.run(startup_program)
    
-   val_reader = paddle.batch(reader.test(), batch_size=128)
+   val_reader = paddle.fluid.io.batch(reader.test(), batch_size=128)
    val_feeder = feeder = fluid.DataFeeder(
            [image, label], place, program=main_program)
    
@@ -378,7 +387,7 @@ load_sensitivities
      }
   }
   sensitivities_file = "sensitive_api_demo.data"
-  with open(sensitivities_file, 'w') as f:
+  with open(sensitivities_file, 'wb') as f:
       pickle.dump(sen, f)
   sensitivities = load_sensitivities(sensitivities_file)
   print(sensitivities)

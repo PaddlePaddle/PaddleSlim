@@ -113,7 +113,7 @@ def test_mnist(model, tokens=None):
     acc_set = []
     avg_loss_set = []
     batch_size = 64
-    test_reader = paddle.batch(
+    test_reader = paddle.fluid.io.batch(
         paddle.dataset.mnist.test(), batch_size=batch_size, drop_last=True)
     for batch_id, data in enumerate(test_reader()):
         dy_x_data = np.array([x[0].reshape(1, 28, 28)
@@ -145,7 +145,7 @@ def train_mnist(args, model, tokens=None):
     adam = AdamOptimizer(
         learning_rate=0.001, parameter_list=model.parameters())
 
-    train_reader = paddle.batch(
+    train_reader = paddle.fluid.io.batch(
         paddle.dataset.mnist.train(), batch_size=BATCH_SIZE, drop_last=True)
     if args.use_data_parallel:
         train_reader = fluid.contrib.reader.distributed_batch_reader(

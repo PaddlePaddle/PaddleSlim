@@ -91,7 +91,7 @@ make html
 sphinx-apidoc -M -o api_en/ ../../paddleslim
 ```
 
-如果有新增`package`，请将其天剑到`./api_en/index_en.rst`文件中。
+如果有新增`package`，请将其添加到`./api_en/index_en.rst`文件中。
 
 
 ### 2.2.2 编译文档

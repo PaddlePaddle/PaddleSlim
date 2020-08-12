@@ -17,7 +17,7 @@ import paddle.fluid as fluid
 import paddle.fluid.core as core
 import paddle.fluid.dygraph_utils as dygraph_utils
 from paddle.fluid.data_feeder import check_variable_and_dtype
-from paddle.fluid.framework import in_dygraph_mode, _varbase_creator
+from paddle.fluid.framework import in_dygraph_mode
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose
 
 from .utils import compute_start_end, get_same_padding, convert_to_list
@@ -48,9 +48,8 @@ class BaseBlock(fluid.dygraph.Layer):
 
 class Block(BaseBlock):
     #def __init__(self, fn, candidate_config, transform_kernel=None, key=None):
-    def __init__(self, fn, transform_kernel=None, key=None):
+    def __init__(self, fn, key=None):
         super(Block, self).__init__(key)
-        #self.transform_kernel = transform_kernel
         self.fn = fn
         self.candidate_config = self.fn.candidate_config
 
@@ -183,20 +182,25 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                  dtype='float32'):
         ### NOTE: padding always is 0, add padding in forward because of kernel size is uncertain
         super(SuperConv2D, self).__init__(
-            num_channels, num_filters, filter_size, stride, 0, dilation,
-            groups, param_attr, bias_attr, use_cudnn, act, dtype)
+            num_channels, num_filters, filter_size, stride, 0, dilation, groups,
+            param_attr, bias_attr, use_cudnn, act, dtype)
 
+        print(candidate_config)
+        for k, v in candidate_config.items():
+            candidate_config[k] = list(set(v))
         self.candidate_config = candidate_config
         self.filter_size_list = candidate_config[
             'kernel_size'] if 'kernel_size' in candidate_config else self._filter_size
-        self.in_channel_list = candidate_config[
-            'in_channel_list'] if 'in_channel_list' in candidate_config else self._num_channels
-        self.out_channel_list = candidate_config[
-            'out_channel_list'] if 'in_channel_list' in candidate_config else self._num_filters
+
+        #self.in_channel_list = candidate_config[
+        #    'in_channel_list'] if 'in_channel_list' in candidate_config else self._num_channels
+        #self.out_channel_list = candidate_config[
+        #    'out_channel_list'] if 'out_channel_list' in candidate_config else self._num_filters
         self.transform_kernel = transform_kernel
-        self.ks_set = list(set(self.filter_size_list))
+        self.ks_set = self.filter_size_list
         self.ks_set.sort()
         if self.transform_kernel is not None:
+            scale_param = dict()
             ### create parameter to transform kernel
             for i in range(len(self.ks_set) - 1):
                 ks_small = self.ks_set[i]
@@ -205,11 +209,11 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                 ks_p = ks_small**2
                 scale_param[param_name] = self.create_parameter(
                     attr=fluid.ParamAttr(
-                        name=param_name,
+                        name=self._full_name + param_name,
                         initializer=fluid.initializer.NumpyArrayInitializer(
-                            np.eye(ks_p)),
-                        shape=(ks_p, ks_p),
-                        dtype='float32'))
+                            np.eye(ks_p))),
+                    shape=(ks_p, ks_p),
+                    dtype=self._dtype)
 
             for name, param in scale_param.items():
                 setattr(self, name, param)
@@ -230,40 +234,42 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                 start, end = compute_start_end(src_ks, target_ks)
                 _input_filter = start_filter[:, :, start:end, start:end]
                 _input_filter = fluid.layers.reshape(
-                    _input_filter.shape[0], _input_filter.shape[1], -1)
-                _input_filter = fluid.layers.reshape(-1,
-                                                     _input_filter.shape[2])
-                #matmul_out = _varbase_creator(dtype=_input_filter.dtype)
+                    _input_filter,
+                    shape=[_input_filter.shape[0], _input_filter.shape[1], -1])
+                _input_filter = fluid.layers.reshape(
+                    _input_filter, shape=[-1, _input_filter.shape[2]])
                 core.ops.matmul(_input_filter,
                                 self.__getattr__('%dto%d_matrix' %
                                                  (src_ks, target_ks)),
                                 _input_filter, 'transpose_X', False,
                                 'transpose_Y', False, "alpha", 1)
-                _input_filter = fluid.layers.reshape(_input_filter.shape[0],
-                                                     _input_filter.shape[1],
-                                                     target_ks**2)
-                _input_filter = fluid.layers.reshape(_input_filter.shape[0],
-                                                     _input_filter.shape[1],
-                                                     target_ks, target_ks)
+                _input_filter = fluid.layers.reshape(
+                    _input_filter,
+                    shape=[filters.shape[0], filters.shape[1], target_ks**2])
+                _input_filter = fluid.layers.reshape(
+                    _input_filter,
+                    shape=[
+                        filters.shape[0], filters.shape[1], target_ks, target_ks
+                    ])
                 start_filter = _input_filter
             filters = start_filter
         return filters
 
-    def forward(self, input, kernel_size=None, out_nc=None):  #config=None):
+    def forward(self, input, kernel_size=None, expand_stdio=None, channel=None):
         in_nc = int(input.shape[1])
-        out_nc = self._num_filters if out_nc == None else out_nc
-        ks = self._filter_size if kernel_size == None else kernel_size
-        #out_nc = self.config['channel'] if 'channel' in config else  self._num_filters
-        #ks = self.config['kernel_size'] if 'kernel_size' in config else self._filter_size
+        assert (
+            expand_stdio == None or channel == None
+        ), "expand_stdio and channel CANNOT be NOT None at the same time."
+        if expand_stdio != None:
+            out_nc = expand_stdio * self._num_filters
+        elif channel != None:
+            out_nc = channel
+        else:
+            out_nc = self._num_filters
 
-        ### NOTE: assert in Block
-        #assert out_nc <= max(self.out_channel_list), \
-        #      "output channel must less than or equal to the max candidate output channel"
-        #assert ks <= max(self.filter_size_list), \
-        #      "kernel size must less than or equal to the max candidate kernel size"
+        ks = self._filter_size if kernel_size == None else kernel_size
 
         weight = self.get_active_filter(in_nc, out_nc, ks)
-
         padding = convert_to_list(get_same_padding(ks), 2)
 
         if in_dygraph_mode():
@@ -461,10 +467,10 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         weight = self.weight[:in_nc, :out_nc, :, :]
         if in_dygraph_mode():
             op = getattr(core.ops, self._op_type)
-            out = op(input, weight, 'output_size', self._output_size,
-                     'strides', self._stride, 'paddings', self._padding,
-                     'dilations', self._dilation, 'groups', self._groups,
-                     'use_cudnn', self._use_cudnn)
+            out = op(input, weight, 'output_size', self._output_size, 'strides',
+                     self._stride, 'paddings', self._padding, 'dilations',
+                     self._dilation, 'groups', self._groups, 'use_cudnn',
+                     self._use_cudnn)
             pre_bias = out
             if self.bias is not None:
                 bias = self.bias[:out_nc]
@@ -641,9 +647,8 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
             elif self.conv[2]._l_type == 'depthwise_conv2d':
                 attrs = ('strides', self.conv[2]._stride, 'paddings',
                          self.conv[2]._padding, 'dilations',
-                         self.conv[2]._dilation, 'groups',
-                         self.conv[2]._groups, 'use_cudnn',
-                         self.conv[2]._use_cudnn)
+                         self.conv[2]._dilation, 'groups', self.conv[2]._groups,
+                         'use_cudnn', self.conv[2]._use_cudnn)
                 out = core.ops.depthwise_conv2d(norm_out, weight, *attrs)
             else:
                 raise ValueError("conv type error")

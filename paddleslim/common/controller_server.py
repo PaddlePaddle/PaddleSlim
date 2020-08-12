@@ -62,7 +62,8 @@ class ControllerServer(object):
         self._socket_server.listen(self._max_client_num)
         self._port = self._socket_server.getsockname()[1]
         self._ip = self._socket_server.getsockname()[0]
-        _logger.info("ControllerServer - listen on: [{}:{}]".format(
+        _logger.info("ControllerServer Start!!!")
+        _logger.debug("ControllerServer - listen on: [{}:{}]".format(
             self._ip, self._port))
         thread = Thread(target=self.run)
         thread.setDaemon(True)

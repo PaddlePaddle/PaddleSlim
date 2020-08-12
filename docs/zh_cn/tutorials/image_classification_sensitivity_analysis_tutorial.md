@@ -44,9 +44,9 @@ place = fluid.CUDAPlace(0)
 
 ```python
 import paddle.dataset.mnist as reader
-train_reader = paddle.batch(
+train_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
-test_reader = paddle.batch(
+test_reader = paddle.fluid.io.batch(
         reader.test(), batch_size=128, drop_last=True)
 data_feeder = fluid.DataFeeder(inputs, place)
 ```

@@ -27,7 +27,7 @@ import paddleslim as slim
 选择`ResNet50`作为teacher对`MobileNet`结构的student进行蒸馏训练。
 
 ```python
-model = models.__dict__['MobileNet']()
+model = slim.models.MobileNet()
 student_program = fluid.Program()
 student_startup = fluid.Program()
 with fluid.program_guard(student_program, student_startup):
@@ -44,7 +44,7 @@ with fluid.program_guard(student_program, student_startup):
 
 
 ```python
-teacher_model = models.__dict__['ResNet50']()
+model = slim.models.ResNet50()
 teacher_program = fluid.Program()
 teacher_startup = fluid.Program()
 with fluid.program_guard(teacher_program, teacher_startup):
@@ -101,7 +101,7 @@ exe.run(student_startup)
 为了快速执行该示例，我们选取简单的MNIST数据，Paddle框架的`paddle.dataset.mnist`包定义了MNIST数据的下载和读取。 代码如下：
 
 ```python
-train_reader = paddle.batch(
+train_reader = paddle.fluid.io.batch(
     paddle.dataset.mnist.train(), batch_size=128, drop_last=True)
 train_feeder = fluid.DataFeeder(['image', 'label'], fluid.CPUPlace(), student_program)
 ```

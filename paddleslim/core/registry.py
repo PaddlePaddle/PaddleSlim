@@ -25,9 +25,6 @@ class Registry(object):
         return self._module_dict.get(key, None)
 
     def _register_module(self, module_class):
-        if not inspect.isclass(module_class):
-            raise TypeError('module must be a class, but receive {}.'.format(
-                type(module_class)))
         module_name = module_class.__name__
         if module_name in self._module_dict:
             raise KeyError('{} is already registered in {}.'.format(

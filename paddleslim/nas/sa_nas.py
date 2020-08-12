@@ -118,9 +118,9 @@ class SANAS(object):
         self._key = str(self._configs)
         self._current_tokens = init_tokens
 
-        server_ip, server_port = server_addr
-        if server_ip == None or server_ip == "":
-            server_ip = self._get_host_ip()
+        self._server_ip, self._server_port = server_addr
+        if self._server_ip == None or self._server_ip == "":
+            self._server_ip = self._get_host_ip()
 
         factory = SearchSpaceFactory()
         self._search_space = factory.get_search_space(configs)
@@ -171,7 +171,7 @@ class SANAS(object):
             max_client_num = 100
             self._controller_server = ControllerServer(
                 controller=self._controller,
-                address=(server_ip, server_port),
+                address=(self._server_ip, self._server_port),
                 max_client_num=max_client_num,
                 search_steps=search_steps,
                 key=self._key)
@@ -179,8 +179,8 @@ class SANAS(object):
             server_port = self._controller_server.port()
 
         self._controller_client = ControllerClient(
-            server_ip,
-            server_port,
+            self._server_ip,
+            self._server_port,
             key=self._key,
             client_name=self._client_name)
 
@@ -190,7 +190,10 @@ class SANAS(object):
             self._iter = 0
 
     def _get_host_ip(self):
-        return socket.gethostbyname(socket.gethostname())
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except:
+            return socket.gethostbyname('localhost')
 
     def tokens2arch(self, tokens):
         """

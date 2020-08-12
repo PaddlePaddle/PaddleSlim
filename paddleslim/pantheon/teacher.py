@@ -35,7 +35,11 @@ from paddleslim.pantheon.utils import convert_dtype, EndSignal, SyncSignal, Star
 
 __all__ = ["Teacher"]
 
-knowledge_queue = Queue.Queue(100)
+# Num of threads for post-processing, including generating and transferring 
+# knowledge data
+num_postprocess_threads = int(os.getenv("NUM_POSTPROCESS_THREADS", 8))
+knowledge_queues = [Queue.Queue(100) for i in range(num_postprocess_threads)]
+
 t2s_queue = Queue.Queue(100)
 s2t_queue = Queue.Queue(100)
 cmd_queue = Queue.Queue(5)
@@ -75,6 +79,90 @@ class MixedDataReader(object):
         self._tail_data = []
 
 
+class WorkerParallel(object):
+    """
+    Process data from the input queue by given worker in parallel, and put the 
+    result into output queue in order.
+
+    Args:
+        num_postprocess_threads (int): Number of threads for data processing.
+        in_queue (object): The input queue.
+        out_queue (object|list): The output queue(s). Its length should be equal 
+            to arg 'num_postprocess_threads' when it is a list.
+    """
+
+    def __init__(self, num_postprocess_threads, in_queue, out_queue):
+        self._num_postprocess_threads = num_postprocess_threads
+        self._in_queue = in_queue
+        self._local_in_queues = [
+            Queue.Queue(5) for i in range(num_postprocess_threads)
+        ]
+        if isinstance(out_queue, list):
+            if len(out_queue) != num_postprocess_threads:
+                raise ValueError("When out_queue is a list, its length must "
+                                 "equal to num_postprocess_threads!")
+            self._local_out_queues = out_queue
+            self._out_queue = None
+        else:
+            self._local_out_queues = [
+                Queue.Queue(5) for i in range(num_postprocess_threads)
+            ]
+            self._out_queue = out_queue
+
+    def _distribute(self):
+        def func():
+            idx = 0
+            while True:
+                data = self._in_queue.get()
+                self._in_queue.task_done()
+                if not isinstance(data, EndSignal):
+                    self._local_in_queues[
+                        idx % self._num_postprocess_threads].put(data)
+                    idx += 1
+                else:
+                    for q in self._local_in_queues:
+                        q.put(EndSignal())
+                    break
+
+        t = Thread(target=func)
+        t.daemon = True
+        t.start()
+
+    def _run(self, worker, args):
+        for i in range(self._num_postprocess_threads):
+            t = Thread(
+                target=worker,
+                args=(self._local_in_queues[i], self._local_out_queues[i]) +
+                args)
+            t.daemon = True
+            t.start()
+
+    def _gather(self):
+        def func():
+            end_received = False
+            while True:
+                for idx, q in enumerate(self._local_out_queues):
+                    data = q.get()
+                    q.task_done()
+                    if isinstance(data, EndSignal):
+                        end_received = True
+                        if idx > 0:
+                            continue
+                    self._out_queue.put(data)
+                if end_received:
+                    break
+
+        t = Thread(target=func)
+        t.daemon = True
+        t.start()
+
+    def __call__(self, worker, args):
+        self._distribute()
+        self._run(worker, args)
+        if self._out_queue:
+            self._gather()
+
+
 class Teacher(object):
     """
     The class defined for the teacher model. Generate knowledge data and 
@@ -102,9 +190,12 @@ class Teacher(object):
         self._started = False
 
     def _start_manager(self):
-        def get_knowledge_queue():
-            global knowledge_queue
-            return knowledge_queue
+        def get_knowledge_queue(idx):
+            global knowledge_queues
+            if idx < len(knowledge_queues):
+                return knowledge_queues[idx]
+            else:
+                return None
 
         def get_s2t_queue():
             global s2t_queue
@@ -141,17 +232,22 @@ class Teacher(object):
         self._started = True
         self._manager = self._start_manager() if self._out_port else None
         if self._manager:
-            self._knowledge_queue = self._manager.get_knowledge_queue()
+            self._knowledge_queues = [
+                self._manager.get_knowledge_queue(i)
+                for i in range(num_postprocess_threads)
+            ]
+            print("Num of knowledge queues: {}".format(
+                num_postprocess_threads))
             self._s2t_queue = self._manager.get_s2t_queue()
             self._t2s_queue = self._manager.get_t2s_queue()
             self._cmd_queue = self._manager.get_cmd_queue()
         else:
-            self._knowledge_queue = None
+            self._knowledge_queues = None
             self._s2t_queue = None
             self._t2s_queue = None
             self._cmd_queue = None
 
-        self._out_file = open(self._out_path, "w") if self._out_path else None
+        self._out_file = open(self._out_path, "wb") if self._out_path else None
         if self._out_file:
             return
 
@@ -173,8 +269,9 @@ class Teacher(object):
 
         while True:
             if self._sync_required:
-                self._knowledge_queue.put(SyncSignal())
-                self._knowledge_queue.join()
+                for q in self._knowledge_queues:
+                    q.put(SyncSignal())
+                    q.join()
                 self._sync_required = False
                 break
 
@@ -231,7 +328,7 @@ class Teacher(object):
                 "The knowledge data should be a dict or OrderedDict!")
 
         knowledge_desc = {}
-        for name, value in knowledge.items():
+        for name, value in list(knowledge.items()):
             knowledge_desc[name] = {
                 "shape": [-1] + list(value.shape[1:]),
                 "dtype": str(value.dtype),
@@ -256,6 +353,7 @@ class Teacher(object):
                                 reader_config,
                                 exe,
                                 buf_size=10,
+                                use_fp16=False,
                                 times=1):
         """
         Start the knowledge service to generate and transfer knowledge data.
@@ -291,10 +389,16 @@ class Teacher(object):
             exe (fluid.Executor): The executor to run the input program.
             buf_size (int): The size of buffers for data reader and knowledge 
                             writer on each device. 
+            use_fp16 (bool): Whether to transfer/store knowledge data in float16 
+                         if their data type is float32/float64. In the offline 
+                         mode, it will reduce the size of dumped knowledge file, 
+                         and in the online mode, it will speedup the online 
+                         transfer, with the sacrifice in precision . Default False.
             times (int): The maximum repeated serving times. Default 1. Whenever 
                          the public method 'get_knowledge_generator()' in Student 
                          object called once, the serving times will be added one, 
-                         until reaching the maximum and ending the service.
+                         until reaching the maximum and ending the service. Only 
+                         valid in online mode, and will be ignored in offline mode.
         """
         if not self._started:
             raise ValueError("The method start() should be called first!")
@@ -332,6 +436,8 @@ class Teacher(object):
             raise ValueError("Input argument should be a fluid Executor!")
         self._exe = exe
 
+        self._use_fp16 = use_fp16
+
         if not buf_size > 0:
             raise ValueError("The buffer size should be positive!")
         self._buf_size = buf_size
@@ -339,9 +445,12 @@ class Teacher(object):
         if not times > 0:
             raise ValueError("Repeated serving times should be positive!")
         self._times = times
+        if self._times > 1 and self._out_file:
+            self._times = 1
+            print("WARNING: args 'times' will be ignored in offline mode")
 
         desc = {}
-        for name, var in schema.items():
+        for name, var in list(schema.items()):
             if not isinstance(var, fluid.framework.Variable):
                 raise ValueError(
                     "The member of schema must be fluid Variable.")
@@ -398,27 +507,75 @@ class Teacher(object):
                 "generator type, which should be one of 'sample_generator', "
                 "'sample_list_generator', and 'batch_generator'.")
 
-        def writer(buf_queue, schema_keys):
-            samples_sent, batches_sent = 0, 0
-            while True:
-                outputs = buf_queue.get()
-                buf_queue.task_done()
-                if not isinstance(outputs, EndSignal):
-                    batch_samples = dict(zip(schema_keys, outputs))
-                    if self._knowledge_queue:
-                        self._knowledge_queue.put(batch_samples)
-                    if self._out_file:
-                        self._out_file.write(pickle.dumps(batch_samples))
-                else:
-                    if self._knowledge_queue:
-                        self._knowledge_queue.put(EndSignal())
+        def cast2fp16(know):
+            for k, v in list(know.items()):
+                if not isinstance(v, np.ndarray):
+                    break
+                if v.dtype == np.float32 or v.dtype == np.float64:
+                    v = v.astype("float16")
+                    know[k] = v
+            return know
 
-        # Asynchronous output
-        out_buf_queue = Queue.Queue(self._buf_size)
-        schema_keys, schema_vars = zip(*self._schema.items())
-        out_thread = Thread(target=writer, args=(out_buf_queue, schema_keys))
-        out_thread.daemon = True
-        out_thread.start()
+        feed_var_names = [var.name for var in self._feed_list]
+        schema_in_feed, schema_in_fetch = {}, {}
+        for k, v in list(self._schema.items()):
+            if k in feed_var_names:
+                schema_in_feed[k] = v
+            else:
+                schema_in_fetch[k] = v
+        schema_in_fetch_keys, schema_in_fetch_vars = zip(
+            *list(schema_in_fetch.items()))
+
+        def know_maker(in_queue, out_queue, use_fp16):
+            while True:
+                data = in_queue.get()
+                in_queue.task_done()
+                if isinstance(data, tuple):
+                    dev_batches, outputs = data
+                    know = {}
+                    for k in schema_in_feed.keys():
+                        batch_know = [
+                            np.array(batch[k]) for batch in dev_batches
+                        ]
+                        know[k] = np.concatenate(batch_know)
+                    know.update(dict(zip(schema_in_fetch_keys, outputs)))
+                    if use_fp16:
+                        know = cast2fp16(know)
+                    out_queue.put(know)
+                else:
+                    # forward other types of data directly (maybe knowledge desc or EndSignal)
+                    out_queue.put(data)
+                    if isinstance(data, EndSignal):
+                        break
+
+        know_make_queue = Queue.Queue(self._buf_size)
+        if self._out_file:
+            # For offline dump, write the knowledge description to the head of file
+            self._out_file.write(pickle.dumps(self._knowledge_desc))
+            print("output path: %s" % self._out_path)
+            offline_write_queue = Queue.Queue(self._buf_size)
+
+            def offline_write(queue):
+                while True:
+                    know = queue.get()
+                    queue.task_done()
+                    if not isinstance(know, EndSignal):
+                        self._out_file.write(pickle.dumps(know))
+                    else:
+                        # should close file in child thread to wait for all 
+                        # writing finished
+                        self._out_file.close()
+
+            t = Thread(target=offline_write, args=(offline_write_queue, ))
+            t.daemon = True
+            t.start()
+            make_knowledge = WorkerParallel(
+                num_postprocess_threads, know_make_queue, offline_write_queue)
+
+        if self._knowledge_queues:
+            make_knowledge = WorkerParallel(num_postprocess_threads,
+                                            know_make_queue,
+                                            self._knowledge_queues)
 
         compiled_program = fluid.compiler.CompiledProgram(
             self._program).with_data_parallel()
@@ -426,51 +583,55 @@ class Teacher(object):
         print("Knowledge description {}".format(self._knowledge_desc))
         print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) +
               "  Teacher begins to serve ...")
-        # For offline dump, write the knowledge description to the head of file
-        if self._out_file:
-            self._out_file.write(pickle.dumps(self._knowledge_desc))
-            print("output path: %s" % self._out_path)
 
         data_reader = MixedDataReader(data_loader, dev_count)
-        # For online mode, send knowledge description every time
         for repeated in range(self._times):
-            if self._knowledge_queue:
+            make_knowledge(worker=know_maker, args=(self._use_fp16, ))
+            if self._knowledge_queues:
                 # wait for the accessing of knowledge desc and data
                 while True:
                     if self._sync_required:
-                        self._knowledge_queue.put(SyncSignal())
-                        self._knowledge_queue.put(self._knowledge_desc)
+                        for q in self._knowledge_queues:
+                            q.put(SyncSignal())
+                        # For online mode, send knowledge description every sync
+                        know_make_queue.put(self._knowledge_desc)
                         self._sync_required = False
                     if self._data_required:
                         self._data_required = False
                         break
-                self._knowledge_queue.join()
+                for q in self._knowledge_queues:
+                    q.join()
 
             print("No.{} time serving ... ".format(repeated))
             num_batches_sent = 0
-            for dev_batches in data_reader.multi_dev_generator():
+            for index, dev_batches in enumerate(
+                    data_reader.multi_dev_generator()):
                 if self._sync_required:
                     break
                 outputs = self._exe.run(compiled_program,
                                         feed=dev_batches,
-                                        fetch_list=schema_vars)
-                out_buf_queue.put(outputs)
+                                        fetch_list=schema_in_fetch_vars)
+                know_make_queue.put((dev_batches, outputs))
+
                 num_batches_sent += dev_count
                 if num_batches_sent % (100 * dev_count) == 0:
                     log = "Processed {} batch samples.".format(
                         num_batches_sent)
-                    if self._knowledge_queue:
-                        log += " Knowledge queue size {}.".format(
-                            self._knowledge_queue.qsize())
+                    if self._knowledge_queues:
+                        qsize = 0
+                        for q in self._knowledge_queues:
+                            qsize += q.qsize()
+                        log += " Knowledge queue size {}.".format(qsize)
                     print(log)
 
-            outputs = []
+            dev_batches, outputs = [], []
             for index, batch in enumerate(data_reader.tail_generator()):
                 if self._sync_required:
                     break
+                dev_batches.append(batch)
                 output = self._exe.run(self._program,
                                        feed=batch,
-                                       fetch_list=schema_vars)
+                                       fetch_list=schema_in_fetch_vars)
                 if outputs:
                     outputs = [
                         np.concatenate(
@@ -479,23 +640,23 @@ class Teacher(object):
                     ]
                 else:
                     outputs = copy.deepcopy(output)
-            if outputs:
-                out_buf_queue.put(outputs)
+            if dev_batches or outputs:
+                know_make_queue.put((dev_batches, outputs))
                 num_batches_sent += (index + 1)
 
             print("Processed {} batch samples in total.".format(
                 num_batches_sent))
+            know_make_queue.put(EndSignal())
+            know_make_queue.join()
 
-            out_buf_queue.put(EndSignal())
-            out_buf_queue.join()
-
-        if self._knowledge_queue:
-            self._knowledge_queue.join()
+            if self._knowledge_queues:
+                for q in self._knowledge_queues:
+                    q.join()
+            if self._out_file:
+                offline_write_queue.join()
         print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) +
               "  Teacher ends serving.")
 
     def __del__(self):
         if self._manager:
             self._manager.shutdown()
-        if self._out_file:
-            self._out_file.close()

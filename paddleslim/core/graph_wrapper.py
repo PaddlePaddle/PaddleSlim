@@ -46,7 +46,7 @@ class VarWrapper(object):
         """
         Overwrite this function for ...in... syntax in python.
         """
-        return self._var.name == v._var.name
+        return (v is not None) and self._var.name == v._var.name
 
     def name(self):
         """
@@ -166,9 +166,7 @@ class OpWrapper(object):
         """
         Get all the varibales by the output name.
         """
-        return [
-            self._graph.var(var_name) for var_name in self._op.output(name)
-        ]
+        return [self._graph.var(var_name) for var_name in self._op.output(name)]
 
     def set_attr(self, key, value):
         """
@@ -354,16 +352,6 @@ class GraphWrapper(object):
             ret += np.product(param.shape())
         return ret
 
-    def update_param_shape(self, scope):
-        """
-        Update the shape of parameters in the graph according to tensors in scope.
-        It is used after loading pruned parameters from file.
-        """
-        for param in self.all_parameters():
-            tensor_shape = np.array(
-                scope.find_var(param.name()).get_tensor()).shape
-            param.set_shape(tensor_shape)
-
     def infer_shape(self):
         """
         Update the groups of convolution layer according to current filters.
@@ -375,6 +363,6 @@ class GraphWrapper(object):
 
     def update_groups_of_conv(self):
         for op in self.ops():
-            if op.type() == 'depthwise_conv2d' or op.type(
-            ) == 'depthwise_conv2d_grad':
+            if 'conv2d' in op.type() and op.attr('groups') >= op.inputs(
+                    'Filter')[0].shape()[0]:
                 op.set_attr('groups', op.inputs('Filter')[0].shape()[0])

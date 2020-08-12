@@ -1,6 +1,6 @@
 # 图像分类模型量化训练-快速开始
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[量化训练接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/docs/api/quantization_api.md)。 该示例包含以下步骤：
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[量化训练接口](../api_cn/quantization_api.html)。 该示例包含以下步骤：
 
 1. 导入依赖
 2. 构建模型
@@ -42,9 +42,9 @@ exe, train_program, val_program, inputs, outputs = \
 
 ```python
 import paddle.dataset.mnist as reader
-train_reader = paddle.batch(
+train_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
-test_reader = paddle.batch(
+test_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
 train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
 ```
@@ -61,7 +61,7 @@ def train(prog):
         if iter % 100 == 0:
             print('train iter={}, top1={}, top5={}, loss={}'.format(iter, acc1.mean(), acc5.mean(), loss.mean()))
         iter += 1
-        
+
 def test(prog):
     iter = 0
     res = [[], []]
@@ -93,7 +93,7 @@ test(val_program)
 
 ## 4. 量化
 
-按照[默认配置](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#_1)在``train_program``和``val_program``中加入量化和反量化op.
+按照[默认配置](https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#id2)在``train_program``和``val_program``中加入量化和反量化op.
 
 
 ```python
@@ -121,19 +121,19 @@ test(val_quant_program)
 
 ## 6. 保存量化后的模型
 
-在``4. 量化``中使用接口``slim.quant.quant_aware``接口得到的模型只适合训练时使用，为了得到最终使用时的模型，需要使用[slim.quant.convert](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#convert)接口，然后使用[fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/io_cn/save_inference_model_cn.html#save-inference-model)保存模型。``float_prog``的参数数据类型是float32，但是数据范围是int8, 保存之后可使用fluid或者paddle-lite加载使用，paddle-lite在使用时，会先将类型转换为int8。``int8_prog``的参数数据类型是int8, 保存后可看到量化后模型大小，不可加载使用。
+在``4. 量化``中使用接口``slim.quant.quant_aware``接口得到的模型只适合训练时使用，为了得到最终使用时的模型，需要使用[slim.quant.convert](https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#convert)接口，然后使用[fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/io_cn/save_inference_model_cn.html#save-inference-model)保存模型。``float_prog``的参数数据类型是float32，但是数据范围是int8, 保存之后可使用fluid或者paddle-lite加载使用，paddle-lite在使用时，会先将类型转换为int8。``int8_prog``的参数数据类型是int8, 保存后可看到量化后模型大小，不可加载使用。
 
 
 ```python
 float_prog, int8_prog = slim.quant.convert(val_quant_program, exe.place, save_int8=True)
-target_vars = [float_prog.global_block().var(name) for name in outputs]
+target_vars = [float_prog.global_block().var(outputs[-1])]
 fluid.io.save_inference_model(dirname='./inference_model/float',
-        feeded_var_names=[var.name for var in inputs],
+        feeded_var_names=[inputs[0].name],
         target_vars=target_vars,
         executor=exe,
         main_program=float_prog)
 fluid.io.save_inference_model(dirname='./inference_model/int8',
-        feeded_var_names=[var.name for var in inputs],
+        feeded_var_names=[inputs[0].name],
         target_vars=target_vars,
         executor=exe,
         main_program=int8_prog)

@@ -13,11 +13,15 @@
 # limitations under the License.
 
 import logging
+import sys
 import numpy as np
+from functools import reduce
 import paddle.fluid as fluid
 import copy
 from ..core import VarWrapper, OpWrapper, GraphWrapper
-from .prune_walker import conv2d as conv2d_walker
+from .group_param import collect_convs
+from .criterion import CRITERION
+from .idx_selector import IDX_SELECTOR
 from ..common import get_logger
 
 __all__ = ["Pruner"]
@@ -29,12 +33,24 @@ class Pruner():
     """The pruner used to prune channels of convolution.
 
     Args:
-        criterion(str): the criterion used to sort channels for pruning. It only supports 'l1_norm' currently.
+        criterion(str|function): the criterion used to sort channels for pruning.
+        idx_selector(str|function): 
 
     """
 
-    def __init__(self, criterion="l1_norm"):
-        self.criterion = criterion
+    def __init__(self,
+                 criterion="l1_norm",
+                 idx_selector="default_idx_selector"):
+        if isinstance(criterion, str):
+            self.criterion = CRITERION.get(criterion)
+        else:
+            self.criterion = criterion
+        if isinstance(idx_selector, str):
+            self.idx_selector = IDX_SELECTOR.get(idx_selector)
+        else:
+            self.idx_selector = idx_selector
+
+        self.pruned_weights = False
 
     def prune(self,
               program,
@@ -74,26 +90,44 @@ class Pruner():
         visited = {}
         pruned_params = []
         for param, ratio in zip(params, ratios):
-            if only_graph:
+            _logger.info("pruning: {}".format(param))
+            if graph.var(param) is None:
+                _logger.warn(
+                    "Variable[{}] to be pruned is not in current graph.".
+                    format(param))
+                continue
+            group = collect_convs([param], graph,
+                                  visited)[0]  # [(name, axis, pruned_idx)]
+            if group is None or len(group) == 0:
+                continue
+            if only_graph and self.idx_selector.__name__ == "default_idx_selector":
+
                 param_v = graph.var(param)
                 pruned_num = int(round(param_v.shape()[0] * ratio))
                 pruned_idx = [0] * pruned_num
+                for name, axis, _ in group:
+                    pruned_params.append((name, axis, pruned_idx))
+
             else:
-                param_t = np.array(scope.find_var(param).get_tensor())
-                pruned_idx = self._cal_pruned_idx(param_t, ratio, axis=0)
-            param = graph.var(param)
-            conv_op = param.outputs()[0]
-            walker = conv2d_walker(
-                conv_op, pruned_params=pruned_params, visited=visited)
-            walker.prune(param, pruned_axis=0, pruned_idx=pruned_idx)
+                assert ((not self.pruned_weights),
+                        "The weights have been pruned once.")
+                group_values = []
+                for name, axis, pruned_idx in group:
+                    values = np.array(scope.find_var(name).get_tensor())
+                    group_values.append((name, values, axis, pruned_idx))
+
+                scores = self.criterion(
+                    group_values, graph)  # [(name, axis, score, pruned_idx)]
+
+                pruned_params.extend(self.idx_selector(scores, ratio))
 
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
-            if param.name() not in merge_pruned_params:
-                merge_pruned_params[param.name()] = {}
-            if pruned_axis not in merge_pruned_params[param.name()]:
-                merge_pruned_params[param.name()][pruned_axis] = []
-            merge_pruned_params[param.name()][pruned_axis].append(pruned_idx)
+            if param not in merge_pruned_params:
+                merge_pruned_params[param] = {}
+            if pruned_axis not in merge_pruned_params[param]:
+                merge_pruned_params[param][pruned_axis] = []
+            merge_pruned_params[param][pruned_axis].append(pruned_idx)
 
         for param_name in merge_pruned_params:
             for pruned_axis in merge_pruned_params[param_name]:
@@ -101,8 +135,9 @@ class Pruner():
                     pruned_axis])
                 param = graph.var(param_name)
                 if not lazy:
-                    _logger.debug("{}\t{}\t{}".format(param.name(
-                    ), pruned_axis, len(pruned_idx)))
+                    _logger.debug("{}\t{}\t{}\t{}".format(
+                        param.name(), pruned_axis,
+                        param.shape()[pruned_axis], len(pruned_idx)))
                     if param_shape_backup is not None:
                         origin_shape = copy.deepcopy(param.shape())
                         param_shape_backup[param.name()] = origin_shape
@@ -128,29 +163,8 @@ class Pruner():
                     param_t.set(pruned_param, place)
         graph.update_groups_of_conv()
         graph.infer_shape()
+        self.pruned_weights = (not only_graph)
         return graph.program, param_backup, param_shape_backup
-
-    def _cal_pruned_idx(self, param, ratio, axis):
-        """
-        Calculate the index to be pruned on axis by given pruning ratio.
-
-        Args:
-            name(str): The name of parameter to be pruned.
-            param(np.array): The data of parameter to be pruned.
-            ratio(float): The ratio to be pruned.
-            axis(int): The axis to be used for pruning given parameter.
-                       If it is None, the value in self.pruning_axis will be used.
-                       default: None.
-
-        Returns:
-            list<int>: The indexes to be pruned on axis.
-        """
-        prune_num = int(round(param.shape[axis] * ratio))
-        reduce_dims = [i for i in range(len(param.shape)) if i != axis]
-        if self.criterion == 'l1_norm':
-            criterions = np.sum(np.abs(param), axis=tuple(reduce_dims))
-        pruned_idx = criterions.argsort()[:prune_num]
-        return pruned_idx
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
         """

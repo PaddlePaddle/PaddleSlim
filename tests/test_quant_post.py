@@ -16,7 +16,7 @@ sys.path.append("../")
 import unittest
 import paddle
 import paddle.fluid as fluid
-from paddleslim.quant import quant_post
+from paddleslim.quant import quant_post_static
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
@@ -50,9 +50,10 @@ class TestQuantAwareCase1(unittest.TestCase):
         exe = fluid.Executor(place)
         exe.run(fluid.default_startup_program())
         feeder = fluid.DataFeeder([image, label], place, program=main_prog)
-        train_reader = paddle.batch(
+        train_reader = paddle.fluid.io.batch(
             paddle.dataset.mnist.train(), batch_size=64)
-        eval_reader = paddle.batch(paddle.dataset.mnist.test(), batch_size=64)
+        eval_reader = paddle.fluid.io.batch(
+            paddle.dataset.mnist.test(), batch_size=64)
 
         def train(program):
             iter = 0
@@ -97,16 +98,19 @@ class TestQuantAwareCase1(unittest.TestCase):
             model_filename='model',
             params_filename='params')
 
-        quant_post(
+        quant_post_static(
             exe,
             './test_quant_post',
             './test_quant_post_inference',
-            paddle.dataset.mnist.test(),
+            sample_generator=paddle.dataset.mnist.test(),
             model_filename='model',
             params_filename='params',
             batch_nums=10)
         quant_post_prog, feed_target_names, fetch_targets = fluid.io.load_inference_model(
-            dirname='./test_quant_post_inference', executor=exe)
+            dirname='./test_quant_post_inference',
+            executor=exe,
+            model_filename='__model__',
+            params_filename='__params__')
         top1_2, top5_2 = test(quant_post_prog, fetch_targets)
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
         print("after quantization: top1: {}, top5: {}".format(top1_2, top5_2))

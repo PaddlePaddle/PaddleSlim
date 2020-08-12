@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import inspect
-import contextlib
+import decorator
 import paddle
 import paddle.nn as nn
 import paddle.fluid as fluid
@@ -23,6 +23,7 @@ from paddle.fluid.dygraph.nn import Conv2D
 from ofa import OFA
 
 
+### TODO: add decorator
 class Convert:
     def __init__(self, context):
         self.context = context
@@ -49,6 +50,7 @@ class Convert:
                 key = attr_dict['_full_name']
                 # TODO(lvmengsi): the channel of last conv and input conv donnot need to change
                 # TODO(lvmengsi): if this conv is second conv in SeparableConv, don't change it.
+                # TODO(lvmengsi): if pre conv is standard conv don't have in_channel_list.
                 if attr_dict['_filter_size'] == '1':
                     continue
 

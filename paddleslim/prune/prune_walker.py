@@ -23,6 +23,8 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 PRUNE_WORKER = Registry('prune_worker')
 
+SKIP_OPS = ["conditional_block"]
+
 
 class PruneWorker(object):
     def __init__(self, op, pruned_params=[], visited={}):
@@ -71,13 +73,18 @@ class PruneWorker(object):
         if visited is not None:
             self.visited = visited
         cls = PRUNE_WORKER.get(op.type())
-        assert cls is not None, "The walker of {} is not registered.".format(
-            op.type())
+        if cls is None:
+            if op.type() in SKIP_OPS:
+                _logger.warn("Skip operator [{}]".format(op.type()))
+                return
+
+#            _logger.warn(
+#                "{} op will be pruned by default walker to keep the shapes of input and output being same because its walker is not registered.".
+#                format(op.type()))
+            cls = PRUNE_WORKER.get("default_walker")
         _logger.debug("\nfrom: {}\nto: {}\npruned_axis: {}; var: {}".format(
             self.op, op, pruned_axis, var.name()))
-        walker = cls(op,
-                     pruned_params=self.pruned_params,
-                     visited=self.visited)
+        walker = cls(op, pruned_params=self.pruned_params, visited=self.visited)
         walker.prune(var, pruned_axis, pruned_idx)
 
 
@@ -147,6 +154,50 @@ class conv2d(PruneWorker):
 
 
 @PRUNE_WORKER.register
+class conv2d_transpose(PruneWorker):
+    def __init__(self, op, pruned_params, visited={}):
+        super(conv2d_transpose, self).__init__(op, pruned_params, visited)
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        data_format = self.op.attr("data_format")
+        channel_axis = 1
+        if data_format == "NHWC":
+            channel_axis = 3
+        if var in self.op.inputs("Input"):
+            assert pruned_axis == channel_axis, "The Input of conv2d can only be pruned at channel axis, but got {}; var: {}".format(
+                pruned_axis, var.name())
+            filter_var = self.op.inputs("Filter")[0]
+            self._visit(filter_var, 0)
+            self.pruned_params.append((filter_var, 0, pruned_idx))
+            for op in filter_var.outputs():
+                self._prune_op(op, filter_var, 0, pruned_idx)
+
+        elif var in self.op.inputs("Filter"):
+            _logger.warn("Skip pruning output channels of conv2d_transpose!")
+            return
+        elif var in self.op.outputs("Output"):
+            assert pruned_axis == channel_axis, "pruned_axis: {}; var: {}".format(
+                pruned_axis, var.name())
+
+            filter_var = self.op.inputs("Filter")[0]
+            self._visit(filter_var, 1)
+
+            self.pruned_params.append((filter_var, 1, pruned_idx))
+
+            for op in filter_var.outputs():
+                self._prune_op(op, filter_var, 1, pruned_idx)
+
+            if len(self.op.inputs("Bias")) > 0:
+                self.pruned_params.append(
+                    (self.op.inputs("Bias")[0], channel_axis, pruned_idx))
+
+            output_var = self.op.outputs("Output")[0]
+            next_ops = output_var.outputs()
+            for op in next_ops:
+                self._prune_op(op, output_var, channel_axis, pruned_idx)
+
+
+@PRUNE_WORKER.register
 class batch_norm(PruneWorker):
     def __init__(self, op, pruned_params, visited):
         super(batch_norm, self).__init__(op, pruned_params, visited)
@@ -190,6 +241,8 @@ class elementwise_op(PruneWorker):
                 if name == "Y":
                     actual_axis = pruned_axis - axis
                 in_var = self.op.inputs(name)[0]
+                if len(in_var.shape()) == 1 and in_var.shape()[0] == 1:
+                    continue
                 pre_ops = in_var.inputs()
                 for op in pre_ops:
                     self._prune_op(op, in_var, actual_axis, pruned_idx)
@@ -197,19 +250,21 @@ class elementwise_op(PruneWorker):
         else:
             if var in self.op.inputs("X"):
                 in_var = self.op.inputs("Y")[0]
-
-                if in_var.is_parameter():
-                    self.pruned_params.append(
-                        (in_var, pruned_axis - axis, pruned_idx))
-                pre_ops = in_var.inputs()
-                for op in pre_ops:
-                    self._prune_op(op, in_var, pruned_axis - axis, pruned_idx)
+                if not (len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
+                    if in_var.is_parameter():
+                        self.pruned_params.append(
+                            (in_var, pruned_axis - axis, pruned_idx))
+                    pre_ops = in_var.inputs()
+                    for op in pre_ops:
+                        self._prune_op(op, in_var, pruned_axis - axis,
+                                       pruned_idx)
             elif var in self.op.inputs("Y"):
                 in_var = self.op.inputs("X")[0]
-                pre_ops = in_var.inputs()
-                pruned_axis = pruned_axis + axis
-                for op in pre_ops:
-                    self._prune_op(op, in_var, pruned_axis, pruned_idx)
+                if not (len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
+                    pre_ops = in_var.inputs()
+                    pruned_axis = pruned_axis + axis
+                    for op in pre_ops:
+                        self._prune_op(op, in_var, pruned_axis, pruned_idx)
 
         out_var = self.op.outputs("Out")[0]
         self._visit(out_var, pruned_axis)
@@ -236,6 +291,7 @@ class elementwise_mul(elementwise_op):
         super(elementwise_mul, self).__init__(op, pruned_params, visited)
 
 
+@PRUNE_WORKER.register
 class activation(PruneWorker):
     def __init__(self, op, pruned_params, visited):
         super(activation, self).__init__(op, pruned_params, visited)
@@ -254,6 +310,27 @@ class activation(PruneWorker):
         next_ops = out_var.outputs()
         for op in next_ops:
             self._prune_op(op, out_var, pruned_axis, pruned_idx)
+
+
+@PRUNE_WORKER.register
+class default_walker(PruneWorker):
+    def __init__(self, op, pruned_params, visited):
+        super(default_walker, self).__init__(op, pruned_params, visited)
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        if var in self.op.all_outputs():
+            for in_var in self.op.all_inputs():
+                if len(in_var.shape()) == len(var.shape()):
+                    pre_ops = in_var.inputs()
+                    for op in pre_ops:
+                        self._prune_op(op, in_var, pruned_axis, pruned_idx)
+
+        for out_var in self.op.all_outputs():
+            if len(out_var.shape()) == len(var.shape()):
+                self._visit(out_var, pruned_axis)
+                next_ops = out_var.outputs()
+                for op in next_ops:
+                    self._prune_op(op, out_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
@@ -442,7 +519,7 @@ class depthwise_conv2d(PruneWorker):
             self._visit(filter_var, 0)
 
             new_groups = filter_var.shape()[0] - len(pruned_idx)
-            op.set_attr("groups", new_groups)
+            self.op.set_attr("groups", new_groups)
 
             for op in filter_var.outputs():
                 self._prune_op(op, filter_var, 0, pruned_idx)
@@ -524,3 +601,33 @@ class adam(PruneWorker):
             self.pruned_params.append((moment1_var, pruned_axis, pruned_idx))
             moment2_var = self.op.inputs("Moment2")[0]
             self.pruned_params.append((moment2_var, pruned_axis, pruned_idx))
+
+
+@PRUNE_WORKER.register
+class affine_channel(PruneWorker):
+    def __init__(self, op, pruned_params, visited):
+        super(affine_channel, self).__init__(op, pruned_params, visited)
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        if (var not in self.op.outputs("Out")) and (
+                var not in self.op.inputs("X")):
+            return
+
+        if var in self.op.outputs("Out"):
+            in_var = self.op.inputs("X")[0]
+            self._visit(in_var, pruned_axis)
+            pre_ops = in_var.inputs()
+            for op in pre_ops:
+                self._prune_op(op, in_var, pruned_axis, pruned_idx)
+
+        for param in ["Scale", "Bias"]:
+            param_var = self.op.inputs(param)[0]
+            for op in param_var.outputs():
+                self._prune_op(op, param_var, 0, pruned_idx)
+            self.pruned_params.append((param_var, 0, pruned_idx))
+
+        out_var = self.op.outputs("Out")[0]
+        self._visit(out_var, pruned_axis)
+        next_ops = out_var.outputs()
+        for op in next_ops:
+            self._prune_op(op, out_var, pruned_axis, pruned_idx)
