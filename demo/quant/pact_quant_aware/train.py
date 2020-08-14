@@ -8,8 +8,9 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-sys.path[0] = os.path.join(
-    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
+sys.path.append(os.path.dirname("__file__"))
+sys.path.append(
+    os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 from paddleslim.quant import quant_aware, quant_post, convert
@@ -52,8 +53,12 @@ add_arg('data',             str, "imagenet",
         "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,
         "Log period in batches.")
-add_arg('checkpoint_dir',         str, "output",
-        "checkpoint save dir")
+add_arg('checkpoint_dir',         str, None,
+        "checkpoint dir")
+add_arg('checkpoint_epoch',         int, None,
+        "checkpoint epoch")
+add_arg('output_dir',         str, "output/MobileNetV3_large_x1_0",
+        "model save dir")
 add_arg('use_pact',          bool, True,
         "Whether to use PACT or not.")
 
@@ -133,8 +138,8 @@ def compress(args):
         raise ValueError("{} is not supported.".format(args.data))
 
     image_shape = [int(m) for m in image_shape.split(",")]
-    assert args.model in model_list, "{} is not in lists: {}".format(
-        args.model, model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
+                                                                     model_list)
     image = fluid.layers.data(name='image', shape=image_shape, dtype='float32')
     if args.use_pact:
         image.stop_gradient = False
@@ -196,8 +201,7 @@ def compress(args):
     if args.pretrained_model:
 
         def if_exist(var):
-            return os.path.exists(
-                os.path.join(args.pretrained_model, var.name))
+            return os.path.exists(os.path.join(args.pretrained_model, var.name))
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
@@ -230,10 +234,9 @@ def compress(args):
             acc_top5_ns.append(np.mean(acc_top5_n))
             batch_id += 1
 
-        _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".
-                     format(epoch,
-                            np.mean(np.array(acc_top1_ns)),
-                            np.mean(np.array(acc_top5_ns))))
+        _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".format(
+            epoch,
+            np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
         return np.mean(np.array(acc_top1_ns))
 
     def train(epoch, compiled_train_prog):
@@ -245,6 +248,7 @@ def compress(args):
                 compiled_train_prog,
                 feed=train_feeder.feed(data),
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
+
             end_time = time.time()
             loss_n = np.mean(loss_n)
             acc_top1_n = np.mean(acc_top1_n)
@@ -259,8 +263,8 @@ def compress(args):
                 threshold = {}
                 for var in val_program.list_vars():
                     if 'pact' in var.name:
-                        array = np.array(fluid.global_scope().find_var(
-                            var.name).get_tensor())
+                        array = np.array(fluid.global_scope().find_var(var.name)
+                                         .get_tensor())
                         threshold[var.name] = array[0]
                 print(threshold)
 
@@ -280,24 +284,37 @@ def compress(args):
     # train loop
     best_acc1 = 0.0
     best_epoch = 0
-    for i in range(args.num_epochs):
+
+    start_epoch = 0
+    if args.checkpoint_dir is not None:
+        ckpt_path = args.checkpoint_dir
+        assert args.checkpoint_epoch is not None, "checkpoint_epoch must be set"
+        start_epoch = args.checkpoint_epoch
+        fluid.io.load_persistables(
+            exe, dirname=args.checkpoint_dir, main_program=val_program)
+        start_step = start_epoch * int(
+            math.ceil(float(args.total_images) / args.batch_size))
+        v = fluid.global_scope().find_var('@LR_DECAY_COUNTER@').get_tensor()
+        v.set(np.array([start_step]).astype(np.float32), place)
+
+    for i in range(start_epoch, args.num_epochs):
         train(i, compiled_train_prog)
         acc1 = test(i, val_program)
         fluid.io.save_persistables(
             exe,
-            dirname=os.path.join(args.checkpoint_dir, str(i)),
+            dirname=os.path.join(args.output_dir, str(i)),
             main_program=val_program)
         if acc1 > best_acc1:
             best_acc1 = acc1
             best_epoch = i
             fluid.io.save_persistables(
                 exe,
-                dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+                dirname=os.path.join(args.output_dir, 'best_model'),
                 main_program=val_program)
-    if os.path.exists(os.path.join(args.checkpoint_dir, 'best_model')):
+    if os.path.exists(os.path.join(args.output_dir, 'best_model')):
         fluid.io.load_persistables(
             exe,
-            dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+            dirname=os.path.join(args.output_dir, 'best_model'),
             main_program=val_program)
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
