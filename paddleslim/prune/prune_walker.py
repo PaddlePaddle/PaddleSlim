@@ -23,7 +23,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 PRUNE_WORKER = Registry('prune_worker')
 
-SKIP_OPS = ["conditional_block"]
+SKIP_OPS = ["conditional_block","shape","reshape2"]
 
 
 class PruneWorker(object):
