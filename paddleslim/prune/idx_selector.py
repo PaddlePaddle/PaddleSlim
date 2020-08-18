@@ -95,7 +95,7 @@ def optimal_threshold(group, ratio):
        list: pruned indexes
 
     """
-    name, axis, score = group[
+    name, axis, score, _ = group[
         0]  # sort channels by the first convolution's score
 
     score[score < 1e-18] = 1e-18
@@ -112,6 +112,6 @@ def optimal_threshold(group, ratio):
     pruned_idx = np.squeeze(np.argwhere(score < th))
 
     idxs = []
-    for name, axis, score in group:
+    for name, axis, score, _ in group:
         idxs.append((name, axis, pruned_idx))
     return idxs
