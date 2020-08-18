@@ -32,14 +32,14 @@ class TestPrune(unittest.TestCase):
         # O: prune input channels
         with fluid.program_guard(main_program, startup_program):
             input = fluid.data(name="image", shape=[None, 3, 16, 16])
-            conv1 = conv_bn_layer(input, 8, 3, "conv1")
-            conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
+            conv1 = conv_bn_layer(input, 8, 3, "conv1", bias=None)
+            conv2 = conv_bn_layer(conv1, 8, 3, "conv2", bias=None)
             sum1 = conv1 + conv2
-            conv3 = conv_bn_layer(sum1, 8, 3, "conv3")
-            conv4 = conv_bn_layer(conv3, 8, 3, "conv4")
+            conv3 = conv_bn_layer(sum1, 8, 3, "conv3", bias=None)
+            conv4 = conv_bn_layer(conv3, 8, 3, "conv4", bias=None)
             sum2 = conv4 + sum1
-            conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
-            conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
+            conv5 = conv_bn_layer(sum2, 8, 3, "conv5", bias=None)
+            conv6 = conv_bn_layer(conv5, 8, 3, "conv6", bias=None)
 
         shapes = {}
         for param in main_program.global_block().all_parameters():
