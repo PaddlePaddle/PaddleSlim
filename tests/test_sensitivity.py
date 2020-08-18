@@ -17,7 +17,7 @@ import unittest
 import numpy
 import paddle
 import paddle.fluid as fluid
-from paddleslim.prune import sensitivity
+from paddleslim.prune import sensitivity, merge_sensitive, load_sensitivities
 from layers import conv_bn_layer
 
 
@@ -60,8 +60,30 @@ class TestSensitivity(unittest.TestCase):
             print("acc_val_mean: {}".format(acc_val_mean))
             return acc_val_mean
 
-        sensitivity(eval_program, place, ["conv4_weights"], eval_func,
-                    "./sensitivities_file")
+        sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func,
+            "./sensitivities_file_0",
+            pruned_ratios=[0.1, 0.2])
+
+        sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func,
+            "./sensitivities_file_1",
+            pruned_ratios=[0.3, 0.4])
+
+        sens_0 = load_sensitivities('./sensitivities_file_0')
+        sens_1 = load_sensitivities('./sensitivities_file_1')
+        sens = merge_sensitive([sens_0, sens_1])
+        origin_sens = sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func,
+            "./sensitivities_file_1",
+            pruned_ratios=[0.1, 0.2, 0.3, 0.4])
+        self.assertTrue(sens == origin_sens)
 
 
 if __name__ == '__main__':

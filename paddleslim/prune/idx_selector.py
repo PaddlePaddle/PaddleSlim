@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import logging
+import numpy as np
 from ..core import GraphWrapper
 from ..common import get_logger
 from ..core import Registry

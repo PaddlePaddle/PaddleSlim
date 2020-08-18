@@ -54,7 +54,7 @@ class TestPrune(unittest.TestCase):
         main_program, _, _ = pruner.prune(
             main_program,
             scope,
-            params=["conv4_weights"],
+            params=["conv3_weights", "conv4_weights"],
             ratios=[0.5],
             place=place,
             lazy=False,
