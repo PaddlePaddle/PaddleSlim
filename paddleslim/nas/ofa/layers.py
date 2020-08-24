@@ -21,7 +21,8 @@ from paddle.fluid.data_feeder import check_variable_and_dtype
 from paddle.fluid.framework import in_dygraph_mode, _varbase_creator
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, BatchNorm
 
-from .utils import compute_start_end, get_same_padding, convert_to_list
+from paddleslim.common import get_logger
+from utils.utils import compute_start_end, get_same_padding, convert_to_list
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
@@ -29,6 +30,8 @@ __all__ = [
     'SuperGroupConv2D', 'SuperDepthwiseConv2D', 'SuperGroupConv2DTranspose',
     'SuperDepthwiseConv2DTranspose'
 ]
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 
 class BaseBlock(fluid.dygraph.Layer):
@@ -39,6 +42,7 @@ class BaseBlock(fluid.dygraph.Layer):
         else:
             self._key = self.__class__.__key__ + str(unique_name())
 
+    # set SuperNet class
     def set_supernet(self, supernet):
         self.__dict__['supernet'] = supernet
 
@@ -48,6 +52,14 @@ class BaseBlock(fluid.dygraph.Layer):
 
 
 class Block(BaseBlock):
+    """
+    Model is composed of nest blocks.
+
+    Parameters:
+        fn(Layer): instance of super layers, such as: SuperConv2D(3, 5, 3).
+        key(str, optional): key of this layer, one-to-one correspondence between key and candidate config. Default: None.
+    """
+
     def __init__(self, fn, key=None):
         super(Block, self).__init__(key)
         self.fn = fn
@@ -110,6 +122,13 @@ class SuperConv2D(fluid.dygraph.Conv2D):
         filter_size (int or tuple): The filter size. If filter_size is a tuple,
             it must contain two integers, (filter_size_H, filter_size_W).
             Otherwise, the filter will be a square.
+        candidate_config(dict, optional): Dictionary descripts candidate config of this layer,
+            such as {'kernel_size': (3, 5, 7), 'channel': (4, 6, 8)}, means the kernel size of 
+            this layer can be choose from (3, 5, 7), the key of candidate_config
+            only can be 'kernel_size', 'channel' and 'expand_ratio', 'channel' and 'expand_ratio'
+            CANNOT be set at the same time. Default: None.
+        transform_kernel(bool, optional): Whether to use transform matrix to transform a large filter
+            to a small filter. Default: False.
         stride (int or tuple, optional): The stride size. If stride is a tuple, it must
             contain two integers, (stride_H, stride_W). Otherwise, the
             stride_H = stride_W = stride. Default: 1.
@@ -171,7 +190,7 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                  num_filters,
                  filter_size,
                  candidate_config=None,
-                 transform_kernel=None,
+                 transform_kernel=False,
                  stride=1,
                  dilation=1,
                  groups=None,
@@ -186,46 +205,52 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             num_channels, num_filters, filter_size, stride, 0, dilation, groups,
             param_attr, bias_attr, use_cudnn, act, dtype)
 
+        if isinstance(self._filter_size, int):
+            self._filter_size = convert_to_list(self._filter_size, 2)
+
         for k, v in candidate_config.items():
             candidate_config[k] = list(set(v))
         self.candidate_config = candidate_config
-        self.filter_size_list = candidate_config[
-            'kernel_size'] if 'kernel_size' in candidate_config else self._filter_size
+        self.ks_set = candidate_config[
+            'kernel_size'] if 'kernel_size' in candidate_config else None
 
-        self.expand_stdio = candidate_config[
-            'expand_stdio'] if 'expand_stdio' in candidate_config else None
+        self.expand_ratio = candidate_config[
+            'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.channel = candidate_config[
             'channel'] if 'channel' in candidate_config else None
         self.base_channel = None
-        if self.expand_stdio != None:
-            self.base_channel = int(self._num_filters / max(self.expand_stdio))
+        if self.expand_ratio != None:
+            self.base_channel = int(self._num_filters / max(self.expand_ratio))
 
         self.transform_kernel = transform_kernel
-        self.ks_set = self.filter_size_list
-        self.ks_set.sort()
-        if self.transform_kernel is not None:
+        if self.ks_set != None:
+            self.ks_set.sort()
+        if self.transform_kernel != False:
             scale_param = dict()
             ### create parameter to transform kernel
             for i in range(len(self.ks_set) - 1):
                 ks_small = self.ks_set[i]
                 ks_large = self.ks_set[i + 1]
                 param_name = '%dto%d_matrix' % (ks_large, ks_small)
-                ks_p = ks_small**2
+                ks_t = ks_small**2
                 scale_param[param_name] = self.create_parameter(
                     attr=fluid.ParamAttr(
                         name=self._full_name + param_name,
                         initializer=fluid.initializer.NumpyArrayInitializer(
-                            np.eye(ks_p))),
-                    shape=(ks_p, ks_p),
+                            np.eye(ks_t))),
+                    shape=(ks_t, ks_t),
                     dtype=self._dtype)
 
             for name, param in scale_param.items():
                 setattr(self, name, param)
 
     def get_active_filter(self, in_nc, out_nc, kernel_size):
-        start, end = compute_start_end(self._filter_size, kernel_size)
+        start, end = compute_start_end(self._filter_size[0], kernel_size)
+        ### if NOT transform kernel, intercept a center filter with kernel_size from largest filter
         filters = self.weight[:out_nc, :in_nc, start:end, start:end]
-        if self.transform_kernel is not None and kernel_size < self._filter_size:
+        if self.transform_kernel != False and kernel_size < self._filter_size[
+                0]:
+            ### if transform kernel, then use matrix to transform
             start_filter = self.weight[:out_nc, :in_nc, :, :]
             for i in range(len(self.ks_set) - 1, 0, -1):
                 src_ks = self.ks_set[i]
@@ -236,17 +261,13 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                 _input_filter = start_filter[:, :, start:end, start:end]
                 _input_filter = fluid.layers.reshape(
                     _input_filter,
-                    shape=[_input_filter.shape[0], _input_filter.shape[1], -1])
-                _input_filter = fluid.layers.reshape(
-                    _input_filter, shape=[-1, _input_filter.shape[2]])
+                    shape=[(_input_filter.shape[0] * _input_filter.shape[1]),
+                           -1])
                 core.ops.matmul(_input_filter,
                                 self.__getattr__('%dto%d_matrix' %
                                                  (src_ks, target_ks)),
                                 _input_filter, 'transpose_X', False,
                                 'transpose_Y', False, "alpha", 1)
-                _input_filter = fluid.layers.reshape(
-                    _input_filter,
-                    shape=[filters.shape[0], filters.shape[1], target_ks**2])
                 _input_filter = fluid.layers.reshape(
                     _input_filter,
                     shape=[
@@ -260,18 +281,22 @@ class SuperConv2D(fluid.dygraph.Conv2D):
         ### standard conv
         return self._groups, in_nc, out_nc
 
-    def forward(self, input, kernel_size=None, expand_stdio=None, channel=None):
+    def forward(self, input, kernel_size=None, expand_ratio=None, channel=None):
+
+        if not in_dygraph_mode():
+            _logger.error("NOT support static graph")
+
         in_nc = int(input.shape[1])
         assert (
-            expand_stdio == None or channel == None
-        ), "expand_stdio and channel CANNOT be NOT None at the same time."
-        if expand_stdio != None:
-            out_nc = expand_stdio * self.base_channel
+            expand_ratio == None or channel == None
+        ), "expand_ratio and channel CANNOT be NOT None at the same time."
+        if expand_ratio != None:
+            out_nc = expand_ratio * self.base_channel
         elif channel != None:
             out_nc = channel
         else:
             out_nc = self._num_filters
-        ks = self._filter_size if kernel_size == None else kernel_size
+        ks = self._filter_size[0] if kernel_size == None else kernel_size
 
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
@@ -279,69 +304,27 @@ class SuperConv2D(fluid.dygraph.Conv2D):
         weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
         padding = convert_to_list(get_same_padding(ks), 2)
 
-        if in_dygraph_mode():
-            if self._l_type == 'conv2d':
-                attrs = ('strides', self._stride, 'paddings', padding,
-                         'dilations', self._dilation, 'groups', groups if groups
-                         else self._groups, 'use_cudnn', self._use_cudnn)
-                out = core.ops.conv2d(input, weight, *attrs)
-            elif self._l_type == 'depthwise_conv2d':
-                attrs = ('strides', self._stride, 'paddings', padding,
-                         'dilations', self._dilation, 'groups', groups if groups
-                         else self._groups, 'use_cudnn', self._use_cudnn)
-                out = core.ops.depthwise_conv2d(input, weight, *attrs)
-            else:
-                raise ValueError("conv type error")
+        if self._l_type == 'conv2d':
+            attrs = ('strides', self._stride, 'paddings', padding, 'dilations',
+                     self._dilation, 'groups', groups
+                     if groups else 1, 'use_cudnn', self._use_cudnn)
+            out = core.ops.conv2d(input, weight, *attrs)
+        elif self._l_type == 'depthwise_conv2d':
+            attrs = ('strides', self._stride, 'paddings', padding, 'dilations',
+                     self._dilation, 'groups', groups
+                     if groups else self._groups, 'use_cudnn', self._use_cudnn)
+            out = core.ops.depthwise_conv2d(input, weight, *attrs)
+        else:
+            raise ValueError("conv type error")
 
-            pre_bias = out
-            if self.bias is not None:
-                bias = self.bias[:weight_out_nc]
-                pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias,
-                                                                1)
-            else:
-                pre_act = pre_bias
-
-            return dygraph_utils._append_activation_in_dygraph(pre_act,
-                                                               self._act)
-
-        inputs = {'Input': [input], 'Filter': [weight]}
-        attrs = {
-            'strides': self._stride,
-            'paddings': padding,
-            'dilations': self._dilation,
-            'groups': groups if groups else self._groups,
-            'use_cudnn': self._use_cudnn,
-            'use_mkldnn': False,
-        }
-        check_variable_and_dtype(
-            input, 'input', ['float16', 'float32', 'float64'], 'SuperConv2D')
-        pre_bias = self._helper.create_variable_for_type_inference(
-            dtype=self._dtype)
-
-        self._helper.append_op(
-            type=self._l_type,
-            inputs={
-                'Input': input,
-                'Filter': weight,
-            },
-            outputs={"Output": pre_bias},
-            attrs=attrs)
-
+        pre_bias = out
         if self.bias is not None:
-            bias = self.bias[:out_nc]
-            pre_act = self._helper.create_variable_for_type_inference(
-                dtype=self._dtype)
-            self._helper.append_op(
-                type='elementwise_add',
-                inputs={'X': [pre_bias],
-                        'Y': [bias]},
-                outputs={'Out': [pre_act]},
-                attrs={'axis': 1})
+            bias = self.bias[:weight_out_nc]
+            pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias, 1)
         else:
             pre_act = pre_bias
 
-        # Currently, we don't support inplace in dygraph mode
-        return self._helper.append_activation(pre_act, act=self._act)
+        return dygraph_utils._append_activation_in_dygraph(pre_act, self._act)
 
 
 class SuperGroupConv2D(SuperConv2D):
@@ -418,6 +401,13 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         filter_size(int or tuple): The filter size. If filter_size is a tuple,
             it must contain two integers, (filter_size_H, filter_size_W).
             Otherwise, the filter will be a square.
+        candidate_config(dict, optional): Dictionary descripts candidate config of this layer,
+            such as {'kernel_size': (3, 5, 7), 'channel': (4, 6, 8)}, means the kernel size of 
+            this layer can be choose from (3, 5, 7), the key of candidate_config
+            only can be 'kernel_size', 'channel' and 'expand_ratio', 'channel' and 'expand_ratio'
+            CANNOT be set at the same time. Default: None.
+        transform_kernel(bool, optional): Whether to use transform matrix to transform a large filter
+            to a small filter. Default: False.
         output_size(int or tuple, optional): The output image size. If output size is a
             tuple, it must contain two integers, (image_H, image_W). None if use
             filter_size, padding, and stride to calculate output_size.
@@ -475,7 +465,7 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                  filter_size,
                  output_size=None,
                  candidate_config=None,
-                 transform_kernel=None,
+                 transform_kernel=False,
                  stride=1,
                  dilation=1,
                  groups=None,
@@ -491,35 +481,37 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         for k, v in candidate_config.items():
             candidate_config[k] = list(set(v))
         self.candidate_config = candidate_config
-        self.filter_size_list = candidate_config[
-            'kernel_size'] if 'kernel_size' in candidate_config else self._filter_size[
-                0]
+        self.ks_set = candidate_config[
+            'kernel_size'] if 'kernel_size' in candidate_config else None
 
-        self.expand_stdio = candidate_config[
-            'expand_stdio'] if 'expand_stdio' in candidate_config else None
+        if isinstance(self._filter_size, int):
+            self._filter_size = convert_to_list(self._filter_size, 2)
+
+        self.expand_ratio = candidate_config[
+            'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.channel = candidate_config[
             'channel'] if 'channel' in candidate_config else None
         self.base_channel = None
-        if self.expand_stdio:
-            self.base_channel = int(self._num_filters / max(self.expand_stdio))
+        if self.expand_ratio:
+            self.base_channel = int(self._num_filters / max(self.expand_ratio))
 
         self.transform_kernel = transform_kernel
-        self.ks_set = self.filter_size_list
-        self.ks_set.sort()
-        if self.transform_kernel is not None:
+        if self.ks_set != None:
+            self.ks_set.sort()
+        if self.transform_kernel != False:
             scale_param = dict()
             ### create parameter to transform kernel
             for i in range(len(self.ks_set) - 1):
                 ks_small = self.ks_set[i]
                 ks_large = self.ks_set[i + 1]
                 param_name = '%dto%d_matrix' % (ks_large, ks_small)
-                ks_p = ks_small**2
+                ks_t = ks_small**2
                 scale_param[param_name] = self.create_parameter(
                     attr=fluid.ParamAttr(
                         name=self._full_name + param_name,
                         initializer=fluid.initializer.NumpyArrayInitializer(
-                            np.eye(ks_p))),
-                    shape=(ks_p, ks_p),
+                            np.eye(ks_t))),
+                    shape=(ks_t, ks_t),
                     dtype=self._dtype)
 
             for name, param in scale_param.items():
@@ -528,7 +520,7 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
     def get_active_filter(self, in_nc, out_nc, kernel_size):
         start, end = compute_start_end(self._filter_size[0], kernel_size)
         filters = self.weight[:in_nc, :out_nc, start:end, start:end]
-        if self.transform_kernel is not None and kernel_size < self._filter_size[
+        if self.transform_kernel != False and kernel_size < self._filter_size[
                 0]:
             start_filter = self.weight[:in_nc, :out_nc, :, :]
             for i in range(len(self.ks_set) - 1, 0, -1):
@@ -540,17 +532,13 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                 _input_filter = start_filter[:, :, start:end, start:end]
                 _input_filter = fluid.layers.reshape(
                     _input_filter,
-                    shape=[_input_filter.shape[0], _input_filter.shape[1], -1])
-                _input_filter = fluid.layers.reshape(
-                    _input_filter, shape=[-1, _input_filter.shape[2]])
+                    shape=[(_input_filter.shape[0] * _input_filter.shape[1]),
+                           -1])
                 core.ops.matmul(_input_filter,
                                 self.__getattr__('%dto%d_matrix' %
                                                  (src_ks, target_ks)),
                                 _input_filter, 'transpose_X', False,
                                 'transpose_Y', False, "alpha", 1)
-                _input_filter = fluid.layers.reshape(
-                    _input_filter,
-                    shape=[filters.shape[0], filters.shape[1], target_ks**2])
                 _input_filter = fluid.layers.reshape(
                     _input_filter,
                     shape=[
@@ -564,13 +552,16 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         ### standard conv
         return self._groups, in_nc, out_nc
 
-    def forward(self, input, kernel_size=None, expand_stdio=None, channel=None):
+    def forward(self, input, kernel_size=None, expand_ratio=None, channel=None):
+        if not in_dygraph_mode():
+            _logger.error("NOT support static graph")
+
         in_nc = int(input.shape[1])
         assert (
-            expand_stdio == None or channel == None
-        ), "expand_stdio and channel CANNOT be NOT None at the same time."
-        if expand_stdio != None:
-            out_nc = expand_stdio * self.base_channel
+            expand_ratio == None or channel == None
+        ), "expand_ratio and channel CANNOT be NOT None at the same time."
+        if expand_ratio != None:
+            out_nc = expand_ratio * self.base_channel
         elif channel != None:
             out_nc = channel
         else:
@@ -584,59 +575,19 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
         padding = convert_to_list(get_same_padding(ks), 2)
 
-        if in_dygraph_mode():
-            op = getattr(core.ops, self._op_type)
-            out = op(input, weight, 'output_size', self._output_size, 'strides',
-                     self._stride, 'paddings', padding, 'dilations',
-                     self._dilation, 'groups', groups, 'use_cudnn',
-                     self._use_cudnn)
-            pre_bias = out
-            if self.bias is not None:
-                bias = self.bias[:weight_out_nc]
-                pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias,
-                                                                1)
-            else:
-                pre_act = pre_bias
-
-            return dygraph_utils._append_activation_in_dygraph(
-                pre_act, act=self._act)
-
-        check_variable_and_dtype(input, 'input',
-                                 ['float16', 'float32', 'float64'],
-                                 "SuperConv2DTranspose")
-
-        inputs = {'Input': [input], 'Filter': [weight]}
-        attrs = {
-            'output_size': self._output_size,
-            'strides': self._stride,
-            'paddings': padding,
-            'dilations': self._dilation,
-            'groups': groups,
-            'use_cudnn': self._use_cudnn
-        }
-
-        pre_bias = self._helper.create_variable_for_type_inference(
-            dtype=input.dtype)
-        self._helper.append_op(
-            type=self._op_type,
-            inputs=inputs,
-            outputs={'Output': pre_bias},
-            attrs=attrs)
-
+        op = getattr(core.ops, self._op_type)
+        out = op(input, weight, 'output_size', self._output_size, 'strides',
+                 self._stride, 'paddings', padding, 'dilations', self._dilation,
+                 'groups', groups, 'use_cudnn', self._use_cudnn)
+        pre_bias = out
         if self.bias is not None:
-            pre_act = self._helper.create_variable_for_type_inference(
-                dtype=self._dtype)
-            self._helper.append_op(
-                type='elementwise_add',
-                inputs={'X': [pre_bias],
-                        'Y': [bias]},
-                outputs={'Out': [pre_act]},
-                attrs={'axis': 1})
+            bias = self.bias[:weight_out_nc]
+            pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias, 1)
         else:
             pre_act = pre_bias
 
-        out = self._helper.append_activation(pre_act, act=self._act)
-        return out
+        return dygraph_utils._append_activation_in_dygraph(
+            pre_act, act=self._act)
 
 
 class SuperGroupConv2DTranspose(SuperConv2DTranspose):
@@ -740,68 +691,65 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         ])
 
     def forward(self, input, config):
+        if not in_dygraph_mode():
+            _logger.error("NOT support static graph")
+
         in_nc = int(input.shape[1])
         out_nc = int(config['channel'])
         weight = self.conv[0].weight[:in_nc]
         ###  conv1
-        if in_dygraph_mode():
-            if self.conv[0]._l_type == 'conv2d':
-                attrs = ('strides', self.conv[0]._stride, 'paddings',
-                         self.conv[0]._padding, 'dilations',
-                         self.conv[0]._dilation, 'groups', in_nc, 'use_cudnn',
-                         self.conv[0]._use_cudnn)
-                out = core.ops.conv2d(input, weight, *attrs)
-            elif self.conv[0]._l_type == 'depthwise_conv2d':
-                attrs = ('strides', self.conv[0]._stride, 'paddings',
-                         self.conv[0]._padding, 'dilations',
-                         self.conv[0]._dilation, 'groups', in_nc, 'use_cudnn',
-                         self.conv[0]._use_cudnn)
-                out = core.ops.depthwise_conv2d(input, weight, *attrs)
-            else:
-                raise ValueError("conv type error")
+        if self.conv[0]._l_type == 'conv2d':
+            attrs = ('strides', self.conv[0]._stride, 'paddings',
+                     self.conv[0]._padding, 'dilations', self.conv[0]._dilation,
+                     'groups', in_nc, 'use_cudnn', self.conv[0]._use_cudnn)
+            out = core.ops.conv2d(input, weight, *attrs)
+        elif self.conv[0]._l_type == 'depthwise_conv2d':
+            attrs = ('strides', self.conv[0]._stride, 'paddings',
+                     self.conv[0]._padding, 'dilations', self.conv[0]._dilation,
+                     'groups', in_nc, 'use_cudnn', self.conv[0]._use_cudnn)
+            out = core.ops.depthwise_conv2d(input, weight, *attrs)
+        else:
+            raise ValueError("conv type error")
 
-            pre_bias = out
-            if self.conv[0].bias is not None:
-                bias = self.conv[0].bias[:in_nc]
-                pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias,
-                                                                1)
-            else:
-                pre_act = pre_bias
+        pre_bias = out
+        if self.conv[0].bias is not None:
+            bias = self.conv[0].bias[:in_nc]
+            pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias, 1)
+        else:
+            pre_act = pre_bias
 
-            conv0_out = dygraph_utils._append_activation_in_dygraph(
-                pre_act, self.conv[0]._act)
+        conv0_out = dygraph_utils._append_activation_in_dygraph(
+            pre_act, self.conv[0]._act)
 
         norm_out = self.conv[1](conv0_out)
 
         weight = self.conv[2].weight[:out_nc, :in_nc, :, :]
 
-        if in_dygraph_mode():
-            if self.conv[2]._l_type == 'conv2d':
-                attrs = ('strides', self.conv[2]._stride, 'paddings',
-                         self.conv[2]._padding, 'dilations',
-                         self.conv[2]._dilation, 'groups', self.conv[2]._groups
-                         if self.conv[2]._groups else 1, 'use_cudnn',
-                         self.conv[2]._use_cudnn)
-                out = core.ops.conv2d(norm_out, weight, *attrs)
-            elif self.conv[2]._l_type == 'depthwise_conv2d':
-                attrs = ('strides', self.conv[2]._stride, 'paddings',
-                         self.conv[2]._padding, 'dilations',
-                         self.conv[2]._dilation, 'groups', self.conv[2]._groups,
-                         'use_cudnn', self.conv[2]._use_cudnn)
-                out = core.ops.depthwise_conv2d(norm_out, weight, *attrs)
-            else:
-                raise ValueError("conv type error")
+        if self.conv[2]._l_type == 'conv2d':
+            attrs = ('strides', self.conv[2]._stride, 'paddings',
+                     self.conv[2]._padding, 'dilations', self.conv[2]._dilation,
+                     'groups', self.conv[2]._groups if self.conv[2]._groups else
+                     1, 'use_cudnn', self.conv[2]._use_cudnn)
+            out = core.ops.conv2d(norm_out, weight, *attrs)
+        elif self.conv[2]._l_type == 'depthwise_conv2d':
+            attrs = ('strides', self.conv[2]._stride, 'paddings',
+                     self.conv[2]._padding, 'dilations', self.conv[2]._dilation,
+                     'groups', self.conv[2]._groups, 'use_cudnn',
+                     self.conv[2]._use_cudnn)
+            out = core.ops.depthwise_conv2d(norm_out, weight, *attrs)
+        else:
+            raise ValueError("conv type error")
 
-            pre_bias = out
-            if self.conv[2].bias is not None:
-                bias = self.conv[2].bias[:out_nc]
-                pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias,
-                                                                1)
-            else:
-                pre_act = pre_bias
+        pre_bias = out
+        if self.conv[2].bias is not None:
+            bias = self.conv[2].bias[:out_nc]
+            pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias, 1)
+        else:
+            pre_act = pre_bias
 
-            conv1_out = dygraph_utils._append_activation_in_dygraph(
-                pre_act, self.conv[2]._act)
+        conv1_out = dygraph_utils._append_activation_in_dygraph(
+            pre_act, self.conv[2]._act)
+
         return conv1_out
 
 
@@ -821,19 +769,22 @@ class SuperLinear(fluid.dygraph.Linear):
                                           bias_attr, act, dtype)
         self.output_dim = output_dim
         self.candidate_config = candidate_config
-        self.expand_stdio = getattr(candidate_config, 'expand_stdio', None)
+        self.expand_ratio = getattr(candidate_config, 'expand_ratio', None)
         self.base_output_dim = None
-        if self.expand_stdio != None:
-            self.base_output_dim = int(self.output_dim / self.expand_stdio)
+        if self.expand_ratio != None:
+            self.base_output_dim = int(self.output_dim / self.expand_ratio)
 
-    def forward(self, input, expand_stdio=None, channel=None):
+    def forward(self, input, expand_ratio=None, channel=None):
+        if not in_dygraph_mode():
+            _logger.error("NOT support static graph")
+
         ### weight: (Cin, Cout)
         in_nc = int(input.shape[1])
         assert (
-            expand_stdio == None or channel == None
-        ), "expand_stdio and channel CANNOT be NOT None at the same time."
-        if expand_stdio != None:
-            out_nc = expand_stdio * self.base_output_dim
+            expand_ratio == None or channel == None
+        ), "expand_ratio and channel CANNOT be NOT None at the same time."
+        if expand_ratio != None:
+            out_nc = expand_ratio * self.base_output_dim
         elif channel != None:
             out_nc = channel
         else:
@@ -844,44 +795,16 @@ class SuperLinear(fluid.dygraph.Linear):
             bias = self.bias[:out_nc]
             use_bias = True
 
-        if in_dygraph_mode():
-            pre_bias = _varbase_creator(dtype=input.dtype)
-            core.ops.matmul(input, weight, pre_bias, 'transpose_X', False,
-                            'transpose_Y', False, "alpha", 1)
-            if self._bias_attr != False:
-                pre_act = dygraph_utils._append_bias_in_dygraph(
-                    pre_bias, bias, axis=len(input.shape) - 1)
-            else:
-                pre_act = pre_bias
-
-            return dygraph_utils._append_activation_in_dygraph(pre_act,
-                                                               self._act)
-
-        check_variable_and_dtype(
-            input, 'input', ['float16', 'float32', 'float64'], "SuperLinear")
-
-        attrs = {
-            "transpose_X": False,
-            "transpose_Y": False,
-            "alpha": 1,
-        }
-        inputs = {"X": [input], "Y": [weight]}
-
-        tmp = self._helper.create_variable_for_type_inference(self._dtype)
-        self._helper.append_op(
-            type="matmul", inputs=inputs, outputs={"Out": tmp}, attrs=attrs)
-        if self.bias is not None:
-            pre_activation = self._helper.create_variable_for_type_inference(
-                dtype=self._dtype)
-            self._helper.append_op(
-                type='elementwise_add',
-                inputs={'X': [tmp],
-                        'Y': [bias]},
-                outputs={'Out': [pre_activation]},
-                attrs={'axis': len(input.shape) - 1})
+        pre_bias = _varbase_creator(dtype=input.dtype)
+        core.ops.matmul(input, weight, pre_bias, 'transpose_X', False,
+                        'transpose_Y', False, "alpha", 1)
+        if self._bias_attr != False:
+            pre_act = dygraph_utils._append_bias_in_dygraph(
+                pre_bias, bias, axis=len(input.shape) - 1)
         else:
-            pre_activation = tmp
-        return self._helper.append_activation(pre_activation, act=self._act)
+            pre_act = pre_bias
+
+        return dygraph_utils._append_activation_in_dygraph(pre_act, self._act)
 
 
 class SuperBatchNorm(fluid.dygraph.BatchNorm):
@@ -912,6 +835,9 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
             use_global_stats, trainable_statistics)
 
     def forward(self, input):
+        if not in_dygraph_mode():
+            _logger.error("NOT support static graph")
+
         feature_dim = int(input.shape[1])
 
         weight = self.weight[:feature_dim]
@@ -922,61 +848,15 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
         mean_out = mean
         variance_out = variance
 
-        if in_dygraph_mode():
-            attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
-                     "is_test", not self.training, "data_layout",
-                     self._data_layout, "use_mkldnn", False, "fuse_with_relu",
-                     self._fuse_with_relu, "use_global_stats",
-                     self._use_global_stats, 'trainable_statistics',
-                     self._trainable_statistics)
-            batch_norm_out, _, _, _, _ = core.ops.batch_norm(
-                input, weight, bias, mean, variance, mean_out, variance_out,
-                *attrs)
-            return dygraph_utils._append_activation_in_dygraph(
-                batch_norm_out, act=self._act)
-
-        check_variable_and_dtype(
-            input, 'input', ['float16', 'float32', 'float64'], 'SuperBatchNorm')
-
-        attrs = {
-            "momentum": self._momentum,
-            "epsilon": self._epsilon,
-            "is_test": self._is_test,
-            "data_layout": self._data_layout,
-            "use_mkldnn": False,
-            "fuse_with_relu": self._fuse_with_relu,
-            "use_global_stats": self._use_global_stats,
-            "trainable_statistics": self._trainable_statistics,
-        }
-
-        inputs = {
-            "X": [input],
-            "Scale": [weight],
-            "Bias": [bias],
-            "Mean": [mean],
-            "Variance": [variance]
-        }
-
-        saved_mean = self._helper.create_variable_for_type_inference(
-            dtype=self._dtype, stop_gradient=True)
-        saved_variance = self._helper.create_variable_for_type_inference(
-            dtype=self._dtype, stop_gradient=True)
-        batch_norm_out = input if self._in_place else self._helper.create_variable_for_type_inference(
-            self._dtype)
-
-        outputs = {
-            "Y": [batch_norm_out],
-            "MeanOut": [mean_out],
-            "VarianceOut": [variance_out],
-            "SavedMean": [saved_mean],
-            "SavedVariance": [saved_variance]
-        }
-
-        self._helper.append_op(
-            type="batch_norm", inputs=inputs, outputs=outputs, attrs=attrs)
-
-        # Currently, we don't support inplace in dygraph mode
-        return self._helper.append_activation(batch_norm_out, self._act)
+        attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
+                 "is_test", not self.training, "data_layout", self._data_layout,
+                 "use_mkldnn", False, "fuse_with_relu", self._fuse_with_relu,
+                 "use_global_stats", self._use_global_stats,
+                 'trainable_statistics', self._trainable_statistics)
+        batch_norm_out, _, _, _, _ = core.ops.batch_norm(
+            input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
+        return dygraph_utils._append_activation_in_dygraph(
+            batch_norm_out, act=self._act)
 
 
 class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
@@ -993,6 +873,9 @@ class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
                                                 param_attr, bias_attr, dtype)
 
     def forward(self, input):
+        if not in_dygraph_mode():
+            _logger.error("NOT support static graph")
+
         feature_dim = int(input.shape[1])
 
         if self._param_attr == False and self._bias_attr == False:
@@ -1002,35 +885,6 @@ class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
             scale = self.scale[:feature_dim]
             bias = self.bias[:feature_dim]
 
-        if in_dygraph_mode():
-            out, _, _ = core.ops.instance_norm(input, scale, bias, 'epsilon',
-                                               self._epsilon)
-            return out
-
-        check_variable_and_dtype(input, 'input', ['float32', 'float64'],
-                                 'SuperInstanceNorm')
-
-        attrs = {"epsilon": self._epsilon}
-
-        if self.scale == None and self.bias == None:
-            inputs = {"X": [input]}
-        else:
-            inputs = {"X": [input], "Scale": [scale], "Bias": [bias]}
-
-        saved_mean = self._helper.create_variable_for_type_inference(
-            dtype=self._dtype, stop_gradient=True)
-        saved_variance = self._helper.create_variable_for_type_inference(
-            dtype=self._dtype, stop_gradient=True)
-        instance_norm_out = self._helper.create_variable_for_type_inference(
-            self._dtype)
-
-        outputs = {
-            "Y": [instance_norm_out],
-            "MeanOut": [mean_out],
-            "VarianceOut": [variance_out],
-        }
-
-        self._helper.append_op(
-            type="instance_norm", inputs=inputs, outputs=outputs, attrs=attrs)
-
-        return instance_norm_out
+        out, _, _ = core.ops.instance_norm(input, scale, bias, 'epsilon',
+                                           self._epsilon)
+        return out

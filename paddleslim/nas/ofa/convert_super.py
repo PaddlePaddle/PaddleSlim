@@ -19,9 +19,9 @@ import paddle
 import paddle.nn as nn
 import paddle.fluid as fluid
 from paddle.fluid import framework
-from paddleslim.core.layers import *
 from paddle.fluid.dygraph.nn import Conv2D
 from ofa import OFA
+from layers import *
 
 WEIGHT_LAYER = ['conv', 'linear']
 
@@ -38,7 +38,7 @@ class Convert:
             task += ['kernel']
 
     # or hasattr(self.context, 'embedding_size') or hasattr(self.context, 'hidden_size') or hasattr(self.context, 'num_head'):
-        if hasattr(self.context, 'expand_stdio') or hasattr(self.context,
+        if hasattr(self.context, 'expand_ratio') or hasattr(self.context,
                                                             'channel'):
             task += ['width']
         if hasattr(self.context, 'depth'):
@@ -50,12 +50,26 @@ class Convert:
         # don't change in channel of the first weight layer
         first_weight_layer_idx = -1
         last_weight_layer_idx = -1
+        weight_layer_count = 0
+        # NOTE: pre_channel store for shortcut module
+        pre_channel = 0
+        cur_channel = None
         for idx, layer in enumerate(model):
             cls_name = layer.__class__.__name__.lower()
             if 'conv' in cls_name or 'linear' in cls_name:
+                weight_layer_count += 1
                 last_weight_layer_idx = idx
                 if first_weight_layer_idx == -1:
                     first_weight_layer_idx = idx
+
+        if getattr(self.context, 'channel', None) != None:
+            assert len(
+                self.context.channel
+            ) == weight_layer_count, "length of channel must same as weight layer."
+
+        if getattr(self.context, 'expand_ratio', None) != None:
+            assert len(
+                self.context.channel) == 1, "length of expand_ratio must be 1."
 
         for idx, layer in enumerate(model):
             if isinstance(layer, nn.Conv2D):
@@ -70,6 +84,9 @@ class Convert:
                 new_attr_dict = dict()
                 new_attr_dict['candidate_config'] = dict()
                 self.kernel_size = getattr(self.context, 'kernel_size', None)
+
+                if self.kernel_size != None:
+                    new_attr_dict['transform_kernel'] = True
 
                 # if the kernel_size of conv is 1, don't change it.
                 if self.kernel_size and int(attr_dict['_filter_size'][0]) != 1:
@@ -97,22 +114,23 @@ class Convert:
                             'num_filters'] = self.context.expand * attr_dict[
                                 '_num_filters']
                         new_attr_dict['candidate_config'].update({
-                            'expand_stdio': self.context.expand_stdio
+                            'expand_ratio': self.context.expand_ratio
                         })
                 elif self.context.channel:
+                    cur_channel = self.context.channel[0]
+                    self.context.channel = self.context.channel[1:]
                     if idx == first_weight_layer_idx:
                         new_attr_dict['num_channels'] = attr_dict[
                             '_num_channels']
                     else:
-                        new_attr_dict['num_channels'] = max(
-                            self.context.channel)
+                        new_attr_dict['num_channels'] = max(cur_channel)
 
                     if idx == last_weight_layer_idx:
                         new_attr_dict['num_filters'] = attr_dict['_num_filters']
                     else:
-                        new_attr_dict['num_filters'] = max(self.context.channel)
+                        new_attr_dict['num_filters'] = max(cur_channel)
                         new_attr_dict['candidate_config'].update({
-                            'channel': self.context.channel
+                            'channel': cur_channel
                         })
                 else:
                     new_attr_dict['num_filters'] = attr_dict['_num_filters']
@@ -158,7 +176,7 @@ class Convert:
                     new_attr_dict['num_channels'] = self.context.expand * int(
                         layer._parameters['weight'].shape[0])
                 elif self.context.channel:
-                    new_attr_dict['num_channels'] = max(self.context.channel)
+                    new_attr_dict['num_channels'] = max(cur_channel)
 
                 for attr in new_attr_name:
                     new_attr_dict[attr[1:]] = attr_dict[attr]
@@ -184,6 +202,9 @@ class Convert:
                 new_attr_dict = dict()
                 new_attr_dict['candidate_config'] = dict()
                 self.kernel_size = getattr(self.context, 'kernel_size', None)
+
+                if self.kernel_size != None:
+                    new_attr_dict['transform_kernel'] = True
 
                 # if the kernel_size of conv transpose is 1, don't change it.
                 if self.kernel_size and int(attr_dict['_filter_size'][0]) != 1:
@@ -211,22 +232,23 @@ class Convert:
                             'num_filters'] = self.context.expand * attr_dict[
                                 '_num_filters']
                         new_attr_dict['candidate_config'].update({
-                            'expand_stdio': self.context.expand_stdio
+                            'expand_ratio': self.context.expand_ratio
                         })
                 elif self.context.channel:
+                    cur_channel = self.context.channel[0]
+                    self.context.channel = self.context.channel[1:]
                     if idx == first_weight_layer_idx:
                         new_attr_dict['num_channels'] = attr_dict[
                             '_num_channels']
                     else:
-                        new_attr_dict['num_channels'] = max(
-                            self.context.channel)
+                        new_attr_dict['num_channels'] = max(cur_channel)
 
                     if idx == last_weight_layer_idx:
                         new_attr_dict['num_filters'] = attr_dict['_num_filters']
                     else:
-                        new_attr_dict['num_filters'] = max(self.context.channel)
+                        new_attr_dict['num_filters'] = max(cur_channel)
                         new_attr_dict['candidate_config'].update({
-                            'channel': self.context.channel
+                            'channel': cur_channel
                         })
                 else:
                     new_attr_dict['num_filters'] = attr_dict['_num_filters']
@@ -280,20 +302,22 @@ class Convert:
                         new_attr_dict['output_dim'] = self.context.expand * int(
                             out_nc)
                         new_attr_dict['candidate_config'].update({
-                            'expand_stdio': self.context.expand_stdio
+                            'expand_ratio': self.context.expand_ratio
                         })
                 elif self.context.channel:
+                    cur_channel = self.context.channel[0]
+                    self.context.channel = self.context.channel[1:]
                     if idx == first_weight_layer_idx:
                         new_attr_dict['input_dim'] = int(in_nc)
                     else:
-                        new_attr_dict['input_dim'] = max(self.context.channel)
+                        new_attr_dict['input_dim'] = max(cur_channel)
 
                     if idx == last_weight_layer_idx:
                         new_attr_dict['output_dim'] = int(out_nc)
                     else:
-                        new_attr_dict['output_dim'] = max(self.context.channel)
+                        new_attr_dict['output_dim'] = max(cur_channel)
                         new_attr_dict['candidate_config'].update({
-                            'channel': self.context.channel
+                            'channel': cur_channel
                         })
                 else:
                     new_attr_dict['input_dim'] = int(in_nc)
@@ -323,7 +347,7 @@ class Convert:
                     new_attr_dict['num_channels'] = self.context.expand * int(
                         layer._parameters['scale'].shape[0])
                 elif self.context.channel:
-                    new_attr_dict['num_channels'] = max(self.context.channel)
+                    new_attr_dict['num_channels'] = max(cur_channel)
 
                 for attr in new_attr_name:
                     new_attr_dict[attr[1:]] = attr_dict[attr]
@@ -342,17 +366,17 @@ class ofa_supernet:
             setattr(self, key, value)
 
         assert (
-            getattr(self, 'expand_stdio', None) == None or
+            getattr(self, 'expand_ratio', None) == None or
             getattr(self, 'channel', None) == None
-        ), "expand_stdio and channel CANNOT be NOT None at the same time."
+        ), "expand_ratio and channel CANNOT be NOT None at the same time."
 
         self.expand = None
-        if 'expand_stdio' in kwargs.keys():
-            if isinstance(self.expand_stdio, list) or isinstance(
-                    self.expand_stdio, tuple):
-                self.expand = max(self.expand_stdio)
-            elif isinstance(self.expand_stdio, int):
-                self.expand = self.expand_stdio
+        if 'expand_ratio' in kwargs.keys():
+            if isinstance(self.expand_ratio, list) or isinstance(
+                    self.expand_ratio, tuple):
+                self.expand = max(self.expand_ratio)
+            elif isinstance(self.expand_ratio, int):
+                self.expand = self.expand_ratio
 
     def __enter__(self):
         return Convert(self)
@@ -361,7 +385,7 @@ class ofa_supernet:
         pass
 
 
-#def ofa_supernet(kernel_size, expand_stdio):
+#def ofa_supernet(kernel_size, expand_ratio):
 #    def _ofa_supernet(func):
 #        @functools.wraps(func)
 #        def convert(*args, **kwargs):
@@ -371,16 +395,19 @@ class ofa_supernet:
 
 
 class Model(fluid.dygraph.Layer):
-    #@ofa_supernet(kernel_size=(3,5,7), expand_stdio=(1, 2, 4))
+    #@ofa_supernet(kernel_size=(3,5,7), expand_ratio=(1, 2, 4))
     def __init__(self):
         super(Model, self).__init__()
+        #with ofa_supernet(
+        #        kernel_size=(3, 5, 7), expand_ratio=(1, 2, 4)) as ofa_super:
         with ofa_supernet(
-                kernel_size=(3, 5, 7), expand_stdio=(1, 2, 4)) as ofa_super:
+                kernel_size=(3, 5, 7),
+                channel=((4, 8, 12), (8, 12, 16), (8, 12, 16))) as ofa_super:
             models = []
             models += [nn.Conv2D(3, 4, 3)]
             models += [nn.InstanceNorm(4)]
             models += [nn.ReLU()]
-            models += [nn.Conv2DTranspose(4, 4, 3, groups=4, use_cudnn=False)]
+            models += [nn.Conv2DTranspose(4, 4, 3, groups=4, use_cudnn=True)]
             models += [nn.BatchNorm(4)]
             models += [nn.ReLU()]
             models += [
