@@ -72,8 +72,10 @@ class TestSaveAndLoad(unittest.TestCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
+        pruned_test_program = pruned_program.clone(for_test=True)
         exe.run(pruned_startup_program)
         load_model(exe, pruned_program, 'model_file')
+        load_model(exe, pruned_test_program, 'model_file', repeat_load=True)
         shapes = {
             "conv1_weights": (4, 3, 3, 3),
             "conv2_weights": (4, 4, 3, 3),
@@ -88,6 +90,12 @@ class TestSaveAndLoad(unittest.TestCase):
                 print("param: {}; param shape: {}".format(param.name,
                                                           param.shape))
                 self.assertTrue(param.shape == shapes[param.name])
+        for param in pruned_test_program.global_block().all_parameters():
+            if "weights" in param.name:
+                print("param: {}; param shape: {}".format(param.name,
+                                                          param.shape))
+                self.assertTrue(param.shape == shapes[param.name])
+        
 
 
 if __name__ == '__main__':

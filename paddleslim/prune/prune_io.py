@@ -58,7 +58,7 @@ def load_model(exe, graph, dirname, repeat_load=False):
     with open(SHAPES_FILE, "r") as f:
         shapes = json.load(f)
         for param_name, shape in shapes.items():
-            param = graph.var(param)
+            param = graph.var(param_name)
             if param is not None:
                 param.set_shape(shape)
             else:
