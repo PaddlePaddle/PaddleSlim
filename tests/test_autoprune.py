@@ -16,6 +16,7 @@ sys.path.append("../")
 import unittest
 import paddle.fluid as fluid
 from paddleslim.prune import Pruner
+from paddleslim.prune import AutoPruner
 from layers import conv_bn_layer
 
 
@@ -42,41 +43,52 @@ class TestPrune(unittest.TestCase):
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
 
         shapes = {}
+        params = []
         for param in main_program.global_block().all_parameters():
             shapes[param.name] = param.shape
+            if 'weights' in param.name:
+                params.append(param.name)
 
+        val_program = fluid.default_main_program().clone(for_test=True)
         place = fluid.CPUPlace()
         exe = fluid.Executor(place)
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
-        criterion = 'bn_scale'
-        idx_selector = 'optimal_threshold'
-        pruner = Pruner(criterion, idx_selector=idx_selector)
-        main_program, _, _ = pruner.prune(
-            main_program,
-            scope,
-            params=["conv4_weights"],
-            ratios=[0.5],
-            place=place,
-            lazy=False,
-            only_graph=False,
-            param_backup=None,
-            param_shape_backup=None)
 
-        shapes = {
-            "conv1_weights": (4, 3, 3, 3),
-            "conv2_weights": (4, 4, 3, 3),
-            "conv3_weights": (8, 4, 3, 3),
-            "conv4_weights": (4, 8, 3, 3),
-            "conv5_weights": (8, 4, 3, 3),
-            "conv6_weights": (8, 8, 3, 3)
-        }
-
-        for param in main_program.global_block().all_parameters():
-            if "weights" in param.name:
-                print("param: {}; param shape: {}".format(param.name,
-                                                          param.shape))
-                #self.assertTrue(param.shape == shapes[param.name])
+        pruner = AutoPruner(
+            val_program,
+            fluid.global_scope(),
+            place,
+            params=params,
+            init_ratios=[0.33] * len(params),
+            pruned_flops=0.5,
+            pruned_latency=None,
+            server_addr=("", 0),
+            init_temperature=100,
+            reduce_rate=0.85,
+            max_try_times=300,
+            max_client_num=10,
+            search_steps=100,
+            max_ratios=0.9,
+            min_ratios=0.,
+            is_server=True,
+            key="auto_pruner")
+        baseratio = None
+        lastratio = None
+        for i in range(10):
+            pruned_program, pruned_val_program = pruner.prune(
+                fluid.default_main_program(), val_program)
+            score = 0.2
+            pruner.reward(score)
+            if i == 0:
+                baseratio = pruner._current_ratios
+            if i == 9:
+                lastratio = pruner._current_ratios
+        changed = False
+        for i in range(len(baseratio)):
+            if baseratio[i] != lastratio[i]:
+                changed = True
+        self.assertTrue(changed == True)
 
 
 if __name__ == '__main__':

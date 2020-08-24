@@ -26,7 +26,7 @@ def save_model(exe, graph, dirname):
     assert graph is not None and dirname is not None
     graph = GraphWrapper(graph) if isinstance(graph, Program) else graph
 
-    fluid.io.save_params(
+    fluid.io.save_persistables(
         executor=exe,
         dirname=dirname,
         main_program=graph.program,
@@ -34,8 +34,8 @@ def save_model(exe, graph, dirname):
     weights_file = os.path.join(dirname, _PARAMS_FILE)
     _logger.info("Save model weights into {}".format(weights_file))
     shapes = {}
-    for var in graph.all_parameters():
-        shapes[var.name()] = var.shape()
+    for var in fluid.io.get_program_persistable_vars(graph.program):
+        shapes[var.name] = var.shape
     SHAPES_FILE = os.path.join(dirname, _SHAPES_FILE)
     with open(SHAPES_FILE, "w") as f:
         json.dump(shapes, f)
@@ -62,7 +62,7 @@ def load_model(exe, graph, dirname):
 
     _logger.info("Load shapes of weights from {}".format(SHAPES_FILE))
 
-    fluid.io.load_params(
+    fluid.io.load_persistables(
         executor=exe,
         dirname=dirname,
         main_program=graph.program,

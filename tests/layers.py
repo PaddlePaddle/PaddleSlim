@@ -21,7 +21,8 @@ def conv_bn_layer(input,
                   name,
                   stride=1,
                   groups=1,
-                  act=None):
+                  act=None,
+                  bias=False):
     conv = fluid.layers.conv2d(
         input=input,
         num_filters=num_filters,
@@ -31,7 +32,7 @@ def conv_bn_layer(input,
         groups=groups,
         act=None,
         param_attr=ParamAttr(name=name + "_weights"),
-        bias_attr=False,
+        bias_attr=bias,
         name=name + "_out")
     bn_name = name + "_bn"
     return fluid.layers.batch_norm(

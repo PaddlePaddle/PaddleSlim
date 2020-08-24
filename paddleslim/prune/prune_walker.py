@@ -84,9 +84,7 @@ class PruneWorker(object):
             cls = PRUNE_WORKER.get("default_walker")
         _logger.debug("\nfrom: {}\nto: {}\npruned_axis: {}; var: {}".format(
             self.op, op, pruned_axis, var.name()))
-        walker = cls(op,
-                     pruned_params=self.pruned_params,
-                     visited=self.visited)
+        walker = cls(op, pruned_params=self.pruned_params, visited=self.visited)
         walker.prune(var, pruned_axis, pruned_idx)
 
 
@@ -175,29 +173,8 @@ class conv2d_transpose(PruneWorker):
                 self._prune_op(op, filter_var, 0, pruned_idx)
 
         elif var in self.op.inputs("Filter"):
-            assert pruned_axis in [0, 1]
-
-            self.pruned_params.append((var, pruned_axis, pruned_idx))
-
-            for op in var.outputs():
-                self._prune_op(op, var, pruned_axis, pruned_idx)
-
-            if pruned_axis == 1:
-                if len(self.op.inputs("Bias")) > 0:
-                    self.pruned_params.append(
-                        (self.op.inputs("Bias"), channel_axis, pruned_idx))
-                output_var = self.op.outputs("Output")[0]
-                self._visit(output_var, channel_axis)
-                next_ops = output_var.outputs()
-                for op in next_ops:
-                    self._prune_op(op, output_var, channel_axis, pruned_idx)
-
-            elif pruned_axis == 0:
-                input_var = self.op.inputs("Input")[0]
-                self._visit(input_var, channel_axis)
-                pre_ops = input_var.inputs()
-                for op in pre_ops:
-                    self._prune_op(op, input_var, channel_axis, pruned_idx)
+            _logger.warn("Skip pruning output channels of conv2d_transpose!")
+            return
         elif var in self.op.outputs("Output"):
             assert pruned_axis == channel_axis, "pruned_axis: {}; var: {}".format(
                 pruned_axis, var.name())
@@ -503,9 +480,6 @@ class depthwise_conv2d(PruneWorker):
             self.pruned_params.append((filter_var, 0, pruned_idx))
             self._visit(filter_var, 0)
 
-            new_groups = filter_var.shape()[0] - len(pruned_idx)
-            self.op.set_attr("groups", new_groups)
-
             for op in filter_var.outputs():
                 self._prune_op(op, filter_var, 0, pruned_idx)
 
@@ -522,8 +496,6 @@ class depthwise_conv2d(PruneWorker):
                         (self.op.inputs("Bias"), channel_axis, pruned_idx))
 
                 self.pruned_params.append((var, 0, pruned_idx))
-                new_groups = var.shape()[0] - len(pruned_idx)
-                self.op.set_attr("groups", new_groups)
 
                 for op in var.outputs():
                     self._prune_op(op, var, 0, pruned_idx)
@@ -540,9 +512,6 @@ class depthwise_conv2d(PruneWorker):
             filter_var = self.op.inputs("Filter")[0]
             self.pruned_params.append((filter_var, 0, pruned_idx))
             self._visit(filter_var, 0)
-
-            new_groups = filter_var.shape()[0] - len(pruned_idx)
-            self.op.set_attr("groups", new_groups)
 
             for op in filter_var.outputs():
                 self._prune_op(op, filter_var, 0, pruned_idx)

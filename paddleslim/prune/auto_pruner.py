@@ -113,9 +113,13 @@ class AutoPruner(object):
                 self._pruned_latency)
         init_tokens = self._ratios2tokens(self._init_ratios)
         _logger.info("range table: {}".format(self._range_table))
-        controller = SAController(self._range_table, self._reduce_rate,
-                                  self._init_temperature, self._max_try_times,
-                                  init_tokens, self._constrain_func)
+        controller = SAController(
+            self._range_table,
+            self._reduce_rate,
+            self._init_temperature,
+            self._max_try_times,
+            init_tokens,
+            constrain_func=self._constrain_func)
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":
