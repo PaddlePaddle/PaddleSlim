@@ -42,7 +42,7 @@ def save_model(exe, graph, dirname):
         _logger.info("Save shapes of weights into {}".format(SHAPES_FILE))
 
 
-def load_model(exe, graph, dirname):
+def load_model(exe, graph, dirname, repeat_load=False):
     """
     Load weights of model and information of shapes from filesystem.
 
@@ -57,16 +57,20 @@ def load_model(exe, graph, dirname):
     _logger.info("Load shapes of weights from {}".format(SHAPES_FILE))
     with open(SHAPES_FILE, "r") as f:
         shapes = json.load(f)
-        for param, shape in shapes.items():
-            graph.var(param).set_shape(shape)
+        for param_name, shape in shapes.items():
+            param = graph.var(param)
+            if param is not None:
+                param.set_shape(shape)
+            else:
+                _logger.info('{} is not loaded'.format(param_name))
 
     _logger.info("Load shapes of weights from {}".format(SHAPES_FILE))
-
-    fluid.io.load_persistables(
-        executor=exe,
-        dirname=dirname,
-        main_program=graph.program,
-        filename=_PARAMS_FILE)
+    if not repeat_load:
+        fluid.io.load_persistables(
+            executor=exe,
+            dirname=dirname,
+            main_program=graph.program,
+            filename=_PARAMS_FILE)
     graph.update_groups_of_conv()
     graph.infer_shape()
     _logger.info("Load weights from {}".format(
