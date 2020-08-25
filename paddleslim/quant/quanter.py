@@ -226,6 +226,8 @@ def quant_aware(program,
             quantization function and preprocess function, this function must be set. Default is None.
         exe(Fluid.Executor): If user want to use self-defined quantization function and preprocess function, exe must be set for
                 initialization. Default is None.
+        return_program(bool): If user want return value is a Program rather than Compiled Program, This argument should be set True.
+                Default is False.
     Returns:
         fluid.CompiledProgram | fluid.Program: Program with quantization and dequantization ``operators``
     """
@@ -291,7 +293,7 @@ def quant_aware(program,
             VARS_MAPPING_TABLE))
         save_dict(main_graph.out_node_mapping_table)
 
-    if for_test:
+    if for_test or return_program:
         quant_program = main_graph.to_program()
     else:
         quant_program = fluid.CompiledProgram(main_graph.graph)
