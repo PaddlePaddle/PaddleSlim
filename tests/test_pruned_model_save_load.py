@@ -35,6 +35,15 @@ class TestSaveAndLoad(unittest.TestCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
+            feature = fluid.layers.reshape(conv6, [-1, 128, 16])
+            predict = fluid.layers.fc(input=feature, size=10, act='softmax')
+            label = fluid.data(name='label', shape=[None,1], dtype='int64')
+            print(label.shape)
+            print(predict.shape)
+            cost = fluid.layers.cross_entropy(input=predict, label=label)
+            avg_cost = fluid.layers.mean(cost)
+            adam_optimizer = fluid.optimizer.AdamOptimizer(0.01)
+            adam_optimizer.minimize(avg_cost)
 
         place = fluid.CPUPlace()
         exe = fluid.Executor(place)
@@ -55,9 +64,11 @@ class TestSaveAndLoad(unittest.TestCase):
             param_shape_backup=None)
 
         x = numpy.random.random(size=(10, 3, 16, 16)).astype('float32')
+        label = numpy.random.random(size=(10, 1)).astype('int64')
         loss_data, = exe.run(train_program,
-                             feed={"image": x},
-                             fetch_list=[conv6.name])
+                             feed={"image": x,
+                                   "label":label},
+                             fetch_list=[cost.name])
 
         save_model(exe, main_program, 'model_file')
         pruned_program = fluid.Program()
