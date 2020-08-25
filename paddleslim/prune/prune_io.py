@@ -10,7 +10,6 @@ __all__ = ["save_model", "load_model"]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-_PARAMS_FILE = "__params__"
 _SHAPES_FILE = "__shapes__"
 
 
@@ -30,8 +29,8 @@ def save_model(exe, graph, dirname):
         executor=exe,
         dirname=dirname,
         main_program=graph.program,
-        filename=_PARAMS_FILE)
-    weights_file = os.path.join(dirname, _PARAMS_FILE)
+        filename=None)
+    weights_file = dirname
     _logger.info("Save model weights into {}".format(weights_file))
     shapes = {}
     for var in fluid.io.get_program_persistable_vars(graph.program):
@@ -42,7 +41,7 @@ def save_model(exe, graph, dirname):
         _logger.info("Save shapes of weights into {}".format(SHAPES_FILE))
 
 
-def load_model(exe, graph, dirname, repeat_load=False):
+def load_model(exe, graph, dirname):
     """
     Load weights of model and information of shapes from filesystem.
 
@@ -65,13 +64,11 @@ def load_model(exe, graph, dirname, repeat_load=False):
                 _logger.info('{} is not loaded'.format(param_name))
 
     _logger.info("Load shapes of weights from {}".format(SHAPES_FILE))
-    if not repeat_load:
-        fluid.io.load_persistables(
-            executor=exe,
-            dirname=dirname,
-            main_program=graph.program,
-            filename=_PARAMS_FILE)
+    fluid.io.load_persistables(
+        executor=exe,
+        dirname=dirname,
+        main_program=graph.program,
+        filename=None)
     graph.update_groups_of_conv()
     graph.infer_shape()
-    _logger.info("Load weights from {}".format(
-        os.path.join(dirname, _PARAMS_FILE)))
+    _logger.info("Load weights from {}".format(dirname))

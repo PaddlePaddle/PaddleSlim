@@ -75,7 +75,7 @@ class TestSaveAndLoad(unittest.TestCase):
         pruned_test_program = pruned_program.clone(for_test=True)
         exe.run(pruned_startup_program)
         load_model(exe, pruned_program, 'model_file')
-        load_model(exe, pruned_test_program, 'model_file', repeat_load=True)
+        load_model(exe, pruned_test_program, 'model_file')
         shapes = {
             "conv1_weights": (4, 3, 3, 3),
             "conv2_weights": (4, 4, 3, 3),
