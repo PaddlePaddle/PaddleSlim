@@ -42,21 +42,22 @@ class TestPrune(unittest.TestCase):
             conv3 = conv_bn_layer(sum1, 8, 3, "conv3")
             conv4 = conv_bn_layer(conv3, 8, 3, "conv4")
             sum2 = conv4 + sum1
-            #test roi_align
-            rois = fluid.data(
-                name='rois', shape=[None, 4], dtype='float32')
-            align_out = fluid.layers.roi_align(input=sum2,
-                                               rois=rois,
-                                               pooled_height=7,
-                                               pooled_width=7,
-                                               spatial_scale=0.5,
-                                               sampling_ratio=-1)
+            # test roi_align
+            rois = fluid.data(name='rois', shape=[None, 4], dtype='float32')
+            align_out = fluid.layers.roi_align(
+                input=sum2,
+                rois=rois,
+                pooled_height=7,
+                pooled_width=7,
+                spatial_scale=0.5,
+                sampling_ratio=-1)
             conv5 = conv_bn_layer(align_out, 8, 3, "conv5")
-            #test gather
-            index = fluid.layers.data(name='index', shape=[-1, 1], dtype='int32')
+            # test gather
+            index = fluid.layers.data(
+                name='index', shape=[-1, 1], dtype='int32')
             gather_out = fluid.layers.gather(sum2, index)
             conv6 = conv_bn_layer(gather_out, 8, 3, "conv6")
-            #test lod_reset
+            # test lod_reset
             y = fluid.layers.data(name='y', shape=[6], lod_level=2)
             lodset_out = fluid.layers.lod_reset(x=sum2, y=y)
             conv7 = conv_bn_layer(lodset_out, 8, 3, "conv7")

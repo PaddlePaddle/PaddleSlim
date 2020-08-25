@@ -23,7 +23,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 PRUNE_WORKER = Registry('prune_worker')
 
-SKIP_OPS = ["conditional_block","shape","reshape2"]
+SKIP_OPS = ["conditional_block", "shape", "reshape2"]
 
 
 class PruneWorker(object):
@@ -643,6 +643,7 @@ class roi_align(PruneWorker):
         for op in next_ops:
             self._prune_op(op, out_var, pruned_axis, pruned_idx)
 
+
 @PRUNE_WORKER.register
 class lod_reset(PruneWorker):
     def __init__(self, op, pruned_params, visited={}):
@@ -661,10 +662,12 @@ class lod_reset(PruneWorker):
         for op in next_ops:
             self._prune_op(op, out_var, pruned_axis, pruned_idx)
 
+
 @PRUNE_WORKER.register
 class gather(PruneWorker):
     def __init__(self, op, pruned_params, visited):
         super(gather, self).__init__(op, pruned_params, visited)
+
     def _prune(self, var, pruned_axis, pruned_idx):
         if var in self.op.outputs("Out"):
             in_var = self.op.inputs("X")[0]
