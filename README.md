@@ -50,7 +50,7 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 						Slim Pruner:<span style="background-color:#FFFDFA;">&nbsp;<a href="https://arxiv.org/pdf/1708.06519.pdf" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">Liu Z , Li J , Shen Z , et al. Learning Efficient Convolutional Networks through Network Slimming[J]. 2017.</span></a></span>
 					</li>
 					<li>
-						<span style="background-color:#FFFDFA;">Opt Slim Pruner:&nbsp;<a href="https://arxiv.org/pdf/1708.06519.pdf" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">Ye Y , You G , Fwu J K , et al. Channel Pruning via Optimal Thresholding[J]. 2020.</span></a><br />
+						<span style="background-color:#FFFDFA;">Opt Slim Pruner:&nbsp;<a href="https://arxiv.org/pdf/2003.04566.pdf" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">Ye Y , You G , Fwu J K , et al. Channel Pruning via Optimal Thresholding[J]. 2020.</span></a><br />
 </span>
 					</li>
 				</ul>
