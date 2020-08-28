@@ -66,7 +66,7 @@ class OFABase(fluid.dygraph.Layer):
             config = self.current_config[block.key]
         else:
             config = dict()
-        logging.debug(model, config)
+        logging.debug(self.model, config)
 
         return block.fn(*inputs, **config)
 
@@ -89,7 +89,7 @@ class OFA(OFABase):
         self.distill_config = distill_config
         self.elastic_order = elastic_order
         self.train_full = train_full
-        self.iter_per_epochs = 1  #self.run_config.total_images // self.run_config.train_batch_size
+        self.iter_per_epochs = self.run_config.total_images // self.run_config.train_batch_size
         self.iter = 0
         self.dynamic_iter = 0
         self.manual_set_task = False
@@ -176,7 +176,7 @@ class OFA(OFABase):
                         sublayer._num_filters,
                         sublayer._num_filters,
                         filter_size=1)
-                    self.netAs_param.append(netA.parameters())
+                    self.netAs_param.extend(netA.parameters())
                     self.netAs.append(netA)
 
             def get_activation(mem, name):
@@ -232,7 +232,6 @@ class OFA(OFABase):
             self.layers, sample_type=sample_type, task=task, phase=phase)
         return config
 
-    ### TODO: if task is elastic width, need to add re_organize_middle_weight in 1x1 conv
     def set_task(self, task=None, phase=None):
         self.manual_set_task = True
         self.task = task
@@ -301,43 +300,3 @@ class OFA(OFABase):
             self.current_config = self.net_config
 
         return self.model.forward(*inputs, **kwargs), teacher_output
-
-
-class SuperNet(fluid.dygraph.Layer):
-    def __init__(self):
-        super(SuperNet, self).__init__()
-        models = [
-            Block(
-                SuperConv2D(
-                    3,
-                    5,
-                    7,
-                    candidate_config={
-                        'kernel_size': [7, 5, 7, 3],
-                        'expand_ratio': [2, 3, 4]
-                    },
-                    transform_kernel=True),
-                key='conv1')
-        ]
-        models += [SuperBatchNorm(20)]
-        models += [nn.Pool2D(global_pooling=True)]
-        models += [nn.ReLU()]
-        models += [
-            Block(
-                SuperConv2D(
-                    5,
-                    5,
-                    7,
-                    candidate_config={
-                        'kernel_size': [3, 5, 7],
-                        'expand_ratio': [2, 3, 4]
-                    },
-                    transform_kernel=True),
-                key='conv2')
-        ]
-        models += [nn.Pool2D(global_pooling=True)]
-        models += [nn.ReLU()]
-        self.models = nn.Sequential(*models)
-
-    def forward(self, x):
-        return self.models(x)

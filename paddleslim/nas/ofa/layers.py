@@ -33,6 +33,8 @@ __all__ = [
 
 _logger = get_logger(__name__, level=logging.INFO)
 
+### TODO: if task is elastic width, need to add re_organize_middle_weight in 1x1 conv in MBBlock
+
 
 class BaseBlock(fluid.dygraph.Layer):
     def __init__(self, key=None):
@@ -181,9 +183,6 @@ class SuperConv2D(fluid.dygraph.Conv2D):
 
     """
 
-    ### case1: train max net, config['channels'] = num_filters, config['kernel_size']=filter_size
-    ### case2: train super net, config = None, sample sub config from self._progressive_shrinking()
-    ### case3: train concert sub net, config['channels']=channels<num_filters, config['filter_size']=kernel_size<filter_size
     ### NOTE: filter_size, num_channels and num_filters must be the max of candidate to define a largest network.
     def __init__(self,
                  num_channels,

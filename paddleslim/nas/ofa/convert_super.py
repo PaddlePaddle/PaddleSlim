@@ -19,9 +19,11 @@ import paddle
 import paddle.nn as nn
 import paddle.fluid as fluid
 from paddle.fluid import framework
-from paddle.fluid.dygraph.nn import Conv2D
+from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm
 from ofa import OFA
 from layers import *
+
+__all__ = ['supernet']
 
 WEIGHT_LAYER = ['conv', 'linear']
 
@@ -72,7 +74,7 @@ class Convert:
                 self.context.channel) == 1, "length of expand_ratio must be 1."
 
         for idx, layer in enumerate(model):
-            if isinstance(layer, nn.Conv2D):
+            if isinstance(layer, Conv2D):
                 attr_dict = layer.__dict__
                 key = attr_dict['_full_name']
 
@@ -89,7 +91,8 @@ class Convert:
                     new_attr_dict['transform_kernel'] = True
 
                 # if the kernel_size of conv is 1, don't change it.
-                if self.kernel_size and int(attr_dict['_filter_size'][0]) != 1:
+                #if self.kernel_size and int(attr_dict['_filter_size'][0]) != 1:
+                if self.kernel_size and int(attr_dict['_filter_size']) != 1:
                     new_attr_dict['filter_size'] = max(self.kernel_size)
                     new_attr_dict['candidate_config'].update({
                         'kernel_size': self.kernel_size
@@ -142,16 +145,24 @@ class Convert:
 
                 del layer
 
-                if int(attr_dict['_groups']) == 1:
+                if attr_dict['_groups'] == None or int(attr_dict[
+                        '_groups']) == 1:
                     ### standard conv
                     layer = Block(SuperConv2D(**new_attr_dict), key=key)
                 elif int(attr_dict['_groups']) == int(attr_dict[
-                        '_num_filters']):
+                        '_num_channels']):
                     ### depthwise conv
                     logging.warning(
                         "If convolution is a depthwise conv, output channel change to the same channel with input, output channel in search is not used."
                     )
-                    new_attr_dict['groups'] = new_attr_dict['num_filters']
+                    new_attr_dict['groups'] = new_attr_dict['num_channels']
+                    # if conv is depthwise conv, groups = in_channel, out_channel = in_channel,
+                    # channel in candidate_config = in_channel_list
+                    if 'channel' in new_attr_dict['candidate_config']:
+                        new_attr_dict['num_filters'] = new_attr_dict[
+                            'num_channels']
+                        new_attr_dict['candidate_config'][
+                            'channel'] = pre_channel
                     layer = Block(
                         SuperDepthwiseConv2D(**new_attr_dict), key=key)
                 else:
@@ -159,7 +170,7 @@ class Convert:
                     layer = Block(SuperGroupConv2D(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            elif isinstance(layer, nn.BatchNorm) and (
+            elif isinstance(layer, BatchNorm) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
                 # num_features in BatchNorm don't change after last weight operators
@@ -188,8 +199,8 @@ class Convert:
                 model[idx] = layer
 
             ### assume output_size = None, filter_size != None
-            ### output_size != None may raise error, solve when it happend. 
-            elif isinstance(layer, nn.Conv2DTranspose):
+            ### NOTE: output_size != None may raise error, solve when it happend. 
+            elif isinstance(layer, Conv2DTranspose):
                 attr_dict = layer.__dict__
                 key = attr_dict['_full_name']
 
@@ -261,17 +272,28 @@ class Convert:
 
                 del layer
 
-                if int(attr_dict['_groups']) == 1:
+                if new_attr_dict['output_size'] == []:
+                    new_attr_dict['output_size'] = None
+
+                if attr_dict['_groups'] == None or int(attr_dict[
+                        '_groups']) == 1:
                     ### standard conv_transpose
                     layer = Block(
                         SuperConv2DTranspose(**new_attr_dict), key=key)
                 elif int(attr_dict['_groups']) == int(attr_dict[
-                        '_num_filters']):
+                        '_num_channels']):
                     ### depthwise conv_transpose
                     logging.warning(
                         "If convolution is a depthwise conv_transpose, output channel change to the same channel with input, output channel in search is not used."
                     )
-                    new_attr_dict['groups'] = new_attr_dict['num_filters']
+                    new_attr_dict['groups'] = new_attr_dict['num_channels']
+                    # if conv is depthwise conv, groups = in_channel, out_channel = in_channel,
+                    # channel in candidate_config = in_channel_list
+                    if 'channel' in new_attr_dict['candidate_config']:
+                        new_attr_dict['num_filters'] = new_attr_dict[
+                            'num_channels']
+                        new_attr_dict['candidate_config'][
+                            'channel'] = pre_channel
                     layer = Block(
                         SuperDepthwiseConv2DTranspose(**new_attr_dict), key=key)
                 else:
@@ -281,7 +303,7 @@ class Convert:
                 model[idx] = layer
 
             ### TODO(paddle): add _param_attr and _bias_attr as private variable of Linear
-            elif isinstance(layer, nn.Linear) and (
+            elif isinstance(layer, Linear) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
                 attr_dict = layer.__dict__
@@ -334,7 +356,7 @@ class Convert:
                 layer = Block(SuperLinear(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            elif isinstance(layer, nn.InstanceNorm) and (
+            elif isinstance(layer, InstanceNorm) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
                 # num_features in InstanceNorm don't change after last weight operators
@@ -363,7 +385,7 @@ class Convert:
         return model
 
 
-class ofa_supernet:
+class supernet:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
