@@ -185,7 +185,8 @@ def quant_aware(program,
                 weight_preprocess_func=None,
                 act_preprocess_func=None,
                 optimizer_func=None,
-                executor=None):
+                executor=None,
+                return_program=False):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
