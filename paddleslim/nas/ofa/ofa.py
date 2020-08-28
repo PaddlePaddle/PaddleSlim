@@ -22,7 +22,7 @@ from paddle.fluid.dygraph import Conv2D
 from layers import BaseBlock, Block, SuperConv2D, SuperBatchNorm
 from utils.utils import search_idx
 
-__all__ = ['OFA', 'RunConfig']
+__all__ = ['OFA', 'RunConfig', 'DistillConfig']
 
 RunConfig = namedtuple('RunConfig', [
     'train_batch_size', 'eval_batch_size', 'n_epochs', 'save_frequency',
@@ -116,8 +116,9 @@ class OFA(OFABase):
             if 'kernel_size' in self._elastic_task:
                 self.elastic_order.append('kernel_size')
 
-            # second, elastic depth, depth -> list(2, 3, 4)
+            # second, elastic depth, such as: list(2, 3, 4)
             if getattr(self.run_config, 'elastic_depth', None) != None:
+                self.layers['depth'] = list(set(self.run_config.elastic_depth))
                 self.elastic_order.append('depth')
 
             # final, elastic width
@@ -126,6 +127,12 @@ class OFA(OFABase):
 
             if 'channel' in self._elastic_task:
                 self.elastic_order.append('channel')
+
+        assert len(self.run_config.n_epochs) == len(self.elastic_order)
+        assert len(self.run_config.n_epochs) == len(
+            self.run_config.dynamic_batch_size)
+        assert len(self.run_config.n_epochs) == len(
+            self.run_config.init_learning_rate)
 
         ### =================  add distill prepare ======================
         if self.distill_config != None and (
