@@ -123,7 +123,7 @@ class Convert:
                         new_attr_dict['num_channels'] = attr_dict[
                             '_num_channels']
                     else:
-                        new_attr_dict['num_channels'] = max(cur_channel)
+                        new_attr_dict['num_channels'] = max(pre_channel)
 
                     if idx == last_weight_layer_idx:
                         new_attr_dict['num_filters'] = attr_dict['_num_filters']
@@ -132,6 +132,7 @@ class Convert:
                         new_attr_dict['candidate_config'].update({
                             'channel': cur_channel
                         })
+                        pre_channel = cur_channel
                 else:
                     new_attr_dict['num_filters'] = attr_dict['_num_filters']
                     new_attr_dict['num_channels'] = attr_dict['_num_channels']
@@ -241,7 +242,7 @@ class Convert:
                         new_attr_dict['num_channels'] = attr_dict[
                             '_num_channels']
                     else:
-                        new_attr_dict['num_channels'] = max(cur_channel)
+                        new_attr_dict['num_channels'] = max(pre_channel)
 
                     if idx == last_weight_layer_idx:
                         new_attr_dict['num_filters'] = attr_dict['_num_filters']
@@ -250,6 +251,7 @@ class Convert:
                         new_attr_dict['candidate_config'].update({
                             'channel': cur_channel
                         })
+                        pre_channel = cur_channel
                 else:
                     new_attr_dict['num_filters'] = attr_dict['_num_filters']
                     new_attr_dict['num_channels'] = attr_dict['_num_channels']
@@ -310,7 +312,7 @@ class Convert:
                     if idx == first_weight_layer_idx:
                         new_attr_dict['input_dim'] = int(in_nc)
                     else:
-                        new_attr_dict['input_dim'] = max(cur_channel)
+                        new_attr_dict['input_dim'] = max(pre_channel)
 
                     if idx == last_weight_layer_idx:
                         new_attr_dict['output_dim'] = int(out_nc)
@@ -319,6 +321,7 @@ class Convert:
                         new_attr_dict['candidate_config'].update({
                             'channel': cur_channel
                         })
+                        pre_channel = cur_channel
                 else:
                     new_attr_dict['input_dim'] = int(in_nc)
                     new_attr_dict['output_dim'] = int(out_nc)
