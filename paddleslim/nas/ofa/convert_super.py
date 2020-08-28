@@ -45,7 +45,7 @@ class Convert:
             task += ['depth']
         return task
 
-    def convert(self, model, config=None):
+    def convert(self, model):
         # search the first and last weight layer, don't change out channel of the last weight layer
         # don't change in channel of the first weight layer
         first_weight_layer_idx = -1
@@ -392,66 +392,3 @@ class ofa_supernet:
 #            supernet_convert(*args, **kwargs)
 #        return convert
 #    return _ofa_supernet
-
-
-class Model(fluid.dygraph.Layer):
-    #@ofa_supernet(kernel_size=(3,5,7), expand_ratio=(1, 2, 4))
-    def __init__(self):
-        super(Model, self).__init__()
-        #with ofa_supernet(
-        #        kernel_size=(3, 5, 7), expand_ratio=(1, 2, 4)) as ofa_super:
-        with ofa_supernet(
-                kernel_size=(3, 5, 7),
-                channel=((4, 8, 12), (8, 12, 16), (8, 12, 16))) as ofa_super:
-            models = []
-            models += [nn.Conv2D(3, 4, 3)]
-            models += [nn.InstanceNorm(4)]
-            models += [nn.ReLU()]
-            models += [nn.Conv2DTranspose(4, 4, 3, groups=4, use_cudnn=True)]
-            models += [nn.BatchNorm(4)]
-            models += [nn.ReLU()]
-            models += [
-                fluid.dygraph.Pool2D(
-                    pool_type='avg', global_pooling=True, use_cudnn=False)
-            ]
-            models += [nn.Linear(4, 3)]
-            models += [nn.ReLU()]
-            models = ofa_super.convert(models)
-        self.models = nn.Sequential(*models)
-
-    def forward(self, inputs):
-        for idx, layer in enumerate(self.models):
-            if idx == (len(self.models) - 2):
-                inputs = fluid.layers.reshape(
-                    inputs, shape=[inputs.shape[0], -1])
-            inputs = layer(inputs)
-        return inputs
-        #return self.models(inputs)
-
-
-if __name__ == '__main__':
-    import numpy as np
-    data_np = np.random.random((1, 3, 10, 10)).astype('float32')
-    fluid.enable_dygraph()
-    net = Model()
-    ofa_model = OFA(net)
-    adam = fluid.optimizer.Adam(
-        learning_rate=0.001, parameter_list=ofa_model.parameters())
-
-    for name, sublayer in net.named_sublayers():
-        print(name, sublayer)
-        if getattr(sublayer, '_filter_size', None) != None and getattr(
-                sublayer, '_num_filters', None) != None:
-            print(name, sublayer._num_channels, sublayer._num_filters,
-                  sublayer._filter_size)
-        if getattr(sublayer, 'candidate_config', None) != None:
-            print(name, sublayer.candidate_config)
-
-    data = fluid.dygraph.to_variable(data_np)
-    for _ in range(10):
-        out = ofa_model(data)
-        loss = fluid.layers.reduce_mean(out)
-        print(loss.numpy())
-        loss.backward()
-        adam.minimize(loss)
-        adam.clear_gradients()

@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import paddle
+import paddle.nn as nn
+
 
 ### TODO: complete
 class AccEvaluator:
-    def __init__(self, model):
+    def __init__(self, model=default_model):
         self.model = model
 
     ### TODO
@@ -35,7 +38,11 @@ class LatencyEvalutor:
 class Model(fluid.dygraph.Layer):
     def __init__(self):
         super(Model, self).__init__()
-        ### add MLP model
+        self.models = nn.Sequential(
+            nn.Linear(128, 400),
+            nn.ReLU(),
+            nn.Linear(400, 400),
+            nn.ReLU(), nn.Linear(400, 400), nn.ReLU(), nn.Linear(400, 1))
 
     def forward(self, *inputs, **kwargs):
         return self.model(inputs)

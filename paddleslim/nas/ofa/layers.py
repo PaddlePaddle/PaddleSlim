@@ -189,10 +189,11 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                  num_channels,
                  num_filters,
                  filter_size,
-                 candidate_config=None,
+                 candidate_config={},
                  transform_kernel=False,
                  stride=1,
                  dilation=1,
+                 padding=0,
                  groups=None,
                  param_attr=None,
                  bias_attr=None,
@@ -202,15 +203,17 @@ class SuperConv2D(fluid.dygraph.Conv2D):
         ### NOTE: padding always is 0, add padding in forward because of kernel size is uncertain
         ### TODO: change padding to any padding
         super(SuperConv2D, self).__init__(
-            num_channels, num_filters, filter_size, stride, 0, dilation, groups,
-            param_attr, bias_attr, use_cudnn, act, dtype)
+            num_channels, num_filters, filter_size, stride, padding, dilation,
+            groups, param_attr, bias_attr, use_cudnn, act, dtype)
 
         if isinstance(self._filter_size, int):
             self._filter_size = convert_to_list(self._filter_size, 2)
 
-        for k, v in candidate_config.items():
-            candidate_config[k] = list(set(v))
         self.candidate_config = candidate_config
+        if len(candidate_config.items()) != 0:
+            for k, v in candidate_config.items():
+                candidate_config[k] = list(set(v))
+
         self.ks_set = candidate_config[
             'kernel_size'] if 'kernel_size' in candidate_config else None
 
@@ -464,10 +467,11 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                  num_filters,
                  filter_size,
                  output_size=None,
-                 candidate_config=None,
+                 candidate_config={},
                  transform_kernel=False,
                  stride=1,
                  dilation=1,
+                 padding=0,
                  groups=None,
                  param_attr=None,
                  bias_attr=None,
@@ -476,11 +480,13 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                  dtype='float32'):
         ### NOTE: padding always is 0, add padding in forward because of kernel size is uncertain
         super(SuperConv2DTranspose, self).__init__(
-            num_channels, num_filters, filter_size, output_size, 0, stride,
-            dilation, groups, param_attr, bias_attr, use_cudnn, act, dtype)
-        for k, v in candidate_config.items():
-            candidate_config[k] = list(set(v))
+            num_channels, num_filters, filter_size, output_size, padding,
+            stride, dilation, groups, param_attr, bias_attr, use_cudnn, act,
+            dtype)
         self.candidate_config = candidate_config
+        if len(self.candidate_config.items()) != 0:
+            for k, v in candidate_config.items():
+                candidate_config[k] = list(set(v))
         self.ks_set = candidate_config[
             'kernel_size'] if 'kernel_size' in candidate_config else None
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import numpy as np
 from collections import namedtuple
 import paddle
@@ -29,6 +30,12 @@ RunConfig = namedtuple('RunConfig', [
     'dynamic_batch_size'
 ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
+
+DistillConfig = namedtuple('DistillConfig', [
+    'lambda_distill', 'teacher_model', 'mapping_layers', 'teacher_model_path',
+    'distill_fn'
+])
+DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
 
 class OFABase(fluid.dygraph.Layer):
@@ -51,10 +58,16 @@ class OFABase(fluid.dygraph.Layer):
     def forward(self, *inputs, **kwargs):
         raise NotImplementedError
 
+    # NOTE: config means set forward config for layers, used in distill.
     def layers_forward(self, block, *inputs, **kwargs):
-        assert block.key in self.current_config, 'DONNT have {} layer in config.'.format(
-            block.key)
-        config = self.current_config[block.key]
+        if getattr(self, 'current_config', None) != None:
+            assert block.key in self.current_config, 'DONNT have {} layer in config.'.format(
+                block.key)
+            config = self.current_config[block.key]
+        else:
+            config = dict()
+        logging.debug(model, config)
+
         return block.fn(*inputs, **config)
 
     @property
@@ -66,21 +79,23 @@ class OFA(OFABase):
     def __init__(self,
                  model,
                  run_config,
-                 config=None,
-                 lambda_distill=0,
+                 net_config=None,
+                 distill_config=None,
                  elastic_order=None,
                  train_full=False):
         super(OFA, self).__init__(model)
+        self.net_config = net_config
         self.run_config = run_config
-        self.config = config
+        self.distill_config = distill_config
         self.elastic_order = elastic_order
-        self.lambda_distill = lambda_distill
         self.train_full = train_full
         self.iter_per_epochs = 1  #self.run_config.total_images // self.run_config.train_batch_size
         self.iter = 0
         self.dynamic_iter = 0
         self.manual_set_task = False
         self.task_idx = 0
+        self._add_teacher = False
+        self.netAs_param = []
 
         for idx in range(len(run_config.n_epochs)):
             assert isinstance(
@@ -112,16 +127,64 @@ class OFA(OFABase):
             if 'channel' in self._elastic_task:
                 self.elastic_order.append('channel')
 
-    ### TODO: complete it
-    #    self.model = model()
-    #    if lambda_distill > 0:
-    #        self.teacher_model = model(config=max_config)
-    #        self.teacher_model.eval()
-    #    self.model.train()
-    #    self.elastic_order = elastic_order
+        ### =================  add distill prepare ======================
+        if self.distill_config != None and (
+                self.distill_config.lambda_distill != None and
+                self.distill_config.lambda_distill > 0):
+            self._add_teacher = True
+            self._prepare_distill()
 
-    #if self.elastic_order == None:
-    #self.elastic_order = self.model.__dict__
+        self.model.train()
+
+    def _prepare_distill(self):
+        self.Tacts, self.Sacts = {}, {}
+
+        if self.distill_config.teacher_model == None:
+            logging.error(
+                'If you want to add distill, please input class of teacher model'
+            )
+
+        assert issubclass(self.distill_config.teacher_model,
+                          paddle.fluid.dygraph.Layer)
+        teacher_model = self.distill_config.teacher_model()
+
+        # load teacher parameter
+        if self.distill_config.teacher_model_path != None:
+            param_state_dict, _ = paddle.load_dygraph(
+                self.distill_config.teacher_model_path)
+            teacher_model.set_dict(param_state_dict)
+
+        self.ofa_teacher_model = OFABase(teacher_model)
+        self.ofa_teacher_model.model.eval()
+
+        # add hook if mapping layers is not None
+        # if mapping layer is None, return the output of the teacher model,
+        # if mapping layer is NOT None, add hook and compute distill loss about mapping layers.
+        mapping_layers = self.distill_config.mapping_layers
+        if mapping_layers != None:
+            self.netAs = []
+            for name, sublayer in self.model.named_sublayers():
+                if name in mapping_layers:
+                    netA = SuperConv2D(
+                        sublayer._num_filters,
+                        sublayer._num_filters,
+                        filter_size=1)
+                    self.netAs_param.append(netA.parameters())
+                    self.netAs.append(netA)
+
+            def get_activation(mem, name):
+                def get_output_hook(layer, input, output):
+                    mem[name] = output
+
+                return get_output_hook
+
+            def add_hook(net, mem, mapping_layers):
+                for idx, (n, m) in enumerate(net.named_sublayers()):
+                    if n in mapping_layers:
+                        m.register_forward_post_hook(get_activation(mem, n))
+
+            add_hook(self.model, self.Sacts, mapping_layers)
+            add_hook(self.ofa_teacher_model.model, self.Tacts, mapping_layers)
 
     def _compute_epochs(self):
         if getattr(self, 'epoch', None) == None:
@@ -183,14 +246,16 @@ class OFA(OFABase):
         losses = []
         for i, netA in enumerate(self.netAs):
             assert isinstance(netA, SuperConv2D)
-            n = self.mapping_layers[i]
+            n = self.distill_config.mapping_layers[i]
             Tact = self.Tacts[n]
             Sact = self.Sacts[n]
-            Sact = netA(Sact)
-            #loss = fluid.layers.mse_loss(Sact, Tact)
-            loss = distill_fn(Sact, Tact)
+            Sact = netA(Sact, channel=netA._num_filters)
+            if self.distill_config.distill_fn == None:
+                loss = fluid.layers.mse_loss(Sact, Tact)
+            else:
+                loss = distill_fn(Sact, Tact)
             losses.append(loss)
-        return sum(losses)
+        return sum(losses) * self.distill_config.lambda_distill
 
     ### TODO: complete it
     def search(self, eval_func, condition):
@@ -201,13 +266,21 @@ class OFA(OFABase):
         pass
 
     def forward(self, *inputs, **kwargs):
+        # =====================  teacher process  =====================
+        teacher_output = None
+        if self._add_teacher:
+            teacher_output = self.ofa_teacher_model.model.forward(*inputs,
+                                                                  **kwargs)
+        # ============================================================
+
+        # ====================   student process  =====================
         self.dynamic_iter += 1
         if self.dynamic_iter == self.run_config.dynamic_batch_size[
                 self.task_idx]:
             self.iter += 1
             self.dynamic_iter = 0
 
-        if self.config == None:
+        if self.net_config == None:
             if self.train_full == True:
                 self.current_config = self._sample_config(
                     task=None, sample_type='largest')
@@ -218,8 +291,9 @@ class OFA(OFABase):
                     self.current_config = self._sample_config(
                         self.task, phase=self.phase)
         else:
-            self.current_config = self.config
-        return self.model.forward(*inputs, **kwargs)
+            self.current_config = self.net_config
+
+        return self.model.forward(*inputs, **kwargs), teacher_output
 
 
 class SuperNet(fluid.dygraph.Layer):
@@ -260,87 +334,3 @@ class SuperNet(fluid.dygraph.Layer):
 
     def forward(self, x):
         return self.models(x)
-
-
-# NOTE: case 1
-if __name__ == '__main__':
-    data_np = np.random.random((1, 3, 10, 10)).astype(np.float32)
-    label_np = np.random.random((1)).astype(np.float32)
-
-    default_run_config = {
-        'train_batch_size': 256,
-        'eval_batch_size': 64,
-        'n_epochs': [[5], [20, 40]],
-        'init_learning_rate': [[0.001], [0.0001, 0.003]],
-        'dynamic_batch_size': [1, 1],
-        'total_images': 1281167
-    }
-    run_config = RunConfig(**default_run_config)
-
-    assert len(run_config.n_epochs) == len(run_config.dynamic_batch_size)
-    assert len(run_config.n_epochs) == len(run_config.init_learning_rate)
-
-    fluid.enable_dygraph()
-    model = SuperNet()
-    ofa_model = OFA(model, run_config)
-    print(ofa_model.state_dict().keys())
-
-    data = fluid.dygraph.to_variable(data_np)
-    label = fluid.dygraph.to_variable(label_np)
-
-    start_epoch = 0
-    for idx in range(len(run_config.n_epochs)):
-        cur_idx = run_config.n_epochs[idx]
-        for ph_idx in range(len(cur_idx)):
-            cur_lr = run_config.init_learning_rate[idx][ph_idx]
-            adam = fluid.optimizer.Adam(
-                learning_rate=cur_lr, parameter_list=ofa_model.parameters())
-            for epoch_id in range(start_epoch,
-                                  run_config.n_epochs[idx][ph_idx]):
-                # add for data in dataset:
-                for model_no in range(run_config.dynamic_batch_size[idx]):
-                    output = ofa_model(data)
-                    loss = fluid.layers.reduce_mean(output)
-                    print('epoch: {}, loss: {}'.format(epoch_id,
-                                                       loss.numpy()[0]))
-                    loss.backward()
-                    adam.minimize(loss)
-                    adam.clear_gradients()
-            start_epoch = run_config.n_epochs[idx][ph_idx]
-
-# NOTE: case 2
-#class BaseManager:
-#    def __init__(self, model, run_config, optim_fn, train_dataset, eval_dataset):
-#        self.model = model
-#        self.run_config = run_config
-#        self.loss = loss_fn
-#        ### optim_fn = dict('Adam': parameter_list: PARAM, learning_rate) ??? 
-#        self.optim = optim_fn
-#        self.train_dataset = train_dataset
-#        self.eval_dataset = eval_dataset
-#
-#    def train_one_epoch(self):
-#        for image, label in self.train_dataset():
-#            out = self.model(image)
-#            loss = self.loss(out, label)
-#            self.optim.clear_gradient()
-#            loss.backward()
-#            self.optim.minimize(loss)
-#
-#    def eval_one_epoch(self):
-#        for image, label in self.eval_dataset():
-#            out = self.model(image)
-#            acc_top1, acc_top5 = accuracy(out, label)
-#
-#        # compute final acc
-#
-#if name == '__main__':
-#    data_np = np.random.random((1, 3, 10, 10)).astype(np.float32)
-#    label_np = np.random.random((1)).astype(np.float32)
-#
-#    fluid.enable_dygraph()
-#    model = SuperNet()
-#    run_config = dict(#TODO)
-#    my_manager = BaseManager(model, run_config)
-#    ofa_model = OFA(my_manager)
-#    ofa_mode.train()
