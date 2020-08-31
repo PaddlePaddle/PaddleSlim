@@ -228,6 +228,7 @@ class OFA(OFABase):
         return sample_cands
 
     def _sample_config(self, task, sample_type='random', phase=None):
+        print("task: ", task)
         config = self._sample_from_nestdict(
             self.layers, sample_type=sample_type, task=task, phase=phase)
         return config
@@ -250,6 +251,7 @@ class OFA(OFABase):
 
     def calc_distill_loss(self):
         losses = []
+        assert len(self.netAs) > 0
         for i, netA in enumerate(self.netAs):
             assert isinstance(netA, SuperConv2D)
             n = self.distill_config.mapping_layers[i]
@@ -298,5 +300,8 @@ class OFA(OFABase):
                         self.task, phase=self.phase)
         else:
             self.current_config = self.net_config
+
+        if 'depth' in self.current_config:
+            kwargs['depth'] = self.current_config['depth']
 
         return self.model.forward(*inputs, **kwargs), teacher_output

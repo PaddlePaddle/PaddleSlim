@@ -38,17 +38,21 @@ class Model(fluid.dygraph.Layer):
                 fluid.dygraph.Pool2D(
                     pool_type='avg', global_pooling=True, use_cudnn=False)
             ]
-            models += [nn.Linear(4, 3)]
+            models += [nn.Conv2D(4, 3, 3)]
             models += [ReLU()]
             models = ofa_super.convert(models)
         self.models = paddle.nn.Sequential(*models)
 
-    def forward(self, inputs):
-        for idx, layer in enumerate(self.models):
-            if idx == (len(self.models) - 2):
-                inputs = fluid.layers.reshape(
-                    inputs, shape=[inputs.shape[0], -1])
-            inputs = layer(inputs)
+    def forward(self, inputs, depth=None):
+        print("depth: ", depth, len(self.models))
+        if depth != None:
+            assert isinstance(depth, int)
+            assert depth < len(self.models)
+        else:
+            depth = len(self.models)
+        # NOTE: fix slice model in sequential
+        for idx in range(depth):
+            inputs = self.models[idx](inputs)
         return inputs
 
 
@@ -57,30 +61,26 @@ def test_ofa():
     label_np = np.random.random((1)).astype(np.float32)
 
     default_run_config = {
-        'train_batch_size': 256,
-        'eval_batch_size': 64,
+        'train_batch_size': 1,  #256,
+        'eval_batch_size': 1,  #64,
         'n_epochs': [[1], [2, 3], [4, 5]],
         'init_learning_rate': [[0.001], [0.003, 0.001], [0.003, 0.001]],
         'dynamic_batch_size': [1, 1, 1],
-        'total_images': 1281167,
-        'elastic_depth': (2, 3, 4)
+        'total_images': 1,  #1281167,
+        'elastic_depth': (2, 5, 8)
     }
     run_config = RunConfig(**default_run_config)
 
     default_distill_config = {
         'lambda_distill': 0.01,
         'teacher_model': Model,
-        'mapping_layers': ['models.3.fn']
+        'mapping_layers': ['models.0.fn']
     }
     distill_config = DistillConfig(**default_distill_config)
 
     fluid.enable_dygraph()
     model = Model()
     ofa_model = OFA(model, run_config, distill_config=distill_config)
-
-    print(ofa_model.state_dict().keys())
-    for name, sublayer in ofa_model.named_sublayers():
-        print(name, sublayer)
 
     data = fluid.dygraph.to_variable(data_np)
     label = fluid.dygraph.to_variable(label_np)
@@ -98,6 +98,7 @@ def test_ofa():
                 # add for data in dataset:
                 for model_no in range(run_config.dynamic_batch_size[idx]):
                     output, _ = ofa_model(data)
+                    print('current_config: ', ofa_model.current_config)
                     loss = fluid.layers.reduce_mean(output)
                     dis_loss = ofa_model.calc_distill_loss()
                     loss += dis_loss
