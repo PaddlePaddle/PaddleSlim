@@ -228,7 +228,6 @@ class OFA(OFABase):
         return sample_cands
 
     def _sample_config(self, task, sample_type='random', phase=None):
-        print("task: ", task)
         config = self._sample_from_nestdict(
             self.layers, sample_type=sample_type, task=task, phase=phase)
         return config

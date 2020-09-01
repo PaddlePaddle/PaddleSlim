@@ -15,54 +15,53 @@
 import sys
 sys.path.append("../")
 import numpy as np
+import unittest
 import paddle
 import paddle.fluid as fluid
 import paddle.fluid.dygraph.nn as nn
 from paddle.nn import ReLU
+from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
-from paddleslim.nas.ofa import supernet
+from paddleslim.nas.ofa.convert_super import supernet
+
+
+class Model(fluid.dygraph.Layer):
+    def __init__(self):
+        super(Model, self).__init__()
+        with supernet(
+                kernel_size=(3, 5, 7),
+                channel=((4, 8, 12), (8, 12, 16), (8, 12, 16))) as ofa_super:
+            models = []
+            models += [nn.Conv2D(3, 4, 3)]
+            models += [nn.InstanceNorm(4)]
+            models += [ReLU()]
+            models += [nn.Conv2DTranspose(4, 4, 3, groups=4, use_cudnn=True)]
+            models += [nn.BatchNorm(4)]
+            models += [ReLU()]
+            models += [
+                fluid.dygraph.Pool2D(
+                    pool_type='avg', global_pooling=True, use_cudnn=False)
+            ]
+            models += [nn.Conv2D(4, 3, 3)]
+            models += [ReLU()]
+            models = ofa_super.convert(models)
+        self.models = paddle.nn.Sequential(*models)
+
+    def forward(self, inputs, depth=None):
+        if depth != None:
+            assert isinstance(depth, int)
+            assert depth < len(self.models)
+        else:
+            depth = len(self.models)
+        for idx in range(depth):
+            layer = self.models[idx]
+            inputs = layer(inputs)
+        return inputs
 
 
 class TestOFA(unittest.TestCase):
     def test_convert(self):
-        class Model(fluid.dygraph.Layer):
-            def __init__(self):
-                super(Model, self).__init__()
-                with supernet(
-                        kernel_size=(3, 5, 7),
-                        channel=((4, 8, 12), (8, 12, 16),
-                                 (8, 12, 16))) as ofa_super:
-                    models = []
-                    models += [nn.Conv2D(3, 4, 3)]
-                    models += [nn.InstanceNorm(4)]
-                    models += [ReLU()]
-                    models += [
-                        nn.Conv2DTranspose(
-                            4, 4, 3, groups=4, use_cudnn=True)
-                    ]
-                    models += [nn.BatchNorm(4)]
-                    models += [ReLU()]
-                    models += [
-                        fluid.dygraph.Pool2D(
-                            pool_type='avg',
-                            global_pooling=True,
-                            use_cudnn=False)
-                    ]
-                    models += [nn.Conv2D(4, 3, 3)]
-                    models += [ReLU()]
-                    models = ofa_super.convert(models)
-                self.models = paddle.nn.Sequential(*models)
-
-            def forward(self, inputs, depth=None):
-                if depth != None:
-                    assert isinstance(depth, int)
-                    assert depth < len(self.models)
-                else:
-                    depth = len(self.models)
-                for idx in range(depth):
-                    layer = self.models[idx]
-                    inputs = layer(inputs)
-                return inputs
+        model = Model()
 
     def test_ofa(self):
         data_np = np.random.random((1, 3, 10, 10)).astype(np.float32)

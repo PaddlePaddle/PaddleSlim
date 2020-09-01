@@ -16,7 +16,6 @@ import inspect
 import decorator
 import logging
 import paddle
-import paddle.nn as nn
 import paddle.fluid as fluid
 from paddle.fluid import framework
 from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm
