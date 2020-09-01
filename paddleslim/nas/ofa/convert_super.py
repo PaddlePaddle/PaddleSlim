@@ -68,10 +68,6 @@ class Convert:
                 self.context.channel
             ) == weight_layer_count, "length of channel must same as weight layer."
 
-        if getattr(self.context, 'expand_ratio', None) != None:
-            assert len(
-                self.context.channel) == 1, "length of expand_ratio must be 1."
-
         for idx, layer in enumerate(model):
             if isinstance(layer, Conv2D):
                 attr_dict = layer.__dict__

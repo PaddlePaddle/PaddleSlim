@@ -774,10 +774,11 @@ class SuperLinear(fluid.dygraph.Linear):
                                           bias_attr, act, dtype)
         self.output_dim = output_dim
         self.candidate_config = candidate_config
-        self.expand_ratio = getattr(candidate_config, 'expand_ratio', None)
+        self.expand_ratio = candidate_config[
+            'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = None
         if self.expand_ratio != None:
-            self.base_output_dim = int(self.output_dim / self.expand_ratio)
+            self.base_output_dim = int(self.output_dim / max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
         if not in_dygraph_mode():
