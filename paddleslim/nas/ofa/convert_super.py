@@ -19,8 +19,7 @@ import paddle
 import paddle.fluid as fluid
 from paddle.fluid import framework
 from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm
-from ofa import OFA
-from layers import *
+from .layers import *
 
 __all__ = ['supernet']
 
@@ -31,20 +30,6 @@ WEIGHT_LAYER = ['conv', 'linear']
 class Convert:
     def __init__(self, context):
         self.context = context
-        self.task = self.get_elastic_task
-
-    def get_elastic_task(self):
-        task = []
-        if hasattr(self.context, 'kernel_size'):
-            task += ['kernel']
-
-    # or hasattr(self.context, 'embedding_size') or hasattr(self.context, 'hidden_size') or hasattr(self.context, 'num_head'):
-        if hasattr(self.context, 'expand_ratio') or hasattr(self.context,
-                                                            'channel'):
-            task += ['width']
-        if hasattr(self.context, 'depth'):
-            task += ['depth']
-        return task
 
     def convert(self, model):
         # search the first and last weight layer, don't change out channel of the last weight layer

@@ -67,6 +67,7 @@ class TestOFA(unittest.TestCase):
         data_np = np.random.random((1, 3, 10, 10)).astype(np.float32)
         label_np = np.random.random((1)).astype(np.float32)
 
+        fluid.enable_dygraph()
         default_run_config = {
             'train_batch_size': 1,
             'eval_batch_size': 1,
@@ -78,14 +79,14 @@ class TestOFA(unittest.TestCase):
         }
         run_config = RunConfig(**default_run_config)
 
+        teacher_model = Model()
         default_distill_config = {
             'lambda_distill': 0.01,
-            'teacher_model': Model,
+            'teacher_model': teacher_model,
             'mapping_layers': ['models.0.fn']
         }
         distill_config = DistillConfig(**default_distill_config)
 
-        fluid.enable_dygraph()
         model = Model()
         ofa_model = OFA(model, run_config, distill_config=distill_config)
 

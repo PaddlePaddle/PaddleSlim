@@ -19,8 +19,8 @@ import paddle
 import paddle.nn as nn
 import paddle.fluid as fluid
 from paddle.fluid.dygraph import Conv2D
-from layers import BaseBlock, Block, SuperConv2D, SuperBatchNorm
-from utils.utils import search_idx
+from .layers import BaseBlock, Block, SuperConv2D, SuperBatchNorm
+from .utils.utils import search_idx
 
 __all__ = ['OFA', 'RunConfig', 'DistillConfig']
 
@@ -151,17 +151,16 @@ class OFA(OFABase):
                 'If you want to add distill, please input class of teacher model'
             )
 
-        assert issubclass(self.distill_config.teacher_model,
+        assert isinstance(self.distill_config.teacher_model,
                           paddle.fluid.dygraph.Layer)
-        teacher_model = self.distill_config.teacher_model()
 
         # load teacher parameter
         if self.distill_config.teacher_model_path != None:
             param_state_dict, _ = paddle.load_dygraph(
                 self.distill_config.teacher_model_path)
-            teacher_model.set_dict(param_state_dict)
+            self.distill_config.teacher_model.set_dict(param_state_dict)
 
-        self.ofa_teacher_model = OFABase(teacher_model)
+        self.ofa_teacher_model = OFABase(self.distill_config.teacher_model)
         self.ofa_teacher_model.model.eval()
 
         # add hook if mapping layers is not None

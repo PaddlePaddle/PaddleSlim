@@ -21,8 +21,8 @@ from paddle.fluid.data_feeder import check_variable_and_dtype
 from paddle.fluid.framework import in_dygraph_mode, _varbase_creator
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, BatchNorm
 
-from paddleslim.common import get_logger
-from utils.utils import compute_start_end, get_same_padding, convert_to_list
+from ...common import get_logger
+from .utils.utils import compute_start_end, get_same_padding, convert_to_list
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',

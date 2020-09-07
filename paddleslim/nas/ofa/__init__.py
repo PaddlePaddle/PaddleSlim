@@ -14,8 +14,4 @@
 
 from .ofa import OFA, RunConfig, DistillConfig
 from .convert_super import supernet
-from .layers import Block
-import layers
-
-__all__ = []
-__all__ += layers.__all__
+from .layers import *
