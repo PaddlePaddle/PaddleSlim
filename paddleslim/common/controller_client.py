@@ -120,9 +120,9 @@ class ControllerClient(object):
         socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         errno = socket_client.connect_ex((self.server_ip, self.server_port))
         if errno != 0:
+            _logger.info("Server is closed")
+            return None
+        else:
             socket_client.send("current_info".encode())
             current_info = socket_client.recv(1024).decode()
             return eval(current_info)
-        else:
-            _logger.info("Server is closed")
-            return None
