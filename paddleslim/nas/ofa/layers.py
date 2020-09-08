@@ -35,6 +35,14 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 ### TODO: if task is elastic width, need to add re_organize_middle_weight in 1x1 conv in MBBlock
 
+_cnt = 0
+
+
+def counter():
+    global _cnt
+    _cnt += 1
+    return _cnt
+
 
 class BaseBlock(fluid.dygraph.Layer):
     def __init__(self, key=None):
@@ -42,7 +50,7 @@ class BaseBlock(fluid.dygraph.Layer):
         if key is not None:
             self._key = str(key)
         else:
-            self._key = self.__class__.__key__ + str(unique_name())
+            self._key = self.__class__.__name__ + str(counter())
 
     # set SuperNet class
     def set_supernet(self, supernet):
@@ -293,12 +301,13 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             expand_ratio == None or channel == None
         ), "expand_ratio and channel CANNOT be NOT None at the same time."
         if expand_ratio != None:
-            out_nc = expand_ratio * self.base_channel
+            out_nc = int(expand_ratio * self.base_channel)
         elif channel != None:
-            out_nc = channel
+            out_nc = int(channel)
         else:
             out_nc = self._num_filters
-        ks = self._filter_size[0] if kernel_size == None else kernel_size
+        ks = int(self._filter_size[0]) if kernel_size == None else int(
+            kernel_size)
 
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
@@ -566,13 +575,14 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
             expand_ratio == None or channel == None
         ), "expand_ratio and channel CANNOT be NOT None at the same time."
         if expand_ratio != None:
-            out_nc = expand_ratio * self.base_channel
+            out_nc = int(expand_ratio * self.base_channel)
         elif channel != None:
-            out_nc = channel
+            out_nc = int(channel)
         else:
             out_nc = self._num_filters
 
-        ks = self._filter_size[0] if kernel_size == None else kernel_size
+        ks = int(self._filter_size[0]) if kernel_size == None else int(
+            kernel_size)
 
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
@@ -663,6 +673,7 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
                  num_channels,
                  num_filters,
                  filter_size,
+                 candidate_config={},
                  stride=1,
                  padding=0,
                  dilation=1,
@@ -695,12 +706,28 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
                 bias_attr=bias_attr)
         ])
 
-    def forward(self, input, config):
+        self.candidate_config = candidate_config
+        self.expand_ratio = candidate_config[
+            'expand_ratio'] if 'expand_ratio' in candidate_config else None
+        self.base_output_dim = None
+        if self.expand_ratio != None:
+            self.base_output_dim = int(self.output_dim / max(self.expand_ratio))
+
+    def forward(self, input, expand_ratio=None, channel=None):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
         in_nc = int(input.shape[1])
-        out_nc = int(config['channel'])
+        assert (
+            expand_ratio == None or channel == None
+        ), "expand_ratio and channel CANNOT be NOT None at the same time."
+        if expand_ratio != None:
+            out_nc = int(expand_ratio * self.base_output_dim)
+        elif channel != None:
+            out_nc = int(channel)
+        else:
+            out_nc = self.conv[0]._num_filters
+
         weight = self.conv[0].weight[:in_nc]
         ###  conv1
         if self.conv[0]._l_type == 'conv2d':
@@ -765,13 +792,15 @@ class SuperLinear(fluid.dygraph.Linear):
     def __init__(self,
                  input_dim,
                  output_dim,
-                 candidate_config,
+                 candidate_config={},
                  param_attr=None,
                  bias_attr=None,
                  act=None,
                  dtype="float32"):
         super(SuperLinear, self).__init__(input_dim, output_dim, param_attr,
                                           bias_attr, act, dtype)
+        self._param_attr = param_attr
+        self._bias_attr = bias_attr
         self.output_dim = output_dim
         self.candidate_config = candidate_config
         self.expand_ratio = candidate_config[
@@ -790,9 +819,9 @@ class SuperLinear(fluid.dygraph.Linear):
             expand_ratio == None or channel == None
         ), "expand_ratio and channel CANNOT be NOT None at the same time."
         if expand_ratio != None:
-            out_nc = expand_ratio * self.base_output_dim
+            out_nc = int(expand_ratio * self.base_output_dim)
         elif channel != None:
-            out_nc = channel
+            out_nc = int(channel)
         else:
             out_nc = self.output_dim
 
@@ -859,7 +888,7 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
                  "use_mkldnn", False, "fuse_with_relu", self._fuse_with_relu,
                  "use_global_stats", self._use_global_stats,
                  'trainable_statistics', self._trainable_statistics)
-        batch_norm_out, _, _, _, _ = core.ops.batch_norm(
+        batch_norm_out, _, _, _, _, _ = core.ops.batch_norm(
             input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
         return dygraph_utils._append_activation_in_dygraph(
             batch_norm_out, act=self._act)

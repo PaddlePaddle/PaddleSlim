@@ -123,10 +123,10 @@ class OFA(OFABase):
 
             # final, elastic width
             if 'expand_ratio' in self._elastic_task:
-                self.elastic_order.append('expand_ratio')
+                self.elastic_order.append('width')
 
-            if 'channel' in self._elastic_task:
-                self.elastic_order.append('channel')
+            if 'channel' in self._elastic_task and 'width' not in self.elastic_order:
+                self.elastic_order.append('width')
 
         assert len(self.run_config.n_epochs) == len(self.elastic_order)
         assert len(self.run_config.n_epochs) == len(
@@ -205,7 +205,8 @@ class OFA(OFABase):
             if isinstance(v, dict):
                 sample_cands[k] = self._sample_from_nestdict(
                     v, sample_type=sample_type, task=task, phase=phase)
-            elif isinstance(v, list) or isinstance(v, set):
+            elif isinstance(v, list) or isinstance(v, set) or isinstance(v,
+                                                                         tuple):
                 if sample_type == 'largest':
                     sample_cands[k] = v[-1]
                 elif sample_type == 'smallest':
@@ -243,6 +244,13 @@ class OFA(OFABase):
         epoch = self._compute_epochs()
         self.task_idx, phase_idx = search_idx(epoch, self.run_config.n_epochs)
         self.task = self.elastic_order[:self.task_idx + 1]
+        if 'width' in self.task:
+            ### change width in task to concrete config
+            self.task.remove('width')
+            if 'expand_ratio' in self._elastic_task:
+                self.task.append('expand_ratio')
+            if 'channel' in self._elastic_task:
+                self.task.append('channel')
         if len(self.run_config.n_epochs[self.task_idx]) == 1:
             phase_idx = None
         return self._sample_config(task=self.task, phase=phase_idx)
@@ -300,6 +308,6 @@ class OFA(OFABase):
             self.current_config = self.net_config
 
         if 'depth' in self.current_config:
-            kwargs['depth'] = self.current_config['depth']
+            kwargs['depth'] = int(self.current_config['depth'])
 
         return self.model.forward(*inputs, **kwargs), teacher_output

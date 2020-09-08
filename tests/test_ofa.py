@@ -23,6 +23,7 @@ from paddle.nn import ReLU
 from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
 from paddleslim.nas.ofa.convert_super import supernet
+from paddleslim.nas.ofa.layers import Block, SuperSeparableConv2D
 
 
 class Model(fluid.dygraph.Layer):
@@ -45,6 +46,21 @@ class Model(fluid.dygraph.Layer):
             models += [nn.Conv2D(4, 3, 3)]
             models += [ReLU()]
             models = ofa_super.convert(models)
+
+        models += [
+            Block(
+                SuperSeparableConv2D(
+                    3, 6, 1, candidate_config={'channel': (3, 6)}))
+        ]
+        with supernet(
+                kernel_size=(3, 5, 7), expand_ratio=(1, 2, 4)) as ofa_super:
+            models1 = []
+            models1 += [nn.Conv2D(3, 4, 3)]
+            models1 += [nn.BatchNorm(4)]
+            models1 += [nn.Linear(4, 3)]
+            models1 = ofa_super.convert(models1)
+
+        models += models1
         self.models = paddle.nn.Sequential(*models)
 
     def forward(self, inputs, depth=None):
@@ -55,6 +71,9 @@ class Model(fluid.dygraph.Layer):
             depth = len(self.models)
         for idx in range(depth):
             layer = self.models[idx]
+            if isinstance(layer, Block) and isinstance(layer.fn, nn.Linear):
+                n, c, h, w = inputs.shape
+                inputs = fluid.layers.reshape(inputs, shape=(n * c, h * w))
             inputs = layer(inputs)
         return inputs
 

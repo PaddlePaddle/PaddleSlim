@@ -282,13 +282,14 @@ class Convert:
                         SuperGroupConv2DTranspose(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            ### TODO(paddle): add _param_attr and _bias_attr as private variable of Linear
             elif isinstance(layer, Linear) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
                 attr_dict = layer.__dict__
                 key = attr_dict['_full_name']
-                new_attr_name = ['_act', '_dtype', '_param_attr', '_bias_attr']
+                ### TODO(paddle): add _param_attr and _bias_attr as private variable of Linear
+                #new_attr_name = ['_act', '_dtype', '_param_attr', '_bias_attr']
+                new_attr_name = ['_act', '_dtype']
                 in_nc, out_nc = layer._parameters['weight'].shape
 
                 new_attr_dict = dict()
