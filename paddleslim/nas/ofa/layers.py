@@ -329,8 +329,9 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             raise ValueError("conv type error")
 
         pre_bias = out
+        out_nc = int(pre_bias.shape[1])
         if self.bias is not None:
-            bias = self.bias[:weight_out_nc]
+            bias = self.bias[:out_nc]
             pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias, 1)
         else:
             pre_act = pre_bias
@@ -341,6 +342,7 @@ class SuperConv2D(fluid.dygraph.Conv2D):
 class SuperGroupConv2D(SuperConv2D):
     def get_groups_in_out_nc(self, in_nc, out_nc):
         ### groups convolution
+        ### conv: weight: (Cout, Cin/G, Kh, Kw)
         groups = self._groups
         in_nc = int(in_nc // groups)
         return groups, in_nc, out_nc
@@ -350,7 +352,7 @@ class SuperDepthwiseConv2D(SuperConv2D):
     ### depthwise convolution
     def get_groups_in_out_nc(self, in_nc, out_nc):
         if in_nc != out_nc:
-            logging.debug(
+            _logger.debug(
                 "input channel and output channel in depthwise conv is different, change output channel to input channel! origin channel:(in_nc {}, out_nc {}): ".
                 format(in_nc, out_nc))
         groups = in_nc
@@ -595,8 +597,9 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                  self._stride, 'paddings', padding, 'dilations', self._dilation,
                  'groups', groups, 'use_cudnn', self._use_cudnn)
         pre_bias = out
+        out_nc = int(pre_bias.shape[1])
         if self.bias is not None:
-            bias = self.bias[:weight_out_nc]
+            bias = self.bias[:out_nc]
             pre_act = dygraph_utils._append_bias_in_dygraph(pre_bias, bias, 1)
         else:
             pre_act = pre_bias
@@ -608,16 +611,17 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
 class SuperGroupConv2DTranspose(SuperConv2DTranspose):
     def get_groups_in_out_nc(self, in_nc, out_nc):
         ### groups convolution
+        ### groups conv transpose: weight: (Cin, Cout/G, Kh, Kw)
         groups = self._groups
-        in_nc = int(in_nc // groups)
+        out_nc = int(out_nc // groups)
         return groups, in_nc, out_nc
 
 
 class SuperDepthwiseConv2DTranspose(SuperConv2DTranspose):
     def get_groups_in_out_nc(self, in_nc, out_nc):
         if in_nc != out_nc:
-            logging.debug(
-                "input channel and output channel in depthwise conv is different, change output channel to input channel! origin channel:(in_nc {}, out_nc {}): ".
+            _logger.debug(
+                "input channel and output channel in depthwise conv transpose is different, change output channel to input channel! origin channel:(in_nc {}, out_nc {}): ".
                 format(in_nc, out_nc))
         groups = in_nc
         out_nc = in_nc

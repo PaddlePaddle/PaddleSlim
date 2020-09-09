@@ -21,6 +21,9 @@ import paddle.fluid as fluid
 from paddle.fluid.dygraph import Conv2D
 from .layers import BaseBlock, Block, SuperConv2D, SuperBatchNorm
 from .utils.utils import search_idx
+from ...common import get_logger
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['OFA', 'RunConfig', 'DistillConfig']
 
@@ -118,7 +121,9 @@ class OFA(OFABase):
 
             # second, elastic depth, such as: list(2, 3, 4)
             if getattr(self.run_config, 'elastic_depth', None) != None:
-                self.layers['depth'] = list(set(self.run_config.elastic_depth))
+                depth_list = list(set(self.run_config.elastic_depth))
+                depth_list.sort()
+                self.layers['depth'] = depth_list
                 self.elastic_order.append('depth')
 
             # final, elastic width
@@ -307,6 +312,7 @@ class OFA(OFABase):
         else:
             self.current_config = self.net_config
 
+        _logger.debug("Current config is {}".format(self.current_config))
         if 'depth' in self.current_config:
             kwargs['depth'] = int(self.current_config['depth'])
 

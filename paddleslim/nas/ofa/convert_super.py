@@ -20,6 +20,9 @@ import paddle.fluid as fluid
 from paddle.fluid import framework
 from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm
 from .layers import *
+from ...common import get_logger
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['supernet']
 
@@ -100,7 +103,17 @@ class Convert:
                             'expand_ratio': self.context.expand_ratio
                         })
                 elif self.context.channel:
-                    cur_channel = self.context.channel[0]
+                    if attr_dict['_groups'] != None and (
+                            int(attr_dict['_groups']) ==
+                            int(attr_dict['_num_channels'])):
+                        ### depthwise conv, if conv is depthwise, use pre channel as cur_channel
+                        _logger.warn(
+                        "If convolution is a depthwise conv, output channel change" \
+                        " to the same channel with input, output channel in search is not used."
+                        )
+                        cur_channel = pre_channel
+                    else:
+                        cur_channel = self.context.channel[0]
                     self.context.channel = self.context.channel[1:]
                     if idx == first_weight_layer_idx:
                         new_attr_dict['num_channels'] = attr_dict[
@@ -131,18 +144,15 @@ class Convert:
                     layer = Block(SuperConv2D(**new_attr_dict), key=key)
                 elif int(attr_dict['_groups']) == int(attr_dict[
                         '_num_channels']):
-                    ### depthwise conv
-                    logging.warning(
-                        "If convolution is a depthwise conv, output channel change to the same channel with input, output channel in search is not used."
-                    )
-                    new_attr_dict['groups'] = new_attr_dict['num_channels']
                     # if conv is depthwise conv, groups = in_channel, out_channel = in_channel,
                     # channel in candidate_config = in_channel_list
                     if 'channel' in new_attr_dict['candidate_config']:
+                        new_attr_dict['num_channels'] = max(cur_channel)
                         new_attr_dict['num_filters'] = new_attr_dict[
                             'num_channels']
                         new_attr_dict['candidate_config'][
-                            'channel'] = pre_channel
+                            'channel'] = cur_channel
+                    new_attr_dict['groups'] = new_attr_dict['num_channels']
                     layer = Block(
                         SuperDepthwiseConv2D(**new_attr_dict), key=key)
                 else:
@@ -227,7 +237,17 @@ class Convert:
                             'expand_ratio': self.context.expand_ratio
                         })
                 elif self.context.channel:
-                    cur_channel = self.context.channel[0]
+                    if attr_dict['_groups'] != None and (
+                            int(attr_dict['_groups']) ==
+                            int(attr_dict['_num_channels'])):
+                        ### depthwise conv_transpose
+                        _logger.warn(
+                        "If convolution is a depthwise conv_transpose, output channel " \
+                        "change to the same channel with input, output channel in search is not used."
+                        )
+                        cur_channel = pre_channel
+                    else:
+                        cur_channel = self.context.channel[0]
                     self.context.channel = self.context.channel[1:]
                     if idx == first_weight_layer_idx:
                         new_attr_dict['num_channels'] = attr_dict[
@@ -262,18 +282,15 @@ class Convert:
                         SuperConv2DTranspose(**new_attr_dict), key=key)
                 elif int(attr_dict['_groups']) == int(attr_dict[
                         '_num_channels']):
-                    ### depthwise conv_transpose
-                    logging.warning(
-                        "If convolution is a depthwise conv_transpose, output channel change to the same channel with input, output channel in search is not used."
-                    )
-                    new_attr_dict['groups'] = new_attr_dict['num_channels']
                     # if conv is depthwise conv, groups = in_channel, out_channel = in_channel,
                     # channel in candidate_config = in_channel_list
                     if 'channel' in new_attr_dict['candidate_config']:
+                        new_attr_dict['num_channels'] = max(cur_channel)
                         new_attr_dict['num_filters'] = new_attr_dict[
                             'num_channels']
                         new_attr_dict['candidate_config'][
-                            'channel'] = pre_channel
+                            'channel'] = cur_channel
+                    new_attr_dict['groups'] = new_attr_dict['num_channels']
                     layer = Block(
                         SuperDepthwiseConv2DTranspose(**new_attr_dict), key=key)
                 else:
