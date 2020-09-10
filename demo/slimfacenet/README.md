@@ -24,6 +24,10 @@
 
 本示例支持`CASIA`和`lfw`两种公开数据集默认情况：
 
+[CASIA训练数据集](https://paddlemodels.bj.bcebos.com/PaddleSlim/dataset/CASIA.zip)
+
+[lfw测试数据集](https://paddlemodels.bj.bcebos.com/PaddleSlim/dataset/lfw.zip)
+
 1). 训练数据集位置`./CASIA`
 2). 测试数据集位置`./lfw`
 
