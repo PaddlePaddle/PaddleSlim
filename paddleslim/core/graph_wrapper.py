@@ -357,9 +357,40 @@ class GraphWrapper(object):
         Update the groups of convolution layer according to current filters.
         It is used after loading pruned parameters from file.
         """
+        '''
         for op in self.ops():
             if op.type() != 'conditional_block':
                 op._op.desc.infer_shape(op._op.block.desc)
+        '''
+        head_op = []
+        visited = []
+        for op in self.ops():
+            if op.type() != 'conditional_block':
+                if len(self.pre_ops(op)) == 0:
+                    head_op.append(op)
+        candidate_op = self.ops()
+
+        def recursive_infer(op, infer=False):
+            if op in candidate_op:
+                if op.type() != 'conditional_block':
+                    if infer:
+                        op._op.desc.infer_shape(op._op.block.desc)
+                    else:
+                        visited.append(op)
+                candidate_op.remove(op)
+                for next_op in self.next_ops(op):
+                    recursive_infer(next_op)
+
+        for op in head_op:
+            recursive_infer(op, infer=False)
+
+        candidate_op = self.ops()
+        for op in candidate_op:
+            if op not in visited and op.type() != 'conditional_block':
+                op._op.desc.infer_shape(op._op.block.desc)
+
+        for op in head_op:
+            recursive_infer(op, infer=True)
 
     def update_groups_of_conv(self):
         for op in self.ops():
