@@ -26,8 +26,8 @@ from ..prune import Pruner
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = [
-    "sensitivity", "flops_sensitivity", "load_sensitivities",
-    "merge_sensitive", "get_ratios_by_loss"
+    "sensitivity", "flops_sensitivity", "load_sensitivities", "merge_sensitive",
+    "get_ratios_by_loss"
 ]
 
 
@@ -36,7 +36,9 @@ def sensitivity(program,
                 param_names,
                 eval_func,
                 sensitivities_file=None,
-                pruned_ratios=None):
+                pruned_ratios=None,
+                eval_params=None,
+                criterion='l1_norm'):
     """Compute the sensitivities of convolutions in a model. The sensitivity of a convolution is the losses of accuracy on test dataset in differenct pruned ratios. The sensitivities can be used to get a group of best ratios with some condition.
     This function return a dict storing sensitivities as below:
 
@@ -83,9 +85,12 @@ def sensitivity(program,
                 _logger.debug('{}, {} has computed.'.format(name, ratio))
                 continue
             if baseline is None:
-                baseline = eval_func(graph.program)
+                if eval_params is None:
+                    baseline = eval_func(graph.program)
+                else:
+                    baseline = eval_func(eval_params)
 
-            pruner = Pruner()
+            pruner = Pruner(criterion=criterion)
             _logger.info("sensitive - param: {}; ratios: {}".format(name,
                                                                     ratio))
             pruned_program, param_backup, _ = pruner.prune(
@@ -97,7 +102,10 @@ def sensitivity(program,
                 lazy=True,
                 only_graph=False,
                 param_backup=True)
-            pruned_metric = eval_func(pruned_program)
+            if eval_params is None:
+                pruned_metric = eval_func(pruned_program)
+            else:
+                pruned_metric = eval_func(eval_params)
             loss = (baseline - pruned_metric) / baseline
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))
