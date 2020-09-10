@@ -134,3 +134,25 @@ def dy_quant_aware(model,
         imperative_qat.quantize(model)
 
         return model
+
+def save_quant_model(model,
+                    path,
+                    input_shape,
+                    input_dtype=['float32']):
+
+    imperative_qat = ImperativeQuantAware(
+            weight_quantize_type='abs_max',
+            activation_quantize_type='moving_average_abs_max',
+            quantizable_layer_type=[
+                'Conv2D', 'Linear', 'ReLU', 'Pool2D', 'LeakyReLU'
+            ])
+
+    imperative_qat.save_quantized_model(
+        dirname=path,
+        model=model,
+        input_shape=input_shape,
+        input_dtype=['float32'],
+        feed=[0],
+        fetch=[0])
+    
+
