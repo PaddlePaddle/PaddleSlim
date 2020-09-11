@@ -51,7 +51,7 @@ class TestPrune(unittest.TestCase):
         exe.run(startup_program, scope=scope)
         criterion = 'bn_scale'
         idx_selector = 'optimal_threshold'
-        pruner = Pruner(criterion)
+        pruner = Pruner(criterion, idx_selector=idx_selector)
         main_program, _, _ = pruner.prune(
             main_program,
             scope,

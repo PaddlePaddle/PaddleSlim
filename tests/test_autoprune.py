@@ -1,4 +1,4 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ class TestPrune(unittest.TestCase):
         for param in main_program.global_block().all_parameters():
             shapes[param.name] = param.shape
             if 'weights' in param.name:
-              params.append(param.name)
+                params.append(param.name)
 
         val_program = fluid.default_main_program().clone(for_test=True)
         place = fluid.CPUPlace()
@@ -77,7 +77,7 @@ class TestPrune(unittest.TestCase):
         lastratio = None
         for i in range(10):
             pruned_program, pruned_val_program = pruner.prune(
-              fluid.default_main_program(), val_program)
+                fluid.default_main_program(), val_program)
             score = 0.2
             pruner.reward(score)
             if i == 0:
@@ -87,7 +87,7 @@ class TestPrune(unittest.TestCase):
         changed = False
         for i in range(len(baseratio)):
             if baseratio[i] != lastratio[i]:
-                changed=True
+                changed = True
         self.assertTrue(changed == True)
 
 

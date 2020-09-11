@@ -24,6 +24,10 @@
 
 本示例支持`CASIA`和`lfw`两种公开数据集默认情况：
 
+[CASIA训练数据集](https://paddlemodels.bj.bcebos.com/PaddleSlim/dataset/CASIA.zip)
+
+[lfw测试数据集](https://paddlemodels.bj.bcebos.com/PaddleSlim/dataset/lfw.zip)
+
 1). 训练数据集位置`./CASIA`
 2). 测试数据集位置`./lfw`
 
@@ -31,6 +35,13 @@
 
 如果使用预先训练并量化好的`slimfacenet`模型，可以从以下地址下载
 
+[SlimFaceNet_A_x0_60预训模型](https://paddlemodels.bj.bcebos.com/PaddleSlim/SlimFaceNet_A_x0_60_112x96.tar)
+
+[SlimFaceNet_A_x0_60量化模型](https://paddlemodels.bj.bcebos.com/PaddleSlim/SlimFaceNet_A_x0_60_112x96_quant_post.tar)
+
+[SlimFaceNet_B_x0_75预训模型](https://paddlemodels.bj.bcebos.com/PaddleSlim/SlimFaceNet_B_x0_75_112x96.tar)
+
+[SlimFaceNet_B_x0_75量化模型](https://paddlemodels.bj.bcebos.com/PaddleSlim/SlimFaceNet_B_x0_75_112x96_quant_post.tar)
 
 ## 3. 启动`slimfacenet`训练任务
 
