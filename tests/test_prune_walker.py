@@ -76,8 +76,7 @@ class TestPrune(unittest.TestCase):
             scaled = fluid.layers.scale(floored)
             concated = fluid.layers.concat([scaled, mult], axis=1)
             conv8 = conv_bn_layer(concated, 8, 3, "conv8")
-            feature = fluid.layers.reshape(conv8, [-1, 128, 16])
-            predict = fluid.layers.fc(input=feature, size=10, act='softmax')
+            predict = fluid.layers.fc(input=conv8, size=10, act='softmax')
             cost = fluid.layers.cross_entropy(input=predict, label=label)
             adam_optimizer = fluid.optimizer.AdamOptimizer(0.01)
             avg_cost = fluid.layers.mean(cost)
@@ -87,8 +86,10 @@ class TestPrune(unittest.TestCase):
         for param in main_program.all_parameters():
             if 'conv' in param.name:
                 params.append(param.name)
+        #TODO: To support pruning convolution before fc layer.
+        params.remove('conv8_weights')
 
-        place = fluid.CPUPlace()
+        place = fluid.CUDAPlace(0)
         exe = fluid.Executor(place)
         exe.run(startup_program)
         x = np.random.random(size=(10, 3, 16, 16)).astype('float32')
@@ -108,6 +109,11 @@ class TestPrune(unittest.TestCase):
             only_graph=False,
             param_backup=None,
             param_shape_backup=None)
+
+        loss_data, = exe.run(main_program,
+                             feed={"image": x,
+                                   "label": label},
+                             fetch_list=[cost.name])
 
 
 if __name__ == '__main__':
