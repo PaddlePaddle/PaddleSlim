@@ -19,6 +19,7 @@ SlimMobileNet基于百度自研的[GP-NAS论文](https://openaccess.thecvf.com/c
 |GhostNet_x1_3|220|75.7|
 |SlimMobileNet_V1|163|76.9|
 |SlimMobileNet_V4_x1_1|296|80.1|
+|SlimMobileNet_V5|390|80.4|
 
 ## [SlimFaceNet](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/slimfacenet/README.md)系列指标
 
