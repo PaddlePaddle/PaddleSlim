@@ -14,10 +14,10 @@ PaddleSlim对[PaddleOCR]()发布的模型进行了压缩，产出了如下一系
     <th>序号</th>
     <th>任务</th>
     <th>模型</th>
-    <th>压缩策略</th>
+    <th>压缩策略<sup><a href="#quant">[3]</a><a href="#prune">[4]</a><sup></th>
     <th>精度(自建中文数据集)</th>
-    <th>耗时(ms)</th>
-    <th>整体耗时(ms)</th>
+    <th>耗时<sup><a href="#latency">[1]</a></sup>(ms)</th>
+    <th>整体耗时<sup><a href="#rec">[2]</a></sup>(ms)</th>
     <th>加速比</th>
     <th>整体模型大小(M)</th>
     <th>压缩比例</th>
@@ -85,7 +85,7 @@ PaddleSlim对[PaddleOCR]()发布的模型进行了压缩，产出了如下一系
     <td>SlimTextRec</td>
     <td>PACT量化训练</td>
     <td>61.48</td>
-    <td>9.00</td>
+    <td>8.6</td>
     <td></td>
   </tr>
   <tr>
@@ -106,7 +106,7 @@ PaddleSlim对[PaddleOCR]()发布的模型进行了压缩，产出了如下一系
     <td>SlimTextRec</td>
     <td>PACT量化训练</td>
     <td>61.48</td>
-    <td>8.4</td>
+    <td>8.6</td>
     <td></td>
   </tr>
 </tbody>
@@ -116,8 +116,9 @@ PaddleSlim对[PaddleOCR]()发布的模型进行了压缩，产出了如下一系
 **注意**:
 
 -   <a name="lantancy">[1]</a> 耗时评测环境为：骁龙855芯片+PaddleLite。
--   <a name="quant">[2]</a> 参考下面关于[OCR量化的说明](#OCR量化说明)。
--   <a name="prune">[3]</a> 参考下面关于[OCR剪裁的说明](#OCR剪裁说明)。
+-   <a name="rec">[2]</a> 整体耗时不等于检测耗时加识别耗时的原因是：识别模型的耗时为单个检测框的耗时，一张图片可能会有多个检测框。
+-   <a name="quant">[3]</a> 参考下面关于[OCR量化的说明](#OCR量化说明)。
+-   <a name="prune">[4]</a> 参考下面关于[OCR剪裁的说明](#OCR剪裁说明)。
 
 
 ## OCR量化说明
