@@ -60,8 +60,8 @@ class TestSensitivity(unittest.TestCase):
             print("acc_val_mean: {}".format(acc_val_mean))
             return acc_val_mean
 
-        def eval_func_for_params(params):
-            program = params[0]
+        def eval_func_for_args(args):
+            program = args[0]
             feeder = fluid.DataFeeder(
                 feed_list=['image', 'label'], place=place, program=program)
             acc_set = []
@@ -91,8 +91,8 @@ class TestSensitivity(unittest.TestCase):
         params_sens = sensitivity(
             eval_program,
             place, ["conv4_weights"],
-            eval_func_for_params,
-            eval_params=[eval_program],
+            eval_func_for_args,
+            eval_args=[eval_program],
             sensitivities_file="./sensitivites_file_params",
             pruned_ratios=[0.1, 0.2, 0.3, 0.4])
 
