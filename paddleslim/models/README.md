@@ -2,10 +2,8 @@
 
 PaddleSlim模型压缩工具在人脸识别,OCR,通用任务分类任务，检测任务等多个任务上都发布了SlimX系列小模型:
 
-- `SlimFaceNet系列`
 - `SlimMobileNet系列`
-- `SlimOCR系列`
-- `SlimDet系列`
+- `SlimFaceNet系列`
 
 ## SlimMobileNet系列指标
 
@@ -22,7 +20,7 @@ SlimMobileNet基于百度自研的[GP-NAS论文](https://openaccess.thecvf.com/c
 |SlimMobileNet_V1|163|76.9|
 |SlimMobileNet_V4_x1_1|296|80.1|
 
-## SlimFaceNet系列指标
+## [SlimFaceNet](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/slimfacenet/README.md)系列指标
 
 SlimFaceNet同样是基于百度自研的GP-NAS AutoDL技术以及百度自研的自监督超网络训练算法得到。相比于MobileNetV2，SlimFaceNet_A_x0_60 flops压缩216%，在RK3288上加速428%。基于PaddleSlim的离线量化功能还可以进一步压缩模型，相比于MobileNetV2，SlimFaceNet_A_x0_60_quant flops可以压缩865%，在RK3288硬件上可以加速643%。为了对齐论文，LFW指标为112x96输入下的结果；结合业务场景，Flops和speed为112x112输入下的结果，延时为RK3288上的延时。
 
