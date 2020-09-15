@@ -60,19 +60,41 @@ class TestSensitivity(unittest.TestCase):
             print("acc_val_mean: {}".format(acc_val_mean))
             return acc_val_mean
 
+        def eval_func_for_args(args):
+            program = args[0]
+            feeder = fluid.DataFeeder(
+                feed_list=['image', 'label'], place=place, program=program)
+            acc_set = []
+            for data in val_reader():
+                acc_np = exe.run(program=program,
+                                 feed=feeder.feed(data),
+                                 fetch_list=[acc_top1])
+                acc_set.append(float(acc_np[0]))
+            acc_val_mean = numpy.array(acc_set).mean()
+            print("acc_val_mean: {}".format(acc_val_mean))
+            return acc_val_mean
+
         sensitivity(
             eval_program,
             place, ["conv4_weights"],
             eval_func,
-            "./sensitivities_file_0",
+            sensitivities_file="./sensitivities_file_0",
             pruned_ratios=[0.1, 0.2])
 
         sensitivity(
             eval_program,
             place, ["conv4_weights"],
             eval_func,
-            "./sensitivities_file_1",
+            sensitivities_file="./sensitivities_file_1",
             pruned_ratios=[0.3, 0.4])
+
+        params_sens = sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func_for_args,
+            eval_args=[eval_program],
+            sensitivities_file="./sensitivites_file_params",
+            pruned_ratios=[0.1, 0.2, 0.3, 0.4])
 
         sens_0 = load_sensitivities('./sensitivities_file_0')
         sens_1 = load_sensitivities('./sensitivities_file_1')
@@ -81,8 +103,9 @@ class TestSensitivity(unittest.TestCase):
             eval_program,
             place, ["conv4_weights"],
             eval_func,
-            "./sensitivities_file_1",
+            sensitivities_file="./sensitivities_file_2",
             pruned_ratios=[0.1, 0.2, 0.3, 0.4])
+        self.assertTrue(params_sens == origin_sens)
         self.assertTrue(sens == origin_sens)
 
 
