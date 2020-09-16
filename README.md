@@ -233,9 +233,9 @@ pip install paddleslim==1.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 - [API文档](https://paddlepaddle.github.io/PaddleSlim/api_cn/index.html)
 - [算法原理](https://paddlepaddle.github.io/PaddleSlim/algo/algo.html): 介绍量化、剪枝、蒸馏、NAS的基本知识背景。
 
-- Slim系列小模型
-    - [SlimOCR](demo/ocr/README.md)
-    - [SlimDet](demo/det/README.md)
+- 飞桨套件压缩方案与小模型
+    - [PaddleOCR压缩方案及小模型](demo/ocr/README.md)
+    - [PaddleDetection压缩方案及小模型](demo/det/README.md)
 
 ## 部分压缩策略效果
 
