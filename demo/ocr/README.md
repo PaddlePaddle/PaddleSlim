@@ -115,7 +115,7 @@ PaddleSlim对[PaddleOCR]()发布的模型进行了压缩，产出了如下一系
 
 **注意**:
 
--   <a name="lantancy">[1]</a> 耗时评测环境为：骁龙855芯片+PaddleLite。
+-   <a name="latency">[1]</a> 耗时评测环境为：骁龙855芯片+PaddleLite。
 -   <a name="rec">[2]</a> 整体耗时不等于检测耗时加识别耗时的原因是：识别模型的耗时为单个检测框的耗时，一张图片可能会有多个检测框。
 -   <a name="quant">[3]</a> 参考下面关于[OCR量化的说明](#OCR量化说明)。
 -   <a name="prune">[4]</a> 参考下面关于[OCR剪裁的说明](#OCR剪裁说明)。
@@ -123,14 +123,52 @@ PaddleSlim对[PaddleOCR]()发布的模型进行了压缩，产出了如下一系
 
 ## OCR量化说明
 
-待补充
+对于OCR模型，普通的量化训练精度损失较大，并且训练不稳定。所以我们选择PACT方法进行量化
 
-分别针对检测和识别模型说明以下内容：
-1. PACT量化所选参数：包括量化算法参数、训练轮数、优化器选择、学习率等信息
-2. 跳过了哪些层
+### 文本检测模型
+
+MobileNetV3_DB是一个全卷积模型，我们可以对整个模型进行量化。
+
+整个量化训练的轮数与全精度模型的训练轮数一致，量化的配置如下所示：
+
+```python
+    quant_config = {
+        'weight_quantize_type': 'channel_wise_abs_max',
+        'activation_quantize_type': 'moving_average_abs_max',
+        'weight_bits': 8,
+        'activation_bits': 8,
+        'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
+        'dtype': 'int8',
+        'window_size': 10000,
+        'moving_rate': 0.9,
+    }
+```
+
+对于PACT参数，我们沿用了论文中的方法，截断阈值$\alpha$的学习率与原模型其他参数保持一致。另外，对其增加一个系数为0.0001的L2正则化，使用`AdamOptimizer`对其进行优化，确保其能快速收敛。
+
+### 文本识别模型
+
+MobileNetV3_CRNN模型包含一个LSTM组件，因为暂时不支持对LSTM进行量化，我们暂时跳过这一部分。
+
+通过[scope_guard API](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/executor_cn/scope_guard_cn.html#scope-guard)将LSTM切换到新的作用域`skip_quant`，量化配置中通过`not_quant_pattern`设置不对这一部分进行量化，具体量化配置如下:
+```python
+    quant_config = {
+        'weight_quantize_type': 'channel_wise_abs_max',
+        'activation_quantize_type': 'moving_average_abs_max',
+        'weight_bits': 8,
+        'activation_bits': 8,
+        'not_quant_pattern': ['skip_quant'],
+        'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
+        'dtype': 'int8',
+        'window_size': 10000,
+        'moving_rate': 0.9,
+    }
+```
+
+同样地，量化训练的轮数与全精度模型的训练轮数一致，PACT阈值$\alpha$的学习率与原模型其他参数保持一致。我们发现，对$\alpha$使用与原模型其他参数一样的L2正则化系数，量化训练就可以很好地收敛。关于优化器，使用`AdamOptimizer`对其进行优化，确保其能快速收敛。
 
 
-更多量化教程请参考[OCR模型量化压缩教程]()
+更多量化教程请参考[OCR模型量化压缩教程](https://github.com/PaddlePaddle/PaddleOCR/blob/develop/deploy/slim/quantization/README.md)
 
 
 ## OCR剪裁说明
