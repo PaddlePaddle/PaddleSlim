@@ -173,11 +173,11 @@ MobileNetV3_CRNN模型包含一个LSTM组件，因为暂时不支持对LSTM进�
 
 ## OCR剪裁说明
 
-待补充
+### 敏感度分析
+  在对OCR文字检测模型进行裁剪敏感度分析时，分析对象为除depthwise convolution外的所有普通卷积层，裁剪的criterion被设置为'geometry_median'，pruned_ratios推荐设置为[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]。
 
-针对检测模型说明以下内容：
-1. 剪裁了哪些层，以及对应的比例
-2. 训练参数
+### 裁剪与finetune
+  裁剪时通过之前的敏感度分析文件决定每个网络层的裁剪比例。在具体实现时，为了尽可能多的保留从图像中提取的低阶特征，我们跳过了backbone中靠近输入的4个卷积层。同样，为了减少由于裁剪导致的模型性能损失，我们通过之间敏感度分析所获得敏感度表，挑选出了一些冗余较少，对裁剪较为敏感[网络层](https://github.com/PaddlePaddle/PaddleOCR/blob/develop/deploy/slim/prune/pruning_and_finetune.py#L41)，并在之后的裁剪过程中选择避开这些网络层。裁剪过后finetune的过程沿用OCR检测模型原始的训练策略。
 
 
-更多OCR剪裁教程请参考[OCR模剪裁压缩教程]()
+更多OCR剪裁教程请参考[OCR模剪裁压缩教程](https://github.com/PaddlePaddle/PaddleOCR/blob/develop/deploy/slim/prune/README.md)
