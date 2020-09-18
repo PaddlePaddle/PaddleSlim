@@ -357,11 +357,6 @@ class GraphWrapper(object):
         Update the groups of convolution layer according to current filters.
         It is used after loading pruned parameters from file.
         """
-        '''
-        for op in self.ops():
-            if op.type() != 'conditional_block':
-                op._op.desc.infer_shape(op._op.block.desc)
-        '''
         head_op = []
         visited = []
         for op in self.ops():
@@ -381,14 +376,17 @@ class GraphWrapper(object):
                 for next_op in self.next_ops(op):
                     recursive_infer(next_op)
 
+        # Find ops which not in the DAG, some ops, such as optimizer op,
+        # should be infered before normal cumputation ops.
         for op in head_op:
             recursive_infer(op, infer=False)
 
+        # Infer ops which not in the DAG firstly.
         candidate_op = self.ops()
         for op in candidate_op:
             if op not in visited and op.type() != 'conditional_block':
                 op._op.desc.infer_shape(op._op.block.desc)
-
+        # Infer the remain ops in topological order.
         for op in head_op:
             recursive_infer(op, infer=True)
 
