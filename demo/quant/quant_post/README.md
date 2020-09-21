@@ -1,16 +1,16 @@
-# 离线量化示例
+# 静态离线量化示例
 
-本示例介绍如何使用离线量化接口``paddleslim.quant.quant_post``来对训练好的分类模型进行离线量化, 该接口无需对模型进行训练就可得到量化模型，减少模型的存储空间和显存占用。
+本示例介绍如何使用离线量化接口``paddleslim.quant.quant_post_static``来对训练好的分类模型进行离线量化, 该接口无需对模型进行训练就可得到量化模型，减少模型的存储空间和显存占用。
 
 ## 接口介绍
 
-请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
+请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-post-static'>量化API文档</a>。
 
 ## 分类模型的离线量化流程
 
 ### 准备数据
 
-在当前文件夹下创建``data``文件夹，将``imagenet``数据集解压在``data``文件夹下，解压后``data``文件夹下应包含以下文件：
+在``demo``文件夹下创建``data``文件夹，将``ImageNet``数据集解压在``data``文件夹下，解压后``data/ILSVRC2012``文件夹下应包含以下文件：
 - ``'train'``文件夹，训练图片
 - ``'train_list.txt'``文件
 - ``'val'``文件夹，验证图片
@@ -30,10 +30,10 @@ python export_model.py --model "MobileNet" --pretrained_model ./pretrain/MobileN
 ```
 转化之后的模型存储在``inference_model/MobileNet/``文件夹下，可看到该文件夹下有``'model'``, ``'weights'``两个文件。
 
-### 离线量化
-接下来对导出的模型文件进行离线量化，离线量化的脚本为[quant_post.py](./quant_post.py)，脚本中使用接口``paddleslim.quant.quant_post``对模型进行离线量化。运行命令为：
+### 静态离线量化
+接下来对导出的模型文件进行静态离线量化，静态离线量化的脚本为[quant_post.py](./quant_post.py)，脚本中使用接口``paddleslim.quant.quant_post_static``对模型进行离线量化。运行命令为：
 ```
-python quant_post.py --model_path ./inference_model/MobileNet --save_path ./quant_model_train/MobileNet --model_filename model --params_filename weights
+python quant_post_static.py --model_path ./inference_model/MobileNet --save_path ./quant_model_train/MobileNet --model_filename model --params_filename weights
 ```
 
 - ``model_path``: 需要量化的模型坐在的文件夹
@@ -62,11 +62,11 @@ top1_acc/top5_acc= [0.70913923 0.89548034]
 使用以下命令测试离线量化后的模型的精度：
 
 ```
-python eval.py --model_path ./quant_model_train/MobileNet
+python eval.py --model_path ./quant_model_train/MobileNet --model_name __model__ --params_name __params__
 ```
 
 精度输出为
 ```
 top1_acc/top5_acc= [0.70141864 0.89086477]
 ```
-从以上精度对比可以看出，对``mobilenet``在``imagenet``上的分类模型进行离线量化后 ``top1``精度损失为``0.77%``， ``top5``精度损失为``0.46%``. 
+从以上精度对比可以看出，对``mobilenet``在``imagenet``上的分类模型进行离线量化后 ``top1``精度损失为``0.77%``， ``top5``精度损失为``0.46%``.

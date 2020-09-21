@@ -8,11 +8,11 @@ import math
 import time
 import numpy as np
 import paddle.fluid as fluid
-sys.path.append(sys.path[0] + "../../../")
-sys.path.append(sys.path[0] + "../../")
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
-from paddleslim.quant import quant_aware, quant_post, convert
+from paddleslim.quant import quant_aware, convert
 import models
 from utility import add_arguments, print_arguments
 
@@ -37,7 +37,7 @@ parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], 
 add_arg('config_file',      str, None,                 "The config file for compression with yaml format.")
 add_arg('data',             str, "imagenet",             "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
-add_arg('test_period',      int, 10,                 "Test period in epoches.")
+add_arg('checkpoint_dir',         str, "output",           "checkpoint save dir")
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -78,27 +78,24 @@ def compress(args):
     # 1. quantization configs
     ############################################################################################################
     quant_config = {
-        # weight quantize type, default is 'abs_max'
-        'weight_quantize_type': 'abs_max',
-        # activation quantize type, default is 'abs_max'
+        # weight quantize type, default is 'channel_wise_abs_max'
+        'weight_quantize_type': 'channel_wise_abs_max',
+        # activation quantize type, default is 'moving_average_abs_max'
         'activation_quantize_type': 'moving_average_abs_max',
         # weight quantize bit num, default is 8
         'weight_bits': 8,
         # activation quantize bit num, default is 8
         'activation_bits': 8,
-        # op of name_scope in not_quant_pattern list, will not quantized
+        # ops of name_scope in not_quant_pattern list, will not be quantized
         'not_quant_pattern': ['skip_quant'],
-        # op of types in quantize_op_types, will quantized
+        # ops of type in quantize_op_types, will be quantized
         'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
-        # data type after quantization, default is 'int8'
+        # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
         'dtype': 'int8',
         # window size for 'range_abs_max' quantization. defaulf is 10000
         'window_size': 10000,
         # The decay coefficient of moving average, default is 0.9
         'moving_rate': 0.9,
-        # if set quant_weight_only True, then only quantize parameters of layers which need quantization,
-        # and insert anti-quantization op for parameters of these layers.
-        'quant_weight_only': False
     }
 
     train_reader = None
@@ -141,23 +138,29 @@ def compress(args):
     #    According to the weight and activation quantization type, the graph will be added
     #    some fake quantize operators and fake dequantize operators.
     ############################################################################################################
-    val_program = quant_aware(val_program, place, quant_config, scope=None, for_test=True)
-    compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, for_test=False)
+    val_program = quant_aware(
+        val_program, place, quant_config, scope=None, for_test=True)
+    compiled_train_prog = quant_aware(
+        train_prog, place, quant_config, scope=None, for_test=False)
     opt = create_optimizer(args)
     opt.minimize(avg_cost)
 
     exe = fluid.Executor(place)
     exe.run(fluid.default_startup_program())
 
+    assert os.path.exists(
+        args.pretrained_model), "pretrained_model doesn't exist"
+
     if args.pretrained_model:
 
         def if_exist(var):
-            return os.path.exists(os.path.join(args.pretrained_model, var.name))
+            return os.path.exists(
+                os.path.join(args.pretrained_model, var.name))
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
-    train_reader = paddle.batch(
+    val_reader = paddle.fluid.io.batch(val_reader, batch_size=args.batch_size)
+    train_reader = paddle.fluid.io.batch(
         train_reader, batch_size=args.batch_size, drop_last=True)
 
     train_feeder = feeder = fluid.DataFeeder([image, label], place)
@@ -192,16 +195,6 @@ def compress(args):
         return np.mean(np.array(acc_top1_ns))
 
     def train(epoch, compiled_train_prog):
-        build_strategy = fluid.BuildStrategy()
-        build_strategy.memory_optimize = False
-        build_strategy.enable_inplace = False
-        build_strategy.fuse_all_reduce_ops = False
-        build_strategy.sync_batch_norm = False
-        exec_strategy = fluid.ExecutionStrategy()
-        compiled_train_prog = compiled_train_prog.with_data_parallel(
-                loss_name=avg_cost.name,
-                build_strategy=build_strategy,
-                exec_strategy=exec_strategy)
 
         batch_id = 0
         for data in train_reader():
@@ -221,14 +214,41 @@ def compress(args):
                            end_time - start_time))
             batch_id += 1
 
+    build_strategy = fluid.BuildStrategy()
+    build_strategy.memory_optimize = False
+    build_strategy.enable_inplace = False
+    build_strategy.fuse_all_reduce_ops = False
+    build_strategy.sync_batch_norm = False
+    exec_strategy = fluid.ExecutionStrategy()
+    compiled_train_prog = compiled_train_prog.with_data_parallel(
+        loss_name=avg_cost.name,
+        build_strategy=build_strategy,
+        exec_strategy=exec_strategy)
+
     ############################################################################################################
     # train loop
     ############################################################################################################
+    best_acc1 = 0.0
+    best_epoch = 0
     for i in range(args.num_epochs):
         train(i, compiled_train_prog)
-        if i % args.test_period == 0:
-            test(i, val_program)
-
+        acc1 = test(i, val_program)
+        fluid.io.save_persistables(
+            exe,
+            dirname=os.path.join(args.checkpoint_dir, str(i)),
+            main_program=val_program)
+        if acc1 > best_acc1:
+            best_acc1 = acc1
+            best_epoch = i
+            fluid.io.save_persistables(
+                exe,
+                dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+                main_program=val_program)
+    if os.path.exists(os.path.join(args.checkpoint_dir, 'best_model')):
+        fluid.io.load_persistables(
+            exe,
+            dirname=os.path.join(args.checkpoint_dir, 'best_model'),
+            main_program=val_program)
     ############################################################################################################
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
@@ -237,13 +257,14 @@ def compress(args):
     float_program, int8_program = convert(val_program, place, quant_config, \
                                                         scope=None, \
                                                         save_int8=True)
-
+    print("eval best_model after convert")
+    final_acc1 = test(best_epoch, float_program)
     ############################################################################################################
     # 4. Save inference model
     ############################################################################################################
     model_path = os.path.join(quantization_model_save_dir, args.model,
-                              'act_' + quant_config['activation_quantize_type'] + '_w_' + quant_config[
-                                  'weight_quantize_type'])
+                              'act_' + quant_config['activation_quantize_type']
+                              + '_w_' + quant_config['weight_quantize_type'])
     float_path = os.path.join(model_path, 'float')
     int8_path = os.path.join(model_path, 'int8')
     if not os.path.isdir(model_path):
@@ -252,7 +273,8 @@ def compress(args):
     fluid.io.save_inference_model(
         dirname=float_path,
         feeded_var_names=[image.name],
-        target_vars=[out], executor=exe,
+        target_vars=[out],
+        executor=exe,
         main_program=float_program,
         model_filename=float_path + '/model',
         params_filename=float_path + '/params')
@@ -260,7 +282,8 @@ def compress(args):
     fluid.io.save_inference_model(
         dirname=int8_path,
         feeded_var_names=[image.name],
-        target_vars=[out], executor=exe,
+        target_vars=[out],
+        executor=exe,
         main_program=int8_program,
         model_filename=int8_path + '/model',
         params_filename=int8_path + '/params')

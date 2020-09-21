@@ -13,49 +13,105 @@
 # limitations under the License.
 import sys
 sys.path.append("../")
+import os
+import sys
 import unittest
 import paddle.fluid as fluid
 from paddleslim.nas import SANAS
-from paddleslim.nas import SearchSpaceFactory
 from paddleslim.analysis import flops
+import numpy as np
+
+
+def compute_op_num(program):
+    params = {}
+    ch_list = []
+    for block in program.blocks:
+        for param in block.all_parameters():
+            if len(param.shape) == 4:
+                params[param.name] = param.shape
+                ch_list.append(int(param.shape[0]))
+    return params, ch_list
 
 
 class TestSANAS(unittest.TestCase):
-    def test_nas(self):
+    def setUp(self):
+        self.init_test_case()
+        port = np.random.randint(8337, 8773)
+        self.sanas = SANAS(
+            configs=self.configs, server_addr=("", port), save_checkpoint=None)
 
-        factory = SearchSpaceFactory()
-        config0 = {'input_size': 224, 'output_size': 7, 'block_num': 5}
-        config1 = {'input_size': 7, 'output_size': 1, 'block_num': 2}
-        configs = [('MobileNetV2Space', config0), ('ResNetSpace', config1)]
+    def init_test_case(self):
+        self.configs = [('MobileNetV2BlockSpace', {'block_mask': [0]})]
+        self.filter_num = np.array([
+            3, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96, 128, 144, 160, 192, 224,
+            256, 320, 384, 512
+        ])
+        self.k_size = np.array([3, 5])
+        self.multiply = np.array([1, 2, 3, 4, 5, 6])
+        self.repeat = np.array([1, 2, 3, 4, 5, 6])
 
-        space = factory.get_search_space([('MobileNetV2Space', config0)])
-        origin_arch = space.token2arch()[0]
+    def check_chnum_convnum(self, program):
+        current_tokens = self.sanas.current_info()['current_tokens']
+        channel_exp = self.multiply[current_tokens[0]]
+        filter_num = self.filter_num[current_tokens[1]]
+        repeat_num = self.repeat[current_tokens[2]]
 
-        main_program = fluid.Program()
-        s_program = fluid.Program()
-        with fluid.program_guard(main_program, s_program):
-            input = fluid.data(
-                name="input", shape=[None, 3, 224, 224], dtype="float32")
-            origin_arch(input)
-        base_flops = flops(main_program)
+        conv_list, ch_pro = compute_op_num(program)
+        ### assert conv number
+        self.assertTrue((repeat_num * 3) == len(
+            conv_list
+        ), "the number of conv is NOT match, the number compute from token: {}, actual conv number: {}".
+                        format(repeat_num * 3, len(conv_list)))
 
-        search_steps = 3
-        sa_nas = SANAS(
-            configs,
-            search_steps=search_steps,
-            server_addr=("", 0),
-            is_server=True)
+        ### assert number of channels
+        ch_token = []
+        init_ch_num = 32
+        for i in range(repeat_num):
+            ch_token.append(init_ch_num * channel_exp)
+            ch_token.append(init_ch_num * channel_exp)
+            ch_token.append(filter_num)
+            init_ch_num = filter_num
 
-        for i in range(search_steps):
-            archs = sa_nas.next_archs()
-            main_program = fluid.Program()
-            s_program = fluid.Program()
-            with fluid.program_guard(main_program, s_program):
-                input = fluid.data(
-                    name="input", shape=[None, 3, 224, 224], dtype="float32")
-                archs[0](input)
-            sa_nas.reward(1)
-            self.assertTrue(flops(main_program) < base_flops)
+        self.assertTrue(
+            str(ch_token) == str(ch_pro),
+            "channel num is WRONG, channel num from token is {}, channel num come fom program is {}".
+            format(str(ch_token), str(ch_pro)))
+
+    def test_all_function(self):
+        ### unittest for next_archs
+        next_program = fluid.Program()
+        startup_program = fluid.Program()
+        token2arch_program = fluid.Program()
+
+        with fluid.program_guard(next_program, startup_program):
+            inputs = fluid.data(
+                name='input', shape=[None, 3, 32, 32], dtype='float32')
+            archs = self.sanas.next_archs()
+            for arch in archs:
+                output = arch(inputs)
+                inputs = output
+        self.check_chnum_convnum(next_program)
+
+        ### unittest for reward
+        self.assertTrue(self.sanas.reward(float(1.0)), "reward is False")
+
+        ### uniitest for tokens2arch
+        with fluid.program_guard(token2arch_program, startup_program):
+            inputs = fluid.data(
+                name='input', shape=[None, 3, 32, 32], dtype='float32')
+            arch = self.sanas.tokens2arch(self.sanas.current_info()[
+                'current_tokens'])
+            for arch in archs:
+                output = arch(inputs)
+                inputs = output
+        self.check_chnum_convnum(token2arch_program)
+
+        ### unittest for current_info
+        current_info = self.sanas.current_info()
+        self.assertTrue(
+            isinstance(current_info, dict),
+            "the type of current info must be dict, but now is {}".format(
+                type(current_info)))
 
 
 if __name__ == '__main__':

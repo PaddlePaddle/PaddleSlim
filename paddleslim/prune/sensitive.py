@@ -26,8 +26,8 @@ from ..prune import Pruner
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = [
-    "sensitivity", "flops_sensitivity", "load_sensitivities",
-    "merge_sensitive", "get_ratios_by_loss"
+    "sensitivity", "flops_sensitivity", "load_sensitivities", "merge_sensitive",
+    "get_ratios_by_loss"
 ]
 
 
@@ -36,7 +36,38 @@ def sensitivity(program,
                 param_names,
                 eval_func,
                 sensitivities_file=None,
-                pruned_ratios=None):
+                pruned_ratios=None,
+                eval_args=None,
+                criterion='l1_norm'):
+    """Compute the sensitivities of convolutions in a model. The sensitivity of a convolution is the losses of accuracy on test dataset in differenct pruned ratios. The sensitivities can be used to get a group of best ratios with some condition.
+    This function return a dict storing sensitivities as below:
+
+    .. code-block:: python
+
+           {"weight_0":
+               {0.1: 0.22,
+                0.2: 0.33
+               },
+             "weight_1":
+               {0.1: 0.21,
+                0.2: 0.4
+               }
+           }
+
+    ``weight_0`` is parameter name of convolution. ``sensitivities['weight_0']`` is a dict in which key is pruned ratio and value is the percent of losses.
+
+
+    Args:
+        program(paddle.fluid.Program): The program to be analysised.
+        place(fluid.CPUPlace | fluid.CUDAPlace): The device place of filter parameters. 
+        param_names(list): The parameter names of convolutions to be analysised. 
+        eval_func(function): The callback function used to evaluate the model. It should accept a instance of `paddle.fluid.Program` as argument and return a score on test dataset.
+        sensitivities_file(str): The file to save the sensitivities. It will append the latest computed sensitivities into the file. And the sensitivities in the file would not be computed again. This file can be loaded by `pickle` library.
+        pruned_ratios(list): The ratios to be pruned. default: ``[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]``.
+
+    Returns: 
+        dict: A dict storing sensitivities.
+    """
     scope = fluid.global_scope()
     graph = GraphWrapper(program)
     sensitivities = load_sensitivities(sensitivities_file)
@@ -54,9 +85,12 @@ def sensitivity(program,
                 _logger.debug('{}, {} has computed.'.format(name, ratio))
                 continue
             if baseline is None:
-                baseline = eval_func(graph.program)
+                if eval_args is None:
+                    baseline = eval_func(graph.program)
+                else:
+                    baseline = eval_func(eval_args)
 
-            pruner = Pruner()
+            pruner = Pruner(criterion=criterion)
             _logger.info("sensitive - param: {}; ratios: {}".format(name,
                                                                     ratio))
             pruned_program, param_backup, _ = pruner.prune(
@@ -68,7 +102,10 @@ def sensitivity(program,
                 lazy=True,
                 only_graph=False,
                 param_backup=True)
-            pruned_metric = eval_func(pruned_program)
+            if eval_args is None:
+                pruned_metric = eval_func(pruned_program)
+            else:
+                pruned_metric = eval_func(eval_args)
             loss = (baseline - pruned_metric) / baseline
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))
@@ -159,13 +196,13 @@ def flops_sensitivity(program,
 
 
 def merge_sensitive(sensitivities):
-    """
-    Merge sensitivities.
+    """Merge sensitivities.
+
     Args:
       sensitivities(list<dict> | list<str>): The sensitivities to be merged. It cann be a list of sensitivities files or dict.
 
     Returns:
-      sensitivities(dict): A dict with sensitivities.
+      dict: A dict stroring sensitivities.
     """
     assert len(sensitivities) > 0
     if not isinstance(sensitivities[0], dict):
@@ -182,8 +219,13 @@ def merge_sensitive(sensitivities):
 
 
 def load_sensitivities(sensitivities_file):
-    """
-    Load sensitivities from file.
+    """Load sensitivities from file.
+
+    Args:
+       sensitivities_file(str):  The file storing sensitivities.
+
+    Returns:
+       dict: A dict stroring sensitivities.
     """
     sensitivities = {}
     if sensitivities_file and os.path.exists(sensitivities_file):
@@ -196,8 +238,11 @@ def load_sensitivities(sensitivities_file):
 
 
 def _save_sensitivities(sensitivities, sensitivities_file):
-    """
-    Save sensitivities into file.
+    """Save sensitivities into file.
+    
+    Args:
+        sensitivities(dict): The sensitivities to be saved.
+        sensitivities_file(str): The file to saved sensitivities.
     """
     with open(sensitivities_file, 'wb') as f:
         pickle.dump(sensitivities, f)
@@ -217,11 +262,12 @@ def get_ratios_by_loss(sensitivities, loss):
 
     Returns:
 
-      ratios(dict): A group of ratios. The key of dict is name of parameters while the value is the ratio to be pruned.
+      dict: A group of ratios. The key of dict is name of parameters while the value is the ratio to be pruned.
     """
     ratios = {}
     for param, losses in sensitivities.items():
         losses = losses.items()
+        losses = list(losses)
         losses.sort()
         for i in range(len(losses))[::-1]:
             if losses[i][1] <= loss:
@@ -236,7 +282,7 @@ def get_ratios_by_loss(sensitivities, loss):
                     ratio = r0 + (loss - l0) * (r1 - r0) / (l1 - l0)
                     ratios[param] = ratio
                     if ratio > 1:
-                        print losses, ratio, (r1 - r0) / (l1 - l0), i
+                        _logger.info(losses, ratio, (r1 - r0) / (l1 - l0), i)
 
                 break
     return ratios
