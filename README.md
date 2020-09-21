@@ -44,7 +44,7 @@ PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持�
 						AMC Pruner:&nbsp;<a href="https://arxiv.org/abs/1802.03494" target="_blank"><span style="font-family:&quot;font-size:13px;background-color:#FFFFFF;">He, Yihui , et al. "AMC: AutoML for Model Compression and Acceleration on Mobile Devices." (2018).</span></a>
 					</li>
 					<li>
-						FFPGM Pruner:&nbsp;<a href="https://arxiv.org/abs/1811.00250" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">He Y , Liu P , Wang Z , et al. Filter Pruning via Geometric Median for Deep Convolutional Neural Networks Acceleration[C]// IEEE/CVF Conference on Computer Vision &amp; Pattern Recognition. IEEE, 2019.</span></a>
+						FPGM Pruner:&nbsp;<a href="https://arxiv.org/abs/1811.00250" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">He Y , Liu P , Wang Z , et al. Filter Pruning via Geometric Median for Deep Convolutional Neural Networks Acceleration[C]// IEEE/CVF Conference on Computer Vision &amp; Pattern Recognition. IEEE, 2019.</span></a>
 					</li>
 					<li>
 						Slim Pruner:<span style="background-color:#FFFDFA;">&nbsp;<a href="https://arxiv.org/pdf/1708.06519.pdf" target="_blank"><span style="font-family:&quot;font-size:14px;background-color:#FFFFFF;">Liu Z , Li J , Shen Z , et al. Learning Efficient Convolutional Networks through Network Slimming[J]. 2017.</span></a></span>
