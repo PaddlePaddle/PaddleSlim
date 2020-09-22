@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import time
 import logging
 import socket
 from .log_helper import get_logger
@@ -24,7 +26,14 @@ _logger = get_logger(__name__, level=logging.INFO)
 class ControllerClient(object):
     """
     Controller client.
+    Args:
+        server_ip(str): The ip that controller server listens on. None means getting the ip automatically. Default: None.
+        server_port(int): The port that controller server listens on. 0 means getting usable port automatically. Default: 0.
+        key(str): The key used to identify legal agent for controller server. Default: "light-nas"
+        client_name(str): Current client name, random generate for counting client number. Default: None.
     """
+
+    START = True
 
     def __init__(self,
                  server_ip=None,
@@ -32,11 +41,6 @@ class ControllerClient(object):
                  key=None,
                  client_name=None):
         """
-        Args:
-            server_ip(str): The ip that controller server listens on. None means getting the ip automatically. Default: None.
-            server_port(int): The port that controller server listens on. 0 means getting usable port automatically. Default: 0.
-            key(str): The key used to identify legal agent for controller server. Default: "light-nas"
-            client_name(str): Current client name, random generate for counting client number. Default: None.
         """
         self.server_ip = server_ip
         self.server_port = server_port
@@ -46,27 +50,64 @@ class ControllerClient(object):
     def update(self, tokens, reward, iter):
         """
         Update the controller according to latest tokens and reward.
+
         Args:
             tokens(list<int>): The tokens generated in last step.
             reward(float): The reward of tokens.
+            iter(int): The iteration number of current client.
         """
+        ControllerClient.START = False
         socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        socket_client.connect((self.server_ip, self.server_port))
-        tokens = ",".join([str(token) for token in tokens])
-        socket_client.send("{}\t{}\t{}\t{}\t{}".format(
-            self._key, tokens, reward, iter, self._client_name).encode())
-        response = socket_client.recv(1024).decode()
-        if response.strip('\n').split("\t") == "ok":
-            return True
+        errno = socket_client.connect_ex((self.server_ip, self.server_port))
+        if errno != 0:
+            _logger.info("Server is closed!!!")
+            os._exit(0)
         else:
-            return False
+            tokens = ",".join([str(token) for token in tokens])
+            socket_client.send("{}\t{}\t{}\t{}\t{}".format(
+                self._key, tokens, reward, iter, self._client_name).encode())
+            try:
+                response = socket_client.recv(1024).decode()
+                if "ok" in response.strip('\n').split("\t"):
+                    return True
+                else:
+                    return False
+            except Exception as err:
+                _logger.error(err)
+                os._exit(0)
 
     def next_tokens(self):
         """
         Get next tokens.
         """
-        socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        socket_client.connect((self.server_ip, self.server_port))
+        retry_cnt = 0
+
+        if ControllerClient.START:
+            while True:
+                socket_client = socket.socket(socket.AF_INET,
+                                              socket.SOCK_STREAM)
+                errno = socket_client.connect_ex(
+                    (self.server_ip, self.server_port))
+                if errno != 0:
+                    retry_cnt += 1
+                    _logger.info("Server is NOT ready, wait 10 second to retry")
+                    time.sleep(10)
+                else:
+                    break
+
+                if retry_cnt == 6:
+                    _logger.error(
+                        "Server is NOT ready in 1 minute, please check if it start"
+                    )
+                    os._exit(errno)
+
+        else:
+            socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            errno = socket_client.connect_ex((self.server_ip, self.server_port))
+            if errno != 0:
+                _logger.info("Server is closed")
+                os._exit(0)
+
         socket_client.send("next_tokens".encode())
         tokens = socket_client.recv(1024).decode()
         tokens = [int(token) for token in tokens.strip("\n").split(",")]
@@ -77,7 +118,11 @@ class ControllerClient(object):
         Request for current information.
         """
         socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        socket_client.connect((self.server_ip, self.server_port))
-        socket_client.send("current_info".encode())
-        current_info = socket_client.recv(1024).decode()
-        return eval(current_info)
+        errno = socket_client.connect_ex((self.server_ip, self.server_port))
+        if errno != 0:
+            _logger.info("Server is closed")
+            return None
+        else:
+            socket_client.send("current_info".encode())
+            current_info = socket_client.recv(1024).decode()
+            return eval(current_info)

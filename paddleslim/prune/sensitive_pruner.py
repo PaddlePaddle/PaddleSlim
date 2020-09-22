@@ -30,18 +30,20 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class SensitivePruner(object):
+    """
+    Pruner used to prune parameters iteratively according to sensitivities
+    of parameters in each step.
+
+    Args:
+        place(fluid.CUDAPlace | fluid.CPUPlace): The device place where
+            program execute.
+        eval_func(function): A callback function used to evaluate pruned
+            program. The argument of this function is pruned program.
+            And it return a score of given program.
+        scope(fluid.scope): The scope used to execute program.
+    """
+
     def __init__(self, place, eval_func, scope=None, checkpoints=None):
-        """
-        Pruner used to prune parameters iteratively according to sensitivities
-        of parameters in each step.
-        Args:
-            place(fluid.CUDAPlace | fluid.CPUPlace): The device place where
-                program execute.
-            eval_func(function): A callback function used to evaluate pruned
-                program. The argument of this function is pruned program.
-                And it return a score of given program.
-            scope(fluid.scope): The scope used to execute program.
-        """
         self._eval_func = eval_func
         self._iter = 0
         self._place = place
@@ -135,12 +137,14 @@ class SensitivePruner(object):
     def prune(self, train_program, eval_program, params, pruned_flops):
         """
         Pruning parameters of training and evaluation network by sensitivities in current step.
+
         Args:
             train_program(fluid.Program): The training program to be pruned.
             eval_program(fluid.Program): The evaluation program to be pruned. And it is also used to calculate sensitivities of parameters.
             params(list<str>): The parameters to be pruned.
             pruned_flops(float): The ratio of FLOPS to be pruned in current step.
-        Return:
+
+        Returns:
             tuple: A tuple of pruned training program and pruned evaluation program.
         """
         _logger.info("Pruning: {}".format(params))
@@ -199,9 +203,9 @@ class SensitivePruner(object):
           pruned_flops(float): The percent of FLOPS to be pruned.
           eval_program(Program): The program whose FLOPS is considered.
 
-        Return:
+        Returns:
 
-          ratios(dict): A group of ratios. The key of dict is name of parameters while the value is the ratio to be pruned.
+          dict: A group of ratios. The key of dict is name of parameters while the value is the ratio to be pruned.
         """
 
         min_loss = 0.
