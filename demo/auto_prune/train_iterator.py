@@ -96,8 +96,8 @@ def compress(args):
         raise ValueError("{} is not supported.".format(args.data))
 
     image_shape = [int(m) for m in image_shape.split(",")]
-    assert args.model in model_list, "{} is not in lists: {}".format(
-        args.model, model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
+                                                                     model_list)
     image = fluid.layers.data(name='image', shape=image_shape, dtype='float32')
     label = fluid.layers.data(name='label', shape=[1], dtype='int64')
     # model definition
@@ -117,8 +117,7 @@ def compress(args):
     if args.pretrained_model:
 
         def if_exist(var):
-            return os.path.exists(
-                os.path.join(args.pretrained_model, var.name))
+            return os.path.exists(os.path.join(args.pretrained_model, var.name))
 
 #        fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
@@ -151,10 +150,9 @@ def compress(args):
             acc_top5_ns.append(np.mean(acc_top5_n))
             batch_id += 1
 
-        _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".
-                     format(epoch,
-                            np.mean(np.array(acc_top1_ns)),
-                            np.mean(np.array(acc_top5_ns))))
+        _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".format(
+            epoch,
+            np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
         return np.mean(np.array(acc_top1_ns))
 
     def train(epoch, program):

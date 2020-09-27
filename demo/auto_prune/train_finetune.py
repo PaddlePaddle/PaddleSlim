@@ -81,8 +81,8 @@ def compress(args):
     class_dim = 1000
     image_shape = "3,224,224"
     image_shape = [int(m) for m in image_shape.split(",")]
-    assert args.model in model_list, "{} is not in lists: {}".format(
-        args.model, model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
+                                                                     model_list)
     image = fluid.layers.data(name='image', shape=image_shape, dtype='float32')
     label = fluid.layers.data(name='label', shape=[1], dtype='int64')
     # model definition
@@ -158,8 +158,7 @@ def compress(args):
                 train_program,
                 feed=train_feeder.feed(data),
                 fetch_list=[
-                    avg_cost.name, acc_top1.name, acc_top5.name,
-                    "learning_rate"
+                    avg_cost.name, acc_top1.name, acc_top5.name, "learning_rate"
                 ])
             end_time = time.time()
             loss_n = np.mean(loss_n)
@@ -177,8 +176,7 @@ def compress(args):
         #if "_weights" in  param.name and "conv1_weights" not in param.name:
         if "_sep_weights" in param.name:
             params.append(param.name)
-    print("fops before pruning: {}".format(
-        flops(fluid.default_main_program())))
+    print("fops before pruning: {}".format(flops(fluid.default_main_program())))
     pruned_program_iter = fluid.default_main_program()
     pruned_val_program_iter = val_program
     for ratios in ratiolist:
