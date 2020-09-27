@@ -15,9 +15,12 @@ import sys
 sys.path.append("../")
 import unittest
 import numpy as np
+import paddle
 import paddle.fluid as fluid
 from paddleslim.prune import Pruner
 from layers import conv_bn_layer
+import random
+from paddleslim.core import GraphWrapper
 
 
 class TestPrune(unittest.TestCase):
@@ -41,7 +44,29 @@ class TestPrune(unittest.TestCase):
             conv4 = conv_bn_layer(conv3, 8, 3, "conv4")
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
-            sum3 = fluid.layers.sum([sum2, conv5])
+
+            flag = fluid.layers.fill_constant([1], value=1, dtype='int32')
+            rand_flag = paddle.randint(2, dtype='int32')
+            cond = fluid.layers.less_than(x=flag, y=rand_flag)
+            cond_output = fluid.layers.create_global_var(
+                shape=[1],
+                value=0.0,
+                dtype='float32',
+                persistable=False,
+                name='cond_output')
+
+            def cond_block1():
+                cond_conv = conv_bn_layer(conv5, 8, 3, "conv_cond1_1")
+                fluid.layers.assign(input=cond_conv, output=cond_output)
+
+            def cond_block2():
+                cond_conv1 = conv_bn_layer(conv5, 8, 3, "conv_cond2_1")
+                cond_conv2 = conv_bn_layer(cond_conv1, 8, 3, "conv_cond2_2")
+                fluid.layers.assign(input=cond_conv2, output=cond_output)
+
+            fluid.layers.cond(cond, cond_block1, cond_block2)
+            sum3 = fluid.layers.sum([sum2, cond_output])
+
             conv6 = conv_bn_layer(sum3, 8, 3, "conv6")
             sub1 = conv6 - sum3
             mult = sub1 * sub1
@@ -51,8 +76,7 @@ class TestPrune(unittest.TestCase):
             scaled = fluid.layers.scale(floored)
             concated = fluid.layers.concat([scaled, mult], axis=1)
             conv8 = conv_bn_layer(concated, 8, 3, "conv8")
-            feature = fluid.layers.reshape(conv8, [-1, 128, 16])
-            predict = fluid.layers.fc(input=feature, size=10, act='softmax')
+            predict = fluid.layers.fc(input=conv8, size=10, act='softmax')
             cost = fluid.layers.cross_entropy(input=predict, label=label)
             adam_optimizer = fluid.optimizer.AdamOptimizer(0.01)
             avg_cost = fluid.layers.mean(cost)
@@ -62,8 +86,10 @@ class TestPrune(unittest.TestCase):
         for param in main_program.all_parameters():
             if 'conv' in param.name:
                 params.append(param.name)
+        #TODO: To support pruning convolution before fc layer.
+        params.remove('conv8_weights')
 
-        place = fluid.CPUPlace()
+        place = fluid.CUDAPlace(0)
         exe = fluid.Executor(place)
         exe.run(startup_program)
         x = np.random.random(size=(10, 3, 16, 16)).astype('float32')
@@ -83,6 +109,11 @@ class TestPrune(unittest.TestCase):
             only_graph=False,
             param_backup=None,
             param_shape_backup=None)
+
+        loss_data, = exe.run(main_program,
+                             feed={"image": x,
+                                   "label": label},
+                             fetch_list=[cost.name])
 
 
 if __name__ == '__main__':
