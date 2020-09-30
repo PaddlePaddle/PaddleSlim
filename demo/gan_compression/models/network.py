@@ -14,11 +14,11 @@
 import functools
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.nn import BatchNorm, InstanceNorm
-from discrimitor import NLayerDiscriminator
-from generator.resnet_generator import ResnetGenerator
-from generator.mobile_generator import MobileResnetGenerator
-from generator.super_generator import SuperMobileResnetGenerator
-from generator.sub_mobile_generator import SubMobileResnetGenerator
+from .discrimitor import NLayerDiscriminator
+from .generator.resnet_generator import ResnetGenerator
+from .generator.mobile_generator import MobileResnetGenerator
+from .generator.super_generator import SuperMobileResnetGenerator
+from .generator.sub_mobile_generator import SubMobileResnetGenerator
 
 
 class Identity(fluid.dygraph.Layer):
@@ -29,15 +29,7 @@ class Identity(fluid.dygraph.Layer):
 def get_norm_layer(norm_type='instance'):
     if norm_type == 'instance':
         norm_layer = functools.partial(
-            InstanceNorm,
-            param_attr=fluid.ParamAttr(
-                initializer=fluid.initializer.Constant(1.0),
-                learning_rate=0.0,
-                trainable=False),
-            bias_attr=fluid.ParamAttr(
-                initializer=fluid.initializer.Constant(0.0),
-                learning_rate=0.0,
-                trainable=False))
+            InstanceNorm, param_attr=False, bias_attr=False)
     elif norm_type == 'batch':
         norm_layer = functools.partial(
             BatchNorm,

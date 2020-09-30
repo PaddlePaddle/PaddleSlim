@@ -15,7 +15,7 @@ import os
 import numpy as np
 import paddle.fluid as fluid
 from distillers.base_resnet_distiller import BaseResnetDistiller
-from models.super_modules import SuperConv2D
+from paddleslim.nas.ofa.layers import SuperConv2D
 from models import loss
 from configs.resnet_configs import get_configs
 from metric import get_fid

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import paddle.fluid as fluid
-from data_reader import DataReader
+from .data_reader import DataReader
 
 
 def create_data(cfgs, direction='AtoB', eval_mode=False):
@@ -29,7 +29,7 @@ def create_data(cfgs, direction='AtoB', eval_mode=False):
 
     #### id2name has something wrong when use_multiprocess
     loader = fluid.io.DataLoader.from_generator(
-        capacity=4, return_list=True, use_multiprocess=cfgs.use_multiprocess)
+        capacity=4, return_list=True, use_multiprocess=cfgs.use_parallel)
 
     loader.set_batch_generator(dreader, places=cfgs.place)
     return loader, id2name

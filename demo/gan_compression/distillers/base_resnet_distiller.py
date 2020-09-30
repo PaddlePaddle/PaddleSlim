@@ -17,7 +17,7 @@ import itertools
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.nn import Conv2D
 from paddle.fluid.dygraph.base import to_variable
-from paddleslim.core.layers import SuperConv2D
+from paddleslim.nas.ofa.layers import SuperConv2D
 from models import loss
 from models import network
 from models.base_model import BaseModel

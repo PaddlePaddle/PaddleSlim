@@ -56,7 +56,7 @@ class ReaderCreator:
         raise NotImplementedError
 
 
-class SingleDatareader(ReaderCreator):
+class single_datareader(ReaderCreator):
     def __init__(self, list_filename, cfgs, mode='TEST'):
         self.cfgs = cfgs
         self.mode = mode
@@ -114,7 +114,7 @@ class SingleDatareader(ReaderCreator):
         return reader
 
 
-class CycleDatareader(ReaderCreator):
+class cycle_datareader(ReaderCreator):
     def __init__(self, list_filename_A, list_filename_B, cfgs, mode='TRAIN'):
         self.cfgs = cfgs
         self.mode = mode

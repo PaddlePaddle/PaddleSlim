@@ -15,7 +15,7 @@ import functools
 import paddle.fluid as fluid
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose
 from paddle.nn.layer import ReLU, Pad2D
-from paddleslim.models.dygraph.modules import MobileResnetBlock
+from .modules import MobileResnetBlock
 
 use_cudnn = False
 

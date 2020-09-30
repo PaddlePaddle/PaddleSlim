@@ -5,7 +5,7 @@ import cv2
 from cv2 import imread
 import paddle.fluid as fluid
 from scipy import linalg
-from inception import InceptionV3
+from .inception import InceptionV3
 import requests
 
 

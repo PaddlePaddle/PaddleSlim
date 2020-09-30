@@ -1,7 +1,24 @@
 # GAN压缩
 基于paddle版本的 [GAN Compression: Efficient Architectures for Interactive Conditional GANs](https://arxiv.org/abs/2003.08936)
 
-包含以下步骤：
+Paddle版本：[develop](https://www.paddlepaddle.org.cn/documentation/docs/zh/install/Tables.html#whl-release)2020.07.09之后的版本。
+
+模型压缩意义：
+
+压缩结果：
+| 模型 | 生成网络结构 | 数据集 | GMACs | 模型体积（MB）| 评价指标 | 下载 |
+|:--:|:---:|:--:|:--:|:--:|:--:|:--:|
+|CycleGAN|resnet_9blocks(origin)|horse2zebra|56.8|11.3| |[链接]()|
+|CycleGAN|mobile_resnet_9blocks(final)|horse2zebra|2.67|0.34| |[链接]()|
+
+Note: 目前仅验证过CycleGAN在horse2zebra数据集中的效果，欢迎您在新的数据集或者新的模型上验证整个流程。
+
+# CycleGAN简单介绍和压缩原理介绍
+CycleGAN原理
+详细讲解每个步骤原理：
+....
+
+整体压缩流程包含以下步骤：
 1. 替换生成网络里的resnet block 为mobile resnnet block.
 2. 裁剪掉第一步得到的生成器中的一些通道作为学生网络，第一步得到的生成器作为教师网络，蒸馏学生网络。
 3. 第二步中的学生网络作为[Once-For-ALL](https://arxiv.org/abs/1908.09791)这个网络中的超网络进行训练，优化不同的子结构的效果。

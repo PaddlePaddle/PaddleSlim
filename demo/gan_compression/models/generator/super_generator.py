@@ -16,7 +16,7 @@ import paddle.fluid as fluid
 import paddle.tensor as tensor
 from paddle.fluid.dygraph.nn import BatchNorm, InstanceNorm, Dropout
 from paddle.nn.layer import ReLU, Pad2D
-from paddleslim.core.layers import SuperConv2D, SuperConv2DTranspose, SuperSeparableConv2D, SuperInstanceNorm
+from paddleslim.nas.ofa.layers import SuperConv2D, SuperConv2DTranspose, SuperSeparableConv2D
 
 
 class SuperMobileResnetBlock(fluid.dygraph.Layer):
@@ -42,7 +42,8 @@ class SuperMobileResnetBlock(fluid.dygraph.Layer):
                 num_filters=dim,
                 filter_size=3,
                 stride=1,
-                padding=p), norm_layer(dim), ReLU()
+                padding=p,
+                norm_layer=norm_layer), norm_layer(dim), ReLU()
         ])
         self.conv_block.extend([Dropout(dropout_rate)])
 
@@ -65,17 +66,18 @@ class SuperMobileResnetBlock(fluid.dygraph.Layer):
                 num_filters=dim,
                 filter_size=3,
                 stride=1,
-                padding=p), norm_layer(dim)
+                padding=p,
+                norm_layer=norm_layer), norm_layer(dim)
         ])
 
-    def forward(self, input, config):
+    def forward(self, input, channel):
         x = input
         cnt = 0
         for sublayer in self.conv_block:
             if isinstance(sublayer, SuperSeparableConv2D):
                 if cnt == 1:
-                    config['channel'] = input.shape[1]
-                x = sublayer(x, config)
+                    channel = input.shape[1]
+                x = sublayer(x, channel=channel)
                 cnt += 1
             else:
                 x = sublayer(x)
@@ -95,11 +97,6 @@ class SuperMobileResnetGenerator(fluid.dygraph.Layer):
         assert n_blocks >= 0
         super(SuperMobileResnetGenerator, self).__init__()
         use_bias = norm_layer == InstanceNorm
-
-        if norm_layer.func == InstanceNorm or norm_layer == InstanceNorm:
-            norm_layer = SuperInstanceNorm
-        else:
-            raise NotImplementedError
 
         self.model = fluid.dygraph.LayerList([])
         self.model.extend([
@@ -184,42 +181,43 @@ class SuperMobileResnetGenerator(fluid.dygraph.Layer):
 
     def forward(self, input):
         configs = self.configs
-        x = tensor.clamp(input, min=-1, max=1)
+        #x = tensor.clamp(input, min=-1, max=1)
+        x = tensor.clip(input, min=-1, max=1)
         cnt = 0
         for i in range(0, 10):
             sublayer = self.model[i]
             if isinstance(sublayer, SuperConv2D):
-                channel = configs['channels'][cnt] * (2**cnt)
+                channel = configs['channel'][cnt] * (2**cnt)
                 config = {'channel': channel}
-                x = sublayer(x, config)
+                x = sublayer(x, **config)
                 cnt += 1
             else:
                 x = sublayer(x)
 
         for i in range(3):
             for j in range(10 + i * 3, 13 + i * 3):
-                if len(configs['channels']) == 6:
-                    channel = configs['channels'][3] * 4
+                if len(configs['channel']) == 6:
+                    channel = configs['channel'][3] * 4
                 else:
-                    channel = configs['channels'][i + 3] * 4
+                    channel = configs['channel'][i + 3] * 4
                 config = {'channel': channel}
                 sublayer = self.model[j]
-                x = sublayer(x, config)
+                x = sublayer(x, **config)
 
         cnt = 2
         for i in range(19, 27):
             sublayer = self.model[i]
             if isinstance(sublayer, SuperConv2DTranspose):
                 cnt -= 1
-                if len(configs['channels']) == 6:
-                    channel = configs['channels'][5 - cnt] * (2**cnt)
+                if len(configs['channel']) == 6:
+                    channel = configs['channel'][5 - cnt] * (2**cnt)
                 else:
-                    channel = configs['channels'][7 - cnt] * (2**cnt)
+                    channel = configs['channel'][7 - cnt] * (2**cnt)
                 config = {'channel': channel}
-                x = sublayer(x, config)
+                x = sublayer(x, **config)
             elif isinstance(sublayer, SuperConv2D):
                 config = {'channel': sublayer._num_filters}
-                x = sublayer(x, config)
+                x = sublayer(x, **config)
             else:
                 x = sublayer(x)
         x = fluid.layers.tanh(x)

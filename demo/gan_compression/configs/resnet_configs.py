@@ -10,23 +10,23 @@ class ResnetConfigs:
 
     def sample(self):
         ret = {}
-        ret['channels'] = []
+        ret['channel'] = []
         for n_channel in self.n_channels:
-            ret['channels'].append(random.choice(n_channel))
+            ret['channel'].append(random.choice(n_channel))
         return ret
 
     def largest(self):
         ret = {}
-        ret['channels'] = []
+        ret['channel'] = []
         for n_channel in self.n_channels:
-            ret['channels'].append(max(n_channel))
+            ret['channel'].append(max(n_channel))
         return ret
 
     def smallest(self):
         ret = {}
-        ret['channels'] = []
+        ret['channel'] = []
         for n_channel in self.n_channels:
-            ret['channels'].append(min(n_channel))
+            ret['channel'].append(min(n_channel))
         return ret
 
     def all_configs(self):
@@ -39,7 +39,7 @@ class ResnetConfigs:
                     yield [n] + after_channels
 
         for channels in yield_channels(0):
-            yield {'channels': channels}
+            yield {'channel': channels}
 
     def __call__(self, name):
         assert name in ('largest', 'smallest')

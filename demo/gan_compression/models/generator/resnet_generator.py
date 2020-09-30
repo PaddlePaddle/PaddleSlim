@@ -16,7 +16,7 @@ import paddle.fluid as fluid
 import paddle.tensor as tensor
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose
 from paddle.nn.layer import ReLU, Pad2D
-from paddleslim.models.dygraph.modules import ResnetBlock
+from .modules import ResnetBlock
 
 
 class ResnetGenerator(fluid.dygraph.Layer):
