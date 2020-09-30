@@ -43,7 +43,8 @@ class EvolutionSearch:
         if strategy == 'EVO':
             self.strategy = Evolution(**kwargs)
         else:
-            raise NotImplementedError("strategy not Implement")
+            raise NotImplementedError("strategy {} is not Implement".format(
+                strategy))
 
         for key, value in constraint.items():
             setattr(self, key, value)
@@ -54,19 +55,22 @@ class EvolutionSearch:
         self.parent_ratio = getattr(kwargs, 'parent_ratio', 0.25)
         self.mutation_ratio = getattr(kwargs, 'mutation_ratio', 0.5)
 
-        if self.acc_constraint != None:
-            input_dim = getattr(self.acc_constraint, 'input_dim', 128)
-            pred_model = getattr(self.acc_constraint, 'pred_model', None)
-            self.acc_predicter = AccuracyEvaluator(pred_model, input_dim)
-            self.min_acc = getattr(self.acc_constraint, 'min_acc', 1.0)
+        acc_constraint = getattr(constraint, 'acc_constraint', None)
+        assert acc_constraint != None, "acc contraint can not be None"
 
-        if self.latency_constraint != None:
-            table_file = getattr(self.latency_constraint, 'table_file', None)
+        input_dim = getattr(acc_constraint, 'input_dim', 128)
+        pred_model = getattr(acc_constraint, 'pred_model', None)
+        self.acc_predicter = AccuracyEvaluator(pred_model, input_dim)
+        self.min_acc = getattr(acc_constraint, 'min_acc', 1.0)
+
+        latency_constraint = getattr(constraint, 'latency_constraint', None)
+        if latency_constraint != None:
+            table_file = getattr(latency_constraint, 'table_file', None)
             assert table_file != None
             self.latency_predicter = TableLatencyEvaluator(table_file)
-            self.max_latency = getattr(self.latency_constraint, 'max_latency',
-                                       -1)
+            self.max_latency = getattr(latency_constraint, 'max_latency', -1)
 
+        self.flops_constraint = getattr(constraint, 'flops_constraint', None)
         if self.flops_constraint != None:
             self.flops_predicter = dygraph_flops
 
@@ -81,11 +85,10 @@ class EvolutionSearch:
 
     def satify_constraint(self, sample):
         status = {}
-        if self.acc_constraint != None:
-            cur_acc = self.acc_predicter(sample)
-            if cur_acc < self.min_acc:
-                return False, None
-            status['acc'] = cur_acc
+        cur_acc = self.acc_predicter(sample)
+        if cur_acc < self.min_acc:
+            return False, None
+        status['acc'] = cur_acc
 
         if self.latency_constraint != None:
             net = self.convert_onehot_to_net(sample)
@@ -109,7 +112,8 @@ class EvolutionSearch:
             sample = self.net_config.random_choice()
             satify, constraint_status = self.satify_constraint(sample)
             if satify:
-                population.append((sample, constraint_status))
+                population.append(
+                    (constraint_status['acc'], sample, constraint_status))
 
         return population
 

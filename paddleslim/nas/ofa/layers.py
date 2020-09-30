@@ -313,7 +313,11 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                                                                         out_nc)
 
         weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
-        padding = convert_to_list(get_same_padding(ks), 2)
+
+        if kernel_size != None:
+            padding = convert_to_list(get_same_padding(ks), 2)
+        else:
+            padding = self._padding
 
         if self._l_type == 'conv2d':
             attrs = ('strides', self._stride, 'paddings', padding, 'dilations',
@@ -590,7 +594,10 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                                                                         out_nc)
 
         weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
-        padding = convert_to_list(get_same_padding(ks), 2)
+        if kernel_size != False:
+            padding = convert_to_list(get_same_padding(ks), 2)
+        else:
+            padding = self._padding
 
         op = getattr(core.ops, self._op_type)
         out = op(input, weight, 'output_size', self._output_size, 'strides',
