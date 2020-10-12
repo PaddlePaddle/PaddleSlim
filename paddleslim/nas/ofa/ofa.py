@@ -156,6 +156,7 @@ class OFA(OFABase):
                 'If you want to add distill, please input class of teacher model'
             )
 
+        ### instance model by user can input super-param easily.
         assert isinstance(self.distill_config.teacher_model,
                           paddle.fluid.dygraph.Layer)
 
@@ -201,7 +202,7 @@ class OFA(OFABase):
         if getattr(self, 'epoch', None) == None:
             epoch = self.iter // self.iter_per_epochs
         else:
-            epoch = self.epochs
+            epoch = self.epoch
         return epoch
 
     def _sample_from_nestdict(self, cands, sample_type, task, phase):

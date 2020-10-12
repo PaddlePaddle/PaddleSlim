@@ -18,7 +18,7 @@ import logging
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid import framework
-from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm
+from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm, LayerNorm, Embedding
 from .layers import *
 from ...common import get_logger
 
@@ -26,7 +26,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['supernet']
 
-WEIGHT_LAYER = ['conv', 'linear']
+WEIGHT_LAYER = ['conv', 'linear', 'embedding']
 
 
 ### TODO: add decorator
@@ -63,7 +63,7 @@ class Convert:
 
                 new_attr_name = [
                     '_stride', '_dilation', '_groups', '_param_attr',
-                    '_bias_attr', '_use_cudnn', '_act', '_dtype'
+                    '_bias_attr', '_use_cudnn', '_act', '_dtype', '_padding'
                 ]
 
                 new_attr_dict = dict()
@@ -196,7 +196,8 @@ class Convert:
 
                 new_attr_name = [
                     '_stride', '_dilation', '_groups', '_param_attr',
-                    '_bias_attr', '_use_cudnn', '_act', '_dtype', '_output_size'
+                    '_padding', '_bias_attr', '_use_cudnn', '_act', '_dtype',
+                    '_output_size'
                 ]
                 assert attr_dict[
                     '_filter_size'] != None, "Conv2DTranspose only support filter size != None now"
@@ -379,6 +380,72 @@ class Convert:
 
                 layer = SuperInstanceNorm(**new_attr_dict)
                 model[idx] = layer
+
+            elif isinstance(layer, LayerNorm) and (
+                    getattr(self.context, 'expand', None) != None or
+                    getattr(self.context, 'channel', None) != None):
+                ### TODO: fix when normalized_shape != last_dim_of_input
+                if idx > last_weight_layer_idx:
+                    continue
+
+                attr_dict = layer.__dict__
+                new_attr_name = [
+                    '_scale', '_shift', '_param_attr', '_bias_attr', '_act',
+                    '_dtype', '_epsilon'
+                ]
+                new_attr_dict = dict()
+                if self.context.expand:
+                    new_attr_dict[
+                        'normalized_shape'] = self.context.expand * int(
+                            layer._parameters['normalized_shape'].shape[0])
+                elif self.context.channel:
+                    new_attr_dict['normalized_shape'] = max(cur_channel)
+
+                for attr in new_attr_name:
+                    new_attr_dict[attr[1:]] = attr_dict[attr]
+
+                del layer, attr_dict
+                layer = SuperLayerNorm(**new_attr_dict)
+                model[idx] = layer
+
+            elif isinstance(layer, Embedding) and (
+                    getattr(self.context, 'expand', None) != None or
+                    getattr(self.context, 'channel', None) != None):
+                attr_dict = layer.__dict__
+                key = attr_dict['_full_name']
+                new_attr_name = [
+                    '_is_sparse', '_is_distributed', '_padding_idx',
+                    '_param_attr', '_dtype'
+                ]
+
+                new_attr_dict = dict()
+                new_attr_dict['candidate_config'] = dict()
+                bef_size = attr_dict['_size']
+                if self.context.expand:
+                    new_attr_dict['size'] = [
+                        bef_size[0], self.context.expand * bef_size[1]
+                    ]
+                    new_attr_dict['candidate_config'].update({
+                        'expand_ratio': self.context.expand_ratio
+                    })
+
+                elif self.context.channel:
+                    cur_channel = self.context.channel[0]
+                    self.context.channel = self.context.channel[1:]
+                    new_attr_dict['size'] = [bef_size[0], max(cur_channel)]
+                    new_attr_dict['candidate_config'].update({
+                        'channel': cur_channel
+                    })
+                    pre_channel = cur_channel
+                else:
+                    new_attr_dict['size'] = bef_size
+
+                for attr in new_attr_name:
+                    new_attr_dict[attr[1:]] = attr_dict[attr]
+
+                del layer, attr_dict
+
+                layer = Block(SuperEmbedding(**new_attr_dict), key=key)
 
         return model
 

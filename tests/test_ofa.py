@@ -34,13 +34,16 @@ class ModelConv(fluid.dygraph.Layer):
                 channel=((4, 8, 12), (8, 12, 16), (8, 12, 16),
                          (8, 12, 16))) as ofa_super:
             models = []
-            models += [nn.Conv2D(3, 4, 3)]
+            models += [nn.Conv2D(3, 4, 3, padding=1)]
             models += [nn.InstanceNorm(4)]
             models += [ReLU()]
             models += [nn.Conv2D(4, 4, 3, groups=4)]
             models += [nn.InstanceNorm(4)]
             models += [ReLU()]
-            models += [nn.Conv2DTranspose(4, 4, 3, groups=4, use_cudnn=True)]
+            models += [
+                nn.Conv2DTranspose(
+                    4, 4, 3, groups=4, padding=1, use_cudnn=True)
+            ]
             models += [nn.BatchNorm(4)]
             models += [ReLU()]
             models += [nn.Conv2D(4, 3, 3)]
@@ -50,7 +53,7 @@ class ModelConv(fluid.dygraph.Layer):
         models += [
             Block(
                 SuperSeparableConv2D(
-                    3, 6, 1, candidate_config={'channel': (3, 6)}))
+                    3, 6, 1, padding=1, candidate_config={'channel': (3, 6)}))
         ]
         with supernet(
                 kernel_size=(3, 5, 7), expand_ratio=(1, 2, 4)) as ofa_super:

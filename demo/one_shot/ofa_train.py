@@ -59,6 +59,10 @@ class Model(fluid.dygraph.Layer):
 
 def test_ofa():
 
+    fluid.enable_dygraph()
+    model = Model()
+    teacher_model = Model()
+
     default_run_config = {
         'train_batch_size': 256,
         'eval_batch_size': 64,
@@ -72,13 +76,11 @@ def test_ofa():
 
     default_distill_config = {
         'lambda_distill': 0.01,
-        'teacher_model': Model,
+        'teacher_model': teacher_model,
         'mapping_layers': ['models.0.fn']
     }
     distill_config = DistillConfig(**default_distill_config)
 
-    fluid.enable_dygraph()
-    model = Model()
     ofa_model = OFA(model, run_config, distill_config=distill_config)
 
     train_reader = paddle.fluid.io.batch(
