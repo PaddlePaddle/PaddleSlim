@@ -314,7 +314,7 @@ convert
        'mul', 'conv2d', 'pool2d', 'depthwise_conv2d', 'elementwise_add',
        'leaky_relu'
    ]
-   TRANSFORM_PASS_OP_TYPES = ['conv2d', 'depthwise_conv2d', 'mul']
+   TRANSFORM_PASS_OP_TYPES = ['conv2d', 'depthwise_conv2d', 'mul', 'conv2d_transpose']
    
    QUANT_DEQUANT_PASS_OP_TYPES = [
            "pool2d", "elementwise_add", "concat", "softmax", "argmax", "transpose",
