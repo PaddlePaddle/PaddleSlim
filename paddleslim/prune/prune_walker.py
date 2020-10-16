@@ -56,6 +56,7 @@ class PruneWorker(object):
 
     def _visit(self, var, pruned_axis):
         key = "_".join([str(self.op.idx()), var.name()])
+        key = "_".join([key, self.op.all_inputs()[0].name()])
         if pruned_axis not in self.visited:
             self.visited[pruned_axis] = {}
         if key in self.visited[pruned_axis]:
