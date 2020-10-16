@@ -17,10 +17,11 @@ import unittest
 import paddle.fluid as fluid
 from paddleslim.prune import Pruner
 from paddleslim.prune import AutoPruner
+from static_case import StaticCase
 from layers import conv_bn_layer
 
 
-class TestPrune(unittest.TestCase):
+class TestPrune(StaticCase):
     def test_prune(self):
         main_program = fluid.Program()
         startup_program = fluid.Program()

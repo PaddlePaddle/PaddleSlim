@@ -17,9 +17,10 @@ import unittest
 import paddle.fluid as fluid
 from paddleslim.dist import merge, soft_label_loss
 from layers import conv_bn_layer
+from static_case import StaticCase
 
 
-class TestSoftLabelLoss(unittest.TestCase):
+class TestSoftLabelLoss(StaticCase):
     def test_soft_label_loss(self):
         student_main = fluid.Program()
         student_startup = fluid.Program()

@@ -17,9 +17,10 @@ import unittest
 import paddle.fluid as fluid
 from paddleslim.dist import merge
 from layers import conv_bn_layer
+from static_case import StaticCase
 
 
-class TestMerge(unittest.TestCase):
+class TestMerge(StaticCase):
     def test_merge(self):
         student_main = fluid.Program()
         student_startup = fluid.Program()

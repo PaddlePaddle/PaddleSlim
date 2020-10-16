@@ -14,12 +14,15 @@
 import sys
 sys.path.append("../")
 import unittest
+from static_case import StaticCase
 import paddle.fluid as fluid
 from paddleslim.prune import Pruner
+from static_case import StaticCase
+from static_case import StaticCase
 from layers import conv_bn_layer
 
 
-class TestPrune(unittest.TestCase):
+class TestPrune(StaticCase):
     def test_prune(self):
         main_program = fluid.Program()
         startup_program = fluid.Program()
