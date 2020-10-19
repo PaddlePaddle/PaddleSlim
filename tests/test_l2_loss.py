@@ -14,7 +14,6 @@
 import sys
 sys.path.append("../")
 import unittest
-from static_case import StaticCase
 import paddle
 import paddle.fluid as fluid
 from static_case import StaticCase

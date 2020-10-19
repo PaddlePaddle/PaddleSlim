@@ -18,7 +18,6 @@ from static_case import StaticCase
 import paddle.fluid as fluid
 from paddleslim.prune import Pruner
 from static_case import StaticCase
-from static_case import StaticCase
 from layers import conv_bn_layer
 
 
