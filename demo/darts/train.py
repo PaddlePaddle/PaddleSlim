@@ -219,7 +219,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    paddle.enable_static()
     args = parser.parse_args()
     print_arguments(args)
     main(args)
