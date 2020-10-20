@@ -101,17 +101,18 @@ class VarCollector(object):
                 _logger.info("can't find var {}.".format(name))
         return self.stats.record()
 
-    def run(self, reader, exe, step=None):
+    def run(self, reader, exe, step=None, loss_name=None):
         if not hasattr(self.program, '_program'):
             # Compile the native program to speed up
-            program = fluid.CompiledProgram(self.program).with_data_parallel()
+            program = fluid.CompiledProgram(self.program).with_data_parallel(
+                loss_name=loss_name)
 
         for idx, data in enumerate(reader):
             vars_np = exe.run(program=program,
                               feed=data,
                               fetch_list=self.real_names)
             mapped_vars_np = dict(zip(self.real_names, vars_np))
-            values = self.update(idx + 1, mapped_vars_np)
+            values = self.update(mapped_vars_np)
 
             if idx % 10 == 0:
                 _logger.info("Collecting..., Step: {}".format(idx))
