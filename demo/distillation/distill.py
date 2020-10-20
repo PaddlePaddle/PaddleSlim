@@ -102,8 +102,8 @@ def compress(args):
         raise ValueError("{} is not supported.".format(args.data))
     image_shape = [int(m) for m in image_shape.split(",")]
 
-    assert args.model in model_list, "{} is not in lists: {}".format(
-        args.model, model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
+                                                                     model_list)
     student_program = fluid.Program()
     s_startup = fluid.Program()
 
@@ -234,4 +234,5 @@ def main():
 
 
 if __name__ == '__main__':
+    paddle.enable_static()
     main()

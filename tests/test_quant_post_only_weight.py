@@ -17,6 +17,7 @@ import unittest
 import paddle
 import paddle.fluid as fluid
 from paddleslim.quant import quant_post_dynamic
+from static_case import StaticCase
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
@@ -26,7 +27,7 @@ from paddle.fluid import core
 import numpy as np
 
 
-class TestQuantPostOnlyWeightCase1(unittest.TestCase):
+class TestQuantPostOnlyWeightCase1(StaticCase):
     def test_accuracy(self):
         image = fluid.layers.data(
             name='image', shape=[1, 28, 28], dtype='float32')

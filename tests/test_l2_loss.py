@@ -14,17 +14,19 @@
 import sys
 sys.path.append("../")
 import unittest
+import paddle
 import paddle.fluid as fluid
+from static_case import StaticCase
 from paddleslim.dist import merge, l2_loss
 from layers import conv_bn_layer
 
 
-class TestL2Loss(unittest.TestCase):
+class TestL2Loss(StaticCase):
     def test_l2_loss(self):
         student_main = fluid.Program()
         student_startup = fluid.Program()
         with fluid.program_guard(student_main, student_startup):
-            input = fluid.data(name="image", shape=[None, 3, 224, 224])
+            input = paddle.data(name="image", shape=[None, 3, 224, 224])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             student_predict = conv1 + conv2
@@ -32,7 +34,7 @@ class TestL2Loss(unittest.TestCase):
         teacher_main = fluid.Program()
         teacher_startup = fluid.Program()
         with fluid.program_guard(teacher_main, teacher_startup):
-            input = fluid.data(name="image", shape=[None, 3, 224, 224])
+            input = paddle.data(name="image", shape=[None, 3, 224, 224])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2

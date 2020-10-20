@@ -17,9 +17,10 @@ import unittest
 import paddle.fluid as fluid
 from paddleslim.dist import merge, fsp_loss
 from layers import conv_bn_layer
+from static_case import StaticCase
 
 
-class TestFSPLoss(unittest.TestCase):
+class TestFSPLoss(StaticCase):
     def test_fsp_loss(self):
         student_main = fluid.Program()
         student_startup = fluid.Program()

@@ -17,6 +17,7 @@ sys.path.append("../")
 import numpy as np
 import unittest
 import paddle
+from static_case import StaticCase
 import paddle.fluid as fluid
 import paddle.fluid.dygraph.nn as nn
 from paddle.nn import ReLU
@@ -119,7 +120,7 @@ class ModelLinear(fluid.dygraph.Layer):
         return inputs
 
 
-class TestOFA(unittest.TestCase):
+class TestOFA(StaticCase):
     def setUp(self):
         fluid.enable_dygraph()
         self.init_model_and_data()

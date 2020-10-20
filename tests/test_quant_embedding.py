@@ -17,8 +17,10 @@ import paddle.fluid as fluid
 import paddleslim.quant as quant
 import unittest
 
+from static_case import StaticCase
 
-class TestQuantEmbedding(unittest.TestCase):
+
+class TestQuantEmbedding(StaticCase):
     def test_quant_embedding(self):
         train_program = fluid.Program()
         with fluid.program_guard(train_program):

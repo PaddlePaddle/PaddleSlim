@@ -17,6 +17,7 @@ import unittest
 import paddle
 import paddle.fluid as fluid
 from paddleslim.quant import quant_aware, convert
+from static_case import StaticCase
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
@@ -26,7 +27,7 @@ from paddle.fluid import core
 import numpy as np
 
 
-class TestQuantAwareCase1(unittest.TestCase):
+class TestQuantAwareCase1(StaticCase):
     def get_model(self):
         image = fluid.layers.data(
             name='image', shape=[1, 28, 28], dtype='float32')
@@ -88,7 +89,7 @@ class TestQuantAwareCase1(unittest.TestCase):
         self.assertTrue(convert_quant_op_nums_1 - 2 == convert_quant_op_nums_2)
 
 
-class TestQuantAwareCase2(unittest.TestCase):
+class TestQuantAwareCase2(StaticCase):
     def test_accuracy(self):
         image = fluid.layers.data(
             name='image', shape=[1, 28, 28], dtype='float32')
@@ -140,9 +141,8 @@ class TestQuantAwareCase2(unittest.TestCase):
                     fetch_list=[avg_cost, acc_top1, acc_top5])
                 iter += 1
                 if iter % 100 == 0:
-                    print(
-                        'eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
-                        format(iter, cost, top1, top5))
+                    print('eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
+                          format(iter, cost, top1, top5))
                 result[0].append(cost)
                 result[1].append(top1)
                 result[2].append(top5)
@@ -158,8 +158,7 @@ class TestQuantAwareCase2(unittest.TestCase):
             'activation_quantize_type': 'moving_average_abs_max',
             'quantize_op_types': ['depthwise_conv2d', 'mul', 'conv2d'],
         }
-        quant_train_prog = quant_aware(
-            main_prog, place, config, for_test=False)
+        quant_train_prog = quant_aware(main_prog, place, config, for_test=False)
         quant_eval_prog = quant_aware(val_prog, place, config, for_test=True)
         train(quant_train_prog)
         quant_eval_prog, int8_prog = convert(
