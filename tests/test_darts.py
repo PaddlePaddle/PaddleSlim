@@ -17,11 +17,12 @@ import paddle
 import unittest
 import paddle.fluid as fluid
 import numpy as np
+from static_case import StaticCase
 from paddleslim.nas.darts import DARTSearch
 from layers import conv_bn_layer
 
 
-class TestDARTS(unittest.TestCase):
+class TestDARTS(StaticCase):
     def test_darts(self):
         class SuperNet(fluid.dygraph.Layer):
             def __init__(self):

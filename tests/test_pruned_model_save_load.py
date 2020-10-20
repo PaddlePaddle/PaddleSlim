@@ -17,11 +17,12 @@ import unittest
 import paddle.fluid as fluid
 from paddleslim.prune import Pruner, save_model, load_model
 from layers import conv_bn_layer
+from static_case import StaticCase
 import numpy as np
 import numpy
 
 
-class TestSaveAndLoad(unittest.TestCase):
+class TestSaveAndLoad(StaticCase):
     def test_prune(self):
         train_program = fluid.Program()
         startup_program = fluid.Program()

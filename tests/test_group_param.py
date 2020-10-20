@@ -17,9 +17,10 @@ import unittest
 import paddle.fluid as fluid
 from layers import conv_bn_layer
 from paddleslim.prune import collect_convs
+from static_case import StaticCase
 
 
-class TestPrune(unittest.TestCase):
+class TestPrune(StaticCase):
     def test_prune(self):
         main_program = fluid.Program()
         startup_program = fluid.Program()

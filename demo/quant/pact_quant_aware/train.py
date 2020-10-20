@@ -441,6 +441,7 @@ def compress(args):
 
 
 def main():
+    paddle.enable_static()
     args = parser.parse_args()
     print_arguments(args)
     compress(args)

@@ -17,6 +17,7 @@ import unittest
 import logging
 import numpy as np
 import paddle
+from static_case import StaticCase
 import paddle.fluid as fluid
 import paddle.dataset.mnist as reader
 from paddle.fluid.dygraph.base import to_variable
@@ -49,7 +50,7 @@ class Model(fluid.dygraph.Layer):
         return y
 
 
-class TestDML(unittest.TestCase):
+class TestDML(StaticCase):
     def test_dml(self):
         place = fluid.CUDAPlace(0) if fluid.is_compiled_with_cuda(
         ) else fluid.CPUPlace()

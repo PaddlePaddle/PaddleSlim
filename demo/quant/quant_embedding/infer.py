@@ -51,8 +51,7 @@ def parse_args():
         '--use_cuda', type=int, default='0', help='whether use cuda')
     parser.add_argument(
         '--batch_size', type=int, default='5', help='batch_size')
-    parser.add_argument(
-        '--emb_size', type=int, default='64', help='batch_size')
+    parser.add_argument('--emb_size', type=int, default='64', help='batch_size')
     parser.add_argument(
         '--emb_quant',
         type=bool,
@@ -76,9 +75,7 @@ def infer_epoch(args, vocab_size, test_reader, use_cuda, i2w):
                 copy_program = main_program.clone()
                 model_path = model_dir + "/pass-" + str(epoch)
                 fluid.io.load_params(
-                    executor=exe,
-                    dirname=model_path,
-                    main_program=copy_program)
+                    executor=exe, dirname=model_path, main_program=copy_program)
                 if args.emb_quant:
                     config = {
                         'quantize_op_types': 'lookup_table',
@@ -208,6 +205,7 @@ def infer_step(args, vocab_size, test_reader, use_cuda, i2w):
 
 
 if __name__ == "__main__":
+    paddle.enable_static()
     args = parse_args()
     start_index = args.start_index
     last_index = args.last_index

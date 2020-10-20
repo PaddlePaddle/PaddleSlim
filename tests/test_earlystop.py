@@ -17,11 +17,12 @@ import unittest
 import paddle
 from paddleslim.nas import SANAS
 from paddleslim.nas.early_stop import MedianStop
+from static_case import StaticCase
 steps = 5
 epochs = 5
 
 
-class TestMedianStop(unittest.TestCase):
+class TestMedianStop(StaticCase):
     def test_median_stop(self):
         config = [('MobileNetV2Space')]
         sanas = SANAS(config, server_addr=("", 8732), save_checkpoint=None)

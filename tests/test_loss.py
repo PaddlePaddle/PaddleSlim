@@ -17,9 +17,10 @@ import unittest
 import paddle.fluid as fluid
 from paddleslim.dist import merge, loss
 from layers import conv_bn_layer
+from static_case import StaticCase
 
 
-class TestLoss(unittest.TestCase):
+class TestLoss(StaticCase):
     def test_loss(self):
         student_main = fluid.Program()
         student_startup = fluid.Program()
