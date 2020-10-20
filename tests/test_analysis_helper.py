@@ -61,7 +61,7 @@ class TestAnalysisHelper(StaticCase):
         values = var_collector1.abs_max_run(
             train_loader, exe, step=None, loss_name=avg_cost.name)
         vars = [v.name for v in main_prog.list_vars() if v.persistable]
-        var_collector2 = VarCollector(main_prog, [], use_ema=False)
+        var_collector2 = VarCollector(main_prog, vars, use_ema=False)
         values = var_collector2.run(train_loader,
                                     exe,
                                     step=None,
@@ -70,6 +70,4 @@ class TestAnalysisHelper(StaticCase):
 
 
 if __name__ == '__main__':
-    #test = TestAnalysisHelper('test_analysis_helper')
-    #test.test_analysis_helper()
     TestAnalysisHelper('test_analysis_helper').test_analysis_helper()
