@@ -209,9 +209,7 @@ def test_search_result(tokens, image_size, args, config):
             drop_last=False)
     elif args.data == 'imagenet':
         train_reader = paddle.fluid.io.batch(
-            imagenet_reader.train(),
-            batch_size=args.batch_size,
-            drop_last=True)
+            imagenet_reader.train(), batch_size=args.batch_size, drop_last=True)
         test_reader = paddle.fluid.io.batch(
             imagenet_reader.val(), batch_size=args.batch_size, drop_last=False)
 
@@ -250,8 +248,8 @@ def test_search_result(tokens, image_size, args, config):
 
             _logger.info(
                 'TEST: batch: {}, avg_cost: {}, acc_top1: {}, acc_top5: {}'.
-                format(batch_id, batch_reward[0], batch_reward[1],
-                       batch_reward[2]))
+                format(batch_id, batch_reward[0], batch_reward[1], batch_reward[
+                    2]))
 
         finally_reward = np.mean(np.array(reward), axis=0)
         _logger.info(
@@ -309,5 +307,5 @@ if __name__ == '__main__':
                 args.data))
 
     config = [('MobileNetV2Space')]
-
+    paddle.enable_static()
     search_mobilenetv2(config, args, image_size, is_server=args.is_server)

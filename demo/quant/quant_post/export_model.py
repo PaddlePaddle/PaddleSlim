@@ -48,8 +48,8 @@ def export_model(args):
     image_shape = [int(m) for m in image_shape.split(",")]
     image = fluid.data(
         name='image', shape=[None] + image_shape, dtype='float32')
-    assert args.model in model_list, "{} is not in lists: {}".format(
-        args.model, model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
+                                                                     model_list)
     # model definition
     model = models.__dict__[args.model]()
     out = model.net(input=image, class_dim=class_dim)
@@ -61,8 +61,7 @@ def export_model(args):
     if args.pretrained_model:
 
         def if_exist(var):
-            return os.path.exists(
-                os.path.join(args.pretrained_model, var.name))
+            return os.path.exists(os.path.join(args.pretrained_model, var.name))
 
         fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
     else:
@@ -85,4 +84,5 @@ def main():
 
 
 if __name__ == '__main__':
+    paddle.enable_static()
     main()

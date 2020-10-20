@@ -17,6 +17,7 @@ import unittest
 import paddle
 import paddle.fluid as fluid
 from paddleslim.quant import quant_post_static
+from static_case import StaticCase
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
@@ -26,7 +27,7 @@ from paddle.fluid import core
 import numpy as np
 
 
-class TestQuantAwareCase1(unittest.TestCase):
+class TestQuantAwareCase1(StaticCase):
     def test_accuracy(self):
         image = fluid.layers.data(
             name='image', shape=[1, 28, 28], dtype='float32')
@@ -77,9 +78,8 @@ class TestQuantAwareCase1(unittest.TestCase):
                                            fetch_list=outputs)
                 iter += 1
                 if iter % 100 == 0:
-                    print(
-                        'eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
-                        format(iter, cost, top1, top5))
+                    print('eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
+                          format(iter, cost, top1, top5))
                 result[0].append(cost)
                 result[1].append(top1)
                 result[2].append(top5)
