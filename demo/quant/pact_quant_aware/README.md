@@ -179,7 +179,10 @@ python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/Mob
 
 使用PACT量化训练
 ```
-python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/MobileNetV3_large_x1_0_ssld_pretrained --num_epochs 30 --lr 0.0001 --use_pact True --batch_size 128 --lr_strategy=piecewise_decay --step_epochs 20 --l2_decay 1e-5
+# 先分析MobileNetV3模型激活值分布，来初始化PACT截断阈值
+python train.py --analysis=True
+# 启动PACT量化训练
+python train.py
 ```
 
 输出结果为
