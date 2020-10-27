@@ -3,9 +3,5 @@ import paddle
 
 
 class StaticCase(unittest.TestCase):
-    def __init__(self, name):
-        super(StaticCase, self).__init__()
+    def setUp(self):
         paddle.enable_static()
-
-    def runTest(self):
-        pass
