@@ -26,7 +26,7 @@ class TestL2Loss(StaticCase):
         student_main = fluid.Program()
         student_startup = fluid.Program()
         with fluid.program_guard(student_main, student_startup):
-            input = paddle.data(name="image", shape=[None, 3, 224, 224])
+            input = fluid.data(name="image", shape=[None, 3, 224, 224])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             student_predict = conv1 + conv2
@@ -34,7 +34,7 @@ class TestL2Loss(StaticCase):
         teacher_main = fluid.Program()
         teacher_startup = fluid.Program()
         with fluid.program_guard(teacher_main, teacher_startup):
-            input = paddle.data(name="image", shape=[None, 3, 224, 224])
+            input = fluid.data(name="image", shape=[None, 3, 224, 224])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2
