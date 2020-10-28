@@ -17,7 +17,7 @@ import os
 import logging
 import pickle
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 from ..core import GraphWrapper
 from ..common import get_logger
 from ..analysis import flops
@@ -68,7 +68,7 @@ def sensitivity(program,
     Returns: 
         dict: A dict storing sensitivities.
     """
-    scope = fluid.global_scope()
+    scope = paddle.static.global_scope()
     graph = GraphWrapper(program)
     sensitivities = load_sensitivities(sensitivities_file)
 
@@ -130,7 +130,7 @@ def flops_sensitivity(program,
 
     assert (1.0 / len(param_names) > pruned_flops_rate)
 
-    scope = fluid.global_scope()
+    scope = paddle.static.global_scope()
     graph = GraphWrapper(program)
     sensitivities = load_sensitivities(sensitivities_file)
 

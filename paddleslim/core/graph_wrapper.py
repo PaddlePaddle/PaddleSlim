@@ -18,7 +18,7 @@ import pickle
 import numpy as np
 from collections import OrderedDict
 from collections import Iterable
-from paddle.fluid.framework import Program, program_guard, Parameter, Variable
+import paddle
 
 __all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper']
 
@@ -37,7 +37,7 @@ OPTIMIZER_OPS = [
 
 class VarWrapper(object):
     def __init__(self, var, graph):
-        assert isinstance(var, Variable)
+        assert isinstance(var, paddle.fluid.framework.Variable)
         assert isinstance(graph, GraphWrapper)
         self._var = var
         self._graph = graph
@@ -96,7 +96,7 @@ class VarWrapper(object):
         return ops
 
     def is_parameter(self):
-        return isinstance(self._var, Parameter)
+        return isinstance(self._var, paddle.fluid.framework.Parameter)
 
 
 class OpWrapper(object):
@@ -211,7 +211,8 @@ class GraphWrapper(object):
         """
         """
         super(GraphWrapper, self).__init__()
-        self.program = Program() if program is None else program
+        self.program = paddle.fluid.framework.Program(
+        ) if program is None else program
         self.persistables = {}
         self.teacher_persistables = {}
         for var in self.program.list_vars():
@@ -244,7 +245,7 @@ class GraphWrapper(object):
         Args:
             var(VarWrapper): The given varibale.
         """
-        return isinstance(var._var, Parameter)
+        return isinstance(var._var, paddle.fluid.framework.Parameter)
 
     def is_persistable(self, var):
         """
@@ -338,7 +339,7 @@ class GraphWrapper(object):
         assert isinstance(op, OpWrapper)
         params = []
         for var in op.all_inputs():
-            if isinstance(var._var, Parameter):
+            if isinstance(var._var, paddle.fluid.framework.Parameter):
                 params.append(var)
         assert len(params) > 0
         return params

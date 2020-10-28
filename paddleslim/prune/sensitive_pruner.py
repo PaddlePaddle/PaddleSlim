@@ -17,7 +17,7 @@ import logging
 import copy
 from scipy.optimize import leastsq
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 from ..common import get_logger
 from .sensitive import sensitivity
 from .sensitive import flops_sensitivity, get_ratios_by_loss
@@ -47,14 +47,14 @@ class SensitivePruner(object):
         self._eval_func = eval_func
         self._iter = 0
         self._place = place
-        self._scope = fluid.global_scope() if scope is None else scope
+        self._scope = paddle.static.global_scope() if scope is None else scope
         self._pruner = Pruner()
         self._checkpoints = checkpoints
 
     def save_checkpoint(self, train_program, eval_program):
         checkpoint = os.path.join(self._checkpoints, str(self._iter - 1))
-        exe = fluid.Executor(self._place)
-        fluid.io.save_persistables(
+        exe = paddle.static.Executor(self._place)
+        paddle.fluid.io.save_persistables(
             exe, checkpoint, main_program=train_program, filename="__params__")
 
         with open(checkpoint + "/main_program", "wb") as f:
@@ -64,7 +64,7 @@ class SensitivePruner(object):
 
     def restore(self, checkpoints=None):
 
-        exe = fluid.Executor(self._place)
+        exe = paddle.static.Executor(self._place)
         checkpoints = self._checkpoints if checkpoints is None else checkpoints
         _logger.info("check points: {}".format(checkpoints))
         main_program = None
@@ -78,17 +78,17 @@ class SensitivePruner(object):
 
                 with open(latest_ck_path + "/main_program", "rb") as f:
                     program_desc_str = f.read()
-                main_program = fluid.Program.parse_from_string(
+                main_program = paddle.static.Program.parse_from_string(
                     program_desc_str)
 
                 with open(latest_ck_path + "/eval_program", "rb") as f:
                     program_desc_str = f.read()
-                eval_program = fluid.Program.parse_from_string(
+                eval_program = paddle.static.Program.parse_from_string(
                     program_desc_str)
 
-                with fluid.scope_guard(self._scope):
-                    fluid.io.load_persistables(exe, latest_ck_path,
-                                               main_program, "__params__")
+                with paddle.static.scope_guard(self._scope):
+                    paddle.fluid.io.load_persistables(
+                        exe, latest_ck_path, main_program, "__params__")
                 _logger.info("load checkpoint from: {}".format(latest_ck_path))
                 _logger.info("flops of eval program: {}".format(
                     flops(eval_program)))
@@ -103,7 +103,7 @@ class SensitivePruner(object):
 
         sensitivities_file = "greedy_sensitivities_iter{}.data".format(
             self._iter)
-        with fluid.scope_guard(self._scope):
+        with paddle.static.scope_guard(self._scope):
             sensitivities = flops_sensitivity(
                 eval_program,
                 self._place,
@@ -149,7 +149,7 @@ class SensitivePruner(object):
         """
         _logger.info("Pruning: {}".format(params))
         sensitivities_file = "sensitivities_iter{}.data".format(self._iter)
-        with fluid.scope_guard(self._scope):
+        with paddle.static.scope_guard(self._scope):
             sensitivities = sensitivity(
                 eval_program,
                 self._place,
