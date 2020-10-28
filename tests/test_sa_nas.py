@@ -16,6 +16,7 @@ sys.path.append("../")
 import os
 import sys
 import unittest
+import paddle
 import paddle.fluid as fluid
 from static_case import StaticCase
 from paddleslim.nas import SANAS
@@ -36,6 +37,7 @@ def compute_op_num(program):
 
 class TestSANAS(StaticCase):
     def setUp(self):
+        paddle.enable_static()
         self.init_test_case()
         port = np.random.randint(8337, 8773)
         self.sanas = SANAS(
