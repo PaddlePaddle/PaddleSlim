@@ -14,6 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
+import paddle
 from paddleslim.dist import merge, loss
 from layers import conv_bn_layer
 from static_case import StaticCase
