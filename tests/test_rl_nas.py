@@ -14,6 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
+import paddle
 import paddle.fluid as fluid
 from paddleslim.nas import RLNAS
 from paddleslim.analysis import flops
@@ -34,6 +35,7 @@ def compute_op_num(program):
 
 class TestRLNAS(StaticCase):
     def setUp(self):
+        paddle.enable_static()
         self.init_test_case()
         port = np.random.randint(8337, 8773)
         self.rlnas = RLNAS(

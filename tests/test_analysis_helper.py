@@ -70,4 +70,4 @@ class TestAnalysisHelper(StaticCase):
 
 
 if __name__ == '__main__':
-    TestAnalysisHelper('test_analysis_helper').test_analysis_helper()
+    unittest.main()
