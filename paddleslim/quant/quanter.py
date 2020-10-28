@@ -321,6 +321,7 @@ def quant_post_static(
         activation_bits=8,
         activation_quantize_type='range_abs_max',
         weight_quantize_type='channel_wise_abs_max',
+        optimize_model=False,
         is_use_cache_file=False,
         cache_dir="./temp_post_training"):
     """
@@ -377,9 +378,11 @@ def quant_post_static(
                 the model accuracy is usually higher when using 'channel_wise_abs_max'.
         is_full_quantize(bool): if True, apply quantization to all supported quantizable op type.
                         If False, only apply quantization to the input quantizable_op_type. Default is False.
-        is_use_cache_file(bool): If False, all temp data will be saved in memory. If True,
-                                all temp data will be saved to disk. Defalut: False.
-        cache_dir(str): When 'is_use_cache_file' is True, temp data will be save in 'cache_dir'. Default is './temp_post_training'.
+        optimize_model(bool, optional): If set optimize_model as True, it applies some 
+                passes to optimize the model before quantization. So far, the place of
+                executor must be cpu it supports fusing batch_norm into convs.
+        is_use_cache_file(bool): This param is deprecated.
+        cache_dir(str): This param is deprecated.
     
     Returns:
         None
@@ -401,8 +404,7 @@ def quant_post_static(
         activation_bits=activation_bits,
         activation_quantize_type=activation_quantize_type,
         weight_quantize_type=weight_quantize_type,
-        is_use_cache_file=is_use_cache_file,
-        cache_dir=cache_dir)
+        optimize_model=optimize_model)
     post_training_quantization.quantize()
     post_training_quantization.save_quantized_model(
         quantize_model_path,
