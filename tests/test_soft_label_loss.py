@@ -22,13 +22,10 @@ from static_case import StaticCase
 
 class TestSoftLabelLoss(StaticCase):
     def test_soft_label_loss(self):
-        student_main = paddle.static.Program()
-        student_startup = paddle.static.Program()
-        with paddle.static.program_guard(student_main, student_startup):
-            input = paddle.static.data(name="image", shape=[None, 3, 224, 224])
-            conv1 = conv_bn_layer(input, 8, 3, "conv1")
-            conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
-            student_predict = conv1 + conv2
+        input = paddle.static.data(name="image", shape=[None, 3, 224, 224])
+        conv1 = conv_bn_layer(input, 8, 3, "conv1")
+        conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
+        student_predict = conv1 + conv2
 
         teacher_main = paddle.static.Program()
         teacher_startup = paddle.static.Program()
@@ -45,17 +42,16 @@ class TestSoftLabelLoss(StaticCase):
 
         place = paddle.CPUPlace()
         data_name_map = {'image': 'image'}
-        merge(teacher_main, student_main, data_name_map, place)
+        merge(teacher_main,
+              paddle.static.default_main_program(), data_name_map, place)
         merged_ops = []
-        for block in student_main.blocks:
+        for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
                 merged_ops.append(op.type)
-        paddle.static.default_main_program = student_main
-        with paddle.static.program_guard(student_main):
-            distill_loss = soft_label_loss('teacher_conv6_bn_output.tmp_2',
-                                           'conv2_bn_output.tmp_2')
+        distill_loss = soft_label_loss('teacher_conv6_bn_output.tmp_2',
+                                       'conv2_bn_output.tmp_2')
         loss_ops = []
-        for block in student_main.blocks:
+        for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
                 loss_ops.append(op.type)
         self.assertTrue(set(merged_ops).difference(set(loss_ops)) == set())
