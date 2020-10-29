@@ -245,16 +245,14 @@ def compress(args):
         train(i, compiled_train_prog)
         acc1 = test(i, val_program)
         paddle.static.save(
-            exe,
-            dirname=os.path.join(args.checkpoint_dir, str(i)),
-            main_program=val_program)
+            program=val_program,
+            model_path=os.path.join(args.checkpoint_dir, str(i)))
         if acc1 > best_acc1:
             best_acc1 = acc1
             best_epoch = i
             paddle.static.save(
-                exe,
-                dirname=os.path.join(args.checkpoint_dir, 'best_model'),
-                main_program=val_program)
+                program=val_program,
+                model_path=os.path.join(args.checkpoint_dir, 'best_model'))
     if os.path.exists(os.path.join(args.checkpoint_dir, 'best_model')):
         paddle.static.load(
             exe,
