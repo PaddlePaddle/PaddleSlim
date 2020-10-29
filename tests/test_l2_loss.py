@@ -50,9 +50,10 @@ class TestL2Loss(StaticCase):
         for block in student_main.blocks:
             for op in block.ops:
                 merged_ops.append(op.type)
+        paddle.static.default_main_program = student_main
         with paddle.static.program_guard(student_main):
             distill_loss = l2_loss('teacher_conv6_bn_output.tmp_2',
-                                   'conv2_bn_output.tmp_2', student_main)
+                                   'conv2_bn_output.tmp_2')
         loss_ops = []
         for block in student_main.blocks:
             for op in block.ops:

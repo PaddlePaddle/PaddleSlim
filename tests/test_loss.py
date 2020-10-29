@@ -56,10 +56,10 @@ class TestLoss(StaticCase):
                 paddle.nn.functional.square_error_cost(s_var, t_var))
             return hint_loss
 
+        paddle.static.default_main_program = student_main
         with paddle.static.program_guard(student_main):
             distill_loss = loss(
                 adaptation_loss,
-                student_main,
                 t_var='teacher_conv6_bn_output.tmp_2',
                 s_var='conv2_bn_output.tmp_2')
         loss_ops = []
