@@ -21,6 +21,7 @@ import numpy as np
 import math
 from multiprocessing.dummy import Pool as ThreadPool
 
+import paddle
 from paddle.fluid.framework import IrGraph
 from paddle.fluid import core
 
