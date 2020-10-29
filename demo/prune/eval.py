@@ -49,8 +49,8 @@ def eval(args):
     else:
         raise ValueError("{} is not supported.".format(args.data))
     image_shape = [int(m) for m in image_shape.split(",")]
-    assert args.model in model_list, "{} is not in lists: {}".format(
-        args.model, model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
+                                                                     model_list)
     image = fluid.layers.data(name='image', shape=image_shape, dtype='float32')
     label = fluid.layers.data(name='label', shape=[1], dtype='int64')
     # model definition
@@ -95,6 +95,7 @@ def eval(args):
 
 
 def main():
+    paddle.enable_static()
     args = parser.parse_args()
     print_arguments(args)
     eval(args)
