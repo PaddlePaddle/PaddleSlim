@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 
 
 def merge(teacher_program,
@@ -32,7 +32,7 @@ def merge(teacher_program,
                             input interface name, where key of dict is the
                             input name of teacher_program, and value is the
                             input name of student_program.
-        place(fluid.CPUPlace()|fluid.CUDAPlace(N)): This parameter represents
+        place(CPUPlace()|CUDAPlace(N)): This parameter represents
                                                     paddle run on which device.
         scope(Scope): This parameter indicates the variable scope used by
                       the program. If not specified, the default global scope
@@ -43,8 +43,8 @@ def merge(teacher_program,
     Returns:
         None
     """
-    if scope==None:
-        scope = fluid.global_scope()
+    if scope == None:
+        scope = paddle.static.global_scope()
     teacher_program = teacher_program.clone(for_test=True)
     for teacher_var in teacher_program.list_vars():
         skip_rename = False
@@ -117,22 +117,23 @@ def fsp_loss(teacher_var1_name,
     Returns:
         Variable: fsp distiller loss.
     """
-    if program==None:
-        program=fluid.default_main_program()
+    if program == None:
+        program = paddle.static.default_main_program()
     teacher_var1 = program.global_block().var(teacher_var1_name)
     teacher_var2 = program.global_block().var(teacher_var2_name)
     student_var1 = program.global_block().var(student_var1_name)
     student_var2 = program.global_block().var(student_var2_name)
-    teacher_fsp_matrix = fluid.layers.fsp_matrix(teacher_var1, teacher_var2)
-    student_fsp_matrix = fluid.layers.fsp_matrix(student_var1, student_var2)
-    fsp_loss = fluid.layers.reduce_mean(
-        fluid.layers.square(student_fsp_matrix - teacher_fsp_matrix))
+    teacher_fsp_matrix = paddle.fluid.layers.fsp_matrix(teacher_var1,
+                                                        teacher_var2)
+    student_fsp_matrix = paddle.fluid.layers.fsp_matrix(student_var1,
+                                                        student_var2)
+    fsp_loss = paddle.mean(
+        paddle.nn.functional.square_error_cost(student_fsp_matrix,
+                                               teacher_fsp_matrix))
     return fsp_loss
 
 
-def l2_loss(teacher_var_name,
-            student_var_name,
-            program=None):
+def l2_loss(teacher_var_name, student_var_name, program=None):
     """Combine variables from student model and teacher model by l2-loss.
 
     Args:
@@ -144,12 +145,12 @@ def l2_loss(teacher_var_name,
     Returns: 
         Variable: l2 distiller loss.
     """
-    if program==None:
-        program=fluid.default_main_program()
+    if program == None:
+        program = paddle.static.default_main_program()
     student_var = program.global_block().var(student_var_name)
     teacher_var = program.global_block().var(teacher_var_name)
-    l2_loss = fluid.layers.reduce_mean(
-        fluid.layers.square(student_var - teacher_var))
+    l2_loss = paddle.mean(
+        paddle.nn.functional.square_error_cost(student_var, teacher_var))
     return l2_loss
 
 
@@ -173,15 +174,18 @@ def soft_label_loss(teacher_var_name,
     Returns:
         Variable: l2 distiller loss.
     """
-    if program==None:
-        program=fluid.default_main_program()
+    if program == None:
+        program = paddle.static.default_main_program()
     student_var = program.global_block().var(student_var_name)
     teacher_var = program.global_block().var(teacher_var_name)
-    student_var = fluid.layers.softmax(student_var / student_temperature)
-    teacher_var = fluid.layers.softmax(teacher_var / teacher_temperature)
     teacher_var.stop_gradient = True
-    soft_label_loss = fluid.layers.reduce_mean(
-        fluid.layers.cross_entropy(
+
+    student_var = paddle.nn.functional.softmax(student_var /
+                                               student_temperature)
+    teacher_var = paddle.nn.functional.softmax(teacher_var /
+                                               teacher_temperature)
+    soft_label_loss = paddle.mean(
+        paddle.fluid.layers.cross_entropy(
             student_var, teacher_var, soft_label=True))
     return soft_label_loss
 
@@ -197,8 +201,8 @@ def loss(loss_func, program=None, **kwargs):
     Returns: 
         Variable: self defined distiller loss.
     """
-    if program==None:
-        program=fluid.default_main_program()
+    if program == None:
+        program = paddle.static.default_main_program()
     func_parameters = {}
     for item in kwargs.items():
         if isinstance(item[1], str):

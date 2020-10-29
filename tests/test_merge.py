@@ -14,7 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
-import paddle.fluid as fluid
+import paddle
 from paddleslim.dist import merge
 from layers import conv_bn_layer
 from static_case import StaticCase
@@ -22,10 +22,10 @@ from static_case import StaticCase
 
 class TestMerge(StaticCase):
     def test_merge(self):
-        student_main = fluid.Program()
-        student_startup = fluid.Program()
-        with fluid.program_guard(student_main, student_startup):
-            input = fluid.data(name="image", shape=[None, 3, 224, 224])
+        student_main = paddle.static.Program()
+        student_startup = paddle.static.Program()
+        with paddle.static.program_guard(student_main, student_startup):
+            input = paddle.static.data(name="image", shape=[None, 3, 224, 224])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             student_predict = conv1 + conv2
@@ -34,10 +34,10 @@ class TestMerge(StaticCase):
             for op in block.ops:
                 student_ops.append(op)
 
-        teacher_main = fluid.Program()
-        teacher_startup = fluid.Program()
-        with fluid.program_guard(teacher_main, teacher_startup):
-            input = fluid.data(name="image", shape=[None, 3, 224, 224])
+        teacher_main = paddle.static.Program()
+        teacher_startup = paddle.static.Program()
+        with paddle.static.program_guard(teacher_main, teacher_startup):
+            input = paddle.static.data(name="image", shape=[None, 3, 224, 224])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2
@@ -51,7 +51,7 @@ class TestMerge(StaticCase):
             for op in block.ops:
                 teacher_ops.append(op)
 
-        place = fluid.CPUPlace()
+        place = paddle.CPUPlace()
         data_name_map = {'image': 'image'}
         merge(teacher_main, student_main, data_name_map, place)
         merged_ops = []
