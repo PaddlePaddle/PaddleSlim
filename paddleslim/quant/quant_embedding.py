@@ -21,7 +21,6 @@ import numpy as np
 import math
 from multiprocessing.dummy import Pool as ThreadPool
 
-import paddle.fluid as fluid
 from paddle.fluid.framework import IrGraph
 from paddle.fluid import core
 
@@ -102,7 +101,7 @@ def _get_var_tensor(scope, var_name):
     """
     get tensor array by name.
     Args:
-        scope(fluid.Scope): scope to get var
+        scope(paddle.static.Scope): scope to get var
         var_name(str): vatiable name
     Return:
         np.array
@@ -158,8 +157,8 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
 
     Args:
         graph(IrGraph): graph that includes lookup_table op
-        scope(fluid.Scope): scope
-        place(fluid.CPUPlace or flud.CUDAPlace): place
+        scope(paddle.static.Scope): scope
+        place(paddle.CPUPlace or paddle.CUDAPlace): place
         config(dict): config to quant
     """
 
@@ -250,15 +249,14 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
     graph.safe_remove_nodes(embedding_node)
 
 
-def _quant_embedding_log(graph, scope, place, config, var_name,
-                         embedding_node):
+def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
     """
     quantize embedding using log
 
     Args:
         graph(IrGraph): graph that includes Embedding Parameter
-        scope(fluid.Scope): scope 
-        place(fluid.CPUPlace or flud.CUDAPlace): place to run program
+        scope(paddle.static.Scope): scope 
+        place(paddle.CPUPlace or paddle.CUDAPlace): place to run program
         config(dict): config to quant Embedding
     """
 
@@ -424,9 +422,9 @@ def quant_embedding(program, place, config=None, scope=None):
     """quantize lookup_table op parameters
 
     Args:
-        program(fluid.Program): infer program
-        scope(fluid.Scope, optional): Scope records the mapping between variable names and variables, similar to brackets in programming languages. Usually users can use `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . When ``None`` will use `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_. Default : ``None``.
-        place(fluid.CPUPlace or fluid.CUDAPlace): This parameter represents the executor run on which device.
+        program(paddle.static.Program): infer program
+        scope(paddle.static.Scope, optional): Scope records the mapping between variable names and variables, similar to brackets in programming languages. Usually users can use `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . When ``None`` will use `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_. Default : ``None``.
+        place(paddle.CPUPlace or paddle.CUDAPlace): This parameter represents the executor run on which device.
         config(dict, optional): config to quantize. The keys are 'quantize_op_types'. For op in quantize_op_types, you can define 'quantize_type', \
                 'quantize_bits', 'dtype', 'threshold'. \
                 ``quantize_type`` is  quantize type, supported types are ['abs_max'], default is "abs_max".
@@ -440,7 +438,7 @@ def quant_embedding(program, place, config=None, scope=None):
     """
     config = config or {}
     config = _merge_config(copy.deepcopy(_default_config), config)
-    scope = fluid.global_scope() if scope is None else scope
+    scope = paddle.static.global_scope() if scope is None else scope
 
     graph = IrGraph(core.Graph(program.desc), for_test=True)
     quantize_params_map = {}

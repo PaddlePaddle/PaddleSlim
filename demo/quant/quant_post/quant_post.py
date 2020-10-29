@@ -7,7 +7,6 @@ import functools
 import math
 import time
 import numpy as np
-import paddle.fluid as fluid
 
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
@@ -33,12 +32,12 @@ add_arg('params_filename',      str, None,                 "params file name")
 def quantize(args):
     val_reader = reader.train()
 
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
+    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
 
     assert os.path.exists(args.model_path), "args.model_path doesn't exist"
     assert os.path.isdir(args.model_path), "args.model_path must be a dir"
 
-    exe = fluid.Executor(place)
+    exe = paddle.static.Executor(place)
     quant_post(
         executor=exe,
         model_dir=args.model_path,
