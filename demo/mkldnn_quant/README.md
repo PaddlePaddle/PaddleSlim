@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文主要介绍在CPU上转化PaddleSlim产出的量化模型并部署和预测的流程。在Casecade Lake机器上（例如Intel® Xeon® Gold 6271、6248，X2XX等），INT8模型进行推理的速度通常是FP32模型的3-3.7倍；在SkyLake机器（例如Intel® Xeon® Gold 6148、8180，X1XX等）上，使用INT8模型进行推理的速度通常是FP32模型的1.5倍。
+本文主要介绍在CPU上转化PaddleSlim产出的量化模型并部署和预测的流程。对于常见图像分类模型，在Casecade Lake机器上（例如Intel® Xeon® Gold 6271、6248，X2XX等），INT8模型进行推理的速度通常是FP32模型的3-3.7倍；在SkyLake机器（例如Intel® Xeon® Gold 6148、8180，X1XX等）上，使用INT8模型进行推理的速度通常是FP32模型的1.5倍。
 
 流程步骤如下：
 - 产出量化模型：使用PaddleSlim训练并产出量化模型。注意模型中被量化的算子的参数值应该在INT8范围内，但是类型仍为float型。
@@ -11,15 +11,16 @@
 
 ## 1. 准备
 
-#### 安装构建PaddleSlim
+#### 安装Paddle和PaddleSlim
 
-PaddleSlim 安装请参考[官方安装文档](https://paddlepaddle.github.io/PaddleSlim/install.html)安装
-```
-git clone https://github.com/PaddlePaddle/PaddleSlim.git
-cd PaddleSlim
-python setup.py install
-```
+Paddle和PaddleSlim版本必须配套安装。
+
+Paddle 安装请参考[官方安装文档](https://www.paddlepaddle.org.cn/install/quick)。
+
+PaddleSlim 安装请参考[官方安装文档](https://github.com/PaddlePaddle/PaddleSlim)。
+
 #### 在代码中使用
+
 在用户自己的测试样例中，按以下方式导入Paddle和PaddleSlim:
 ```
 import paddle
@@ -37,15 +38,22 @@ import numpy as np
 量化训练流程可以参考 [分类模型的量化训练流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
 
 **量化训练过程中config参数：**
-- **quantize_op_types:** 目前CPU上量化支持的算子为 `depthwise_conv2d`, `conv2d`, `fc`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`。但是在量化训练阶段插入fake_quantize/fake_dequantize算子时，只需在前四种op前后插入fake_quantize/fake_dequantize 算子，因为后面四种算子 `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`的scales将从其他op的`out_threshold`属性获取，因此`quantize_op_types`参数只需要设置为 `depthwise_conv2d`, `conv2d`, `fc`, `matmul` 即可。
+- **quantize_op_types:** 目前CPU上量化支持的算子为 `depthwise_conv2d`, `conv2d`, `mul`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`。但是在量化训练阶段插入fake_quantize/fake_dequantize算子时，只需在前四种op前后插入fake_quantize/fake_dequantize 算子，因为后面四种算子 `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`的scales将从其他op的`out_threshold`属性获取。所以，在使用PaddleSlim量化训练时，只可以对 `depthwise_conv2d`, `conv2d`, `mul`, `matmul`进行量化，不支持其他op。
 - **其他参数:** 请参考 [PaddleSlim quant_aware API](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#quant_aware)
 
 #### 2.2 离线量化
 
 离线量化模型产出可以参考[分类模型的静态离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_post_demo/#_1)
 
+在使用PaddleSlim离线量化时，只可以对 `depthwise_conv2d`, `conv2d`, `mul`, `matmul`进行量化，不支持其他op。
+
 ## 3. 转化产出的量化模型为DNNL优化后的INT8模型
-为了部署在CPU上，我们将保存的quant模型，通过一个转化脚本，移除fake_quantize/fake_dequantize op，进行算子融合和优化并且转化为INT8模型。脚本在官网的位置为[save_quant_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py)。复制脚本到本样例所在目录(`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`)，并执行如下命令：
+
+为了部署在CPU上，我们将保存的quant模型，通过一个转化脚本，移除fake_quantize/fake_dequantize op，进行算子融合和优化并且转化为INT8模型。
+
+脚本在官网的位置为[save_quant_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py)。
+
+复制脚本到本样例所在目录(`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`)，并执行如下命令：
 ```
 python save_quant_model.py --quant_model_path=/PATH/TO/SAVE/FLOAT32/QUANT/MODEL --int8_model_save_path=/PATH/TO/SAVE/INT8/MODEL
 ```
@@ -63,6 +71,7 @@ python save_quant_model.py --quant_model_path=/PATH/TO/SAVE/FLOAT32/QUANT/MODEL 
 ## 4. 预测
 
 ### 4.1 数据预处理转化
+
 在精度和性能预测中，需要先对数据进行二进制转化。运行脚本如下可转化完整ILSVRC2012 val数据集。使用`--local`可以转化用户自己的数据。在Paddle所在目录运行下面的脚本。脚本在官网位置为[full_ILSVRC2012_val_preprocess.py](https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/fluid/inference/tests/api/full_ILSVRC2012_val_preprocess.py)
 ```
 python Paddle/paddle/fluid/inference/tests/api/full_ILSVRC2012_val_preprocess.py --local --data_dir=/PATH/TO/USER/DATASET/  --output_file=/PATH/TO/SAVE/BINARY/FILE
@@ -97,6 +106,7 @@ val/ILSVRC2012_val_00000002.jpg 0
 ### 4.2 部署预测
 
 #### 部署前提
+
 - 用户可以通过在命令行红输入`lscpu`查看本机支持指令。
 - 在支持`avx512_vnni`的CPU服务器上，INT8精度和性能最高，如：Casecade Lake, Model name: Intel(R) Xeon(R) Gold X2XX，INT8性能提升为FP32模型的3~3.7倍
 - 在支持`avx512`但是不支持`avx512_vnni`的CPU服务器上，如：SkyLake, Model name：Intel(R) Xeon(R) Gold X1XX，INT8性能为FP32性能的1.5倍左右。
@@ -111,6 +121,7 @@ val/ILSVRC2012_val_00000002.jpg 0
 你可以将准备好的预测库解压并重命名为fluid_inference，放在当前目录下(`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`)。或者在cmake时通过设置PADDLE_ROOT来指定Paddle预测库的位置。
 
 #### 编译应用
+
 样例所在目录为PaddleSlim下`demo/mkldnn_quant/`,样例`sample_tester.cc`和编译所需`cmake`文件夹都在这个目录下。
 ```
 cd /PATH/TO/PaddleSlim
@@ -149,6 +160,7 @@ echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 你可以直接修改`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`目录下的`run.sh`中的MODEL_DIR和DATA_DIR，即可执行`./run.sh`进行CPU预测。
 
 ### 4.3 用户编写自己的测试：
+
 如果用户编写自己的测试：
 1. 测试INT8模型
     如果用户测试转化好的INT8模型，使用 `paddle::NativeConfig` 即可测试。在demo中，设置`use_analysis`为`false`。
