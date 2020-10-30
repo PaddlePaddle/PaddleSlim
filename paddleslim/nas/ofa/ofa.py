@@ -71,6 +71,7 @@ class OFABase(fluid.dygraph.Layer):
             config = dict()
         logging.debug(self.model, config)
 
+        config.update(kwargs)
         return block.fn(*inputs, **config)
 
     @property

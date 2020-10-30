@@ -295,6 +295,11 @@ class SuperConv2D(fluid.dygraph.Conv2D):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
+        self.cur_config = {
+            'kernel_size': kernel_size,
+            'expand_ratio': expand_ratio,
+            'channel': channel
+        }
         in_nc = int(input.shape[1])
         assert (
             expand_ratio == None or channel == None
@@ -574,6 +579,11 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
+        self.cur_config = {
+            'kernel_size': kernel_size,
+            'expand_ratio': expand_ratio,
+            'channel': channel
+        }
         in_nc = int(input.shape[1])
         assert (
             expand_ratio == None or channel == None
@@ -726,6 +736,7 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
+        self.cur_config = {'expand_ratio': expand_ratio, 'channel': channel}
         in_nc = int(input.shape[1])
         assert (
             expand_ratio == None or channel == None
@@ -822,6 +833,7 @@ class SuperLinear(fluid.dygraph.Linear):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
+        self.cur_config = {'expand_ratio': expand_ratio, 'channel': channel}
         ### weight: (Cin, Cout)
         in_nc = int(input.shape[-1])
         assert (
