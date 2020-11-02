@@ -41,12 +41,12 @@ class AutoPruner(object):
         params(list<str>): The names of parameters to be pruned.
         init_ratios(list<float>|float): Init ratios used to pruned parameters in `params`.
             List means ratios used for pruning each parameter in `params`.
-            The length of `init_ratios` should be equal to length of params when `init_ratios` is a list. 
+            The length of `init_ratios` should be equal to length of params when `init_ratios` is a list.
             If it is a scalar, all the parameters in `params` will be pruned by uniform ratio.
             None means get a group of init ratios by `pruned_flops` of `pruned_latency`. Default: None.
         pruned_flops(float): The percent of FLOPS to be pruned. Default: None.
         pruned_latency(float): The percent of latency to be pruned. Default: None.
-        server_addr(tuple): A tuple of server ip and server port for controller server. 
+        server_addr(tuple): A tuple of server ip and server port for controller server.
         init_temperature(float): The init temperature used in simulated annealing search strategy.
         reduce_rate(float): The decay rate used in simulated annealing search strategy.
         max_try_times(int): The max number of trying to generate legal tokens.
@@ -191,14 +191,14 @@ class AutoPruner(object):
             paddle.fluid.Program: The pruned program.
         """
         self._current_ratios = self._next_ratios()
-        pruned_program, _, _ = self._pruner.prune(
+        pruned_program, self._param_backup, _ = self._pruner.prune(
             program,
             self._scope,
             self._params,
             self._current_ratios,
             place=self._place,
             only_graph=False,
-            param_backup=self._param_backup)
+            param_backup=True)
         pruned_val_program = None
         if eval_program is not None:
             pruned_val_program, _, _ = self._pruner.prune(

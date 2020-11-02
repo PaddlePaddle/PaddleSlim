@@ -17,11 +17,12 @@ import unittest
 import numpy
 import paddle
 import paddle.fluid as fluid
+from static_case import StaticCase
 from paddleslim.prune import sensitivity, merge_sensitive, load_sensitivities
 from layers import conv_bn_layer
 
 
-class TestSensitivity(unittest.TestCase):
+class TestSensitivity(StaticCase):
     def test_sensitivity(self):
         main_program = fluid.Program()
         startup_program = fluid.Program()

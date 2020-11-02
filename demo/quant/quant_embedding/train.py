@@ -194,8 +194,8 @@ def train(args):
         os.mkdir(args.model_output_dir)
 
     filelist = GetFileList(args.train_data_dir)
-    word2vec_reader = reader.Word2VecReader(
-        args.dict_path, args.train_data_dir, filelist, 0, 1)
+    word2vec_reader = reader.Word2VecReader(args.dict_path, args.train_data_dir,
+                                            filelist, 0, 1)
 
     logger.info("dict_size: {}".format(word2vec_reader.dict_size))
     np_power = np.power(np.array(word2vec_reader.id_frequencys), 0.75)
@@ -224,5 +224,6 @@ def train(args):
 
 
 if __name__ == '__main__':
+    paddle.enable_static()
     args = parse_args()
     train(args)

@@ -203,7 +203,7 @@ def search_mobilenetv2_block(config, args, image_size):
 
 
 if __name__ == '__main__':
-
+    paddle.enable_static()
     parser = argparse.ArgumentParser(
         description='SA NAS MobileNetV2 cifar10 argparase')
     parser.add_argument(
