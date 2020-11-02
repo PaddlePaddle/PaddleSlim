@@ -17,7 +17,7 @@ import os
 import logging
 import pickle
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 from ..core import GraphWrapper
 from ..common import get_logger
 from ..analysis import flops
@@ -26,8 +26,7 @@ from ..prune import Pruner
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = [
-    "sensitivity", "flops_sensitivity", "load_sensitivities", "merge_sensitive",
-    "get_ratios_by_loss"
+    "sensitivity", "load_sensitivities", "merge_sensitive", "get_ratios_by_loss"
 ]
 
 
@@ -68,7 +67,7 @@ def sensitivity(program,
     Returns: 
         dict: A dict storing sensitivities.
     """
-    scope = fluid.global_scope()
+    scope = paddle.static.global_scope()
     graph = GraphWrapper(program)
     sensitivities = load_sensitivities(sensitivities_file)
 
@@ -132,7 +131,7 @@ def merge_sensitive(sensitivities):
     """
     assert len(sensitivities) > 0
     if not isinstance(sensitivities[0], dict):
-        sensitivities = [pickle.load(open(sen, 'r')) for sen in sensitivities]
+        sensitivities = [load_sensitivities(sen) for sen in sensitivities]
 
     new_sensitivities = {}
     for sen in sensitivities:
