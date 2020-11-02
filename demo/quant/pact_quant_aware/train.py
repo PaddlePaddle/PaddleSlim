@@ -412,9 +412,8 @@ def compress(args):
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
-    float_program, int8_program = convert(val_program, place, quant_config, \
-                                                        scope=None, \
-                                                        save_int8=True)
+    float_program, _ = convert(val_program, place, quant_config, \
+                                                        scope=None)
     _logger.info("eval best_model after convert")
     final_acc1 = test(best_epoch, float_program)
     _logger.info("final acc:{}".format(final_acc1))

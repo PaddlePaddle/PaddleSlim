@@ -247,12 +247,11 @@ convert
 - **place(fluid.CPUPlace | fluid.CUDAPlace)** - 该参数表示 ``Executor`` 执行所在的设备。
 - **config(dict)** -  量化配置表。
 - **scope(fluid.Scope)** - 传入用于存储 ``Variable`` 的 ``scope`` ，需要传入 ``program`` 所使用的 ``scope`` ，一般情况下，是 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ 。设置为 ``None`` 时将使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ ，默认值为 ``None`` 。
-- **save_int8（bool)** -  是否需要返回参数为 ``int8`` 的 program 。该功能目前只能用于确认模型大小。默认值为 ``False`` 。
+- **save_int8（bool)** -  该接口已废弃，将会在未来版本移除，可用导出的float_program经过转换后做量化预测。
 
 **返回**
 
-- **program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``float32`` 类型，但其数值范围可用int8表示。
-- **int8_program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``int8`` 类型。当 ``save_int8`` 为False 时，不返回该值。
+- **program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``float32`` 类型，但其数值范围可用int8表示, 经过PaddleLite、Paddle-TRT、 MKLDNN转换为int8模型后即可进行量化预测。
 
 .. note::
 

@@ -118,16 +118,11 @@ The model in ``4. Quantization`` after calling ``slim.quant.quant_aware`` API is
 
 
 ```python
-float_prog, int8_prog = slim.quant.convert(val_quant_program, exe.place, save_int8=True)
+qat_prog = slim.quant.convert(val_quant_program, exe.place)
 target_vars = [float_prog.global_block().var(name) for name in outputs]
 fluid.io.save_inference_model(dirname='./inference_model/float',
         feeded_var_names=[var.name for var in inputs],
         target_vars=target_vars,
         executor=exe,
-        main_program=float_prog)
-fluid.io.save_inference_model(dirname='./inference_model/int8',
-        feeded_var_names=[var.name for var in inputs],
-        target_vars=target_vars,
-        executor=exe,
-        main_program=int8_prog)
+        main_program=qat_prog)
 ```

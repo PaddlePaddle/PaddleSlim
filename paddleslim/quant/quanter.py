@@ -436,15 +436,11 @@ def convert(program, place, config=None, scope=None, save_int8=False):
                 When ``None`` will use 
                 `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_
                 . Default: ``None``.
-        save_int8: Whether to return ``program`` which model parameters'
-                dtype is ``int8``. This parameter can only be used to
-                get model size. Default: ``False``.
+        save_int8: Deprecated. Will be removed in the future. The returned float program can be used as int8 model after inference lib conversion.
 
     Returns:
         Tuple : freezed program which can be used for inference.
-                when ``save_int8`` is False, return ``freezed_program(paddle.static.Program)``.
-                when ``save_int8`` is True, return ``freezed_program(paddle.static.Program)``
-                and ``freezed_program_int8(paddle.static.Program)``
+                return ``freezed_program(paddle.static.Program)``.
     """
     scope = paddle.static.global_scope() if not scope else scope
 
@@ -475,12 +471,11 @@ def convert(program, place, config=None, scope=None, save_int8=False):
     freezed_program = test_graph.to_program()
 
     if save_int8:
-        convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
-        convert_int8_pass.apply(test_graph)
-        freezed_program_int8 = test_graph.to_program()
-        return freezed_program, freezed_program_int8
-    else:
-        return freezed_program
+        _logger.info(
+            "save_int8 interface is deprecated, it will be removed in the future. The returned float program can be used as int8 model after inference lib conversion."
+        )
+        return freezed_program, freezed_program
+    return freezed_program
 
 
 def quant_post_dynamic(model_dir,
