@@ -70,9 +70,10 @@ class Block(BaseBlock):
         key(str, optional): key of this layer, one-to-one correspondence between key and candidate config. Default: None.
     """
 
-    def __init__(self, fn, key=None):
+    def __init__(self, fn, fixed=False, key=None):
         super(Block, self).__init__(key)
         self.fn = fn
+        self.fixed = fixed
         self.candidate_config = self.fn.candidate_config
 
     def forward(self, *inputs, **kwargs):
@@ -227,7 +228,7 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.channel = candidate_config[
             'channel'] if 'channel' in candidate_config else None
-        self.base_channel = None
+        self.base_channel = self._num_filters
         if self.expand_ratio != None:
             self.base_channel = int(self._num_filters / max(self.expand_ratio))
 
@@ -514,7 +515,7 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.channel = candidate_config[
             'channel'] if 'channel' in candidate_config else None
-        self.base_channel = None
+        self.base_channel = self._num_filters
         if self.expand_ratio:
             self.base_channel = int(self._num_filters / max(self.expand_ratio))
 
@@ -728,7 +729,7 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         self.candidate_config = candidate_config
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
-        self.base_output_dim = None
+        self.base_output_dim = self.output_dim
         if self.expand_ratio != None:
             self.base_output_dim = int(self.output_dim / max(self.expand_ratio))
 
@@ -825,7 +826,7 @@ class SuperLinear(fluid.dygraph.Linear):
         self.candidate_config = candidate_config
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
-        self.base_output_dim = None
+        self.base_output_dim = self.output_dim
         if self.expand_ratio != None:
             self.base_output_dim = int(self.output_dim / max(self.expand_ratio))
 
@@ -995,7 +996,7 @@ class SuperEmbedding(fluid.dygraph.Embedding):
         self.candidate_config = candidate_config
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
-        self.base_output_dim = None
+        self.base_output_dim = self._size[-1]
         if self.expand_ratio != None:
             self.base_output_dim = int(self._size[-1] / max(self.expand_ratio))
 

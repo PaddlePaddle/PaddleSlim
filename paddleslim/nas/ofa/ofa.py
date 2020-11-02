@@ -16,7 +16,7 @@ import logging
 import numpy as np
 from collections import namedtuple
 import paddle
-import paddle.nn as nn
+#import paddle.nn as nn
 import paddle.fluid as fluid
 from paddle.fluid.dygraph import Conv2D
 from .layers import BaseBlock, Block, SuperConv2D, SuperBatchNorm
@@ -53,25 +53,30 @@ class OFABase(fluid.dygraph.Layer):
         for name, sublayer in self.model.named_sublayers():
             if isinstance(sublayer, BaseBlock):
                 sublayer.set_supernet(self)
-                layers[sublayer.key] = sublayer.candidate_config
-                for k in sublayer.candidate_config.keys():
-                    elastic_task.add(k)
+                if not sublayer.fixed:
+                    layers[sublayer.key] = sublayer.candidate_config
+                    for k in sublayer.candidate_config.keys():
+                        elastic_task.add(k)
         return layers, elastic_task
 
     def forward(self, *inputs, **kwargs):
         raise NotImplementedError
 
-    # NOTE: config means set forward config for layers, used in distill.
     def layers_forward(self, block, *inputs, **kwargs):
         if getattr(self, 'current_config', None) != None:
-            assert block.key in self.current_config, 'DONNT have {} layer in config.'.format(
-                block.key)
-            config = self.current_config[block.key]
+            ### if block is fixed, donnot join key into candidate
+            ### concrete config as parameter in kwargs
+            if block.fixed == False:
+                assert block.key in self.current_config, 'DONNT have {} layer in config.'.format(
+                    block.key)
+                config = self.current_config[block.key]
+            else:
+                config = dict()
+                config.update(kwargs)
         else:
             config = dict()
         logging.debug(self.model, config)
 
-        config.update(kwargs)
         return block.fn(*inputs, **config)
 
     @property
@@ -112,6 +117,11 @@ class OFA(OFABase):
         if self.elastic_order is not None:
             assert isinstance(self.elastic_order,
                               list), 'elastic_order must be a list'
+
+            if getattr(self.run_config, 'elastic_depth', None) != None:
+                depth_list = list(set(self.run_config.elastic_depth))
+                depth_list.sort()
+                self.layers['depth'] = depth_list
 
         if self.elastic_order is None:
             self.elastic_order = []
@@ -154,7 +164,7 @@ class OFA(OFABase):
 
         if self.distill_config.teacher_model == None:
             logging.error(
-                'If you want to add distill, please input class of teacher model'
+                'If you want to add distill, please input instance of teacher model'
             )
 
         ### instance model by user can input super-param easily.
@@ -285,6 +295,9 @@ class OFA(OFABase):
     ### TODO: complete it
     def export(self, config):
         pass
+
+    def set_net_config(self, net_config):
+        self.net_config = net_config
 
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
