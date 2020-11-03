@@ -174,6 +174,8 @@ class TestQuantAwareCase2(StaticCase):
         # values before quantization and after quantization should be close
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
         print("after quantization: top1: {}, top5: {}".format(top1_2, top5_2))
+        quant_eval_prog, _ = convert(
+            quant_eval_prog, place, config, save_int8=True)
 
 
 if __name__ == '__main__':
