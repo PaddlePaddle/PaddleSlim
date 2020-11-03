@@ -19,6 +19,7 @@ import logging
 
 import paddle
 import paddle.fluid as fluid
+# For Static graph quantization
 from paddle.fluid.framework import IrGraph
 from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass
 from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
@@ -30,6 +31,8 @@ from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
 from paddle.fluid import core
 from paddle.fluid.contrib.slim.quantization import WeightQuantization
+# For Imperative graph quantization 
+from paddle.fluid.contrib.slim.quantization import ImperativeQuantAware
 
 from ..common import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
@@ -80,7 +83,9 @@ _quant_config_default = {
     # if True, 'quantize_op_types' will be TENSORRT_OP_TYPES
     'for_tensorrt': False,
     # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
-    'is_full_quantize': False
+    'is_full_quantize': False,
+    # for dygraph quantization, layers of type in quantize_layer_types will be quantized
+    'quantizable_layer_type': ['Conv2D', 'Linear']
 }
 
 
@@ -297,6 +302,33 @@ def quant_aware(program,
         quant_program = fluid.CompiledProgram(main_graph.graph)
     return quant_program
 
+def quant_aware(model,
+                config=None):
+    """
+    This is function overload for dygraph model quant aware training.
+    Args:
+    model(fluid.Layer)
+    config(dict, optional): configs for quantization. if None, will use default config. 
+            Default: None.
+
+    Returns:
+    model(fluid.Layer) | fluid.layer: model with fake quantized layers
+    """
+
+    if config is None:
+        config = _quant_config_default
+    else:
+        assert isinstance(config, dict), "config must be dict"
+        config = _parse_configs(config)
+
+    imperative_qat = ImperativeQuantAware(
+        weight_quantize_type=config['weight_quantize_type'],
+        activation_quantize_type=config['activation_quantize_type'],
+        quantizable_layer_type=config['quantizable_layer_type'])
+
+    imperative_qat.quantize(model)
+
+    return model
 
 def quant_post_static(
         executor,
