@@ -15,7 +15,6 @@
 import socket
 import logging
 import numpy as np
-import paddle.fluid as fluid
 from .pruner import Pruner
 from ..core import VarWrapper, OpWrapper, GraphWrapper
 from ..common import SAController
