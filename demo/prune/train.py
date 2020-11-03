@@ -7,7 +7,6 @@ import functools
 import math
 import time
 import numpy as np
-import paddle.fluid as fluid
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from paddleslim.prune import Pruner, save_model
 from paddleslim.common import get_logger
@@ -69,23 +68,23 @@ def piecewise_decay(args):
     step = int(math.ceil(float(args.total_images) / args.batch_size))
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
-    learning_rate = fluid.layers.piecewise_decay(boundaries=bd, values=lr)
+    learning_rate = paddle.optimizer.lr.PiecewiseDecay(boundaries=bd, values=lr)
 
-    optimizer = fluid.optimizer.Momentum(
+    optimizer = paddle.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
-        regularization=fluid.regularizer.L2Decay(args.l2_decay))
+        weight_decay=paddle.regularizer.L2Decay(args.l2_decay))
     return optimizer
 
 
 def cosine_decay(args):
     step = int(math.ceil(float(args.total_images) / args.batch_size))
-    learning_rate = fluid.layers.cosine_decay(
+    learning_rate = paddle.optimizer.lr.cosine_decay(
         learning_rate=args.lr, step_each_epoch=step, epochs=args.num_epochs)
-    optimizer = fluid.optimizer.Momentum(
+    optimizer = paddle.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
-        regularization=fluid.regularizer.L2Decay(args.l2_decay))
+        weight_decay=paddle.regularizer.L2Decay(args.l2_decay))
     return optimizer
 
 
@@ -100,9 +99,8 @@ def compress(args):
     train_reader = None
     test_reader = None
     if args.data == "mnist":
-        import paddle.dataset.mnist as reader
-        train_reader = reader.train()
-        val_reader = reader.test()
+        train_reader = paddle.dataset.mnist.train()
+        val_reader = paddle.dataset.mnist.test()
         class_dim = 10
         image_shape = "1,28,28"
     elif args.data == "imagenet":
@@ -114,52 +112,61 @@ def compress(args):
     else:
         raise ValueError("{} is not supported.".format(args.data))
     image_shape = [int(m) for m in image_shape.split(",")]
-    assert args.model in model_list, "{} is not in lists: {}".format(
-        args.model, model_list)
-    image = fluid.layers.data(name='image', shape=image_shape, dtype='float32')
-    label = fluid.layers.data(name='label', shape=[1], dtype='int64')
+    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
+                                                                     model_list)
+    image = paddle.static.data(
+        name='image', shape=[None] + image_shape, dtype='float32')
+    label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
     # model definition
     model = models.__dict__[args.model]()
     out = model.net(input=image, class_dim=class_dim)
-    cost = fluid.layers.cross_entropy(input=out, label=label)
-    avg_cost = fluid.layers.mean(x=cost)
-    acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
-    acc_top5 = fluid.layers.accuracy(input=out, label=label, k=5)
-    val_program = fluid.default_main_program().clone(for_test=True)
+    cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
+    avg_cost = paddle.mean(x=cost)
+    acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
+    acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
+    val_program = paddle.static.default_main_program().clone(for_test=True)
     opt = create_optimizer(args)
     opt.minimize(avg_cost)
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-    exe = fluid.Executor(place)
-    exe.run(fluid.default_startup_program())
+    places = paddle.static.cuda_places(
+    ) if args.use_gpu else paddle.static.cpu_places()
+    place = places[0]
+    exe = paddle.static.Executor(place)
+    exe.run(paddle.static.default_startup_program())
 
     if args.pretrained_model:
 
         def if_exist(var):
-            return os.path.exists(
-                os.path.join(args.pretrained_model, var.name))
+            return os.path.exists(os.path.join(args.pretrained_model, var.name))
 
         _logger.info("Load pretrained model from {}".format(
             args.pretrained_model))
-        fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
+        paddle.fluid.io.load_vars(
+            exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.fluid.io.batch(val_reader, batch_size=args.batch_size)
-    train_reader = paddle.fluid.io.batch(
+    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
+    train_reader = paddle.batch(
         train_reader, batch_size=args.batch_size, drop_last=True)
 
-    train_feeder = feeder = fluid.DataFeeder([image, label], place)
-    val_feeder = feeder = fluid.DataFeeder(
-        [image, label], place, program=val_program)
+    train_loader = paddle.io.DataLoader.from_generator(
+        feed_list=[image, label],
+        capacity=64,
+        use_double_buffer=True,
+        iterable=True)
+    valid_loader = paddle.io.DataLoader.from_generator(
+        feed_list=[image, label],
+        capacity=64,
+        use_double_buffer=True,
+        iterable=True)
+    train_loader.set_sample_list_generator(train_reader, places)
+    valid_loader.set_sample_list_generator(val_reader, place)
 
     def test(epoch, program):
-        batch_id = 0
         acc_top1_ns = []
         acc_top5_ns = []
-        for data in val_reader():
+        for batch_id, data in enumerate(valid_loader):
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(
-                program,
-                feed=train_feeder.feed(data),
-                fetch_list=[acc_top1.name, acc_top5.name])
+                program, feed=data, fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
             if batch_id % args.log_period == 0:
                 _logger.info(
@@ -169,29 +176,26 @@ def compress(args):
                            np.mean(acc_top5_n), end_time - start_time))
             acc_top1_ns.append(np.mean(acc_top1_n))
             acc_top5_ns.append(np.mean(acc_top5_n))
-            batch_id += 1
 
-        _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".
-                     format(epoch,
-                            np.mean(np.array(acc_top1_ns)),
-                            np.mean(np.array(acc_top5_ns))))
+        _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".format(
+            epoch,
+            np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
 
     def train(epoch, program):
 
-        build_strategy = fluid.BuildStrategy()
-        exec_strategy = fluid.ExecutionStrategy()
-        train_program = fluid.compiler.CompiledProgram(
+        build_strategy = paddle.static.BuildStrategy()
+        exec_strategy = paddle.static.ExecutionStrategy()
+        train_program = paddle.static.CompiledProgram(
             program).with_data_parallel(
                 loss_name=avg_cost.name,
                 build_strategy=build_strategy,
                 exec_strategy=exec_strategy)
 
-        batch_id = 0
-        for data in train_reader():
+        for batch_id, data in enumerate(train_loader):
             start_time = time.time()
             loss_n, acc_top1_n, acc_top5_n = exe.run(
                 train_program,
-                feed=train_feeder.feed(data),
+                feed=data,
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
             end_time = time.time()
             loss_n = np.mean(loss_n)
@@ -205,22 +209,21 @@ def compress(args):
             batch_id += 1
 
     test(0, val_program)
-
-    params = get_pruned_params(args, fluid.default_main_program())
+    params = get_pruned_params(args, paddle.static.default_main_program())
     _logger.info("FLOPs before pruning: {}".format(
-        flops(fluid.default_main_program())))
+        flops(paddle.static.default_main_program())))
     pruner = Pruner(args.criterion)
     pruned_val_program, _, _ = pruner.prune(
         val_program,
-        fluid.global_scope(),
+        paddle.static.global_scope(),
         params=params,
         ratios=[args.pruned_ratio] * len(params),
         place=place,
         only_graph=True)
 
     pruned_program, _, _ = pruner.prune(
-        fluid.default_main_program(),
-        fluid.global_scope(),
+        paddle.static.default_main_program(),
+        paddle.static.global_scope(),
         params=params,
         ratios=[args.pruned_ratio] * len(params),
         place=place)
@@ -234,13 +237,14 @@ def compress(args):
         if args.save_inference:
             infer_model_path = os.path.join(args.model_path, "infer_models",
                                             str(i))
-            fluid.io.save_inference_model(infer_model_path, ["image"], [out],
-                                          exe, pruned_val_program)
+            paddle.fluid.io.save_inference_model(infer_model_path, ["image"],
+                                                 [out], exe, pruned_val_program)
             _logger.info("Saved inference model into [{}]".format(
                 infer_model_path))
 
 
 def main():
+    paddle.enable_static()
     args = parser.parse_args()
     print_arguments(args)
     compress(args)

@@ -17,8 +17,6 @@ from .pruner import *
 from ..prune import pruner
 from .auto_pruner import *
 from ..prune import auto_pruner
-from .sensitive_pruner import *
-from ..prune import sensitive_pruner
 from .sensitive import *
 from ..prune import sensitive
 from .prune_walker import *
@@ -36,7 +34,6 @@ __all__ = []
 
 __all__ += pruner.__all__
 __all__ += auto_pruner.__all__
-__all__ += sensitive_pruner.__all__
 __all__ += sensitive.__all__
 __all__ += prune_walker.__all__
 __all__ += prune_io.__all__
