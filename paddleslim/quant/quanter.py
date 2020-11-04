@@ -16,6 +16,7 @@ import os
 import copy
 import json
 import logging
+from singledispatch import singledispatch
 
 import paddle
 from paddle.fluid.framework import IrGraph
@@ -82,7 +83,7 @@ _quant_config_default = {
     'for_tensorrt': False,
     # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
     'is_full_quantize': False,
-    # for dygraph quantization, layers of type in quantize_layer_types will be quantized
+    # for dygraph quantization, layers of type in quantizable_layer_type will be quantized
     'quantizable_layer_type': ['Conv2D', 'Linear']
 }
 
@@ -177,7 +178,7 @@ def _parse_configs(user_config):
 
     return configs
 
-
+@singledispatch
 def quant_aware(program,
                 place,
                 config=None,
@@ -303,14 +304,42 @@ def quant_aware(program,
         quant_program = paddle.static.CompiledProgram(main_graph.graph)
     return quant_program
 
-def quant_aware(model,
-                config=None):
+@quant_aware.register(paddle.fluid.Layer)
+def _(model: paddle.fluid.Layer,
+      config=None,
+      weight_quantize_func=None,
+      act_quantize_func=None,
+      weight_preprocess_func=None,
+      act_preprocess_func=None):
+
     """
     This is function overload for dygraph model quant aware training.
     Args:
-    model(fluid.Layer)
-    config(dict, optional): configs for quantization. if None, will use default config. 
-            Default: None.
+        model(fluid.Layer)
+        config(dict, optional): configs for quantization. if None, will use default config. 
+                Default: None.
+        weight_quantize_func(function): Function that defines how to quantize weight. Using this
+                can quickly test if user's quantization method works or not. In this function, user should
+                both define quantization function and dequantization function, that is, the function's input
+                is non-quantized weight and function returns dequantized weight. If None, will use
+                quantization op defined by 'weight_quantize_type'.
+                Default is None.
+        act_quantize_func(function): Function that defines how to quantize activation. Using this
+                can quickly test if user's quantization method works or not. In this function, user should
+                both define quantization and dequantization process, that is, the function's input
+                is non-quantized activation and function returns dequantized activation. If None, will use 
+                quantization op defined by 'activation_quantize_type'.
+                Default is None.
+        weight_preprocess_func(function): Function that defines how to preprocess weight before quantization. Using this
+                can quickly test if user's preprocess method works or not. The function's input
+                is non-quantized weight and function returns processed weight to be quantized. If None, the weight will
+                be quantized directly.
+                Default is None.
+        act_preprocess_func(function): Function that defines how to preprocess activation before quantization. Using this
+                can quickly test if user's preprocess method works or not. The function's input
+                is non-quantized activation and function returns processed activation to be quantized. If None, the activation will
+                be quantized directly.
+                Default is None.
 
     Returns:
     model(fluid.Layer) | fluid.layer: model with fake quantized layers
