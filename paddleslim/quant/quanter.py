@@ -304,8 +304,8 @@ def quant_aware(program,
         quant_program = paddle.static.CompiledProgram(main_graph.graph)
     return quant_program
 
-@quant_aware.register(paddle.fluid.Layer)
-def _(model: paddle.fluid.Layer,
+@quant_aware.register(paddle.nn.Layer)
+def _(model: paddle.nn.Layer,
       config=None,
       weight_quantize_func=None,
       act_quantize_func=None,
@@ -315,7 +315,7 @@ def _(model: paddle.fluid.Layer,
     """
     This is function overload for dygraph model quant aware training.
     Args:
-        model(fluid.Layer)
+        model(nn.Layer)
         config(dict, optional): configs for quantization. if None, will use default config. 
                 Default: None.
         weight_quantize_func(function): Function that defines how to quantize weight. Using this
@@ -342,7 +342,7 @@ def _(model: paddle.fluid.Layer,
                 Default is None.
 
     Returns:
-    model(fluid.Layer) | fluid.layer: model with fake quantized layers
+    model(nn.Layer) | nn.layer: model with fake quantized layers
     """
 
     if config is None:

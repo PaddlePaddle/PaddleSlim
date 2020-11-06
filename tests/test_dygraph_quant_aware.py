@@ -18,6 +18,7 @@ sys.path.append("../")
 import unittest
 import logging
 import paddle
+import paddle.nn as nn
 import paddle.fluid as fluid
 from paddle.fluid.optimizer import AdamOptimizer
 from paddle.fluid.dygraph.container import Sequential
@@ -31,7 +32,7 @@ from paddleslim.quant import quant_aware
 _logger = get_logger(
     __name__, logging.INFO, fmt='%(asctime)s-%(levelname)s: %(message)s')
 
-class ImperativeLenet(fluid.dygraph.Layer):
+class ImperativeLenet(nn.Layer):
     def __init__(self, num_classes=10, classifier_activation='softmax'):
         super(ImperativeLenet, self).__init__()
         self.features = Sequential(
@@ -79,9 +80,7 @@ class TestImperativeQat(unittest.TestCase):
     def test_qat_acc(self):
         with fluid.dygraph.guard():
             lenet = ImperativeLenet()
-            print("sublayers num: 1", len(lenet.sublayers()))
             quant_lenet = quant_aware(lenet)
-            print("sublayers num: 2", len(quant_lenet.sublayers()))
             train_reader = paddle.batch(
                 paddle.dataset.mnist.train(), batch_size=32, drop_last=True)
             test_reader = paddle.batch(
