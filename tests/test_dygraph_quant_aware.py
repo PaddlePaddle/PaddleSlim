@@ -32,6 +32,7 @@ from paddleslim.quant import quant_aware
 _logger = get_logger(
     __name__, logging.INFO, fmt='%(asctime)s-%(levelname)s: %(message)s')
 
+
 class ImperativeLenet(nn.Layer):
     def __init__(self, num_classes=10, classifier_activation='softmax'):
         super(ImperativeLenet, self).__init__()
@@ -55,14 +56,11 @@ class ImperativeLenet(nn.Layer):
 
         self.fc = Sequential(
             Linear(
-                input_dim=400,
-                output_dim=120),
+                input_dim=400, output_dim=120),
             Linear(
-                input_dim=120,
-                output_dim=84),
+                input_dim=120, output_dim=84),
             Linear(
-                input_dim=84,
-                output_dim=num_classes,
+                input_dim=84, output_dim=num_classes,
                 act=classifier_activation))
 
     def forward(self, inputs):
@@ -71,6 +69,7 @@ class ImperativeLenet(nn.Layer):
         x = fluid.layers.flatten(x, 1)
         x = self.fc(x)
         return x
+
 
 class TestImperativeQat(unittest.TestCase):
     """
@@ -88,13 +87,14 @@ class TestImperativeQat(unittest.TestCase):
 
             def train(model):
                 adam = AdamOptimizer(
-                learning_rate=0.001, parameter_list=model.parameters())
+                    learning_rate=0.001, parameter_list=model.parameters())
                 epoch_num = 1
                 for epoch in range(epoch_num):
                     model.train()
                     for batch_id, data in enumerate(train_reader()):
-                        x_data = np.array([x[0].reshape(1, 28, 28)
-                                        for x in data]).astype('float32')
+                        x_data = np.array(
+                            [x[0].reshape(1, 28, 28)
+                             for x in data]).astype('float32')
                         y_data = np.array(
                             [x[1] for x in data]).astype('int64').reshape(-1, 1)
 
@@ -111,10 +111,11 @@ class TestImperativeQat(unittest.TestCase):
                             _logger.info(
                                 "Train | At epoch {} step {}: loss = {:}, acc= {:}".
                                 format(epoch, batch_id,
-                                    avg_loss.numpy(), acc.numpy()))
+                                       avg_loss.numpy(), acc.numpy()))
+
             def test(model):
                 model.eval()
-                avg_acc = [[],[]]
+                avg_acc = [[], []]
                 for batch_id, data in enumerate(test_reader()):
                     x_data = np.array([x[0].reshape(1, 28, 28)
                                        for x in data]).astype('float32')
@@ -133,13 +134,11 @@ class TestImperativeQat(unittest.TestCase):
                     avg_acc[1].append(acc_top5.numpy())
                     if batch_id % 100 == 0:
                         _logger.info(
-                            "Test | step {}: acc1 = {:}, acc5 = {:}".
-                            format(batch_id,
-                                   acc_top1.numpy(), acc_top5.numpy()))
+                            "Test | step {}: acc1 = {:}, acc5 = {:}".format(
+                                batch_id, acc_top1.numpy(), acc_top5.numpy()))
 
-                _logger.info(
-                            "Test |Average: acc_top1 {}, acc_top5 {}".format(
-                    np.mean(avg_acc[0]), np.mean(avg_acc[1])))  
+                _logger.info("Test |Average: acc_top1 {}, acc_top5 {}".format(
+                    np.mean(avg_acc[0]), np.mean(avg_acc[1])))
                 return np.mean(avg_acc[0]), np.mean(avg_acc[1])
 
             train(lenet)
@@ -150,7 +149,11 @@ class TestImperativeQat(unittest.TestCase):
             top1_2, top5_2 = test(quant_lenet)
 
             # values before quantization and after quantization should be close
-            _logger.info("Before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
-            _logger.info("After quantization: top1: {}, top5: {}".format(top1_2, top5_2))
+            _logger.info("Before quantization: top1: {}, top5: {}".format(
+                top1_1, top5_1))
+            _logger.info("After quantization: top1: {}, top5: {}".format(
+                top1_2, top5_2))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -178,6 +178,7 @@ def _parse_configs(user_config):
 
     return configs
 
+
 @singledispatch
 def quant_aware(program,
                 place,
@@ -304,6 +305,7 @@ def quant_aware(program,
         quant_program = paddle.static.CompiledProgram(main_graph.graph)
     return quant_program
 
+
 @quant_aware.register(paddle.nn.Layer)
 def _(model: paddle.nn.Layer,
       config=None,
@@ -311,7 +313,6 @@ def _(model: paddle.nn.Layer,
       act_quantize_func=None,
       weight_preprocess_func=None,
       act_preprocess_func=None):
-
     """
     This is function overload for dygraph model quant aware training.
     Args:
@@ -359,6 +360,7 @@ def _(model: paddle.nn.Layer,
     imperative_qat.quantize(model)
 
     return model
+
 
 def quant_post_static(
         executor,
