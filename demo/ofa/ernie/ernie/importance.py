@@ -1,14 +1,17 @@
 import os
+import numpy as np
 import paddle
 import paddle.fluid as F
 import paddle.fluid.dygraph as FD
 import paddle.fluid.layers as L
 
+
 def compute_neuron_head_importance(args, model, tokenizer, dev_ds, place):
-    n_layers, n_heads = model.cfg['num_hidden_layers'], model.cfg['num_attention_heads']
+    n_layers, n_heads = model.cfg['num_hidden_layers'], model.cfg[
+        'num_attention_heads']
     head_importance = L.zeros(shape=[n_layers, n_heads], dtype='float32')
     head_mask = L.ones(shape=[n_layers, n_heads], dtype='float32')
-    head_mask.stop_gradient=False
+    head_mask.stop_gradient = False
 
     intermediate_weight = []
     intermediate_bias = []
@@ -30,8 +33,11 @@ def compute_neuron_head_importance(args, model, tokenizer, dev_ds, place):
     for w in intermediate_weight:
         neuron_importance.append(L.zeros(shape=[w.shape[1]], dtype='float32'))
 
-    eval_task_names = ('mnli', 'mnli-mm') if args.task == 'mnli' else (args.task, )
-    eval_outputs_dirs = (args.save_dir, args.save_dir + 'MM') if args.task == "mnli" else (args.save_dir,)
+    eval_task_names = ('mnli', 'mnli-mm') if args.task == 'mnli' else (
+        args.task, )
+    eval_outputs_dirs = (
+        args.save_dir,
+        args.save_dir + 'MM') if args.task == "mnli" else (args.save_dir, )
 
     for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
         if not os.path.exists(eval_output_dir):
@@ -41,17 +47,21 @@ def compute_neuron_head_importance(args, model, tokenizer, dev_ds, place):
 
         for batch in dev_ds.start(place):
             ids, sids, label = batch
-            loss, _, _ = model(ids, sids, labels=label, head_mask = head_mask)
+            loss, _, _ = model(ids, sids, labels=label, head_mask=head_mask)
             loss.backward()
             head_importance += L.abs(FD.to_variable(head_mask.gradient()))
 
-        for w1, b1, w2, current_importance in zip(intermediate_weight, intermediate_bias, output_weight, neuron_importance):
-            #current_importance += ((w1 * FD.to_variable(w1.gradient())).sum(dim=1) + b1 * FD.to_variable(b1.gradient())).abs().detach()
-            #current_importance += ((w2 * FD.to_variable(w2.gradient())).sum(dim=0)).abs().detach()
-            current_importance += L.abs((L.reduce_sum(w1 * FD.to_variable(w1.gradient()), dim=0) + b1 * FD.to_variable(b1.gradient()))).detach()
-            current_importance += L.abs(L.reduce_sum(w2 * FD.to_variable(w2.gradient()), dim=1)).detach()
+            for w1, b1, w2, current_importance in zip(
+                    intermediate_weight, intermediate_bias, output_weight,
+                    neuron_importance):
+                current_importance += np.abs(
+                    (np.sum(w1.numpy() * w1.gradient(), axis=0) + b1.numpy() *
+                     b1.gradient()))
+                current_importance += np.abs(
+                    np.sum(w2.numpy() * w2.gradient(), axis=1))
 
     return head_importance, neuron_importance
+
 
 def reorder_neuron_head(model, head_importance, neuron_importance):
     # reorder heads and ffn neurons
@@ -60,6 +70,6 @@ def reorder_neuron_head(model, head_importance, neuron_importance):
         idx = L.argsort(head_importance[layer], descending=True)[-1]
         model.encoder_stack.block[layer].attn.reorder_heads(idx)
         # reorder neurons
-        idx = L.argsort(current_importance, descending=True)[-1]
+        idx = L.argsort(FD.to_variable(current_importance), descending=True)[-1]
         model.encoder_stack.block[layer].ffn.reorder_neurons(idx)
         #model.encoder_stack.layer[layer].ffn.o.reorder_neurons(idx)

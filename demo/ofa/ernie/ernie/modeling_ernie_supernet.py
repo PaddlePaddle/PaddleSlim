@@ -40,25 +40,47 @@ from ernie.file_utils import _fetch_from_remote, add_docstring
 
 log = logging.getLogger(__name__)
 
-def _build_linear(n_in, n_out, name, init, act=None, candidate_config={}, fixed=False):
-    return Block(SuperLinear(n_in, 
-            n_out, candidate_config=candidate_config,
-            param_attr=F.ParamAttr(name='%s.w_0' % name if name is not None else None, initializer=init), 
-            bias_attr='%s.b_0' % name if name is not None else None, act=act), fixed=fixed)
+
+def _build_linear(n_in,
+                  n_out,
+                  name,
+                  init,
+                  act=None,
+                  candidate_config={},
+                  fixed=False):
+    return Block(
+        SuperLinear(
+            n_in,
+            n_out,
+            candidate_config=candidate_config,
+            param_attr=F.ParamAttr(
+                name='%s.w_0' % name if name is not None else None,
+                initializer=init),
+            bias_attr='%s.b_0' % name if name is not None else None,
+            act=act),
+        fixed=fixed)
+
 
 def _build_ori_linear(n_in, n_out, name, init, act=None):
-    return D.Linear(n_in, 
-            n_out,
-            param_attr=F.ParamAttr(name='%s.w_0' % name if name is not None else None, initializer=init), 
-            bias_attr='%s.b_0' % name if name is not None else None, act=act)
+    return D.Linear(
+        n_in,
+        n_out,
+        param_attr=F.ParamAttr(
+            name='%s.w_0' % name if name is not None else None,
+            initializer=init),
+        bias_attr='%s.b_0' % name if name is not None else None,
+        act=act)
+
 
 def _build_ln(n_in, name):
-    return SuperLayerNorm(normalized_shape=n_in, 
-            param_attr=F.ParamAttr(name='%s_layer_norm_scale' % name if name is not None else None, 
-                initializer=F.initializer.Constant(1.)),
-            bias_attr=F.ParamAttr(name='%s_layer_norm_bias' % name if name is not None else None, 
-                initializer=F.initializer.Constant(1.)),
-        )
+    return SuperLayerNorm(
+        normalized_shape=n_in,
+        param_attr=F.ParamAttr(
+            name='%s_layer_norm_scale' % name if name is not None else None,
+            initializer=F.initializer.Constant(1.)),
+        bias_attr=F.ParamAttr(
+            name='%s_layer_norm_bias' % name if name is not None else None,
+            initializer=F.initializer.Constant(1.)), )
 
 
 def append_name(name, postfix):
@@ -73,31 +95,62 @@ def append_name(name, postfix):
 class AttentionLayer(D.Layer):
     def __init__(self, cfg, name=None):
         super(AttentionLayer, self).__init__()
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
         d_model = cfg['hidden_size']
         n_head = cfg['num_attention_heads']
         assert d_model % n_head == 0
-        d_model_q = cfg.get('query_hidden_size_per_head', d_model // n_head) * n_head
-        d_model_v = cfg.get('value_hidden_size_per_head', d_model // n_head) * n_head
+        d_model_q = cfg.get('query_hidden_size_per_head',
+                            d_model // n_head) * n_head
+        d_model_v = cfg.get('value_hidden_size_per_head',
+                            d_model // n_head) * n_head
         self.n_head = n_head
         self.d_key = d_model_q // n_head
-        self.q = _build_linear(d_model, d_model_q, append_name(name, 'query_fc'), initializer, candidate_config={'expand_ratio': cfg['width_size_choice']})
-        self.k = _build_linear(d_model, d_model_q, append_name(name, 'key_fc'), initializer, fixed=True)
-        self.v = _build_linear(d_model, d_model_v, append_name(name, 'value_fc'), initializer, fixed=True)
-        self.o = _build_linear(d_model_v, d_model, append_name(name, 'output_fc'), initializer)
-        self.dropout = lambda i: L.dropout(i, dropout_prob=cfg['attention_probs_dropout_prob'], dropout_implementation="upscale_in_train",) if self.training else i
+        self.q = _build_linear(
+            d_model,
+            d_model_q,
+            append_name(name, 'query_fc'),
+            initializer,
+            candidate_config={'expand_ratio': cfg['width_size_choice']})
+        self.k = _build_linear(
+            d_model,
+            d_model_q,
+            append_name(name, 'key_fc'),
+            initializer,
+            fixed=True)
+        self.v = _build_linear(
+            d_model,
+            d_model_v,
+            append_name(name, 'value_fc'),
+            initializer,
+            fixed=True)
+        self.o = _build_linear(d_model_v, d_model,
+                               append_name(name, 'output_fc'), initializer)
+        self.dropout = lambda i: L.dropout(
+            i,
+            dropout_prob=cfg['attention_probs_dropout_prob'],
+            dropout_implementation="upscale_in_train", ) if self.training else i
 
     def reorder_heads(self, idx):
         n, a = self.n_head, self.d_key
-        index = L.reshape(L.index_select(L.transpose(L.reshape(L.arange(0, n * a, dtype='int64'), shape=[n, a]), perm=[1,0]), idx, dim=1), shape=[-1])
+        index = L.reshape(
+            L.index_select(
+                L.reshape(
+                    L.arange(
+                        0, n * a, dtype='int64'), shape=[n, a]),
+                idx,
+                dim=0),
+            shape=[-1])
 
         def reorder_head_matrix(linearLayer, index, dim=1):
-            W  = L.index_select(linearLayer.weight, index, dim=dim).detach()
+            W = L.index_select(linearLayer.weight, index, dim=dim).detach()
             if linearLayer.bias is not None:
                 if dim == 0:
                     b = L.assign(linearLayer.bias).detach()
                 else:
-                    b = L.assign(L.index_select(linearLayer.bias, index, dim=0)).detach()
+                    b = L.assign(
+                        L.index_select(
+                            linearLayer.bias, index, dim=0)).detach()
 
             linearLayer.weight.stop_gradient = True
             linearLayer.weight.set_value(W)
@@ -112,7 +165,13 @@ class AttentionLayer(D.Layer):
         reorder_head_matrix(self.v.fn, index)
         reorder_head_matrix(self.o.fn, index, dim=0)
 
-    def forward(self, queries, keys, values, attn_bias, past_cache, head_mask=None):
+    def forward(self,
+                queries,
+                keys,
+                values,
+                attn_bias,
+                past_cache,
+                head_mask=None):
         assert len(queries.shape) == len(keys.shape) == len(values.shape) == 3
         #bsz, q_len, q_dim = queries.shape
         #bsz, k_len, k_dim = keys.shape
@@ -134,19 +193,23 @@ class AttentionLayer(D.Layer):
         else:
             n_head = self.n_head
 
-        q = L.transpose(L.reshape(q, [0, 0, n_head, q.shape[-1] // n_head]), [0, 2, 1, 3]) #[batch, head, seq, dim]
-        k = L.transpose(L.reshape(k, [0, 0, n_head, k.shape[-1] // n_head]), [0, 2, 1, 3]) #[batch, head, seq, dim]
-        v = L.transpose(L.reshape(v, [0, 0, n_head, v.shape[-1] // n_head]), [0, 2, 1, 3]) #[batch, head, seq, dim]
+        q = L.transpose(
+            L.reshape(q, [0, 0, n_head, q.shape[-1] // n_head]),
+            [0, 2, 1, 3])  #[batch, head, seq, dim]
+        k = L.transpose(
+            L.reshape(k, [0, 0, n_head, k.shape[-1] // n_head]),
+            [0, 2, 1, 3])  #[batch, head, seq, dim]
+        v = L.transpose(
+            L.reshape(v, [0, 0, n_head, v.shape[-1] // n_head]),
+            [0, 2, 1, 3])  #[batch, head, seq, dim]
 
-
-        q = L.scale(q, scale=self.d_key ** -0.5)
+        q = L.scale(q, scale=self.d_key**-0.5)
         score = L.matmul(q, k, transpose_y=True)
         if attn_bias is not None:
-            score += attn_bias 
+            score += attn_bias
 
         score = L.softmax(score, use_cudnn=True)
         score = self.dropout(score)
-
         """
         """
         if head_mask is not None:
@@ -163,14 +226,25 @@ class AttentionLayer(D.Layer):
 class PositionwiseFeedForwardLayer(D.Layer):
     def __init__(self, cfg, name=None):
         super(PositionwiseFeedForwardLayer, self).__init__()
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
         d_model = cfg['hidden_size']
         d_ffn = cfg.get('intermediate_size', 4 * d_model)
         assert cfg['hidden_act'] in ['relu', 'gelu']
-        self.i = _build_linear(d_model, d_ffn, append_name(name, 'fc_0'), initializer, act=cfg['hidden_act'], fixed=True)
-        self.o = _build_linear(d_ffn, d_model, append_name(name, 'fc_1'), initializer)
+        self.i = _build_linear(
+            d_model,
+            d_ffn,
+            append_name(name, 'fc_0'),
+            initializer,
+            act=cfg['hidden_act'],
+            fixed=True)
+        self.o = _build_linear(d_ffn, d_model,
+                               append_name(name, 'fc_1'), initializer)
         prob = cfg.get('intermediate_dropout_prob', 0.)
-        self.dropout = lambda i: L.dropout(i, dropout_prob=prob, dropout_implementation="upscale_in_train",) if self.training else i
+        self.dropout = lambda i: L.dropout(
+            i,
+            dropout_prob=prob,
+            dropout_implementation="upscale_in_train", ) if self.training else i
 
     def reorder_neurons(self, index, dim=0):
         def reorder_neurons_matrix(linearLayer, index, dim):
@@ -179,7 +253,9 @@ class PositionwiseFeedForwardLayer(D.Layer):
                 if dim == 0:
                     b = L.assign(linearLayer.bias).detach()
                 else:
-                    b = L.assign(L.index_select(linearLayer.bias, index, dim=0)).detach() 
+                    b = L.assign(
+                        L.index_select(
+                            linearLayer.bias, index, dim=0)).detach()
             linearLayer.weight.stop_gradient = True
             linearLayer.weight.set_value(W)
             linearLayer.weight.stop_gradient = False
@@ -191,7 +267,6 @@ class PositionwiseFeedForwardLayer(D.Layer):
 
         reorder_neurons_matrix(self.i.fn, index, dim=1)
         reorder_neurons_matrix(self.o.fn, index, dim=0)
-        
 
     def forward(self, inputs, expand_ratio=None):
         hidden = self.i(inputs, expand_ratio=expand_ratio)
@@ -204,57 +279,83 @@ class ErnieBlock(D.Layer):
     def __init__(self, cfg, name=None):
         super(ErnieBlock, self).__init__()
         d_model = cfg['hidden_size']
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
 
-        self.attn = AttentionLayer(cfg, name = append_name(name, 'multi_head_att'))
-        self.ln1 = _build_ln(d_model, name = append_name(name, 'post_att'))
-        self.ffn = PositionwiseFeedForwardLayer(cfg, name = append_name(name, 'ffn'))
-        self.ln2 = _build_ln(d_model, name = append_name(name, 'post_ffn'))
+        self.attn = AttentionLayer(
+            cfg, name=append_name(name, 'multi_head_att'))
+        self.ln1 = _build_ln(d_model, name=append_name(name, 'post_att'))
+        self.ffn = PositionwiseFeedForwardLayer(
+            cfg, name=append_name(name, 'ffn'))
+        self.ln2 = _build_ln(d_model, name=append_name(name, 'post_ffn'))
         prob = cfg.get('intermediate_dropout_prob', cfg['hidden_dropout_prob'])
-        self.dropout = lambda i: L.dropout(i, dropout_prob=prob, dropout_implementation="upscale_in_train",) if self.training else i
+        self.dropout = lambda i: L.dropout(
+            i,
+            dropout_prob=prob,
+            dropout_implementation="upscale_in_train", ) if self.training else i
 
     def forward(self, inputs, attn_bias=None, past_cache=None, head_mask=None):
-        attn_out, cache, score = self.attn(inputs, inputs, inputs, attn_bias, past_cache=past_cache, head_mask=head_mask) #self attn
+        attn_out, cache, score = self.attn(
+            inputs,
+            inputs,
+            inputs,
+            attn_bias,
+            past_cache=past_cache,
+            head_mask=head_mask)  #self attn
         attn_out = self.dropout(attn_out)
-        hidden = attn_out + inputs 
-        hidden = self.ln1(hidden) # dropout/ add/ norm
+        hidden = attn_out + inputs
+        hidden = self.ln1(hidden)  # dropout/ add/ norm
 
-        ffn_out, ffn_mid_out = self.ffn(hidden, expand_ratio=self.attn.q.fn.cur_config['expand_ratio'])
+        ffn_out, ffn_mid_out = self.ffn(
+            hidden, expand_ratio=self.attn.q.fn.cur_config['expand_ratio'])
         ffn_out = self.dropout(ffn_out)
         hidden = ffn_out + hidden
         hidden = self.ln2(hidden)
         return hidden, cache, score, ffn_mid_out
 
-        
+
 class ErnieEncoderStack(D.Layer):
     def __init__(self, cfg, name=None):
         super(ErnieEncoderStack, self).__init__()
         self.n_layers = cfg['num_hidden_layers']
-        self.block = D.LayerList([ErnieBlock(cfg, append_name(name, 'layer_%d' % i)) for i in range(self.n_layers)])
+        self.block = D.LayerList([
+            ErnieBlock(cfg, append_name(name, 'layer_%d' % i))
+            for i in range(self.n_layers)
+        ])
 
-    def forward(self, inputs, attn_bias=None, past_cache=None, depth_mult=1., head_mask=None):
+    def forward(self,
+                inputs,
+                attn_bias=None,
+                past_cache=None,
+                depth_mult=1.,
+                head_mask=None):
         attn_list = []
         ffn_mid_list = []
 
         if past_cache is not None:
-            assert isinstance(past_cache, tuple), 'unknown type of `past_cache`, expect tuple or list. got %s' % repr(type(past_cache))
+            assert isinstance(
+                past_cache, tuple
+            ), 'unknown type of `past_cache`, expect tuple or list. got %s' % repr(
+                type(past_cache))
             past_cache = list(zip(*past_cache))
         else:
             past_cache = [None] * len(self.block)
         cache_list_k, cache_list_v, hidden_list = [], [], [inputs]
-
         """
         """
         depth = round(self.n_layers * depth_mult)
         kept_layers_index = []
-        for i in range(depth):
-            kept_layers_index.append(math.floor(i / depth_mult))
+        for i in range(1, depth + 1):
+            kept_layers_index.append(math.floor(i / depth_mult) - 1)
 
         for i in kept_layers_index:
             b = self.block[i]
             p = past_cache[i]
-            inputs, cache, attn_outs, ffn_mid_outs = b(inputs, attn_bias=attn_bias, past_cache=p, head_mask=head_mask[i])
-            
+            inputs, cache, attn_outs, ffn_mid_outs = b(inputs,
+                                                       attn_bias=attn_bias,
+                                                       past_cache=p,
+                                                       head_mask=head_mask[i])
+
             cache_k, cache_v = cache
             cache_list_k.append(cache_k)
             cache_list_v.append(cache_v)
@@ -269,7 +370,8 @@ class ErnieEncoderStack(D.Layer):
         ###    cache_list_v.append(cache_v)
         ###    hidden_list.append(inputs)
 
-        return inputs, hidden_list, attn_list, ffn_mid_list, (cache_list_k, cache_list_v)
+        return inputs, hidden_list, attn_list, ffn_mid_list, (cache_list_k,
+                                                              cache_list_v)
 
 
 class PretrainedModel(object):
@@ -277,31 +379,37 @@ class PretrainedModel(object):
     resource_map = {
         'ernie-1.0': bce + 'model-ernie1.0.1.tar.gz',
         'ernie-2.0-en': bce + 'model-ernie2.0-en.1.tar.gz',
-        'ernie-2.0-large-en':  bce + 'model-ernie2.0-large-en.1.tar.gz',
+        'ernie-2.0-large-en': bce + 'model-ernie2.0-large-en.1.tar.gz',
         'ernie-tiny': bce + 'model-ernie_tiny.1.tar.gz',
     }
+
     @classmethod
-    def from_pretrained(cls, pretrain_dir_or_url, force_download=False, **kwargs):
-        if not Path(pretrain_dir_or_url).exists() and pretrain_dir_or_url in cls.resource_map:
+    def from_pretrained(cls,
+                        pretrain_dir_or_url,
+                        force_download=False,
+                        **kwargs):
+        if not Path(pretrain_dir_or_url).exists(
+        ) and pretrain_dir_or_url in cls.resource_map:
             url = cls.resource_map[pretrain_dir_or_url]
             log.info('get pretrain dir from %s' % url)
             pretrain_dir = _fetch_from_remote(url, force_download)
         else:
-            log.info('pretrain dir %s not in %s, read from local' % (pretrain_dir_or_url, repr(cls.resource_map)))
+            log.info('pretrain dir %s not in %s, read from local' %
+                     (pretrain_dir_or_url, repr(cls.resource_map)))
             pretrain_dir = pretrain_dir_or_url
 
         if not pretrain_dir.exists():
             raise ValueError('pretrain dir not found: %s' % pretrain_dir)
-        param_path = pretrain_dir /'params'
+        param_path = pretrain_dir / 'params'
         state_dict_path = pretrain_dir / 'saved_weights'
         config_path = pretrain_dir / 'ernie_config.json'
 
         if not config_path.exists():
             raise ValueError('config path not found: %s' % config_path)
-        name_prefix=kwargs.pop('name', None)
+        name_prefix = kwargs.pop('name', None)
         cfg_dict = dict(json.loads(config_path.open().read()), **kwargs)
         model = cls(cfg_dict, name=name_prefix)
-        
+
         log.info('loading pretrained model from %s' % pretrain_dir)
 
         #if os.path.exists(param_path):
@@ -322,10 +430,11 @@ class PretrainedModel(object):
             for k, v in model.state_dict().items():
                 if k not in super_m:
                     log.warn('param:%s not set in pretrained model, skip' % k)
-                    super_m[k] = v # FIXME: no need to do this in the future
+                    super_m[k] = v  # FIXME: no need to do this in the future
             model.set_dict(super_m)
         else:
-            raise ValueError('weight file not found in pretrain dir: %s' % pretrain_dir)
+            raise ValueError('weight file not found in pretrain dir: %s' %
+                             pretrain_dir)
         return model
 
 
@@ -344,22 +453,43 @@ class ErnieModel(D.Layer, PretrainedModel):
         d_sent = cfg.get("sent_type_vocab_size") or cfg['type_vocab_size']
         self.n_head = cfg['num_attention_heads']
         self.return_additional_info = cfg.get('return_additional_info', True)
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
 
         self.ln = _build_ln(d_model, name=append_name(name, 'pre_encoder'))
-        self.word_emb = D.Embedding([d_vocab, d_emb], param_attr=F.ParamAttr(name=append_name(name, 'word_embedding'), initializer=initializer))
-        self.pos_emb = D.Embedding([d_pos, d_emb], param_attr=F.ParamAttr(name=append_name(name, 'pos_embedding'), initializer=initializer))
-        self.sent_emb = D.Embedding([d_sent, d_emb], param_attr=F.ParamAttr(name=append_name(name, 'sent_embedding'), initializer=initializer))
+        self.word_emb = D.Embedding(
+            [d_vocab, d_emb],
+            param_attr=F.ParamAttr(
+                name=append_name(name, 'word_embedding'),
+                initializer=initializer))
+        self.pos_emb = D.Embedding(
+            [d_pos, d_emb],
+            param_attr=F.ParamAttr(
+                name=append_name(name, 'pos_embedding'),
+                initializer=initializer))
+        self.sent_emb = D.Embedding(
+            [d_sent, d_emb],
+            param_attr=F.ParamAttr(
+                name=append_name(name, 'sent_embedding'),
+                initializer=initializer))
         prob = cfg['hidden_dropout_prob']
-        self.dropout = lambda i: L.dropout(i, dropout_prob=prob, dropout_implementation="upscale_in_train",) if self.training else i
+        self.dropout = lambda i: L.dropout(
+            i,
+            dropout_prob=prob,
+            dropout_implementation="upscale_in_train", ) if self.training else i
 
-        self.encoder_stack = ErnieEncoderStack(cfg, append_name(name, 'encoder'))
+        self.encoder_stack = ErnieEncoderStack(cfg,
+                                               append_name(name, 'encoder'))
         if cfg.get('has_pooler', True):
-            self.pooler = _build_ori_linear(cfg['hidden_size'], cfg['hidden_size'], append_name(name, 'pooled_fc'), initializer, act='tanh')
+            self.pooler = _build_ori_linear(
+                cfg['hidden_size'],
+                cfg['hidden_size'],
+                append_name(name, 'pooled_fc'),
+                initializer,
+                act='tanh')
         else:
             self.pooler = None
         self.train()
-    
 
     def eval(self):
         if F.in_dygraph_mode():
@@ -375,7 +505,16 @@ class ErnieModel(D.Layer, PretrainedModel):
         for l in self.sublayers():
             l.training = True
 
-    def forward(self, src_ids, sent_ids=None, pos_ids=None, input_mask=None, attn_bias=None, past_cache=None, use_causal_mask=False, depth=1., head_mask=None):
+    def forward(self,
+                src_ids,
+                sent_ids=None,
+                pos_ids=None,
+                input_mask=None,
+                attn_bias=None,
+                past_cache=None,
+                use_causal_mask=False,
+                depth=1.,
+                head_mask=None):
         """
         Args:
             src_ids (`Variable` of shape `[batch_size, seq_len]`): 
@@ -403,7 +542,10 @@ class ErnieModel(D.Layer, PretrainedModel):
                 addtional middle level info, inclues: all hidden stats, k/v caches.
         """
         #d_batch, d_seqlen = src_ids.shape
-        assert len(src_ids.shape) == 2, 'expect src_ids.shape = [batch, sequecen], got %s' % (repr(src_ids.shape))
+        assert len(
+            src_ids.
+            shape) == 2, 'expect src_ids.shape = [batch, sequecen], got %s' % (
+                repr(src_ids.shape))
         assert attn_bias is not None if past_cache else True, 'if `past_cache` is specified; attn_bias should not be None'
         d_batch = L.shape(src_ids)[0]
         d_seqlen = L.shape(src_ids)[1]
@@ -417,25 +559,37 @@ class ErnieModel(D.Layer, PretrainedModel):
             input_mask = L.unsqueeze(input_mask, axes=[-1])
             attn_bias = L.matmul(input_mask, input_mask, transpose_y=True)
             if use_causal_mask:
-                sequence = L.reshape(L.range(0, d_seqlen, 1, dtype='float32') + 1., [1, 1, -1, 1])
-                causal_mask = L.cast((L.matmul(sequence, 1. / sequence, transpose_y=True) >= 1.) , 'float32')
+                sequence = L.reshape(
+                    L.range(
+                        0, d_seqlen, 1, dtype='float32') + 1., [1, 1, -1, 1])
+                causal_mask = L.cast(
+                    (L.matmul(
+                        sequence, 1. / sequence, transpose_y=True) >= 1.),
+                    'float32')
                 attn_bias *= causal_mask
         else:
-            assert len(attn_bias.shape) == 3, 'expect attn_bias tobe rank 3, got %r' % attn_bias.shape
+            assert len(
+                attn_bias.shape
+            ) == 3, 'expect attn_bias tobe rank 3, got %r' % attn_bias.shape
         attn_bias = (1. - attn_bias) * -10000.0
         attn_bias = L.unsqueeze(attn_bias, [1])
         #attn_bias = L.expand(attn_bias, [1, self.n_head, 1, 1]) # avoid broadcast =_=
         attn_bias.stop_gradient = True
-            
+
         if sent_ids is None:
             sent_ids = L.zeros_like(src_ids)
 
         if head_mask is not None:
             if len(head_mask.shape) == 1:
-                head_mask = L.unsqueeze(L.unsqueeze(L.unsqueeze(L.unsqueeze(head_mask, 0), 0), -1), -1)
-                head_mask = L.expand(head_mask, expand_times=[self.cfg['num_hidden_layers'], 1, 1, 1, 1])
+                head_mask = L.unsqueeze(
+                    L.unsqueeze(L.unsqueeze(L.unsqueeze(head_mask, 0), 0), -1),
+                    -1)
+                head_mask = L.expand(
+                    head_mask,
+                    expand_times=[self.cfg['num_hidden_layers'], 1, 1, 1, 1])
             elif len(head_mask.shape) == 2:
-                head_mask = L.unsqueeze(L.unsqueeze(L.unsqueeze(head_mask, 1), -1), -1)
+                head_mask = L.unsqueeze(
+                    L.unsqueeze(L.unsqueeze(head_mask, 1), -1), -1)
 
         else:
             head_mask = [None] * self.cfg['num_hidden_layers']
@@ -447,7 +601,12 @@ class ErnieModel(D.Layer, PretrainedModel):
 
         embedded = self.dropout(self.ln(embedded))
 
-        encoded, hidden_list, attn_list, ffn_mid_list, cache_list = self.encoder_stack(embedded, attn_bias, past_cache=past_cache, depth_mult=depth, head_mask=head_mask)
+        encoded, hidden_list, attn_list, ffn_mid_list, cache_list = self.encoder_stack(
+            embedded,
+            attn_bias,
+            past_cache=past_cache,
+            depth_mult=depth,
+            head_mask=head_mask)
         if self.pooler is not None:
             pooled = self.pooler(encoded[:, 0, :])
         else:
@@ -464,7 +623,7 @@ class ErnieModel(D.Layer, PretrainedModel):
             return pooled, encoded, additional_info
         else:
             return pooled, encoded
-        
+
 
 class ErnieModelForSequenceClassification(ErnieModel):
     """
@@ -472,16 +631,22 @@ class ErnieModelForSequenceClassification(ErnieModel):
     """
 
     def __init__(self, cfg, name=None):
-        super(ErnieModelForSequenceClassification, self).__init__(cfg, name=name)
+        super(ErnieModelForSequenceClassification, self).__init__(
+            cfg, name=name)
 
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
-
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
         """  Normal Linear
         """
-        self.classifier = _build_ori_linear(cfg['hidden_size'], cfg['num_labels'], append_name(name, 'cls'), initializer)
+        self.classifier = _build_ori_linear(
+            cfg['hidden_size'], cfg['num_labels'],
+            append_name(name, 'cls'), initializer)
 
         prob = cfg.get('classifier_dropout_prob', cfg['hidden_dropout_prob'])
-        self.dropout = lambda i: L.dropout(i, dropout_prob=prob, dropout_implementation="upscale_in_train",) if self.training else i
+        self.dropout = lambda i: L.dropout(
+            i,
+            dropout_prob=prob,
+            dropout_implementation="upscale_in_train", ) if self.training else i
 
     @add_docstring(ErnieModel.forward.__doc__)
     def forward(self, *args, **kwargs):
@@ -497,8 +662,9 @@ class ErnieModelForSequenceClassification(ErnieModel):
                 output logits of classifier
         """
         labels = kwargs.pop('labels', None)
-        
-        pooled, encoded, addition_info = super(ErnieModelForSequenceClassification, self).forward(*args, **kwargs)
+
+        pooled, encoded, addition_info = super(
+            ErnieModelForSequenceClassification, self).forward(*args, **kwargs)
         hidden = self.dropout(pooled)
         logits = self.classifier(hidden)
 
@@ -516,14 +682,20 @@ class ErnieModelForTokenClassification(ErnieModel):
     """
     Ernie Model for Named entity tasks(NER)
     """
+
     def __init__(self, cfg, name=None):
         super(ErnieModelForTokenClassification, self).__init__(cfg, name=name)
 
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
-        self.classifier = _build_linear(cfg['hidden_size'], cfg['num_labels'], append_name(name, 'cls'), initializer)
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
+        self.classifier = _build_linear(cfg['hidden_size'], cfg['num_labels'],
+                                        append_name(name, 'cls'), initializer)
 
         prob = cfg.get('classifier_dropout_prob', cfg['hidden_dropout_prob'])
-        self.dropout = lambda i: L.dropout(i, dropout_prob=prob, dropout_implementation="upscale_in_train",) if self.training else i
+        self.dropout = lambda i: L.dropout(
+            i,
+            dropout_prob=prob,
+            dropout_implementation="upscale_in_train", ) if self.training else i
 
     @add_docstring(ErnieModel.forward.__doc__)
     def forward(self, *args, **kwargs):
@@ -545,14 +717,16 @@ class ErnieModelForTokenClassification(ErnieModel):
         ignore_index = kwargs.pop('ignore_index', -100)
         labels = kwargs.pop('labels', None)
         loss_weights = kwargs.pop('loss_weights', None)
-        pooled, encoded = super(ErnieModelForTokenClassification, self).forward(*args, **kwargs)
-        hidden = self.dropout(encoded) # maybe not?
+        pooled, encoded = super(ErnieModelForTokenClassification, self).forward(
+            *args, **kwargs)
+        hidden = self.dropout(encoded)  # maybe not?
         logits = self.classifier(hidden)
 
         if labels is not None:
             if len(labels.shape) == 2:
                 labels = L.unsqueeze(labels, axes=[-1])
-            loss = L.softmax_with_cross_entropy(logits, labels, ignore_index=ignore_index)
+            loss = L.softmax_with_cross_entropy(
+                logits, labels, ignore_index=ignore_index)
             if loss_weights is not None:
                 loss = L.squeeze(loss, [-1]) * loss_weights
             loss = L.reduce_mean(loss)
@@ -565,14 +739,21 @@ class ErnieModelForQuestionAnswering(ErnieModel):
     """
     Ernie model for reading comprehension tasks (SQuAD)
     """
+
     def __init__(self, cfg, name=None):
         super(ErnieModelForQuestionAnswering, self).__init__(cfg, name=name)
 
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
-        self.classifier = _build_linear(cfg['hidden_size'], 2, append_name(name, 'cls_mrc'), initializer)
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
+        self.classifier = _build_linear(cfg['hidden_size'], 2,
+                                        append_name(name, 'cls_mrc'),
+                                        initializer)
 
         prob = cfg.get('classifier_dropout_prob', cfg['hidden_dropout_prob'])
-        self.dropout = lambda i: L.dropout(i, dropout_prob=prob, dropout_implementation="upscale_in_train",) if self.training else i
+        self.dropout = lambda i: L.dropout(
+            i,
+            dropout_prob=prob,
+            dropout_implementation="upscale_in_train", ) if self.training else i
 
     @add_docstring(ErnieModel.forward.__doc__)
     def forward(self, *args, **kwargs):
@@ -594,7 +775,8 @@ class ErnieModelForQuestionAnswering(ErnieModel):
 
         start_pos = kwargs.pop('start_pos', None)
         end_pos = kwargs.pop('end_pos', None)
-        pooled, encoded = super(ErnieModelForQuestionAnswering, self).forward(*args, **kwargs)
+        pooled, encoded = super(ErnieModelForQuestionAnswering, self).forward(
+            *args, **kwargs)
         encoded = self.dropout(encoded)
         encoded = self.classifier(encoded)
         start_logit, end_logits = L.unstack(encoded, axis=-1)
@@ -614,8 +796,10 @@ class ErnieModelForQuestionAnswering(ErnieModel):
 class NSPHead(D.Layer):
     def __init__(self, cfg, name=None):
         super(NSPHead, self).__init__()
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
-        self.nsp = _build_linear(cfg['hidden_size'], 2, append_name(name, 'nsp_fc'), initializer)
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
+        self.nsp = _build_linear(cfg['hidden_size'], 2,
+                                 append_name(name, 'nsp_fc'), initializer)
 
     def forward(self, inputs, labels):
         """
@@ -644,24 +828,30 @@ class ErnieModelForPretraining(ErnieModel):
     """
     Ernie Model for Masked Languate Model pretrain
     """
+
     def __init__(self, cfg, name=None):
         super(ErnieModelForPretraining, self).__init__(cfg, name=name)
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
         d_model = cfg['hidden_size']
         d_vocab = cfg['vocab_size']
 
         self.pooler_heads = D.LayerList([NSPHead(cfg, name=name)])
-        self.mlm = _build_linear(d_model, d_model, append_name(name, 'mask_lm_trans_fc'), initializer, act=cfg['hidden_act'])
-        self.mlm_ln = _build_ln(d_model, name = append_name(name, 'mask_lm_trans'))
+        self.mlm = _build_linear(
+            d_model,
+            d_model,
+            append_name(name, 'mask_lm_trans_fc'),
+            initializer,
+            act=cfg['hidden_act'])
+        self.mlm_ln = _build_ln(
+            d_model, name=append_name(name, 'mask_lm_trans'))
         self.mlm_bias = L.create_parameter(
-                dtype='float32',
-                shape=[d_vocab], 
-                attr=F.ParamAttr(
-                    name=append_name(name, 'mask_lm_out_fc.b_0'), 
-                    initializer=F.initializer.Constant(value=0.0)
-                    ),
-                is_bias=True,
-            )
+            dtype='float32',
+            shape=[d_vocab],
+            attr=F.ParamAttr(
+                name=append_name(name, 'mask_lm_out_fc.b_0'),
+                initializer=F.initializer.Constant(value=0.0)),
+            is_bias=True, )
 
     @add_docstring(ErnieModel.forward.__doc__)
     def forward(self, *args, **kwargs):
@@ -685,7 +875,8 @@ class ErnieModelForPretraining(ErnieModel):
         mlm_labels = kwargs.pop('labels')
         mlm_pos = kwargs.pop('mlm_pos')
         nsp_labels = kwargs.pop('nsp_labels')
-        pooled, encoded = super(ErnieModelForPretraining, self).forward(*args, **kwargs)
+        pooled, encoded = super(ErnieModelForPretraining, self).forward(
+            *args, **kwargs)
         if len(mlm_labels.shape) == 1:
             mlm_labels = L.reshape(mlm_labels, [-1, 1])
         if len(nsp_labels.shape) == 1:
@@ -696,8 +887,10 @@ class ErnieModelForPretraining(ErnieModel):
         encoded_2d = L.gather_nd(encoded, mlm_pos)
         encoded_2d = self.mlm(encoded_2d)
         encoded_2d = self.mlm_ln(encoded_2d)
-        logits_2d = L.matmul(encoded_2d, self.word_emb.weight, transpose_y=True) + self.mlm_bias
-        mlm_loss = L.reduce_mean(L.softmax_with_cross_entropy(logits_2d, mlm_labels))
+        logits_2d = L.matmul(
+            encoded_2d, self.word_emb.weight, transpose_y=True) + self.mlm_bias
+        mlm_loss = L.reduce_mean(
+            L.softmax_with_cross_entropy(logits_2d, mlm_labels))
         total_loss = mlm_loss + nsp_loss
         return total_loss, mlm_loss, nsp_loss
 
@@ -707,30 +900,39 @@ class ErnieModelForGeneration(ErnieModel):
     Ernie Model for sequence to sequence generation.
     """
     resource_map = {
-        'ernie-gen-base-en': ErnieModel.bce + 'model-ernie-gen-base-en.1.tar.gz',
-        'ernie-gen-large-en': ErnieModel.bce + 'model-ernie-gen-large-en.1.tar.gz',
-        'ernie-gen-large-430g-en': ErnieModel.bce + 'model-ernie-gen-large-430g-en.1.tar.gz',
+        'ernie-gen-base-en':
+        ErnieModel.bce + 'model-ernie-gen-base-en.1.tar.gz',
+        'ernie-gen-large-en':
+        ErnieModel.bce + 'model-ernie-gen-large-en.1.tar.gz',
+        'ernie-gen-large-430g-en':
+        ErnieModel.bce + 'model-ernie-gen-large-430g-en.1.tar.gz',
         'ernie-1.0': ErnieModel.bce + 'model-ernie1.0.1.tar.gz',
     }
+
     def __init__(self, cfg, name=None):
         cfg['return_additional_info'] = True
         cfg['has_pooler'] = False
         super(ErnieModelForGeneration, self).__init__(cfg, name=name)
-        initializer = F.initializer.TruncatedNormal(scale=cfg['initializer_range'])
+        initializer = F.initializer.TruncatedNormal(
+            scale=cfg['initializer_range'])
         d_model = cfg['hidden_size']
         d_vocab = cfg['vocab_size']
 
-        self.mlm = _build_linear(d_model, d_model, append_name(name, 'mask_lm_trans_fc'), initializer, act=cfg['hidden_act'])
-        self.mlm_ln = _build_ln(d_model, name = append_name(name, 'mask_lm_trans'))
+        self.mlm = _build_linear(
+            d_model,
+            d_model,
+            append_name(name, 'mask_lm_trans_fc'),
+            initializer,
+            act=cfg['hidden_act'])
+        self.mlm_ln = _build_ln(
+            d_model, name=append_name(name, 'mask_lm_trans'))
         self.mlm_bias = L.create_parameter(
-                dtype='float32',
-                shape=[d_vocab], 
-                attr=F.ParamAttr(
-                    name=append_name(name, 'mask_lm_out_fc.b_0'), 
-                    initializer=F.initializer.Constant(value=0.0)
-                    ),
-                is_bias=True,
-            )
+            dtype='float32',
+            shape=[d_vocab],
+            attr=F.ParamAttr(
+                name=append_name(name, 'mask_lm_out_fc.b_0'),
+                initializer=F.initializer.Constant(value=0.0)),
+            is_bias=True, )
 
     @add_docstring(ErnieModel.forward.__doc__)
     def forward(self, *args, **kwargs):
@@ -758,20 +960,23 @@ class ErnieModelForGeneration(ErnieModel):
         elif tgt_labels is None or tgt_pos is None:
             encoded = self.mlm(encoded)
             encoded = self.mlm_ln(encoded)
-            logits = L.matmul(encoded, self.word_emb.weight, transpose_y=True) + self.mlm_bias
+            logits = L.matmul(
+                encoded, self.word_emb.weight, transpose_y=True) + self.mlm_bias
             output_ids = L.argmax(logits, -1)
             return output_ids, logits, info
         else:
             encoded_2d = L.gather_nd(encoded, tgt_pos)
             encoded_2d = self.mlm(encoded_2d)
             encoded_2d = self.mlm_ln(encoded_2d)
-            logits_2d = L.matmul(encoded_2d, self.word_emb.weight, transpose_y=True) + self.mlm_bias
+            logits_2d = L.matmul(
+                encoded_2d, self.word_emb.weight,
+                transpose_y=True) + self.mlm_bias
             if len(tgt_labels.shape) == 1:
                 tgt_labels = L.reshape(tgt_labels, [-1, 1])
-            
+
             loss = L.reduce_mean(
-                    L.softmax_with_cross_entropy(logits_2d, tgt_labels, soft_label=(tgt_labels.shape[-1] != 1))
-                    )
+                L.softmax_with_cross_entropy(
+                    logits_2d,
+                    tgt_labels,
+                    soft_label=(tgt_labels.shape[-1] != 1)))
             return loss, logits_2d, info
-
-

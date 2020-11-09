@@ -291,9 +291,9 @@ if __name__ == '__main__':
                             depth = round(model.cfg['num_hidden_layers'] *
                                           depth_mult)
                             kept_layers_index = []
-                            for i in range(depth):
+                            for i in range(1, depth + 1):
                                 kept_layers_index.append(
-                                    math.floor(i / depth_mult))
+                                    math.floor(i / depth_mult) - 1)
 
                             if mode == 'classification':
                                 logit_loss = soft_cross_entropy(
