@@ -71,15 +71,109 @@ class ImperativeLenet(nn.Layer):
         return x
 
 
-class TestImperativeQat(unittest.TestCase):
+class TestImperativeQatDefaultConfig(unittest.TestCase):
     """
     QAT = quantization-aware training
+    This test case uses defualt quantization config, weight_quantize_type 
+    is channel_wise_abs_max
     """
 
     def test_qat_acc(self):
         with fluid.dygraph.guard():
             lenet = ImperativeLenet()
             quant_lenet = quant_aware(lenet)
+
+            train_reader = paddle.batch(
+                paddle.dataset.mnist.train(), batch_size=32, drop_last=True)
+            test_reader = paddle.batch(
+                paddle.dataset.mnist.test(), batch_size=32)
+
+            def train(model):
+                adam = AdamOptimizer(
+                    learning_rate=0.001, parameter_list=model.parameters())
+                epoch_num = 1
+                for epoch in range(epoch_num):
+                    model.train()
+                    for batch_id, data in enumerate(train_reader()):
+                        x_data = np.array(
+                            [x[0].reshape(1, 28, 28)
+                             for x in data]).astype('float32')
+                        y_data = np.array(
+                            [x[1] for x in data]).astype('int64').reshape(-1, 1)
+
+                        img = fluid.dygraph.to_variable(x_data)
+                        label = fluid.dygraph.to_variable(y_data)
+                        out = model(img)
+                        acc = fluid.layers.accuracy(out, label)
+                        loss = fluid.layers.cross_entropy(out, label)
+                        avg_loss = fluid.layers.mean(loss)
+                        avg_loss.backward()
+                        adam.minimize(avg_loss)
+                        model.clear_gradients()
+                        if batch_id % 100 == 0:
+                            _logger.info(
+                                "Train | At epoch {} step {}: loss = {:}, acc= {:}".
+                                format(epoch, batch_id,
+                                       avg_loss.numpy(), acc.numpy()))
+
+            def test(model):
+                model.eval()
+                avg_acc = [[], []]
+                for batch_id, data in enumerate(test_reader()):
+                    x_data = np.array([x[0].reshape(1, 28, 28)
+                                       for x in data]).astype('float32')
+                    y_data = np.array(
+                        [x[1] for x in data]).astype('int64').reshape(-1, 1)
+
+                    img = fluid.dygraph.to_variable(x_data)
+                    label = fluid.dygraph.to_variable(y_data)
+
+                    out = model(img)
+                    acc_top1 = fluid.layers.accuracy(
+                        input=out, label=label, k=1)
+                    acc_top5 = fluid.layers.accuracy(
+                        input=out, label=label, k=5)
+                    avg_acc[0].append(acc_top1.numpy())
+                    avg_acc[1].append(acc_top5.numpy())
+                    if batch_id % 100 == 0:
+                        _logger.info(
+                            "Test | step {}: acc1 = {:}, acc5 = {:}".format(
+                                batch_id, acc_top1.numpy(), acc_top5.numpy()))
+
+                _logger.info("Test |Average: acc_top1 {}, acc_top5 {}".format(
+                    np.mean(avg_acc[0]), np.mean(avg_acc[1])))
+                return np.mean(avg_acc[0]), np.mean(avg_acc[1])
+
+            train(lenet)
+            top1_1, top5_1 = test(lenet)
+
+            quant_lenet.__init__()
+            train(quant_lenet)
+            top1_2, top5_2 = test(quant_lenet)
+
+            # values before quantization and after quantization should be close
+            _logger.info("Before quantization: top1: {}, top5: {}".format(
+                top1_1, top5_1))
+            _logger.info("After quantization: top1: {}, top5: {}".format(
+                top1_2, top5_2))
+
+
+class TestImperativeQatUserDefineConfig(unittest.TestCase):
+    """
+    QAT = quantization-aware training
+    This test case is for testing user defined quantization config.
+    """
+
+    def test_qat_acc(self):
+        with fluid.dygraph.guard():
+            lenet = ImperativeLenet()
+            quant_config = {
+                'weight_quantize_type': 'abs_max',
+                'activation_quantize_type': 'moving_average_abs_max',
+                'quantizable_layer_type': ['Conv2D', 'Linear']
+            }
+            quant_lenet = quant_aware(lenet, quant_config)
+
             train_reader = paddle.batch(
                 paddle.dataset.mnist.train(), batch_size=32, drop_last=True)
             test_reader = paddle.batch(

@@ -176,6 +176,8 @@ def _parse_configs(user_config):
     assert isinstance(configs['moving_rate'], float), \
         "moving_rate must be float value, The decay coefficient of moving average, default is 0.9."
 
+    assert isinstance(configs['quantizable_layer_type'], list), \
+        "quantizable_layer_type must be a list"
     return configs
 
 
