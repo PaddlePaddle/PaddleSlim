@@ -306,8 +306,13 @@ def train_resnet():
         groups = VarGroup(resnet, input_shape=[1, 3, 224, 224])
         pruner = L1NormPruner(resnet, input_shape=[1, 3, 224, 224])
         plan = pruner.prune_var("conv2d_0.w_0", [0], 0.1)
-        plan.imperative_apply(resnet)
-        #plan.lazy_apply(resnet)
+        resnet.eval()
+        plan.apply(resnet, lazy=True)
+        eval(resnet, test_reader)
+        plan.restore(resnet)
+        eval(resnet, test_reader)
+        plan.apply(resnet)
+        return
         ##########################################################
 
         #NOTE: used in benchmark 
