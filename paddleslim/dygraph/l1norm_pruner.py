@@ -3,16 +3,19 @@ import numpy as np
 from ..common import get_logger
 from .var_group import *
 from .pruning_plan import *
+from .pruner import Pruner
 
 __all__ = ['L1NormPruner']
 
 _logger = get_logger(__name__, logging.INFO)
 
 
-class L1NormPruner():
-    def __init__(self, model, input_shape):
+class L1NormPruner(Pruner):
+    def __init__(self, model, input_shape, sensitive=False):
+        super(L1NormPruner, self).__init__(model, input_shape)
         self.model = model
         self.var_group = VarGroup(model, input_shape)
+        self.sensitive = sensitive
 
     def prune_var(self, var_name, axis, pruned_ratio):
         if isinstance(axis, int):

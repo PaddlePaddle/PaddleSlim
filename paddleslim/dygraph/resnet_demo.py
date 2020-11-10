@@ -272,6 +272,7 @@ def eval(model, data):
         print("kpis\ttest_acc5\t%0.3f" % (total_acc5 / total_sample))
     print("final eval acc1 %0.3f acc5 %0.3f" % \
           (total_acc1 / total_sample, total_acc5 / total_sample))
+    return (total_acc1 / total_sample)
 
 
 def train_resnet():
@@ -297,22 +298,32 @@ def train_resnet():
         test_reader = paddle.batch(
             paddle.dataset.flowers.test(use_xmap=False), batch_size=batch_size)
 
+        params, _ = fluid.load_dygraph("./resnet_params.pdparams")
+        resnet.load_dict(params)
+        resnet.eval()
+        eval(resnet, test_reader)
         ####################pruning##############################
         from paddle.fluid.dygraph import TracedLayer
         from paddleslim.core import GraphWrapper
         from paddleslim.prune import collect_convs
         from paddleslim.dygraph import *
+        from functools import partial
 
-        groups = VarGroup(resnet, input_shape=[1, 3, 224, 224])
-        pruner = L1NormPruner(resnet, input_shape=[1, 3, 224, 224])
-        plan = pruner.prune_var("conv2d_0.w_0", [0], 0.1)
-        resnet.eval()
-        plan.apply(resnet, lazy=True)
-        eval(resnet, test_reader)
-        plan.restore(resnet)
-        eval(resnet, test_reader)
-        plan.apply(resnet)
+        pruner = L1NormPruner(
+            resnet, input_shape=[1, 3, 224, 224], sensitive=True)
+
+        status = pruner.status(
+            resnet, eval_func=partial(eval, resnet, test_reader))
         return
+        #
+        #        plan = pruner.prune_var("conv2d_0.w_0", [0], 0.1)
+        #        resnet.eval()
+        #        plan.apply(resnet, lazy=True)
+        #        eval(resnet, test_reader)
+        #        plan.restore(resnet)
+        #        eval(resnet, test_reader)
+        #        plan.apply(resnet)
+        #        return
         ##########################################################
 
         #NOTE: used in benchmark 
@@ -325,8 +336,6 @@ def train_resnet():
             total_acc1 = 0.0
             total_acc5 = 0.0
             total_sample = 0
-
-            print("load finished")
 
             for batch_id, data in enumerate(train_reader()):
 
