@@ -9,7 +9,6 @@ import time
 import numpy as np
 from collections import defaultdict
 
-import paddle.fluid as fluid
 sys.path.append(os.path.dirname("__file__"))
 sys.path.append(
     os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
@@ -20,8 +19,6 @@ import models
 from utility import add_arguments, print_arguments
 from paddle.fluid.layer_helper import LayerHelper
 quantization_model_save_dir = './quantization_models/'
-
-from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -74,29 +71,32 @@ model_list = [m for m in dir(models) if "__" not in m]
 
 
 def piecewise_decay(args):
-    places = fluid.cuda_places() if args.use_gpu else fluid.cpu_places()
+    places = paddle.static.cuda_places(
+    ) if args.use_gpu else paddle.static.cpu_places()
     step = int(
         math.ceil(float(args.total_images) / (args.batch_size * len(places))))
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
-    learning_rate = fluid.layers.piecewise_decay(boundaries=bd, values=lr)
-    optimizer = fluid.optimizer.Momentum(
+    learning_rate = paddle.optimizer.lr.PiecewiseDecay(
+        boundaries=bd, values=lr, verbose=False)
+    optimizer = paddle.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
-        regularization=fluid.regularizer.L2Decay(args.l2_decay))
+        weight_decay=paddle.regularizer.L2Decay(args.l2_decay))
     return learning_rate, optimizer
 
 
 def cosine_decay(args):
-    places = fluid.cuda_places() if args.use_gpu else fluid.cpu_places()
+    places = paddle.static.cuda_places(
+    ) if args.use_gpu else paddle.static.cpu_places()
     step = int(
         math.ceil(float(args.total_images) / (args.batch_size * len(places))))
-    learning_rate = fluid.layers.cosine_decay(
-        learning_rate=args.lr, step_each_epoch=step, epochs=args.num_epochs)
-    optimizer = fluid.optimizer.Momentum(
+    learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
+        learning_rate=args.lr, T_max=step * args.num_epochs, verbose=False)
+    optimizer = paddle.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
-        regularization=fluid.regularizer.L2Decay(args.l2_decay))
+        weight_decay=paddle.regularizer.L2Decay(args.l2_decay))
     return learning_rate, optimizer
 
 
@@ -127,41 +127,43 @@ def compress(args):
     image_shape = [int(m) for m in image_shape.split(",")]
     assert args.model in model_list, "{} is not in lists: {}".format(args.model,
                                                                      model_list)
-    image = fluid.layers.data(name='image', shape=image_shape, dtype='float32')
+    image = paddle.static.data(
+        name='image', shape=[None] + image_shape, dtype='float32')
     if args.use_pact:
         image.stop_gradient = False
-    label = fluid.layers.data(name='label', shape=[1], dtype='int64')
+    label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
     # model definition
     model = models.__dict__[args.model]()
     out = model.net(input=image, class_dim=class_dim)
-    cost = fluid.layers.cross_entropy(input=out, label=label)
-    avg_cost = fluid.layers.mean(x=cost)
-    acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
-    acc_top5 = fluid.layers.accuracy(input=out, label=label, k=5)
+    cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
+    avg_cost = paddle.mean(x=cost)
+    acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
+    acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
 
-    train_prog = fluid.default_main_program()
-    val_program = fluid.default_main_program().clone(for_test=True)
+    train_prog = paddle.static.default_main_program()
+    val_program = paddle.static.default_main_program().clone(for_test=True)
 
     if not args.analysis:
         learning_rate, opt = create_optimizer(args)
         opt.minimize(avg_cost)
 
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-    exe = fluid.Executor(place)
-    exe.run(fluid.default_startup_program())
+    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
+    exe.run(paddle.static.default_startup_program())
 
-    train_reader = paddle.fluid.io.batch(
+    train_reader = paddle.batch(
         train_reader, batch_size=args.batch_size, drop_last=True)
-    train_loader = fluid.io.DataLoader.from_generator(
+    train_loader = paddle.io.DataLoader.from_generator(
         feed_list=[image, label],
         capacity=512,
         use_double_buffer=True,
         iterable=True)
-    places = fluid.cuda_places() if args.use_gpu else fluid.cpu_places()
+    places = paddle.static.cuda_places(
+    ) if args.use_gpu else paddle.static.cpu_places()
     train_loader.set_sample_list_generator(train_reader, places)
 
-    val_reader = paddle.fluid.io.batch(val_reader, batch_size=args.batch_size)
-    valid_loader = fluid.io.DataLoader.from_generator(
+    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
+    valid_loader = paddle.io.DataLoader.from_generator(
         feed_list=[image, label],
         capacity=512,
         use_double_buffer=True,
@@ -246,21 +248,21 @@ def compress(args):
         helper = LayerHelper("pact", **locals())
         dtype = 'float32'
         init_thres = values[x.name.split('_tmp_input')[0]]
-        u_param_attr = fluid.ParamAttr(
+        u_param_attr = paddle.ParamAttr(
             name=x.name + '_pact',
-            initializer=fluid.initializer.ConstantInitializer(value=init_thres),
-            regularizer=fluid.regularizer.L2Decay(0.0001),
+            initializer=paddle.nn.initializer.Constant(value=init_thres),
+            regularizer=paddle.regularizer.L2Decay(0.0001),
             learning_rate=1)
         u_param = helper.create_parameter(
             attr=u_param_attr, shape=[1], dtype=dtype)
 
-        part_a = fluid.layers.relu(fluid.layers.elementwise_sub(x, u_param))
-        part_b = fluid.layers.relu(fluid.layers.elementwise_sub(-u_param, x))
+        part_a = paddle.nn.functional.relu(x - u_param)
+        part_b = paddle.nn.functional.relu(-u_param - x)
         x = x - part_a + part_b
         return x
 
     def get_optimizer():
-        return fluid.optimizer.MomentumOptimizer(args.lr, 0.9)
+        return paddle.optimizer.Momentum(args.lr, 0.9)
 
     if args.use_pact:
         act_preprocess_func = pact
@@ -294,11 +296,7 @@ def compress(args):
         args.pretrained_model), "pretrained_model doesn't exist"
 
     if args.pretrained_model:
-
-        def if_exist(var):
-            return os.path.exists(os.path.join(args.pretrained_model, var.name))
-
-        fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
+        paddle.static.load(train_prog, args.pretrained_model, exe)
 
     def test(epoch, program):
         batch_id = 0
@@ -325,44 +323,42 @@ def compress(args):
                 np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
         return np.mean(np.array(acc_top1_ns))
 
-    def train(epoch, compiled_train_prog):
+    def train(epoch, compiled_train_prog, lr):
 
         batch_id = 0
         for data in train_loader():
             start_time = time.time()
-            lr_n, loss_n, acc_top1_n, acc_top5_n = exe.run(
+            loss_n, acc_top1_n, acc_top5_n = exe.run(
                 compiled_train_prog,
                 feed=data,
-                fetch_list=[
-                    learning_rate.name, avg_cost.name, acc_top1.name,
-                    acc_top5.name
-                ])
+                fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
 
             end_time = time.time()
-            lr_n = np.mean(lr_n)
             loss_n = np.mean(loss_n)
             acc_top1_n = np.mean(acc_top1_n)
             acc_top5_n = np.mean(acc_top5_n)
             if batch_id % args.log_period == 0:
                 _logger.info(
                     "epoch[{}]-batch[{}] lr: {:.6f} - loss: {:.6f}; acc_top1: {:.6f}; acc_top5: {:.6f}; time: {:.3f}".
-                    format(epoch, batch_id, lr_n, loss_n, acc_top1_n,
+                    format(epoch, batch_id,
+                           learning_rate.get_lr(), loss_n, acc_top1_n,
                            acc_top5_n, end_time - start_time))
 
             if args.use_pact and batch_id % 1000 == 0:
                 threshold = {}
                 for var in val_program.list_vars():
                     if 'pact' in var.name:
-                        array = np.array(fluid.global_scope().find_var(var.name)
-                                         .get_tensor())
+                        array = np.array(paddle.static.global_scope().find_var(
+                            var.name).get_tensor())
                         threshold[var.name] = array[0]
                 _logger.info(threshold)
             batch_id += 1
+            lr.step()
 
-    build_strategy = fluid.BuildStrategy()
+    build_strategy = paddle.static.BuildStrategy()
     build_strategy.enable_inplace = False
     build_strategy.fuse_all_reduce_ops = False
-    exec_strategy = fluid.ExecutionStrategy()
+    exec_strategy = paddle.static.ExecutionStrategy()
     compiled_train_prog = compiled_train_prog.with_data_parallel(
         loss_name=avg_cost.name,
         build_strategy=build_strategy,
@@ -377,37 +373,38 @@ def compress(args):
         ckpt_path = args.checkpoint_dir
         assert args.checkpoint_epoch is not None, "checkpoint_epoch must be set"
         start_epoch = args.checkpoint_epoch
-        fluid.io.load_persistables(
+        paddle.static.load_vars(
             exe, dirname=args.checkpoint_dir, main_program=val_program)
         start_step = start_epoch * int(
             math.ceil(float(args.total_images) / args.batch_size))
-        v = fluid.global_scope().find_var('@LR_DECAY_COUNTER@').get_tensor()
+        v = paddle.static.global_scope().find_var(
+            '@LR_DECAY_COUNTER@').get_tensor()
         v.set(np.array([start_step]).astype(np.float32), place)
 
     best_eval_acc1 = 0
     best_acc1_epoch = 0
     for i in range(start_epoch, args.num_epochs):
-        train(i, compiled_train_prog)
+        train(i, compiled_train_prog, learning_rate)
         acc1 = test(i, val_program)
         if acc1 > best_eval_acc1:
             best_eval_acc1 = acc1
             best_acc1_epoch = i
         _logger.info("Best Validation Acc1: {:.6f}, at epoch {}".format(
             best_eval_acc1, best_acc1_epoch))
-        fluid.io.save_persistables(
+        paddle.static.save(
             exe,
             dirname=os.path.join(args.output_dir, str(i)),
             main_program=val_program)
         if acc1 > best_acc1:
             best_acc1 = acc1
             best_epoch = i
-            fluid.io.save_persistables(
+            paddle.static.save(
                 exe,
                 dirname=os.path.join(args.output_dir, 'best_model'),
                 main_program=val_program)
 
     if os.path.exists(os.path.join(args.output_dir, 'best_model')):
-        fluid.io.load_persistables(
+        paddle.static.load(
             exe,
             dirname=os.path.join(args.output_dir, 'best_model'),
             main_program=val_program)
@@ -430,7 +427,7 @@ def compress(args):
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
 
-    fluid.io.save_inference_model(
+    paddle.static.save_inference_model(
         dirname=float_path,
         feeded_var_names=[image.name],
         target_vars=[out],

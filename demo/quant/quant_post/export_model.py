@@ -7,7 +7,6 @@ import functools
 import math
 import time
 import numpy as np
-import paddle.fluid as fluid
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
@@ -46,28 +45,24 @@ def export_model(args):
         raise ValueError("{} is not supported.".format(args.data))
 
     image_shape = [int(m) for m in image_shape.split(",")]
-    image = fluid.data(
+    image = paddle.static.data(
         name='image', shape=[None] + image_shape, dtype='float32')
     assert args.model in model_list, "{} is not in lists: {}".format(args.model,
                                                                      model_list)
     # model definition
     model = models.__dict__[args.model]()
     out = model.net(input=image, class_dim=class_dim)
-    val_program = fluid.default_main_program().clone(for_test=True)
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-    exe = fluid.Executor(place)
-    exe.run(fluid.default_startup_program())
+    val_program = paddle.static.default_main_program().clone(for_test=True)
+    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
+    exe.run(paddle.static.default_startup_program())
 
     if args.pretrained_model:
-
-        def if_exist(var):
-            return os.path.exists(os.path.join(args.pretrained_model, var.name))
-
-        fluid.io.load_vars(exe, args.pretrained_model, predicate=if_exist)
+        paddle.static.load(val_program, args.pretrained_model, exe)
     else:
         assert False, "args.pretrained_model must set"
 
-    fluid.io.save_inference_model(
+    paddle.static.save_inference_model(
         './inference_model/' + args.model,
         feeded_var_names=[image.name],
         target_vars=[out],
