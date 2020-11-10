@@ -329,6 +329,6 @@ class OFA(OFABase):
 
         _logger.debug("Current config is {}".format(self.current_config))
         if 'depth' in self.current_config:
-            kwargs['depth'] = int(self.current_config['depth'])
+            kwargs['depth'] = self.current_config['depth']
 
         return self.model.forward(*inputs, **kwargs), teacher_output
