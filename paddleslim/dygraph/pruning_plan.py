@@ -55,3 +55,24 @@ class PruningPlan():
                 expand_mask = mask.reshape(expand_mask_shape).astype("float32")
                 place = fluid.CUDAPlace(0)
                 t_value.set(value * expand_mask, place)
+
+    def imperative_apply(self, model):
+        """
+        Pruning values of variable imperatively. It is valid when pruning
+        on one dimension.
+        """
+        for param in model.parameters():
+            if param.name in self._masks:
+                dims = self._masks[param.name].dims
+                mask = self._masks[param.name].mask
+                assert (
+                    len(dims) == 1, "Imperative mode only support for pruning"
+                    "on one dimension, but get dims {} when pruning parameter {}".
+                    format(dims, param.name))
+                t_value = param.value().get_tensor()
+                value = np.array(t_value).astype("float32")
+                bool_mask = mask.astype(bool)
+                pruned_value = np.apply_along_axis(
+                    lambda data: data[~bool_mask], dims[0], value)
+                place = fluid.CUDAPlace(0)
+                t_value.set(pruned_value, place)
