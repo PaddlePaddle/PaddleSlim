@@ -136,7 +136,7 @@ class LSTM(RLBaseController):
                     else:
                         action = fluid.layers.sampling_id(probs)
                 actions.append(action)
-                log_prob = paddle.functional.nn.softmax_with_cross_entropy(
+                log_prob = paddle.nn.functional.softmax_with_cross_entropy(
                     logits,
                     paddle.reshape(
                         action, shape=[paddle.shape(action), 1]),
