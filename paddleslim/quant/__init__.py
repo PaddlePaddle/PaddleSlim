@@ -14,6 +14,7 @@
 
 import logging
 
+import paddle
 import paddle.version as fluid_version
 from ..common import get_logger
 
