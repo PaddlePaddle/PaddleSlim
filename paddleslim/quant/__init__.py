@@ -14,14 +14,13 @@
 
 import logging
 
-import paddle.fluid as fluid
 import paddle.version as fluid_version
 from ..common import get_logger
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 try:
-    fluid.require_version('1.8.4')
+    paddle.utils.require_version('1.8.4')
     version_installed = [
         fluid_version.major, fluid_version.minor, fluid_version.patch,
         fluid_version.rc
