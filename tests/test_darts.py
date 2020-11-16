@@ -15,24 +15,23 @@ import sys
 sys.path.append("../")
 import paddle
 import unittest
-import paddle.fluid as fluid
 import numpy as np
 from static_case import StaticCase
 from paddleslim.nas.darts import DARTSearch
 from layers import conv_bn_layer
 
 
-class TestDARTS(StaticCase):
+class TestDARTS(unittest.TestCase):
     def test_darts(self):
-        class SuperNet(fluid.dygraph.Layer):
+        class SuperNet(paddle.nn.Layer):
             def __init__(self):
                 super(SuperNet, self).__init__()
                 self._method = 'DARTS'
                 self._steps = 1
-                self.stem = fluid.dygraph.nn.Conv2D(
-                    num_channels=1, num_filters=3, filter_size=3, padding=1)
-                self.classifier = fluid.dygraph.nn.Linear(
-                    input_dim=2352, output_dim=10)
+                self.stem = paddle.nn.Conv2D(
+                    in_channels=1, out_channels=3, kernel_size=3, padding=1)
+                self.classifier = paddle.nn.Linear(
+                    in_features=2352, out_features=10)
                 self._multiplier = 4
                 self._primitives = [
                     'none', 'max_pool_3x3', 'avg_pool_3x3', 'skip_connect',
@@ -42,9 +41,9 @@ class TestDARTS(StaticCase):
                 self._initialize_alphas()
 
             def _initialize_alphas(self):
-                self.alphas_normal = fluid.layers.create_parameter(
+                self.alphas_normal = self.create_parameter(
                     shape=[14, 8], dtype="float32")
-                self.alphas_reduce = fluid.layers.create_parameter(
+                self.alphas_reduce = self.create_parameter(
                     shape=[14, 8], dtype="float32")
                 self._arch_parameters = [
                     self.alphas_normal,
@@ -57,14 +56,15 @@ class TestDARTS(StaticCase):
             def forward(self, input):
                 out = self.stem(input) * self.alphas_normal[0][
                     0] * self.alphas_reduce[0][0]
-                out = fluid.layers.reshape(out, [0, -1])
+                out = paddle.reshape(out, [0, -1])
                 logits = self.classifier(out)
                 return logits
 
             def _loss(self, input, label):
                 logits = self.forward(input)
-                return fluid.layers.reduce_mean(
-                    fluid.layers.softmax_with_cross_entropy(logits, label))
+                return paddle.mean(
+                    paddle.nn.functional.softmax_with_cross_entropy(logits,
+                                                                    label))
 
         def batch_generator(reader):
             def wrapper():
@@ -84,16 +84,15 @@ class TestDARTS(StaticCase):
 
             return wrapper
 
-        place = fluid.CUDAPlace(0)
-        with fluid.dygraph.guard(place):
-            model = SuperNet()
-            trainset = paddle.dataset.mnist.train()
-            validset = paddle.dataset.mnist.test()
-            train_reader = batch_generator(trainset)
-            valid_reader = batch_generator(validset)
-            searcher = DARTSearch(
-                model, train_reader, valid_reader, place, num_epochs=5)
-            searcher.train()
+        place = paddle.CUDAPlace(0)
+        model = SuperNet()
+        trainset = paddle.dataset.mnist.train()
+        validset = paddle.dataset.mnist.test()
+        train_reader = batch_generator(trainset)
+        valid_reader = batch_generator(validset)
+        searcher = DARTSearch(
+            model, train_reader, valid_reader, place, num_epochs=5)
+        searcher.train()
 
 
 if __name__ == '__main__':
