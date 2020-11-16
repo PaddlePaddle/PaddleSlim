@@ -33,13 +33,12 @@ model_list = [m for m in dir(models) if "__" not in m]
 def compress(args):
     test_reader = None
     if args.data == "mnist":
-        import paddle.dataset.mnist as reader
-        val_reader = reader.test()
+        val_dataset = paddle.vision.datasets.MNIST(mode='test')
         class_dim = 10
         image_shape = "1,28,28"
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        val_reader = reader.val()
+        val_dataset = reader.ImageNetDataset(mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -70,14 +69,13 @@ def compress(args):
         paddle.fluid.io.load_vars(
             exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
-    valid_loader = paddle.io.DataLoader.from_generator(
+    valid_loader = paddle.io.DataLoader(
+        val_dataset,
+        places=place,
         feed_list=[image, label],
-        capacity=64,
-        use_double_buffer=True,
-        iterable=True)
-
-    valid_loader.set_sample_list_generator(val_reader, place)
+        drop_last=False,
+        batch_size=args.batch_size,
+        shuffle=False)
 
     def test(program):
         acc_top1_ns = []
