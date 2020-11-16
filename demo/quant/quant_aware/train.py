@@ -168,6 +168,7 @@ def compress(args):
         feed_list=[image, label],
         drop_last=True,
         batch_size=args.batch_size,
+        use_shared_memory=False,
         shuffle=True,
         num_workers=1)
     valid_loader = paddle.io.DataLoader(
@@ -176,6 +177,7 @@ def compress(args):
         feed_list=[image, label],
         drop_last=False,
         batch_size=args.batch_size,
+        use_shared_memory=False,
         shuffle=False)
 
     def test(epoch, program):

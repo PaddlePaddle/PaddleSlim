@@ -68,7 +68,7 @@ def infer_epoch(args, vocab_size, test_reader, use_cuda, i2w):
     batch_size = args.batch_size
     with paddle.static.scope_guard(paddle.static.Scope()):
         main_program = paddle.static.Program()
-        with paddle.staic.program_guard(main_program):
+        with paddle.static.program_guard(main_program):
             values, pred = net.infer_network(vocab_size, emb_size)
             for epoch in range(start_index, last_index + 1):
                 copy_program = main_program.clone()
