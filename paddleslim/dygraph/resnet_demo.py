@@ -298,10 +298,10 @@ def train_resnet():
         test_reader = paddle.batch(
             paddle.dataset.flowers.test(use_xmap=False), batch_size=batch_size)
 
-        params, _ = fluid.load_dygraph("./resnet_params.pdparams")
-        resnet.load_dict(params)
-        resnet.eval()
-        eval(resnet, test_reader)
+        #        params, _ = fluid.load_dygraph("./resnet_params.pdparams")
+        #        resnet.load_dict(params)
+        #        resnet.eval()
+        #        eval(resnet, test_reader)
         ####################pruning##############################
         from paddle.fluid.dygraph import TracedLayer
         from paddleslim.core import GraphWrapper
@@ -309,12 +309,21 @@ def train_resnet():
         from paddleslim.dygraph import *
         from functools import partial
 
-        pruner = L1NormPruner(
-            resnet, input_shape=[1, 3, 224, 224], sensitive=True)
-
-        status = pruner.status(
-            resnet, eval_func=partial(eval, resnet, test_reader))
+        pruner = L1NormFilterPruner(resnet, [1, 3, 224, 224], sensitive=True)
+        plan = pruner.uniform_prune(
+            ratio=0.5,
+            skip_vars=["conv2d_52.w_0"],
+            constrain_value=None,
+            constrain_func=None)
+        print(plan)
+        plan.apply(resnet)
+        eval(resnet, test_reader)
         return
+        #        print(plan)
+
+        #        status = pruner.status(
+        #            resnet, eval_func=partial(eval, resnet, test_reader))
+        #        return
         #
         #        plan = pruner.prune_var("conv2d_0.w_0", [0], 0.1)
         #        resnet.eval()

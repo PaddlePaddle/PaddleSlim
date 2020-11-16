@@ -13,11 +13,12 @@ class Status():
 
 
 class Pruner(object):
-    def __init__(self, model, input_shape):
+    def __init__(self, model, input_shape, sensitive=False, status=None):
         self.model = model
         self.input_shape = input_shape
         self.var_group = VarGroup(model, input_shape)
-        self._status = None
+        self._status = status
+        self.sensitive = sensitive
 
     def status(self, data=None, eval_func=None):
         if self._status is not None:
@@ -42,12 +43,10 @@ class Pruner(object):
                     _logger.debug("{}, {} has computed.".format(var_name,
                                                                 ratio))
                     continue
-
                 plan = self.prune_var(var_name, dims, ratio)
                 plan.apply(model, lazy=True)
                 pruned_metric = eval_func()
                 loss = (baseline - pruned_metric) / baseline
-
                 _logger.info("pruned param: {}; {}; loss={}".format(
                     var_name, ratio, loss))
                 sensitivities[var_name][ratio] = loss

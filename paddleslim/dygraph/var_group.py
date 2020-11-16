@@ -21,8 +21,6 @@ class VarGroup():
             for _name, _axis, _ in group:
                 if isinstance(_axis, int):
                     _axis = [_axis]  # TODO: fix
-                print("_name: {}; var_name: {}; _axis: {}; axis: {}".format(
-                    _name, var_name, _axis, axis))
                 if _name == var_name and _axis == axis:
                     return group
 

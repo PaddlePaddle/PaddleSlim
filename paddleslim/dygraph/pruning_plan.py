@@ -1,4 +1,5 @@
 import paddle
+import collections
 import numpy as np
 import logging
 from ..common import get_logger
@@ -10,12 +11,45 @@ __all__ = ['PruningPlan', 'PruningMask']
 
 
 class PruningMask():
-    def __init__(self, dims, mask):
-        self.dims = dims
-        self.mask = mask
+    def __init__(self, dims, mask, ratio):
+        self._dims = dims
+        self._mask = mask
+        self._pruned_ratio = ratio
+
+    @property
+    def dims(self):
+        return self._dims
+
+    @dims.setter
+    def dims(self, value):
+        if not isinstance(value, collections.Iterator):
+            raise ValueError(
+                "The dims of PruningMask must be instance of collections.Iterator."
+            )
+        if self._mask is not None:
+            assert (
+                len(self._mask.shape) == len(value),
+                "The length of value must be same with shape of mask in current PruningMask instance."
+            )
+        self._dims = list(value)
+
+    @property
+    def mask(self):
+        return self._mask
+
+    @mask.setter
+    def mask(self, value):
+        assert (isinstance(value, PruningMask))
+        if self._dims is not None:
+            assert (
+                len(self._mask.shape) == len(value),
+                "The length of value must be same with shape of mask in current PruningMask instance."
+            )
+        self._mask = value
 
     def __str__(self):
-        return "dims:{}\nmask:{}".format(self.dims, self.mask)
+        return "pruned ratio: {};\tpruned dims: {}.".format(self._pruned_ratio,
+                                                            self._dims)
 
 
 class PruningPlan():
@@ -25,19 +59,41 @@ class PruningPlan():
         self._model_name = model_name
         self._plan_id = model_name
         self._masks = {}  #{param_name: pruning_mask}
+        self._dims = {}
         self._pruned_size = None
         self._total_size = None
         self._pruned_flops = None
         self._pruned_size = None
         self._model_size = None
 
-    def add(self, var_name, mask):
-        assert (isinstance(mask, PruningMask))
-        self._masks[var_name] = mask
+    def add(self, var_name, pruning_mask):
+        assert (isinstance(pruning_mask, PruningMask))
+        if var_name not in self._masks:
+            self._masks[var_name] = []
+        self._masks[var_name].append(pruning_mask)
+        if var_name not in self._dims:
+            self._dims[var_name] = []
+        self._dims[var_name].append(pruning_mask.dims)
+
+    @property
+    def masks(self):
+        return self._masks
+
+    def extend(self, plan):
+        assert (isinstance(plan, PruningPlan))
+        for var_name in plan.masks:
+            for mask in plan.masks[var_name]:
+                if not self.contains(var_name, mask.dims):
+                    self.add(var_name, mask)
+
+    def contains(self, var_name, dims=None):
+        return (var_name in self._dims) and (dims is None or
+                                             dims in self._dims[var_name])
 
     def __str__(self):
         return "\n".join([
-            "name:{}\npruning plan:{}".format(name, mask)
+            "variable name:{}\t{}".format(name,
+                                          ",".join([str(m) for m in mask]))
             for name, mask in self._masks.items()
         ])
 
@@ -51,35 +107,36 @@ class PruningPlan():
         for name, sub_layer in model.named_sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
-                    dims = self._masks[param.name].dims
-                    mask = self._masks[param.name].mask
-                    t_value = param.value().get_tensor()
-                    value = np.array(t_value).astype("float32")
-                    # The name of buffer can not contains "."
-                    sub_layer.register_buffer(
-                        param.name.replace(".", "_") + "_backup",
-                        paddle.to_tensor(value))
-                    _logger.info("Backup values of {} into buffers.".format(
-                        param.name))
-                    expand_mask_shape = [1] * len(value.shape)
-                    for i in dims:
-                        expand_mask_shape[i] = value.shape[i]
-                    _logger.info("Expanded mask shape: {}".format(
-                        expand_mask_shape))
-                    expand_mask = mask.reshape(expand_mask_shape).astype(
-                        "float32")
+                    for _mask in self._masks[param.name]:
+                        dims = _mask.dims
+                        mask = _mask.mask
+                        t_value = param.value().get_tensor()
+                        value = np.array(t_value).astype("float32")
+                        # The name of buffer can not contains "."
+                        sub_layer.register_buffer(
+                            param.name.replace(".", "_") + "_backup",
+                            paddle.to_tensor(value))
+                        _logger.info("Backup values of {} into buffers.".format(
+                            param.name))
+                        expand_mask_shape = [1] * len(value.shape)
+                        for i in dims:
+                            expand_mask_shape[i] = value.shape[i]
+                        _logger.info("Expanded mask shape: {}".format(
+                            expand_mask_shape))
+                        expand_mask = mask.reshape(expand_mask_shape).astype(
+                            "float32")
 
-                    p = t_value._place()
-                    if p.is_cpu_place():
-                        place = paddle.CPUPlace()
-                    elif p.is_cuda_pinned_place():
-                        place = paddle.CUDAPinnedPlace()
-                    else:
-                        p = core.Place()
-                        p.set_place(t_value._place())
-                        place = paddle.CUDAPlace(p.gpu_device_id())
+                        p = t_value._place()
+                        if p.is_cpu_place():
+                            place = paddle.CPUPlace()
+                        elif p.is_cuda_pinned_place():
+                            place = paddle.CUDAPinnedPlace()
+                        else:
+                            p = core.Place()
+                            p.set_place(t_value._place())
+                            place = paddle.CUDAPlace(p.gpu_device_id())
 
-                    t_value.set(value * expand_mask, place)
+                        t_value.set(value * expand_mask, place)
 
     def imperative_apply(self, model):
         """
@@ -89,26 +146,27 @@ class PruningPlan():
         for name, sub_layer in model.named_sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
-                    dims = self._masks[param.name].dims
-                    mask = self._masks[param.name].mask
-                    assert (
-                        len(dims) == 1,
-                        "Imperative mode only support for pruning"
-                        "on one dimension, but get dims {} when pruning parameter {}".
-                        format(dims, param.name))
-                    t_value = param.value().get_tensor()
-                    value = np.array(t_value).astype("float32")
-                    # The name of buffer can not contains "."
-                    sub_layer.register_buffer(
-                        param.name.replace(".", "_") + "_backup",
-                        paddle.to_tensor(value))
-                    _logger.info("Backup values of {} into buffers.".format(
-                        param.name))
-                    bool_mask = mask.astype(bool)
-                    pruned_value = np.apply_along_axis(
-                        lambda data: data[~bool_mask], dims[0], value)
-                    place = fluid.CUDAPlace(0)
-                    t_value.set(pruned_value, place)
+                    for _mask in self._masks[param.name]:
+                        dims = _mask.dims
+                        mask = _mask.mask
+                        assert (
+                            len(dims) == 1,
+                            "Imperative mode only support for pruning"
+                            "on one dimension, but get dims {} when pruning parameter {}".
+                            format(dims, param.name))
+                        t_value = param.value().get_tensor()
+                        value = np.array(t_value).astype("float32")
+                        # The name of buffer can not contains "."
+                        sub_layer.register_buffer(
+                            param.name.replace(".", "_") + "_backup",
+                            paddle.to_tensor(value))
+                        _logger.info("Backup values of {} into buffers.".format(
+                            param.name))
+                        bool_mask = mask.astype(bool)
+                        pruned_value = np.apply_along_axis(
+                            lambda data: data[~bool_mask], dims[0], value)
+                        place = fluid.CUDAPlace(0)
+                        t_value.set(pruned_value, place)
 
     def restore(self, model):
         for name, sub_layer in model.named_sublayers():
