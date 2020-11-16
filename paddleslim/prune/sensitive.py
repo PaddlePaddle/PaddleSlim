@@ -57,10 +57,10 @@ def sensitivity(program,
 
 
     Args:
-        program(paddle.fluid.Program): The program to be analysised.
-        place(fluid.CPUPlace | fluid.CUDAPlace): The device place of filter parameters. 
+        program(paddle.static.Program): The program to be analysised.
+        place(paddle.CPUPlace | paddle.CUDAPlace): The device place of filter parameters. 
         param_names(list): The parameter names of convolutions to be analysised. 
-        eval_func(function): The callback function used to evaluate the model. It should accept a instance of `paddle.fluid.Program` as argument and return a score on test dataset.
+        eval_func(function): The callback function used to evaluate the model. It should accept a instance of `paddle.static.Program` as argument and return a score on test dataset.
         sensitivities_file(str): The file to save the sensitivities. It will append the latest computed sensitivities into the file. And the sensitivities in the file would not be computed again. This file can be loaded by `pickle` library.
         pruned_ratios(list): The ratios to be pruned. default: ``[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]``.
 
