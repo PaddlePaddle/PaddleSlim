@@ -119,10 +119,10 @@ class ResNet():
             input=conv, pool_type='avg', global_pooling=True)
         stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
 
-        out = fluid.layers.fc(
+        out = paddle.static.nn.fc(
             input=pool,
             size=class_dim,
-            param_attr=fluid.param_attr.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 initializer=fluid.initializer.Uniform(-stdv, stdv)))
 
         return out
@@ -149,7 +149,7 @@ class ResNet():
             bn_name = "bn_" + name
         else:
             bn_name = "bn" + name[3:]
-        return fluid.layers.batch_norm(
+        return paddle.nn.functional.batch_norm(
             input=conv,
             act=act,
             param_attr=ParamAttr(name=bn_name + '_scale'),
@@ -187,7 +187,7 @@ class ResNet():
             bn_name = "bn_" + name
         else:
             bn_name = "bn" + name[3:]
-        return fluid.layers.batch_norm(
+        return paddle.nn.functional.batch_norm(
             input=conv,
             act=act,
             param_attr=ParamAttr(name=bn_name + '_scale'),
@@ -236,7 +236,7 @@ class ResNet():
             if_first=if_first,
             name=name + "_branch1")
 
-        return fluid.layers.elementwise_add(x=short, y=conv2, act='relu')
+        return paddle.add(x=short, y=conv2, act='relu')
 
     def basic_block(self, input, num_filters, stride, name, if_first):
         conv0 = self.conv_bn_layer(
@@ -258,7 +258,7 @@ class ResNet():
             stride,
             if_first=if_first,
             name=name + "_branch1")
-        return fluid.layers.elementwise_add(x=short, y=conv1, act='relu')
+        return paddle.add(x=short, y=conv1, act='relu')
 
 
 def ResNet18_vd():

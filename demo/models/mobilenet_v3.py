@@ -117,11 +117,11 @@ class MobileNetV3():
             bias_attr=False)
         #conv = fluid.layers.hard_swish(conv)
         conv = self.hard_swish(conv)
-        out = fluid.layers.fc(input=conv,
-                              size=class_dim,
-                              act='softmax',
-                              param_attr=ParamAttr(name='fc_weights'),
-                              bias_attr=ParamAttr(name='fc_offset'))
+        out = paddle.static.nn.fc(input=conv,
+                                  size=class_dim,
+                                  act='softmax',
+                                  param_attr=ParamAttr(name='fc_weights'),
+                                  bias_attr=ParamAttr(name='fc_offset'))
         return out
 
     def conv_bn_layer(self,
@@ -147,28 +147,26 @@ class MobileNetV3():
             param_attr=ParamAttr(name=name + '_weights'),
             bias_attr=False)
         bn_name = name + '_bn'
-        bn = fluid.layers.batch_norm(
+        bn = paddle.nn.functional.batch_norm(
             input=conv,
             param_attr=ParamAttr(
                 name=bn_name + "_scale",
-                regularizer=fluid.regularizer.L2DecayRegularizer(
-                    regularization_coeff=0.0)),
+                regularizer=paddle.regularizer.L2Decay(coeff=0.0)),
             bias_attr=ParamAttr(
                 name=bn_name + "_offset",
-                regularizer=fluid.regularizer.L2DecayRegularizer(
-                    regularization_coeff=0.0)),
+                regularizer=paddle.regularizer.L2Decay(coeff=0.0)),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
         if if_act:
             if act == 'relu':
-                bn = fluid.layers.relu(bn)
+                bn = paddle.nn.functional.relu(bn)
             elif act == 'hard_swish':
                 #bn = fluid.layers.hard_swish(bn)
                 bn = self.hard_swish(bn)
         return bn
 
     def hard_swish(self, x):
-        return x * fluid.layers.relu6(x + 3) / 6.
+        return x * paddle.nn.functional.relu6(x + 3) / 6.
 
     def se_block(self, input, num_out_filter, ratio=4, name=None):
         num_mid_filter = int(num_out_filter // ratio)
@@ -189,7 +187,7 @@ class MobileNetV3():
             param_attr=ParamAttr(name=name + '_2_weights'),
             bias_attr=ParamAttr(name=name + '_2_offset'))
 
-        scale = fluid.layers.elementwise_mul(x=input, y=conv2, axis=0)
+        scale = paddle.multiply(x=input, y=conv2, axis=0)
         return scale
 
     def residual_unit(self,
@@ -227,7 +225,7 @@ class MobileNetV3():
             name=name + '_depthwise')
 
         if use_se:
-            with fluid.name_scope('se_block_skip'):
+            with paddle.static.name_scope('se_block_skip'):
                 conv1 = self.se_block(
                     input=conv1,
                     num_out_filter=num_mid_filter,
@@ -244,8 +242,7 @@ class MobileNetV3():
         if num_in_filter != num_out_filter or stride != 1:
             return conv2
         else:
-            return fluid.layers.elementwise_add(
-                x=input_data, y=conv2, act=None)
+            return paddle.add(x=input_data, y=conv2, act=None)
 
 
 def MobileNetV3_small_x0_25():

@@ -108,11 +108,11 @@ class MobileNetV2():
             pool_type='avg',
             global_pooling=True)
 
-        output = fluid.layers.fc(input=input,
-                                 size=class_dim,
-                                 act='softmax',
-                                 param_attr=ParamAttr(name='fc10_weights'),
-                                 bias_attr=ParamAttr(name='fc10_offset'))
+        output = paddle.static.nn.fc(input=input,
+                                     size=class_dim,
+                                     act='softmax',
+                                     param_attr=ParamAttr(name='fc10_weights'),
+                                     bias_attr=ParamAttr(name='fc10_offset'))
         return output
 
     def conv_bn_layer(self,
@@ -138,19 +138,19 @@ class MobileNetV2():
             param_attr=ParamAttr(name=name + '_weights'),
             bias_attr=False)
         bn_name = name + '_bn'
-        bn = fluid.layers.batch_norm(
+        bn = paddle.nn.functional.batch_norm(
             input=conv,
             param_attr=ParamAttr(name=bn_name + "_scale"),
             bias_attr=ParamAttr(name=bn_name + "_offset"),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
         if if_act:
-            return fluid.layers.relu6(bn)
+            return paddle.nn.functional.relu6(bn)
         else:
             return bn
 
     def shortcut(self, input, data_residual):
-        return fluid.layers.elementwise_add(input, data_residual)
+        return paddle.add(input, data_residual)
 
     def inverted_residual_unit(self,
                                input,

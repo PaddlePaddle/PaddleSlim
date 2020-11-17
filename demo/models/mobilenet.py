@@ -127,14 +127,14 @@ class MobileNet():
             pool_stride=1,
             pool_type='avg',
             global_pooling=True)
-        with fluid.name_scope('last_fc'):
-            output = fluid.layers.fc(input=input,
-                                     size=class_dim,
-                                     act='softmax',
-                                     param_attr=ParamAttr(
-                                         initializer=MSRA(),
-                                         name="fc7_weights"),
-                                     bias_attr=ParamAttr(name="fc7_offset"))
+        with paddle.name_scope('last_fc'):
+            output = paddle.static.nn.fc(input=input,
+                                         size=class_dim,
+                                         act='softmax',
+                                         param_attr=ParamAttr(
+                                             initializer=MSRA(),
+                                             name="fc7_weights"),
+                                         bias_attr=ParamAttr(name="fc7_offset"))
 
         return output
 
@@ -162,7 +162,7 @@ class MobileNet():
                 initializer=MSRA(), name=name + "_weights"),
             bias_attr=False)
         bn_name = name + "_bn"
-        return fluid.layers.batch_norm(
+        return paddle.nn.functional.batch_norm(
             input=conv,
             act=act,
             param_attr=ParamAttr(name=bn_name + "_scale"),
