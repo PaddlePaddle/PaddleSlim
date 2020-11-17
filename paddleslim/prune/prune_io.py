@@ -17,7 +17,7 @@ def save_model(exe, graph, dirname):
     Save weights of model and information of shapes into filesystem.
 
     Args:
-        exe(paddle.fluid.Executor): The executor used to save model.
+        exe(paddle.static.Executor): The executor used to save model.
         graph(Program|Graph): The graph to be saved.
         dirname(str): The directory that the model saved into.
     """

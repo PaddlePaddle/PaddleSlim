@@ -64,7 +64,7 @@ class Pruner():
 
         Args:
 
-            program(fluid.Program): The program to be pruned.
+            program(paddle.static.Program): The program to be pruned.
             scope(fluid.Scope): The scope storing paramaters to be pruned.
             params(list<str>): A list of parameter names to be pruned.
             ratios(list<float>): A list of ratios to be used to pruning parameters.

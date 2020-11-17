@@ -79,8 +79,8 @@ def piecewise_decay(args):
 
 def cosine_decay(args):
     step = int(math.ceil(float(args.total_images) / args.batch_size))
-    learning_rate = paddle.optimizer.lr.cosine_decay(
-        learning_rate=args.lr, step_each_epoch=step, epochs=args.num_epochs)
+    learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
+        learning_rate=args.lr, T_max=args.num_epochs)
     optimizer = paddle.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
@@ -99,14 +99,14 @@ def compress(args):
     train_reader = None
     test_reader = None
     if args.data == "mnist":
-        train_reader = paddle.dataset.mnist.train()
-        val_reader = paddle.dataset.mnist.test()
+        train_dataset = paddle.vision.datasets.MNIST(mode='train')
+        val_dataset = paddle.vision.datasets.MNIST(mode='test')
         class_dim = 10
         image_shape = "1,28,28"
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_reader = reader.train()
-        val_reader = reader.val()
+        train_dataset = reader.ImageNetDataset(mode='train')
+        val_dataset = reader.ImageNetDataset(mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -143,22 +143,23 @@ def compress(args):
         paddle.fluid.io.load_vars(
             exe, args.pretrained_model, predicate=if_exist)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
-    train_reader = paddle.batch(
-        train_reader, batch_size=args.batch_size, drop_last=True)
-
-    train_loader = paddle.io.DataLoader.from_generator(
+    train_loader = paddle.io.DataLoader(
+        train_dataset,
+        places=places,
         feed_list=[image, label],
-        capacity=64,
-        use_double_buffer=True,
-        iterable=True)
-    valid_loader = paddle.io.DataLoader.from_generator(
+        drop_last=True,
+        batch_size=args.batch_size,
+        shuffle=True,
+        use_shared_memory=False,
+        num_workers=16)
+    valid_loader = paddle.io.DataLoader(
+        val_dataset,
+        places=place,
         feed_list=[image, label],
-        capacity=64,
-        use_double_buffer=True,
-        iterable=True)
-    train_loader.set_sample_list_generator(train_reader, places)
-    valid_loader.set_sample_list_generator(val_reader, place)
+        drop_last=False,
+        use_shared_memory=False,
+        batch_size=args.batch_size,
+        shuffle=False)
 
     def test(epoch, program):
         acc_top1_ns = []
@@ -237,8 +238,8 @@ def compress(args):
         if args.save_inference:
             infer_model_path = os.path.join(args.model_path, "infer_models",
                                             str(i))
-            paddle.fluid.io.save_inference_model(infer_model_path, ["image"],
-                                                 [out], exe, pruned_val_program)
+            paddle.static.save_inference_model(infer_model_path, ["image"],
+                                               [out], exe, pruned_val_program)
             _logger.info("Saved inference model into [{}]".format(
                 infer_model_path))
 
