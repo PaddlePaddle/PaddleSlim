@@ -118,10 +118,7 @@ def infer_network(vocab_size, emb_size):
     analogy_c = paddle.static.data(
         name="analogy_c", shape=[None], dtype='int64')
     all_label = paddle.static.data(
-        name="all_label",
-        shape=[None, vocab_size],
-        dtype='int64',
-        append_batch_size=False)
+        name="all_label", shape=[vocab_size], dtype='int64')
     emb_all_label = paddel.static.nn.embedding(
         input=all_label, size=[vocab_size, emb_size], param_attr="emb")
 
