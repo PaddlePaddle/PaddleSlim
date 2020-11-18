@@ -131,7 +131,7 @@ class LSTM(RLBaseController):
                             axes=[1],
                             starts=[idx],
                             ends=[idx + 1])
-                        action = paddle.squeeze(action, axes=[1])
+                        action = paddle.squeeze(action, axis=[1])
                         action.stop_gradient = True
                     else:
                         action = fluid.layers.sampling_id(probs)
