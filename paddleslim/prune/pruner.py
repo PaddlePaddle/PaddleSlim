@@ -14,10 +14,9 @@
 
 import logging
 import sys
+import copy
 import numpy as np
 from functools import reduce
-import paddle.fluid as fluid
-import copy
 from ..core import VarWrapper, OpWrapper, GraphWrapper
 from .group_param import collect_convs
 from .criterion import CRITERION
@@ -38,8 +37,7 @@ class Pruner():
 
     """
 
-    def __init__(self,
-                 criterion="l1_norm",
+    def __init__(self, criterion="l1_norm",
                  idx_selector="default_idx_selector"):
         if isinstance(criterion, str):
             self.criterion = CRITERION.get(criterion)
@@ -66,7 +64,7 @@ class Pruner():
 
         Args:
 
-            program(fluid.Program): The program to be pruned.
+            program(paddle.static.Program): The program to be pruned.
             scope(fluid.Scope): The scope storing paramaters to be pruned.
             params(list<str>): A list of parameter names to be pruned.
             ratios(list<float>): A list of ratios to be used to pruning parameters.
@@ -93,8 +91,8 @@ class Pruner():
             _logger.info("pruning: {}".format(param))
             if graph.var(param) is None:
                 _logger.warn(
-                    "Variable[{}] to be pruned is not in current graph.".
-                    format(param))
+                    "Variable[{}] to be pruned is not in current graph.".format(
+                        param))
                 continue
             group = collect_convs([param], graph,
                                   visited)[0]  # [(name, axis, pruned_idx)]

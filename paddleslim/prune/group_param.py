@@ -42,7 +42,7 @@ def collect_convs(params, graph, visited={}):
 
     Args:
        params(list): A list of convolution layer's parameter names. It will collect all the groups that contains anyone of these parameters.
-       graph(paddle.fluid.Program | GraphWrapper): The graph used to search the groups.
+       graph(paddle.static.Program | GraphWrapper): The graph used to search the groups.
 
     Returns:
        list<list<tuple>>: The groups.
