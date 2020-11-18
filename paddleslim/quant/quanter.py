@@ -311,36 +311,36 @@ def quant_aware(program,
 @quant_aware.register(paddle.nn.Layer)
 def _(model: paddle.nn.Layer,
       config=None,
-      weight_quantize_func=None,
-      act_quantize_func=None,
-      weight_preprocess_func=None,
-      act_preprocess_func=None):
+      weight_preprocess_layer=None,
+      act_preprocess_layer=None,
+      weight_quantize_layer=None,
+      act_quantize_layer=None):
     """
     This is function overload for dygraph model quant aware training.
     Args:
         model(nn.Layer)
         config(dict, optional): configs for quantization. if None, will use default config. 
                 Default: None.
-        weight_quantize_func(function): Function that defines how to quantize weight. Using this
-                can quickly test if user's quantization method works or not. In this function, user should
-                both define quantization function and dequantization function, that is, the function's input
-                is non-quantized weight and function returns dequantized weight. If None, will use
+        weight_quantize_layer(nn.Layer, optional): Layer that defines how to quantize weight. Using this
+                can quickly test if user's quantization method works or not. In this Layer, user should
+                both define quantization method and dequantization method, that is, the Layer's input
+                is non-quantized weight and returns dequantized weight. If None, will use
                 quantization op defined by 'weight_quantize_type'.
                 Default is None.
-        act_quantize_func(function): Function that defines how to quantize activation. Using this
-                can quickly test if user's quantization method works or not. In this function, user should
-                both define quantization and dequantization process, that is, the function's input
-                is non-quantized activation and function returns dequantized activation. If None, will use 
+        act_quantize_layer(nn.Layer, optional): Layer that defines how to quantize activation. Using this
+                can quickly test if user's quantization method works or not. In this Layer, user should
+                both define quantization and dequantization process, that is, the Layer's input
+                is non-quantized activation and returns dequantized activation. If None, will use 
                 quantization op defined by 'activation_quantize_type'.
                 Default is None.
-        weight_preprocess_func(function): Function that defines how to preprocess weight before quantization. Using this
-                can quickly test if user's preprocess method works or not. The function's input
-                is non-quantized weight and function returns processed weight to be quantized. If None, the weight will
+        weight_preprocess_layer(nn.Layer, optional): Layer that defines how to preprocess weight before quantization. Using this
+                can quickly test if user's preprocess method works or not. The Layer's input
+                is non-quantized weight and returns processed weight to be quantized. If None, the weight will
                 be quantized directly.
                 Default is None.
-        act_preprocess_func(function): Function that defines how to preprocess activation before quantization. Using this
-                can quickly test if user's preprocess method works or not. The function's input
-                is non-quantized activation and function returns processed activation to be quantized. If None, the activation will
+        act_preprocess_layer(nn.Layer, optional): Layer that defines how to preprocess activation before quantization. Using this
+                can quickly test if user's preprocess method works or not. The Layer's input
+                is non-quantized activation and returns processed activation to be quantized. If None, the activation will
                 be quantized directly.
                 Default is None.
 
@@ -357,7 +357,11 @@ def _(model: paddle.nn.Layer,
     imperative_qat = ImperativeQuantAware(
         weight_quantize_type=config['weight_quantize_type'],
         activation_quantize_type=config['activation_quantize_type'],
-        quantizable_layer_type=config['quantizable_layer_type'])
+        quantizable_layer_type=config['quantizable_layer_type'],
+        weight_preprocess_layer=weight_preprocess_layer,
+        act_preprocess_layer=act_preprocess_layer,
+        weight_quantize_layer=weight_quantize_layer,
+        act_quantize_layer=act_quantize_layer)
 
     imperative_qat.quantize(model)
 
