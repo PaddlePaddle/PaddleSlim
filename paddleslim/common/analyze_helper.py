@@ -125,8 +125,7 @@ class VarCollector(object):
         with paddle.static.program_guard(self.program):
             for act_name in self.real_names:
                 act = self.program.global_block().var(act_name)
-                act = fluid.layers.reduce_max(
-                    paddle.abs(act), name=act_name + "_reduced")
+                act = paddle.max(paddle.abs(act), name=act_name + "_reduced")
                 fetch_list.append(act_name + "_reduced.tmp_0")
 
         if not hasattr(self.program, '_program'):
