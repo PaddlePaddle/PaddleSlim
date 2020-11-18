@@ -105,18 +105,15 @@ def compress(args):
         'moving_rate': 0.9,
     }
 
-    train_reader = None
-    test_reader = None
     if args.data == "mnist":
-        import paddle.dataset.mnist as reader
-        train_reader = reader.train()
-        val_reader = reader.test()
+        train_dataset = paddle.vision.datasets.MNIST(mode='train')
+        val_dataset = paddle.vision.datasets.MNIST(mode='test')
         class_dim = 10
         image_shape = "1,28,28"
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_reader = reader.train()
-        val_reader = reader.val()
+        train_dataset = reader.ImageNetDataset(mode='train')
+        val_dataset = reader.ImageNetDataset(mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -162,24 +159,26 @@ def compress(args):
     if args.pretrained_model:
         paddle.static.load(train_prog, args.pretrained_model, exe)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
-    train_reader = paddle.batch(
-        train_reader, batch_size=args.batch_size, drop_last=True)
     places = paddle.static.cuda_places(
     ) if args.use_gpu else paddle.static.cpu_places()
 
-    train_loader = paddle.io.DataLoader.from_generator(
+    train_loader = paddle.io.DataLoader(
+        train_dataset,
+        places=places,
         feed_list=[image, label],
-        capacity=512,
-        use_double_buffer=True,
-        iterable=True)
-    valid_loader = paddle.io.DataLoader.from_generator(
+        drop_last=True,
+        batch_size=args.batch_size,
+        use_shared_memory=False,
+        shuffle=True,
+        num_workers=1)
+    valid_loader = paddle.io.DataLoader(
+        val_dataset,
+        places=place,
         feed_list=[image, label],
-        capacity=512,
-        use_double_buffer=True,
-        iterable=True)
-    train_loader.set_sample_list_generator(train_reader, places)
-    valid_loader.set_sample_list_generator(val_reader, places[0])
+        drop_last=False,
+        batch_size=args.batch_size,
+        use_shared_memory=False,
+        shuffle=False)
 
     def test(epoch, program):
         batch_id = 0

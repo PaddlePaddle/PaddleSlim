@@ -55,10 +55,10 @@ compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, f
 ### 关掉指定build策略
 
 ```
-build_strategy = fluid.BuildStrategy()
+build_strategy = paddle.static.BuildStrategy()
 build_strategy.fuse_all_reduce_ops = False
 build_strategy.sync_batch_norm = False
-exec_strategy = fluid.ExecutionStrategy()
+exec_strategy = paddle.static.ExecutionStrategy()
 compiled_train_prog = compiled_train_prog.with_data_parallel(
         loss_name=avg_cost.name,
         build_strategy=build_strategy,

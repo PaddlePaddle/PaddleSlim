@@ -17,7 +17,7 @@
 - ``'val_list.txt'``文件
 
 ### 准备需要量化的模型
-因为离线量化接口只支持加载通过``fluid.io.save_inference_model``接口保存的模型，因此如果您的模型是通过其他接口保存的，那需要先将模型进行转化。本示例将以分类模型为例进行说明。
+因为离线量化接口只支持加载通过``paddle.static.save_inference_model``接口保存的模型，因此如果您的模型是通过其他接口保存的，那需要先将模型进行转化。本示例将以分类模型为例进行说明。
 
 首先在[imagenet分类模型](https://github.com/PaddlePaddle/models/tree/develop/PaddleCV/image_classification#%E5%B7%B2%E5%8F%91%E5%B8%83%E6%A8%A1%E5%9E%8B%E5%8F%8A%E5%85%B6%E6%80%A7%E8%83%BD)中下载训练好的``mobilenetv1``模型。
 
