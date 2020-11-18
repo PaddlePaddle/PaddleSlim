@@ -110,15 +110,14 @@ def create_optimizer(args):
 def compress(args):
 
     if args.data == "mnist":
-        import paddle.dataset.mnist as reader
-        train_reader = reader.train()
-        val_reader = reader.test()
+        train_dataset = paddle.vision.datasets.MNIST(mode='train')
+        val_dataset = paddle.vision.datasets.MNIST(mode='test')
         class_dim = 10
         image_shape = "1,28,28"
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_reader = reader.train()
-        val_reader = reader.val()
+        train_dataset = reader.ImageNetDataset(mode='train')
+        val_dataset = reader.ImageNetDataset(mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -148,27 +147,27 @@ def compress(args):
         opt.minimize(avg_cost)
 
     place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
+    places = paddle.static.cuda_places(
+    ) if args.use_gpu else paddle.static.cpu_places()
     exe = paddle.static.Executor(place)
     exe.run(paddle.static.default_startup_program())
 
-    train_reader = paddle.batch(
-        train_reader, batch_size=args.batch_size, drop_last=True)
-    train_loader = paddle.io.DataLoader.from_generator(
+    train_loader = paddle.io.DataLoader(
+        train_dataset,
+        places=places,
         feed_list=[image, label],
-        capacity=512,
-        use_double_buffer=True,
-        iterable=True)
-    places = paddle.static.cuda_places(
-    ) if args.use_gpu else paddle.static.cpu_places()
-    train_loader.set_sample_list_generator(train_reader, places)
+        drop_last=True,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=1)
 
-    val_reader = paddle.batch(val_reader, batch_size=args.batch_size)
-    valid_loader = paddle.io.DataLoader.from_generator(
+    valid_loader = paddle.io.DataLoader(
+        val_dataset,
+        places=place,
         feed_list=[image, label],
-        capacity=512,
-        use_double_buffer=True,
-        iterable=True)
-    valid_loader.set_sample_list_generator(val_reader, places[0])
+        drop_last=False,
+        batch_size=args.batch_size,
+        shuffle=False)
 
     if args.analysis:
         # get all activations names

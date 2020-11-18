@@ -53,7 +53,7 @@ class TestQuantAwareCase1(StaticCase):
 
     def test_quant_op(self):
         startup_prog, train_prog = self.get_model()
-        place = paddle.CUDAPlace(0) if paddle.fluid.is_compiled_with_cuda(
+        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(startup_prog)
@@ -107,24 +107,26 @@ class TestQuantAwareCase2(StaticCase):
         main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
 
-        place = paddle.CUDAPlace(0) if paddle.fluid.is_compiled_with_cuda(
+        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.static.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(paddle.static.default_startup_program())
-        train_loader = paddle.io.DataLoader.from_generator(
+
+        def transform(x):
+            return np.reshape(x, [1, 28, 28])
+
+        train_dataset = paddle.vision.datasets.MNIST(
+            mode='train', backend='cv2', transform=transform)
+        test_dataset = paddle.vision.datasets.MNIST(
+            mode='test', backend='cv2', transform=transform)
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            places=place,
             feed_list=[image, label],
-            capacity=512,
-            use_double_buffer=True,
-            iterable=True)
-        valid_loader = paddle.io.DataLoader.from_generator(
-            feed_list=[image, label],
-            capacity=512,
-            use_double_buffer=True,
-            iterable=True)
-        train_reader = paddle.batch(paddle.dataset.mnist.train(), batch_size=64)
-        eval_reader = paddle.batch(paddle.dataset.mnist.test(), batch_size=64)
-        train_loader.set_sample_list_generator(train_reader, place)
-        valid_loader.set_sample_list_generator(eval_reader, place)
+            drop_last=True,
+            batch_size=64)
+        valid_loader = paddle.io.DataLoader(
+            test_dataset, places=place, feed_list=[image, label], batch_size=64)
 
         def train(program):
             iter = 0

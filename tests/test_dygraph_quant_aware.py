@@ -20,8 +20,6 @@ import logging
 import paddle
 import paddle.nn as nn
 import paddle.fluid as fluid
-from paddle.fluid.optimizer import AdamOptimizer
-from paddle.fluid.dygraph.container import Sequential
 from paddle.fluid.dygraph.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D
 from paddle.fluid.dygraph.nn import Linear
@@ -36,7 +34,7 @@ _logger = get_logger(
 class ImperativeLenet(nn.Layer):
     def __init__(self, num_classes=10, classifier_activation='softmax'):
         super(ImperativeLenet, self).__init__()
-        self.features = Sequential(
+        self.features = paddle.nn.Sequential(
             Conv2D(
                 num_channels=1,
                 num_filters=6,
@@ -54,7 +52,7 @@ class ImperativeLenet(nn.Layer):
             Pool2D(
                 pool_size=2, pool_type='max', pool_stride=2))
 
-        self.fc = Sequential(
+        self.fc = paddle.nn.Sequential(
             Linear(
                 input_dim=400, output_dim=120),
             Linear(
@@ -66,7 +64,7 @@ class ImperativeLenet(nn.Layer):
     def forward(self, inputs):
         x = self.features(inputs)
 
-        x = fluid.layers.flatten(x, 1)
+        x = paddle.flatten(x, 1)
         x = self.fc(x)
         return x
 
@@ -79,83 +77,79 @@ class TestImperativeQatDefaultConfig(unittest.TestCase):
     """
 
     def test_qat_acc(self):
-        with fluid.dygraph.guard():
-            lenet = ImperativeLenet()
-            quant_lenet = quant_aware(lenet)
+        lenet = ImperativeLenet()
+        quant_lenet = quant_aware(lenet)
 
-            train_reader = paddle.batch(
-                paddle.dataset.mnist.train(), batch_size=32, drop_last=True)
-            test_reader = paddle.batch(
-                paddle.dataset.mnist.test(), batch_size=32)
+        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
+        ) else paddle.CPUPlace()
 
-            def train(model):
-                adam = AdamOptimizer(
-                    learning_rate=0.001, parameter_list=model.parameters())
-                epoch_num = 1
-                for epoch in range(epoch_num):
-                    model.train()
-                    for batch_id, data in enumerate(train_reader()):
-                        x_data = np.array(
-                            [x[0].reshape(1, 28, 28)
-                             for x in data]).astype('float32')
-                        y_data = np.array(
-                            [x[1] for x in data]).astype('int64').reshape(-1, 1)
+        def transform(x):
+            return np.reshape(x, [1, 28, 28])
 
-                        img = fluid.dygraph.to_variable(x_data)
-                        label = fluid.dygraph.to_variable(y_data)
-                        out = model(img)
-                        acc = fluid.layers.accuracy(out, label)
-                        loss = fluid.layers.cross_entropy(out, label)
-                        avg_loss = fluid.layers.mean(loss)
-                        avg_loss.backward()
-                        adam.minimize(avg_loss)
-                        model.clear_gradients()
-                        if batch_id % 100 == 0:
-                            _logger.info(
-                                "Train | At epoch {} step {}: loss = {:}, acc= {:}".
-                                format(epoch, batch_id,
-                                       avg_loss.numpy(), acc.numpy()))
+        train_dataset = paddle.vision.datasets.MNIST(
+            mode='train', backend='cv2', transform=transform)
+        train_reader = paddle.io.DataLoader(
+            train_dataset, drop_last=True, places=place, batch_size=64)
+        val_dataset = paddle.vision.datasets.MNIST(
+            mode='test', backend='cv2', transform=transform)
+        test_reader = paddle.io.DataLoader(
+            val_dataset, places=place, batch_size=64)
 
-            def test(model):
-                model.eval()
-                avg_acc = [[], []]
-                for batch_id, data in enumerate(test_reader()):
-                    x_data = np.array([x[0].reshape(1, 28, 28)
-                                       for x in data]).astype('float32')
-                    y_data = np.array(
-                        [x[1] for x in data]).astype('int64').reshape(-1, 1)
-
-                    img = fluid.dygraph.to_variable(x_data)
-                    label = fluid.dygraph.to_variable(y_data)
-
+        def train(model):
+            adam = paddle.optimizer.Adam(
+                learning_rate=0.001, parameters=model.parameters())
+            epoch_num = 1
+            for epoch in range(epoch_num):
+                model.train()
+                for batch_id, data in enumerate(train_reader):
+                    img = paddle.to_tensor(data[0])
+                    label = paddle.to_tensor(data[1])
                     out = model(img)
-                    acc_top1 = fluid.layers.accuracy(
-                        input=out, label=label, k=1)
-                    acc_top5 = fluid.layers.accuracy(
-                        input=out, label=label, k=5)
-                    avg_acc[0].append(acc_top1.numpy())
-                    avg_acc[1].append(acc_top5.numpy())
+                    acc = paddle.metric.accuracy(out, label)
+                    loss = paddle.nn.functional.loss.cross_entropy(out, label)
+                    avg_loss = paddle.mean(loss)
+                    avg_loss.backward()
+                    adam.minimize(avg_loss)
+                    model.clear_gradients()
                     if batch_id % 100 == 0:
                         _logger.info(
-                            "Test | step {}: acc1 = {:}, acc5 = {:}".format(
-                                batch_id, acc_top1.numpy(), acc_top5.numpy()))
+                            "Train | At epoch {} step {}: loss = {:}, acc= {:}".
+                            format(epoch, batch_id,
+                                   avg_loss.numpy(), acc.numpy()))
 
-                _logger.info("Test |Average: acc_top1 {}, acc_top5 {}".format(
-                    np.mean(avg_acc[0]), np.mean(avg_acc[1])))
-                return np.mean(avg_acc[0]), np.mean(avg_acc[1])
+        def test(model):
+            model.eval()
+            avg_acc = [[], []]
+            for batch_id, data in enumerate(test_reader):
+                img = paddle.to_tensor(data[0])
+                label = paddle.to_tensor(data[1])
 
-            train(lenet)
-            top1_1, top5_1 = test(lenet)
+                out = model(img)
+                acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
+                acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
+                avg_acc[0].append(acc_top1.numpy())
+                avg_acc[1].append(acc_top5.numpy())
+                if batch_id % 100 == 0:
+                    _logger.info(
+                        "Test | step {}: acc1 = {:}, acc5 = {:}".format(
+                            batch_id, acc_top1.numpy(), acc_top5.numpy()))
 
-            quant_lenet.__init__()
-            train(quant_lenet)
-            top1_2, top5_2 = test(quant_lenet)
+            _logger.info("Test |Average: acc_top1 {}, acc_top5 {}".format(
+                np.mean(avg_acc[0]), np.mean(avg_acc[1])))
+            return np.mean(avg_acc[0]), np.mean(avg_acc[1])
 
-            # values before quantization and after quantization should be close
-            _logger.info("Before quantization: top1: {}, top5: {}".format(
-                top1_1, top5_1))
-            _logger.info("After quantization: top1: {}, top5: {}".format(
-                top1_2, top5_2))
+        train(lenet)
+        top1_1, top5_1 = test(lenet)
+
+        quant_lenet.__init__()
+        train(quant_lenet)
+        top1_2, top5_2 = test(quant_lenet)
+
+        # values before quantization and after quantization should be close
+        _logger.info("Before quantization: top1: {}, top5: {}".format(top1_1,
+                                                                      top5_1))
+        _logger.info("After quantization: top1: {}, top5: {}".format(top1_2,
+                                                                     top5_2))
 
 
 class TestImperativeQatUserDefineConfig(unittest.TestCase):
@@ -165,88 +159,84 @@ class TestImperativeQatUserDefineConfig(unittest.TestCase):
     """
 
     def test_qat_acc(self):
-        with fluid.dygraph.guard():
-            lenet = ImperativeLenet()
-            quant_config = {
-                'weight_quantize_type': 'abs_max',
-                'activation_quantize_type': 'moving_average_abs_max',
-                'quantizable_layer_type': ['Conv2D', 'Linear']
-            }
-            quant_lenet = quant_aware(lenet, quant_config)
+        lenet = ImperativeLenet()
+        quant_config = {
+            'weight_quantize_type': 'abs_max',
+            'activation_quantize_type': 'moving_average_abs_max',
+            'quantizable_layer_type': ['Conv2D', 'Linear']
+        }
+        quant_lenet = quant_aware(lenet, quant_config)
 
-            train_reader = paddle.batch(
-                paddle.dataset.mnist.train(), batch_size=32, drop_last=True)
-            test_reader = paddle.batch(
-                paddle.dataset.mnist.test(), batch_size=32)
+        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
+        ) else paddle.CPUPlace()
 
-            def train(model):
-                adam = AdamOptimizer(
-                    learning_rate=0.001, parameter_list=model.parameters())
-                epoch_num = 1
-                for epoch in range(epoch_num):
-                    model.train()
-                    for batch_id, data in enumerate(train_reader()):
-                        x_data = np.array(
-                            [x[0].reshape(1, 28, 28)
-                             for x in data]).astype('float32')
-                        y_data = np.array(
-                            [x[1] for x in data]).astype('int64').reshape(-1, 1)
+        def transform(x):
+            return np.reshape(x, [1, 28, 28])
 
-                        img = fluid.dygraph.to_variable(x_data)
-                        label = fluid.dygraph.to_variable(y_data)
-                        out = model(img)
-                        acc = fluid.layers.accuracy(out, label)
-                        loss = fluid.layers.cross_entropy(out, label)
-                        avg_loss = fluid.layers.mean(loss)
-                        avg_loss.backward()
-                        adam.minimize(avg_loss)
-                        model.clear_gradients()
-                        if batch_id % 100 == 0:
-                            _logger.info(
-                                "Train | At epoch {} step {}: loss = {:}, acc= {:}".
-                                format(epoch, batch_id,
-                                       avg_loss.numpy(), acc.numpy()))
+        train_dataset = paddle.vision.datasets.MNIST(
+            mode='train', backend='cv2', transform=transform)
+        train_reader = paddle.io.DataLoader(
+            train_dataset, drop_last=True, places=place, batch_size=64)
+        val_dataset = paddle.vision.datasets.MNIST(
+            mode='test', backend='cv2', transform=transform)
+        test_reader = paddle.io.DataLoader(
+            val_dataset, places=place, batch_size=64)
 
-            def test(model):
-                model.eval()
-                avg_acc = [[], []]
-                for batch_id, data in enumerate(test_reader()):
-                    x_data = np.array([x[0].reshape(1, 28, 28)
-                                       for x in data]).astype('float32')
-                    y_data = np.array(
-                        [x[1] for x in data]).astype('int64').reshape(-1, 1)
-
-                    img = fluid.dygraph.to_variable(x_data)
-                    label = fluid.dygraph.to_variable(y_data)
-
+        def train(model):
+            adam = paddle.optimizer.Adam(
+                learning_rate=0.001, parameters=model.parameters())
+            epoch_num = 1
+            for epoch in range(epoch_num):
+                model.train()
+                for batch_id, data in enumerate(train_reader):
+                    img = paddle.to_tensor(data[0])
+                    label = paddle.to_tensor(data[1])
                     out = model(img)
-                    acc_top1 = fluid.layers.accuracy(
-                        input=out, label=label, k=1)
-                    acc_top5 = fluid.layers.accuracy(
-                        input=out, label=label, k=5)
-                    avg_acc[0].append(acc_top1.numpy())
-                    avg_acc[1].append(acc_top5.numpy())
+                    acc = paddle.metric.accuracy(out, label)
+                    loss = paddle.nn.functional.loss.cross_entropy(out, label)
+                    avg_loss = paddle.mean(loss)
+                    avg_loss.backward()
+                    adam.minimize(avg_loss)
+                    model.clear_gradients()
                     if batch_id % 100 == 0:
                         _logger.info(
-                            "Test | step {}: acc1 = {:}, acc5 = {:}".format(
-                                batch_id, acc_top1.numpy(), acc_top5.numpy()))
+                            "Train | At epoch {} step {}: loss = {:}, acc= {:}".
+                            format(epoch, batch_id,
+                                   avg_loss.numpy(), acc.numpy()))
 
-                _logger.info("Test |Average: acc_top1 {}, acc_top5 {}".format(
-                    np.mean(avg_acc[0]), np.mean(avg_acc[1])))
-                return np.mean(avg_acc[0]), np.mean(avg_acc[1])
+        def test(model):
+            model.eval()
+            avg_acc = [[], []]
+            for batch_id, data in enumerate(test_reader):
+                img = paddle.to_tensor(data[0])
+                label = paddle.to_tensor(data[1])
 
-            train(lenet)
-            top1_1, top5_1 = test(lenet)
+                out = model(img)
+                acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
+                acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
+                avg_acc[0].append(acc_top1.numpy())
+                avg_acc[1].append(acc_top5.numpy())
+                if batch_id % 100 == 0:
+                    _logger.info(
+                        "Test | step {}: acc1 = {:}, acc5 = {:}".format(
+                            batch_id, acc_top1.numpy(), acc_top5.numpy()))
 
-            quant_lenet.__init__()
-            train(quant_lenet)
-            top1_2, top5_2 = test(quant_lenet)
+            _logger.info("Test |Average: acc_top1 {}, acc_top5 {}".format(
+                np.mean(avg_acc[0]), np.mean(avg_acc[1])))
+            return np.mean(avg_acc[0]), np.mean(avg_acc[1])
 
-            # values before quantization and after quantization should be close
-            _logger.info("Before quantization: top1: {}, top5: {}".format(
-                top1_1, top5_1))
-            _logger.info("After quantization: top1: {}, top5: {}".format(
-                top1_2, top5_2))
+        train(lenet)
+        top1_1, top5_1 = test(lenet)
+
+        quant_lenet.__init__()
+        train(quant_lenet)
+        top1_2, top5_2 = test(quant_lenet)
+
+        # values before quantization and after quantization should be close
+        _logger.info("Before quantization: top1: {}, top5: {}".format(top1_1,
+                                                                      top5_1))
+        _logger.info("After quantization: top1: {}, top5: {}".format(top1_2,
+                                                                     top5_2))
 
 
 if __name__ == '__main__':
