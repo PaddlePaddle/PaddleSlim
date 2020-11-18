@@ -112,20 +112,24 @@ def skip_gram_word2vec(dict_size, embedding_size, is_sparse=False, neg_num=5):
 
 def infer_network(vocab_size, emb_size):
     analogy_a = paddle.static.data(
-        name="analogy_a", shape=[None], dtype='int64')
+        name="analogy_a", shape=[None, 1], dtype='int64')
     analogy_b = paddle.static.data(
-        name="analogy_b", shape=[None], dtype='int64')
+        name="analogy_b", shape=[None, 1], dtype='int64')
     analogy_c = paddle.static.data(
-        name="analogy_c", shape=[None], dtype='int64')
+        name="analogy_c", shape=[None, 1], dtype='int64')
     all_label = paddle.static.data(
-        name="all_label", shape=[vocab_size], dtype='int64')
-    emb_all_label = paddel.static.nn.embedding(
+        name="all_label", shape=[vocab_size, 1], dtype='int64')
+    all_label = paddle.reshape(all_label, [-1])
+    emb_all_label = paddle.static.nn.embedding(
         input=all_label, size=[vocab_size, emb_size], param_attr="emb")
 
+    analogy_a = paddle.reshape(analogy_a, [-1])
     emb_a = paddle.static.nn.embedding(
         input=analogy_a, size=[vocab_size, emb_size], param_attr="emb")
+    analogy_b = paddle.reshape(analogy_b, [-1])
     emb_b = paddle.static.nn.embedding(
         input=analogy_b, size=[vocab_size, emb_size], param_attr="emb")
+    analogy_c = paddle.reshape(analogy_c, [-1])
     emb_c = paddle.static.nn.embedding(
         input=analogy_c, size=[vocab_size, emb_size], param_attr="emb")
     target = paddle.add(paddle.add(emb_b, -emb_a), emb_c)
