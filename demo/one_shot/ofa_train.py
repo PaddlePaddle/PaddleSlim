@@ -64,7 +64,6 @@ def test_ofa():
 
     default_run_config = {
         'train_batch_size': 256,
-        'eval_batch_size': 64,
         'n_epochs': [[1], [2, 3], [4, 5]],
         'init_learning_rate': [[0.001], [0.003, 0.001], [0.003, 0.001]],
         'dynamic_batch_size': [1, 1, 1],

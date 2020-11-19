@@ -28,9 +28,8 @@ _logger = get_logger(__name__, level=logging.INFO)
 __all__ = ['OFA', 'RunConfig', 'DistillConfig']
 
 RunConfig = namedtuple('RunConfig', [
-    'train_batch_size', 'eval_batch_size', 'n_epochs', 'save_frequency',
-    'eval_frequency', 'init_learning_rate', 'total_images', 'elastic_depth',
-    'dynamic_batch_size'
+    'train_batch_size', 'n_epochs', 'save_frequency', 'eval_frequency',
+    'init_learning_rate', 'total_images', 'elastic_depth', 'dynamic_batch_size'
 ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
@@ -87,7 +86,7 @@ class OFABase(fluid.dygraph.Layer):
 class OFA(OFABase):
     def __init__(self,
                  model,
-                 run_config,
+                 run_config=None,
                  net_config=None,
                  distill_config=None,
                  elastic_order=None,
@@ -98,20 +97,12 @@ class OFA(OFABase):
         self.distill_config = distill_config
         self.elastic_order = elastic_order
         self.train_full = train_full
-        self.iter_per_epochs = self.run_config.total_images // self.run_config.train_batch_size
         self.iter = 0
         self.dynamic_iter = 0
         self.manual_set_task = False
         self.task_idx = 0
         self._add_teacher = False
         self.netAs_param = []
-
-        for idx in range(len(run_config.n_epochs)):
-            assert isinstance(
-                run_config.init_learning_rate[idx],
-                list), "each candidate in init_learning_rate must be list"
-            assert isinstance(run_config.n_epochs[idx],
-                              list), "each candidate in n_epochs must be list"
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
@@ -144,16 +135,26 @@ class OFA(OFABase):
             if 'channel' in self._elastic_task and 'width' not in self.elastic_order:
                 self.elastic_order.append('width')
 
-        assert len(self.run_config.n_epochs) == len(self.elastic_order)
-        assert len(self.run_config.n_epochs) == len(
-            self.run_config.dynamic_batch_size)
-        assert len(self.run_config.n_epochs) == len(
-            self.run_config.init_learning_rate)
+        if getattr(self.run_config, 'n_epochs', None) != None:
+            assert len(self.run_config.n_epochs) == len(self.elastic_order)
+            for idx in range(len(run_config.n_epochs)):
+                assert isinstance(
+                    run_config.n_epochs[idx],
+                    list), "each candidate in n_epochs must be list"
+
+            if self.run_config.dynamic_batch_size != None:
+                assert len(self.run_config.n_epochs) == len(
+                    self.run_config.dynamic_batch_size)
+            if self.run_config.init_learning_rate != None:
+                assert len(self.run_config.n_epochs) == len(
+                    self.run_config.init_learning_rate)
+                for idx in range(len(run_config.n_epochs)):
+                    assert isinstance(
+                        run_config.init_learning_rate[idx], list
+                    ), "each candidate in init_learning_rate must be list"
 
         ### =================  add distill prepare ======================
-        if self.distill_config != None and (
-                self.distill_config.lambda_distill != None and
-                self.distill_config.lambda_distill > 0):
+        if self.distill_config != None:
             self._add_teacher = True
             self._prepare_distill()
 
@@ -183,7 +184,7 @@ class OFA(OFABase):
         # add hook if mapping layers is not None
         # if mapping layer is None, return the output of the teacher model,
         # if mapping layer is NOT None, add hook and compute distill loss about mapping layers.
-        mapping_layers = self.distill_config.mapping_layers
+        mapping_layers = getattr(self.distill_config, 'mapping_layers', None)
         if mapping_layers != None:
             self.netAs = []
             for name, sublayer in self.model.named_sublayers():
@@ -211,6 +212,13 @@ class OFA(OFABase):
 
     def _compute_epochs(self):
         if getattr(self, 'epoch', None) == None:
+            assert self.run_config.total_images is not None, \
+                "if not use set_epoch() to set epoch, please set total_images in run_config."
+            assert self.run_config.train_batch_size is not None, \
+                "if not use set_epoch() to set epoch, please set train_batch_size in run_config."
+            assert self.run_config.n_epochs is not None, \
+                "if not use set_epoch() to set epoch, please set n_epochs in run_config."
+            self.iter_per_epochs = self.run_config.total_images // self.run_config.train_batch_size
             epoch = self.iter // self.iter_per_epochs
         else:
             epoch = self.epoch
@@ -308,11 +316,12 @@ class OFA(OFABase):
         # ============================================================
 
         # ====================   student process  =====================
-        self.dynamic_iter += 1
-        if self.dynamic_iter == self.run_config.dynamic_batch_size[
-                self.task_idx]:
-            self.iter += 1
-            self.dynamic_iter = 0
+        if getattr(self.run_config, 'dynamic_batch_size', None) != None:
+            self.dynamic_iter += 1
+            if self.dynamic_iter == self.run_config.dynamic_batch_size[
+                    self.task_idx]:
+                self.iter += 1
+                self.dynamic_iter = 0
 
         if self.net_config == None:
             if self.train_full == True:

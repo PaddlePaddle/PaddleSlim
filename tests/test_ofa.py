@@ -143,7 +143,6 @@ class TestOFA(StaticCase):
     def init_config(self):
         default_run_config = {
             'train_batch_size': 1,
-            'eval_batch_size': 1,
             'n_epochs': [[1], [2, 3], [4, 5]],
             'init_learning_rate': [[0.001], [0.003, 0.001], [0.003, 0.001]],
             'dynamic_batch_size': [1, 1, 1],
@@ -209,7 +208,6 @@ class TestOFACase1(TestOFA):
     def init_config(self):
         default_run_config = {
             'train_batch_size': 1,
-            'eval_batch_size': 1,
             'n_epochs': [[2, 5]],
             'init_learning_rate': [[0.003, 0.001]],
             'dynamic_batch_size': [1],
