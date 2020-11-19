@@ -5,11 +5,9 @@
 
 ## 1. 准备环境
 
-### 1.1 下载或者编译支持TensorRT的Paddle预测库
-
 * 有2种方式获取Paddle预测库，下面进行详细介绍。
 
-#### 1.1.1 预测库源码编译
+### 1.1 预测库源码编译
 * 如果希望获取最新预测库特性，可以从Paddle github上克隆最新代码，源码编译预测库。
 * 可以参考[Paddle预测库官网](https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)的说明，从github上获取Paddle代码，然后进行编译，生成最新的预测库。使用git获取代码方法如下。
 
@@ -55,7 +53,7 @@ LIB_ROOT/
 
 其中`paddle`就是之后进行TensorRT预测时所需的Paddle库，`version.txt`中包含当前预测库的版本信息。
 
-#### 1.2.2 直接下载安装
+### 1.2 直接下载安装
 
 * [Paddle预测库官网](https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)上提供了不同cuda版本的Linux预测库，可以在官网查看并选择带有TensorRT的预测库版本。
 
