@@ -19,7 +19,7 @@ import unittest
 import paddle
 from static_case import StaticCase
 import paddle.fluid as fluid
-import paddle.fluid.dygraph.nn as nn
+import paddle.nn as nn
 from paddle.nn import ReLU
 from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
@@ -95,7 +95,9 @@ class ModelLinear(fluid.dygraph.Layer):
         models = []
         with supernet(expand_ratio=(1, 2, 4)) as ofa_super:
             models1 = []
+            models1 += [nn.Embedding(size=(64, 64))]
             models1 += [nn.Linear(64, 128)]
+            models1 += [nn.LayerNorm(128)]
             models1 += [nn.Linear(128, 256)]
             models1 = ofa_super.convert(models1)
 
@@ -104,6 +106,7 @@ class ModelLinear(fluid.dygraph.Layer):
         with supernet(channel=((64, 128, 256), (64, 128, 256))) as ofa_super:
             models1 = []
             models1 += [nn.Linear(256, 128)]
+            models1 += [nn.LayerNorm(128)]
             models1 += [nn.Linear(128, 256)]
             models1 = ofa_super.convert(models1)
 
@@ -172,9 +175,14 @@ class TestOFA(StaticCase):
                         ofa_model.parameters() + ofa_model.netAs_param))
                 for epoch_id in range(start_epoch,
                                       self.run_config.n_epochs[idx][ph_idx]):
+                    if epoch_id == 0:
+                        ofa_model.set_epoch(epoch_id)
                     for model_no in range(self.run_config.dynamic_batch_size[
                             idx]):
                         output, _ = ofa_model(self.data)
+                        if model_no == 0:
+                            first_net_config = ofa_model.current_config
+                            ofa_model.set_net_config(first_net_config)
                         loss = fluid.layers.reduce_mean(output)
                         if self.distill_config.mapping_layers != None:
                             dis_loss = ofa_model.calc_distill_loss()
@@ -194,7 +202,7 @@ class TestOFACase1(TestOFA):
     def init_model_and_data(self):
         self.model = ModelLinear()
         self.teacher_model = ModelLinear()
-        data_np = np.random.random((3, 64)).astype(np.float32)
+        data_np = np.random.random((3, 64)).astype(np.int64)
 
         self.data = fluid.dygraph.to_variable(data_np)
 

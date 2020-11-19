@@ -16,9 +16,8 @@ import inspect
 import decorator
 import logging
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid import framework
-from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm, LayerNorm, Embedding
+import numbers
+from paddle.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm, LayerNorm, Embedding
 from .layers import *
 from ...common import get_logger
 
@@ -45,7 +44,7 @@ class Convert:
         cur_channel = None
         for idx, layer in enumerate(model):
             cls_name = layer.__class__.__name__.lower()
-            if 'conv' in cls_name or 'linear' in cls_name:
+            if 'conv' in cls_name or 'linear' in cls_name or 'embedding' in cls_name:
                 weight_layer_count += 1
                 last_weight_layer_idx = idx
                 if first_weight_layer_idx == -1:
@@ -74,8 +73,7 @@ class Convert:
                     new_attr_dict['transform_kernel'] = True
 
                 # if the kernel_size of conv is 1, don't change it.
-                #if self.kernel_size and int(attr_dict['_filter_size'][0]) != 1:
-                if self.kernel_size and int(attr_dict['_filter_size']) != 1:
+                if self.kernel_size and int(attr_dict['_filter_size'][0]) != 1:
                     new_attr_dict['filter_size'] = max(self.kernel_size)
                     new_attr_dict['candidate_config'].update({
                         'kernel_size': self.kernel_size
@@ -179,6 +177,8 @@ class Convert:
                         layer._parameters['weight'].shape[0])
                 elif self.context.channel:
                     new_attr_dict['num_channels'] = max(cur_channel)
+                else:
+                    new_attr_dict['num_channels'] = attr_dict['_num_channels']
 
                 for attr in new_attr_name:
                     new_attr_dict[attr[1:]] = attr_dict[attr]
@@ -372,6 +372,8 @@ class Convert:
                         layer._parameters['scale'].shape[0])
                 elif self.context.channel:
                     new_attr_dict['num_channels'] = max(cur_channel)
+                else:
+                    new_attr_dict['num_channels'] = attr_dict['_num_channels']
 
                 for attr in new_attr_name:
                     new_attr_dict[attr[1:]] = attr_dict[attr]
@@ -384,7 +386,7 @@ class Convert:
             elif isinstance(layer, LayerNorm) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
-                ### TODO: fix when normalized_shape != last_dim_of_input
+                ### TODO(ceci3): fix when normalized_shape != last_dim_of_input
                 if idx > last_weight_layer_idx:
                     continue
 
@@ -397,9 +399,12 @@ class Convert:
                 if self.context.expand:
                     new_attr_dict[
                         'normalized_shape'] = self.context.expand * int(
-                            layer._parameters['normalized_shape'].shape[0])
+                            attr_dict['_normalized_shape'][0])
                 elif self.context.channel:
                     new_attr_dict['normalized_shape'] = max(cur_channel)
+                else:
+                    new_attr_dict['normalized_shape'] = attr_dict[
+                        '_normalized_shape']
 
                 for attr in new_attr_name:
                     new_attr_dict[attr[1:]] = attr_dict[attr]

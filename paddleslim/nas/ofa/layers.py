@@ -717,7 +717,7 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         self.conv.extend([norm_layer(num_channels * scale_factor)])
 
         self.conv.extend([
-            Conv2D(
+            fluid.dygraph.nn.Conv2D(
                 num_channels=num_channels * scale_factor,
                 num_filters=num_filters,
                 filter_size=1,
@@ -729,9 +729,10 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         self.candidate_config = candidate_config
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
-        self.base_output_dim = self.output_dim
+        self.base_output_dim = self.conv[0]._num_filters
         if self.expand_ratio != None:
-            self.base_output_dim = int(self.output_dim / max(self.expand_ratio))
+            self.base_output_dim = int(self.conv[0]._num_filters /
+                                       max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
         if not in_dygraph_mode():
@@ -910,7 +911,7 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
                  "use_mkldnn", False, "fuse_with_relu", self._fuse_with_relu,
                  "use_global_stats", self._use_global_stats,
                  'trainable_statistics', self._trainable_statistics)
-        batch_norm_out, _, _, _, _, _ = core.ops.batch_norm(
+        batch_norm_out, _, _, _, _, = core.ops.batch_norm(
             input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
         return dygraph_utils._append_activation_in_dygraph(
             batch_norm_out, act=self._act)
@@ -972,7 +973,7 @@ class SuperLayerNorm(fluid.dygraph.LayerNorm):
         self._begin_norm_axis = input_ndim - normalized_ndim
 
         ### TODO(ceci3): fix if normalized_shape is not a single number
-        feature_dim = input.shape[-1]
+        feature_dim = int(input.shape[-1])
         weight = self.weight[:feature_dim]
         bias = self.bias[:feature_dim]
         pre_act, _, _ = core.ops.layer_norm(input, weight, bias, 'epsilon',
