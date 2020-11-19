@@ -88,17 +88,6 @@ if(WITH_GPU)
     set(DEPS ${DEPS} $ENV{CUDA_LIB})
 endif()
 
-# set(TestFiles "slim_clas_test.cc";
-#               "slim_det_test.cc";
-#               "trt_fp32_test.cc";
-#               "trt_gen_calib_table_test.cc";
-#               "trt_int8_test.cc";
-#               "slim_det_test_calib.cc";
-#               "trt_clas_benchmark.cc";
-#               "trt_det_benchmark.cc";
-#               "trt_seg_benchmark.cc";
-#               "trt_optics_benchmark.cc")
-
 set(TestFiles "trt_clas_benchmark.cc";
               "trt_gen_calib_table_test.cc";
               "slim_clas_test.cc";)
