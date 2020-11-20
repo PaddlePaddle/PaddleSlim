@@ -911,7 +911,7 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
                  "use_mkldnn", False, "fuse_with_relu", self._fuse_with_relu,
                  "use_global_stats", self._use_global_stats,
                  'trainable_statistics', self._trainable_statistics)
-        batch_norm_out, _, _, _, _, = core.ops.batch_norm(
+        batch_norm_out, _, _, _, _, _ = core.ops.batch_norm(
             input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
         return dygraph_utils._append_activation_in_dygraph(
             batch_norm_out, act=self._act)

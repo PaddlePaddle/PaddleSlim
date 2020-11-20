@@ -452,6 +452,7 @@ class Convert:
                 del layer, attr_dict
 
                 layer = Block(SuperEmbedding(**new_attr_dict), key=key)
+                model[idx] = layer
 
         return model
 
