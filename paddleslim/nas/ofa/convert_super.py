@@ -17,7 +17,7 @@ import decorator
 import logging
 import paddle
 import numbers
-from paddle.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm, LayerNorm, Embedding
+from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, BatchNorm, InstanceNorm, LayerNorm, Embedding
 from .layers import *
 from ...common import get_logger
 
@@ -73,7 +73,8 @@ class Convert:
                     new_attr_dict['transform_kernel'] = True
 
                 # if the kernel_size of conv is 1, don't change it.
-                if self.kernel_size and int(attr_dict['_filter_size'][0]) != 1:
+                #if self.kernel_size and int(attr_dict['_filter_size'][0]) != 1:
+                if self.kernel_size and int(attr_dict['_filter_size']) != 1:
                     new_attr_dict['filter_size'] = max(self.kernel_size)
                     new_attr_dict['candidate_config'].update({
                         'kernel_size': self.kernel_size

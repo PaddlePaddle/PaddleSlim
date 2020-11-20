@@ -19,7 +19,7 @@ import unittest
 import paddle
 from static_case import StaticCase
 import paddle.fluid as fluid
-import paddle.nn as nn
+import paddle.fluid.dygraph.nn as nn
 from paddle.nn import ReLU
 from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
