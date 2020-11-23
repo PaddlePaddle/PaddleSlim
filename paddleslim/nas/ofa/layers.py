@@ -28,7 +28,7 @@ __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
     'SuperBatchNorm', 'SuperLinear', 'SuperInstanceNorm', 'Block',
     'SuperGroupConv2D', 'SuperDepthwiseConv2D', 'SuperGroupConv2DTranspose',
-    'SuperDepthwiseConv2DTranspose'
+    'SuperDepthwiseConv2DTranspose', 'SuperLayerNorm', 'SuperEmbedding'
 ]
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -70,9 +70,10 @@ class Block(BaseBlock):
         key(str, optional): key of this layer, one-to-one correspondence between key and candidate config. Default: None.
     """
 
-    def __init__(self, fn, key=None):
+    def __init__(self, fn, fixed=False, key=None):
         super(Block, self).__init__(key)
         self.fn = fn
+        self.fixed = fixed
         self.candidate_config = self.fn.candidate_config
 
     def forward(self, *inputs, **kwargs):
@@ -208,7 +209,6 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                  act=None,
                  dtype='float32'):
         ### NOTE: padding always is 0, add padding in forward because of kernel size is uncertain
-        ### TODO: change padding to any padding
         super(SuperConv2D, self).__init__(
             num_channels, num_filters, filter_size, stride, padding, dilation,
             groups, param_attr, bias_attr, use_cudnn, act, dtype)
@@ -228,7 +228,7 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.channel = candidate_config[
             'channel'] if 'channel' in candidate_config else None
-        self.base_channel = None
+        self.base_channel = self._num_filters
         if self.expand_ratio != None:
             self.base_channel = int(self._num_filters / max(self.expand_ratio))
 
@@ -296,6 +296,11 @@ class SuperConv2D(fluid.dygraph.Conv2D):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
+        self.cur_config = {
+            'kernel_size': kernel_size,
+            'expand_ratio': expand_ratio,
+            'channel': channel
+        }
         in_nc = int(input.shape[1])
         assert (
             expand_ratio == None or channel == None
@@ -313,7 +318,11 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                                                                         out_nc)
 
         weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
-        padding = convert_to_list(get_same_padding(ks), 2)
+
+        if kernel_size != None or 'kernel_size' in self.candidate_config.keys():
+            padding = convert_to_list(get_same_padding(ks), 2)
+        else:
+            padding = self._padding
 
         if self._l_type == 'conv2d':
             attrs = ('strides', self._stride, 'paddings', padding, 'dilations',
@@ -488,7 +497,6 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                  use_cudnn=True,
                  act=None,
                  dtype='float32'):
-        ### NOTE: padding always is 0, add padding in forward because of kernel size is uncertain
         super(SuperConv2DTranspose, self).__init__(
             num_channels, num_filters, filter_size, output_size, padding,
             stride, dilation, groups, param_attr, bias_attr, use_cudnn, act,
@@ -507,7 +515,7 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.channel = candidate_config[
             'channel'] if 'channel' in candidate_config else None
-        self.base_channel = None
+        self.base_channel = self._num_filters
         if self.expand_ratio:
             self.base_channel = int(self._num_filters / max(self.expand_ratio))
 
@@ -572,6 +580,11 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
+        self.cur_config = {
+            'kernel_size': kernel_size,
+            'expand_ratio': expand_ratio,
+            'channel': channel
+        }
         in_nc = int(input.shape[1])
         assert (
             expand_ratio == None or channel == None
@@ -590,7 +603,10 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                                                                         out_nc)
 
         weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
-        padding = convert_to_list(get_same_padding(ks), 2)
+        if kernel_size != None or 'kernel_size' in self.candidate_config.keys():
+            padding = convert_to_list(get_same_padding(ks), 2)
+        else:
+            padding = self._padding
 
         op = getattr(core.ops, self._op_type)
         out = op(input, weight, 'output_size', self._output_size, 'strides',
@@ -701,7 +717,7 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         self.conv.extend([norm_layer(num_channels * scale_factor)])
 
         self.conv.extend([
-            Conv2D(
+            fluid.dygraph.nn.Conv2D(
                 num_channels=num_channels * scale_factor,
                 num_filters=num_filters,
                 filter_size=1,
@@ -713,14 +729,16 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         self.candidate_config = candidate_config
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
-        self.base_output_dim = None
+        self.base_output_dim = self.conv[0]._num_filters
         if self.expand_ratio != None:
-            self.base_output_dim = int(self.output_dim / max(self.expand_ratio))
+            self.base_output_dim = int(self.conv[0]._num_filters /
+                                       max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
+        self.cur_config = {'expand_ratio': expand_ratio, 'channel': channel}
         in_nc = int(input.shape[1])
         assert (
             expand_ratio == None or channel == None
@@ -809,7 +827,7 @@ class SuperLinear(fluid.dygraph.Linear):
         self.candidate_config = candidate_config
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
-        self.base_output_dim = None
+        self.base_output_dim = self.output_dim
         if self.expand_ratio != None:
             self.base_output_dim = int(self.output_dim / max(self.expand_ratio))
 
@@ -817,8 +835,9 @@ class SuperLinear(fluid.dygraph.Linear):
         if not in_dygraph_mode():
             _logger.error("NOT support static graph")
 
+        self.cur_config = {'expand_ratio': expand_ratio, 'channel': channel}
         ### weight: (Cin, Cout)
-        in_nc = int(input.shape[1])
+        in_nc = int(input.shape[-1])
         assert (
             expand_ratio == None or channel == None
         ), "expand_ratio and channel CANNOT be NOT None at the same time."
@@ -927,3 +946,77 @@ class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
         out, _, _ = core.ops.instance_norm(input, scale, bias, 'epsilon',
                                            self._epsilon)
         return out
+
+
+class SuperLayerNorm(fluid.dygraph.LayerNorm):
+    def __init__(self,
+                 normalized_shape,
+                 candidate_config={},
+                 scale=True,
+                 shift=True,
+                 epsilon=1e-05,
+                 param_attr=None,
+                 bias_attr=None,
+                 act=None,
+                 dtype='float32'):
+        super(SuperLayerNorm,
+              self).__init__(normalized_shape, scale, shift, epsilon,
+                             param_attr, bias_attr, act, dtype)
+
+    def forward(self, input):
+        if not in_dygraph_mode():
+            _logger.error("NOT support static graph")
+
+        input_shape = list(input.shape)
+        input_ndim = len(input_shape)
+        normalized_ndim = len(self._normalized_shape)
+        self._begin_norm_axis = input_ndim - normalized_ndim
+
+        ### TODO(ceci3): fix if normalized_shape is not a single number
+        feature_dim = int(input.shape[-1])
+        weight = self.weight[:feature_dim]
+        bias = self.bias[:feature_dim]
+        pre_act, _, _ = core.ops.layer_norm(input, weight, bias, 'epsilon',
+                                            self._epsilon, 'begin_norm_axis',
+                                            self._begin_norm_axis)
+        return dygraph_utils._append_activation_in_dygraph(
+            pre_act, act=self._act)
+
+
+class SuperEmbedding(fluid.dygraph.Embedding):
+    def __init__(self,
+                 size,
+                 candidate_config={},
+                 is_sparse=False,
+                 is_distributed=False,
+                 padding_idx=None,
+                 param_attr=None,
+                 dtype='float32'):
+        super(SuperEmbedding, self).__init__(size, is_sparse, is_distributed,
+                                             padding_idx, param_attr, dtype)
+        self.candidate_config = candidate_config
+        self.expand_ratio = candidate_config[
+            'expand_ratio'] if 'expand_ratio' in candidate_config else None
+        self.base_output_dim = self._size[-1]
+        if self.expand_ratio != None:
+            self.base_output_dim = int(self._size[-1] / max(self.expand_ratio))
+
+    def forward(self, input, expand_ratio=None, channel=None):
+        if not in_dygraph_mode():
+            _logger.error("NOT support static graph")
+
+        assert (
+            expand_ratio == None or channel == None
+        ), "expand_ratio and channel CANNOT be NOT None at the same time."
+        if expand_ratio != None:
+            out_nc = int(expand_ratio * self.base_output_dim)
+        elif channel != None:
+            out_nc = int(channel)
+        else:
+            out_nc = self._size[-1]
+
+        weight = self.weight[:, :out_nc]
+        return core.ops.lookup_table_v2(
+            weight, input, 'is_sparse', self._is_sparse, 'is_distributed',
+            self._is_distributed, 'remote_prefetch', self._remote_prefetch,
+            'padding_idx', self._padding_idx)

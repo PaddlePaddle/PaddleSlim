@@ -19,6 +19,7 @@ from .sa_nas import *
 from .rl_nas import *
 from ..nas import darts
 from .darts import *
+from .ofa import *
 
 __all__ = []
 __all__ += sa_nas.__all__
