@@ -237,7 +237,7 @@ pip install paddleslim==1.2.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
     - [SlimFaceNet](demo/slimfacenet/README.md)
     - [OCR模型压缩(基于PaddleOCR)](demo/ocr/README.md)
     - [检测模型压缩(基于PaddleDetection)](demo/detection/README.md)
-- [TensorRT预测部署](demo/quant/deploy/TensorRT): 介绍使用TensorRT部署PaddleSlim量化得到的模型
+- [TensorRT部署](demo/quant/deploy/TensorRT): 介绍如何使用TensorRT部署PaddleSlim量化得到的模型。
 
 ## 部分压缩策略效果
 
