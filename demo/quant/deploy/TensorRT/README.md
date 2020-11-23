@@ -7,7 +7,20 @@
 
 * 有2种方式获取Paddle预测库，下面进行详细介绍。
 
-### 1.1 预测库源码编译
+### 1.1 直接下载安装
+
+* [Paddle预测库官网](https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)上提供了不同cuda版本的Linux预测库，可以在官网查看并选择带有TensorRT的预测库版本。
+
+* 下载之后使用下面的方法解压。
+
+```
+tar -xf fluid_inference.tgz
+```
+
+最终会在当前的文件夹中生成`fluid_inference/`的子文件夹。
+
+
+### 1.2 预测库源码编译
 * 如果希望获取最新预测库特性，可以从Paddle github上克隆最新代码，源码编译预测库。
 * 可以参考[Paddle预测库官网](https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)的说明，从github上获取Paddle代码，然后进行编译，生成最新的预测库。使用git获取代码方法如下。
 
@@ -52,18 +65,6 @@ LIB_ROOT/
 ```
 
 其中`paddle`就是之后进行TensorRT预测时所需的Paddle库，`version.txt`中包含当前预测库的版本信息。
-
-### 1.2 直接下载安装
-
-* [Paddle预测库官网](https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)上提供了不同cuda版本的Linux预测库，可以在官网查看并选择带有TensorRT的预测库版本。
-
-* 下载之后使用下面的方法解压。
-
-```
-tar -xf fluid_inference.tgz
-```
-
-最终会在当前的文件夹中生成`fluid_inference/`的子文件夹。
 
 
 ## 2 开始运行
@@ -211,3 +212,17 @@ I1123 11:28:58.457620 10913 test_acc.cc:107] final result:
 I1123 11:28:58.457688 10913 test_acc.cc:108] top1 acc:0.70664
 I1123 11:28:58.457712 10913 test_acc.cc:109] top5 acc:0.89494
 ```
+
+
+## 3 Benchmark
+
+GPU: NVIDIA® Tesla® P4
+数据集： ImageNet-2012
+预测引擎： Paddle-TensorRT
+
+
+|    模型     | FP32精度(Top1/Top5) | INT8精度(Top1/Top5) | FP32性能(ms) | INT8性能(ms) | 量化加速比 |
+| :---------: | :-----------------: | :-----------------: | :----------: | :----------: | :--------: |
+| MobileNetV1 |    71.00%/89.69%    |    70.66%/89.27%    |    1.083     |    0.568     |   47.55%   |
+| MobileNetV2 |    72.16%/90.65%    |    71.09%/90.16%    |    1.821     |    0.980     |   46.19%   |
+|  ResNet50   |    76.50%/93.00%    |    76.27%/92.95%    |    4.960     |    2.014     |   59.39%   |
