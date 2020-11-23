@@ -17,7 +17,6 @@ sys.path.append("../")
 import numpy as np
 import unittest
 import paddle
-from static_case import StaticCase
 import paddle.fluid as fluid
 import paddle.fluid.dygraph.nn as nn
 from paddle.nn import ReLU
@@ -35,13 +34,16 @@ class ModelConv(fluid.dygraph.Layer):
                 channel=((4, 8, 12), (8, 12, 16), (8, 12, 16),
                          (8, 12, 16))) as ofa_super:
             models = []
-            models += [nn.Conv2D(3, 4, 3)]
+            models += [nn.Conv2D(3, 4, 3, padding=1)]
             models += [nn.InstanceNorm(4)]
             models += [ReLU()]
             models += [nn.Conv2D(4, 4, 3, groups=4)]
             models += [nn.InstanceNorm(4)]
             models += [ReLU()]
-            models += [nn.Conv2DTranspose(4, 4, 3, groups=4, use_cudnn=True)]
+            models += [
+                nn.Conv2DTranspose(
+                    4, 4, 3, groups=4, padding=1, use_cudnn=True)
+            ]
             models += [nn.BatchNorm(4)]
             models += [ReLU()]
             models += [nn.Conv2D(4, 3, 3)]
@@ -51,7 +53,8 @@ class ModelConv(fluid.dygraph.Layer):
         models += [
             Block(
                 SuperSeparableConv2D(
-                    3, 6, 1, candidate_config={'channel': (3, 6)}))
+                    3, 6, 1, padding=1, candidate_config={'channel': (3, 6)}),
+                fixed=True)
         ]
         with supernet(
                 kernel_size=(3, 5, 7), expand_ratio=(1, 2, 4)) as ofa_super:
@@ -92,15 +95,37 @@ class ModelLinear(fluid.dygraph.Layer):
         models = []
         with supernet(expand_ratio=(1, 2, 4)) as ofa_super:
             models1 = []
+            models1 += [nn.Embedding(size=(64, 64))]
             models1 += [nn.Linear(64, 128)]
+            models1 += [nn.LayerNorm(128)]
             models1 += [nn.Linear(128, 256)]
             models1 = ofa_super.convert(models1)
 
         models += models1
+        self.models = paddle.nn.Sequential(*models)
 
-        with supernet(channel=((64, 128, 256), (64, 128, 256))) as ofa_super:
+    def forward(self, inputs, depth=None):
+        if depth != None:
+            assert isinstance(depth, int)
+            assert depth < len(self.models)
+        else:
+            depth = len(self.models)
+        for idx in range(depth):
+            layer = self.models[idx]
+            inputs = layer(inputs)
+        return inputs
+
+
+class ModelLinear1(fluid.dygraph.Layer):
+    def __init__(self):
+        super(ModelLinear1, self).__init__()
+        models = []
+        with supernet(channel=((64, 128, 256), (64, 128, 256),
+                               (64, 128, 256))) as ofa_super:
             models1 = []
-            models1 += [nn.Linear(256, 128)]
+            models1 += [nn.Embedding(size=(64, 64))]
+            models1 += [nn.Linear(64, 128)]
+            models1 += [nn.LayerNorm(128)]
             models1 += [nn.Linear(128, 256)]
             models1 = ofa_super.convert(models1)
 
@@ -120,7 +145,35 @@ class ModelLinear(fluid.dygraph.Layer):
         return inputs
 
 
-class TestOFA(StaticCase):
+class ModelLinear2(fluid.dygraph.Layer):
+    def __init__(self):
+        super(ModelLinear2, self).__init__()
+        models = []
+        with supernet(expand_ratio=None) as ofa_super:
+            models1 = []
+            models1 += [nn.Embedding(size=(64, 64))]
+            models1 += [nn.Linear(64, 128)]
+            models1 += [nn.LayerNorm(128)]
+            models1 += [nn.Linear(128, 256)]
+            models1 = ofa_super.convert(models1)
+
+        models += models1
+
+        self.models = paddle.nn.Sequential(*models)
+
+    def forward(self, inputs, depth=None):
+        if depth != None:
+            assert isinstance(depth, int)
+            assert depth < len(self.models)
+        else:
+            depth = len(self.models)
+        for idx in range(depth):
+            layer = self.models[idx]
+            inputs = layer(inputs)
+        return inputs
+
+
+class TestOFA(unittest.TestCase):
     def setUp(self):
         fluid.enable_dygraph()
         self.init_model_and_data()
@@ -137,7 +190,6 @@ class TestOFA(StaticCase):
     def init_config(self):
         default_run_config = {
             'train_batch_size': 1,
-            'eval_batch_size': 1,
             'n_epochs': [[1], [2, 3], [4, 5]],
             'init_learning_rate': [[0.001], [0.003, 0.001], [0.003, 0.001]],
             'dynamic_batch_size': [1, 1, 1],
@@ -152,11 +204,13 @@ class TestOFA(StaticCase):
             'mapping_layers': ['models.0.fn']
         }
         self.distill_config = DistillConfig(**default_distill_config)
+        self.elastic_order = ['kernel_size', 'width', 'depth']
 
     def test_ofa(self):
         ofa_model = OFA(self.model,
                         self.run_config,
-                        distill_config=self.distill_config)
+                        distill_config=self.distill_config,
+                        elastic_order=self.elastic_order)
 
         start_epoch = 0
         for idx in range(len(self.run_config.n_epochs)):
@@ -169,6 +223,8 @@ class TestOFA(StaticCase):
                         ofa_model.parameters() + ofa_model.netAs_param))
                 for epoch_id in range(start_epoch,
                                       self.run_config.n_epochs[idx][ph_idx]):
+                    if epoch_id == 0:
+                        ofa_model.set_epoch(epoch_id)
                     for model_no in range(self.run_config.dynamic_batch_size[
                             idx]):
                         output, _ = ofa_model(self.data)
@@ -191,14 +247,13 @@ class TestOFACase1(TestOFA):
     def init_model_and_data(self):
         self.model = ModelLinear()
         self.teacher_model = ModelLinear()
-        data_np = np.random.random((3, 64)).astype(np.float32)
+        data_np = np.random.random((3, 64)).astype(np.int64)
 
         self.data = fluid.dygraph.to_variable(data_np)
 
     def init_config(self):
         default_run_config = {
             'train_batch_size': 1,
-            'eval_batch_size': 1,
             'n_epochs': [[2, 5]],
             'init_learning_rate': [[0.003, 0.001]],
             'dynamic_batch_size': [1],
@@ -211,6 +266,23 @@ class TestOFACase1(TestOFA):
             'teacher_model': self.teacher_model,
         }
         self.distill_config = DistillConfig(**default_distill_config)
+        self.elastic_order = None
+
+
+class TestOFACase2(TestOFACase1):
+    def init_model_and_data(self):
+        self.model = ModelLinear1()
+        self.teacher_model = ModelLinear1()
+        data_np = np.random.random((3, 64)).astype(np.int64)
+
+        self.data = fluid.dygraph.to_variable(data_np)
+
+
+class TestOFACase3(unittest.TestCase):
+    def test_ofa(self):
+        self.model = ModelLinear2()
+        ofa_model = OFA(self.model)
+        ofa_model.set_net_config({'expand_ratio': None})
 
 
 if __name__ == '__main__':

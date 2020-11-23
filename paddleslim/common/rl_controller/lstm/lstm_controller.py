@@ -131,7 +131,7 @@ class LSTM(RLBaseController):
                             axes=[1],
                             starts=[idx],
                             ends=[idx + 1])
-                        action = fluid.layers.squeeze(action, axes=[1])
+                        action = paddle.squeeze(action, axis=[1])
                         action.stop_gradient = True
                     else:
                         action = fluid.layers.sampling_id(probs)
@@ -157,7 +157,7 @@ class LSTM(RLBaseController):
             self.sample_log_probs = paddle.concat(sample_log_probs, axis=0)
 
             entropies = paddle.stack(entropies)
-            self.sample_entropies = fluid.layers.reduce_sum(entropies)
+            self.sample_entropies = paddle.sum(entropies)
 
         return actions
 
@@ -187,13 +187,12 @@ class LSTM(RLBaseController):
             self._network(hidden, cell, init_actions=init_actions)
 
             rewards = fluid.data(name='rewards', shape=[None])
-            self.rewards = fluid.layers.reduce_mean(rewards)
+            self.rewards = paddle.mean(rewards)
 
             if self.weight_entropy is not None:
                 self.rewards += self.weight_entropy * self.sample_entropies
 
-            self.sample_log_probs = fluid.layers.reduce_sum(
-                self.sample_log_probs)
+            self.sample_log_probs = paddle.sum(self.sample_log_probs)
 
             paddle.assign(self.baseline - (1.0 - self.decay) *
                           (self.baseline - self.rewards), self.baseline)
