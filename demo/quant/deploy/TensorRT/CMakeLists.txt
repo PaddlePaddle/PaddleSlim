@@ -88,9 +88,9 @@ if(WITH_GPU)
     set(DEPS ${DEPS} $ENV{CUDA_LIB})
 endif()
 
-set(TestFiles "trt_clas_benchmark.cc";
+set(TestFiles "trt_clas.cc";
               "trt_gen_calib_table_test.cc";
-              "slim_clas_test.cc";)
+              "test_acc.cc";)
 
 foreach(testsourcefile ${TestFiles})
   message("====> ${testsourcefile} will be compiled")

@@ -10,5 +10,5 @@ MODEL_DIR=MobileNetV1-quant # change to your model_dir
 DATA_DIR=imagenet-eval-binary # chage to your data_dir
 USE_INT8=True
 
-./build/slim_clas_test --model_dir=$MODEL_DIR --data_dir=$DATA_DIR --int8=$USE_INT8
+./build/test_acc --model_dir=$MODEL_DIR --data_dir=$DATA_DIR --int8=$USE_INT8
 

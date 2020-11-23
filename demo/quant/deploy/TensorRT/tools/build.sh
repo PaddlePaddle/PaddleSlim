@@ -9,6 +9,7 @@ TENSORRT_LIB_DIR=TensorRT-6.0.1.5/lib # change to your path
 if [ $USE_GPU -eq ON ]; then
   export CUDA_LIB=`find /usr/local -name libcudart.so`
 fi
+rm -rf build
 BUILD=build
 mkdir -p $BUILD
 cd $BUILD

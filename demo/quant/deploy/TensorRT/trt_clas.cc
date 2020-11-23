@@ -27,6 +27,18 @@ double time_diff(Time t1, Time t2) {
   return counter.count() / 1000.0;
 }
 
+std::pair<int, float> findMax(std::vector<float>& vec) {
+	float max = -1000;
+	int idx = -1;
+	for (int i=0; i<vec.size(); ++i) {
+		if (vec[i] > max) {
+			max = vec[i];
+			idx=i;
+		}
+	}
+	return {idx, max};
+}
+
 std::unique_ptr<paddle::PaddlePredictor> CreatePredictor() {
   paddle::AnalysisConfig config;
   config.SetModel(FLAGS_model_dir + "/model", FLAGS_model_dir + "/params");
@@ -64,10 +76,12 @@ void run(paddle::PaddlePredictor *predictor,
   input_t->copy_from_cpu(input.data());
 
   // warm up 10 times
-  for(int i=0; i<10; i++){
-    CHECK(predictor->ZeroCopyRun());
+  if (FLAGS_repeat_times != 1) {
+      for(int i=0; i<10; i++){
+        CHECK(predictor->ZeroCopyRun());
+      }
+      LOG(INFO) << "finish warm up 10 times";
   }
-  LOG(INFO) << "finish warm up 10 times";
 
   auto time1 = time(); 
   for(int i=0; i<FLAGS_repeat_times; i++){
@@ -105,20 +119,22 @@ int main(int argc, char* argv[]) {
     LOG(FATAL) << "open input file fail.";
   }
   auto input_data_tmp = input_data;
-    for (int i = 0; i < input_num; ++i) {
+  for (int i = 0; i < input_num; ++i) {
       fs.read(reinterpret_cast<char*>(input_data_tmp), sizeof(*input_data_tmp));
       input_data_tmp++;
   }
+  int label = 0;
+  fs.read(reinterpret_cast<char*>(&label), sizeof(label));
   fs.close();
 
   std::vector<float> input_vec {input_data, input_data + input_num};
 
   std::vector<float> out_data;
   run(predictor.get(), input_vec, input_shape, &out_data);
-  // Print first 20 outputs
-  // for (int i = 0; i < 20; i++) {
-  //   LOG(INFO) << out_data[i] << std::endl;
-  // }
+  if (FLAGS_batch_size == 1) {
+      std::pair<int, float> result = findMax(out_data);
+      LOG(INFO) << "pred image class is : " << result.first << ", ground truth label is : " << label;
+  }
   return 0;
 }
 

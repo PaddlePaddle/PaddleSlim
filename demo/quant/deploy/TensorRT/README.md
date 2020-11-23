@@ -158,13 +158,34 @@ val/ILSVRC2012_val_00000002.jpg 0
 
 
 ### 运行demo
-* 执行以下命令，完成对一个模型的TensorRT速度评测。
+* 执行以下命令，完成一个分类模型的TensorRT预测。
 
 ```shell
-sh tools/run_benchmark.sh
+sh tools/run.sh
+```
+其中`MODEL_DIR`和`DATA_FILE`分别代表模型文件和数据文件, 需要在预测时替换为自己实际要用的地址。
+
+可以看到类似下面的预测结果：
+
+```shell
+I1123 11:30:49.160024 10999 trt_clas.cc:103] finish prediction
+I1123 11:30:49.160050 10999 trt_clas.cc:136] pred image class is : 65, ground truth label is : 65
 ```
 
-其中`MODEL_DIR`和`DATA_FILE`分别代表模型文件和数据文件, 需要在预测时替换为自己实际要用的地址。
+* 修改`tools/run.sh`中的repeat_times大于1，通过多次预测取平均完成对一个模型的TensorRT速度评测。
+
+```shell
+sh tools/run.sh
+```
+
+可以看到类似下面的评测结果：
+
+```shell
+I1123 11:40:30.936796 11681 trt_clas.cc:83] finish warm up 10 times
+I1123 11:40:30.947906 11681 trt_clas.cc:101] total predict cost is : 11.042 ms, repeat 10 times
+I1123 11:40:30.947947 11681 trt_clas.cc:102] average predict cost is : 1.1042 ms
+```
+
 
 * 执行以下命令，完成对一个模型的TensorRT精度评测。
 
@@ -173,3 +194,20 @@ sh tools/test_acc.sh
 ```
 
 同上，在预测时需要将其中路径替换为自己实际要用的地址。
+
+可以看到类似下面的评测结果：
+
+```shell
+I1123 11:23:11.856046 10913 test_acc.cc:64] 5000
+I1123 11:23:50.318663 10913 test_acc.cc:64] 10000
+I1123 11:24:28.793603 10913 test_acc.cc:64] 15000
+I1123 11:25:07.277580 10913 test_acc.cc:64] 20000
+I1123 11:25:45.698241 10913 test_acc.cc:64] 25000
+I1123 11:26:24.195798 10913 test_acc.cc:64] 30000
+I1123 11:27:02.625052 10913 test_acc.cc:64] 35000
+I1123 11:27:41.178545 10913 test_acc.cc:64] 40000
+I1123 11:28:19.798691 10913 test_acc.cc:64] 45000
+I1123 11:28:58.457620 10913 test_acc.cc:107] final result:
+I1123 11:28:58.457688 10913 test_acc.cc:108] top1 acc:0.70664
+I1123 11:28:58.457712 10913 test_acc.cc:109] top5 acc:0.89494
+```
