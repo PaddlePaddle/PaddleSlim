@@ -37,27 +37,27 @@ PACT方法属于自定义 `act_preprocess_func`, 输入是将要量化的激活�
 
 ```
 import paddle
-import paddle.fluid as fluid
 from paddle.fluid.layer_helper import LayerHelper
 
-def pact(x, name=None):
+def pact(x):
     helper = LayerHelper("pact", **locals())
     dtype = 'float32'
     # 定义PACT初始阈值
     init_thres = 20
-    u_param_attr = fluid.ParamAttr(
+    u_param_attr = paddle.ParamAttr(
         name=x.name + '_pact',
-        initializer=fluid.initializer.ConstantInitializer(value=init_thres),
-        regularizer=fluid.regularizer.L2Decay(0.0001),
+        initializer=paddle.nn.initializer.Constant(value=init_thres),
+        regularizer=paddle.regularizer.L2Decay(0.0001),
         learning_rate=1)
     u_param = helper.create_parameter(
         attr=u_param_attr, shape=[1], dtype=dtype)
-    x = fluid.layers.elementwise_sub(
-        x, fluid.layers.relu(fluid.layers.elementwise_sub(x, u_param)))
-    x = fluid.layers.elementwise_add(
-        x, fluid.layers.relu(fluid.layers.elementwise_sub(-u_param, x)))
 
+    part_a = paddle.nn.functional.relu(x - u_param)
+    part_b = paddle.nn.functional.relu(-u_param - x)
+    x = x - part_a + part_b
     return x
+
+
 ```
 
 函数中可以定义初始阈值，和初始阈值的l2正则项系数，在训练过程中可根据梯度传播训练阈值为一个合适的值。
@@ -66,7 +66,7 @@ def pact(x, name=None):
 
 ```
 def get_optimizer():
-    return fluid.optimizer.MomentumOptimizer(0.001, 0.9)
+    return paddle.optimizer.Momentum(args.lr, 0.9)
 ```
 因为除了PACT阈值以外，其他参数都是训练好的，因此在训练时可以将PACT中阈值的学习率调大一些。
 
@@ -144,10 +144,10 @@ compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, a
 ### 关掉指定build策略
 
 ```
-build_strategy = fluid.BuildStrategy()
+build_strategy = paddle.static.BuildStrategy()
 build_strategy.fuse_all_reduce_ops = False
 build_strategy.sync_batch_norm = False
-exec_strategy = fluid.ExecutionStrategy()
+exec_strategy = paddle.static.ExecutionStrategy()
 compiled_train_prog = compiled_train_prog.with_data_parallel(
         loss_name=avg_cost.name,
         build_strategy=build_strategy,
@@ -179,7 +179,10 @@ python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/Mob
 
 使用PACT量化训练
 ```
-python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/MobileNetV3_large_x1_0_ssld_pretrained --num_epochs 30 --lr 0.0001 --use_pact True --batch_size 128 --lr_strategy=piecewise_decay --step_epochs 20 --l2_decay 1e-5
+# 先分析MobileNetV3模型激活值分布，来初始化PACT截断阈值
+python train.py --analysis=True
+# 启动PACT量化训练
+python train.py
 ```
 
 输出结果为

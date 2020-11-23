@@ -17,6 +17,7 @@ import os
 import time
 import signal
 import unittest
+from static_case import StaticCase
 import paddle.fluid as fluid
 from paddleslim.nas import SANAS
 from paddleslim.common.controller_client import ControllerClient
@@ -44,7 +45,7 @@ def start_server(configs, port):
     return server_sanas
 
 
-class TestClientConnect(unittest.TestCase):
+class TestClientConnect(StaticCase):
     def setUp(self):
         self.configs = [('MobileNetV2BlockSpace', {'block_mask': [0]})]
         self.port = np.random.randint(8337, 8773)
@@ -58,7 +59,7 @@ class TestClientConnect(unittest.TestCase):
         start_server(self.configs, self.port)
 
 
-class TestClientConnectCase1(unittest.TestCase):
+class TestClientConnectCase1(StaticCase):
     def setUp(self):
         self.configs = [('MobileNetV2BlockSpace', {'block_mask': [0]})]
         self.port = np.random.randint(8337, 8773)
@@ -74,7 +75,7 @@ class TestClientConnectCase1(unittest.TestCase):
         os.kill(os.getpid(), 0)
 
 
-class TestClientConnectCase2(unittest.TestCase):
+class TestClientConnectCase2(StaticCase):
     def setUp(self):
         self.port = np.random.randint(8337, 8773)
         self.addr = socket.gethostbyname(socket.gethostname())

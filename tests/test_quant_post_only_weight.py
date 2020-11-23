@@ -15,52 +15,61 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle
-import paddle.fluid as fluid
 from paddleslim.quant import quant_post_dynamic
+from static_case import StaticCase
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
 import paddle.dataset.mnist as reader
-from paddle.fluid.framework import IrGraph
-from paddle.fluid import core
 import numpy as np
 
 
-class TestQuantPostOnlyWeightCase1(unittest.TestCase):
+class TestQuantPostOnlyWeightCase1(StaticCase):
     def test_accuracy(self):
-        image = fluid.layers.data(
-            name='image', shape=[1, 28, 28], dtype='float32')
-        label = fluid.layers.data(name='label', shape=[1], dtype='int64')
+        image = paddle.static.data(
+            name='image', shape=[None, 1, 28, 28], dtype='float32')
+        label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
         model = MobileNet()
         out = model.net(input=image, class_dim=10)
-        cost = fluid.layers.cross_entropy(input=out, label=label)
-        avg_cost = fluid.layers.mean(x=cost)
-        acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
-        acc_top5 = fluid.layers.accuracy(input=out, label=label, k=5)
-        optimizer = fluid.optimizer.Momentum(
+        cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
+        avg_cost = paddle.mean(x=cost)
+        acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
+        acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
+        optimizer = paddle.optimizer.Momentum(
             momentum=0.9,
             learning_rate=0.01,
-            regularization=fluid.regularizer.L2Decay(4e-5))
+            weight_decay=paddle.regularizer.L2Decay(4e-5))
         optimizer.minimize(avg_cost)
-        main_prog = fluid.default_main_program()
+        main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
 
-        place = fluid.CUDAPlace(0) if fluid.is_compiled_with_cuda(
-        ) else fluid.CPUPlace()
-        exe = fluid.Executor(place)
-        exe.run(fluid.default_startup_program())
-        feeder = fluid.DataFeeder([image, label], place, program=main_prog)
-        train_reader = paddle.fluid.io.batch(
-            paddle.dataset.mnist.train(), batch_size=64)
-        eval_reader = paddle.fluid.io.batch(
-            paddle.dataset.mnist.test(), batch_size=64)
+        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
+        ) else paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
+        exe.run(paddle.static.default_startup_program())
+
+        def transform(x):
+            return np.reshape(x, [1, 28, 28])
+
+        train_dataset = paddle.vision.datasets.MNIST(
+            mode='train', backend='cv2', transform=transform)
+        test_dataset = paddle.vision.datasets.MNIST(
+            mode='test', backend='cv2', transform=transform)
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            places=place,
+            feed_list=[image, label],
+            drop_last=True,
+            batch_size=64)
+        valid_loader = paddle.io.DataLoader(
+            test_dataset, places=place, feed_list=[image, label], batch_size=64)
 
         def train(program):
             iter = 0
-            for data in train_reader():
+            for data in train_loader():
                 cost, top1, top5 = exe.run(
                     program,
-                    feed=feeder.feed(data),
+                    feed=data,
                     fetch_list=[avg_cost, acc_top1, acc_top5])
                 iter += 1
                 if iter % 100 == 0:
@@ -71,9 +80,9 @@ class TestQuantPostOnlyWeightCase1(unittest.TestCase):
         def test(program, outputs=[avg_cost, acc_top1, acc_top5]):
             iter = 0
             result = [[], [], []]
-            for data in train_reader():
+            for data in valid_loader():
                 cost, top1, top5 = exe.run(program,
-                                           feed=feeder.feed(data),
+                                           feed=data,
                                            fetch_list=outputs)
                 iter += 1
                 if iter % 100 == 0:
@@ -88,7 +97,7 @@ class TestQuantPostOnlyWeightCase1(unittest.TestCase):
 
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
-        fluid.io.save_inference_model(
+        paddle.static.save_inference_model(
             dirname='./test_quant_post_dynamic',
             feeded_var_names=[image.name, label.name],
             target_vars=[avg_cost, acc_top1, acc_top5],
@@ -103,7 +112,7 @@ class TestQuantPostOnlyWeightCase1(unittest.TestCase):
             model_filename='model',
             params_filename='params',
             generate_test_model=True)
-        quant_post_prog, feed_target_names, fetch_targets = fluid.io.load_inference_model(
+        quant_post_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
             dirname='./test_quant_post_inference/test_model', executor=exe)
         top1_2, top5_2 = test(quant_post_prog, fetch_targets)
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))

@@ -16,6 +16,7 @@
 import copy
 import math
 import numpy as np
+import paddle
 import paddle.fluid as fluid
 
 __all__ = ['EvolutionaryController', 'RLBaseController']
@@ -72,11 +73,11 @@ class RLBaseController(object):
     def get_params(self, program):
         var_dict = {}
         for var in program.global_block().all_parameters():
-            var_dict[var.name] = np.array(fluid.global_scope().find_var(
+            var_dict[var.name] = np.array(paddle.static.global_scope().find_var(
                 var.name).get_tensor())
         return var_dict
 
     def set_params(self, program, params_dict, place):
         for var in program.global_block().all_parameters():
-            fluid.global_scope().find_var(var.name).get_tensor().set(
+            paddle.static.global_scope().find_var(var.name).get_tensor().set(
                 params_dict[var.name], place)

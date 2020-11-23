@@ -18,28 +18,17 @@ from __future__ import print_function
 
 import copy
 import paddle
-import paddle.fluid as fluid
+import paddle.nn as nn
 
-PADDLE_VERSION = 1.8
-try:
-    from paddle.fluid.layers import log_softmax
-except:
-    from paddle.nn import LogSoftmax
-    PADDLE_VERSION = 2.0
+from paddle.nn import LogSoftmax
 
 
-class DML(fluid.dygraph.Layer):
+class DML(nn.Layer):
     def __init__(self, model, use_parallel=False):
         super(DML, self).__init__()
         self.model = model
         self.use_parallel = use_parallel
         self.model_num = len(self.model)
-        if self.use_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-            self.model = [
-                fluid.dygraph.parallel.DataParallel(m, strategy)
-                for m in self.model
-            ]
 
     def full_name(self):
         return [m.full_name() for m in self.model]
@@ -61,8 +50,9 @@ class DML(fluid.dygraph.Layer):
         ce_losses = []
         for i in range(self.model_num):
             ce_losses.append(
-                fluid.layers.mean(
-                    fluid.layers.softmax_with_cross_entropy(logits[i], labels)))
+                paddle.mean(
+                    paddle.nn.functional.softmax_with_cross_entropy(logits[i],
+                                                                    labels)))
         return ce_losses
 
     def kl_loss(self, logits):
@@ -76,13 +66,11 @@ class DML(fluid.dygraph.Layer):
             cur_kl_loss = 0
             for j in range(self.model_num):
                 if i != j:
-                    if PADDLE_VERSION == 2.0:
-                        log_softmax = LogSoftmax(axis=1)
-                        x = log_softmax(logits[i])
-                    else:
-                        x = fluid.layers.log_softmax(logits[i], axis=1)
-                    y = fluid.layers.softmax(logits[j], axis=1)
-                    cur_kl_loss += fluid.layers.kldiv_loss(
+                    log_softmax = LogSoftmax(axis=1)
+                    x = log_softmax(logits[i])
+
+                    y = nn.functional.softmax(logits[j], axis=1)
+                    cur_kl_loss += nn.functional.kl_div(
                         x, y, reduction='batchmean')
             kl_losses.append(cur_kl_loss / (self.model_num - 1))
         return kl_losses
@@ -97,7 +85,7 @@ class DML(fluid.dygraph.Layer):
 
     def acc(self, logits, labels, k):
         accs = [
-            fluid.layers.accuracy(
+            paddle.metric.accuracy(
                 input=l, label=labels, k=k) for l in logits
         ]
         return accs
