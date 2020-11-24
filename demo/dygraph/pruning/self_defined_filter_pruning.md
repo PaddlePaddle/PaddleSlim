@@ -81,6 +81,11 @@ import numpy as np
 from paddleslim.dygraph import FilterPruner
 
 class L2NormFilterPruner(FilterPruner):
+
+    def __init__(self, model, input_shape, sen_file=None):
+        super(L2NormFilterPruner, self).__init__(
+            model, input_shape, sen_file=sen_file)
+
     def cal_mask(self, var_name, pruned_ratio, group):
         value = group[var_name]['value']
         pruned_dims = group[var_name]['pruned_dims']
@@ -164,6 +169,11 @@ import numpy as np
 from paddleslim.dygraph import FilterPruner
 
 class FPGMFilterPruner(FilterPruner):
+
+    def __init__(self, model, input_shape, sen_file=None):
+        super(FPGMFilterPruner, self).__init__(
+            model, input_shape, sen_file=sen_file)
+
     def cal_mask(self, var_name, pruned_ratio, group):
         value = group[var_name]['value']
         pruned_dims = group[var_name]['pruned_dims']
