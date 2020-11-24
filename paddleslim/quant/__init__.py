@@ -14,14 +14,14 @@
 
 import logging
 
-import paddle.fluid as fluid
+import paddle
 import paddle.version as fluid_version
 from ..common import get_logger
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 try:
-    fluid.require_version('1.8.4')
+    paddle.utils.require_version('1.8.4')
     version_installed = [
         fluid_version.major, fluid_version.minor, fluid_version.patch,
         fluid_version.rc
@@ -32,6 +32,7 @@ try:
     from .quanter import quant_aware, convert, quant_post_static, quant_post_dynamic
     from .quanter import quant_post, quant_post_only_weight
 except Exception as e:
+    _logger.warning(e)
     _logger.warning(
         "If you want to use training-aware and post-training quantization, "
         "please use Paddle >= 1.8.4 or develop version")

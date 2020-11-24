@@ -15,7 +15,6 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle
-import paddle.fluid as fluid
 from paddleslim.common import VarCollector
 from static_case import StaticCase
 sys.path.append("../demo")
@@ -27,34 +26,38 @@ import numpy as np
 
 class TestAnalysisHelper(StaticCase):
     def test_analysis_helper(self):
-        image = fluid.layers.data(
-            name='image', shape=[1, 28, 28], dtype='float32')
-        label = fluid.layers.data(name='label', shape=[1], dtype='int64')
+        image = paddle.static.data(
+            name='image', shape=[None, 1, 28, 28], dtype='float32')
+        label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
         model = MobileNet()
         out = model.net(input=image, class_dim=10)
-        cost = fluid.layers.cross_entropy(input=out, label=label)
-        avg_cost = fluid.layers.mean(x=cost)
-        acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
-        acc_top5 = fluid.layers.accuracy(input=out, label=label, k=5)
-        optimizer = fluid.optimizer.Momentum(
+        cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
+        avg_cost = paddle.mean(x=cost)
+        acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
+        acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
+        optimizer = paddle.optimizer.Momentum(
             momentum=0.9,
             learning_rate=0.01,
-            regularization=fluid.regularizer.L2Decay(4e-5))
+            weight_decay=paddle.regularizer.L2Decay(4e-5))
         optimizer.minimize(avg_cost)
-        main_prog = fluid.default_main_program()
+        main_prog = paddle.static.default_main_program()
 
-        places = fluid.cuda_places() if fluid.is_compiled_with_cuda(
-        ) else fluid.cpu_places()
-        exe = fluid.Executor(places[0])
-        train_reader = paddle.fluid.io.batch(
-            paddle.dataset.mnist.train(), batch_size=64)
-        train_loader = fluid.io.DataLoader.from_generator(
+        places = paddle.static.cuda_places() if paddle.is_compiled_with_cuda(
+        ) else paddle.static.cpu_places()
+        exe = paddle.static.Executor(places[0])
+
+        def transform(x):
+            return np.reshape(x, [1, 28, 28])
+
+        train_dataset = paddle.vision.datasets.MNIST(
+            mode='train', backend='cv2', transform=transform)
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            places=places,
             feed_list=[image, label],
-            capacity=512,
-            use_double_buffer=True,
-            iterable=True)
-        train_loader.set_sample_list_generator(train_reader, places)
-        exe.run(fluid.default_startup_program())
+            drop_last=True,
+            batch_size=64)
+        exe.run(paddle.static.default_startup_program())
 
         vars = ['conv2d_0.tmp_0', 'fc_0.tmp_0', 'fc_0.tmp_1', 'fc_0.tmp_2']
         var_collector1 = VarCollector(main_prog, vars, use_ema=True)
