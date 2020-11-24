@@ -46,4 +46,5 @@ class Pruner(object):
             if not global_plan.contains(var, axis):
                 plan = self.prune_var(var, axis, ratio)
                 global_plan.extend(plan)
+        global_plan.apply(self.model)
         return global_plan
