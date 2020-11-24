@@ -65,7 +65,11 @@ class FilterPruner(Pruner):
         # sensitive and var_group are just used in filter pruning
         self.var_group = VarGroup(model, input_shape)
 
-    def sensitive(self, eval_func=None, sen_file=None):
+    def sensitive(self,
+                  eval_func=None,
+                  sen_file=None,
+                  target_vars=None,
+                  skip_vars=None):
 
         if eval_func is None and sen_file is None:
             return self._status.sensitivies
@@ -77,7 +81,12 @@ class FilterPruner(Pruner):
         if not self._status.is_ckp:
             return self._status
 
-        self._cal_sensitive(self.model, eval_func, status_file=sen_file)
+        self._cal_sensitive(
+            self.model,
+            eval_func,
+            status_file=sen_file,
+            target_vars=target_vars,
+            skip_vars=skip_vars)
 
         self._status.is_ckp = False
         return self._status.sensitivies
@@ -182,13 +191,24 @@ class FilterPruner(Pruner):
                 return ratios, c_pruned_flops
         return ratios, c_pruned_flops
 
-    def _cal_sensitive(self, model, eval_func, status_file=None):
+    def _cal_sensitive(self,
+                       model,
+                       eval_func,
+                       status_file=None,
+                       target_vars=None,
+                       skip_vars=None):
         sensitivities = self._status.sensitivies
         baseline = eval_func()
         ratios = np.arange(0.1, 1, step=0.1)
         for group in self.var_group.groups:
             var_name = group[0][0]
             dims = group[0][1]
+
+            if target_vars is not None and var_name not in target_vars:
+                continue
+            if skip_vars is not None and var_name in skip_vars:
+                continue
+
             if var_name not in sensitivities:
                 sensitivities[var_name] = {}
             for ratio in ratios:
