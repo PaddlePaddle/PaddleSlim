@@ -48,8 +48,7 @@ class PruningMask():
         self._mask = value
 
     def __str__(self):
-        return "pruned ratio: {};\tpruned dims: {}.".format(self._pruned_ratio,
-                                                            self._dims)
+        return "{}\t{}".format(self._pruned_ratio, self._dims)
 
 
 class PruningPlan():
@@ -65,6 +64,14 @@ class PruningPlan():
         self._pruned_flops = None
         self._pruned_size = None
         self._model_size = None
+
+    @property
+    def pruned_flops(self):
+        return self._pruned_flops
+
+    @pruned_flops.setter
+    def pruned_flops(self, value):
+        self._pruned_flops = value
 
     def add(self, var_name, pruning_mask):
         assert (isinstance(pruning_mask, PruningMask))
@@ -91,11 +98,12 @@ class PruningPlan():
                                              dims in self._dims[var_name])
 
     def __str__(self):
-        return "\n".join([
-            "variable name:{}\t{}".format(name,
-                                          ",".join([str(m) for m in mask]))
+        details = "\npruned FLOPs: {}".format(self._pruned_flops)
+        head = "variable name\tpruned ratio\tpruned dims\n"
+        return head + "\n".join([
+            "{}:\t{}".format(name, ",".join([str(m) for m in mask]))
             for name, mask in self._masks.items()
-        ])
+        ]) + details
 
     def apply(self, model, lazy=False):
         if lazy:
@@ -113,15 +121,16 @@ class PruningPlan():
                         t_value = param.value().get_tensor()
                         value = np.array(t_value).astype("float32")
                         # The name of buffer can not contains "."
-                        sub_layer.register_buffer(
-                            param.name.replace(".", "_") + "_backup",
-                            paddle.to_tensor(value))
-                        _logger.info("Backup values of {} into buffers.".format(
-                            param.name))
+                        backup_name = param.name.replace(".", "_") + "_backup"
+                        if backup_name not in sub_layer._buffers:
+                            sub_layer.register_buffer(backup_name,
+                                                      paddle.to_tensor(value))
+                            _logger.debug("Backup values of {} into buffers.".
+                                          format(param.name))
                         expand_mask_shape = [1] * len(value.shape)
                         for i in dims:
                             expand_mask_shape[i] = value.shape[i]
-                        _logger.info("Expanded mask shape: {}".format(
+                        _logger.debug("Expanded mask shape: {}".format(
                             expand_mask_shape))
                         expand_mask = mask.reshape(expand_mask_shape).astype(
                             "float32")
@@ -143,6 +152,7 @@ class PruningPlan():
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
+
         for name, sub_layer in model.named_sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
@@ -157,23 +167,34 @@ class PruningPlan():
                         t_value = param.value().get_tensor()
                         value = np.array(t_value).astype("float32")
                         # The name of buffer can not contains "."
-                        sub_layer.register_buffer(
-                            param.name.replace(".", "_") + "_backup",
-                            paddle.to_tensor(value))
-                        _logger.info("Backup values of {} into buffers.".format(
-                            param.name))
+                        backup_name = param.name.replace(".", "_") + "_backup"
+                        if backup_name not in sub_layer._buffers:
+                            sub_layer.register_buffer(backup_name,
+                                                      paddle.to_tensor(value))
+                            _logger.debug("Backup values of {} into buffers.".
+                                          format(param.name))
                         bool_mask = mask.astype(bool)
                         pruned_value = np.apply_along_axis(
-                            lambda data: data[~bool_mask], dims[0], value)
+                            lambda data: data[bool_mask], dims[0], value)
                         place = fluid.CUDAPlace(0)
                         t_value.set(pruned_value, place)
+                        if isinstance(sub_layer, paddle.nn.layer.conv.Conv2D):
+                            if sub_layer._groups > 1:
+                                _logger.debug(
+                                    "Update groups of conv form {} to {}".
+                                    format(sub_layer._groups,
+                                           pruned_value.shape[0]))
+                                sub_layer._groups = pruned_value.shape[0]
+                    # for training
+                    if param.trainable:
+                        param.clear_gradient()
 
     def restore(self, model):
         for name, sub_layer in model.named_sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
                 backup_name = "_".join([param.name.replace(".", "_"), "backup"])
                 if backup_name in sub_layer._buffers:
-                    _logger.info("Restore values of variable: {}".format(
+                    _logger.debug("Restore values of variable: {}".format(
                         param.name))
                     t_value = param.value().get_tensor()
                     t_backup = sub_layer._buffers[backup_name].value(
@@ -190,4 +211,11 @@ class PruningPlan():
                         place = paddle.CUDAPlace(p.gpu_device_id())
 
                     t_value.set(np.array(t_backup).astype("float32"), place)
+
+                    if isinstance(sub_layer, paddle.nn.layer.conv.Conv2D):
+                        if sub_layer._groups > 1:
+                            _logger.debug(
+                                "Update groups of conv form {} to {}".format(
+                                    sub_layer._groups, t_value.shape()[0]))
+                            sub_layer._groups = t_value.shape()[0]
                     del sub_layer._buffers[backup_name]

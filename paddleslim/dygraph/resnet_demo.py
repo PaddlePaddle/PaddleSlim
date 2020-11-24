@@ -272,7 +272,7 @@ def eval(model, data):
         print("kpis\ttest_acc5\t%0.3f" % (total_acc5 / total_sample))
     print("final eval acc1 %0.3f acc5 %0.3f" % \
           (total_acc1 / total_sample, total_acc5 / total_sample))
-    return (total_acc1 / total_sample)
+    return (total_acc1 / total_sample)[0]
 
 
 def train_resnet():
@@ -298,41 +298,37 @@ def train_resnet():
         test_reader = paddle.batch(
             paddle.dataset.flowers.test(use_xmap=False), batch_size=batch_size)
 
-        #        params, _ = fluid.load_dygraph("./resnet_params.pdparams")
-        #        resnet.load_dict(params)
-        #        resnet.eval()
+        params, _ = fluid.load_dygraph("./resnet_params.pdparams")
+        resnet.load_dict(params)
+        resnet.eval()
         #        eval(resnet, test_reader)
         ####################pruning##############################
-        from paddle.fluid.dygraph import TracedLayer
-        from paddleslim.core import GraphWrapper
-        from paddleslim.prune import collect_convs
         from paddleslim.dygraph import *
         from functools import partial
 
-        pruner = L1NormFilterPruner(resnet, [1, 3, 224, 224], sensitive=True)
-        plan = pruner.uniform_prune(
-            ratio=0.5,
-            skip_vars=["conv2d_52.w_0"],
-            constrain_value=None,
-            constrain_func=None)
-        print(plan)
-        plan.apply(resnet)
-        eval(resnet, test_reader)
-        return
-        #        print(plan)
+        pruner = L1NormFilterPruner(
+            resnet, [1, 3, 224, 224], sen_file="./sen.pickle")
+        sen = pruner.sensitive(
+            eval_func=partial(eval, resnet, test_reader),
+            sen_file="./sen.pickle")
+        print(sen)
+        pruner.sensitive_prune(0.10)
+        pruner.prune_vars(ratios)
+        pruner.restore()
 
-        #        status = pruner.status(
-        #            resnet, eval_func=partial(eval, resnet, test_reader))
-        #        return
-        #
-        #        plan = pruner.prune_var("conv2d_0.w_0", [0], 0.1)
-        #        resnet.eval()
+        #        plan = pruner.uniform_prune(
+        #            ratio=0.5,
+        #            skip_vars=["conv2d_52.w_0"],
+        #            constrain_value=None,
+        #            constrain_func=None)
+
+        resnet.eval()
+        eval(resnet, test_reader)
+        pruner.restore()
         #        plan.apply(resnet, lazy=True)
-        #        eval(resnet, test_reader)
-        #        plan.restore(resnet)
-        #        eval(resnet, test_reader)
-        #        plan.apply(resnet)
-        #        return
+        eval(resnet, test_reader)
+        plan.restore(resnet)
+        return
         ##########################################################
 
         #NOTE: used in benchmark 
