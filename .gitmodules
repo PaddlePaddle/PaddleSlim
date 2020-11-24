@@ -1,6 +1,0 @@
-[submodule "demo/ocr/PaddleOCR"]
-	path = demo/ocr/PaddleOCR
-	url = https://github.com/PaddlePaddle/PaddleOCR
-[submodule "demo/PaddleClas"]
-	path = demo/PaddleClas
-	url = https://github.com/PaddlePaddle/PaddleClas.git
