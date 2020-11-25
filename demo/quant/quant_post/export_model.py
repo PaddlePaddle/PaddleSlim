@@ -62,7 +62,7 @@ def export_model(args):
     else:
         assert False, "args.pretrained_model must set"
 
-    paddle.static.save_inference_model(
+    paddle.fluid.io.save_inference_model(
         './inference_model/' + args.model,
         feeded_var_names=[image.name],
         target_vars=[out],
