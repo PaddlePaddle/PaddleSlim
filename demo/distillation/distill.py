@@ -121,6 +121,7 @@ def compress(args):
                 feed_list=[image, label],
                 drop_last=True,
                 batch_size=args.batch_size,
+                return_list=False,
                 shuffle=True,
                 use_shared_memory=False,
                 num_workers=1)
@@ -129,6 +130,7 @@ def compress(args):
                 places=place,
                 feed_list=[image, label],
                 drop_last=False,
+                return_list=False,
                 use_shared_memory=False,
                 batch_size=args.batch_size,
                 shuffle=False)
