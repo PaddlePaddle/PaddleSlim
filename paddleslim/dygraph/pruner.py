@@ -14,6 +14,8 @@ class Pruner(object):
     """
     Pruner used to resize or mask dimensions of variables.
     Args:
+        model(paddle.nn.Layer): The target model to be pruned.
+        input_shape(list<int>): The input shape of model. It is used to trace the graph of the model.
         
     """
 
@@ -37,6 +39,7 @@ class Pruner(object):
         Args:
             ratios(dict<str, float>): The key is the name of variable to be pruned and the
                                       value is the pruned ratio.
+            axis(list): The dimensions to be pruned on.
 
         Returns:
             plan(PruningPlan): The pruning plan.

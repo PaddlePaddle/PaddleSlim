@@ -257,7 +257,7 @@ class FilterPruner(Pruner):
 
     def sensitive_prune(self, pruned_flops, skip_vars=[], align=None):
 
-        # skip depthwise convilutions
+        # skip depthwise convolutions
         for layer in self.model.sublayers():
             if isinstance(layer,
                           paddle.nn.layer.conv.Conv2D) and layer._groups > 1:
