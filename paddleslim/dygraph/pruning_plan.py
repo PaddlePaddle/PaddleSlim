@@ -3,7 +3,6 @@ import collections
 import numpy as np
 import logging
 from ..common import get_logger
-import paddle.fluid as fluid
 from paddle.fluid import core
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -176,7 +175,17 @@ class PruningPlan():
                         bool_mask = mask.astype(bool)
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims[0], value)
-                        place = fluid.CUDAPlace(0)
+
+                        p = t_value._place()
+                        if p.is_cpu_place():
+                            place = paddle.CPUPlace()
+                        elif p.is_cuda_pinned_place():
+                            place = paddle.CUDAPinnedPlace()
+                        else:
+                            p = core.Place()
+                            p.set_place(t_value._place())
+                            place = paddle.CUDAPlace(p.gpu_device_id())
+
                         t_value.set(pruned_value, place)
                         if isinstance(sub_layer, paddle.nn.layer.conv.Conv2D):
                             if sub_layer._groups > 1:

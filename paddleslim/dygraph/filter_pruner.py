@@ -14,7 +14,7 @@ __all__ = ['Status', 'FilterPruner']
 
 _logger = get_logger(__name__, logging.INFO)
 
-CONV_OP_TYPE = paddle.fluid.dygraph.nn.Conv2D
+CONV_OP_TYPE = paddle.nn.Conv2D
 FILTER_DIM = [0]
 CONV_WEIGHT_NAME = "weight"
 
