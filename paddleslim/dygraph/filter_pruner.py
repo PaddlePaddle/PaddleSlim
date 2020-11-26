@@ -44,24 +44,19 @@ class Status():
 class FilterPruner(Pruner):
     """
     Pruner used to prune filter structure in convolution layer.
-    Parameters:
-        model(dygraph): The target model to be pruned.
+
+    Args:
+        model(paddle.nn.Layer): The target model to be pruned.
         input_shape(list<int>): The input shape of model. It is used to trace the graph of the model.
-        sensitive(bool): Whether to prune each layer by different ratio that is
-                         in direct proportion to sensitivity of each layer. 'False' means pruning
-                         each layer by uniform ratio. Default: "False".
-        status(Status): The status of model. It contains sensitivity information used
-                        in sensitive pruning. It can be instance loaded from local file system.
-                        If it is None, you should call 'status' function to get status instance
-                        before call 'prune' function and 'prune_var' function. Default: None.
+        sen_file(str, optional): The absolute path of file that stores computed sensitivities. If it is
+                              set rightly, 'FilterPruner::sensitive' function can not be called anymore
+                              in next step. Default: None.
     
     """
 
     def __init__(self, model, input_shape, sen_file=None):
         super(FilterPruner, self).__init__(model, input_shape)
         self._status = Status(sen_file)
-        self.var_group = VarGroup(model, input_shape)
-
         # sensitive and var_group are just used in filter pruning
         self.var_group = VarGroup(model, input_shape)
 
@@ -70,11 +65,37 @@ class FilterPruner(Pruner):
                   sen_file=None,
                   target_vars=None,
                   skip_vars=None):
+        """
+        Compute or get sensitivities of model in current pruner. It will return a cached sensitivities when all the arguments are "None".
 
+        This function return a dict storing sensitivities as below:
+    
+        .. code-block:: python
+    
+               {"weight_0":
+                   {0.1: 0.22,
+                    0.2: 0.33
+                   },
+                 "weight_1":
+                   {0.1: 0.21,
+                    0.2: 0.4
+                   }
+               }
+    
+        ``weight_0`` is parameter name of convolution. ``sensitivities['weight_0']`` is a dict in which key is pruned ratio and value is the percent of losses.
+
+        Args:
+          eval_func(function, optional): The function to evaluate the model in current pruner. This function should have an empy arguments list and return a score with type "float32". Default: None.
+          sen_file(str, optional): The absolute path of file to save sensitivities into local filesystem. Default: None.
+          target_vars(list, optional): The names of tensors whose sensitivity will be computed. "None" means all weights in convolution layer will be computed. Default: None.
+          skip_vars(list, optional): The names of tensors whose sensitivity won't be computed. "None" means skip nothing. Default: None.
+    
+        Returns:
+           dict: A dict storing sensitivities.       
+
+        """
         if eval_func is None and sen_file is None:
             return self._status.sensitivies
-        if self._status is None:
-            self._status = Status()
         if sen_file is not None and os.path.isfile(sen_file):
             self._status.load(sen_file)
 
@@ -102,6 +123,7 @@ class FilterPruner(Pruner):
                                is name of parameters to be pruned. The value of dict is a list of tuple with
                                format `(pruned_ratio, accuracy_loss)`.
           loss(float): The threshold of accuracy loss.
+          skip_vars(list, optional): The names of tensors whose sensitivity won't be computed. "None" means skip nothing. Default: None.
     
         Returns:
     
@@ -154,8 +176,12 @@ class FilterPruner(Pruner):
          Get a group of ratios by sensitivities.
          Args:
              pruned_flops(float): The excepted rate of FLOPs to be pruned. It should be in range (0, 1).
-             align: Round the size of each pruned dimension to multiple of 'align' if 'align' is not None.
-                    Default: None.
+             align(int, optional): Round the size of each pruned dimension to multiple of 'align' if 'align' is not None. Default: None.
+             dims(list, optional): The dims to be pruned on. [0] means pruning channels of output for convolution. Default: [0].
+             skip_vars(list, optional): The names of tensors whose sensitivity won't be computed. "None" means skip nothing. Default: None.
+
+        Returns:
+            tuple: A tuple with format ``(ratios, pruned_flops)`` . "ratios" is a dict whose key is name of tensor and value is ratio to be pruned. "pruned_flops" is the ratio of total pruned FLOPs in the model.
         """
         base_flops = flops(self.model, self.input_shape)
 

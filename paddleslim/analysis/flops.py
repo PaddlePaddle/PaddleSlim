@@ -13,7 +13,7 @@
 # limitations under the License.
 import paddle
 import numpy as np
-import paddle.fluid.dygraph.jit as jit
+import paddle.jit as jit
 from ..core import GraphWrapper
 
 __all__ = ["flops", "dygraph_flops"]

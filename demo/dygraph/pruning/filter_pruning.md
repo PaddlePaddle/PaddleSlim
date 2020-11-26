@@ -6,7 +6,7 @@
 
 PaddlePaddle提供的`vision`模块提供了一些构建好的分类模型结构，并提供在`ImageNet`数据集上的预训练模型。为了简化教程，我们不再重新定义网络结构，而是直接从`vision`模块导入模型结构。代码如下所示，我们导入`MobileNetV1`模型，并查看模型的结构信息。
 
-```
+```python
 import paddle
 from paddle.vision.models import mobilenet_v1
 net = mobilenet_v1(pretrained=False)
@@ -17,7 +17,7 @@ paddle.summary(net, (1, 3, 32, 32))
 
 我们直接使用`vision`模块提供的`Cifar10`数据集，并通过飞桨高层API `paddle.vision.transforms`对数据进行预处理。在声明`paddle.vision.datasets.Cifar10`对象时，会自动下载数据并缓存到本地文件系统。代码如下所示：
 
-```
+```python
 import paddle.vision.transforms as T
 transform = T.Compose([
                     T.Transpose(),
@@ -29,7 +29,7 @@ val_dataset = paddle.vision.datasets.Cifar10(mode="test", backend="cv2",transfor
 
 我们可以通过以下代码查看训练集和测试集的样本数量，并尝试取出训练集中的第一个样本，观察其图片的`shape`和对应的`label`。
 
-```
+```python
 from __future__ import print_function
 print(f'train samples count: {len(train_dataset)}')
 print(f'val samples count: {len(val_dataset)}')
@@ -47,7 +47,7 @@ for data in train_dataset:
 - 模型评估指标
 
 
-```
+```python
 from paddle.static import InputSpec as Input
 optimizer = paddle.optimizer.Momentum(
         learning_rate=0.1,
@@ -66,7 +66,7 @@ model.prepare(
 
 以上代码声明了用于训练的`model`对象，接下来可以调用`model`的`fit`接口和`evaluate`接口分别进行训练和评估：
 
-```
+```python
 model.fit(train_dataset, epochs=2, batch_size=128, verbose=1)
 result = model.evaluate(val_dataset,batch_size=128, log_freq=10)
 print(result)
@@ -77,7 +77,7 @@ print(result)
 本节内容分为两部分：卷积层重要性分析和`Filters`剪裁，其中『卷积层重要性分析』也可以被称作『卷积层敏感度分析』，我们定义越重要的卷积层越敏感。
 PaddleSlim提供了工具类`Pruner`来进行重要性分析和剪裁操作，不同的`Pruner`的子类对应不同的分析和剪裁策略，本示例以`L1NormFilterPruner`为例说明。首先我们声明一个`L1NormFilterPruner`对象，如下所示：
 
-```
+```python
 from paddleslim.dygraph import L1NormFilterPruner
 pruner = L1NormFilterPruner(net, [1, 3, 224, 224])#, sen_file="./sen.pickle")
 ```
@@ -128,18 +128,18 @@ pruner = L1NormFilterPruner(net, [1, 3, 224, 224])#, sen_file="./sen.pickle")
 
 调用`pruner`对象的`sensitive`方法进行敏感度分析，在调用`sensitive`之前，我们简单对`model.evaluate`进行包装，使其符合`sensitive`接口的规范。执行如下代码，会进行敏感度计算，并将计算结果存入本地文件系统：
 
-```
+```python
 def eval_fn():
         result = model.evaluate(
             val_dataset,
             batch_size=128)
         return result['acc_top1']
-sen = pruner.sensitive(eval_func=eval_fn, sen_file="./sen.pickle")
+pruner.sensitive(eval_func=eval_fn, sen_file="./sen.pickle")
 ```
 
 上述代码执行完毕后，敏感度信息会存放在pruner对象中，可以通过以下方式查看敏感度信息内容：
 
-```
+```python
 print(pruner.sensitive())
 ```
 
@@ -149,7 +149,7 @@ print(pruner.sensitive())
 
 `pruner`对象提供了`sensitive_prune`方法根据敏感度信息对模型进行剪裁，用户只需要传入期望的FLOPs减少比例。首先，我们记录下剪裁之前的模型的FLOPs数值，如下：
 
-```
+```python
 from paddleslim.analysis import dygraph_flops
 flops = dygraph_flops(net, [1, 3, 32, 32])
 print(f"FLOPs before pruning: {flops}")
@@ -157,7 +157,7 @@ print(f"FLOPs before pruning: {flops}")
 
 执行剪裁操作，期望跳过最后一层卷积层并剪掉40%的FLOPs：
 
-```
+```python
 plan = pruner.sensitive_prune(0.4, skip_vars=["conv2d_26.w_0"])
 flops = dygraph_flops(net, [1, 3, 32, 32])
 print(f"FLOPs after pruning: {flops}")
@@ -166,14 +166,14 @@ print(f"Pruned FLOPs: {round(plan.pruned_flops*100, 2)}%")
 
 剪裁之后，在测试集上重新评估精度，会发现精度大幅下降，如下所示：
 
-```
+```python
 result = model.evaluate(val_dataset,batch_size=128, log_freq=10)
 print(f"before fine-tuning: {result}")
 ```
 
 对剪裁后的模型重新训练, 并再测试集上测试精度，如下：
 
-```
+```python
 optimizer = paddle.optimizer.Momentum(
         learning_rate=0.1,
         parameters=net.parameters())
@@ -188,6 +188,6 @@ print(f"after fine-tuning: {result}")
 
 经过重新训练，精度有所提升，最后看下剪裁后模型的结构信息，如下：
 
-```
+```python
 paddle.summary(net, (1, 3, 32, 32))
 ```

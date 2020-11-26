@@ -5,7 +5,7 @@
 该教程介绍如果在PaddleSlim提供的接口基础上快速自定义`Filters`剪裁策略。
 在PaddleSlim中，所有剪裁`Filters`的`Pruner`继承自基类`FilterPruner`。`FilterPruner`中自定义了一系列通用方法，用户只需要重载实现`FilterPruner`的`cal_mask`接口，`cal_mask`接口定义如下：
 
-```
+```python
 def cal_mask(self, var_name, pruned_ratio, group):
     raise NotImplemented()
 ```
@@ -29,7 +29,7 @@ def cal_mask(self, var_name, pruned_ratio, group):
 
 如图1-1所示，在给定模型中有两个卷积层，第一个卷积层有3个`filters`，第二个卷积层有2个`filters`。如果删除第一个卷积绿色的`filter`，第一个卷积的输出特征图的通道数也会减1，同时需要删掉第二个卷积层绿色的`kernels`。如上所述的两个卷积共同组成一个group，表示如下：
 
-```
+```python
 group = {
             "conv_1.weight":{
                 "pruned_dims": [0],
@@ -48,8 +48,8 @@ group = {
 
 在上述表示`group`的数据结构示例中，`conv_1.weight`为第一个卷积权重参数的名称，其对应的value也是一个dict实例，存放了当前参数的一些信息，包括：
 - **pruned_dims:** 类型为`list<int>`，表示当前参数在哪些维度上被裁。
-- **layer:** 类型为[paddle.dygraph.Layer](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/dygraph_cn/Layer_cn.html#layer), 表示当前参数所在`Layer`。
-- **var:** 类型为[paddle.Variable](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Variable_cn.html#variable), 表示当前参数对应的实例。
+- **layer:** 类型为[paddle.nn.Layer](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/dygraph_cn/Layer_cn.html#layer), 表示当前参数所在`Layer`。
+- **var:** 类型为[paddle.Tensor](https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/Variable_cn.html#variable), 表示当前参数对应的实例。
 - **value:** 类型为numpy.array类型，待裁参数所存的具体数值，方便开发者使用。
 
 图1-2为更复杂的情况，其中，`Add`操作的所有输入的通道数需要保持一致，`Concat`操作的输出通道数的调整可能会影响到所有输入的通道数，因此`group`中可能包含多个卷积的参数或变量，可以是：卷积权重、卷积bias、`batch norm`相关参数等。
@@ -65,7 +65,7 @@ group = {
 
 ## 2. 定义模型
 
-```
+```python
 import paddle
 from paddle.vision.models import mobilenet_v1
 net = mobilenet_v1(pretrained=False)
@@ -76,7 +76,7 @@ paddle.summary(net, (1, 3, 32, 32))
 
 该小节参考`L1NormFilterPruner`实现`L2NormFilterPruner`，方式为集成`FIlterPruner`并重载`cal_mask`接口。代码如下所示：
 
-```
+```python
 import numpy as np
 from paddleslim.dygraph import FilterPruner
 
@@ -105,7 +105,8 @@ class L2NormFilterPruner(FilterPruner):
 ```
 
 如上述代码所示，我们重载了`FilterPruner`基类的`cal_mask`方法，并在`L1NormFilterPruner`代码基础上，修改了计算通道重要性的语句，将其修改为了计算L2Norm的逻辑：
-```
+
+```python
 scores = np.sqrt(np.sum(np.square(value), axis=tuple(reduce_dims)))
 ```
 
@@ -113,7 +114,7 @@ scores = np.sqrt(np.sum(np.square(value), axis=tuple(reduce_dims)))
 按以下代码调用`prune_var`方法后，参数名称为`conv2d_0.w_0`的卷积层会被裁掉50%的`filters`，与之相关关联的后续卷积和`BatchNorm`相关的参数也会被剪裁。`prune_var`不仅会对待裁模型进行`inplace`的裁剪，还会返回保存裁剪详细信息的`PruningPlan`对象，用户可以直接打印`PruningPlan`对象内容。
 最后，可以通过调用`Pruner`的`restore`方法，将已被裁剪的模型恢复到初始状态。
 
-```
+```python
 pruner = L2NormFilterPruner(net, [1, 3, 32, 32])
 plan = pruner.prune_var("conv2d_0.w_0", 0, 0.5)
 print(plan)
@@ -164,7 +165,7 @@ pruner.restore()
 
 以下代码通过继承`FilterPruner`并重载`cal_mask`实现了`FPGMFilterPruner`，其中，`get_distance_sum`用于计算第`out_idx`个filter的重要性。
 
-```
+```python
 import numpy as np
 from paddleslim.dygraph import FilterPruner
 
@@ -204,7 +205,7 @@ class FPGMFilterPruner(FilterPruner):
 
 接下来声明一个FPGMFilterPruner对象进行验证:
 
-```
+```python
 pruner = FPGMFilterPruner(net, [1, 3, 32, 32])
 plan = pruner.prune_var("conv2d_0.w_0", 0, 0.5)
 print(plan)
@@ -217,7 +218,7 @@ pruner.restore()
 
 ### 5.1 预训练
 
-```
+```python
 import paddle.vision.transforms as T
 transform = T.Compose([
                     T.Transpose(),
@@ -244,7 +245,7 @@ print(result)
 
 ### 5.2 计算敏感度
 
-```
+```python
 pruner = FPGMFilterPruner(net, [1, 3, 32, 32])
 def eval_fn():
         result = model.evaluate(
@@ -257,7 +258,7 @@ print(sen)
 
 ### 5.3 剪裁
 
-```
+```python
 from paddleslim.analysis import dygraph_flops
 flops = dygraph_flops(net, [1, 3, 32, 32])
 print(f"FLOPs before pruning: {flops}")
@@ -271,7 +272,7 @@ print(f"before fine-tuning: {result}")
 
 ### 5.4 重训练
 
-```
+```python
 optimizer = paddle.optimizer.Momentum(
         learning_rate=0.1,
         parameters=net.parameters())
