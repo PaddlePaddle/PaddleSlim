@@ -56,6 +56,7 @@ class TestAnalysisHelper(StaticCase):
             places=places,
             feed_list=[image, label],
             drop_last=True,
+            return_list=False,
             batch_size=64)
         exe.run(paddle.static.default_startup_program())
 

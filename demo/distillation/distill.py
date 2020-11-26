@@ -121,6 +121,7 @@ def compress(args):
                 feed_list=[image, label],
                 drop_last=True,
                 batch_size=args.batch_size,
+                return_list=False,
                 shuffle=True,
                 use_shared_memory=False,
                 num_workers=1)
@@ -129,6 +130,7 @@ def compress(args):
                 places=place,
                 feed_list=[image, label],
                 drop_last=False,
+                return_list=False,
                 use_shared_memory=False,
                 batch_size=args.batch_size,
                 shuffle=False)
@@ -217,7 +219,7 @@ def compress(args):
                     format(epoch_id, step_id, val_loss[0], val_acc1[0],
                            val_acc5[0]))
         if args.save_inference:
-            paddle.static.save_inference_model(
+            paddle.fluid.io.save_inference_model(
                 os.path.join("./saved_models", str(epoch_id)), ["image"],
                 [out], exe, student_program)
         _logger.info("epoch {} top1 {:.6f}, top5 {:.6f}".format(

@@ -168,6 +168,7 @@ def compress(args):
         feed_list=[image, label],
         drop_last=True,
         batch_size=args.batch_size,
+        return_list=False,
         use_shared_memory=False,
         shuffle=True,
         num_workers=1)
@@ -176,6 +177,7 @@ def compress(args):
         places=place,
         feed_list=[image, label],
         drop_last=False,
+        return_list=False,
         batch_size=args.batch_size,
         use_shared_memory=False,
         shuffle=False)
@@ -277,7 +279,7 @@ def compress(args):
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
 
-    paddle.static.save_inference_model(
+    paddle.fluid.io.save_inference_model(
         dirname=float_path,
         feeded_var_names=[image.name],
         target_vars=[out],

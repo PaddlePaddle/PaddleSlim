@@ -124,9 +124,14 @@ class TestQuantAwareCase2(StaticCase):
             places=place,
             feed_list=[image, label],
             drop_last=True,
+            return_list=False,
             batch_size=64)
         valid_loader = paddle.io.DataLoader(
-            test_dataset, places=place, feed_list=[image, label], batch_size=64)
+            test_dataset,
+            places=place,
+            feed_list=[image, label],
+            batch_size=64,
+            return_list=False)
 
         def train(program):
             iter = 0
