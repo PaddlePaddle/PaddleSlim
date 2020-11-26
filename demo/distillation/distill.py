@@ -219,7 +219,7 @@ def compress(args):
                     format(epoch_id, step_id, val_loss[0], val_acc1[0],
                            val_acc5[0]))
         if args.save_inference:
-            paddle.static.save_inference_model(
+            paddle.fluid.io.save_inference_model(
                 os.path.join("./saved_models", str(epoch_id)), ["image"],
                 [out], exe, student_program)
         _logger.info("epoch {} top1 {:.6f}, top5 {:.6f}".format(
