@@ -120,7 +120,7 @@ pruner = L1NormFilterPruner(net, [1, 3, 224, 224])#, sen_file="./sen.pickle")
     <img src="filter_pruning/4-3.png" width="600" height="600">
 </div>
 <div align="center">
-图4-3 用精度损失表示的敏感度<\center>
+图4-3 用精度损失表示的敏感度
 </div>
 
 

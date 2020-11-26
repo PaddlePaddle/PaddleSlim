@@ -24,9 +24,6 @@ def cal_mask(self, var_name, pruned_ratio, group):
 <strong>图1-1 卷积层关联关系示意图</strong>
 </div>
 
-![image-2.png](attachment:image-2.png)
-
-
 如图1-1所示，在给定模型中有两个卷积层，第一个卷积层有3个`filters`，第二个卷积层有2个`filters`。如果删除第一个卷积绿色的`filter`，第一个卷积的输出特征图的通道数也会减1，同时需要删掉第二个卷积层绿色的`kernels`。如上所述的两个卷积共同组成一个group，表示如下：
 
 ```python
