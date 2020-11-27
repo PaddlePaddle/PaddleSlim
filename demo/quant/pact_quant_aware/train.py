@@ -157,6 +157,7 @@ def compress(args):
         places=places,
         feed_list=[image, label],
         drop_last=True,
+        return_list=False,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=1)
@@ -166,6 +167,7 @@ def compress(args):
         places=place,
         feed_list=[image, label],
         drop_last=False,
+        return_list=False,
         batch_size=args.batch_size,
         shuffle=False)
 
