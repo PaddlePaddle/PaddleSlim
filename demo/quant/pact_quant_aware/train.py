@@ -159,6 +159,7 @@ def compress(args):
         drop_last=True,
         return_list=False,
         batch_size=args.batch_size,
+        use_shared_memory=False,
         shuffle=True,
         num_workers=1)
 
@@ -169,6 +170,7 @@ def compress(args):
         drop_last=False,
         return_list=False,
         batch_size=args.batch_size,
+        use_shared_memory=False,
         shuffle=False)
 
     if args.analysis:
