@@ -14,4 +14,10 @@
 
 from .ofa import OFA, RunConfig, DistillConfig
 from .convert_super import supernet
-from .layers import *
+
+from .utils.utils import get_paddle_version
+pd_ver = get_paddle_version()
+if pd_ver == 185:
+    from .layers import *
+else:
+    from .layers_new import *

@@ -44,3 +44,13 @@ def search_idx(num, sorted_nestlist):
                 return idx, phase_idx
     assert num > max_num
     return len(sorted_nestlist) - 1, max_idx
+
+
+def get_paddle_version():
+    import paddle
+    pd_ver = 185
+    if hasattr(paddle, 'nn'):
+        if hasattr(paddle.nn, 'Conv1D'):  ### judge 2.0 alpha
+            pd_ver = 200
+
+    return pd_ver
