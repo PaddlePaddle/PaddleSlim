@@ -26,7 +26,7 @@ from paddle.static import InputSpec as Input
 from paddleslim.dygraph import L1NormFilterPruner
 
 
-class TestSensitivity(StaticCase):
+class TestSensitivity(unittest.TestCase):
     def __init__(self,
                  methodName='runTest',
                  net=None,

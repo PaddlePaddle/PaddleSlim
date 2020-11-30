@@ -161,9 +161,9 @@ class FilterPruner(Pruner):
         ret = {}
         for name in ratios:
             ratio = ratios[name]
-            dim = self.var_shapes[name][dims[0]]
-            pruned_dims = round(ratio * dim / factor) * factor
-            ratio = pruned_dims / dim
+            dim = self._var_shapes[name][dims[0]]
+            remained = round((1 - ratio) * dim / factor) * factor
+            ratio = (dim - remained) / dim
             ret[name] = ratio
         return ret
 
@@ -198,7 +198,6 @@ class FilterPruner(Pruner):
                 ratios = self._round_to(ratios, dims=dims, factor=align)
             plan = self.prune_vars(ratios, axis=dims)
             _logger.debug("pruning plan: {}".format(plan))
-            plan.apply(self.model)
             c_flops = flops(self.model, self.input_shape)
             _logger.debug("FLOPs after pruning: {}".format(c_flops))
             c_pruned_flops = (base_flops - c_flops) / base_flops
@@ -243,8 +242,7 @@ class FilterPruner(Pruner):
                     _logger.debug("{}, {} has computed.".format(var_name,
                                                                 ratio))
                     continue
-                plan = self.prune_var(var_name, dims, ratio)
-                plan.apply(model, lazy=True)
+                plan = self.prune_var(var_name, dims, ratio, apply="lazy")
                 pruned_metric = eval_func()
                 loss = (baseline - pruned_metric) / baseline
                 _logger.info("pruned param: {}; {}; loss={}".format(
@@ -270,25 +268,7 @@ class FilterPruner(Pruner):
         _logger.info("ratios: {}".format(ratios))
         self.plan = self.prune_vars(ratios, FILTER_DIM)
         self.plan._pruned_flops = pruned_flops
-        self.plan.apply(self.model)
-        return self.plan
-
-    def uniform_prune(self, skip_vars=None, ratio=None):
-        self.plan = PruningPlan(self.model.full_name)
-        for name, sub_layer in self.model.named_sublayers():
-            if isinstance(sub_layer, CONV_OP_TYPE):
-                for name, param in sub_layer.named_parameters(
-                        include_sublayers=False):
-                    if name == CONV_WEIGHT_NAME and param.name not in skip_vars and not self.plan.contains(
-                            param.name, FILTER_DIM):
-                        plan = self.prune_var(param.name, FILTER_DIM, ratio)
-                        skip = False
-                        for var in skip_vars:
-                            if plan.contains(var, FILTER_DIM):
-                                skip = True
-                        if not skip:
-                            self.plan.extend(plan)
-        self.plan.apply(self.model)
+        #        self.plan.apply(self.model)
         return self.plan
 
     def restore(self):
@@ -309,7 +289,7 @@ class FilterPruner(Pruner):
         """
         raise NotImplemented("cal_mask is not implemented")
 
-    def prune_var(self, var_name, pruned_dims, pruned_ratio):
+    def prune_var(self, var_name, pruned_dims, pruned_ratio, apply="impretive"):
         """
         Pruning a variable.
         Parameters:
@@ -344,5 +324,8 @@ class FilterPruner(Pruner):
             if isinstance(dims, int):
                 dims = [dims]
             plan.add(_name, PruningMask(dims, mask, pruned_ratio))
-
+        if apply == "lazy":
+            plan.apply(self.model, lazy=True)
+        elif apply == "impretive":
+            plan.apply(self.model, lazy=False)
         return plan
