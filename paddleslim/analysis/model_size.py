@@ -21,8 +21,12 @@ __all__ = ["model_size"]
 def model_size(program):
     """
     Get total value numbers of all parameters.
+
     Args:
-        program(Program): The program used to calculate model size.
+        program(fluid.Program): The program used to calculate model size.
+
+    Returns:
+        int: The total count of all parameters. 
     """
     size = 0
     for block in program.blocks:

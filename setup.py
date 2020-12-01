@@ -32,17 +32,6 @@ max_version, mid_version, min_version = python_version()
 with open('./requirements.txt') as f:
     setup_requires = f.read().splitlines()
 
-packages = [
-    'paddleslim',
-    'paddleslim.prune',
-    'paddleslim.dist',
-    'paddleslim.nas',
-    'paddleslim.analysis',
-    'paddleslim.quant',
-    'paddleslim.core',
-    'paddleslim.common',
-]
-
 setup(
     name='paddleslim',
     version=slim_version,
@@ -52,7 +41,7 @@ setup(
     author='PaddlePaddle Author',
     author_email='dltp-all@baidu.com',
     install_requires=setup_requires,
-    packages=packages,
+    packages=find_packages(),
     # PyPI package information.
     classifiers=[
         'Development Status :: 4 - Beta',
