@@ -94,7 +94,29 @@ class conv2d(PruneWorker):
     def __init__(self, op, pruned_params, visited={}):
         super(conv2d, self).__init__(op, pruned_params, visited)
 
+    def _is_depthwise_conv(self, op):
+        data_format = self.op.attr("data_format")
+        channel_axis = 1
+        if data_format == "NHWC":
+            channel_axis = 3
+
+        filter_shape = self.op.inputs("Filter")[0].shape()
+        input_shape = self.op.inputs("Input")[0].shape()
+        num_channels = input_shape[channel_axis]
+        groups = self.op.attr("groups")
+        num_filters = filter_shape[0]
+        return (num_channels == groups and num_channels != 1 and
+                num_filters % num_channels == 0)
+
     def _prune(self, var, pruned_axis, pruned_idx):
+
+        if self._is_depthwise_conv(self.op):
+            _logger.debug(f"Meet conv2d who is depthwise conv2d actually.")
+            walker = depthwise_conv2d(
+                self.op, self.pruned_params, visited=self.visited)
+            walker._prune(var, pruned_axis, pruned_idx)
+            return
+
         data_format = self.op.attr("data_format")
         channel_axis = 1
         if data_format == "NHWC":
