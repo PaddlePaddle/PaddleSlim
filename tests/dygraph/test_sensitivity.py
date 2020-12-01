@@ -18,7 +18,6 @@ import time
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from static_case import StaticCase
 from paddleslim.prune import sensitivity, merge_sensitive, load_sensitivities
 from paddle.vision.models import mobilenet_v1, resnet50
 import paddle.vision.transforms as T
@@ -27,19 +26,14 @@ from paddleslim.dygraph import L1NormFilterPruner
 
 
 class TestSensitivity(unittest.TestCase):
-    def __init__(self,
-                 methodName='runTest',
-                 net=None,
-                 pruner=None,
-                 param_names=[]):
+    def __init__(self, methodName='runTest', pruner=None, param_names=[]):
         super(TestSensitivity, self).__init__(methodName)
-        self._net = net
         self._pruner = pruner
         self._param_names = param_names
         transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
-        self.train_dataset = paddle.vision.datasets.Cifar10(
+        self.train_dataset = paddle.vision.datasets.MNIST(
             mode="train", backend="cv2", transform=transform)
-        self.val_dataset = paddle.vision.datasets.Cifar10(
+        self.val_dataset = paddle.vision.datasets.MNIST(
             mode="test", backend="cv2", transform=transform)
 
         def _reader():
@@ -66,10 +60,10 @@ class TestSensitivity(unittest.TestCase):
 
     def dygraph_sen(self):
         paddle.disable_static()
-        net = self._net(pretrained=False)
-        optimizer = paddle.optimizer.Momentum(
-            learning_rate=0.1, parameters=net.parameters())
-        inputs = [Input([None, 3, 32, 32], 'float32', name='image')]
+        net = paddle.vision.models.LeNet()
+        optimizer = paddle.optimizer.Adam(
+            learning_rate=0.001, parameters=net.parameters())
+        inputs = [Input([None, 1, 28, 28], 'float32', name='image')]
         labels = [Input([None, 1], 'int64', name='label')]
         model = paddle.Model(net, inputs, labels)
         model.prepare(
@@ -77,13 +71,13 @@ class TestSensitivity(unittest.TestCase):
             paddle.nn.CrossEntropyLoss(),
             paddle.metric.Accuracy(topk=(1, 5)))
 
-        model.fit(self.train_dataset, epochs=2, batch_size=128, verbose=1)
-        result = model.evaluate(self.val_dataset, batch_size=128, log_freq=10)
+        model.fit(self.train_dataset, epochs=1, batch_size=128, verbose=1)
+        result = model.evaluate(self.val_dataset, batch_size=128, verbose=1)
         pruner = None
         if self._pruner == 'l1norm':
-            pruner = L1NormFilterPruner(net, [1, 3, 32, 32])
+            pruner = L1NormFilterPruner(net, [1, 1, 28, 28])
         elif self._pruner == 'fpgm':
-            pruner = FPGMFilterPruner(net, [1, 3, 32, 32])
+            pruner = FPGMFilterPruner(net, [1, 1, 28, 28])
 
         def eval_fn():
             result = model.evaluate(self.val_dataset, batch_size=128)
@@ -106,9 +100,9 @@ class TestSensitivity(unittest.TestCase):
         startup_program = fluid.Program()
         with fluid.unique_name.guard():
             with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[None, 3, 32, 32])
+                input = fluid.data(name="image", shape=[None, 1, 28, 28])
                 label = fluid.data(name="label", shape=[None, 1], dtype="int64")
-                model = self._net(pretrained=False)
+                model = paddle.vision.models.LeNet()
                 out = model(input)
                 acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
         eval_program = main_program.clone(for_test=True)
@@ -154,10 +148,7 @@ class TestSensitivity(unittest.TestCase):
 def add_cases(suite):
     suite.addTest(
         TestSensitivity(
-            net=mobilenet_v1, pruner="l1norm", param_names=["conv2d_8.w_0"]))
-    suite.addTest(
-        TestSensitivity(
-            net=resnet50, pruner="l1norm", param_names=["conv2d_8.w_0"]))
+            pruner="l1norm", param_names=["conv2d_0.w_0"]))
 
 
 def load_tests(loader, standard_tests, pattern):

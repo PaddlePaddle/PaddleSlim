@@ -234,8 +234,11 @@ class elementwise_op(PruneWorker):
 
     def _prune(self, var, pruned_axis, pruned_idx):
         axis = self.op.attr("axis")
-        if axis == -1:  # TODO
-            axis = 0
+        if axis == -1:
+            x = self.op.inputs("X")[0]
+            y = self.op.inputs("Y")[0]
+            axis = len(x.shape()) - len(y.shape())
+
         if var in self.op.outputs("Out"):
             for name in ["X", "Y"]:
                 actual_axis = pruned_axis
@@ -251,19 +254,27 @@ class elementwise_op(PruneWorker):
         else:
             if var in self.op.inputs("X"):
                 in_var = self.op.inputs("Y")[0]
-                if not (len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
-                    if in_var.is_parameter():
-                        self.pruned_params.append(
-                            (in_var, pruned_axis - axis, pruned_idx))
+                y_pruned_axis = pruned_axis
+                if len(in_var.shape()) != len(var.shape()):
+                    assert (len(var.shape()) > len(in_var.shape()))
+                    if axis == -1:
+                        axis = len(var.shape()) - len(in_var.shape())
+                    y_pruned_axis = pruned_axis - axis
+
+                if y_pruned_axis >= 0 and not (len(in_var.shape()) == 1 and
+                                               in_var.shape()[0] == 1):
+                    self.pruned_params.append(
+                        (in_var, y_pruned_axis, pruned_idx))
                     pre_ops = in_var.inputs()
                     for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis - axis,
-                                       pruned_idx)
+                        self._prune_op(op, in_var, y_pruned_axis, pruned_idx)
             elif var in self.op.inputs("Y"):
                 in_var = self.op.inputs("X")[0]
-                if not (len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
-                    pre_ops = in_var.inputs()
+                if len(in_var.shape()) != len(var.shape()):
+                    assert (len(var.shape()) < len(in_var.shape()))
                     pruned_axis = pruned_axis + axis
+                if pruned_axis <= len(in_var.shape()):
+                    pre_ops = in_var.inputs()
                     for op in pre_ops:
                         self._prune_op(op, in_var, pruned_axis, pruned_idx)
 

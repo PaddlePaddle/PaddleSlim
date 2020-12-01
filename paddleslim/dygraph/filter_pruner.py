@@ -163,7 +163,10 @@ class FilterPruner(Pruner):
             ratio = ratios[name]
             dim = self._var_shapes[name][dims[0]]
             remained = round((1 - ratio) * dim / factor) * factor
-            ratio = (dim - remained) / dim
+            if remained == 0:
+                remained = factor
+            ratio = float(dim - remained) / dim
+            ratio = ratio if ratio > 0 else 0.
             ret[name] = ratio
         return ret
 
@@ -261,11 +264,11 @@ class FilterPruner(Pruner):
                           paddle.nn.layer.conv.Conv2D) and layer._groups > 1:
                 for param in layer.parameters(include_sublayers=False):
                     skip_vars.append(param.name)
-        _logger.info("skip vars: {}".format(skip_vars))
+        _logger.debug("skip vars: {}".format(skip_vars))
         self.restore()
         ratios, pruned_flops = self.get_ratios_by_sensitivity(
             pruned_flops, align=align, dims=FILTER_DIM, skip_vars=skip_vars)
-        _logger.info("ratios: {}".format(ratios))
+        _logger.debug("ratios: {}".format(ratios))
         self.plan = self.prune_vars(ratios, FILTER_DIM)
         self.plan._pruned_flops = pruned_flops
         #        self.plan.apply(self.model)
