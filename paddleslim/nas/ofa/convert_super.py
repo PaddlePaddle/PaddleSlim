@@ -602,7 +602,7 @@ class Convert:
                 raise NotImplementedError("name error")
             return net
 
-        if isinstance(network, paddle.nn.Layer):
+        if isinstance(network, Layer):
             for idx, (name, sublayer) in enumerate(network.named_sublayers()):
                 if len(name.split('.')) > 1:
                     net = split_prefix(network, name.split('.')[:-1])
