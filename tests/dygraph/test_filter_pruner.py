@@ -18,7 +18,6 @@ import time
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from models import mobilenet_v1
 import paddle.vision.transforms as T
 from paddle.static import InputSpec as Input
 from paddleslim.dygraph import L1NormFilterPruner, L2NormFilterPruner, FPGMFilterPruner
@@ -62,8 +61,6 @@ class TestFilterPruner(unittest.TestCase):
     def runTest(self):
         with fluid.unique_name.guard():
             net = paddle.vision.models.LeNet()
-            #            pruner = L1NormFilterPruner(net, [1, 1, 28, 28])
-            #            plan = pruner.prune_vars({'conv2d_0.w_0': 0.5}, [0], apply="impretive")
             optimizer = paddle.optimizer.Adam(
                 learning_rate=0.001, parameters=net.parameters())
             inputs = [Input([None, 1, 28, 28], 'float32', name='image')]

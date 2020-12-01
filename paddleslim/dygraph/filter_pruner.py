@@ -271,7 +271,6 @@ class FilterPruner(Pruner):
         _logger.debug("ratios: {}".format(ratios))
         self.plan = self.prune_vars(ratios, FILTER_DIM)
         self.plan._pruned_flops = pruned_flops
-        #        self.plan.apply(self.model)
         return self.plan
 
     def restore(self):

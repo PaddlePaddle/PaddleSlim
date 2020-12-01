@@ -110,7 +110,6 @@ class Pruner():
                 assert ((not self.pruned_weights),
                         "The weights have been pruned once.")
                 group_values = []
-                print(f"group: {group}")
                 for name, axis, pruned_idx in group:
                     var = scope.find_var(name)
                     if var is not None:

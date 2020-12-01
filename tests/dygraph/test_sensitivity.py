@@ -18,8 +18,7 @@ import time
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from paddleslim.prune import sensitivity, merge_sensitive, load_sensitivities
-from paddle.vision.models import mobilenet_v1, resnet50
+from paddleslim.prune import sensitivity
 import paddle.vision.transforms as T
 from paddle.static import InputSpec as Input
 from paddleslim.dygraph import L1NormFilterPruner
