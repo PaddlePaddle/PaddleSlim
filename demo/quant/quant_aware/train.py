@@ -256,9 +256,9 @@ def compress(args):
                 model_path=os.path.join(args.checkpoint_dir, 'best_model'))
     if os.path.exists(os.path.join(args.checkpoint_dir, 'best_model')):
         paddle.static.load(
-            exe,
-            dirname=os.path.join(args.checkpoint_dir, 'best_model'),
-            main_program=val_program)
+            executor=exe,
+            model_path=os.path.join(args.checkpoint_dir, 'best_model'),
+            program=val_program)
     ############################################################################################################
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
