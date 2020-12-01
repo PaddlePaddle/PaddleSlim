@@ -25,11 +25,13 @@ if pd_ver == 185:
     from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
     from .layers import *
     from . import layers
+    Layer = fluid.dygraph.nn.Layer
 else:
     import paddle.nn as nn
     from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
     from .layers_new import *
     from . import layers_new as layers
+    Layer = paddle.nn.Layer
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -42,9 +44,16 @@ class Convert:
     def __init__(self, context):
         self.context = context
 
-    def convert(self, model):
+    def convert(self, network):
         # search the first and last weight layer, don't change out channel of the last weight layer
         # don't change in channel of the first weight layer
+        model = []
+        if isinstance(network, Layer):
+            for name, sublayer in network.named_sublayers():
+                model.append(sublayer)
+        else:
+            model = network
+
         first_weight_layer_idx = -1
         last_weight_layer_idx = -1
         weight_layer_count = 0
@@ -91,9 +100,6 @@ class Convert:
                     new_attr_dict['kernel_size'] = None
                 self.kernel_size = getattr(self.context, 'kernel_size', None)
 
-                if self.kernel_size != None:
-                    new_attr_dict['transform_kernel'] = True
-
                 # if the kernel_size of conv is 1, don't change it.
                 fks = '_filter_size' if '_filter_size' in attr_dict.keys(
                 ) else '_kernel_size'
@@ -103,6 +109,7 @@ class Convert:
                     ks = attr_dict[fks]
 
                 if self.kernel_size and int(ks[0]) != 1:
+                    new_attr_dict['transform_kernel'] = True
                     new_attr_dict[fks[1:]] = max(self.kernel_size)
                     new_attr_dict['candidate_config'].update({
                         'kernel_size': self.kernel_size
@@ -268,9 +275,6 @@ class Convert:
                     new_attr_dict['kernel_size'] = None
                 self.kernel_size = getattr(self.context, 'kernel_size', None)
 
-                if self.kernel_size != None:
-                    new_attr_dict['transform_kernel'] = True
-
                 # if the kernel_size of conv transpose is 1, don't change it.
                 fks = '_filter_size' if '_filter_size' in attr_dict.keys(
                 ) else '_kernel_size'
@@ -280,6 +284,7 @@ class Convert:
                     ks = attr_dict[fks]
 
                 if self.kernel_size and int(ks[0]) != 1:
+                    new_attr_dict['transform_kernel'] = True
                     new_attr_dict[fks[1:]] = max(self.kernel_size)
                     new_attr_dict['candidate_config'].update({
                         'kernel_size': self.kernel_size
@@ -588,7 +593,24 @@ class Convert:
                 layer = Block(SuperEmbedding(**new_attr_dict), key=key)
                 model[idx] = layer
 
-        return model
+        def split_prefix(net, name_list):
+            if len(name_list) > 1:
+                net = split_prefix(getattr(net, name_list[0]), name_list[1:])
+            elif len(name_list) == 1:
+                net = getattr(net, name_list[0])
+            else:
+                raise NotImplementedError("name error")
+            return net
+
+        if isinstance(network, paddle.nn.Layer):
+            for idx, (name, sublayer) in enumerate(network.named_sublayers()):
+                if len(name.split('.')) > 1:
+                    net = split_prefix(network, name.split('.')[:-1])
+                else:
+                    net = network
+                setattr(net, name.split('.')[-1], model[idx])
+
+        return network
 
 
 class supernet:
