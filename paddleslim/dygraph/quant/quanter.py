@@ -181,7 +181,8 @@ class QAT(object):
                     Default is None.
             act_preprocess(class, optional): Defines how to preprocess activation before quantization. Using this
                     can quickly test if user's preprocess method works or not. The function's input
-                    is non-quantized activation and function returns processed activation to be quantized. If None,                    will use preprocess method defined by 'activation_preprocess_type'.
+                    is non-quantized activation and function returns processed activation to be quantized. If None,
+                    will use preprocess method defined by 'activation_preprocess_type'.
                     Default is None.
         """
         if config is None:
@@ -218,14 +219,14 @@ class QAT(object):
 
     def save_quantized_model(self, model, path, input_spec=None):
         if self.weight_preprocess is not None or self.act_preprocess is not None:
-            model = self._remove_preprocess(self, model)
+            model = self._remove_preprocess(model)
 
         self.imperative_qat.save_quantized_model(
-            layer=model, path=path, input_spec=None)
+            layer=model, path=path, input_spec=input_spec)
 
     def _remove_preprocess(self, model):
         state_dict = model.state_dict()
-        native_qat = ImperativeQuantAware(
+        self.imperative_qat = ImperativeQuantAware(
             weight_bits=self.config['weight_bits'],
             activation_bits=self.config['activation_bits'],
             weight_quantize_type=self.config['weight_quantize_type'],
@@ -234,7 +235,8 @@ class QAT(object):
             quantizable_layer_type=self.config['quantizable_layer_type'])
 
         with paddle.utils.unique_name.guard():
-            model.init()
-            native_qat.quantize(model)
+            model.__init__()
+            self.imperative_qat.quantize(model)
+            state_dict = model.state_dict()
             model.set_state_dict(state_dict)
         return model
