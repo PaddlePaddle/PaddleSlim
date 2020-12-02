@@ -238,7 +238,7 @@ class TestImperativeQatPACT(unittest.TestCase):
 
         train(lenet)
         top1_1, top5_1 = test(lenet)
-        model = quanter.save_quantized_model(
+        quanter.save_quantized_model(
             lenet,
             './dygraph_qat',
             input_spec=[
