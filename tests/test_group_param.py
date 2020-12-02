@@ -45,8 +45,9 @@ class TestPrune(StaticCase):
             ["conv1_weights", "conv2_weights", "conv3_weights"], main_program)
         while [] in groups:
             groups.remove([])
+        print(groups)
         self.assertTrue(len(groups) == 2)
-        self.assertTrue(len(groups[0]) == 18)
+        self.assertTrue(len(groups[0]) == 20)
         self.assertTrue(len(groups[1]) == 6)
 
 

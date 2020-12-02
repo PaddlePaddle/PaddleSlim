@@ -111,8 +111,10 @@ class Pruner():
                         "The weights have been pruned once.")
                 group_values = []
                 for name, axis, pruned_idx in group:
-                    values = np.array(scope.find_var(name).get_tensor())
-                    group_values.append((name, values, axis, pruned_idx))
+                    var = scope.find_var(name)
+                    if var is not None:
+                        values = np.array(var.get_tensor())
+                        group_values.append((name, values, axis, pruned_idx))
 
                 scores = self.criterion(
                     group_values, graph)  # [(name, axis, score, pruned_idx)]
