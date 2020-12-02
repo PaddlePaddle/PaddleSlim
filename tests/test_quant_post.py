@@ -55,19 +55,29 @@ class TestQuantAwareCase1(StaticCase):
             mode='train', backend='cv2', transform=transform)
         test_dataset = paddle.vision.datasets.MNIST(
             mode='test', backend='cv2', transform=transform)
+
         train_loader = paddle.io.DataLoader(
             train_dataset,
             places=place,
             feed_list=[image, label],
             drop_last=True,
-            return_list=False,
-            batch_size=64)
+            batch_size=64,
+            return_list=False)
+
         valid_loader = paddle.io.DataLoader(
             test_dataset,
             places=place,
             feed_list=[image, label],
             batch_size=64,
             return_list=False)
+
+        def sample_generator_creator():
+            def __reader__():
+                for data in test_dataset:
+                    image, label = data
+                    yield image, label
+
+            return __reader__
 
         def train(program):
             iter = 0
@@ -115,7 +125,7 @@ class TestQuantAwareCase1(StaticCase):
             exe,
             './test_quant_post',
             './test_quant_post_inference',
-            sample_generator=paddle.dataset.mnist.test(),
+            sample_generator=sample_generator_creator(),
             model_filename='model',
             params_filename='params',
             batch_nums=10)
