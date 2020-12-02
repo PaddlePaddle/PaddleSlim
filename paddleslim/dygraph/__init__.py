@@ -19,3 +19,6 @@ __all__ += l2norm_pruner.__all__
 __all__ += fpgm_pruner.__all__
 __all__ += pruner.__all__
 __all__ += filter_pruner.__all__
+
+from .quant import *
+__all__ += quant.__all__
