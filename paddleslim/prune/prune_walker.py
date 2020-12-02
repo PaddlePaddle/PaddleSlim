@@ -94,7 +94,29 @@ class conv2d(PruneWorker):
     def __init__(self, op, pruned_params, visited={}):
         super(conv2d, self).__init__(op, pruned_params, visited)
 
+    def _is_depthwise_conv(self, op):
+        data_format = self.op.attr("data_format")
+        channel_axis = 1
+        if data_format == "NHWC":
+            channel_axis = 3
+
+        filter_shape = self.op.inputs("Filter")[0].shape()
+        input_shape = self.op.inputs("Input")[0].shape()
+        num_channels = input_shape[channel_axis]
+        groups = self.op.attr("groups")
+        num_filters = filter_shape[0]
+        return (num_channels == groups and num_channels != 1 and
+                num_filters % num_channels == 0)
+
     def _prune(self, var, pruned_axis, pruned_idx):
+
+        if self._is_depthwise_conv(self.op):
+            _logger.debug(f"Meet conv2d who is depthwise conv2d actually.")
+            walker = depthwise_conv2d(
+                self.op, self.pruned_params, visited=self.visited)
+            walker._prune(var, pruned_axis, pruned_idx)
+            return
+
         data_format = self.op.attr("data_format")
         channel_axis = 1
         if data_format == "NHWC":
@@ -234,8 +256,11 @@ class elementwise_op(PruneWorker):
 
     def _prune(self, var, pruned_axis, pruned_idx):
         axis = self.op.attr("axis")
-        if axis == -1:  # TODO
-            axis = 0
+        if axis == -1:
+            x = self.op.inputs("X")[0]
+            y = self.op.inputs("Y")[0]
+            axis = len(x.shape()) - len(y.shape())
+
         if var in self.op.outputs("Out"):
             for name in ["X", "Y"]:
                 actual_axis = pruned_axis
@@ -251,19 +276,27 @@ class elementwise_op(PruneWorker):
         else:
             if var in self.op.inputs("X"):
                 in_var = self.op.inputs("Y")[0]
-                if not (len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
-                    if in_var.is_parameter():
-                        self.pruned_params.append(
-                            (in_var, pruned_axis - axis, pruned_idx))
+                y_pruned_axis = pruned_axis
+                if len(in_var.shape()) != len(var.shape()):
+                    assert (len(var.shape()) > len(in_var.shape()))
+                    if axis == -1:
+                        axis = len(var.shape()) - len(in_var.shape())
+                    y_pruned_axis = pruned_axis - axis
+
+                if y_pruned_axis >= 0 and not (len(in_var.shape()) == 1 and
+                                               in_var.shape()[0] == 1):
+                    self.pruned_params.append(
+                        (in_var, y_pruned_axis, pruned_idx))
                     pre_ops = in_var.inputs()
                     for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis - axis,
-                                       pruned_idx)
+                        self._prune_op(op, in_var, y_pruned_axis, pruned_idx)
             elif var in self.op.inputs("Y"):
                 in_var = self.op.inputs("X")[0]
-                if not (len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
-                    pre_ops = in_var.inputs()
+                if len(in_var.shape()) != len(var.shape()):
+                    assert (len(var.shape()) < len(in_var.shape()))
                     pruned_axis = pruned_axis + axis
+                if pruned_axis <= len(in_var.shape()):
+                    pre_ops = in_var.inputs()
                     for op in pre_ops:
                         self._prune_op(op, in_var, pruned_axis, pruned_idx)
 
