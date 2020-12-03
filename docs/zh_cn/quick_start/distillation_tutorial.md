@@ -27,7 +27,7 @@ import paddleslim as slim
 选择`ResNet50`作为teacher对`MobileNet`结构的student进行蒸馏训练。
 
 ```python
-model = slim.models.MobileNet()
+student_model = slim.models.MobileNet()
 student_program = fluid.Program()
 student_startup = fluid.Program()
 with fluid.program_guard(student_program, student_startup):
@@ -44,7 +44,7 @@ with fluid.program_guard(student_program, student_startup):
 
 
 ```python
-model = slim.models.ResNet50()
+teacher_model = slim.models.ResNet50()
 teacher_program = fluid.Program()
 teacher_startup = fluid.Program()
 with fluid.program_guard(teacher_program, teacher_startup):
