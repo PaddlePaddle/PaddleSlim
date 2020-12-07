@@ -103,10 +103,9 @@ class Convert:
                 # if the kernel_size of conv is 1, don't change it.
                 fks = '_filter_size' if '_filter_size' in attr_dict.keys(
                 ) else '_kernel_size'
-                if isinstance(attr_dict[fks], numbers.Integral):
-                    ks = list(attr_dict[fks])
-                else:
-                    ks = attr_dict[fks]
+
+                ks = list(attr_dict[fks]) if isinstance(
+                    attr_dict[fks], numbers.Integral) else attr_dict[fks]
 
                 if self.kernel_size and int(ks[0]) != 1:
                     new_attr_dict['transform_kernel'] = True
@@ -278,10 +277,8 @@ class Convert:
                 # if the kernel_size of conv transpose is 1, don't change it.
                 fks = '_filter_size' if '_filter_size' in attr_dict.keys(
                 ) else '_kernel_size'
-                if isinstance(attr_dict[fks], numbers.Integral):
-                    ks = list(attr_dict[fks])
-                else:
-                    ks = attr_dict[fks]
+                ks = list(attr_dict[fks]) if isinstance(
+                    attr_dict[fks], numbers.Integral) else attr_dict[fks]
 
                 if self.kernel_size and int(ks[0]) != 1:
                     new_attr_dict['transform_kernel'] = True
@@ -630,12 +627,16 @@ class supernet:
                 self.expand = max(self.expand_ratio)
             elif isinstance(self.expand_ratio, int):
                 self.expand = self.expand_ratio
+        if 'channel' not in kwargs.keys():
+            self.channel = None
 
     def __enter__(self):
         return Convert(self)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        self.expand = None
+        self.channel = None
+        self.kernel_size = None
 
 
 #def ofa_supernet(kernel_size, expand_ratio):

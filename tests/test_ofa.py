@@ -67,10 +67,12 @@ class ModelConv(nn.Layer):
             models1 += [nn.Conv2DTranspose(4, 4, 3)]
             models1 += [nn.BatchNorm2D(4)]
             models1 += [ReLU()]
+            models1 += [nn.Conv2DTranspose(4, 4, 1)]
+            models1 += [nn.BatchNorm2D(4)]
+            models1 += [ReLU()]
             models1 = ofa_super.convert(models1)
 
         models += models1
-
         self.models = paddle.nn.Sequential(*models)
 
     def forward(self, inputs, depth=None):
@@ -85,16 +87,61 @@ class ModelConv(nn.Layer):
         return inputs
 
 
+class ModelConv2(nn.Layer):
+    def __init__(self):
+        super(ModelConv2, self).__init__()
+        with supernet(expand_ratio=(1, 2, 4)) as ofa_super:
+            models = []
+            models += [nn.Conv2DTranspose(4, 4, 3)]
+            models += [nn.BatchNorm2D(4)]
+            models += [ReLU()]
+            models += [nn.Conv2D(4, 4, 3)]
+            models += [nn.BatchNorm2D(4)]
+            models += [ReLU()]
+            models = ofa_super.convert(models)
+
+        with supernet(channel=((4, 6, 8), (4, 6, 8))) as ofa_super:
+            models1 = []
+            models1 += [nn.Conv2DTranspose(4, 4, 3)]
+            models1 += [nn.BatchNorm2D(4)]
+            models1 += [ReLU()]
+            models1 += [nn.Conv2DTranspose(4, 4, 3)]
+            models1 += [nn.BatchNorm2D(4)]
+            models1 += [ReLU()]
+            models1 = ofa_super.convert(models1)
+        models += models1
+
+        with supernet(kernel_size=(3, 5, 7)) as ofa_super:
+            models2 = []
+            models2 += [nn.Conv2D(4, 4, 3)]
+            models2 += [nn.BatchNorm2D(4)]
+            models2 += [ReLU()]
+            models2 += [nn.Conv2DTranspose(4, 4, 3)]
+            models2 += [nn.BatchNorm2D(4)]
+            models2 += [ReLU()]
+            models2 += [nn.Conv2D(4, 4, 3)]
+            models2 += [nn.BatchNorm2D(4)]
+            models2 += [ReLU()]
+            models2 = ofa_super.convert(models2)
+
+        models += models2
+        self.models = paddle.nn.Sequential(*models)
+
+
 class ModelLinear(nn.Layer):
     def __init__(self):
         super(ModelLinear, self).__init__()
-        models = []
+        with supernet(expand_ratio=(1, 2, 4)) as ofa_super:
+            models = []
+            models += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
+            models += [nn.Linear(64, 128)]
+            models += [nn.LayerNorm(128)]
+            models += [nn.Linear(128, 256)]
+            models = ofa_super.convert(models)
+
         with supernet(expand_ratio=(1, 2, 4)) as ofa_super:
             models1 = []
-            models1 += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
-            models1 += [nn.Linear(64, 128)]
-            models1 += [nn.LayerNorm(128)]
-            models1 += [nn.Linear(128, 256)]
+            models1 += [nn.Linear(256, 256)]
             models1 = ofa_super.convert(models1)
 
         models += models1
@@ -115,14 +162,18 @@ class ModelLinear(nn.Layer):
 class ModelLinear1(nn.Layer):
     def __init__(self):
         super(ModelLinear1, self).__init__()
-        models = []
         with supernet(channel=((64, 128, 256), (64, 128, 256),
                                (64, 128, 256))) as ofa_super:
+            models = []
+            models += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
+            models += [nn.Linear(64, 128)]
+            models += [nn.LayerNorm(128)]
+            models += [nn.Linear(128, 256)]
+            models = ofa_super.convert(models)
+
+        with supernet(channel=((64, 128, 256), )) as ofa_super:
             models1 = []
-            models1 += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
-            models1 += [nn.Linear(64, 128)]
-            models1 += [nn.LayerNorm(128)]
-            models1 += [nn.Linear(128, 256)]
+            models1 += [nn.Linear(256, 256)]
             models1 = ofa_super.convert(models1)
 
         models += models1
@@ -144,17 +195,13 @@ class ModelLinear1(nn.Layer):
 class ModelLinear2(nn.Layer):
     def __init__(self):
         super(ModelLinear2, self).__init__()
-        models = []
         with supernet(expand_ratio=None) as ofa_super:
-            models1 = []
-            models1 += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
-            models1 += [nn.Linear(64, 128)]
-            models1 += [nn.LayerNorm(128)]
-            models1 += [nn.Linear(128, 256)]
-            models1 = ofa_super.convert(models1)
-
-        models += models1
-
+            models = []
+            models += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
+            models += [nn.Linear(64, 128)]
+            models += [nn.LayerNorm(128)]
+            models += [nn.Linear(128, 256)]
+            models = ofa_super.convert(models)
         self.models = paddle.nn.Sequential(*models)
 
     def forward(self, inputs, depth=None):
@@ -277,6 +324,11 @@ class TestOFACase3(unittest.TestCase):
         self.model = ModelLinear2()
         ofa_model = OFA(self.model)
         ofa_model.set_net_config({'expand_ratio': None})
+
+
+class TestOFACase3(unittest.TestCase):
+    def test_ofa(self):
+        self.model = ModelConv2()
 
 
 if __name__ == '__main__':
