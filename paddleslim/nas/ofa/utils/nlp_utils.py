@@ -19,82 +19,6 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 
 
-### rewrite MultiHeadAttention forward to accept head_mask
-def mha_forward(self, query, key, value, attn_mask=None, cache=None):
-    key = query if key is None else key
-    value = query if value is None else value
-    # compute q ,k ,v
-    if cache is None:
-        q, k, v = self._prepare_qkv(query, key, value, cache)
-    else:
-        q, k, v, cache = self._prepare_qkv(query, key, value, cache)
-
-    # scale dot product attention
-    # TODO: use paddle.matmul, however it doesn't support `alpha`
-    product = paddle.fluid.layers.matmul(
-        x=q, y=k, transpose_y=True, alpha=self.head_dim**-0.5)
-    if attn_mask[0] is not None:
-        # TODO(guosheng): support bool mask
-        product = product + attn_mask[0]
-    weights = F.softmax(product)
-    if self.dropout:
-        weights = F.dropout(
-            weights,
-            self.dropout,
-            training=self.training,
-            mode="upscale_in_train")
-
-    if attn_mask[1] is not None:
-        weights = weights * attn_mask[1]
-
-    out = paddle.matmul(weights, v)
-
-    # combine heads
-    out = paddle.transpose(out, perm=[0, 2, 1, 3])
-    out = paddle.reshape(x=out, shape=[0, 0, out.shape[2] * out.shape[3]])
-
-    # project to output
-    out = self.out_proj(out)
-
-    outs = [out]
-    if self.need_weights:
-        outs.append(weights)
-    if cache is not None:
-        outs.append(cache)
-    return out if len(outs) == 1 else tuple(outs)
-
-
-def encoder_forward(self, src, src_mask=[None, None]):
-    output = src
-    if src_mask[1] is not None:
-        head_mask = src_mask[1]
-        if len(head_mask.shape) == 1:
-            head_mask = paddle.unsqueeze(
-                paddle.unsqueeze(
-                    paddle.unsqueeze(paddle.unsqueeze(head_mask, 0), 0), -1),
-                -1)
-            head_mask = paddle.expand(
-                head_mask,
-                expand_times=[self.cfg['num_hidden_layers'], 1, 1, 1, 1])
-        elif len(head_mask.shape) == 2:
-            head_mask = paddle.unsqueeze(
-                paddle.unsqueeze(paddle.unsqueeze(head_mask, 1), -1), -1)
-    else:
-        head_mask = [None] * self.num_layers
-
-    for i, mod in enumerate(self.layers):
-        output = mod(output, src_mask=[src_mask[0], head_mask[i]])
-
-    if self.norm is not None:
-        output = self.norm(output)
-
-    return output
-
-
-nn.MultiHeadAttention.forward = mha_forward
-nn.TransformerEncoder.forward = encoder_forward
-
-
 def compute_neuron_head_importance(task_name,
                                    model,
                                    data_loader,
@@ -203,3 +127,80 @@ def reorder_neuron(linearLayer, index, dim=0):
         linearLayer.bias.stop_gradient = True
         linearLayer.bias.set_value(b)
         linearLayer.bias.stop_gradient = False
+
+
+### rewrite MultiHeadAttention forward to accept head_mask
+def _mha_forward(self, query, key, value, attn_mask=None, cache=None):
+    key = query if key is None else key
+    value = query if value is None else value
+    # compute q ,k ,v
+    if cache is None:
+        q, k, v = self._prepare_qkv(query, key, value, cache)
+    else:
+        q, k, v, cache = self._prepare_qkv(query, key, value, cache)
+
+    # scale dot product attention
+    # TODO: use paddle.matmul, however it doesn't support `alpha`
+    product = paddle.fluid.layers.matmul(
+        x=q, y=k, transpose_y=True, alpha=self.head_dim**-0.5)
+    if attn_mask[0] is not None:
+        # TODO(guosheng): support bool mask
+        product = product + attn_mask[0]
+    weights = F.softmax(product)
+    if self.dropout:
+        weights = F.dropout(
+            weights,
+            self.dropout,
+            training=self.training,
+            mode="upscale_in_train")
+
+    if attn_mask[1] is not None:
+        weights = weights * attn_mask[1]
+
+    out = paddle.matmul(weights, v)
+
+    # combine heads
+    out = paddle.transpose(out, perm=[0, 2, 1, 3])
+    out = paddle.reshape(x=out, shape=[0, 0, out.shape[2] * out.shape[3]])
+
+    # project to output
+    out = self.out_proj(out)
+
+    outs = [out]
+    if self.need_weights:
+        outs.append(weights)
+    if cache is not None:
+        outs.append(cache)
+    return out if len(outs) == 1 else tuple(outs)
+
+
+### rewrite TransformerEncoder forward to accept head_mask
+def _encoder_forward(self, src, src_mask=[None, None]):
+    output = src
+    if src_mask[1] is not None:
+        head_mask = src_mask[1]
+        if len(head_mask.shape) == 1:
+            head_mask = paddle.unsqueeze(
+                paddle.unsqueeze(
+                    paddle.unsqueeze(paddle.unsqueeze(head_mask, 0), 0), -1),
+                -1)
+            head_mask = paddle.expand(
+                head_mask,
+                expand_times=[self.cfg['num_hidden_layers'], 1, 1, 1, 1])
+        elif len(head_mask.shape) == 2:
+            head_mask = paddle.unsqueeze(
+                paddle.unsqueeze(paddle.unsqueeze(head_mask, 1), -1), -1)
+    else:
+        head_mask = [None] * self.num_layers
+
+    for i, mod in enumerate(self.layers):
+        output = mod(output, src_mask=[src_mask[0], head_mask[i]])
+
+    if self.norm is not None:
+        output = self.norm(output)
+
+    return output
+
+
+nn.MultiHeadAttention.forward = _mha_forward
+nn.TransformerEncoder.forward = _encoder_forward
