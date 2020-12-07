@@ -125,15 +125,15 @@ class Convert:
                     if idx == first_weight_layer_idx:
                         new_attr_dict[in_key[1:]] = attr_dict[in_key]
                     else:
-                        new_attr_dict[in_key[
-                            1:]] = self.context.expand * attr_dict[in_key]
+                        new_attr_dict[in_key[1:]] = int(self.context.expand *
+                                                        attr_dict[in_key])
 
                     ### last super convolution
                     if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
-                        new_attr_dict[out_key[
-                            1:]] = self.context.expand * attr_dict[out_key]
+                        new_attr_dict[out_key[1:]] = int(self.context.expand *
+                                                         attr_dict[out_key])
                         new_attr_dict['candidate_config'].update({
                             'expand_ratio': self.context.expand_ratio
                         })
@@ -222,7 +222,8 @@ class Convert:
                 new_key = 'num_channels' if 'num_channels' in new_attr_dict.keys(
                 ) else 'num_features'
                 if self.context.expand:
-                    new_attr_dict[new_key] = self.context.expand * int(
+                    new_attr_dict[new_key] = int(
+                        self.context.expand *
                         layer._parameters['weight'].shape[0])
                 elif self.context.channel:
                     new_attr_dict[new_key] = max(cur_channel)
@@ -298,14 +299,14 @@ class Convert:
                     if idx == first_weight_layer_idx:
                         new_attr_dict[in_key[1:]] = attr_dict[in_key]
                     else:
-                        new_attr_dict[in_key[
-                            1:]] = self.context.expand * attr_dict[in_key]
+                        new_attr_dict[in_key[1:]] = int(self.context.expand *
+                                                        attr_dict[in_key])
                     ### last super convolution transpose
                     if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
-                        new_attr_dict[out_key[
-                            1:]] = self.context.expand * attr_dict[out_key]
+                        new_attr_dict[out_key[1:]] = int(self.context.expand *
+                                                         attr_dict[out_key])
                         new_attr_dict['candidate_config'].update({
                             'expand_ratio': self.context.expand_ratio
                         })
@@ -404,14 +405,14 @@ class Convert:
                     if idx == first_weight_layer_idx:
                         new_attr_dict[in_key[1:]] = int(attr_dict[in_key])
                     else:
-                        new_attr_dict[in_key[1:]] = self.context.expand * int(
-                            attr_dict[in_key])
+                        new_attr_dict[in_key[1:]] = int(self.context.expand *
+                                                        attr_dict[in_key])
 
                     if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = int(attr_dict[out_key])
                     else:
-                        new_attr_dict[out_key[1:]] = self.context.expand * int(
-                            attr_dict[out_key])
+                        new_attr_dict[out_key[1:]] = int(self.context.expand *
+                                                         attr_dict[out_key])
                         new_attr_dict['candidate_config'].update({
                             'expand_ratio': self.context.expand_ratio
                         })
@@ -472,8 +473,8 @@ class Convert:
                     layer._parameters) != 0 else 10
 
                 if self.context.expand:
-                    new_attr_dict[new_key[1:]] = self.context.expand * int(
-                        attr_dict[new_key])
+                    new_attr_dict[new_key[1:]] = int(self.context.expand *
+                                                     attr_dict[new_key])
                 elif self.context.channel:
                     new_attr_dict[new_key[1:]] = max(cur_channel)
                 else:
@@ -507,9 +508,8 @@ class Convert:
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 new_attr_dict['normalized_shape'] = None
                 if self.context.expand:
-                    new_attr_dict[
-                        'normalized_shape'] = self.context.expand * int(
-                            attr_dict['_normalized_shape'][0])
+                    new_attr_dict['normalized_shape'] = int(
+                        self.context.expand * attr_dict['_normalized_shape'][0])
                 elif self.context.channel:
                     new_attr_dict['normalized_shape'] = max(cur_channel)
                 else:
@@ -546,14 +546,13 @@ class Convert:
                 if self.context.expand:
                     if pd_ver == 185:
                         new_attr_dict['size'] = [
-                            bef_size[0], self.context.expand * bef_size[1]
+                            bef_size[0], int(self.context.expand * bef_size[1])
                         ]
                     else:
                         new_attr_dict['num_embeddings'] = attr_dict[
                             '_num_embeddings']
-                        new_attr_dict[
-                            'embedding_dim'] = self.context.expand * attr_dict[
-                                '_embedding_dim']
+                        new_attr_dict['embedding_dim'] = int(
+                            self.context.expand * attr_dict['_embedding_dim'])
 
                     new_attr_dict['candidate_config'].update({
                         'expand_ratio': self.context.expand_ratio
