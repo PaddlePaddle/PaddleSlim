@@ -188,9 +188,10 @@ class PruningPlan():
 
                         t_value.set(pruned_value, place)
                         if isinstance(sub_layer, paddle.nn.layer.conv.Conv2D):
-                            if sub_layer._groups > 1:
+                            if sub_layer._groups > 1 and pruned_value.shape[
+                                    1] == 1:  # depthwise conv2d
                                 _logger.debug(
-                                    "Update groups of conv form {} to {}".
+                                    "Update groups of depthwise conv2d form {} to {}".
                                     format(sub_layer._groups,
                                            pruned_value.shape[0]))
                                 sub_layer._groups = pruned_value.shape[0]

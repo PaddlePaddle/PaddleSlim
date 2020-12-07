@@ -13,6 +13,7 @@ from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 import models
 from utility import add_arguments, print_arguments
+import paddle.vision.transforms as T
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -99,8 +100,11 @@ def compress(args):
     train_reader = None
     test_reader = None
     if args.data == "mnist":
-        train_dataset = paddle.vision.datasets.MNIST(mode='train')
-        val_dataset = paddle.vision.datasets.MNIST(mode='test')
+        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        train_dataset = paddle.vision.datasets.MNIST(
+            mode='train', backend="cv2", transform=transform)
+        val_dataset = paddle.vision.datasets.MNIST(
+            mode='test', backend="cv2", transform=transform)
         class_dim = 10
         image_shape = "1,28,28"
     elif args.data == "imagenet":
@@ -231,6 +235,11 @@ def compress(args):
         ratios=[args.pruned_ratio] * len(params),
         place=place)
     _logger.info("FLOPs after pruning: {}".format(flops(pruned_program)))
+
+    #    for param in pruned_val_program.all_parameters():
+    #        if "weight" in param.name:
+    #            print(f"{param.name}\t{param.shape}")
+    #    return
     for i in range(args.num_epochs):
         train(i, pruned_program)
         if i % args.test_period == 0:
