@@ -13,10 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from ..core import GraphWrapper
+from ..common import get_logger
 from .prune_walker import PRUNE_WORKER
 
 __all__ = ["collect_convs"]
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 
 def collect_convs(params, graph, visited={}):
@@ -66,6 +70,11 @@ def collect_convs(params, graph, visited={}):
                     break
         else:
             cls = PRUNE_WORKER.get(target_op.type())
+            if cls is None:
+                _logger.info("No walker for operator: {}".format(target_op.type(
+                )))
+                groups.append(pruned_params)
+                continue
             walker = cls(target_op,
                          pruned_params=pruned_params,
                          visited=visited)

@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import paddle
 import numpy as np
+import paddle.jit as jit
 from ..core import GraphWrapper
 
-__all__ = ["flops"]
+__all__ = ["flops", "dygraph_flops"]
 
 
 def flops(program, only_conv=True, detail=False):
@@ -80,3 +81,12 @@ def _graph_flops(graph, only_conv=True, detail=False):
         return flops, params2flops
     else:
         return flops
+
+
+def dygraph_flops(model, input_shape, only_conv=False, detail=False):
+    data = np.ones(tuple(input_shape)).astype("float32")
+    in_var = paddle.to_tensor(data)
+    _, traced = paddle.jit.TracedLayer.trace(model, [in_var])
+    program = traced.program
+    graph = GraphWrapper(program)
+    return _graph_flops(graph, only_conv=only_conv, detail=detail)

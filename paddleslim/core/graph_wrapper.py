@@ -160,13 +160,21 @@ class OpWrapper(object):
         """
         Get all the varibales by the input name.
         """
-        return [self._graph.var(var_name) for var_name in self._op.input(name)]
+        if name in self._op.input_names:
+            return [
+                self._graph.var(var_name) for var_name in self._op.input(name)
+            ]
+        return []
 
     def outputs(self, name):
         """
         Get all the varibales by the output name.
         """
-        return [self._graph.var(var_name) for var_name in self._op.output(name)]
+        if name in self._op.output_names:
+            return [
+                self._graph.var(var_name) for var_name in self._op.output(name)
+            ]
+        return []
 
     def set_attr(self, key, value):
         """

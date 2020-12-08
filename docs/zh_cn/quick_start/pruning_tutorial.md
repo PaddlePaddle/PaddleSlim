@@ -61,7 +61,7 @@ pruned_program, _, _ = pruner.prune(
 ### 3.3 计算剪裁之后的FLOPs
 
 ```
-FLOPs = paddleslim.analysis.flops(train_program)
+FLOPs = paddleslim.analysis.flops(pruned_program)
 print("FLOPs: {}".format(FLOPs))
 ```
 
