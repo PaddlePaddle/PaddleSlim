@@ -36,6 +36,7 @@ class VarGroup():
         _logger.debug("Parsing model with input: {}".format(input_shape))
         data = np.ones(tuple(input_shape)).astype("float32")
         in_var = paddle.to_tensor(data)
+        model.eval()
         out_dygraph, static_layer = TracedLayer.trace(model, inputs=[in_var])
         graph = GraphWrapper(static_layer.program)
 
