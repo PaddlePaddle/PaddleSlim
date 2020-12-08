@@ -243,7 +243,8 @@ class TestOFA(unittest.TestCase):
         default_distill_config = {
             'lambda_distill': 0.01,
             'teacher_model': self.teacher_model,
-            'mapping_layers': ['models.0.fn']
+            'mapping_layers': ['models.0.fn'],
+            'mapping_op': 'conv2d'
         }
         self.distill_config = DistillConfig(**default_distill_config)
         self.elastic_order = ['kernel_size', 'width', 'depth']

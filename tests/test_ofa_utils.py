@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 import paddle
 import paddle.nn as nn
-from paddle.vision.models import vgg11
+from paddle.vision.models import mobilenet_v1
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 from paddleslim.nas.ofa.utils import compute_neuron_head_importance, reorder_head, reorder_neuron, set_state_dict
 
@@ -95,7 +95,7 @@ class TestComputeImportance(unittest.TestCase):
 
 class TestSetStateDict(unittest.TestCase):
     def setUp(self):
-        self.model = vgg11()
+        self.model = mobilenet_v1()
         self.origin_weights = {}
         for name, param in self.model.named_parameters():
             self.origin_weights[name] = param

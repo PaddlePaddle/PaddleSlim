@@ -25,7 +25,7 @@ if pd_ver == 185:
     from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
     from .layers import *
     from . import layers
-    Layer = fluid.dygraph.nn.Layer
+    Layer = paddle.fluid.dygraph.Layer
 else:
     import paddle.nn as nn
     from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
