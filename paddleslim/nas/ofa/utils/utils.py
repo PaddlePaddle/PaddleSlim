@@ -12,6 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import paddle
+from ....common import get_logger
+
+
+def get_paddle_version():
+    import paddle
+    pd_ver = 185
+    if hasattr(paddle, 'nn'):
+        if hasattr(paddle.nn, 'Conv1D'):  ### judge 2.0 alpha
+            pd_ver = 200
+
+    return pd_ver
+
+
+pd_ver = get_paddle_version()
+if pd_ver == 185:
+    Layer = paddle.fluid.dygraph.Layer
+else:
+    Layer = paddle.nn.Layer
+
+_logger = get_logger(__name__, level=logging.INFO)
+
+__all__ = ['set_state_dict']
+
+
+def set_state_dict(model, state_dict):
+    """
+    Set state dict from origin model to supernet model.
+
+    Args:
+        model(paddle.nn.Layer): model after convert to supernet.
+        state_dict(dict): dict with the type of {name: param} in origin model.
+    """
+    assert isinstance(model, Layer)
+    assert isinstance(state_dict, dict)
+    for name, param in model.named_parameters():
+        tmp_n = name.split('.')[:-2] + [name.split('.')[-1]]
+        tmp_n = '.'.join(tmp_n)
+        if name in state_dict:
+            param.set_value(state_dict[name])
+        elif tmp_n in state_dict:
+            param.set_value(state_dict[tmp_n])
+        else:
+            _logger.info('{} is not in state_dict'.format(tmp_n))
+
 
 def compute_start_end(kernel_size, sub_kernel_size):
     center = kernel_size // 2
@@ -44,13 +90,3 @@ def search_idx(num, sorted_nestlist):
                 return idx, phase_idx
     assert num > max_num
     return len(sorted_nestlist) - 1, max_idx
-
-
-def get_paddle_version():
-    import paddle
-    pd_ver = 185
-    if hasattr(paddle, 'nn'):
-        if hasattr(paddle.nn, 'Conv1D'):  ### judge 2.0 alpha
-            pd_ver = 200
-
-    return pd_ver

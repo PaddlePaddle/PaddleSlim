@@ -289,7 +289,6 @@ class TestOFACase1(TestOFA):
         self.model = ModelLinear()
         self.teacher_model = ModelLinear()
         data_np = np.random.random((3, 64)).astype(np.int64)
-
         self.data = paddle.to_tensor(data_np)
 
     def init_config(self):
@@ -305,6 +304,8 @@ class TestOFACase1(TestOFA):
         default_distill_config = {
             'lambda_distill': 0.01,
             'teacher_model': self.teacher_model,
+            'mapping_op': 'linear',
+            'mapping_layers': ['models.3.fn'],
         }
         self.distill_config = DistillConfig(**default_distill_config)
         self.elastic_order = None

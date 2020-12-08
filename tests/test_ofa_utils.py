@@ -18,7 +18,9 @@ import unittest
 import numpy as np
 import paddle
 import paddle.nn as nn
-from paddleslim.nas.ofa.utils import compute_neuron_head_importance, reorder_head, reorder_neuron
+from paddle.vision.models import vgg11
+from paddleslim.nas.ofa.convert_super import Convert, supernet
+from paddleslim.nas.ofa.utils import compute_neuron_head_importance, reorder_head, reorder_neuron, set_state_dict
 
 
 class TestComputeImportance(unittest.TestCase):
@@ -83,12 +85,25 @@ class TestComputeImportance(unittest.TestCase):
             task_name='xnli',
             model=self.model,
             data_loader=self.data_loader,
-            n_layers=3,
-            n_heads=12)
+            num_layers=3,
+            num_heads=12)
         assert (len(head_importance) == 3)
         assert (len(neuron_importance) == 3)
         self.reorder_reorder_neuron_head(self.model, head_importance,
                                          neuron_importance)
+
+
+class TestSetStateDict(unittest.TestCase):
+    def setUp(self):
+        self.model = vgg11()
+        self.origin_weights = {}
+        for name, param in self.model.named_parameters():
+            self.origin_weights[name] = param
+
+    def test_set_state_dict(self):
+        sp_net_config = supernet(expand_ratio=[0.5, 1.0])
+        sp_model = Convert(sp_net_config).convert(self.model)
+        set_state_dict(sp_model, self.origin_weights)
 
 
 if __name__ == '__main__':
