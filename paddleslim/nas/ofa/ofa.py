@@ -16,10 +16,15 @@ import logging
 import numpy as np
 from collections import namedtuple
 import paddle
-#import paddle.nn as nn
 import paddle.fluid as fluid
-from paddle.fluid.dygraph import Conv2D
-from .layers import BaseBlock, Block, SuperConv2D, SuperBatchNorm
+from .utils.utils import get_paddle_version
+pd_ver = get_paddle_version()
+if pd_ver == 185:
+    from .layers import BaseBlock, SuperConv2D
+    Layer = paddle.fluid.dygraph.Layer
+else:
+    from .layers_new import BaseBlock, SuperConv2D
+    Layer = paddle.nn.Layer
 from .utils.utils import search_idx
 from ...common import get_logger
 
@@ -40,7 +45,7 @@ DistillConfig = namedtuple('DistillConfig', [
 DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
 
-class OFABase(fluid.dygraph.Layer):
+class OFABase(Layer):
     def __init__(self, model):
         super(OFABase, self).__init__()
         self.model = model
@@ -169,8 +174,7 @@ class OFA(OFABase):
             )
 
         ### instance model by user can input super-param easily.
-        assert isinstance(self.distill_config.teacher_model,
-                          paddle.fluid.dygraph.Layer)
+        assert isinstance(self.distill_config.teacher_model, Layer)
 
         # load teacher parameter
         if self.distill_config.teacher_model_path != None:
@@ -190,9 +194,10 @@ class OFA(OFABase):
             for name, sublayer in self.model.named_sublayers():
                 if name in mapping_layers:
                     netA = SuperConv2D(
-                        sublayer._num_filters,
-                        sublayer._num_filters,
-                        filter_size=1)
+                        getattr(sublayer, '_num_filters',
+                                sublayer._out_channels),
+                        getattr(sublayer, '_num_filters',
+                                sublayer._out_channels), 1)
                     self.netAs_param.extend(netA.parameters())
                     self.netAs.append(netA)
 
@@ -288,7 +293,8 @@ class OFA(OFABase):
             n = self.distill_config.mapping_layers[i]
             Tact = self.Tacts[n]
             Sact = self.Sacts[n]
-            Sact = netA(Sact, channel=netA._num_filters)
+            Sact = netA(
+                Sact, channel=getattr(netA, '_num_filters', netA._out_channels))
             if self.distill_config.distill_fn == None:
                 loss = fluid.layers.mse_loss(Sact, Tact)
             else:
