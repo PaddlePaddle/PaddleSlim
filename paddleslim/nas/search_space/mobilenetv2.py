@@ -182,7 +182,7 @@ class MobileNetV2Space(SearchSpaceBase):
                     c=int(c * self.scale),
                     n=n,
                     s=s,
-                    k=k,
+                    k=int(k),
                     name='mobilenetv2_conv' + str(i))
                 in_c = int(c * self.scale)
 

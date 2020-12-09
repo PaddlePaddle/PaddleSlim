@@ -7,13 +7,12 @@ import math
 import random
 import numpy as np
 import paddle
-import paddle.fluid as fluid
 import six
 import reader
 from net import skip_gram_word2vec
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("fluid")
+logger = logging.getLogger("paddle")
 logger.setLevel(logging.INFO)
 
 
@@ -113,20 +112,20 @@ def convert_python_to_tensor(weight, batch_size, sample_reader):
             if len(result[0]) == batch_size:
                 tensor_result = []
                 for tensor in result:
-                    t = fluid.Tensor()
+                    t = paddle.fluid.Tensor()
                     dat = np.array(tensor, dtype='int64')
                     if len(dat.shape) > 2:
                         dat = dat.reshape((dat.shape[0], dat.shape[2]))
                     elif len(dat.shape) == 1:
                         dat = dat.reshape((-1, 1))
-                    t.set(dat, fluid.CPUPlace())
+                    t.set(dat, paddle.CPUPlace())
                     tensor_result.append(t)
-                tt = fluid.Tensor()
+                tt = paddle.fluid.Tensor()
                 neg_array = cs.searchsorted(np.random.sample(args.nce_num))
                 neg_array = np.tile(neg_array, batch_size)
                 tt.set(
                     neg_array.reshape((batch_size, args.nce_num)),
-                    fluid.CPUPlace())
+                    paddle.CPUPlace())
                 tensor_result.append(tt)
                 yield tensor_result
                 result = [[], []]
@@ -134,15 +133,15 @@ def convert_python_to_tensor(weight, batch_size, sample_reader):
     return __reader__
 
 
-def train_loop(args, train_program, reader, py_reader, loss, trainer_id,
-               weight):
+def train_loop(args, train_program, reader, py_reader, loss, trainer_id, weight,
+               lr):
 
     py_reader.decorate_tensor_provider(
         convert_python_to_tensor(weight, args.batch_size, reader.train()))
 
-    place = fluid.CPUPlace()
-    exe = fluid.Executor(place)
-    exe.run(fluid.default_startup_program())
+    place = paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
+    exe.run(paddle.static.default_startup_program())
 
     print("CPU_NUM:" + str(os.getenv("CPU_NUM")))
 
@@ -173,23 +172,24 @@ def train_loop(args, train_program, reader, py_reader, loss, trainer_id,
                             os.getenv("CPU_NUM"))
                         logger.info("Time used: {}, Samples/Sec: {}".format(
                             elapsed, samples / elapsed))
+                lr.step()
 
                 if batch_id % args.save_step == 0 and batch_id != 0:
                     model_dir = args.model_output_dir + '/pass-' + str(
                         pass_id) + ('/batch-' + str(batch_id))
                     if trainer_id == 0:
-                        fluid.io.save_params(executor=exe, dirname=model_dir)
+                        paddle.static.save(exe, model_dir, train_program)
                         print("model saved in %s" % model_dir)
                 batch_id += 1
 
-        except fluid.core.EOFException:
+        except paddle.fluid.core.EOFException:
             py_reader.reset()
             epoch_end = time.time()
             logger.info("Epoch: {0}, Train total expend: {1} ".format(
                 pass_id, epoch_end - epoch_start))
             model_dir = args.model_output_dir + '/pass-' + str(pass_id)
             if trainer_id == 0:
-                fluid.io.save_params(executor=exe, dirname=model_dir)
+                paddle.static.save(exe, model_dir, train_program)
                 print("model saved in %s" % model_dir)
 
 
@@ -203,8 +203,8 @@ def train(args):
         os.mkdir(args.model_output_dir)
 
     filelist = GetFileList(args.train_data_dir)
-    word2vec_reader = reader.Word2VecReader(
-        args.dict_path, args.train_data_dir, filelist, 0, 1)
+    word2vec_reader = reader.Word2VecReader(args.dict_path, args.train_data_dir,
+                                            filelist, 0, 1)
 
     logger.info("dict_size: {}".format(word2vec_reader.dict_size))
     np_power = np.power(np.array(word2vec_reader.id_frequencys), 0.75)
@@ -216,18 +216,16 @@ def train(args):
         is_sparse=args.is_sparse,
         neg_num=args.nce_num)
 
-    optimizer = fluid.optimizer.SGD(
-        learning_rate=fluid.layers.exponential_decay(
-            learning_rate=args.base_lr,
-            decay_steps=100000,
-            decay_rate=0.999,
-            staircase=True))
+    learning_rate = paddle.optimizer.lr.ExponentialDecay(
+        args.base_lr, gama=0.999)
+
+    optimizer = paddle.optimizer.SGD(learning_rate=learning_rate)
 
     optimizer.minimize(loss)
 
     logger.info("run dist training")
 
-    t = fluid.DistributeTranspiler()
+    t = paddle.fluid.DistributeTranspiler()
     t.transpile(
         args.trainer_id, pservers=args.endpoints, trainers=args.trainers)
     if args.role == "pserver":
@@ -235,14 +233,14 @@ def train(args):
         pserver_prog = t.get_pserver_program(args.current_endpoint)
         pserver_startup = t.get_startup_program(args.current_endpoint,
                                                 pserver_prog)
-        exe = fluid.Executor(fluid.CPUPlace())
+        exe = paddle.static.Executor(paddle.CPUPlace())
         exe.run(pserver_startup)
         exe.run(pserver_prog)
     elif args.role == "trainer":
         print("run trainer")
         train_loop(args,
                    t.get_trainer_program(), word2vec_reader, py_reader, loss,
-                   args.trainer_id, id_frequencys_pow)
+                   args.trainer_id, id_frequencys_pow, learning_rate)
 
 
 if __name__ == '__main__':
