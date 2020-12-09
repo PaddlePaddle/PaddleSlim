@@ -20,10 +20,10 @@ import paddle.fluid as fluid
 from .utils.utils import get_paddle_version
 pd_ver = get_paddle_version()
 if pd_ver == 185:
-    from .layers import BaseBlock, SuperConv2D
+    from .layers import BaseBlock, SuperConv2D, SuperLinear
     Layer = paddle.fluid.dygraph.Layer
 else:
-    from .layers_new import BaseBlock, SuperConv2D
+    from .layers_new import BaseBlock, SuperConv2D, SuperLinear
     Layer = paddle.nn.Layer
 from .utils.utils import search_idx
 from ...common import get_logger
@@ -40,7 +40,7 @@ RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
 DistillConfig = namedtuple('DistillConfig', [
     'lambda_distill', 'teacher_model', 'mapping_layers', 'teacher_model_path',
-    'distill_fn'
+    'distill_fn', 'mapping_op'
 ])
 DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
@@ -193,12 +193,28 @@ class OFA(OFABase):
             self.netAs = []
             for name, sublayer in self.model.named_sublayers():
                 if name in mapping_layers:
-                    netA = SuperConv2D(
-                        getattr(sublayer, '_num_filters',
-                                sublayer._out_channels),
-                        getattr(sublayer, '_num_filters',
-                                sublayer._out_channels), 1)
-                    self.netAs_param.extend(netA.parameters())
+                    if self.distill_config.mapping_op != None:
+                        if self.distill_config.mapping_op.lower() == 'conv2d':
+                            netA = SuperConv2D(
+                                getattr(sublayer, '_num_filters',
+                                        sublayer._out_channels),
+                                getattr(sublayer, '_num_filters',
+                                        sublayer._out_channels), 1)
+                        elif self.distill_config.mapping_op.lower() == 'linear':
+                            netA = SuperLinear(
+                                getattr(sublayer, '_output_dim',
+                                        sublayer._out_features),
+                                getattr(sublayer, '_output_dim',
+                                        sublayer._out_features))
+                        else:
+                            raise NotImplementedError(
+                                "Not Support Op: {}".format(
+                                    self.distill_config.mapping_op.lower()))
+                    else:
+                        netA = None
+
+                    if netA != None:
+                        self.netAs_param.extend(netA.parameters())
                     self.netAs.append(netA)
 
             def get_activation(mem, name):
@@ -289,16 +305,24 @@ class OFA(OFABase):
         losses = []
         assert len(self.netAs) > 0
         for i, netA in enumerate(self.netAs):
-            assert isinstance(netA, SuperConv2D)
             n = self.distill_config.mapping_layers[i]
             Tact = self.Tacts[n]
             Sact = self.Sacts[n]
-            Sact = netA(
-                Sact, channel=getattr(netA, '_num_filters', netA._out_channels))
-            if self.distill_config.distill_fn == None:
-                loss = fluid.layers.mse_loss(Sact, Tact)
+            if isinstance(netA, SuperConv2D):
+                Sact = netA(
+                    Sact,
+                    channel=getattr(netA, '_num_filters', netA._out_channels))
+            elif isinstance(netA, SuperLinear):
+                Sact = netA(
+                    Sact,
+                    channel=getattr(netA, '_output_dim', netA._out_features))
             else:
-                loss = distill_fn(Sact, Tact)
+                Sact = Sact
+
+            if self.distill_config.distill_fn == None:
+                loss = fluid.layers.mse_loss(Sact, Tact.detach())
+            else:
+                loss = distill_fn(Sact, Tact.detach())
             losses.append(loss)
         return sum(losses) * self.distill_config.lambda_distill
 
