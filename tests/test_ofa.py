@@ -312,13 +312,30 @@ class TestOFACase1(TestOFA):
         self.elastic_order = None
 
 
-class TestOFACase2(TestOFACase1):
+class TestOFACase2(TestOFA):
     def init_model_and_data(self):
         self.model = ModelLinear1()
         self.teacher_model = ModelLinear1()
         data_np = np.random.random((3, 64)).astype(np.int64)
 
         self.data = paddle.to_tensor(data_np)
+
+    def init_config(self):
+        default_run_config = {
+            'train_batch_size': 1,
+            'n_epochs': [[2, 5]],
+            'init_learning_rate': [[0.003, 0.001]],
+            'dynamic_batch_size': [1],
+            'total_images': 1,
+        }
+        self.run_config = RunConfig(**default_run_config)
+        default_distill_config = {
+            'lambda_distill': 0.01,
+            'teacher_model': self.teacher_model,
+            'mapping_layers': ['models.3.fn'],
+        }
+        self.distill_config = DistillConfig(**default_distill_config)
+        self.elastic_order = None
 
 
 class TestOFACase3(unittest.TestCase):
@@ -328,7 +345,7 @@ class TestOFACase3(unittest.TestCase):
         ofa_model.set_net_config({'expand_ratio': None})
 
 
-class TestOFACase3(unittest.TestCase):
+class TestOFACase4(unittest.TestCase):
     def test_ofa(self):
         self.model = ModelConv2()
 

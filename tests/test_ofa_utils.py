@@ -93,6 +93,25 @@ class TestComputeImportance(unittest.TestCase):
                                          neuron_importance)
 
 
+class TestComputeImportanceCase1(TestComputeImportance):
+    def test_compute(self):
+        for batch in self.data_loader:
+            input_ids, segment_ids, labels = batch
+            logits = self.model(
+                input_ids, segment_ids, attention_mask=[None, None])
+        assert logits.shape[1] == 3
+
+
+class TestComputeImportanceCase2(TestComputeImportance):
+    def test_compute(self):
+        head_mask = paddle.ones(shape=[12], dtype='float32')
+        for batch in self.data_loader:
+            input_ids, segment_ids, labels = batch
+            logits = self.model(
+                input_ids, segment_ids, attention_mask=[None, head_mask])
+        assert logits.shape[1] == 3
+
+
 class TestSetStateDict(unittest.TestCase):
     def setUp(self):
         self.model = mobilenet_v1()

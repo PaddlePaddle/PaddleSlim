@@ -251,8 +251,7 @@ def _encoder_forward(self, src, src_mask=[None, None]):
                     paddle.unsqueeze(paddle.unsqueeze(head_mask, 0), 0), -1),
                 -1)
             head_mask = paddle.expand(
-                head_mask,
-                expand_times=[self.cfg['num_hidden_layers'], 1, 1, 1, 1])
+                head_mask, shape=[self.num_layers] + head_mask.shape[1:])
         elif len(head_mask.shape) == 2:
             head_mask = paddle.unsqueeze(
                 paddle.unsqueeze(paddle.unsqueeze(head_mask, 1), -1), -1)
