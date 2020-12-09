@@ -17,7 +17,7 @@
 
 - 对于paddle vision支持的[模型](https://github.com/PaddlePaddle/Paddle/tree/develop/python/paddle/vision/models)：`[lenet, mobilenetv1, mobilenetv2, resnet, vgg]`可以直接使用vision内置的模型定义和ImageNet预训练权重
 - 对于paddle vision暂未支持的模型，例如mobilenetv3，需要自行定义好模型结构以及准备相应的预训练权重
-  - 本示例使用的是经过蒸馏的mobilenetv3模型，在ImageNet数据集上Top1精度达到78.96，[预训练权重下载](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV3_large_x1_0_ssld_pretrained.tar)
+  - 本示例使用的是经过蒸馏的mobilenetv3模型，在ImageNet数据集上Top1精度达到78.96: [预训练权重下载](https://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV3_large_x1_0_ssld_pretrained.tar)
 
 
 ### 配置量化参数
@@ -41,11 +41,11 @@ quant_config = {
 
 - `'activation_preprocess_type'`：代表对量化模型激活值预处理的方法，目前支持PACT方法，如需使用可以改为'PACT'；默认为None，代表不对激活值进行任何预处理。
 
-- `weight_quantize_type`：代表模型权重的量化方式，可选的有`['abs_max', 'moving_average_abs_max', 'channel_wise_abs_max']`，默认为`channel_wise_abs_max`
+- `weight_quantize_type`：代表模型权重的量化方式，可选的有['abs_max', 'moving_average_abs_max', 'channel_wise_abs_max']，默认为channel_wise_abs_max
 
-- `activation_quantize_type`：代表模型激活值的量化方式，可选的有`['abs_max', 'moving_average_abs_max']`，默认为`moving_average_abs_max`
+- `activation_quantize_type`：代表模型激活值的量化方式，可选的有['abs_max', 'moving_average_abs_max']，默认为moving_average_abs_max
 
-- `quantizable_layer_type`：代表量化OP的类型，目前支持`Conv2D`和`Linear`
+- `quantizable_layer_type`：代表量化OP的类型，目前支持Conv2D和Linear
 
 
 
