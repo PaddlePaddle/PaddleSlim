@@ -572,7 +572,6 @@ class mul(PruneWorker):
         super(mul, self).__init__(op, pruned_params, visited)
 
     def _prune(self, var, pruned_axis, pruned_idx):
-        print(f"var: {var}; mul inputs: {self.op.inputs('X')}")
         if var in self.op.inputs("X"):
             assert pruned_axis == 1, "The Input of conv2d can only be pruned at axis 1, but got {}".format(
                 pruned_axis)
@@ -582,7 +581,6 @@ class mul(PruneWorker):
             for i in pruned_idx:
                 idx += list(range_idx + i * feature_map_size)
             param_var = self.op.inputs("Y")[0]
-            print(f"param_var: {param_var}")
             self.pruned_params.append((param_var, 0, idx))
 
             for op in param_var.outputs():
