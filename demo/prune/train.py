@@ -236,10 +236,6 @@ def compress(args):
         place=place)
     _logger.info("FLOPs after pruning: {}".format(flops(pruned_program)))
 
-    #    for param in pruned_val_program.all_parameters():
-    #        if "weight" in param.name:
-    #            print(f"{param.name}\t{param.shape}")
-    #    return
     for i in range(args.num_epochs):
         train(i, pruned_program)
         if i % args.test_period == 0:
