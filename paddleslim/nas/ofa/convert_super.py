@@ -528,7 +528,7 @@ class Convert:
                     getattr(self.context, 'channel', None) != None):
                 attr_dict = layer.__dict__
                 key = attr_dict['_full_name']
-                new_attr_name = ['padding_idx', ]
+                new_attr_name = []
                 if pd_ver == 185:
                     new_attr_name += [
                         'size', 'is_sparse', 'is_distributed', 'param_attr',
@@ -583,6 +583,9 @@ class Convert:
 
                 for attr in new_attr_name:
                     new_attr_dict[attr] = attr_dict['_' + attr]
+
+                new_attr_dict['padding_idx'] = None if attr_dict[
+                    '_padding_idx'] == -1 else attr_dict['_padding_idx']
 
                 del layer, attr_dict
 
