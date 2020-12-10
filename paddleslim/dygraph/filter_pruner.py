@@ -331,9 +331,9 @@ class FilterPruner(Pruner):
                 dims = [dims]
 
             current_mask = mask.repeat(stride[0]) if stride[0] > 1 else mask
-            #current_mask = np.tile(current_mask, var_shape[dims[0]] / len(current_mask))
 
-            assert (len(current_mask) == var_shape[dims[0]])
+            assert len(current_mask) == var_shape[dims[
+                0]], "The length of current_mask must be equal to the size of dimension to be pruned on."
 
             plan.add(_name, PruningMask(dims, current_mask, pruned_ratio))
         if apply == "lazy":

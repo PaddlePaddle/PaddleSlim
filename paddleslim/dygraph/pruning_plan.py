@@ -26,10 +26,9 @@ class PruningMask():
                 "The dims of PruningMask must be instance of collections.Iterator."
             )
         if self._mask is not None:
-            assert (
-                len(self._mask.shape) == len(value),
-                "The length of value must be same with shape of mask in current PruningMask instance."
-            )
+            assert len(self._mask.shape) == len(
+                value
+            ), "The length of value must be same with shape of mask in current PruningMask instance."
         self._dims = list(value)
 
     @property
@@ -40,10 +39,9 @@ class PruningMask():
     def mask(self, value):
         assert (isinstance(value, PruningMask))
         if self._dims is not None:
-            assert (
-                len(self._mask.shape) == len(value),
-                "The length of value must be same with shape of mask in current PruningMask instance."
-            )
+            assert len(self._mask.shape) == len(
+                value
+            ), "The length of value must be same with shape of mask in current PruningMask instance."
         self._mask = value
 
     def __str__(self):
@@ -158,11 +156,10 @@ class PruningPlan():
                     for _mask in self._masks[param.name]:
                         dims = _mask.dims
                         mask = _mask.mask
-                        assert (
-                            len(dims) == 1,
-                            "Imperative mode only support for pruning"
-                            "on one dimension, but get dims {} when pruning parameter {}".
-                            format(dims, param.name))
+                        assert len(
+                            dims
+                        ) == 1, "Imperative mode only support for pruning on one dimension, but get dims {} when pruning parameter {}".format(
+                            dims, param.name)
                         t_value = param.value().get_tensor()
                         value = np.array(t_value).astype("float32")
                         # The name of buffer can not contains "."
