@@ -249,8 +249,8 @@ def compress(args):
         if args.save_inference:
             infer_model_path = os.path.join(args.model_path, "infer_models",
                                             str(i))
-            paddle.static.save_inference_model(infer_model_path, ["image"],
-                                               [out], exe, pruned_val_program)
+            paddle.fluid.io.save_inference_model(infer_model_path, ["image"],
+                                                 [out], exe, pruned_val_program)
             _logger.info("Saved inference model into [{}]".format(
                 infer_model_path))
 
