@@ -122,7 +122,7 @@ def compress(args):
         val_dataset = paddle.vision.datasets.Cifar10(
             mode="test", backend="cv2", transform=transform)
         class_dim = 10
-        image_shape = [3, 224, 224]
+        image_shape = [3, 32, 32]
         pretrain = False
     elif args.data == "imagenet":
 
@@ -164,7 +164,6 @@ def compress(args):
     ratios = {}
     for param in params:
         ratios[param] = args.pruned_ratio
-    #ratios = {"conv2d_26.w_0": 0.3}
     plan = pruner.prune_vars(ratios, [0])
 
     _logger.info("FLOPs after pruning: {}GFLOPs; pruned ratio: {}".format(
