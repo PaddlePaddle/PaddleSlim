@@ -1,7 +1,7 @@
 #!/bin/bash
-CUDA_VISIBLE_DEVICES=4,5,6,7 \
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
 python -m paddle.distributed.launch \
---gpus="4,5,6,7" \
+--gpus="0,1,2,3" \
 --log_dir="fpgm_resnet34_f-42_train_log" \
 train.py \
     --model="resnet34" \
@@ -11,4 +11,3 @@ train.py \
     --lr_strategy="cosine_decay" \
     --criterion="fpgm" \
     --model_path="./fpgm_resnet34_025_120_models"
-#    &> fpgm_resnet025_120_train.log &

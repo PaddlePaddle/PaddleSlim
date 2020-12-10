@@ -20,6 +20,7 @@ import paddle.vision.transforms as T
 from paddle.static import InputSpec as Input
 from imagenet import ImageNetDataset
 from paddle.io import BatchSampler, DataLoader, DistributedBatchSampler
+from paddle.distributed import ParallelEnv
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -33,16 +34,15 @@ add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay 
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
 add_arg('num_epochs',       int,  120,               "The number of total epochs.")
-add_arg('total_images',     int,  1281167,               "The number of total training images.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
-add_arg('config_file',      str, None,                 "The config file for compression with yaml format.")
 add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
 add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used, support l1_norm and batch_norm_scale.")
-add_arg('save_inference',   bool, False,                "Whether to save inference model.")
+add_arg('use_gpu',   bool, True,                "Whether to GPUs.")
+add_arg('checkpoint',   str, None,                "The path of checkpoint which is used for resume training.")
 # yapf: enable
 
 model_list = models.__all__
@@ -77,9 +77,8 @@ def get_pruned_params(args, model):
     return params
 
 
-def piecewise_decay(args, parameters):
-    step = int(math.ceil(float(args.total_images) / args.batch_size))
-    bd = [step * e for e in args.step_epochs]
+def piecewise_decay(args, parameters, steps_per_epoch):
+    bd = [steps_per_epoch * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = paddle.optimizer.lr.PiecewiseDecay(boundaries=bd, values=lr)
 
@@ -91,10 +90,9 @@ def piecewise_decay(args, parameters):
     return optimizer
 
 
-def cosine_decay(args, parameters):
-    step = int(math.ceil(float(args.total_images) / args.batch_size))
+def cosine_decay(args, parameters, steps_per_epoch):
     learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
-        learning_rate=args.lr, T_max=args.num_epochs * args.total_images)
+        learning_rate=args.lr, T_max=args.num_epochs * steps_per_epoch)
     optimizer = paddle.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
@@ -103,15 +101,16 @@ def cosine_decay(args, parameters):
     return optimizer
 
 
-def create_optimizer(args, parameters):
+def create_optimizer(args, parameters, steps_per_epoch):
     if args.lr_strategy == "piecewise_decay":
-        return piecewise_decay(args, parameters)
+        return piecewise_decay(args, parameters, steps_per_epoch)
     elif args.lr_strategy == "cosine_decay":
-        return cosine_decay(args, parameters)
+        return cosine_decay(args, parameters, steps_per_epoch)
 
 
 def compress(args):
-    paddle.set_device("gpu")
+
+    paddle.set_device('gpu' if args.use_gpu else 'cpu')
     train_reader = None
     test_reader = None
     if args.data == "cifar10":
@@ -177,16 +176,19 @@ def compress(args):
 
     net.train()
     model = paddle.Model(net, inputs, labels)
-    opt = create_optimizer(args, net.parameters())
+    steps_per_epoch = int(np.ceil(len(train_dataset) * 1. / args.batch_size))
+    opt = create_optimizer(args, net.parameters(), steps_per_epoch)
     model.prepare(
         opt, paddle.nn.CrossEntropyLoss(), paddle.metric.Accuracy(topk=(1, 5)))
+    if args.checkpoint is not None:
+        model.load(args.checkpoint)
     model.fit(train_data=train_dataset,
               eval_data=val_dataset,
               epochs=args.num_epochs,
-              batch_size=args.batch_size,
+              batch_size=args.batch_size // ParallelEnv().nranks,
               verbose=1,
               save_dir=args.model_path,
-              num_workers=4)
+              num_workers=8)
 
 
 def main():
