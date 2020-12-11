@@ -310,22 +310,32 @@ class FilterPruner(Pruner):
         group = self.var_group.find_group(var_name, pruned_dims)
         _logger.debug("found group with {}: {}".format(var_name, group))
         plan = PruningPlan(self.model.full_name)
-
+        group_dict = {}
         for sub_layer in self.model.sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in group:
-                    group[param.name]['layer'] = sub_layer
-                    group[param.name]['var'] = param
-                    group[param.name]['value'] = np.array(param.value()
-                                                          .get_tensor())
+                    group_dict[param.name] = group[param.name]
+                    group_dict[param.name].update({
+                        'layer': sub_layer,
+                        'var': param,
+                        'value': np.array(param.value().get_tensor())
+                    })
                     _logger.debug(f"set value of {param.name} into group")
 
-        mask = self.cal_mask(var_name, pruned_ratio, group)
-        for _name in group:
-            dims = group[_name]['pruned_dims']
+        mask = self.cal_mask(var_name, pruned_ratio, group_dict)
+        for _name in group_dict:
+            dims = group_dict[_name]['pruned_dims']
+            stride = group_dict[_name]['stride']
+            var_shape = group_dict[_name]['var'].shape
             if isinstance(dims, int):
                 dims = [dims]
-            plan.add(_name, PruningMask(dims, mask, pruned_ratio))
+
+            current_mask = mask.repeat(stride[0]) if stride[0] > 1 else mask
+
+            assert len(current_mask) == var_shape[dims[
+                0]], "The length of current_mask must be equal to the size of dimension to be pruned on."
+
+            plan.add(_name, PruningMask(dims, current_mask, pruned_ratio))
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":

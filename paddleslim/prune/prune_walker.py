@@ -588,6 +588,20 @@ class mul(PruneWorker):
 
 
 @PRUNE_WORKER.register
+class matmul(PruneWorker):
+    def __init__(self, op, pruned_params, visited):
+        super(matmul, self).__init__(op, pruned_params, visited)
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        if var in self.op.inputs("X") and pruned_axis == 1:
+            param_var = self.op.inputs("Y")[0]
+            self.pruned_params.append((param_var, 0, pruned_idx))
+
+            for op in param_var.outputs():
+                self._prune_op(op, param_var, 0, pruned_idx)
+
+
+@PRUNE_WORKER.register
 class scale(PruneWorker):
     def __init__(self, op, pruned_params, visited={}):
         super(scale, self).__init__(op, pruned_params, visited)
@@ -657,3 +671,33 @@ class affine_channel(PruneWorker):
         next_ops = out_var.outputs()
         for op in next_ops:
             self._prune_op(op, out_var, pruned_axis, pruned_idx)
+
+
+@PRUNE_WORKER.register
+class flatten_contiguous_range(PruneWorker):
+    def __init__(self, op, pruned_params, visited):
+        super(flatten_contiguous_range, self).__init__(op, pruned_params,
+                                                       visited)
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        start_axis = self.op.attr("start_axis")
+        stop_axis = self.op.attr("stop_axis")
+        if var in self.op.inputs("X"):
+            out_var = self.op.outputs("Out")[0]
+            in_var = self.op.inputs("X")[0]
+            stride = 1
+            out_pruned_axis = pruned_axis
+            out_pruned_idx = pruned_idx
+            if pruned_axis >= start_axis and pruned_axis <= stop_axis:
+                out_pruned_axis = start_axis
+                for i in range(pruned_axis + 1, stop_axis + 1):
+                    stride *= in_var.shape()[i]
+            elif pruned_axis > stop_axis:
+                out_pruned_axis = start_axis + pruned_axis - stop_axis
+
+            self._visit(in_var, pruned_axis)
+            self._visit(out_var, out_pruned_axis)
+
+            next_ops = out_var.outputs()
+            for op in next_ops:
+                self._prune_op(op, out_var, out_pruned_axis, [stride])
