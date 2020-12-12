@@ -7,15 +7,13 @@ import functools
 import math
 import time
 import numpy as np
-import paddle.fluid as fluid
 
-import reader
-sys.path.append(sys.path[0] + "/../../../")
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
 from paddleslim.quant import quant_post
-sys.path.append(sys.path[0] + "/../../")
 from utility import add_arguments, print_arguments
-
+import imagenet_reader as reader
 _logger = get_logger(__name__, level=logging.INFO)
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -34,12 +32,12 @@ add_arg('params_filename',      str, None,                 "params file name")
 def quantize(args):
     val_reader = reader.train()
 
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
+    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
 
     assert os.path.exists(args.model_path), "args.model_path doesn't exist"
     assert os.path.isdir(args.model_path), "args.model_path must be a dir"
 
-    exe = fluid.Executor(place)
+    exe = paddle.static.Executor(place)
     quant_post(
         executor=exe,
         model_dir=args.model_path,
@@ -58,4 +56,5 @@ def main():
 
 
 if __name__ == '__main__':
+    paddle.enable_static()
     main()

@@ -17,11 +17,12 @@ import unittest
 import numpy
 import paddle
 import paddle.fluid as fluid
-from paddleslim.analysis import sensitivity
+from static_case import StaticCase
+from paddleslim.prune import sensitivity, merge_sensitive, load_sensitivities
 from layers import conv_bn_layer
 
 
-class TestSensitivity(unittest.TestCase):
+class TestSensitivity(StaticCase):
     def test_sensitivity(self):
         main_program = fluid.Program()
         startup_program = fluid.Program()
@@ -44,15 +45,15 @@ class TestSensitivity(unittest.TestCase):
         exe = fluid.Executor(place)
         exe.run(startup_program)
 
-        val_reader = paddle.batch(paddle.dataset.mnist.test(), batch_size=128)
+        val_reader = paddle.fluid.io.batch(
+            paddle.dataset.mnist.test(), batch_size=128)
 
-        def eval_func(program, scope):
+        def eval_func(program):
             feeder = fluid.DataFeeder(
                 feed_list=['image', 'label'], place=place, program=program)
             acc_set = []
             for data in val_reader():
                 acc_np = exe.run(program=program,
-                                 scope=scope,
                                  feed=feeder.feed(data),
                                  fetch_list=[acc_top1])
                 acc_set.append(float(acc_np[0]))
@@ -60,9 +61,53 @@ class TestSensitivity(unittest.TestCase):
             print("acc_val_mean: {}".format(acc_val_mean))
             return acc_val_mean
 
-        sensitivity(eval_program,
-                    fluid.global_scope(), place, ["conv4_weights"], eval_func,
-                    "./sensitivities_file")
+        def eval_func_for_args(args):
+            program = args[0]
+            feeder = fluid.DataFeeder(
+                feed_list=['image', 'label'], place=place, program=program)
+            acc_set = []
+            for data in val_reader():
+                acc_np = exe.run(program=program,
+                                 feed=feeder.feed(data),
+                                 fetch_list=[acc_top1])
+                acc_set.append(float(acc_np[0]))
+            acc_val_mean = numpy.array(acc_set).mean()
+            print("acc_val_mean: {}".format(acc_val_mean))
+            return acc_val_mean
+
+        sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func,
+            sensitivities_file="./sensitivities_file_0",
+            pruned_ratios=[0.1, 0.2])
+
+        sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func,
+            sensitivities_file="./sensitivities_file_1",
+            pruned_ratios=[0.3, 0.4])
+
+        params_sens = sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func_for_args,
+            eval_args=[eval_program],
+            sensitivities_file="./sensitivites_file_params",
+            pruned_ratios=[0.1, 0.2, 0.3, 0.4])
+
+        sens_0 = load_sensitivities('./sensitivities_file_0')
+        sens_1 = load_sensitivities('./sensitivities_file_1')
+        sens = merge_sensitive([sens_0, sens_1])
+        origin_sens = sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func,
+            sensitivities_file="./sensitivities_file_2",
+            pruned_ratios=[0.1, 0.2, 0.3, 0.4])
+        self.assertTrue(params_sens == origin_sens)
+        self.assertTrue(sens == origin_sens)
 
 
 if __name__ == '__main__':

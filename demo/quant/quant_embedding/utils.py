@@ -3,7 +3,6 @@ import collections
 import six
 import time
 import numpy as np
-import paddle.fluid as fluid
 import paddle
 import os
 import preprocess
