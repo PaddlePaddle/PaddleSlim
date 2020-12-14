@@ -211,14 +211,15 @@ def compress(args):
             total_samples += batch_size
 
             if batch_id % args.log_period == 0:
+                log_period = 1 if batch_id == 0 else args.log_period
                 _logger.info(
                     "Eval epoch[{}] batch[{}] - top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
                            np.mean(acc_top1.numpy()),
                            np.mean(acc_top5.numpy()), eval_reader_cost /
-                           args.log_period, (eval_reader_cost + eval_run_cost) /
-                           args.log_period, total_samples / args.log_period,
-                           total_samples / (eval_reader_cost + eval_run_cost)))
+                           log_period, (eval_reader_cost + eval_run_cost) /
+                           log_period, total_samples / log_period, total_samples
+                           / (eval_reader_cost + eval_run_cost)))
                 eval_reader_cost = 0.0
                 eval_run_cost = 0.0
                 total_samples = 0
@@ -282,15 +283,15 @@ def compress(args):
             total_samples += batch_size
 
             if batch_id % args.log_period == 0:
+                log_period = 1 if batch_id == 0 else args.log_period
                 _logger.info(
                     "epoch[{}]-batch[{}] lr: {:.6f} - loss: {:.6f}; top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
                            lr.get_lr(), loss_n, acc_top1_n, acc_top5_n,
-                           train_reader_cost / args.log_period, (
-                               train_reader_cost + train_run_cost
-                           ) / args.log_period, total_samples / args.log_period,
-                           total_samples / (train_reader_cost + train_run_cost
-                                            )))
+                           train_reader_cost / log_period, (
+                               train_reader_cost + train_run_cost) / log_period,
+                           total_samples / log_period, total_samples / (
+                               train_reader_cost + train_run_cost)))
                 train_reader_cost = 0.0
                 train_run_cost = 0.0
                 total_samples = 0
