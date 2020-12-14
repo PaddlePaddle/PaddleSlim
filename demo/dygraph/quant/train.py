@@ -205,7 +205,7 @@ def compress(args):
             end_time = time.time()
             total_time = end_time - start_time
             batch_time = end_time - batch_start_time
-            num_samples = image.shape[0] * trainer_num
+            num_samples = image.shape[0]
             ips = num_samples / total_time
 
             if batch_id % args.log_period == 0:
@@ -269,7 +269,7 @@ def compress(args):
             end_time = time.time()
             total_time = end_time - start_time
             batch_time = end_time - batch_start_time
-            num_samples = image.shape[0] * trainer_num
+            num_samples = image.shape[0]
             ips = num_samples / total_time
 
             if batch_id % args.log_period == 0:
