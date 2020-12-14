@@ -285,12 +285,12 @@ def compress(args):
                 _logger.info(
                     "epoch[{}]-batch[{}] lr: {:.6f} - loss: {:.6f}; top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
-                           lr.get_lr(
-                           ), loss_n, acc_top1_n, acc_top5_n, train_run_cost /
-                           args.log_period, (train_reader_cost + train_run_cost
-                                             ) / args.log_period, total_samples
-                           / args.log_period, total_samples / (
-                               train_reader_cost + train_run_cost)))
+                           lr.get_lr(), loss_n, acc_top1_n, acc_top5_n,
+                           train_reader_cost / args.log_period, (
+                               train_reader_cost + train_run_cost
+                           ) / args.log_period, total_samples / args.log_period,
+                           total_samples / (train_reader_cost + train_run_cost
+                                            )))
                 train_reader_cost = 0.0
                 train_run_cost = 0.0
                 total_samples = 0
