@@ -210,7 +210,7 @@ def compress(args):
 
             if batch_id % args.log_period == 0:
                 _logger.info(
-                    "Eval epoch[{}] batch[{}] - top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f}, avg_batch_cost: {:.6f}, avg_samples: {}, avg_ips: {:.3f} images/s".
+                    "Eval epoch[{}] batch[{}] - top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
                            np.mean(acc_top1.numpy()),
                            np.mean(acc_top5.numpy()), reader_time, batch_time,
@@ -274,7 +274,7 @@ def compress(args):
 
             if batch_id % args.log_period == 0:
                 _logger.info(
-                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {:.6f}; top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f}, avg_batch_cost: {:.6f}, avg_samples: {}, avg_ips: {:.3f} images/s".
+                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {:.6f}; top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
                            lr.get_lr(), loss_n, acc_top1_n, acc_top5_n,
                            reader_time, batch_time, num_samples, ips))
