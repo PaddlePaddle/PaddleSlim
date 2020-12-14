@@ -191,34 +191,41 @@ def compress(args):
         acc_top1_ns = []
         acc_top5_ns = []
 
-        start_time = time.time()
+        eval_reader_cost = 0.0
+        eval_run_cost = 0.0
+        total_samples = 0
+        reader_start = time.time()
         for data in valid_loader():
-            reader_time = time.time() - start_time
+            eval_reader_cost += time.time() - reader_start
             image = data[0]
             label = data[1]
 
-            batch_start_time = time.time()
+            eval_start = time.time()
+
             out = net(image)
             acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
             acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
 
-            end_time = time.time()
-            total_time = end_time - start_time
-            batch_time = end_time - batch_start_time
-            num_samples = image.shape[0]
-            ips = num_samples / total_time
+            eval_run_cost += time.time() - eval_start
+            batch_size = image.shape[0]
+            total_samples += batch_size
 
             if batch_id % args.log_period == 0:
                 _logger.info(
                     "Eval epoch[{}] batch[{}] - top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
                            np.mean(acc_top1.numpy()),
-                           np.mean(acc_top5.numpy()), reader_time, batch_time,
-                           num_samples, ips))
+                           np.mean(acc_top5.numpy()), eval_reader_cost /
+                           args.log_period, (eval_reader_cost + eval_run_cost) /
+                           args.log_period, total_samples / args.log_period,
+                           total_samples / (eval_reader_cost + eval_run_cost)))
+                eval_reader_cost = 0.0
+                eval_run_cost = 0.0
+                total_samples = 0
             acc_top1_ns.append(np.mean(acc_top1.numpy()))
             acc_top5_ns.append(np.mean(acc_top5.numpy()))
             batch_id += 1
-            start_time = end_time
+            reader_start = time.time()
 
         _logger.info(
             "Final eval epoch[{}] - acc_top1: {:.6f}; acc_top5: {:.6f}".format(
@@ -244,14 +251,18 @@ def compress(args):
 
         net.train()
         batch_id = 0
-        start_time = time.time()
+
+        train_reader_cost = 0.0
+        train_run_cost = 0.0
+        total_samples = 0
+        reader_start = time.time()
         for data in train_loader():
-            reader_time = time.time() - start_time
+            train_reader_cost += time.time() - reader_start
 
             image = data[0]
             label = data[1]
 
-            batch_start_time = time.time()
+            train_start = time.time()
             out = net(image)
             avg_cost = cross_entropy(out, label, args.ls_epsilon)
 
@@ -266,20 +277,25 @@ def compress(args):
             acc_top1_n = np.mean(acc_top1.numpy())
             acc_top5_n = np.mean(acc_top5.numpy())
 
-            end_time = time.time()
-            total_time = end_time - start_time
-            batch_time = end_time - batch_start_time
-            num_samples = image.shape[0]
-            ips = num_samples / total_time
+            train_run_cost += time.time() - train_start
+            batch_size = image.shape[0]
+            total_samples += batch_size
 
             if batch_id % args.log_period == 0:
                 _logger.info(
                     "epoch[{}]-batch[{}] lr: {:.6f} - loss: {:.6f}; top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
-                           lr.get_lr(), loss_n, acc_top1_n, acc_top5_n,
-                           reader_time, batch_time, num_samples, ips))
+                           lr.get_lr(
+                           ), loss_n, acc_top1_n, acc_top5_n, train_run_cost /
+                           args.log_period, (train_reader_cost + train_run_cost
+                                             ) / args.log_period, total_samples
+                           / args.log_period, total_samples / (
+                               train_reader_cost + train_run_cost)))
+                train_reader_cost = 0.0
+                train_run_cost = 0.0
+                total_samples = 0
             batch_id += 1
-            start_time = end_time
+            reader_start = time.time()
 
     ############################################################################################################
     # train loop
