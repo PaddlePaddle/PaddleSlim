@@ -190,8 +190,10 @@ def compress(args):
         batch_id = 0
         acc_top1_ns = []
         acc_top5_ns = []
+
+        start_time = time.time()
         for data in valid_loader():
-            start_time = time.time()
+            reader_time = time.time() - start_time
             image = data[0]
             label = data[1]
 
@@ -203,7 +205,6 @@ def compress(args):
             end_time = time.time()
             total_time = end_time - start_time
             batch_time = end_time - batch_start_time
-            reader_time = total_time - batch_time
             num_samples = image.shape[0] * trainer_num
             ips = num_samples / total_time
 
@@ -217,6 +218,7 @@ def compress(args):
             acc_top1_ns.append(np.mean(acc_top1.numpy()))
             acc_top5_ns.append(np.mean(acc_top5.numpy()))
             batch_id += 1
+            start_time = end_time
 
         _logger.info(
             "Final eval epoch[{}] - acc_top1: {:.6f}; acc_top5: {:.6f}".format(
@@ -242,8 +244,10 @@ def compress(args):
 
         net.train()
         batch_id = 0
+        start_time = time.time()
         for data in train_loader():
-            start_time = time.time()
+            reader_time = time.time() - start_time
+
             image = data[0]
             label = data[1]
 
@@ -265,7 +269,6 @@ def compress(args):
             end_time = time.time()
             total_time = end_time - start_time
             batch_time = end_time - batch_start_time
-            reader_time = total_time - batch_time
             num_samples = image.shape[0] * trainer_num
             ips = num_samples / total_time
 
@@ -276,6 +279,7 @@ def compress(args):
                            lr.get_lr(), loss_n, acc_top1_n, acc_top5_n,
                            reader_time, batch_time, num_samples, ips))
             batch_id += 1
+            start_time = end_time
 
     ############################################################################################################
     # train loop
