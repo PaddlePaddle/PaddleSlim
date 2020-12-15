@@ -14,14 +14,14 @@
 
 import numpy as np
 import paddle
-import paddle.fluid as fluid
-import paddle.fluid.dygraph.nn as nn
+import paddle.nn as nn
+import paddle.nn.functional as F
 from paddle.nn import ReLU
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
 from paddleslim.nas.ofa import supernet
 
 
-class Model(fluid.dygraph.Layer):
+class Model(nn.Layer):
     def __init__(self):
         super(Model, self).__init__()
         with supernet(
@@ -50,18 +50,20 @@ class Model(fluid.dygraph.Layer):
 
         for idx, layer in enumerate(models):
             if idx == 6:
-                inputs = fluid.layers.flatten(inputs, 1)
+                inputs = paddle.flatten(inputs, 1)
             inputs = layer(inputs)
 
-        inputs = fluid.layers.softmax(inputs)
+        inputs = F.softmax(inputs)
         return inputs
 
 
 def test_ofa():
 
+    model = Model()
+    teacher_model = Model()
+
     default_run_config = {
         'train_batch_size': 256,
-        'eval_batch_size': 64,
         'n_epochs': [[1], [2, 3], [4, 5]],
         'init_learning_rate': [[0.001], [0.003, 0.001], [0.003, 0.001]],
         'dynamic_batch_size': [1, 1, 1],
@@ -72,42 +74,46 @@ def test_ofa():
 
     default_distill_config = {
         'lambda_distill': 0.01,
-        'teacher_model': Model,
+        'teacher_model': teacher_model,
         'mapping_layers': ['models.0.fn']
     }
     distill_config = DistillConfig(**default_distill_config)
 
-    fluid.enable_dygraph()
-    model = Model()
     ofa_model = OFA(model, run_config, distill_config=distill_config)
 
-    train_reader = paddle.fluid.io.batch(
-        paddle.dataset.mnist.train(), batch_size=256, drop_last=True)
+    train_dataset = paddle.vision.datasets.MNIST(
+        mode='train', backend='cv2', transform=transform)
+    train_loader = paddle.io.DataLoader(
+        train_dataset,
+        places=place,
+        feed_list=[image, label],
+        drop_last=True,
+        batch_size=64)
 
     start_epoch = 0
     for idx in range(len(run_config.n_epochs)):
         cur_idx = run_config.n_epochs[idx]
         for ph_idx in range(len(cur_idx)):
             cur_lr = run_config.init_learning_rate[idx][ph_idx]
-            adam = fluid.optimizer.Adam(
+            adam = paddle.optimizer.Adam(
                 learning_rate=cur_lr,
                 parameter_list=(ofa_model.parameters() + ofa_model.netAs_param))
             for epoch_id in range(start_epoch,
                                   run_config.n_epochs[idx][ph_idx]):
-                for batch_id, data in enumerate(train_reader()):
+                for batch_id, data in enumerate(train_loader()):
                     dy_x_data = np.array(
                         [x[0].reshape(1, 28, 28)
                          for x in data]).astype('float32')
                     y_data = np.array(
                         [x[1] for x in data]).astype('int64').reshape(-1, 1)
 
-                    img = fluid.dygraph.to_variable(dy_x_data)
-                    label = fluid.dygraph.to_variable(y_data)
+                    img = paddle.dygraph.to_variable(dy_x_data)
+                    label = paddle.dygraph.to_variable(y_data)
                     label.stop_gradient = True
 
                     for model_no in range(run_config.dynamic_batch_size[idx]):
                         output, _ = ofa_model(img, label)
-                        loss = fluid.layers.reduce_mean(output)
+                        loss = F.mean(output)
                         dis_loss = ofa_model.calc_distill_loss()
                         loss += dis_loss
                         loss.backward()

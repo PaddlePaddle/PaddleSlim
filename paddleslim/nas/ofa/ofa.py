@@ -16,10 +16,15 @@ import logging
 import numpy as np
 from collections import namedtuple
 import paddle
-import paddle.nn as nn
 import paddle.fluid as fluid
-from paddle.fluid.dygraph import Conv2D
-from .layers import BaseBlock, Block, SuperConv2D, SuperBatchNorm
+from .utils.utils import get_paddle_version
+pd_ver = get_paddle_version()
+if pd_ver == 185:
+    from .layers import BaseBlock, SuperConv2D, SuperLinear
+    Layer = paddle.fluid.dygraph.Layer
+else:
+    from .layers_new import BaseBlock, SuperConv2D, SuperLinear
+    Layer = paddle.nn.Layer
 from .utils.utils import search_idx
 from ...common import get_logger
 
@@ -28,20 +33,19 @@ _logger = get_logger(__name__, level=logging.INFO)
 __all__ = ['OFA', 'RunConfig', 'DistillConfig']
 
 RunConfig = namedtuple('RunConfig', [
-    'train_batch_size', 'eval_batch_size', 'n_epochs', 'save_frequency',
-    'eval_frequency', 'init_learning_rate', 'total_images', 'elastic_depth',
-    'dynamic_batch_size'
+    'train_batch_size', 'n_epochs', 'save_frequency', 'eval_frequency',
+    'init_learning_rate', 'total_images', 'elastic_depth', 'dynamic_batch_size'
 ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
 DistillConfig = namedtuple('DistillConfig', [
     'lambda_distill', 'teacher_model', 'mapping_layers', 'teacher_model_path',
-    'distill_fn'
+    'distill_fn', 'mapping_op'
 ])
 DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
 
-class OFABase(fluid.dygraph.Layer):
+class OFABase(Layer):
     def __init__(self, model):
         super(OFABase, self).__init__()
         self.model = model
@@ -53,20 +57,26 @@ class OFABase(fluid.dygraph.Layer):
         for name, sublayer in self.model.named_sublayers():
             if isinstance(sublayer, BaseBlock):
                 sublayer.set_supernet(self)
-                layers[sublayer.key] = sublayer.candidate_config
-                for k in sublayer.candidate_config.keys():
-                    elastic_task.add(k)
+                if not sublayer.fixed:
+                    layers[sublayer.key] = sublayer.candidate_config
+                    for k in sublayer.candidate_config.keys():
+                        elastic_task.add(k)
         return layers, elastic_task
 
     def forward(self, *inputs, **kwargs):
         raise NotImplementedError
 
-    # NOTE: config means set forward config for layers, used in distill.
     def layers_forward(self, block, *inputs, **kwargs):
         if getattr(self, 'current_config', None) != None:
-            assert block.key in self.current_config, 'DONNT have {} layer in config.'.format(
-                block.key)
-            config = self.current_config[block.key]
+            ### if block is fixed, donnot join key into candidate
+            ### concrete config as parameter in kwargs
+            if block.fixed == False:
+                assert block.key in self.current_config, 'DONNT have {} layer in config.'.format(
+                    block.key)
+                config = self.current_config[block.key]
+            else:
+                config = dict()
+                config.update(kwargs)
         else:
             config = dict()
         logging.debug(self.model, config)
@@ -81,7 +91,7 @@ class OFABase(fluid.dygraph.Layer):
 class OFA(OFABase):
     def __init__(self,
                  model,
-                 run_config,
+                 run_config=None,
                  net_config=None,
                  distill_config=None,
                  elastic_order=None,
@@ -92,7 +102,6 @@ class OFA(OFABase):
         self.distill_config = distill_config
         self.elastic_order = elastic_order
         self.train_full = train_full
-        self.iter_per_epochs = self.run_config.total_images // self.run_config.train_batch_size
         self.iter = 0
         self.dynamic_iter = 0
         self.manual_set_task = False
@@ -100,17 +109,15 @@ class OFA(OFABase):
         self._add_teacher = False
         self.netAs_param = []
 
-        for idx in range(len(run_config.n_epochs)):
-            assert isinstance(
-                run_config.init_learning_rate[idx],
-                list), "each candidate in init_learning_rate must be list"
-            assert isinstance(run_config.n_epochs[idx],
-                              list), "each candidate in n_epochs must be list"
-
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
             assert isinstance(self.elastic_order,
                               list), 'elastic_order must be a list'
+
+            if getattr(self.run_config, 'elastic_depth', None) != None:
+                depth_list = list(set(self.run_config.elastic_depth))
+                depth_list.sort()
+                self.layers['depth'] = depth_list
 
         if self.elastic_order is None:
             self.elastic_order = []
@@ -133,16 +140,26 @@ class OFA(OFABase):
             if 'channel' in self._elastic_task and 'width' not in self.elastic_order:
                 self.elastic_order.append('width')
 
-        assert len(self.run_config.n_epochs) == len(self.elastic_order)
-        assert len(self.run_config.n_epochs) == len(
-            self.run_config.dynamic_batch_size)
-        assert len(self.run_config.n_epochs) == len(
-            self.run_config.init_learning_rate)
+        if getattr(self.run_config, 'n_epochs', None) != None:
+            assert len(self.run_config.n_epochs) == len(self.elastic_order)
+            for idx in range(len(run_config.n_epochs)):
+                assert isinstance(
+                    run_config.n_epochs[idx],
+                    list), "each candidate in n_epochs must be list"
+
+            if self.run_config.dynamic_batch_size != None:
+                assert len(self.run_config.n_epochs) == len(
+                    self.run_config.dynamic_batch_size)
+            if self.run_config.init_learning_rate != None:
+                assert len(self.run_config.n_epochs) == len(
+                    self.run_config.init_learning_rate)
+                for idx in range(len(run_config.n_epochs)):
+                    assert isinstance(
+                        run_config.init_learning_rate[idx], list
+                    ), "each candidate in init_learning_rate must be list"
 
         ### =================  add distill prepare ======================
-        if self.distill_config != None and (
-                self.distill_config.lambda_distill != None and
-                self.distill_config.lambda_distill > 0):
+        if self.distill_config != None:
             self._add_teacher = True
             self._prepare_distill()
 
@@ -153,11 +170,11 @@ class OFA(OFABase):
 
         if self.distill_config.teacher_model == None:
             logging.error(
-                'If you want to add distill, please input class of teacher model'
+                'If you want to add distill, please input instance of teacher model'
             )
 
-        assert isinstance(self.distill_config.teacher_model,
-                          paddle.fluid.dygraph.Layer)
+        ### instance model by user can input super-param easily.
+        assert isinstance(self.distill_config.teacher_model, Layer)
 
         # load teacher parameter
         if self.distill_config.teacher_model_path != None:
@@ -171,16 +188,33 @@ class OFA(OFABase):
         # add hook if mapping layers is not None
         # if mapping layer is None, return the output of the teacher model,
         # if mapping layer is NOT None, add hook and compute distill loss about mapping layers.
-        mapping_layers = self.distill_config.mapping_layers
+        mapping_layers = getattr(self.distill_config, 'mapping_layers', None)
         if mapping_layers != None:
             self.netAs = []
             for name, sublayer in self.model.named_sublayers():
                 if name in mapping_layers:
-                    netA = SuperConv2D(
-                        sublayer._num_filters,
-                        sublayer._num_filters,
-                        filter_size=1)
-                    self.netAs_param.extend(netA.parameters())
+                    if self.distill_config.mapping_op != None:
+                        if self.distill_config.mapping_op.lower() == 'conv2d':
+                            netA = SuperConv2D(
+                                getattr(sublayer, '_num_filters',
+                                        sublayer._out_channels),
+                                getattr(sublayer, '_num_filters',
+                                        sublayer._out_channels), 1)
+                        elif self.distill_config.mapping_op.lower() == 'linear':
+                            netA = SuperLinear(
+                                getattr(sublayer, '_output_dim',
+                                        sublayer._out_features),
+                                getattr(sublayer, '_output_dim',
+                                        sublayer._out_features))
+                        else:
+                            raise NotImplementedError(
+                                "Not Support Op: {}".format(
+                                    self.distill_config.mapping_op.lower()))
+                    else:
+                        netA = None
+
+                    if netA != None:
+                        self.netAs_param.extend(netA.parameters())
                     self.netAs.append(netA)
 
             def get_activation(mem, name):
@@ -199,9 +233,16 @@ class OFA(OFABase):
 
     def _compute_epochs(self):
         if getattr(self, 'epoch', None) == None:
+            assert self.run_config.total_images is not None, \
+                "if not use set_epoch() to set epoch, please set total_images in run_config."
+            assert self.run_config.train_batch_size is not None, \
+                "if not use set_epoch() to set epoch, please set train_batch_size in run_config."
+            assert self.run_config.n_epochs is not None, \
+                "if not use set_epoch() to set epoch, please set n_epochs in run_config."
+            self.iter_per_epochs = self.run_config.total_images // self.run_config.train_batch_size
             epoch = self.iter // self.iter_per_epochs
         else:
-            epoch = self.epochs
+            epoch = self.epoch
         return epoch
 
     def _sample_from_nestdict(self, cands, sample_type, task, phase):
@@ -264,15 +305,24 @@ class OFA(OFABase):
         losses = []
         assert len(self.netAs) > 0
         for i, netA in enumerate(self.netAs):
-            assert isinstance(netA, SuperConv2D)
             n = self.distill_config.mapping_layers[i]
             Tact = self.Tacts[n]
             Sact = self.Sacts[n]
-            Sact = netA(Sact, channel=netA._num_filters)
-            if self.distill_config.distill_fn == None:
-                loss = fluid.layers.mse_loss(Sact, Tact)
+            if isinstance(netA, SuperConv2D):
+                Sact = netA(
+                    Sact,
+                    channel=getattr(netA, '_num_filters', netA._out_channels))
+            elif isinstance(netA, SuperLinear):
+                Sact = netA(
+                    Sact,
+                    channel=getattr(netA, '_output_dim', netA._out_features))
             else:
-                loss = distill_fn(Sact, Tact)
+                Sact = Sact
+
+            if self.distill_config.distill_fn == None:
+                loss = fluid.layers.mse_loss(Sact, Tact.detach())
+            else:
+                loss = distill_fn(Sact, Tact.detach())
             losses.append(loss)
         return sum(losses) * self.distill_config.lambda_distill
 
@@ -284,6 +334,9 @@ class OFA(OFABase):
     def export(self, config):
         pass
 
+    def set_net_config(self, net_config):
+        self.net_config = net_config
+
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
         teacher_output = None
@@ -293,11 +346,12 @@ class OFA(OFABase):
         # ============================================================
 
         # ====================   student process  =====================
-        self.dynamic_iter += 1
-        if self.dynamic_iter == self.run_config.dynamic_batch_size[
-                self.task_idx]:
-            self.iter += 1
-            self.dynamic_iter = 0
+        if getattr(self.run_config, 'dynamic_batch_size', None) != None:
+            self.dynamic_iter += 1
+            if self.dynamic_iter == self.run_config.dynamic_batch_size[
+                    self.task_idx]:
+                self.iter += 1
+                self.dynamic_iter = 0
 
         if self.net_config == None:
             if self.train_full == True:
@@ -314,6 +368,6 @@ class OFA(OFABase):
 
         _logger.debug("Current config is {}".format(self.current_config))
         if 'depth' in self.current_config:
-            kwargs['depth'] = int(self.current_config['depth'])
+            kwargs['depth'] = self.current_config['depth']
 
         return self.model.forward(*inputs, **kwargs), teacher_output

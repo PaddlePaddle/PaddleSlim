@@ -43,24 +43,41 @@ class TestQuantAwareCase1(StaticCase):
         main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
 
-        place = paddle.CUDAPlace(0) if paddle.fluid.is_compiled_with_cuda(
+        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(paddle.static.default_startup_program())
-        train_loader = paddle.io.DataLoader.from_generator(
+
+        def transform(x):
+            return np.reshape(x, [1, 28, 28])
+
+        train_dataset = paddle.vision.datasets.MNIST(
+            mode='train', backend='cv2', transform=transform)
+        test_dataset = paddle.vision.datasets.MNIST(
+            mode='test', backend='cv2', transform=transform)
+
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            places=place,
             feed_list=[image, label],
-            capacity=512,
-            use_double_buffer=True,
-            iterable=True)
-        valid_loader = paddle.io.DataLoader.from_generator(
+            drop_last=True,
+            batch_size=64,
+            return_list=False)
+
+        valid_loader = paddle.io.DataLoader(
+            test_dataset,
+            places=place,
             feed_list=[image, label],
-            capacity=512,
-            use_double_buffer=True,
-            iterable=True)
-        train_reader = paddle.batch(paddle.dataset.mnist.train(), batch_size=64)
-        eval_reader = paddle.batch(paddle.dataset.mnist.test(), batch_size=64)
-        train_loader.set_sample_list_generator(train_reader, place)
-        valid_loader.set_sample_list_generator(eval_reader, place)
+            batch_size=64,
+            return_list=False)
+
+        def sample_generator_creator():
+            def __reader__():
+                for data in test_dataset:
+                    image, label = data
+                    yield image, label
+
+            return __reader__
 
         def train(program):
             iter = 0
@@ -95,7 +112,7 @@ class TestQuantAwareCase1(StaticCase):
 
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
-        paddle.static.save_inference_model(
+        paddle.fluid.io.save_inference_model(
             dirname='./test_quant_post',
             feeded_var_names=[image.name, label.name],
             target_vars=[avg_cost, acc_top1, acc_top5],
@@ -108,11 +125,11 @@ class TestQuantAwareCase1(StaticCase):
             exe,
             './test_quant_post',
             './test_quant_post_inference',
-            sample_generator=paddle.dataset.mnist.test(),
+            sample_generator=sample_generator_creator(),
             model_filename='model',
             params_filename='params',
             batch_nums=10)
-        quant_post_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+        quant_post_prog, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
             dirname='./test_quant_post_inference',
             executor=exe,
             model_filename='__model__',

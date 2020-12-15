@@ -203,7 +203,7 @@ pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 ### 量化和Paddle版本的对应关系
 
-如果在ARM和GPU上预测，每个版本都可以，如果在CPU上预测，请选择Paddle 2.0对应的PaddleSlim 1.1.0版本
+如果在ARM和GPU上预测，每个版本都可以，如果在CPU上预测，请选择Paddle 2.0对应的PaddleSlim 1.2.0版本
 
 - Paddle 1.7 系列版本，需要安装PaddleSlim 1.0.1版本
 
@@ -217,10 +217,10 @@ pip install paddleslim==1.0.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
 pip install paddleslim==1.1.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-- Paddle 2.0 系列版本，需要安装PaddleSlim 1.1.0版本
+- Paddle 2.0 系列版本，需要安装PaddleSlim 1.2.0版本
 
 ```bash
-pip install paddleslim==1.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install paddleslim==1.2.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 
@@ -237,6 +237,7 @@ pip install paddleslim==1.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
     - [SlimFaceNet](demo/slimfacenet/README.md)
     - [OCR模型压缩(基于PaddleOCR)](demo/ocr/README.md)
     - [检测模型压缩(基于PaddleDetection)](demo/detection/README.md)
+- [TensorRT部署](demo/quant/deploy/TensorRT): 介绍如何使用TensorRT部署PaddleSlim量化得到的模型。
 
 ## 部分压缩策略效果
 

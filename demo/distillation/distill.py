@@ -87,15 +87,14 @@ def create_optimizer(args):
 
 def compress(args):
     if args.data == "cifar10":
-        import paddle.dataset.cifar as reader
-        train_reader = reader.train10()
-        val_reader = reader.test10()
+        train_dataset = paddle.vision.datasets.Cifar10(mode='train')
+        val_dataset = paddle.vision.datasets.Cifar10(mode='test')
         class_dim = 10
         image_shape = "3,32,32"
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_reader = reader.train()
-        val_reader = reader.val()
+        train_dataset = reader.ImageNetDataset(mode='train')
+        val_dataset = reader.ImageNetDataset(mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -106,6 +105,9 @@ def compress(args):
                                                                      model_list)
     student_program = paddle.static.Program()
     s_startup = paddle.static.Program()
+    places = paddle.static.cuda_places(
+    ) if args.use_gpu else paddle.static.cpu_places()
+    place = places[0]
 
     with paddle.static.program_guard(student_program, s_startup):
         with paddle.fluid.unique_name.guard():
@@ -113,16 +115,25 @@ def compress(args):
                 name='image', shape=[None] + image_shape, dtype='float32')
             label = paddle.static.data(
                 name='label', shape=[None, 1], dtype='int64')
-            train_loader = paddle.io.DataLoader.from_generator(
+            train_loader = paddle.io.DataLoader(
+                train_dataset,
+                places=places,
                 feed_list=[image, label],
-                capacity=64,
-                use_double_buffer=True,
-                iterable=True)
-            valid_loader = paddle.io.DataLoader.from_generator(
+                drop_last=True,
+                batch_size=args.batch_size,
+                return_list=False,
+                shuffle=True,
+                use_shared_memory=False,
+                num_workers=1)
+            valid_loader = paddle.io.DataLoader(
+                val_dataset,
+                places=place,
                 feed_list=[image, label],
-                capacity=64,
-                use_double_buffer=True,
-                iterable=True)
+                drop_last=False,
+                return_list=False,
+                use_shared_memory=False,
+                batch_size=args.batch_size,
+                shuffle=False)
             # model definition
             model = models.__dict__[args.model]()
             out = model.net(input=image, class_dim=class_dim)
@@ -132,19 +143,8 @@ def compress(args):
             acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
             acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
 
-    train_reader = paddle.batch(
-        train_reader, batch_size=args.batch_size, drop_last=True)
-    val_reader = paddle.batch(
-        val_reader, batch_size=args.batch_size, drop_last=True)
     val_program = student_program.clone(for_test=True)
-
-    places = paddle.static.cuda_places(
-    ) if args.use_gpu else paddle.static.cpu_places()
-    place = places[0]
     exe = paddle.static.Executor(place)
-
-    train_loader.set_sample_list_generator(train_reader, places)
-    valid_loader.set_sample_list_generator(val_reader, place)
 
     teacher_model = models.__dict__[args.teacher_model]()
     # define teacher program
@@ -219,7 +219,7 @@ def compress(args):
                     format(epoch_id, step_id, val_loss[0], val_acc1[0],
                            val_acc5[0]))
         if args.save_inference:
-            paddle.static.save_inference_model(
+            paddle.fluid.io.save_inference_model(
                 os.path.join("./saved_models", str(epoch_id)), ["image"],
                 [out], exe, student_program)
         _logger.info("epoch {} top1 {:.6f}, top5 {:.6f}".format(

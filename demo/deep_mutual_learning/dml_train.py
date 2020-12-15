@@ -21,8 +21,7 @@ import sys
 import argparse
 import functools
 import logging
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.base import to_variable
+import paddle
 from paddleslim.common import AvgrageMeter, get_logger
 from paddleslim.dist import DML
 from paddleslim.models.dygraph import MobileNetV1
@@ -46,28 +45,27 @@ add_arg('epochs',            int,   200,             "Epoch number.")
 add_arg('class_num',         int,   100,             "Class number of dataset.")
 add_arg('trainset_num',      int,   50000,           "Images number of trainset.")
 add_arg('model_save_dir',    str,   'saved_models',  "The path to save model.")
-add_arg('use_parallel',      bool,  False,           "Whether to use data parallel mode to train the model.")
 # yapf: enable
 
 
 def create_optimizer(models, args):
-    device_num = fluid.dygraph.parallel.Env().nranks
-    step = int(args.trainset_num / (args.batch_size * device_num))
+    step = int(args.trainset_num / (args.batch_size))
     epochs = [60, 120, 180]
     bd = [step * e for e in epochs]
     lr = [args.init_lr * (0.1**i) for i in range(len(bd) + 1)]
 
     optimizers = []
     for cur_model in models:
-        learning_rate = fluid.dygraph.PiecewiseDecay(bd, lr, 0)
-        opt = fluid.optimizer.MomentumOptimizer(
+        learning_rate = paddle.optimizer.lr.PiecewiseDecay(
+            boundaries=bd, values=lr)
+        opt = paddle.optimizer.Momentum(
             learning_rate,
             0.9,
-            parameter_list=cur_model.parameters(),
+            parameters=cur_model.parameters(),
             use_nesterov=True,
-            regularization=fluid.regularizer.L2DecayRegularizer(5e-4))
+            weight_decay=paddle.regularizer.L2Decay(5e-4))
         optimizers.append(opt)
-    return optimizers
+    return optimizers, learning_rate
 
 
 def create_reader(place, args):
@@ -75,33 +73,31 @@ def create_reader(place, args):
         batch_size=args.batch_size, is_train=True, is_shuffle=True)
     valid_reader = reader.train_valid(
         batch_size=args.batch_size, is_train=False, is_shuffle=False)
-    if args.use_parallel:
-        train_reader = fluid.contrib.reader.distributed_batch_reader(
-            train_reader)
-    train_loader = fluid.io.DataLoader.from_generator(
+    train_loader = paddle.io.DataLoader.from_generator(
         capacity=1024, return_list=True)
-    valid_loader = fluid.io.DataLoader.from_generator(
+    valid_loader = paddle.io.DataLoader.from_generator(
         capacity=1024, return_list=True)
     train_loader.set_batch_generator(train_reader, places=place)
     valid_loader.set_batch_generator(valid_reader, places=place)
     return train_loader, valid_loader
 
 
-def train(train_loader, dml_model, dml_optimizer, args):
+def train(train_loader, dml_model, dml_optimizer, lr, args):
     dml_model.train()
     costs = [AvgrageMeter() for i in range(dml_model.model_num)]
     accs = [AvgrageMeter() for i in range(dml_model.model_num)]
     for step_id, (images, labels) in enumerate(train_loader):
-        images, labels = to_variable(images), to_variable(labels)
+        images, labels = paddle.to_tensor(images), paddle.to_tensor(labels)
         batch_size = images.shape[0]
 
         logits = dml_model.forward(images)
         precs = [
-            fluid.layers.accuracy(
+            paddle.metric.accuracy(
                 input=l, label=labels, k=1) for l in logits
         ]
         losses = dml_model.loss(logits, labels)
         dml_optimizer.minimize(losses)
+        lr.step()
 
         for i in range(dml_model.model_num):
             accs[i].update(precs[i].numpy(), batch_size)
@@ -121,12 +117,12 @@ def valid(valid_loader, dml_model, args):
     costs = [AvgrageMeter() for i in range(dml_model.model_num)]
     accs = [AvgrageMeter() for i in range(dml_model.model_num)]
     for step_id, (images, labels) in enumerate(valid_loader):
-        images, labels = to_variable(images), to_variable(labels)
+        images, labels = paddle.to_tensor(images), paddle.to_tensor(labels)
         batch_size = images.shape[0]
 
         logits = dml_model.forward(images)
         precs = [
-            fluid.layers.accuracy(
+            paddle.metric.accuracy(
                 input=l, label=labels, k=1) for l in logits
         ]
         losses = dml_model.loss(logits, labels)
@@ -146,65 +142,48 @@ def valid(valid_loader, dml_model, args):
 
 def main(args):
     if not args.use_gpu:
-        place = fluid.CPUPlace()
-    elif not args.use_parallel:
-        place = fluid.CUDAPlace(0)
+        place = paddle.CPUPlace()
     else:
-        place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
+        place = paddle.CUDAPlace(0)
 
-    with fluid.dygraph.guard(place):
-        # 1. Define data reader
-        train_loader, valid_loader = create_reader(place, args)
+    # 1. Define data reader
+    train_loader, valid_loader = create_reader(place, args)
 
-        # 2. Define neural network
-        if args.models == "mobilenet-mobilenet":
-            models = [
-                MobileNetV1(class_dim=args.class_num),
-                MobileNetV1(class_dim=args.class_num)
-            ]
-        elif args.models == "mobilenet-resnet50":
-            models = [
-                MobileNetV1(class_dim=args.class_num),
-                ResNet(class_dim=args.class_num)
-            ]
-        else:
-            logger.info("You can define the model as you wish")
-            return
-        optimizers = create_optimizer(models, args)
+    # 2. Define neural network
+    if args.models == "mobilenet-mobilenet":
+        models = [
+            MobileNetV1(class_dim=args.class_num),
+            MobileNetV1(class_dim=args.class_num)
+        ]
+    elif args.models == "mobilenet-resnet50":
+        models = [
+            MobileNetV1(class_dim=args.class_num),
+            ResNet(class_dim=args.class_num)
+        ]
+    else:
+        logger.info("You can define the model as you wish")
+        return
+    optimizers, lr = create_optimizer(models, args)
 
-        # 3. Use PaddleSlim DML strategy
-        dml_model = DML(models, args.use_parallel)
-        dml_optimizer = dml_model.opt(optimizers)
+    # 3. Use PaddleSlim DML strategy
+    dml_model = DML(models)
+    dml_optimizer = dml_model.opt(optimizers)
 
-        # 4. Train your network
-        save_parameters = (not args.use_parallel) or (
-            args.use_parallel and fluid.dygraph.parallel.Env().local_rank == 0)
-        best_valid_acc = [0] * dml_model.model_num
-        for epoch_id in range(args.epochs):
-            current_step_lr = dml_optimizer.get_lr()
-            lr_msg = "Epoch {}".format(epoch_id)
-            for model_id, lr in enumerate(current_step_lr):
-                lr_msg += ", {} lr: {:.6f}".format(
-                    dml_model.full_name()[model_id], lr)
-            logger.info(lr_msg)
-            train_losses, train_accs = train(train_loader, dml_model,
-                                             dml_optimizer, args)
-            valid_losses, valid_accs = valid(valid_loader, dml_model, args)
-            for i in range(dml_model.model_num):
-                if valid_accs[i].avg[0] > best_valid_acc[i]:
-                    best_valid_acc[i] = valid_accs[i].avg[0]
-                    if save_parameters:
-                        fluid.save_dygraph(
-                            models[i].state_dict(),
-                            os.path.join(args.model_save_dir,
-                                         dml_model.full_name()[i],
-                                         "best_model"))
-                summery_msg = "Epoch {} {}: valid_loss {:.6f}, valid_acc {:.6f}, best_valid_acc {:.6f}"
-                logger.info(
-                    summery_msg.format(epoch_id,
-                                       dml_model.full_name()[i], valid_losses[
-                                           i].avg[0], valid_accs[i].avg[0],
-                                       best_valid_acc[i]))
+    # 4. Train your network
+    best_valid_acc = [0] * dml_model.model_num
+    for epoch_id in range(args.epochs):
+        train_losses, train_accs = train(train_loader, dml_model, dml_optimizer,
+                                         lr, args)
+        valid_losses, valid_accs = valid(valid_loader, dml_model, args)
+        for i in range(dml_model.model_num):
+            if valid_accs[i].avg[0] > best_valid_acc[i]:
+                best_valid_acc[i] = valid_accs[i].avg[0]
+            summery_msg = "Epoch {} {}: valid_loss {:.6f}, valid_acc {:.6f}, best_valid_acc {:.6f}"
+            logger.info(
+                summery_msg.format(epoch_id,
+                                   dml_model.full_name()[i], valid_losses[
+                                       i].avg[0], valid_accs[i].avg[0],
+                                   best_valid_acc[i]))
 
 
 if __name__ == '__main__':

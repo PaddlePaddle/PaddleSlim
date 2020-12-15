@@ -70,7 +70,7 @@ class VarCollector(object):
                  scope=None):
         self.program = program
         self.var_names = var_names
-        self.scope = fluid.global_scope() if scope is None else scope
+        self.scope = paddle.static.global_scope() if scope is None else scope
         self.use_ema = use_ema
         self.set_up()
         if self.use_ema:
@@ -104,8 +104,8 @@ class VarCollector(object):
     def run(self, reader, exe, step=None, loss_name=None):
         if not hasattr(self.program, '_program'):
             # Compile the native program to speed up
-            program = fluid.CompiledProgram(self.program).with_data_parallel(
-                loss_name=loss_name)
+            program = paddle.static.CompiledProgram(
+                self.program).with_data_parallel(loss_name=loss_name)
 
         for idx, data in enumerate(reader):
             vars_np = exe.run(program=program,
@@ -122,17 +122,16 @@ class VarCollector(object):
 
     def abs_max_run(self, reader, exe, step=None, loss_name=None):
         fetch_list = []
-        with fluid.program_guard(self.program):
+        with paddle.static.program_guard(self.program):
             for act_name in self.real_names:
                 act = self.program.global_block().var(act_name)
-                act = fluid.layers.reduce_max(
-                    fluid.layers.abs(act), name=act_name + "_reduced")
+                act = paddle.max(paddle.abs(act), name=act_name + "_reduced")
                 fetch_list.append(act_name + "_reduced.tmp_0")
 
         if not hasattr(self.program, '_program'):
             # Compile the native program to speed up
-            program = fluid.CompiledProgram(self.program).with_data_parallel(
-                loss_name=loss_name)
+            program = paddle.static.CompiledProgram(
+                self.program).with_data_parallel(loss_name=loss_name)
         for idx, data in enumerate(reader):
             vars_np = exe.run(program=program, feed=data, fetch_list=fetch_list)
             vars_np = [np.max(var) for var in vars_np]
