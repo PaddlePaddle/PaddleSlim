@@ -34,10 +34,10 @@ class ImageNetDataset(DatasetFolder):
 
         self.samples = []
         list_file = "train_list.txt" if self.mode == "train" else "val_list.txt"
-        with open(os.path.join([path, list_file]), 'r') as f:
+        with open(os.path.join(path, list_file), 'r') as f:
             for line in f:
                 _image, _label = line.strip().split(" ")
-                self.samples.append((_image, int(_label)))
+                self.samples.append((os.path.join(path, _image), int(_label)))
         normalize = transforms.Normalize(
             mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
         if self.mode == 'train':
