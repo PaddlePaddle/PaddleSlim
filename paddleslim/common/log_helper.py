@@ -24,15 +24,20 @@ def get_logger(name, level, fmt='%(asctime)s-%(levelname)s: %(message)s'):
     Get logger from logging with given name, level and format without
     setting logging basicConfig. For setting basicConfig in paddle
     will disable basicConfig setting after import paddle.
+
     Args:
         name (str): The logger name.
         level (logging.LEVEL): The base level of the logger
         fmt (str): Format of logger output
+
     Returns:
         logging.Logger: logging logger with given setttings
+
     Examples:
-        .. code-block:: python
-            logger = log_helper.get_logger(__name__, logging.INFO,
+
+    .. code-block:: python
+
+       logger = log_helper.get_logger(__name__, logging.INFO,
                             fmt='%(asctime)s-%(levelname)s: %(message)s')
     """
 

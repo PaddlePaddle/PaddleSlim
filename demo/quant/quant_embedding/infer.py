@@ -6,7 +6,6 @@ import unittest
 import contextlib
 import numpy as np
 import six
-import paddle.fluid as fluid
 import paddle
 import net
 import utils
@@ -51,8 +50,7 @@ def parse_args():
         '--use_cuda', type=int, default='0', help='whether use cuda')
     parser.add_argument(
         '--batch_size', type=int, default='5', help='batch_size')
-    parser.add_argument(
-        '--emb_size', type=int, default='64', help='batch_size')
+    parser.add_argument('--emb_size', type=int, default='64', help='batch_size')
     parser.add_argument(
         '--emb_quant',
         type=bool,
@@ -64,28 +62,28 @@ def parse_args():
 
 def infer_epoch(args, vocab_size, test_reader, use_cuda, i2w):
     """ inference function """
-    place = fluid.CUDAPlace(0) if use_cuda else fluid.CPUPlace()
-    exe = fluid.Executor(place)
+    place = paddle.CUDAPlace(0) if use_cuda else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
     emb_size = args.emb_size
     batch_size = args.batch_size
-    with fluid.scope_guard(fluid.Scope()):
-        main_program = fluid.Program()
-        with fluid.program_guard(main_program):
+    with paddle.static.scope_guard(paddle.static.Scope()):
+        main_program = paddle.static.Program()
+        with paddle.static.program_guard(main_program):
             values, pred = net.infer_network(vocab_size, emb_size)
             for epoch in range(start_index, last_index + 1):
                 copy_program = main_program.clone()
                 model_path = model_dir + "/pass-" + str(epoch)
-                fluid.io.load_params(
-                    executor=exe,
-                    dirname=model_path,
-                    main_program=copy_program)
+                paddle.static.load(copy_program, model_path, exe)
                 if args.emb_quant:
-                    config = {'params_name': 'emb', 'quantize_type': 'abs_max'}
+                    config = {
+                        'quantize_op_types': 'lookup_table',
+                        'lookup_table': {
+                            'quantize_type': 'abs_max'
+                        },
+                    }
                     copy_program = quant_embedding(copy_program, place, config)
-                    fluid.io.save_persistables(
-                        exe,
-                        './output_quant/pass-' + str(epoch),
-                        main_program=copy_program)
+                    paddle.static.save(copy_program,
+                                       './output_quant/pass-' + str(epoch))
 
                 accum_num = 0
                 accum_num_sum = 0.0
@@ -137,23 +135,20 @@ def infer_epoch(args, vocab_size, test_reader, use_cuda, i2w):
 
 def infer_step(args, vocab_size, test_reader, use_cuda, i2w):
     """ inference function """
-    place = fluid.CUDAPlace(0) if use_cuda else fluid.CPUPlace()
-    exe = fluid.Executor(place)
+    place = paddle.CUDAPlace(0) if use_cuda else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
     emb_size = args.emb_size
     batch_size = args.batch_size
-    with fluid.scope_guard(fluid.Scope()):
-        main_program = fluid.Program()
-        with fluid.program_guard(main_program):
+    with paddle.static.scope_guard(paddle.static.Scope()):
+        main_program = paddle.static.Program()
+        with paddle.static.program_guard(main_program):
             values, pred = net.infer_network(vocab_size, emb_size)
             for epoch in range(start_index, last_index + 1):
                 for batchid in range(args.start_batch, args.end_batch):
                     copy_program = main_program.clone()
                     model_path = model_dir + "/pass-" + str(epoch) + (
                         '/batch-' + str(batchid * args.print_step))
-                    fluid.io.load_params(
-                        executor=exe,
-                        dirname=model_path,
-                        main_program=copy_program)
+                    paddle.static.load(copy_program, model_path, exe)
                     accum_num = 0
                     accum_num_sum = 0.0
                     t0 = time.time()
@@ -203,6 +198,7 @@ def infer_step(args, vocab_size, test_reader, use_cuda, i2w):
 
 
 if __name__ == "__main__":
+    paddle.enable_static()
     args = parse_args()
     start_index = args.start_index
     last_index = args.last_index
