@@ -82,7 +82,7 @@ quanter.save_quantized_model(net, 'save_dir', input_spec=[paddle.static.InputSpe
   # 单卡训练
   python train.py  --lr=0.001 --use_pact=True --num_epochs=30 --l2_decay=2e-5 --ls_epsilon=0.1
   # 多卡训练，以0到3号卡为例
-  python -m paddle.distributed.launch --gpus="0,1,2,3" train.py  --lr=0.001 --use_pact=True --num_epochs=60 --l2_decay=2e-5 --ls_epsilon=0.1
+  python -m paddle.distributed.launch --gpus="0,1,2,3" train.py  --lr=0.001 --use_pact=True --num_epochs=30 --l2_decay=2e-5 --ls_epsilon=0.1
   ```
 
 
