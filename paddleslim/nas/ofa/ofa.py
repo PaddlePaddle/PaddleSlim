@@ -21,9 +21,11 @@ from .utils.utils import get_paddle_version
 pd_ver = get_paddle_version()
 if pd_ver == 185:
     from .layers import BaseBlock, SuperConv2D, SuperLinear
+    from paddle.fluid.dygraph import Conv2D, Conv2DTranspose, Linear, Embedding
     Layer = paddle.fluid.dygraph.Layer
 else:
     from .layers_new import BaseBlock, SuperConv2D, SuperLinear
+    from paddle.nn import Conv2D, Conv2DTranspose, Linear, Embedding
     Layer = paddle.nn.Layer
 from .utils.utils import search_idx
 from ...common import get_logger
@@ -330,9 +332,54 @@ class OFA(OFABase):
     def search(self, eval_func, condition):
         pass
 
-    ### TODO: complete it
     def export(self, config):
-        pass
+        pre_channel = None
+        for name, sublayer in self.model.named_sublayers():
+            if isinstance(
+                    sublayer,
+                    BaseBlock):  # and name == 'encoder_stack.block.3.ffn.i':
+                if isinstance(sublayer.fn, Conv2D):
+                    Cin = sublayer.fn.weight.shape[1]
+                    Cout = sublayer.fn.weight.shape[0]
+                if isinstance(sublayer.fn, Conv2DTranspose) or isinstance(
+                        sublayer.fn, Linear) or isinstance(sublayer.fn,
+                                                           Embedding):
+                    Cin = sublayer.fn.weight.shape[0]
+                    Cout = sublayer.fn.weight.shape[1]
+
+                for name, param in sublayer.named_parameters():
+                    if 'weight' in name:
+                        key = sublayer.__dict__['_key']
+                        if key not in config.keys():
+                            continue
+                        #assert key in config.keys(), \
+                        #    "config must include all layers prune percent, but {} is not in config".format(sublayer.__dict__['_key'])
+                        if 'kernel_size' in config[key].keys():
+                            raise NotImplementedError("NOT support NOW")
+
+                        if 'expand_ratio' in config[key].keys():
+                            kept_out_channel = int(config[key]['expand_ratio'] *
+                                                   Cout)
+                        elif 'channel' in config[key].keys():
+                            kept_out_channel = config[key]['channel']
+                        else:
+                            kept_out_channel = Cout
+                        kept_in_channel = pre_channel if pre_channel is not None else Cin
+                        if isinstance(sublayer, Conv2D):
+                            param = param[:kept_out_channel, :
+                                          kept_in_channel, :, :]
+                        if isinstance(sublayer, Conv2DTranspose):
+                            param = param[:kept_in_channel, :
+                                          kept_out_channel, :, :]
+                        if isinstance(sublayer, Linear) or isinstance(
+                                sublayer, Embedding):
+                            param = param[:kept_in_channel, :kept_out_channel]
+                        pre_channel = kept_out_channel
+                    elif 'bias' in name:
+                        param = param[:kept_out_channel]
+                    print(key, name, kept_in_channel, kept_out_channel,
+                          param.shape)
+        print(config)
 
     def set_net_config(self, net_config):
         self.net_config = net_config
