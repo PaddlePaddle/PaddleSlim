@@ -83,31 +83,28 @@ def _graph_flops(graph, only_conv=True, detail=False):
         return flops
 
 
-def dygraph_flops_v1(model,
-                     inputs,
-                     only_conv=False,
-                     detail=False,
-                     extract_vars_fn=None):
-    program = dygraph2program(model, inputs, extract_vars_fn=extract_vars_fn)
-    graph = GraphWrapper(program)
-    return _graph_flops(graph, only_conv=only_conv, detail=detail)
+def _is_shape(value):
+    if not isinstance(value, (list, tuple)):
+        return False
+    for i in value:
+        if not isinstance(i, int):
+            return False
+    return True
 
 
 def dygraph_flops(model,
-                  input_shape,
+                  inputs,
                   only_conv=False,
                   detail=False,
                   extract_vars_fn=None):
-    for i in input_shape:
-        if not isinstance(i, int):
-            return dygraph_flops_v1(
-                model,
-                input_shape,
-                only_conv=only_conv,
-                detail=detail,
-                extract_vars_fn=extract_vars_fn)
 
-    data = np.ones(tuple(input_shape)).astype("float32")
+    if not _is_shape(inputs):
+        program = dygraph2program(
+            model, inputs, extract_vars_fn=extract_vars_fn)
+        graph = GraphWrapper(program)
+        return _graph_flops(graph, only_conv=only_conv, detail=detail)
+
+    data = np.ones(tuple(inputs)).astype("float32")
     in_var = paddle.to_tensor(data)
     _, traced = paddle.jit.TracedLayer.trace(model, [in_var])
     program = traced.program

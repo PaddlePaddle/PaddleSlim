@@ -313,7 +313,7 @@ class FilterPruner(Pruner):
         if isinstance(pruned_dims, int):
             pruned_dims = [pruned_dims]
         group = self.var_group.find_group(var_name, pruned_dims)
-        _logger.info("found group with {}: {}".format(var_name, group))
+        _logger.debug("found group with {}: {}".format(var_name, group))
         plan = PruningPlan(self.model.full_name)
         group_dict = {}
         for sub_layer in self.model.sublayers():
@@ -334,11 +334,8 @@ class FilterPruner(Pruner):
             var_shape = group_dict[_name]['var'].shape
             if isinstance(dims, int):
                 dims = [dims]
-            print(f'transforms: {transforms}')
             for trans in transforms:
-                print(f"transform from mask: {mask.shape}")
                 mask = self._transform_mask(mask, trans)
-                print(f"to mask: {mask.shape}\nwith trans: {trans}")
             current_mask = mask
             assert len(current_mask) == var_shape[dims[
                 0]], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; dims: {dims}; var name: {_name}; stride: {stride}; len(mask): {len(mask)}"

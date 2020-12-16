@@ -73,17 +73,11 @@ class PruningPlan():
     def add(self, var_name, pruning_mask):
 
         assert (isinstance(pruning_mask, PruningMask))
-        #        debug = False
-        #        if var_name == "yolo_block.2.0.0.conv.weights":
-        #            debug = True
-        #            print(f"meet yolo_block.2.0.0.conv.weights")
         if var_name not in self._masks:
             self._masks[var_name] = []
         if var_name not in self._dims:
             self._dims[var_name] = []
 
-#        print(f"pruning_mask: {pruning_mask}")
-#        print(f"self._dims[var_name]: {self._dims[var_name]}")
         if pruning_mask.dims in self._dims[var_name]:
             for _mask in self._masks[var_name]:
                 if pruning_mask.dims == _mask.dims:
