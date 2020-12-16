@@ -319,20 +319,22 @@ def compress(args):
                 paddle.save(net.state_dict(), model_prefix + ".pdparams")
                 paddle.save(opt.state_dict(), model_prefix + ".pdopt")
 
-    # load best model
-    load_dygraph_pretrain(net, os.path.join(args.model_save_dir, "best_model"))
-
     ############################################################################################################
     # 3. Save quant aware model
     ############################################################################################################
-    path = os.path.join(args.model_save_dir, "inference_model", 'qat_model')
-    quanter.save_quantized_model(
-        net,
-        path,
-        input_spec=[
-            paddle.static.InputSpec(
-                shape=[None, 3, 224, 224], dtype='float32')
-        ])
+    if paddle.distributed.get_rank() == 0:
+        # load best model
+        load_dygraph_pretrain(net,
+                              os.path.join(args.model_save_dir, "best_model"))
+
+        path = os.path.join(args.model_save_dir, "inference_model", 'qat_model')
+        quanter.save_quantized_model(
+            net,
+            path,
+            input_spec=[
+                paddle.static.InputSpec(
+                    shape=[None, 3, 224, 224], dtype='float32')
+            ])
 
 
 def main():
