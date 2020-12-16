@@ -250,6 +250,12 @@ class batch_norm(PruneWorker):
             self._prune_op(op, out_var, pruned_axis, pruned_idx)
 
 
+@PRUNE_WORKER.register
+class sync_batch_norm(batch_norm):
+    def __init__(self, op, pruned_params, visited):
+        super(sync_batch_norm, self).__init__(op, pruned_params, visited)
+
+
 class elementwise_op(PruneWorker):
     def __init__(self, op, pruned_params, visited):
         super(elementwise_op, self).__init__(op, pruned_params, visited)
@@ -447,53 +453,71 @@ class concat(PruneWorker):
     def __init__(self, op, pruned_params, visited):
         super(concat, self).__init__(op, pruned_params, visited)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
-        idx = []
+    def _prune(self, var, pruned_axis, transforms):
         axis = self.op.attr("axis")
         if var in self.op.outputs("Out"):
             start = 0
             if axis == pruned_axis:
                 for _, in_var in enumerate(self.op.inputs("X")):
                     idx = []
-                    for i in pruned_idx:
-                        r_idx = i - start
-                        if r_idx < in_var.shape()[pruned_axis] and r_idx >= 0:
-                            idx.append(r_idx)
+                    transoform = {
+                        'src_start': start,
+                        'src_end': start + in_var.shape()[pruned_axis],
+                        'target_start': 0,
+                        'target_end': in_var.shape()[pruned_axis],
+                        'target_len': in_var.shape()[pruned_axis],
+                        'stride': 1
+                    }
                     start += in_var.shape()[pruned_axis]
 
                     pre_ops = in_var.inputs()
                     for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis, idx)
-                idx = pruned_idx[:]
+                        self._prune_op(op, in_var, pruned_axis,
+                                       transforms + [transoform])
             else:
                 for _, in_var in enumerate(self.op.inputs("X")):
                     pre_ops = in_var.inputs()
                     for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis, pruned_idx)
+                        self._prune_op(op, in_var, pruned_axis, transforms)
         elif var in self.op.inputs("X"):
             if axis == pruned_axis:
                 idx = []
-                start = 0
+                target_start = 0
                 for v in self.op.inputs("X"):
-                    if v.name() == var.name():
-                        idx = [i + start for i in pruned_idx]
+                    if v.name() != var.name():
+                        target_start += v.shape()[pruned_axis]
                     else:
-                        start += v.shape()[pruned_axis]
-
+                        break
+                target_end = target_start + v.shape()[pruned_axis]
                 out_var = self.op.outputs("Out")[0]
                 self._visit(out_var, pruned_axis)
                 next_ops = out_var.outputs()
+
+                transform = {
+                    'src_start': 0,
+                    'src_end': var.shape()[pruned_axis],
+                    'target_start': target_start,
+                    'target_end': target_end,
+                    'target_len': out_var.shape()[pruned_axis],
+                    'stride': 1
+                }
+
                 for op in next_ops:
-                    self._prune_op(op, out_var, pruned_axis, idx, visited={})
+                    self._prune_op(
+                        op,
+                        out_var,
+                        pruned_axis,
+                        transforms + [transform],
+                        visited={})
             else:
                 for v in self.op.inputs("X"):
                     for op in v.inputs():
-                        self._prune_op(op, v, pruned_axis, pruned_idx)
+                        self._prune_op(op, v, pruned_axis, transforms)
                 out_var = self.op.outputs("Out")[0]
                 self._visit(out_var, pruned_axis)
                 next_ops = out_var.outputs()
                 for op in next_ops:
-                    self._prune_op(op, out_var, pruned_axis, pruned_idx)
+                    self._prune_op(op, out_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -679,7 +703,7 @@ class flatten_contiguous_range(PruneWorker):
         super(flatten_contiguous_range, self).__init__(op, pruned_params,
                                                        visited)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         start_axis = self.op.attr("start_axis")
         stop_axis = self.op.attr("stop_axis")
         if var in self.op.inputs("X"):
@@ -695,9 +719,11 @@ class flatten_contiguous_range(PruneWorker):
             elif pruned_axis > stop_axis:
                 out_pruned_axis = start_axis + pruned_axis - stop_axis
 
+            #print(f"in_var.shape(): {in_var.shape()}; stride: {stride}; start_axis: {start_axis}; stop_axis: {stop_axis}")
             self._visit(in_var, pruned_axis)
             self._visit(out_var, out_pruned_axis)
-
+            transform = {'stride': stride}
             next_ops = out_var.outputs()
             for op in next_ops:
-                self._prune_op(op, out_var, out_pruned_axis, [stride])
+                self._prune_op(op, out_var, out_pruned_axis,
+                               transforms + [transform])

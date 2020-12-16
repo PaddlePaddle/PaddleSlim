@@ -28,7 +28,7 @@ class PruningMask():
         if self._mask is not None:
             assert len(self._mask.shape) == len(
                 value
-            ), "The length of value must be same with shape of mask in current PruningMask instance."
+            ), "The length of value must be same with length of mask's shape in current PruningMask instance."
         self._dims = list(value)
 
     @property
@@ -37,11 +37,11 @@ class PruningMask():
 
     @mask.setter
     def mask(self, value):
-        assert (isinstance(value, PruningMask))
+        #        assert (isinstance(value, PruningMask))
         if self._dims is not None:
-            assert len(self._mask.shape) == len(
-                value
-            ), "The length of value must be same with shape of mask in current PruningMask instance."
+            assert len(self._dims) == len(
+                value.shape
+            ), "The length of mask's shape must be same with length of dims in current PruningMask instance."
         self._mask = value
 
     def __str__(self):
@@ -71,13 +71,26 @@ class PruningPlan():
         self._pruned_flops = value
 
     def add(self, var_name, pruning_mask):
+
         assert (isinstance(pruning_mask, PruningMask))
+        #        debug = False
+        #        if var_name == "yolo_block.2.0.0.conv.weights":
+        #            debug = True
+        #            print(f"meet yolo_block.2.0.0.conv.weights")
         if var_name not in self._masks:
             self._masks[var_name] = []
-        self._masks[var_name].append(pruning_mask)
         if var_name not in self._dims:
             self._dims[var_name] = []
-        self._dims[var_name].append(pruning_mask.dims)
+
+#        print(f"pruning_mask: {pruning_mask}")
+#        print(f"self._dims[var_name]: {self._dims[var_name]}")
+        if pruning_mask.dims in self._dims[var_name]:
+            for _mask in self._masks[var_name]:
+                if pruning_mask.dims == _mask.dims:
+                    _mask.mask = (_mask.mask * pruning_mask.mask)
+        else:
+            self._masks[var_name].append(pruning_mask)
+            self._dims[var_name].append(pruning_mask.dims)
 
     @property
     def masks(self):
@@ -87,8 +100,7 @@ class PruningPlan():
         assert (isinstance(plan, PruningPlan))
         for var_name in plan.masks:
             for mask in plan.masks[var_name]:
-                if not self.contains(var_name, mask.dims):
-                    self.add(var_name, mask)
+                self.add(var_name, mask)
 
     def contains(self, var_name, dims=None):
         return (var_name in self._dims) and (dims is None or

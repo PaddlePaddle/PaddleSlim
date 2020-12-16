@@ -47,18 +47,21 @@ class FilterPruner(Pruner):
 
     Args:
         model(paddle.nn.Layer): The target model to be pruned.
-        input_shape(list<int>): The input shape of model. It is used to trace the graph of the model.
+        inputs(list<int>): The inputs of model. It will be use in calling 'model.forward(inputs)'.
+        extract_vars_fn(function): The callback functions used to extract variables from inputs.
         sen_file(str, optional): The absolute path of file that stores computed sensitivities. If it is
                               set rightly, 'FilterPruner::sensitive' function can not be called anymore
                               in next step. Default: None.
     
     """
 
-    def __init__(self, model, input_shape, sen_file=None):
-        super(FilterPruner, self).__init__(model, input_shape)
+    def __init__(self, model, inputs, extract_vars_fn=None, sen_file=None):
+        super(FilterPruner, self).__init__(
+            model, inputs, extract_vars_fn=extract_vars_fn)
         self._status = Status(sen_file)
         # sensitive and var_group are just used in filter pruning
-        self.var_group = VarGroup(model, input_shape)
+        self.var_group = VarGroup(
+            model, inputs, extract_vars_fn=extract_vars_fn)
 
     def sensitive(self,
                   eval_func=None,
@@ -186,7 +189,8 @@ class FilterPruner(Pruner):
         Returns:
             tuple: A tuple with format ``(ratios, pruned_flops)`` . "ratios" is a dict whose key is name of tensor and value is ratio to be pruned. "pruned_flops" is the ratio of total pruned FLOPs in the model.
         """
-        base_flops = flops(self.model, self.input_shape)
+        base_flops = flops(
+            self.model, self.inputs, extract_vars_fn=extract_vars_fn)
 
         _logger.info("Base FLOPs: {}".format(base_flops))
         low = 0.
@@ -201,7 +205,8 @@ class FilterPruner(Pruner):
                 ratios = self._round_to(ratios, dims=dims, factor=align)
             plan = self.prune_vars(ratios, axis=dims)
             _logger.debug("pruning plan: {}".format(plan))
-            c_flops = flops(self.model, self.input_shape)
+            c_flops = flops(
+                self.model, self.inputs, extract_vars_fn=extract_vars_fn)
             _logger.debug("FLOPs after pruning: {}".format(c_flops))
             c_pruned_flops = (base_flops - c_flops) / base_flops
             plan.restore(self.model)
@@ -308,7 +313,7 @@ class FilterPruner(Pruner):
         if isinstance(pruned_dims, int):
             pruned_dims = [pruned_dims]
         group = self.var_group.find_group(var_name, pruned_dims)
-        _logger.debug("found group with {}: {}".format(var_name, group))
+        _logger.info("found group with {}: {}".format(var_name, group))
         plan = PruningPlan(self.model.full_name)
         group_dict = {}
         for sub_layer in self.model.sublayers():
@@ -325,15 +330,18 @@ class FilterPruner(Pruner):
         mask = self.cal_mask(var_name, pruned_ratio, group_dict)
         for _name in group_dict:
             dims = group_dict[_name]['pruned_dims']
-            stride = group_dict[_name]['stride']
+            transforms = group_dict[_name]['transforms']
             var_shape = group_dict[_name]['var'].shape
             if isinstance(dims, int):
                 dims = [dims]
-
-            current_mask = mask.repeat(stride[0]) if stride[0] > 1 else mask
-
+            print(f'transforms: {transforms}')
+            for trans in transforms:
+                print(f"transform from mask: {mask.shape}")
+                mask = self._transform_mask(mask, trans)
+                print(f"to mask: {mask.shape}\nwith trans: {trans}")
+            current_mask = mask
             assert len(current_mask) == var_shape[dims[
-                0]], "The length of current_mask must be equal to the size of dimension to be pruned on."
+                0]], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; dims: {dims}; var name: {_name}; stride: {stride}; len(mask): {len(mask)}"
 
             plan.add(_name, PruningMask(dims, current_mask, pruned_ratio))
         if apply == "lazy":
@@ -341,3 +349,16 @@ class FilterPruner(Pruner):
         elif apply == "impretive":
             plan.apply(self.model, lazy=False)
         return plan
+
+    def _transform_mask(self, mask, transform):
+        src_start = transform['src_start']
+        src_end = transform['src_end']
+        target_start = transform['target_start']
+        target_end = transform['target_end']
+        target_len = transform['target_len']
+        stride = transform['stride']
+        mask = mask[src_start:src_end]
+        mask = mask.repeat(stride) if stride > 1 else mask
+        dst_mask = np.ones([target_len])
+        dst_mask[target_start:target_end] = mask
+        return dst_mask

@@ -14,7 +14,7 @@
 import paddle
 import numpy as np
 import paddle.jit as jit
-from ..core import GraphWrapper
+from ..core import GraphWrapper, dygraph2program
 
 __all__ = ["flops", "dygraph_flops"]
 
@@ -83,7 +83,29 @@ def _graph_flops(graph, only_conv=True, detail=False):
         return flops
 
 
-def dygraph_flops(model, input_shape, only_conv=False, detail=False):
+def dygraph_flops_v1(model,
+                     inputs,
+                     only_conv=False,
+                     detail=False,
+                     extract_vars_fn=None):
+    program = dygraph2program(model, inputs, extract_vars_fn=extract_vars_fn)
+    graph = GraphWrapper(program)
+    return _graph_flops(graph, only_conv=only_conv, detail=detail)
+
+
+def dygraph_flops(model,
+                  input_shape,
+                  only_conv=False,
+                  detail=False,
+                  extract_vars_fn=None):
+    for i in input_shape:
+        if not isinstance(i, int):
+            return dygraph_flops_v1(
+                model,
+                input_shape,
+                only_conv=only_conv,
+                detail=detail,
+                extract_vars_fn=extract_vars_fn)
 
     data = np.ones(tuple(input_shape)).astype("float32")
     in_var = paddle.to_tensor(data)
