@@ -22,7 +22,6 @@ import time
 import paddle.fluid as fluid
 from ..common import SAController
 from ..common import get_logger
-from ..analysis import flops
 
 from ..common import ControllerServer
 from ..common import ControllerClient
