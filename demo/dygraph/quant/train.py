@@ -43,7 +43,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',               int,    256,                                         "Minibatch size.")
+add_arg('batch_size',               int,    256,                                         "Single Card Minibatch size.")
 add_arg('use_gpu',                  bool,   True,                                        "Whether to use GPU or not.")
 add_arg('model',                    str,    "mobilenet_v3",                              "The target model.")
 add_arg('pretrained_model',         str,    "MobileNetV3_large_x1_0_ssld_pretrained",    "Whether to use pretrained model.")
@@ -57,7 +57,7 @@ add_arg('num_epochs',               int,    1,                                  
 add_arg('total_images',             int,    1281167,                                     "The number of total training images.")
 add_arg('data',                     str,    "imagenet",                                  "Which data to use. 'mnist' or 'imagenet'")
 add_arg('log_period',               int,    10,                                          "Log period in batches.")
-add_arg('model_save_dir',           str,    "./",                                        "model save directory.")
+add_arg('model_save_dir',           str,    "./output_models",                           "model save directory.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[10, 20, 30], help="piecewise decay step")
 # yapf: enable
 
@@ -110,12 +110,12 @@ def compress(args):
     if use_data_parallel:
         paddle.distributed.init_parallel_env()
 
+    pretrain = True if args.data == "imagenet" else False
     if args.model == "mobilenet_v1":
-        pretrain = True if args.data == "imagenet" else False
-        net = mobilenet_v1(pretrained=pretrained)
+        net = mobilenet_v1(pretrained=pretrain)
     elif args.model == "mobilenet_v3":
         net = MobileNetV3_large_x1_0()
-        if args.data == "imagenet":
+        if pretrain:
             load_dygraph_pretrain(net, args.pretrained_model, True)
     else:
         raise ValueError("{} is not supported.".format(args.model))
@@ -190,25 +190,43 @@ def compress(args):
         batch_id = 0
         acc_top1_ns = []
         acc_top5_ns = []
+
+        eval_reader_cost = 0.0
+        eval_run_cost = 0.0
+        total_samples = 0
+        reader_start = time.time()
         for data in valid_loader():
+            eval_reader_cost += time.time() - reader_start
             image = data[0]
             label = data[1]
-            start_time = time.time()
+
+            eval_start = time.time()
 
             out = net(image)
             acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
             acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
 
-            end_time = time.time()
+            eval_run_cost += time.time() - eval_start
+            batch_size = image.shape[0]
+            total_samples += batch_size
+
             if batch_id % args.log_period == 0:
+                log_period = 1 if batch_id == 0 else args.log_period
                 _logger.info(
-                    "Eval epoch[{}] batch[{}] - acc_top1: {:.6f}; acc_top5: {:.6f}; time: {:.3f}".
+                    "Eval epoch[{}] batch[{}] - top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
                            np.mean(acc_top1.numpy()),
-                           np.mean(acc_top5.numpy()), end_time - start_time))
+                           np.mean(acc_top5.numpy()), eval_reader_cost /
+                           log_period, (eval_reader_cost + eval_run_cost) /
+                           log_period, total_samples / log_period, total_samples
+                           / (eval_reader_cost + eval_run_cost)))
+                eval_reader_cost = 0.0
+                eval_run_cost = 0.0
+                total_samples = 0
             acc_top1_ns.append(np.mean(acc_top1.numpy()))
             acc_top5_ns.append(np.mean(acc_top5.numpy()))
             batch_id += 1
+            reader_start = time.time()
 
         _logger.info(
             "Final eval epoch[{}] - acc_top1: {:.6f}; acc_top5: {:.6f}".format(
@@ -234,11 +252,18 @@ def compress(args):
 
         net.train()
         batch_id = 0
+
+        train_reader_cost = 0.0
+        train_run_cost = 0.0
+        total_samples = 0
+        reader_start = time.time()
         for data in train_loader():
+            train_reader_cost += time.time() - reader_start
+
             image = data[0]
             label = data[1]
-            start_time = time.time()
 
+            train_start = time.time()
             out = net(image)
             avg_cost = cross_entropy(out, label, args.ls_epsilon)
 
@@ -253,14 +278,25 @@ def compress(args):
             acc_top1_n = np.mean(acc_top1.numpy())
             acc_top5_n = np.mean(acc_top5.numpy())
 
-            end_time = time.time()
+            train_run_cost += time.time() - train_start
+            batch_size = image.shape[0]
+            total_samples += batch_size
+
             if batch_id % args.log_period == 0:
+                log_period = 1 if batch_id == 0 else args.log_period
                 _logger.info(
-                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {:.6f}; acc_top1: {:.6f}; acc_top5: {:.6f}; time: {:.3f}".
+                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {:.6f}; top1: {:.6f}; top5: {:.6f}; avg_reader_cost: {:.6f} s, avg_batch_cost: {:.6f} s, avg_samples: {}, avg_ips: {:.3f} images/s".
                     format(epoch, batch_id,
-                           lr.get_lr(), loss_n, acc_top1_n, acc_top5_n, end_time
-                           - start_time))
+                           lr.get_lr(), loss_n, acc_top1_n, acc_top5_n,
+                           train_reader_cost / log_period, (
+                               train_reader_cost + train_run_cost) / log_period,
+                           total_samples / log_period, total_samples / (
+                               train_reader_cost + train_run_cost)))
+                train_reader_cost = 0.0
+                train_run_cost = 0.0
+                total_samples = 0
             batch_id += 1
+            reader_start = time.time()
 
     ############################################################################################################
     # train loop
@@ -283,20 +319,22 @@ def compress(args):
                 paddle.save(net.state_dict(), model_prefix + ".pdparams")
                 paddle.save(opt.state_dict(), model_prefix + ".pdopt")
 
-    # load best model
-    load_dygraph_pretrain(net, os.path.join(args.model_save_dir, "best_model"))
-
     ############################################################################################################
     # 3. Save quant aware model
     ############################################################################################################
-    path = os.path.join(args.model_save_dir, "inference_model", 'qat_model')
-    quanter.save_quantized_model(
-        net,
-        path,
-        input_spec=[
-            paddle.static.InputSpec(
-                shape=[None, 3, 224, 224], dtype='float32')
-        ])
+    if paddle.distributed.get_rank() == 0:
+        # load best model
+        load_dygraph_pretrain(net,
+                              os.path.join(args.model_save_dir, "best_model"))
+
+        path = os.path.join(args.model_save_dir, "inference_model", 'qat_model')
+        quanter.save_quantized_model(
+            net,
+            path,
+            input_spec=[
+                paddle.static.InputSpec(
+                    shape=[None, 3, 224, 224], dtype='float32')
+            ])
 
 
 def main():
