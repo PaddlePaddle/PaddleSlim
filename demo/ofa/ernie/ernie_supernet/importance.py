@@ -31,20 +31,12 @@ def compute_neuron_head_importance(args, model, tokenizer, dev_ds, place):
 
     neuron_importance = []
     for w in intermediate_weight:
-        neuron_importance.append(L.zeros(shape=[w.shape[1]], dtype='float32'))
+        neuron_importance.append(np.zeros(shape=[w.shape[1]], dtype='float32'))
 
     eval_task_names = ('mnli', 'mnli-mm') if args.task == 'mnli' else (
         args.task, )
-    eval_outputs_dirs = (
-        args.save_dir,
-        args.save_dir + 'MM') if args.task == "mnli" else (args.save_dir, )
 
-    for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
-        if not os.path.exists(eval_output_dir):
-            os.makedirs(eval_output_dir)
-
-        args.eval_batch_size = args.bsz
-
+    for eval_task in eval_task_names:
         for batch in dev_ds.start(place):
             ids, sids, label = batch
             loss, _, _ = model(ids, sids, labels=label, head_mask=head_mask)

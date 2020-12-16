@@ -15,7 +15,6 @@
 import os
 import re
 import time
-#import logging
 import json
 from random import random
 from tqdm import tqdm
@@ -23,26 +22,23 @@ from functools import reduce, partial
 
 import numpy as np
 import math
-#import logging
+import logging
 import argparse
 
 import paddle
 import paddle.fluid as F
 import paddle.fluid.dygraph as FD
 import paddle.fluid.layers as L
-from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
+from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig, utils
 
 from propeller import log
 import propeller.paddle as propeller
 
-#log.setLevel(logging.DEBUG)
-#logging.getLogger().setLevel(logging.DEBUG)
-
-#from model.bert import BertConfig, BertModelLayer
-from ernie.modeling_ernie_supernet import ErnieModel, ErnieModelForSequenceClassification
+from ernie_supernet.modeling_ernie_supernet import ErnieModel, ErnieModelForSequenceClassification
+from ernie_supernet.importance import compute_neuron_head_importance, reorder_neuron_head
+from ernie_supernet.optimization import AdamW
 from ernie.tokenizing_ernie import ErnieTokenizer, ErnieTinyTokenizer
-from ernie.optimization import AdamW, LinearDecay
-from ernie.importance import compute_neuron_head_importance, reorder_neuron_head
+from ernie.optimization import LinearDecay
 
 
 def soft_cross_entropy(inp, target):
@@ -97,12 +93,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--inference_model_dir',
         type=str,
-        default='dyna_ernie_inf',
+        default='ofa_ernie_inf',
         help='inference model output directory')
     parser.add_argument(
         '--save_dir',
         type=str,
-        default='dyna_ernie_save',
+        default='ofa_ernie_save',
         help='model output directory')
     parser.add_argument(
         '--max_steps',
@@ -143,7 +139,18 @@ if __name__ == '__main__':
         type=str,
         default=None,
         help='checkpoint to warm start from')
-
+    parser.add_argument(
+        '--width_mult_list',
+        nargs='+',
+        type=float,
+        default=[1.0, 5 / 6, 2 / 3, 0.5],
+        help="width mult in compress")
+    parser.add_argument(
+        '--depth_mult_list',
+        nargs='+',
+        type=float,
+        default=[1.0, 0.75, 0.5, 0.25],
+        help="width mult in compress")
     args = parser.parse_args()
 
     if args.task == 'sts-b':
@@ -151,8 +158,7 @@ if __name__ == '__main__':
     else:
         mode = 'classification'
 
-    tokenizer = ErnieTokenizer.from_pretrained(args.from_pretrained)
-    #tokenizer = ErnieTinyTokenizer.from_pretrained(args.from_pretrained)
+    tokenizer = ErnieTinyTokenizer.from_pretrained(args.from_pretrained)
 
     feature_column = propeller.data.FeatureColumns([
         propeller.data.TextColumn(
@@ -205,20 +211,14 @@ if __name__ == '__main__':
             args.from_pretrained, num_labels=3, name='teacher')
 
         default_run_config = {
-            'train_batch_size': args.bsz,
-            'eval_batch_size': args.bsz,
             'n_epochs': [[4 * args.epoch], [6 * args.epoch]],
             'init_learning_rate': [[args.lr], [args.lr]],
-            'elastic_depth': [1.0, 0.75],
-            'total_images': 1,
+            'elastic_depth': args.depth_mult_list,
             'dynamic_batch_size': [[1, 1], [1, 1]]
         }
         run_config = RunConfig(**default_run_config)
 
-        default_distill_config = {
-            'lambda_distill': 1.0,
-            'teacher_model': teacher_model
-        }
+        default_distill_config = {'teacher_model': teacher_model}
         distill_config = DistillConfig(**default_distill_config)
 
         ofa_model = OFA(model,
@@ -257,7 +257,6 @@ if __name__ == '__main__':
 
         for epoch in range(6 * args.epoch):
             ofa_model.set_epoch(epoch)
-            width_mult_list = [1.0, 0.75, 0.5, 0.25]
             if epoch <= int(max(run_config.n_epochs[0])):
                 ofa_model.set_task('width')
                 depth_mult_list = [1.0]
@@ -274,7 +273,7 @@ if __name__ == '__main__':
                     accumulate_gradients[param.name] = 0.0
 
                 for depth_mult in depth_mult_list:
-                    for width_mult in width_mult_list:
+                    for width_mult in args.width_mult_list:
                         net_config = apply_config(
                             ofa_model, width_mult, depth=depth_mult)
                         ofa_model.set_net_config(net_config)
@@ -314,7 +313,6 @@ if __name__ == '__main__':
 
                         else:
                             ### logit distillation loss
-                            #print(student_logit.numpy(), teacher_logit.numpy())
                             if mode == 'classification':
                                 logit_loss = soft_cross_entropy(
                                     student_logit, teacher_logit.detach())
@@ -347,7 +345,7 @@ if __name__ == '__main__':
                 ofa_model.model.clear_gradients()
                 if step % 100 == 0:
                     for depth_mult in depth_mult_list:
-                        for width_mult in width_mult_list:
+                        for width_mult in args.width_mult_list:
                             net_config = apply_config(
                                 ofa_model, width_mult, depth=depth_mult)
                             ofa_model.set_net_config(net_config)
@@ -365,7 +363,6 @@ if __name__ == '__main__':
                                     [loss, logits,
                                      _], [_, tea_logits, _] = ofa_model(
                                          ids, sids, labels=label)
-                                    #print('\n'.join(map(str, logits.numpy().tolist())))
                                     a = L.argmax(logits, -1) == label
                                     acc.append(a.numpy())
 
@@ -378,21 +375,6 @@ if __name__ == '__main__':
                                    np.concatenate(acc).mean(),
                                    np.concatenate(tea_acc).mean()))
         if args.save_dir is not None:
+            if not os.path.exists(args.save_dir):
+                os.makedirs(args.save_dir)
             F.save_dygraph(ofa_model.model.state_dict(), args.save_dir)
-        if args.inference_model_dir is not None:
-            log.debug('saving inference model')
-
-            class InferemceModel(ErnieModelForSequenceClassification):
-                def forward(self, *args, **kwargs):
-                    _, logits = super(InferemceModel, self).forward(*args,
-                                                                    **kwargs)
-                    return logits
-
-            model.__class__ = InferemceModel  #dynamic change model type, to make sure forward output doesn't contain `None`
-            src_placeholder = FD.to_variable(np.ones([1, 1], dtype=np.int64))
-            sent_placehodler = FD.to_variable(np.zeros([1, 1], dtype=np.int64))
-            model(src_placeholder, sent_placehodler)
-            _, static_model = FD.TracedLayer.trace(
-                model, inputs=[src_placeholder, sent_placehodler])
-            static_model.save_inference_model(args.inference_model_dir)
-            log.debug('done')

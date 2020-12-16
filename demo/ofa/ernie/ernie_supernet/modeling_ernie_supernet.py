@@ -363,13 +363,6 @@ class ErnieEncoderStack(D.Layer):
             attn_list.append(attn_outs)
             ffn_mid_list.append(ffn_mid_outs)
 
-        ###for b, p in zip(self.block, past_cache):
-        ###    inputs, cache = b(inputs, attn_bias=attn_bias, past_cache=p)
-        ###    cache_k, cache_v = cache
-        ###    cache_list_k.append(cache_k)
-        ###    cache_list_v.append(cache_v)
-        ###    hidden_list.append(inputs)
-
         return inputs, hidden_list, attn_list, ffn_mid_list, (cache_list_k,
                                                               cache_list_v)
 
