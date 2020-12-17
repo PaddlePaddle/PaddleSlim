@@ -330,7 +330,6 @@ class TestOFACase2(TestOFA):
         }
         self.run_config = RunConfig(**default_run_config)
         default_distill_config = {
-            'lambda_distill': 0.01,
             'teacher_model': self.teacher_model,
             'mapping_layers': ['models.3.fn'],
         }

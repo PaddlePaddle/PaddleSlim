@@ -22,6 +22,9 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
         <tbody>
                 <tr>
                         <td style="text-align:center;">
+                                <span style="font-size:18px;">Device</span>
+                        </td>
+                        <td style="text-align:center;">
                                 <span style="font-size:18px;">Batch Size</span>
                         </td>
                         <td style="text-align:center;">
@@ -35,8 +38,9 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         </td>
                 </tr>
                 <tr>
-                        <td rowspan=4>**16** </td>
-                        <td rowspan=2>**BERT** </td>
+                        <td rowspan=8 align=center> T4 </td>
+                        <td rowspan=4 align=center> 16 </td>
+                        <td rowspan=2 align=center> BERT </td>
                         <td style="text-align:center;">
                                 <span style="font-size:18px;">N</span>
                         </td>
@@ -53,7 +57,7 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         </td>
                 </tr>
                 <tr>
-                        <td rowspan=2>**Compressed BERT** </td>
+                        <td rowspan=2 align=center>Compressed BERT </td>
                         <td style="text-align:center;">
                                 <span style="font-size:18px;">N</span>
                         </td>
@@ -67,6 +71,41 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         </td>
                         <td style="text-align:center;">
                                 <span style="font-size:18px;">9.78</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td rowspan=4 align=center> 1 </td>
+                        <td rowspan=2 align=center> BERT </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">N</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">7.29</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">Y</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">2.57</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td rowspan=2 align=center>Compressed BERT </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">N</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">3.16</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">Y</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">1.59</span>
                         </td>
                 </tr>
         </tbody>

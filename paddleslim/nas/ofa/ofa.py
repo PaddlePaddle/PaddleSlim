@@ -324,7 +324,9 @@ class OFA(OFABase):
             else:
                 loss = distill_fn(Sact, Tact.detach())
             losses.append(loss)
-        return sum(losses) * self.distill_config.lambda_distill
+        if self.distill_config.lambda_distill != None:
+            return sum(losses) * self.distill_config.lambda_distill
+        return sum(losses)
 
     ### TODO: complete it
     def search(self, eval_func, condition):
