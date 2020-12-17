@@ -17,6 +17,63 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
 | MNLI  | Matched acc/MisMatched acc   |  0.84422/0.84825  |   0.84687/0.85242      |
 | RTE   | Accuracy                     |      0.711191     |       0.718412         |
 
+加速测试环境: T4, GPU单卡, batch_size=16, fp32
+<table style="width:100%;" cellpadding="2" cellspacing="0" border="1" bordercolor="#000000">
+        <tbody>
+                <tr>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">Batch Size</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">Model</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">TRT(FP16)</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">Latency(ms)</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td rowspan=4>**16** </td>
+                        <td rowspan=2>**BERT** </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">N</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">110.71</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">Y</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">22.0</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td rowspan=2>**Compressed BERT** </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">N</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">36.13</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">Y</span>
+                        </td>
+                        <td style="text-align:center;">
+                                <span style="font-size:18px;">9.78</span>
+                        </td>
+                </tr>
+        </tbody>
+</table>
+<br />
+
+
 ## 快速开始
 本教程示例以GLUE/SST-2 数据集为例。
 
