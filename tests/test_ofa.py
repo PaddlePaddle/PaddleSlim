@@ -210,10 +210,15 @@ class ModelLinear2(nn.Layer):
                 nn.Linear(
                     64,
                     128,
+                    weight_attr=paddle.ParamAttr(name='fc1_w'),
+                    bias_attr=paddle.ParamAttr(name='fc1_b'))
+            ]
+            models += [
+                nn.LayerNorm(
+                    128,
                     weight_attr=paddle.ParamAttr(name='ln1_w'),
                     bias_attr=paddle.ParamAttr(name='ln1_b'))
             ]
-            models += [nn.LayerNorm(128)]
             models += [nn.Linear(128, 256)]
             models = ofa_super.convert(models)
         self.models = paddle.nn.Sequential(*models)
