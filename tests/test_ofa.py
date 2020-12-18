@@ -96,7 +96,12 @@ class ModelConv2(nn.Layer):
                 nn.Conv2DTranspose(
                     4, 4, 3, weight_attr=paddle.ParamAttr(name='conv1_w'))
             ]
-            models += [nn.BatchNorm2D(4)]
+            models += [
+                nn.BatchNorm2D(
+                    4,
+                    weight_attr=paddle.ParamAttr(name='bn1_w'),
+                    bias_attr=paddle.ParamAttr(name='bn1_b'))
+            ]
             models += [ReLU()]
             models += [nn.Conv2D(4, 4, 3)]
             models += [nn.BatchNorm2D(4)]
