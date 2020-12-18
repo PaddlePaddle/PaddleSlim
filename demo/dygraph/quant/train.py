@@ -117,9 +117,9 @@ def compress(args):
 
     pretrain = True if args.data == "imagenet" else False
     if args.model == "mobilenet_v1":
-        net = mobilenet_v1(pretrained=pretrain)
+        net = mobilenet_v1(pretrained=pretrain, num_classes=class_dim)
     elif args.model == "mobilenet_v3":
-        net = MobileNetV3_large_x1_0()
+        net = MobileNetV3_large_x1_0(class_dim=class_dim)
         if pretrain:
             load_dygraph_pretrain(net, args.pretrained_model, True)
     else:
