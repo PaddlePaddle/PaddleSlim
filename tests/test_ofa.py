@@ -92,7 +92,10 @@ class ModelConv2(nn.Layer):
         super(ModelConv2, self).__init__()
         with supernet(expand_ratio=(1, 2, 4)) as ofa_super:
             models = []
-            models += [nn.Conv2DTranspose(4, 4, 3)]
+            models += [
+                nn.Conv2DTranspose(
+                    4, 4, 3, weight_attr=paddle.ParamAttr(name='conv1_w'))
+            ]
             models += [nn.BatchNorm2D(4)]
             models += [ReLU()]
             models += [nn.Conv2D(4, 4, 3)]
@@ -197,8 +200,19 @@ class ModelLinear2(nn.Layer):
         super(ModelLinear2, self).__init__()
         with supernet(expand_ratio=None) as ofa_super:
             models = []
-            models += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
-            models += [nn.Linear(64, 128)]
+            models += [
+                nn.Embedding(
+                    num_embeddings=64,
+                    embedding_dim=64,
+                    weight_attr=paddle.ParamAttr(name='emb'))
+            ]
+            models += [
+                nn.Linear(
+                    64,
+                    128,
+                    weight_attr=paddle.ParamAttr(name='ln1_w'),
+                    bias_attr=paddle.ParamAttr(name='ln1_b'))
+            ]
             models += [nn.LayerNorm(128)]
             models += [nn.Linear(128, 256)]
             models = ofa_super.convert(models)

@@ -44,6 +44,19 @@ class Convert:
     def __init__(self, context):
         self.context = context
 
+    def _change_name(self, layer, pd_ver, has_bias=True, conv=False):
+        if conv:
+            w_attr = layer._param_attr
+        else:
+            w_attr = layer._param_attr if pd_ver == 185 else layer._weight_attr
+        if w_attr != None and not isinstance(w_attr, bool):
+            w_attr.name = 'super_' + w_attr.name
+
+        if has_bias:
+            if layer._bias_attr != None and not isinstance(layer._bias_attr,
+                                                           bool):
+                layer._bias_attr.name = 'super_' + layer._bias_attr.name
+
     def convert(self, network):
         # search the first and last weight layer, don't change out channel of the last weight layer
         # don't change in channel of the first weight layer
@@ -88,6 +101,7 @@ class Convert:
                         'weight_attr', 'data_format', 'padding_mode'
                     ]
 
+                self._change_name(layer, pd_ver, conv=True)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 new_attr_dict['candidate_config'] = dict()
                 if pd_ver == 185:
@@ -214,6 +228,7 @@ class Convert:
                 else:
                     new_attr_name += ['weight_attr', 'data_format', 'name']
 
+                self._change_name(layer, pd_ver)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 if pd_ver == 185:
                     new_attr_dict['num_channels'] = None
@@ -273,6 +288,8 @@ class Convert:
                     new_attr_dict['in_channels'] = None
                     new_attr_dict['out_channels'] = None
                     new_attr_dict['kernel_size'] = None
+
+                self._change_name(layer, pd_ver, conv=True)
                 self.kernel_size = getattr(self.context, 'kernel_size', None)
 
                 # if the kernel_size of conv transpose is 1, don't change it.
@@ -381,7 +398,7 @@ class Convert:
                 attr_dict = layer.__dict__
                 key = attr_dict['_full_name']
                 if pd_ver == 185:
-                    new_attr_name = ['param_attr', 'bias_attr', 'act', 'dtype']
+                    new_attr_name = ['act', 'dtype']
                 else:
                     new_attr_name = ['weight_attr', 'bias_attr']
                 in_nc, out_nc = layer._parameters['weight'].shape
@@ -395,10 +412,8 @@ class Convert:
                     new_attr_dict['in_features'] = None
                     new_attr_dict['out_features'] = None
 
-                in_key = '_input_dim' if '_input_dim' in attr_dict.keys(
-                ) else '_in_features'
-                out_key = '_output_dim' if '_output_dim' in attr_dict.keys(
-                ) else '_out_features'
+                in_key = '_input_dim' if pd_ver == 185 else '_in_features'
+                out_key = '_output_dim' if pd_ver == 185 else '_out_features'
                 attr_dict[in_key] = in_nc
                 attr_dict[out_key] = out_nc
                 if self.context.expand:
@@ -461,6 +476,8 @@ class Convert:
                     ]
                 else:
                     new_attr_name = ['bias_attr', 'epsilon', 'weight_attr']
+
+                self._change_name(layer, pd_ver)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 if pd_ver == 185:
                     new_attr_dict['num_channels'] = None
@@ -505,6 +522,7 @@ class Convert:
                 else:
                     new_attr_name += ['weight_attr']
 
+                self._change_name(layer, pd_ver)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 new_attr_dict['normalized_shape'] = None
                 if self.context.expand:
@@ -539,6 +557,8 @@ class Convert:
                         'num_embeddings', 'embedding_dim', 'sparse',
                         'weight_attr', 'name'
                     ]
+
+                self._change_name(layer, pd_ver, has_bias=False)
 
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 new_attr_dict['candidate_config'] = dict()
