@@ -5,6 +5,7 @@ import functools
 import numpy as np
 import paddle
 from PIL import Image, ImageEnhance
+from paddle.io import Dataset
 
 random.seed(0)
 np.random.seed(0)
@@ -14,8 +15,7 @@ DATA_DIM = 224
 THREAD = 16
 BUF_SIZE = 10240
 
-#DATA_DIR = './data/ILSVRC2012/'
-DATA_DIR = './data/'
+DATA_DIR = './data/ILSVRC2012/'
 DATA_DIR = os.path.join(os.path.split(os.path.realpath(__file__))[0], DATA_DIR)
 
 img_mean = np.array([0.485, 0.456, 0.406]).reshape((3, 1, 1))
@@ -101,7 +101,11 @@ def distort_color(img):
 def process_image(sample, mode, color_jitter, rotate):
     img_path = sample[0]
 
-    img = Image.open(img_path)
+    try:
+        img = Image.open(img_path)
+    except:
+        print(img_path, "not exists!")
+        return None
     if mode == 'train':
         if rotate: img = rotate_image(img)
         img = random_crop(img, DATA_DIM)
@@ -157,8 +161,7 @@ def _reader_creator(file_list,
                 for line in lines:
                     if mode == 'train' or mode == 'val':
                         img_path, label = line.split()
-                        img_path = os.path.join(data_dir + "/" + mode,
-                                                img_path)
+                        img_path = os.path.join(data_dir, img_path)
                         yield img_path, int(label)
                     elif mode == 'test':
                         img_path = os.path.join(data_dir, line)
@@ -192,3 +195,54 @@ def val(data_dir=DATA_DIR):
 def test(data_dir=DATA_DIR):
     file_list = os.path.join(data_dir, 'test_list.txt')
     return _reader_creator(file_list, 'test', shuffle=False, data_dir=data_dir)
+
+
+class ImageNetDataset(Dataset):
+    def __init__(self, data_dir=DATA_DIR, mode='train'):
+        super(ImageNetDataset, self).__init__()
+        train_file_list = os.path.join(data_dir, 'train_list.txt')
+        val_file_list = os.path.join(data_dir, 'val_list.txt')
+        test_file_list = os.path.join(data_dir, 'test_list.txt')
+        self.mode = mode
+        if mode == 'train':
+            with open(train_file_list) as flist:
+                full_lines = [line.strip() for line in flist]
+                np.random.shuffle(full_lines)
+                if os.getenv('PADDLE_TRAINING_ROLE'):
+                    # distributed mode if the env var `PADDLE_TRAINING_ROLE` exits
+                    trainer_id = int(os.getenv("PADDLE_TRAINER_ID", "0"))
+                    trainer_count = int(os.getenv("PADDLE_TRAINERS", "1"))
+                    per_node_lines = len(full_lines) // trainer_count
+                    lines = full_lines[trainer_id * per_node_lines:(
+                        trainer_id + 1) * per_node_lines]
+                    print(
+                        "read images from %d, length: %d, lines length: %d, total: %d"
+                        % (trainer_id * per_node_lines, per_node_lines,
+                           len(lines), len(full_lines)))
+                else:
+                    lines = full_lines
+            self.data = [line.split() for line in lines]
+        else:
+            with open(val_file_list) as flist:
+                lines = [line.strip() for line in flist]
+                self.data = [line.split() for line in lines]
+
+    def __getitem__(self, index):
+        sample = self.data[index]
+        data_path = os.path.join(DATA_DIR, sample[0])
+        if self.mode == 'train':
+            data, label = process_image(
+                [data_path, sample[1]],
+                mode='train',
+                color_jitter=False,
+                rotate=False)
+        if self.mode == 'val':
+            data, label = process_image(
+                [data_path, sample[1]],
+                mode='val',
+                color_jitter=False,
+                rotate=False)
+        return data, np.array([label]).astype('int64')
+
+    def __len__(self):
+        return len(self.data)
