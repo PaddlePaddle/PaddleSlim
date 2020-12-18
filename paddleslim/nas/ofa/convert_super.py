@@ -23,12 +23,14 @@ pd_ver = get_paddle_version()
 if pd_ver == 185:
     import paddle.fluid.dygraph.nn as nn
     from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
+    from paddle.fluid import ParamAttr
     from .layers import *
     from . import layers
     Layer = paddle.fluid.dygraph.Layer
 else:
     import paddle.nn as nn
     from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
+    from paddle import ParamAttr
     from .layers_new import *
     from . import layers_new as layers
     Layer = paddle.nn.Layer
@@ -49,13 +51,16 @@ class Convert:
             w_attr = layer._param_attr
         else:
             w_attr = layer._param_attr if pd_ver == 185 else layer._weight_attr
-        if w_attr != None and not isinstance(w_attr, bool):
-            w_attr.name = 'super_' + w_attr.name
+
+        if isinstance(w_attr, ParamAttr):
+            if w_attr != None and not isinstance(w_attr, bool):
+                w_attr.name = 'super_' + w_attr.name
 
         if has_bias:
-            if layer._bias_attr != None and not isinstance(layer._bias_attr,
-                                                           bool):
-                layer._bias_attr.name = 'super_' + layer._bias_attr.name
+            if isinstance(layer._bias_attr, ParamAttr):
+                if layer._bias_attr != None and not isinstance(layer._bias_attr,
+                                                               bool):
+                    layer._bias_attr.name = 'super_' + layer._bias_attr.name
 
     def convert(self, network):
         # search the first and last weight layer, don't change out channel of the last weight layer
@@ -118,7 +123,7 @@ class Convert:
                 fks = '_filter_size' if '_filter_size' in attr_dict.keys(
                 ) else '_kernel_size'
 
-                ks = list(attr_dict[fks]) if isinstance(
+                ks = [attr_dict[fks]] if isinstance(
                     attr_dict[fks], numbers.Integral) else attr_dict[fks]
 
                 if self.kernel_size and int(ks[0]) != 1:
@@ -252,8 +257,9 @@ class Convert:
 
                 del layer, attr_dict
 
-                layer = getattr(layers, 'SuperBatchNorm', SuperBatchNorm2D)(
-                    **new_attr_dict)
+                layer = layers.SuperBatchNorm(
+                    **new_attr_dict
+                ) if pd_ver == 185 else layers.SuperBatchNorm2D(**new_attr_dict)
                 model[idx] = layer
 
             ### assume output_size = None, filter_size != None
@@ -295,7 +301,7 @@ class Convert:
                 # if the kernel_size of conv transpose is 1, don't change it.
                 fks = '_filter_size' if '_filter_size' in attr_dict.keys(
                 ) else '_kernel_size'
-                ks = list(attr_dict[fks]) if isinstance(
+                ks = [attr_dict[fks]] if isinstance(
                     attr_dict[fks], numbers.Integral) else attr_dict[fks]
 
                 if self.kernel_size and int(ks[0]) != 1:
@@ -502,8 +508,10 @@ class Convert:
 
                 del layer, attr_dict
 
-                layer = getattr(layers, 'SuperInstanceNorm2D',
-                                'SuperInstanceNorm')(**new_attr_dict)
+                layer = layers.SuperInstanceNorm(
+                    **new_attr_dict
+                ) if pd_ver == 185 else layers.SuperInstanceNorm2D(
+                    **new_attr_dict)
                 model[idx] = layer
 
             elif isinstance(layer, LayerNorm) and (
