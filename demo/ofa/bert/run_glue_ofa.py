@@ -23,10 +23,9 @@ import numpy as np
 import paddle
 import paddle.nn.functional as F
 from paddle.io import DataLoader
-from paddle.metric import Metric, Accuracy, Precision, Recall
+from paddle.metric import Accuracy
 
 from paddlenlp.data import Stack, Tuple, Pad
-from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.transformers import BertModel, BertForSequenceClassification, BertTokenizer
 from paddlenlp.utils.log import logger
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman

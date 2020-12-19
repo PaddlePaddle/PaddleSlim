@@ -1,4 +1,4 @@
-#   Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
+#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,11 +34,13 @@ from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig, utils
 from propeller import log
 import propeller.paddle as propeller
 
-from ernie_supernet.modeling_ernie_supernet import ErnieModel, ErnieModelForSequenceClassification
-from ernie_supernet.importance import compute_neuron_head_importance, reorder_neuron_head
-from ernie_supernet.optimization import AdamW
+from ernie.modeling_ernie import ErnieModelForSequenceClassification
 from ernie.tokenizing_ernie import ErnieTokenizer, ErnieTinyTokenizer
 from ernie.optimization import LinearDecay
+from ernie_supernet.importance import compute_neuron_head_importance, reorder_neuron_head
+from ernie_supernet.optimization import AdamW
+from ernie_supernet.modeling_ernie_supernet import get_config
+from paddleslim.nas.ofa.convert_super import Convert, supernet
 
 
 def soft_cross_entropy(inp, target):
@@ -47,13 +49,27 @@ def soft_cross_entropy(inp, target):
     return -1. * L.mean(L.reduce_sum(inp_likelihood * target_prob, dim=-1))
 
 
-def apply_config(model, width_mult, depth):
+### get certain config
+def apply_config(model, width_mult, depth_mult):
     new_config = dict()
-    for block_k, block_v in model.layers.items():
+
+    def fix_exp(idx):
+        if (idx - 3) % 6 == 0 or (idx - 5) % 6 == 0:
+            return True
+        return False
+
+    for idx, (block_k, block_v) in enumerate(model.layers.items()):
+        if isinstance(block_v, dict) and len(block_v.keys()) != 0:
+            name, name_idx = block_k.split('_'), int(block_k.split('_')[1])
+            if fix_exp(name_idx) or 'emb' in block_k or idx == (
+                    len(model.layers.items()) - 2):
+                block_v['expand_ratio'] = 1.0
+            else:
+                block_v['expand_ratio'] = width_mult
+
         if block_k == 'depth':
-            block_v = depth
-        elif 'expand_ratio' in block_v.keys():
-            block_v['expand_ratio'] = width_mult
+            block_v = depth_mult
+
         new_config[block_k] = block_v
     return new_config
 
@@ -143,14 +159,14 @@ if __name__ == '__main__':
         '--width_mult_list',
         nargs='+',
         type=float,
-        default=[1.0, 5 / 6, 2 / 3, 0.5],
+        default=[1.0, 0.75, 0.5, 0.5],
         help="width mult in compress")
     parser.add_argument(
         '--depth_mult_list',
         nargs='+',
         type=float,
-        default=[1.0, 0.75, 0.5, 0.25],
-        help="width mult in compress")
+        default=[1.0, 2 / 3],
+        help="depth mult in compress")
     args = parser.parse_args()
 
     if args.task == 'sts-b':
@@ -207,8 +223,20 @@ if __name__ == '__main__':
     with FD.guard(place):
         model = ErnieModelForSequenceClassification.from_pretrained(
             args.from_pretrained, num_labels=3, name='')
+        setattr(model, 'return_additional_info', True)
+
+        origin_weights = {}
+        for name, param in model.named_parameters():
+            origin_weights[name] = param
+
+        sp_config = supernet(expand_ratio=args.width_mult_list)
+        model = Convert(sp_config).convert(model)
+        utils.set_state_dict(model, origin_weights)
+        del origin_weights
+
         teacher_model = ErnieModelForSequenceClassification.from_pretrained(
             args.from_pretrained, num_labels=3, name='teacher')
+        setattr(teacher_model, 'return_additional_info', True)
 
         default_run_config = {
             'n_epochs': [[4 * args.epoch], [6 * args.epoch]],
@@ -217,6 +245,8 @@ if __name__ == '__main__':
             'dynamic_batch_size': [[1, 1], [1, 1]]
         }
         run_config = RunConfig(**default_run_config)
+
+        model_cfg = get_config(args.from_pretrained)
 
         default_distill_config = {'teacher_model': teacher_model}
         distill_config = DistillConfig(**default_distill_config)
@@ -229,7 +259,7 @@ if __name__ == '__main__':
         ### suppose elastic width first
         if args.reorder_weight:
             head_importance, neuron_importance = compute_neuron_head_importance(
-                args, ofa_model.model, tokenizer, dev_ds, place)
+                args, ofa_model.model, tokenizer, dev_ds, place, model_cfg)
             reorder_neuron_head(ofa_model.model, head_importance,
                                 neuron_importance)
         #################
@@ -255,7 +285,7 @@ if __name__ == '__main__':
                 weight_decay=args.wd,
                 grad_clip=g_clip)
 
-        for epoch in range(6 * args.epoch):
+        for epoch in range(max(run_config.n_epochs[-1])):
             ofa_model.set_epoch(epoch)
             if epoch <= int(max(run_config.n_epochs[0])):
                 ofa_model.set_task('width')
@@ -275,11 +305,14 @@ if __name__ == '__main__':
                 for depth_mult in depth_mult_list:
                     for width_mult in args.width_mult_list:
                         net_config = apply_config(
-                            ofa_model, width_mult, depth=depth_mult)
+                            ofa_model, width_mult, depth_mult=depth_mult)
                         ofa_model.set_net_config(net_config)
 
                         student_output, teacher_output = ofa_model(
-                            ids, sids, labels=label)
+                            ids,
+                            sids,
+                            labels=label,
+                            num_layers=model_cfg['num_hidden_layers'])
                         loss, student_logit, student_reps = student_output[
                             0], student_output[1], student_output[2]['hiddens']
                         teacher_logit, teacher_reps = teacher_output[
@@ -287,7 +320,7 @@ if __name__ == '__main__':
 
                         if ofa_model.task == 'depth':
                             depth_mult = ofa_model.current_config['depth']
-                            depth = round(model.cfg['num_hidden_layers'] *
+                            depth = round(model_cfg['num_hidden_layers'] *
                                           depth_mult)
                             kept_layers_index = []
                             for i in range(1, depth + 1):
@@ -343,11 +376,12 @@ if __name__ == '__main__':
                 opt.apply_optimize(
                     loss, startup_program=None, params_grads=param_grads)
                 ofa_model.model.clear_gradients()
+
                 if step % 100 == 0:
                     for depth_mult in depth_mult_list:
                         for width_mult in args.width_mult_list:
                             net_config = apply_config(
-                                ofa_model, width_mult, depth=depth_mult)
+                                ofa_model, width_mult, depth_mult=depth_mult)
                             ofa_model.set_net_config(net_config)
 
                             acc = []
@@ -362,7 +396,11 @@ if __name__ == '__main__':
                                     ids, sids, label = d
                                     [loss, logits,
                                      _], [_, tea_logits, _] = ofa_model(
-                                         ids, sids, labels=label)
+                                         ids,
+                                         sids,
+                                         labels=label,
+                                         num_layers=model_cfg[
+                                             'num_hidden_layers'])
                                     a = L.argmax(logits, -1) == label
                                     acc.append(a.numpy())
 

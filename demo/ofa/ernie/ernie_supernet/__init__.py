@@ -1,4 +1,4 @@
-#   Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
+#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,9 +17,4 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import paddle
-
-from ernie_supernet.modeling_ernie_supernet import ErnieModel
-from ernie_supernet.modeling_ernie_supernet import (
-    ErnieModelForSequenceClassification, ErnieModelForTokenClassification,
-    ErnieModelForQuestionAnswering, ErnieModelForPretraining)
+from ernie_supernet.modeling_ernie_supernet import *

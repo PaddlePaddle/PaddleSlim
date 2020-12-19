@@ -1,4 +1,4 @@
-#   Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
+#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,15 +18,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-import logging
-import re
-
-import numpy as np
 import paddle.fluid as F
 import paddle.fluid.layers as L
 import paddle.fluid.dygraph as D
-
-log = logging.getLogger(__name__)
 
 
 class AdamW(F.optimizer.AdamOptimizer):
@@ -45,4 +39,4 @@ class AdamW(F.optimizer.AdamOptimizer):
         for p, g in params_grads:
             if not self.pat.match(p.name):
                 with D.no_grad():
-                    L.assign(p * (1. - self.wd * self.current_step_lr()), p)
+                    L.assign(p * (20 - self.wd * self.current_step_lr()), p)

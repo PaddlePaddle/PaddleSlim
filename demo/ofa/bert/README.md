@@ -2,11 +2,11 @@
 
 BERT-base模型是一个迁移能力很强的通用语义表示模型，但是模型中也有一些参数冗余。本教程将介绍如何使用PaddleSlim对[PaddleNLP](https://github.com/PaddlePaddle/models/tree/develop/PaddleNLP/)中BERT-base模型进行压缩。
 
-## 压缩结果
+## 1. 压缩结果
 
-基于`bert-base-uncased` 在GLUE dev数据集上的finetune结果进行压缩。压缩后模型精度和压缩前模型在GLUE dev数据集上的精度对比如下表所示， 压缩后模型相比压缩前加速约2倍，模型参数大小减小26%（从110M减少到81M）。
+利用`bert-base-uncased`模型首先在GLUE数据集上进行finetune，得到需要压缩的模型，之后基于此模型进行压缩。压缩后模型参数大小减小26%（从110M减少到81M），压缩后模型在GLUE dev数据集上的精度和压缩前模型在GLUE dev数据集上的精度对比如下表所示：
 
-| Task  | Metric                       | Result            | Result with PaddleSlim |
+| Task  | Metric                       | Baseline          | Result with PaddleSlim |
 |:-----:|:----------------------------:|:-----------------:|:----------------------:|
 | SST-2 | Accuracy                     |      0.93005      |       0.931193         |
 | QNLI  | Accuracy                     |      0.91781      |       0.920740         |
@@ -17,20 +17,25 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
 | MNLI  | Matched acc/MisMatched acc   |  0.84422/0.84825  |   0.84687/0.85242      |
 | RTE   | Accuracy                     |      0.711191     |       0.718412         |
 
-加速测试环境: T4, GPU单卡, batch_size=16, fp32
+<p align="center">
+<strong>表1-1: GLUE数据集精度对比</strong>
+</p>
+
+压缩前后模型的耗时如下表所示：
+
 <table style="width:100%;" cellpadding="2" cellspacing="0" border="1" bordercolor="#000000">
         <tbody>
                 <tr>
-                        <td style="text-align:center;">
+                        <td style="text-align:center">
                                 <span style="font-size:18px;">Device</span>
                         </td>
-                        <td style="text-align:center;">
+                        <td style="text-align:center">
                                 <span style="font-size:18px;">Batch Size</span>
                         </td>
-                        <td style="text-align:center;">
+                        <td style="text-align:center">
                                 <span style="font-size:18px;">Model</span>
                         </td>
-                        <td style="text-align:center;">
+                        <td style="text-align:center">
                                 <span style="font-size:18px;">TRT(FP16)</span>
                         </td>
                         <td style="text-align:center;">
@@ -38,85 +43,104 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         </td>
                 </tr>
                 <tr>
-                        <td rowspan=8 align=center> T4 </td>
+                        <td rowspan=4 align=center> T4 </td>
                         <td rowspan=4 align=center> 16 </td>
                         <td rowspan=2 align=center> BERT </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">N</span>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">N</span>
                         </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">110.71</span>
-                        </td>
-                </tr>
-                <tr>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">Y</span>
-                        </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">22.0</span>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">110.71</span>
                         </td>
                 </tr>
                 <tr>
-                        <td rowspan=2 align=center>Compressed BERT </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">N</span>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">Y</span>
                         </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">36.13</span>
-                        </td>
-                </tr>
-                <tr>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">Y</span>
-                        </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">9.78</span>
-                        </td>
-                </tr>
-                <tr>
-                        <td rowspan=4 align=center> 1 </td>
-                        <td rowspan=2 align=center> BERT </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">N</span>
-                        </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">7.29</span>
-                        </td>
-                </tr>
-                <tr>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">Y</span>
-                        </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">2.57</span>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">22.0</span>
                         </td>
                 </tr>
                 <tr>
                         <td rowspan=2 align=center>Compressed BERT </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">N</span>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">N</span>
                         </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">3.16</span>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">69.62</span>
                         </td>
                 </tr>
                 <tr>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">Y</span>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">Y</span>
                         </td>
-                        <td style="text-align:center;">
-                                <span style="font-size:18px;">1.59</span>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">14.93</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td rowspan=2 align=center> V100 </td>
+                        <td rowspan=2 align=center> 16 </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px;">BERT</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">N</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">33.28</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td style="text-align:center">
+                                <span style="font-size:18px;">Compressed BERT</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">N</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">21.83</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td rowspan=2 align=center> Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz </td>
+                        <td rowspan=2 align=center> 16 </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px;">BERT</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">N</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">10831.73</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td style="text-align:center">
+                                <span style="font-size:18px;">Compressed BERT</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">N</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">7682.93</span>
                         </td>
                 </tr>
         </tbody>
 </table>
 <br />
+<p align="center">
+<strong>表1-2: 模型速度对比</strong>
+</p>
 
+压缩后模型在T4机器上相比原始模型在FP32的情况下加速59%，在TensorRT FP16的情况下加速47.3%。
+压缩后模型在V100机器上相比原始模型在FP32的情况下加速52.5%。
+压缩后模型在Intel(R) Xeon(R) Gold 5117 CPU上相比原始模型在FP32的情况下加速41%。
 
-## 快速开始
+## 2. 快速开始
 本教程示例以GLUE/SST-2 数据集为例。
 
-### 安装PaddleNLP和Paddle
+### 2.1 安装PaddleNLP和Paddle
 本教程基于PaddleNLP中BERT模型进行压缩，依赖PaddleNLP2.0beta及之后版本和Paddle2.0rc1及之后版本。
 
 ```shell
@@ -124,11 +148,11 @@ pip install paddlenlp
 pip install paddlepaddle_gpu>=2.0rc1
 ```
 
-### Fine-tuing
+### 2.2 Fine-tuing
 首先需要对Pretrain-Model在实际的下游任务上进行Fine-tuning，得到需要压缩的模型。Fine-tuning流程参考[Fine-tuning教程](https://github.com/PaddlePaddle/models/tree/develop/PaddleNLP/examples/bert)
-Fine-tuning 在dev上的结果如压缩结果表格中Result那一列所示。
+Fine-tuning 在dev上的结果如压缩结果表1-1『Baseline』那一列所示。
 
-### 压缩训练
+### 2.3 压缩训练
 
 ```python
 python -u ./run_glue_ofa.py --model_type bert \
@@ -157,20 +181,7 @@ python -u ./run_glue_ofa.py --model_type bert \
 - `n_gpu` 表示使用的 GPU 卡数。若希望使用多卡训练，将其设置为指定数目即可；若为0，则使用CPU。
 - `width_mult_list` 表示压缩训练过程中，对每层Transformer Block的宽度选择的范围。
 
-压缩训练之后在dev上的结果如压缩结果表格中Result with PaddleSlim那一列所示，速度相比原始模型加速2倍。
+压缩训练之后在dev上的结果如表1-1中『Result with PaddleSlim』列所示，延时情况如表1-2所示。
 
-## OFA接口介绍
+## 3. OFA接口介绍
 TODO
-
-## 原理介绍
-
-1. 对Fine-tuning得到模型通过计算参数及其梯度的乘积得到参数的重要性，把模型参数根据重要性进行重排序。
-2. 超网络中最大的子网络选择和Bert-base模型网络结构一致的网络结构，其他小的子网络是对最大网络的进行不同的宽度选择来得到的，宽度选择
-具体指的是网络中的参数进行裁剪，所有子网络在整个训练过程中都是参数共享的。
-2. 用重排序之后的模型参数作为超网络模型的初始化参数。
-3. Fine-tuning之后的模型作为教师网络，超网络作为学生网络，进行知识蒸馏。
-
-<p align="center">
-<img src="../../../docs/images/algo/ofa_bert.jpg" width="950"/><br />
-整体流程图
-</p>
