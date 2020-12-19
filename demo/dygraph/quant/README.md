@@ -22,7 +22,7 @@
 
 ### 配置量化参数
 
-```
+```python
 quant_config = {
     'weight_preprocess_type': None,
     'activation_preprocess_type': None,
@@ -70,9 +70,9 @@ quanter.save_quantized_model(net, 'save_dir', input_spec=[paddle.static.InputSpe
 
    ```bash
   # 单卡训练
-  python train.py --model='mobilenet_v1'
+  python train.py --model=mobilenet_v1
   # 多卡训练，以0到3号卡为例
-  python -m paddle.distributed.launch --gpus="0,1,2,3" train.py --model='mobilenet_v1'
+  python -m paddle.distributed.launch --gpus="0,1,2,3" train.py --model=mobilenet_v1
    ```
 - MobileNetV3
 
