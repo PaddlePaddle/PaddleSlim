@@ -25,16 +25,13 @@ def save_model(exe, graph, dirname):
     graph = GraphWrapper(graph) if isinstance(graph,
                                               paddle.static.Program) else graph
 
-    paddle.fluid.io.save_persistables(
-        executor=exe,
-        dirname=dirname,
-        main_program=graph.program,
-        filename=None)
+    paddle.static.save(program=graph.program, model_path=dirname)
     weights_file = dirname
     _logger.info("Save model weights into {}".format(weights_file))
     shapes = {}
-    for var in paddle.fluid.io.get_program_persistable_vars(graph.program):
-        shapes[var.name] = var.shape
+    for var in graph.program.list_vars():
+        if var.persistable:
+            shapes[var.name] = var.shape
     SHAPES_FILE = os.path.join(dirname, _SHAPES_FILE)
     with open(SHAPES_FILE, "w") as f:
         json.dump(shapes, f)
@@ -65,11 +62,7 @@ def load_model(exe, graph, dirname):
                 _logger.info('{} is not loaded'.format(param_name))
 
     _logger.info("Load shapes of weights from {}".format(SHAPES_FILE))
-    paddle.fluid.io.load_persistables(
-        executor=exe,
-        dirname=dirname,
-        main_program=graph.program,
-        filename=None)
+    paddle.static.load(program=graph.program, model_path=dirname, executor=exe)
     graph.update_groups_of_conv()
     graph.infer_shape()
     _logger.info("Load weights from {}".format(dirname))
