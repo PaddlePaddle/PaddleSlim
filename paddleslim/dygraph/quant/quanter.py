@@ -134,7 +134,7 @@ class PACT(paddle.nn.Layer):
         alpha_attr = paddle.ParamAttr(
             name=self.full_name() + ".pact",
             initializer=paddle.nn.initializer.Constant(value=20),
-            learning_rate=10.0)
+            learning_rate=1000.0)
 
         self.alpha = self.create_parameter(
             shape=[1], attr=alpha_attr, dtype='float32')
