@@ -84,6 +84,7 @@ def _graph_flops(graph, only_conv=True, detail=False):
 
 
 def dygraph_flops(model, input_shape, only_conv=False, detail=False):
+
     data = np.ones(tuple(input_shape)).astype("float32")
     in_var = paddle.to_tensor(data)
     _, traced = paddle.jit.TracedLayer.trace(model, [in_var])

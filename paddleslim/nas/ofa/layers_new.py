@@ -937,7 +937,8 @@ class SuperEmbedding(nn.Embedding):
                  weight_attr=None,
                  name=None):
         super(SuperEmbedding, self).__init__(num_embeddings, embedding_dim,
-                                             sparse, weight_attr, name)
+                                             padding_idx, sparse, weight_attr,
+                                             name)
         self.candidate_config = candidate_config
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
