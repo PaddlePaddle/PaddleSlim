@@ -124,8 +124,7 @@ def compress(args):
     # model definition
     model = models.__dict__[args.model]()
     out = model.net(input=image, class_dim=class_dim)
-    cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
-    avg_cost = paddle.mean(x=cost)
+    avg_cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
     acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
     acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
     val_program = paddle.static.default_main_program().clone(for_test=True)
@@ -144,8 +143,8 @@ def compress(args):
 
         _logger.info("Load pretrained model from {}".format(
             args.pretrained_model))
-        paddle.fluid.io.load_vars(
-            exe, args.pretrained_model, predicate=if_exist)
+        paddle.static.load(paddle.static.default_main_program(),
+                           args.pretrained_model, exe)
 
     train_loader = paddle.io.DataLoader(
         train_dataset,
@@ -245,8 +244,10 @@ def compress(args):
         if args.save_inference:
             infer_model_path = os.path.join(args.model_path, "infer_models",
                                             str(i))
-            paddle.fluid.io.save_inference_model(infer_model_path, ["image"],
-                                                 [out], exe, pruned_val_program)
+            paddle.static.save_inference_model(
+                infer_model_path, ["image"], [out],
+                exe,
+                program=pruned_val_program)
             _logger.info("Saved inference model into [{}]".format(
                 infer_model_path))
 
