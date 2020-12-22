@@ -123,15 +123,15 @@ def compress(args):
                 batch_size=args.batch_size,
                 return_list=False,
                 shuffle=True,
-                use_shared_memory=False,
-                num_workers=1)
+                use_shared_memory=True,
+                num_workers=4)
             valid_loader = paddle.io.DataLoader(
                 val_dataset,
                 places=place,
                 feed_list=[image, label],
                 drop_last=False,
                 return_list=False,
-                use_shared_memory=False,
+                use_shared_memory=True,
                 batch_size=args.batch_size,
                 shuffle=False)
             # model definition
