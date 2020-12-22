@@ -33,6 +33,8 @@ def save_model(exe, graph, dirname):
         if var.persistable:
             shapes[var.name] = var.shape
     SHAPES_FILE = os.path.join(dirname, _SHAPES_FILE)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
     with open(SHAPES_FILE, "w") as f:
         json.dump(shapes, f)
         _logger.info("Save shapes of weights into {}".format(SHAPES_FILE))
