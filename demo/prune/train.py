@@ -143,8 +143,8 @@ def compress(args):
 
         _logger.info("Load pretrained model from {}".format(
             args.pretrained_model))
-        paddle.fluid.io.load_vars(
-            exe, args.pretrained_model, predicate=if_exist)
+        paddle.static.load(paddle.static.default_main_program(),
+                           args.pretrained_model, exe)
 
     train_loader = paddle.io.DataLoader(
         train_dataset,
