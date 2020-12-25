@@ -334,6 +334,7 @@ class SlimFaceNet():
         else:
             pass
 
+        label = paddle.reshape(label, (label.shape[0], ))
         one_hot = fluid.one_hot(input=label, depth=out_dim)
         output = fluid.layers.elementwise_mul(
             one_hot, phi) + fluid.layers.elementwise_mul(
