@@ -29,6 +29,8 @@ from lfw_eval import parse_filelist, evaluation_10_fold
 from paddleslim import models
 from paddleslim.quant import quant_post_static
 
+paddle.enable_static()
+
 
 def now():
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))

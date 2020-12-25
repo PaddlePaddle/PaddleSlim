@@ -25,6 +25,8 @@ from dataloader.casia import CASIA_Face
 from dataloader.lfw import LFW
 from paddleslim import models
 
+paddle.enable_static()
+
 
 def parse_filelist(root):
     with open(os.path.join(root, 'pairs.txt')) as f:
