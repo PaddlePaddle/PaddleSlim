@@ -24,7 +24,6 @@ from paddle.fluid.param_attr import ParamAttr
 
 class SlimFaceNet():
     def __init__(self, class_dim, scale=0.6, arch=None):
-
         assert arch is not None
         self.arch = arch
         self.class_dim = class_dim
