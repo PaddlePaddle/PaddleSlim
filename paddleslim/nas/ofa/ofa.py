@@ -33,8 +33,8 @@ _logger = get_logger(__name__, level=logging.INFO)
 __all__ = ['OFA', 'RunConfig', 'DistillConfig']
 
 RunConfig = namedtuple('RunConfig', [
-    'train_batch_size', 'n_epochs', 'save_frequency', 'eval_frequency',
-    'init_learning_rate', 'total_images', 'elastic_depth', 'dynamic_batch_size'
+    'train_batch_size', 'n_epochs', 'init_learning_rate', 'total_images',
+    'elastic_depth', 'dynamic_batch_size'
 ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
@@ -92,12 +92,11 @@ class OFA(OFABase):
     def __init__(self,
                  model,
                  run_config=None,
-                 net_config=None,
                  distill_config=None,
                  elastic_order=None,
                  train_full=False):
         super(OFA, self).__init__(model)
-        self.net_config = net_config
+        self.net_config = None
         self.run_config = run_config
         self.distill_config = distill_config
         self.elastic_order = elastic_order
