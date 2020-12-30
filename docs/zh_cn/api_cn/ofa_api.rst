@@ -91,6 +91,7 @@ OFA实例
    from paddlslim.nas.ofa import OFA
 
    ofa_model = OFA(model)
+..
 
   .. py:method:: set_epoch(epoch)
 

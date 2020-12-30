@@ -49,31 +49,6 @@ def soft_cross_entropy(inp, target):
     return -1. * L.mean(L.reduce_sum(inp_likelihood * target_prob, dim=-1))
 
 
-### get certain config
-def apply_config(model, width_mult, depth_mult):
-    new_config = dict()
-
-    def fix_exp(idx):
-        if (idx - 3) % 6 == 0 or (idx - 5) % 6 == 0:
-            return True
-        return False
-
-    for idx, (block_k, block_v) in enumerate(model.layers.items()):
-        if isinstance(block_v, dict) and len(block_v.keys()) != 0:
-            name, name_idx = block_k.split('_'), int(block_k.split('_')[1])
-            if fix_exp(name_idx) or 'emb' in block_k or idx == (
-                    len(model.layers.items()) - 2):
-                block_v['expand_ratio'] = 1.0
-            else:
-                block_v['expand_ratio'] = width_mult
-
-        if block_k == 'depth':
-            block_v = depth_mult
-
-        new_config[block_k] = block_v
-    return new_config
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('classify model with ERNIE')
     parser.add_argument(
@@ -304,7 +279,7 @@ if __name__ == '__main__':
 
                 for depth_mult in depth_mult_list:
                     for width_mult in args.width_mult_list:
-                        net_config = apply_config(
+                        net_config = utils.dynabert_config(
                             ofa_model, width_mult, depth_mult=depth_mult)
                         ofa_model.set_net_config(net_config)
 
@@ -380,7 +355,7 @@ if __name__ == '__main__':
                 if step % 100 == 0:
                     for depth_mult in depth_mult_list:
                         for width_mult in args.width_mult_list:
-                            net_config = apply_config(
+                            net_config = utils.dynabert_config(
                                 ofa_model, width_mult, depth_mult=depth_mult)
                             ofa_model.set_net_config(net_config)
 
