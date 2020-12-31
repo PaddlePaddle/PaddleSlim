@@ -23,6 +23,7 @@ PaddleSlim依赖Paddle1.7版本，请确认已正确安装Paddle，然后按以�
 import paddle
 import paddle.fluid as fluid
 import paddleslim as slim
+paddle.enable_static()
 ```
 
 ## 2. 构建网络
@@ -62,7 +63,7 @@ def test(program):
     acc_top1_ns = []
     acc_top5_ns = []
     for data in test_reader():
-        acc_top1_n, acc_top5_n, _ = exe.run(
+        acc_top1_n, acc_top5_n, _, _ = exe.run(
             program,
             feed=data_feeder.feed(data),
             fetch_list=outputs)
@@ -258,7 +259,7 @@ test(pruned_val_program)
 
 ```python
 for data in train_reader():
-    acc1, acc5, loss = exe.run(pruned_program, feed=data_feeder.feed(data), fetch_list=outputs)
+    acc1, acc5, loss, _ = exe.run(pruned_program, feed=data_feeder.feed(data), fetch_list=outputs)
 print(np.mean(acc1), np.mean(acc5), np.mean(loss))
 ```
 
