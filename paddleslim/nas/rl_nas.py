@@ -75,6 +75,7 @@ class RLNAS(object):
         self.range_tables = self._search_space.range_table()
         self.save_controller = save_controller
         self.load_controller = load_controller
+        self._is_server = is_server
 
         if key.upper() in ['DDPG']:
             try:
