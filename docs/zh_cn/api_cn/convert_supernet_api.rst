@@ -17,9 +17,9 @@ Convert SuperNet
 通过键值对的方式传入搜索空间。
 
 **参数：**
-- **kernel_size(list|tuple, optional)：** 网络中Conv2D的kernel_size的搜索空间。
-- **expand_ratio(list|tuple, optional)：** 网络中Conv2D的通道数、Embedding和Linear的参数输出维度的搜索空间，本参数是按照原始模型中每个OP的通道的比例来得到转换后的超网络中每个OP的通道数，所以本参数的长度为1。本参数和 ``channel`` 之间设置一个即可。
-- **channel(list(list)|tuple(tuple), optional)：** 网络中Conv2D的通道数、Embedding和Linear的参数输出维度的搜索空间，本参数是直接设置超网络中每个OP的通道数量，所以本参数的长度需要和网络中包括的Conv2D、Embedding、Linear的总数相等。本参数和 ``expand_ratio`` 之间设置一个即可。
+  - **kernel_size(list|tuple, optional)：** 网络中Conv2D的kernel_size的搜索空间。
+  - **expand_ratio(list|tuple, optional)：** 网络中Conv2D的通道数、Embedding和Linear的参数输出维度的搜索空间，本参数是按照原始模型中每个OP的通道的比例来得到转换后的超网络中每个OP的通道数，所以本参数的长度为1。本参数和 ``channel`` 之间设置一个即可。
+  - **channel(list(list)|tuple(tuple), optional)：** 网络中Conv2D的通道数、Embedding和Linear的参数输出维度的搜索空间，本参数是直接设置超网络中每个OP的通道数量，所以本参数的长度需要和网络中包括的Conv2D、Embedding、Linear的总数相等。本参数和 ``expand_ratio`` 之间设置一个即可。
 
 **返回：**
 超网络配置。
@@ -38,7 +38,7 @@ None
   实际超网络转换。
 
   **参数：**
-  - **network(paddle.nn.Layer)：** 要转换为超网络的原始模型实例。
+    - **network(paddle.nn.Layer)：** 要转换为超网络的原始模型实例。
 
   **返回：**
   超网络实例。

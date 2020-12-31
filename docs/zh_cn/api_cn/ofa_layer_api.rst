@@ -1,7 +1,7 @@
 SuperOP
 ========
 
-PaddleSlim提供了一些API的动态版本，动态API指的是这些OP的参数大小可以在实际运行过程中根据传入的参数进行改变。其中 `layers_old.py <>`_ 对应的是Paddle 2.0alpha及之前版本的API， `layers.py <>`_ 对应的是Paddle 2.0alpha之后版本的API。
+PaddleSlim提供了一些API的动态版本，动态API指的是这些OP的参数大小可以在实际运行过程中根据传入的参数进行改变，用法上的差别具体是forward时候需要额外传一些实际运行相关的参数。其中 `layers_old.py <>`_ 对应的是Paddle 2.0alpha及之前版本的API， `layers.py <>`_ 对应的是Paddle 2.0alpha之后版本的API。
 
 .. py:class:: paddleslim.nas.ofa.layers.Block(fn, fixed=False, key=None)
 
@@ -40,10 +40,18 @@ Block实例
    - **padding** (int|list|tuple|str，可选) - 填充大小。如果它是一个字符串，可以是"VALID"或者"SAME"，表示填充算法，计算细节可参考上述 ``padding`` = "SAME"或  ``padding`` = "VALID" 时的计算公式。如果它是一个元组或列表，它可以有3种格式：(1)包含4个二元组：当 ``data_format`` 为"NCHW"时为 [[0,0], [0,0], [padding_height_top, padding_height_bottom], [padding_width_left, padding_width_right]]，当 ``data_format`` 为"NHWC"时为[[0,0], [padding_height_top, padding_height_bottom], [padding_width_left, padding_width_right], [0,0]]；(2)包含4个整数值：[padding_height_top, padding_height_bottom, padding_width_left, padding_width_right]；(3)包含2个整数值：[padding_height, padding_width]，此时padding_height_top = padding_height_bottom = padding_height， padding_width_left = padding_width_right = padding_width。若为一个整数，padding_height = padding_width = padding。默认值：0。
   - **dilation** (int|list|tuple，可选) - 空洞大小。可以为单个整数或包含两个整数的元组或列表，分别表示卷积核中的元素沿着高和宽的空洞。如果为单个整数，表示高和宽的空洞都等于该整数。默认值：1。
   - **groups** (int，可选) - 二维卷积层的组数。根据Alex Krizhevsky的深度卷积神经网络（CNN）论文中的成组卷积：当group=n，输入和卷积核分别根据通道数量平均分为n组，第一组卷积核和第一组输入进行卷积计算，第二组卷积核和第二组输入进行卷积计算，……，第n组卷积核和第n组输入进行卷积计算。默认值：1。
-  - **padding_mode** (str, 可选): 填充模式。 包括 ``'zeros'``, ``'reflect'``, ``'replicate'`` 或者 ``'circular'``. 默认值: ``'zeros'`` .
+  - **padding_mode** (str, 可选): - 填充模式。 包括 ``'zeros'``, ``'reflect'``, ``'replicate'`` 或者 ``'circular'``. 默认值: ``'zeros'`` .
   - **weight_attr** (ParamAttr，可选) - 指定权重参数属性的对象。默认值为None，表示使用默认的权重参数属性。具体用法请参见 :ref:`cn_api_fluid_ParamAttr` 。
   - **bias_attr** （ParamAttr|bool，可选）- 指定偏置参数属性的对象。若 ``bias_attr`` 为bool类型，只支持为False，表示没有偏置参数。默认值为None，表示使用默认的偏置参数属性。具体用法请参见 :ref:`cn_api_fluid_ParamAttr` 。
   - **data_format** (str，可选) - 指定输入的数据格式，输出的数据格式将与输入保持一致，可以是"NCHW"和"NHWC"。N是批尺寸，C是通道数，H是特征高度，W是特征宽度。默认值："NCHW"。
+
+  .. py:method:: forward(input, kernel_size=None, expand_ratio=None, channel=None)
+
+  **参数
+    - **input** (Tensor)：- 实际输入。
+    - **kernel_size** （int, 可选）：- 实际运行过程中卷积核大小，设置为None时则初始卷积核大小。默认：None。
+    - **expand_ratio** （int|float, 可选）：- 实际运行过程中卷积核输出通道数膨胀比例，设置为None时则初始卷积核通道数。本参数和 ``channel`` 不能同时不为None。默认：None。
+    - **channel** （int, 可选）：- 实际运行过程中卷积核输出通道数，设置为None时则初始卷积核通道数。本参数和 ``expand_ratio`` 不能同时不为None。默认：None。
 
 **示例代码：**
 
@@ -79,6 +87,15 @@ Block实例
   - **bias_attr** (ParamAttr|bool, 可选) - 指定偏置参数属性的对象。默认值为None，表示使用默认的偏置参数属性。具体用法请参见 :ref:`cn_api_fluid_ParamAttr` 。
   - **data_format** (str，可选) - 指定输入的数据格式，输出的数据格式将与输入保持一致，可以是"NCHW"和"NHWC"。N是批尺寸，C是通道数，H是特征高度，W是特征宽度。默认值："NCHW"。
 
+  .. py:method:: forward(input, kernel_size=None, expand_ratio=None, channel=None)
+
+  **参数
+    - **input** (Tensor)：- 实际输入。
+    - **kernel_size** （int, 可选）：- 实际运行过程中卷积核大小，设置为None时则初始卷积核大小。默认：None。
+    - **expand_ratio** （int|float, 可选）：- 实际运行过程中卷积核输出通道数膨胀比例，设置为None时则初始卷积核通道数。本参数和 ``channel`` 不能同时不为None。默认：None。
+    - **channel** （int, 可选）：- 实际运行过程中卷积核输出通道数，设置为None时则初始卷积核通道数。本参数和 ``expand_ratio`` 不能同时不为None。默认：None。
+
+**示例代码：**
 **示例代码：**
 
 .. code-block:: python
@@ -106,6 +123,13 @@ Block实例
   - **weight_attr** (ParamAttr, 可选) – 指定权重参数属性的对象。默认值为None，表示使用默认的权重参数属性。具体用法请参见 :ref:`cn_api_fluid_ParamAttr` 。
   - **bias_attr** (ParamAttr, 可选) – 指定偏置参数属性的对象，若 `bias_attr` 为bool类型，如果设置为False，表示不会为该层添加偏置；如果设置为True，表示使用默认的偏置参数属性。默认值为None，表示使用默认的偏置参数属性。默认的偏置参数属性将偏置参数的初始值设为0。具体用法请参见 :ref:`cn_api_fluid_ParamAttr` 。
   - **name** (string, 可选) – BatchNorm的名称, 默认值为None。更多信息请参见 :ref:`api_guide_Name` 。
+
+  .. py:method:: forward(input, expand_ratio=None, channel=None)
+
+  **参数
+    - **input** (Tensor)：- 实际输入。
+    - **expand_ratio** （int|float, 可选）：- 实际运行过程中卷积核输出通道数膨胀比例，设置为None时则初始卷积核通道数。本参数和 ``channel`` 不能同时不为None。默认：None。
+    - **channel** （int, 可选）：- 实际运行过程中卷积核输出通道数，设置为None时则初始卷积核通道数。本参数和 ``expand_ratio`` 不能同时不为None。默认：None。
 
 **示例代码：**
 
@@ -136,6 +160,13 @@ Block实例
   - **sparse** (bool) - 是否使用稀疏的更新方式，这个参数只会影响反向的梯度更新的性能，sparse更新速度更快，推荐使用稀疏更新的方式。但某些optimizer不支持sparse更新，比如 :ref:`cn_api_fluid_optimizer_AdadeltaOptimizer` 、 :ref:`cn_api_fluid_optimizer_AdamaxOptimizer` 、 :ref:`cn_api_fluid_optimizer_DecayedAdagradOptimizer` 、 :ref:`cn_api_fluid_optimizer_FtrlOptimizer` 、 :ref:`cn_api_fluid_optimizer_LambOptimizer` 、:ref:`cn_api_fluid_optimizer_LarsMomentumOptimizer` ，此时sparse必须为False。默认为False。
   - **weight_attr** (ParamAttr) - 指定权重参数属性的对象。默认值为None，表示使用默认的权重参数属性。具体用法请参见 :ref:`cn_api_fluid_ParamAttr` 。此外，可以通过 ``weight_attr`` 参数加载用户自定义或预训练的词向量。只需将本地词向量转为numpy数据格式，且保证本地词向量的shape和embedding的 ``num_embeddings`` 和 ``embedding_dim`` 参数一致，然后使用 :ref:`cn_api_fluid_initializer_NumpyArrayInitializer` 进行初始化，即可实现加载自定义或预训练的词向量。详细使用方法见代码示例2。
   - **name** (string, 可选) – BatchNorm的名称, 默认值为None。更多信息请参见 :ref:`api_guide_Name` 。
+
+  .. py:method:: forward(input, kernel_size=None, expand_ratio=None, channel=None)
+
+  **参数
+    - **input** (Tensor)：- 实际输入。
+    - **expand_ratio** （int|float, 可选）：- 实际运行过程中卷积核输出通道数膨胀比例，设置为None时则初始卷积核通道数。本参数和 ``channel`` 不能同时不为None。默认：None。
+    - **channel** （int, 可选）：- 实际运行过程中卷积核输出通道数，设置为None时则初始卷积核通道数。本参数和 ``expand_ratio`` 不能同时不为None。默认：None。
 
 **示例代码：**
 
