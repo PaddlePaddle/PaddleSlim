@@ -118,9 +118,10 @@ class Pruner():
 
                 scores = self.criterion(
                     group_values, graph)  # [(name, axis, score, pruned_idx)]
+                g = self._transform(self.idx_selector(scores, ratio))
+                pruned_params.extend(g)
 
-                pruned_params.extend(self.idx_selector(scores, ratio))
-
+        print(f"pruned_params: \n{pruned_params}")
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
             if param not in merge_pruned_params:
@@ -165,6 +166,26 @@ class Pruner():
         graph.infer_shape()
         self.pruned_weights = (not only_graph)
         return graph.program, param_backup, param_shape_backup
+
+    def _transform(self, group):
+        ret = []
+        for name, axis, pruned_idx, transforms in group:
+            src = pruned_idx
+            for trans in transforms:
+                src_start = trans['src_start']
+                src_end = trans['src_end']
+                target_start = trans['target_start']
+                target_end = trans['target_end']
+                target = []
+                for idx in src:
+                    if idx >= src_start and idx < src_end:
+                        idx -= src_start
+                        idx += target_start
+                        if idx < target_end:
+                            target.append(idx)
+                src = target
+            ret.append((name, axis, src))
+        return ret
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
         """

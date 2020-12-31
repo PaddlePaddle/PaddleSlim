@@ -74,6 +74,7 @@ class PruneWorker(object):
         if visited is not None:
             self.visited = visited
         cls = PRUNE_WORKER.get(op.type())
+        #        _logger.info(f"visit {op.type()} by var [{var.name()}] on axis [{pruned_axis}];\t visited={self.visited}\n")
         if cls is None:
             if op.type() in SKIP_OPS:
                 _logger.warn("Skip operator [{}]".format(op.type()))
@@ -456,6 +457,7 @@ class concat(PruneWorker):
     def _prune(self, var, pruned_axis, transforms):
         axis = self.op.attr("axis")
         if var in self.op.outputs("Out"):
+            self._visit(var, pruned_axis)
             start = 0
             if axis == pruned_axis:
                 for _, in_var in enumerate(self.op.inputs("X")):
@@ -470,16 +472,19 @@ class concat(PruneWorker):
                     }
                     start += in_var.shape()[pruned_axis]
 
+                    self._visit(in_var, pruned_axis)
                     pre_ops = in_var.inputs()
                     for op in pre_ops:
                         self._prune_op(op, in_var, pruned_axis,
                                        transforms + [transoform])
             else:
                 for _, in_var in enumerate(self.op.inputs("X")):
+                    self._visit(in_var, pruned_axis)
                     pre_ops = in_var.inputs()
                     for op in pre_ops:
                         self._prune_op(op, in_var, pruned_axis, transforms)
         elif var in self.op.inputs("X"):
+            self._visit(var, pruned_axis)
             if axis == pruned_axis:
                 idx = []
                 target_start = 0
@@ -490,7 +495,6 @@ class concat(PruneWorker):
                         break
                 target_end = target_start + v.shape()[pruned_axis]
                 out_var = self.op.outputs("Out")[0]
-                self._visit(out_var, pruned_axis)
                 next_ops = out_var.outputs()
 
                 transform = {
@@ -514,7 +518,7 @@ class concat(PruneWorker):
                     for op in v.inputs():
                         self._prune_op(op, v, pruned_axis, transforms)
                 out_var = self.op.outputs("Out")[0]
-                self._visit(out_var, pruned_axis)
+                #self._visit(out_var, pruned_axis)
                 next_ops = out_var.outputs()
                 for op in next_ops:
                     self._prune_op(op, out_var, pruned_axis, transforms)
