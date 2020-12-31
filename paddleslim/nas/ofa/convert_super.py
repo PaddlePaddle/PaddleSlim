@@ -24,15 +24,15 @@ if pd_ver == 185:
     import paddle.fluid.dygraph.nn as nn
     from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
     from paddle.fluid import ParamAttr
-    from .layers import *
-    from . import layers
+    from .layers_old import *
+    from . import layers_old as layers
     Layer = paddle.fluid.dygraph.Layer
 else:
     import paddle.nn as nn
     from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
     from paddle import ParamAttr
-    from .layers_new import *
-    from . import layers_new as layers
+    from .layers import *
+    from . import layers
     Layer = paddle.nn.Layer
 
 _logger = get_logger(__name__, level=logging.INFO)

@@ -90,7 +90,7 @@ PaddleSlim提供了三种方式构造超网络，下面分别介绍这三种方�
 直接调用动态OP组网，组网方式和普通模型相同。PaddleSlim支持的动态OP请参考 `动态OP <>`_ 。这种方式的优点是组网更自由，缺点是用法更复杂。
 
 .. note::
-  - paddleslim.nas.ofa.layers_new 文件中的动态OP是基于Paddle 2.0beta及其之后的版本实现的。paddleslim.nas.ofa.layers文件中的动态OP是基于Paddle 2.0beta之前的版本实现的。
+  - paddleslim.nas.ofa.layers 文件中的动态OP是基于Paddle 2.0beta及其之后的版本实现的。paddleslim.nas.ofa.layers_old文件中的动态OP是基于Paddle 2.0beta之前的版本实现的。
   - Block接口是把当前动态OP的搜索空间加入到OFA训练过程中的搜索空间中。由于Conv2D、Embedding、Linear这三个OP的参数中输出的部分是可以随意修改的，所以这三个OP所对应的动态OP需要使用Block包装一下。而Norm相关的动态OP由于其参数大小是根据输入大小相关，所以不需要用Block包装。
 ..
 

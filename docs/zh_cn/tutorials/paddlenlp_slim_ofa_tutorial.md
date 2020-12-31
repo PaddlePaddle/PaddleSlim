@@ -2,9 +2,7 @@
 
 本教程是对BERT/TinyERNIE模型进行压缩的原理介绍。并分别以PaddleNLP repo中BERT-base模型和ERNIE repo中TinyERNIE模型为例，说明如何快速把整体压缩流程迁移到其他NLP模型。
 
-本压缩方法仅支持Paddle动态图模型。
-
-本教程使用的是[DynaBERT-Dynamic BERT with Adaptive Width and Depth](https://arxiv.org/abs/2004.04037)中的训练策略。把原始模型作为超网络中最大的子模型，原始模型包括多个相同大小的Transformer Block。在每次训练前会选择当前batch的数据要训练的子模型，每个子模型包含多个相同大小的Sub Transformer Block，每个Sub Transformer Block是选择不同宽度的Transformer Block得到的，一个Transformer Block包含一个Multi-Head Attention和一个Feed-Forward Network，Sub Transformer Block获得方式为：<br/>
+本教程使用的是[DynaBERT-Dynamic BERT with Adaptive Width and Depth](https://arxiv.org/abs/2004.04037)中的训练策略。把原始模型作为超网络中最大的子模型，原始模型包括多个相同大小的Transformer Block。在每次训练前会选择当前轮次要训练的子模型，每个子模型包含多个相同大小的Sub Transformer Block，每个Sub Transformer Block是选择不同宽度的Transformer Block得到的，一个Transformer Block包含一个Multi-Head Attention和一个Feed-Forward Network，Sub Transformer Block获得方式为：<br/>
 &emsp;&emsp;a. 一个Multi-Head Attention层中有多个Head，每次选择不同宽度的子模型时，会同时对Head数量进行等比例减少，例如：如果原始模型中有12个Head，本次训练选择的模型是宽度为原始宽度75%的子模型，则本次训练中所有Transformer Block的Head数量为9。<br/>
 &emsp;&emsp;b. Feed-Forward Network层中Linear的参数大小进行等比例减少，例如：如果原始模型中FFN层的特征维度为3072，本次训练选择的模型是宽度为原始宽度75%的子模型，则本次训练中所有Transformer Block中FFN层的特征维度为2304。
 

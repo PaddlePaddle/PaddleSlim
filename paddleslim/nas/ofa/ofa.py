@@ -20,10 +20,10 @@ import paddle.fluid as fluid
 from .utils.utils import get_paddle_version
 pd_ver = get_paddle_version()
 if pd_ver == 185:
-    from .layers import BaseBlock, SuperConv2D, SuperLinear
+    from .layers_old import BaseBlock, SuperConv2D, SuperLinear
     Layer = paddle.fluid.dygraph.Layer
 else:
-    from .layers_new import BaseBlock, SuperConv2D, SuperLinear
+    from .layers import BaseBlock, SuperConv2D, SuperLinear
     Layer = paddle.nn.Layer
 from .utils.utils import search_idx
 from ...common import get_logger
