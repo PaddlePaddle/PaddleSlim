@@ -37,7 +37,7 @@ Block实例
   - **candidate_config** （dict，可选）- 针对本层卷积的搜索空间，以字典的形式传入，字典可选的关键字包括： ``kernel_size`` ， ``expand_ratio``， ``channel`` ，其中 ``expand_ratio`` 和 ``channel`` 含义相同，都是对通道数进行搜索，不能同时设置。默认值：{}。
   - **transform_kernel** （bool，可选）- 是否使用转换矩阵把大kernel转换为小kernel。默认值：False。
   - **stride** (int|list|tuple，可选) - 步长大小。可以为单个整数或包含两个整数的元组或列表，分别表示卷积沿着高和宽的步长。如果为单个整数，表示沿着高和宽的步长都等于该整数。默认值：1。
-   - **padding** (int|list|tuple|str，可选) - 填充大小。如果它是一个字符串，可以是"VALID"或者"SAME"，表示填充算法，计算细节可参考上述 ``padding`` = "SAME"或  ``padding`` = "VALID" 时的计算公式。如果它是一个元组或列表，它可以有3种格式：(1)包含4个二元组：当 ``data_format`` 为"NCHW"时为 [[0,0], [0,0], [padding_height_top, padding_height_bottom], [padding_width_left, padding_width_right]]，当 ``data_format`` 为"NHWC"时为[[0,0], [padding_height_top, padding_height_bottom], [padding_width_left, padding_width_right], [0,0]]；(2)包含4个整数值：[padding_height_top, padding_height_bottom, padding_width_left, padding_width_right]；(3)包含2个整数值：[padding_height, padding_width]，此时padding_height_top = padding_height_bottom = padding_height， padding_width_left = padding_width_right = padding_width。若为一个整数，padding_height = padding_width = padding。默认值：0。
+  - **padding** (int|list|tuple|str，可选) - 填充大小。如果它是一个字符串，可以是"VALID"或者"SAME"，表示填充算法，计算细节可参考上述 ``padding`` = "SAME"或  ``padding`` = "VALID" 时的计算公式。如果它是一个元组或列表，它可以有3种格式：(1)包含4个二元组：当 ``data_format`` 为"NCHW"时为 [[0,0], [0,0], [padding_height_top, padding_height_bottom], [padding_width_left, padding_width_right]]，当 ``data_format`` 为"NHWC"时为[[0,0], [padding_height_top, padding_height_bottom], [padding_width_left, padding_width_right], [0,0]]；(2)包含4个整数值：[padding_height_top, padding_height_bottom, padding_width_left, padding_width_right]；(3)包含2个整数值：[padding_height, padding_width]，此时padding_height_top = padding_height_bottom = padding_height， padding_width_left = padding_width_right = padding_width。若为一个整数，padding_height = padding_width = padding。默认值：0。
   - **dilation** (int|list|tuple，可选) - 空洞大小。可以为单个整数或包含两个整数的元组或列表，分别表示卷积核中的元素沿着高和宽的空洞。如果为单个整数，表示高和宽的空洞都等于该整数。默认值：1。
   - **groups** (int，可选) - 二维卷积层的组数。根据Alex Krizhevsky的深度卷积神经网络（CNN）论文中的成组卷积：当group=n，输入和卷积核分别根据通道数量平均分为n组，第一组卷积核和第一组输入进行卷积计算，第二组卷积核和第二组输入进行卷积计算，……，第n组卷积核和第n组输入进行卷积计算。默认值：1。
   - **padding_mode** (str, 可选): - 填充模式。 包括 ``'zeros'``, ``'reflect'``, ``'replicate'`` 或者 ``'circular'``. 默认值: ``'zeros'`` .
@@ -47,7 +47,7 @@ Block实例
 
   .. py:method:: forward(input, kernel_size=None, expand_ratio=None, channel=None)
 
-  **参数
+  **参数：**
     - **input** (Tensor)：- 实际输入。
     - **kernel_size** （int, 可选）：- 实际运行过程中卷积核大小，设置为None时则初始卷积核大小。默认：None。
     - **expand_ratio** （int|float, 可选）：- 实际运行过程中卷积核输出通道数膨胀比例，设置为None时则初始卷积核通道数。本参数和 ``channel`` 不能同时不为None。默认：None。
@@ -89,13 +89,12 @@ Block实例
 
   .. py:method:: forward(input, kernel_size=None, expand_ratio=None, channel=None)
 
-  **参数
+  **参数：**
     - **input** (Tensor)：- 实际输入。
     - **kernel_size** （int, 可选）：- 实际运行过程中卷积核大小，设置为None时则初始卷积核大小。默认：None。
     - **expand_ratio** （int|float, 可选）：- 实际运行过程中卷积核输出通道数膨胀比例，设置为None时则初始卷积核通道数。本参数和 ``channel`` 不能同时不为None。默认：None。
     - **channel** （int, 可选）：- 实际运行过程中卷积核输出通道数，设置为None时则初始卷积核通道数。本参数和 ``expand_ratio`` 不能同时不为None。默认：None。
 
-**示例代码：**
 **示例代码：**
 
 .. code-block:: python
@@ -126,7 +125,7 @@ Block实例
 
   .. py:method:: forward(input, expand_ratio=None, channel=None)
 
-  **参数
+  **参数：**
     - **input** (Tensor)：- 实际输入。
     - **expand_ratio** （int|float, 可选）：- 实际运行过程中卷积核输出通道数膨胀比例，设置为None时则初始卷积核通道数。本参数和 ``channel`` 不能同时不为None。默认：None。
     - **channel** （int, 可选）：- 实际运行过程中卷积核输出通道数，设置为None时则初始卷积核通道数。本参数和 ``expand_ratio`` 不能同时不为None。默认：None。
@@ -163,7 +162,7 @@ Block实例
 
   .. py:method:: forward(input, kernel_size=None, expand_ratio=None, channel=None)
 
-  **参数
+  **参数：**
     - **input** (Tensor)：- 实际输入。
     - **expand_ratio** （int|float, 可选）：- 实际运行过程中卷积核输出通道数膨胀比例，设置为None时则初始卷积核通道数。本参数和 ``channel`` 不能同时不为None。默认：None。
     - **channel** （int, 可选）：- 实际运行过程中卷积核输出通道数，设置为None时则初始卷积核通道数。本参数和 ``expand_ratio`` 不能同时不为None。默认：None。
