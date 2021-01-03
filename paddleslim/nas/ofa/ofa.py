@@ -32,16 +32,40 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['OFA', 'RunConfig', 'DistillConfig']
 
-RunConfig = namedtuple('RunConfig', [
-    'train_batch_size', 'n_epochs', 'init_learning_rate', 'total_images',
-    'elastic_depth', 'dynamic_batch_size'
-])
+RunConfig = namedtuple(
+    'RunConfig',
+    [
+        # int, batch_size in training, used to get current epoch, default: None
+        'train_batch_size',
+        # list, the number of epoch of every task in training, default: None
+        'n_epochs',
+        # list, initial learning rate of every task in traning, NOT used now. Default: None.
+        'init_learning_rate',
+        # int, total images of train dataset, used to get current epoch, default: None
+        'total_images',
+        # list, elactic depth of the model in training, default: None
+        'elastic_depth',
+        # list, the number of sub-network to train per mini-batch data, used to get current epoch, default: None
+        'dynamic_batch_size'
+    ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
-DistillConfig = namedtuple('DistillConfig', [
-    'lambda_distill', 'teacher_model', 'mapping_layers', 'teacher_model_path',
-    'distill_fn', 'mapping_op'
-])
+DistillConfig = namedtuple(
+    'DistillConfig',
+    [
+        # float, lambda scale of distillation loss, default: None.
+        'lambda_distill',
+        # instance of model, instance of teacher model, default: None.
+        'teacher_model',
+        # list(str), name of the layers which need a distillation, default: None.
+        'mapping_layers',
+        # str, the path of teacher pretrained model, default: None.
+        'teacher_model_path',
+        # instance of loss layer, the loss function used in distillation, if set to None, use mse_loss default, default: None.
+        'distill_fn',
+        # str, define which op append between teacher model and student model used in distillation, choice in ['conv', 'linear', None], default: None.
+        'mapping_op'
+    ])
 DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
 
@@ -89,6 +113,23 @@ class OFABase(Layer):
 
 
 class OFA(OFABase):
+    """
+    Convert the training progress to the Once-For-All training progress, a detailed description in the paper: `Once-for-All: Train One Network and Specialize it for Efficient Deployment<https://arxiv.org/abs/1908.09791>`_ . This paper propose a training propgress named progressive shrinking (PS), which means we start with training the largest neural network with the maximum kernel size (i.e., 7), depth (i.e., 4), and width (i.e., 6). Next, we progressively fine-tune the network to support smaller sub-networks by gradually adding them into the sampling space (larger sub-networks may also be sampled). Specifically, after training the largest network, we first support elastic kernel size which can choose from {3, 5, 7} at each layer, while the depth and width remain the maximum values. Then, we support elastic depth and elastic width sequentially. 
+
+    Parameters:
+        model(paddle.nn.Layer): instance of model.
+        run_config(paddleslim.ofa.RunConfig, optional): config in ofa training, can reference `<>`_ . Default: None.
+        distill_config(paddleslim.ofa.DistillConfig, optional): config of distilltion in ofa training, can reference `<>`_. Default: None.
+        elastic_order(list, optional): define the training order, if it set to None, use the default order in the paper. Default: None.
+        train_full(bool, optional): whether to train the largest sub-network only. Default: False.
+
+    Examples:
+        .. code-block:: python
+          from paddlslim.nas.ofa import OFA
+          ofa_model = OFA(model)
+
+    """
+
     def __init__(self,
                  model,
                  run_config=None,
@@ -277,12 +318,29 @@ class OFA(OFABase):
             self.layers, sample_type=sample_type, task=task, phase=phase)
         return config
 
-    def set_task(self, task=None, phase=None):
+    def set_task(self, task, phase=None):
+        """
+        set task in the ofa training progress.
+        Parameters:
+            task(list(str)|str): spectial task in training progress.
+            phase(int, optional): the search space is gradually increased, use this parameter to spectial the phase in current task, if set to None, means use the whole search space in training progress. Default: None.
+        Examples:
+            .. code-block:: python
+              ofa_model.set_task('width')
+        """
         self.manual_set_task = True
         self.task = task
         self.phase = phase
 
     def set_epoch(self, epoch):
+        """
+        set epoch in the ofa training progress.
+        Parameters:
+            epoch(int): spectial epoch in training progress.
+        Examples:
+            .. code-block:: python
+              ofa_model.set_epoch(3)
+        """
         self.epoch = epoch
 
     def _progressive_shrinking(self):
@@ -301,6 +359,12 @@ class OFA(OFABase):
         return self._sample_config(task=self.task, phase=phase_idx)
 
     def calc_distill_loss(self):
+        """
+        Calculate distill loss if there are distillation.
+        Examples:
+            .. code-block:: python
+              dis_loss = ofa_model.calc_distill_loss()
+        """
         losses = []
         assert len(self.netAs) > 0
         for i, netA in enumerate(self.netAs):
@@ -318,6 +382,8 @@ class OFA(OFABase):
             else:
                 Sact = Sact
 
+            Sact = Sact[0] if isinstance(Sact, tuple) else Sact
+            Tact = Tact[0] if isinstance(Tact, tuple) else Tact
             if self.distill_config.distill_fn == None:
                 loss = fluid.layers.mse_loss(Sact, Tact.detach())
             else:
@@ -336,6 +402,15 @@ class OFA(OFABase):
         pass
 
     def set_net_config(self, net_config):
+        """
+        Set the config of the special sub-network to be trained.
+        Parameters:
+            net_config(dict): special the config of sug-network.
+        Examples:
+            .. code-block:: python
+              config = ofa_model.current_config
+              ofa_model.set_net_config(config)
+        """
         self.net_config = net_config
 
     def forward(self, *inputs, **kwargs):

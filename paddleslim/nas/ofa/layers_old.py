@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+### NOTE: the API of this file is based on Paddle1.8, the API in layers.py is based on Paddle2.0
+
 import numpy as np
 import logging
 import paddle.fluid as fluid
@@ -589,8 +591,24 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         return filters
 
     def get_groups_in_out_nc(self, in_nc, out_nc):
-        ### standard conv
-        return self._groups, in_nc, out_nc
+        if self._groups == 1:
+            ### standard conv
+            return self._groups, in_nc, out_nc
+        elif self._groups == self._num_channels:
+            ### depthwise convolution
+            if in_nc != out_nc:
+                _logger.debug(
+                    "input channel and output channel in depthwise conv is different, change output channel to input channel! origin channel:(in_nc {}, out_nc {}): ".
+                    format(in_nc, out_nc))
+            groups = in_nc
+            out_nc = in_nc
+            return groups, in_nc, out_nc
+        else:
+            ### groups convolution
+            ### groups conv transpose: weight: (Cin, Cout/G, Kh, Kw)
+            groups = self._groups
+            out_nc = int(out_nc // groups)
+            return groups, in_nc, out_nc
 
     def forward(self, input, kernel_size=None, expand_ratio=None, channel=None):
         if not in_dygraph_mode():
@@ -967,7 +985,6 @@ class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
 class SuperLayerNorm(fluid.dygraph.LayerNorm):
     def __init__(self,
                  normalized_shape,
-                 candidate_config={},
                  scale=True,
                  shift=True,
                  epsilon=1e-05,

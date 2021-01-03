@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+### NOTE: the API of this file is based on Paddle2.0, the API in layers_old.py is based on Paddle1.8
+
 import numpy as np
 import logging
 import paddle
@@ -64,7 +66,8 @@ class Block(BaseBlock):
     Model is composed of nest blocks.
 
     Parameters:
-        fn(Layer): instance of super layers, such as: SuperConv2D(3, 5, 3).
+        fn(paddle.nn.Layer): instance of super layers, such as: SuperConv2D(3, 5, 3).
+        fixed(bool, optional): whether to fix the shape of the weight in this layer. Default: False.
         key(str, optional): key of this layer, one-to-one correspondence between key and candidate config. Default: None.
     """
 
@@ -82,10 +85,6 @@ class Block(BaseBlock):
 class SuperConv2D(nn.Conv2D):
     """
     This interface is used to construct a callable object of the ``SuperConv2D``  class.
-    The difference between ```SuperConv2D``` and ```Conv2D``` is: ```SuperConv2D``` need 
-    to feed a config dictionary with the format of {'channel', num_of_channel} represents 
-    the channels of the outputs, used to change the first dimension of weight and bias, 
-    only train the first channels of the weight and bias.
 
     Note: the channel in config need to less than first defined.
 
@@ -306,6 +305,13 @@ class SuperConv2D(nn.Conv2D):
             return groups, in_nc, out_nc
 
     def forward(self, input, kernel_size=None, expand_ratio=None, channel=None):
+        """
+        Parameters:
+            input(Tensor): Input tensor.
+            kernel_size(int, optional): the kernel size of the filter in actual calculation. Default: None.
+            expand_ratio(int|float, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+            channel(int, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+        """
         self.cur_config = {
             'kernel_size': kernel_size,
             'expand_ratio': expand_ratio,
@@ -376,11 +382,6 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
     """
     This interface is used to construct a callable object of the ``SuperConv2DTranspose`` 
     class.
-    The difference between ```SuperConv2DTranspose``` and ```Conv2DTranspose``` is: 
-    ```SuperConv2DTranspose``` need to feed a config dictionary with the format of 
-    {'channel', num_of_channel} represents the channels of the outputs, used to change 
-    the first dimension of weight and bias, only train the first channels of the weight 
-    and bias.
 
     Note: the channel in config need to less than first defined.
 
@@ -576,8 +577,24 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
         return filters
 
     def get_groups_in_out_nc(self, in_nc, out_nc):
-        ### standard conv
-        return self._groups, in_nc, out_nc
+        if self._groups == 1:
+            ### standard conv
+            return self._groups, in_nc, out_nc
+        elif self._groups == self._in_channels:
+            ### depthwise convolution
+            if in_nc != out_nc:
+                _logger.debug(
+                    "input channel and output channel in depthwise conv is different, change output channel to input channel! origin channel:(in_nc {}, out_nc {}): ".
+                    format(in_nc, out_nc))
+            groups = in_nc
+            out_nc = in_nc
+            return groups, in_nc, out_nc
+        else:
+            ### groups convolution
+            ### groups conv transpose: weight: (Cin, Cout/G, Kh, Kw)
+            groups = self._groups
+            out_nc = int(out_nc // groups)
+            return groups, in_nc, out_nc
 
     def forward(self,
                 input,
@@ -585,6 +602,14 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
                 kernel_size=None,
                 expand_ratio=None,
                 channel=None):
+        """
+        Parameters:
+            input(Tensor): input tensor.
+            output_size(int, optional): the size of the feature map after transpose convolution. Default: None.
+            kernel_size(int, optional): the kernel size of the filter in actual calculation. Default: None.
+            expand_ratio(int|float, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+            channel(int, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+        """
         self.cur_config = {
             'kernel_size': kernel_size,
             'expand_ratio': expand_ratio,
@@ -744,6 +769,12 @@ class SuperSeparableConv2D(nn.Layer):
                                        max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
+        """
+        Parameters:
+            input(Tensor): input tensor.
+            expand_ratio(int|float, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+            channel(int, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+        """
         self.cur_config = {'expand_ratio': expand_ratio, 'channel': channel}
         in_nc = int(input.shape[1])
         assert (
@@ -796,6 +827,55 @@ class SuperSeparableConv2D(nn.Layer):
 
 class SuperLinear(nn.Linear):
     """
+    Super Fully-connected linear transformation layer. 
+    
+    For each input :math:`X` , the equation is:
+    .. math::
+        Out = XW + b
+    where :math:`W` is the weight and :math:`b` is the bias.
+    Linear layer takes only one multi-dimensional tensor as input with the
+    shape :math:`[batch\_size, *, in\_features]` , where :math:`*` means any
+    number of additional dimensions. It multiplies input tensor with the weight
+    (a 2-D tensor of shape :math:`[in\_features, out\_features]` ) and produces
+    an output tensor of shape :math:`[batch\_size, *, out\_features]` .
+    If :math:`bias\_attr` is not False, the bias (a 1-D tensor of
+    shape :math:`[out\_features]` ) will be created and added to the output.
+    Parameters:
+        in_features (int): The number of input units.
+        out_features (int): The number of output units.
+        candidate_config(dict, optional): Dictionary descripts candidate config of this layer,
+            such as {'channel': (4, 6, 8)}, the key of candidate_config
+            only can be 'channel' and 'expand_ratio', 'channel' and 'expand_ratio'
+            CANNOT be set at the same time. Default: None.
+        weight_attr (ParamAttr, optional): The attribute for the learnable
+            weight of this layer. The default value is None and the weight will be
+            initialized to zero. For detailed information, please refer to
+            paddle.ParamAttr.
+        bias_attr (ParamAttr|bool, optional): The attribute for the learnable bias
+            of this layer. If it is set to False, no bias will be added to the output.
+            If it is set to None or one kind of ParamAttr, a bias parameter will
+            be created according to ParamAttr. For detailed information, please refer
+            to paddle.ParamAttr. The default value is None and the bias will be
+            initialized to zero.
+        name (str, optional): Normally there is no need for user to set this parameter.
+            For detailed information, please refer to :ref:`api_guide_Name` .
+    Attribute:
+        **weight** (Parameter): the learnable weight of this layer.
+        **bias** (Parameter): the learnable bias of this layer.
+    Shape:
+        - input: Multi-dimentional tensor with shape :math:`[batch\_size, *, in\_features]` .
+        - output: Multi-dimentional tensor with shape :math:`[batch\_size, *, out\_features]` .
+    Examples:
+        .. code-block:: python
+          import numpy as np
+          import paddle
+          from paddleslim.nas.ofa.layers import SuperLinear
+          
+          data = np.random.uniform(-1, 1, [32, 64] ).astype('float32')
+          config = {'channel': 16}
+          linear = SuperLinear(32, 64)
+          data = paddle.to_variable(data)
+          res = linear(data, **config)
     """
 
     def __init__(self,
@@ -820,6 +900,12 @@ class SuperLinear(nn.Linear):
                                        max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
+        """
+        Parameters:
+            input(Tensor): input tensor.
+            expand_ratio(int|float, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+            channel(int, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+        """
         self.cur_config = {'expand_ratio': expand_ratio, 'channel': channel}
         ### weight: (Cin, Cout)
         in_nc = int(input.shape[-1])
@@ -845,7 +931,34 @@ class SuperLinear(nn.Linear):
 
 class SuperBatchNorm2D(nn.BatchNorm2D):
     """
-    add comment
+    This interface is used to construct a callable object of the ``SuperBatchNorm2D`` class. 
+
+    Parameters:
+        num_features(int): Indicate the number of channels of the input ``Tensor``.
+        epsilon(float, optional): The small value added to the variance to prevent division by zero. Default: 1e-5.
+        momentum(float, optional): The value used for the moving_mean and moving_var computation. Default: 0.9.
+        weight_attr(ParamAttr|bool, optional): The parameter attribute for Parameter `scale`
+            of batch_norm. If it is set to None or one attribute of ParamAttr, batch_norm
+            will create ParamAttr as weight_attr. If it is set to Fasle, the weight is not learnable.
+            If the Initializer of the weight_attr is not set, the parameter is initialized with Xavier. Default: None.
+        bias_attr(ParamAttr|bool, optional): The parameter attribute for the bias of batch_norm.
+            If it is set to None or one attribute of ParamAttr, batch_norm
+            will create ParamAttr as bias_attr. If it is set to Fasle, the weight is not learnable.
+            If the Initializer of the bias_attr is not set, the bias is initialized zero. Default: None.
+        data_format(str, optional): Specify the input data format, the data format can be "NCHW" or "NHWC". Default: NCHW.
+        name(str, optional): Name for the BatchNorm, default is None. For more information, please refer to :ref:`api_guide_Name`..
+
+    Examples:
+       .. code-block:: python
+         import paddle
+         import numpy as np
+         from paddleslim.nas.ofa.layers import SuperBatchNorm2D
+         
+         np.random.seed(123)
+         x_data = np.random.random(size=(2, 5, 2, 3)).astype('float32')
+         x = paddle.to_tensor(x_data)
+         batch_norm = SuperBatchNorm2D(5)
+         batch_norm_out = batch_norm(x)
     """
 
     def __init__(self,
@@ -885,6 +998,34 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
 
 class SuperInstanceNorm2D(nn.InstanceNorm2D):
     """
+    This interface is used to construct a callable object of the ``SuperBatchNorm2D`` class. 
+
+    Parameters:
+        num_features(int): Indicate the number of channels of the input ``Tensor``.
+        epsilon(float, optional): The small value added to the variance to prevent division by zero. Default: 1e-5.
+        momentum(float, optional): The value used for the moving_mean and moving_var computation. Default: 0.9.
+        weight_attr(ParamAttr|bool, optional): The parameter attribute for Parameter `scale`
+            of batch_norm. If it is set to None or one attribute of ParamAttr, batch_norm
+            will create ParamAttr as weight_attr. If it is set to Fasle, the weight is not learnable.
+            If the Initializer of the weight_attr is not set, the parameter is initialized with Xavier. Default: None.
+        bias_attr(ParamAttr|bool, optional): The parameter attribute for the bias of batch_norm.
+            If it is set to None or one attribute of ParamAttr, batch_norm
+            will create ParamAttr as bias_attr. If it is set to Fasle, the weight is not learnable.
+            If the Initializer of the bias_attr is not set, the bias is initialized zero. Default: None.
+        data_format(str, optional): Specify the input data format, the data format can be "NCHW" or "NHWC". Default: NCHW.
+        name(str, optional): Name for the BatchNorm, default is None. For more information, please refer to :ref:`api_guide_Name`..
+
+    Examples:
+       .. code-block:: python
+         import paddle
+         import numpy as np
+         from paddleslim.nas.ofa.layers import SuperInstanceNorm2D
+         
+         np.random.seed(123)
+         x_data = np.random.random(size=(2, 5, 2, 3)).astype('float32')
+         x = paddle.to_tensor(x_data)
+         instance_norm = SuperInstanceNorm2D(5)
+         out = instance_norm(x)
     """
 
     def __init__(self,
@@ -914,6 +1055,45 @@ class SuperInstanceNorm2D(nn.InstanceNorm2D):
 
 
 class SuperLayerNorm(nn.LayerNorm):
+    """
+    This interface is used to construct a callable object of the ``SuperLayerNorm`` class.
+
+    The difference between ```SuperLayerNorm``` and ```LayerNorm``` is: 
+    the trained weight and bias in ```SuperLayerNorm``` can be changed according to the shape of input,
+    only train the first channels of the weight and bias.
+
+    Parameters:
+        normalized_shape(int|list|tuple): Input shape from an expected input of
+            size :math:`[*, normalized_shape[0], normalized_shape[1], ..., normalized_shape[-1]]`.
+            If it is a single integer, this module will normalize over the last dimension
+            which is expected to be of that specific size.
+        epsilon(float, optional): The small value added to the variance to prevent
+            division by zero. Default: 1e-05.
+        weight_attr(ParamAttr|bool, optional): The parameter attribute for the learnable
+            gain :math:`g`. If False, weight is None. If is None, a default :code:`ParamAttr` would be added as scale. The
+            :attr:`param_attr` is initialized as 1 if it is added. Default: None.
+        bias_attr(ParamAttr|bool, optional): The parameter attribute for the learnable
+            bias :math:`b`. If is False, bias is None. If is None, a default :code:`ParamAttr` would be added as bias. The
+            :attr:`bias_attr` is initialized as 0 if it is added. Default: None.
+        name(str, optional): Name for the LayerNorm, default is None. For more information, please refer to :ref:`api_guide_Name`..
+    Shape:
+        - x: 2-D, 3-D, 4-D or 5-D tensor.
+        - output: same shape as input x.
+    Returns:
+        None
+    Examples:
+        .. code-block:: python
+          import paddle
+          import numpy as np
+          from paddleslim.nas.ofa.layers import SuperLayerNorm
+          
+          np.random.seed(123)
+          x_data = np.random.random(size=(2, 2, 2, 3)).astype('float32')
+          x = paddle.to_tensor(x_data)
+          layer_norm = SuperLayerNorm(x_data.shape[1:])
+          layer_norm_out = layer_norm(x)
+    """
+
     def __init__(self,
                  normalized_shape,
                  epsilon=1e-05,
@@ -944,6 +1124,51 @@ class SuperLayerNorm(nn.LayerNorm):
 
 
 class SuperEmbedding(nn.Embedding):
+    """
+    This interface is used to construct a callable object of the ``SuperEmbedding`` class.
+
+    Parameters:
+        num_embeddings (int): Just one element which indicate the size
+            of the dictionary of embeddings.
+        embedding_dim:  Just one element which indicate the size of each embedding vector respectively.
+        padding_idx(int|long|None): padding_idx needs to be in the interval [-num_embeddings, num_embeddings).
+            If :math:`padding\_idx < 0`, the :math:`padding\_idx` will automatically be converted
+            to :math:`vocab\_size + padding\_idx` . It will output all-zero padding data whenever lookup
+            encounters :math:`padding\_idx` in id. And the padding data will not be updated while training.
+            If set None, it makes no effect to output. Default: None.
+        sparse(bool): The flag indicating whether to use sparse update. This parameter only
+            affects the performance of the backwards gradient update. It is recommended to set
+            True because sparse update is faster. But some optimizer does not support sparse update,
+            such as :ref:`api_optimizer_AdadeltaOptimizer` , :ref:`api_optimizer_AdamaxOptimizer` ,
+            :ref:`api_optimizer_DecayedAdagradOptimizer` , :ref:`api_optimizer_FtrlOptimizer` ,
+            :ref:`api_optimizer_LambOptimizer` and :ref:`api_optimizer_LarsMomentumOptimizer` .
+            In these case, sparse must be False. Default: False.
+        weight_attr(ParamAttr): To specify the weight parameter property. Default: None, which means the
+            default weight parameter property is used. See usage for details in :ref:`api_ParamAttr` . In addition,
+            user-defined or pre-trained word vectors can be loaded with the :attr:`param_attr` parameter.
+            The local word vector needs to be transformed into numpy format, and the shape of local word
+            vector should be consistent with :attr:`num_embeddings` . Then :ref:`api_initializer_NumpyArrayInitializer`
+            is used to load custom or pre-trained word vectors. See code example for details.
+        name(str|None): For detailed information, please refer
+               to :ref:`api_guide_Name`. Usually name is no need to set and
+               None by default.
+    Attribute:
+        **weight** (Parameter): the learnable weights of this layer.
+    Returns:
+        None
+    Examples:
+        .. code-block:: python
+          import numpy as np
+          import paddle
+          from paddleslim.nas.ofa.layers import SuperEmbedding
+          
+          data = np.random.uniform(-1, 1, [32, 64]).astype('float32')
+          config = {'channel': 16}
+          emb = SuperEmbedding(32, 64)
+          data = paddle.to_variable(data)
+          res = emb(data, **config)
+    """
+
     def __init__(self,
                  num_embeddings,
                  embedding_dim,
@@ -964,6 +1189,12 @@ class SuperEmbedding(nn.Embedding):
                                        max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
+        """
+        Parameters:
+            input(Tensor): input tensor.
+            expand_ratio(int|float, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+            channel(int, optional): the expansion ratio of filter's channel number in actual calculation. Default: None.
+        """
         assert (
             expand_ratio == None or channel == None
         ), "expand_ratio and channel CANNOT be NOT None at the same time."

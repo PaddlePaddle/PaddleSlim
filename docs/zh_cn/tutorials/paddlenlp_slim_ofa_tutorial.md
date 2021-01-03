@@ -1,4 +1,4 @@
-# BERT/ERNIE模型压缩教程
+# BERT模型压缩教程
 
 1. 本教程是对BERT/TinyERNIE模型进行压缩的原理介绍。并分别以PaddleNLP repo中BERT-base模型和ERNIE repo中TinyERNIE模型为例，说明如何快速把整体压缩流程迁移到其他NLP模型。
 

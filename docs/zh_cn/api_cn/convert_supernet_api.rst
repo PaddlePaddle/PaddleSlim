@@ -31,7 +31,10 @@ Convert SuperNet
 把普通网络根据传入的自定义的搜索空间转换为超网络。
 
 **返回：**
-None
+转换实例
+
+**参数：**
+  - **context(paddleslim.nas.ofa.supernet)：** 用户自定义的搜索空间
 
   .. py:method:: convert(network)
 
@@ -41,7 +44,7 @@ None
     - **network(paddle.nn.Layer)：** 要转换为超网络的原始模型实例。
 
   **返回：**
-  超网络实例。
+  实例化之后的超网络。
 
 PaddleSlim提供了三种方式构造超网络，下面分别介绍这三种方式。
 

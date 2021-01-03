@@ -11,11 +11,11 @@ RunConfig
 超网络实际运行需要用到的配置和超参，通过字典的形式配置。如果想使用论文中默认的 ``Progressive shrinking`` 的方式进行超网络训练，则本项为必填参数。否则可以通过 ``paddleslim.nas.ofa.OFA().set_epoch(epoch)`` 和 ``paddleslim.nas.ofa.OFA().set_task(task, phase=None)`` 来手动指定超网络训练所处的阶段。默认：None。
 
 **参数：**
-  - **train_batch_size:(int, optional):** 训练时的batch size，用来计算每个epoch包括的iteration数量。默认：None。
-  - **n_epochs(list, optional):** 包含每个阶段运行到多少epochs，用来判断当前epoch在超网训练中所处的阶段，默认：None。
-  - **total_images(int, optional):**  训练集图片数量，用来计算每个epoch包括的iteration数量。默认：None。
-  - **elastic_depth(list/tuple, optional):** 如果设置为None，则不把depth作为搜索的一部分，否则，采样到的config中会包含depth。对模型depth的改变需要在模型定义中的forward部分配合使用，具体示例可以参考 `示例 <>`_ ，默认：None。
-  - **dynamic_batch_size(list, optional):** 代表每个阶段每个batch数据应该参与几个子网络的训练，shape应该和n_epochs的shape保持一致。默认：None。
+  - **train_batch_size:(int, 可选):** 训练时的batch size，用来计算每个epoch包括的iteration数量。默认：None。
+  - **n_epochs(list, 可选):** 包含每个阶段运行到多少epochs，用来判断当前epoch在超网训练中所处的阶段，默认：None。
+  - **total_images(int, 可选):**  训练集图片数量，用来计算每个epoch包括的iteration数量。默认：None。
+  - **elastic_depth(list/tuple, 可选):** 如果设置为None，则不把depth作为搜索的一部分，否则，采样到的config中会包含depth。对模型depth的改变需要在模型定义中的forward部分配合使用，具体示例可以参考 `示例 <>`_ ，默认：None。
+  - **dynamic_batch_size(list, 可选):** 代表每个阶段每个batch数据应该参与几个子网络的训练，shape应该和n_epochs的shape保持一致。默认：None。
 
 **返回：**
 训练配置。
@@ -39,12 +39,12 @@ DistillConfig
 如果在训练过程中需要添加蒸馏的话，蒸馏过程的配置和超参，通过字典的形式配置，默认：None。
 
 **参数：**
-  - **lambda_distill(float, optional):**  蒸馏loss的缩放比例，默认：None。
-  - **teacher_model(instance of paddle.nn.Layer, optional):** 教师网络实例，默认：None。
-  - **mapping_layers(list[str], optinal):** 如果需要给模型中间层添加蒸馏，则需要用这个参数给出需要添加蒸馏的中间层的名字，默认：None。
-  - **teacher_model_path(str, optional):** 教师网络预训练模型的路径，默认：None。
-  - **distill_fn(instance of paddle.nn.Layer, optional):** 如果需要自定义添加蒸馏loss，则需要传入loss的实例，若传入参数为None，则默认使用mse_loss作为蒸馏损失，默认：None。
-  - **mapping_op(str, optional):** 如果在给模型中间层添加蒸馏的时候教师网络和学生网络中间层的shape不相同，则给学生网络中间层添加相应的op，保证在计算蒸馏损失时，教师网络和学生网络中间层的shape相同。该参数可选范围为 ``["conv", "linear", None]`` ，'conv'表示添加Conv2D，'linear'表示添加Linear，None表示不添加任何op。若使用本参数在蒸馏过程中额外添加op，则在优化过程中可以调用 ``paddleslim.nas.ofa.OFA().netAs_param`` 获取到这些op的参数，并把这些op的参数添加到优化器的参数列表中。默认：None。
+  - **lambda_distill(float, 可选):**  蒸馏loss的缩放比例，默认：None。
+  - **teacher_model(instance of paddle.nn.Layer, 可选):** 教师网络实例，默认：None。
+  - **mapping_layers(list[str], 可选):** 如果需要给模型中间层添加蒸馏，则需要用这个参数给出需要添加蒸馏的中间层的名字，默认：None。
+  - **teacher_model_path(str, 可选):** 教师网络预训练模型的路径，默认：None。
+  - **distill_fn(instance of paddle.nn.Layer, 可选):** 如果需要自定义添加蒸馏loss，则需要传入loss的实例，若传入参数为None，则默认使用mse_loss作为蒸馏损失，默认：None。
+  - **mapping_op(str, 可选):** 如果在给模型中间层添加蒸馏的时候教师网络和学生网络中间层的shape不相同，则给学生网络中间层添加相应的op，保证在计算蒸馏损失时，教师网络和学生网络中间层的shape相同。该参数可选范围为 ``["conv", "linear", None]`` ，'conv'表示添加Conv2D，'linear'表示添加Linear，None表示不添加任何op。若使用本参数在蒸馏过程中额外添加op，则在优化过程中可以调用 ``paddleslim.nas.ofa.OFA().netAs_param`` 获取到这些op的参数，并把这些op的参数添加到优化器的参数列表中。默认：None。
 
 **返回：**
 蒸馏配置。
@@ -76,10 +76,10 @@ OFA
 **参数：**
 
   - **model(paddle.nn.Layer):** 把超网络的训练规则转换成默认的Once-For-All论文中推荐的方式训练。
-  - **run_config(paddleslim.ofa.RunConfig, optinal):** 模型运行过程中的配置，默认：None。
-  - **distill_config(paddleslim.ofa.DistillConfig, optional):** 若模型运行过程中添加蒸馏的话，蒸馏相关的配置，具体可配置的参数请参考 `DistillConfig <>`_ , 为None的话则不添加蒸馏，默认：None。
-  - **elastic_order(list, optional):** 指定训练顺序，若传入None，则按照默认的 ``Progressive Shrinking`` 的方式进行超网络训练，默认：None。
-  - **train_full(bool, optional):** 是否训练超网络中最大的子网络，默认：False。
+  - **run_config(paddleslim.ofa.RunConfig, 可选):** 模型运行过程中的配置，默认：None。
+  - **distill_config(paddleslim.ofa.DistillConfig, 可选):** 若模型运行过程中添加蒸馏的话，蒸馏相关的配置，具体可配置的参数请参考 `DistillConfig <>`_ , 为None的话则不添加蒸馏，默认：None。
+  - **elastic_order(list, 可选):** 指定训练顺序，若传入None，则按照默认的 ``Progressive Shrinking`` 的方式进行超网络训练，默认：None。
+  - **train_full(bool, 可选):** 是否训练超网络中最大的子网络，默认：False。
 
 **返回：**
 OFA实例
@@ -114,8 +114,8 @@ OFA实例
   手动设置OFA超网络训练所处的阶段。
 
   **参数：**
-    - **task(str)：** 手动设置超网络训练中当前训练的任务名称，可选 ``"kernel_size", "width", "depth"`` 。
-    - **phase(int, optional)：** 手动设置超网络训练中当前训练任务所处的阶段，阶段指的是 ``Progresssive Shrinking`` 训练方式中每个任务依次增加搜索空间，不同阶段代表着不同大小的搜索空间，若为None，则当前任务使用整个搜索空间，默认：None。
+    - **task(list(str)|str)：** 手动设置超网络训练中当前训练的任务名称，可选 ``"kernel_size", "width", "depth"`` 。
+    - **phase(int, 可选)：** 手动设置超网络训练中当前训练任务所处的阶段，阶段指的是 ``Progresssive Shrinking`` 训练方式中每个任务依次增加搜索空间，不同阶段代表着不同大小的搜索空间，若为None，则当前任务使用整个搜索空间，默认：None。
 
   **返回：**
   None
