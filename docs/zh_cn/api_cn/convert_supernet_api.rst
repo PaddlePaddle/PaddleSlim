@@ -102,7 +102,7 @@ PaddleSlim提供了三种方式构造超网络，下面分别介绍这三种方�
 .. code-block:: python
 
   import paddle.nn as nn
-  from paddleslim.nas.ofa.layers_new import Block, SuperConv2D, SuperBatchNorm2D
+  from paddleslim.nas.ofa.layers import Block, SuperConv2D, SuperBatchNorm2D
 
   class Net(nn.Layer):
     def __init__(self):

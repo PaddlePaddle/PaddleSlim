@@ -68,7 +68,7 @@ if __name__ == '__main__':
         type=str,
         required=True,
         help='data directory includes train / develop data')
-    parser.add_argument('--task', type=str, default='mnli', help='task name')
+    parser.add_argument('--task', type=str, default='xnli', help='task name')
     parser.add_argument(
         '--use_lr_decay',
         action='store_true',
@@ -134,7 +134,7 @@ if __name__ == '__main__':
         '--width_mult_list',
         nargs='+',
         type=float,
-        default=[1.0, 0.75, 0.5, 0.5],
+        default=[1.0, 0.75, 0.5, 0.25],
         help="width mult in compress")
     parser.add_argument(
         '--depth_mult_list',
@@ -234,7 +234,7 @@ if __name__ == '__main__':
         ### suppose elastic width first
         if args.reorder_weight:
             head_importance, neuron_importance = compute_neuron_head_importance(
-                args, ofa_model.model, tokenizer, dev_ds, place, model_cfg)
+                args, ofa_model.model, dev_ds, place, model_cfg)
             reorder_neuron_head(ofa_model.model, head_importance,
                                 neuron_importance)
         #################
