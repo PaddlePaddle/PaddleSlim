@@ -20,7 +20,7 @@ import paddle.fluid as fluid
 import paddle.fluid.core as core
 import paddle.fluid.dygraph_utils as dygraph_utils
 from paddle.fluid.data_feeder import check_variable_and_dtype
-from paddle.fluid.framework import in_dygraph_mode, _varbase_creator
+from paddle.fluid.framework import _varbase_creator
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, BatchNorm
 
 from ...common import get_logger
@@ -290,7 +290,7 @@ class SuperConv2D(fluid.dygraph.Conv2D):
         return filters
 
     def get_groups_in_out_nc(self, in_nc, out_nc):
-        if self._groups == 1:
+        if self._groups == 1 or self._groups == None:
             ### standard conv
             return self._groups, in_nc, out_nc
         elif self._groups == self._num_channels:
@@ -310,10 +310,6 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             return groups, in_nc, out_nc
 
     def forward(self, input, kernel_size=None, expand_ratio=None, channel=None):
-
-        if not in_dygraph_mode():
-            _logger.error("NOT support static graph")
-
         self.cur_config = {
             'kernel_size': kernel_size,
             'expand_ratio': expand_ratio,
@@ -591,7 +587,7 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         return filters
 
     def get_groups_in_out_nc(self, in_nc, out_nc):
-        if self._groups == 1:
+        if self._groups == 1 or self._groups == None:
             ### standard conv
             return self._groups, in_nc, out_nc
         elif self._groups == self._num_channels:
@@ -611,9 +607,6 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
             return groups, in_nc, out_nc
 
     def forward(self, input, kernel_size=None, expand_ratio=None, channel=None):
-        if not in_dygraph_mode():
-            _logger.error("NOT support static graph")
-
         self.cur_config = {
             'kernel_size': kernel_size,
             'expand_ratio': expand_ratio,
@@ -769,9 +762,6 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
                                        max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
-        if not in_dygraph_mode():
-            _logger.error("NOT support static graph")
-
         self.cur_config = {'expand_ratio': expand_ratio, 'channel': channel}
         in_nc = int(input.shape[1])
         assert (
@@ -866,9 +856,6 @@ class SuperLinear(fluid.dygraph.Linear):
             self.base_output_dim = int(self.output_dim / max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
-        if not in_dygraph_mode():
-            _logger.error("NOT support static graph")
-
         self.cur_config = {'expand_ratio': expand_ratio, 'channel': channel}
         ### weight: (Cin, Cout)
         in_nc = int(input.shape[-1])
@@ -927,9 +914,6 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
             use_global_stats, trainable_statistics)
 
     def forward(self, input):
-        if not in_dygraph_mode():
-            _logger.error("NOT support static graph")
-
         feature_dim = int(input.shape[1])
 
         weight = self.weight[:feature_dim]
@@ -965,9 +949,6 @@ class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
                                                 param_attr, bias_attr, dtype)
 
     def forward(self, input):
-        if not in_dygraph_mode():
-            _logger.error("NOT support static graph")
-
         feature_dim = int(input.shape[1])
 
         if self._param_attr == False and self._bias_attr == False:
@@ -997,9 +978,6 @@ class SuperLayerNorm(fluid.dygraph.LayerNorm):
                              param_attr, bias_attr, act, dtype)
 
     def forward(self, input):
-        if not in_dygraph_mode():
-            _logger.error("NOT support static graph")
-
         input_shape = list(input.shape)
         input_ndim = len(input_shape)
         normalized_ndim = len(self._normalized_shape)
@@ -1035,9 +1013,6 @@ class SuperEmbedding(fluid.dygraph.Embedding):
             self.base_output_dim = int(self._size[-1] / max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
-        if not in_dygraph_mode():
-            _logger.error("NOT support static graph")
-
         assert (
             expand_ratio == None or channel == None
         ), "expand_ratio and channel CANNOT be NOT None at the same time."

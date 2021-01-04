@@ -18,11 +18,9 @@ import numpy as np
 import unittest
 import paddle
 import paddle.nn as nn
-from paddle.nn import ReLU
 from paddleslim.nas import ofa
-from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
-from paddleslim.nas.ofa.convert_super import supernet
-from paddleslim.nas.ofa.layers import *
+from paddleslim.nas.ofa import OFA
+from paddleslim.nas.ofa.layers_old import *
 
 
 class ModelCase1(nn.Layer):
@@ -31,6 +29,7 @@ class ModelCase1(nn.Layer):
         models = [SuperConv2D(3, 4, 3, bias_attr=False)]
         models += [SuperConv2D(4, 4, 3, groups=4)]
         models += [SuperConv2D(4, 4, 3, groups=2)]
+        models += [SuperBatchNorm(4)]
         models += [SuperConv2DTranspose(4, 4, 3, bias_attr=False)]
         models += [SuperConv2DTranspose(4, 4, 3, groups=4)]
         models += [nn.Conv2DTranspose(4, 4, 3, groups=2)]
@@ -42,8 +41,35 @@ class ModelCase1(nn.Layer):
                 1,
                 padding=1,
                 bias_attr=False,
-                candidate_config={'expand_ratio': (1.0, 2.0)}),
+                candidate_config={'expand_ratio': (0.5, 1.0)}),
         ]
+        models += [
+            SuperSeparableConv2D(
+                4,
+                4,
+                1,
+                padding=1,
+                bias_attr=False,
+                candidate_config={'channel': (2, 4)}),
+        ]
+        self.models = paddle.nn.Sequential(*models)
+
+    def forward(self, inputs):
+        return self.models(inputs)
+
+
+class ModelCase2(nn.Layer):
+    def __init__(self):
+        super(ModelCase2, self).__init__()
+        models = [
+            SuperEmbedding(
+                size=(64, 64), candidate_config={'expand_ratio': (0.5, 1.0)})
+        ]
+        models += [
+            SuperLinear(
+                64, 64, candidate_config={'expand_ratio': (0.5, 1.0)})
+        ]
+        models += [SuperLinear(64, 64, candidate_config={'channel': (32, 64)})]
         self.models = paddle.nn.Sequential(*models)
 
     def forward(self, inputs):
@@ -59,6 +85,13 @@ class TestCase(unittest.TestCase):
     def test_ofa(self):
         ofa_model = OFA(self.model)
         out = self.model(self.data)
+
+
+class TestCase2(TestCase):
+    def setUp(self):
+        self.model = ModelCase2()
+        data_np = np.random.random((64, 64)).astype(np.int64)
+        self.data = paddle.to_tensor(data_np)
 
 
 if __name__ == '__main__':
