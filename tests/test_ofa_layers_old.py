@@ -27,11 +27,34 @@ class ModelCase1(nn.Layer):
     def __init__(self):
         super(ModelCase1, self).__init__()
         models = [SuperConv2D(3, 4, 3, bias_attr=False)]
+        models += [
+            SuperConv2D(
+                4,
+                4,
+                7,
+                candidate_config={
+                    'expand_ratio': (0.5, 1.0),
+                    'kernel_size': (3, 5, 7)
+                },
+                transform_kernel=True)
+        ]
         models += [SuperConv2D(4, 4, 3, groups=4)]
         models += [SuperConv2D(4, 4, 3, groups=2)]
         models += [SuperBatchNorm(4)]
         models += [SuperConv2DTranspose(4, 4, 3, bias_attr=False)]
+        models += [
+            SuperConv2DTranspose(
+                4,
+                4,
+                7,
+                candidate_config={
+                    'expand_ratio': (0.5, 1.0),
+                    'kernel_size': (3, 5, 7)
+                },
+                transform_kernel=True)
+        ]
         models += [SuperConv2DTranspose(4, 4, 3, groups=4)]
+        models += [SuperInstanceNorm(4)]
         models += [nn.Conv2DTranspose(4, 4, 3, groups=2)]
         models += [SuperConv2DTranspose(4, 4, 3, groups=2)]
         models += [
@@ -45,12 +68,7 @@ class ModelCase1(nn.Layer):
         ]
         models += [
             SuperSeparableConv2D(
-                4,
-                4,
-                1,
-                padding=1,
-                bias_attr=False,
-                candidate_config={'channel': (2, 4)}),
+                4, 4, 1, padding=1, candidate_config={'channel': (2, 4)}),
         ]
         self.models = paddle.nn.Sequential(*models)
 
@@ -69,6 +87,7 @@ class ModelCase2(nn.Layer):
             SuperLinear(
                 64, 64, candidate_config={'expand_ratio': (0.5, 1.0)})
         ]
+        models += [SuperLayerNorm(64)]
         models += [SuperLinear(64, 64, candidate_config={'channel': (32, 64)})]
         self.models = paddle.nn.Sequential(*models)
 
