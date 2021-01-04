@@ -21,8 +21,6 @@ paddle.enable_static()
 ## 2. 构建网络
 该章节构造一个用于对MNIST数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[1, 28, 28]`，输出类别数为10。为了方便展示示例，我们在`paddleslim.models`下预定义了用于构建分类模型的方法，执行以下代码构建分类模型：
 
->注意：paddleslim.models下的API并非PaddleSlim常规API，是为了简化示例而封装预定义的一系列方法，比如：模型结构的定义、Program的构建等。
-
 
 ```python
 USE_GPU = True
@@ -53,7 +51,7 @@ val_program = train_program.clone(for_test=True)
 
 ### 3.1 定义输入数据
 
-为了快速执行该示例，我们选取简单的MNIST数据，Paddle框架的`paddle.dataset.mnist`包定义了MNIST数据的下载和读取。
+为了快速执行该示例，我们选取简单的MNIST数据，Paddle框架的`paddle.vision.datasets`包定义了MNIST数据的下载和读取。
 代码如下：
 
 
