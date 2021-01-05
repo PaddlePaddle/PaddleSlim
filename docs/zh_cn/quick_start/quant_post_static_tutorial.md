@@ -8,25 +8,42 @@
 4. 静态离线量化
 
 ## 1. 导入依赖
-PaddleSlim依赖Paddle1.7版本，请确认已正确安装Paddle，然后按以下方式导入Paddle和PaddleSlim:
+PaddleSlim依赖Paddle2.0版本，请确认已正确安装Paddle，然后按以下方式导入Paddle和PaddleSlim:
 
 
 ```python
 import paddle
-import paddle.fluid as fluid
 import paddleslim as slim
 import numpy as np
+paddle.enable_static()
 ```
 
 ## 2. 构建网络
 该章节构造一个用于对MNIST数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[1, 28, 28]`，输出类别数为10。为了方便展示示例，我们在`paddleslim.models`下预定义了用于构建分类模型的方法，执行以下代码构建分类模型：
 
->注意：paddleslim.models下的API并非PaddleSlim常规API，是为了简化示例而封装预定义的一系列方法，比如：模型结构的定义、Program的构建等。
-
 
 ```python
-exe, train_program, val_program, inputs, outputs = \
-    slim.models.image_classification("MobileNet", [1, 28, 28], 10, use_gpu=True)
+USE_GPU = True
+model = slim.models.MobileNet()
+train_program = paddle.static.Program()
+startup = paddle.static.Program()
+with paddle.static.program_guard(train_program, startup):
+    image = paddle.static.data(
+        name='image', shape=[None, 1, 28, 28], dtype='float32')
+    label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
+    gt = paddle.reshape(label, [-1, 1])
+    out = model.net(input=image, class_dim=10)
+    cost = paddle.nn.functional.loss.cross_entropy(input=out, label=gt)
+    avg_cost = paddle.mean(x=cost)
+    acc_top1 = paddle.metric.accuracy(input=out, label=gt, k=1)
+    acc_top5 = paddle.metric.accuracy(input=out, label=gt, k=5)
+    opt = paddle.optimizer.Momentum(0.01, 0.9)
+    opt.minimize(avg_cost)
+
+place = paddle.CUDAPlace(0) if USE_GPU else paddle.CPUPlace()
+exe = paddle.static.Executor(place)
+exe.run(startup)
+val_program = train_program.clone(for_test=True)
 ```
 
 ## 3. 训练模型
@@ -34,17 +51,33 @@ exe, train_program, val_program, inputs, outputs = \
 
 ### 3.1 定义输入数据
 
-为了快速执行该示例，我们选取简单的MNIST数据，Paddle框架的`paddle.dataset.mnist`包定义了MNIST数据的下载和读取。
+为了快速执行该示例，我们选取简单的MNIST数据，Paddle框架的`paddle.vision.datasets`包定义了MNIST数据的下载和读取。
 代码如下：
 
 
 ```python
-import paddle.dataset.mnist as reader
-train_reader = paddle.fluid.io.batch(
-        reader.train(), batch_size=128, drop_last=True)
-test_reader = paddle.fluid.io.batch(
-        reader.train(), batch_size=128, drop_last=True)
-train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
+import paddle.vision.transforms as T
+transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+train_dataset = paddle.vision.datasets.MNIST(
+    mode="train", backend="cv2", transform=transform)
+test_dataset = paddle.vision.datasets.MNIST(
+    mode="test", backend="cv2", transform=transform)
+train_loader = paddle.io.DataLoader(
+    train_dataset,
+    places=place,
+    feed_list=[image, label],
+    drop_last=True,
+    batch_size=64,
+    return_list=False,
+    shuffle=True)
+test_loader = paddle.io.DataLoader(
+    test_dataset,
+    places=place,
+    feed_list=[image, label],
+    drop_last=True,
+    batch_size=64,
+    return_list=False,
+    shuffle=False)
 ```
 
 ### 3.2 训练和测试
@@ -53,21 +86,22 @@ train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
 
 
 ```python
+outputs = [acc_top1.name, acc_top5.name, avg_cost.name]
 def train(prog):
     iter = 0
-    for data in train_reader():
-        acc1, acc5, loss = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
+    for data in train_loader():
+        acc1, acc5, loss = exe.run(prog, feed=data, fetch_list=outputs)
         if iter % 100 == 0:
-            print('train', acc1.mean(), acc5.mean(), loss.mean())
+            print('train iter={}, top1={}, top5={}, loss={}'.format(iter, acc1.mean(), acc5.mean(), loss.mean()))
         iter += 1
 
 def test(prog, outputs=outputs):
     iter = 0
     res = [[], []]
-    for data in train_reader():
-        acc1, acc5, loss = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
+    for data in test_loader():
+        acc1, acc5, loss = exe.run(prog, feed=data, fetch_list=outputs)
         if iter % 100 == 0:
-            print('test', acc1.mean(), acc5.mean(), loss.mean())
+            print('test iter={}, top1={}, top5={}, loss={}'.format(iter, acc1.mean(), acc5.mean(), loss.mean()))
         res[0].append(acc1.mean())
         res[1].append(acc5.mean())
         iter += 1
@@ -94,12 +128,12 @@ test(val_program)
 
 
 ```python
-target_vars = [val_program.global_block().var(name) for name in outputs]
-fluid.io.save_inference_model(dirname='./inference_model',
-        feeded_var_names=[var.name for var in inputs],
-        target_vars=target_vars,
+paddle.static.save_inference_model(
+        path_prefix='./inference_model/fp32',
+        feed_vars=[image, label],
+        fetch_vars=[acc_top1, acc_top5, avg_cost],
         executor=exe,
-        main_program=val_program)
+        program=val_program)
 ```
 
 ## 4. 静态离线量化
@@ -112,7 +146,9 @@ slim.quant.quant_post_static(
         executor=exe,
         model_dir='./inference_model',
         quantize_model_path='./quant_post_static_model',
-        sample_generator=reader.test(),
+        sample_generator=paddle.dataset.mnist.test(),
+        model_filename='fp32.pdmodel',
+        params_filename='fp32.pdiparams',
         batch_nums=10)
 ```
 
@@ -121,10 +157,8 @@ slim.quant.quant_post_static(
 
 
 ```python
-quant_post_static_prog, feed_target_names, fetch_targets = fluid.io.load_inference_model(
-        dirname='./quant_post_static_model',
-        model_filename='__model__',
-        params_filename='__params__',
+quant_post_static_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+        path_prefix='./inference_model/fp32',
         executor=exe)
 test(quant_post_static_prog, fetch_targets)
 ```
