@@ -1,6 +1,6 @@
-# BERT模型压缩教程
+# TinyERNIE模型压缩教程
 
-1. 本教程是对BERT模型进行压缩的原理介绍。并以PaddleNLP repo中BERT-base模型为例，说明如何快速把整体压缩流程迁移到其他NLP模型。
+1. 本教程是对TinyERNIE模型进行压缩的原理介绍。并以ERNIE repo中TinyERNIE模型为例，说明如何快速把整体压缩流程迁移到其他NLP模型。
 
 2. 本教程使用的是[DynaBERT-Dynamic BERT with Adaptive Width and Depth](https://arxiv.org/abs/2004.04037)中的训练策略。把原始模型作为超网络中最大的子模型，原始模型包括多个相同大小的Transformer Block。在每次训练前会选择当前轮次要训练的子模型，每个子模型包含多个相同大小的Sub Transformer Block，每个Sub Transformer Block是选择不同宽度的Transformer Block得到的，一个Transformer Block包含一个Multi-Head Attention和一个Feed-Forward Network，Sub Transformer Block获得方式为：<br/>
 &emsp;&emsp;a. 一个Multi-Head Attention层中有多个Head，每次选择不同宽度的子模型时，会同时对Head数量进行等比例减少，例如：如果原始模型中有12个Head，本次训练选择的模型是宽度为原始宽度75%的子模型，则本次训练中所有Transformer Block的Head数量为9。<br/>
@@ -18,14 +18,15 @@
 整体流程图
 </p>
 
-## 基于PaddleNLP repo代码进行压缩
-本教程基于PaddleSlim2.0及之后版本、Paddle2.0rc1及之后版本和PaddleNLP2.0beta及之后版本，请确认已正确安装Paddle、PaddleSlim和PaddleNLP。
-基于PaddleNLP repo中BERT-base的整体代码示例请参考：[BERT-base](../../../demo/ofa/bert/README.md)
+## 基于ERNIE repo代码进行压缩
+本教程基于PaddleSlim2.0及之后版本、Paddle1.8.5和ERNIE 0.0.4dev及之后版本，请确认已正确安装Paddle、PaddleSlim和ERNIE。
+基于ERNIE repo中TinyERNIE的整体代码示例请参考：[TinyERNIE](../../../demo/ofa/ernie/README.md)
 
 ### 1. 定义初始网络
-定义原始BERT-base模型并定义一个字典保存原始模型参数。普通模型转换为超网络之后，由于其组网OP的改变导致原始模型加载的参数失效，所以需要定义一个字典保存原始模型的参数并用来初始化超网络。
+定义原始TinyERNIE模型并定义一个字典保存原始模型参数。普通模型转换为超网络之后，由于其组网OP的改变导致原始模型加载的参数失效，所以需要定义一个字典保存原始模型的参数并用来初始化超网络。设置'return_additional_info'参数为True，返回中间层结果，便于添加蒸馏。
 ```python
-model = BertForSequenceClassification.from_pretrained('bert', num_classes=2)
+model = ErnieModelForSequenceClassification.from_pretrained(args.from_pretrained, num_labels=3, name='')
+setattr(model, 'return_additional_info', True)
 origin_weights = {}
 for name, param in model.named_parameters():
     origin_weights[name] = param
@@ -42,22 +43,17 @@ paddleslim.nas.ofa.utils.set_state_dict(model, origin_weights)
 ```
 
 ### 3. 定义教师网络
-调用paddlenlp中的接口直接构造教师网络。
+调用paddlenlp中的接口直接构造教师网络。设置'return_additional_info'参数为True，返回中间层结果，便于添加蒸馏。
 ```python
-teacher_model = BertForSequenceClassification.from_pretrained('bert', num_classes=2)
+teacher_model = ErnieModelForSequenceClassification.from_pretrained(args.from_pretrained, num_labels=3, name='teacher')
+setattr(teacher_model, 'return_additional_info', True)
 ```
 
 ### 4. 配置蒸馏相关参数
-需要配置的参数包括教师模型实例；需要添加蒸馏的层，在教师网络和学生网络的Embedding层和每一个Tranformer Block层之间添加蒸馏损失，中间层的蒸馏损失使用默认的MSE损失函数；配置'lambda_distill'参数表示整体蒸馏损失的缩放比例。
+需要配置的参数包括教师模型实例。TinyERNIE模型定义的时候会返回隐藏层和Embedding层的计算结果，所以直接利用返回值进行网络蒸馏。
 ```python
-mapping_layers = ['bert.embeddings']
-for idx in range(model.bert.config['num_hidden_layers']):
-    mapping_layers.append('bert.encoder.layers.{}'.format(idx))
-
 default_distill_config = {
-    'lambda_distill': 0.1,
-    'teacher_model': teacher_model,
-    'mapping_layers': mapping_layers,
+    'teacher_model': teacher_model
 }
 distill_config = DistillConfig(**default_distill_config)
 ```
@@ -69,13 +65,14 @@ ofa_model = paddleslim.nas.ofa.OFA(model, distill_config=distill_config)
 ```
 
 ### 6. 计算神经元和head的重要性并根据其重要性重排序参数
+基于Paddle 1.8.5实现的重要性计算代码位于：[importance.py](../../../demo/ofa/ernie/ernie_supernet/importance.py)
 ```python
-head_importance, neuron_importance = utils.compute_neuron_head_importance(
-    'sst-2',
+head_importance, neuron_importance = compute_neuron_head_importance(
+    args,
     ofa_model.model,
-    dev_data_loader,
-    num_layers=model.bert.config['num_hidden_layers'],
-    num_heads=model.bert.config['num_attention_heads'])
+    dev_ds,
+    place,
+    model_cfg)
 reorder_neuron_head(ofa_model.model, head_importance, neuron_importance)
 ```
 
@@ -90,46 +87,45 @@ ofa_model.set_task('width')
 ```python
 width_mult_list = [1.0, 0.75, 0.5, 0.25]
 lambda_logit = 0.1
+# paddle 2.0rc1之前版本的动态图模型梯度不会自动累加，需要自定义一个dict保存每个模型的梯度，自行进行梯度累加
+accumulate_gradients = dict()
+for param in opt._parameter_list:
+    accumulate_gradients[param.name] = 0.0
+
 for width_mult in width_mult_list:
     net_config = paddleslim.nas.ofa.utils.dynabert_config(ofa_model, width_mult)
     ofa_model.set_net_config(net_config)
-    logits, teacher_logits = ofa_model(input_ids, segment_ids, attention_mask=[None, None])
-    rep_loss = ofa_model.calc_distill_loss()
-    logit_loss = soft_cross_entropy(logits, teacher_logits.detach())
+    student_output, teacher_output = ofa_model(ids, sids, labels=label,
+        num_layers=model_cfg['num_hidden_layers'])
+    loss, student_logit, student_reps = student_output[
+        0], student_output[1], student_output[2]['hiddens']
+    teacher_logit, teacher_reps = teacher_output[
+        1], teacher_output[2]['hiddens']
+
+    logit_loss = soft_cross_entropy(student_logits, teacher_logits.detach())
+    rep_loss = 0.0
+    for stu_rep, tea_rep in zip(student_reps, teacher_reps):
+        tmp_loss = L.mse_loss(stu_rep, tea_rep.detach())
+        rep_loss += tmp_loss
     loss = rep_loss + lambda_logit * logit_loss
     loss.backward()
-optimizer.step()
-lr_scheduler.step()
+    param_grads = opt.backward(loss)
+    # 梯度累加
+    for param in opt._parameter_list:
+        accumulate_gradients[param.name] += param.gradient()
+# 利用累加后的梯度更新模型
+for k, v in param_grads:
+    assert k.name in accumulate_gradients.keys(
+    ), "{} not in accumulate_gradients".format(k.name)
+    v.set_value(accumulate_gradients[k.name])
+opt.apply_optimize(
+    loss, startup_program=None, params_grads=param_grads)
 ofa_model.model.clear_gradients()
 ```
 
 ---
 **NOTE**
 
-由于在计算head的重要性时会利用一个mask来收集梯度，所以需要通过monkey patch的方式重新实现一下BERT的forward函数。示例如下:
-```python
-from paddlenlp.transformers import BertModel
-def bert_forward(self,
-                 input_ids,
-                 token_type_ids=None,
-                 position_ids=None,
-                 attention_mask=[None, None]):
-    wtype = self.pooler.dense.fn.weight.dtype if hasattr(
-        self.pooler.dense, 'fn') else self.pooler.dense.weight.dtype
-    if attention_mask[0] is None:
-        attention_mask[0] = paddle.unsqueeze(
-            (input_ids == self.pad_token_id).astype(wtype) * -1e9, axis=[1, 2])
-    embedding_output = self.embeddings(
-        input_ids=input_ids,
-        position_ids=position_ids,
-        token_type_ids=token_type_ids)
-    encoder_outputs = self.encoder(embedding_output, attention_mask)
-    sequence_output = encoder_outputs
-    pooled_output = self.pooler(sequence_output)
-    return sequence_output, pooled_output
-
-
-BertModel.forward = bert_forward
-```
+由于在计算head的重要性时会利用一个mask来收集梯度，所以需要通过monkey patch的方式重新实现一下TinyERNIE中一些相关类的forward函数。具体实现的forward可以参考：[model_ernie_supernet.py](../../../demo/ofa/ernie/ernie_supernet/modeling_ernie_supernet.py)
 
 ---

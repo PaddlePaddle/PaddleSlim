@@ -231,27 +231,6 @@ def soft_cross_entropy(inp, target):
     return -1. * paddle.mean(paddle.sum(inp_likelihood * target_prob, axis=-1))
 
 
-### get certain config
-def apply_config(model, width_mult):
-    new_config = dict()
-
-    def fix_exp(idx):
-        if (idx - 3) % 6 == 0 or (idx - 5) % 6 == 0:
-            return True
-        return False
-
-    for idx, (block_k, block_v) in enumerate(model.layers.items()):
-        if len(block_v.keys()) != 0:
-            name, name_idx = block_k.split('_'), int(block_k.split('_')[1])
-            if fix_exp(name_idx) or 'emb' in block_k or idx == (
-                    len(model.layers.items()) - 2):
-                block_v['expand_ratio'] = 1.0
-            else:
-                block_v['expand_ratio'] = width_mult
-        new_config[block_k] = block_v
-    return new_config
-
-
 def convert_example(example,
                     tokenizer,
                     label_list,
@@ -487,7 +466,7 @@ def do_train(args):
             for width_mult in args.width_mult_list:
                 # Step8: Broadcast supernet config from width_mult,
                 # and use this config in supernet training.
-                net_config = apply_config(ofa_model, width_mult)
+                net_config = utils.dynabert_config(ofa_model, width_mult)
                 ofa_model.set_net_config(net_config)
                 logits, teacher_logits = ofa_model(
                     input_ids, segment_ids, attention_mask=[None, None])
