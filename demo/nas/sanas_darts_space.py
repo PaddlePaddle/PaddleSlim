@@ -98,10 +98,10 @@ def build_program(main_program, startup_program, image_shape, archs, args,
                 weight_decay=paddle.regularizer.L2Decay(weight_decay),
                 grad_clip=nn.ClipGradByGlobalNorm(clip_norm=5.0))
             optimizer.minimize(loss)
-            outs = [loss, top1, top5, learning_rate]
+            outs = [loss, top1, top5]
         else:
             outs = [loss, top1, top5]
-    return outs, data_loader
+    return outs, (data, label), data_loader
 
 
 def train(main_prog, exe, epoch_id, train_loader, fetch_list, args):
@@ -129,16 +129,16 @@ def train(main_prog, exe, epoch_id, train_loader, fetch_list, args):
                 })
         else:
             feed = data
-        loss_v, top1_v, top5_v, lr = exe.run(
+        loss_v, top1_v, top5_v = exe.run(
             main_prog, feed=feed, fetch_list=[v.name for v in fetch_list])
         loss.update(loss_v, args.batch_size)
         top1.update(top1_v, args.batch_size)
         top5.update(top5_v, args.batch_size)
         if step_id % 10 == 0:
             _logger.info(
-                "Train Epoch {}, Step {}, Lr {:.8f}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
-                format(epoch_id, step_id, lr[0], loss.avg[0], top1.avg[0],
-                       top5.avg[0]))
+                "Train Epoch {}, Step {}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
+                format(epoch_id, step_id, loss.avg[0], top1.avg[0], top5.avg[
+                    0]))
     return top1.avg[0]
 
 
@@ -185,7 +185,7 @@ def search(config, args, image_size, is_server=True):
         train_program = static.Program()
         test_program = static.Program()
         startup_program = static.Program()
-        train_fetch_list, train_loader = build_program(
+        train_fetch_list, _, train_loader = build_program(
             train_program,
             startup_program,
             image_shape,
@@ -200,7 +200,7 @@ def search(config, args, image_size, is_server=True):
         if current_params > float(3.77):
             continue
 
-        test_fetch_list, test_loader = build_program(
+        test_fetch_list, _, test_loader = build_program(
             test_program,
             startup_program,
             image_shape,
@@ -253,13 +253,13 @@ def final_test(config, args, image_size, token=None):
     train_program = static.Program()
     test_program = static.Program()
     startup_program = static.Program()
-    train_fetch_list, train_loader = build_program(
+    train_fetch_list, (data, label), train_loader = build_program(
         train_program, startup_program, image_shape, archs, args, is_train=True)
 
     current_params = count_parameters_in_MB(
         train_program.global_block().all_parameters(), 'cifar10')
     _logger.info('current_params: {}M'.format(current_params))
-    test_fetch_list, test_loader = build_program(
+    test_fetch_list, _, test_loader = build_program(
         test_program, startup_program, image_shape, archs, args, is_train=False)
     test_program = test_program.clone(for_test=True)
 
@@ -267,9 +267,9 @@ def final_test(config, args, image_size, token=None):
     exe.run(startup_program)
 
     train_reader = reader.train_valid(
-        batch_size=args.batch_size, is_train=True, is_shuffle=True, args=args)
+        batch_size=args.batch_size, is_train=True, is_shuffle=True)
     test_reader = reader.train_valid(
-        batch_size=args.batch_size, is_train=False, is_shuffle=False, args=args)
+        batch_size=args.batch_size, is_train=False, is_shuffle=False)
 
     train_loader.set_batch_generator(train_reader, places=place)
     test_loader.set_batch_generator(test_reader, places=place)
@@ -294,7 +294,7 @@ def final_test(config, args, image_size, token=None):
         output_dir = os.path.join('darts_output', str(epoch_id))
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        static.save_inference_model(output_dir, ["image"], [valid_top1], exe)
+        static.save_inference_model(output_dir, [data], test_fetch_list, exe)
 
 
 if __name__ == '__main__':
