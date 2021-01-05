@@ -20,8 +20,7 @@ import paddle.fluid.dygraph as FD
 import paddle.fluid.layers as L
 
 
-def compute_neuron_head_importance(args, model, tokenizer, dev_ds, place,
-                                   model_cfg):
+def compute_neuron_head_importance(args, model, dev_ds, place, model_cfg):
     n_layers, n_heads = model_cfg['num_hidden_layers'], model_cfg[
         'num_attention_heads']
     head_importance = L.zeros(shape=[n_layers, n_heads], dtype='float32')
