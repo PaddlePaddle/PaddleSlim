@@ -71,7 +71,7 @@ OFA
 
 .. py:class:: paddleslim.nas.ofa.OFA(model, run_config=None, distill_config=None, elastic_order=None, train_full=False)
 
-`源代码 <>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/nas/ofa/ofa.py#L91>`_
 
 **参数：**
 

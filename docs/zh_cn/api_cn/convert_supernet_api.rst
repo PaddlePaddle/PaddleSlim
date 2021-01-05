@@ -12,7 +12,7 @@ Convert SuperNet
 
 .. py:class:: paddleslim.nas.ofa.supernet(kernel_size=None, expand_ratio=None, channel=None)
 
-`源代码 <>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/nas/ofa/convert_super.py#L643>`_
 
 通过键值对的方式传入搜索空间。
 
@@ -26,7 +26,7 @@ Convert SuperNet
 
 .. py:class:: paddleslim.nas.ofa.Convert(context)
 
-`源代码 <>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/nas/ofa/convert_super.py#L45>`_
 
 把普通网络根据传入的自定义的搜索空间转换为超网络。
 

@@ -89,10 +89,37 @@ class ModelCase2(nn.Layer):
         ]
         models += [SuperLayerNorm(64)]
         models += [SuperLinear(64, 64, candidate_config={'channel': (32, 64)})]
+        models += [
+            SuperLinear(
+                64, 64, bias_attr=False,
+                candidate_config={'channel': (32, 64)})
+        ]
         self.models = paddle.nn.Sequential(*models)
 
     def forward(self, inputs):
         return self.models(inputs)
+
+
+class ModelCase3(nn.Layer):
+    def __init__(self):
+        super(ModelCase3, self).__init__()
+        self.conv1 = SuperConv2D(
+            3,
+            4,
+            7,
+            candidate_config={'kernel_size': (3, 5, 7)},
+            transform_kernel=True)
+        self.conv2 = SuperConv2DTranspose(
+            4,
+            4,
+            7,
+            candidate_config={'kernel_size': (3, 5, 7)},
+            transform_kernel=True)
+
+    def forward(self, inputs):
+        inputs = self.conv1(inputs, kernel_size=3)
+        inputs = self.conv2(inputs, kernel_size=3)
+        return inputs
 
 
 class TestCase(unittest.TestCase):
@@ -110,6 +137,13 @@ class TestCase2(TestCase):
     def setUp(self):
         self.model = ModelCase2()
         data_np = np.random.random((64, 64)).astype(np.int64)
+        self.data = paddle.to_tensor(data_np)
+
+
+class TestCase3(TestCase):
+    def setUp(self):
+        self.model = ModelCase3()
+        data_np = np.random.random((1, 3, 64, 64)).astype(np.float32)
         self.data = paddle.to_tensor(data_np)
 
 
