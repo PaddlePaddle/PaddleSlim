@@ -24,15 +24,15 @@ if pd_ver == 185:
     import paddle.fluid.dygraph.nn as nn
     from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
     from paddle.fluid import ParamAttr
-    from .layers import *
-    from . import layers
+    from .layers_old import *
+    from . import layers_old as layers
     Layer = paddle.fluid.dygraph.Layer
 else:
     import paddle.nn as nn
     from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
     from paddle import ParamAttr
-    from .layers_new import *
-    from . import layers_new as layers
+    from .layers import *
+    from . import layers
     Layer = paddle.nn.Layer
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -43,6 +43,17 @@ WEIGHT_LAYER = ['conv', 'linear', 'embedding']
 
 
 class Convert:
+    """
+    Convert network to the supernet according to the search space.
+    Parameters:
+        context(paddleslim.nas.ofa.supernet): search space defined by the user.
+    Examples:
+        .. code-block:: python
+          from paddleslim.nas.ofa import supernet, Convert
+          sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+          convert = Convert(sp_net_config)
+    """
+
     def __init__(self, context):
         self.context = context
 
@@ -63,6 +74,17 @@ class Convert:
                     layer._bias_attr.name = 'super_' + layer._bias_attr.name
 
     def convert(self, network):
+        """
+        The function to convert the network to a supernet.
+        Parameters:
+            network(paddle.nn.Layer|list(paddle.nn.Layer)): instance of the model or list of instance of layers.
+        Examples:
+            .. code-block:: python
+              from paddle.vision.models import mobilenet_v1
+              from paddleslim.nas.ofa import supernet, Convert
+              sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+              convert = Convert(sp_net_config).convert(mobilenet_v1())
+        """
         # search the first and last weight layer, don't change out channel of the last weight layer
         # don't change in channel of the first weight layer
         model = []
@@ -641,6 +663,14 @@ class Convert:
 
 
 class supernet:
+    """
+    Search space of the network.
+    Parameters:
+        kernel_size(list|tuple, optional): search space for the kernel size of the Conv2D.
+        expand_ratio(list|tuple, optional): the search space for the expand ratio of the number of channels of Conv2D, the expand ratio of the output dimensions of the Embedding or Linear, which means this parameter get the number of channels of each OP in the converted super network based on the the channels of each OP in the original model, so this parameter The length is 1. Just set one between this parameter and ``channel``.
+        channel(list|tuple, optional): the search space for the number of channels of Conv2D, the output dimensions of the Embedding or Linear, this parameter directly sets the number of channels of each OP in the super network, so the length of this parameter needs to be the same as the total number that of Conv2D, Embedding, and Linear included in the network. Just set one between this parameter and ``expand_ratio``.
+    """
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
