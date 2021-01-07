@@ -11,6 +11,7 @@ import paddle
 import paddle.nn as nn
 import paddle.static as static
 import paddle.nn.functional as F
+import paddle.vision.transforms as T
 from paddleslim.nas import RLNAS
 from paddleslim.common import get_logger
 from optimizer import create_optimizer
@@ -104,8 +105,11 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
 
     image_shape = [3, image_size, image_size]
     if args.data == 'cifar10':
-        train_dataset = paddle.vision.datasets.Cifar10(mode='train')
-        val_dataset = paddle.vision.datasets.Cifar10(mode='test')
+        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        train_dataset = paddle.vision.datasets.Cifar10(
+            mode='train', transform=transform, backend='cv2')
+        val_dataset = paddle.vision.datasets.Cifar10(
+            mode='test', transform=transform, backend='cv2')
 
     elif args.data == 'imagenet':
         train_dataset = imagenet_reader.ImageNetDataset(mode='train')
