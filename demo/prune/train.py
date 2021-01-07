@@ -81,7 +81,7 @@ def piecewise_decay(args):
 def cosine_decay(args):
     step = int(math.ceil(float(args.total_images) / args.batch_size))
     learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
-        learning_rate=args.lr, T_max=args.num_epochs)
+        learning_rate=args.lr, T_max=args.num_epochs * step)
     optimizer = paddle.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=args.momentum_rate,
