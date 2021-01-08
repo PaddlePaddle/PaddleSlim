@@ -159,9 +159,9 @@ def compress(args):
         drop_last=True,
         return_list=False,
         batch_size=args.batch_size,
-        use_shared_memory=False,
+        use_shared_memory=True,
         shuffle=True,
-        num_workers=1)
+        num_workers=4)
 
     valid_loader = paddle.io.DataLoader(
         val_dataset,
@@ -170,7 +170,7 @@ def compress(args):
         drop_last=False,
         return_list=False,
         batch_size=args.batch_size,
-        use_shared_memory=False,
+        use_shared_memory=True,
         shuffle=False)
 
     if args.analysis:

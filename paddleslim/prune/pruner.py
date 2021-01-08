@@ -65,10 +65,10 @@ class Pruner():
         Args:
 
             program(paddle.static.Program): The program to be pruned.
-            scope(fluid.Scope): The scope storing paramaters to be pruned.
+            scope(paddle.static.Scope): The scope storing paramaters to be pruned.
             params(list<str>): A list of parameter names to be pruned.
             ratios(list<float>): A list of ratios to be used to pruning parameters.
-            place(fluid.Place): The device place of filter parameters. Defalut: None.
+            place(paddle.CUDAPlace||paddle.CPUPlace): The device place of filter parameters. Defalut: None.
             lazy(bool): True means setting the pruned elements to zero.
                         False means cutting down the pruned elements. Default: False.
             only_graph(bool): True means only modifying the graph.
