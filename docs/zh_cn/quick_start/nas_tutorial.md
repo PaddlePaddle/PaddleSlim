@@ -74,8 +74,8 @@ def build_program(archs):
 import paddle.vision.transforms as T
 
 def input_data(image, label):
-    transform = T.Compose([T.Normalize([127.5], [127.5])])
-    train_dataset = paddle.vision.datasets.Cifar10(mode="train", transform=transform)
+    transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+    train_dataset = paddle.vision.datasets.Cifar10(mode="train", transform=transform, backend='cv2')
     train_loader = paddle.io.DataLoader(train_dataset,
                     places=paddle.CPUPlace(),
                     feed_list=[image, label],
@@ -83,7 +83,7 @@ def input_data(image, label):
                     batch_size=64,
                     return_list=False,
                     shuffle=True)
-    eval_dataset = paddle.vision.datasets.Cifar10(mode="test", transform=transform)
+    eval_dataset = paddle.vision.datasets.Cifar10(mode="test", transform=transform, backend='cv2')
     eval_loader = paddle.io.DataLoader(eval_dataset,
                     places=paddle.CPUPlace(),
                     feed_list=[image, label],
