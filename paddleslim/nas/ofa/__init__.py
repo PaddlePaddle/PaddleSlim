@@ -18,6 +18,6 @@ from .convert_super import supernet
 from .utils.utils import get_paddle_version
 pd_ver = get_paddle_version()
 if pd_ver == 185:
-    from .layers import *
+    from .layers_old import *
 else:
-    from .layers_new import *
+    from .layers import *
