@@ -147,7 +147,8 @@ def compress(args):
     # model definition
     model = models.__dict__[args.model]()
     out = model.net(input=image, class_dim=class_dim)
-    avg_cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
+    cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
+    avg_cost = paddle.mean(x=cost)
     acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
     acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
     val_program = paddle.static.default_main_program().clone(for_test=True)

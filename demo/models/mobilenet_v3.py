@@ -119,7 +119,6 @@ class MobileNetV3():
         conv = self.hard_swish(conv)
         out = fluid.layers.fc(input=conv,
                               size=class_dim,
-                              act='softmax',
                               param_attr=ParamAttr(name='fc_weights'),
                               bias_attr=ParamAttr(name='fc_offset'))
         return out
@@ -244,8 +243,7 @@ class MobileNetV3():
         if num_in_filter != num_out_filter or stride != 1:
             return conv2
         else:
-            return fluid.layers.elementwise_add(
-                x=input_data, y=conv2, act=None)
+            return fluid.layers.elementwise_add(x=input_data, y=conv2, act=None)
 
 
 def MobileNetV3_small_x0_25():
