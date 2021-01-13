@@ -239,7 +239,7 @@ def compress(args):
 
     for i in range(args.num_epochs):
         train(i, train_program)
-        if i % args.test_period == 0:
+        if (i + 1) % args.test_period == 0:
             test(i, pruned_val_program)
             save_model(exe, pruned_val_program,
                        os.path.join(args.model_path, str(i)))
