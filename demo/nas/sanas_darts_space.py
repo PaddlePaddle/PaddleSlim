@@ -8,7 +8,10 @@ import time
 import argparse
 import ast
 import logging
-import paddle.fluid as fluid
+import paddle
+import paddle.nn.functional as F
+import paddle.nn as nn
+import paddle.static as static
 from paddleslim.nas import SANAS
 from paddleslim.common import get_logger
 import darts_cifar10_reader as reader
@@ -49,10 +52,10 @@ def count_parameters_in_MB(all_params, prefix='model'):
 
 
 def create_data_loader(image_shape, is_train, args):
-    image = fluid.data(
+    image = static.data(
         name="image", shape=[None] + image_shape, dtype="float32")
-    label = fluid.data(name="label", shape=[None, 1], dtype="int64")
-    data_loader = fluid.io.DataLoader.from_generator(
+    label = static.data(name="label", shape=[None, 1], dtype="int64")
+    data_loader = paddle.io.DataLoader.from_generator(
         feed_list=[image, label],
         capacity=64,
         use_double_buffer=True,
@@ -60,9 +63,9 @@ def create_data_loader(image_shape, is_train, args):
     drop_path_prob = ''
     drop_path_mask = ''
     if is_train:
-        drop_path_prob = fluid.data(
+        drop_path_prob = static.data(
             name="drop_path_prob", shape=[args.batch_size, 1], dtype="float32")
-        drop_path_mask = fluid.data(
+        drop_path_mask = static.data(
             name="drop_path_mask",
             shape=[args.batch_size, 20, 4, 2],
             dtype="float32")
@@ -72,36 +75,33 @@ def create_data_loader(image_shape, is_train, args):
 
 def build_program(main_program, startup_program, image_shape, archs, args,
                   is_train):
-    with fluid.program_guard(main_program, startup_program):
+    with static.program_guard(main_program, startup_program):
         data_loader, data, label, drop_path_prob, drop_path_mask = create_data_loader(
             image_shape, is_train, args)
         logits, logits_aux = archs(data, drop_path_prob, drop_path_mask,
                                    is_train, 10)
-        top1 = fluid.layers.accuracy(input=logits, label=label, k=1)
-        top5 = fluid.layers.accuracy(input=logits, label=label, k=5)
-        loss = fluid.layers.reduce_mean(
-            fluid.layers.softmax_with_cross_entropy(logits, label))
+        top1 = paddle.metric.accuracy(input=logits, label=label, k=1)
+        top5 = paddle.metric.accuracy(input=logits, label=label, k=5)
+        loss = paddle.mean(F.softmax_with_cross_entropy(logits, label))
 
         if is_train:
             if auxiliary:
-                loss_aux = fluid.layers.reduce_mean(
-                    fluid.layers.softmax_with_cross_entropy(logits_aux, label))
+                loss_aux = paddle.mean(
+                    F.softmax_with_cross_entropy(logits_aux, label))
                 loss = loss + auxiliary_weight * loss_aux
             step_per_epoch = int(trainset_num / args.batch_size)
-            learning_rate = fluid.layers.cosine_decay(lr, step_per_epoch,
-                                                      args.retain_epoch)
-            fluid.clip.set_gradient_clip(
-                clip=fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0))
-            optimizer = fluid.optimizer.MomentumOptimizer(
+            learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
+                lr, T_max=step_per_epoch * args.retain_epoch)
+            optimizer = paddle.optimizer.Momentum(
                 learning_rate,
                 momentum,
-                regularization=fluid.regularizer.L2DecayRegularizer(
-                    weight_decay))
+                weight_decay=paddle.regularizer.L2Decay(weight_decay),
+                grad_clip=nn.ClipGradByGlobalNorm(clip_norm=5.0))
             optimizer.minimize(loss)
-            outs = [loss, top1, top5, learning_rate]
+            outs = [loss, top1, top5]
         else:
             outs = [loss, top1, top5]
-    return outs, data_loader
+    return outs, (data, label), data_loader
 
 
 def train(main_prog, exe, epoch_id, train_loader, fetch_list, args):
@@ -129,16 +129,16 @@ def train(main_prog, exe, epoch_id, train_loader, fetch_list, args):
                 })
         else:
             feed = data
-        loss_v, top1_v, top5_v, lr = exe.run(
+        loss_v, top1_v, top5_v = exe.run(
             main_prog, feed=feed, fetch_list=[v.name for v in fetch_list])
         loss.update(loss_v, args.batch_size)
         top1.update(top1_v, args.batch_size)
         top5.update(top5_v, args.batch_size)
         if step_id % 10 == 0:
             _logger.info(
-                "Train Epoch {}, Step {}, Lr {:.8f}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
-                format(epoch_id, step_id, lr[0], loss.avg[0], top1.avg[0],
-                       top5.avg[0]))
+                "Train Epoch {}, Step {}, loss {:.6f}, acc_1 {:.6f}, acc_5 {:.6f}".
+                format(epoch_id, step_id, loss.avg[0], top1.avg[0], top5.avg[
+                    0]))
     return top1.avg[0]
 
 
@@ -161,6 +161,8 @@ def valid(main_prog, exe, epoch_id, valid_loader, fetch_list, args):
 
 
 def search(config, args, image_size, is_server=True):
+    places = static.cuda_places() if args.use_gpu else static.cpu_places()
+    place = places[0]
     if is_server:
         ### start a server and a client
         sa_nas = SANAS(
@@ -180,10 +182,10 @@ def search(config, args, image_size, is_server=True):
     for step in range(args.search_steps):
         archs = sa_nas.next_archs()[0]
 
-        train_program = fluid.Program()
-        test_program = fluid.Program()
-        startup_program = fluid.Program()
-        train_fetch_list, train_loader = build_program(
+        train_program = static.Program()
+        test_program = static.Program()
+        startup_program = static.Program()
+        train_fetch_list, _, train_loader = build_program(
             train_program,
             startup_program,
             image_shape,
@@ -198,7 +200,7 @@ def search(config, args, image_size, is_server=True):
         if current_params > float(3.77):
             continue
 
-        test_fetch_list, test_loader = build_program(
+        test_fetch_list, _, test_loader = build_program(
             test_program,
             startup_program,
             image_shape,
@@ -207,8 +209,7 @@ def search(config, args, image_size, is_server=True):
             is_train=False)
         test_program = test_program.clone(for_test=True)
 
-        place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-        exe = fluid.Executor(place)
+        exe = static.Executor(place)
         exe.run(startup_program)
 
         train_reader = reader.train_valid(
@@ -219,8 +220,8 @@ def search(config, args, image_size, is_server=True):
         train_loader.set_batch_generator(train_reader, places=place)
         test_loader.set_batch_generator(test_reader, places=place)
 
-        build_strategy = fluid.BuildStrategy()
-        train_compiled_program = fluid.CompiledProgram(
+        build_strategy = static.BuildStrategy()
+        train_compiled_program = static.CompiledProgram(
             train_program).with_data_parallel(
                 loss_name=train_fetch_list[0].name,
                 build_strategy=build_strategy)
@@ -241,52 +242,40 @@ def search(config, args, image_size, is_server=True):
 
 def final_test(config, args, image_size, token=None):
     assert token != None, "If you want to start a final experiment, you must input a token."
+    places = static.cuda_places() if args.use_gpu else static.cpu_places()
+    place = places[0]
     sa_nas = SANAS(
         config, server_addr=(args.server_address, args.port), is_server=True)
 
     image_shape = [3, image_size, image_size]
     archs = sa_nas.tokens2arch(token)[0]
 
-    train_program = fluid.Program()
-    test_program = fluid.Program()
-    startup_program = fluid.Program()
-    train_fetch_list, train_loader = build_program(
-        train_program,
-        startup_program,
-        image_shape,
-        archs,
-        args,
-        is_train=True)
+    train_program = static.Program()
+    test_program = static.Program()
+    startup_program = static.Program()
+    train_fetch_list, (data, label), train_loader = build_program(
+        train_program, startup_program, image_shape, archs, args, is_train=True)
 
     current_params = count_parameters_in_MB(
         train_program.global_block().all_parameters(), 'cifar10')
     _logger.info('current_params: {}M'.format(current_params))
-    test_fetch_list, test_loader = build_program(
-        test_program,
-        startup_program,
-        image_shape,
-        archs,
-        args,
-        is_train=False)
+    test_fetch_list, _, test_loader = build_program(
+        test_program, startup_program, image_shape, archs, args, is_train=False)
     test_program = test_program.clone(for_test=True)
 
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-    exe = fluid.Executor(place)
+    exe = static.Executor(place)
     exe.run(startup_program)
 
     train_reader = reader.train_valid(
-        batch_size=args.batch_size, is_train=True, is_shuffle=True, args=args)
+        batch_size=args.batch_size, is_train=True, is_shuffle=True)
     test_reader = reader.train_valid(
-        batch_size=args.batch_size,
-        is_train=False,
-        is_shuffle=False,
-        args=args)
+        batch_size=args.batch_size, is_train=False, is_shuffle=False)
 
     train_loader.set_batch_generator(train_reader, places=place)
     test_loader.set_batch_generator(test_reader, places=place)
 
-    build_strategy = fluid.BuildStrategy()
-    train_compiled_program = fluid.CompiledProgram(
+    build_strategy = static.BuildStrategy()
+    train_compiled_program = static.CompiledProgram(
         train_program).with_data_parallel(
             loss_name=train_fetch_list[0].name, build_strategy=build_strategy)
 
@@ -305,11 +294,12 @@ def final_test(config, args, image_size, token=None):
         output_dir = os.path.join('darts_output', str(epoch_id))
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        fluid.io.save_persistables(exe, output_dir, main_program=train_program)
+        static.save_inference_model(output_dir, [data], test_fetch_list, exe)
 
 
 if __name__ == '__main__':
 
+    paddle.enable_static()
     parser = argparse.ArgumentParser(
         description='SA NAS MobileNetV2 cifar10 argparase')
     parser.add_argument(

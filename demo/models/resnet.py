@@ -105,7 +105,6 @@ class ResNet():
             out = fluid.layers.fc(
                 input=pool,
                 size=class_dim,
-                act='softmax',
                 name=fc_name,
                 param_attr=fluid.param_attr.ParamAttr(
                     initializer=fluid.initializer.Uniform(-stdv, stdv)))
@@ -138,8 +137,7 @@ class ResNet():
                 bn_name = "bn" + name[3:]
         else:
             if name.split("_")[1] == "conv1":
-                bn_name = name.split("_", 1)[0] + "_bn_" + name.split("_",
-                                                                      1)[1]
+                bn_name = name.split("_", 1)[0] + "_bn_" + name.split("_", 1)[1]
             else:
                 bn_name = name.split("_", 1)[0] + "_bn" + name.split("_",
                                                                      1)[1][3:]
