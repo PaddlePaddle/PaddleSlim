@@ -42,9 +42,10 @@ def dygraph2program(layer,
     tracer = _dygraph_tracer()._get_program_desc_tracer()
 
     var_list = extract_vars_fn(inputs)
-
+    if _is_shape(inputs):
+        inputs = var_list
     with program_desc_tracing_guard(True):
-        original_outputs = layer(*var_list)
+        original_outputs = layer(*inputs)
         out_vars = extract_vars(original_outputs)
         program_desc, feed_names, fetch_names, parameters = tracer.create_program_desc(
             var_list, feed_prefix, out_vars, fetch_prefix, tmp_prefix)
