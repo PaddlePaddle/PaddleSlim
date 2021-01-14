@@ -17,8 +17,10 @@ class L1NormFilterPruner(FilterPruner):
             model, inputs, extract_vars_fn=extract_vars_fn, sen_file=sen_file)
 
     def cal_mask(self, var_name, pruned_ratio, group):
-        value = group[var_name]['value']
-        pruned_dims = group[var_name]['pruned_dims']
+        for _item in group[var_name]:
+            if _item['pruned_dims'] == [0]:
+                value = _item['value']
+                pruned_dims = _item['pruned_dims']
         reduce_dims = [
             i for i in range(len(value.shape)) if i not in pruned_dims
         ]

@@ -85,8 +85,8 @@ class Pruner():
         param_backup = {} if param_backup else None
         param_shape_backup = {} if param_shape_backup else None
 
-        visited = {}
         pruned_params = []
+        visited = {}
         for param, ratio in zip(params, ratios):
             _logger.info("pruning: {}".format(param))
             if graph.var(param) is None:
@@ -121,7 +121,6 @@ class Pruner():
                 g = self._transform(self.idx_selector(scores, ratio))
                 pruned_params.extend(g)
 
-        print(f"pruned_params: \n{pruned_params}")
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
             if param not in merge_pruned_params:
@@ -129,7 +128,6 @@ class Pruner():
             if pruned_axis not in merge_pruned_params[param]:
                 merge_pruned_params[param][pruned_axis] = []
             merge_pruned_params[param][pruned_axis].append(pruned_idx)
-
         for param_name in merge_pruned_params:
             for pruned_axis in merge_pruned_params[param_name]:
                 pruned_idx = np.concatenate(merge_pruned_params[param_name][
@@ -157,11 +155,11 @@ class Pruner():
                             pruned_idx,
                             pruned_axis=pruned_axis,
                             lazy=lazy)
+                        param_t.set(pruned_param, place)
                     except IndexError as e:
                         _logger.error("Pruning {}, but get [{}]".format(
                             param.name(), e))
 
-                    param_t.set(pruned_param, place)
         graph.update_groups_of_conv()
         graph.infer_shape()
         self.pruned_weights = (not only_graph)

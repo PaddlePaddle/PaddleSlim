@@ -27,15 +27,18 @@ class VarGroup():
         ret = {}
         for _name, _axis, _transforms in group:
             if isinstance(_axis, int):
-                _axis = [_axis]  # TODO: fix
-            ret[_name] = {'pruned_dims': _axis, 'transforms': _transforms}
+                _axis = [_axis]
+            if _name not in ret:
+                ret[_name] = []
+            # Variable can be pruned on multiple axies.
+            ret[_name].append({'pruned_dims': _axis, 'transforms': _transforms})
         return ret
 
     def find_group(self, var_name, axis):
         for group in self.groups:
             for _name, _axis, _stride in group:
                 if isinstance(_axis, int):
-                    _axis = [_axis]  # TODO: fix
+                    _axis = [_axis]
                 if _name == var_name and _axis == axis:
                     return self._to_dict(group)
 
@@ -45,6 +48,7 @@ class VarGroup():
         model.eval()
         program = dygraph2program(
             model, inputs=inputs, extract_vars_fn=extract_vars_fn)
+
         graph = GraphWrapper(program)
 
         visited = {}

@@ -1,4 +1,5 @@
 import paddle
+import numpy as np
 from paddle.fluid.framework import _dygraph_tracer, dygraph_only, _dygraph_guard
 from paddle.fluid.dygraph.base import program_desc_tracing_guard
 from paddle.fluid.dygraph.layers import Layer
@@ -43,10 +44,8 @@ def dygraph2program(layer,
     var_list = extract_vars_fn(inputs)
 
     with program_desc_tracing_guard(True):
-        original_outputs = layer(*inputs)
-
+        original_outputs = layer(*var_list)
         out_vars = extract_vars(original_outputs)
-
         program_desc, feed_names, fetch_names, parameters = tracer.create_program_desc(
             var_list, feed_prefix, out_vars, fetch_prefix, tmp_prefix)
         tracer.reset()

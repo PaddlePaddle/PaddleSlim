@@ -178,7 +178,6 @@ class PruningPlan():
                         bool_mask = mask.astype(bool)
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims[0], value)
-
                         p = t_value._place()
                         if p.is_cpu_place():
                             place = paddle.CPUPlace()
@@ -190,14 +189,19 @@ class PruningPlan():
                             place = paddle.CUDAPlace(p.gpu_device_id())
 
                         t_value.set(pruned_value, place)
-                        if isinstance(sub_layer, paddle.nn.layer.conv.Conv2D):
-                            if sub_layer._groups > 1 and pruned_value.shape[
-                                    1] == 1:  # depthwise conv2d
-                                _logger.debug(
-                                    "Update groups of depthwise conv2d form {} to {}".
-                                    format(sub_layer._groups,
-                                           pruned_value.shape[0]))
-                                sub_layer._groups = pruned_value.shape[0]
+                        if isinstance(
+                                sub_layer, paddle.nn.layer.conv.Conv2D
+                        ) and sub_layer._groups > 1 and len(param.shape) == 4:
+                            assert param.shape[
+                                1] == 1, "It just supports depthwise conv2d when groups > 1."
+                            new_groups = int(bool_mask.sum() *
+                                             sub_layer._groups / len(bool_mask))
+                            _logger.debug(
+                                "Update groups of depthwise conv2d form {} to {}".
+                                format(sub_layer._groups, new_groups))
+                            sub_layer._origin_groups = sub_layer._groups
+                            sub_layer._groups = new_groups
+
                     # for training
                     if param.trainable:
                         param.clear_gradient()
@@ -225,10 +229,8 @@ class PruningPlan():
 
                     t_value.set(np.array(t_backup).astype("float32"), place)
 
-                    if isinstance(sub_layer, paddle.nn.layer.conv.Conv2D):
-                        if sub_layer._groups > 1:
-                            _logger.debug(
-                                "Update groups of conv form {} to {}".format(
-                                    sub_layer._groups, t_value.shape()[0]))
-                            sub_layer._groups = t_value.shape()[0]
+                    if isinstance(sub_layer, paddle.nn.layer.conv.
+                                  Conv2D) and sub_layer._groups > 1:
+                        if "_origin_groups" in sub_layer.__dict__:
+                            sub_layer._groups = sub_layer._origin_groups
                     del sub_layer._buffers[backup_name]
