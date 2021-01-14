@@ -6,8 +6,11 @@ import ast
 import logging
 import time
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
+import paddle.nn as nn
+import paddle.nn.functional as F
+import paddle.vision.transforms as T
+import paddle.static as static
+from paddle import ParamAttr
 from paddleslim.analysis import flops
 from paddleslim.nas import SANAS
 from paddleslim.common import get_logger
@@ -15,18 +18,6 @@ from optimizer import create_optimizer
 import imagenet_reader
 
 _logger = get_logger(__name__, level=logging.INFO)
-
-
-def create_data_loader(image_shape):
-    data_shape = [None] + image_shape
-    data = fluid.data(name='data', shape=data_shape, dtype='float32')
-    label = fluid.data(name='label', shape=[None, 1], dtype='int64')
-    data_loader = fluid.io.DataLoader.from_generator(
-        feed_list=[data, label],
-        capacity=1024,
-        use_double_buffer=True,
-        iterable=True)
-    return data_loader, data, label
 
 
 def conv_bn_layer(input,
@@ -38,7 +29,7 @@ def conv_bn_layer(input,
                   act=None,
                   name=None,
                   use_cudnn=True):
-    conv = fluid.layers.conv2d(
+    conv = static.nn.conv2d(
         input,
         num_filters=num_filters,
         filter_size=filter_size,
@@ -50,7 +41,7 @@ def conv_bn_layer(input,
         param_attr=ParamAttr(name=name + '_weights'),
         bias_attr=False)
     bn_name = name + '_bn'
-    return fluid.layers.batch_norm(
+    return static.nn.batch_norm(
         input=conv,
         act=act,
         param_attr=ParamAttr(name=bn_name + '_scale'),
@@ -61,6 +52,19 @@ def conv_bn_layer(input,
 
 def search_mobilenetv2_block(config, args, image_size):
     image_shape = [3, image_size, image_size]
+    transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+    if args.data == 'cifar10':
+        train_dataset = paddle.vision.datasets.Cifar10(
+            mode='train', transform=transform, backend='cv2')
+        val_dataset = paddle.vision.datasets.Cifar10(
+            mode='test', transform=transform, backend='cv2')
+
+    elif args.data == 'imagenet':
+        train_dataset = imagenet_reader.ImageNetDataset(mode='train')
+        val_dataset = imagenet_reader.ImageNetDataset(mode='val')
+
+    places = static.cuda_places() if args.use_gpu else static.cpu_places()
+    place = places[0]
     if args.is_server:
         sa_nas = SANAS(
             config,
@@ -77,11 +81,33 @@ def search_mobilenetv2_block(config, args, image_size):
     for step in range(args.search_steps):
         archs = sa_nas.next_archs()[0]
 
-        train_program = fluid.Program()
-        test_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.program_guard(train_program, startup_program):
-            train_loader, data, label = create_data_loader(image_shape)
+        train_program = static.Program()
+        test_program = static.Program()
+        startup_program = static.Program()
+        with static.program_guard(train_program, startup_program):
+            data_shape = [None] + image_shape
+            data = static.data(name='data', shape=data_shape, dtype='float32')
+            label = static.data(name='label', shape=[None, 1], dtype='int64')
+            if args.data == 'cifar10':
+                paddle.assign(paddle.reshape(label, [-1, 1]), label)
+            train_loader = paddle.io.DataLoader(
+                train_dataset,
+                places=places,
+                feed_list=[data, label],
+                drop_last=True,
+                batch_size=args.batch_size,
+                return_list=False,
+                shuffle=True,
+                use_shared_memory=True,
+                num_workers=4)
+            val_loader = paddle.io.DataLoader(
+                val_dataset,
+                places=place,
+                feed_list=[data, label],
+                drop_last=False,
+                batch_size=args.batch_size,
+                return_list=False,
+                shuffle=False)
             data = conv_bn_layer(
                 input=data,
                 num_filters=32,
@@ -99,32 +125,27 @@ def search_mobilenetv2_block(config, args, image_size):
                 padding='SAME',
                 act='relu6',
                 name='mobilenetv2_last_conv')
-            data = fluid.layers.pool2d(
-                input=data,
-                pool_size=7,
-                pool_stride=1,
-                pool_type='avg',
-                global_pooling=True,
-                name='mobilenetv2_last_pool')
-            output = fluid.layers.fc(
-                input=data,
+            data = F.adaptive_avg_pool2d(
+                data, output_size=[1, 1], name='mobilenetv2_last_pool')
+            output = static.nn.fc(
+                x=data,
                 size=args.class_dim,
-                param_attr=ParamAttr(name='mobilenetv2_fc_weights'),
+                weight_attr=ParamAttr(name='mobilenetv2_fc_weights'),
                 bias_attr=ParamAttr(name='mobilenetv2_fc_offset'))
 
-            softmax_out = fluid.layers.softmax(input=output, use_cudnn=False)
-            cost = fluid.layers.cross_entropy(input=softmax_out, label=label)
-            avg_cost = fluid.layers.mean(cost)
-            acc_top1 = fluid.layers.accuracy(
+            softmax_out = F.softmax(output)
+            cost = F.cross_entropy(softmax_out, label=label)
+            avg_cost = paddle.mean(cost)
+            acc_top1 = paddle.metric.accuracy(
                 input=softmax_out, label=label, k=1)
-            acc_top5 = fluid.layers.accuracy(
+            acc_top5 = paddle.metric.accuracy(
                 input=softmax_out, label=label, k=5)
             test_program = train_program.clone(for_test=True)
 
-            optimizer = fluid.optimizer.Momentum(
+            optimizer = paddle.optimizer.Momentum(
                 learning_rate=0.1,
                 momentum=0.9,
-                regularization=fluid.regularizer.L2Decay(1e-4))
+                weight_decay=paddle.regularizer.L2Decay(1e-4))
             optimizer.minimize(avg_cost)
 
         current_flops = flops(train_program)
@@ -132,39 +153,11 @@ def search_mobilenetv2_block(config, args, image_size):
         if current_flops > int(321208544):
             continue
 
-        place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-        exe = fluid.Executor(place)
+        exe = static.Executor(place)
         exe.run(startup_program)
 
-        if args.data == 'cifar10':
-            train_reader = paddle.fluid.io.batch(
-                paddle.reader.shuffle(
-                    paddle.dataset.cifar.train10(cycle=False), buf_size=1024),
-                batch_size=args.batch_size,
-                drop_last=True)
-
-            test_reader = paddle.fluid.io.batch(
-                paddle.dataset.cifar.test10(cycle=False),
-                batch_size=args.batch_size,
-                drop_last=False)
-        elif args.data == 'imagenet':
-            train_reader = paddle.fluid.io.batch(
-                imagenet_reader.train(),
-                batch_size=args.batch_size,
-                drop_last=True)
-            test_reader = paddle.fluid.io.batch(
-                imagenet_reader.val(),
-                batch_size=args.batch_size,
-                drop_last=False)
-
-        test_loader, _, _ = create_data_loader(image_shape)
-        train_loader.set_sample_list_generator(
-            train_reader,
-            places=fluid.cuda_places() if args.use_gpu else fluid.cpu_places())
-        test_loader.set_sample_list_generator(test_reader, places=place)
-
-        build_strategy = fluid.BuildStrategy()
-        train_compiled_program = fluid.CompiledProgram(
+        build_strategy = static.BuildStrategy()
+        train_compiled_program = static.CompiledProgram(
             train_program).with_data_parallel(
                 loss_name=avg_cost.name, build_strategy=build_strategy)
         for epoch_id in range(args.retain_epoch):
@@ -181,7 +174,7 @@ def search_mobilenetv2_block(config, args, image_size):
                         format(step, epoch_id, batch_id, outs[0], batch_time))
 
         reward = []
-        for batch_id, data in enumerate(test_loader()):
+        for batch_id, data in enumerate(val_loader()):
             test_fetches = [avg_cost.name, acc_top1.name, acc_top5.name]
             batch_reward = exe.run(test_program,
                                    feed=data,

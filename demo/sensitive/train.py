@@ -75,6 +75,7 @@ def compress(args):
         feed_list=[image, label],
         drop_last=False,
         batch_size=args.batch_size,
+        use_shared_memory=True,
         shuffle=False)
 
     def test(program):

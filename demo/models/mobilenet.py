@@ -130,7 +130,6 @@ class MobileNet():
         with fluid.name_scope('last_fc'):
             output = fluid.layers.fc(input=input,
                                      size=class_dim,
-                                     act='softmax',
                                      param_attr=ParamAttr(
                                          initializer=MSRA(),
                                          name="fc7_weights"),

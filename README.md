@@ -228,6 +228,9 @@ pip install paddleslim==1.2.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ## 使用
 
 - [快速开始](docs/zh_cn/quick_start)：通过简单示例介绍如何快速使用PaddleSlim。
+- 动态图：
+    - 剪枝：[教程](dygraph_docs/)，[示例](demo/dygraph/pruning)
+    - 量化：[示例](demo/dygraph/quant)
 - [进阶教程](docs/zh_cn/tutorials)：PaddleSlim高阶教程。
 - [模型库](docs/zh_cn/model_zoo.md)：各个压缩策略在图像分类、目标检测和图像语义分割模型上的实验结论，包括模型精度、预测速度和可供下载的预训练模型。
 - [API文档](https://paddlepaddle.github.io/PaddleSlim/api_cn/index.html)

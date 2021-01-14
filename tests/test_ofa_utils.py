@@ -20,39 +20,35 @@ import paddle
 import paddle.nn as nn
 from paddle.vision.models import mobilenet_v1
 from paddleslim.nas.ofa.convert_super import Convert, supernet
-from paddleslim.nas.ofa.utils import compute_neuron_head_importance, reorder_head, reorder_neuron, set_state_dict
+from paddleslim.nas.ofa.utils import compute_neuron_head_importance, reorder_head, reorder_neuron, set_state_dict, dynabert_config
+from paddleslim.nas.ofa import OFA
+
+
+class TestModel(nn.Layer):
+    def __init__(self):
+        super(TestModel, self).__init__()
+        encoder_layer = nn.TransformerEncoderLayer(
+            312,
+            12,
+            1024,
+            dropout=0.1,
+            activation='gelu',
+            attn_dropout=0.1,
+            act_dropout=0)
+        self.encoder = nn.TransformerEncoder(encoder_layer, 3)
+        self.fc = nn.Linear(312, 3)
+
+    def forward(self, input_ids, segment_ids, attention_mask=[None, None]):
+        src = input_ids + segment_ids
+        out = self.encoder(src, attention_mask)
+        out = self.fc(out[:, 0])
+        return out
 
 
 class TestComputeImportance(unittest.TestCase):
     def setUp(self):
-        self.model = self.init_model()
+        self.model = TestModel()
         self.data_loader = self.init_data()
-
-    def init_model(self):
-        class TestModel(nn.Layer):
-            def __init__(self):
-                super(TestModel, self).__init__()
-                encoder_layer = nn.TransformerEncoderLayer(
-                    312,
-                    12,
-                    1024,
-                    dropout=0.1,
-                    activation='gelu',
-                    attn_dropout=0.1,
-                    act_dropout=0)
-                self.encoder = nn.TransformerEncoder(encoder_layer, 3)
-                self.fc = nn.Linear(312, 3)
-
-            def forward(self,
-                        input_ids,
-                        segment_ids,
-                        attention_mask=[None, None]):
-                src = input_ids + segment_ids
-                out = self.encoder(src, attention_mask)
-                out = self.fc(out[:, 0])
-                return out
-
-        return TestModel()
 
     def init_data(self):
         batch_size = 16
@@ -67,8 +63,7 @@ class TestComputeImportance(unittest.TestCase):
                  paddle.to_tensor(labels)), )
         return data
 
-    def reorder_reorder_neuron_head(self, model, head_importance,
-                                    neuron_importance):
+    def reorder_neuron_head(self, model, head_importance, neuron_importance):
         # reorder heads and ffn neurons
         for layer, current_importance in enumerate(neuron_importance):
             # reorder heads
@@ -89,8 +84,7 @@ class TestComputeImportance(unittest.TestCase):
             num_heads=12)
         assert (len(head_importance) == 3)
         assert (len(neuron_importance) == 3)
-        self.reorder_reorder_neuron_head(self.model, head_importance,
-                                         neuron_importance)
+        self.reorder_neuron_head(self.model, head_importance, neuron_importance)
 
 
 class TestComputeImportanceCase1(TestComputeImportance):
@@ -123,6 +117,15 @@ class TestSetStateDict(unittest.TestCase):
         sp_net_config = supernet(expand_ratio=[0.5, 1.0])
         sp_model = Convert(sp_net_config).convert(self.model)
         set_state_dict(sp_model, self.origin_weights)
+
+
+class TestSpecialConfig(unittest.TestCase):
+    def test_dynabert(self):
+        self.model = TestModel()
+        sp_net_config = supernet(expand_ratio=[0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(self.model)
+        ofa_model = OFA(self.model)
+        config = dynabert_config(ofa_model, 0.5)
 
 
 if __name__ == '__main__':

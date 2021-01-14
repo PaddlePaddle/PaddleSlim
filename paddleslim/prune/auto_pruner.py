@@ -36,7 +36,7 @@ class AutoPruner(object):
     Args:
         program(Program): The program to be pruned.
         scope(Scope): The scope to be pruned.
-        place(fluid.Place): The device place of parameters.
+        place(paddle.CUDAPlace||paddle.CPUPlace): The device place of parameters.
         params(list<str>): The names of parameters to be pruned.
         init_ratios(list<float>|float): Init ratios used to pruned parameters in `params`.
             List means ratios used for pruning each parameter in `params`.

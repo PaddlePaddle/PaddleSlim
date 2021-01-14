@@ -23,14 +23,16 @@ pd_ver = get_paddle_version()
 if pd_ver == 185:
     import paddle.fluid.dygraph.nn as nn
     from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
-    from .layers import *
-    from . import layers
+    from paddle.fluid import ParamAttr
+    from .layers_old import *
+    from . import layers_old as layers
     Layer = paddle.fluid.dygraph.Layer
 else:
     import paddle.nn as nn
     from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
-    from .layers_new import *
-    from . import layers_new as layers
+    from paddle import ParamAttr
+    from .layers import *
+    from . import layers
     Layer = paddle.nn.Layer
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -41,10 +43,48 @@ WEIGHT_LAYER = ['conv', 'linear', 'embedding']
 
 
 class Convert:
+    """
+    Convert network to the supernet according to the search space.
+    Parameters:
+        context(paddleslim.nas.ofa.supernet): search space defined by the user.
+    Examples:
+        .. code-block:: python
+          from paddleslim.nas.ofa import supernet, Convert
+          sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+          convert = Convert(sp_net_config)
+    """
+
     def __init__(self, context):
         self.context = context
 
+    def _change_name(self, layer, pd_ver, has_bias=True, conv=False):
+        if conv:
+            w_attr = layer._param_attr
+        else:
+            w_attr = layer._param_attr if pd_ver == 185 else layer._weight_attr
+
+        if isinstance(w_attr, ParamAttr):
+            if w_attr != None and not isinstance(w_attr, bool):
+                w_attr.name = 'super_' + w_attr.name
+
+        if has_bias:
+            if isinstance(layer._bias_attr, ParamAttr):
+                if layer._bias_attr != None and not isinstance(layer._bias_attr,
+                                                               bool):
+                    layer._bias_attr.name = 'super_' + layer._bias_attr.name
+
     def convert(self, network):
+        """
+        The function to convert the network to a supernet.
+        Parameters:
+            network(paddle.nn.Layer|list(paddle.nn.Layer)): instance of the model or list of instance of layers.
+        Examples:
+            .. code-block:: python
+              from paddle.vision.models import mobilenet_v1
+              from paddleslim.nas.ofa import supernet, Convert
+              sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+              convert = Convert(sp_net_config).convert(mobilenet_v1())
+        """
         # search the first and last weight layer, don't change out channel of the last weight layer
         # don't change in channel of the first weight layer
         model = []
@@ -88,6 +128,7 @@ class Convert:
                         'weight_attr', 'data_format', 'padding_mode'
                     ]
 
+                self._change_name(layer, pd_ver, conv=True)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 new_attr_dict['candidate_config'] = dict()
                 if pd_ver == 185:
@@ -104,7 +145,7 @@ class Convert:
                 fks = '_filter_size' if '_filter_size' in attr_dict.keys(
                 ) else '_kernel_size'
 
-                ks = list(attr_dict[fks]) if isinstance(
+                ks = [attr_dict[fks]] if isinstance(
                     attr_dict[fks], numbers.Integral) else attr_dict[fks]
 
                 if self.kernel_size and int(ks[0]) != 1:
@@ -214,6 +255,7 @@ class Convert:
                 else:
                     new_attr_name += ['weight_attr', 'data_format', 'name']
 
+                self._change_name(layer, pd_ver)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 if pd_ver == 185:
                     new_attr_dict['num_channels'] = None
@@ -237,8 +279,9 @@ class Convert:
 
                 del layer, attr_dict
 
-                layer = getattr(layers, 'SuperBatchNorm', SuperBatchNorm2D)(
-                    **new_attr_dict)
+                layer = layers.SuperBatchNorm(
+                    **new_attr_dict
+                ) if pd_ver == 185 else layers.SuperBatchNorm2D(**new_attr_dict)
                 model[idx] = layer
 
             ### assume output_size = None, filter_size != None
@@ -273,12 +316,14 @@ class Convert:
                     new_attr_dict['in_channels'] = None
                     new_attr_dict['out_channels'] = None
                     new_attr_dict['kernel_size'] = None
+
+                self._change_name(layer, pd_ver, conv=True)
                 self.kernel_size = getattr(self.context, 'kernel_size', None)
 
                 # if the kernel_size of conv transpose is 1, don't change it.
                 fks = '_filter_size' if '_filter_size' in attr_dict.keys(
                 ) else '_kernel_size'
-                ks = list(attr_dict[fks]) if isinstance(
+                ks = [attr_dict[fks]] if isinstance(
                     attr_dict[fks], numbers.Integral) else attr_dict[fks]
 
                 if self.kernel_size and int(ks[0]) != 1:
@@ -381,7 +426,7 @@ class Convert:
                 attr_dict = layer.__dict__
                 key = attr_dict['_full_name']
                 if pd_ver == 185:
-                    new_attr_name = ['param_attr', 'bias_attr', 'act', 'dtype']
+                    new_attr_name = ['act', 'dtype']
                 else:
                     new_attr_name = ['weight_attr', 'bias_attr']
                 in_nc, out_nc = layer._parameters['weight'].shape
@@ -395,10 +440,8 @@ class Convert:
                     new_attr_dict['in_features'] = None
                     new_attr_dict['out_features'] = None
 
-                in_key = '_input_dim' if '_input_dim' in attr_dict.keys(
-                ) else '_in_features'
-                out_key = '_output_dim' if '_output_dim' in attr_dict.keys(
-                ) else '_out_features'
+                in_key = '_input_dim' if pd_ver == 185 else '_in_features'
+                out_key = '_output_dim' if pd_ver == 185 else '_out_features'
                 attr_dict[in_key] = in_nc
                 attr_dict[out_key] = out_nc
                 if self.context.expand:
@@ -461,6 +504,8 @@ class Convert:
                     ]
                 else:
                     new_attr_name = ['bias_attr', 'epsilon', 'weight_attr']
+
+                self._change_name(layer, pd_ver)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 if pd_ver == 185:
                     new_attr_dict['num_channels'] = None
@@ -485,8 +530,10 @@ class Convert:
 
                 del layer, attr_dict
 
-                layer = getattr(layers, 'SuperInstanceNorm2D',
-                                'SuperInstanceNorm')(**new_attr_dict)
+                layer = layers.SuperInstanceNorm(
+                    **new_attr_dict
+                ) if pd_ver == 185 else layers.SuperInstanceNorm2D(
+                    **new_attr_dict)
                 model[idx] = layer
 
             elif isinstance(layer, LayerNorm) and (
@@ -505,6 +552,7 @@ class Convert:
                 else:
                     new_attr_name += ['weight_attr']
 
+                self._change_name(layer, pd_ver)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 new_attr_dict['normalized_shape'] = None
                 if self.context.expand:
@@ -539,6 +587,8 @@ class Convert:
                         'num_embeddings', 'embedding_dim', 'sparse',
                         'weight_attr', 'name'
                     ]
+
+                self._change_name(layer, pd_ver, has_bias=False)
 
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 new_attr_dict['candidate_config'] = dict()
@@ -613,6 +663,14 @@ class Convert:
 
 
 class supernet:
+    """
+    Search space of the network.
+    Parameters:
+        kernel_size(list|tuple, optional): search space for the kernel size of the Conv2D.
+        expand_ratio(list|tuple, optional): the search space for the expand ratio of the number of channels of Conv2D, the expand ratio of the output dimensions of the Embedding or Linear, which means this parameter get the number of channels of each OP in the converted super network based on the the channels of each OP in the original model, so this parameter The length is 1. Just set one between this parameter and ``channel``.
+        channel(list|tuple, optional): the search space for the number of channels of Conv2D, the output dimensions of the Embedding or Linear, this parameter directly sets the number of channels of each OP in the super network, so the length of this parameter needs to be the same as the total number that of Conv2D, Embedding, and Linear included in the network. Just set one between this parameter and ``expand_ratio``.
+    """
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
