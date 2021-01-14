@@ -137,12 +137,26 @@ class Pruner():
                     _logger.debug("{}\t{}\t{}\t{}".format(
                         param.name(), pruned_axis,
                         param.shape()[pruned_axis], len(pruned_idx)))
+                    origin_shape = copy.deepcopy(param.shape())
                     if param_shape_backup is not None:
-                        origin_shape = copy.deepcopy(param.shape())
                         param_shape_backup[param.name()] = origin_shape
                     new_shape = list(param.shape())
                     new_shape[pruned_axis] -= len(pruned_idx)
                     param.set_shape(new_shape)
+                    # update groups of depthwise conv2d
+                    for op in param.outputs():
+                        if op.type() in ["conv2d", "depthwise_conv2d"
+                                         ] and op.attr("groups") > 1:
+                            assert origin_shape[
+                                1] == 1, "Only support for depthwise when groups > 1."
+                            new_groups = int(
+                                op.attr("groups") * new_shape[pruned_axis] /
+                                origin_shape[pruned_axis])
+                            _logger.debug(
+                                f"change groups of conv({param.name()}) from {op.attr('groups')} to {new_groups}; origin_shape: {origin_shape}; new_shape: {new_shape}"
+                            )
+                            op.set_attr("groups", new_groups)
+
                 if not only_graph:
                     param_t = scope.find_var(param.name()).get_tensor()
                     if param_backup is not None and (
@@ -160,7 +174,6 @@ class Pruner():
                         _logger.error("Pruning {}, but get [{}]".format(
                             param.name(), e))
 
-        graph.update_groups_of_conv()
         graph.infer_shape()
         self.pruned_weights = (not only_graph)
         return graph.program, param_backup, param_shape_backup
