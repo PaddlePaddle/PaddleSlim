@@ -36,7 +36,6 @@ def conv_bn_layer(input,
         bias_attr=bias,
         name=name + "_out",
         use_cudnn=use_cudnn)
-    return conv
     bn_name = name + "_bn"
     return fluid.layers.batch_norm(
         input=conv,
