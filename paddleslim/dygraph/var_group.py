@@ -19,9 +19,9 @@ class VarGroup():
       - inputs(Variable|list|dict): The dummy inputs of target model. It will be used in calling `model.forward(inputs)`.
     """
 
-    def __init__(self, model, inputs, extract_vars_fn=None):
+    def __init__(self, model, inputs):
         self.groups = []
-        self._parse_model(model, inputs, extract_vars_fn=extract_vars_fn)
+        self._parse_model(model, inputs)
 
     def _to_dict(self, group):
         ret = {}
@@ -42,12 +42,11 @@ class VarGroup():
                 if _name == var_name and _axis == axis:
                     return self._to_dict(group)
 
-    def _parse_model(self, model, inputs, extract_vars_fn=None):
+    def _parse_model(self, model, inputs):
         _logger.debug("Parsing model with input: {}".format(inputs))
 
         model.eval()
-        program = dygraph2program(
-            model, inputs=inputs, extract_vars_fn=extract_vars_fn)
+        program = dygraph2program(model, inputs=inputs)
 
         graph = GraphWrapper(program)
 

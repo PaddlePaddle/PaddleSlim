@@ -48,20 +48,17 @@ class FilterPruner(Pruner):
     Args:
         model(paddle.nn.Layer): The target model to be pruned.
         inputs(list<int>): The inputs of model. It will be use in calling 'model.forward(inputs)'.
-        extract_vars_fn(function): The callback functions used to extract variables from inputs.
         sen_file(str, optional): The absolute path of file that stores computed sensitivities. If it is
                               set rightly, 'FilterPruner::sensitive' function can not be called anymore
                               in next step. Default: None.
     
     """
 
-    def __init__(self, model, inputs, extract_vars_fn=None, sen_file=None):
-        super(FilterPruner, self).__init__(
-            model, inputs, extract_vars_fn=extract_vars_fn)
+    def __init__(self, model, inputs, sen_file=None):
+        super(FilterPruner, self).__init__(model, inputs)
         self._status = Status(sen_file)
         # sensitive and var_group are just used in filter pruning
-        self.var_group = VarGroup(
-            model, inputs, extract_vars_fn=extract_vars_fn)
+        self.var_group = VarGroup(model, inputs)
 
         # skip vars in:
         # 1. depthwise conv2d layer
@@ -200,8 +197,7 @@ class FilterPruner(Pruner):
         Returns:
             tuple: A tuple with format ``(ratios, pruned_flops)`` . "ratios" is a dict whose key is name of tensor and value is ratio to be pruned. "pruned_flops" is the ratio of total pruned FLOPs in the model.
         """
-        base_flops = flops(
-            self.model, self.inputs, extract_vars_fn=self.extract_vars_fn)
+        base_flops = flops(self.model, self.inputs)
 
         _logger.debug("Base FLOPs: {}".format(base_flops))
         low = 0.
@@ -215,8 +211,7 @@ class FilterPruner(Pruner):
             if align is not None:
                 ratios = self._round_to(ratios, dims=dims, factor=align)
             plan = self.prune_vars(ratios, axis=dims)
-            c_flops = flops(
-                self.model, self.inputs, extract_vars_fn=self.extract_vars_fn)
+            c_flops = flops(self.model, self.inputs)
             _logger.debug("FLOPs after pruning: {}".format(c_flops))
             c_pruned_flops = (base_flops - c_flops) / base_flops
             plan.restore(self.model)

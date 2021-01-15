@@ -12,9 +12,9 @@ _logger = get_logger(__name__, logging.INFO)
 
 
 class L1NormFilterPruner(FilterPruner):
-    def __init__(self, model, inputs, extract_vars_fn=None, sen_file=None):
+    def __init__(self, model, inputs, sen_file=None):
         super(L1NormFilterPruner, self).__init__(
-            model, inputs, extract_vars_fn=extract_vars_fn, sen_file=sen_file)
+            model, inputs, sen_file=sen_file)
 
     def cal_mask(self, var_name, pruned_ratio, group):
         for _item in group[var_name]:

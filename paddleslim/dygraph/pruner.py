@@ -19,10 +19,9 @@ class Pruner(object):
         
     """
 
-    def __init__(self, model, inputs, extract_vars_fn=None):
+    def __init__(self, model, inputs):
         self.model = model
         self.inputs = inputs
-        self.extract_vars_fn = extract_vars_fn
         self._var_shapes = {}
         for var in model.parameters():
             self._var_shapes[var.name] = var.shape

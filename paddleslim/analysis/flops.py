@@ -92,15 +92,29 @@ def _is_shape(value):
     return True
 
 
-def dygraph_flops(model,
-                  inputs,
-                  only_conv=False,
-                  detail=False,
-                  extract_vars_fn=None):
+def dygraph_flops(model, inputs, dtypes=None, only_conv=False, detail=False):
+    """
+    Compute the FLOPs of nn.Layer.
+    Args:
+      model(nn.Layer): The target model.
+      inputs(list): The dummy inputs used for 'model.forward'. It can be:
+                      1. list<int>|tuple<int>: means 'model.forward' accepts
+                         only one variable as argument and the shape of
+                         variable is 'inputs'.
+                      2. list<list<list>>: means 'model.forward' accepts multiple
+                         variables as arguments and the shapes of variables is 'inputs'.
+                      3. others: 'inputs' will be used as argument list by calling
+                         'model.forward(*inputs)'.
+      dtypes(str|list<str>): It only used when 'inputs' is shape or shapes that means
+                      data type of each input. None means all the inputs is 'float32'.
+                      Default: None.
+      only_conv(bool): Just return number of mul-adds in convolution and FC layer if `only_conv` is true.
+                         default: True.
+      detail(bool): Whether to return detail of each convolution layer.
+    """
 
     if not _is_shape(inputs):
-        program = dygraph2program(
-            model, inputs, extract_vars_fn=extract_vars_fn)
+        program = dygraph2program(model, inputs)
         graph = GraphWrapper(program)
         return _graph_flops(graph, only_conv=only_conv, detail=detail)
 

@@ -12,9 +12,9 @@ _logger = get_logger(__name__, logging.INFO)
 
 
 class L2NormFilterPruner(FilterPruner):
-    def __init__(self, model, inputs, extract_vars_fn=None, sen_file=None):
+    def __init__(self, model, inputs, sen_file=None):
         super(L2NormFilterPruner, self).__init__(
-            model, inputs, sen_file=sen_file, extract_vars_fn=extract_vars_fn)
+            model, inputs, sen_file=sen_file)
 
     def cal_mask(self, var_name, pruned_ratio, group):
         # find information of pruning on output channels

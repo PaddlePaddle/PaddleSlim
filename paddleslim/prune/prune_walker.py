@@ -65,6 +65,15 @@ class PruneWorker(object):
             self.visited[pruned_axis][key] = True
             return True
 
+    def _visit_and_search(self, var, axis, transforms):
+        self._visit(var, axis)
+        pre_ops = var.inputs()
+        for op in pre_ops:
+            self._prune_op(op, var, axis, transforms)
+        next_ops = var.outputs()
+        for op in next_ops:
+            self._prune_op(op, var, axis, transforms)
+
     def _prune(self, var, pruned_axis, pruned_idx):
         raise NotImplementedError('Abstract method.')
 
@@ -273,16 +282,12 @@ class elementwise_op(PruneWorker):
                 in_var = self.op.inputs(name)[0]
                 if len(in_var.shape()) == 1 and in_var.shape()[0] == 1:
                     continue
-                pre_ops = in_var.inputs()
-                for op in pre_ops:
-                    self._prune_op(op, in_var, actual_axis, pruned_idx)
+
                 # for bias
                 if name == "Y" and actual_axis >= 0 and not (
                         len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
                     self.pruned_params.append((in_var, actual_axis, pruned_idx))
-                    pre_ops = in_var.inputs()
-                    for op in pre_ops:
-                        self._prune_op(op, in_var, actual_axis, pruned_idx)
+                self._visit_and_search(in_var, actual_axis, pruned_idx)
 
         else:
             if var in self.op.inputs("X"):
@@ -298,24 +303,17 @@ class elementwise_op(PruneWorker):
                                                in_var.shape()[0] == 1):
                     self.pruned_params.append(
                         (in_var, y_pruned_axis, pruned_idx))
-                    pre_ops = in_var.inputs()
-                    for op in pre_ops:
-                        self._prune_op(op, in_var, y_pruned_axis, pruned_idx)
+                    self._visit_and_search(in_var, y_pruned_axis, pruned_idx)
             elif var in self.op.inputs("Y"):
                 in_var = self.op.inputs("X")[0]
                 if len(in_var.shape()) != len(var.shape()):
                     assert (len(var.shape()) < len(in_var.shape()))
                     pruned_axis = pruned_axis + axis
                 if pruned_axis <= len(in_var.shape()):
-                    pre_ops = in_var.inputs()
-                    for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis, pruned_idx)
+                    self._visit_and_search(in_var, pruned_axis, pruned_idx)
 
             out_var = self.op.outputs("Out")[0]
-            self._visit(out_var, pruned_axis)
-            next_ops = out_var.outputs()
-            for op in next_ops:
-                self._prune_op(op, out_var, pruned_axis, pruned_idx)
+            self._visit_and_search(out_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
@@ -736,7 +734,6 @@ class flatten_contiguous_range(PruneWorker):
             in_var = self.op.inputs("X")[0]
             stride = 1
             out_pruned_axis = pruned_axis
-            out_pruned_idx = pruned_idx
             if pruned_axis >= start_axis and pruned_axis <= stop_axis:
                 out_pruned_axis = start_axis
                 for i in range(pruned_axis + 1, stop_axis + 1):
