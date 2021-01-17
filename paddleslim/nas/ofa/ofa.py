@@ -206,8 +206,6 @@ class OFA(OFABase):
         self.model.train()
 
     def _prepare_distill(self):
-        self.Tacts, self.Sacts = {}, {}
-
         if self.distill_config.teacher_model == None:
             logging.error(
                 'If you want to add distill, please input instance of teacher model'
@@ -256,6 +254,11 @@ class OFA(OFABase):
                     if netA != None:
                         self.netAs_param.extend(netA.parameters())
                     self.netAs.append(netA)
+
+    def _reset_hook_before_forward(self):
+        self.Tacts, self.Sacts = {}, {}
+        mapping_layers = getattr(self.distill_config, 'mapping_layers', None)
+        if mapping_layers != None:
 
             def get_activation(mem, name):
                 def get_output_hook(layer, input, output):
@@ -369,6 +372,9 @@ class OFA(OFABase):
         assert len(self.netAs) > 0
         for i, netA in enumerate(self.netAs):
             n = self.distill_config.mapping_layers[i]
+            ### add for elastic depth
+            if n not in self.Sacts.keys():
+                continue
             Tact = self.Tacts[n]
             Sact = self.Sacts[n]
             if isinstance(netA, SuperConv2D):
@@ -398,53 +404,13 @@ class OFA(OFABase):
         pass
 
     def export(self, config):
-        pre_channel = None
+        new_config = {}
         for name, sublayer in self.model.named_sublayers():
-            if isinstance(
-                    sublayer,
-                    BaseBlock):  # and name == 'encoder_stack.block.3.ffn.i':
-                if isinstance(sublayer.fn, Conv2D):
-                    Cin = sublayer.fn.weight.shape[1]
-                    Cout = sublayer.fn.weight.shape[0]
-                if isinstance(sublayer.fn, Conv2DTranspose) or isinstance(
-                        sublayer.fn, Linear) or isinstance(sublayer.fn,
-                                                           Embedding):
-                    Cin = sublayer.fn.weight.shape[0]
-                    Cout = sublayer.fn.weight.shape[1]
+            if isinstance(sublayer, BaseBlock):
+                for param in sublayer.parameters():
+                    print(name, param.name, sublayer.key)
 
-                for name, param in sublayer.named_parameters():
-                    if 'weight' in name:
-                        key = sublayer.__dict__['_key']
-                        if key not in config.keys():
-                            continue
-                        #assert key in config.keys(), \
-                        #    "config must include all layers prune percent, but {} is not in config".format(sublayer.__dict__['_key'])
-                        if 'kernel_size' in config[key].keys():
-                            raise NotImplementedError("NOT support NOW")
-
-                        if 'expand_ratio' in config[key].keys():
-                            kept_out_channel = int(config[key]['expand_ratio'] *
-                                                   Cout)
-                        elif 'channel' in config[key].keys():
-                            kept_out_channel = config[key]['channel']
-                        else:
-                            kept_out_channel = Cout
-                        kept_in_channel = pre_channel if pre_channel is not None else Cin
-                        if isinstance(sublayer, Conv2D):
-                            param = param[:kept_out_channel, :
-                                          kept_in_channel, :, :]
-                        if isinstance(sublayer, Conv2DTranspose):
-                            param = param[:kept_in_channel, :
-                                          kept_out_channel, :, :]
-                        if isinstance(sublayer, Linear) or isinstance(
-                                sublayer, Embedding):
-                            param = param[:kept_in_channel, :kept_out_channel]
-                        pre_channel = kept_out_channel
-                    elif 'bias' in name:
-                        param = param[:kept_out_channel]
-                    print(key, name, kept_in_channel, kept_out_channel,
-                          param.shape)
-        print(config)
+        ### change config to prune config
 
     def set_net_config(self, net_config):
         """
@@ -462,6 +428,7 @@ class OFA(OFABase):
         # =====================  teacher process  =====================
         teacher_output = None
         if self._add_teacher:
+            self._reset_hook_before_forward()
             teacher_output = self.ofa_teacher_model.model.forward(*inputs,
                                                                   **kwargs)
         # ============================================================

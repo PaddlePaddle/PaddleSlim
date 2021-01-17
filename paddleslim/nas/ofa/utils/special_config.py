@@ -27,10 +27,17 @@ def dynabert_config(model, width_mult, depth_mult=1.0):
             return True
         return False
 
+    start_idx = 0
+    for idx, (block_k, block_v) in enumerate(model.layers.items()):
+        if 'linear' in block_k:
+            start_idx = int(block_k.split('_')[1])
+            break
+
     for idx, (block_k, block_v) in enumerate(model.layers.items()):
         if isinstance(block_v, dict) and len(block_v.keys()) != 0:
             name, name_idx = block_k.split('_'), int(block_k.split('_')[1])
-            if fix_exp(name_idx) or 'emb' in block_k or idx >= block_name:
+            if fix_exp(name_idx -
+                       start_idx) or 'emb' in block_k or idx >= block_name:
                 block_v['expand_ratio'] = 1.0
             else:
                 block_v['expand_ratio'] = width_mult
