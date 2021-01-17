@@ -98,28 +98,19 @@ class Pruner():
                                   visited)[0]  # [(name, axis, pruned_idx)]
             if group is None or len(group) == 0:
                 continue
-            if only_graph and self.idx_selector.__name__ == "default_idx_selector":
+            assert ((not self.pruned_weights),
+                    "The weights have been pruned once.")
+            group_values = []
+            for name, axis, pruned_idx in group:
+                var = scope.find_var(name)
+                if var is not None:
+                    values = np.array(var.get_tensor())
+                    group_values.append((name, values, axis, pruned_idx))
 
-                param_v = graph.var(param)
-                pruned_num = int(round(param_v.shape()[0] * ratio))
-                pruned_idx = [0] * pruned_num
-                for name, axis, _ in group:
-                    pruned_params.append((name, axis, pruned_idx))
-
-            else:
-                assert ((not self.pruned_weights),
-                        "The weights have been pruned once.")
-                group_values = []
-                for name, axis, pruned_idx in group:
-                    var = scope.find_var(name)
-                    if var is not None:
-                        values = np.array(var.get_tensor())
-                        group_values.append((name, values, axis, pruned_idx))
-
-                scores = self.criterion(
-                    group_values, graph)  # [(name, axis, score, pruned_idx)]
-                g = self._transform(self.idx_selector(scores, ratio))
-                pruned_params.extend(g)
+            scores = self.criterion(group_values,
+                                    graph)  # [(name, axis, score, pruned_idx)]
+            g = self._transform(self.idx_selector(scores, ratio))
+            pruned_params.extend(g)
 
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:

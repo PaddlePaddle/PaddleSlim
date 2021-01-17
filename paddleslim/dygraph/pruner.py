@@ -53,5 +53,5 @@ class Pruner(object):
             global_plan.apply(self.model, lazy=True)
         elif apply == "impretive":
             global_plan.apply(self.model, lazy=False)
-
+        self.plan = global_plan
         return global_plan

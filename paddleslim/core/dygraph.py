@@ -63,7 +63,7 @@ def extract_vars(inputs):
                 _logger.warn(
                     f"Variable is excepted, but get an element with type({type(_value)}) from inputs whose type is dict. And the key of element is {_key}."
                 )
-    elif isinstance(inputs, collections.Iterable):
+    elif isinstance(inputs, (tuple, list)):
         for _value in inputs:
             vars.extend(extract_vars(_value))
     if len(vars) == 0:
@@ -82,11 +82,11 @@ def to_variables(inputs):
         for _key in inputs:
             ret[_key] = to_variables(inputs[_key])
         return inputs
-    elif isinstance(inputs, collections.Iterable):
+    elif isinstance(inputs, list):
         ret = []
         for _value in inputs:
             ret.append(to_variables(_value))
-            return ret
+        return ret
 
 
 @dygraph_only
@@ -116,7 +116,6 @@ def dygraph2program(layer,
         else:
             inputs = to_variables(inputs)
             input_var_list = extract_inputs_fn(inputs)
-
         original_outputs = layer(*inputs)
         # 'original_outputs' may be dict, so we should convert it to list of varibles.
         # And should not create new varibles in 'extract_vars'.
@@ -130,6 +129,4 @@ def dygraph2program(layer,
         program.desc = program_desc
         program.blocks = [Block(program, 0)]
         program._sync_with_cpp()
-        return program
-
     return program

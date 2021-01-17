@@ -397,14 +397,3 @@ class GraphWrapper(object):
         # Infer the remain ops in topological order.
         for op in head_op:
             recursive_infer(op, infer=True)
-
-    def update_groups_of_conv(self, conv_format="NCHW"):
-        for op in self.ops():
-            if 'conv2d' in op.type():
-                input_shape = op.inputs("Input")[0].shape()
-                input_channels = input_shape[
-                    1] if conv_format == "NCHW" else input_shape[3]
-                if op.attr('groups') > 1:
-                    assert op.inputs("Filter")[0].shape()[
-                        1] == 1, "Only support depthwise conv when groups>1."
-                    op.set_attr('groups', input_channels)

@@ -37,11 +37,6 @@ class PruningMask():
 
     @mask.setter
     def mask(self, value):
-        #        assert (isinstance(value, PruningMask))
-        if self._dims is not None:
-            assert len(self._dims) == len(
-                value.shape
-            ), "The length of mask's shape must be same with length of dims in current PruningMask instance."
         self._mask = value
 
     def __str__(self):
@@ -81,7 +76,8 @@ class PruningPlan():
         if pruning_mask.dims in self._dims[var_name]:
             for _mask in self._masks[var_name]:
                 if pruning_mask.dims == _mask.dims:
-                    _mask.mask = (_mask.mask * pruning_mask.mask)
+                    _mask.mask = list(
+                        np.array(_mask.mask) | np.array(pruning_mask.mask))
         else:
             self._masks[var_name].append(pruning_mask)
             self._dims[var_name].append(pruning_mask.dims)
@@ -228,9 +224,6 @@ class PruningPlan():
                         place = paddle.CUDAPlace(p.gpu_device_id())
 
                     t_value.set(np.array(t_backup).astype("float32"), place)
-
-                    if isinstance(sub_layer, paddle.nn.layer.conv.
-                                  Conv2D) and sub_layer._groups > 1:
-                        if "_origin_groups" in sub_layer.__dict__:
-                            sub_layer._groups = sub_layer._origin_groups
+                    if "_origin_groups" in sub_layer.__dict__:
+                        sub_layer._groups = sub_layer._origin_groups
                     del sub_layer._buffers[backup_name]

@@ -520,15 +520,6 @@ class concat(PruneWorker):
                         visited=c_visited)
                     # Add nodes searched from concat into global visited array.
                     self.visited.update(c_visited)
-            else:
-                for v in self.op.inputs("X"):
-                    for op in v.inputs():
-                        self._prune_op(op, v, pruned_axis, transforms)
-                out_var = self.op.outputs("Out")[0]
-                self._visit(out_var, pruned_axis)
-                next_ops = out_var.outputs()
-                for op in next_ops:
-                    self._prune_op(op, out_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -537,6 +528,11 @@ class depthwise_conv2d(PruneWorker):
         super(depthwise_conv2d, self).__init__(op, pruned_params, visited)
 
     def _prune(self, var, pruned_axis, transforms):
+        assert var not in self.op.inputs(
+            "Filter"), "Unsupport for pruning depthwise conv2d directly."
+        assert var not in self.op.outputs(
+            "Output"
+        ), "Unsupport for pruning output of depthwise conv2d directly."
         data_format = self.op.attr("data_format")
         groups = self.op.attr("groups")
         channel_axis = 1
@@ -568,49 +564,6 @@ class depthwise_conv2d(PruneWorker):
             for op in next_ops:
                 self._prune_op(op, output_var, channel_axis,
                                transforms + [transform])
-
-        elif var in self.op.inputs("Filter"):
-            assert pruned_axis in [0]
-            if pruned_axis == 0:
-                if len(self.op.inputs("Bias")) > 0:
-                    self.pruned_params.append(
-                        (self.op.inputs("Bias"), channel_axis, transforms))
-
-                self.pruned_params.append((var, 0, transforms))
-
-                for op in var.outputs():
-                    self._prune_op(op, var, 0, transforms)
-
-                output_var = self.op.outputs("Output")[0]
-                self._visit(output_var, channel_axis)
-                next_ops = output_var.outputs()
-                for op in next_ops:
-                    self._prune_op(op, output_var, channel_axis, transforms)
-            for op in var.outputs():
-                self._prune_op(op, var, pruned_axis, transforms)
-        elif var in self.op.outputs("Output"):  # TODO: fix
-            assert pruned_axis == channel_axis
-            filter_var = self.op.inputs("Filter")[0]
-            self.pruned_params.append((filter_var, 0, transforms))
-            self._visit(filter_var, 0)
-
-            for op in filter_var.outputs():
-                self._prune_op(op, filter_var, 0, transforms)
-
-            if len(self.op.inputs("Bias")) > 0:
-                self.pruned_params.append(
-                    (self.op.inputs("Bias")[0], channel_axis, transforms))
-
-            in_var = self.op.inputs("Input")[0]
-            self._visit(in_var, channel_axis)
-            pre_ops = in_var.inputs()
-            for op in pre_ops:
-                self._prune_op(op, in_var, channel_axis, transforms)
-
-            output_var = self.op.outputs("Output")[0]
-            next_ops = output_var.outputs()
-            for op in next_ops:
-                self._prune_op(op, output_var, channel_axis, transforms)
 
 
 @PRUNE_WORKER.register

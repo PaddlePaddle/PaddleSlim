@@ -30,12 +30,10 @@ class TestPrune(StaticCase):
         #     |            ^ |                    ^
         #     |____________| |____________________|
         #
-        # X: prune output channels
-        # O: prune input channels
         with fluid.program_guard(main_program, startup_program):
             input = fluid.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
-            conv2 = conv_bn_layer(input, 8, 3, "conv2")
+            conv2 = conv_bn_layer(input, 8, 3, "conv2", sync_bn=True)
             tmp = fluid.layers.concat([conv1, conv2], axis=1)
             conv3 = conv_bn_layer(input, 16, 3, "conv3", bias=None)
             out = conv3 + tmp
@@ -49,7 +47,28 @@ class TestPrune(StaticCase):
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
-        main_program, _, _ = pruner.prune(
+        # test backward search of concat
+        pruned_program, _, _ = pruner.prune(
+            main_program,
+            scope,
+            params=["conv3_weights"],
+            ratios=[0.5],
+            place=place,
+            lazy=False,
+            only_graph=True,
+            param_backup=None,
+            param_shape_backup=None)
+        shapes = {
+            "conv3_weights": (8, 3, 3, 3),
+            "conv2_weights": (4, 3, 3, 3),
+            "conv1_weights": (4, 3, 3, 3)
+        }
+        for param in pruned_program.global_block().all_parameters():
+            if "weights" in param.name and "conv2d" in param.name:
+                self.assertTrue(shapes[param.name] == param.shape)
+
+        # test forward search of concat
+        pruned_program, _, _ = pruner.prune(
             main_program,
             scope,
             params=["conv1_weights", "conv2_weights"],
@@ -62,13 +81,26 @@ class TestPrune(StaticCase):
 
         shapes = {
             "conv1_weights": (4, 3, 3, 3),
+            "conv1_bn_scale": (4, ),
+            "conv1_bn_variance": (4, ),
+            "conv1_bn_mean": (4, ),
+            "conv1_bn_offset": (4, ),
             "conv2_weights": (4, 3, 3, 3),
+            "sync_batch_norm_0.w_0": (4, ),
+            "sync_batch_norm_0.w_1": (4, ),
+            "conv2_bn_scale": (4, ),
+            "conv2_bn_offset": (4, ),
             "conv3_weights": (8, 3, 3, 3),
-            "conv3_out.b_0": (8, )
+            "conv3_bn_mean": (8, ),
+            "conv3_bn_offset": (8, ),
+            "conv3_bn_scale": (8, ),
+            "conv3_bn_variance": (8, ),
+            "conv3_out.b_0": (8, ),
         }
 
-        for param in main_program.global_block().all_parameters():
-            self.assertTrue(shapes[param.name] == param.shape)
+        for param in pruned_program.global_block().all_parameters():
+            if "weights" in param.name and "conv2d" in param.name:
+                self.assertTrue(shapes[param.name] == param.shape)
 
 
 if __name__ == '__main__':

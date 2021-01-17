@@ -47,6 +47,7 @@ class TestPrune(unittest.TestCase):
         shapes = {}
         for param in model.parameters():
             shapes[param.name] = param.shape
+        pruner.restore()
         return shapes
 
     def static_prune(self, net, ratios):

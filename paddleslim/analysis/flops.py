@@ -83,15 +83,6 @@ def _graph_flops(graph, only_conv=True, detail=False):
         return flops
 
 
-def _is_shape(value):
-    if not isinstance(value, (list, tuple)):
-        return False
-    for i in value:
-        if not isinstance(i, int):
-            return False
-    return True
-
-
 def dygraph_flops(model, inputs, dtypes=None, only_conv=False, detail=False):
     """
     Compute the FLOPs of nn.Layer.
@@ -113,14 +104,6 @@ def dygraph_flops(model, inputs, dtypes=None, only_conv=False, detail=False):
       detail(bool): Whether to return detail of each convolution layer.
     """
 
-    if not _is_shape(inputs):
-        program = dygraph2program(model, inputs)
-        graph = GraphWrapper(program)
-        return _graph_flops(graph, only_conv=only_conv, detail=detail)
-
-    data = np.ones(tuple(inputs)).astype("float32")
-    in_var = paddle.to_tensor(data)
-    _, traced = paddle.jit.TracedLayer.trace(model, [in_var])
-    program = traced.program
+    program = dygraph2program(model, inputs)
     graph = GraphWrapper(program)
     return _graph_flops(graph, only_conv=only_conv, detail=detail)
