@@ -59,11 +59,9 @@ def default_idx_selector(group, ratio):
 
     pruned_num = int(round(len(sorted_idx) * ratio))
     pruned_idx = sorted_idx[:pruned_num]
-
     idxs = []
-    for name, axis, score, offsets in group:
-        r_idx = [i + offsets[0] for i in pruned_idx]
-        idxs.append((name, axis, r_idx))
+    for name, axis, score, transforms in group:
+        idxs.append((name, axis, pruned_idx, transforms))
     return idxs
 
 
@@ -112,6 +110,6 @@ def optimal_threshold(group, ratio):
     pruned_idx = np.squeeze(np.argwhere(score < th))
 
     idxs = []
-    for name, axis, score, _ in group:
-        idxs.append((name, axis, pruned_idx))
+    for name, axis, score, transforms in group:
+        idxs.append((name, axis, pruned_idx, transforms))
     return idxs

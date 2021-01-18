@@ -14,7 +14,7 @@
 import paddle
 import numpy as np
 import paddle.jit as jit
-from ..core import GraphWrapper
+from ..core import GraphWrapper, dygraph2program
 
 __all__ = ["flops", "dygraph_flops"]
 
@@ -83,11 +83,27 @@ def _graph_flops(graph, only_conv=True, detail=False):
         return flops
 
 
-def dygraph_flops(model, input_shape, only_conv=False, detail=False):
+def dygraph_flops(model, inputs, dtypes=None, only_conv=False, detail=False):
+    """
+    Compute the FLOPs of nn.Layer.
+    Args:
+      model(nn.Layer): The target model.
+      inputs(list): The dummy inputs used for 'model.forward'. It can be:
+                      1. list<int>|tuple<int>: means 'model.forward' accepts
+                         only one variable as argument and the shape of
+                         variable is 'inputs'.
+                      2. list<list<list>>: means 'model.forward' accepts multiple
+                         variables as arguments and the shapes of variables is 'inputs'.
+                      3. others: 'inputs' will be used as argument list by calling
+                         'model.forward(*inputs)'.
+      dtypes(str|list<str>): It only used when 'inputs' is shape or shapes that means
+                      data type of each input. None means all the inputs is 'float32'.
+                      Default: None.
+      only_conv(bool): Just return number of mul-adds in convolution and FC layer if `only_conv` is true.
+                         default: True.
+      detail(bool): Whether to return detail of each convolution layer.
+    """
 
-    data = np.ones(tuple(input_shape)).astype("float32")
-    in_var = paddle.to_tensor(data)
-    _, traced = paddle.jit.TracedLayer.trace(model, [in_var])
-    program = traced.program
+    program = dygraph2program(model, inputs)
     graph = GraphWrapper(program)
     return _graph_flops(graph, only_conv=only_conv, detail=detail)

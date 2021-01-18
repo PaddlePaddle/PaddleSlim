@@ -47,24 +47,34 @@ class FilterPruner(Pruner):
 
     Args:
         model(paddle.nn.Layer): The target model to be pruned.
-        input_shape(list<int>): The input shape of model. It is used to trace the graph of the model.
+        inputs(list<int>): The inputs of model. It will be use in calling 'model.forward(inputs)'.
         sen_file(str, optional): The absolute path of file that stores computed sensitivities. If it is
                               set rightly, 'FilterPruner::sensitive' function can not be called anymore
                               in next step. Default: None.
     
     """
 
-    def __init__(self, model, input_shape, sen_file=None):
-        super(FilterPruner, self).__init__(model, input_shape)
+    def __init__(self, model, inputs, sen_file=None):
+        super(FilterPruner, self).__init__(model, inputs)
         self._status = Status(sen_file)
         # sensitive and var_group are just used in filter pruning
-        self.var_group = VarGroup(model, input_shape)
+        self.var_group = VarGroup(model, inputs)
+
+        # skip vars in:
+        # 1. depthwise conv2d layer
+        self.skip_vars = []
+        for sub_layer in model.sublayers():
+            if isinstance(
+                    sub_layer,
+                    paddle.nn.layer.conv.Conv2D) and sub_layer._groups > 1:
+                for param in sub_layer.parameters():
+                    self.skip_vars.append(param.name)
 
     def sensitive(self,
                   eval_func=None,
                   sen_file=None,
                   target_vars=None,
-                  skip_vars=None):
+                  skip_vars=[]):
         """
         Compute or get sensitivities of model in current pruner. It will return a cached sensitivities when all the arguments are "None".
 
@@ -88,7 +98,7 @@ class FilterPruner(Pruner):
           eval_func(function, optional): The function to evaluate the model in current pruner. This function should have an empy arguments list and return a score with type "float32". Default: None.
           sen_file(str, optional): The absolute path of file to save sensitivities into local filesystem. Default: None.
           target_vars(list, optional): The names of tensors whose sensitivity will be computed. "None" means all weights in convolution layer will be computed. Default: None.
-          skip_vars(list, optional): The names of tensors whose sensitivity won't be computed. "None" means skip nothing. Default: None.
+          skip_vars(list, optional): The names of tensors whose sensitivity won't be computed. Default: [].
     
         Returns:
            dict: A dict storing sensitivities.       
@@ -102,6 +112,7 @@ class FilterPruner(Pruner):
         if not self._status.is_ckp:
             return self._status
 
+        skip_vars.extend(self.skip_vars)
         self._cal_sensitive(
             self.model,
             eval_func,
@@ -186,9 +197,9 @@ class FilterPruner(Pruner):
         Returns:
             tuple: A tuple with format ``(ratios, pruned_flops)`` . "ratios" is a dict whose key is name of tensor and value is ratio to be pruned. "pruned_flops" is the ratio of total pruned FLOPs in the model.
         """
-        base_flops = flops(self.model, self.input_shape)
+        base_flops = flops(self.model, self.inputs)
 
-        _logger.info("Base FLOPs: {}".format(base_flops))
+        _logger.debug("Base FLOPs: {}".format(base_flops))
         low = 0.
         up = 1.0
         history = set()
@@ -200,8 +211,7 @@ class FilterPruner(Pruner):
             if align is not None:
                 ratios = self._round_to(ratios, dims=dims, factor=align)
             plan = self.prune_vars(ratios, axis=dims)
-            _logger.debug("pruning plan: {}".format(plan))
-            c_flops = flops(self.model, self.input_shape)
+            c_flops = flops(self.model, self.inputs)
             _logger.debug("FLOPs after pruning: {}".format(c_flops))
             c_pruned_flops = (base_flops - c_flops) / base_flops
             plan.restore(self.model)
@@ -304,7 +314,11 @@ class FilterPruner(Pruner):
             plan: An instance of PruningPlan that can be applied on model by calling 'plan.apply(model)'.
 
         """
-
+        if var_name in self.skip_vars:
+            _logger.warn(
+                f"{var_name} is skiped beacause it is not support for pruning derectly."
+            )
+            return
         if isinstance(pruned_dims, int):
             pruned_dims = [pruned_dims]
         group = self.var_group.find_group(var_name, pruned_dims)
@@ -315,29 +329,52 @@ class FilterPruner(Pruner):
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in group:
                     group_dict[param.name] = group[param.name]
-                    group_dict[param.name].update({
-                        'layer': sub_layer,
-                        'var': param,
-                        'value': np.array(param.value().get_tensor())
-                    })
+                    # Varibales can be pruned on multiple axies.
+                    for _item in group_dict[param.name]:
+                        _item.update({
+                            'layer': sub_layer,
+                            'var': param,
+                            'value': np.array(param.value().get_tensor())
+                        })
                     _logger.debug(f"set value of {param.name} into group")
 
         mask = self.cal_mask(var_name, pruned_ratio, group_dict)
         for _name in group_dict:
-            dims = group_dict[_name]['pruned_dims']
-            stride = group_dict[_name]['stride']
-            var_shape = group_dict[_name]['var'].shape
-            if isinstance(dims, int):
-                dims = [dims]
-
-            current_mask = mask.repeat(stride[0]) if stride[0] > 1 else mask
-
-            assert len(current_mask) == var_shape[dims[
-                0]], "The length of current_mask must be equal to the size of dimension to be pruned on."
-
-            plan.add(_name, PruningMask(dims, current_mask, pruned_ratio))
+            # Varibales can be pruned on multiple axies. 
+            for _item in group_dict[_name]:
+                dims = _item['pruned_dims']
+                transforms = _item['transforms']
+                var_shape = _item['var'].shape
+                if isinstance(dims, int):
+                    dims = [dims]
+                for trans in transforms:
+                    mask = self._transform_mask(mask, trans)
+                current_mask = mask
+                assert len(current_mask) == var_shape[dims[
+                    0]], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; dims: {dims}; var name: {_name}; len(mask): {len(mask)}"
+                plan.add(_name, PruningMask(dims, current_mask, pruned_ratio))
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":
             plan.apply(self.model, lazy=False)
         return plan
+
+    def _transform_mask(self, mask, transform):
+        src_start = transform['src_start']
+        src_end = transform['src_end']
+        target_start = transform['target_start']
+        target_end = transform['target_end']
+        target_len = transform['target_len']
+        stride = transform['stride']
+        mask = mask[src_start:src_end]
+        mask = mask.repeat(stride) if stride > 1 else mask
+
+        dst_mask = np.ones([target_len])
+        # for depthwise conv2d with:
+        # input shape:  (1, 4, 32, 32)
+        # filter shape: (32, 1, 3, 3)
+        # groups: 4
+        # if we pruning input channels by 50%(from 4 to 2), the output channel should be 50% * 4 * 8.
+        expand = int((target_end - target_start) / len(mask))
+        dst_mask[target_start:target_end] = list(mask) * expand
+        return dst_mask
