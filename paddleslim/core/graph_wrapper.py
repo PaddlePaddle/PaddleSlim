@@ -397,9 +397,3 @@ class GraphWrapper(object):
         # Infer the remain ops in topological order.
         for op in head_op:
             recursive_infer(op, infer=True)
-
-    def update_groups_of_conv(self):
-        for op in self.ops():
-            if 'conv2d' in op.type() and op.attr('groups') >= op.inputs(
-                    'Filter')[0].shape()[0]:
-                op.set_attr('groups', op.inputs('Filter')[0].shape()[0])
