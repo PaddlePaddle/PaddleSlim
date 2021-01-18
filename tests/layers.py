@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import paddle
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
 
@@ -23,7 +24,8 @@ def conv_bn_layer(input,
                   groups=1,
                   act=None,
                   bias=False,
-                  use_cudnn=True):
+                  use_cudnn=True,
+                  sync_bn=False):
     conv = fluid.layers.conv2d(
         input=input,
         num_filters=num_filters,
@@ -37,11 +39,19 @@ def conv_bn_layer(input,
         name=name + "_out",
         use_cudnn=use_cudnn)
     bn_name = name + "_bn"
-    return fluid.layers.batch_norm(
-        input=conv,
-        act=act,
-        name=bn_name + '_output',
-        param_attr=ParamAttr(name=bn_name + '_scale'),
-        bias_attr=ParamAttr(bn_name + '_offset'),
-        moving_mean_name=bn_name + '_mean',
-        moving_variance_name=bn_name + '_variance', )
+    if sync_bn:
+        bn = paddle.nn.SyncBatchNorm(
+            num_filters,
+            weight_attr=ParamAttr(name=bn_name + '_scale'),
+            bias_attr=ParamAttr(name=bn_name + '_offset'),
+            name=bn_name)
+        return bn(conv)
+    else:
+        return fluid.layers.batch_norm(
+            input=conv,
+            act=act,
+            name=bn_name + '_output',
+            param_attr=ParamAttr(name=bn_name + '_scale'),
+            bias_attr=ParamAttr(bn_name + '_offset'),
+            moving_mean_name=bn_name + '_mean',
+            moving_variance_name=bn_name + '_variance', )

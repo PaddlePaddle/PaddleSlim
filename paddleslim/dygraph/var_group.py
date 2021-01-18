@@ -2,7 +2,7 @@ import numpy as np
 import logging
 import paddle
 from paddle.fluid.dygraph import TracedLayer
-from ..core import GraphWrapper
+from ..core import GraphWrapper, dygraph2program
 from ..prune import collect_convs
 from ..common import get_logger
 
@@ -12,33 +12,43 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class VarGroup():
-    def __init__(self, model, input_shape):
+    """
+    A tool used to parse dygraph and store information of variables' relationship.
+    Args:
+      - model(nn.Layer): The dygraph to be parsed.
+      - inputs(Variable|list|dict): The dummy inputs of target model. It will be used in calling `model.forward(inputs)`.
+    """
+
+    def __init__(self, model, inputs):
         self.groups = []
-        self._parse_model(model, input_shape)
+        self._parse_model(model, inputs)
 
     def _to_dict(self, group):
         ret = {}
-        for _name, _axis, _stride in group:
+        for _name, _axis, _transforms in group:
             if isinstance(_axis, int):
-                _axis = [_axis]  # TODO: fix
-            ret[_name] = {'pruned_dims': _axis, 'stride': _stride}
+                _axis = [_axis]
+            if _name not in ret:
+                ret[_name] = []
+            # Variable can be pruned on multiple axies.
+            ret[_name].append({'pruned_dims': _axis, 'transforms': _transforms})
         return ret
 
     def find_group(self, var_name, axis):
         for group in self.groups:
             for _name, _axis, _stride in group:
                 if isinstance(_axis, int):
-                    _axis = [_axis]  # TODO: fix
+                    _axis = [_axis]
                 if _name == var_name and _axis == axis:
                     return self._to_dict(group)
 
-    def _parse_model(self, model, input_shape):
-        _logger.debug("Parsing model with input: {}".format(input_shape))
-        data = np.ones(tuple(input_shape)).astype("float32")
-        in_var = paddle.to_tensor(data)
+    def _parse_model(self, model, inputs):
+        _logger.debug("Parsing model with input: {}".format(inputs))
+
         model.eval()
-        out_dygraph, static_layer = TracedLayer.trace(model, inputs=[in_var])
-        graph = GraphWrapper(static_layer.program)
+        program = dygraph2program(model, inputs=inputs)
+
+        graph = GraphWrapper(program)
 
         visited = {}
         for name, param in model.named_parameters():
