@@ -58,7 +58,12 @@ def collect_convs(params, graph, visited={}):
     for param in params:
         pruned_params = []
         param = graph.var(param)
-
+        if param is None:
+            _logger.warn(
+                f"Cann't found relative variables of {param} because {param} is not in target program or model. Please make sure {param} is in your program if you are using static API of PaddlePaddle. And make sure your model in correctly mode and contains {param} if you are using dynamic API of PaddlePaddle."
+            )
+            groups.append([])
+            continue
         target_op = param.outputs()[0]
         if target_op.type() == 'conditional_block':
             for op in param.outputs():

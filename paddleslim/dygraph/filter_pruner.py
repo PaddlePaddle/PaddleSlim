@@ -360,21 +360,29 @@ class FilterPruner(Pruner):
         return plan
 
     def _transform_mask(self, mask, transform):
-        src_start = transform['src_start']
-        src_end = transform['src_end']
-        target_start = transform['target_start']
-        target_end = transform['target_end']
-        target_len = transform['target_len']
-        stride = transform['stride']
-        mask = mask[src_start:src_end]
-        mask = mask.repeat(stride) if stride > 1 else mask
+        if "src_start" in transform:
+            src_start = transform['src_start']
+            src_end = transform['src_end']
+            target_start = transform['target_start']
+            target_end = transform['target_end']
+            target_len = transform['target_len']
+            stride = transform['stride']
+            mask = mask[src_start:src_end]
 
-        dst_mask = np.ones([target_len])
-        # for depthwise conv2d with:
-        # input shape:  (1, 4, 32, 32)
-        # filter shape: (32, 1, 3, 3)
-        # groups: 4
-        # if we pruning input channels by 50%(from 4 to 2), the output channel should be 50% * 4 * 8.
-        expand = int((target_end - target_start) / len(mask))
-        dst_mask[target_start:target_end] = list(mask) * expand
+            mask = mask.repeat(stride) if stride > 1 else mask
+
+            dst_mask = np.ones([target_len])
+            # for depthwise conv2d with:
+            # input shape:  (1, 4, 32, 32)
+            # filter shape: (32, 1, 3, 3)
+            # groups: 4
+            # if we pruning input channels by 50%(from 4 to 2), the output channel should be 50% * 4 * 8.
+            expand = int((target_end - target_start) / len(mask))
+            dst_mask[target_start:target_end] = list(mask) * expand
+        elif "stride" in transform:
+            stride = transform['stride']
+            mask = mask.repeat(stride) if stride > 1 else mask
+            return mask
+        else:
+            return mask
         return dst_mask
