@@ -33,6 +33,7 @@ from paddlenlp.utils.log import logger
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
 import paddlenlp.datasets as datasets
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig, utils
+from paddleslim.nas.ofa.utils import nlp_utils
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 
 TASK_CLASSES = {
@@ -181,27 +182,21 @@ def set_seed(args):
 def evaluate(model,
              criterion,
              metric,
-             teacher_metric,
              data_loader,
              width_mult=1.0,
              depth_mult=1.0):
     with paddle.no_grad():
         model.eval()
         metric.reset()
-        #teacher_metric.reset()
         for batch in data_loader:
             input_ids, segment_ids, labels = batch
             logits = model(input_ids, segment_ids, attention_mask=[None, None])
             if isinstance(logits, tuple):
-                #teacher_logits = logits[1]
                 logits = logits[0]
             loss = criterion(logits, labels)
             correct = metric.compute(logits, labels)
-            #teacher_correct = metric.compute(teacher_logits, labels)
             metric.update(correct)
-            #teacher_metric.update(teacher_correct)
         results = metric.accumulate()
-        #teacher_results = teacher_metric.accumulate()
         print(
             "depth_mult: %f, width_mult: %f, eval loss: %f, %s: %s\n" %
             (depth_mult, width_mult, loss.numpy(), metric.name(), results),
@@ -436,8 +431,8 @@ def do_train(args):
     model = Convert(sp_config).convert(model)
 
     # Use weights saved in the dictionary to initialize supernet. 
-    weights = os.path.join(args.model_name_or_path, 'model_state.pdparams')
-    origin_weights = paddle.load(weights)
+    weights_path = os.path.join(args.model_name_or_path, 'model_state.pdparams')
+    origin_weights = paddle.load(weights_path)
     model.set_state_dict(origin_weights)
 
     # Step3: Define teacher model.
@@ -473,7 +468,6 @@ def do_train(args):
     ) else paddle.nn.loss.MSELoss()
 
     metric = metric_class()
-    teacher_metric = metric_class()
 
     if args.task_name == "mnli":
         dev_data_loader = (dev_data_loader_matched, dev_data_loader_mismatched)
@@ -545,14 +539,12 @@ def do_train(args):
                         teacher_model,
                         criterion,
                         metric,
-                        teacher_metric,
                         dev_data_loader_matched,
                         width_mult=100)
                     evaluate(
                         teacher_model,
                         criterion,
                         metric,
-                        teacher_metric,
                         dev_data_loader_mismatched,
                         width_mult=100)
                 else:
@@ -560,7 +552,6 @@ def do_train(args):
                         teacher_model,
                         criterion,
                         metric,
-                        teacher_metric,
                         dev_data_loader,
                         width_mult=100)
                 for depth_mult in args.depth_mult_list:
@@ -570,18 +561,18 @@ def do_train(args):
                         ofa_model.set_net_config(net_config)
                         tic_eval = time.time()
                         if args.task_name == "mnli":
-                            acc = evaluate(
-                                ofa_model, criterion, metric, teacher_metric,
-                                dev_data_loader_matched, width_mult, depth_mult)
+                            acc = evaluate(ofa_model, criterion, metric,
+                                           dev_data_loader_matched, width_mult,
+                                           depth_mult)
                             evaluate(ofa_model, criterion, metric,
-                                     teacher_metric, dev_data_loader_mismatched,
-                                     width_mult, depth_mult)
+                                     dev_data_loader_mismatched, width_mult,
+                                     depth_mult)
                             print("eval done total : %s s" %
                                   (time.time() - tic_eval))
                         else:
                             acc = evaluate(ofa_model, criterion, metric,
-                                           teacher_metric, dev_data_loader,
-                                           width_mult, depth_mult)
+                                           dev_data_loader, width_mult,
+                                           depth_mult)
                             print("eval done total : %s s" %
                                   (time.time() - tic_eval))
 

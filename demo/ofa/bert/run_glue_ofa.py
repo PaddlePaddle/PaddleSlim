@@ -31,6 +31,7 @@ from paddlenlp.utils.log import logger
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
 import paddlenlp.datasets as datasets
 from paddleslim.nas.ofa import OFA, DistillConfig, utils
+from paddleslim.nas.ofa.utils import nlp_utils
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 
 TASK_CLASSES = {
@@ -215,13 +216,13 @@ def reorder_neuron_head(model, head_importance, neuron_importance):
     for layer, current_importance in enumerate(neuron_importance):
         # reorder heads
         idx = paddle.argsort(head_importance[layer], descending=True)
-        utils.reorder_head(model.bert.encoder.layers[layer].self_attn, idx)
+        nlp_utils.reorder_head(model.bert.encoder.layers[layer].self_attn, idx)
         # reorder neurons
         idx = paddle.argsort(
             paddle.to_tensor(current_importance), descending=True)
-        utils.reorder_neuron(
+        nlp_utils.reorder_neuron(
             model.bert.encoder.layers[layer].linear1.fn, idx, dim=1)
-        utils.reorder_neuron(
+        nlp_utils.reorder_neuron(
             model.bert.encoder.layers[layer].linear2.fn, idx, dim=0)
 
 
@@ -422,7 +423,7 @@ def do_train(args):
 
     # Step6: Calculate the importance of neurons and head, 
     # and then reorder them according to the importance.
-    head_importance, neuron_importance = utils.compute_neuron_head_importance(
+    head_importance, neuron_importance = nlp_utils.compute_neuron_head_importance(
         args.task_name,
         ofa_model.model,
         dev_data_loader,

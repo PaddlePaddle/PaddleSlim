@@ -17,7 +17,7 @@ import numpy as np
 from collections import namedtuple
 import paddle
 import paddle.fluid as fluid
-from .utils.utils import get_paddle_version
+from .utils.utils import get_paddle_version, remove_model_fn
 pd_ver = get_paddle_version()
 if pd_ver == 185:
     from .layers_old import BaseBlock, SuperConv2D, SuperLinear
@@ -27,6 +27,8 @@ else:
     Layer = paddle.nn.Layer
 from .utils.utils import search_idx
 from ...common import get_logger
+from ...core import GraphWrapper, dygraph2program
+from .get_sub_model import get_prune_params_config, prune_params
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -403,14 +405,57 @@ class OFA(OFABase):
     def search(self, eval_func, condition):
         pass
 
-    def export(self, config):
-        new_config = {}
+    def _export_sub_model_config(self, origin_model, config, input_shapes,
+                                 input_dtypes):
+        super_model_config = {}
         for name, sublayer in self.model.named_sublayers():
             if isinstance(sublayer, BaseBlock):
                 for param in sublayer.parameters():
-                    print(name, param.name, sublayer.key)
+                    super_model_config[name] = sublayer.key
 
-        ### change config to prune config
+        for name, value in super_model_config.items():
+            super_model_config[name] = config[value]
+
+        origin_model_config = {}
+        for name, sublayer in origin_model.named_sublayers():
+            for param in sublayer.parameters(include_sublayers=False):
+                if name in super_model_config.keys():
+                    origin_model_config[param.name] = super_model_config[name]
+
+        program = dygraph2program(
+            origin_model, inputs=input_shapes, dtypes=input_dtypes)
+        graph = GraphWrapper(program)
+        param_prune_config = get_prune_params_config(graph, origin_model_config)
+        return param_prune_config
+
+    def export(self,
+               origin_model,
+               config,
+               input_shapes,
+               input_dtypes,
+               load_weights_from_supernet=True):
+        """
+        Export the weights according origin model and sub model config.
+        Parameters:
+            origin_model(paddle.nn.Layer): the instance of original model.
+            config(dict): the config of sub model, can get by OFA.get_current_config() or some special config, such as paddleslim.nas.ofa.utils.dynabert_config(width_mult).
+            input_shapes(list): the shape of all inputs.
+            input_dtypes(list): the dtype of all inputs.
+            load_weights_from_supernet(bool, optional): whether to load weights from SuperNet.
+        """
+        if load_weights_from_supernet:
+            new_state_dict = remove_model_fn(origin_model,
+                                             self.model.state_dict())
+            origin_model.set_state_dict(new_state_dict)
+            _logger.info("Set state dict from SuperNet to origin model Done")
+        param_config = self._export_sub_model_config(origin_model, config,
+                                                     input_shapes, input_dtypes)
+        prune_params(origin_model, param_config)
+        return origin_model
+
+    @property
+    def get_current_config(self):
+        return self.current_config
 
     def set_net_config(self, net_config):
         """
