@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .graph_wrapper import GraphWrapper, VarWrapper, OpWrapper
-from .registry import Registry
+from ..core import graph_wrapper
+from .graph_wrapper import *
+from ..core import registry
+from .registry import *
+from ..core import dygraph
+from .dygraph import *
 
-__all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper', 'Registry']
+__all__ = []
+__all__ += graph_wrapper.__all__
+__all__ += registry.__all__
+__all__ += dygraph.__all__

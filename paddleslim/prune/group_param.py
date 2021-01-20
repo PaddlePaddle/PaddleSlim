@@ -79,7 +79,7 @@ def collect_convs(params, graph, visited={}):
                          pruned_params=pruned_params,
                          visited=visited)
 
-        walker.prune(param, pruned_axis=0, pruned_idx=[0])
+        walker.prune(param, pruned_axis=0, pruned_idx=[])
         groups.append(pruned_params)
     visited = set()
     uniq_groups = []
@@ -96,5 +96,4 @@ def collect_convs(params, graph, visited={}):
             simple_group.append((param, axis, pruned_idx))
         if not repeat_group:
             uniq_groups.append(simple_group)
-
     return uniq_groups

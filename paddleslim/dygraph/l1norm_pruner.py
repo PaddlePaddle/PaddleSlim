@@ -12,13 +12,15 @@ _logger = get_logger(__name__, logging.INFO)
 
 
 class L1NormFilterPruner(FilterPruner):
-    def __init__(self, model, input_shape, sen_file=None):
+    def __init__(self, model, inputs, sen_file=None):
         super(L1NormFilterPruner, self).__init__(
-            model, input_shape, sen_file=sen_file)
+            model, inputs, sen_file=sen_file)
 
     def cal_mask(self, var_name, pruned_ratio, group):
-        value = group[var_name]['value']
-        pruned_dims = group[var_name]['pruned_dims']
+        for _item in group[var_name]:
+            if _item['pruned_dims'] == [0]:
+                value = _item['value']
+                pruned_dims = _item['pruned_dims']
         reduce_dims = [
             i for i in range(len(value.shape)) if i not in pruned_dims
         ]
