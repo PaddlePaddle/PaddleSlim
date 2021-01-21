@@ -17,6 +17,7 @@ import logging
 import os
 import random
 import time
+import json
 from functools import partial
 
 import numpy as np
@@ -26,7 +27,7 @@ import paddle.nn.functional as F
 
 from paddlenlp.transformers import BertModel, BertForSequenceClassification, BertTokenizer
 from paddlenlp.utils.log import logger
-from paddleslim.nas.ofa import OFA
+from paddleslim.nas.ofa import OFA, utils
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 from paddleslim.nas.ofa.layers import BaseBlock
 

@@ -14,6 +14,7 @@
 
 from .ofa import OFA, RunConfig, DistillConfig
 from .convert_super import supernet
+from .utils.special_config import *
 from .get_sub_model import *
 
 from .utils.utils import get_paddle_version

@@ -40,6 +40,8 @@ def get_prune_params_config(graph, origin_model_config):
                     else:
                         param_config[inp._var.name] = [tmp]
                     precedor = tmp
+                else:
+                    precedor = None
             for n_op in n_ops:
                 for next_inp in n_op.all_inputs():
                     if next_inp._var.persistable == True:
@@ -53,15 +55,25 @@ def get_prune_params_config(graph, origin_model_config):
                                     param_config[next_inp._var.name] = [pre]
                                 else:
                                     param_config[next_inp._var.name] = [tmp]
+                            else:
+                                if len(next_inp._var.
+                                       shape) > 1 and precedor != None:
+                                    param_config[
+                                        next_inp._var.name] = [precedor, None]
                         else:
                             param_config[next_inp._var.name] = [precedor]
+
     return param_config
 
 
-def prune_params(model, param_config):
+def prune_params(model, param_config, super_model_sd=None):
     for name, param in model.named_parameters():
         t_value = param.value().get_tensor()
         value = np.array(t_value).astype("float32")
+
+        if super_model_sd != None:
+            super_t_value = super_model_sd[name].value().get_tensor()
+            super_value = np.array(super_t_value).astype("float32")
 
         if param.name in param_config.keys():
             if len(param_config[param.name]) > 1:
@@ -69,13 +81,19 @@ def prune_params(model, param_config):
                 out_exp = param_config[param.name][1]
                 in_chn = int(value.shape[0]) if in_exp == None else int(
                     value.shape[0] * in_exp)
-                out_chn = int(value.shape[1] * out_exp)
-                prune_value = value[:in_chn, :out_chn]
+                out_chn = int(value.shape[1]) if out_exp == None else int(
+                    value.shape[1] * out_exp)
+                prune_value = super_value[:in_chn, :
+                                          out_chn] if super_model_sd != None else value[:
+                                                                                        in_chn, :
+                                                                                        out_chn]
             else:
                 out_chn = int(value.shape[0] * param_config[param.name][0])
-                prune_value = value[:out_chn]
+                prune_value = super_value[:
+                                          out_chn] if super_model_sd != None else value[:
+                                                                                        out_chn]
         else:
-            prune_value = value
+            prune_value = super_value if super_model_sd != None else value
 
         p = t_value._place()
         if p.is_cpu_place():

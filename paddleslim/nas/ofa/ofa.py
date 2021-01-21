@@ -443,14 +443,13 @@ class OFA(OFABase):
             input_dtypes(list): the dtype of all inputs.
             load_weights_from_supernet(bool, optional): whether to load weights from SuperNet.
         """
+        super_sd = None
         if load_weights_from_supernet:
-            new_state_dict = remove_model_fn(origin_model,
-                                             self.model.state_dict())
-            origin_model.set_state_dict(new_state_dict)
-            _logger.info("Set state dict from SuperNet to origin model Done")
+            super_sd = remove_model_fn(origin_model, self.model.state_dict())
+
         param_config = self._export_sub_model_config(origin_model, config,
                                                      input_shapes, input_dtypes)
-        prune_params(origin_model, param_config)
+        prune_params(origin_model, param_config, super_sd)
         return origin_model
 
     @property
