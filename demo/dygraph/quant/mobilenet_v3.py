@@ -21,7 +21,8 @@ import paddle
 from paddle import ParamAttr
 import paddle.nn as nn
 import paddle.nn.functional as F
-from paddle.nn.functional.activation import hard_sigmoid, hard_swish
+from paddle.nn.functional.activation import hardsigmoid as hard_sigmoid
+from paddle.nn.functional.activation import hardswish as hard_swish
 from paddle.nn import Conv2D, BatchNorm, Linear, Dropout
 from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.regularizer import L2Decay
