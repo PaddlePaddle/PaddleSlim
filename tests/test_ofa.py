@@ -22,7 +22,7 @@ from paddle.nn import ReLU
 from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
 from paddleslim.nas.ofa.convert_super import supernet
-from paddleslim.nas.ofa.layers_new import Block, SuperSeparableConv2D
+from paddleslim.nas.ofa.layers import Block, SuperSeparableConv2D
 
 
 class ModelConv(nn.Layer):
