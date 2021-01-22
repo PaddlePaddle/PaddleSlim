@@ -21,7 +21,6 @@ import paddle
 from paddle import ParamAttr
 import paddle.nn as nn
 import paddle.nn.functional as F
-from paddle.nn.functional.activation import hard_sigmoid, hard_swish
 from paddle.nn import Conv2D, BatchNorm, Linear, Dropout
 from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.regularizer import L2Decay
@@ -165,7 +164,7 @@ class MobileNetV3(nn.Layer):
         x = self.pool(x)
 
         x = self.last_conv(x)
-        x = hard_swish(x)
+        x = paddle.nn.functional.activation.hardswish(x)
         x = paddle.reshape(x, shape=[x.shape[0], x.shape[1]])
         x = self.out(x)
 
@@ -303,7 +302,8 @@ class SEModule(nn.Layer):
         outputs = self.conv1(outputs)
         outputs = F.relu(outputs)
         outputs = self.conv2(outputs)
-        outputs = hard_sigmoid(outputs)
+        outputs = paddle.nn.functional.activation.hardsigmoid(
+            outputs, slope=0.2)
         return paddle.multiply(x=inputs, y=outputs)
 
 
