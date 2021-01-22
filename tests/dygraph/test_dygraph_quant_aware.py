@@ -39,16 +39,16 @@ class ImperativeLenet(nn.Layer):
                 kernel_size=3,
                 stride=1,
                 padding=1),
-            paddle.nn.Pool2D(
-                pool_size=2, pool_type='max', pool_stride=2),
+            paddle.nn.AvgPool2D(
+                kernel_size=2, stride=2),
             paddle.nn.Conv2D(
                 in_channels=6,
                 out_channels=16,
                 kernel_size=5,
                 stride=1,
                 padding=0),
-            paddle.nn.Pool2D(
-                pool_size=2, pool_type='max', pool_stride=2))
+            paddle.nn.AvgPool2D(
+                kernel_size=2, stride=2))
 
         self.fc = paddle.nn.Sequential(
             paddle.nn.Linear(
