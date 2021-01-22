@@ -21,7 +21,6 @@ import paddle
 from paddle import ParamAttr
 import paddle.nn as nn
 import paddle.nn.functional as F
-from paddle.nn.functional.activation import hardsigmoid, hardswish
 from paddle.nn import Conv2D, BatchNorm, Linear, Dropout
 from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.regularizer import L2Decay
@@ -165,7 +164,7 @@ class MobileNetV3(nn.Layer):
         x = self.pool(x)
 
         x = self.last_conv(x)
-        x = hardswish(x)
+        x = paddle.nn.functional.activation.hardswish(x)
         x = paddle.reshape(x, shape=[x.shape[0], x.shape[1]])
         x = self.out(x)
 
@@ -213,8 +212,8 @@ class ConvBNLayer(nn.Layer):
         if self.if_act:
             if self.act == "relu":
                 x = F.relu(x)
-            elif self.act == "hardswish":
-                x = hardswish(x)
+            elif self.act == "hard_swish":
+                x = paddle.nn.functional.activation.hardswish(x)
             else:
                 print("The activation function is selected incorrectly.")
                 exit()
@@ -303,7 +302,8 @@ class SEModule(nn.Layer):
         outputs = self.conv1(outputs)
         outputs = F.relu(outputs)
         outputs = self.conv2(outputs)
-        outputs = hardsigmoid(outputs)
+        outputs = paddle.nn.functional.activation.hardsigmoid(
+            outputs, slope=0.2)
         return paddle.multiply(x=inputs, y=outputs)
 
 
