@@ -359,16 +359,10 @@ class default_walker(PruneWorker):
         if var in self.op.all_outputs():
             for in_var in self.op.all_inputs():
                 if len(in_var.shape()) == len(var.shape()):
-                    pre_ops = in_var.inputs()
-                    for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis, pruned_idx)
-
+                    self._visit_and_search(in_var, pruned_axis, pruned_idx)
         for out_var in self.op.all_outputs():
             if len(out_var.shape()) == len(var.shape()):
-                self._visit(out_var, pruned_axis)
-                next_ops = out_var.outputs()
-                for op in next_ops:
-                    self._prune_op(op, out_var, pruned_axis, pruned_idx)
+                self._visit_and_search(out_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register

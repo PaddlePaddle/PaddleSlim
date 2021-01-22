@@ -63,15 +63,15 @@ class MobileNetV3(nn.Layer):
                 [5, 72, 40, True, "relu", 2],
                 [5, 120, 40, True, "relu", 1],
                 [5, 120, 40, True, "relu", 1],
-                [3, 240, 80, False, "hardswish", 2],
-                [3, 200, 80, False, "hardswish", 1],
-                [3, 184, 80, False, "hardswish", 1],
-                [3, 184, 80, False, "hardswish", 1],
-                [3, 480, 112, True, "hardswish", 1],
-                [3, 672, 112, True, "hardswish", 1],
-                [5, 672, 160, True, "hardswish", 2],
-                [5, 960, 160, True, "hardswish", 1],
-                [5, 960, 160, True, "hardswish", 1],
+                [3, 240, 80, False, "hard_swish", 2],
+                [3, 200, 80, False, "hard_swish", 1],
+                [3, 184, 80, False, "hard_swish", 1],
+                [3, 184, 80, False, "hard_swish", 1],
+                [3, 480, 112, True, "hard_swish", 1],
+                [3, 672, 112, True, "hard_swish", 1],
+                [5, 672, 160, True, "hard_swish", 2],
+                [5, 960, 160, True, "hard_swish", 1],
+                [5, 960, 160, True, "hard_swish", 1],
             ]
             self.cls_ch_squeeze = 960
             self.cls_ch_expand = 1280
@@ -81,14 +81,14 @@ class MobileNetV3(nn.Layer):
                 [3, 16, 16, True, "relu", 2],
                 [3, 72, 24, False, "relu", 2],
                 [3, 88, 24, False, "relu", 1],
-                [5, 96, 40, True, "hardswish", 2],
-                [5, 240, 40, True, "hardswish", 1],
-                [5, 240, 40, True, "hardswish", 1],
-                [5, 120, 48, True, "hardswish", 1],
-                [5, 144, 48, True, "hardswish", 1],
-                [5, 288, 96, True, "hardswish", 2],
-                [5, 576, 96, True, "hardswish", 1],
-                [5, 576, 96, True, "hardswish", 1],
+                [5, 96, 40, True, "hard_swish", 2],
+                [5, 240, 40, True, "hard_swish", 1],
+                [5, 240, 40, True, "hard_swish", 1],
+                [5, 120, 48, True, "hard_swish", 1],
+                [5, 144, 48, True, "hard_swish", 1],
+                [5, 288, 96, True, "hard_swish", 2],
+                [5, 576, 96, True, "hard_swish", 1],
+                [5, 576, 96, True, "hard_swish", 1],
             ]
             self.cls_ch_squeeze = 576
             self.cls_ch_expand = 1280
@@ -104,7 +104,7 @@ class MobileNetV3(nn.Layer):
             padding=1,
             num_groups=1,
             if_act=True,
-            act="hardswish",
+            act="hard_swish",
             name="conv1")
 
         self.block_list = []
@@ -134,7 +134,7 @@ class MobileNetV3(nn.Layer):
             padding=0,
             num_groups=1,
             if_act=True,
-            act="hardswish",
+            act="hard_swish",
             name="conv_last")
 
         self.pool = AdaptiveAvgPool2D(1)
