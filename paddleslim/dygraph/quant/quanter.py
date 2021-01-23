@@ -235,6 +235,8 @@ class QAT(object):
             quantizable_layer_type=self.config['quantizable_layer_type'])
 
         with paddle.utils.unique_name.guard():
+            if hasattr(model, "_layers"):
+                model = model._layers
             model.__init__()
             self.imperative_qat.quantize(model)
             state_dict = model.state_dict()
