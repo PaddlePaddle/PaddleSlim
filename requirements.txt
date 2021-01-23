@@ -1,4 +1,6 @@
 #paddlepaddle == 1.6.0rc0
 tqdm
 pyzmq
-matplotlib 
+matplotlib
+opencv-python
+pillow 

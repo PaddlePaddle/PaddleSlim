@@ -55,12 +55,12 @@ def collect_convs(params, graph, visited={}):
     if not isinstance(graph, GraphWrapper):
         graph = GraphWrapper(graph)
     groups = []
-    for param in params:
+    for _param in params:
         pruned_params = []
-        param = graph.var(param)
+        param = graph.var(_param)
         if param is None:
-            _logger.warn(
-                f"Cann't found relative variables of {param} because {param} is not in target program or model. Please make sure {param} is in your program if you are using static API of PaddlePaddle. And make sure your model in correctly mode and contains {param} if you are using dynamic API of PaddlePaddle."
+            _logger.warning(
+                f"Cann't found relative variables of {_param} because {_param} is not in target program or model. Please make sure {_param} is in your program if you are using static API of PaddlePaddle. And make sure your model in correctly mode and contains {_param} if you are using dynamic API of PaddlePaddle."
             )
             groups.append([])
             continue
