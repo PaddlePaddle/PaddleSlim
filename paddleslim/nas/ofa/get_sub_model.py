@@ -83,23 +83,14 @@ def prune_params(model, param_config, super_model_sd=None):
                     value.shape[0] * in_exp)
                 out_chn = int(value.shape[1]) if out_exp == None else int(
                     value.shape[1] * out_exp)
-                prune_value = super_value[:in_chn, :out_chn, ..
-                                          .] if super_model_sd != None else value[:
-                                                                                  in_chn, :
-                                                                                  out_chn,
-                                                                                  .
-                                                                                  .
-                                                                                  .]
+                prune_value = super_value[:in_chn, :out_chn, ...] \
+                                 if super_model_sd != None else value[:in_chn, :out_chn, ...]
             else:
                 out_chn = int(value.shape[0]) if param_config[param.name][
                     0] == None else int(value.shape[0] *
                                         param_config[param.name][0])
-                prune_value = super_value[:out_chn, ..
-                                          .] if super_model_sd != None else value[:
-                                                                                  out_chn,
-                                                                                  .
-                                                                                  .
-                                                                                  .]
+                prune_value = super_value[:out_chn, ...] \
+                                 if super_model_sd != None else value[:out_chn, ...]
         else:
             prune_value = super_value if super_model_sd != None else value
 
