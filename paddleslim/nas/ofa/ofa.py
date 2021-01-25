@@ -127,8 +127,14 @@ class OFA(OFABase):
 
     Examples:
         .. code-block:: python
-          from paddlslim.nas.ofa import OFA
-          ofa_model = OFA(model)
+          from paddle.vision.models import mobilenet_v1
+          from paddleslim.nas.ofa import OFA
+          from paddleslim.nas.ofa.convert_super import Convert, supernet
+
+          model = mobilenet_v1()
+          sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+          sp_model = Convert(sp_net_config).convert(model)
+          ofa_model = OFA(sp_model)
 
     """
 
@@ -414,7 +420,8 @@ class OFA(OFABase):
                     super_model_config[name] = sublayer.key
 
         for name, value in super_model_config.items():
-            super_model_config[name] = config[value]
+            super_model_config[name] = config[value] if value in config.keys(
+            ) else {}
 
         origin_model_config = {}
         for name, sublayer in origin_model.named_sublayers():
@@ -439,9 +446,16 @@ class OFA(OFABase):
         Parameters:
             origin_model(paddle.nn.Layer): the instance of original model.
             config(dict): the config of sub model, can get by OFA.get_current_config() or some special config, such as paddleslim.nas.ofa.utils.dynabert_config(width_mult).
-            input_shapes(list): the shape of all inputs.
+            input_shapes(list|list(list)): the shape of all inputs.
             input_dtypes(list): the dtype of all inputs.
-            load_weights_from_supernet(bool, optional): whether to load weights from SuperNet.
+            load_weights_from_supernet(bool, optional): whether to load weights from SuperNet. Default: False.
+        Examples:
+            .. code-block:: python
+              from paddle.vision.models import mobilenet_v1
+              origin_model = mobilenet_v1()
+
+              config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
+              origin_model = ofa_model.export(origin_model, config, input_shapes=[1, 3, 28, 28], input_dtypes=['float32'])
         """
         super_sd = None
         if load_weights_from_supernet:
@@ -463,7 +477,7 @@ class OFA(OFABase):
             net_config(dict): special the config of sug-network.
         Examples:
             .. code-block:: python
-              config = ofa_model.current_config
+              config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
               ofa_model.set_net_config(config)
         """
         self.net_config = net_config
