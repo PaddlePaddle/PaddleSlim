@@ -44,12 +44,9 @@ class VarGroup():
 
     def _parse_model(self, model, inputs):
         _logger.debug("Parsing model with input: {}".format(inputs))
-
-        model.eval()
+        # model can be in training mode, because some model contains auxiliary parameters for training.
         program = dygraph2program(model, inputs=inputs)
-
         graph = GraphWrapper(program)
-
         visited = {}
         for name, param in model.named_parameters():
             group = collect_convs([param.name], graph,

@@ -98,8 +98,8 @@ class Pruner():
                                   visited)[0]  # [(name, axis, pruned_idx)]
             if group is None or len(group) == 0:
                 continue
-            assert ((not self.pruned_weights),
-                    "The weights have been pruned once.")
+            assert (
+                not self.pruned_weights), "The weights have been pruned once."
             group_values = []
             for name, axis, pruned_idx in group:
                 var = scope.find_var(name)

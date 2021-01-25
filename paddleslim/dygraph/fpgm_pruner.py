@@ -20,9 +20,6 @@ class FPGMFilterPruner(FilterPruner):
             if _item['pruned_dims'] == [0]:
                 value = _item['value']
                 pruned_dims = _item['pruned_dims']
-
-        assert (pruned_dims == [0])
-
         dist_sum_list = []
         for out_i in range(value.shape[0]):
             dist_sum = self.get_distance_sum(value, out_i)
