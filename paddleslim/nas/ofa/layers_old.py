@@ -925,7 +925,6 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
 
         mean_out = mean
         variance_out = variance
-
         attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
                  "is_test", not self.training, "data_layout", self._data_layout,
                  "use_mkldnn", False, "fuse_with_relu", self._fuse_with_relu,
