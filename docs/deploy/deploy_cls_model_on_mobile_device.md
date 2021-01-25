@@ -147,47 +147,44 @@ wget  https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_quant_aware.tar 
     ```
 
  4. 准备优化后的模型、预测库文件
- ```
- # 创建临时目录
- mkdir /{user path}/temp
- cd /{lite repo path}/build.lite.android.armv8.gcc/inference_lite_lib.android.armv8/demo/cxx/mobile_light/
- # 编译部署程序
- make
- # 将部署程序拷贝到之前创建的临时目录
- cp mobilenetv1_light_api /{user path}/temp
- # 将链接文件拷贝到临时目录
- cp ../../../cxx/lib/libpaddle_light_api_shared.so /{user path}/temp
- ```
+    ```
+    # 创建临时目录
+    mkdir /{user path}/temp
+    cd /{lite repo path}/build.lite.android.armv8.gcc/inference_lite_lib.android.armv8/demo/cxx/mobile_light/
+    # 编译部署程序
+    make
+    # 将部署程序拷贝到之前创建的临时目录
+    cp mobilenetv1_light_api /{user path}/temp
+    # 将链接文件拷贝到临时目录
+    cp ../../../cxx/lib/libpaddle_light_api_shared.so /{user path}/temp
+    ```
 
- 将之前生成的模型文件：`mbv1_opt.nb`, `quant_mbv1_opt.nb` 同样拷贝到/{user path}/temp目录下。
+    将之前生成的模型文件：`mbv1_opt.nb`, `quant_mbv1_opt.nb` 同样拷贝到/{user path}/temp目录下。
 
  5. 启动调试
 
- 上述步骤完成后就可以使用adb将文件push到手机上运行，步骤如下：
+    上述步骤完成后就可以使用adb将文件push到手机上运行，步骤如下：
 
- ```
- # 进入/{user path}/temp
- cd /{user path}/temp
- # 将模型文件push到手机上
- adb push mbv1_opt.nb /data/local/tmp
- adb push quant_mbv1_opt.nb /data/local/tmp
- # 将部署文件和链接文件push到手机上
- adb push libpaddle_light_api_shared.so /data/local/tmp
- adb push mobilenetv1_light_api /data/local/tmp
- # 执行原始MobileNetV1模型
- adb shell 'cd /data/local/tmp && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/local/tmp && ./mobilenetv1_light_api ./mbv1_opt.nb'
- # 执行原始MobileNetV1模型
- adb shell 'cd /data/local/tmp && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/local/tmp && ./mobilenetv1_light_api ./quant_mbv1_opt.nb'
- ```
+    ```
+    # 进入/{user path}/temp
+    cd /{user path}/temp
+    # 将模型文件push到手机上
+    adb push mbv1_opt.nb /data/local/tmp
+    adb push quant_mbv1_opt.nb /data/local/tmp
+    # 将部署文件和链接文件push到手机上
+    adb push libpaddle_light_api_shared.so /data/local/tmp
+    adb push mobilenetv1_light_api /data/local/tmp
+    # 执行原始MobileNetV1模型
+    adb shell 'cd /data/local/tmp && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/local/tmp && ./mobilenetv1_light_api ./mbv1_opt.nb'
+    # 执行原始MobileNetV1模型
+    adb shell 'cd /data/local/tmp && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/local/tmp && ./mobilenetv1_light_api ./quant_mbv1_opt.nb'
+    ```
 
- 如果对代码做了修改，则需要重新编译并push到手机上。
+    如果对代码做了修改，则需要重新编译并push到手机上。
 
- ###运行效果如下：
- 原始模型：
-<div align="center">
-    <img src="../imgs/deploy/baseline.png" width="600">
-</div>
-量化模型：
-<div align="center"
-    <img src="../imgs/deploy/quanted.png" width="600">
-</div>
+    运行效果如下：
+    原始模型/量化模型：
+    <div align="center">
+        <img src="../images/deploy/baseline.png" width="600">
+        <img src="../images/deploy/quanted.png" width="518">
+    </div>
