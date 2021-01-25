@@ -275,17 +275,18 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                     _input_filter,
                     shape=[(_input_filter.shape[0] * _input_filter.shape[1]),
                            -1])
+                _tmp_filter = _varbase_creator(dtype=_input_filter.dtype)
                 core.ops.matmul(_input_filter,
                                 self.__getattr__('%dto%d_matrix' %
                                                  (src_ks, target_ks)),
-                                _input_filter, 'transpose_X', False,
+                                _tmp_filter, 'transpose_X', False,
                                 'transpose_Y', False, "alpha", 1)
-                _input_filter = fluid.layers.reshape(
-                    _input_filter,
+                _tmp_filter = fluid.layers.reshape(
+                    _tmp_filter,
                     shape=[
                         filters.shape[0], filters.shape[1], target_ks, target_ks
                     ])
-                start_filter = _input_filter
+                start_filter = _tmp_filter
             filters = start_filter
         return filters
 
@@ -572,17 +573,18 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                     _input_filter,
                     shape=[(_input_filter.shape[0] * _input_filter.shape[1]),
                            -1])
+                _tmp_filter = _varbase_creator(dtype=_input_filter.dtype)
                 core.ops.matmul(_input_filter,
                                 self.__getattr__('%dto%d_matrix' %
                                                  (src_ks, target_ks)),
-                                _input_filter, 'transpose_X', False,
+                                _tmp_filter, 'transpose_X', False,
                                 'transpose_Y', False, "alpha", 1)
-                _input_filter = fluid.layers.reshape(
-                    _input_filter,
+                _tmp_filter = fluid.layers.reshape(
+                    _tmp_filter,
                     shape=[
                         filters.shape[0], filters.shape[1], target_ks, target_ks
                     ])
-                start_filter = _input_filter
+                start_filter = _tmp_filter
             filters = start_filter
         return filters
 
