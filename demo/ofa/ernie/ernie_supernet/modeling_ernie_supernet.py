@@ -26,6 +26,10 @@ import logging
 import logging
 from functools import partial
 import six
+if six.PY2:
+    from pathlib2 import Path
+else:
+    from pathlib import Path
 
 import paddle.fluid.dygraph as D
 import paddle.fluid as F
@@ -288,8 +292,16 @@ def get_config(pretrain_dir_or_url):
         'ernie-2.0-large-en': bce + 'model-ernie2.0-large-en.1.tar.gz',
         'ernie-tiny': bce + 'model-ernie_tiny.1.tar.gz',
     }
-    url = resource_map[pretrain_dir_or_url]
-    pretrain_dir = _fetch_from_remote(url, False)
+
+    if not Path(pretrain_dir_or_url).exists() and str(
+            pretrain_dir_or_url) in resource_map:
+        url = resource_map[pretrain_dir_or_url]
+        pretrain_dir = _fetch_from_remote(url, False)
+    else:
+        log.info('pretrain dir %s not in %s, read from local' %
+                 (pretrain_dir_or_url, repr(resource_map)))
+        pretrain_dir = Path(pretrain_dir_or_url)
+
     config_path = os.path.join(pretrain_dir, 'ernie_config.json')
     if not os.path.exists(config_path):
         raise ValueError('config path not found: %s' % config_path)
