@@ -42,7 +42,8 @@ class TestPrune(StaticCase):
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
         collected_groups = collect_convs(
-            ["conv1_weights", "conv2_weights", "conv3_weights"], main_program)
+            ["conv1_weights", "conv2_weights", "conv3_weights", "dummy"],
+            main_program)
         while [] in collected_groups:
             collected_groups.remove([])
         print(collected_groups)

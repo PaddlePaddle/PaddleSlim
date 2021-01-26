@@ -9,8 +9,8 @@ import functools
 import math
 import time
 import numpy as np
-sys.path[0] = os.path.join(
-    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
+sys.path.append(
+    os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
 import paddleslim
 from paddleslim.common import get_logger
 from paddleslim.analysis import dygraph_flops as flops
