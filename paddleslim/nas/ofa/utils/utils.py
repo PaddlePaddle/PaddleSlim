@@ -59,6 +59,25 @@ def set_state_dict(model, state_dict):
             _logger.info('{} is not in state_dict'.format(tmp_n))
 
 
+def remove_model_fn(model, sd):
+    new_dict = {}
+    keys = []
+    for name, param in model.named_parameters():
+        keys.append(name)
+    for name, param in sd.items():
+        if name.split('.')[-2] == 'fn':
+            tmp_n = name.split('.')[:-2] + [name.split('.')[-1]]
+            tmp_n = '.'.join(tmp_n)
+            #print(name, tmp_n)
+        if name in keys:
+            new_dict[name] = param
+        elif tmp_n in keys:
+            new_dict[tmp_n] = param
+        else:
+            _logger.debug('{} is not in state_dict'.format(tmp_n))
+    return new_dict
+
+
 def compute_start_end(kernel_size, sub_kernel_size):
     center = kernel_size // 2
     sub_center = sub_kernel_size // 2

@@ -88,9 +88,14 @@ OFA实例
 
 .. code-block:: python
 
-   from paddlslim.nas.ofa import OFA
+   from paddle.vision.models import mobilenet_v1
+   from paddleslim.nas.ofa import OFA
+   from paddleslim.nas.ofa.convert_super import Convert, supernet
 
-   ofa_model = OFA(model)
+   model = mobilenet_v1()
+   sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+   sp_model = Convert(sp_net_config).convert(model)
+   ofa_model = OFA(sp_model)
 ..
 
   .. py:method:: set_epoch(epoch)
@@ -140,7 +145,7 @@ OFA实例
 
   .. code-block:: python
 
-    config = ofa_model.current_config
+    config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
     ofa_model.set_net_config(config)
 
   .. py:method:: calc_distill_loss()
@@ -159,15 +164,25 @@ OFA实例
   .. py:method:: search()
   ### TODO
 
-  .. py:method:: export(config)
+  .. py:method:: export(origin_model, config, input_shapes, input_dtypes, load_weights_from_supernet=True)
 
-  根据传入的子网络配置导出当前子网络的参数。
+  根据传入的原始模型结构、子网络配置，模型输入的形状和类型导出当前子网络，导出的子网络可以进一步训练、预测或者调用框架动静转换功能转为静态图模型。
 
   **参数：**
-    - **config(dict)：** 某个子网络每层的配置。
+    - **origin_model(paddle.nn.Layer)：** 原始模型实例，子模型会直接在原始模型的基础上进行修改。
+    - **config(dict)：** 某个子网络每层的配置，可以用。
+    - **input_shapes(list|list(list))：** 模型输入的形状。
+    - **input_dtypes(list)：** 模型输入的类型。
+    - **load_weights_from_supernet(bool, optional)：** 是否从超网络加载参数。若为False，则不从超网络加载参数，则只根据config裁剪原始模型的网络结构；若为True，则用超网络参数来初始化原始模型，并根据config裁剪原始模型的网络结构。默认：True。
 
   **返回：**
-  TODO
+  子模型实例。
 
   **示例代码：**
-  TODO
+
+  .. code-block:: python
+    from paddle.vision.models import mobilenet_v1     
+    origin_model = mobilenet_v1()
+
+    config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
+    origin_model = ofa_model.export(origin_model, config, input_shapes=[1, 3, 28, 28], input_dtypes=['float32'])
