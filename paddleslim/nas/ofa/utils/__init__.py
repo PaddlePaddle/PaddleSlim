@@ -17,5 +17,3 @@ from .special_config import *
 
 from .utils import get_paddle_version
 pd_ver = get_paddle_version()
-if pd_ver == 200:
-    from .nlp_utils import *
