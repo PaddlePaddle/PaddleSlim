@@ -579,14 +579,10 @@ class Convert:
                 new_attr_name = []
                 if pd_ver == 185:
                     new_attr_name += [
-                        'size', 'is_sparse', 'is_distributed', 'param_attr',
-                        'dtype'
+                        'is_sparse', 'is_distributed', 'param_attr', 'dtype'
                     ]
                 else:
-                    new_attr_name += [
-                        'num_embeddings', 'embedding_dim', 'sparse',
-                        'weight_attr', 'name'
-                    ]
+                    new_attr_name += ['sparse', 'weight_attr', 'name']
 
                 self._change_name(layer, pd_ver, has_bias=False)
 

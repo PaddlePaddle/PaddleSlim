@@ -20,7 +20,8 @@ import paddle
 import paddle.nn as nn
 from paddle.vision.models import mobilenet_v1
 from paddleslim.nas.ofa.convert_super import Convert, supernet
-from paddleslim.nas.ofa.utils import compute_neuron_head_importance, reorder_head, reorder_neuron, set_state_dict, dynabert_config
+from paddleslim.nas.ofa.utils import set_state_dict, dynabert_config
+from paddleslim.nas.ofa.utils.nlp_utils import compute_neuron_head_importance, reorder_head, reorder_neuron
 from paddleslim.nas.ofa import OFA
 
 
