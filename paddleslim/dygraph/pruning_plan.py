@@ -77,7 +77,8 @@ class PruningPlan():
             for _mask in self._masks[var_name]:
                 if pruning_mask.dims == _mask.dims:
                     _mask.mask = list(
-                        np.array(_mask.mask) | np.array(pruning_mask.mask))
+                        np.array(_mask.mask).astype(np.int64) & np.array(
+                            pruning_mask.mask).astype(np.int64))
         else:
             self._masks[var_name].append(pruning_mask)
             self._dims[var_name].append(pruning_mask.dims)
@@ -171,7 +172,7 @@ class PruningPlan():
                                                       paddle.to_tensor(value))
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
-                        bool_mask = mask.astype(bool)
+                        bool_mask = np.array(mask).astype(bool)
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims[0], value)
                         p = t_value._place()
