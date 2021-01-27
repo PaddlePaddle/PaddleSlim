@@ -213,7 +213,7 @@ class ConvBNLayer(nn.Layer):
             if self.act == "relu":
                 x = F.relu(x)
             elif self.act == "hard_swish":
-                x = hard_swish(x)
+                x = paddle.nn.functional.activation.hardswish(x)
             else:
                 print("The activation function is selected incorrectly.")
                 exit()
