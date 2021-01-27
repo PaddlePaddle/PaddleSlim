@@ -33,8 +33,7 @@ git checkout release/v2.8
 
 ```
 注意：编译Paddle-Lite获得预测库时，需要打开`--with_cv=ON --with_extra=ON`两个选项，`--arch`表示`arm`版本，这里指定为armv8，
-更多编译命令
-介绍请参考[链接](https://paddle-lite.readthedocs.io/zh/latest/source_compile/compile_andriod.html)。
+更多编译命令介绍请参考[链接](https://paddle-lite.readthedocs.io/zh/latest/source_compile/compile_andriod.html)。
 预测库的文件目录如下：
 ```
 inference_lite_lib.android.armv8/
@@ -63,7 +62,7 @@ inference_lite_lib.android.armv8/
 
 ## 2. 模型准备
 
-该节主要介绍如何准备Paddle-Lite的模型转换工具以及如何利用opt工具将模型转化为部署所需要的.nb文件。
+该节主要介绍如何准备Paddle-Lite的模型转换工具以及如何利用模型转换工具将模型转化为部署所需要的.nb文件。
 
 ### 2.1 准备模型转换工具
 
