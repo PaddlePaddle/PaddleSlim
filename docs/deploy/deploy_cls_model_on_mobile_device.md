@@ -1,17 +1,19 @@
 # 端侧部署
 
-本教程将介绍基于[Paddle Lite](https://github.com/PaddlePaddle/Paddle-Lite) 在移动端部署经过PaddleSlim压缩后的分类模型的详细步骤。
+本教程以图像分类模型为例，介绍基于[Paddle Lite](https://github.com/PaddlePaddle/Paddle-Lite) 在移动端部署经过PaddleSlim压缩后的分类模型的详细步骤。
 
 Paddle Lite是飞桨轻量化推理引擎，为手机、IOT端提供高效推理能力，并广泛整合跨平台硬件，为端侧部署及应用落地问题提供轻量化的部署方案。
 
 
 ## 1. 准备环境
 
-### 运行准备
+该节主要介绍如何准备部署环境。
+
+### 1.1 运行准备
 - 电脑（编译Paddle Lite）
 - 安卓手机（armv7或armv8）
 
-### 1.1 准备交叉编译环境
+### 1.2 准备交叉编译环境
 交叉编译环境用于编译 Paddle Lite的C++ demo。
 支持多种开发环境，不同开发环境的编译流程请参考对应文档。
 
@@ -19,13 +21,13 @@ Paddle Lite是飞桨轻量化推理引擎，为手机、IOT端提供高效推理
 2. [Linux](https://paddle-lite.readthedocs.io/zh/latest/source_compile/compile_env.html#linux)
 3. [MAC OS](https://paddle-lite.readthedocs.io/zh/latest/source_compile/compile_env.html#mac-os)
 
-### 1.2 准备预测库
+### 1.3 准备预测库
 
 编译Paddle-Lite得到预测库，Paddle-Lite的编译方式如下：
 ```
 git clone https://github.com/PaddlePaddle/Paddle-Lite.git
 cd Paddle-Lite
-# 切换到Paddle-Lite release/v2.8 稳定分支
+# 切换到Paddle-Lite 稳定分支，这里以release/v2.8为例
 git checkout release/v2.8
 ./lite/tools/build_android.sh  --arch=armv8  --with_cv=ON
 
@@ -33,7 +35,6 @@ git checkout release/v2.8
 注意：编译Paddle-Lite获得预测库时，需要打开`--with_cv=ON --with_extra=ON`两个选项，`--arch`表示`arm`版本，这里指定为armv8，
 更多编译命令
 介绍请参考[链接](https://paddle-lite.readthedocs.io/zh/latest/source_compile/compile_andriod.html)。
-
 预测库的文件目录如下：
 ```
 inference_lite_lib.android.armv8/
@@ -60,9 +61,11 @@ inference_lite_lib.android.armv8/
 |   `-- java                                 Java 预测库demo
 ```
 
-## 2 开始运行
+## 2. 模型准备
 
-### 2.1 模型优化
+该节主要介绍如何准备Paddle-Lite的模型转换工具以及如何利用opt工具将模型转化为部署所需要的.nb文件。
+
+### 2.1 准备模型转换工具
 
 Paddle-Lite 提供了多种策略来自动优化原始的模型，其中包括量化、子图融合、混合调度、Kernel优选等方法，使用Paddle-lite的opt工具可以自动
 对inference模型进行优化，优化后的模型更轻量，模型运行速度更快。
@@ -95,17 +98,19 @@ cd build.opt/lite/api/
 |--valid_targets |指定模型可执行的backend，默认为arm。目前可支持x86、arm、opencl、npu、xpu，可以同时指定多个backend(以空格分隔)，Model Optimize Tool将会自动选择最佳方式。如果需要支持华为NPU（Kirin 810/990 Soc搭载的达芬奇架构NPU），应当设置为npu, arm|
 |--record_tailoring_info|当使用 根据模型裁剪库文件 功能时，则设置该选项为true，以记录优化后模型含有的kernel和OP信息，默认为false|
 
-`--model_dir`适用于待优化的模型是非combined方式，PaddleOCR的inference模型是combined方式，即模型结构和模型参数使用单独一个文件存储。
+`--model_dir`适用于待优化的模型是非combined方式，`--model_file`与`--param_file`用于待优化的combined模型，即模型结构和模型参数使用单独一个文件存储。通过[paddle.jit.save](https://www.paddlepaddle.org.cn/documentation/docs/zh/2.0-rc1/api/paddle/fluid/dygraph/jit/save_cn.html)保存的模型均为combined模型。
 
-下面以通过PaddleSlim裁剪过后的MobileNetV1模型为例。
+一般来讲，通过剪枝、蒸馏、NAS方法压缩得到的模型，和通用模型PaddleLite部署、模型转换步骤相同，下面以MobileNetv1的原始模型和经过PaddleSlim量化后的模型为例。
 
-### 转换原始模型
+### 2.2 转换模型
+
+#### 转换原始模型
 ```
 wget https://paddle-inference-dist.bj.bcebos.com/PaddleLite/benchmark_0/benchmark_models.tgz && tar xf benchmark_models.tgz
 ./opt --model_dir=./benchmark_models/mobilenetv1 --optimize_out_type=naive_buffer --optimize_out=./mbv1_opt --valid_targets=arm
 ```
 
-### 转换量化模型
+#### 转换量化模型
 ```
 wget  https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_quant_aware.tar && tar xf MobileNetV1_quant_aware.tar
 ./opt --model_file=./MobileNetV1_quant_aware/model --param_file=./MobileNetV1_quant_aware/params --optimize_out_type=naive_buffer --optimize_out=./quant_mbv1_opt --valid_targets=arm
@@ -115,8 +120,7 @@ wget  https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_quant_aware.tar 
 
 注意：使用paddle-lite部署时，需要使用opt工具优化后的模型。 opt 工具的输入模型是paddle保存的inference模型
 
-<a name="2.2与手机联调"></a>
-### 2.2 与手机联调
+## 3. 运行模型
 
 首先需要进行一些准备工作。
  1. 准备一台arm8的安卓手机，如果编译的预测库和opt文件是armv7，则需要arm7的手机，并修改Makefile中`ARM_ABI = arm7`。

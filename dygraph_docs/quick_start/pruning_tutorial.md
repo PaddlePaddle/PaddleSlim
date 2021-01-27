@@ -1,6 +1,6 @@
 #  图像分类模型通道剪裁-快速开始
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的卷积通道剪裁接口]()。
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的卷积通道剪裁接口](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/dygraph_docs)。
 该示例包含以下步骤：
 
 1. 导入依赖
@@ -13,20 +13,21 @@
 
 ## 1. 导入依赖
 
-PaddleSlim依赖Paddle2.0-rc1版本，请确认已正确安装Paddle，然后按以下方式导入Paddle和PaddleSlim:
+请确认已正确安装Paddle，版本依赖关系可见[PaddleSlim Rep主页](https://github.com/PaddlePaddle/PaddleSlim)。然后按以下方式导入Paddle和PaddleSlim:
 
 ```
 import paddle
 import paddle.vision.models as models
 from paddle.static import InputSpec as Input
 from paddle.vision.datasets import Cifar10
+import paddle.vision.transforms as T
 from paddleslim.dygraph import L1NormFilterPruner
 ```
 
 ## 2. 构建网络和数据集
 
 该章节构造一个用于对CIFAR10数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[3, 32, 32]`，输出类别数为10。
-为了方便展示示例，我们使用Paddle提供的预定义分类模型，执行以下代码构建分类模型：
+为了方便展示示例，我们使用Paddle提供的[预定义分类模型](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api/paddle/vision/models/mobilenetv1/MobileNetV1_cn.html#mobilenetv1)和[高层API](https://www.paddlepaddle.org.cn/documentation/docs/zh/2.0-rc1/tutorial/quick_start/high_level_api/high_level_api.html)，执行以下代码构建分类模型：
 
 ```
 net = models.mobilenet_v1(pretrained=False, scale=1.0, num_classes=10)
@@ -41,8 +42,13 @@ model.prepare(
         paddle.nn.CrossEntropyLoss(),
         paddle.metric.Accuracy(topk=(1, 5)))
 
-val_dataset = mnist = Cifar10(mode='test')
-train_dataset = mnist = Cifar10(mode='train')
+transform = T.Compose([
+                    T.Transpose(),
+                    T.Normalize([127.5], [127.5])
+                ])
+
+val_dataset = Cifar10(mode='test', transform=transform)
+train_dataset = Cifar10(mode='train', transform=transform)
 ```
 
 ## 3. 进行预训练
@@ -50,7 +56,7 @@ train_dataset = mnist = Cifar10(mode='train')
 对模型进行预训练，为之后的裁剪做准备。
 执行以下代码对模型进行预训练
 ```
-model.fit(train_dataset, epoch=2, batch_size=128, verbose=1)
+model.fit(train_dataset, epochs=2, batch_size=128, verbose=1)
 ```
 
 
@@ -69,11 +75,7 @@ FLOPs = paddle.flops(net, input_size=[1, 3, 32, 32], print_detail=True)
 
 ```
 pruner = L1NormFilterPruner(net, [1, 3, 32, 32])
-def eval_fn():
-    result = model.evaluate(val_dataset, batch_size=128)
-    return result['acc_top1']
-pruner.sensitive(eval_func=eval_fn, sen_file="./sen.pickle")
-print(pruner.sensitive())
+pruner.prune_vars({'conv2d_22.w_0':0.5, 'conv2d_20.w_0':0.6}, axis=0)
 ```
 
 以上操作会按照网络结构中不同网路层的冗余程度对网络层进行不同程度的裁剪并修改网络模型结构。
@@ -100,6 +102,6 @@ model.evaluate(val_dataset, batch_size=128, verbose=1)
 以下代码对裁剪过后的模型进行评估后执行了一个`epoch`的微调，再对微调过后的模型重新进行评估：
 
 ```
-model.fit(train_dataset, epoch=1, batch_size=128, verbose=1)
+model.fit(train_dataset, epochs=1, batch_size=128, verbose=1)
 model.evaluate(val_dataset, batch_size=128, verbose=1)
 ```

@@ -18,6 +18,7 @@ PaddleSlim依赖Paddle1.7版本，请确认已正确安装Paddle，然后按以�
 import paddle
 import paddle.fluid as fluid
 import paddleslim as slim
+paddle.enable_static()
 ```
 
 ## 2. 构建网络
@@ -61,7 +62,7 @@ pruned_program, _, _ = pruner.prune(
 ### 3.3 计算剪裁之后的FLOPs
 
 ```
-FLOPs = paddleslim.analysis.flops(pruned_program)
+FLOPs = slim.analysis.flops(pruned_program)
 print("FLOPs: {}".format(FLOPs))
 ```
 
@@ -84,6 +85,6 @@ train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
 
 ```
 for data in train_reader():
-    acc1, acc5, loss = exe.run(pruned_program, feed=train_feeder.feed(data), fetch_list=outputs)
+    acc1, acc5, loss, _ = exe.run(pruned_program, feed=train_feeder.feed(data), fetch_list=outputs)
     print(acc1, acc5, loss)
 ```
