@@ -13,7 +13,7 @@
 
 ## 1. 导入依赖
 
-PaddleSlim依赖Paddle2.0-rc1版本，请确认已正确安装Paddle，然后按以下方式导入Paddle和PaddleSlim:
+请参考PaddleSlim安装文档，安装正确的Paddle和PaddleSlim版本，然后按以下方式导入Paddle和PaddleSlim:
 
 ```python
 import paddle
@@ -27,7 +27,8 @@ from paddleslim.dygraph.quant import QAT
 ## 2. 构建网络和数据集
 
 该章节构造一个用于对CIFAR10数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[3, 32, 32]`，输出类别数为10。
-为了方便展示示例，我们使用Paddle提供的预定义分类模型，执行以下代码构建分类模型：
+为了方便展示示例，我们使用Paddle高层API提供的预定义[mobilenetv1分类模型](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api/paddle/vision/models/mobilenetv1/MobileNetV1_cn.html#mobilenetv1)。
+调用`model.prepare`配置模型所需的部件，比如优化器、损失函数和评价指标，API细节请参考[文档](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api/paddle/hapi/model/Model_cn.html#prepare-optimizer-none-loss-function-none-metrics-none)
 
 ```python
 net = models.mobilenet_v1(pretrained=False, scale=1.0, num_classes=10)
@@ -48,7 +49,7 @@ val_dataset = Cifar10(mode='test', backend='cv2', transform=transform)
 
 ## 3. 进行预训练
 
-对模型进行预训练，为之后的裁剪做准备。
+对模型进行预训练，为之后的量化做准备。
 执行以下代码对模型进行预训练
 ```python
 model.fit(train_dataset, epochs=5, batch_size=256, verbose=1)
@@ -63,7 +64,7 @@ paddle.jit.save(net, "./fp32_inference_model", input_spec=[inputs])
 
 ## 4.离线量化
 
-调用slim接口将原模型转换为离线量化模型：
+调用slim接口将原模型转换为离线量化模型, 导出的模型可以直接用于预测部署：
 
 ```python
 paddle.enable_static()
