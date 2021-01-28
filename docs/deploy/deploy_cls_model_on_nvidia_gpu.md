@@ -1,4 +1,4 @@
-# PaddleSlim量化模型在CPU上的预测部署
+# PaddleSlim量化模型在Nvidia GPU上的预测部署
 
 本教程以图像分类模型为例，介绍使用TensortRT部署PaddleSlim量化得到的模型的详细步骤。
 
