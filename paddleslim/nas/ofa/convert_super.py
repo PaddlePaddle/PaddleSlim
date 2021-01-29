@@ -64,13 +64,15 @@ class Convert:
             w_attr = layer._param_attr if pd_ver == 185 else layer._weight_attr
 
         if isinstance(w_attr, ParamAttr):
-            if w_attr != None and not isinstance(w_attr, bool):
+            if w_attr != None and not isinstance(w_attr,
+                                                 bool) and w_attr.name != None:
                 w_attr.name = 'super_' + w_attr.name
 
         if has_bias:
             if isinstance(layer._bias_attr, ParamAttr):
-                if layer._bias_attr != None and not isinstance(layer._bias_attr,
-                                                               bool):
+                if layer._bias_attr != None and not isinstance(
+                        layer._bias_attr,
+                        bool) and layer._bias_attr.name != None:
                     layer._bias_attr.name = 'super_' + layer._bias_attr.name
 
     def convert(self, network):
@@ -429,6 +431,7 @@ class Convert:
                     new_attr_name = ['act', 'dtype']
                 else:
                     new_attr_name = ['weight_attr', 'bias_attr']
+                self._change_name(layer, pd_ver)
                 in_nc, out_nc = layer._parameters['weight'].shape
 
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
