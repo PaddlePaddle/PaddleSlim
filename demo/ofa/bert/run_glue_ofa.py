@@ -27,7 +27,6 @@ from paddle.metric import Accuracy
 
 from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.transformers import BertModel, BertForSequenceClassification, BertTokenizer
-from paddlenlp.utils.log import logger
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
 import paddlenlp.datasets as datasets
 from paddleslim.nas.ofa import OFA, DistillConfig, utils
@@ -166,7 +165,8 @@ def set_seed(args):
     paddle.seed(args.seed + paddle.distributed.get_rank())
 
 
-def evaluate(model, criterion, metric, data_loader, width_mult=1.0):
+def evaluate(model, criterion, metric, data_loader, epoch, step,
+             width_mult=1.0):
     with paddle.no_grad():
         model.eval()
         metric.reset()
@@ -180,8 +180,9 @@ def evaluate(model, criterion, metric, data_loader, width_mult=1.0):
             metric.update(correct)
         results = metric.accumulate()
         print(
-            "width_mult: %f, eval loss: %f, %s: %s\n" %
-            (width_mult, loss.numpy(), metric.name(), results),
+            "epoch: %d, batch: %d, width_mult: %s, eval loss: %f, %s: %s\n" %
+            (epoch, step, 'teacher' if width_mult == 100 else str(width_mult),
+             loss.numpy(), metric.name(), results),
             end='')
         model.train()
 
@@ -485,7 +486,7 @@ def do_train(args):
 
             if global_step % args.logging_steps == 0:
                 if (not args.n_gpu > 1) or paddle.distributed.get_rank() == 0:
-                    logger.info(
+                    print(
                         "global step %d, epoch: %d, batch: %d, loss: %f, speed: %.2f step/s"
                         % (global_step, epoch, step, loss,
                            args.logging_steps / (time.time() - tic_train)))
@@ -498,12 +499,16 @@ def do_train(args):
                         criterion,
                         metric,
                         dev_data_loader_matched,
+                        epoch,
+                        step,
                         width_mult=100)
                     evaluate(
                         teacher_model,
                         criterion,
                         metric,
                         dev_data_loader_mismatched,
+                        epoch,
+                        step,
                         width_mult=100)
                 else:
                     evaluate(
@@ -511,6 +516,8 @@ def do_train(args):
                         criterion,
                         metric,
                         dev_data_loader,
+                        epoch,
+                        step,
                         width_mult=100)
                 for idx, width_mult in enumerate(args.width_mult_list):
                     net_config = utils.dynabert_config(ofa_model, width_mult)
@@ -518,14 +525,16 @@ def do_train(args):
                     tic_eval = time.time()
                     if args.task_name == "mnli":
                         acc = evaluate(ofa_model, criterion, metric,
-                                       dev_data_loader_matched, width_mult)
+                                       dev_data_loader_matched, epoch, step,
+                                       width_mult)
                         evaluate(ofa_model, criterion, metric,
-                                 dev_data_loader_mismatched, width_mult)
+                                 dev_data_loader_mismatched, epoch, step,
+                                 width_mult)
                         print("eval done total : %s s" %
                               (time.time() - tic_eval))
                     else:
                         acc = evaluate(ofa_model, criterion, metric,
-                                       dev_data_loader, width_mult)
+                                       dev_data_loader, epoch, step, width_mult)
                         print("eval done total : %s s" %
                               (time.time() - tic_eval))
 
