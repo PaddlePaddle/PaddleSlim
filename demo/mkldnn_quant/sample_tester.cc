@@ -24,10 +24,6 @@ limitations under the License. */
 #include <sstream>
 #include <string>
 #include <vector>
-#ifdef WITH_GPERFTOOLS
-#include <gperftools/profiler.h>
-#include <paddle/fluid/platform/profiler.h>
-#endif
 
 DEFINE_string(infer_model, "", "path to the model");
 DEFINE_string(infer_data, "", "path to the input data");
@@ -154,7 +150,7 @@ void SetInput(std::vector<std::vector<paddle::PaddleTensor>> *inputs,
       labels_gt->push_back(std::move(labels));
     }
     inputs->push_back(std::move(tmp_vec));
-    if (i > 0 && i % 100) {
+    if (i > 0 && i % 100==0)  {
       LOG(INFO) << "Read " << i * 100 * FLAGS_batch_size << " samples";
     }
   }
