@@ -1,4 +1,4 @@
-# PaddleSlim量化模型的TensorRT预测
+# PaddleSlim INT8量化模型使用TensorRT的部署和预测
 
 本教程将介绍使用TensortRT部署PaddleSlim量化得到的模型的详细步骤。
 
