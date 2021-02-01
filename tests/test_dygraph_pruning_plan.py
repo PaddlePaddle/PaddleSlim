@@ -2,7 +2,7 @@ import sys
 sys.path.append("../")
 import unittest
 import numpy as np
-from paddleslim.dygraph.pruning_plan import PruningPlan, PruningMask
+from paddleslim.dygraph.prune.pruning_plan import PruningPlan, PruningMask
 
 
 class TestPruningPlan(unittest.TestCase):
