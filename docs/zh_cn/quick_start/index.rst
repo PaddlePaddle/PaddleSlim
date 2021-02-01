@@ -1,8 +1,9 @@
 
-压缩教程
+快速开始
 ==============
 
 .. toctree::
    :maxdepth: 1
-
    static/index.rst
+   pruning_tutorial.md
+    
