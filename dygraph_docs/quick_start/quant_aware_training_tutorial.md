@@ -1,6 +1,11 @@
 #  图像分类模型量化训练-快速开始
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的模型量化接口]()。
+量化训练要解决的问题是将FP32浮点数量化成INT8整数进行存储和计算，通过在训练中建模量化对模型的影响，降低量化误差。
+
+PaddleSlim使用的是模拟量化训练方案，一般模拟量化需要先对网络计算图进行一定的处理，先在需要量化的算子前插入量化-反量化节点，再经过finetune训练减少量化运算带来的误差，降低量化模型的精度损失。
+
+下面该教程将以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的模型量化接口]()。
+
 该示例包含以下步骤：
 
 1. 导入依赖
@@ -62,26 +67,11 @@ model.evaluate(val_dataset, batch_size=256, verbose=1)
 
 ### 4.1 将模型转换为模拟量化模型
 
+当使用普通在线量化时`weight_preprocess_type` 用默认设置None即可，当需要使用PACT在线量化时，则设置为'PACT'。
 ```python
 quant_config = {
     # weight preprocess type, default is None and no preprocessing is performed.
     'weight_preprocess_type': None,
-    # activation preprocess type, default is None and no preprocessing is performed.
-    'activation_preprocess_type': None,
-    # weight quantize type, default is 'channel_wise_abs_max'
-    'weight_quantize_type': 'channel_wise_abs_max',
-    # activation quantize type, default is 'moving_average_abs_max'
-    'activation_quantize_type': 'moving_average_abs_max',
-    # weight quantize bit num, default is 8
-    'weight_bits': 8,
-    # activation quantize bit num, default is 8
-    'activation_bits': 8,
-    # data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'
-    'dtype': 'int8',
-    # window size for 'range_abs_max' quantization. default is 10000
-    'window_size': 10000,
-    # The decay coefficient of moving average, default is 0.9
-    'moving_rate': 0.9,
     # for dygraph quantization, layers of type in quantizable_layer_type will be quantized
     'quantizable_layer_type': ['Conv2D', 'Linear'],
 }
