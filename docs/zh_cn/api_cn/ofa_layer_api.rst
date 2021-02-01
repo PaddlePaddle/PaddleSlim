@@ -21,8 +21,9 @@ Block实例
 
 .. code-block:: python
 
-  from paddleslim.nas.ofa.layers import Block
-  block_layer = Block(SuperConv2D(3, 4, 3, candidate_config={'kerne_size': (3, 5, 7)})
+  from paddleslim.nas.ofa.layers import Block, SuperConv2D
+  
+  block_layer = Block(SuperConv2D(3, 4, 3, candidate_config={'kerne_size': (3, 5, 7)}))
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperConv2D(in_channels, out_channels, kernel_size, candidate_config={}, transform_kernel=False, stride=1, padding=0, dilation=1, groups=1, padding_mode='zeros', weight_attr=None, bias_attr=None, data_format='NCHW')
 
@@ -63,7 +64,7 @@ Block实例
    data = np.random.uniform(-1, 1, [10, 3, 32, 32]).astype('float32')
    super_conv2d = SuperConv2D(3, 10, 3)
    config = {'channel': 5}
-   data = paddle.to_variable(data)
+   data = paddle.to_tensor(data)
    conv = super_conv2d(data, **config)
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperConv2DTranspose(in_channels, out_channels, kernel_size, candidate_config={}, transform_kernel=False, stride=1, padding=0, output_padding=0, dilation=1, groups=1, padding_mode='zeros', weight_attr=None, bias_attr=None, data_format='NCHW')
@@ -99,14 +100,14 @@ Block实例
 
 .. code-block:: python
 
-   import paddle 
-   from paddleslim.nas.ofa.layers import SuperConv2D
-   import numpy as np
-   data = np.random.uniform(-1, 1, [32, 10, 32, 32]).astype('float32')
-   config = {'channel': 5}
-   data = paddle.to_variable(data)
-   super_convtranspose = SuperConv2DTranspose(num_channels=32, num_filters=10, filter_size=3)
-   ret = super_convtranspose(paddle.to_variable(data), **config)
+  import paddle 
+  from paddleslim.nas.ofa.layers import SuperConv2DTranspose
+  import numpy as np
+  data = np.random.uniform(-1, 1, [32, 10, 32, 32]).astype('float32')
+  config = {'channel': 5}
+  data = paddle.to_tensor(data)
+  super_convtranspose = SuperConv2DTranspose(32, 10, 3)
+  ret = super_convtranspose(paddle.to_tensor(data), **config)
 
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperLinear(in_features, out_features, candidate_config={}, weight_attr=None, bias_attr=None, name=None):
@@ -138,10 +139,10 @@ Block实例
   import paddle
   from paddleslim.nas.ofa.layers import SuperLinear
 
-  data = np.random.uniform(-1, 1, [32, 64] ).astype('float32')
+  data = np.random.uniform(-1, 1, [32, 64]).astype('float32')
   config = {'channel': 16}
-  linear = SuperLinear(32, 64)
-  data = paddle.to_variable(data)
+  linear = SuperLinear(64, 64)
+  data = paddle.to_tensor(data)
   res = linear(data, **config)
 
 
@@ -175,10 +176,10 @@ Block实例
   import paddle
   from paddleslim.nas.ofa.layers import SuperEmbedding
 
-  data = np.random.uniform(-1, 1, [32, 64]).astype('float32')
+  data = np.random.uniform(-1, 1, [32, 64]).astype('int64')
   config = {'channel': 16}
-  emb = SuperEmbedding(32, 64)
-  data = paddle.to_variable(data)
+  emb = SuperEmbedding(64, 64)
+  data = paddle.to_tensor(data)
   res = emb(data, **config)
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperBatchNorm2D(num_features, momentum=0.9, epsilon=1e-05, weight_attr=None, bias_attr=None, data_format='NCHW', name=None):
@@ -261,8 +262,8 @@ Block实例
     from paddleslim.nas.ofa.layers import SuperLayerNorm
 
     np.random.seed(123)
-    x_data = np.random.random(size=(2, 2, 2, 3)).astype('float32')
+    x_data = np.random.random(size=(2, 3)).astype('float32')
     x = paddle.to_tensor(x_data) 
-    layer_norm = SuperLayerNorm(x_data.shape[1:])
+    layer_norm = SuperLayerNorm(x_data.shape[1])
     layer_norm_out = layer_norm(x)
 

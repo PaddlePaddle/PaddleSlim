@@ -12,8 +12,8 @@ OFA的基本流程分为以下步骤：
 4. 传入模型和相应配置
 
 ### 1. 定义超网络
-   这里的超网络指的是用[动态OP](../api_cn/ofa_layer_api.rst)组网的网络。
-   PaddleSlim提供了三种获得超网络的方式，具体可以参考[超网络转换](../api_cn/convert_supernet_api.rst)。
+   这里的超网络指的是用[动态OP](../../api_cn/ofa_layer_api.rst)组网的网络。
+   PaddleSlim提供了三种获得超网络的方式，具体可以参考[超网络转换](../../api_cn/convert_supernet_api.rst)。
 
 ```python
   import paddle
@@ -26,7 +26,7 @@ OFA的基本流程分为以下步骤：
 ```
 
 ### 2. 训练配置
-   训练配置默认根据论文中PS的训练模式进行配置，可进行配置的参数和含义可以参考: [RunConfig](../api_cn/ofa_api.rst)
+   训练配置默认根据论文中PS的训练模式进行配置，可进行配置的参数和含义可以参考: [RunConfig](../../api_cn/ofa_api.rst)
 
 ```python
   from paddleslim.nas.ofa import RunConfig
@@ -42,7 +42,7 @@ OFA的基本流程分为以下步骤：
 ```
 
 ### 3. 蒸馏配置
-  为OFA训练过程添加蒸馏配置，可进行配置的参数和含义可以参考: [DistillConfig](../api_cn/ofa_api.rst)
+  为OFA训练过程添加蒸馏配置，可进行配置的参数和含义可以参考: [DistillConfig](../../api_cn/ofa_api.rst)
 
 ```python
   from paddle.vision.models import mobilenet_v1
