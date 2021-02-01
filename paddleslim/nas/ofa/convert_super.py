@@ -431,7 +431,7 @@ class Convert:
                     new_attr_name = ['act', 'dtype']
                 else:
                     new_attr_name = ['weight_attr', 'bias_attr']
-                self._change_name(layer, pd_ver)
+                self._change_name(layer, pd_ver) if pd_ver != 185 else None
                 in_nc, out_nc = layer._parameters['weight'].shape
 
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
