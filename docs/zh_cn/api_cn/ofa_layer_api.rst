@@ -1,7 +1,7 @@
 SuperOP
 ========
 
-PaddleSlim提供了一些API的动态版本，动态API指的是这些OP的参数大小可以在实际运行过程中根据传入的参数进行改变，用法上的差别具体是forward时候需要额外传一些实际运行相关的参数。其中 `layers_old.py <>`_ 对应的是Paddle 2.0alpha及之前版本的API， `layers.py <>`_ 对应的是Paddle 2.0alpha之后版本的API。
+PaddleSlim提供了一些API的动态版本，动态API指的是这些OP的参数大小可以在实际运行过程中根据传入的参数进行改变，用法上的差别具体是forward时候需要额外传一些实际运行相关的参数。其中 `layers_old.py <../../../paddleslim/nas/ofa/layers_old.py>`_ 对应的是Paddle 2.0alpha及之前版本的API， `layers.py <../../../paddleslim/nas/ofa/layers.py>`_ 对应的是Paddle 2.0alpha之后版本的API。
 
 .. py:class:: paddleslim.nas.ofa.layers.Block(fn, fixed=False, key=None)
 

@@ -1,7 +1,7 @@
 Once-For-All
 ============
 
-在进行Once-For-All训练之前，需要把普通的模型先转换为由动态OP组网的超网络。超网络转换方式可以参考 `超网络转换 <>`_ 。
+在进行Once-For-All训练之前，需要把普通的模型先转换为由动态OP组网的超网络。超网络转换方式可以参考 `超网络转换 <./convert_supernet_api.rst>`_ 。
 
 Once-For-All 训练参数配置
 ------------------
@@ -14,7 +14,7 @@ RunConfig
   - **train_batch_size:(int, 可选):** 训练时的batch size，用来计算每个epoch包括的iteration数量。默认：None。
   - **n_epochs(list, 可选):** 包含每个阶段运行到多少epochs，用来判断当前epoch在超网训练中所处的阶段，默认：None。
   - **total_images(int, 可选):**  训练集图片数量，用来计算每个epoch包括的iteration数量。默认：None。
-  - **elastic_depth(list/tuple, 可选):** 如果设置为None，则不把depth作为搜索的一部分，否则，采样到的config中会包含depth。对模型depth的改变需要在模型定义中的forward部分配合使用，具体示例可以参考 `示例 <>`_ ，默认：None。
+  - **elastic_depth(list/tuple, 可选):** 如果设置为None，则不把depth作为搜索的一部分，否则，采样到的config中会包含depth。对模型depth的改变需要在模型定义中的forward部分配合使用，具体示例可以参考 `示例 <../tutorials/nas/nas_ofa.md>`_ ，默认：None。
   - **dynamic_batch_size(list, 可选):** 代表每个阶段每个batch数据应该参与几个子网络的训练，shape应该和n_epochs的shape保持一致。默认：None。
 
 **返回：**
