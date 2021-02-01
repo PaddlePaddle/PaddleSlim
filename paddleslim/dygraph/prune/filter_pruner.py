@@ -4,11 +4,11 @@ import numpy as np
 import pickle
 import copy
 import paddle
-from ..common import get_logger
+from paddleslim.common import get_logger
 from .var_group import *
 from .pruning_plan import *
 from .pruner import Pruner
-from ..analysis import dygraph_flops as flops
+from paddleslim.analysis import dygraph_flops as flops
 from .var_group import VarGroup
 
 __all__ = ['Status', 'FilterPruner']
