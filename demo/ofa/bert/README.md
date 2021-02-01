@@ -222,3 +222,27 @@ python -u ./run_glue_ofa.py --model_type bert \
                          --n_gpu 1 \
                          --width_mult_list 1.0 0.8333333333333334 0.6666666666666666 0.5
 ```
+
+# 导出子模型
+根据传入的config导出相应的子模型并转为静态图模型。
+
+## 启动命令
+
+```shell
+python3.7 -u ./export_model.py --model_type bert \
+                             --model_name_or_path ${PATH_OF_QQP_MODEL_AFTER_OFA} \
+                             --max_seq_length 128     \
+			     --sub_model_output_dir ./tmp/$TASK_NAME/dynamic_model \
+                             --static_sub_model ./tmp/$TASK_NAME/static_model \
+			     --n_gpu 1 \
+			     --width_mult  0.6666666666666666
+```
+
+其中参数释义如下：
+- `model_type` 指示了模型类型，当前仅支持BERT模型。
+- `model_name_or_path` 指示了某种特定配置的经过OFA训练后保存的模型，对应有其预训练模型和预训练时使用的tokenizer。若模型相关内容保存在本地，这里也可以提供相应目录地址。
+- `max_seq_length` 表示最大句子长度，超过该长度将被截断。默认：128.
+- `sub_model_output_dir` 指示了导出子模型动态图参数的目录。
+- `static_sub_model` 指示了导出子模型静态图模型及参数的目录，设置为None，则表示不导出静态图模型。默认：None。
+- `n_gpu` 表示使用的 GPU 卡数。若希望使用多卡训练，将其设置为指定数目即可；若为0，则使用CPU。默认：1.
+- `width_mult` 表示导出子模型的宽度。默认：1.0.

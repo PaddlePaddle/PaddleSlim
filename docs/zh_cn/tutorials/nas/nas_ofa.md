@@ -66,6 +66,8 @@ OFA的基本流程分为以下步骤：
 ## 实验效果
 
 目前我们进在BERT-base、TinyBERT和TinyERNIE上进行了压缩实验，其他CV任务的压缩效果之后会进行补充。BERT和TinyBERT的压缩结果如下表所示。
+
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<strong>表1: BERT-base上GLUE数据集精度对比</strong>
 | Task  | Metric                       | BERT-base         | Result with PaddleSlim |
 |:-----:|:----------------------------:|:-----------------:|:----------------------:|
 | SST-2 | Accuracy                     |      0.93005      |     [0.931193]()       |
@@ -77,10 +79,8 @@ OFA的基本流程分为以下步骤：
 | MNLI  | Matched acc/MisMatched acc   |  0.84422/0.84825  |  [0.84687/0.85242]()   |
 | RTE   | Accuracy                     |      0.711191     |     [0.718412]()       |
 
-<p align="center">
-<strong>表1: BERT-base上GLUE数据集精度对比</strong>
-</p>
 
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<strong>表2: TinyBERT上GLUE数据集精度对比</strong>
 | Task  | Metric                       | TinyBERT(L=4, D=312) |     Result with OFA    |
 |:-----:|:----------------------------:|:--------------------:|:----------------------:|
 | SST-2 | Accuracy                     |     [0.9234]()       |      [0.9220]()        |
@@ -91,7 +91,3 @@ OFA的基本流程分为以下步骤：
 | QQP   | Accuracy/F1                  |  [0.9047/0.8751]()   |   [0.9034/0.8733]()    |
 | MNLI  | Matched acc/MisMatched acc   |  [0.8256/0.8294]()   |   [0.8211/0.8261]()    |
 | RTE   | Accuracy                     |     [0.6534]()       |      [0.6787]()        |
-
-<p align="center">
-<strong>表2: TinyBERT上GLUE数据集精度对比</strong>
-</p>
