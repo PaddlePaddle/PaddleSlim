@@ -1,40 +1,62 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.2)
+project(mkldnn_int8_demo CXX C)
+option(WITH_MKL        "Compile demo with MKL/OpenBlas support, default use MKL."       ON)
+option(WITH_STATIC_LIB "Compile demo with static/shared library, default use static."   ON)
 
-project(mkldnn_quantaware_demo CXX C)
-set(DEMO_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(DEMO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g")
+set(CMAKE_STATIC_LIBRARY_PREFIX "")
+message("flags" ${CMAKE_CXX_FLAGS})
 
-option(USE_GPU      "Compile the inference code with the support CUDA GPU" OFF)
-option(USE_PROFILER "Whether enable Paddle's profiler." OFF)
-
-set(USE_SHARED OFF)
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-if(NOT PADDLE_ROOT)
-  set(PADDLE_ROOT ${DEMO_SOURCE_DIR}/fluid_inference)
+if(NOT DEFINED PADDLE_LIB)
+  message(FATAL_ERROR "please set PADDLE_LIB with -DPADDLE_LIB=/path/paddle/lib")
 endif()
-find_package(Fluid)
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11")
-
-if(USE_PROFILER)
-    find_package(Gperftools REQUIRED)
-    include_directories(${GPERFTOOLS_INCLUDE_DIR})
-    add_definitions(-DWITH_GPERFTOOLS)
+if(NOT DEFINED DEMO_NAME)
+  message(FATAL_ERROR "please set DEMO_NAME with -DDEMO_NAME=demo_name")
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories("${PADDLE_LIB}")
+include_directories("${PADDLE_LIB}/paddle/include")
+include_directories("${PADDLE_LIB}/third_party/install/protobuf/include")
+include_directories("${PADDLE_LIB}/third_party/install/glog/include")
+include_directories("${PADDLE_LIB}/third_party/install/gflags/include")
+include_directories("${PADDLE_LIB}/third_party/install/xxhash/include")
+include_directories("${PADDLE_LIB}/third_party/install/zlib/include")
+include_directories("${PADDLE_LIB}/third_party/boost")
+include_directories("${PADDLE_LIB}/third_party/eigen3")
 
-if(PADDLE_FOUND)
-  add_executable(inference sample_tester.cc)
-  target_link_libraries(inference
-      ${PADDLE_LIBRARIES}
-      ${PADDLE_THIRD_PARTY_LIBRARIES}
-      rt dl pthread)
-  if (mklml_FOUND)
-    target_link_libraries(inference "-L${THIRD_PARTY_ROOT}/install/mklml/lib -liomp5 -Wl,--as-needed")
+link_directories("${PADDLE_LIB}/third_party/install/zlib/lib")
+link_directories("${PADDLE_LIB}/third_party/install/protobuf/lib")
+link_directories("${PADDLE_LIB}/third_party/install/glog/lib")
+link_directories("${PADDLE_LIB}/third_party/install/gflags/lib")
+link_directories("${PADDLE_LIB}/third_party/install/xxhash/lib")
+link_directories("${PADDLE_LIB}/paddle/lib")
+
+add_executable(${DEMO_NAME} ${DEMO_NAME}.cc)
+
+if(WITH_MKL)
+  include_directories("${PADDLE_LIB}/third_party/install/mklml/include")
+  set(MATH_LIB ${PADDLE_LIB}/third_party/install/mklml/lib/libmklml_intel${CMAKE_SHARED_LIBRARY_SUFFIX}
+               ${PADDLE_LIB}/third_party/install/mklml/lib/libiomp5${CMAKE_SHARED_LIBRARY_SUFFIX})
+  set(MKLDNN_PATH "${PADDLE_LIB}/third_party/install/mkldnn")
+  if(EXISTS ${MKLDNN_PATH})
+    include_directories("${MKLDNN_PATH}/include")
+    set(MKLDNN_LIB ${MKLDNN_PATH}/lib/libmkldnn.so.0)
   endif()
 else()
-  message(FATAL_ERROR "Cannot find PaddlePaddle Fluid under ${PADDLE_ROOT}")
+  set(MATH_LIB ${PADDLE_LIB}/third_party/install/openblas/lib/libopenblas${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
+
+# Note: libpaddle_inference_api.so/a must put before libpaddle_fluid.so/a
+if(WITH_STATIC_LIB)
+  set(DEPS
+      ${PADDLE_LIB}/paddle/lib/libpaddle_fluid${CMAKE_STATIC_LIBRARY_SUFFIX})
+else()
+  set(DEPS
+      ${PADDLE_LIB}/paddle/lib/libpaddle_fluid${CMAKE_SHARED_LIBRARY_SUFFIX})
+endif()
+
+set(EXTERNAL_LIB "-lrt -ldl -lpthread")
+set(DEPS ${DEPS}
+    ${MATH_LIB} ${MKLDNN_LIB} glog gflags xxhash protobuf z 
+    ${EXTERNAL_LIB})
+
+target_link_libraries(${DEMO_NAME} ${DEPS})
