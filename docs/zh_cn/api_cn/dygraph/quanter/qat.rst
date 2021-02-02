@@ -35,6 +35,7 @@ QAT
 量化训练方法的参数配置
 
 .. code-block:: python
+
 {
     # weight预处理方法，默认为None，代表不进行预处理；当需要使用`PACT`方法时设置为`"PACT"`
     'weight_preprocess_type': None,
