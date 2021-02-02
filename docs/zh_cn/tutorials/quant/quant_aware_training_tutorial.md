@@ -3,7 +3,7 @@
 在线量化是在模型训练的过程中建模定点量化对模型的影响，通过在模型计算图中插入量化节点，在训练建模量化对模型精度的影响降低量化损失。
 
 
-PaddleSlim包含`QAT量化训练`和`PACT改进的量化训练`两种
+PaddleSlim包含`QAT量化训练`和`PACT改进的量化训练`两种量化方法
 
 - [QAT]()
 - [PACT]()
@@ -44,7 +44,7 @@ quant_config = {
 
 ```python
 import paddleslim
-quanter = paddleslim.dygraph.quant.QAT(config=quant_config)
+quanter = paddleslim.QAT(config=quant_config)
 quanter.quantize(net)
 ```
 
@@ -66,7 +66,7 @@ quanter.save_quantized_model(
 
 ## PACT在线量化
 
-PACT方法是对普通在线量化方法的改进，对于一些量化敏感的模型，例如MobileNetV3，PACT方法一般都能降低量化模型的精度损失
+PACT方法是对普通在线量化方法的改进，对于一些量化敏感的模型，例如MobileNetV3，PACT方法一般都能降低量化模型的精度损失。
 
 使用方法上与普通在线量化方法相近：
 

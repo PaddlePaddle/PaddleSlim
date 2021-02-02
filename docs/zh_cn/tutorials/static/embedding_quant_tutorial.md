@@ -2,8 +2,7 @@
 
 Embedding量化将网络中的Embedding参数从`float32`类型量化到 `8-bit`整数类型，在几乎不损失模型精度的情况下减少模型的存储空间和显存占用。
 
-Embedding量化仅能减少模型参数的体积，并不能显著提升模型预测速度
-
+Embedding量化仅能减少模型参数的体积，并不能显著提升模型预测速度。
 ## 使用方法
 
 在预测时调用paddleslim `quant_embedding`接口，主要实现代码如下：
