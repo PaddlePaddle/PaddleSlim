@@ -1,6 +1,12 @@
-# 在线量化
+# 量化训练
 
-在线量化是在模型训练的过程中建模定点量化对模型的影响，通过在模型计算图中插入量化节点实现，详细算法原理请参考：[量化训练]([https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/algo/algo.md#122-%E9%87%8F%E5%8C%96%E8%AE%AD%E7%BB%83](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/algo/algo.md#122-量化训练))
+在线量化是在模型训练的过程中建模定点量化对模型的影响，通过在模型计算图中插入量化节点，在训练建模量化对模型精度的影响降低量化损失。
+
+
+PaddleSlim包含`QAT量化训练`和`PACT改进的量化训练`两种
+
+- [QAT]()
+- [PACT]()
 
 ## 使用方法
 
@@ -149,3 +155,9 @@ compiled_train_prog = quant_aware(
 |    MobileNetV2    |   quant_aware    |     72.15%/90.65%     |      72.05%/90.63%      |
 |     ResNet50      |   quant_aware    |     76.50%/93.00%     |      76.48%/93.11%      |
 | MobileNetV3_large | pact_quant_aware |     78.96%/94.48%     |      77.52%/93.77%      |
+
+## 参考文献
+
+1. [Quantizing deep convolutional networks for efficient inference: A whitepaper](https://arxiv.org/pdf/1806.08342.pdf)
+
+2. [PACT: Parameterized Clipping Activation for Quantized Neural Networks](https://arxiv.org/abs/1805.06085)
