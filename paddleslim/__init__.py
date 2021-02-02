@@ -24,3 +24,8 @@ from paddleslim import dygraph
 __all__ = [
     'models', 'prune', 'nas', 'analysis', 'dist', 'quant', 'pantheon', 'dygraph'
 ]
+
+from paddleslim.dygraph import *
+__all__ += dygraph.__all__
+from paddleslim.analysis import *
+__all__ += analysis.__all__
