@@ -13,8 +13,7 @@
    install.md
    quick_start/index
    tutorials/index
-   api_cn/dygraph/index
-   api_cn/static/index
+   api_cn/index
    FAQ/index
    model_zoo/index
    algo/algo.md

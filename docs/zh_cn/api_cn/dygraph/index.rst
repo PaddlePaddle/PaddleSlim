@@ -3,11 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-API文档-动态图
-======================================
+动态图
+=======
 
 .. toctree::
    :maxdepth: 1
 
-   pruners/pruners_index.rst
-   ofa/ofa_index.rst
+   pruners/index.rst
+   ofa/index.rst

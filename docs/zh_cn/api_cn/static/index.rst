@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-API文档-静态图
-======================================
+静态图
+======
 
 .. toctree::
    :maxdepth: 1
