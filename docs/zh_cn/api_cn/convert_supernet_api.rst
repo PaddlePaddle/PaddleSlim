@@ -90,7 +90,7 @@ PaddleSlim提供了三种方式构造超网络，下面分别介绍这三种方�
 
 方式三
 ------------------
-直接调用动态OP组网，组网方式和普通模型相同。PaddleSlim支持的动态OP请参考 `动态OP <>`_ 。这种方式的优点是组网更自由，缺点是用法更复杂。
+直接调用动态OP组网，组网方式和普通模型相同。PaddleSlim支持的动态OP请参考 `动态OP <./ofa_layer_api.rst>`_ 。这种方式的优点是组网更自由，缺点是用法更复杂。
 
 .. note::
   - paddleslim.nas.ofa.layers 文件中的动态OP是基于Paddle 2.0beta及其之后的版本实现的。paddleslim.nas.ofa.layers_old文件中的动态OP是基于Paddle 2.0beta之前的版本实现的。

@@ -60,6 +60,7 @@ def parse_args():
         "--sub_model_output_dir",
         default=None,
         type=str,
+        required=True,
         help="The output directory where the sub model predictions and checkpoints will be written.",
     )
     parser.add_argument(
@@ -130,6 +131,13 @@ def do_train(args):
     for name, sublayer in origin_model.named_sublayers():
         if isinstance(sublayer, paddle.nn.MultiHeadAttention):
             sublayer.num_heads = int(args.width_mult * sublayer.num_heads)
+
+    output_dir = os.path.join(args.sub_model_output_dir,
+                              "model_width_%.5f" % args.width_mult)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    model_to_save = origin_model
+    model_to_save.save_pretrained(output_dir)
 
     if args.static_sub_model != None:
         export_static_model(origin_model, args.static_sub_model,
