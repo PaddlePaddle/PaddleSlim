@@ -8,14 +8,14 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
 
 | Task  | Metric                       | Baseline          | Result with PaddleSlim |
 |:-----:|:----------------------------:|:-----------------:|:----------------------:|
-| SST-2 | Accuracy                     |      0.93005      |       0.931193         |
-| QNLI  | Accuracy                     |      0.91781      |       0.920740         |
-| CoLA  | Mattehew's corr              |      0.59557      |       0.601244         |
-| MRPC  | F1/Accuracy                  |  0.91667/0.88235  |   0.91740/0.88480      |
-| STS-B | Person/Spearman corr         |  0.88847/0.88350  |   0.89271/0.88958      |
-| QQP   | Accuracy/F1                  |  0.90581/0.87347  |   0.90994/0.87947      |
-| MNLI  | Matched acc/MisMatched acc   |  0.84422/0.84825  |   0.84687/0.85242      |
-| RTE   | Accuracy                     |      0.711191     |       0.718412         |
+| SST-2 | Accuracy                     |      0.93005      |     [0.931193]()       |
+| QNLI  | Accuracy                     |      0.91781      |     [0.920740]()       |
+| CoLA  | Mattehew's corr              |      0.59557      |     [0.601244]()       |
+| MRPC  | F1/Accuracy                  |  0.91667/0.88235  |  [0.91740/0.88480]()   |
+| STS-B | Person/Spearman corr         |  0.88847/0.88350  |  [0.89271/0.88958]()   |
+| QQP   | Accuracy/F1                  |  0.90581/0.87347  |  [0.90994/0.87947]()   |
+| MNLI  | Matched acc/MisMatched acc   |  0.84422/0.84825  |  [0.84687/0.85242]()   |
+| RTE   | Accuracy                     |      0.711191     |     [0.718412]()       |
 
 <p align="center">
 <strong>表1-1: GLUE数据集精度对比</strong>
@@ -184,4 +184,65 @@ python -u ./run_glue_ofa.py --model_type bert \
 压缩训练之后在dev上的结果如表1-1中『Result with PaddleSlim』列所示，延时情况如表1-2所示。
 
 ## 3. OFA接口介绍
-TODO
+OFA API介绍参考[API](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/ofa_api.rst)
+
+# 基于本代码对TinyBERT(L=4, D=312)进行压缩
+下游任务模型是从TinyBERT官方repo转换得到。
+
+## 1. 压缩结果
+
+| Task  | Metric                       | TinyBERT(L=4, D=312) |     Result with OFA    |
+|:-----:|:----------------------------:|:--------------------:|:----------------------:|
+| SST-2 | Accuracy                     |     [0.9234]()       |      [0.9220]()        |
+| QNLI  | Accuracy                     |     [0.8746]()       |      [0.8720]()        |
+| CoLA  | Mattehew's corr              |     [0.4961]()       |      [0.5048]()        |
+| MRPC  | F1/Accuracy                  |  [0.8998/0.8554]()   |   [0.9003/0.8578]()    |
+| STS-B | Person/Spearman corr         |  [0.8635/0.8631]()   |   [0.8717/0.8706]()    |
+| QQP   | Accuracy/F1                  |  [0.9047/0.8751]()   |   [0.9034/0.8733]()    |
+| MNLI  | Matched acc/MisMatched acc   |  [0.8256/0.8294]()   |   [0.8211/0.8261]()    |
+| RTE   | Accuracy                     |     [0.6534]()       |      [0.6787]()        |
+
+## 2. 启动命令
+
+以GLUE/QQP任务为例。
+
+```shell
+export CUDA_VISIBLE_DEVICES=3
+export TASK_NAME='QQP'
+
+python -u ./run_glue_ofa.py --model_type bert \
+                         --model_name_or_path ${PATH_OF_QQP} \
+                         --task_name $TASK_NAME --max_seq_length 128     \
+                         --batch_size 32       \
+                         --learning_rate 2e-5     \
+                         --num_train_epochs 6     \
+                         --logging_steps 10     \
+                         --save_steps 500     \
+                         --output_dir ./tmp/$TASK_NAME/ \
+                         --n_gpu 1 \
+                         --width_mult_list 1.0 0.8333333333333334 0.6666666666666666 0.5
+```
+
+# 导出子模型
+根据传入的config导出相应的子模型并转为静态图模型。
+
+## 启动命令
+
+```shell
+python3.7 -u ./export_model.py --model_type bert \
+                             --model_name_or_path ${PATH_OF_QQP_MODEL_AFTER_OFA} \
+                             --max_seq_length 128     \
+			     --sub_model_output_dir ./tmp/$TASK_NAME/dynamic_model \
+                             --static_sub_model ./tmp/$TASK_NAME/static_model \
+			     --n_gpu 1 \
+			     --width_mult  0.6666666666666666
+```
+
+其中参数释义如下：
+- `model_type` 指示了模型类型，当前仅支持BERT模型。
+- `model_name_or_path` 指示了某种特定配置的经过OFA训练后保存的模型，对应有其预训练模型和预训练时使用的tokenizer。若模型相关内容保存在本地，这里也可以提供相应目录地址。
+- `max_seq_length` 表示最大句子长度，超过该长度将被截断。默认：128.
+- `sub_model_output_dir` 指示了导出子模型动态图参数的目录。
+- `static_sub_model` 指示了导出子模型静态图模型及参数的目录，设置为None，则表示不导出静态图模型。默认：None。
+- `n_gpu` 表示使用的 GPU 卡数。若希望使用多卡训练，将其设置为指定数目即可；若为0，则使用CPU。默认：1.
+- `width_mult` 表示导出子模型的宽度。默认：1.0.

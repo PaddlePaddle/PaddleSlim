@@ -3,7 +3,7 @@ sys.path.append("../../")
 import unittest
 import numpy as np
 import paddle
-from paddleslim.analysis import dygraph_flops as flops
+from paddleslim import flops
 from paddle.vision.models import mobilenet_v1, resnet50
 from paddle.nn import Conv2D, Layer
 
@@ -16,7 +16,7 @@ class TestFlops(unittest.TestCase):
 
     def runTest(self):
         net = self._net(pretrained=False)
-        FLOPs = flops(net, (1, 3, 32, 32))
+        FLOPs = flops(net, (1, 3, 32, 32), only_conv=False)
         self.assertTrue(FLOPs == self._gt)
 
 
@@ -54,7 +54,7 @@ class TestFLOPsCase1(unittest.TestCase):
             "y": paddle.to_tensor(y),
             "z": "test"
         }
-        FLOPs = flops(net, [inputs])
+        FLOPs = flops(net, [inputs], only_conv=False)
         self.assertTrue(FLOPs == 59184)
 
 
@@ -67,9 +67,10 @@ class TestFLOPsCase2(unittest.TestCase):
         y = np.random.uniform(-1, 1, y_shape).astype('float32')
 
         inputs = [paddle.to_tensor(x), paddle.to_tensor(y)]
-        FLOPs1 = flops(net, inputs)
+        FLOPs1 = flops(net, inputs, only_conv=False)
         shapes = [x_shape, y_shape]
-        FLOPs2 = flops(net, shapes, dtypes=["float32", "float32"])
+        FLOPs2 = flops(
+            net, shapes, dtypes=["float32", "float32"], only_conv=False)
         self.assertTrue(FLOPs1 == FLOPs2)
 
 

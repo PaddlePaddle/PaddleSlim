@@ -2,12 +2,13 @@ import os
 import logging
 import numpy as np
 import pickle
+import copy
 import paddle
-from ..common import get_logger
+from paddleslim.common import get_logger
 from .var_group import *
 from .pruning_plan import *
 from .pruner import Pruner
-from ..analysis import dygraph_flops as flops
+from paddleslim.analysis import dygraph_flops as flops
 from .var_group import VarGroup
 
 __all__ = ['Status', 'FilterPruner']
@@ -17,6 +18,7 @@ _logger = get_logger(__name__, logging.INFO)
 CONV_OP_TYPE = paddle.nn.Conv2D
 FILTER_DIM = [0]
 CONV_WEIGHT_NAME = "weight"
+SKIP_LAYERS = (paddle.nn.Conv2DTranspose, paddle.nn.layer.conv.Conv2DTranspose)
 
 
 class Status():
@@ -64,9 +66,9 @@ class FilterPruner(Pruner):
         # 1. depthwise conv2d layer
         self.skip_vars = []
         for sub_layer in model.sublayers():
-            if isinstance(
-                    sub_layer,
-                    paddle.nn.layer.conv.Conv2D) and sub_layer._groups > 1:
+            if isinstance(sub_layer, SKIP_LAYERS) or (isinstance(
+                    sub_layer, paddle.nn.layer.conv.Conv2D) and
+                                                      sub_layer._groups > 1):
                 for param in sub_layer.parameters():
                     self.skip_vars.append(param.name)
 
@@ -236,7 +238,7 @@ class FilterPruner(Pruner):
                        target_vars=None,
                        skip_vars=None):
         sensitivities = self._status.sensitivies
-        baseline = eval_func()
+        baseline = None
         ratios = np.arange(0.1, 1, step=0.1)
         for group in self.var_group.groups:
             var_name = group[0][0]
@@ -255,6 +257,8 @@ class FilterPruner(Pruner):
                     _logger.debug("{}, {} has computed.".format(var_name,
                                                                 ratio))
                     continue
+                if baseline is None:
+                    baseline = eval_func()
                 plan = self.prune_var(var_name, dims, ratio, apply="lazy")
                 pruned_metric = eval_func()
                 loss = (baseline - pruned_metric) / baseline
@@ -342,14 +346,15 @@ class FilterPruner(Pruner):
         for _name in group_dict:
             # Varibales can be pruned on multiple axies. 
             for _item in group_dict[_name]:
+                src_mask = copy.deepcopy(mask)
                 dims = _item['pruned_dims']
                 transforms = _item['transforms']
                 var_shape = _item['var'].shape
                 if isinstance(dims, int):
                     dims = [dims]
                 for trans in transforms:
-                    mask = self._transform_mask(mask, trans)
-                current_mask = mask
+                    src_mask = self._transform_mask(src_mask, trans)
+                current_mask = src_mask
                 assert len(current_mask) == var_shape[dims[
                     0]], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; dims: {dims}; var name: {_name}; len(mask): {len(mask)}"
                 plan.add(_name, PruningMask(dims, current_mask, pruned_ratio))
@@ -360,21 +365,29 @@ class FilterPruner(Pruner):
         return plan
 
     def _transform_mask(self, mask, transform):
-        src_start = transform['src_start']
-        src_end = transform['src_end']
-        target_start = transform['target_start']
-        target_end = transform['target_end']
-        target_len = transform['target_len']
-        stride = transform['stride']
-        mask = mask[src_start:src_end]
-        mask = mask.repeat(stride) if stride > 1 else mask
+        if "src_start" in transform:
+            src_start = transform['src_start']
+            src_end = transform['src_end']
+            target_start = transform['target_start']
+            target_end = transform['target_end']
+            target_len = transform['target_len']
+            stride = transform['stride']
+            mask = mask[src_start:src_end]
 
-        dst_mask = np.ones([target_len])
-        # for depthwise conv2d with:
-        # input shape:  (1, 4, 32, 32)
-        # filter shape: (32, 1, 3, 3)
-        # groups: 4
-        # if we pruning input channels by 50%(from 4 to 2), the output channel should be 50% * 4 * 8.
-        expand = int((target_end - target_start) / len(mask))
-        dst_mask[target_start:target_end] = list(mask) * expand
+            mask = mask.repeat(stride) if stride > 1 else mask
+
+            dst_mask = np.ones([target_len])
+            # for depthwise conv2d with:
+            # input shape:  (1, 4, 32, 32)
+            # filter shape: (32, 1, 3, 3)
+            # groups: 4
+            # if we pruning input channels by 50%(from 4 to 2), the output channel should be 50% * 4 * 8.
+            expand = int((target_end - target_start) / len(mask))
+            dst_mask[target_start:target_end] = list(mask) * expand
+        elif "stride" in transform:
+            stride = transform['stride']
+            mask = mask.repeat(stride) if stride > 1 else mask
+            return mask
+        else:
+            return mask
         return dst_mask

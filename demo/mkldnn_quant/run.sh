@@ -1,12 +1,12 @@
 #!/bin/bash
-MODEL_DIR=./mobilenetv2_INT8
-DATA_FILE=/data/datasets/ImageNet_py/val.bin
+MODEL_DIR=/home/li/models/ResNet50_4th_qat_int8
+DATA_FILE=/mnt/disk500/data/int8_full_val.bin
 num_threads=1
 with_accuracy_layer=false
 use_profile=true
 ITERATIONS=0
 
-./build/inference --logtostderr=1 \
+GLOG_logtostderr=1 ./build/sample_tester \
     --infer_model=${MODEL_DIR} \
     --infer_data=${DATA_FILE} \
     --batch_size=1 \

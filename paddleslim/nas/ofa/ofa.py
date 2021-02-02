@@ -17,7 +17,7 @@ import numpy as np
 from collections import namedtuple
 import paddle
 import paddle.fluid as fluid
-from .utils.utils import get_paddle_version
+from .utils.utils import get_paddle_version, remove_model_fn
 pd_ver = get_paddle_version()
 if pd_ver == 185:
     from .layers_old import BaseBlock, SuperConv2D, SuperLinear
@@ -27,6 +27,8 @@ else:
     Layer = paddle.nn.Layer
 from .utils.utils import search_idx
 from ...common import get_logger
+from ...core import GraphWrapper, dygraph2program
+from .get_sub_model import get_prune_params_config, prune_params
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -125,8 +127,14 @@ class OFA(OFABase):
 
     Examples:
         .. code-block:: python
-          from paddlslim.nas.ofa import OFA
-          ofa_model = OFA(model)
+          from paddle.vision.models import mobilenet_v1
+          from paddleslim.nas.ofa import OFA
+          from paddleslim.nas.ofa.convert_super import Convert, supernet
+
+          model = mobilenet_v1()
+          sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+          sp_model = Convert(sp_net_config).convert(model)
+          ofa_model = OFA(sp_model)
 
     """
 
@@ -206,8 +214,6 @@ class OFA(OFABase):
         self.model.train()
 
     def _prepare_distill(self):
-        self.Tacts, self.Sacts = {}, {}
-
         if self.distill_config.teacher_model == None:
             logging.error(
                 'If you want to add distill, please input instance of teacher model'
@@ -256,6 +262,11 @@ class OFA(OFABase):
                     if netA != None:
                         self.netAs_param.extend(netA.parameters())
                     self.netAs.append(netA)
+
+    def _reset_hook_before_forward(self):
+        self.Tacts, self.Sacts = {}, {}
+        mapping_layers = getattr(self.distill_config, 'mapping_layers', None)
+        if mapping_layers != None:
 
             def get_activation(mem, name):
                 def get_output_hook(layer, input, output):
@@ -369,6 +380,9 @@ class OFA(OFABase):
         assert len(self.netAs) > 0
         for i, netA in enumerate(self.netAs):
             n = self.distill_config.mapping_layers[i]
+            ### add for elastic depth
+            if n not in self.Sacts.keys():
+                continue
             Tact = self.Tacts[n]
             Sact = self.Sacts[n]
             if isinstance(netA, SuperConv2D):
@@ -397,9 +411,64 @@ class OFA(OFABase):
     def search(self, eval_func, condition):
         pass
 
-    ### TODO: complete it
-    def export(self, config):
-        pass
+    def _export_sub_model_config(self, origin_model, config, input_shapes,
+                                 input_dtypes):
+        super_model_config = {}
+        for name, sublayer in self.model.named_sublayers():
+            if isinstance(sublayer, BaseBlock):
+                for param in sublayer.parameters():
+                    super_model_config[name] = sublayer.key
+
+        for name, value in super_model_config.items():
+            super_model_config[name] = config[value] if value in config.keys(
+            ) else {}
+
+        origin_model_config = {}
+        for name, sublayer in origin_model.named_sublayers():
+            for param in sublayer.parameters(include_sublayers=False):
+                if name in super_model_config.keys():
+                    origin_model_config[param.name] = super_model_config[name]
+
+        program = dygraph2program(
+            origin_model, inputs=input_shapes, dtypes=input_dtypes)
+        graph = GraphWrapper(program)
+        param_prune_config = get_prune_params_config(graph, origin_model_config)
+        return param_prune_config
+
+    def export(self,
+               origin_model,
+               config,
+               input_shapes,
+               input_dtypes,
+               load_weights_from_supernet=True):
+        """
+        Export the weights according origin model and sub model config.
+        Parameters:
+            origin_model(paddle.nn.Layer): the instance of original model.
+            config(dict): the config of sub model, can get by OFA.get_current_config() or some special config, such as paddleslim.nas.ofa.utils.dynabert_config(width_mult).
+            input_shapes(list|list(list)): the shape of all inputs.
+            input_dtypes(list): the dtype of all inputs.
+            load_weights_from_supernet(bool, optional): whether to load weights from SuperNet. Default: False.
+        Examples:
+            .. code-block:: python
+              from paddle.vision.models import mobilenet_v1
+              origin_model = mobilenet_v1()
+
+              config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
+              origin_model = ofa_model.export(origin_model, config, input_shapes=[1, 3, 28, 28], input_dtypes=['float32'])
+        """
+        super_sd = None
+        if load_weights_from_supernet:
+            super_sd = remove_model_fn(origin_model, self.model.state_dict())
+
+        param_config = self._export_sub_model_config(origin_model, config,
+                                                     input_shapes, input_dtypes)
+        prune_params(origin_model, param_config, super_sd)
+        return origin_model
+
+    @property
+    def get_current_config(self):
+        return self.current_config
 
     def set_net_config(self, net_config):
         """
@@ -408,7 +477,7 @@ class OFA(OFABase):
             net_config(dict): special the config of sug-network.
         Examples:
             .. code-block:: python
-              config = ofa_model.current_config
+              config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
               ofa_model.set_net_config(config)
         """
         self.net_config = net_config
@@ -417,6 +486,7 @@ class OFA(OFABase):
         # =====================  teacher process  =====================
         teacher_output = None
         if self._add_teacher:
+            self._reset_hook_before_forward()
             teacher_output = self.ofa_teacher_model.model.forward(*inputs,
                                                                   **kwargs)
         # ============================================================

@@ -33,8 +33,6 @@ BUILT_IN_PREPROCESS_TYPES = ['PACT']
 
 VALID_DTYPES = ['int8']
 
-DYGRAPH_QUANTIZABLE_TYPE = ['Conv2D', 'Linear']
-
 __all__ = ['QAT']
 
 _quant_config_default = {
@@ -119,11 +117,6 @@ def _parse_configs(user_config):
 
     assert isinstance(configs['quantizable_layer_type'], list), \
         "quantizable_layer_type must be a list"
-
-    for op_type in configs['quantizable_layer_type']:
-        assert (op_type in DYGRAPH_QUANTIZABLE_TYPE), "{} is not support, \
-                    now support op types are {}".format(
-            op_type, DYGRAPH_QUANTIZABLE_TYPE)
 
     return configs
 

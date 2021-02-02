@@ -2,9 +2,9 @@ import numpy as np
 import logging
 import paddle
 from paddle.fluid.dygraph import TracedLayer
-from ..core import GraphWrapper, dygraph2program
-from ..prune import collect_convs
-from ..common import get_logger
+from paddleslim.core import GraphWrapper, dygraph2program
+from paddleslim.prune import collect_convs
+from paddleslim.common import get_logger
 
 __all__ = ["VarGroup"]
 
@@ -44,12 +44,9 @@ class VarGroup():
 
     def _parse_model(self, model, inputs):
         _logger.debug("Parsing model with input: {}".format(inputs))
-
-        model.eval()
+        # model can be in training mode, because some model contains auxiliary parameters for training.
         program = dygraph2program(model, inputs=inputs)
-
         graph = GraphWrapper(program)
-
         visited = {}
         for name, param in model.named_parameters():
             group = collect_convs([param.name], graph,

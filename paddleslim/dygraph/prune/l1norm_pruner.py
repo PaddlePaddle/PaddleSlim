@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 import paddle
-from ..common import get_logger
+from paddleslim.common import get_logger
 from .var_group import *
 from .pruning_plan import *
 from .filter_pruner import FilterPruner
