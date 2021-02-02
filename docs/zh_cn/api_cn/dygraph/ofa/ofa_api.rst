@@ -1,7 +1,7 @@
 OFA-训练
 ============
 
-在进行Once-For-All训练之前，需要把普通的模型先转换为由动态OP组网的超网络。超网络转换方式可以参考 `超网络转换 <>`_ 。
+在进行Once-For-All训练之前，需要把普通的模型先转换为由动态OP组网的超网络。超网络转换方式可以参考 `超网络转换 <./convert_supernet_api.rst>`_ 。
 
 Once-For-All 训练参数配置
 ------------------
@@ -14,7 +14,7 @@ RunConfig
   - **train_batch_size:(int, 可选):** 训练时的batch size，用来计算每个epoch包括的iteration数量。默认：None。
   - **n_epochs(list, 可选):** 包含每个阶段运行到多少epochs，用来判断当前epoch在超网训练中所处的阶段，默认：None。
   - **total_images(int, 可选):**  训练集图片数量，用来计算每个epoch包括的iteration数量。默认：None。
-  - **elastic_depth(list/tuple, 可选):** 如果设置为None，则不把depth作为搜索的一部分，否则，采样到的config中会包含depth。对模型depth的改变需要在模型定义中的forward部分配合使用，具体示例可以参考 `示例 <>`_ ，默认：None。
+  - **elastic_depth(list/tuple, 可选):** 如果设置为None，则不把depth作为搜索的一部分，否则，采样到的config中会包含depth。对模型depth的改变需要在模型定义中的forward部分配合使用，具体示例可以参考 `示例 <../tutorials/nas/nas_ofa.md>`_ ，默认：None。
   - **dynamic_batch_size(list, 可选):** 代表每个阶段每个batch数据应该参与几个子网络的训练，shape应该和n_epochs的shape保持一致。默认：None。
 
 **返回：**
@@ -29,7 +29,7 @@ RunConfig
       'train_batch_size': 1,
       'n_epochs': [[1], [2, 3], [4, 5]],
       'total_images': 12,
-      'elastic_depth': (5, 15, 24)
+      'elastic_depth': (5, 15, 24),
       'dynamic_batch_size': [1, 1, 1],
   }
   run_config = RunConfig(**default_run_config)
@@ -67,7 +67,7 @@ DistillConfig
 
 OFA
 ------------------
-把超网络训练方式转换为Once-For-All的方式训练。在 `Once-For-All论文 <>`_ 中，提出 ``Progressive Shrinking`` 的超网络训练方式，具体原理是在训练过程中按照 ``elastic kernel_size`` 、 ``elastic width`` 、 ``elactic depth`` 的顺序分阶段进行训练，并且在训练过程中逐步扩大搜索空间，例如：搜索空间为 ``kernel_size=(3,5,7), expand_ratio=(0.5, 1.0, 2.0), depth=(0.5, 0.75, 1.0)`` ，则在训练过程中首先对kernel size的大小进行动态训练，并把kernel_size的动态训练分为两个阶段，第一阶段kernel_size的搜索空间为 ``[5, 7]`` ，第二阶段kernel_size的搜索空间为 ``[3, 5, 7]`` ；之后把expand_ratio的动态训练加入到超网络训练中，和对kernel_size的训练方式相同，对expand_ratio的动态训练也分为两个阶段，第一阶段expand_ratio的搜索空间为 ``[1.0, 2.0]`` ，第二阶段expand_ratio的搜索空间为 ``[0.5, 1.0, 2.0]`` ；最后对depth进行动态训练，训练阶段和kernel_size相同。
+把超网络训练方式转换为Once-For-All的方式训练。在 `Once-For-All论文 <https://arxiv.org/abs/1908.09791>`_ 中，提出 ``Progressive Shrinking`` 的超网络训练方式，具体原理是在训练过程中按照 ``elastic kernel_size`` 、 ``elastic width`` 、 ``elactic depth`` 的顺序分阶段进行训练，并且在训练过程中逐步扩大搜索空间，例如：搜索空间为 ``kernel_size=(3,5,7), expand_ratio=(0.5, 1.0, 2.0), depth=(0.5, 0.75, 1.0)`` ，则在训练过程中首先对kernel size的大小进行动态训练，并把kernel_size的动态训练分为两个阶段，第一阶段kernel_size的搜索空间为 ``[5, 7]`` ，第二阶段kernel_size的搜索空间为 ``[3, 5, 7]`` ；之后把expand_ratio的动态训练加入到超网络训练中，和对kernel_size的训练方式相同，对expand_ratio的动态训练也分为两个阶段，第一阶段expand_ratio的搜索空间为 ``[1.0, 2.0]`` ，第二阶段expand_ratio的搜索空间为 ``[0.5, 1.0, 2.0]`` ；最后对depth进行动态训练，训练阶段和kernel_size相同。
 
 .. py:class:: paddleslim.nas.ofa.OFA(model, run_config=None, distill_config=None, elastic_order=None, train_full=False)
 
@@ -96,6 +96,7 @@ OFA实例
    sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
    sp_model = Convert(sp_net_config).convert(model)
    ofa_model = OFA(sp_model)
+
 ..
 
   .. py:method:: set_epoch(epoch)
@@ -110,9 +111,7 @@ OFA实例
 
   **示例代码：**
 
-  .. code-block:: python
-
-    ofa_model.set_epoch(3)
+   ofa_model.set_epoch(3)
 
   .. py:method:: set_task(task, phase=None)
 
@@ -127,9 +126,7 @@ OFA实例
 
   **示例代码：**
 
-  .. code-block:: python
-
-    ofa_model.set_task('width')
+   ofa_model.set_task('width')
 
   .. py:method:: set_net_config(config)
 
@@ -143,8 +140,6 @@ OFA实例
 
   **示例代码：**
 
-  .. code-block:: python
-
     config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
     ofa_model.set_net_config(config)
 
@@ -156,8 +151,6 @@ OFA实例
   中间层蒸馏损失。
 
   **示例代码：**
-
-  .. code-block:: python
 
     distill_loss = ofa_model.calc_distill_loss()
 
@@ -180,7 +173,6 @@ OFA实例
 
   **示例代码：**
 
-  .. code-block:: python
     from paddle.vision.models import mobilenet_v1     
     origin_model = mobilenet_v1()
 
