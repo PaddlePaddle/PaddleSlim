@@ -24,19 +24,6 @@ PaddleSlim包含`QAT量化训练`和`PACT改进的量化训练`两种
 首先我们需要对本次量化的一些基本量化配置做一些选择，例如weight量化类型，activation量化类型等。如果没有特殊需求，可以直接拷贝我们默认的量化配置。全部可选的配置可以参考PaddleSlim量化文档，例如我们用的量化配置如下：
 
 ```python
-# 静态图
-quant_config = {
-    'weight_quantize_type': 'abs_max',
-    'activation_quantize_type': 'moving_average_abs_max',
-    'weight_bits': 8,
-    'activation_bits': 8,
-    'not_quant_pattern': ['skip_quant'],
-    'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
-    'dtype': 'int8',
-    'window_size': 10000,
-    'moving_rate': 0.9
-}
-# 动态图
 quant_config = {
     'weight_preprocess_type': None,
     'activation_preprocess_type': None,
@@ -57,9 +44,6 @@ quant_config = {
 
 ```python
 import paddleslim
-# 静态图
-compiled_train_prog = paddleslim.quant.quant_aware(train_prog, place, quant_config, scope=None, for_test=False)
-# 动态图
 quanter = paddleslim.dygraph.quant.QAT(config=quant_config)
 quanter.quantize(net)
 ```
@@ -74,15 +58,6 @@ quanter.quantize(net)
 
 ```python
 import paddleslim
-# 静态图
-qat_program = paddleslim.quant.convert(val_program, place, quant_config, scope=None)
-paddle.static.save_inference_model(
-  dirname=save_path,
-  feeded_var_names=feed_var_names,
-  target_vars=target_vars,
-  executor=exe,
-  main_program=qat_program)
-# 动态图
 quanter.save_quantized_model(
   model,
   path,
@@ -96,37 +71,7 @@ PACT方法是对普通在线量化方法的改进，对于一些量化敏感的�
 使用方法上与普通在线量化方法相近：
 
 ```python
-# 静态图
-# 提前定义好PACT函数
-def pact(x):
-  helper = LayerHelper("pact", **locals())
-  dtype = 'float32'
-  init_thres = values[x.name.split('_tmp_input')[0]]
-  u_param_attr = paddle.ParamAttr(
-    name=x.name + '_pact',
-    initializer=paddle.nn.initializer.Constant(value=init_thres),
-    regularizer=paddle.regularizer.L2Decay(0.0001),
-    learning_rate=1)
-  u_param = helper.create_parameter(
-    attr=u_param_attr, shape=[1], dtype=dtype)
-
-  gamma = paddle.nn.functional.relu(x - u_param)
-  beta = paddle.nn.functional.relu(-u_param - x)
-  x = x - gamma + beta
-  return x
-def get_optimizer():
-  return paddle.optimizer.Momentum(args.lr, 0.9)
-# 额外传入act_preprocess_func和optimizer_func
-compiled_train_prog = quant_aware(
-  train_prog,
-  place,
-  quant_config,
-  act_preprocess_func=pact,
-  optimizer_func=get_optimizer,
-  executor=executor,
-  for_test=False)
-# 动态图
-# 只需在quant_config中额外指定'weight_preprocess_type'为'PACT'
+# 在quant_config中额外指定'weight_preprocess_type'为'PACT'
     quant_config = {
         'weight_preprocess_type': 'PACT',
         'weight_quantize_type': 'channel_wise_abs_max',
@@ -143,9 +88,7 @@ compiled_train_prog = quant_aware(
 
 详细代码与例程请参考：
 
-- [静态图普通在线量化](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_aware)
-- [静态图PACT在线量化](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/pact_quant_aware)
-- [动态图普通、PACT在线量化](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/quant)
+- [动态图量化训练](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/quant)
 
 ## 实验结果
 
