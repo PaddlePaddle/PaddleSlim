@@ -179,11 +179,9 @@ def evaluate(model, criterion, metric, data_loader, epoch, step,
             correct = metric.compute(logits, labels)
             metric.update(correct)
         results = metric.accumulate()
-        print(
-            "epoch: %d, batch: %d, width_mult: %s, eval loss: %f, %s: %s\n" %
-            (epoch, step, 'teacher' if width_mult == 100 else str(width_mult),
-             loss.numpy(), metric.name(), results),
-            end='')
+        print("epoch: %d, batch: %d, width_mult: %s, eval loss: %f, %s: %s\n" %
+              (epoch, step, 'teacher' if width_mult == 100 else str(width_mult),
+               loss.numpy(), metric.name(), results))
         model.train()
 
 

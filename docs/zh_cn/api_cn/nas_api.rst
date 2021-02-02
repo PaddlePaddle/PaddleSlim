@@ -45,8 +45,10 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
 
 .. code-block:: python
 
+   import paddle
    from paddleslim.nas import SANAS
    config = [('MobileNetV2Space')]
+   paddle.enable_static()
    sanas = SANAS(configs=config)
 
 .. note::
@@ -82,11 +84,12 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
 
    .. code-block:: python
 
-      import paddle.fluid as fluid
+      import paddle
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
+      paddle.enable_static()
       sanas = SANAS(configs=config)
-      input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+      input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
       archs = sanas.next_archs()
       for arch in archs:
           output = arch(input)
@@ -108,9 +111,10 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
 
    .. code-block:: python
 
-      import paddle.fluid as fluid
+      import paddle
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
+      paddle.enable_static()
       sanas = SANAS(configs=config)
       archs = sanas.next_archs()
       
@@ -134,11 +138,12 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
 
    .. code-block:: python
 
-      import paddle.fluid as fluid
+      import paddle
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
+      paddle.enable_static()
       sanas = SANAS(configs=config)
-      input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+      input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
       tokens = ([0] * 25)
       archs = sanas.tokens2arch(tokens)[0]
       print(archs(input))
@@ -154,9 +159,10 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
 
    .. code-block:: python
 
-      import paddle.fluid as fluid
+      import paddle
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
+      paddle.enable_static()
       sanas = SANAS(configs=config)
       print(sanas.current_info())
 
@@ -222,8 +228,11 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 
 .. code-block:: python
 
+   import paddle
    from paddleslim.nas import RLNAS
    config = [('MobileNetV2Space')]
+
+   paddle.enable_static()
    rlnas = RLNAS(key='lstm', configs=config)
 
 
@@ -242,11 +251,12 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 
 .. code-block:: python
 
-  import paddle.fluid as fluid
+  import paddle
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
+  paddle.enable_static()
   rlnas = RLNAS(key='lstm', configs=config)
-  input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+  input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
   archs = rlnas.next_archs(1)[0]
   for arch in archs:
       output = arch(input)
@@ -266,9 +276,10 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 
 .. code-block:: python
 
-  import paddle.fluid as fluid
+  import paddle
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
+  paddle.enable_static()
   rlnas = RLNAS(key='lstm', configs=config)
   rlnas.next_archs(1)
   rlnas.reward(1.0)
@@ -292,9 +303,10 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 
 .. code-block:: python
 
-  import paddle.fluid as fluid
+  import paddle
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
+  paddle.enable_static()
   rlnas = RLNAS(key='lstm', configs=config)
   archs = rlnas.final_archs(1)
   print(archs)
@@ -314,11 +326,12 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
 
 .. code-block:: python
 
-  import paddle.fluid as fluid
+  import paddle
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
+  paddle.enable_static()
   rlnas = RLNAS(key='lstm', configs=config)
-  input = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+  input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
   tokens = ([0] * 25)
   archs = rlnas.tokens2arch(tokens)[0]
   print(archs(input))
