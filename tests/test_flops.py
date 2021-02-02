@@ -15,7 +15,7 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle.fluid as fluid
-from paddleslim.analysis import flops
+from paddleslim import flops
 from layers import conv_bn_layer
 from static_case import StaticCase
 

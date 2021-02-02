@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import logging
 from .pruning_plan import PruningPlan
-from ..common import get_logger
+from paddleslim.common import get_logger
 
 __all__ = ["Pruner"]
 
