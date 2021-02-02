@@ -1,4 +1,4 @@
-# 图像分类INT8量化模型在CPU上的部署和预测
+# PaddleSlim INT8量化模型在CPU上的部署和预测
 
 ## 概述
 
