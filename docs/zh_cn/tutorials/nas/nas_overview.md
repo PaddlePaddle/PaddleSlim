@@ -5,9 +5,9 @@ PaddleSlim提供了4种网络结构搜索的方法：基于模拟退火进行网
 | 算法名称  |   算法简介   | 代表模型 |
 |:---------:|:------------:|:--------:|
 | [Once-For-All](nas_ofa.md)    | OFA是一种基于One-Shot NAS的压缩方案。这种方式比较高效，其优势是只需要训练一个超网络就可以从中选择满足不同延时要求的子模型。 | Once-For-All   |
-| [SANAS](../../quick_start/static/nas_tutorial.md)            | SANAS是基于模拟退火的方式进行网络结构搜索，在机器资源不多的情况下，选择这种方式一般能得到比强化学习更好的模型。             | \              |
-| [RLNAS](./../api_cn/nas_api.rst)            | RLNAS是基于强化学习的方式进行网络结构搜索，这种方式需要耗费大量机器资源。 | ENAS、NasNet、MNasNet  |
-| [DARTS/PCDARTS](../../api_cn/darts.rst) | DARTS是基于梯度进行网络结构搜索，这种方式比较高效，大大减少了搜索时间和所需要的机器资源。 |DARTS、PCDARTS、ProxylessNAS|
+| [SANAS](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/quick_start/static/nas_tutorial.md)            | SANAS是基于模拟退火的方式进行网络结构搜索，在机器资源不多的情况下，选择这种方式一般能得到比强化学习更好的模型。             | \              |
+| [RLNAS](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/nas/nas_api.rst)            | RLNAS是基于强化学习的方式进行网络结构搜索，这种方式需要耗费大量机器资源。 | ENAS、NasNet、MNasNet  |
+| [DARTS/PCDARTS](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/dygraph/nas/darts.rst) | DARTS是基于梯度进行网络结构搜索，这种方式比较高效，大大减少了搜索时间和所需要的机器资源。 |DARTS、PCDARTS、ProxylessNAS|
 
 
 # 参考文献

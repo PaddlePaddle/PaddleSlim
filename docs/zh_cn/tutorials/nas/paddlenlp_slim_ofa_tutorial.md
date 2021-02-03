@@ -14,13 +14,13 @@
 5. 通过以上的方式来优化整个超网络参数，训练完成后选择满足加速要求和精度要求的子模型。
 
 <p align="center">
-<img src="../../images/algo/ofa_bert.jpg" width="950"/><br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/images/algo/ofa_bert.jpg" width="950"/><br />
 整体流程图
 </p>
 
 ## 基于PaddleNLP repo代码进行压缩
 本教程基于PaddleSlim2.0及之后版本、Paddle2.0rc1及之后版本和PaddleNLP2.0beta及之后版本，请确认已正确安装Paddle、PaddleSlim和PaddleNLP。
-基于PaddleNLP repo中BERT-base的整体代码示例请参考：[BERT-base](../../../demo/ofa/bert/README.md)
+基于PaddleNLP repo中BERT-base的整体代码示例请参考：[BERT-base](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/ofa/bert/README.md)
 
 ### 1. 定义初始网络
 定义原始BERT-base模型并定义一个字典保存原始模型参数。普通模型转换为超网络之后，由于其组网OP的改变导致原始模型加载的参数失效，所以需要定义一个字典保存原始模型的参数并用来初始化超网络。
