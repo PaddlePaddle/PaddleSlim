@@ -16,7 +16,7 @@ sys.path.append("../../")
 import unittest
 import paddle
 import paddle.fluid as fluid
-from paddleslim.dygraph import L1NormFilterPruner
+from paddleslim import L1NormFilterPruner
 from paddle.vision.models import mobilenet_v1, resnet50
 from paddleslim.prune import Pruner
 
@@ -47,6 +47,7 @@ class TestPrune(unittest.TestCase):
         shapes = {}
         for param in model.parameters():
             shapes[param.name] = param.shape
+        pruner.restore()
         return shapes
 
     def static_prune(self, net, ratios):

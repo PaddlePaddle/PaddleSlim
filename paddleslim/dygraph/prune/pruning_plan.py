@@ -2,7 +2,7 @@ import paddle
 import collections
 import numpy as np
 import logging
-from ..common import get_logger
+from paddleslim.common import get_logger
 from paddle.fluid import core
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -28,7 +28,7 @@ class PruningMask():
         if self._mask is not None:
             assert len(self._mask.shape) == len(
                 value
-            ), "The length of value must be same with shape of mask in current PruningMask instance."
+            ), "The length of value must be same with length of mask's shape in current PruningMask instance."
         self._dims = list(value)
 
     @property
@@ -37,11 +37,6 @@ class PruningMask():
 
     @mask.setter
     def mask(self, value):
-        assert (isinstance(value, PruningMask))
-        if self._dims is not None:
-            assert len(self._mask.shape) == len(
-                value
-            ), "The length of value must be same with shape of mask in current PruningMask instance."
         self._mask = value
 
     def __str__(self):
@@ -71,13 +66,22 @@ class PruningPlan():
         self._pruned_flops = value
 
     def add(self, var_name, pruning_mask):
+
         assert (isinstance(pruning_mask, PruningMask))
         if var_name not in self._masks:
             self._masks[var_name] = []
-        self._masks[var_name].append(pruning_mask)
         if var_name not in self._dims:
             self._dims[var_name] = []
-        self._dims[var_name].append(pruning_mask.dims)
+
+        if pruning_mask.dims in self._dims[var_name]:
+            for _mask in self._masks[var_name]:
+                if pruning_mask.dims == _mask.dims:
+                    _mask.mask = list(
+                        np.array(_mask.mask).astype(np.int64) & np.array(
+                            pruning_mask.mask).astype(np.int64))
+        else:
+            self._masks[var_name].append(pruning_mask)
+            self._dims[var_name].append(pruning_mask.dims)
 
     @property
     def masks(self):
@@ -87,8 +91,7 @@ class PruningPlan():
         assert (isinstance(plan, PruningPlan))
         for var_name in plan.masks:
             for mask in plan.masks[var_name]:
-                if not self.contains(var_name, mask.dims):
-                    self.add(var_name, mask)
+                self.add(var_name, mask)
 
     def contains(self, var_name, dims=None):
         return (var_name in self._dims) and (dims is None or
@@ -169,10 +172,9 @@ class PruningPlan():
                                                       paddle.to_tensor(value))
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
-                        bool_mask = mask.astype(bool)
+                        bool_mask = np.array(mask).astype(bool)
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims[0], value)
-
                         p = t_value._place()
                         if p.is_cpu_place():
                             place = paddle.CPUPlace()
@@ -184,14 +186,19 @@ class PruningPlan():
                             place = paddle.CUDAPlace(p.gpu_device_id())
 
                         t_value.set(pruned_value, place)
-                        if isinstance(sub_layer, paddle.nn.layer.conv.Conv2D):
-                            if sub_layer._groups > 1 and pruned_value.shape[
-                                    1] == 1:  # depthwise conv2d
-                                _logger.debug(
-                                    "Update groups of depthwise conv2d form {} to {}".
-                                    format(sub_layer._groups,
-                                           pruned_value.shape[0]))
-                                sub_layer._groups = pruned_value.shape[0]
+                        if isinstance(
+                                sub_layer, paddle.nn.layer.conv.Conv2D
+                        ) and sub_layer._groups > 1 and len(param.shape) == 4:
+                            assert param.shape[
+                                1] == 1, "It just supports depthwise conv2d when groups > 1."
+                            new_groups = int(bool_mask.sum() *
+                                             sub_layer._groups / len(bool_mask))
+                            _logger.debug(
+                                "Update groups of depthwise conv2d form {} to {}".
+                                format(sub_layer._groups, new_groups))
+                            sub_layer._origin_groups = sub_layer._groups
+                            sub_layer._groups = new_groups
+
                     # for training
                     if param.trainable:
                         param.clear_gradient()
@@ -218,11 +225,6 @@ class PruningPlan():
                         place = paddle.CUDAPlace(p.gpu_device_id())
 
                     t_value.set(np.array(t_backup).astype("float32"), place)
-
-                    if isinstance(sub_layer, paddle.nn.layer.conv.Conv2D):
-                        if sub_layer._groups > 1:
-                            _logger.debug(
-                                "Update groups of conv form {} to {}".format(
-                                    sub_layer._groups, t_value.shape()[0]))
-                            sub_layer._groups = t_value.shape()[0]
+                    if "_origin_groups" in sub_layer.__dict__:
+                        sub_layer._groups = sub_layer._origin_groups
                     del sub_layer._buffers[backup_name]

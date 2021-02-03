@@ -55,10 +55,15 @@ def collect_convs(params, graph, visited={}):
     if not isinstance(graph, GraphWrapper):
         graph = GraphWrapper(graph)
     groups = []
-    for param in params:
+    for _param in params:
         pruned_params = []
-        param = graph.var(param)
-
+        param = graph.var(_param)
+        if param is None:
+            _logger.warning(
+                f"Cann't found relative variables of {_param} because {_param} is not in target program or model. Please make sure {_param} is in your program if you are using static API of PaddlePaddle. And make sure your model in correctly mode and contains {_param} if you are using dynamic API of PaddlePaddle."
+            )
+            groups.append([])
+            continue
         target_op = param.outputs()[0]
         if target_op.type() == 'conditional_block':
             for op in param.outputs():
@@ -79,7 +84,7 @@ def collect_convs(params, graph, visited={}):
                          pruned_params=pruned_params,
                          visited=visited)
 
-        walker.prune(param, pruned_axis=0, pruned_idx=[0])
+        walker.prune(param, pruned_axis=0, pruned_idx=[])
         groups.append(pruned_params)
     visited = set()
     uniq_groups = []
@@ -96,5 +101,4 @@ def collect_convs(params, graph, visited={}):
             simple_group.append((param, axis, pruned_idx))
         if not repeat_group:
             uniq_groups.append(simple_group)
-
     return uniq_groups

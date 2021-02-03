@@ -22,7 +22,7 @@ from paddle.nn import ReLU
 from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
 from paddleslim.nas.ofa.convert_super import supernet
-from paddleslim.nas.ofa.layers_new import Block, SuperSeparableConv2D
+from paddleslim.nas.ofa.layers import Block, SuperSeparableConv2D
 
 
 class ModelConv(nn.Layer):
@@ -139,7 +139,7 @@ class ModelConv2(nn.Layer):
 class ModelLinear(nn.Layer):
     def __init__(self):
         super(ModelLinear, self).__init__()
-        with supernet(expand_ratio=(1, 2, 4)) as ofa_super:
+        with supernet(expand_ratio=(1.0, 2.0, 4.0)) as ofa_super:
             models = []
             models += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
             models += [nn.Linear(64, 128)]
@@ -165,6 +165,22 @@ class ModelLinear(nn.Layer):
             layer = self.models[idx]
             inputs = layer(inputs)
         return inputs
+
+
+class ModelOriginLinear(nn.Layer):
+    def __init__(self):
+        super(ModelOriginLinear, self).__init__()
+        models = []
+        models += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
+        models += [nn.Linear(64, 128)]
+        models += [nn.LayerNorm(128)]
+        models += [nn.Linear(128, 256)]
+        models += [nn.Linear(256, 256)]
+
+        self.models = paddle.nn.Sequential(*models)
+
+    def forward(self, inputs):
+        return self.models(inputs)
 
 
 class ModelLinear1(nn.Layer):
@@ -371,6 +387,41 @@ class TestOFACase3(unittest.TestCase):
 class TestOFACase4(unittest.TestCase):
     def test_ofa(self):
         self.model = ModelConv2()
+
+
+class TestExport(unittest.TestCase):
+    def setUp(self):
+        self._init_model()
+
+    def _init_model(self):
+        self.origin_model = ModelOriginLinear()
+        model = ModelLinear()
+        self.ofa_model = OFA(model)
+
+    def test_ofa(self):
+        config = {
+            'embedding_1': {
+                'expand_ratio': (2.0)
+            },
+            'linear_3': {
+                'expand_ratio': (2.0)
+            },
+            'linear_4': {},
+            'linear_5': {}
+        }
+        origin_dict = {}
+        for name, param in self.origin_model.named_parameters():
+            origin_dict[name] = param.shape
+        self.ofa_model.export(
+            self.origin_model,
+            config,
+            input_shapes=[[1, 64]],
+            input_dtypes=['int64'])
+        for name, param in self.origin_model.named_parameters():
+            if name in config.keys():
+                if 'expand_ratio' in config[name]:
+                    assert origin_dict[name][-1] == param.shape[-1] * config[
+                        name]['expand_ratio']
 
 
 if __name__ == '__main__':

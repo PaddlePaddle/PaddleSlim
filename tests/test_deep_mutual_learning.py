@@ -31,7 +31,7 @@ class Model(paddle.nn.Layer):
         super(Model, self).__init__()
         self.conv = paddle.nn.Conv2D(
             in_channels=1, out_channels=256, kernel_size=3, stride=1, padding=1)
-        self.pool2d_avg = paddle.nn.Pool2D(pool_type='avg', global_pooling=True)
+        self.pool2d_avg = paddle.nn.AdaptiveAvgPool2D([1, 1])
         self.out = paddle.nn.Linear(256, 10)
 
     def forward(self, inputs):

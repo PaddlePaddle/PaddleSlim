@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import logging
 from .pruning_plan import PruningPlan
-from ..common import get_logger
+from paddleslim.common import get_logger
 
 __all__ = ["Pruner"]
 
@@ -19,9 +19,9 @@ class Pruner(object):
         
     """
 
-    def __init__(self, model, input_shape):
+    def __init__(self, model, inputs):
         self.model = model
-        self.input_shape = input_shape
+        self.inputs = inputs
         self._var_shapes = {}
         for var in model.parameters():
             self._var_shapes[var.name] = var.shape
@@ -53,5 +53,5 @@ class Pruner(object):
             global_plan.apply(self.model, lazy=True)
         elif apply == "impretive":
             global_plan.apply(self.model, lazy=False)
-
+        self.plan = global_plan
         return global_plan
