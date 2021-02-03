@@ -3,7 +3,7 @@ L2NormFilterPruner
 
 .. py:class:: paddleslim.L2NormFilterPruner(model, inputs, sen_file=None)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/dygraph/l2norm_pruner.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/dygraph/prune/l2norm_pruner.py>`_
 
 用于剪裁卷积层输出通道的的剪裁器。该剪裁器按 ``Filters`` 的 ``l2-norm`` 统计值对单个卷积层内的 ``Filters`` 的重要性进行排序，并按指定比例剪裁掉相对不重要的 ``Filters`` 。对 ``Filters`` 的剪裁等价于剪裁卷积层的输出通道数。
 
