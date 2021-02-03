@@ -1,6 +1,12 @@
-# PaddleSlim量化模型的TensorRT预测
+# PaddleSlim INT8量化模型使用TensorRT的部署和预测
 
-本教程将介绍使用TensortRT部署PaddleSlim量化得到的模型的详细步骤。
+## 概述
+NVIDIA TensorRT 是一个高性能的深度学习预测库，适用于Nvidia GPU，可为深度学习推理应用程序提供低延迟和高吞吐量。PaddlePaddle 采用子图的形式对TensorRT进行了集成，即我们可以使用该模块来提升Paddle模型的预测性能。本教程将介绍如何使用TensortRT部署PaddleSlim量化得到的模型，无论是量化训练（QAT）还是离线量化（PTQ）模型均可支持。对于常见图像分类模型，INT8模型的推理速度通常是FP32模型的3.2-6.7倍。
+
+流程步骤如下：
+
+- 产出量化模型：使用PaddleSlim量化训练或离线量化得到量化模型。注意模型中被量化的算子的参数值应该在INT8范围内，但是类型仍为float型。
+- 在Nvidia GPU上部署预测：在GPU上以INT8类型进行预测部署。
 
 
 ## 1. 准备环境
@@ -157,6 +163,16 @@ val/ILSVRC2012_val_00000002.jpg 0
 
 ### 2.4 部署预测
 
+相比FP32模型的TensorRT预测，量化模型的预测需要在开启TensorRT时另外设定精度为`kInt8`, 核心代码如下：
+
+```python
+config.EnableTensorRtEngine(workspace_size, \
+                            batch_size, \
+                            min_subgraph_size, \
+                            paddle::AnalysisConfig::Precision::kInt8, \
+                            false, \
+                            false);
+```
 
 ### 运行demo
 * 执行以下命令，完成一个分类模型的TensorRT预测。
