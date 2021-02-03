@@ -14,13 +14,13 @@
 5. 通过以上的方式来优化整个超网络参数，训练完成后选择满足加速要求和精度要求的子模型。
 
 <p align="center">
-<img src="../../images/algo/ofa_bert.jpg" width="950"/><br />
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/images/algo/ofa_bert.jpg" width="950"/><br />
 整体流程图
 </p>
 
 ## 基于ERNIE repo代码进行压缩
 本教程基于PaddleSlim2.0及之后版本、Paddle1.8.5和ERNIE 0.0.4dev及之后版本，请确认已正确安装Paddle、PaddleSlim和ERNIE。
-基于ERNIE repo中TinyERNIE的整体代码示例请参考：[TinyERNIE](../../../demo/ofa/ernie/README.md)
+基于ERNIE repo中TinyERNIE的整体代码示例请参考：[TinyERNIE](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/ofa/ernie/README.md)
 
 ### 1. 定义初始网络
 定义原始TinyERNIE模型并定义一个字典保存原始模型参数。普通模型转换为超网络之后，由于其组网OP的改变导致原始模型加载的参数失效，所以需要定义一个字典保存原始模型的参数并用来初始化超网络。设置'return_additional_info'参数为True，返回中间层结果，便于添加蒸馏。
@@ -65,7 +65,7 @@ ofa_model = paddleslim.nas.ofa.OFA(model, distill_config=distill_config)
 ```
 
 ### 6. 计算神经元和head的重要性并根据其重要性重排序参数
-基于Paddle 1.8.5实现的重要性计算代码位于：[importance.py](../../../demo/ofa/ernie/ernie_supernet/importance.py)
+基于Paddle 1.8.5实现的重要性计算代码位于：[importance.py](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/ofa/ernie/ernie_supernet/importance.py)
 ```python
 head_importance, neuron_importance = compute_neuron_head_importance(
     args,
@@ -126,6 +126,6 @@ ofa_model.model.clear_gradients()
 ---
 **NOTE**
 
-由于在计算head的重要性时会利用一个mask来收集梯度，所以需要通过monkey patch的方式重新实现一下TinyERNIE中一些相关类的forward函数。具体实现的forward可以参考：[model_ernie_supernet.py](../../../demo/ofa/ernie/ernie_supernet/modeling_ernie_supernet.py)
+由于在计算head的重要性时会利用一个mask来收集梯度，所以需要通过monkey patch的方式重新实现一下TinyERNIE中一些相关类的forward函数。具体实现的forward可以参考：[model_ernie_supernet.py](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/ofa/ernie/ernie_supernet/modeling_ernie_supernet.py)
 
 ---
