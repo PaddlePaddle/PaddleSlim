@@ -36,9 +36,6 @@ DEFINE_bool(with_accuracy_layer,
             true,
             "Set with_accuracy_layer to true if provided model has accuracy "
             "layer and requires label input");
-DEFINE_bool(use_profile,
-            false,
-            "Set use_profile to true to get profile information");
 DEFINE_bool(use_analysis,
             false,
             "If use_analysis is set to true, the model will be optimized");
@@ -151,7 +148,7 @@ void SetInput(std::vector<std::vector<paddle::PaddleTensor>> *inputs,
     }
     inputs->push_back(std::move(tmp_vec));
     if (i > 0 && i % 100==0)  {
-      LOG(INFO) << "Read " << i * 100 * FLAGS_batch_size << " samples";
+      LOG(INFO) << "Read " << i * FLAGS_batch_size << " samples";
     }
   }
 }
@@ -183,10 +180,6 @@ void PredictionRun(paddle::PaddlePredictor *predictor,
   outputs->resize(iterations);
   Timer run_timer;
   double elapsed_time = 0;
-#ifdef WITH_GPERFTOOLS
-  ResetProfiler();
-  ProfilerStart("paddle_inference.prof");
-#endif
   int predicted_num = 0;
 
   for (int i = 0; i < iterations; i++) {
@@ -199,10 +192,6 @@ void PredictionRun(paddle::PaddlePredictor *predictor,
       LOG(INFO) << "Infer " << predicted_num << " samples";
     }
   }
-
-#ifdef WITH_GPERFTOOLS
-  ProfilerStop();
-#endif
 
   auto batch_latency = elapsed_time / iterations;
   PrintTime(FLAGS_batch_size, num_threads, batch_latency, iterations);
@@ -277,9 +266,6 @@ static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
   cfg->DisableGpu();
   cfg->SwitchIrOptim();
   cfg->EnableMKLDNN();
-  if (FLAGS_use_profile) {
-    cfg->EnableProfile();
-  }
 }
 
 std::unique_ptr<paddle::PaddlePredictor> CreatePredictor(
