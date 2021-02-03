@@ -11,3 +11,4 @@
 
    pruners/index.rst
    ofa/index.rst
+   quanter/index.rst
