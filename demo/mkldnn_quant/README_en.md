@@ -134,13 +134,16 @@ export KMP_AFFINITY=granularity=fine,compact,1,0
 export KMP_BLOCKTIME=1
 # Turbo Boost could be set to OFF using the command
 echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
+# For 1 thread performance, by default the bash use 1 threads
 ./run.sh path/to/MODEL_DIR path/to/DATA_FILE
+# For 20 thread performance, set third parameter 20
+./run.sh path/to/MODEL_DIR path/to/DATA_FILE 20
 ```
 
 **Available options in `run.sh` and their descriptions are as follows:**
 - **infer_model:** Required. Tested model path. Note that the model parameters files need be saved into multiple files.
 - **infer_data:** Required. The path of the tested data file. Note that it needs to be a binary file converted by `full_ILSVRC2012_val_preprocess`.
-- **batch_size:** Batch size. The default value is 50.
+- **batch_size:** Batch size. The default value is 1.
 - **iterations:** Batch iterations. The default is 0, which means predict all batches (image numbers/batch size) in infer_data
 - **num_threads:** Number of CPU threads used. The default value is 1.
 - **with_accuracy_layer:** The model is with accuracy layer or not. Default value false.

@@ -137,14 +137,16 @@ export KMP_AFFINITY=granularity=fine,compact,1,0
 export KMP_BLOCKTIME=1
 # Turbo Boost could be set to OFF using the command
 echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
-# For 1 thread performance:
+# For 1 thread performance, by default the bash use 1 threads
 ./run.sh path/to/MODEL_DIR path/to/DATA_FILE
+# For 20 thread performance, set third parameter 20
+./run.sh path/to/MODEL_DIR path/to/DATA_FILE 20
 ```
 
 `run.sh`中所有可选配置参数注释：
 - **infer_model:** 模型所在目录，注意模型参数当前必须是分开保存成多个文件的。可以设置为`PATH/TO/SAVE/INT8/MODEL`, `PATH/TO/SAVE/FLOAT32/MODEL`。无默认值。
 - **infer_data:** 测试数据文件所在路径。注意需要是经`full_ILSVRC2012_val_preprocess`转化后的binary文件。
-- **batch_size:** 预测batch size大小。默认值为50。
+- **batch_size:** 预测batch size大小。默认值为1。
 - **iterations:** batches迭代数。默认为0，0表示预测infer_data中所有batches (image numbers/batch_size)
 - **num_threads:** 预测使用CPU 线程数，默认为单核一个线程。
 - **with_accuracy_layer:** 模型为包含精度计算层的测试模型还是不包含精度计算层的预测模型，默认为true。
