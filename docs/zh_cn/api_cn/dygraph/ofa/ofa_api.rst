@@ -1,4 +1,4 @@
-Once-For-All
+OFA-训练
 ============
 
 在进行Once-For-All训练之前，需要把普通的模型先转换为由动态OP组网的超网络。超网络转换方式可以参考 `超网络转换 <./convert_supernet_api.rst>`_ 。
