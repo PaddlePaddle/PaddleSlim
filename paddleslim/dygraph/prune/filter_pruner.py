@@ -49,7 +49,7 @@ class FilterPruner(Pruner):
 
     Args:
         model(paddle.nn.Layer): The target model to be pruned.
-        inputs(list<int>): The inputs of model. It will be use in calling 'model.forward(inputs)'.
+        inputs(list<Object>): The inputs of model. It will be use in calling 'model.forward(inputs)'.
         sen_file(str, optional): The absolute path of file that stores computed sensitivities. If it is
                               set rightly, 'FilterPruner::sensitive' function can not be called anymore
                               in next step. Default: None.
