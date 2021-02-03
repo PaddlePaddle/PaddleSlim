@@ -118,7 +118,7 @@ pruner = FPGMFilterPruner(net, [1, 3, 224, 224])
 
 ## 裁剪结果
 | 模型 | 压缩方法 | Top-1/Top-5 Acc | 模型体积（MB） | GFLOPs |PaddleLite推理耗时| 下载 |
-|:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
+|:--:|:---:|:--:|:--:|:--:|:--:|:--:|
 | MobileNetV1 |    Baseline    |         70.99%/89.68%         |       17       |  1.11  |66.052\35.8014\19.5762|[下载链接](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar) |
 | MobileNetV1 |  uniform -50%  | 69.4%/88.66% (-1.59%/-1.02%)  |       9        |  0.56  | 33.5636\18.6834\10.5076|[下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_uniform-50.tar) |
 | MobileNetV1 | sensitive -30% |  70.4%/89.3% (-0.59%/-0.38%)  |       12       |  0.74  | 46.5958\25.3098\13.6982|[下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/MobileNetV1_sensitive-30.tar) |
