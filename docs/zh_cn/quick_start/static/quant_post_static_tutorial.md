@@ -1,4 +1,4 @@
- # 图像分类模型静态离线量化-快速开始
+ # 图像分类模型静态离线量化
 
 该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[静态离线量化接口](../api_cn/quantization_api.html#quant-post-static)。 该示例包含以下步骤：
 

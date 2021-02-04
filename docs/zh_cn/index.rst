@@ -13,9 +13,13 @@
    install.md
    quick_start/index
    tutorials/index
+   deploy/index
+   cv/index
+   nlp/index
+   models/index
    api_cn/index
    FAQ/index
-   model_zoo/index
+   model_zoo.md
    algo/algo.md
    CHANGELOG.md
 

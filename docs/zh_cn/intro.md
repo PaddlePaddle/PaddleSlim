@@ -1,77 +1,95 @@
-# 介绍
+# 简介
 
-PaddleSlim是一个模型压缩工具库，包含模型剪裁、定点量化、知识蒸馏、超参搜索和模型结构搜索等一系列模型压缩策略。
+PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**剪裁、量化、蒸馏、和模型结构搜索**等模型压缩策略，帮助用户快速实现模型的小型化。
 
-对于业务用户，PaddleSlim提供完整的模型压缩解决方案，可用于图像分类、检测、分割等各种类型的视觉场景。
-同时也在持续探索NLP领域模型的压缩方案。另外，PaddleSlim提供且在不断完善各种压缩策略在经典开源任务的benchmark,
-以便业务用户参考。
+## 版本对齐
 
-对于模型压缩算法研究者或开发者，PaddleSlim提供各种压缩策略的底层辅助接口，方便用户复现、调研和使用最新论文方法。
-PaddleSlim会从底层能力、技术咨询合作和业务场景等角度支持开发者进行模型压缩策略相关的创新工作。
-
-
-## 功能
-
-- 模型剪裁
-  - 卷积通道均匀剪裁
-  - 基于敏感度的卷积通道剪裁
-  - 基于进化算法的自动剪裁
-
-- 定点量化
-  - 在线量化训练（training aware）
-  - 静态离线量化（static post training）
-  - 动态离线量化（dynamic post training）
-
-- 知识蒸馏
-  - 支持单进程知识蒸馏
-  - 支持多进程分布式知识蒸馏
-
-- 神经网络结构自动搜索（NAS）
-  - 支持基于进化算法的轻量神经网络结构自动搜索
-  - 支持One-Shot网络结构自动搜索
-  - 支持基于梯度的DARTS网络结构自动搜索
-  - 支持 FLOPS / 硬件延时约束
-  - 支持多平台模型延时评估
-  - 支持用户自定义搜索算法和搜索空间
+|  PaddleSlim   | PaddlePaddle   | PaddleLite    | 备注        |
+| :-----------: | :------------: | :------------:| :----------:|
+| 1.0.1         | <=1.7          |       2.7     | 支持静态图  |
+| 1.1.1         | 1.8            |       2.7     | 支持静态图  |
+| 1.2.0         | 2.0Beta/RC     |       2.8     | 支持静态图  |
+| 2.0.0         | 2.0            |       2.8     | 支持动态图和静态图  |
 
 
-## 部分压缩策略效果
+## 最近更新
 
-### 分类模型
+2021.2.5： 发布V2.0.0版本，新增支持动态图，新增OFA压缩功能，优化剪枝功能。
+2020.916:  发布V1.2.0版本，新增PACT量化训练功能，新增DML(互蒸馏功能)，修复部分剪裁bug，加强对depthwise_conv2d的剪裁能力，优化剪裁和量化API的易用性和灵活性。
 
-数据: ImageNet2012; 模型: MobileNetV1;
+## 功能概览
 
-|压缩策略 |精度收益(baseline: 70.91%) |模型大小(baseline: 17.0M)|
-|:---:|:---:|:---:|
-| 知识蒸馏(ResNet50)| **+1.06%** | |
-| 知识蒸馏(ResNet50) + int8量化训练 |**+1.10%**| **-71.76%**|
-| 剪裁(FLOPs-50%) + int8量化训练|**-1.71%**|**-86.47%**|
+PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
+<table border=1>
+<tr align="center" valign="bottom">
+  <th>Quantization</th>
+  <th>Pruning</th>
+  <th>NAS</th>
+  <th>Distilling</th>
+</tr>
+<tr valign="top">
+  <td>
+    <ul>
+      <li>QAT</li>
+      <li>PACT</li>
+      <li>PTQ-Static</li>
+      <li>PTQ-Dynamic</li>
+      <li>Embedding Quant</li>
+    </ul>
+  </td>
+  <td>
+    <ul>
+      <li>SensitivityPruner</li>
+      <li>FPGMFilterPruner</li>
+      <li>L1NormFilterPruner</li>
+      <li>L2NormFilterPruner</li>
+      <li>*SlimFilterPruner</li>
+      <li>*OptSlimFilterPruner</li>
+    </ul>
+  </td>
+  <td>
+    <ul>
+      <li>*Simulate Anneal based NAS</li>
+      <li>*Reinforcement Learning based NAS</li>
+      <li>**DARTS</li>
+      <li>**PC-DARTS</li>
+      <li>**Once-for-All</li>
+      <li>*Hardware-aware Search</li>
+    </ul>
+  </td>
 
+  <td>
+    <ul>
+      <li>*FSP</li>
+      <li>*DML</li>
+      <li>*DK for YOLOv3</li>
+    </ul>
+  </td>
+</tr>
+</table>
 
-### 图像检测模型
+注：*表示仅支持静态图，**表示仅支持动态图
 
-#### 数据：Pascal VOC；模型：MobileNet-V1-YOLOv3
+### 效果展示
 
-|        压缩方法           | mAP(baseline: 76.2%)         | 模型大小(baseline: 94MB)      |
-| :---------------------:   | :------------: | :------------:|
-| 知识蒸馏(ResNet34-YOLOv3) | **+2.8%**    |              |
-| 剪裁 FLOPs -52.88%        | **+1.4%**      | **-67.76%**   |
-|知识蒸馏(ResNet34-YOLOv3)+剪裁(FLOPs-69.57%)| **+2.6%**|**-67.00%**|
+PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并且测试了Nvidia GPU、ARM等设备上的加速情况，这里展示部分模型的压缩效果，详细方案可以参考下面CV和NLP模型压缩方案:
 
+<p align="center">
+<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/images/benchmark.png?raw=true" height=185 width=849 hspace='10'/> <br />
+<strong>表1: 部分模型压缩加速情况</strong>
+</p>
 
-#### 数据：COCO；模型：MobileNet-V1-YOLOv3
+注:
+- YOLOv3: 在移动端SD855上加速3.55倍。
+- PP-OCR: 体积由8.9M减少到2.9M, 在SD855上加速1.27倍。
+- BERT: 模型参数由110M减少到80M，精度提升的情况下，Tesla T4 GPU FP16计算加速1.47倍。
 
-|        压缩方法           | mAP(baseline: 29.3%) | 模型大小|
-| :---------------------:   | :------------: | :------:|
-| 知识蒸馏(ResNet34-YOLOv3) |  **+2.1%**     | |
-| 知识蒸馏(ResNet34-YOLOv3)+剪裁(FLOPs-67.56%) | **-0.3%** | **-66.90%**|
+## 许可证书
 
-### 搜索
+本项目的发布受[Apache 2.0 license](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/LICENSE)许可认证。
 
-数据：ImageNet2012; 模型：MobileNetV2
+## 贡献代码
 
-|硬件环境           | 推理耗时 | Top1准确率(baseline:71.90%) |
-|:---------------:|:---------:|:--------------------:|
-| RK3288  | **-23%**    | +0.07%    |
-| Android cellphone  | **-20%**    | +0.16% |
-| iPhone 6s   | **-17%**  | +0.32%  |
+我们非常欢迎你可以为PaddleSlim提供代码，也十分感谢你的反馈。
+
+## 欢迎加入PaddleSlim技术交流群

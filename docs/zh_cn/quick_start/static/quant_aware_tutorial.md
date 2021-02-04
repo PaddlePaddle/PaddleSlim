@@ -1,4 +1,4 @@
-# 图像分类模型量化训练-快速开始
+# 图像分类模型量化训练
 
 该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[量化训练接口](../api_cn/quantization_api.html)。 该示例包含以下步骤：
 
