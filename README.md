@@ -127,7 +127,7 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 - [概述]()
 - [PaddleInference量化部署]()
   - [Intel CPU量化部署]()
-  - [GPU量化部署]()
+  - [Nvidia GPU量化部署]()
 - [PaddleLite量化部署]()
 
 ### CV模型压缩

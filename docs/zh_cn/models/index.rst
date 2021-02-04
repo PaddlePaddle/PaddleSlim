@@ -5,5 +5,4 @@
 .. toctree::
    :maxdepth: 1
 
-   deploy/index
-   strategies/index
+   slimfacenet.md

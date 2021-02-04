@@ -2,7 +2,7 @@
 推理部署
 ==============
 
-该部分介绍如何将PaddleSlim产出的量化模型部署到移动端、Intel CPU和GPU上。
+该部分介绍如何将PaddleSlim产出的量化模型部署到移动端、Intel CPU和Nvidia GPU上。
 
 .. toctree::
    :maxdepth: 1
