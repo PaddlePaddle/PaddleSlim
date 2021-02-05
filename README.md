@@ -35,7 +35,7 @@ pip install paddleslim=1.2.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ## 最近更新
 
 2021.2.5： 发布V2.0.0版本，新增支持动态图，新增OFA压缩功能，优化剪枝功能。
-2020.916:  发布V1.2.0版本，新增PACT量化训练功能，新增DML(互蒸馏功能)，修复部分剪裁bug，加强对depthwise_conv2d的剪裁能力，优化剪裁和量化API的易用性和灵活性。
+2020.9.16:  发布V1.2.0版本，新增PACT量化训练功能，新增DML(互蒸馏功能)，修复部分剪裁bug，加强对depthwise_conv2d的剪裁能力，优化剪裁和量化API的易用性和灵活性。
 
 更多信息请参考：[release note](https://github.com/PaddlePaddle/PaddleSlim/releases)
 

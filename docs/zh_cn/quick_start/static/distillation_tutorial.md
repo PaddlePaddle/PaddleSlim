@@ -1,4 +1,4 @@
-#  图像分类模型知识蒸馏-快速开始
+#  知识蒸馏
 
 该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的知识蒸馏接口](https://paddlepaddle.github.io/PaddleSlim/api/single_distiller_api/)。
 该示例包含以下步骤：

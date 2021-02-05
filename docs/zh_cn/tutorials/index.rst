@@ -7,9 +7,6 @@
 .. toctree::
    :maxdepth: 1
 
-   pruning/overview.md
-   nas/overview.md
-   quant/overview.md
    pruning/index
    nas/index
    quant/index
