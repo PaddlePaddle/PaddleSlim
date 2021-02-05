@@ -31,7 +31,7 @@ def save_model(exe, graph, dirname):
     _logger.info("Save model weights into {}".format(weights_file))
     shapes = {}
     for var in graph.program.list_vars():
-        if var.persistable:
+        if var.persistable and str(var.type) != 'VarType.READER':
             shapes[var.name] = var.shape
     SHAPES_FILE = os.path.join(dirname, _SHAPES_FILE)
     if not os.path.exists(dirname):
