@@ -60,7 +60,7 @@ def collect_convs(params, graph, visited={}):
         param = graph.var(_param)
         if param is None:
             _logger.warning(
-                f"Cann't found relative variables of {_param} because {_param} is not in target program or model. Please make sure {_param} is in your program if you are using static API of PaddlePaddle. And make sure your model in correctly mode and contains {_param} if you are using dynamic API of PaddlePaddle."
+                "Cann't found relative variables of {} because {} is not in target program or model. Please make sure {} is in your program if you are using static API of PaddlePaddle. And make sure your model in correctly mode and contains {} if you are using dynamic API of PaddlePaddle.".format(_param, _param, _param, _param)
             )
             groups.append([])
             continue

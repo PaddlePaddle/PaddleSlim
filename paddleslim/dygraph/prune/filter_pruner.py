@@ -320,7 +320,7 @@ class FilterPruner(Pruner):
         """
         if var_name in self.skip_vars:
             _logger.warn(
-                f"{var_name} is skiped beacause it is not support for pruning derectly."
+                "{} is skiped beacause it is not support for pruning derectly.".format(var_name)
             )
             return
         if isinstance(pruned_dims, int):
@@ -340,7 +340,7 @@ class FilterPruner(Pruner):
                             'var': param,
                             'value': np.array(param.value().get_tensor())
                         })
-                    _logger.debug(f"set value of {param.name} into group")
+                    _logger.debug("set value of {} into group".format(param.name))
 
         mask = self.cal_mask(var_name, pruned_ratio, group_dict)
         for _name in group_dict:
@@ -356,7 +356,7 @@ class FilterPruner(Pruner):
                     src_mask = self._transform_mask(src_mask, trans)
                 current_mask = src_mask
                 assert len(current_mask) == var_shape[dims[
-                    0]], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; dims: {dims}; var name: {_name}; len(mask): {len(mask)}"
+                    0]], "The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {}; var_shape: {}; dims: {}; var name: {}; len(mask): {}".format(len(current_mask), var_shape, dims, _name, len(mask))
                 plan.add(_name, PruningMask(dims, current_mask, pruned_ratio))
         if apply == "lazy":
             plan.apply(self.model, lazy=True)

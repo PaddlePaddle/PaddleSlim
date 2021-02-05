@@ -61,13 +61,13 @@ def extract_vars(inputs):
                 vars.append(_value)
             else:
                 _logger.warn(
-                    f"Variable is excepted, but get an element with type({type(_value)}) from inputs whose type is dict. And the key of element is {_key}."
+                    "Variable is excepted, but get an element with type({}) from inputs whose type is dict. And the key of element is {}.".format(type(_value), _key)
                 )
     elif isinstance(inputs, (tuple, list)):
         for _value in inputs:
             vars.extend(extract_vars(_value))
     if len(vars) == 0:
-        _logger.warn(f"Extract none variables from inputs.")
+        _logger.warn("Extract none variables from inputs.")
     return vars
 
 

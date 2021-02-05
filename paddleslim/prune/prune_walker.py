@@ -95,7 +95,7 @@ class PruneWorker(object):
         _logger.debug("\nfrom: {}\nto: {}\npruned_axis: {}; var: {}".format(
             self.op, op, pruned_axis, var.name()))
         _logger.debug(
-            f"visit {op.type()} by var [{var.name()}] on axis [{pruned_axis}];\t visited={self.visited}\n"
+            "visit {} by var [{}] on axis [{}];\t visited={}\n".format(op.type(), var.name(), pruned_axis, self.visited)
         )
         walker = cls(op, pruned_params=self.pruned_params, visited=self.visited)
         walker.prune(var, pruned_axis, pruned_idx)
@@ -123,7 +123,7 @@ class conv2d(PruneWorker):
     def _prune(self, var, pruned_axis, pruned_idx):
 
         if self._is_depthwise_conv(self.op):
-            _logger.debug(f"Meet conv2d who is depthwise conv2d actually.")
+            _logger.debug("Meet conv2d who is depthwise conv2d actually.")
             walker = depthwise_conv2d(
                 self.op, self.pruned_params, visited=self.visited)
             walker._prune(var, pruned_axis, pruned_idx)
