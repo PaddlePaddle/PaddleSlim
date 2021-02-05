@@ -144,7 +144,7 @@ class Pruner():
                                 op.attr("groups") * new_shape[pruned_axis] /
                                 origin_shape[pruned_axis])
                             _logger.debug(
-                                f"change groups of conv({param.name()}) from {op.attr('groups')} to {new_groups}; origin_shape: {origin_shape}; new_shape: {new_shape}"
+                                "change groups of conv({}) from {} to {}; origin_shape: {}; new_shape: {}".format(param.name(), op.attr('groups'), new_groups, origin_shape, new_shape)
                             )
                             op.set_attr("groups", new_groups)
 
