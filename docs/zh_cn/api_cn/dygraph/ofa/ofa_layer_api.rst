@@ -1,11 +1,11 @@
-SuperOP
-========
+OFA-超网络转换
+==============
 
-PaddleSlim提供了一些API的动态版本，动态API指的是这些OP的参数大小可以在实际运行过程中根据传入的参数进行改变，用法上的差别具体是forward时候需要额外传一些实际运行相关的参数。其中 `layers_old.py <>`_ 对应的是Paddle 2.0alpha及之前版本的API， `layers.py <>`_ 对应的是Paddle 2.0alpha之后版本的API。
+PaddleSlim提供了一些API的动态版本，动态API指的是这些OP的参数大小可以在实际运行过程中根据传入的参数进行改变，用法上的差别具体是forward时候需要额外传一些实际运行相关的参数。其中 `layers_old.py <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers_old.py>`_ 对应的是Paddle 2.0alpha及之前版本的API， `layers.py <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py>`_ 对应的是Paddle 2.0alpha之后版本的API。
 
 .. py:class:: paddleslim.nas.ofa.layers.Block(fn, fixed=False, key=None)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/74db974b6f0187e22bbaf340381a63b7d687a7d4/paddleslim/nas/ofa/layers.py#L64>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py#L64>`_
 
 对Layer进行封装，封装后的Layer和普通Layer用法相同。把每层定义的搜索空间整合到一个大的搜索空间中，训练的时候可以去选择每层的搜索空间。只有在实际运行过程中可以主动改变参数大小的API需要用本类封装，即只有 ``Conv2D`` 、 ``Linear`` 和 ``Embedding`` 这三个API构造的层可能需要被封装。
 
@@ -21,12 +21,13 @@ Block实例
 
 .. code-block:: python
 
-  from paddleslim.nas.ofa.layers import Block
-  block_layer = Block(SuperConv2D(3, 4, 3, candidate_config={'kerne_size': (3, 5, 7)})
+  from paddleslim.nas.ofa.layers import Block, SuperConv2D
+  
+  block_layer = Block(SuperConv2D(3, 4, 3, candidate_config={'kerne_size': (3, 5, 7)}))
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperConv2D(in_channels, out_channels, kernel_size, candidate_config={}, transform_kernel=False, stride=1, padding=0, dilation=1, groups=1, padding_mode='zeros', weight_attr=None, bias_attr=None, data_format='NCHW')
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/74db974b6f0187e22bbaf340381a63b7d687a7d4/paddleslim/nas/ofa/layers.py#L85>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py#L85>`_
 
 该接口用于构建 SuperConv2D 类的一个可调用对象。
 
@@ -63,12 +64,12 @@ Block实例
    data = np.random.uniform(-1, 1, [10, 3, 32, 32]).astype('float32')
    super_conv2d = SuperConv2D(3, 10, 3)
    config = {'channel': 5}
-   data = paddle.to_variable(data)
+   data = paddle.to_tensor(data)
    conv = super_conv2d(data, **config)
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperConv2DTranspose(in_channels, out_channels, kernel_size, candidate_config={}, transform_kernel=False, stride=1, padding=0, output_padding=0, dilation=1, groups=1, padding_mode='zeros', weight_attr=None, bias_attr=None, data_format='NCHW')
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/74db974b6f0187e22bbaf340381a63b7d687a7d4/paddleslim/nas/ofa/layers.py#L381>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py#L386>`_
 
 该接口用于构建 SuperConv2DTranspose 类的一个可调用对象。
 
@@ -99,19 +100,19 @@ Block实例
 
 .. code-block:: python
 
-   import paddle 
-   from paddleslim.nas.ofa.layers import SuperConv2D
-   import numpy as np
-   data = np.random.uniform(-1, 1, [32, 10, 32, 32]).astype('float32')
-   config = {'channel': 5}
-   data = paddle.to_variable(data)
-   super_convtranspose = SuperConv2DTranspose(num_channels=32, num_filters=10, filter_size=3)
-   ret = super_convtranspose(paddle.to_variable(data), **config)
+  import paddle 
+  from paddleslim.nas.ofa.layers import SuperConv2DTranspose
+  import numpy as np
+  data = np.random.uniform(-1, 1, [32, 10, 32, 32]).astype('float32')
+  config = {'channel': 5}
+  data = paddle.to_tensor(data)
+  super_convtranspose = SuperConv2DTranspose(32, 10, 3)
+  ret = super_convtranspose(paddle.to_tensor(data), **config)
 
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperLinear(in_features, out_features, candidate_config={}, weight_attr=None, bias_attr=None, name=None):
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/74db974b6f0187e22bbaf340381a63b7d687a7d4/paddleslim/nas/ofa/layers.py#L828>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py#L833>`_
 
 该接口用于构建 SuperLinear 类的一个可调用对象。
 
@@ -138,16 +139,16 @@ Block实例
   import paddle
   from paddleslim.nas.ofa.layers import SuperLinear
 
-  data = np.random.uniform(-1, 1, [32, 64] ).astype('float32')
+  data = np.random.uniform(-1, 1, [32, 64]).astype('float32')
   config = {'channel': 16}
-  linear = SuperLinear(32, 64)
-  data = paddle.to_variable(data)
+  linear = SuperLinear(64, 64)
+  data = paddle.to_tensor(data)
   res = linear(data, **config)
 
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperEmbedding(num_embeddings, embedding_dim, candidate_config={}, padding_idx=None, sparse=False, weight_attr=None, name=None):
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/74db974b6f0187e22bbaf340381a63b7d687a7d4/paddleslim/nas/ofa/layers.py#L1126>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py#L1131>`_
 
 该接口用于构建 SuperEmbedding 类的一个可调用对象。
 
@@ -175,15 +176,15 @@ Block实例
   import paddle
   from paddleslim.nas.ofa.layers import SuperEmbedding
 
-  data = np.random.uniform(-1, 1, [32, 64]).astype('float32')
+  data = np.random.uniform(-1, 1, [32, 64]).astype('int64')
   config = {'channel': 16}
-  emb = SuperEmbedding(32, 64)
-  data = paddle.to_variable(data)
+  emb = SuperEmbedding(64, 64)
+  data = paddle.to_tensor(data)
   res = emb(data, **config)
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperBatchNorm2D(num_features, momentum=0.9, epsilon=1e-05, weight_attr=None, bias_attr=None, data_format='NCHW', name=None):
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/74db974b6f0187e22bbaf340381a63b7d687a7d4/paddleslim/nas/ofa/layers.py#L932>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py#L937>`_
 
 该接口用于构建 SuperBatchNorm2D 类的一个可调用对象。
 
@@ -212,7 +213,7 @@ Block实例
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperInstanceNorm2D(num_features, momentum=0.9, epsilon=1e-05, weight_attr=None, bias_attr=None, data_format='NCHW', name=None):
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/74db974b6f0187e22bbaf340381a63b7d687a7d4/paddleslim/nas/ofa/layers.py#L999>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py#L1004>`_
 
 该接口用于构建 SuperInstanceNorm2D 类的一个可调用对象。
 
@@ -241,7 +242,7 @@ Block实例
 
 .. py:class:: paddleslim.nas.ofa.layers.SuperLayerNorm(normalized_shape, epsilon=1e-05, weight_attr=None, bias_attr=None, name=None):
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/74db974b6f0187e22bbaf340381a63b7d687a7d4/paddleslim/nas/ofa/layers.py#L1057>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/nas/ofa/layers.py#L1062>`_
 
 该接口用于构建 SuperLayerNorm 类的一个可调用对象。
 
@@ -261,8 +262,8 @@ Block实例
     from paddleslim.nas.ofa.layers import SuperLayerNorm
 
     np.random.seed(123)
-    x_data = np.random.random(size=(2, 2, 2, 3)).astype('float32')
+    x_data = np.random.random(size=(2, 3)).astype('float32')
     x = paddle.to_tensor(x_data) 
-    layer_norm = SuperLayerNorm(x_data.shape[1:])
+    layer_norm = SuperLayerNorm(x_data.shape[1])
     layer_norm_out = layer_norm(x)
 

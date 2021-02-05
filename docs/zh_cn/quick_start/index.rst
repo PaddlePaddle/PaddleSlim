@@ -1,13 +1,11 @@
 
 快速开始
-========
+==============
 
 .. toctree::
    :maxdepth: 1
-
-   pruning_tutorial.md
-   distillation_tutorial.md
-   quant_aware_tutorial.md
-   quant_post_static_tutorial.md
-   nas_tutorial.md
+   static/index.rst
+   dygraph_pruning_tutorial.md
+   dygraph_quant_aware_training_tutorial.md
+   dygraph_quant_post_tutorial.md
     

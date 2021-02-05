@@ -3,11 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-API文档
-=======
+静态图
+======
 
 .. toctree::
    :maxdepth: 1
 
-   dygraph/index.rst
-   static/index.rst
+   common/common_index.rst
+   quant/quant_index.rst
+   prune/prune_index.rst
+   dist/distill_index.rst
+   nas/nas_index.rst

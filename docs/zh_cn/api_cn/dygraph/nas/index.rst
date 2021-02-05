@@ -3,11 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-API文档
+NAS
 =======
 
 .. toctree::
    :maxdepth: 1
 
-   dygraph/index.rst
-   static/index.rst
+   darts.rst

@@ -2,7 +2,7 @@ import paddle
 import collections
 import numpy as np
 import logging
-from ..common import get_logger
+from paddleslim.common import get_logger
 from paddle.fluid import core
 _logger = get_logger(__name__, level=logging.INFO)
 

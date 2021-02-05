@@ -104,7 +104,9 @@ class SuperConv2D(nn.Conv2D):
     applied to the final result.
     For each input :math:`X`, the equation is:
     .. math::
-        Out = \\sigma (W \\ast X + b)
+
+        Out = sigma (W \\ast X + b)
+
     Where:
     * :math:`X`: Input value, a ``Tensor`` with NCHW format.
     * :math:`W`: Filter value, a ``Tensor`` with shape [MCHW] .
@@ -121,8 +123,11 @@ class SuperConv2D(nn.Conv2D):
           Output shape: :math:`(N, C_{out}, H_{out}, W_{out})`
         Where
         .. math::
-            H_{out}&= \\frac{(H_{in} + 2 * paddings[0] - (dilations[0] * (H_f - 1) + 1))}{strides[0]} + 1 \\\\
+
+            H_{out}&= \\frac{(H_{in} + 2 * paddings[0] - (dilations[0] * (H_f - 1) + 1))}{strides[0]} + 1   
+
             W_{out}&= \\frac{(W_{in} + 2 * paddings[1] - (dilations[1] * (W_f - 1) + 1))}{strides[1]} + 1
+
     Parameters:
         num_channels(int): The number of channels in the input image.
         num_filters(int): The number of filter. It is as same as the output
@@ -182,7 +187,7 @@ class SuperConv2D(nn.Conv2D):
           data = np.random.uniform(-1, 1, [10, 3, 32, 32]).astype('float32')
           super_conv2d = SuperConv2D(3, 10, 3)
           config = {'channel': 5}
-          data = paddle.to_variable(data)
+          data = paddle.to_tensor(data)
           conv = super_conv2d(data, config)
 
     """
@@ -480,8 +485,8 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
           from paddleslim.nas.ofa.layers import SuperConv2DTranspose
           data = np.random.random((3, 32, 32, 5)).astype('float32')
           config = {'channel': 5}
-          super_convtranspose = SuperConv2DTranspose(num_channels=32, num_filters=10, filter_size=3)
-          ret = super_convtranspose(paddle.to_variable(data), config)
+          super_convtranspose = SuperConv2DTranspose(32, 10, 3)
+          ret = super_convtranspose(paddle.to_tensor(data), config)
     """
 
     def __init__(self,
@@ -871,10 +876,10 @@ class SuperLinear(nn.Linear):
           import paddle
           from paddleslim.nas.ofa.layers import SuperLinear
           
-          data = np.random.uniform(-1, 1, [32, 64] ).astype('float32')
+          data = np.random.uniform(-1, 1, [32, 64]).astype('float32')
           config = {'channel': 16}
-          linear = SuperLinear(32, 64)
-          data = paddle.to_variable(data)
+          linear = SuperLinear(64, 64)
+          data = paddle.to_tensor(data)
           res = linear(data, **config)
     """
 
@@ -1088,9 +1093,9 @@ class SuperLayerNorm(nn.LayerNorm):
           from paddleslim.nas.ofa.layers import SuperLayerNorm
           
           np.random.seed(123)
-          x_data = np.random.random(size=(2, 2, 2, 3)).astype('float32')
+          x_data = np.random.random(size=(2, 3)).astype('float32')
           x = paddle.to_tensor(x_data)
-          layer_norm = SuperLayerNorm(x_data.shape[1:])
+          layer_norm = SuperLayerNorm(x_data.shape[1])
           layer_norm_out = layer_norm(x)
     """
 
@@ -1162,10 +1167,10 @@ class SuperEmbedding(nn.Embedding):
           import paddle
           from paddleslim.nas.ofa.layers import SuperEmbedding
           
-          data = np.random.uniform(-1, 1, [32, 64]).astype('float32')
+          data = np.random.uniform(-1, 1, [32, 64]).astype('int64')
           config = {'channel': 16}
-          emb = SuperEmbedding(32, 64)
-          data = paddle.to_variable(data)
+          emb = SuperEmbedding(64, 64)
+          data = paddle.to_tensor(data)
           res = emb(data, **config)
     """
 

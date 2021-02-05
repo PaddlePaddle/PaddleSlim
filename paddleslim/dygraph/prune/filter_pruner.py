@@ -4,11 +4,11 @@ import numpy as np
 import pickle
 import copy
 import paddle
-from ..common import get_logger
+from paddleslim.common import get_logger
 from .var_group import *
 from .pruning_plan import *
 from .pruner import Pruner
-from ..analysis import dygraph_flops as flops
+from paddleslim.analysis import dygraph_flops as flops
 from .var_group import VarGroup
 
 __all__ = ['Status', 'FilterPruner']
@@ -49,7 +49,7 @@ class FilterPruner(Pruner):
 
     Args:
         model(paddle.nn.Layer): The target model to be pruned.
-        inputs(list<int>): The inputs of model. It will be use in calling 'model.forward(inputs)'.
+        inputs(list<Object>): The inputs of model. It will be use in calling 'model.forward(inputs)'.
         sen_file(str, optional): The absolute path of file that stores computed sensitivities. If it is
                               set rightly, 'FilterPruner::sensitive' function can not be called anymore
                               in next step. Default: None.
