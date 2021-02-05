@@ -29,7 +29,7 @@ pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 安装指定版本：
 ```bash
-pip install paddleslim=1.2.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install paddleslim=2.0.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ## 最近更新
@@ -166,3 +166,5 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 我们非常欢迎你可以为PaddleSlim提供代码，也十分感谢你的反馈。
 
 ## 欢迎加入PaddleSlim技术交流群
+
+请添加微信公众号"AIDigest"，备注“压缩”，飞桨同学会拉您进入微信交流群。

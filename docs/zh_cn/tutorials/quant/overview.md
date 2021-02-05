@@ -1,4 +1,4 @@
-# 量化策略介绍与应用效果
+# Overview
 
 ## 图像分类INT8量化模型在CPU上的部署和预测
 PaddleSlim主要包含三种量化方法：量化训练(Quant Aware Training, QAT)、动态离线量化(Post Training Quantization Dynamic, PTQ Dynamic)、静态离线量化(Post Training Quantization Static, PTQ Static)。

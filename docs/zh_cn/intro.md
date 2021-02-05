@@ -87,9 +87,3 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 ## 许可证书
 
 本项目的发布受[Apache 2.0 license](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/LICENSE)许可认证。
-
-## 贡献代码
-
-我们非常欢迎你可以为PaddleSlim提供代码，也十分感谢你的反馈。
-
-## 欢迎加入PaddleSlim技术交流群
