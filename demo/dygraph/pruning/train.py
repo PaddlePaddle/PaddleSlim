@@ -171,7 +171,7 @@ def compress(args):
 
     for param in net.parameters():
         if "conv2d" in param.name:
-            print(f"{param.name}\t{param.shape}")
+            print("{}\t{}".format(param.name, param.shape))
 
     net.train()
     model = paddle.Model(net, inputs, labels)
