@@ -49,8 +49,8 @@ class TestFSPLoss(StaticCase):
             for op in block.ops:
                 merged_ops.append(op.type)
         distill_loss = fsp_loss(
-            'teacher_conv5_bn_output.tmp_2', 'teacher_conv6_bn_output.tmp_2',
-            'conv1_bn_output.tmp_2', 'conv2_bn_output.tmp_2')
+            'teacher_conv5_bn_output.tmp_3', 'teacher_conv6_bn_output.tmp_3',
+            'conv1_bn_output.tmp_3', 'conv2_bn_output.tmp_3')
         loss_ops = []
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
