@@ -86,7 +86,7 @@ def export(args):
     ratios = {}
     for param in params:
         ratios[param] = args.pruned_ratio
-    print(f"ratios: {ratios}")
+    print("ratios: {}".format(ratios))
     pruner.prune_vars(ratios, [0])
 
     param_state_dict = paddle.load(args.checkpoint + ".pdparams")
