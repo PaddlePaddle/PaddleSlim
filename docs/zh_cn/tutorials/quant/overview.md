@@ -3,13 +3,13 @@
 ## 图像分类INT8量化模型在CPU上的部署和预测
 PaddleSlim主要包含三种量化方法：量化训练(Quant Aware Training, QAT)、动态离线量化(Post Training Quantization Dynamic, PTQ Dynamic)、静态离线量化(Post Training Quantization Static, PTQ Static)。
 
-- [量化训练](quant_aware_training_tutorial.md) 量化训练让模型感知量化运算对模型精度带来的影响，通过finetune训练降低量化误差。
-- [动态离线量化](quant_post_dynamic_tutorial.md) 动态离线量化仅将模型中特定算子的权重从FP32类型映射成INT8/16类型。
-- [静态离线量化](quant_post_static_tutorial.md) 静态离线量化使用少量无标签校准数据，采用KL散度等方法计算量化比例因子。
+- [量化训练](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/quant/static/quant_aware_tutorial.html) 量化训练让模型感知量化运算对模型精度带来的影响，通过finetune训练降低量化误差。
+- [动态离线量化](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/quant/static/quant_post_tutorial.html) 动态离线量化仅将模型中特定算子的权重从FP32类型映射成INT8/16类型。
+- [静态离线量化](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/quant/static/quant_post_tutorial.html) 静态离线量化使用少量无标签校准数据，采用KL散度等方法计算量化比例因子。
 
 除此之外，PaddleSlim还有一种对embedding层量化的方法，将网络中embedding层参数从float32类型量化到int8类型。
 
-- [Embedding量化](../static/embedding_quant_tutorial.md) Embedding量化仅将embedding参数从float32类型映射到int8类型，可以降低embedding参数体积。
+- [Embedding量化](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/quant/static/embedding_quant_tutorial.html) Embedding量化仅将embedding参数从float32类型映射到int8类型，可以降低embedding参数体积。
 
 下图展示了如何根据需要选择模型量化方法
 
