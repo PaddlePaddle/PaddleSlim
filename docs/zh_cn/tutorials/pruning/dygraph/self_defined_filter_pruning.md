@@ -17,12 +17,8 @@ def cal_mask(self, var_name, pruned_ratio, group):
 
 ### 1.1 Group概念介绍
 
-<div align="center">
-    <img src="self_define_filter_pruning/1-1.png" width="600" height="230">
-</div>
-<div align="center">
-<strong>图1-1 卷积层关联关系示意图</strong>
-</div>
+![](./self_define_filter_pruning/1-1.png)
+<center><strong>图1-1 卷积层关联关系示意图</strong></center>
 
 如图1-1所示，在给定模型中有两个卷积层，第一个卷积层有3个`filters`，第二个卷积层有2个`filters`。如果删除第一个卷积绿色的`filter`，第一个卷积的输出特征图的通道数也会减1，同时需要删掉第二个卷积层绿色的`kernels`。如上所述的两个卷积共同组成一个group，表示如下：
 
@@ -52,13 +48,8 @@ group = {
 图1-2为更复杂的情况，其中，`Add`操作的所有输入的通道数需要保持一致，`Concat`操作的输出通道数的调整可能会影响到所有输入的通道数，因此`group`中可能包含多个卷积的参数或变量，可以是：卷积权重、卷积bias、`batch norm`相关参数等。
 
 
-<div align="center">
-    <img src="self_define_filter_pruning/1-2.png" width="388" height="350">
-</div>
-<div align="center">
-<strong>图1-2 复杂网络示例</strong>
-</div>
-
+![](./self_define_filter_pruning/1-2.png)
+<center><strong>图1-2 复杂网络示例</strong></center>
 
 ## 2. 定义模型
 
@@ -132,31 +123,20 @@ pruner.restore()
 满足上述条件后，我们才能裁掉更多Norm统计值较小的参数，如图4-1中红色部分所示。
 
 
-<div align="center">
-    <img src="self_define_filter_pruning/4-1.png" width="600" height="170">
-</div>
-<div align="center">
-<strong>图4-1</strong>
-</div>
+![](./self_define_filter_pruning/4-1.png)
+<center><strong>图 4-1</strong></center>
 
 而现实中的模型的权重分布如图4-2中绿色分布所示，总是有较小的偏差或较大的最小值。
 
-<div align="center">
-    <img src="self_define_filter_pruning/4-2.png" width="600" height="224">
-</div>
-<div align="center">
-<strong>图4-2</strong>
-</div>
+![](./self_define_filter_pruning/4-2.png)
+<center><strong>图 4-2</strong></center>
 
 考虑到上述传统方法的缺点，FPGM则用filter之间的几何距离来表示重要性，其遵循的原则就是：几何距离比较近的filters，作用也相近。
 如图4-3所示，有3个filters，将各个filter展开为向量，并两两计算几何距离。其中，绿色filter的重要性得分就是它到其它两个filter的距离和，即0.7071+0.5831=1.2902。同理算出另外两个filters的得分，绿色filter得分最高，其重要性最高。
 
-<div align="center">
-    <img src="self_define_filter_pruning/4-3.png" width="400" height="560">
-</div>
-<div align="center">
-<strong>图4-3</strong>
-</div>
+![](./self_define_filter_pruning/4-3.png)
+<center><strong>图 4-3</strong></center>
+
 
 ### 4.2 实现
 
