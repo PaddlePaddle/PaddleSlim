@@ -1,4 +1,4 @@
-# PaddleSlim INT8量化模型使用TensorRT的部署和预测
+# Nvidia GPU量化部署
 
 ## 概述
 NVIDIA TensorRT 是一个高性能的深度学习预测库，适用于Nvidia GPU，可为深度学习推理应用程序提供低延迟和高吞吐量。PaddlePaddle 采用子图的形式对TensorRT进行了集成，即我们可以使用该模块来提升Paddle模型的预测性能。本教程将介绍如何使用TensortRT部署PaddleSlim量化得到的模型，无论是量化训练（QAT）还是离线量化（PTQ）模型均可支持。对于常见图像分类模型，INT8模型的推理速度通常是FP32模型的3.2-6.7倍。
