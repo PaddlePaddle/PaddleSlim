@@ -13,10 +13,8 @@
 4. 每个batch数据在训练前首先中会选择当前要训练的子网络配置（子网络配置目前仅包括对整个模型的宽度的选择），参数更新时仅会更新当前子网络计算中用到的那部分参数。
 5. 通过以上的方式来优化整个超网络参数，训练完成后选择满足加速要求和精度要求的子模型。
 
-<p align="center">
-<img src="https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/images/algo/ofa_bert.jpg" width="950"/><br />
-整体流程图
-</p>
+![](./images/ofa_bert.png)
+<center>整体流程</center>
 
 ## 基于ERNIE repo代码进行压缩
 本教程基于PaddleSlim2.0及之后版本、Paddle1.8.5和ERNIE 0.0.4dev及之后版本，请确认已正确安装Paddle、PaddleSlim和ERNIE。

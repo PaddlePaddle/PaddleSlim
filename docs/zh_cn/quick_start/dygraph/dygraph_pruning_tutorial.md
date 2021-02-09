@@ -1,6 +1,6 @@
 #  卷积Filter剪裁
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的卷积通道剪裁接口](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/dygraph_docs)。
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的卷积通道剪裁接口]()。
 该示例包含以下步骤：
 
 1. 导入依赖
@@ -27,7 +27,7 @@ from paddleslim.dygraph import L1NormFilterPruner
 ## 2. 构建网络和数据集
 
 该章节构造一个用于对CIFAR10数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[3, 32, 32]`，输出类别数为10。
-为了方便展示示例，我们使用Paddle提供的[预定义分类模型](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api/paddle/vision/models/mobilenetv1/MobileNetV1_cn.html#mobilenetv1)和[高层API](https://www.paddlepaddle.org.cn/documentation/docs/zh/2.0-rc1/tutorial/quick_start/high_level_api/high_level_api.html)，执行以下代码构建分类模型：
+为了方便展示示例，我们使用Paddle提供的[预定义分类模型](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api/paddle/vision/models/mobilenetv1/MobileNetV1_cn.html#mobilenetv1)和[高层API]()，执行以下代码构建分类模型：
 
 ```
 net = models.mobilenet_v1(pretrained=False, scale=1.0, num_classes=10)
