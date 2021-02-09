@@ -1,7 +1,5 @@
 # PaddleSlim
 
-中文 | [English](README_en.md)
-
 [![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)](https://paddleslim.readthedocs.io/en/latest/)
 [![Documentation Status](https://img.shields.io/badge/中文文档-最新-brightgreen.svg)](https://paddleslim.readthedocs.io/zh_CN/latest/)
 [![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
@@ -118,41 +116,82 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 
 ### 进阶教程
 
-[量化训练]()
-[离线量化]() | [剪裁]() | [蒸馏]() | [NAS]()
+- 通道剪裁
+  - [四种剪裁策略效果对比与应用方法](docs/zh_cn/tutorials/pruning/overview.md)
+    - [L1NormFilterPruner](docs/zh_cn/tutorials/pruning/overview.md#l1normfilterpruner)
+    - [FPGMFilterPruner](docs/zh_cn/tutorials/pruning/overview.md#fpgmfilterpruner)
+    - [SlimFilterFilterPruner](docs/zh_cn/tutorials/pruning/overview.md#slimfilterpruner)
+    - [OptSlimFilterPruner](docs/zh_cn/tutorials/pruning/overview.md#optslimfilterpruner)
+  - 剪裁功能详解: [动态图](docs/zh_cn/tutorials/pruning/dygraph/filter_pruning.md) | [静态图](docs/zh_cn/tutorials/pruning/static/image_classification_sensitivity_analysis_tutorial.md)
+  - 自定义剪裁策略：[动态图](docs/zh_cn/tutorials/pruning/dygraph/self_defined_filter_pruning.md)
+
+- 低比特量化
+  - [三种量化方法介绍与应用](docs/zh_cn/tutorials/quant/overview.md)
+    - 量化训练：[动态图](docs/zh_cn/tutorials/quant/dygraph/quant_aware_training_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
+    - 离线量化：[动态图](docs/zh_cn/tutorials/quant/dygraph/dygraph_quant_post_tutorial.md) | [静态图](docs/zh_cn/tutorials/quant/static/quant_post_tutorial.md)
+    - embedding量化：[静态图](docs/zh_cn/tutorials/quant/static/embedding_quant_tutorial.md)
+
+- NAS
+  - [四种NAS策略介绍和应用](docs/zh_cn/tutorials/nas/overview.md)
+
+- 蒸馏
+  - [知识蒸馏示例](demo/distillation)
+
 
 #### 推理部署
 
-- [概述]()
-- [PaddleInference量化部署]()
-  - [Intel CPU量化部署]()
-  - [Nvidia GPU量化部署]()
-- [PaddleLite量化部署]()
+- [Intel CPU量化部署](demo/mkldnn_quant/README.md)
+- [Nvidia GPU量化部署](demo/quant/deploy/TensorRT/README.md)
+- [PaddleLite量化部署](docs/zh_cn/deploy/deploy_cls_model_on_mobile_device.md)
 
 ### CV模型压缩
 
-- [检测模型压缩(基于PaddleDetection)]()
-  - YOLOv3 3.5倍加速方案
+- 检测模型压缩(基于PaddleDetection)
+  - 压缩方案
+    - YOLOv3 3.5倍加速方案: 文档整理中...
+  - 方法应用-静态图
+    - [在COCO和VOC上蒸馏MobileNetV1-YOLOv3](docs/zh_cn/cv/detection/static/paddledetection_slim_distillation_tutorial.md)
+    - [MobileNetV1-YOLOv3低比特量化训练](docs/zh_cn/cv/detection/static/paddledetection_slim_quantization_tutorial.md)
+    - [人脸检测模型小模型结构搜索](docs/zh_cn/cv/detection/static/paddledetection_slim_nas_tutorial.md)
+    - [剪枝](docs/zh_cn/cv/detection/static/paddledetection_slim_pruing_tutorial.md)
+    - [剪枝与蒸馏的结合使用](docs/zh_cn/cv/detection/static/paddledetection_slim_prune_dist_tutorial.md)
+    - [卷积层敏感度分析](docs/zh_cn/cv/detection/static/paddledetection_slim_sensitivy_tutorial.md)
+  - 方法应用-动态图
+    - 文档整理中...
 
-- [分割模型压缩(基于PaddleSeg)]()
+- 分割模型压缩(基于PaddleSeg)
+
+  - 压缩方案
+    - 方案建设中...
+
+  - 方法应用-静态图
+    - 文档整理中...
+
+  - 方法应用-动态图
+    - 文档整理中...
 
 - [OCR模型压缩(基于PaddleOCR)]()
-  - [3.5M模型压缩方案]()
+
+  - 压缩方案
+    - 3.5M模型压缩方案: 文档整理中...
+
+  - 方法应用-静态图
+    - [低比特量化训练](https://github.com/PaddlePaddle/PaddleOCR/tree/release/1.1/deploy/slim/quantization)
+    - [剪枝](https://github.com/PaddlePaddle/PaddleOCR/tree/release/1.1/deploy/slim/prune)
+
+  - 方法应用-动态图
+    - 文档整理中...
+
 
 ### NLP模型压缩
 
-- [BERT]()
-- [ERNIE]()
-
-### 通用轻量级模型
-
-- 人脸模型（SlimfaceNet）
-- 图像分类模型（SlimMobileNet）
+- [BERT](docs/zh_cn/nlp/paddlenlp_slim_ofa_tutorial.md)
+- [ERNIE](docs/zh_cn/nlp/ernie_slim_ofa_tutorial.md)
 
 ### API文档
 
-- 动态图
-- 静态图
+- [动态图](docs/zh_cn/api_cn/dygraph)
+- [静态图](docs/zh_cn/api_cn/static)
 
 ### [FAQ]()
 
