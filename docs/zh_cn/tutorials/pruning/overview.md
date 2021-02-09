@@ -18,7 +18,7 @@ PaddleSlim提供以下内置剪裁方法。
 - 支持自定义各层剪裁率：意为是否支持手动指定各个卷积层的剪裁率。
 
 
-除了以上内置策略，PaddleSlim还支持用户自定义卷积通道剪裁策略，请参考：[自定义卷积通道剪裁教程]()
+除了以上内置策略，PaddleSlim还支持用户自定义卷积通道剪裁策略，请参考：[自定义卷积通道剪裁教程](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/pruning/dygraph/self_defined_filter_pruning.html)
 
 ## 各类方法效果对比
 
@@ -52,7 +52,7 @@ pruner =paddleslim. L1NormFilterPruner(net, [1, 3, 128, 128])
 pruner.prune_vars({"conv2d_0.w_0": 0.3})
 ```
 
-[API文档](../../api_cn/dygraph/pruners/l1norm_filter_pruner.html) | [完整示例](../../quick_start/dygraph/dygraph_pruning_tutorial.html)
+[API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/dygraph/pruners/l1norm_filter_pruner.html) | [完整示例](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/dygraph/dygraph_pruning_tutorial.html)
 
 #### 静态图
 
@@ -66,7 +66,7 @@ pruned_program, _, _ = pruner.prune(
         place=fluid.CPUPlace())
 ```
 
-[API文档](../../api_cn/static/prune/prune_api.html) | [完整示例](../../quick_start/static/pruning_tutorial.html)
+[API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html) | [完整示例](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/static/pruning_tutorial.html)
 
 
 ### FPGMFilterPruner
@@ -84,7 +84,7 @@ pruner =paddleslim.FPGMFilterPruner(net, [1, 3, 128, 128])
 pruner.prune_vars({"conv2d_0.w_0": 0.3})
 ```
 
-[API文档](../../api_cn/dygraph/pruners/fpgm_filter_pruner.html) | [完整示例](../../quick_start/dygraph/dygraph_pruning_tutorial.html)
+[API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/dygraph/pruners/fpgm_filter_pruner.html) | [完整示例](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/dygraph/dygraph_pruning_tutorial.html)
 
 #### 静态图
 
@@ -98,7 +98,7 @@ pruned_program, _, _ = pruner.prune(
         place=fluid.CPUPlace())
 ```
 
-[API文档](../../api_cn/static/prune/prune_api.html) | [完整示例](../../quick_start/static/pruning_tutorial.html)
+[API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html) | [完整示例](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/static/pruning_tutorial.html)
 
 
 ### SlimFilterPruner
@@ -121,7 +121,7 @@ pruned_program, _, _ = pruner.prune(
         place=fluid.CPUPlace())
 ```
 
-[API文档](../../api_cn/static/prune/prune_api.html) | [完整示例](../../quick_start/static/pruning_tutorial.html)
+[API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html) | [完整示例](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/static/pruning_tutorial.html)
 
 
 ### OptSlimFilterPruner
@@ -142,4 +142,4 @@ pruned_program, _, _ = pruner.prune(
         place=fluid.CPUPlace())
 ```
 
-[API文档](../../api_cn/static/prune/prune_api.html) | [完整示例](../../quick_start/static/pruning_tutorial.html)
+[API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html) | [完整示例](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/static/pruning_tutorial.html)

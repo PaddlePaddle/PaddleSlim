@@ -1,6 +1,6 @@
 #  敏感度分析
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的敏感度分析接口](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/#sensitivity)。
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的敏感度分析接口](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html#sensitivity)。
 该示例包含以下步骤：
 
 1. 导入依赖
@@ -109,7 +109,7 @@ params = params[:5]
 
 ### 7.1 简单计算敏感度
 
-调用[sensitivity接口](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/#sensitivity)对训练好的模型进行敏感度分析。
+调用[sensitivity接口](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html#paddleslim.prune.sensitivity)对训练好的模型进行敏感度分析。
 
 在计算过程中，敏感度信息会不断追加保存到选项`sensitivities_file`指定的文件中，该文件中已有的敏感度信息不会被重复计算。
 
@@ -204,7 +204,7 @@ print(s)
 
 ### 8.1 计算剪裁率
 
-首先，调用PaddleSlim提供的[get_ratios_by_loss](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/#get_ratios_by_loss)方法根据敏感度计算剪裁率，通过调整参数`loss`大小获得合适的一组剪裁率：
+首先，调用PaddleSlim提供的[get_ratios_by_loss](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html#paddleslim.prune.get_ratios_by_loss)方法根据敏感度计算剪裁率，通过调整参数`loss`大小获得合适的一组剪裁率：
 
 
 ```python
@@ -230,7 +230,7 @@ print("FLOPs after pruning: {}".format(slim.analysis.flops(pruned_program)))
 
 ### 8.3 剪裁测试网络
 
->注意：对测试网络进行剪裁时，需要将`only_graph`设置为True，具体原因请参考[Pruner API文档](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/#pruner)
+>注意：对测试网络进行剪裁时，需要将`only_graph`设置为True，具体原因请参考[Pruner API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html#paddleslim.prune.Pruner)
 
 
 ```python

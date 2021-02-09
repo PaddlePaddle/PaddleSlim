@@ -5,8 +5,8 @@
 
 PaddleSlim包含`QAT量化训练`和`PACT改进的量化训练`两种量化方法
 
-- [QAT]()
-- [PACT]()
+- QAT
+- PACT
 
 ## 使用方法
 
