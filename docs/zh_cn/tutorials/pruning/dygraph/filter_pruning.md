@@ -103,32 +103,19 @@ pruner = L1NormFilterPruner(net, [1, 3, 224, 224])
 第三步：同理得到第4个红点。把『卷积1』对应的4个红点链接成曲线，即为『卷积1』的敏感度曲线。
 第四步：同理得到『卷积K』的敏感度曲线。
 
-<div align="center">
-    <img src="filter_pruning/4-1.png" width="600" height="300">
-</div>
-<div align="center">
-图4-1 敏感度计算过程示意图
-</div>
+![](./filter_pruning/4-1.png)
+<center>图4-1</center>
 
 如图4-2所示，为VGG-16在CIFAR10分类任务上的敏感度曲线示意图：
 
-<div align="center">
-    <img src="filter_pruning/4-2.png" width="600" height="500">
-</div>
-<div align="center">
-图4-2 VGG-16敏感度示例
-</div>
+![](./filter_pruning/4-2.png)
+<center>图4-2</center>
 
 
 考虑到不同的模型在不同的任务上的精度数值差别较大，甚至不在同一个量级，所以，PaddleSlim在计算和存储卷积层敏感度时，使用的是精度的损失比例。如图4-3所示，为PaddleSlim计算出的MobileNetV1-YOLOv3在VOC检测任务上的敏感度示意图，其中，纵轴为精度损失：
 
-<div align="center">
-    <img src="filter_pruning/4-3.png" width="600" height="600">
-</div>
-<div align="center">
-图4-3 用精度损失表示的敏感度
-</div>
-
+![](./filter_pruning/4-3.png)
+<center>图4-3</center>
 
 #### 敏感度计算
 
