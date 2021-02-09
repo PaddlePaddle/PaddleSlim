@@ -108,19 +108,18 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 
 ## 文档教程
 
-### 快速上手
+### 快速开始
 
-- 量化训练 - [动态图]() | [静态图]()
-- 离线量化 - [动态图]() | [静态图]()
-- 剪裁 - [动态图]() | [静态图]()
-- 蒸馏 - [动态图]() | [静态图]()
-- NAS - [动态图]() | [静态图]()
+- 量化训练 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_quant_aware_training_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
+- 离线量化 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_quant_post_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/quant_post_static_tutorial.md)
+- 剪裁 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_pruning_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/pruning_tutorial.md)
+- 蒸馏 - [静态图](docs/zh_cn/quick_start/static/distillation_tutorial.md)
+- NAS - [静态图](docs/zh_cn/quick_start/static/nas_tutorial.md)
 
 ### 进阶教程
 
-#### 压缩功能详解
-
-[量化训练]() | [离线量化]() | [剪裁]() | [蒸馏]() | [NAS]()
+[量化训练]()
+[离线量化]() | [剪裁]() | [蒸馏]() | [NAS]()
 
 #### 推理部署
 
