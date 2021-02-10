@@ -1,4 +1,4 @@
-# PaddleSlim INT8量化模型在CPU上的部署和预测
+# Intel CPU量化部署
 
 ## 概述
 

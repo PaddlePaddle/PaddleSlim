@@ -1,6 +1,6 @@
-# 图像分类网络结构搜索-快速开始
+# 网络结构搜索
 
-该教程以图像分类模型MobileNetV2为例，说明如何在cifar10数据集上快速使用[网络结构搜索接口](../api/nas_api.md)。
+该教程以图像分类模型MobileNetV2为例，说明如何在cifar10数据集上快速使用[网络结构搜索接口](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/nas/nas_api.html)。
 该示例包含以下步骤：
 
 1. 导入依赖

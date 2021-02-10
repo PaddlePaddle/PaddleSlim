@@ -10,4 +10,3 @@
    table_latency.md
    early_stop.rst
    one_shot_api.rst
-   darts.rst

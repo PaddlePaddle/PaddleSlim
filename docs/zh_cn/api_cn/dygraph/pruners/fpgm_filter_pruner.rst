@@ -3,7 +3,7 @@ FPGMFilterPruner
 
 .. py:class:: paddleslim.FPGMFilterPruner(model, inputs, sen_file=None)
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/dygraph/fpgm_pruner.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/dygraph/prune/fpgm_pruner.py>`_
 
 用于剪裁卷积层输出通道的的剪裁器。该剪裁器按论文 `Filter Pruning via Geometric Median for Deep Convolutional Neural Networks Acceleration <https://arxiv.org/abs/1811.00250>_` 中的统计方法对单个卷积层内的 ``Filters`` 的重要性进行排序，并按指定比例剪裁掉相对不重要的 ``Filters`` 。对 ``Filters`` 的剪裁等价于剪裁卷积层的输出通道数。
 
