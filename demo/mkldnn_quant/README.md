@@ -138,6 +138,8 @@ export KMP_BLOCKTIME=1
 # Turbo Boost could be set to OFF using the command
 echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 # For 1 thread performance, by default the bash use 1 threads
+# Set `MODEL_DIR` to `/PATH/TO/FLOAT32/MODEL` or `/PATH/TO/SAVE/INT8/MODEL`
+# Set `DATA_FILE` to `/PATH/TO/SAVE/BINARY/FILE`
 ./run.sh path/to/MODEL_DIR path/to/DATA_FILE
 # For 20 thread performance, set third parameter 20
 ./run.sh path/to/MODEL_DIR path/to/DATA_FILE 20
