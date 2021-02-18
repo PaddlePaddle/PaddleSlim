@@ -1,6 +1,6 @@
-#  图像分类模型通道剪裁-快速开始
+#  卷积Filter剪裁
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的卷积通道剪裁接口]()。
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的卷积通道剪裁接口](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html)。
 该示例包含以下步骤：
 
 1. 导入依赖
