@@ -42,53 +42,55 @@ pip install paddleslim=2.0.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
 <table>
 <tr align="center" valign="bottom">
-  <th>Quantization</th>
-  <th>Pruning</th>
-  <th>NAS</th>
-  <th>Distilling</th>
+  <th><a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/tutorials/quant/overview.md">Quantization</a></th>
+  <th><a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/tutorials/pruning/overview.md">Pruning</a></th>
+  <th><a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/tutorials/nas/overview.md">NAS</a></th>
+  <th><a href="">Distilling</a></th>
 </tr>
 <tr valign="top">
   <td>
     <ul>
-      <li>QAT</li>
-      <li>PACT</li>
-      <li>PTQ-Static</li>
-      <li>PTQ-Dynamic</li>
-      <li>Embedding Quant</li>
+      <li><a href="docs/zh_cn/api_cn/overview.md">QAT</a></li>
+      <li>PACT[<a href="https://github.com/PaddlePaddle/PaddleSlim/tree/release/2.0.0/demo/quant/pact_quant_aware#%E5%AE%9A%E4%B9%89pact%E5%87%BD%E6%95%B0">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/quanter/qat.rst#qat">动态图</a>]</li>
+      <li>PTQ Static[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static">动态图</a>]</li>
+      <li>PTQ Dynamic[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_dynamic">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_dynamic">动态图</a>]</li>
+      <li>Embedding Quant[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_embedding">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_embedding">动态图</a>]</li>
     </ul>
   </td>
   <td>
     <ul>
-      <li>SensitivityPruner</li>
-      <li>FPGMFilterPruner</li>
-      <li>L1NormFilterPruner</li>
-      <li>L2NormFilterPruner</li>
-      <li>*SlimFilterPruner</li>
-      <li>*OptSlimFilterPruner</li>
+      <li>SensitivityPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/prune/prune_api.rst#sensitivity">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/tutorials/pruning/dygraph/filter_pruning.md#41-%E5%8D%B7%E7%A7%AF%E9%87%8D%E8%A6%81%E6%80%A7%E5%88%86%E6%9E%90">动态图</a>]</li>
+      <li>FPGMFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/9b01b195f0c4bc34a1ab434751cb260e13d64d9e/docs/zh_cn/tutorials/pruning/overview.md#%E9%9D%99%E6%80%81%E5%9B%BE-1">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/pruners/fpgm_filter_pruner.rst#fpgmfilterpruner">动态图</a>]</li>
+      <li>L1NormFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/9b01b195f0c4bc34a1ab434751cb260e13d64d9e/docs/zh_cn/tutorials/pruning/overview.md#%E9%9D%99%E6%80%81%E5%9B%BE">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/pruners/l1norm_filter_pruner.rst#l1normfilterpruner">动态图</a>]</li>
+      <li>**L2NormFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/pruners/l2norm_filter_pruner.rst#l2normfilterpruner">动态图</a>]</li>
+      <li>*SlimFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/9b01b195f0c4bc34a1ab434751cb260e13d64d9e/docs/zh_cn/tutorials/pruning/overview.md#slimfilterpruner">静态图</a>]</li>
+      <li>*OptSlimFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/9b01b195f0c4bc34a1ab434751cb260e13d64d9e/docs/zh_cn/tutorials/pruning/overview.md#optslimfilterpruner">静态图</a>]</li>
     </ul>
   </td>
   <td>
     <ul>
-      <li>*Simulate Anneal based NAS</li>
-      <li>*Reinforcement Learning based NAS</li>
-      <li>**DARTS</li>
-      <li>**PC-DARTS</li>
-      <li>**Once-for-All</li>
-      <li>*Hardware-aware Search</li>
+      <li>*Simulate Anneal based NAS[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/nas/nas_api.rst#sanas">静态图</a>]/li>
+      <li>*Reinforcement Learning based NAS[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/nas/nas_api.rst#rlnas">静态图</a>]</li>
+      <li>**DARTS[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/nas/darts.rst#%E5%8F%AF%E5%BE%AE%E5%88%86%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84%E6%90%9C%E7%B4%A2darts">动态图</a>]</li>
+      <li>**PC-DARTS[<a href="https://github.com/PaddlePaddle/PaddleSlim/tree/release/2.0.0/demo/darts#%E7%BD%91%E7%BB%9C%E7%BB%93%E6%9E%84%E6%90%9C%E7%B4%A2">动态图</a>]</li>
+      <li>**Once-for-All[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/ofa/ofa_api.rst#ofa-%E8%AE%AD%E7%BB%83">动态图</a>]</li>
+      <li>*Hardware-aware Search[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/nas/table_latency.md#%E7%A1%AC%E4%BB%B6%E5%BB%B6%E6%97%B6%E8%AF%84%E4%BC%B0%E8%A1%A8">静态图</a>]</li>
     </ul>
   </td>
 
   <td>
     <ul>
-      <li>*FSP</li>
-      <li>*DML</li>
-      <li>*DK for YOLOv3</li>
+      <li>*FSP[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/dist/single_distiller_api.rst#fsp_loss">静态图</a>]</li>
+      <li>*DML[<a href="https://github.com/PaddlePaddle/PaddleSlim/tree/release/2.0.0/demo/deep_mutual_learning">静态图</a>]</li>
+      <li>*DK for YOLOv3[<a href="https://github.com/PaddlePaddle/PaddleDetection/tree/release/0.4/slim/distillation#%E6%A8%A1%E5%9E%8B%E8%92%B8%E9%A6%8F%E6%95%99%E7%A8%8B">静态图</a>]</li>
     </ul>
   </td>
 </tr>
 </table>
 
-注：*表示仅支持静态图，**表示仅支持动态图
+注：
+- *表示仅支持静态图，**表示仅支持动态图
+- 支持敏感度分析裁剪指的是通过各个层的敏感度分析来确定各个卷积层的剪裁率，需要和其他裁剪方法配合使用。
 
 ### 效果展示
 
@@ -108,6 +110,8 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 
 ### 快速开始
 
+快速开始教程是能基于CIFAR10数据集快速运行起来的简单示例，若您是Paddle官方模型套件用户，请直接使用下方的CV模型压缩或者NLP模型压缩中教程。
+
 - 量化训练 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_quant_aware_training_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
 - 离线量化 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_quant_post_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/quant_post_static_tutorial.md)
 - 剪裁 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_pruning_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/pruning_tutorial.md)
@@ -116,13 +120,14 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 
 ### 进阶教程
 
+进阶教程详细介绍了每一步的流程，帮助您把相应方法迁移到您自己的模型上。
+
 - 通道剪裁
   - [四种剪裁策略效果对比与应用方法](docs/zh_cn/tutorials/pruning/overview.md)
     - [L1NormFilterPruner](docs/zh_cn/tutorials/pruning/overview.md#l1normfilterpruner)
     - [FPGMFilterPruner](docs/zh_cn/tutorials/pruning/overview.md#fpgmfilterpruner)
     - [SlimFilterFilterPruner](docs/zh_cn/tutorials/pruning/overview.md#slimfilterpruner)
     - [OptSlimFilterPruner](docs/zh_cn/tutorials/pruning/overview.md#optslimfilterpruner)
-  - 剪裁功能详解: [动态图](docs/zh_cn/tutorials/pruning/dygraph/filter_pruning.md) | [静态图](docs/zh_cn/tutorials/pruning/static/image_classification_sensitivity_analysis_tutorial.md)
   - 自定义剪裁策略：[动态图](docs/zh_cn/tutorials/pruning/dygraph/self_defined_filter_pruning.md)
 
 - 低比特量化
@@ -133,6 +138,10 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 
 - NAS
   - [四种NAS策略介绍和应用](docs/zh_cn/tutorials/nas/overview.md)
+    - [Once-For-All](docs/zh_cn/tutorials/nas/dygraph/nas_ofa.md)
+    - [SANAS](docs/zh_cn/tutorials/nas/static/sanas_darts_space.md)
+    - [RLNAS](https://github.com/PaddlePaddle/PaddleSlim/tree/release/2.0.0/demo/nas#rlnas%E7%BD%91%E7%BB%9C%E7%BB%93%E6%9E%84%E6%90%9C%E7%B4%A2%E7%A4%BA%E4%BE%8B)
+    - [DARTS](demo/darts/README.md)
 
 - 蒸馏
   - [知识蒸馏示例](demo/distillation)
@@ -145,48 +154,54 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 - [PaddleLite量化部署](docs/zh_cn/deploy/deploy_cls_model_on_mobile_device.md)
 
 ### CV模型压缩
+本系列教程均基于Paddle官方的模型套件中模型进行压缩，若您不是模型套件用户，更推荐使用快速教程和进阶教程。
 
-- 检测模型压缩(基于PaddleDetection)
+- 检测模型压缩
   - 压缩方案
-    - YOLOv3 3.5倍加速方案: 文档整理中...
+    - [PPDetection-YOLOv3 压缩方案](TODO)
   - 方法应用-静态图
-    - [在COCO和VOC上蒸馏MobileNetV1-YOLOv3](docs/zh_cn/cv/detection/static/paddledetection_slim_distillation_tutorial.md)
-    - [MobileNetV1-YOLOv3低比特量化训练](docs/zh_cn/cv/detection/static/paddledetection_slim_quantization_tutorial.md)
-    - [人脸检测模型小模型结构搜索](docs/zh_cn/cv/detection/static/paddledetection_slim_nas_tutorial.md)
+    - [蒸馏](docs/zh_cn/cv/detection/static/paddledetection_slim_distillation_tutorial.md)
+    - [量化训练](docs/zh_cn/cv/detection/static/paddledetection_slim_quantization_tutorial.md)
+    - [模型结构搜索](docs/zh_cn/cv/detection/static/paddledetection_slim_nas_tutorial.md)
     - [剪枝](docs/zh_cn/cv/detection/static/paddledetection_slim_pruing_tutorial.md)
     - [剪枝与蒸馏的结合使用](docs/zh_cn/cv/detection/static/paddledetection_slim_prune_dist_tutorial.md)
     - [卷积层敏感度分析](docs/zh_cn/cv/detection/static/paddledetection_slim_sensitivy_tutorial.md)
   - 方法应用-动态图
-    - 文档整理中...
+    - [剪枝](#TODO)
+    - [量化训练](#TODO)
 
-- 分割模型压缩(基于PaddleSeg)
+- 分割模型压缩
 
   - 压缩方案
-    - 方案建设中...
 
   - 方法应用-静态图
-    - 文档整理中...
+    - [蒸馏](TODO)
+    - [量化训练](TODO)
+    - [模型结构搜索](TODO)
+    - [剪枝](TODO)
 
   - 方法应用-动态图
-    - 文档整理中...
+    - [剪枝](#TODO)
+    - [量化训练](#TODO)
 
-- [OCR模型压缩(基于PaddleOCR)]()
+- OCR模型压缩
 
   - 压缩方案
-    - 3.5M模型压缩方案: 文档整理中...
+    - [3.5M模型压缩方案](TODO)
 
   - 方法应用-静态图
-    - [低比特量化训练](https://github.com/PaddlePaddle/PaddleOCR/tree/release/1.1/deploy/slim/quantization)
+    - [量化训练](https://github.com/PaddlePaddle/PaddleOCR/tree/release/1.1/deploy/slim/quantization)
     - [剪枝](https://github.com/PaddlePaddle/PaddleOCR/tree/release/1.1/deploy/slim/prune)
 
   - 方法应用-动态图
-    - 文档整理中...
+    - [剪枝](#TODO)
+    - [量化训练](#TODO)
 
 
 ### NLP模型压缩
 
-- [BERT](docs/zh_cn/nlp/paddlenlp_slim_ofa_tutorial.md)
-- [ERNIE](docs/zh_cn/nlp/ernie_slim_ofa_tutorial.md)
+- [PaddleNLP-BERT](docs/zh_cn/nlp/paddlenlp_slim_ofa_tutorial.md)
+- [ERNIE-ERNIE](docs/zh_cn/nlp/ernie_slim_ofa_tutorial.md)
 
 ### API文档
 

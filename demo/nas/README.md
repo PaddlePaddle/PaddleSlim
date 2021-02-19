@@ -35,7 +35,7 @@ CUDA_VISIBLE_DEVICES=0 python block_sa_nas_mobilenetv2.py
 ## 接口介绍
 请参考<a href='../../docs/zh_cn/api_cn/nas_api.rst'>神经网络搜索API文档</a>。
 
-示例为利用SANAS在MobileNetV2的搜索空间上搜索精度更高的模型。
+示例为利用RLNAS在MobileNetV2的搜索空间上搜索精度更高的模型。
 ## 1 搜索空间配置
 默认搜索空间为`MobileNetV2`，详细的搜索空间配置请参考<a href='../../docs/zh_cn/api_cn/search_space.md'>搜索空间配置文档</a>。
 
