@@ -50,39 +50,39 @@ PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
 <tr valign="top">
   <td>
     <ul>
-      <li><a href="docs/zh_cn/api_cn/overview.md">QAT</a></li>
-      <li>PACT[<a href="https://github.com/PaddlePaddle/PaddleSlim/tree/release/2.0.0/demo/quant/pact_quant_aware#%E5%AE%9A%E4%B9%89pact%E5%87%BD%E6%95%B0">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/quanter/qat.rst#qat">动态图</a>]</li>
-      <li>PTQ Static[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static">动态图</a>]</li>
-      <li>PTQ Dynamic[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_dynamic">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_dynamic">动态图</a>]</li>
-      <li>Embedding Quant[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_embedding">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_embedding">动态图</a>]</li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#%E5%9C%A8%E7%BA%BF%E9%87%8F%E5%8C%96%E8%AE%AD%E7%BB%83qat">QAT</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#pact">PACT</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#%E9%9D%99%E6%80%81%E7%A6%BB%E7%BA%BF%E9%87%8F%E5%8C%96ptq-static">PTQ Static</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#%E5%8A%A8%E6%80%81%E7%A6%BB%E7%BA%BF%E9%87%8F%E5%8C%96ptq-dynamic">PTQ Dynamic</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#embedding%E9%87%8F%E5%8C%96">Embedding Quant</a></li>
     </ul>
   </td>
   <td>
     <ul>
-      <li>SensitivityPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/prune/prune_api.rst#sensitivity">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/tutorials/pruning/dygraph/filter_pruning.md#41-%E5%8D%B7%E7%A7%AF%E9%87%8D%E8%A6%81%E6%80%A7%E5%88%86%E6%9E%90">动态图</a>]</li>
-      <li>FPGMFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/9b01b195f0c4bc34a1ab434751cb260e13d64d9e/docs/zh_cn/tutorials/pruning/overview.md#%E9%9D%99%E6%80%81%E5%9B%BE-1">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/pruners/fpgm_filter_pruner.rst#fpgmfilterpruner">动态图</a>]</li>
-      <li>L1NormFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/9b01b195f0c4bc34a1ab434751cb260e13d64d9e/docs/zh_cn/tutorials/pruning/overview.md#%E9%9D%99%E6%80%81%E5%9B%BE">静态图</a>|<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/pruners/l1norm_filter_pruner.rst#l1normfilterpruner">动态图</a>]</li>
-      <li>**L2NormFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/pruners/l2norm_filter_pruner.rst#l2normfilterpruner">动态图</a>]</li>
-      <li>*SlimFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/9b01b195f0c4bc34a1ab434751cb260e13d64d9e/docs/zh_cn/tutorials/pruning/overview.md#slimfilterpruner">静态图</a>]</li>
-      <li>*OptSlimFilterPruner[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/9b01b195f0c4bc34a1ab434751cb260e13d64d9e/docs/zh_cn/tutorials/pruning/overview.md#optslimfilterpruner">静态图</a>]</li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#%E6%95%8F%E6%84%9F%E5%BA%A6%E5%89%AA%E6%9E%9D">SensitivityPruner</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#fpgm">FPGMFilterPruner</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#l1norm">L1NormFilterPruner</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#l2norm">**L2NormFilterPruner</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#slimfilter">*SlimFilterPruner</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#optslimfilter">*OptSlimFilterPruner</a></li>
     </ul>
   </td>
   <td>
     <ul>
-      <li>*Simulate Anneal based NAS[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/nas/nas_api.rst#sanas">静态图</a>]/li>
-      <li>*Reinforcement Learning based NAS[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/nas/nas_api.rst#rlnas">静态图</a>]</li>
-      <li>**DARTS[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/nas/darts.rst#%E5%8F%AF%E5%BE%AE%E5%88%86%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84%E6%90%9C%E7%B4%A2darts">动态图</a>]</li>
-      <li>**PC-DARTS[<a href="https://github.com/PaddlePaddle/PaddleSlim/tree/release/2.0.0/demo/darts#%E7%BD%91%E7%BB%9C%E7%BB%93%E6%9E%84%E6%90%9C%E7%B4%A2">动态图</a>]</li>
-      <li>**Once-for-All[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/ofa/ofa_api.rst#ofa-%E8%AE%AD%E7%BB%83">动态图</a>]</li>
-      <li>*Hardware-aware Search[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/nas/table_latency.md#%E7%A1%AC%E4%BB%B6%E5%BB%B6%E6%97%B6%E8%AF%84%E4%BC%B0%E8%A1%A8">静态图</a>]</li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#sanas">*Simulate Anneal based NAS</a>/li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#rlnas">*Reinforcement Learning based NAS</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#darts">**DARTS</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#pc-darts">**PC-DARTS</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#once-for-all">**Once-for-All</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#hardware-aware-search">*Hardware-aware Search</a></li>
     </ul>
   </td>
 
   <td>
     <ul>
-      <li>*FSP[<a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/static/dist/single_distiller_api.rst#fsp_loss">静态图</a>]</li>
-      <li>*DML[<a href="https://github.com/PaddlePaddle/PaddleSlim/tree/release/2.0.0/demo/deep_mutual_learning">静态图</a>]</li>
-      <li>*DK for YOLOv3[<a href="https://github.com/PaddlePaddle/PaddleDetection/tree/release/0.4/slim/distillation#%E6%A8%A1%E5%9E%8B%E8%92%B8%E9%A6%8F%E6%95%99%E7%A8%8B">静态图</a>]</li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#fsp">*FSP</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#dml">*DML</a></li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#dk">*DK</a></li>
     </ul>
   </td>
 </tr>
@@ -90,7 +90,7 @@ PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
 
 注：
 - *表示仅支持静态图，**表示仅支持动态图
-- 支持敏感度分析裁剪指的是通过各个层的敏感度分析来确定各个卷积层的剪裁率，需要和其他裁剪方法配合使用。
+- 敏感度裁剪指的是通过各个层的敏感度分析来确定各个卷积层的剪裁率，需要和其他裁剪方法配合使用。
 
 ### 效果展示
 
@@ -158,7 +158,7 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 
 - 检测模型压缩
   - 压缩方案
-    - [PPDetection-YOLOv3 压缩方案](TODO)
+    - [PPDetection-YOLOv3 压缩方案](docs/zh_cn/cv/detection/static/yolov3_slim.md)
   - 方法应用-静态图
     - [蒸馏](docs/zh_cn/cv/detection/static/paddledetection_slim_distillation_tutorial.md)
     - [量化训练](docs/zh_cn/cv/detection/static/paddledetection_slim_quantization_tutorial.md)
@@ -187,7 +187,7 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 - OCR模型压缩
 
   - 压缩方案
-    - [3.5M模型压缩方案](TODO)
+    - [3.5M模型压缩方案](docs/zh_cn/cv/ocr/static/3.5M_slim.md)
 
   - 方法应用-静态图
     - [量化训练](https://github.com/PaddlePaddle/PaddleOCR/tree/release/1.1/deploy/slim/quantization)
