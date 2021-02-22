@@ -69,7 +69,7 @@ PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
   </td>
   <td>
     <ul>
-      <li><a href="docs/zh_cn/api_cn/overview.md#sanas">*Simulate Anneal based NAS</a>/li>
+      <li><a href="docs/zh_cn/api_cn/overview.md#sanas">*Simulate Anneal based NAS</a></li>
       <li><a href="docs/zh_cn/api_cn/overview.md#rlnas">*Reinforcement Learning based NAS</a></li>
       <li><a href="docs/zh_cn/api_cn/overview.md#darts">**DARTS</a></li>
       <li><a href="docs/zh_cn/api_cn/overview.md#pc-darts">**PC-DARTS</a></li>
@@ -159,6 +159,7 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 - 检测模型压缩
   - 压缩方案
     - [PPDetection-YOLOv3 压缩方案](docs/zh_cn/cv/detection/static/yolov3_slim.md)
+
   - 方法应用-静态图
     - [蒸馏](docs/zh_cn/cv/detection/static/paddledetection_slim_distillation_tutorial.md)
     - [量化训练](docs/zh_cn/cv/detection/static/paddledetection_slim_quantization_tutorial.md)
@@ -166,23 +167,24 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
     - [剪枝](docs/zh_cn/cv/detection/static/paddledetection_slim_pruing_tutorial.md)
     - [剪枝与蒸馏的结合使用](docs/zh_cn/cv/detection/static/paddledetection_slim_prune_dist_tutorial.md)
     - [卷积层敏感度分析](docs/zh_cn/cv/detection/static/paddledetection_slim_sensitivy_tutorial.md)
+
   - 方法应用-动态图
-    - [剪枝](#TODO)
-    - [量化训练](#TODO)
+    - [剪枝](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.0-rc/dygraph/configs/slim#%E5%89%AA%E8%A3%81)
+    - [量化训练](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.0-rc/dygraph/configs/slim#%E9%87%8F%E5%8C%96)
 
 - 分割模型压缩
 
   - 压缩方案
 
   - 方法应用-静态图
-    - [蒸馏](TODO)
-    - [量化训练](TODO)
-    - [模型结构搜索](TODO)
-    - [剪枝](TODO)
+    - [蒸馏](https://github.com/PaddlePaddle/PaddleSeg/tree/release/v0.8.0/slim/distillation)
+    - [量化训练](https://github.com/PaddlePaddle/PaddleSeg/tree/release/v0.8.0/slim/quantization)
+    - [模型结构搜索](https://github.com/PaddlePaddle/PaddleSeg/tree/release/v0.8.0/slim/nas)
+    - [剪枝](https://github.com/PaddlePaddle/PaddleSeg/tree/release/v0.8.0/slim/prune)
 
   - 方法应用-动态图
-    - [剪枝](#TODO)
-    - [量化训练](#TODO)
+    - [剪枝](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/slim#%E6%A8%A1%E5%9E%8B%E8%A3%81%E5%89%AA)
+    - [量化训练](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/slim#%E6%A8%A1%E5%9E%8B%E9%87%8F%E5%8C%96)
 
 - OCR模型压缩
 
@@ -194,8 +196,8 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
     - [剪枝](https://github.com/PaddlePaddle/PaddleOCR/tree/release/1.1/deploy/slim/prune)
 
   - 方法应用-动态图
-    - [剪枝](#TODO)
-    - [量化训练](#TODO)
+    - [剪枝](https://github.com/PaddlePaddle/PaddleOCR/tree/develop/deploy/slim/prune)
+    - [量化训练](https://github.com/PaddlePaddle/PaddleOCR/tree/develop/deploy/slim/quantization)
 
 
 ### NLP模型压缩
@@ -208,7 +210,7 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 - [动态图](docs/zh_cn/api_cn/dygraph)
 - [静态图](docs/zh_cn/api_cn/static)
 
-### [FAQ]()
+### [FAQ](docs/zh_cn/FAQ/quantization_FAQ.md)
 
 ## 许可证书
 
