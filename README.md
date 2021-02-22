@@ -27,7 +27,7 @@ pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 安装指定版本：
 ```bash
-pip install paddleslim=2.0.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install paddleslim==2.0.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ## 最近更新
