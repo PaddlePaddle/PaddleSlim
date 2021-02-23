@@ -1,9 +1,10 @@
 #!/bin/bash
-MODEL_DIR=/home/li/models/ResNet50_4th_qat_int8
-DATA_FILE=/mnt/disk500/data/int8_full_val.bin
-num_threads=1
-with_accuracy_layer=false
-use_profile=true
+MODEL_DIR=$1
+DATA_FILE=$2
+default_num_threads=1
+default_with_accuracy=false
+num_threads=${3:-$default_num_threads}
+with_accuracy_layer=${4:-$default_with_accuracy}
 ITERATIONS=0
 
 GLOG_logtostderr=1 ./build/sample_tester \
@@ -13,5 +14,4 @@ GLOG_logtostderr=1 ./build/sample_tester \
     --num_threads=${num_threads} \
     --iterations=${ITERATIONS} \
     --with_accuracy_layer=${with_accuracy_layer} \
-    --use_profile=${use_profile} \
     --use_analysis=false
