@@ -1,0 +1,1659 @@
+(null): can't open file 'train.py': [Errno 2] No such file or directory
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+Traceback (most recent call last):
+  File "sparse_train.py", line 18, in <module>
+    from utility import add_arguments, print_arguments
+ModuleNotFoundError: No module named 'utility'
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+Traceback (most recent call last):
+  File "sparse_train.py", line 21, in <module>
+    from imagenet import ImageNetDataset
+ModuleNotFoundError: No module named 'imagenet'
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+usage: sparse_train.py [-h] [--batch_size BATCH_SIZE] [--model MODEL]
+                       [--lr LR] [--lr_strategy LR_STRATEGY]
+                       [--l2_decay L2_DECAY] [--momentum_rate MOMENTUM_RATE]
+                       [--num_epochs NUM_EPOCHS]
+                       [--step_epochs STEP_EPOCHS [STEP_EPOCHS ...]]
+                       [--data DATA] [--model_path MODEL_PATH]
+                       [--use_gpu USE_GPU] [--checkpoint CHECKPOINT]
+sparse_train.py: error: unrecognized arguments: --test_period=10
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 256
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 128, in compress
+    resize_short_size=256)
+  File "../imagenet.py", line 32, in __init__
+    super(ImageNetDataset, self).__init__(path)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/datasets/folder.py", line 135, in __init__
+    classes, class_to_idx = self._find_classes(self.root)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/datasets/folder.py", line 167, in _find_classes
+    classes = [d.name for d in os.scandir(dir) if d.is_dir()]
+FileNotFoundError: [Errno 2] No such file or directory: 'data/ILSVRC2012'
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 256
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 128, in compress
+    resize_short_size=256)
+  File "../imagenet.py", line 32, in __init__
+    super(ImageNetDataset, self).__init__(path)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/datasets/folder.py", line 135, in __init__
+    classes, class_to_idx = self._find_classes(self.root)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/datasets/folder.py", line 167, in _find_classes
+    classes = [d.name for d in os.scandir(dir) if d.is_dir()]
+FileNotFoundError: [Errno 2] No such file or directory: '~/data/ILSVRC2012'
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 256
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:08:22.176954 30589 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:08:22.195727 30589 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:08:27.767740 30589 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 152, in compress
+    opt, lr = create_optimizer(args, net.parameters(), steps_per_epoch)
+  File "sparse_train.py", line 77, in create_optimizer
+    return cosine_decay(args, parameters, steps_per_epoch)
+  File "sparse_train.py", line 70, in cosine_decay
+    return optimizer, lr
+NameError: name 'lr' is not defined
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 256
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:09:15.524077 30816 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:09:15.530556 30816 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:09:19.775230 30816 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 164, in compress
+    for epoch in range(args.epochs):
+AttributeError: 'Namespace' object has no attribute 'epochs'
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 256
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:10:49.699872 31033 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:10:49.706722 31033 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:10:54.019887 31033 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 165, in compress
+    train(model, opt, lr, train_loader)
+NameError: name 'model' is not defined
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 256
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:11:41.231519 31227 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:11:41.238552 31227 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:11:46.159983 31227 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+/usr/local/lib/python3.7/site-packages/paddle/nn/layer/norm.py:636: UserWarning: When training, we now always track global mean and variance.
+  "When training, we now always track global mean and variance.")
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 165, in compress
+    train(net, opt, lr, train_loader)
+  File "sparse_train.py", line 84, in train
+    predicts = model(img)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/models/mobilenetv1.py", line 225, in forward
+    x = dws(x)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/models/mobilenetv1.py", line 79, in forward
+    x = self._depthwise_conv(x)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/models/mobilenetv1.py", line 54, in forward
+    x = self._act(x)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/nn/layer/activation.py", line 406, in forward
+    return F.relu(x, self._name)
+  File "/usr/local/lib/python3.7/site-packages/paddle/nn/functional/activation.py", line 528, in relu
+    return core.ops.relu(x)
+SystemError: (Fatal) Operator relu raises an paddle::memory::allocation::BadAlloc exception.
+The exception content is
+:ResourceExhaustedError: 
+
+Out of memory error on GPU 0. Cannot allocate 196.000244MB memory on GPU 0, available memory is only 110.750000MB.
+
+Please check whether there is any other process using GPU 0.
+1. If yes, please stop them, or start PaddlePaddle on another GPU.
+2. If no, please decrease the batch size of your model. 
+
+ (at /paddle/paddle/fluid/memory/allocation/cuda_allocator.cc:69)
+. (at /paddle/paddle/fluid/imperative/tracer.cc:172)
+
+
+
+--------------------------------------
+C++ Traceback (most recent call last):
+--------------------------------------
+0   paddle::framework::SignalHandle(char const*, int)
+1   paddle::platform::GetCurrentTraceBackString()
+
+----------------------
+Error Message Summary:
+----------------------
+FatalError: `Termination signal` is detected by the operating system.
+  [TimeInfo: *** Aborted at 1614064325 (unix time) try "date -d @1614064325" if you are using GNU date ***]
+  [SignalInfo: *** SIGTERM (@0x796d) received by PID 31227 (TID 0x7eff26757700) from PID 31085 ***]
+
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:13:15.851613 31443 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:13:15.857141 31443 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:13:20.856809 31443 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+/usr/local/lib/python3.7/site-packages/paddle/nn/layer/norm.py:636: UserWarning: When training, we now always track global mean and variance.
+  "When training, we now always track global mean and variance.")
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 165, in compress
+    train(net, opt, lr, train_loader)
+  File "sparse_train.py", line 92, in train
+    _logger.info("epoch: {}, batch_id: {}, lr is: {}, loss is: {}, acc is: {}".format(epoch, batch_id+1, lr.numpy(), loss.numpy(), acc.numpy()))
+NameError: name 'epoch' is not defined
+
+
+--------------------------------------
+C++ Traceback (most recent call last):
+--------------------------------------
+0   paddle::framework::SignalHandle(char const*, int)
+1   paddle::platform::GetCurrentTraceBackString()
+
+----------------------
+Error Message Summary:
+----------------------
+FatalError: `Termination signal` is detected by the operating system.
+  [TimeInfo: *** Aborted at 1614064410 (unix time) try "date -d @1614064410" if you are using GNU date ***]
+  [SignalInfo: *** SIGTERM (@0x7a45) received by PID 31443 (TID 0x7fd0cf133700) from PID 31301 ***]
+
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:15:26.945909 31714 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:15:26.951689 31714 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:15:31.771809 31714 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+/usr/local/lib/python3.7/site-packages/paddle/nn/layer/norm.py:636: UserWarning: When training, we now always track global mean and variance.
+  "When training, we now always track global mean and variance.")
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 165, in compress
+    train(epoch, net, opt, lr, train_loader)
+  File "sparse_train.py", line 92, in train
+    _logger.info("epoch: {}, batch_id: {}, lr is: {}, loss is: {}, acc is: {}".format(epoch, batch_id+1, lr.numpy(), loss.numpy(), acc.numpy()))
+AttributeError: 'CosineAnnealingDecay' object has no attribute 'numpy'
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:16:58.609517 31915 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:16:58.615509 31915 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:17:03.411697 31915 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+/usr/local/lib/python3.7/site-packages/paddle/nn/layer/norm.py:636: UserWarning: When training, we now always track global mean and variance.
+  "When training, we now always track global mean and variance.")
+2021-02-23 07:17:11,240-INFO: epoch: 0, batch_id: 50, lr is: <paddle.optimizer.lr.CosineAnnealingDecay object at 0x7f81a11fa8d0>, loss is: [7.1511126], acc is: [0.]
+2021-02-23 07:17:13,106-INFO: epoch: 0, batch_id: 100, lr is: <paddle.optimizer.lr.CosineAnnealingDecay object at 0x7f81a11fa8d0>, loss is: [7.1401753], acc is: [0.]
+2021-02-23 07:17:15,473-INFO: epoch: 0, batch_id: 150, lr is: <paddle.optimizer.lr.CosineAnnealingDecay object at 0x7f81a11fa8d0>, loss is: [7.133363], acc is: [0.]
+2021-02-23 07:17:17,670-INFO: epoch: 0, batch_id: 200, lr is: <paddle.optimizer.lr.CosineAnnealingDecay object at 0x7f81a11fa8d0>, loss is: [7.059592], acc is: [0.]
+2021-02-23 07:17:19,419-INFO: epoch: 0, batch_id: 250, lr is: <paddle.optimizer.lr.CosineAnnealingDecay object at 0x7f81a11fa8d0>, loss is: [7.0045366], acc is: [0.]
+2021-02-23 07:17:21,651-INFO: epoch: 0, batch_id: 300, lr is: <paddle.optimizer.lr.CosineAnnealingDecay object at 0x7f81a11fa8d0>, loss is: [7.1975245], acc is: [0.]
+2021-02-23 07:17:23,407-INFO: epoch: 0, batch_id: 350, lr is: <paddle.optimizer.lr.CosineAnnealingDecay object at 0x7f81a11fa8d0>, loss is: [6.5174193], acc is: [0.]
+2021-02-23 07:17:25,200-INFO: epoch: 0, batch_id: 400, lr is: <paddle.optimizer.lr.CosineAnnealingDecay object at 0x7f81a11fa8d0>, loss is: [7.1596475], acc is: [0.]
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 165, in compress
+    train(epoch, net, opt, lr, train_loader)
+  File "sparse_train.py", line 89, in train
+    optim.clear_grad()
+  File "</usr/local/lib/python3.7/site-packages/decorator.py:decorator-gen-192>", line 2, in clear_grad
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/wrapped_decorator.py", line 25, in __impl__
+    return wrapped_func(*args, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/framework.py", line 225, in __impl__
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/optimizer/optimizer.py", line 822, in clear_grad
+    p.clear_gradient()
+KeyboardInterrupt
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:20:10.630601 32124 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:20:10.637020 32124 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:20:14.217505 32124 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+/usr/local/lib/python3.7/site-packages/paddle/nn/layer/norm.py:636: UserWarning: When training, we now always track global mean and variance.
+  "When training, we now always track global mean and variance.")
+2021-02-23 07:20:22,954-INFO: epoch: 0, batch_id: 50, lr is: 0.09999999999989147, loss is: [6.6252604], acc is: [0.]
+2021-02-23 07:20:24,295-INFO: epoch: 0, batch_id: 100, lr is: 0.09999999999957418, loss is: [5.734769], acc is: [0.]
+2021-02-23 07:20:25,802-INFO: epoch: 0, batch_id: 150, lr is: 0.09999999999904803, loss is: [7.0940285], acc is: [0.]
+2021-02-23 07:20:27,214-INFO: epoch: 0, batch_id: 200, lr is: 0.09999999999831317, loss is: [7.609229], acc is: [0.]
+2021-02-23 07:20:28,691-INFO: epoch: 0, batch_id: 250, lr is: 0.09999999999736948, loss is: [7.051621], acc is: [0.]
+2021-02-23 07:20:30,076-INFO: epoch: 0, batch_id: 300, lr is: 0.0999999999962169, loss is: [7.0893116], acc is: [0.]
+2021-02-23 07:20:31,726-INFO: epoch: 0, batch_id: 350, lr is: 0.09999999999485568, loss is: [7.1281857], acc is: [0.]
+2021-02-23 07:20:33,887-INFO: epoch: 0, batch_id: 400, lr is: 0.0999999999932856, loss is: [6.6641083], acc is: [0.]
+2021-02-23 07:20:35,365-INFO: epoch: 0, batch_id: 450, lr is: 0.09999999999150677, loss is: [7.1711435], acc is: [0.]
+2021-02-23 07:20:36,841-INFO: epoch: 0, batch_id: 500, lr is: 0.09999999998951908, loss is: [7.1762705], acc is: [0.]
+2021-02-23 07:20:38,195-INFO: epoch: 0, batch_id: 550, lr is: 0.09999999998732279, loss is: [6.7792606], acc is: [0.]
+2021-02-23 07:20:39,748-INFO: epoch: 0, batch_id: 600, lr is: 0.09999999998491754, loss is: [6.4122534], acc is: [0.]
+2021-02-23 07:20:41,043-INFO: epoch: 0, batch_id: 650, lr is: 0.09999999998230365, loss is: [6.7761707], acc is: [0.]
+2021-02-23 07:20:42,687-INFO: epoch: 0, batch_id: 700, lr is: 0.09999999997948088, loss is: [7.255109], acc is: [0.]
+2021-02-23 07:20:44,123-INFO: epoch: 0, batch_id: 750, lr is: 0.09999999997644932, loss is: [7.222047], acc is: [0.]
+2021-02-23 07:20:45,525-INFO: epoch: 0, batch_id: 800, lr is: 0.09999999997320903, loss is: [7.2926874], acc is: [0.]
+2021-02-23 07:20:46,967-INFO: epoch: 0, batch_id: 850, lr is: 0.09999999996975986, loss is: [7.2831416], acc is: [0.]
+2021-02-23 07:20:48,253-INFO: epoch: 0, batch_id: 900, lr is: 0.09999999996610201, loss is: [6.1529093], acc is: [0.]
+2021-02-23 07:20:49,842-INFO: epoch: 0, batch_id: 950, lr is: 0.09999999996223535, loss is: [7.0010347], acc is: [0.]
+2021-02-23 07:20:51,432-INFO: epoch: 0, batch_id: 1000, lr is: 0.09999999995815999, loss is: [6.614505], acc is: [0.]
+2021-02-23 07:20:53,065-INFO: epoch: 0, batch_id: 1050, lr is: 0.09999999995387573, loss is: [7.372018], acc is: [0.]
+2021-02-23 07:20:54,691-INFO: epoch: 0, batch_id: 1100, lr is: 0.09999999994938268, loss is: [6.438128], acc is: [0.]
+2021-02-23 07:20:56,281-INFO: epoch: 0, batch_id: 1150, lr is: 0.09999999994468091, loss is: [7.350029], acc is: [0.]
+2021-02-23 07:20:57,894-INFO: epoch: 0, batch_id: 1200, lr is: 0.09999999993977038, loss is: [7.4518366], acc is: [0.]
+2021-02-23 07:20:59,461-INFO: epoch: 0, batch_id: 1250, lr is: 0.09999999993465107, loss is: [7.45051], acc is: [0.]
+2021-02-23 07:21:00,961-INFO: epoch: 0, batch_id: 1300, lr is: 0.09999999992932287, loss is: [6.6345596], acc is: [0.]
+2021-02-23 07:21:02,396-INFO: epoch: 0, batch_id: 1350, lr is: 0.09999999992378596, loss is: [7.4354677], acc is: [0.]
+2021-02-23 07:21:04,030-INFO: epoch: 0, batch_id: 1400, lr is: 0.0999999999180402, loss is: [7.0450945], acc is: [0.]
+2021-02-23 07:21:05,604-INFO: epoch: 0, batch_id: 1450, lr is: 0.0999999999120858, loss is: [6.9956684], acc is: [0.]
+2021-02-23 07:21:07,607-INFO: epoch: 0, batch_id: 1500, lr is: 0.09999999990592252, loss is: [6.392788], acc is: [0.]
+2021-02-23 07:21:09,085-INFO: epoch: 0, batch_id: 1550, lr is: 0.09999999989955047, loss is: [7.4991317], acc is: [0.]
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 165, in compress
+    train(epoch, net, opt, lr, train_loader)
+  File "sparse_train.py", line 87, in train
+    loss.backward()
+  File "</usr/local/lib/python3.7/site-packages/decorator.py:decorator-gen-114>", line 2, in backward
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/wrapped_decorator.py", line 25, in __impl__
+    return wrapped_func(*args, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/framework.py", line 225, in __impl__
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/varbase_patch_methods.py", line 173, in backward
+    scaled_loss = scale_loss(self)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/parallel.py", line 308, in scale_loss
+    np.array([ParallelEnv().world_size]).astype("float32"))
+  File "</usr/local/lib/python3.7/site-packages/decorator.py:decorator-gen-44>", line 2, in to_variable
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/wrapped_decorator.py", line 25, in __impl__
+    return wrapped_func(*args, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/framework.py", line 225, in __impl__
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/base.py", line 692, in to_variable
+    name=name if name else '')
+KeyboardInterrupt
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:22:46.281381 32353 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:22:46.287484 32353 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:22:50.726336 32353 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+/usr/local/lib/python3.7/site-packages/paddle/nn/layer/norm.py:636: UserWarning: When training, we now always track global mean and variance.
+  "When training, we now always track global mean and variance.")
+2021-02-23 07:22:59,713-INFO: epoch: 0, batch_id: 50, lr is: 0.1, loss is: 7.054264068603516, acc is: 0.0
+2021-02-23 07:23:01,277-INFO: epoch: 0, batch_id: 100, lr is: 0.1, loss is: 6.9766693115234375, acc is: 0.0
+2021-02-23 07:23:02,773-INFO: epoch: 0, batch_id: 150, lr is: 0.1, loss is: 7.064464569091797, acc is: 0.0
+2021-02-23 07:23:04,069-INFO: epoch: 0, batch_id: 200, lr is: 0.1, loss is: 7.210050106048584, acc is: 0.0
+2021-02-23 07:23:05,535-INFO: epoch: 0, batch_id: 250, lr is: 0.1, loss is: 6.375611305236816, acc is: 0.0
+2021-02-23 07:23:07,376-INFO: epoch: 0, batch_id: 300, lr is: 0.1, loss is: 6.653074264526367, acc is: 0.0
+2021-02-23 07:23:08,659-INFO: epoch: 0, batch_id: 350, lr is: 0.1, loss is: 7.100130081176758, acc is: 0.0
+2021-02-23 07:23:10,185-INFO: epoch: 0, batch_id: 400, lr is: 0.1, loss is: 7.200385093688965, acc is: 0.0
+2021-02-23 07:23:11,504-INFO: epoch: 0, batch_id: 450, lr is: 0.1, loss is: 7.148921489715576, acc is: 0.0
+2021-02-23 07:23:13,003-INFO: epoch: 0, batch_id: 500, lr is: 0.1, loss is: 7.216774940490723, acc is: 0.0
+2021-02-23 07:23:14,405-INFO: epoch: 0, batch_id: 550, lr is: 0.1, loss is: 6.811818599700928, acc is: 0.0
+2021-02-23 07:23:15,817-INFO: epoch: 0, batch_id: 600, lr is: 0.1, loss is: 7.2287139892578125, acc is: 0.0
+2021-02-23 07:23:17,330-INFO: epoch: 0, batch_id: 650, lr is: 0.1, loss is: 7.256369590759277, acc is: 0.0
+2021-02-23 07:23:18,757-INFO: epoch: 0, batch_id: 700, lr is: 0.1, loss is: 6.966853141784668, acc is: 0.0
+2021-02-23 07:23:20,207-INFO: epoch: 0, batch_id: 750, lr is: 0.1, loss is: 7.2548723220825195, acc is: 0.0
+2021-02-23 07:23:21,574-INFO: epoch: 0, batch_id: 800, lr is: 0.1, loss is: 6.45812463760376, acc is: 0.0
+2021-02-23 07:23:23,396-INFO: epoch: 0, batch_id: 850, lr is: 0.1, loss is: 7.3058600425720215, acc is: 0.0
+2021-02-23 07:23:24,841-INFO: epoch: 0, batch_id: 900, lr is: 0.1, loss is: 7.295306205749512, acc is: 0.0
+2021-02-23 07:23:26,278-INFO: epoch: 0, batch_id: 950, lr is: 0.1, loss is: 7.0650506019592285, acc is: 0.0
+2021-02-23 07:23:28,896-INFO: epoch: 0, batch_id: 1000, lr is: 0.1, loss is: 7.027098178863525, acc is: 0.0
+2021-02-23 07:23:30,666-INFO: epoch: 0, batch_id: 1050, lr is: 0.1, loss is: 6.922519207000732, acc is: 0.0
+2021-02-23 07:23:32,545-INFO: epoch: 0, batch_id: 1100, lr is: 0.1, loss is: 7.377620697021484, acc is: 0.0
+2021-02-23 07:23:33,984-INFO: epoch: 0, batch_id: 1150, lr is: 0.1, loss is: 7.02359676361084, acc is: 0.0
+2021-02-23 07:23:35,579-INFO: epoch: 0, batch_id: 1200, lr is: 0.1, loss is: 7.027484893798828, acc is: 0.0
+2021-02-23 07:23:36,877-INFO: epoch: 0, batch_id: 1250, lr is: 0.1, loss is: 6.802753448486328, acc is: 0.0
+2021-02-23 07:23:38,348-INFO: epoch: 0, batch_id: 1300, lr is: 0.1, loss is: 7.082135200500488, acc is: 0.0
+2021-02-23 07:23:39,693-INFO: epoch: 0, batch_id: 1350, lr is: 0.1, loss is: 7.154465675354004, acc is: 0.0
+2021-02-23 07:23:41,113-INFO: epoch: 0, batch_id: 1400, lr is: 0.1, loss is: 6.985048770904541, acc is: 0.0
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 165, in compress
+    train(epoch, net, opt, lr, train_loader)
+  File "sparse_train.py", line 84, in train
+    predicts = model(img)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/models/mobilenetv1.py", line 225, in forward
+    x = dws(x)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/models/mobilenetv1.py", line 80, in forward
+    x = self._pointwise_conv(x)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/vision/models/mobilenetv1.py", line 52, in forward
+    x = self._conv(x)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/nn/layer/conv.py", line 643, in forward
+    use_cudnn=self._use_cudnn)
+  File "/usr/local/lib/python3.7/site-packages/paddle/nn/functional/conv.py", line 119, in _conv_nd
+    pre_bias = getattr(core.ops, op_type)(x, weight, *attrs)
+KeyboardInterrupt
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:24:23.948179 32570 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:24:23.954095 32570 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:24:28.327579 32570 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+/usr/local/lib/python3.7/site-packages/paddle/nn/layer/norm.py:636: UserWarning: When training, we now always track global mean and variance.
+  "When training, we now always track global mean and variance.")
+2021-02-23 07:24:35,144-INFO: batch_id: 50, acc is: [0.]
+2021-02-23 07:24:36,105-INFO: batch_id: 100, acc is: [0.]
+2021-02-23 07:24:37,045-INFO: batch_id: 150, acc is: [0.]
+2021-02-23 07:24:37,960-INFO: batch_id: 200, acc is: [0.]
+2021-02-23 07:24:38,873-INFO: batch_id: 250, acc is: [0.]
+2021-02-23 07:24:39,745-INFO: batch_id: 300, acc is: [0.]
+2021-02-23 07:24:40,892-INFO: batch_id: 350, acc is: [0.]
+2021-02-23 07:24:41,914-INFO: batch_id: 400, acc is: [0.]
+2021-02-23 07:24:42,874-INFO: batch_id: 450, acc is: [0.]
+2021-02-23 07:24:43,848-INFO: batch_id: 500, acc is: [0.]
+2021-02-23 07:24:44,872-INFO: batch_id: 550, acc is: [0.]
+2021-02-23 07:24:45,830-INFO: batch_id: 600, acc is: [0.]
+2021-02-23 07:24:46,811-INFO: batch_id: 650, acc is: [0.]
+2021-02-23 07:24:47,795-INFO: batch_id: 700, acc is: [0.]
+Traceback (most recent call last):
+  File "sparse_train.py", line 180, in <module>
+    main()
+  File "sparse_train.py", line 176, in main
+    compress(args)
+  File "sparse_train.py", line 166, in compress
+    evaluate(net, val_loader)
+  File "sparse_train.py", line 100, in evaluate
+    acc = paddle.metric.accuracy(predicts, label)
+  File "/usr/local/lib/python3.7/site-packages/paddle/metric/metrics.py", line 802, in accuracy
+    total)
+KeyboardInterrupt
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+Traceback (most recent call last):
+  File "sparse_train.py", line 19, in <module>
+    import models
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/__init__.py", line 15, in <module>
+    from .mobilenet_v1 import MobileNetV1_x0_25, MobileNetV1_x0_5, MobileNetV1_x0_75, MobileNetV1
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 24, in <module>
+    from paddle.nn import Conv2D, BatchNorm, Linear, Dropout, _ConvNd
+ImportError: cannot import name '_ConvNd' from 'paddle.nn' (/usr/local/lib/python3.7/site-packages/paddle/nn/__init__.py)
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+Traceback (most recent call last):
+  File "sparse_train.py", line 46, in <module>
+    model_list = models.__all__
+AttributeError: module 'models' has no attribute '__all__'
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+
+
+--------------------------------------
+C++ Traceback (most recent call last):
+--------------------------------------
+0   paddle::framework::SignalHandle(char const*, int)
+1   paddle::platform::GetCurrentTraceBackString()
+
+----------------------
+Error Message Summary:
+----------------------
+FatalError: `Termination signal` is detected by the operating system.
+  [TimeInfo: *** Aborted at 1614066110 (unix time) try "date -d @1614066110" if you are using GNU date ***]
+  [SignalInfo: *** SIGTERM (@0x81c7) received by PID 33365 (TID 0x7f9b90b94700) from PID 33223 ***]
+
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: mobilenet_v1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+Traceback (most recent call last):
+  File "sparse_train.py", line 178, in <module>
+    main()
+  File "sparse_train.py", line 174, in main
+    compress(args)
+  File "sparse_train.py", line 142, in compress
+    model_list)
+AssertionError: mobilenet_v1 is not in lists: ['MobileNetV1_x0_25', 'MobileNetV1_x0_5', 'MobileNetV1_x0_75', 'MobileNetV1', 'MobileNetV2_x0_25', 'MobileNetV2_x0_5', 'MobileNetV2_x0_75', 'MobileNetV2', 'MobileNetV2_x1_5', 'MobileNetV2_x2_0']
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: MobileNetV1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+
+
+--------------------------------------
+C++ Traceback (most recent call last):
+--------------------------------------
+0   paddle::framework::SignalHandle(char const*, int)
+1   paddle::platform::GetCurrentTraceBackString()
+
+----------------------
+Error Message Summary:
+----------------------
+FatalError: `Termination signal` is detected by the operating system.
+  [TimeInfo: *** Aborted at 1614066224 (unix time) try "date -d @1614066224" if you are using GNU date ***]
+  [SignalInfo: *** SIGTERM (@0x8334) received by PID 33730 (TID 0x7fe3ecd5b700) from PID 33588 ***]
+
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: MobileNetV1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+Traceback (most recent call last):
+  File "sparse_train.py", line 178, in <module>
+    main()
+  File "sparse_train.py", line 174, in main
+    compress(args)
+  File "sparse_train.py", line 145, in compress
+    num_classes=class_dim)
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 399, in MobileNetV1
+    model = MobileNet(scale=1.0, **args)
+TypeError: __init__() got an unexpected keyword argument 'pretrained'
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: MobileNetV1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:46:25.374948 34125 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:46:25.381464 34125 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:46:29.684134 34125 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+2021-02-23 07:46:41,415-INFO: batch_id: 50, acc is: [0.]
+2021-02-23 07:46:46,219-INFO: batch_id: 100, acc is: [0.]
+2021-02-23 07:46:51,044-INFO: batch_id: 150, acc is: [0.]
+2021-02-23 07:46:55,911-INFO: batch_id: 200, acc is: [0.]
+Traceback (most recent call last):
+  File "sparse_train.py", line 177, in <module>
+    main()
+  File "sparse_train.py", line 173, in main
+    compress(args)
+  File "sparse_train.py", line 163, in compress
+    evaluate(net, val_loader)
+  File "sparse_train.py", line 99, in evaluate
+    predicts = model(img)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 376, in forward
+    y = block(y)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 235, in forward
+    y = self._depthwise_conv(inputs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 201, in forward
+    y = self._conv(inputs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/nn/layer/conv.py", line 643, in forward
+    use_cudnn=self._use_cudnn)
+  File "/usr/local/lib/python3.7/site-packages/paddle/nn/functional/conv.py", line 119, in _conv_nd
+    pre_bias = getattr(core.ops, op_type)(x, weight, *attrs)
+KeyboardInterrupt
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: MobileNetV1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+use_gpu: True
+------------------------------------------------
+W0223 07:47:27.888116 34317 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 07:47:27.893774 34317 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 07:47:32.895893 34317 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+2021-02-23 07:47:46,078-INFO: epoch: 0, batch_id: 50, lr is: 0.1, loss is: 6.900120735168457, acc is: 0.0
+2021-02-23 07:47:52,131-INFO: epoch: 0, batch_id: 100, lr is: 0.1, loss is: 6.969445705413818, acc is: 0.0
+Traceback (most recent call last):
+  File "sparse_train.py", line 177, in <module>
+    main()
+  File "sparse_train.py", line 173, in main
+    compress(args)
+  File "sparse_train.py", line 162, in compress
+    train(epoch, net, opt, lr, train_loader)
+  File "sparse_train.py", line 84, in train
+    predicts = model(img)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 376, in forward
+    y = block(y)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 236, in forward
+    y = self._pointwise_conv(y)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 164, in forward
+    y = self._conv(inputs)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/dygraph/layers.py", line 891, in __call__
+    outputs = self.forward(*inputs, **kwargs)
+  File "/root/slim_develop/PaddleSlim/demo/dygraph/pruning/semi-structure_sparse/models/mobilenet_v1.py", line 79, in forward
+    drop_mask = drop_mask.reshape(self.weight.shape)
+  File "/usr/local/lib/python3.7/site-packages/paddle/tensor/manipulation.py", line 1550, in reshape
+    return paddle.fluid.layers.reshape(x=x, shape=shape, name=name)
+  File "/usr/local/lib/python3.7/site-packages/paddle/fluid/layers/nn.py", line 6135, in reshape
+    out, _ = core.ops.reshape2(x, None, 'shape', shape)
+KeyboardInterrupt
+  File "sparse_train.py", line 187
+    drop_rate_dict[epoch], Infer Sparse))
+                                      ^
+SyntaxError: invalid syntax
+  File "sparse_train.py", line 186
+    _logger.info('Target Rate: {}, Drop Rate: {}, Infer Sparse: {}'.format(target_rate_dict[epoch],drop_rate_dict[epoch], Infer Sparse))
+                                                                                                                                     ^
+SyntaxError: invalid syntax
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: MobileNetV1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+target_rate: 12
+use_gpu: True
+------------------------------------------------
+W0223 08:24:27.334854 35180 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 08:24:27.340531 35180 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 08:24:31.498705 35180 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+2021-02-23 08:24:36,809-INFO: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 9.5367431640625e-07
+2021-02-23 08:24:36,810-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:37,008-INFO: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 9.5367431640625e-07
+2021-02-23 08:24:37,008-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:37,158-INFO: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 9.5367431640625e-07
+2021-02-23 08:24:37,158-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:37,325-INFO: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 9.5367431640625e-07
+2021-02-23 08:24:37,325-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:37,499-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:24:37,499-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:37,675-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:24:37,675-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:37,750-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:24:37,750-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:37,961-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:24:37,961-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:38,150-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:24:38,150-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:38,267-INFO: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:24:38,267-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:38,400-INFO: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:24:38,400-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:38,607-INFO: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:24:38,607-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:38,771-INFO: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:24:38,771-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:38,952-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:24:38,952-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:39,031-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:24:39,031-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:39,245-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:24:39,245-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:39,424-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:24:39,425-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:39,625-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:24:39,626-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:39,747-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:24:39,748-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:39,950-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:24:39,950-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:40,145-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:24:40,145-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:40,267-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:24:40,268-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:40,480-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:24:40,480-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:40,670-INFO: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:24:40,671-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:40,774-INFO: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:24:40,774-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:40,984-INFO: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:24:40,984-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:41,159-INFO: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:24:41,159-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:41,284-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:24:41,284-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:41,497-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:24:41,497-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:41,670-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:24:41,670-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:41,772-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:24:41,772-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:41,975-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:24:41,975-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:42,145-INFO: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:24:42,146-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:42,262-INFO: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:24:42,262-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:42,459-INFO: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:24:42,459-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:42,606-INFO: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:24:42,606-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:42,794-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:24:42,794-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:42,982-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:24:42,982-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:43,133-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:24:43,133-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:43,335-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:24:43,335-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:43,564-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:24:43,565-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:43,764-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:24:43,764-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:43,880-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:24:43,880-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:44,066-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:24:44,067-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:44,254-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:24:44,254-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:44,383-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:24:44,383-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:44,595-INFO: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:24:44,595-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:44,789-INFO: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:24:44,789-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:44,974-INFO: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:24:44,974-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:45,095-INFO: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:24:45,095-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:45,297-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:24:45,297-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:45,493-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:24:45,493-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:45,617-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:24:45,617-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:45,820-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:24:45,820-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:46,015-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:24:46,015-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:46,146-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:24:46,146-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:46,348-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:24:46,348-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:46,544-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:24:46,545-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:46,687-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:24:46,687-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:46,899-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:24:46,899-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:47,095-INFO: Target Rate: 12, Drop Rate: 0.5083333333333333, Infer Sparse: 0.75
+2021-02-23 08:24:47,095-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:47,282-INFO: Target Rate: 12, Drop Rate: 0.5166666666666666, Infer Sparse: 0.75
+2021-02-23 08:24:47,282-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:47,416-INFO: Target Rate: 12, Drop Rate: 0.5249999999999999, Infer Sparse: 0.75
+2021-02-23 08:24:47,417-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:47,615-INFO: Target Rate: 12, Drop Rate: 0.5333333333333332, Infer Sparse: 0.75
+2021-02-23 08:24:47,615-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:47,803-INFO: Target Rate: 12, Drop Rate: 0.5416666666666665, Infer Sparse: 0.75
+2021-02-23 08:24:47,804-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:47,929-INFO: Target Rate: 12, Drop Rate: 0.5499999999999998, Infer Sparse: 0.75
+2021-02-23 08:24:47,929-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:48,131-INFO: Target Rate: 12, Drop Rate: 0.5583333333333331, Infer Sparse: 0.75
+2021-02-23 08:24:48,131-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:48,325-INFO: Target Rate: 12, Drop Rate: 0.5666666666666664, Infer Sparse: 0.75
+2021-02-23 08:24:48,325-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:48,475-INFO: Target Rate: 12, Drop Rate: 0.5749999999999997, Infer Sparse: 0.75
+2021-02-23 08:24:48,476-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:48,668-INFO: Target Rate: 12, Drop Rate: 0.583333333333333, Infer Sparse: 0.75
+2021-02-23 08:24:48,668-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:48,867-INFO: Target Rate: 12, Drop Rate: 0.5916666666666663, Infer Sparse: 0.75
+2021-02-23 08:24:48,867-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:49,061-INFO: Target Rate: 12, Drop Rate: 0.5999999999999996, Infer Sparse: 0.75
+2021-02-23 08:24:49,062-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:49,195-INFO: Target Rate: 12, Drop Rate: 0.608333333333333, Infer Sparse: 0.75
+2021-02-23 08:24:49,196-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:49,410-INFO: Target Rate: 12, Drop Rate: 0.6166666666666663, Infer Sparse: 0.75
+2021-02-23 08:24:49,410-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:49,594-INFO: Target Rate: 12, Drop Rate: 0.6249999999999996, Infer Sparse: 0.75
+2021-02-23 08:24:49,595-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:49,756-INFO: Target Rate: 12, Drop Rate: 0.6333333333333329, Infer Sparse: 0.75
+2021-02-23 08:24:49,757-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:49,942-INFO: Target Rate: 12, Drop Rate: 0.6416666666666662, Infer Sparse: 0.75
+2021-02-23 08:24:49,943-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:50,140-INFO: Target Rate: 12, Drop Rate: 0.6499999999999995, Infer Sparse: 0.75
+2021-02-23 08:24:50,140-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:50,334-INFO: Target Rate: 12, Drop Rate: 0.6583333333333328, Infer Sparse: 0.75
+2021-02-23 08:24:50,334-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:50,452-INFO: Target Rate: 12, Drop Rate: 0.6666666666666661, Infer Sparse: 0.75
+2021-02-23 08:24:50,453-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:50,666-INFO: Target Rate: 12, Drop Rate: 0.6749999999999994, Infer Sparse: 0.75
+2021-02-23 08:24:50,666-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:50,857-INFO: Target Rate: 12, Drop Rate: 0.6833333333333327, Infer Sparse: 0.75
+2021-02-23 08:24:50,857-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:51,046-INFO: Target Rate: 12, Drop Rate: 0.691666666666666, Infer Sparse: 0.75
+2021-02-23 08:24:51,046-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:51,156-INFO: Target Rate: 12, Drop Rate: 0.6999999999999993, Infer Sparse: 0.75
+2021-02-23 08:24:51,156-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:51,369-INFO: Target Rate: 12, Drop Rate: 0.7083333333333326, Infer Sparse: 0.75
+2021-02-23 08:24:51,370-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:51,557-INFO: Target Rate: 12, Drop Rate: 0.7166666666666659, Infer Sparse: 0.75
+2021-02-23 08:24:51,557-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:51,750-INFO: Target Rate: 12, Drop Rate: 0.7249999999999992, Infer Sparse: 0.75
+2021-02-23 08:24:51,750-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:51,834-INFO: Target Rate: 12, Drop Rate: 0.7333333333333325, Infer Sparse: 0.75
+2021-02-23 08:24:51,834-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:52,020-INFO: Target Rate: 12, Drop Rate: 0.7416666666666658, Infer Sparse: 0.75
+2021-02-23 08:24:52,020-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:52,214-INFO: Target Rate: 12, Drop Rate: 0.7499999999999991, Infer Sparse: 0.75
+2021-02-23 08:24:52,214-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:52,408-INFO: Target Rate: 12, Drop Rate: 0.7583333333333324, Infer Sparse: 0.75
+2021-02-23 08:24:52,408-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:52,537-INFO: Target Rate: 12, Drop Rate: 0.7666666666666657, Infer Sparse: 0.75
+2021-02-23 08:24:52,537-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:52,750-INFO: Target Rate: 12, Drop Rate: 0.774999999999999, Infer Sparse: 0.75
+2021-02-23 08:24:52,750-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:52,949-INFO: Target Rate: 12, Drop Rate: 0.7833333333333323, Infer Sparse: 0.75
+2021-02-23 08:24:52,949-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:53,120-INFO: Target Rate: 12, Drop Rate: 0.7916666666666656, Infer Sparse: 0.75
+2021-02-23 08:24:53,120-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:53,261-INFO: Target Rate: 12, Drop Rate: 0.7999999999999989, Infer Sparse: 0.75
+2021-02-23 08:24:53,261-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:53,453-INFO: Target Rate: 12, Drop Rate: 0.8083333333333322, Infer Sparse: 0.75
+2021-02-23 08:24:53,453-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:53,634-INFO: Target Rate: 12, Drop Rate: 0.8166666666666655, Infer Sparse: 0.75
+2021-02-23 08:24:53,634-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:53,746-INFO: Target Rate: 12, Drop Rate: 0.8249999999999988, Infer Sparse: 0.75
+2021-02-23 08:24:53,746-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:53,948-INFO: Target Rate: 12, Drop Rate: 0.8333333333333321, Infer Sparse: 0.75
+2021-02-23 08:24:53,948-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:54,142-INFO: Target Rate: 12, Drop Rate: 0.8416666666666655, Infer Sparse: 0.75
+2021-02-23 08:24:54,143-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:54,343-INFO: Target Rate: 12, Drop Rate: 0.8499999999999988, Infer Sparse: 0.75
+2021-02-23 08:24:54,343-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:54,457-INFO: Target Rate: 12, Drop Rate: 0.8583333333333321, Infer Sparse: 0.75
+2021-02-23 08:24:54,457-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:54,657-INFO: Target Rate: 12, Drop Rate: 0.8666666666666654, Infer Sparse: 0.75
+2021-02-23 08:24:54,658-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:54,846-INFO: Target Rate: 12, Drop Rate: 0.8749999999999987, Infer Sparse: 0.75
+2021-02-23 08:24:54,847-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:54,966-INFO: Target Rate: 12, Drop Rate: 0.883333333333332, Infer Sparse: 0.75
+2021-02-23 08:24:54,966-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:55,177-INFO: Target Rate: 12, Drop Rate: 0.8916666666666653, Infer Sparse: 0.75
+2021-02-23 08:24:55,177-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:55,358-INFO: Target Rate: 12, Drop Rate: 0.8999999999999986, Infer Sparse: 0.75
+2021-02-23 08:24:55,359-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:55,559-INFO: Target Rate: 12, Drop Rate: 0.9083333333333319, Infer Sparse: 0.75
+2021-02-23 08:24:55,560-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:55,691-INFO: Target Rate: 12, Drop Rate: 0.9166666666666652, Infer Sparse: 0.75
+2021-02-23 08:24:55,691-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:55,898-INFO: Target Rate: 12, Drop Rate: 0.9249999999999985, Infer Sparse: 0.75
+2021-02-23 08:24:55,898-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:56,088-INFO: Target Rate: 12, Drop Rate: 0.9333333333333318, Infer Sparse: 0.75
+2021-02-23 08:24:56,088-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:56,289-INFO: Target Rate: 12, Drop Rate: 0.9416666666666651, Infer Sparse: 0.75
+2021-02-23 08:24:56,289-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:56,418-INFO: Target Rate: 12, Drop Rate: 0.9499999999999984, Infer Sparse: 0.75
+2021-02-23 08:24:56,418-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:56,619-INFO: Target Rate: 12, Drop Rate: 0.9583333333333317, Infer Sparse: 0.75
+2021-02-23 08:24:56,620-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:56,815-INFO: Target Rate: 12, Drop Rate: 0.966666666666665, Infer Sparse: 0.75
+2021-02-23 08:24:56,815-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:56,951-INFO: Target Rate: 12, Drop Rate: 0.9749999999999983, Infer Sparse: 0.75
+2021-02-23 08:24:56,951-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:57,162-INFO: Target Rate: 12, Drop Rate: 0.9833333333333316, Infer Sparse: 0.75
+2021-02-23 08:24:57,163-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:57,350-INFO: Target Rate: 12, Drop Rate: 0.9916666666666649, Infer Sparse: 0.75
+2021-02-23 08:24:57,350-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+2021-02-23 08:24:57,518-INFO: Target Rate: 12, Drop Rate: 0.9999999999999982, Infer Sparse: 0.75
+2021-02-23 08:24:57,519-INFO: Real_sparse: [0.51708984375, 0.49365234375, 0.5015869140625, 0.49658203125, 0.5001220703125, 0.5009002685546875, 0.49941253662109375, 0.4980049133300781, 0.5003395080566406, 0.5018501281738281, 0.5000457763671875, 0.5000782012939453, 0.4992027282714844]
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: MobileNetV1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+target_rate: 12
+use_gpu: True
+------------------------------------------------
+W0223 08:25:35.475641 35374 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 08:25:35.484030 35374 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 08:25:40.736860 35374 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+2021-02-23 08:25:46,353-INFO: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 0.0
+2021-02-23 08:25:46,542-INFO: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 0.0
+2021-02-23 08:25:46,654-INFO: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 0.0
+2021-02-23 08:25:46,848-INFO: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 0.0
+2021-02-23 08:25:47,036-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:25:47,163-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:25:47,374-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:25:47,574-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:25:47,702-INFO: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:25:47,904-INFO: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:25:48,101-INFO: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:25:48,219-INFO: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:25:48,394-INFO: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:25:48,582-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:25:48,783-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:25:48,889-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:25:49,072-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:25:49,265-INFO: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:25:49,452-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:25:49,559-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:25:49,768-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:25:49,961-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:25:50,151-INFO: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:25:50,276-INFO: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:25:50,432-INFO: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:25:50,626-INFO: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:25:50,810-INFO: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:25:50,905-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:25:51,119-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:25:51,298-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:25:51,379-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:25:51,594-INFO: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:25:51,773-INFO: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:25:51,859-INFO: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:25:52,073-INFO: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:25:52,254-INFO: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:25:52,455-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:25:52,572-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:25:52,739-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:25:52,938-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:25:53,116-INFO: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:25:53,199-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:25:53,403-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:25:53,593-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:25:53,771-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:25:53,882-INFO: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5625
+2021-02-23 08:25:54,074-INFO: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:25:54,262-INFO: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:25:54,353-INFO: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:25:54,566-INFO: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:25:54,760-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:25:54,885-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:25:55,098-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:25:55,279-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:25:55,434-INFO: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:25:55,609-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:25:55,801-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:25:55,985-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:25:56,106-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:25:56,316-INFO: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:25:56,499-INFO: Target Rate: 12, Drop Rate: 0.5083333333333333, Infer Sparse: 0.75
+2021-02-23 08:25:56,695-INFO: Target Rate: 12, Drop Rate: 0.5166666666666666, Infer Sparse: 0.75
+2021-02-23 08:25:56,792-INFO: Target Rate: 12, Drop Rate: 0.5249999999999999, Infer Sparse: 0.75
+2021-02-23 08:25:57,003-INFO: Target Rate: 12, Drop Rate: 0.5333333333333332, Infer Sparse: 0.75
+2021-02-23 08:25:57,195-INFO: Target Rate: 12, Drop Rate: 0.5416666666666665, Infer Sparse: 0.75
+2021-02-23 08:25:57,335-INFO: Target Rate: 12, Drop Rate: 0.5499999999999998, Infer Sparse: 0.75
+2021-02-23 08:25:57,413-INFO: Target Rate: 12, Drop Rate: 0.5583333333333331, Infer Sparse: 0.75
+2021-02-23 08:25:57,624-INFO: Target Rate: 12, Drop Rate: 0.5666666666666664, Infer Sparse: 0.75
+2021-02-23 08:25:57,823-INFO: Target Rate: 12, Drop Rate: 0.5749999999999997, Infer Sparse: 0.75
+2021-02-23 08:25:57,976-INFO: Target Rate: 12, Drop Rate: 0.583333333333333, Infer Sparse: 0.75
+2021-02-23 08:25:58,088-INFO: Target Rate: 12, Drop Rate: 0.5916666666666663, Infer Sparse: 0.75
+2021-02-23 08:25:58,283-INFO: Target Rate: 12, Drop Rate: 0.5999999999999996, Infer Sparse: 0.75
+2021-02-23 08:25:58,451-INFO: Target Rate: 12, Drop Rate: 0.608333333333333, Infer Sparse: 0.75
+2021-02-23 08:25:58,563-INFO: Target Rate: 12, Drop Rate: 0.6166666666666663, Infer Sparse: 0.75
+2021-02-23 08:25:58,757-INFO: Target Rate: 12, Drop Rate: 0.6249999999999996, Infer Sparse: 0.75
+2021-02-23 08:25:58,951-INFO: Target Rate: 12, Drop Rate: 0.6333333333333329, Infer Sparse: 0.75
+2021-02-23 08:25:59,095-INFO: Target Rate: 12, Drop Rate: 0.6416666666666662, Infer Sparse: 0.75
+2021-02-23 08:25:59,270-INFO: Target Rate: 12, Drop Rate: 0.6499999999999995, Infer Sparse: 0.75
+2021-02-23 08:25:59,504-INFO: Target Rate: 12, Drop Rate: 0.6583333333333328, Infer Sparse: 0.75
+2021-02-23 08:25:59,645-INFO: Target Rate: 12, Drop Rate: 0.6666666666666661, Infer Sparse: 0.75
+2021-02-23 08:25:59,847-INFO: Target Rate: 12, Drop Rate: 0.6749999999999994, Infer Sparse: 0.75
+2021-02-23 08:26:00,050-INFO: Target Rate: 12, Drop Rate: 0.6833333333333327, Infer Sparse: 0.75
+2021-02-23 08:26:00,242-INFO: Target Rate: 12, Drop Rate: 0.691666666666666, Infer Sparse: 0.75
+2021-02-23 08:26:00,369-INFO: Target Rate: 12, Drop Rate: 0.6999999999999993, Infer Sparse: 0.75
+2021-02-23 08:26:00,587-INFO: Target Rate: 12, Drop Rate: 0.7083333333333326, Infer Sparse: 0.75
+2021-02-23 08:26:00,839-INFO: Target Rate: 12, Drop Rate: 0.7166666666666659, Infer Sparse: 0.75
+2021-02-23 08:26:00,972-INFO: Target Rate: 12, Drop Rate: 0.7249999999999992, Infer Sparse: 0.75
+2021-02-23 08:26:01,239-INFO: Target Rate: 12, Drop Rate: 0.7333333333333325, Infer Sparse: 0.75
+2021-02-23 08:26:01,429-INFO: Target Rate: 12, Drop Rate: 0.7416666666666658, Infer Sparse: 0.75
+2021-02-23 08:26:01,561-INFO: Target Rate: 12, Drop Rate: 0.7499999999999991, Infer Sparse: 0.75
+2021-02-23 08:26:01,763-INFO: Target Rate: 12, Drop Rate: 0.7583333333333324, Infer Sparse: 0.75
+2021-02-23 08:26:01,962-INFO: Target Rate: 12, Drop Rate: 0.7666666666666657, Infer Sparse: 0.75
+2021-02-23 08:26:02,099-INFO: Target Rate: 12, Drop Rate: 0.774999999999999, Infer Sparse: 0.75
+2021-02-23 08:26:02,307-INFO: Target Rate: 12, Drop Rate: 0.7833333333333323, Infer Sparse: 0.75
+2021-02-23 08:26:02,504-INFO: Target Rate: 12, Drop Rate: 0.7916666666666656, Infer Sparse: 0.75
+2021-02-23 08:26:02,683-INFO: Target Rate: 12, Drop Rate: 0.7999999999999989, Infer Sparse: 0.75
+2021-02-23 08:26:02,896-INFO: Target Rate: 12, Drop Rate: 0.8083333333333322, Infer Sparse: 0.75
+2021-02-23 08:26:03,129-INFO: Target Rate: 12, Drop Rate: 0.8166666666666655, Infer Sparse: 0.75
+2021-02-23 08:26:03,319-INFO: Target Rate: 12, Drop Rate: 0.8249999999999988, Infer Sparse: 0.75
+2021-02-23 08:26:03,541-INFO: Target Rate: 12, Drop Rate: 0.8333333333333321, Infer Sparse: 0.75
+2021-02-23 08:26:03,697-INFO: Target Rate: 12, Drop Rate: 0.8416666666666655, Infer Sparse: 0.75
+2021-02-23 08:26:03,953-INFO: Target Rate: 12, Drop Rate: 0.8499999999999988, Infer Sparse: 0.75
+2021-02-23 08:26:04,253-INFO: Target Rate: 12, Drop Rate: 0.8583333333333321, Infer Sparse: 0.75
+2021-02-23 08:26:04,507-INFO: Target Rate: 12, Drop Rate: 0.8666666666666654, Infer Sparse: 0.75
+2021-02-23 08:26:04,759-INFO: Target Rate: 12, Drop Rate: 0.8749999999999987, Infer Sparse: 0.75
+2021-02-23 08:26:05,011-INFO: Target Rate: 12, Drop Rate: 0.883333333333332, Infer Sparse: 0.75
+2021-02-23 08:26:05,224-INFO: Target Rate: 12, Drop Rate: 0.8916666666666653, Infer Sparse: 0.75
+2021-02-23 08:26:05,485-INFO: Target Rate: 12, Drop Rate: 0.8999999999999986, Infer Sparse: 0.75
+2021-02-23 08:26:05,739-INFO: Target Rate: 12, Drop Rate: 0.9083333333333319, Infer Sparse: 0.75
+2021-02-23 08:26:05,939-INFO: Target Rate: 12, Drop Rate: 0.9166666666666652, Infer Sparse: 0.75
+2021-02-23 08:26:06,221-INFO: Target Rate: 12, Drop Rate: 0.9249999999999985, Infer Sparse: 0.75
+2021-02-23 08:26:06,446-INFO: Target Rate: 12, Drop Rate: 0.9333333333333318, Infer Sparse: 0.75
+2021-02-23 08:26:06,735-INFO: Target Rate: 12, Drop Rate: 0.9416666666666651, Infer Sparse: 0.75
+2021-02-23 08:26:06,928-INFO: Target Rate: 12, Drop Rate: 0.9499999999999984, Infer Sparse: 0.75
+2021-02-23 08:26:07,202-INFO: Target Rate: 12, Drop Rate: 0.9583333333333317, Infer Sparse: 0.75
+2021-02-23 08:26:07,438-INFO: Target Rate: 12, Drop Rate: 0.966666666666665, Infer Sparse: 0.75
+2021-02-23 08:26:07,682-INFO: Target Rate: 12, Drop Rate: 0.9749999999999983, Infer Sparse: 0.75
+2021-02-23 08:26:07,924-INFO: Target Rate: 12, Drop Rate: 0.9833333333333316, Infer Sparse: 0.75
+2021-02-23 08:26:08,130-INFO: Target Rate: 12, Drop Rate: 0.9916666666666649, Infer Sparse: 0.75
+2021-02-23 08:26:08,315-INFO: Target Rate: 12, Drop Rate: 0.9999999999999982, Infer Sparse: 0.75
+/usr/local/lib/python3.7/site-packages/matplotlib/__init__.py:107: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import MutableMapping
+/usr/local/lib/python3.7/site-packages/matplotlib/rcsetup.py:20: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Iterable, Mapping
+/usr/local/lib/python3.7/site-packages/matplotlib/colors.py:53: DeprecationWarning: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working
+  from collections import Sized
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:188: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:485: DeprecationWarning: invalid escape sequence \s
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:879: DeprecationWarning: invalid escape sequence \_
+/usr/local/lib/python3.7/site-packages/paddleslim-1.0.0-py3.7.egg/paddleslim/nas/ofa/layers.py:1170: DeprecationWarning: invalid escape sequence \_
+-----------  Configuration Arguments -----------
+batch_size: 2
+checkpoint: None
+data: imagenet
+l2_decay: 3e-05
+lr: 0.1
+lr_strategy: cosine_decay
+model: MobileNetV1
+model_path: ./sparse_mobilenetv1_models
+momentum_rate: 0.9
+num_epochs: 120
+step_epochs: [30, 60, 90]
+target_rate: 12
+use_gpu: True
+------------------------------------------------
+W0223 08:26:45.305722 35593 device_context.cc:362] Please NOTE: device: 0, GPU Compute Capability: 7.0, Driver API Version: 11.0, Runtime API Version: 10.0
+W0223 08:26:45.311830 35593 device_context.cc:372] device: 0, cuDNN Version: 7.5.
+W0223 08:26:49.219099 35593 device_context.h:245] WARNING: device: 0. The installed Paddle is compiled with CUDNN 7.6, but CUDNN version in your machine is 7.5, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+2021-02-23 08:26:55,345-INFO: Epoch 0: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 0.0
+2021-02-23 08:26:55,457-INFO: Epoch 1: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 0.0
+2021-02-23 08:26:55,637-INFO: Epoch 2: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 0.0
+2021-02-23 08:26:55,827-INFO: Epoch 3: Target Rate: 0, Drop Rate: 0.5, Infer Sparse: 0.0
+2021-02-23 08:26:55,990-INFO: Epoch 4: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:26:56,154-INFO: Epoch 5: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:26:56,331-INFO: Epoch 6: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:26:56,445-INFO: Epoch 7: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:26:56,642-INFO: Epoch 8: Target Rate: 1, Drop Rate: 0.5, Infer Sparse: 0.0625
+2021-02-23 08:26:56,832-INFO: Epoch 9: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:26:57,008-INFO: Epoch 10: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:26:57,227-INFO: Epoch 11: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:26:57,424-INFO: Epoch 12: Target Rate: 2, Drop Rate: 0.5, Infer Sparse: 0.125
+2021-02-23 08:26:57,552-INFO: Epoch 13: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:26:57,836-INFO: Epoch 14: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:26:58,154-INFO: Epoch 15: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:26:58,393-INFO: Epoch 16: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:26:58,678-INFO: Epoch 17: Target Rate: 3, Drop Rate: 0.5, Infer Sparse: 0.1875
+2021-02-23 08:26:58,906-INFO: Epoch 18: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:26:59,119-INFO: Epoch 19: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:26:59,260-INFO: Epoch 20: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:26:59,471-INFO: Epoch 21: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:26:59,670-INFO: Epoch 22: Target Rate: 4, Drop Rate: 0.5, Infer Sparse: 0.25
+2021-02-23 08:26:59,857-INFO: Epoch 23: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:26:59,967-INFO: Epoch 24: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:27:00,180-INFO: Epoch 25: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:27:00,376-INFO: Epoch 26: Target Rate: 5, Drop Rate: 0.5, Infer Sparse: 0.3125
+2021-02-23 08:27:00,564-INFO: Epoch 27: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:27:00,696-INFO: Epoch 28: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:27:00,892-INFO: Epoch 29: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:27:01,081-INFO: Epoch 30: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:27:01,203-INFO: Epoch 31: Target Rate: 6, Drop Rate: 0.5, Infer Sparse: 0.375
+2021-02-23 08:27:01,429-INFO: Epoch 32: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:27:01,700-INFO: Epoch 33: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:27:01,918-INFO: Epoch 34: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:27:02,126-INFO: Epoch 35: Target Rate: 7, Drop Rate: 0.5, Infer Sparse: 0.4375
+2021-02-23 08:27:02,320-INFO: Epoch 36: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:27:02,508-INFO: Epoch 37: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:27:02,690-INFO: Epoch 38: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:27:02,893-INFO: Epoch 39: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:27:03,052-INFO: Epoch 40: Target Rate: 8, Drop Rate: 0.5, Infer Sparse: 0.5
+2021-02-23 08:27:03,237-INFO: Epoch 41: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5624990463256836
+2021-02-23 08:27:03,444-INFO: Epoch 42: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5624990463256836
+2021-02-23 08:27:03,682-INFO: Epoch 43: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5624990463256836
+2021-02-23 08:27:03,920-INFO: Epoch 44: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5624990463256836
+2021-02-23 08:27:04,181-INFO: Epoch 45: Target Rate: 9, Drop Rate: 0.5, Infer Sparse: 0.5624990463256836
+2021-02-23 08:27:04,452-INFO: Epoch 46: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:27:04,566-INFO: Epoch 47: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:27:04,774-INFO: Epoch 48: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:27:05,002-INFO: Epoch 49: Target Rate: 10, Drop Rate: 0.5, Infer Sparse: 0.625
+2021-02-23 08:27:05,182-INFO: Epoch 50: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:27:05,335-INFO: Epoch 51: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:27:05,528-INFO: Epoch 52: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:27:05,665-INFO: Epoch 53: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:27:05,884-INFO: Epoch 54: Target Rate: 11, Drop Rate: 0.5, Infer Sparse: 0.6875
+2021-02-23 08:27:06,160-INFO: Epoch 55: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:27:06,366-INFO: Epoch 56: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:27:06,574-INFO: Epoch 57: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:27:06,793-INFO: Epoch 58: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:27:06,976-INFO: Epoch 59: Target Rate: 12, Drop Rate: 0.5, Infer Sparse: 0.75
+2021-02-23 08:27:07,198-INFO: Epoch 60: Target Rate: 12, Drop Rate: 0.5083333333333333, Infer Sparse: 0.75
+2021-02-23 08:27:07,433-INFO: Epoch 61: Target Rate: 12, Drop Rate: 0.5166666666666666, Infer Sparse: 0.75
+2021-02-23 08:27:07,574-INFO: Epoch 62: Target Rate: 12, Drop Rate: 0.5249999999999999, Infer Sparse: 0.75
+2021-02-23 08:27:07,773-INFO: Epoch 63: Target Rate: 12, Drop Rate: 0.5333333333333332, Infer Sparse: 0.75
+2021-02-23 08:27:07,993-INFO: Epoch 64: Target Rate: 12, Drop Rate: 0.5416666666666665, Infer Sparse: 0.75
+2021-02-23 08:27:08,228-INFO: Epoch 65: Target Rate: 12, Drop Rate: 0.5499999999999998, Infer Sparse: 0.75
+2021-02-23 08:27:08,486-INFO: Epoch 66: Target Rate: 12, Drop Rate: 0.5583333333333331, Infer Sparse: 0.75
+2021-02-23 08:27:08,602-INFO: Epoch 67: Target Rate: 12, Drop Rate: 0.5666666666666664, Infer Sparse: 0.75
+2021-02-23 08:27:08,814-INFO: Epoch 68: Target Rate: 12, Drop Rate: 0.5749999999999997, Infer Sparse: 0.75
+2021-02-23 08:27:09,009-INFO: Epoch 69: Target Rate: 12, Drop Rate: 0.583333333333333, Infer Sparse: 0.75
+2021-02-23 08:27:09,267-INFO: Epoch 70: Target Rate: 12, Drop Rate: 0.5916666666666663, Infer Sparse: 0.75
+2021-02-23 08:27:09,445-INFO: Epoch 71: Target Rate: 12, Drop Rate: 0.5999999999999996, Infer Sparse: 0.75
+2021-02-23 08:27:09,662-INFO: Epoch 72: Target Rate: 12, Drop Rate: 0.608333333333333, Infer Sparse: 0.75
+2021-02-23 08:27:09,855-INFO: Epoch 73: Target Rate: 12, Drop Rate: 0.6166666666666663, Infer Sparse: 0.75
+2021-02-23 08:27:09,970-INFO: Epoch 74: Target Rate: 12, Drop Rate: 0.6249999999999996, Infer Sparse: 0.75
+2021-02-23 08:27:10,245-INFO: Epoch 75: Target Rate: 12, Drop Rate: 0.6333333333333329, Infer Sparse: 0.75
+2021-02-23 08:27:10,523-INFO: Epoch 76: Target Rate: 12, Drop Rate: 0.6416666666666662, Infer Sparse: 0.75
+2021-02-23 08:27:10,704-INFO: Epoch 77: Target Rate: 12, Drop Rate: 0.6499999999999995, Infer Sparse: 0.75
+2021-02-23 08:27:10,976-INFO: Epoch 78: Target Rate: 12, Drop Rate: 0.6583333333333328, Infer Sparse: 0.75
+2021-02-23 08:27:11,198-INFO: Epoch 79: Target Rate: 12, Drop Rate: 0.6666666666666661, Infer Sparse: 0.75
+2021-02-23 08:27:11,469-INFO: Epoch 80: Target Rate: 12, Drop Rate: 0.6749999999999994, Infer Sparse: 0.75
+2021-02-23 08:27:11,691-INFO: Epoch 81: Target Rate: 12, Drop Rate: 0.6833333333333327, Infer Sparse: 0.75
+2021-02-23 08:27:11,943-INFO: Epoch 82: Target Rate: 12, Drop Rate: 0.691666666666666, Infer Sparse: 0.75
+2021-02-23 08:27:12,222-INFO: Epoch 83: Target Rate: 12, Drop Rate: 0.6999999999999993, Infer Sparse: 0.75
+2021-02-23 08:27:12,468-INFO: Epoch 84: Target Rate: 12, Drop Rate: 0.7083333333333326, Infer Sparse: 0.75
+2021-02-23 08:27:12,712-INFO: Epoch 85: Target Rate: 12, Drop Rate: 0.7166666666666659, Infer Sparse: 0.75
+2021-02-23 08:27:12,959-INFO: Epoch 86: Target Rate: 12, Drop Rate: 0.7249999999999992, Infer Sparse: 0.75
+2021-02-23 08:27:13,178-INFO: Epoch 87: Target Rate: 12, Drop Rate: 0.7333333333333325, Infer Sparse: 0.75
+2021-02-23 08:27:13,456-INFO: Epoch 88: Target Rate: 12, Drop Rate: 0.7416666666666658, Infer Sparse: 0.75
+2021-02-23 08:27:13,714-INFO: Epoch 89: Target Rate: 12, Drop Rate: 0.7499999999999991, Infer Sparse: 0.75
+2021-02-23 08:27:13,986-INFO: Epoch 90: Target Rate: 12, Drop Rate: 0.7583333333333324, Infer Sparse: 0.75
+2021-02-23 08:27:14,237-INFO: Epoch 91: Target Rate: 12, Drop Rate: 0.7666666666666657, Infer Sparse: 0.75
+2021-02-23 08:27:14,425-INFO: Epoch 92: Target Rate: 12, Drop Rate: 0.774999999999999, Infer Sparse: 0.75
+2021-02-23 08:27:14,696-INFO: Epoch 93: Target Rate: 12, Drop Rate: 0.7833333333333323, Infer Sparse: 0.75
+2021-02-23 08:27:14,958-INFO: Epoch 94: Target Rate: 12, Drop Rate: 0.7916666666666656, Infer Sparse: 0.75
+2021-02-23 08:27:15,184-INFO: Epoch 95: Target Rate: 12, Drop Rate: 0.7999999999999989, Infer Sparse: 0.75
+2021-02-23 08:27:15,379-INFO: Epoch 96: Target Rate: 12, Drop Rate: 0.8083333333333322, Infer Sparse: 0.75
+2021-02-23 08:27:15,605-INFO: Epoch 97: Target Rate: 12, Drop Rate: 0.8166666666666655, Infer Sparse: 0.75
+2021-02-23 08:27:15,802-INFO: Epoch 98: Target Rate: 12, Drop Rate: 0.8249999999999988, Infer Sparse: 0.75
+2021-02-23 08:27:15,994-INFO: Epoch 99: Target Rate: 12, Drop Rate: 0.8333333333333321, Infer Sparse: 0.75
+2021-02-23 08:27:16,098-INFO: Epoch 100: Target Rate: 12, Drop Rate: 0.8416666666666655, Infer Sparse: 0.75
+2021-02-23 08:27:16,324-INFO: Epoch 101: Target Rate: 12, Drop Rate: 0.8499999999999988, Infer Sparse: 0.75
+2021-02-23 08:27:16,488-INFO: Epoch 102: Target Rate: 12, Drop Rate: 0.8583333333333321, Infer Sparse: 0.75
+2021-02-23 08:27:16,596-INFO: Epoch 103: Target Rate: 12, Drop Rate: 0.8666666666666654, Infer Sparse: 0.75
+2021-02-23 08:27:16,812-INFO: Epoch 104: Target Rate: 12, Drop Rate: 0.8749999999999987, Infer Sparse: 0.75
+2021-02-23 08:27:17,004-INFO: Epoch 105: Target Rate: 12, Drop Rate: 0.883333333333332, Infer Sparse: 0.75
+2021-02-23 08:27:17,218-INFO: Epoch 106: Target Rate: 12, Drop Rate: 0.8916666666666653, Infer Sparse: 0.75
+2021-02-23 08:27:17,450-INFO: Epoch 107: Target Rate: 12, Drop Rate: 0.8999999999999986, Infer Sparse: 0.75
+2021-02-23 08:27:17,601-INFO: Epoch 108: Target Rate: 12, Drop Rate: 0.9083333333333319, Infer Sparse: 0.75
+2021-02-23 08:27:17,818-INFO: Epoch 109: Target Rate: 12, Drop Rate: 0.9166666666666652, Infer Sparse: 0.75
+2021-02-23 08:27:17,958-INFO: Epoch 110: Target Rate: 12, Drop Rate: 0.9249999999999985, Infer Sparse: 0.75
+2021-02-23 08:27:18,127-INFO: Epoch 111: Target Rate: 12, Drop Rate: 0.9333333333333318, Infer Sparse: 0.75
+2021-02-23 08:27:18,347-INFO: Epoch 112: Target Rate: 12, Drop Rate: 0.9416666666666651, Infer Sparse: 0.75
+2021-02-23 08:27:18,585-INFO: Epoch 113: Target Rate: 12, Drop Rate: 0.9499999999999984, Infer Sparse: 0.75
+2021-02-23 08:27:18,920-INFO: Epoch 114: Target Rate: 12, Drop Rate: 0.9583333333333317, Infer Sparse: 0.75
+2021-02-23 08:27:19,162-INFO: Epoch 115: Target Rate: 12, Drop Rate: 0.966666666666665, Infer Sparse: 0.75
+2021-02-23 08:27:19,427-INFO: Epoch 116: Target Rate: 12, Drop Rate: 0.9749999999999983, Infer Sparse: 0.75
+2021-02-23 08:27:19,616-INFO: Epoch 117: Target Rate: 12, Drop Rate: 0.9833333333333316, Infer Sparse: 0.75
+2021-02-23 08:27:19,782-INFO: Epoch 118: Target Rate: 12, Drop Rate: 0.9916666666666649, Infer Sparse: 0.75
+2021-02-23 08:27:20,015-INFO: Epoch 119: Target Rate: 12, Drop Rate: 0.9999999999999982, Infer Sparse: 0.75
