@@ -2,6 +2,8 @@
 
 ERNIE是百度开创性提出的基于知识增强的持续学习语义理解框架，该框架将大数据预训练与多源丰富知识相结合，通过持续学习技术，不断吸收海量文本数据中词汇、结构、语义等方面的知识，实现模型效果不断进化。本教程讲介绍如何使用PaddleSlim对[ERNIE](https://github.com/PaddlePaddle/ERNIE)模型进行压缩。
 
+本教程只会演示如何快速启动相应训练，详细教程请参考：[ERNIE](https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/nlp/ernie_slim_ofa_tutorial.md)
+
 使用本教程压缩算法可以在精度无损的情况下，对原始Tiny-ERNIE模型进行40%的加速。
 
 ## 1. 快速开始
@@ -41,4 +43,4 @@ python ./ofa_ernie.py \
 - `depth_mult_list` 表示压缩训练过程中，模型包含的Transformer Block数量的选择的范围。
 
 ## 2. OFA接口介绍
-TODO
+OFA API介绍参考[API](https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/ofa/ofa_api.rst)
