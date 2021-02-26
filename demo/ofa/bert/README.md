@@ -1,6 +1,7 @@
 # OFA压缩PaddleNLP-BERT模型
 
-BERT-base模型是一个迁移能力很强的通用语义表示模型，但是模型中也有一些参数冗余。本教程将介绍如何使用PaddleSlim对[PaddleNLP](https://github.com/PaddlePaddle/models/tree/develop/PaddleNLP/)中BERT-base模型进行压缩。
+BERT-base模型是一个迁移能力很强的通用语义表示模型，但是模型中也有一些参数冗余。本教程将介绍如何使用PaddleSlim对[PaddleNLP](https://github.com/PaddlePaddle/models/tree/develop/PaddleNLP/)中BERT-base模型进行压缩。  
+本教程只会演示如何快速启动相应训练，详细教程请参考: [BERT](https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/nlp/paddlenlp_slim_ofa_tutorial.md)
 
 ## 1. 压缩结果
 
@@ -82,7 +83,7 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         <td rowspan=2 align=center> V100 </td>
                         <td rowspan=2 align=center> 16 </td>
                         <td style="text-align:center">
-                                <span style="font-size:18px;">BERT</span>
+                                <span style="font-size:18px;" align=center>BERT</span>
                         </td>
                         <td style="text-align:center">
                                 <span style="font-size:18px">N</span>
@@ -106,7 +107,7 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         <td rowspan=2 align=center> Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz </td>
                         <td rowspan=2 align=center> 16 </td>
                         <td style="text-align:center">
-                                <span style="font-size:18px;">BERT</span>
+                                <span style="font-size:18px;" align=center>BERT</span>
                         </td>
                         <td style="text-align:center">
                                 <span style="font-size:18px">N</span>
@@ -184,7 +185,7 @@ python -u ./run_glue_ofa.py --model_type bert \
 压缩训练之后在dev上的结果如表1-1中『Result with PaddleSlim』列所示，延时情况如表1-2所示。
 
 ## 3. OFA接口介绍
-OFA API介绍参考[API](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/ofa_api.rst)
+OFA API介绍参考[API](https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/api_cn/dygraph/ofa/ofa_api.rst)
 
 # 基于本代码对TinyBERT(L=4, D=312)进行压缩
 下游任务模型是从TinyBERT官方repo转换得到。
