@@ -105,3 +105,55 @@ def prune_params(model, param_config, super_model_sd=None):
         t_value.set(prune_value, place)
         if param.trainable:
             param.clear_gradient()
+
+
+def _find_weight_ops(op, graph, weights):
+    pre_ops = graph.pre_ops(op)
+    for pre_op in pre_ops:
+        if pre_op.type() in WEIGHT_OP:
+            for inp in pre_op.all_inputs():
+                if inp._var.persistable:
+                    weights.append(inp._var.name)
+            return weights
+        return _find_weight_ops(pre_op, graph, weights)
+
+
+def _find_pre_elementwise_add(op, graph):
+    same_ss_per_op = []
+    pre_ops = graph.pre_ops(op)
+    for pre_op in pre_ops:
+        if pre_op.type() in WEIGHT_OP:
+            return
+        same_ss_per_op = _find_weight_ops(pre_op, graph, same_ss_per_op)
+    return same_ss_per_op
+
+
+def check_ss(graph):
+    same_ss = []
+    for op in graph.ops():
+        if op.type() == 'elementwise_add':
+            inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
+            if (not inp1._var.persistable) and (not inp2._var.persistable):
+                same_ss.append(_find_pre_elementwise_add(op, graph))
+
+    same_ss = sorted([sorted(x) for x in same_ss])
+    if len(same_ss) == 0:
+        return None
+    final_ss = []
+
+    if len(same_ss) >= 1:
+        final_ss = [same_ss[0]]
+        if len(same_ss) > 1:
+            for l in same_ss[1:]:
+                listset = set(l)
+                merged = False
+                for idx in range(len(final_ss)):
+                    rset = set(final_ss[idx])
+                    if len(listset & rset) != 0:
+                        final_ss[idx] = list(listset | rset)
+                        merged = True
+                        break
+                if not merged:
+                    final_ss.append(l)
+
+    return final_ss

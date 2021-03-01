@@ -28,7 +28,7 @@ else:
 from .utils.utils import search_idx
 from ...common import get_logger
 from ...core import GraphWrapper, dygraph2program
-from .get_sub_model import get_prune_params_config, prune_params
+from .get_sub_model import get_prune_params_config, prune_params, check_ss
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -156,6 +156,8 @@ class OFA(OFABase):
         self.task_idx = 0
         self._add_teacher = False
         self.netAs_param = []
+        self._build_ss = False
+        self._broadcast = False
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
@@ -482,6 +484,47 @@ class OFA(OFABase):
         """
         self.net_config = net_config
 
+    def _find_ele(self, inp, targets):
+        def _roll_eles(target_list, types=(list, set, tuple)):
+            if isinstance(target_list, types):
+                for targ in target_list:
+                    for v in _roll_eles(targ, types):
+                        yield v
+            else:
+                yield target_list
+
+        if inp in list(_roll_eles(targets)):
+            return True
+        else:
+            return False
+
+    def _clear_search_space(self, *inputs, **kwargs):
+        input_shapes = []
+        input_dtypes = []
+        for n in inputs:
+            input_shapes.append(n.shape)
+            input_dtypes.append(n.numpy().dtype)
+        for n, v in kwargs.items():
+            input_shapes.append(v.shape)
+            input_dtypes.append(v.numpy().dtype)
+
+        _st_prog = dygraph2program(
+            self.model, inputs=input_shapes, dtypes=input_dtypes)
+        self._same_ss = sorted(check_ss(GraphWrapper(_st_prog)))
+
+        if self._same_ss != None:
+            self._param2key = {}
+            self._broadcast = True
+
+            for name, sublayer in self.model.named_sublayers():
+                if isinstance(sublayer, BaseBlock):
+                    for param in sublayer.parameters():
+                        if self._find_ele(param.name, self._same_ss):
+                            self._param2key[param.name] = sublayer.key
+            for per_ss in self._same_ss:
+                for ss in per_ss[1:]:
+                    self._layers.pop(self._param2key[ss])
+
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
         teacher_output = None
@@ -492,6 +535,10 @@ class OFA(OFABase):
         # ============================================================
 
         # ====================   student process  =====================
+        if not self._build_ss:
+            self._clear_search_space(*inputs, **kwargs)
+            self._build_ss = True
+
         if getattr(self.run_config, 'dynamic_batch_size', None) != None:
             self.dynamic_iter += 1
             if self.dynamic_iter == self.run_config.dynamic_batch_size[
@@ -515,5 +562,11 @@ class OFA(OFABase):
         _logger.debug("Current config is {}".format(self.current_config))
         if 'depth' in self.current_config:
             kwargs['depth'] = self.current_config['depth']
+
+        if self._broadcast:
+            for per_ss in self._same_ss:
+                for ss in per_ss[1:]:
+                    self.current_config[self._param2key[
+                        ss]] = self.current_config[self._param2key[per_ss[0]]]
 
         return self.model.forward(*inputs, **kwargs), teacher_output
