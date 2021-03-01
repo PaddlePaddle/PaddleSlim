@@ -499,6 +499,7 @@ class OFA(OFABase):
             return False
 
     def _clear_search_space(self, *inputs, **kwargs):
+        """ find shortcut in model, and clear up the search space """
         input_shapes = []
         input_dtypes = []
         for n in inputs:
@@ -508,6 +509,7 @@ class OFA(OFABase):
             input_shapes.append(v.shape)
             input_dtypes.append(v.numpy().dtype)
 
+        ### find shortcut block using static model
         _st_prog = dygraph2program(
             self.model, inputs=input_shapes, dtypes=input_dtypes)
         self._same_ss = sorted(check_ss(GraphWrapper(_st_prog)))
@@ -516,14 +518,49 @@ class OFA(OFABase):
             self._param2key = {}
             self._broadcast = True
 
+            ### sublayer.key is the key in search space
+            ### param.name is the name in self._same_ss
             for name, sublayer in self.model.named_sublayers():
                 if isinstance(sublayer, BaseBlock):
                     for param in sublayer.parameters():
                         if self._find_ele(param.name, self._same_ss):
                             self._param2key[param.name] = sublayer.key
+
             for per_ss in self._same_ss:
                 for ss in per_ss[1:]:
-                    self._layers.pop(self._param2key[ss])
+                    if 'expand_ratio' in self.layers[self._param2key[ss]]:
+                        self._layers[self._param2key[ss]].pop('expand_ratio')
+                    elif 'channel' in self.layers[self._param2key[ss]]:
+                        self._layers[self._param2key[ss]].pop('channel')
+                    if len(self._layers[self._param2key[ss]]) == 0:
+                        self._layers.pop(self._param2key[ss])
+
+    def _broadcast_ss(self):
+        """ broadcast search space after random sample."""
+        for per_ss in self._same_ss:
+            for ss in per_ss[1:]:
+                key = self._param2key[ss]
+                pre_key = self._param2key[per_ss[0]]
+                if key in self.current_config:
+                    if 'expand_ratio' in self.current_config[pre_key]:
+                        self.current_config[key].update({
+                            'expand_ratio':
+                            self.current_config[pre_key]['expand_ratio']
+                        })
+                    elif 'channel' in self.current_config[pre_key]:
+                        self.current_config[key].update({
+                            'channel': self.current_config[pre_key]['channel']
+                        })
+                else:
+                    if 'expand_ratio' in self.current_config[pre_key]:
+                        self.current_config[key] = {
+                            'expand_ratio':
+                            self.current_config[pre_key]['expand_ratio']
+                        }
+                    elif 'channel' in self.current_config[pre_key]:
+                        self.current_config[key] = {
+                            'channel': self.current_config[pre_key]['channel']
+                        }
 
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
@@ -564,9 +601,6 @@ class OFA(OFABase):
             kwargs['depth'] = self.current_config['depth']
 
         if self._broadcast:
-            for per_ss in self._same_ss:
-                for ss in per_ss[1:]:
-                    self.current_config[self._param2key[
-                        ss]] = self.current_config[self._param2key[per_ss[0]]]
+            self._broadcast_ss()
 
         return self.model.forward(*inputs, **kwargs), teacher_output
