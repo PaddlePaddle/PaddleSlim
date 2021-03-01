@@ -208,6 +208,7 @@ class QAT(object):
             act_quantize_layer=self.act_quantize)
 
     def quantize(self, model):
+        self._orig_model = copy.deepcopy(model)
         self.imperative_qat.quantize(model)
 
     def save_quantized_model(self, model, path, input_spec=None):
@@ -228,9 +229,10 @@ class QAT(object):
             quantizable_layer_type=self.config['quantizable_layer_type'])
 
         with paddle.utils.unique_name.guard():
+            if "_orig_model" in self.__dict__:
+                model = self._orig_model
             if hasattr(model, "_layers"):
                 model = model._layers
-            model.__init__()
             self.imperative_qat.quantize(model)
             state_dict = model.state_dict()
             model.set_state_dict(state_dict)
