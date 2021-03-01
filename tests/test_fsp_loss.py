@@ -44,13 +44,14 @@ class TestFSPLoss(StaticCase):
         data_name_map = {'image': 'image'}
         merge(teacher_main,
               paddle.static.default_main_program(), data_name_map, place)
+
         merged_ops = []
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
                 merged_ops.append(op.type)
-        distill_loss = fsp_loss(
-            'teacher_conv5_bn_output.tmp_2', 'teacher_conv6_bn_output.tmp_2',
-            'conv1_bn_output.tmp_2', 'conv2_bn_output.tmp_2')
+        distill_loss = fsp_loss('teacher_conv1_out.tmp_1',
+                                'teacher_conv6_out.tmp_0', 'conv1_out.tmp_0',
+                                'conv2_out.tmp_0')
         loss_ops = []
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
