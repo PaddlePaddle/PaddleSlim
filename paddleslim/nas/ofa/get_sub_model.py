@@ -16,7 +16,10 @@ import numpy as np
 import paddle
 from paddle.fluid import core
 
-__all__ = ['get_prune_params_config', 'prune_params']
+__all__ = ['get_prune_params_config', 'prune_params', 'check_ss']
+
+WEIGHT_OP = ['conv2d', 'conv3d', 'conv1d', 'linear', 'embedding']
+CONV_TYPES = ['conv2d', 'conv3d', 'conv1d']
 
 
 def get_prune_params_config(graph, origin_model_config):
@@ -68,43 +71,56 @@ def get_prune_params_config(graph, origin_model_config):
 
 
 def prune_params(model, param_config, super_model_sd=None):
-    for name, param in model.named_parameters():
-        t_value = param.value().get_tensor()
-        value = np.array(t_value).astype("float32")
+    for l_name, sublayer in model.named_sublayers():
+        for p_name, param in sublayer.named_parameters(include_sublayers=False):
+            name = l_name + '.' + p_name
+            t_value = param.value().get_tensor()
+            value = np.array(t_value).astype("float32")
 
-        if super_model_sd != None:
-            super_t_value = super_model_sd[name].value().get_tensor()
-            super_value = np.array(super_t_value).astype("float32")
+            if super_model_sd != None:
+                super_t_value = super_model_sd[name].value().get_tensor()
+                super_value = np.array(super_t_value).astype("float32")
 
-        if param.name in param_config.keys():
-            if len(param_config[param.name]) > 1:
-                in_exp = param_config[param.name][0]
-                out_exp = param_config[param.name][1]
-                in_chn = int(value.shape[0]) if in_exp == None else int(
-                    value.shape[0] * in_exp)
-                out_chn = int(value.shape[1]) if out_exp == None else int(
-                    value.shape[1] * out_exp)
-                prune_value = super_value[:in_chn, :out_chn, ...] \
-                                 if super_model_sd != None else value[:in_chn, :out_chn, ...]
+            if param.name in param_config.keys():
+                if len(param_config[param.name]) > 1:
+                    in_exp = param_config[param.name][0]
+                    out_exp = param_config[param.name][1]
+                    if sublayer.__class__.__name__.lower() in CONV_TYPES:
+                        in_chn = int(value.shape[1]) if in_exp == None else int(
+                            value.shape[1] * in_exp)
+                        out_chn = int(value.shape[
+                            0]) if out_exp == None else int(value.shape[0] *
+                                                            out_exp)
+                        prune_value = super_value[:out_chn, :in_chn, ...] \
+                                         if super_model_sd != None else value[:out_chn, :in_chn, ...]
+                    else:
+                        in_chn = int(value.shape[0]) if in_exp == None else int(
+                            value.shape[0] * in_exp)
+                        out_chn = int(value.shape[
+                            1]) if out_exp == None else int(value.shape[1] *
+                                                            out_exp)
+                        prune_value = super_value[:in_chn, :out_chn, ...] \
+                                         if super_model_sd != None else value[:in_chn, :out_chn, ...]
+                else:
+                    out_chn = int(value.shape[0]) if param_config[param.name][
+                        0] == None else int(value.shape[0] *
+                                            param_config[param.name][0])
+                    prune_value = super_value[:out_chn, ...] \
+                                     if super_model_sd != None else value[:out_chn, ...]
+
             else:
-                out_chn = int(value.shape[0]) if param_config[param.name][
-                    0] == None else int(value.shape[0] *
-                                        param_config[param.name][0])
-                prune_value = super_value[:out_chn, ...] \
-                                 if super_model_sd != None else value[:out_chn, ...]
-        else:
-            prune_value = super_value if super_model_sd != None else value
+                prune_value = super_value if super_model_sd != None else value
 
-        p = t_value._place()
-        if p.is_cpu_place():
-            place = core.CPUPlace()
-        elif p.is_cuda_pinned_place():
-            place = core.CUDAPinnedPlace()
-        else:
-            place = core.CUDAPlace(p.gpu_device_id())
-        t_value.set(prune_value, place)
-        if param.trainable:
-            param.clear_gradient()
+            p = t_value._place()
+            if p.is_cpu_place():
+                place = core.CPUPlace()
+            elif p.is_cuda_pinned_place():
+                place = core.CUDAPinnedPlace()
+            else:
+                place = core.CUDAPlace(p.gpu_device_id())
+            t_value.set(prune_value, place)
+            if param.trainable:
+                param.clear_gradient()
 
 
 def _find_weight_ops(op, graph, weights):

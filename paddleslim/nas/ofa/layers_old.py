@@ -28,59 +28,14 @@ from .utils.utils import compute_start_end, get_same_padding, convert_to_list
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
-    'SuperBatchNorm', 'SuperLinear', 'SuperInstanceNorm', 'Block',
-    'SuperGroupConv2D', 'SuperDepthwiseConv2D', 'SuperGroupConv2DTranspose',
+    'SuperBatchNorm', 'SuperLinear', 'SuperInstanceNorm', 'SuperGroupConv2D',
+    'SuperDepthwiseConv2D', 'SuperGroupConv2DTranspose',
     'SuperDepthwiseConv2DTranspose', 'SuperLayerNorm', 'SuperEmbedding'
 ]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 ### TODO: if task is elastic width, need to add re_organize_middle_weight in 1x1 conv in MBBlock
-
-_cnt = 0
-
-
-def counter():
-    global _cnt
-    _cnt += 1
-    return _cnt
-
-
-class BaseBlock(fluid.dygraph.Layer):
-    def __init__(self, key=None):
-        super(BaseBlock, self).__init__()
-        if key is not None:
-            self._key = str(key)
-        else:
-            self._key = self.__class__.__name__ + str(counter())
-
-    # set SuperNet class
-    def set_supernet(self, supernet):
-        self.__dict__['supernet'] = supernet
-
-    @property
-    def key(self):
-        return self._key
-
-
-class Block(BaseBlock):
-    """
-    Model is composed of nest blocks.
-
-    Parameters:
-        fn(Layer): instance of super layers, such as: SuperConv2D(3, 5, 3).
-        key(str, optional): key of this layer, one-to-one correspondence between key and candidate config. Default: None.
-    """
-
-    def __init__(self, fn, fixed=False, key=None):
-        super(Block, self).__init__(key)
-        self.fn = fn
-        self.fixed = fixed
-        self.candidate_config = self.fn.candidate_config
-
-    def forward(self, *inputs, **kwargs):
-        out = self.supernet.layers_forward(self, *inputs, **kwargs)
-        return out
 
 
 class SuperConv2D(fluid.dygraph.Conv2D):
