@@ -25,6 +25,7 @@ from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, Batch
 
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
+from .layers_base import *
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',

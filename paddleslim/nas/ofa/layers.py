@@ -23,6 +23,7 @@ import paddle.fluid.core as core
 
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
+from .layers_base import *
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
