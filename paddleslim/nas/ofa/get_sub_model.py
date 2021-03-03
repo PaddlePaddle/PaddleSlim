@@ -15,11 +15,15 @@
 import numpy as np
 import paddle
 from paddle.fluid import core
+from .layers_base import BaseBlock
 
 __all__ = ['get_prune_params_config', 'prune_params', 'check_ss']
 
 WEIGHT_OP = ['conv2d', 'conv3d', 'conv1d', 'linear', 'embedding']
-CONV_TYPES = ['conv2d', 'conv3d', 'conv1d']
+CONV_TYPES = [
+    'conv2d', 'conv3d', 'conv1d', 'superconv2d', 'supergroupconv2d',
+    'superdepthwiseconv2d'
+]
 
 
 def get_prune_params_config(graph, origin_model_config):
@@ -72,6 +76,8 @@ def get_prune_params_config(graph, origin_model_config):
 
 def prune_params(model, param_config, super_model_sd=None):
     for l_name, sublayer in model.named_sublayers():
+        if isinstance(sublayer, BaseBlock):
+            continue
         for p_name, param in sublayer.named_parameters(include_sublayers=False):
             name = l_name + '.' + p_name
             t_value = param.value().get_tensor()

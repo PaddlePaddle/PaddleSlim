@@ -439,6 +439,8 @@ class OFA(OFABase):
                                  input_dtypes):
         origin_model_config = {}
         for name, sublayer in origin_model.named_sublayers():
+            if isinstance(sublayer, BaseBlock):
+                sublayer = sublayer.fn
             for param in sublayer.parameters(include_sublayers=False):
                 if name in config.keys():
                     origin_model_config[param.name] = config[name]
