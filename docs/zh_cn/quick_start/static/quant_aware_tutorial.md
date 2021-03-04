@@ -1,6 +1,6 @@
-# 图像分类模型量化训练-快速开始
+# 量化训练
 
-该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的[量化训练接口](../api_cn/quantization_api.html)。 该示例包含以下步骤：
+该教程以图像分类模型MobileNetV1为例，说明如何快速使用PaddleSlim的量化训练接口。 该示例包含以下步骤：
 
 1. 导入依赖
 2. 构建模型
@@ -128,7 +128,7 @@ test(val_program)
 
 ## 4. 量化
 
-按照[默认配置](https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#id2)在``train_program``和``val_program``中加入量化和反量化op.
+按照[默认配置](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#id12)在``train_program``和``val_program``中加入量化和反量化op.
 
 
 ```python
@@ -156,7 +156,7 @@ test(val_quant_program)
 
 ## 6. 保存量化后的模型
 
-在``4. 量化``中使用接口``slim.quant.quant_aware``接口得到的模型只适合训练时使用，为了得到最终使用时的模型，需要使用[slim.quant.convert](https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#convert)接口，然后使用[fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/io_cn/save_inference_model_cn.html#save-inference-model)保存模型。``float_prog``的参数数据类型是float32，但是数据范围是int8, 保存之后可使用fluid或者paddle-lite加载使用，paddle-lite在使用时，会先将类型转换为int8。``int8_prog``的参数数据类型是int8, 保存后可看到量化后模型大小，不可加载使用。
+在``4. 量化``中使用接口``slim.quant.quant_aware``接口得到的模型只适合训练时使用，为了得到最终使用时的模型，需要使用[slim.quant.convert](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#convert)接口，然后使用[fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/save_inference_model_cn.html#save-inference-model)保存模型。``float_prog``的参数数据类型是float32，但是数据范围是int8, 保存之后可使用fluid或者paddle-lite加载使用，paddle-lite在使用时，会先将类型转换为int8。``int8_prog``的参数数据类型是int8, 保存后可看到量化后模型大小，不可加载使用。
 
 
 ```python

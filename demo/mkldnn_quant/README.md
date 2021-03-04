@@ -1,4 +1,4 @@
-# PaddleSlim INT8量化模型在CPU上的部署和预测
+# Intel CPU量化部署
 
 ## 概述
 
@@ -118,20 +118,17 @@ val/ILSVRC2012_val_00000002.jpg 0
 
 - 用户也可以从Paddle官网下载发布的[预测库](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)。请选择`ubuntu14.04_cpu_avx_mkl` 最新发布版或者develop版。
 
-你可以将准备好的预测库解压并重命名为fluid_inference，放在当前目录下(`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`)。或者在cmake时通过设置PADDLE_ROOT来指定Paddle预测库的位置。
 
 #### 编译应用
 
-样例所在目录为PaddleSlim下`demo/mkldnn_quant/`,样例`sample_tester.cc`和编译所需`cmake`文件夹都在这个目录下。
+样例`sample_tester.cc`所在目录为PaddleSlim下`demo/mkldnn_quant/`。 编译时，设置`PADDLE_LIB`为Paddle源码编译生成的预测库或者直接下载的预测库
 ```
 cd /PATH/TO/PaddleSlim
 cd demo/mkldnn_quant/
-mkdir build
-cd build
-cmake -DPADDLE_ROOT=$PADDLE_ROOT ..
+mkdir build && cd build
+cmake -DPADDLE_LIB=path/to/paddle_inference_install_dir ..
 make -j
 ```
-如果你从官网下载解压了[预测库](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)到当前目录下，这里`-DPADDLE_ROOT`可以不设置，因为`-DPADDLE_ROOT`默认位置`demo/mkldnn_quant/fluid_inference`
 
 #### 运行测试
 ```
@@ -140,26 +137,24 @@ export KMP_AFFINITY=granularity=fine,compact,1,0
 export KMP_BLOCKTIME=1
 # Turbo Boost could be set to OFF using the command
 echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
-# In the file run.sh, set `MODEL_DIR` to `/PATH/TO/FLOAT32/MODEL`或者`/PATH/TO/SAVE/INT8/MODEL`
-# In the file run.sh, set `DATA_FILE` to `/PATH/TO/SAVE/BINARY/FILE`
-# For 1 thread performance:
-./run.sh
-# For 20 thread performance:
-./run.sh -1 20
+# For 1 thread performance, by default the bash use 1 threads
+# Set `MODEL_DIR` to `/PATH/TO/FLOAT32/MODEL` or `/PATH/TO/SAVE/INT8/MODEL`
+# Set `DATA_FILE` to `/PATH/TO/SAVE/BINARY/FILE`
+./run.sh path/to/MODEL_DIR path/to/DATA_FILE
+# For 20 thread performance, set third parameter 20
+./run.sh path/to/MODEL_DIR path/to/DATA_FILE 20
 ```
 
-运行时需要配置以下参数：
+`run.sh`中所有可选配置参数注释：
 - **infer_model:** 模型所在目录，注意模型参数当前必须是分开保存成多个文件的。可以设置为`PATH/TO/SAVE/INT8/MODEL`, `PATH/TO/SAVE/FLOAT32/MODEL`。无默认值。
 - **infer_data:** 测试数据文件所在路径。注意需要是经`full_ILSVRC2012_val_preprocess`转化后的binary文件。
-- **batch_size:** 预测batch size大小。默认值为50。
+- **batch_size:** 预测batch size大小。默认值为1。
 - **iterations:** batches迭代数。默认为0，0表示预测infer_data中所有batches (image numbers/batch_size)
 - **num_threads:** 预测使用CPU 线程数，默认为单核一个线程。
 - **with_accuracy_layer:** 模型为包含精度计算层的测试模型还是不包含精度计算层的预测模型，默认为true。
 - **use_analysis** 是否使用`paddle::AnalysisConfig`对模型优化、融合(fuse)，加速。默认为false
 
-你可以直接修改`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`目录下的`run.sh`中的MODEL_DIR和DATA_DIR，即可执行`./run.sh`进行CPU预测。
-
-### 4.3 用户编写自己的测试：
+### 4.3 用户编写自己的测试
 
 如果用户编写自己的测试：
 1. 测试INT8模型
@@ -180,7 +175,7 @@ static void SetConfig(paddle::AnalysisConfig *cfg) {
 - 如果infer_model传入PaddleSlim产出的quant模型，`use_analysis`即使设置为true不起作用，因为quant模型包含fake_quantize/fake_dequantize ops,无法fuse,无法优化。
 
 ## 5. 精度和性能数据
-INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性能](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/docs/zh_cn/tutorials/image_classification_mkldnn_quant_tutorial.md)
+INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性能](https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0-alpha/docs/zh_cn/tutorials/image_classification_mkldnn_quant_tutorial.md)
 
 ## FAQ
 

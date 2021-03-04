@@ -14,6 +14,7 @@
 
 import numpy as np
 import paddle
+from paddle.fluid import core
 
 __all__ = ['get_prune_params_config', 'prune_params']
 
@@ -96,11 +97,11 @@ def prune_params(model, param_config, super_model_sd=None):
 
         p = t_value._place()
         if p.is_cpu_place():
-            place = paddle.CPUPlace()
+            place = core.CPUPlace()
         elif p.is_cuda_pinned_place():
-            place = paddle.CUDAPinnedPlace()
+            place = core.CUDAPinnedPlace()
         else:
-            place = paddle.CUDAPlace(p.gpu_device_id())
+            place = core.CUDAPlace(p.gpu_device_id())
         t_value.set(prune_value, place)
         if param.trainable:
             param.clear_gradient()

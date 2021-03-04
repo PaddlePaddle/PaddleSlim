@@ -52,12 +52,13 @@ def compute_neuron_head_importance(args, model, dev_ds, place, model_cfg):
     for eval_task in eval_task_names:
         for batch in dev_ds.start(place):
             ids, sids, label = batch
-            loss, _, _ = model(
+            out = model(
                 ids,
                 sids,
                 labels=label,
                 head_mask=head_mask,
                 num_layers=model_cfg['num_hidden_layers'])
+            loss = out[0]
             loss.backward()
             head_importance += L.abs(FD.to_variable(head_mask.gradient()))
 
