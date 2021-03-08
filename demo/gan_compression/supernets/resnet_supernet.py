@@ -13,7 +13,8 @@
 # limitations under the License.
 import os
 import numpy as np
-import paddle.fluid as fluid
+import paddle
+import paddle.nn.functional as F
 from distillers.base_resnet_distiller import BaseResnetDistiller
 from paddleslim.nas.ofa.layers import SuperConv2D
 from models import loss
@@ -86,7 +87,7 @@ class ResnetSupernet(BaseResnetDistiller):
             self.opt.eval_mode = 'largest'
 
     def forward(self, config):
-        with fluid.dygraph.no_grad():
+        with paddle.no_grad():
             self.Tfake_B = self.netG_teacher(self.real_A)
         self.Tfake_B.stop_gradient = True
         if self.cfgs.use_parallel:
@@ -102,8 +103,12 @@ class ResnetSupernet(BaseResnetDistiller):
             n = self.mapping_layers[i]
             Tact = self.Tacts[n]
             Sact = self.Sacts[n]
-            Sact = netA(Sact, {'channel': netA._num_filters})
-            loss = fluid.layers.mse_loss(Sact, Tact)
+            Sact = netA(Sact, **{
+                'channel': netA._out_channels[0]
+                if isinstance(netA._out_channels, (list, set, tuple)) else
+                netA._out_channels
+            })
+            loss = F.mse_loss(Sact, Tact)
             setattr(self, 'loss_G_distill%d' % i, loss)
             losses.append(loss)
         return sum(losses)
@@ -168,10 +173,10 @@ class ResnetSupernet(BaseResnetDistiller):
                                         os.path.join(save_dir, Tname))
 
             suffix = self.cfgs.direction
-            fluid.disable_imperative()
+            paddle.enable_static()
             fid = get_fid(fakes, self.inception_model, self.npz,
                           self.cfgs.inception_model)
-            fluid.enable_imperative()
+            paddle.disable_static()
             if fid < getattr(self, 'best_fid_%s' % config_name, fid):
                 self.is_best = True
                 setattr(self, 'best_fid_%s' % config_name, fid)
@@ -194,5 +199,5 @@ class ResnetSupernet(BaseResnetDistiller):
         return ret
 
     def test(self, config):
-        with fluid.dygraph.no_grad():
+        with paddle.no_grad():
             self.forward(config)

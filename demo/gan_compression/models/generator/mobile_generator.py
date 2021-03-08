@@ -12,37 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import functools
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose
-from paddle.nn.layer import ReLU, Pad2D
+import paddle
+import paddle.nn as nn
+from paddle.nn import InstanceNorm2D, Conv2D, Conv2DTranspose, ReLU, Pad2D
 from .modules import MobileResnetBlock
 
-use_cudnn = False
 
-
-class MobileResnetGenerator(fluid.dygraph.Layer):
+class MobileResnetGenerator(nn.Layer):
     def __init__(self,
-                 input_channel,
+                 input_nc,
                  output_nc,
                  ngf,
-                 norm_layer=InstanceNorm,
+                 norm_layer=InstanceNorm2D,
                  dropout_rate=0,
                  n_blocks=9,
                  padding_type='reflect'):
         super(MobileResnetGenerator, self).__init__()
         if type(norm_layer) == functools.partial:
-            use_bias = norm_layer.func == InstanceNorm
+            use_bias = norm_layer.func == InstanceNorm2D
         else:
-            use_bias = norm_layer == InstanceNorm
+            use_bias = norm_layer == InstanceNorm2D
 
-        self.model = fluid.dygraph.LayerList([
+        self.model = nn.LayerList([
             Pad2D(
-                paddings=[3, 3, 3, 3], mode="reflect"), Conv2D(
-                    input_channel,
+                padding=[3, 3, 3, 3], mode="reflect"), Conv2D(
+                    input_nc,
                     int(ngf),
-                    filter_size=7,
+                    kernel_size=7,
                     padding=0,
-                    use_cudnn=use_cudnn,
                     bias_attr=use_bias), norm_layer(ngf), ReLU()
         ])
 
@@ -53,10 +50,9 @@ class MobileResnetGenerator(fluid.dygraph.Layer):
                 Conv2D(
                     ngf * mult,
                     ngf * mult * 2,
-                    filter_size=3,
+                    kernel_size=3,
                     stride=2,
                     padding=1,
-                    use_cudnn=use_cudnn,
                     bias_attr=use_bias), norm_layer(ngf * mult * 2), ReLU()
             ])
 
@@ -106,21 +102,20 @@ class MobileResnetGenerator(fluid.dygraph.Layer):
                 Conv2DTranspose(
                     ngf * mult,
                     int(ngf * mult / 2),
-                    filter_size=3,
-                    output_size=output_size,
+                    kernel_size=3,
+                    output_padding=1,
                     stride=2,
                     padding=1,
-                    use_cudnn=use_cudnn,
                     bias_attr=use_bias), norm_layer(int(ngf * mult / 2)),
                 ReLU()
             ])
 
-        self.model.extend([Pad2D(paddings=[3, 3, 3, 3], mode="reflect")])
-        self.model.extend([Conv2D(ngf, output_nc, filter_size=7, padding=0)])
+        self.model.extend([Pad2D(padding=[3, 3, 3, 3], mode="reflect")])
+        self.model.extend([Conv2D(ngf, output_nc, kernel_size=7, padding=0)])
 
     def forward(self, inputs):
         y = inputs
         for sublayer in self.model:
             y = sublayer(y)
-        y = fluid.layers.tanh(y)
+        y = paddle.tanh(y)
         return y

@@ -13,7 +13,7 @@
 # limitations under the License.
 import os
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 from dataset.data_loader import create_eval_data
 from utils.image_pool import ImagePool
 from models import network, loss
@@ -108,14 +108,10 @@ class CycleGAN(BaseModel):
                                        cfgs.norm_type, cfgs.n_layer_D)
 
         if self.cfgs.use_parallel:
-            self.netG_A = fluid.dygraph.parallel.DataParallel(
-                self.netG_A, self.cfgs.strategy)
-            self.netG_B = fluid.dygraph.parallel.DataParallel(
-                self.netG_B, self.cfgs.strategy)
-            self.netD_A = fluid.dygraph.parallel.DataParallel(
-                self.netD_A, self.cfgs.strategy)
-            self.netD_B = fluid.dygraph.parallel.DataParallel(
-                self.netD_B, self.cfgs.strategy)
+            self.netG_A = paddle.DataParallel(self.netG_A, self.cfgs.strategy)
+            self.netG_B = paddle.DataParallel(self.netG_B, self.cfgs.strategy)
+            self.netD_A = paddle.DataParallel(self.netD_A, self.cfgs.strategy)
+            self.netD_B = paddle.DataParallel(self.netD_B, self.cfgs.strategy)
 
         if cfgs.lambda_identity > 0.0:
             assert (cfgs.input_nc == cfgs.output_nc)
@@ -186,7 +182,7 @@ class CycleGAN(BaseModel):
                 save_path = os.path.join(self.cfgs.save_dir, 'mobile',
                                          save_filename)
                 net = getattr(self, name)
-                fluid.save_dygraph(net.state_dict(), save_path)
+                paddle.save(net.state_dict(), save_path)
 
     def forward(self):
         self.fake_B = self.netG_A(self.real_A)  ## G_A(A)
@@ -267,16 +263,16 @@ class CycleGAN(BaseModel):
         self.optimizer_D_B.optimizer.minimize(self.loss_D_B)
         self.optimizer_D_B.optimizer.clear_gradients()
 
-    @fluid.dygraph.no_grad
+    @paddle.no_grad()
     def test_single_side(self, direction):
         generator = getattr(self, 'netG_%s' % direction[0])
         self.fake_B = generator(self.real_A)
 
     def get_current_lr(self):
         lr_dict = {}
-        lr_dict['optim_G'] = self.optimizer_G.optimizer.current_step_lr()
-        lr_dict['optim_D_A'] = self.optimizer_D_A.optimizer.current_step_lr()
-        lr_dict['optim_D_B'] = self.optimizer_D_B.optimizer.current_step_lr()
+        lr_dict['optim_G'] = self.optimizer_G.optimizer.get_lr()
+        lr_dict['optim_D_A'] = self.optimizer_D_A.optimizer.get_lr()
+        lr_dict['optim_D_B'] = self.optimizer_D_B.optimizer.get_lr()
         return lr_dict
 
     def evaluate_model(self, step):
@@ -305,11 +301,11 @@ class CycleGAN(BaseModel):
                     cnt += 1
 
             suffix = direction[-1]
-            fluid.disable_imperative()
+            paddle.enable_static()
             fid = get_fid(fakes, self.inception_model,
                           getattr(self, 'npz_%s' % direction[-1]),
                           self.cfgs.inception_model)
-            fluid.enable_imperative()
+            paddle.disable_static()
             if fid < getattr(self, 'best_fid_%s' % suffix):
                 self.is_best = True
                 setattr(self, 'best_fid_%s' % suffix, fid)

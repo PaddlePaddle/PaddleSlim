@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import os
-import paddle.fluid as fluid
+import paddle.nn as nn
 
 
-class BaseModel(fluid.dygraph.Layer):
+class BaseModel(nn.Layer):
     @staticmethod
     def add_special_cfgs(parser):
         raise NotImplementedError
@@ -40,7 +40,7 @@ class BaseModel(fluid.dygraph.Layer):
                 save_filename = '%s_net_%s' % (epoch, name)
                 save_path = os.path.join(self.args.save_dir, save_filename)
                 net = getattr(self, 'net' + name)
-                fluid.save_dygraph(net.state_dict(), save_path)
+                paddle.save(net.state_dict(), save_path)
 
     def forward(self):
         raise NotImplementedError

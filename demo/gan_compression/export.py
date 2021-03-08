@@ -14,8 +14,8 @@
 import argparse
 import os
 
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose
+import paddle
+from paddle.nn import InstanceNorm2D, Conv2D, Conv2DTranspose
 from configs import decode_config
 from utils.util import load_network
 
@@ -40,7 +40,6 @@ def transfer_weight(netA, netB):
 
 
 def main(cfgs):
-    fluid.enable_imperative()
     config = decode_config(cfgs.config_str)
     if cfgs.model == 'mobile_resnet':
         from model.mobile_generator import MobileResnetGenerator as SuperModel
@@ -50,13 +49,13 @@ def main(cfgs):
             input_nc,
             output_nc,
             ngf=cfgs.ngf,
-            norm_layer=InstanceNorm,
+            norm_layer=InstanceNorm2D,
             n_blocks=9)
         sub_model = SubModel(
             input_nc,
             output_nc,
             config=config,
-            norm_layer=InstanceNorm,
+            norm_layer=InstanceNorm2D,
             n_blocks=9)
     else:
         raise NotImplementedError
@@ -67,7 +66,7 @@ def main(cfgs):
     if not os.path.exists(cfgs.save_dir):
         os.makedirs(cfgs.save_dir)
     save_path = os.path.join(cfgs.save_dir, 'final_net')
-    fluid.save_dygraph(sub_model.state_dict(), save_path)
+    paddle.save(sub_model.state_dict(), save_path)
     print('Successfully export the subnet at [%s].' % save_path)
 
 

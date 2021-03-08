@@ -14,9 +14,8 @@
 import os
 import numpy as np
 import itertools
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import Conv2D
-from paddle.fluid.dygraph.base import to_variable
+import paddle
+from paddle.nn import Conv2D
 from paddleslim.nas.ofa.layers import SuperConv2D
 from models import loss
 from models import network
@@ -89,19 +88,18 @@ class BaseResnetDistiller(BaseModel):
                 cfgs.input_nc, cfgs.output_nc, cfgs.pretrained_ngf,
                 cfgs.pretrained_netG, cfgs.norm_type, 0)
             if self.cfgs.use_parallel:
-                self.netG_pretrained = fluid.dygraph.parallel.DataParallel(
+                self.netG_pretrained = paddle.DataParallel(
                     self.netG_pretrained, self.cfgs.strategy)
 
         self.netD = network.define_D(cfgs.output_nc, cfgs.ndf, cfgs.netD,
                                      cfgs.norm_type, cfgs.n_layer_D)
 
         if self.cfgs.use_parallel:
-            self.netG_teacher = fluid.dygraph.parallel.DataParallel(
-                self.netG_teacher, self.cfgs.strategy)
-            self.netG_student = fluid.dygraph.parallel.DataParallel(
-                self.netG_student, self.cfgs.strategy)
-            self.netD = fluid.dygraph.parallel.DataParallel(self.netD,
-                                                            self.cfgs.strategy)
+            self.netG_teacher = paddle.DataParallel(self.netG_teacher,
+                                                    self.cfgs.strategy)
+            self.netG_student = paddle.DataParallel(self.netG_student,
+                                                    self.cfgs.strategy)
+            self.netD = paddle.DataParallel(self.netD, self.cfgs.strategy)
 
         self.netG_teacher.eval()
         self.netG_student.train()
@@ -122,10 +120,10 @@ class BaseResnetDistiller(BaseModel):
             ft, fs = cfgs.ngf, cfgs.student_ngf
             if self.task == 'distiller':
                 netA = Conv2D(
-                    num_channels=fs * 4, num_filters=ft * 4, filter_size=1)
+                    in_channels=fs * 4, out_channels=ft * 4, kernel_size=1)
             else:
                 netA = SuperConv2D(
-                    num_channels=fs * 4, num_filters=ft * 4, filter_size=1)
+                    in_channels=fs * 4, out_channels=ft * 4, kernel_size=1)
 
             G_params += netA.parameters()
             self.netAs.append(netA)
@@ -211,7 +209,8 @@ class BaseResnetDistiller(BaseModel):
                 key = 'netG_B' if 'netG_B' in model_weight else 'netG_teacher'
                 self.netG_teacher.set_dict(model_weight[key])
         else:
-            util.load_network(self.netG_teacher, self.cfgs.teacher_G_path)
+            util.load_network(self.netG_teacher,
+                              self.cfgs.restore_teacher_G_path)
 
         if self.cfgs.restore_student_G_path is not None:
             util.load_network(self.netG_student,
@@ -281,20 +280,20 @@ class BaseResnetDistiller(BaseModel):
     def save_network(self, epoch):
         save_filename = '{}_stu_netG'.format(epoch)
         save_path = os.path.join(self.cfgs.save_dir, self.task, save_filename)
-        fluid.save_dygraph(self.netG_student.state_dict(), save_path)
+        paddle.save(self.netG_student.state_dict(), save_path)
         save_filename = '{}_tea_netG'.format(epoch)
         save_path = os.path.join(self.cfgs.save_dir, self.task, save_filename)
-        fluid.save_dygraph(self.netG_teacher.state_dict(), save_path)
+        paddle.save(self.netG_teacher.state_dict(), save_path)
 
         save_filename = '{}_netD'.format(epoch)
         save_path = os.path.join(self.cfgs.save_dir, self.task, save_filename)
-        fluid.save_dygraph(self.netD.state_dict(), save_path)
+        paddle.save(self.netD.state_dict(), save_path)
 
         for idx, net in enumerate(self.netAs):
             save_filename = '{}_netA-{}'.format(epoch, idx)
             save_path = os.path.join(self.cfgs.save_dir, self.task,
                                      save_filename)
-            fluid.save_dygraph(net.state_dict(), save_path)
+            paddle.save(net.state_dict(), save_path)
 
     def get_current_loss(self):
         loss_dict = {}
@@ -316,10 +315,10 @@ class BaseResnetDistiller(BaseModel):
 
     def get_current_lr(self):
         lr_dict = {}
-        lr_dict['optim_G'] = self.optimizer_G.optimizer.current_step_lr()
-        lr_dict['optim_D'] = self.optimizer_D.optimizer.current_step_lr()
+        lr_dict['optim_G'] = self.optimizer_G.optimizer.get_lr()
+        lr_dict['optim_D'] = self.optimizer_D.optimizer.get_lr()
         return lr_dict
 
     def test(self):
-        with fluid.dygraph.no_grad():
+        with paddle.no_grad():
             self.forward()

@@ -20,7 +20,7 @@ import sys
 import time
 
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 
 from configs import encode_config
 from data_loader import create_eval_data
@@ -32,7 +32,6 @@ from utils import util
 
 
 def main(cfgs):
-    fluid.enable_imperative()
     if 'resnet' in cfgs.netG:
         from configs.resnet_configs import get_configs
     else:
@@ -75,7 +74,7 @@ def main(cfgs):
             'flops': flops
         }  ### compute FLOPs
 
-        fluid.disable_imperative()
+        paddle.enable_static()
         if not cfgs.no_fid:
             block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[2048]
             inception_model = InceptionV3([block_idx])
@@ -87,7 +86,7 @@ def main(cfgs):
                 batch_size=cfgs.batch_size,
                 use_gpu=cfgs.use_gpu)
             result['fid'] = fid
-        fluid.enable_imperative()
+        paddle.disable_static()
 
         e_time = (time.time() - s_time) / 60
         result['time'] = e_time

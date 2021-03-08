@@ -12,37 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle.fluid as fluid
+import paddle
+import paddle.nn as nn
+import paddle.nn.functional as F
 
 
 def gan_loss(gan_mode, prediction, target_is_real, for_discriminator=True):
     if target_is_real:
-        label = fluid.layers.fill_constant(
-            shape=fluid.layers.shape(prediction), value=1.0, dtype='float32')
+        label = paddle.ones(shape=prediction.shape, dtype='float32')
     else:
-        label = fluid.layers.fill_constant(
-            shape=fluid.layers.shape(prediction), value=0.0, dtype='float32')
+        label = paddle.zeros(shape=prediction.shape, dtype='float32')
     if gan_mode == 'lsgan':
-        loss = fluid.layers.mse_loss(prediction, label)
+        loss = F.mse_loss(prediction, label)
     elif gan_mode == 'vanilla':
-        loss = fluid.layers.sigmoid_cross_entropy_with_logits(prediction,
-                                                              label)
+        loss = F.binary_cross_entropy_with_logits(prediction, label)
     elif gan_mode == 'wgangp':
         pass
     elif gan_mode == 'hinge':
-        zero = fluid.layers.fill_constant(
-            shape=fluid.layers.shape(prediction), value=0.0, dtype='float32')
+        zero = paddle.zeros(shape=prediction.shape, dtype='float32')
         if for_discriminator:
             if target_is_real:
-                minval = fluid.layers.elementwise_min(prediction - 1., zero)
-                loss = -1. * fluid.layers.reduce_mean(minval)
+                minval = paddle.minimum(prediction - 1., zero)
+                loss = -1. * paddle.mean(minval)
             else:
-                minval = fluid.layers.elementwise_min(-1. * prediction - 1.,
-                                                      zero)
-                loss = -1. * fluid.layers.reduce_mean(minval)
+                minval = paddle.minimum(-1. * prediction - 1., zero)
+                loss = -1. * paddle.mean(minval)
         else:
             assert target_is_real
-            loss = -1. * fluid.layers.reduce_mean(prediction)
+            loss = -1. * paddle.mean(prediction)
     else:
         raise NotImplementedError('gan mode %s not implemented' % gan_mode)
     return loss
@@ -50,14 +47,11 @@ def gan_loss(gan_mode, prediction, target_is_real, for_discriminator=True):
 
 def recon_loss(mode, prediction, label):
     if mode == 'l1':
-        loss = fluid.layers.reduce_mean(
-            fluid.layers.elementwise_sub(
-                prediction, label, act='abs'))
+        loss = paddle.mean(paddle.abs(prediction - label))
     elif mode == 'l2':
-        loss = fluid.layers.mse_loss(prediction, label)
+        loss = F.mse_loss(prediction, label)
     elif mode == 'smooth_l1':
-        loss = fluid.layers.reduce_mean(
-            fluid.layers.smooth_l1(prediction, label))
+        loss = paddle.mean(F.smooth_l1_loss(prediction, label))
     elif mode == 'vgg':
         pass
     else:

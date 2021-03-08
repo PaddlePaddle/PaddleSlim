@@ -13,9 +13,10 @@
 # limitations under the License.
 import os
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import Conv2D
-from .base_resnet_distiller import BaseResnetDistiller
+import paddle
+import paddle.nn.functional as F
+from paddle.nn import Conv2D
+from distillers.base_resnet_distiller import BaseResnetDistiller
 from utils import util
 from utils.weight_transfer import load_pretrained_weight
 from models import loss
@@ -81,7 +82,7 @@ class ResnetDistiller(BaseResnetDistiller):
         self.npz = np.load(cfgs.real_stat_path)
 
     def forward(self):
-        with fluid.dygraph.no_grad():
+        with paddle.no_grad():
             self.Tfake_B = self.netG_teacher(self.real_A)
         self.Sfake_B = self.netG_student(self.real_A)
 
@@ -95,7 +96,7 @@ class ResnetDistiller(BaseResnetDistiller):
             Sact = self.Sacts[n]
             ### 1x1 conv to match channels
             Sact = netA(Sact)
-            loss = fluid.layers.mse_loss(Sact, Tact)
+            loss = F.mse_loss(Sact, Tact)
             setattr(self, 'loss_G_distill%d' % i, loss)
             losses.append(loss)
         return sum(losses)
@@ -117,9 +118,6 @@ class ResnetDistiller(BaseResnetDistiller):
         self.loss_G = self.loss_G_gan + self.loss_G_recon + self.loss_G_distill
         self.loss_G.backward()
 
-        if self.cfgs.use_parallel:
-            self.netG_student.apply_collective_grads()
-
     def optimize_parameter(self):
         self.forward()
 
@@ -134,7 +132,7 @@ class ResnetDistiller(BaseResnetDistiller):
         self.optimizer_G.optimizer.clear_gradients()
 
     def load_networks(self, model_weight=None):
-        if self.cfgs.restore_pretrained_G_path != False:
+        if self.cfgs.restore_pretrained_G_path.lower() != 'false':
             if self.cfgs.restore_pretrained_G_path != None:
                 pretrained_G_path = self.cfgs.restore_pretrained_G_path
                 util.load_network(self.netG_pretrained, pretrained_G_path)
@@ -180,10 +178,10 @@ class ResnetDistiller(BaseResnetDistiller):
                 cnt += 1
 
         suffix = self.cfgs.direction
-        fluid.disable_imperative()
+        paddle.enable_static()
         fid = get_fid(fakes, self.inception_model, self.npz,
                       self.cfgs.inception_model)
-        fluid.enable_imperative()
+        paddle.disable_static()
         if fid < self.best_fid:
             self.is_best = True
             self.best_fid = fid

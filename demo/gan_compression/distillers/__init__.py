@@ -1,5 +1,8 @@
 """Based on https://github.com/mit-han-lab/gan-compression """
 
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import importlib
 from models.base_model import BaseModel
 

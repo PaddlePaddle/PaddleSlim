@@ -15,7 +15,7 @@ import os
 import time
 import logging
 
-import paddle.fluid as fluid
+import paddle
 from dataset.data_loader import create_data
 from utils.get_args import configs
 
@@ -24,14 +24,10 @@ class gan_compression:
     def __init__(self, cfgs, **kwargs):
         self.cfgs = cfgs
         use_gpu, use_parallel = self._get_device()
-
         if not use_gpu:
-            place = fluid.CPUPlace()
+            place = paddle.static.cpu_places()
         else:
-            if not use_parallel:
-                place = fluid.CUDAPlace(0)
-            else:
-                place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
+            place = paddle.static.cuda_places()
 
         setattr(self.cfgs, 'use_gpu', use_gpu)
         setattr(self.cfgs, 'use_parallel', use_parallel)
@@ -67,13 +63,12 @@ class gan_compression:
             print(
                 "============================= start train {} ==============================".
                 format(step))
-            fluid.enable_imperative(place=self.cfgs.place)
+            model = create_model(self.cfgs)
 
             if self.cfgs.use_parallel and idx == 0:
-                strategy = fluid.dygraph.parallel.prepare_context()
-                setattr(self.cfgs, 'strategy', strategy)
+                paddle.distributed.init_parallel_env()
+                model = paddle.DataParallel(model)
 
-            model = create_model(self.cfgs)
             model.setup(model_weight)
             ### clear model_weight every step
             model_weight = {}
@@ -105,7 +100,7 @@ class gan_compression:
 
                 save_model = (not self.cfgs.use_parallel) or (
                     self.cfgs.use_parallel and
-                    fluid.dygraph.parallel.Env().local_rank == 0)
+                    paddle.distributed.get_rank() == 0)
                 if epoch_id % self.cfgs.save_freq == 0 or epoch_id == (
                         epochs - 1) and save_model:
                     model.evaluate_model(epoch_id)

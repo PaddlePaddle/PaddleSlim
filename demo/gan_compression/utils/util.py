@@ -15,7 +15,8 @@ import os
 import numpy as np
 import pickle
 from PIL import Image
-import paddle.fluid as fluid
+import paddle
+import paddle.nn as nn
 
 
 def load_network(model, model_path):
@@ -25,9 +26,8 @@ def load_network(model, model_path):
             model_weight[key] = np.array(value)
     else:
         assert os.path.exists(
-            model_path + '.pdparams'), "model path: {} is not exist!!!".format(
-                model_path + '.pdparams')
-        model_weight, _ = fluid.load_dygraph(model_path)
+            model_path), "model path: {} is not exist!!!".format(model_path)
+        model_weight = paddle.load(model_path)
     model.set_dict(model_weight)
     print("params {} load done".format(model_path))
     return model
@@ -35,9 +35,8 @@ def load_network(model, model_path):
 
 def load_optimizer(optimizer, optimizer_path):
     assert os.path.exists(
-        optimizer + '.pdopt'), "optimizer path: {} is not exist!!!".format(
-            optimizer_path + '.pdopt')
-    _, optimier_info = fluid.load_dygraph(optimizer_path)
+        optimizer), "optimizer path: {} is not exist!!!".format(optimizer_path)
+    optimier_info = paddle.load(optimizer_path)
     optimizer.set_dict(optimizer_info)
     return optimizer
 
@@ -74,7 +73,6 @@ def tensor2img(image_tensor, imtype=np.uint8, normalize=True, tile=False):
             return images_np
 
     if len(image_tensor.shape) == 2:
-        #image_tensor = fluid.layers.unsqueeze(image_tensor, axes=0)
         image_tensor = np.expand_dims(image_tensor, axis=0)
     if type(image_tensor) != np.ndarray:
         image_np = image_tensor.numpy()

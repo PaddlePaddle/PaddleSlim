@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from functools import reduce
-import paddle.fluid as fluid
+import paddle
+import paddle.nn as nn
 import network
 from utils import util
 from paddleslim.analysis.flops import dygraph_flops
 
 
-class TestModel(fluid.dygraph.Layer):
+class TestModel(nn.Layer):
     def __init__(self, cfgs):
         super(TestModel, self).__init__()
         self.model_names = ['G']
@@ -47,13 +48,13 @@ class TestModel(fluid.dygraph.Layer):
         self.fake_B = self.netG(self.real_A)
 
     def test(self, config=None):
-        with fluid.dygraph.no_grad():
+        with paddle.no_grad():
             self.forward(config)
 
     def profile(self, config=None):
         netG = self.netG
         netG.configs = config
-        with fluid.dygraph.no_grad():
+        with paddle.no_grad():
             flops = dygraph_flops(
                 netG, (self.real_A[:1]), only_conv=False, only_multiply=True)
         params = 0

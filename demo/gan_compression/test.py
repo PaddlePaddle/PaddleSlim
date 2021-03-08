@@ -17,7 +17,7 @@ import argparse
 import ast
 
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 from dataset.data_loader import create_eval_data
 from metric.inception import InceptionV3
 from metric import get_fid
@@ -26,7 +26,6 @@ from utils import util
 
 
 def main(cfgs):
-    fluid.enable_imperative()
     if cfgs.config_str is not None:
         assert 'super' in cfgs.netG or 'sub' in cfgs.netG
         config = decode_config(cfgs.config_str)
@@ -59,8 +58,7 @@ def main(cfgs):
             image = util.tensor2img(generated)
             util.save_image(image, save_path)
 
-    fluid.disable_imperative()
-
+    paddle.enable_static()
     if not cfgs.no_fid:
         print('Calculating FID...')
         block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[2048]

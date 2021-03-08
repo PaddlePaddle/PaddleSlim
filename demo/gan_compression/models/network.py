@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import functools
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import BatchNorm, InstanceNorm
+import paddle
+import paddle.nn as nn
+from paddle.nn import BatchNorm2D, InstanceNorm2D
 from .discrimitor import NLayerDiscriminator
 from .generator.resnet_generator import ResnetGenerator
 from .generator.mobile_generator import MobileResnetGenerator
@@ -21,7 +22,7 @@ from .generator.super_generator import SuperMobileResnetGenerator
 from .generator.sub_mobile_generator import SubMobileResnetGenerator
 
 
-class Identity(fluid.dygraph.Layer):
+class Identity(nn.Layer):
     def forward(self, x):
         return x
 
@@ -29,14 +30,14 @@ class Identity(fluid.dygraph.Layer):
 def get_norm_layer(norm_type='instance'):
     if norm_type == 'instance':
         norm_layer = functools.partial(
-            InstanceNorm, param_attr=False, bias_attr=False)
+            InstanceNorm2D, weight_attr=False, bias_attr=False)
     elif norm_type == 'batch':
         norm_layer = functools.partial(
-            BatchNorm,
-            param_attr=fluid.ParamAttr(
-                initializer=fluid.initializer.NormalInitializer(1.0, 0.02)),
-            bias_attr=fluid.ParamAttr(
-                initializer=fluid.initializer.Constant(0.0)))
+            BatchNorm2D,
+            weight_attr=paddle.ParamAttr(
+                initializer=nn.initializer.Normal(1.0, 0.02)),
+            bias_attr=paddle.ParamAttr(
+                initializer=nn.initializer.Constant(0.0)))
     elif norm_type == 'none':
 
         def norm_layer(x):

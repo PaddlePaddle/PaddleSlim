@@ -12,25 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import functools
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, BatchNorm
-from paddle.nn.layer import LeakyReLU, ReLU, Pad2D
+import paddle
+import paddle.nn as nn
+from paddle.nn import InstanceNorm2D, Conv2D, Conv2DTranspose, BatchNorm2D, LeakyReLU
 
 
-class NLayerDiscriminator(fluid.dygraph.Layer):
-    def __init__(self, input_channel, ndf, n_layers=3,
-                 norm_layer=InstanceNorm):
+class NLayerDiscriminator(nn.Layer):
+    def __init__(self, input_nc, ndf, n_layers=3, norm_layer=InstanceNorm2D):
         super(NLayerDiscriminator, self).__init__()
         if type(norm_layer) == functools.partial:
-            use_bias = norm_layer.func == InstanceNorm
+            use_bias = norm_layer.func == InstanceNorm2D
         else:
-            use_bias = norm_layer == InstanceNorm
+            use_bias = norm_layer == InstanceNorm2D
 
         kw = 4
         padw = 1
-        self.model = fluid.dygraph.LayerList([
+        self.model = nn.LayerList([
             Conv2D(
-                input_channel, ndf, filter_size=kw, stride=2, padding=padw),
+                input_nc, ndf, kernel_size=kw, stride=2, padding=padw),
             LeakyReLU(0.2)
         ])
         nf_mult = 1
@@ -42,7 +41,7 @@ class NLayerDiscriminator(fluid.dygraph.Layer):
                 Conv2D(
                     ndf * nf_mult_prev,
                     ndf * nf_mult,
-                    filter_size=kw,
+                    kernel_size=kw,
                     stride=2,
                     padding=padw,
                     bias_attr=use_bias), norm_layer(ndf * nf_mult),
@@ -55,7 +54,7 @@ class NLayerDiscriminator(fluid.dygraph.Layer):
             Conv2D(
                 ndf * nf_mult_prev,
                 ndf * nf_mult,
-                filter_size=kw,
+                kernel_size=kw,
                 stride=1,
                 padding=padw,
                 bias_attr=use_bias), norm_layer(ndf * nf_mult), LeakyReLU(0.2)
@@ -63,15 +62,11 @@ class NLayerDiscriminator(fluid.dygraph.Layer):
 
         self.model.extend([
             Conv2D(
-                ndf * nf_mult, 1, filter_size=kw, stride=1, padding=padw)
+                ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw)
         ])
 
     def forward(self, inputs):
-        #import numpy as np
-        #print("================ DISCRIMINATOR ====================")
         y = inputs
         for sublayer in self.model:
             y = sublayer(y)
-        #    print(sublayer, np.sum(np.abs(y.numpy())))
-        #print("===================================================")
         return y

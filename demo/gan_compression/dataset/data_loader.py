@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle.fluid as fluid
+import paddle
 from .data_reader import DataReader
 
 
@@ -25,10 +25,10 @@ def create_data(cfgs, direction='AtoB', eval_mode=False):
     dreader, id2name = reader.make_data(direction)
 
     if cfgs.use_parallel:
-        dreader = fluid.contrib.reader.distributed_batch_reader(dreader)
+        dreader = paddle.fluid.contrib.reader.distributed_batch_reader(dreader)
 
-    #### id2name has something wrong when use_multiprocess
-    loader = fluid.io.DataLoader.from_generator(
+#### id2name has something wrong when use_multiprocess
+    loader = paddle.io.DataLoader.from_generator(
         capacity=4, return_list=True, use_multiprocess=cfgs.use_parallel)
 
     loader.set_batch_generator(dreader, places=cfgs.place)

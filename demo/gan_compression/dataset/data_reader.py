@@ -22,9 +22,7 @@ import argparse
 import struct
 import os
 import paddle
-import paddle.fluid as fluid
 import random
-import sys
 
 
 def RandomCrop(img, crop_w, crop_h):
@@ -56,11 +54,12 @@ class ReaderCreator:
         raise NotImplementedError
 
 
-class single_datareader(ReaderCreator):
+class SingleDataReader(ReaderCreator):
     def __init__(self, list_filename, cfgs, mode='TEST'):
         self.cfgs = cfgs
         self.mode = mode
-        self.lines = open(list_filename).readlines()
+        with open(list_filename) as f:
+            self.lines = f.readlines()
         (self.data_dir, _) = os.path.split(list_filename)
         self.id2name = {}
         if self.mode == "TRAIN":
@@ -114,12 +113,14 @@ class single_datareader(ReaderCreator):
         return reader
 
 
-class cycle_datareader(ReaderCreator):
+class PairDataReader(ReaderCreator):
     def __init__(self, list_filename_A, list_filename_B, cfgs, mode='TRAIN'):
         self.cfgs = cfgs
         self.mode = mode
-        self.lines_A = open(list_filename_A).readlines()
-        self.lines_B = open(list_filename_B).readlines()
+        with open(list_filename_A) as f:
+            self.lines_A = f.readlines()
+        with open(list_filename_B) as f:
+            self.lines_B = f.readlines()
         (self.data_dir, _) = os.path.split(list_filename_A)
         self._max_dataset_size = max(len(self.lines_A), len(self.lines_B))
         self.id2name = {}
@@ -221,13 +222,13 @@ class DataReader(object):
                     fileA_list = os.path.join(dataset_dir, "testB.txt")
 
             if fileB_list is not None:
-                train_reader = cycle_datareader(
+                train_reader = PairDataReader(
                     list_filename_A=fileA_list,
                     list_filename_B=fileB_list,
                     cfgs=self.cfgs,
                     mode=self.mode)
             else:
-                train_reader = single_datareader(
+                train_reader = SingleDataReader(
                     list_filename=fileA_list, cfgs=self.cfgs, mode=self.mode)
 
             reader = train_reader.make_reader()

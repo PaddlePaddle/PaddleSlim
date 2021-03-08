@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import functools
-import paddle.fluid as fluid
-import paddle.tensor as tensor
-from paddle.fluid.dygraph.nn import BatchNorm, InstanceNorm, Dropout
-from paddle.nn.layer import ReLU, Pad2D
+import paddle
+import paddle.nn as nn
+from paddle.nn import BatchNorm2D, InstanceNorm2D, Dropout, ReLU, Pad2D
 from paddleslim.nas.ofa.layers import SuperConv2D, SuperConv2DTranspose, SuperSeparableConv2D
 
 
-class SuperMobileResnetBlock(fluid.dygraph.Layer):
+class SuperMobileResnetBlock(nn.Layer):
     def __init__(self, dim, padding_type, norm_layer, dropout_rate, use_bias):
         super(SuperMobileResnetBlock, self).__init__()
-        self.conv_block = fluid.dygraph.LayerList([])
+        self.conv_block = nn.LayerList([])
         p = 0
         if padding_type == 'reflect':
             self.conv_block.extend(
                 [Pad2D(
-                    paddings=[1, 1, 1, 1], mode="reflect")])
+                    padding=[1, 1, 1, 1], mode="reflect")])
         elif padding_type == 'replicate':
-            self.conv_block.extend([Pad2D(paddings=[1, 1, 1, 1], mode="edge")])
+            self.conv_block.extend(
+                [Pad2D(
+                    padding=[1, 1, 1, 1], mode="replicate")])
         elif padding_type == 'zero':
             p = 1
         else:
@@ -38,9 +39,9 @@ class SuperMobileResnetBlock(fluid.dygraph.Layer):
 
         self.conv_block.extend([
             SuperSeparableConv2D(
-                num_channels=dim,
-                num_filters=dim,
-                filter_size=3,
+                in_channels=dim,
+                out_channels=dim,
+                kernel_size=3,
                 stride=1,
                 padding=p,
                 norm_layer=norm_layer), norm_layer(dim), ReLU()
@@ -51,9 +52,11 @@ class SuperMobileResnetBlock(fluid.dygraph.Layer):
         if padding_type == 'reflect':
             self.conv_block.extend(
                 [Pad2D(
-                    paddings=[1, 1, 1, 1], mode="reflect")])
+                    padding=[1, 1, 1, 1], mode="reflect")])
         elif padding_type == 'replicate':
-            self.conv_block.extend([Pad2D(paddings=[1, 1, 1, 1], mode="edge")])
+            self.conv_block.extend(
+                [Pad2D(
+                    padding=[1, 1, 1, 1], mode="replicate")])
         elif padding_type == 'zero':
             p = 1
         else:
@@ -62,9 +65,9 @@ class SuperMobileResnetBlock(fluid.dygraph.Layer):
 
         self.conv_block.extend([
             SuperSeparableConv2D(
-                num_channels=dim,
-                num_filters=dim,
-                filter_size=3,
+                in_channels=dim,
+                out_channels=dim,
+                kernel_size=3,
                 stride=1,
                 padding=p,
                 norm_layer=norm_layer), norm_layer(dim)
@@ -85,26 +88,26 @@ class SuperMobileResnetBlock(fluid.dygraph.Layer):
         return out
 
 
-class SuperMobileResnetGenerator(fluid.dygraph.Layer):
+class SuperMobileResnetGenerator(nn.Layer):
     def __init__(self,
-                 input_channel,
+                 input_nc,
                  output_nc,
                  ngf,
-                 norm_layer=InstanceNorm,
+                 norm_layer=InstanceNorm2D,
                  dropout_rate=0,
                  n_blocks=6,
                  padding_type='reflect'):
         assert n_blocks >= 0
         super(SuperMobileResnetGenerator, self).__init__()
-        use_bias = norm_layer == InstanceNorm
+        use_bias = norm_layer == InstanceNorm2D
 
-        self.model = fluid.dygraph.LayerList([])
+        self.model = nn.LayerList([])
         self.model.extend([
             Pad2D(
-                paddings=[3, 3, 3, 3], mode="reflect"), SuperConv2D(
-                    input_channel,
+                padding=[3, 3, 3, 3], mode="reflect"), SuperConv2D(
+                    input_nc,
                     ngf,
-                    filter_size=7,
+                    kernel_size=7,
                     padding=0,
                     bias_attr=use_bias), norm_layer(ngf), ReLU()
         ])
@@ -116,7 +119,7 @@ class SuperMobileResnetGenerator(fluid.dygraph.Layer):
                 SuperConv2D(
                     ngf * mult,
                     ngf * mult * 2,
-                    filter_size=3,
+                    kernel_size=3,
                     stride=2,
                     padding=1,
                     bias_attr=use_bias), norm_layer(int(ngf * mult * 2)),
@@ -160,29 +163,26 @@ class SuperMobileResnetGenerator(fluid.dygraph.Layer):
 
         for i in range(n_downsampling):
             mult = 2**(n_downsampling - i)
-            output_size = (i + 1) * 128
-            #### torch:out_padding = 1 => paddle:deconv + pad
             self.model.extend([
                 SuperConv2DTranspose(
                     ngf * mult,
                     int(ngf * mult / 2),
-                    filter_size=3,
-                    output_size=output_size,
+                    kernel_size=3,
+                    output_padding=1,
                     stride=2,
                     padding=1,
                     bias_attr=use_bias), norm_layer(int(ngf * mult / 2)),
                 ReLU()
             ])
 
-        self.model.extend([Pad2D(paddings=[3, 3, 3, 3], mode="reflect")])
+        self.model.extend([Pad2D(padding=[3, 3, 3, 3], mode="reflect")])
         self.model.extend(
             [SuperConv2D(
-                ngf, output_nc, filter_size=7, padding=0)])
+                ngf, output_nc, kernel_size=7, padding=0)])
 
     def forward(self, input):
         configs = self.configs
-        #x = tensor.clamp(input, min=-1, max=1)
-        x = tensor.clip(input, min=-1, max=1)
+        x = paddle.clip(input, min=-1, max=1)
         cnt = 0
         for i in range(0, 10):
             sublayer = self.model[i]
@@ -216,9 +216,9 @@ class SuperMobileResnetGenerator(fluid.dygraph.Layer):
                 config = {'channel': channel}
                 x = sublayer(x, **config)
             elif isinstance(sublayer, SuperConv2D):
-                config = {'channel': sublayer._num_filters}
+                config = {'channel': sublayer._out_channels}
                 x = sublayer(x, **config)
             else:
                 x = sublayer(x)
-        x = fluid.layers.tanh(x)
+        x = paddle.tanh(x)
         return x

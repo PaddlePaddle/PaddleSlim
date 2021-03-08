@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, InstanceNorm
-from paddle.fluid.dygraph.base import to_variable
-from paddleslim.models.dygraph.modules import SeparableConv2D, MobileResnetBlock, ResnetBlock
+import paddle
+import paddle.nn.functional as F
+from paddle.nn import Conv2D, Conv2DTranspose, InstanceNorm2D
+from models.generator.modules import SeparableConv2D, MobileResnetBlock, ResnetBlock
 
 
 ### CoutCinKhKw
@@ -37,16 +37,15 @@ def transfer_Conv2D(m1, m2, input_index=None, output_index=None):
         p = m1.parameters()[0]
 
         if input_index is None:
-            q = fluid.layers.reduce_sum(fluid.layers.abs(p), dim=[0, 2, 3])
-            _, idx = fluid.layers.topk(q, m2.parameters()[0].shape[1])
+            q = paddle.sum(paddle.abs(p), axis=[0, 2, 3])
+            _, idx = paddle.topk(q, m2.parameters()[0].shape[1])
             p = p.numpy()[:, idx.numpy()]
         else:
             p = p.numpy()[:, input_index]
 
         if output_index is None:
-            q = fluid.layers.reduce_sum(
-                fluid.layers.abs(to_variable(p)), dim=[1, 2, 3])
-            _, idx = fluid.layers.topk(q, m2.parameters()[0].shape[0])
+            q = paddle.sum(paddle.abs(paddle.to_tensor(p)), axis=[1, 2, 3])
+            _, idx = paddle.topk(q, m2.parameters()[0].shape[0])
             idx = idx.numpy()
         else:
             idx = output_index
@@ -63,23 +62,21 @@ def transfer_Conv2DTranspose(m1, m2, input_index=None, output_index=None):
     assert isinstance(m1, Conv2DTranspose) and isinstance(m2, Conv2DTranspose)
     assert output_index is None
     p = m1.parameters()[0]
-    with fluid.dygraph.guard():
-        if input_index is None:
-            q = fluid.layers.reduce_sum(fluid.layers.abs(p), dim=[1, 2, 3])
-            _, idx = fluid.layers.topk(q, m2.parameters()[0].shape[0])  ### Cin
-            p = p.numpy()[idx.numpy()]
-        else:
-            p = p.numpy()[input_index]
+    if input_index is None:
+        q = paddle.sum(paddle.abs(p), axis=[1, 2, 3])
+        _, idx = paddle.topk(q, m2.parameters()[0].shape[0])  ### Cin
+        p = p.numpy()[idx.numpy()]
+    else:
+        p = p.numpy()[input_index]
 
-        q = fluid.layers.reduce_sum(
-            fluid.layers.abs(to_variable(p)), dim=[0, 2, 3])
-        _, idx = fluid.layers.topk(q, m2.parameters()[0].shape[1])
-        idx = idx.numpy()
-        m2.parameters()[0].set_value(p[:, idx])
-        if len(m2.parameters()) == 2:
-            m2.parameters()[1].set_value(m1.parameters()[1].numpy()[idx])
+    q = paddle.sum(paddle.abs(paddle.to_tensor(p)), axis=[0, 2, 3])
+    _, idx = paddle.topk(q, m2.parameters()[0].shape[1])
+    idx = idx.numpy()
+    m2.parameters()[0].set_value(p[:, idx])
+    if len(m2.parameters()) == 2:
+        m2.parameters()[1].set_value(m1.parameters()[1].numpy()[idx])
 
-        return idx
+    return idx
 
 
 def transfer_SeparableConv2D(m1, m2, input_index=None, output_index=None):
@@ -89,8 +86,8 @@ def transfer_SeparableConv2D(m1, m2, input_index=None, output_index=None):
 
     if input_index is None:
         p = dw1.parameters()[0]
-        q = fluid.layers.reduce_sum(fluid.layers.abs(p), dim=[1, 2, 3])
-        _, idx = fluid.layers.topk(q, dw2.parameters()[0].shape[0])
+        q = paddle.sum(paddle.abs(p), axis=[1, 2, 3])
+        _, idx = paddle.topk(q, dw2.parameters()[0].shape[0])
         input_index = idx.numpy()
     dw2.parameters()[0].set_value(dw1.parameters()[0].numpy()[input_index])
 

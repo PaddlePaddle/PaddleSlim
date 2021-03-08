@@ -103,10 +103,6 @@ class InceptionV3:
             x = fluid.layers.pool2d(x, global_pooling=True, pool_type='avg')
             out.append(x)
 
-            #x = fluid.layers.dropout(x, dropout_prob=0.5)
-            #x = fluid.layers.flatten(x, axis=1)
-            #x = fluid.layers.fc(x, size=num_classes, param_attr=ParamAttr(name='fc.weight'), bias_attr=ParamAttr(name='fc.bias'))
-
         return out, aux
 
     def inceptionA(self, x, pool_features, name=None):

@@ -207,6 +207,11 @@ class configs:
             else:
                 raise NotImplementedError(
                     "task name {} is error, please check it".format(t))
+
+        if cfg.model.lower() == 'cycle_gan':
+            model_parser = models.get_special_cfg('cycle_gan')
+            parser = model_parser(parser)
+
         self.parser = parser
         return parser.parse_args()
 

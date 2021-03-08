@@ -13,56 +13,50 @@
 # limitations under the License.
 import numpy as np
 
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, BatchNorm, InstanceNorm, Dropout
+import paddle
+import paddle.nn as nn
+from paddle.nn import Conv2D, Conv2DTranspose, BatchNorm2D, InstanceNorm2D, Dropout
 from paddle.nn.layer import LeakyReLU, ReLU, Pad2D
 
 __all__ = ['SeparableConv2D', 'MobileResnetBlock', 'ResnetBlock']
 
-use_cudnn = False
 
-
-class SeparableConv2D(fluid.dygraph.Layer):
+class SeparableConv2D(nn.Layer):
     def __init__(self,
-                 num_channels,
-                 num_filters,
-                 filter_size,
+                 in_channels,
+                 out_channels,
+                 kernel_size,
                  stride=1,
                  padding=0,
-                 norm_layer=InstanceNorm,
+                 norm_layer=InstanceNorm2D,
                  use_bias=True,
                  scale_factor=1,
-                 stddev=0.02,
-                 use_cudnn=use_cudnn):
+                 stddev=0.02):
         super(SeparableConv2D, self).__init__()
 
-        self.conv = fluid.dygraph.LayerList([
+        self.conv = nn.LayerList([
             Conv2D(
-                num_channels=num_channels,
-                num_filters=num_channels * scale_factor,
-                filter_size=filter_size,
+                in_channels=in_channels,
+                out_channels=in_channels * scale_factor,
+                kernel_size=kernel_size,
                 stride=stride,
                 padding=padding,
-                use_cudnn=False,
-                groups=num_channels,
-                param_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.NormalInitializer(
-                        loc=0.0, scale=stddev)),
+                groups=in_channels,
+                weight_attr=paddle.ParamAttr(initializer=nn.initializer.Normal(
+                    mean=0.0, std=stddev)),
                 bias_attr=use_bias)
         ])
 
-        self.conv.extend([norm_layer(num_channels * scale_factor)])
+        self.conv.extend([norm_layer(in_channels * scale_factor)])
 
         self.conv.extend([
             Conv2D(
-                num_channels=num_channels * scale_factor,
-                num_filters=num_filters,
-                filter_size=1,
+                in_channels=in_channels * scale_factor,
+                out_channels=out_channels,
+                kernel_size=1,
                 stride=1,
-                use_cudnn=use_cudnn,
-                param_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.NormalInitializer(
-                        loc=0.0, scale=stddev)),
+                weight_attr=paddle.ParamAttr(initializer=nn.initializer.Normal(
+                    mean=0.0, std=stddev)),
                 bias_attr=use_bias)
         ])
 
@@ -72,23 +66,23 @@ class SeparableConv2D(fluid.dygraph.Layer):
         return inputs
 
 
-class MobileResnetBlock(fluid.dygraph.Layer):
+class MobileResnetBlock(nn.Layer):
     def __init__(self, in_c, out_c, padding_type, norm_layer, dropout_rate,
                  use_bias):
         super(MobileResnetBlock, self).__init__()
         self.padding_type = padding_type
         self.dropout_rate = dropout_rate
-        self.conv_block = fluid.dygraph.LayerList([])
+        self.conv_block = nn.LayerList([])
 
         p = 0
         if self.padding_type == 'reflect':
             self.conv_block.extend(
                 [Pad2D(
-                    paddings=[1, 1, 1, 1], mode='reflect')])
+                    padding=[1, 1, 1, 1], mode='reflect')])
         elif self.padding_type == 'replicate':
             self.conv_block.extend(
                 [Pad2D(
-                    inputs, paddings=[1, 1, 1, 1], mode='edge')])
+                    padding=[1, 1, 1, 1], mode='replicate')])
         elif self.padding_type == 'zero':
             p = 1
         else:
@@ -97,9 +91,9 @@ class MobileResnetBlock(fluid.dygraph.Layer):
 
         self.conv_block.extend([
             SeparableConv2D(
-                num_channels=in_c,
-                num_filters=out_c,
-                filter_size=3,
+                in_channels=in_c,
+                out_channels=out_c,
+                kernel_size=3,
                 padding=p,
                 stride=1), norm_layer(out_c), ReLU()
         ])
@@ -109,11 +103,11 @@ class MobileResnetBlock(fluid.dygraph.Layer):
         if self.padding_type == 'reflect':
             self.conv_block.extend(
                 [Pad2D(
-                    paddings=[1, 1, 1, 1], mode='reflect')])
+                    padding=[1, 1, 1, 1], mode='reflect')])
         elif self.padding_type == 'replicate':
             self.conv_block.extend(
                 [Pad2D(
-                    inputs, paddings=[1, 1, 1, 1], mode='edge')])
+                    paddings=[1, 1, 1, 1], mode='replicate')])
         elif self.padding_type == 'zero':
             p = 1
         else:
@@ -122,9 +116,9 @@ class MobileResnetBlock(fluid.dygraph.Layer):
 
         self.conv_block.extend([
             SeparableConv2D(
-                num_channels=out_c,
-                num_filters=in_c,
-                filter_size=3,
+                in_channels=out_c,
+                out_channels=in_c,
+                kernel_size=3,
                 padding=p,
                 stride=1), norm_layer(in_c)
         ])
@@ -137,7 +131,7 @@ class MobileResnetBlock(fluid.dygraph.Layer):
         return out
 
 
-class ResnetBlock(fluid.dygraph.Layer):
+class ResnetBlock(nn.Layer):
     def __init__(self,
                  dim,
                  padding_type,
@@ -146,14 +140,16 @@ class ResnetBlock(fluid.dygraph.Layer):
                  use_bias=False):
         super(ResnetBlock, self).__init__()
 
-        self.conv_block = fluid.dygraph.LayerList([])
+        self.conv_block = nn.LayerList([])
         p = 0
         if padding_type == 'reflect':
             self.conv_block.extend(
                 [Pad2D(
-                    paddings=[1, 1, 1, 1], mode='reflect')])
+                    padding=[1, 1, 1, 1], mode='reflect')])
         elif padding_type == 'replicate':
-            self.conv_block.extend([Pad2D(paddings=[1, 1, 1, 1], mode='edge')])
+            self.conv_block.extend(
+                [Pad2D(
+                    padding=[1, 1, 1, 1], mode='replicate')])
         elif padding_type == 'zero':
             p = 1
         else:
@@ -162,7 +158,7 @@ class ResnetBlock(fluid.dygraph.Layer):
 
         self.conv_block.extend([
             Conv2D(
-                dim, dim, filter_size=3, padding=p, bias_attr=use_bias),
+                dim, dim, kernel_size=3, padding=p, bias_attr=use_bias),
             norm_layer(dim), ReLU()
         ])
         self.conv_block.extend([Dropout(dropout_rate)])
@@ -171,9 +167,11 @@ class ResnetBlock(fluid.dygraph.Layer):
         if padding_type == 'reflect':
             self.conv_block.extend(
                 [Pad2D(
-                    paddings=[1, 1, 1, 1], mode='reflect')])
+                    padding=[1, 1, 1, 1], mode='reflect')])
         elif padding_type == 'replicate':
-            self.conv_block.extend([Pad2D(paddings=[1, 1, 1, 1], mode='edge')])
+            self.conv_block.extend(
+                [Pad2D(
+                    padding=[1, 1, 1, 1], mode='replicate')])
         elif padding_type == 'zero':
             p = 1
         else:
@@ -182,7 +180,7 @@ class ResnetBlock(fluid.dygraph.Layer):
 
         self.conv_block.extend([
             Conv2D(
-                dim, dim, filter_size=3, padding=p, bias_attr=use_bias),
+                dim, dim, kernel_size=3, padding=p, bias_attr=use_bias),
             norm_layer(dim)
         ])
 
