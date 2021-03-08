@@ -17,7 +17,7 @@ import paddle
 from paddle.fluid import core
 from .layers_base import BaseBlock
 
-__all__ = ['get_prune_params_config', 'prune_params', 'check_ss']
+__all__ = ['get_prune_params_config', 'prune_params', 'check_search_space']
 
 WEIGHT_OP = ['conv2d', 'conv3d', 'conv1d', 'linear', 'embedding']
 CONV_TYPES = [
@@ -27,6 +27,8 @@ CONV_TYPES = [
 
 
 def get_prune_params_config(graph, origin_model_config):
+    """ Convert config of search space to parameters' prune config.
+    """
     param_config = {}
     precedor = None
     for op in graph.ops():
@@ -75,6 +77,8 @@ def get_prune_params_config(graph, origin_model_config):
 
 
 def prune_params(model, param_config, super_model_sd=None):
+    """ Prune parameters according to the config.
+    """
     for l_name, sublayer in model.named_sublayers():
         if isinstance(sublayer, BaseBlock):
             continue
@@ -130,6 +134,8 @@ def prune_params(model, param_config, super_model_sd=None):
 
 
 def _find_weight_ops(op, graph, weights):
+    """ Find operators with weight.
+    """
     pre_ops = graph.pre_ops(op)
     for pre_op in pre_ops:
         if pre_op.type() in WEIGHT_OP:
@@ -141,6 +147,8 @@ def _find_weight_ops(op, graph, weights):
 
 
 def _find_pre_elementwise_add(op, graph):
+    """ Find precedor of the elementwise_add operator.
+    """
     same_ss_per_op = []
     pre_ops = graph.pre_ops(op)
     for pre_op in pre_ops:
@@ -150,7 +158,9 @@ def _find_pre_elementwise_add(op, graph):
     return same_ss_per_op
 
 
-def check_ss(graph):
+def check_search_space(graph):
+    """ Find the shortcut in the model and set same config for this situation.
+    """
     same_ss = []
     for op in graph.ops():
         if op.type() == 'elementwise_add':

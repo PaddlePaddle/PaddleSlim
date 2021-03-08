@@ -31,7 +31,7 @@ from .layers_base import BaseBlock
 from .utils.utils import search_idx
 from ...common import get_logger
 from ...core import GraphWrapper, dygraph2program
-from .get_sub_model import get_prune_params_config, prune_params, check_ss
+from .get_sub_model import get_prune_params_config, prune_params, check_search_space
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -531,7 +531,7 @@ class OFA(OFABase):
         ### find shortcut block using static model
         _st_prog = dygraph2program(
             self.model, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss = sorted(check_ss(GraphWrapper(_st_prog)))
+        self._same_ss = sorted(check_search_space(GraphWrapper(_st_prog)))
 
         if self._same_ss != None:
             self._param2key = {}
