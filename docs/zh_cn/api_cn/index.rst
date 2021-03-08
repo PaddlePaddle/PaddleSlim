@@ -4,13 +4,10 @@
    contain the root `toctree` directive.
 
 API文档
-======================================
+=======
 
 .. toctree::
    :maxdepth: 1
 
-   common_index.rst
-   quant_index.rst
-   prune_index.rst
-   distill_index.rst
-   nas_index.rst
+   dygraph/index.rst
+   static/index.rst

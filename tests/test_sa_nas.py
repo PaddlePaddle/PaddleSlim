@@ -11,32 +11,40 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import sys
+sys.path.append("../")
 import os
 import sys
 import unittest
+import paddle
 import paddle.fluid as fluid
+from static_case import StaticCase
 from paddleslim.nas import SANAS
 from paddleslim.analysis import flops
 import numpy as np
+
 
 def compute_op_num(program):
     params = {}
     ch_list = []
     for block in program.blocks:
         for param in block.all_parameters():
-            if len(param.shape) == 4: 
+            if len(param.shape) == 4:
                 params[param.name] = param.shape
                 ch_list.append(int(param.shape[0]))
     return params, ch_list
 
-class TestSANAS(unittest.TestCase):
+
+class TestSANAS(StaticCase):
     def setUp(self):
+        paddle.enable_static()
         self.init_test_case()
         port = np.random.randint(8337, 8773)
-        self.sanas = SANAS(configs=self.configs, server_addr=("", port), save_checkpoint=None)
+        self.sanas = SANAS(
+            configs=self.configs, server_addr=("", port), save_checkpoint=None)
 
     def init_test_case(self):
-        self.configs=[('MobileNetV2BlockSpace', {'block_mask':[0]})]
+        self.configs = [('MobileNetV2BlockSpace', {'block_mask': [0]})]
         self.filter_num = np.array([
             3, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96, 128, 144, 160, 192, 224,
             256, 320, 384, 512
@@ -53,7 +61,10 @@ class TestSANAS(unittest.TestCase):
 
         conv_list, ch_pro = compute_op_num(program)
         ### assert conv number
-        self.assertTrue((repeat_num * 3) ==  len(conv_list), "the number of conv is NOT match, the number compute from token: {}, actual conv number: {}".format(repeat_num * 3, len(conv_list)))
+        self.assertTrue((repeat_num * 3) == len(
+            conv_list
+        ), "the number of conv is NOT match, the number compute from token: {}, actual conv number: {}".
+                        format(repeat_num * 3, len(conv_list)))
 
         ### assert number of channels
         ch_token = []
@@ -64,7 +75,10 @@ class TestSANAS(unittest.TestCase):
             ch_token.append(filter_num)
             init_ch_num = filter_num
 
-        self.assertTrue(str(ch_token) == str(ch_pro), "channel num is WRONG, channel num from token is {}, channel num come fom program is {}".format(str(ch_token), str(ch_pro)))
+        self.assertTrue(
+            str(ch_token) == str(ch_pro),
+            "channel num is WRONG, channel num from token is {}, channel num come fom program is {}".
+            format(str(ch_token), str(ch_pro)))
 
     def test_all_function(self):
         ### unittest for next_archs
@@ -73,7 +87,8 @@ class TestSANAS(unittest.TestCase):
         token2arch_program = fluid.Program()
 
         with fluid.program_guard(next_program, startup_program):
-            inputs = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
+            inputs = fluid.data(
+                name='input', shape=[None, 3, 32, 32], dtype='float32')
             archs = self.sanas.next_archs()
             for arch in archs:
                 output = arch(inputs)
@@ -85,8 +100,10 @@ class TestSANAS(unittest.TestCase):
 
         ### uniitest for tokens2arch
         with fluid.program_guard(token2arch_program, startup_program):
-            inputs = fluid.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
-            arch = self.sanas.tokens2arch(self.sanas.current_info()['current_tokens'])
+            inputs = fluid.data(
+                name='input', shape=[None, 3, 32, 32], dtype='float32')
+            arch = self.sanas.tokens2arch(self.sanas.current_info()[
+                'current_tokens'])
             for arch in archs:
                 output = arch(inputs)
                 inputs = output
@@ -94,7 +111,11 @@ class TestSANAS(unittest.TestCase):
 
         ### unittest for current_info
         current_info = self.sanas.current_info()
-        self.assertTrue(isinstance(current_info, dict), "the type of current info must be dict, but now is {}".format(type(current_info)))
+        self.assertTrue(
+            isinstance(current_info, dict),
+            "the type of current info must be dict, but now is {}".format(
+                type(current_info)))
+
 
 if __name__ == '__main__':
     unittest.main()

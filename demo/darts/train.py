@@ -152,8 +152,7 @@ def main(args):
             count_parameters_in_MB(model.parameters())))
 
         device_num = fluid.dygraph.parallel.Env().nranks
-        step_per_epoch = int(args.trainset_num /
-                             (args.batch_size * device_num))
+        step_per_epoch = int(args.trainset_num / (args.batch_size * device_num))
         learning_rate = fluid.dygraph.CosineDecay(args.learning_rate,
                                                   step_per_epoch, args.epochs)
         clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=args.grad_clip)

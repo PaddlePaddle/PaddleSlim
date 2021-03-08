@@ -160,15 +160,21 @@ class OpWrapper(object):
         """
         Get all the varibales by the input name.
         """
-        return [self._graph.var(var_name) for var_name in self._op.input(name)]
+        if name in self._op.input_names:
+            return [
+                self._graph.var(var_name) for var_name in self._op.input(name)
+            ]
+        return []
 
     def outputs(self, name):
         """
         Get all the varibales by the output name.
         """
-        return [
-            self._graph.var(var_name) for var_name in self._op.output(name)
-        ]
+        if name in self._op.output_names:
+            return [
+                self._graph.var(var_name) for var_name in self._op.output(name)
+            ]
+        return []
 
     def set_attr(self, key, value):
         """
@@ -354,27 +360,40 @@ class GraphWrapper(object):
             ret += np.product(param.shape())
         return ret
 
-    def update_param_shape(self, scope):
-        """
-        Update the shape of parameters in the graph according to tensors in scope.
-        It is used after loading pruned parameters from file.
-        """
-        for param in self.all_parameters():
-            tensor_shape = np.array(
-                scope.find_var(param.name()).get_tensor()).shape
-            param.set_shape(tensor_shape)
-
     def infer_shape(self):
         """
         Update the groups of convolution layer according to current filters.
         It is used after loading pruned parameters from file.
         """
+        head_op = []
+        visited = []
         for op in self.ops():
             if op.type() != 'conditional_block':
-                op._op.desc.infer_shape(op._op.block.desc)
+                if len(self.pre_ops(op)) == 0:
+                    head_op.append(op)
+        candidate_op = self.ops()
 
-    def update_groups_of_conv(self):
-        for op in self.ops():
-            if op.type() == 'depthwise_conv2d' or op.type(
-            ) == 'depthwise_conv2d_grad':
-                op.set_attr('groups', op.inputs('Filter')[0].shape()[0])
+        def recursive_infer(op, infer=False):
+            if op in candidate_op:
+                if op.type() != 'conditional_block':
+                    if infer:
+                        op._op.desc.infer_shape(op._op.block.desc)
+                    else:
+                        visited.append(op)
+                candidate_op.remove(op)
+                for next_op in self.next_ops(op):
+                    recursive_infer(next_op)
+
+        # Find ops which not in the DAG, some ops, such as optimizer op,
+        # should be infered before normal cumputation ops.
+        for op in head_op:
+            recursive_infer(op, infer=False)
+
+        # Infer ops which not in the DAG firstly.
+        candidate_op = self.ops()
+        for op in candidate_op:
+            if op not in visited and op.type() != 'conditional_block':
+                op._op.desc.infer_shape(op._op.block.desc)
+        # Infer the remain ops in topological order.
+        for op in head_op:
+            recursive_infer(op, infer=True)

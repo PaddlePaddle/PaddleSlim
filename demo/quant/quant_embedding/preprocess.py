@@ -11,7 +11,7 @@ prog = re.compile("[^a-z ]", flags=0)
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Paddle Fluid word2 vector preprocess")
+        description="Paddle word2 vector preprocess")
     parser.add_argument(
         '--build_dict_corpus_dir', type=str, help="The dir of corpus")
     parser.add_argument(
@@ -112,8 +112,7 @@ def filter_corpus(args):
     for file in os.listdir(args.input_corpus_dir):
         with io.open(args.output_corpus_dir + '/convert_' + file, "w") as wf:
             with io.open(
-                    args.input_corpus_dir + '/' + file,
-                    encoding='utf-8') as rf:
+                    args.input_corpus_dir + '/' + file, encoding='utf-8') as rf:
                 print(args.input_corpus_dir + '/' + file)
                 for line in rf:
                     signal = False
@@ -153,8 +152,7 @@ def build_dict(args):
 
     for file in os.listdir(args.build_dict_corpus_dir):
         with io.open(
-                args.build_dict_corpus_dir + "/" + file,
-                encoding='utf-8') as f:
+                args.build_dict_corpus_dir + "/" + file, encoding='utf-8') as f:
             print("build dict : ", args.build_dict_corpus_dir + "/" + file)
             for line in f:
                 line = text_strip(line)

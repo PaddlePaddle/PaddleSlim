@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import copy
+import json
 import logging
 
 import paddle
-import paddle.fluid as fluid
 from paddle.fluid.framework import IrGraph
 from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass
 from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
@@ -33,8 +34,7 @@ from ..common import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
 
 WEIGHT_QUANTIZATION_TYPES = [
-    'abs_max', 'channel_wise_abs_max', 'range_abs_max',
-    'moving_average_abs_max'
+    'abs_max', 'channel_wise_abs_max', 'range_abs_max', 'moving_average_abs_max'
 ]
 WEIGHT_QUANTIZATION_TYPES_TENSORRT = ['channel_wise_abs_max']
 
@@ -54,6 +54,8 @@ TENSORRT_OP_TYPES = [
     'mul', 'conv2d', 'pool2d', 'depthwise_conv2d', 'elementwise_add',
     'leaky_relu'
 ]
+
+VARS_MAPPING_TABLE = './mapping_table_for_saving_inference_model'
 
 _quant_config_default = {
     # weight quantize type, default is 'channel_wise_abs_max'
@@ -79,6 +81,18 @@ _quant_config_default = {
     # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
     'is_full_quantize': False
 }
+
+
+def load_dict():
+    with open(VARS_MAPPING_TABLE, 'r') as file:
+        data = file.read()
+        data = json.loads(data)
+        return data
+
+
+def save_dict(table):
+    with open(VARS_MAPPING_TABLE, 'w') as file:
+        file.write(json.dumps(table))
 
 
 def _parse_configs(user_config):
@@ -170,19 +184,20 @@ def quant_aware(program,
                 weight_preprocess_func=None,
                 act_preprocess_func=None,
                 optimizer_func=None,
-                executor=None):
+                executor=None,
+                return_program=False):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
     Args:
-        program(fluid.Program): training or testing ``program``.
-        place(fluid.CPUPlace or fluid.CUDAPlace): This parameter represents 
+        program(paddle.static.Program): training or testing ``program``.
+        place(paddle.CPUPlace or paddle.CUDAPlace): This parameter represents 
             the executor run on which device.
         config(dict, optional): configs for quantization. if None, will use default config. 
             Default: None.
-        scope(fluid.Scope): Scope records the mapping between variable names and variables, 
+        scope(paddle.static.Scope): Scope records the mapping between variable names and variables, 
             similar to brackets in programming languages. Usually users can use 
-            `fluid.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.              When ``None`` will use `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . Default: ``None``.
+            `paddle.static.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.              When ``None`` will use `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . Default: ``None``.
         for_test(bool): If the 'program' parameter is a test program, this parameter should be set to ``True``. 
             Otherwise, set to ``False``.Default: False
        weight_quantize_func(function): Function that defines how to quantize weight. Using this
@@ -209,13 +224,15 @@ def quant_aware(program,
                 Default is None.
         optimizer_func(function): Fuction return a optimizer. When 'is_test' is False and user want to use self-defined 
             quantization function and preprocess function, this function must be set. Default is None.
-        exe(Fluid.Executor): If user want to use self-defined quantization function and preprocess function, exe must be set for
+        exe(paddle.static.Executor): If user want to use self-defined quantization function and preprocess function, exe must be set for
                 initialization. Default is None.
+        return_program(bool): If user want return value is a Program rather than Compiled Program, This argument should be set True.
+                Default is False.
     Returns:
-        fluid.CompiledProgram | fluid.Program: Program with quantization and dequantization ``operators``
+        paddle.static.CompiledProgram | paddle.static.Program: Program with quantization and dequantization ``operators``
     """
 
-    scope = fluid.global_scope() if not scope else scope
+    scope = paddle.static.global_scope() if not scope else scope
     if config is None:
         config = _quant_config_default
     else:
@@ -267,34 +284,45 @@ def quant_aware(program,
         scope=scope, place=place, moving_rate=config['moving_rate'])
     out_scale_training_pass.apply(main_graph)
 
-    if for_test:
+    if (weight_preprocess_func is not None or
+            act_preprocess_func is not None) and not for_test:
+        _logger.info(
+            "When a preprocess_func is used in quant_aware, Need to save a mapping table to match variable names in the convert phase."
+        )
+        _logger.info("The mapping table is saved as '{}'.".format(
+            VARS_MAPPING_TABLE))
+        save_dict(main_graph.out_node_mapping_table)
+
+    if for_test or return_program:
         quant_program = main_graph.to_program()
     else:
-        quant_program = fluid.CompiledProgram(main_graph.graph)
+        quant_program = paddle.static.CompiledProgram(main_graph.graph)
     return quant_program
 
 
-def quant_post_static(executor,
-               model_dir,
-               quantize_model_path,
-               batch_generator=None,
-               sample_generator=None,
-               model_filename=None,
-               params_filename=None,
-               save_model_filename='__model__',
-               save_params_filename='__params__',
-               batch_size=16,
-               batch_nums=None,
-               scope=None,
-               algo='KL',
-               quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
-               is_full_quantize=False,
-               weight_bits=8,
-               activation_bits=8,
-               activation_quantize_type='range_abs_max',
-               weight_quantize_type='channel_wise_abs_max',
-               is_use_cache_file=False,
-               cache_dir="./temp_post_training"):
+def quant_post_static(
+        executor,
+        model_dir,
+        quantize_model_path,
+        batch_generator=None,
+        sample_generator=None,
+        model_filename=None,
+        params_filename=None,
+        save_model_filename='__model__',
+        save_params_filename='__params__',
+        batch_size=16,
+        batch_nums=None,
+        scope=None,
+        algo='KL',
+        quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
+        is_full_quantize=False,
+        weight_bits=8,
+        activation_bits=8,
+        activation_quantize_type='range_abs_max',
+        weight_quantize_type='channel_wise_abs_max',
+        optimize_model=False,
+        is_use_cache_file=False,
+        cache_dir="./temp_post_training"):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -302,13 +330,13 @@ def quant_post_static(executor,
     and dequantization operators to obtain the quantized model.
 
     Args:
-        executor(fluid.Executor): The executor to load, run and save the 
+        executor(paddle.static.Executor): The executor to load, run and save the 
             quantized model.
         model_dir(str): The path of fp32 model that will be quantized, and 
-            the model and params that saved by ``fluid.io.save_inference_model`` 
+            the model and params that saved by ``paddle.static.io.save_inference_model`` 
             are under the path.
         quantize_model_path(str): The path to save quantized model using api
-            ``fluid.io.save_inference_model``.
+            ``paddle.static.io.save_inference_model``.
         batch_generator(Python Generator): The batch generator provides 
                 calibrate data for DataLoader, and it returns a batch every
                 time. For sample_generator and batch_generator, only one
@@ -328,8 +356,8 @@ def quant_post_static(executor,
         batch_nums(int, optional): If batch_nums is not None, the number of calibrate 
                         data is 'batch_size*batch_nums'. If batch_nums is None, use all data
                         generated by sample_generator  as calibrate data.
-        scope(fluid.Scope, optional): The scope to run program, use it to load 
-                        and save variables. If scope is None, will use fluid.global_scope().
+        scope(paddle.static.Scope, optional): The scope to run program, use it to load 
+                        and save variables. If scope is None, will use paddle.static.global_scope().
         algo(str, optional): If algo=KL, use KL-divergenc method to 
                         get the more precise scale factor. If algo='direct', use 
                         abs_max method to get the scale factor. Default: 'KL'.
@@ -349,9 +377,11 @@ def quant_post_static(executor,
                 the model accuracy is usually higher when using 'channel_wise_abs_max'.
         is_full_quantize(bool): if True, apply quantization to all supported quantizable op type.
                         If False, only apply quantization to the input quantizable_op_type. Default is False.
-        is_use_cache_file(bool): If False, all temp data will be saved in memory. If True,
-                                all temp data will be saved to disk. Defalut: False.
-        cache_dir(str): When 'is_use_cache_file' is True, temp data will be save in 'cache_dir'. Default is './temp_post_training'.
+        optimize_model(bool, optional): If set optimize_model as True, it applies some 
+                passes to optimize the model before quantization. So far, the place of
+                executor must be cpu it supports fusing batch_norm into convs.
+        is_use_cache_file(bool): This param is deprecated.
+        cache_dir(str): This param is deprecated.
     
     Returns:
         None
@@ -373,13 +403,13 @@ def quant_post_static(executor,
         activation_bits=activation_bits,
         activation_quantize_type=activation_quantize_type,
         weight_quantize_type=weight_quantize_type,
-        is_use_cache_file=is_use_cache_file,
-        cache_dir=cache_dir)
+        optimize_model=optimize_model)
     post_training_quantization.quantize()
     post_training_quantization.save_quantized_model(
         quantize_model_path,
         model_filename=save_model_filename,
         params_filename=save_params_filename)
+
 
 # We have changed the quant_post to quant_post_static.
 # For compatibility, we keep quant_post api for now, and it will be
@@ -393,18 +423,18 @@ def convert(program, place, config=None, scope=None, save_int8=False):
     ``program``that can be used to  save ``inference model``.
     
     Args:
-        program(fluid.Program): quantized and well-trained ``test program``.
-        place(fluid.CPUPlace or fluid.CUDAPlace): This parameter represents
+        program(paddle.static.Program): quantized and well-trained ``test program``.
+        place(paddle.CPUPlace or paddle.CUDAPlace): This parameter represents
                 the executor run on which device.
         config(dict, optional): configs for convert. if set None, will use
                 default config. It must be same with config that used in
                 'quant_aware'. Default is None.
-        scope(fluid.Scope, optional):  Scope records the mapping between
+        scope(paddle.static.Scope, optional):  Scope records the mapping between
                 variable names and variables, similar to brackets in
                 programming languages. Usually users can use
-                `fluid.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.
+                `paddle.static.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.
                 When ``None`` will use 
-                `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_
+                `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_
                 . Default: ``None``.
         save_int8: Whether to return ``program`` which model parameters'
                 dtype is ``int8``. This parameter can only be used to
@@ -412,11 +442,11 @@ def convert(program, place, config=None, scope=None, save_int8=False):
 
     Returns:
         Tuple : freezed program which can be used for inference.
-                when ``save_int8`` is False, return ``freezed_program(fluid.Program)``.
-                when ``save_int8`` is True, return ``freezed_program(fluid.Program)``
-                and ``freezed_program_int8(fluid.Program)``
+                when ``save_int8`` is False, return ``freezed_program(paddle.static.Program)``.
+                when ``save_int8`` is True, return ``freezed_program(paddle.static.Program)``
+                and ``freezed_program_int8(paddle.static.Program)``
     """
-    scope = fluid.global_scope() if not scope else scope
+    scope = paddle.static.global_scope() if not scope else scope
 
     if config is None:
         config = _quant_config_default
@@ -438,6 +468,9 @@ def convert(program, place, config=None, scope=None, save_int8=False):
         activation_bits=config['activation_bits'],
         weight_quantize_type=config['weight_quantize_type'])
 
+    if os.path.exists(VARS_MAPPING_TABLE):
+        test_graph.out_node_mapping_table = load_dict()
+
     freeze_pass.apply(test_graph)
     freezed_program = test_graph.to_program()
 
@@ -451,14 +484,14 @@ def convert(program, place, config=None, scope=None, save_int8=False):
 
 
 def quant_post_dynamic(model_dir,
-                           save_model_dir,
-                           model_filename=None,
-                           params_filename=None,
-                           save_model_filename=None,
-                           save_params_filename=None,
-                           quantizable_op_type=["conv2d", "mul"],
-                           weight_bits=8,
-                           generate_test_model=False):
+                       save_model_dir,
+                       model_filename=None,
+                       params_filename=None,
+                       save_model_filename=None,
+                       save_params_filename=None,
+                       quantizable_op_type=["conv2d", "mul"],
+                       weight_bits=8,
+                       generate_test_model=False):
     '''
     The function utilizes static post training quantization method to
     quantize the fp32 model. In details, it quantizes the weight of some

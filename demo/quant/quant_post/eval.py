@@ -19,7 +19,6 @@ import argparse
 import functools
 
 import paddle
-import paddle.fluid as fluid
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import imagenet_reader as reader
@@ -38,29 +37,33 @@ add_arg('params_name', str, None, "params filename for inference model")
 def eval(args):
     # parameters from arguments
 
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-    exe = fluid.Executor(place)
+    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
 
-    val_program, feed_target_names, fetch_targets = fluid.io.load_inference_model(
+    val_program, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
         args.model_path,
         exe,
         model_filename=args.model_name,
         params_filename=args.params_name)
-    val_reader = paddle.fluid.io.batch(reader.val(), batch_size=128)
-    feeder = fluid.DataFeeder(
-        place=place, feed_list=feed_target_names, program=val_program)
+    val_reader = paddle.batch(reader.val(), batch_size=1)
+
+    image = paddle.static.data(
+        name='image', shape=[None, 3, 224, 224], dtype='float32')
+    label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
+
+    valid_loader = paddle.io.DataLoader.from_generator(
+        feed_list=[image], capacity=512, use_double_buffer=True, iterable=True)
+    valid_loader.set_sample_list_generator(val_reader, place)
 
     results = []
     for batch_id, data in enumerate(val_reader()):
-
         # top1_acc, top5_acc
         if len(feed_target_names) == 1:
             # eval "infer model", which input is image, output is classification probability
-            image = [[d[0]] for d in data]
+            image = data[0][0].reshape((1, 3, 224, 224))
             label = [[d[1]] for d in data]
-            feed_data = feeder.feed(image)
             pred = exe.run(val_program,
-                           feed=feed_data,
+                           feed={feed_target_names[0]: image},
                            fetch_list=fetch_targets)
             pred = np.array(pred[0])
             label = np.array(label)
@@ -76,8 +79,13 @@ def eval(args):
             results.append([top_1, top_5])
         else:
             # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
+            image = data[0][0].reshape((1, 3, 224, 224))
+            label = [[d[1]] for d in data]
             result = exe.run(val_program,
-                             feed=feeder.feed(data),
+                             feed={
+                                 feed_target_names[0]: image,
+                                 feed_target_names[1]: label
+                             },
                              fetch_list=fetch_targets)
             result = [np.mean(r) for r in result]
             results.append(result)
@@ -87,6 +95,7 @@ def eval(args):
 
 
 def main():
+    paddle.enable_static()
     args = parser.parse_args()
     print_arguments(args)
     eval(args)

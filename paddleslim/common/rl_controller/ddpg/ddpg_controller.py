@@ -15,6 +15,7 @@
 import numpy as np
 import parl
 from parl import layers
+import paddle
 from paddle import fluid
 from ..utils import RLCONTROLLER, action_mapping
 from ...controller import RLBaseController
@@ -37,15 +38,15 @@ class DDPGAgent(parl.Agent):
         self.alg.sync_target(decay=0)
 
     def build_program(self):
-        self.pred_program = fluid.Program()
-        self.learn_program = fluid.Program()
+        self.pred_program = paddle.static.Program()
+        self.learn_program = paddle.static.Program()
 
-        with fluid.program_guard(self.pred_program):
+        with paddle.static.program_guard(self.pred_program):
             obs = fluid.data(
                 name='obs', shape=[None, self.obs_dim], dtype='float32')
             self.pred_act = self.alg.predict(obs)
 
-        with fluid.program_guard(self.learn_program):
+        with paddle.static.program_guard(self.learn_program):
             obs = fluid.data(
                 name='obs', shape=[None, self.obs_dim], dtype='float32')
             act = fluid.data(
@@ -88,8 +89,7 @@ class DDPG(RLBaseController):
         self.obs_dim = kwargs.get('obs_dim')
         self.model = kwargs.get(
             'model') if 'model' in kwargs else default_ddpg_model
-        self.actor_lr = kwargs.get(
-            'actor_lr') if 'actor_lr' in kwargs else 1e-4
+        self.actor_lr = kwargs.get('actor_lr') if 'actor_lr' in kwargs else 1e-4
         self.critic_lr = kwargs.get(
             'critic_lr') if 'critic_lr' in kwargs else 1e-3
         self.gamma = kwargs.get('gamma') if 'gamma' in kwargs else 0.99
@@ -103,7 +103,7 @@ class DDPG(RLBaseController):
         self.actions_noise = kwargs.get(
             'actions_noise') if 'actions_noise' in kwargs else default_noise
         self.action_dist = 0.0
-        self.place = fluid.CUDAPlace(0) if self.use_gpu else fluid.CPUPlace()
+        self.place = paddle.CUDAPlace(0) if self.use_gpu else paddle.CPUPlace()
 
         model = self.model(self.act_dim)
 

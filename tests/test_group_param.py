@@ -17,9 +17,10 @@ import unittest
 import paddle.fluid as fluid
 from layers import conv_bn_layer
 from paddleslim.prune import collect_convs
+from static_case import StaticCase
 
 
-class TestPrune(unittest.TestCase):
+class TestPrune(StaticCase):
     def test_prune(self):
         main_program = fluid.Program()
         startup_program = fluid.Program()
@@ -40,11 +41,31 @@ class TestPrune(unittest.TestCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
-        groups = collect_convs(
-            ["conv1_weights", "conv2_weights", "conv3_weights"], main_program)
-        self.assertTrue(len(groups) == 2)
-        self.assertTrue(len(groups[0]) == 18)
-        self.assertTrue(len(groups[1]) == 6)
+        collected_groups = collect_convs(
+            ["conv1_weights", "conv2_weights", "conv3_weights", "dummy"],
+            main_program)
+        while [] in collected_groups:
+            collected_groups.remove([])
+        print(collected_groups)
+
+        params = set([
+            param.name for param in main_program.all_parameters()
+            if "weights" in param.name
+        ])
+
+        expected_groups = [[('conv1_weights', 0), ('conv2_weights', 1),
+                            ('conv2_weights', 0), ('conv3_weights', 1),
+                            ('conv4_weights', 0), ('conv5_weights', 1)],
+                           [('conv3_weights', 0), ('conv4_weights', 1)]]
+
+        self.assertTrue(len(collected_groups) == len(expected_groups))
+        for _collected, _expected in zip(collected_groups, expected_groups):
+            for _name, _axis, _ in _collected:
+                if _name in params:
+                    self.assertTrue((_name, _axis) in _expected)
+            for _name, _axis in _expected:
+                if _name in params:
+                    self.assertTrue((_name, _axis, []) in _collected)
 
 
 if __name__ == '__main__':

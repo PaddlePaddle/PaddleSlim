@@ -1,23 +1,21 @@
+
 # 安装
 
-安装PaddleSlim前，请确认已正确安装Paddle1.6版本或更新版本。Paddle安装请参考：[Paddle安装教程](https://www.paddlepaddle.org.cn/install/quick)。
-
-
-- 安装develop版本
-
-
+安装最新版本：
 ```bash
-git clone https://github.com/PaddlePaddle/PaddleSlim.git
-cd PaddleSlim
-python setup.py install
+pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-- 安装官方发布的最新版本
-
+安装指定版本：
 ```bash
-pip install paddleslim -i https://pypi.org/simple
+pip install paddleslim==2.0.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-- 安装历史版本
+## 版本对齐
 
-请点击[pypi.org](https://pypi.org/project/paddleslim/#history)查看可安装历史版本。
+|  PaddleSlim   | PaddlePaddle   | PaddleLite    | 备注        |
+| :-----------: | :------------: | :------------:| :----------:|
+| 1.0.1         | <=1.7          |       2.7     | 支持静态图  |
+| 1.1.1         | 1.8            |       2.7     | 支持静态图  |
+| 1.2.0         | 2.0Beta/RC     |       2.8     | 支持静态图  |
+| 2.0.0         | 2.0            |       2.8     | 支持动态图和静态图  |

@@ -49,17 +49,17 @@ class Architect(object):
                     self.network_weight_decay),
                 parameter_list=self.unrolled_model_params)
 
-    def step(self, train_data, valid_data):
+    def step(self, train_data, valid_data, epoch):
         if self.unrolled:
             params_grads = self._backward_step_unrolled(train_data, valid_data)
             self.optimizer.apply_gradients(params_grads)
         else:
-            loss = self._backward_step(valid_data)
+            loss = self._backward_step(valid_data, epoch)
             self.optimizer.minimize(loss)
         self.optimizer.clear_gradients()
 
-    def _backward_step(self, valid_data):
-        loss = self.model.loss(valid_data)
+    def _backward_step(self, valid_data, epoch):
+        loss = self.model.loss(valid_data, epoch)
         loss[0].backward()
         return loss[0]
 

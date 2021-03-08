@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import logging
+import numpy as np
 from ..core import GraphWrapper
 from ..common import get_logger
 from ..core import Registry
@@ -58,11 +59,9 @@ def default_idx_selector(group, ratio):
 
     pruned_num = int(round(len(sorted_idx) * ratio))
     pruned_idx = sorted_idx[:pruned_num]
-
     idxs = []
-    for name, axis, score, offsets in group:
-        r_idx = [i + offsets[0] for i in pruned_idx]
-        idxs.append((name, axis, r_idx))
+    for name, axis, score, transforms in group:
+        idxs.append((name, axis, pruned_idx, transforms))
     return idxs
 
 
@@ -94,7 +93,7 @@ def optimal_threshold(group, ratio):
        list: pruned indexes
 
     """
-    name, axis, score = group[
+    name, axis, score, _ = group[
         0]  # sort channels by the first convolution's score
 
     score[score < 1e-18] = 1e-18
@@ -111,6 +110,6 @@ def optimal_threshold(group, ratio):
     pruned_idx = np.squeeze(np.argwhere(score < th))
 
     idxs = []
-    for name, axis, score in group:
-        idxs.append((name, axis, pruned_idx))
+    for name, axis, score, transforms in group:
+        idxs.append((name, axis, pruned_idx, transforms))
     return idxs
