@@ -109,8 +109,8 @@ def compress(args):
         args.pretrained_model = False
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_dataset = reader.ImageNetDataset(mode='train')
-        val_dataset = reader.ImageNetDataset(mode='val')
+        train_dataset = reader.ImageNetDataset(data_dir=DATA_DIR, mode='train')
+        val_dataset = reader.ImageNetDataset(data_dir=DATA_DIR, mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -191,7 +191,7 @@ def compress(args):
         _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".format(
             epoch,
             np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
-
+    
     def train(epoch, program):
         for batch_id, data in enumerate(train_loader):
             start_time = time.time()
@@ -214,7 +214,7 @@ def compress(args):
 
     pruner = UnstructurePruner(
         paddle.static.default_main_program(), place=place)
-    #    test(0, val_program)
+    # test(0, val_program)
 
     build_strategy = paddle.static.BuildStrategy()
     exec_strategy = paddle.static.ExecutionStrategy()
@@ -223,14 +223,20 @@ def compress(args):
             loss_name=avg_cost.name,
             build_strategy=build_strategy,
             exec_strategy=exec_strategy)
-
+    total_ratio = 0.4
+    last_ratio = 0
     for i in range(args.num_epochs):
-        pruner.uniform_prune(0.1 * (i + 1))
+        if i <= args.num_epochs / float(2): ratio = total_ratio * (4 / float(args.num_epochs ** 2)) * i
+        else: ratio = total_ratio * (4 / float(args.num_epochs) - (4 / float(args.num_epochs ** 2)) * i)
+        last_ratio += ratio
+        
+        pruner.uniform_prune(last_ratio, mode="global")
+        
         train(i, train_program)
+        test(i, val_program)
         #        print(pruner.sparse(paddle.static.default_main_program()))
-        print(
-            f"total_sparse: {pruner.total_sparse(paddle.static.default_main_program())}"
-        )
+        print pruner.total_sparse(paddle.static.default_main_program())
+        
 
 
 def main():

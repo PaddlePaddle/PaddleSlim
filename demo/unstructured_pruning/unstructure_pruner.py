@@ -65,25 +65,64 @@ class UnstructurePruner():
           - ratios(dict): The key is name of parameters and the value is the ratio to be pruned.
         """
         for param, ratio in ratios.items():
-            assert param in self.masks, f"Can't found {param.name} in parameters of target program."
+            assert param in self.masks #, f"Can't found {param.name} in parameters of target program."
             mask_name = self.masks[param]
             t_param = self.scope.find_var(param).get_tensor()
             t_mask = self.scope.find_var(mask_name).get_tensor()
             v_param = np.array(t_param)
             ori_shape = v_param.shape
             v_param = v_param.flatten()
-            pruned_num = round(len(v_param) * ratio)
+            pruned_num = int(len(v_param) * ratio)
             v_param[np.abs(v_param).argsort()[:pruned_num]] = 0
             v_param = v_param.reshape(ori_shape)
             v_mask = (v_param != 0).astype(v_param.dtype)
             t_param.set(v_param, self.place)
             t_mask.set(v_mask, self.place)
 
-    def uniform_prune(self, ratio):
+    def prune_by_ratio_globally(self, ratios):
+        """
+        Prune the whole network globally by ratio
+        Args:
+          - ratios(dict): The key is the name of parameters and the value is the ratio to by pruned
+        """
+        average_ratio = 0
+        total_length = 0
+        params_flatten = []
+        # get the importance threshold according to the given ratio
+        for param, ratio in ratios.items():
+            assert param in self.masks #, f"Can't found {param.name} in parameters of target program."
+            mask_name = self.masks[param]
+            t_param = self.scope.find_var(param).get_tensor()
+            t_mask = self.scope.find_var(mask_name).get_tensor()
+            v_param = np.array(t_param)
+            params_flatten.append(v_param.flatten())
+            
+            total_length += int(len(v_param))
+            average_ratio = ratio
+        params_flatten = np.concatenate(params_flatten, axis=0)
+        threshold = np.sort(params_flatten)[int(ratio * total_length)]
+        
+        # set mask based on the global threshold
+        for param, ratio in ratios.items():
+            assert param in self.masks #, f"Can't found {param.name} in parameters of target program."
+            mask_name = self.masks[param]
+            t_param = self.scope.find_var(param).get_tensor()
+            t_mask = self.scope.find_var(mask_name).get_tensor()
+            v_param = np.array(t_param)
+            v_param[np.abs(v_param) <= threshold] = 0
+            v_mask = (v_param != 0).astype(v_param.dtype)
+            t_param.set(v_param, self.place)
+            t_mask.set(v_mask, self.place)
+
+    def uniform_prune(self, ratio, mode="layer"):
+        assert mode in ["layer", "global"]
         ratios = {}
         for param in self.masks:
             ratios[param] = ratio
-        self.prune_by_ratio(ratios)
+        if mode == "layer":
+            self.prune_by_ratio(ratios)
+        elif mode == "global":
+            self.prune_by_ratio_globally(ratios)
 
     def update_params(self):
         for param in self.masks:
