@@ -380,7 +380,13 @@ class OFA(OFABase):
 
     def _progressive_shrinking(self):
         epoch = self._compute_epochs()
-        self.task_idx, phase_idx = search_idx(epoch, self.run_config.n_epochs)
+        phase_idx = None
+        if len(self.elastic_order) != 1:
+            assert self.run_config.n_epochs is not None, \
+                "if not use set_task() to set current task, please set n_epochs in run_config " \
+                "for to compute which task in this epoch."
+            self.task_idx, phase_idx = search_idx(epoch,
+                                                  self.run_config.n_epochs)
         self.task = self.elastic_order[:self.task_idx + 1]
         if 'width' in self.task:
             ### change width in task to concrete config
@@ -389,8 +395,6 @@ class OFA(OFABase):
                 self.task.append('expand_ratio')
             if 'channel' in self._elastic_task:
                 self.task.append('channel')
-        if len(self.run_config.n_epochs[self.task_idx]) == 1:
-            phase_idx = None
         return self._sample_config(task=self.task, phase=phase_idx)
 
     def calc_distill_loss(self):

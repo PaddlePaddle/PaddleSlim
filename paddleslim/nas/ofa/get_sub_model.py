@@ -78,16 +78,21 @@ def get_prune_params_config(graph, origin_model_config):
 
 def prune_params(model, param_config, super_model_sd=None):
     """ Prune parameters according to the config.
+
+        Parameters:
+            model(paddle.nn.Layer): instance of model.
+            param_config(dict): prune config of each weight.
+            super_model_sd(dict, optional): parameters come from supernet. If super_model_sd is not None, transfer parameters from this dict to model; otherwise, prune model from itself.
     """
     for l_name, sublayer in model.named_sublayers():
         if isinstance(sublayer, BaseBlock):
             continue
         for p_name, param in sublayer.named_parameters(include_sublayers=False):
-            name = l_name + '.' + p_name
             t_value = param.value().get_tensor()
             value = np.array(t_value).astype("float32")
 
             if super_model_sd != None:
+                name = l_name + '.' + p_name
                 super_t_value = super_model_sd[name].value().get_tensor()
                 super_value = np.array(super_t_value).astype("float32")
 
@@ -134,7 +139,7 @@ def prune_params(model, param_config, super_model_sd=None):
 
 
 def _find_weight_ops(op, graph, weights):
-    """ Find operators with weight.
+    """ Find the vars come from operators with weight.
     """
     pre_ops = graph.pre_ops(op)
     for pre_op in pre_ops:
@@ -147,48 +152,49 @@ def _find_weight_ops(op, graph, weights):
 
 
 def _find_pre_elementwise_add(op, graph):
-    """ Find precedor of the elementwise_add operator.
+    """ Find precedors of the elementwise_add operator in the model.
     """
-    same_ss_per_op = []
+    same_prune_before_elementwise_add = []
     pre_ops = graph.pre_ops(op)
     for pre_op in pre_ops:
         if pre_op.type() in WEIGHT_OP:
             return
-        same_ss_per_op = _find_weight_ops(pre_op, graph, same_ss_per_op)
-    return same_ss_per_op
+        same_prune_before_elementwise_add = _find_weight_ops(
+            pre_op, graph, same_prune_before_elementwise_add)
+    return same_prune_before_elementwise_add
 
 
 def check_search_space(graph):
     """ Find the shortcut in the model and set same config for this situation.
     """
-    same_ss = []
+    same_search_space = []
     for op in graph.ops():
         if op.type() == 'elementwise_add':
             inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
             if (not inp1._var.persistable) and (not inp2._var.persistable):
                 pre_ele_op = _find_pre_elementwise_add(op, graph)
                 if pre_ele_op != None:
-                    same_ss.append(pre_ele_op)
+                    same_search_space.append(pre_ele_op)
 
-    if len(same_ss) == 0:
+    if len(same_search_space) == 0:
         return None
 
-    same_ss = sorted([sorted(x) for x in same_ss])
-    final_ss = []
+    same_search_space = sorted([sorted(x) for x in same_search_space])
+    final_search_space = []
 
-    if len(same_ss) >= 1:
-        final_ss = [same_ss[0]]
-        if len(same_ss) > 1:
-            for l in same_ss[1:]:
+    if len(same_search_space) >= 1:
+        final_search_space = [same_search_space[0]]
+        if len(same_search_space) > 1:
+            for l in same_search_space[1:]:
                 listset = set(l)
                 merged = False
-                for idx in range(len(final_ss)):
-                    rset = set(final_ss[idx])
+                for idx in range(len(final_search_space)):
+                    rset = set(final_search_space[idx])
                     if len(listset & rset) != 0:
-                        final_ss[idx] = list(listset | rset)
+                        final_search_space[idx] = list(listset | rset)
                         merged = True
                         break
                 if not merged:
-                    final_ss.append(l)
+                    final_search_space.append(l)
 
-    return final_ss
+    return final_search_space
