@@ -531,9 +531,10 @@ class OFA(OFABase):
         ### find shortcut block using static model
         _st_prog = dygraph2program(
             self.model, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss = sorted(check_search_space(GraphWrapper(_st_prog)))
+        self._same_ss = check_search_space(GraphWrapper(_st_prog))
 
         if self._same_ss != None:
+            self._same_ss = sorted(self._same_ss)
             self._param2key = {}
             self._broadcast = True
 

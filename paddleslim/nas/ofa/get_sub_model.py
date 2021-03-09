@@ -166,11 +166,14 @@ def check_search_space(graph):
         if op.type() == 'elementwise_add':
             inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
             if (not inp1._var.persistable) and (not inp2._var.persistable):
-                same_ss.append(_find_pre_elementwise_add(op, graph))
+                pre_ele_op = _find_pre_elementwise_add(op, graph)
+                if pre_ele_op != None:
+                    same_ss.append(pre_ele_op)
 
-    same_ss = sorted([sorted(x) for x in same_ss])
     if len(same_ss) == 0:
         return None
+
+    same_ss = sorted([sorted(x) for x in same_ss])
     final_ss = []
 
     if len(same_ss) >= 1:

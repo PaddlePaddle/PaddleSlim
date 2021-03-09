@@ -413,10 +413,10 @@ class TestExport(unittest.TestCase):
         for name, param in self.origin_model.named_parameters():
             origin_dict[name] = param.shape
         self.ofa_model.export(
-            self.origin_model,
             config,
             input_shapes=[[1, 64]],
-            input_dtypes=['int64'])
+            input_dtypes=['int64'],
+            origin_model=self.origin_model)
         for name, param in self.origin_model.named_parameters():
             if name in config.keys():
                 if 'expand_ratio' in config[name]:
