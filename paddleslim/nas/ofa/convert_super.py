@@ -34,6 +34,7 @@ else:
     from .layers import *
     from . import layers
     Layer = paddle.nn.Layer
+from .layers_base import Block
 
 _logger = get_logger(__name__, level=logging.INFO)
 
