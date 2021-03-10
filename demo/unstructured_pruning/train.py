@@ -234,9 +234,8 @@ def compress(args):
         
         train(i, train_program)
         test(i, val_program)
-        #        print(pruner.sparse(paddle.static.default_main_program()))
-        print pruner.total_sparse(paddle.static.default_main_program())
-        
+        # print(pruner.sparse(paddle.static.default_main_program()))
+        print("total_sparse: {}".format(pruner.total_sparse(paddle.static.default_main_program()))) 
 
 
 def main():

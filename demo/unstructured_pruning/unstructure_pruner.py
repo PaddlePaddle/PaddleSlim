@@ -65,7 +65,7 @@ class UnstructurePruner():
           - ratios(dict): The key is name of parameters and the value is the ratio to be pruned.
         """
         for param, ratio in ratios.items():
-            assert param in self.masks #, f"Can't found {param.name} in parameters of target program."
+            assert param in self.masks, "Couldn't find {} in parameters of target program.".format(param.name)
             mask_name = self.masks[param]
             t_param = self.scope.find_var(param).get_tensor()
             t_mask = self.scope.find_var(mask_name).get_tensor()
@@ -90,7 +90,7 @@ class UnstructurePruner():
         params_flatten = []
         # get the importance threshold according to the given ratio
         for param, ratio in ratios.items():
-            assert param in self.masks #, f"Can't found {param.name} in parameters of target program."
+            assert param in self.masks, "Couldn't find {} in parameters of target program.".format(param.name)
             mask_name = self.masks[param]
             t_param = self.scope.find_var(param).get_tensor()
             t_mask = self.scope.find_var(mask_name).get_tensor()
@@ -104,7 +104,7 @@ class UnstructurePruner():
         
         # set mask based on the global threshold
         for param, ratio in ratios.items():
-            assert param in self.masks #, f"Can't found {param.name} in parameters of target program."
+            assert param in self.masks, "Couldn't find {} in parameters of target program.".format(param.name)
             mask_name = self.masks[param]
             t_param = self.scope.find_var(param).get_tensor()
             t_mask = self.scope.find_var(mask_name).get_tensor()
