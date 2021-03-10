@@ -6,10 +6,10 @@ Paddle版本：[develop](https://www.paddlepaddle.org.cn/documentation/docs/zh/i
 模型压缩意义：
 
 压缩结果：
-| 模型 | 生成网络结构 | 数据集 | GMACs | 模型体积（MB）| 评价指标 | 下载 |
+| 模型 | 生成网络结构 | 数据集 | GMACs | 模型体积（MB）| 评价指标（） | 下载 |
 |:--:|:---:|:--:|:--:|:--:|:--:|:--:|
-|CycleGAN|resnet_9blocks(origin)|horse2zebra|56.8|11.3| |[链接]()|
-|CycleGAN|mobile_resnet_9blocks(final)|horse2zebra|2.67|0.34| |[链接]()|
+|CycleGAN|resnet_9blocks(origin)|horse2zebra|56.8|11.3|64.95 |[链接]()|
+|CycleGAN|mobile_resnet_9blocks(final)|horse2zebra|2.67|0.34|64.57 |[链接]()|
 
 Note: 目前仅验证过CycleGAN在horse2zebra数据集中的效果，欢迎您在新的数据集或者新的模型上验证整个流程。
 
