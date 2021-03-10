@@ -51,7 +51,9 @@ RunConfig = namedtuple(
         # list, elactic depth of the model in training, default: None
         'elastic_depth',
         # list, the number of sub-network to train per mini-batch data, used to get current epoch, default: None
-        'dynamic_batch_size'
+        'dynamic_batch_size',
+        # the shape of weights in the skip_layers will not change in the training, default: None
+        'skip_layers'
     ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
@@ -561,6 +563,15 @@ class OFA(OFABase):
                         self._ofa_layers[self._param2key[ss]].pop('channel')
                     if len(self._ofa_layers[self._param2key[ss]]) == 0:
                         self._ofa_layers.pop(self._param2key[ss])
+
+        if self.run_config != None and getattr(self.run_config, 'skip_layers',
+                                               None) != None:
+            for skip_layer in skip_layers:
+                if skip_layer in self._ofa_layers.keys():
+                    self._ofa_layers.pop(skip_layer)
+                else:
+                    _logger.info('skip layer: {} is not in search space.'.
+                                 format(skip_layer))
 
     def _broadcast_ss(self):
         """ broadcast search space after random sample."""
