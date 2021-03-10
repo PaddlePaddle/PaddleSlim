@@ -44,6 +44,12 @@ DEFINE_bool(use_analysis,
 DEFINE_int32(num_jobs, 32, "num of threads to run in parallel");
 
 
+static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
+  cfg->DisableGpu();
+  cfg->SwitchIrOptim();
+  cfg->EnableMKLDNN();
+}
+
 struct Timer {
   std::chrono::high_resolution_clock::time_point start;
   std::chrono::high_resolution_clock::time_point startu;
@@ -196,6 +202,12 @@ bool PredictionRun(int num_jobs,
                    const std::vector<std::vector<paddle::PaddleTensor>> &inputs,
                    int num_threads,
                    float *sample_latency = nullptr) {
+  paddle::AnalysisConfig cfg;
+  cfg.SetModel(FLAGS_infer_model);
+  cfg.SetCpuMathLibraryNumThreads(FLAGS_num_threads);
+  if (FLAGS_use_analysis) {
+    SetIrOptimConfig(&cfg);
+  }                     
   auto predictor =
       CreatePredictor(reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg),
                       FLAGS_use_analysis);
@@ -314,23 +326,10 @@ std::pair<float, float> CalculateAccuracy(
   return std::make_pair(acc1_ss_avg, acc5_ss_avg);
 }
 
-static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
-  cfg->DisableGpu();
-  cfg->SwitchIrOptim();
-  cfg->EnableMKLDNN();
-}
-
-
 int main(int argc, char *argv[]) {
   // InitFLAGS(argc, argv);
   google::InitGoogleLogging(*argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  paddle::AnalysisConfig cfg;
-  cfg.SetModel(FLAGS_infer_model);
-  cfg.SetCpuMathLibraryNumThreads(FLAGS_num_threads);
-  if (FLAGS_use_analysis) {
-    SetIrOptimConfig(&cfg);
-  }
 
   std::vector<std::vector<paddle::PaddleTensor>> input_slots_all;
   std::vector<paddle::PaddleTensor> labels_gt;  // optional
