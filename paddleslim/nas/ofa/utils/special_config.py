@@ -45,5 +45,6 @@ def dynabert_config(model, width_mult, depth_mult=1.0):
         if block_k == 'depth':
             block_v = depth_mult
 
-        new_config[block_k] = block_v
+        new_block_k = model._key2name[block_k]
+        new_config[new_block_k] = block_v
     return new_config

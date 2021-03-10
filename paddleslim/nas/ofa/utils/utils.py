@@ -48,7 +48,7 @@ def set_state_dict(model, state_dict):
     """
     assert isinstance(model, Layer)
     assert isinstance(state_dict, dict)
-    for name, param in model.named_parameters():
+    for name, param in model.state_dict().items():
         tmp_n = name.split('.')[:-2] + [name.split('.')[-1]]
         tmp_n = '.'.join(tmp_n)
         if name in state_dict:
@@ -59,16 +59,15 @@ def set_state_dict(model, state_dict):
             _logger.info('{} is not in state_dict'.format(tmp_n))
 
 
-def remove_model_fn(model, sd):
+def remove_model_fn(model, state_dict):
     new_dict = {}
     keys = []
-    for name, param in model.named_parameters():
+    for name, param in model.state_dict().items():
         keys.append(name)
-    for name, param in sd.items():
+    for name, param in state_dict.items():
         if name.split('.')[-2] == 'fn':
             tmp_n = name.split('.')[:-2] + [name.split('.')[-1]]
             tmp_n = '.'.join(tmp_n)
-            #print(name, tmp_n)
         if name in keys:
             new_dict[name] = param
         elif tmp_n in keys:

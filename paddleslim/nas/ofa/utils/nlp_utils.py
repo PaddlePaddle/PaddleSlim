@@ -272,6 +272,31 @@ def _encoder_forward(self, src, src_mask=[None, None]):
     return output
 
 
+def _encoder_layer_forward(self, src, src_mask=None, cache=None):
+    residual = src
+    if self.normalize_before:
+        src = self.norm1(src)
+    # Add cache for encoder for the usage like UniLM
+    if cache is None:
+        src = self.self_attn(src, src, src, src_mask)
+    else:
+        src, incremental_cache = self.self_attn(src, src, src, src_mask, cache)
+
+    src = residual + self.dropout1(src)
+    if not self.normalize_before:
+        src = self.norm1(src)
+
+    residual = src
+    if self.normalize_before:
+        src = self.norm2(src)
+    src = self.linear2(self.dropout(self.activation(self.linear1(src))))
+    src = residual + self.dropout2(src)
+    if not self.normalize_before:
+        src = self.norm2(src)
+    return src if cache is None else (src, incremental_cache)
+
+
 nn.MultiHeadAttention.forward = _mha_forward
 nn.MultiHeadAttention._prepare_qkv = _prepare_qkv
 nn.TransformerEncoder.forward = _encoder_forward
+nn.TransformerEncoderLayer.forward = _encoder_layer_forward
