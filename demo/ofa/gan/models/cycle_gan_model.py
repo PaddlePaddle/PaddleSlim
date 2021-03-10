@@ -278,8 +278,7 @@ class CycleGAN(BaseModel):
     def evaluate_model(self, step):
         ret = {}
         self.is_best = False
-        save_dir = os.path.join(self.cfgs.save_dir, 'mobile', 'eval',
-                                str(step))
+        save_dir = os.path.join(self.cfgs.save_dir, 'mobile', 'eval', str(step))
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         self.netG_A.eval()
@@ -319,8 +318,8 @@ class CycleGAN(BaseModel):
             ret['metric/fid_%s-mean' %
                 suffix] = sum(getattr(self, 'fids_%s' % suffix)) / len(
                     getattr(self, 'fids_%s' % suffix))
-            ret['metric/fid_%s-best' % suffix] = getattr(self, 'best_fid_%s' %
-                                                         suffix)
+            ret['metric/fid_%s-best' % suffix] = getattr(self,
+                                                         'best_fid_%s' % suffix)
 
         self.netG_A.train()
         self.netG_B.train()

@@ -24,8 +24,7 @@ def transfer_Conv2D(m1, m2, input_index=None, output_index=None):
     assert isinstance(m1, Conv2D) and isinstance(m2, Conv2D)
     if m1.parameters()[0].shape[0] == 3:  ### last convolution
         assert input_index is not None
-        m2.parameters()[0].set_value(m1.parameters()[0].numpy()[:,
-                                                                input_index])
+        m2.parameters()[0].set_value(m1.parameters()[0].numpy()[:, input_index])
         if len(m2.parameters()) == 2:
             m2.parameters()[1].set_value(m1.parameters()[1].numpy())
         return None

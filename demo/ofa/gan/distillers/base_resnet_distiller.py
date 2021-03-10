@@ -88,8 +88,8 @@ class BaseResnetDistiller(BaseModel):
                 cfgs.input_nc, cfgs.output_nc, cfgs.pretrained_ngf,
                 cfgs.pretrained_netG, cfgs.norm_type, 0)
             if self.cfgs.use_parallel:
-                self.netG_pretrained = paddle.DataParallel(
-                    self.netG_pretrained, self.cfgs.strategy)
+                self.netG_pretrained = paddle.DataParallel(self.netG_pretrained,
+                                                           self.cfgs.strategy)
 
         self.netD = network.define_D(cfgs.output_nc, cfgs.ndf, cfgs.netD,
                                      cfgs.norm_type, cfgs.n_layer_D)

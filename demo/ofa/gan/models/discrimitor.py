@@ -60,10 +60,9 @@ class NLayerDiscriminator(nn.Layer):
                 bias_attr=use_bias), norm_layer(ndf * nf_mult), LeakyReLU(0.2)
         ])
 
-        self.model.extend([
-            Conv2D(
-                ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw)
-        ])
+        self.model.extend(
+            [Conv2D(
+                ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw)])
 
     def forward(self, inputs):
         y = inputs

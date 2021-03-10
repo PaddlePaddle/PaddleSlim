@@ -214,15 +214,9 @@ class InceptionV3:
 
         branch3x3 = self.conv_bn_layer(x, 384, 1, name=name + '.branch3x3_1')
         branch3x3_2a = self.conv_bn_layer(
-            branch3x3,
-            384, (1, 3),
-            padding=(0, 1),
-            name=name + '.branch3x3_2a')
+            branch3x3, 384, (1, 3), padding=(0, 1), name=name + '.branch3x3_2a')
         branch3x3_2b = self.conv_bn_layer(
-            branch3x3,
-            384, (3, 1),
-            padding=(1, 0),
-            name=name + '.branch3x3_2b')
+            branch3x3, 384, (3, 1), padding=(1, 0), name=name + '.branch3x3_2b')
         branch3x3 = fluid.layers.concat([branch3x3_2a, branch3x3_2b], axis=1)
 
         branch3x3dbl = self.conv_bn_layer(
@@ -342,15 +336,9 @@ class InceptionV3:
 
         branch3x3 = self.conv_bn_layer(x, 384, 1, name=name + '.branch3x3_1')
         branch3x3_2a = self.conv_bn_layer(
-            branch3x3,
-            384, (1, 3),
-            padding=(0, 1),
-            name=name + '.branch3x3_2a')
+            branch3x3, 384, (1, 3), padding=(0, 1), name=name + '.branch3x3_2a')
         branch3x3_2b = self.conv_bn_layer(
-            branch3x3,
-            384, (3, 1),
-            padding=(1, 0),
-            name=name + '.branch3x3_2b')
+            branch3x3, 384, (3, 1), padding=(1, 0), name=name + '.branch3x3_2b')
         branch3x3 = fluid.layers.concat([branch3x3_2a, branch3x3_2b], axis=1)
 
         branch3x3dbl = self.conv_bn_layer(
@@ -390,15 +378,9 @@ class InceptionV3:
 
         branch3x3 = self.conv_bn_layer(x, 384, 1, name=name + '.branch3x3_1')
         branch3x3_2a = self.conv_bn_layer(
-            branch3x3,
-            384, (1, 3),
-            padding=(0, 1),
-            name=name + '.branch3x3_2a')
+            branch3x3, 384, (1, 3), padding=(0, 1), name=name + '.branch3x3_2a')
         branch3x3_2b = self.conv_bn_layer(
-            branch3x3,
-            384, (3, 1),
-            padding=(1, 0),
-            name=name + '.branch3x3_2b')
+            branch3x3, 384, (3, 1), padding=(1, 0), name=name + '.branch3x3_2b')
         branch3x3 = fluid.layers.concat([branch3x3_2a, branch3x3_2b], axis=1)
 
         branch3x3dbl = self.conv_bn_layer(

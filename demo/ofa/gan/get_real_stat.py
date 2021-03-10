@@ -43,10 +43,7 @@ def main(cfgs):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '--dataroot',
-        type=str,
-        default='./data',
-        help="the dictionary of data")
+        '--dataroot', type=str, default='./data', help="the dictionary of data")
     parser.add_argument(
         '--filename',
         type=str,

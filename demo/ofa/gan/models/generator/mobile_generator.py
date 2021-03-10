@@ -106,8 +106,7 @@ class MobileResnetGenerator(nn.Layer):
                     output_padding=1,
                     stride=2,
                     padding=1,
-                    bias_attr=use_bias), norm_layer(int(ngf * mult / 2)),
-                ReLU()
+                    bias_attr=use_bias), norm_layer(int(ngf * mult / 2)), ReLU()
             ])
 
         self.model.extend([Pad2D(padding=[3, 3, 3, 3], mode="reflect")])

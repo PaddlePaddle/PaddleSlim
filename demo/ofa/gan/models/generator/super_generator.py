@@ -105,10 +105,7 @@ class SuperMobileResnetGenerator(nn.Layer):
         self.model.extend([
             Pad2D(
                 padding=[3, 3, 3, 3], mode="reflect"), SuperConv2D(
-                    input_nc,
-                    ngf,
-                    kernel_size=7,
-                    padding=0,
+                    input_nc, ngf, kernel_size=7, padding=0,
                     bias_attr=use_bias), norm_layer(ngf), ReLU()
         ])
 
@@ -122,8 +119,7 @@ class SuperMobileResnetGenerator(nn.Layer):
                     kernel_size=3,
                     stride=2,
                     padding=1,
-                    bias_attr=use_bias), norm_layer(int(ngf * mult * 2)),
-                ReLU()
+                    bias_attr=use_bias), norm_layer(int(ngf * mult * 2)), ReLU()
             ])
 
         mult = 2**n_downsampling
@@ -171,8 +167,7 @@ class SuperMobileResnetGenerator(nn.Layer):
                     output_padding=1,
                     stride=2,
                     padding=1,
-                    bias_attr=use_bias), norm_layer(int(ngf * mult / 2)),
-                ReLU()
+                    bias_attr=use_bias), norm_layer(int(ngf * mult / 2)), ReLU()
             ])
 
         self.model.extend([Pad2D(padding=[3, 3, 3, 3], mode="reflect")])

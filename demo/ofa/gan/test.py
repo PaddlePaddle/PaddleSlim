@@ -99,10 +99,7 @@ if __name__ == '__main__':
         default='horse2zebra',
         help="The name of dataset")
     parser.add_argument(
-        '--dataroot',
-        type=str,
-        default='./data',
-        help="The dictionary of data")
+        '--dataroot', type=str, default='./data', help="The dictionary of data")
     parser.add_argument(
         '--model', type=str, default='cycle_gan', help="model name")
     parser.add_argument(
@@ -141,8 +138,7 @@ if __name__ == '__main__':
         default=None,
         help="the pretrain model path of generator")
 
-    parser.add_argument(
-        '--input_nc', type=int, default=3, help="input channel")
+    parser.add_argument('--input_nc', type=int, default=3, help="input channel")
     parser.add_argument(
         '--output_nc', type=int, default=3, help="output channel")
     parser.add_argument(

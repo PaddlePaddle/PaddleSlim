@@ -95,8 +95,8 @@ class gan_compression:
 
                 if epoch_id == (epochs - 1):
                     for name in model.model_names:
-                        model_weight[name] = model._sub_layers[
-                            name].state_dict()
+                        model_weight[name] = model._sub_layers[name].state_dict(
+                        )
 
                 save_model = (not self.cfgs.use_parallel) or (
                     self.cfgs.use_parallel and

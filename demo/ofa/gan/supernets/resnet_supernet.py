@@ -167,10 +167,8 @@ class ResnetSupernet(BaseResnetDistiller):
                         Tname = 'Tfake_' + str(i + j) + '.png'
                         Sfake_im = util.tensor2img(self.Sfake_B[j])
                         Tfake_im = util.tensor2img(self.Tfake_B[j])
-                        util.save_image(Sfake_im,
-                                        os.path.join(save_dir, Sname))
-                        util.save_image(Tfake_im,
-                                        os.path.join(save_dir, Tname))
+                        util.save_image(Sfake_im, os.path.join(save_dir, Sname))
+                        util.save_image(Tfake_im, os.path.join(save_dir, Tname))
 
             suffix = self.cfgs.direction
             paddle.enable_static()

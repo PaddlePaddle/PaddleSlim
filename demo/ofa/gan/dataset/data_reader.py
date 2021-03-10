@@ -147,8 +147,7 @@ class PairDataReader(ReaderCreator):
             if self.shuffle:
                 np.random.shuffle(self.lines_B)
 
-            for i, (fileA,
-                    fileB) in enumerate(zip(self.lines_A, self.lines_B)):
+            for i, (fileA, fileB) in enumerate(zip(self.lines_A, self.lines_B)):
                 fileA = fileA.strip('\n\r\t').split(' ')[0]
                 fileB = fileB.strip('\n\r\t').split(' ')[0]
                 self.id2name[i] = os.path.basename(
