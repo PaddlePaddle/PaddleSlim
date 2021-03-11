@@ -1,7 +1,6 @@
 # PaddleSlim
 
-[![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)](https://paddleslim.readthedocs.io/en/latest/)
-[![Documentation Status](https://img.shields.io/badge/中文文档-最新-brightgreen.svg)](https://paddleslim.readthedocs.io/zh_CN/latest/)
+[![Documentation Status](https://img.shields.io/badge/中文文档-最新-brightgreen.svg)](https://paddleslim.readthedocs.io/zh_CN/release-2.0.0/)
 [![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
 
 ## 简介
