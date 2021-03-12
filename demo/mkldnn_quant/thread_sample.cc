@@ -207,16 +207,24 @@ bool PredictionRun(int num_jobs,
   paddle::PaddlePredictor *pres[3]; 
   
   paddle::AnalysisConfig cfg[3];
-  // std::vector<std::unique_ptr> predictor
+
+  // std::vector<std::unique_ptr<paddle::PaddlePredictor>> predictor[3]; 
+  
   for (int i = 0 ; i < 3; i++){
     cfg[i].SetModel(FLAGS_infer_model);
     cfg[i].SetCpuMathLibraryNumThreads(FLAGS_num_threads);
     if (FLAGS_use_analysis) {
       SetIrOptimConfig(&cfg[i]);
     }
-    // auto predictor = CreatePaddlePredictor(cfg[i]);
-    pres[i] = CreatePaddlePredictor(cfg[i]).get();
+    // predictor[i] = CreatePaddlePredictor(cfg[i]);
+    // pres[i] = predictor[i].get();
   }
+  auto predictor0 = CreatePaddlePredictor(cfg[0]);
+  auto predictor1 = CreatePaddlePredictor(cfg[1]);
+  auto predictor2 = CreatePaddlePredictor(cfg[2]);
+  pres[1] = predictor0.get();
+  pres[2] = predictor1.get();
+  pres[3] = predictor2.get();
 
   std::cout<<"LOG INFO 2.5 2.5 2.5 2.5-----------------------------";
   
@@ -224,7 +232,7 @@ bool PredictionRun(int num_jobs,
   std::cout<<"LOG INFO 3333333333-----------------------------";
   auto time1 = time();
 
-  for (int tid = 0; tid< num_jobs ; tid++){
+  for (int tid = 0; tid< num_jobs; tid++){
     threads.emplace_back([&, tid](){
       std::vector<std::vector<paddle::PaddleTensor>> *outputs;
       for (int j = 0 ; j < FLAGS_iterations;j++){
