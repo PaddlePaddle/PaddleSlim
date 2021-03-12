@@ -185,17 +185,17 @@ static void PrintTime(int batch_size,
             << "ms, fps: " << 1000.f / sample_latency << " ======";
 }
 
-std::unique_ptr<paddle::PaddlePredictor> CreatePredictor(
-    const paddle::PaddlePredictor::Config *config, bool use_analysis = true) {
-  const auto *analysis_config =
-      reinterpret_cast<const paddle::AnalysisConfig *>(config);
-  if (use_analysis) {
-    return paddle::CreatePaddlePredictor<paddle::AnalysisConfig>(
-        *analysis_config);
-  }
-  auto native_config = analysis_config->ToNativeConfig();
-  return paddle::CreatePaddlePredictor<paddle::NativeConfig>(native_config);
-}
+// std::unique_ptr<paddle::PaddlePredictor> CreatePredictor(
+//     const paddle::PaddlePredictor::Config *config, bool use_analysis = true) {
+//   const auto *analysis_config =
+//       reinterpret_cast<const paddle::AnalysisConfig *>(config);
+//   if (use_analysis) {
+//     return paddle::CreatePaddlePredictor<paddle::AnalysisConfig>(
+//         *analysis_config);
+//   }
+//   auto native_config = analysis_config->ToNativeConfig();
+//   return paddle::CreatePaddlePredictor<paddle::NativeConfig>(native_config);
+// }
 
 bool PredictionRun(int num_jobs,
                    const std::vector<std::vector<paddle::PaddleTensor>> &inputs,
@@ -207,20 +207,23 @@ bool PredictionRun(int num_jobs,
   paddle::PaddlePredictor *pres[3]; 
   
   paddle::AnalysisConfig cfg[3];
+  // std::vector<std::unique_ptr> predictor
   for (int i = 0 ; i < 3; i++){
     cfg[i].SetModel(FLAGS_infer_model);
     cfg[i].SetCpuMathLibraryNumThreads(FLAGS_num_threads);
     if (FLAGS_use_analysis) {
       SetIrOptimConfig(&cfg[i]);
     }
-    auto predictor = CreatePaddlePredictor(cfg[i]);
-    pres[i] = predictor.get();
-  }                   
+    // auto predictor = CreatePaddlePredictor(cfg[i]);
+    pres[i] = CreatePaddlePredictor(cfg[i]).get();
+  }
+
   std::cout<<"LOG INFO 2.5 2.5 2.5 2.5-----------------------------";
   
   std::vector<std::thread> threads;
   std::cout<<"LOG INFO 3333333333-----------------------------";
   auto time1 = time();
+
   for (int tid = 0; tid< num_jobs ; tid++){
     threads.emplace_back([&, tid](){
       std::vector<std::vector<paddle::PaddleTensor>> *outputs;
