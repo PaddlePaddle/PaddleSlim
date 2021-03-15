@@ -136,8 +136,10 @@ class Pruner():
                     param.set_shape(new_shape)
                     # update groups of depthwise conv2d
                     for op in param.outputs():
-                        if op.type() in ["conv2d", "depthwise_conv2d"
-                                         ] and op.attr("groups") > 1:
+                        if op.type() in [
+                                "conv2d", "conv2d_grad", "depthwise_conv2d",
+                                "depthwise_conv2d_grad"
+                        ] and op.attr("groups") > 1:
                             assert origin_shape[
                                 1] == 1, "Only support for depthwise when groups > 1."
                             new_groups = int(
