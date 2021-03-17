@@ -11,6 +11,7 @@ import paddle.fluid as fluid
 from unstructure_pruner import UnstructurePruner
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from paddleslim.prune import Pruner, save_model
+import paddle.distributed as dist
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 import models
@@ -22,24 +23,24 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
+add_arg('batch_size',       int,  64 * 8,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
-add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretained",                "Whether to use pretrained model.")
+add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
 add_arg('lr',               float,  0.1,               "The learning rate used to fine-tune pruned model.")
 add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
+add_arg('threshold',        float,  1e-5,               "The threshold to set zeros, the abs(weights) lower than which will be zeros.")
 add_arg('num_epochs',       int,  120,               "The number of total epochs.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
-add_arg('config_file',      str, None,                 "The config file for compression with yaml format.")
-add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'")
+add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'.")
 add_arg('log_period',       int, 100,                 "Log period in batches.")
+add_arg('phase',            str, "train",              "Whether to train or test the pruned model.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
-add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
-add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used, support l1_norm and batch_norm_scale.")
-add_arg('save_inference',   bool, False,                "Whether to save inference model.")
+add_arg('model_period',     int, 10,             "The period to save model in epochs.")
+add_arg('resume_epoch',     int, 0,             "The epoch to resume training.")
 # yapf: enable
 
 model_list = models.__all__
@@ -109,8 +110,8 @@ def compress(args):
         args.pretrained_model = False
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_dataset = reader.ImageNetDataset(data_dir=DATA_DIR, mode='train')
-        val_dataset = reader.ImageNetDataset(data_dir=DATA_DIR, mode='val')
+        train_dataset = reader.ImageNetDataset(data_dir='/data', mode='train')
+        val_dataset = reader.ImageNetDataset(data_dir='/data', mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -135,7 +136,7 @@ def compress(args):
         shuffle=True,
         return_list=False,
         use_shared_memory=True,
-        num_workers=16)
+        num_workers=32)
     valid_loader = paddle.io.DataLoader(
         val_dataset,
         places=place,
@@ -154,10 +155,16 @@ def compress(args):
     avg_cost = paddle.mean(x=cost)
     acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
     acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
+
     val_program = paddle.static.default_main_program().clone(for_test=True)
 
     opt, learning_rate = create_optimizer(args, step_per_epoch)
     opt.minimize(avg_cost)
+
+    pruner = UnstructurePruner(
+        paddle.static.default_main_program(),
+        threshold=args.threshold,
+        place=place)
 
     exe.run(paddle.static.default_startup_program())
 
@@ -168,13 +175,26 @@ def compress(args):
 
         _logger.info("Load pretrained model from {}".format(
             args.pretrained_model))
-        paddle.static.load(paddle.static.default_main_program(),
-                           args.pretrained_model, exe)
+        paddle.fluid.io.load_vars(
+            exe, args.pretrained_model, predicate=if_exist)
+
+    def add_dim_label(label):
+        label = np.expand_dims(label, -1)
+        label_new = fluid.LoDTensor()
+        label_new.set(label, place)
+        return label_new
 
     def test(epoch, program):
         acc_top1_ns = []
         acc_top5_ns = []
+
+        print("The current density of the inference model is {}%".format(
+            round(100 * pruner.total_sparse(paddle.static.default_main_program(
+            )), 2)))
         for batch_id, data in enumerate(valid_loader):
+            tmp_label = np.array(data[0]['label'])
+            if not (len(tmp_label.shape) == 2 and tmp_label.shape[-1] == 1):
+                data[0]['label'] = add_dim_label(tmp_label)
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(
                 program, feed=data, fetch_list=[acc_top1.name, acc_top5.name])
@@ -191,10 +211,13 @@ def compress(args):
         _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".format(
             epoch,
             np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
-    
+
     def train(epoch, program):
         for batch_id, data in enumerate(train_loader):
             start_time = time.time()
+            tmp_label = np.array(data[0]['label'])
+            if not (len(tmp_label.shape) == 2 and tmp_label.shape[-1] == 1):
+                data[0]['label'] = add_dim_label(tmp_label)
             loss_n, acc_top1_n, acc_top5_n = exe.run(
                 train_program,
                 feed=data,
@@ -212,30 +235,26 @@ def compress(args):
             learning_rate.step()
             batch_id += 1
 
-    pruner = UnstructurePruner(
-        paddle.static.default_main_program(), place=place)
-    # test(0, val_program)
-
     build_strategy = paddle.static.BuildStrategy()
     exec_strategy = paddle.static.ExecutionStrategy()
-    train_program = paddle.static.CompiledProgram(
-        paddle.static.default_main_program()).with_data_parallel(
-            loss_name=avg_cost.name,
-            build_strategy=build_strategy,
-            exec_strategy=exec_strategy)
-    total_ratio = 0.4
-    last_ratio = 0
-    for i in range(args.num_epochs):
-        if i <= args.num_epochs / float(2): ratio = total_ratio * (4 / float(args.num_epochs ** 2)) * i
-        else: ratio = total_ratio * (4 / float(args.num_epochs) - (4 / float(args.num_epochs ** 2)) * i)
-        last_ratio += ratio
-        
-        pruner.uniform_prune(last_ratio, mode="global")
-        
-        train(i, train_program)
-        test(i, val_program)
-        # print(pruner.sparse(paddle.static.default_main_program()))
-        print("total_sparse: {}".format(pruner.total_sparse(paddle.static.default_main_program()))) 
+
+    if args.phase == 'train':
+        train_program = paddle.static.CompiledProgram(
+            paddle.static.default_main_program()).with_data_parallel(
+                loss_name=avg_cost.name,
+                build_strategy=build_strategy,
+                exec_strategy=exec_strategy)
+        for i in range(args.resume_epoch, args.num_epochs):
+            train(i, train_program)
+            print("The current density of the pruned model is: {}%".format(
+                round(100 * pruner.total_sparse(
+                    paddle.static.default_main_program()), 2)))
+
+            if i % args.test_period == 0: test(i, val_program)
+            if i > args.resume_epoch and i % args.model_period == 0:
+                fluid.io.save_params(executor=exe, dirname=args.model_path)
+    elif args.phase == 'test':
+        test(0, val_program)
 
 
 def main():
