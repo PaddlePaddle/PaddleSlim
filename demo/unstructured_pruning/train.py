@@ -178,12 +178,6 @@ def compress(args):
         paddle.fluid.io.load_vars(
             exe, args.pretrained_model, predicate=if_exist)
 
-    def add_dim_label(label):
-        label = np.expand_dims(label, -1)
-        label_new = fluid.LoDTensor()
-        label_new.set(label, place)
-        return label_new
-
     def test(epoch, program):
         acc_top1_ns = []
         acc_top5_ns = []
@@ -192,9 +186,6 @@ def compress(args):
             round(100 * pruner.total_sparse(paddle.static.default_main_program(
             )), 2)))
         for batch_id, data in enumerate(valid_loader):
-            tmp_label = np.array(data[0]['label'])
-            if not (len(tmp_label.shape) == 2 and tmp_label.shape[-1] == 1):
-                data[0]['label'] = add_dim_label(tmp_label)
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(
                 program, feed=data, fetch_list=[acc_top1.name, acc_top5.name])
@@ -215,9 +206,6 @@ def compress(args):
     def train(epoch, program):
         for batch_id, data in enumerate(train_loader):
             start_time = time.time()
-            tmp_label = np.array(data[0]['label'])
-            if not (len(tmp_label.shape) == 2 and tmp_label.shape[-1] == 1):
-                data[0]['label'] = add_dim_label(tmp_label)
             loss_n, acc_top1_n, acc_top5_n = exe.run(
                 train_program,
                 feed=data,

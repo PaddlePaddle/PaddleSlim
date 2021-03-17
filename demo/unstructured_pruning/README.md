@@ -84,10 +84,10 @@ optional arguments:
 
 ## 实验结果
 
-| 模型 | 数据集 | 压缩方法 | 压缩率｜Top-1/Top-5 Acc | lr | threshold ｜ epoch ｜
+| 模型 | 数据集 | 压缩方法 | 压缩率| Top-1/Top-5 Acc | lr | threshold | epoch |
 |:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
-| MobileNetV1 | ImageNet ｜Baseline | - | 70.99%/89.68% | - | - | - |
-| MobileNetV1 | ImageNet ｜Global Pruning | -41.11% | 71.09%/89.73% (+0.10%/+0.05%) | 0.05 | 0.00001 | 40 |
+| MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
+| MobileNetV1 | ImageNet | Global Pruning | -41.11% | 71.09%/89.73% (+0.10%/+0.05%) | 0.05 | 0.00001 | 40 |
 
 ## TODO
 
