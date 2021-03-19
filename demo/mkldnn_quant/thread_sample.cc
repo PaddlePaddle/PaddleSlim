@@ -41,12 +41,26 @@ DEFINE_bool(with_accuracy_layer,
 DEFINE_bool(use_analysis,
             false,
             "If use_analysis is set to true, the model will be optimized");
-DEFINE_int32(num_jobs, 3, "num of threads to run in parallel");
+DEFINE_int32(num_jobs, 2, "num of threads to run in parallel");
+
+std::unique_ptr<paddle::PaddlePredictor> CreatePredictor(
+    const paddle::PaddlePredictor::Config *config, bool use_analysis = true) {
+  const auto *analysis_config =
+      reinterpret_cast<const paddle::AnalysisConfig *>(config);
+  if (use_analysis) {
+    return paddle::CreatePaddlePredictor<paddle::AnalysisConfig>(
+        *analysis_config);
+  }
+  auto native_config = analysis_config->ToNativeConfig();
+  return paddle::CreatePaddlePredictor<paddle::NativeConfig>(native_config);
+}
 
 static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
   cfg->DisableGpu();
   cfg->SwitchIrOptim();
   cfg->EnableMKLDNN();
+  cfg->SetModel(FLAGS_infer_model);
+  cfg->SetCpuMathLibraryNumThreads(FLAGS_num_threads);
 }
 
 struct Timer {
@@ -185,18 +199,6 @@ static void PrintTime(int batch_size,
             << "ms, fps: " << 1000.f / sample_latency << " ======";
 }
 
-// std::unique_ptr<paddle::PaddlePredictor> CreatePredictor(
-//     const paddle::PaddlePredictor::Config *config, bool use_analysis = true) {
-//   const auto *analysis_config =
-//       reinterpret_cast<const paddle::AnalysisConfig *>(config);
-//   if (use_analysis) {
-//     return paddle::CreatePaddlePredictor<paddle::AnalysisConfig>(
-//         *analysis_config);
-//   }
-//   auto native_config = analysis_config->ToNativeConfig();
-//   return paddle::CreatePaddlePredictor<paddle::NativeConfig>(native_config);
-// }
-
 bool PredictionRun(int num_jobs,
                    const std::vector<std::vector<paddle::PaddleTensor>> &inputs,
                    int num_threads,
@@ -204,34 +206,30 @@ bool PredictionRun(int num_jobs,
   std::cout<<"LOG INFO 1-----------------------------";
   
   std::cout<<"LOG INFO 2.1 2.1 2.1 2.1 2.1 2.1 2.1 2.1 2.1 2.1 -----------------------------";
-  paddle::PaddlePredictor *pres[3]; 
   
-  paddle::AnalysisConfig cfg[3];
+  paddle::AnalysisConfig cfg;
+  paddle::AnalysisConfig cfg1;
 
-  // std::vector<std::unique_ptr<paddle::PaddlePredictor>> predictor[3]; 
+  SetIrOptimConfig(&cfg);
+  SetIrOptimConfig(&cfg1);
+  std::cout<<"LOG INFO 2.51 2.51 2.51 2.51-----------------------------------------------------------------";
+ 
+  paddle::PaddlePredictor *pres[2]; 
+  auto predictor0 = CreatePredictor(reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg));
+  auto predictor1 = CreatePredictor(reinterpret_cast<paddle::PaddlePredictor::Config *>(&cfg1));
+
+  std::cout<<"LOG INFO 2.52 2.52 2.52 2.52-----------------------------------------------------";
   
-  for (int i = 0 ; i < 3; i++){
-    cfg[i].SetModel(FLAGS_infer_model);
-    cfg[i].SetCpuMathLibraryNumThreads(FLAGS_num_threads);
-    if (FLAGS_use_analysis) {
-      SetIrOptimConfig(&cfg[i]);
-    }
-    // predictor[i] = CreatePaddlePredictor(cfg[i]);
-    // pres[i] = predictor[i].get();
-  }
-  auto predictor0 = CreatePaddlePredictor(cfg[0]);
-  auto predictor1 = CreatePaddlePredictor(cfg[1]);
-  auto predictor2 = CreatePaddlePredictor(cfg[2]);
-  pres[1] = predictor0.get();
-  pres[2] = predictor1.get();
-  pres[3] = predictor2.get();
+  pres[0] = predictor0.get();
+  pres[1] = predictor1.get();
 
   std::cout<<"LOG INFO 2.5 2.5 2.5 2.5-----------------------------";
   
   std::vector<std::thread> threads;
   std::cout<<"LOG INFO 3333333333-----------------------------";
   auto time1 = time();
-
+  
+  num_jobs=2;
   for (int tid = 0; tid< num_jobs; tid++){
     threads.emplace_back([&, tid](){
       std::vector<std::vector<paddle::PaddleTensor>> *outputs;
@@ -242,106 +240,14 @@ bool PredictionRun(int num_jobs,
     });
   }
 
-  // paddle::PaddlePredictor *predictor;
-  // int iterations = inputs.size();  // process the whole dataset ...
-  // if (FLAGS_iterations > 0 &&
-  //     FLAGS_iterations < static_cast<int64_t>(inputs.size()))
-  //   iterations =
-  //       FLAGS_iterations;  // ... unless the number of iterations is set
-  // outputs->resize(iterations);
-  // Timer run_timer;
-  // double elapsed_time = 0;
-  // int predicted_num = 0;
-
-  // for (int i = 0; i < iterations; i++) {
-  //   run_timer.tic();
-  //   predictor->Run(inputs[i], &(*outputs)[i], FLAGS_batch_size);
-  //   elapsed_time += run_timer.toc();
-
-  //   predicted_num += FLAGS_batch_size;
-  //   if (predicted_num % 100 == 0) {
-  //     LOG(INFO) << "Infer " << predicted_num << " samples";
-  //   }
-  // }
-
-  // auto batch_latency = elapsed_time / iterations;
-  // PrintTime(FLAGS_batch_size, num_threads, batch_latency, iterations);
-
-  // if (sample_latency != nullptr)
-  //   *sample_latency = batch_latency / FLAGS_batch_size;
-  
   for(int i = 0; i < num_jobs; i++){
     threads[i].join();
   }
-  auto time2 = time(); 
-  std::cout << " predict cost: " << time_diff(time1, time2) / 4000.0 << "ms" << std::endl;
+  // auto time2 = time(); 
+  // std::cout << " predict cost: " << time_diff(time1, time2) / 4000.0 << "ms" << std::endl;
 
   return true;
 }
-
-std::pair<float, float> CalculateAccuracy(
-    const std::vector<std::vector<paddle::PaddleTensor>> &outputs,
-    const std::vector<paddle::PaddleTensor> &labels_gt,
-    bool with_accuracy = FLAGS_with_accuracy_layer) {
-  LOG_IF(ERROR, !with_accuracy && labels_gt.size() == 0)
-      << "if with_accuracy set to false, labels_gt must be not empty";
-  std::vector<float> acc1_ss;
-  std::vector<float> acc5_ss;
-  if (!with_accuracy) {     // model with_accuracy_layer = false
-    float *result_array;    // for one batch 50*1000
-    int64_t *batch_labels;  // 50*1
-    LOG_IF(ERROR, outputs.size() != labels_gt.size())
-        << "outputs first dimension must be equal to labels_gt first dimension";
-    for (auto i = 0; i < outputs.size();
-         ++i) {  // same as labels first dimension
-      result_array = static_cast<float *>(outputs[i][0].data.data());
-      batch_labels = static_cast<int64_t *>(labels_gt[i].data.data());
-      int correct_1 = 0, correct_5 = 0, total = FLAGS_batch_size;
-      for (auto j = 0; j < FLAGS_batch_size; j++) {  // batch_size
-        std::vector<float> v(result_array + j * 1000,
-                             result_array + (j + 1) * 1000);
-        std::vector<std::pair<float, int>> vx;
-        for (int k = 0; k < 1000; k++) {
-          vx.push_back(std::make_pair(v[k], k));
-        }
-        std::partial_sort(vx.begin(),
-                          vx.begin() + 5,
-                          vx.end(),
-                          [](std::pair<float, int> a, std::pair<float, int> b) {
-                            return a.first > b.first;
-                          });
-        if (static_cast<int>(batch_labels[j]) == vx[0].second) correct_1 += 1;
-        if (std::find_if(vx.begin(),
-                         vx.begin() + 5,
-                         [batch_labels, j](std::pair<float, int> a) {
-                           return static_cast<int>(batch_labels[j]) == a.second;
-                         }) != vx.begin() + 5)
-          correct_5 += 1;
-      }
-      acc1_ss.push_back(static_cast<float>(correct_1) /
-                        static_cast<float>(total));
-      acc5_ss.push_back(static_cast<float>(correct_5) /
-                        static_cast<float>(total));
-    }
-  } else {  // model with_accuracy_layer = true
-    for (auto i = 0; i < outputs.size(); ++i) {
-      LOG_IF(ERROR, outputs[i].size() < 3UL) << "To get top1 and top5 "
-                                                "accuracy, output[i] size must "
-                                                "be bigger than or equal to 3";
-      acc1_ss.push_back(
-          *static_cast<float *>(outputs[i][1].data.data()));  // 1 is top1 acc
-      acc5_ss.push_back(*static_cast<float *>(
-          outputs[i][2].data.data()));  // 2 is top5 acc or mAP
-    }
-  }
-  auto acc1_ss_avg =
-      std::accumulate(acc1_ss.begin(), acc1_ss.end(), 0.0) / acc1_ss.size();
-  auto acc5_ss_avg =
-      std::accumulate(acc5_ss.begin(), acc5_ss.end(), 0.0) / acc5_ss.size();
-  return std::make_pair(acc1_ss_avg, acc5_ss_avg);
-}
-
-
 
 int main(int argc, char *argv[]) {
   // InitFLAGS(argc, argv);
@@ -358,4 +264,5 @@ int main(int argc, char *argv[]) {
   //           << std::setprecision(4) << acc_pair.first;
   // LOG(INFO) << "Top5 accuracy: " << std::fixed << std::setw(6)
   //           << std::setprecision(4) << acc_pair.second;
+  return 0;
 }

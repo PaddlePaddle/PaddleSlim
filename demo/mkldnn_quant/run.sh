@@ -5,9 +5,9 @@ default_num_threads=1
 default_with_accuracy=false
 num_threads=${3:-$default_num_threads}
 with_accuracy_layer=${4:-$default_with_accuracy}
-ITERATIONS=0
+ITERATIONS=500
 
-GLOG_logtostderr=1 ./build/sample_tester \
+GLOG_logtostderr=1 ./build/thread_sample \
     --infer_model=${MODEL_DIR} \
     --infer_data=${DATA_FILE} \
     --batch_size=1 \
