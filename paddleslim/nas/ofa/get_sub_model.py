@@ -95,6 +95,7 @@ def prune_params(model, param_config, super_model_sd=None):
                 name = l_name + '.' + p_name
                 super_t_value = super_model_sd[name].value().get_tensor()
                 super_value = np.array(super_t_value).astype("float32")
+                super_model_sd.pop(name)
 
             if param.name in param_config.keys():
                 if len(param_config[param.name]) > 1:
@@ -136,6 +137,11 @@ def prune_params(model, param_config, super_model_sd=None):
             t_value.set(prune_value, place)
             if param.trainable:
                 param.clear_gradient()
+
+    ### initialize param which not in sublayers, such as create persistable inputs by create_parameters 
+    if super_model_sd != None and len(super_model_sd) != 0:
+        for k, v in super_model_sd.items():
+            setattr(model, k, v)
 
 
 def _find_weight_ops(op, graph, weights):
