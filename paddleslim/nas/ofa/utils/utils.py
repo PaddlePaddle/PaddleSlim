@@ -81,7 +81,10 @@ def compute_start_end(kernel_size, sub_kernel_size):
     center = kernel_size // 2
     sub_center = sub_kernel_size // 2
     start = center - sub_center
-    end = center + sub_center + 1
+    if sub_kernel_size % 2 == 0:
+        end = center + sub_center
+    else:
+        end = center + sub_center + 1
     assert end - start == sub_kernel_size
     return start, end
 
