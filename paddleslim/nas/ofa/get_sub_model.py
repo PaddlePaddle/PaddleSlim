@@ -19,7 +19,9 @@ from .layers_base import BaseBlock
 
 __all__ = ['get_prune_params_config', 'prune_params', 'check_search_space']
 
-WEIGHT_OP = ['conv2d', 'conv3d', 'conv1d', 'linear', 'embedding']
+WEIGHT_OP = [
+    'conv2d', 'linear', 'embedding', 'conv2d_transpose', 'depthwise_conv2d'
+]
 CONV_TYPES = [
     'conv2d', 'conv3d', 'conv1d', 'superconv2d', 'supergroupconv2d',
     'superdepthwiseconv2d'
