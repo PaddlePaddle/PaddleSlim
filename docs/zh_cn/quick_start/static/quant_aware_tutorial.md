@@ -156,7 +156,7 @@ test(val_quant_program)
 
 ## 6. 保存量化后的模型
 
-在``4. 量化``中使用接口``slim.quant.quant_aware``接口得到的模型只适合训练时使用，为了得到最终使用时的模型，需要使用[slim.quant.convert](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#convert)接口，然后使用[fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/save_inference_model_cn.html#save-inference-model)保存模型。``float_prog``的参数数据类型是float32，但是数据范围是int8, 保存之后可使用fluid或者paddle-lite加载使用，paddle-lite在使用时，会先将类型转换为int8。``int8_prog``的参数数据类型是int8, 保存后可看到量化后模型大小，不可加载使用。
+在``4. 量化``中使用接口``slim.quant.quant_aware``接口得到的模型只适合训练时使用，为了得到最终使用时的模型，需要使用[slim.quant.convert](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#convert)接口，然后使用[fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/save_inference_model_cn.html#save-inference-model)保存模型。``float_prog``的参数数据类型是float32，但是数据范围是int8, 保存之后可使用Paddle executor, PaddleInference predictor 和Paddle-Lite predictor加载执行。``int8_prog``的参数数据类型是int8, 保存后可看到量化后模型大小会减小，**该模型不可以用于预测部署**。
 
 
 ```python
