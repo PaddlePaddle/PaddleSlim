@@ -106,4 +106,6 @@ quanter.save_quantized_model(
     input_spec=inputs)
 ```
 
-导出之后，可以在`path`路径下找到导出的量化预测模型
+导出之后，可以在`path`路径下找到导出的量化预测模型。
+
+量化预测模型可以使用`netron`软件打开，进行可视化查看。该量化预测模型和普通FP32预测模型一样，可以使用PaddleLite和PaddleInference加载预测，具体请参考`推理部署`章节。

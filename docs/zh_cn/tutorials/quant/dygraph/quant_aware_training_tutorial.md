@@ -65,6 +65,8 @@ quanter.save_quantized_model(
   input_spec=[paddle.static.InputSpec()])
 ```
 
+量化预测模型可以使用`netron`软件打开，进行可视化查看。该量化预测模型和普通FP32预测模型一样，可以使用PaddleLite和PaddleInference加载预测，具体请参考`推理部署`章节。
+
 ## PACT在线量化
 
 PACT方法是对普通在线量化方法的改进，对于一些量化敏感的模型，例如MobileNetV3，PACT方法一般都能降低量化模型的精度损失。
