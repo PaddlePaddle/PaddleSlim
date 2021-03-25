@@ -23,25 +23,27 @@ import numpy as np
 import paddle
 import paddle.nn.functional as F
 from paddle.io import DataLoader
-from paddle.metric import Accuracy
+from paddle.metric import Metric, Accuracy, Precision, Recall
 
 from paddlenlp.data import Stack, Tuple, Pad
+from paddlenlp.datasets import load_dataset
 from paddlenlp.transformers import BertModel, BertForSequenceClassification, BertTokenizer
+from paddlenlp.transformers import LinearDecayWithWarmup
+from paddlenlp.utils.log import logger
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
-import paddlenlp.datasets as datasets
 from paddleslim.nas.ofa import OFA, DistillConfig, utils
 from paddleslim.nas.ofa.utils import nlp_utils
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 
-TASK_CLASSES = {
-    "cola": (datasets.GlueCoLA, Mcc),
-    "sst-2": (datasets.GlueSST2, Accuracy),
-    "mrpc": (datasets.GlueMRPC, AccuracyAndF1),
-    "sts-b": (datasets.GlueSTSB, PearsonAndSpearman),
-    "qqp": (datasets.GlueQQP, AccuracyAndF1),
-    "mnli": (datasets.GlueMNLI, Accuracy),
-    "qnli": (datasets.GlueQNLI, Accuracy),
-    "rte": (datasets.GlueRTE, Accuracy),
+METRIC_CLASSES = {
+    "cola": Mcc,
+    "sst-2": Accuracy,
+    "mrpc": AccuracyAndF1,
+    "sts-b": PearsonAndSpearman,
+    "qqp": AccuracyAndF1,
+    "mnli": Accuracy,
+    "qnli": Accuracy,
+    "rte": Accuracy,
 }
 
 MODEL_CLASSES = {"bert": (BertForSequenceClassification, BertTokenizer), }
@@ -57,7 +59,7 @@ def parse_args():
         type=str,
         required=True,
         help="The name of the task to train selected in the list: " +
-        ", ".join(TASK_CLASSES.keys()), )
+        ", ".join(METRIC_CLASSES.keys()), )
     parser.add_argument(
         "--model_type",
         default=None,
@@ -165,24 +167,46 @@ def set_seed(args):
     paddle.seed(args.seed + paddle.distributed.get_rank())
 
 
-def evaluate(model, criterion, metric, data_loader, epoch, step,
-             width_mult=1.0):
-    with paddle.no_grad():
-        model.eval()
-        metric.reset()
-        for batch in data_loader:
-            input_ids, segment_ids, labels = batch
-            logits = model(input_ids, segment_ids, attention_mask=[None, None])
-            if isinstance(logits, tuple):
-                logits = logits[0]
-            loss = criterion(logits, labels)
-            correct = metric.compute(logits, labels)
-            metric.update(correct)
-        results = metric.accumulate()
-        print("epoch: %d, batch: %d, width_mult: %s, eval loss: %f, %s: %s\n" %
-              (epoch, step, 'teacher' if width_mult == 100 else str(width_mult),
-               loss.numpy(), metric.name(), results))
-        model.train()
+@paddle.no_grad()
+def evaluate(model, criterion, metric, data_loader, width_mult=1.0):
+    model.eval()
+    metric.reset()
+    for batch in data_loader:
+        input_ids, segment_ids, labels = batch
+        logits = model(input_ids, segment_ids, attention_mask=[None, None])
+        if isinstance(logits, tuple):
+            logits = logits[0]
+        loss = criterion(logits, labels)
+        correct = metric.compute(logits, labels)
+        metric.update(correct)
+    res = metric.accumulate()
+    if isinstance(metric, AccuracyAndF1):
+        print(
+            "width_mult: %s, eval loss: %f, acc: %s, precision: %s, recall: %s, f1: %s, acc and f1: %s, "
+            % (
+                'teacher' if int(width_mult) == 100 else str(width_mult),
+                loss.numpy(),
+                res[0],
+                res[1],
+                res[2],
+                res[3],
+                res[4], ),
+            end='')
+    elif isinstance(metric, Mcc):
+        print(
+            "width_mult: %s, eval loss: %f, mcc: %s, " %
+            (str(width_mult), loss.numpy(), res[0]),
+            end='')
+    elif isinstance(metric, PearsonAndSpearman):
+        print(
+            "width_mult: %s, eval loss: %f, pearson: %s, spearman: %s, pearson and spearman: %s, "
+            % (str(width_mult), loss.numpy(), res[0], res[1], res[2]),
+            end='')
+    else:
+        print(
+            "width_mult: %s, eval loss: %f, acc: %s, " %
+            (str(width_mult), loss.numpy(), res),
+            end='')
 
 
 ### monkey patch for bert forward to accept [attention_mask, head_mask] as  attention_mask
@@ -237,69 +261,25 @@ def convert_example(example,
                     max_seq_length=512,
                     is_test=False):
     """convert a glue example into necessary features"""
-
-    def _truncate_seqs(seqs, max_seq_length):
-        if len(seqs) == 1:  # single sentence
-            # Account for [CLS] and [SEP] with "- 2"
-            seqs[0] = seqs[0][0:(max_seq_length - 2)]
-        else:  # sentence pair
-            # Account for [CLS], [SEP], [SEP] with "- 3"
-            tokens_a, tokens_b = seqs
-            max_seq_length -= 3
-            while True:  # truncate with longest_first strategy
-                total_length = len(tokens_a) + len(tokens_b)
-                if total_length <= max_seq_length:
-                    break
-                if len(tokens_a) > len(tokens_b):
-                    tokens_a.pop()
-                else:
-                    tokens_b.pop()
-        return seqs
-
-    def _concat_seqs(seqs, separators, seq_mask=0, separator_mask=1):
-        concat = sum((seq + sep for sep, seq in zip(separators, seqs)), [])
-        segment_ids = sum(([i] * (len(seq) + len(sep)) for i, (sep, seq) in
-                           enumerate(zip(separators, seqs))), [])
-        if isinstance(seq_mask, int):
-            seq_mask = [[seq_mask] * len(seq) for seq in seqs]
-        if isinstance(separator_mask, int):
-            separator_mask = [[separator_mask] * len(sep) for sep in separators]
-        p_mask = sum((s_mask + mask for sep, seq, s_mask, mask in
-                      zip(separators, seqs, seq_mask, separator_mask)), [])
-        return concat, segment_ids, p_mask
-
     if not is_test:
         # `label_list == None` is for regression task
         label_dtype = "int64" if label_list else "float32"
-        # get the label
-        label = example[-1]
-        example = example[:-1]
-        #create label maps if classification task
-        if label_list:
-            label_map = {}
-            for (i, l) in enumerate(label_list):
-                label_map[l] = i
-            label = label_map[label]
+        # Get the label
+        label = example['labels']
         label = np.array([label], dtype=label_dtype)
-
-    # tokenize raw text
-    tokens_raw = [tokenizer(l) for l in example]
-    # truncate to the truncate_length,
-    tokens_trun = _truncate_seqs(tokens_raw, max_seq_length)
-    # concate the sequences with special tokens
-    tokens_trun[0] = [tokenizer.cls_token] + tokens_trun[0]
-    tokens, segment_ids, _ = _concat_seqs(tokens_trun, [[tokenizer.sep_token]] *
-                                          len(tokens_trun))
-    # convert the token to ids
-    input_ids = tokenizer.convert_tokens_to_ids(tokens)
-    valid_length = len(input_ids)
-    # The mask has 1 for real tokens and 0 for padding tokens. Only real
-    # tokens are attended to.
-    # input_mask = [1] * len(input_ids)
-    if not is_test:
-        return input_ids, segment_ids, valid_length, label
+    # Convert raw text to feature
+    if (int(is_test) + len(example)) == 2:
+        example = tokenizer(example['sentence'], max_seq_len=max_seq_length)
     else:
-        return input_ids, segment_ids, valid_length
+        example = tokenizer(
+            example['sentence1'],
+            text_pair=example['sentence2'],
+            max_seq_len=max_seq_length)
+
+    if not is_test:
+        return example['input_ids'], example['token_type_ids'], label
+    else:
+        return example['input_ids'], example['token_type_ids']
 
 
 def do_train(args):
@@ -310,27 +290,27 @@ def do_train(args):
     set_seed(args)
 
     args.task_name = args.task_name.lower()
-    dataset_class, metric_class = TASK_CLASSES[args.task_name]
+    metric_class = METRIC_CLASSES[args.task_name]
     args.model_type = args.model_type.lower()
     model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
 
-    train_ds = dataset_class.get_datasets(['train'])
+    train_ds = load_dataset('glue', args.task_name, splits="train")
 
     tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path)
     trans_func = partial(
         convert_example,
         tokenizer=tokenizer,
-        label_list=train_ds.get_labels(),
+        label_list=train_ds.label_list,
         max_seq_length=args.max_seq_length)
-    train_ds = train_ds.apply(trans_func, lazy=True)
+    train_ds = train_ds.map(trans_func, lazy=True)
     train_batch_sampler = paddle.io.DistributedBatchSampler(
         train_ds, batch_size=args.batch_size, shuffle=True)
     batchify_fn = lambda samples, fn=Tuple(
         Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input
-        Pad(axis=0, pad_val=tokenizer.pad_token_id),  # segment
-        Stack(),  # length
-        Stack(dtype="int64" if train_ds.get_labels() else "float32")  # label
-    ): [data for i, data in enumerate(fn(samples)) if i != 2]
+        Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # segment
+        Stack(dtype="int64" if train_ds.label_list else "float32")  # label
+    ): fn(samples)
+
     train_data_loader = DataLoader(
         dataset=train_ds,
         batch_sampler=train_batch_sampler,
@@ -338,41 +318,39 @@ def do_train(args):
         num_workers=0,
         return_list=True)
     if args.task_name == "mnli":
-        dev_dataset_matched, dev_dataset_mismatched = dataset_class.get_datasets(
-            ["dev_matched", "dev_mismatched"])
-        dev_dataset_matched = dev_dataset_matched.apply(trans_func, lazy=True)
-        dev_dataset_mismatched = dev_dataset_mismatched.apply(
-            trans_func, lazy=True)
+        dev_ds_matched, dev_ds_mismatched = load_dataset(
+            'glue', args.task_name, splits=["dev_matched", "dev_mismatched"])
+        dev_ds_matched = dev_ds_matched.map(trans_func, lazy=True)
+        dev_ds_mismatched = dev_ds_mismatched.map(trans_func, lazy=True)
         dev_batch_sampler_matched = paddle.io.BatchSampler(
-            dev_dataset_matched, batch_size=args.batch_size, shuffle=False)
+            dev_ds_matched, batch_size=args.batch_size, shuffle=False)
         dev_data_loader_matched = DataLoader(
-            dataset=dev_dataset_matched,
+            dataset=dev_ds_matched,
             batch_sampler=dev_batch_sampler_matched,
             collate_fn=batchify_fn,
             num_workers=0,
             return_list=True)
         dev_batch_sampler_mismatched = paddle.io.BatchSampler(
-            dev_dataset_mismatched, batch_size=args.batch_size, shuffle=False)
+            dev_ds_mismatched, batch_size=args.batch_size, shuffle=False)
         dev_data_loader_mismatched = DataLoader(
-            dataset=dev_dataset_mismatched,
+            dataset=dev_ds_mismatched,
             batch_sampler=dev_batch_sampler_mismatched,
             collate_fn=batchify_fn,
             num_workers=0,
             return_list=True)
     else:
-        dev_dataset = dataset_class.get_datasets(["dev"])
-        dev_dataset = dev_dataset.apply(trans_func, lazy=True)
+        dev_ds = load_dataset('glue', args.task_name, splits='dev')
+        dev_ds = dev_ds.map(trans_func, lazy=True)
         dev_batch_sampler = paddle.io.BatchSampler(
-            dev_dataset, batch_size=args.batch_size, shuffle=False)
+            dev_ds, batch_size=args.batch_size, shuffle=False)
         dev_data_loader = DataLoader(
-            dataset=dev_dataset,
+            dataset=dev_ds,
             batch_sampler=dev_batch_sampler,
             collate_fn=batchify_fn,
             num_workers=0,
             return_list=True)
 
-    num_labels = 1 if train_ds.get_labels() == None else len(
-        train_ds.get_labels())
+    num_labels = 1 if train_ds.label_list == None else len(train_ds.label_list)
 
     model = model_class.from_pretrained(
         args.model_name_or_path, num_classes=num_labels)
@@ -412,8 +390,8 @@ def do_train(args):
                     distill_config=distill_config,
                     elastic_order=['width'])
 
-    criterion = paddle.nn.loss.CrossEntropyLoss() if train_ds.get_labels(
-    ) else paddle.nn.loss.MSELoss()
+    criterion = paddle.nn.loss.CrossEntropyLoss(
+    ) if train_ds.label_list else paddle.nn.loss.MSELoss()
 
     metric = metric_class()
 
@@ -431,26 +409,24 @@ def do_train(args):
         num_heads=model.bert.config['num_attention_heads'])
     reorder_neuron_head(ofa_model.model, head_importance, neuron_importance)
 
-    lr_scheduler = paddle.optimizer.lr.LambdaDecay(
-        args.learning_rate,
-        lambda current_step, num_warmup_steps=args.warmup_steps,
-        num_training_steps=args.max_steps if args.max_steps > 0 else
-        (len(train_data_loader) * args.num_train_epochs): float(
-            current_step) / float(max(1, num_warmup_steps))
-        if current_step < num_warmup_steps else max(
-            0.0,
-            float(num_training_steps - current_step) / float(
-                max(1, num_training_steps - num_warmup_steps))))
+    num_training_steps = args.max_steps if args.max_steps > 0 else len(
+        train_data_loader) * args.num_train_epochs
 
+    lr_scheduler = LinearDecayWithWarmup(args.learning_rate, num_training_steps,
+                                         args.warmup_steps)
+
+    # Generate parameter names needed to perform weight decay.
+    # All bias and LayerNorm parameters are excluded.
+    decay_params = [
+        p.name for n, p in model.named_parameters()
+        if not any(nd in n for nd in ["bias", "norm"])
+    ]
     optimizer = paddle.optimizer.AdamW(
         learning_rate=lr_scheduler,
         epsilon=args.adam_epsilon,
         parameters=ofa_model.model.parameters(),
         weight_decay=args.weight_decay,
-        apply_decay_param_fun=lambda x: x in [
-            p.name for n, p in ofa_model.model.named_parameters()
-            if not any(nd in n for nd in ["bias", "norm"])
-        ])
+        apply_decay_param_fun=lambda x: x in decay_params)
 
     global_step = 0
     tic_train = time.time()
@@ -480,33 +456,30 @@ def do_train(args):
                 loss.backward()
             optimizer.step()
             lr_scheduler.step()
-            ofa_model.model.clear_gradients()
+            optimizer.clear_grad()
 
             if global_step % args.logging_steps == 0:
                 if (not args.n_gpu > 1) or paddle.distributed.get_rank() == 0:
-                    print(
+                    logger.info(
                         "global step %d, epoch: %d, batch: %d, loss: %f, speed: %.2f step/s"
                         % (global_step, epoch, step, loss,
                            args.logging_steps / (time.time() - tic_train)))
                 tic_train = time.time()
 
             if global_step % args.save_steps == 0:
+                tic_eval = time.time()
                 if args.task_name == "mnli":
                     evaluate(
                         teacher_model,
                         criterion,
                         metric,
                         dev_data_loader_matched,
-                        epoch,
-                        step,
                         width_mult=100)
                     evaluate(
                         teacher_model,
                         criterion,
                         metric,
                         dev_data_loader_mismatched,
-                        epoch,
-                        step,
                         width_mult=100)
                 else:
                     evaluate(
@@ -514,25 +487,22 @@ def do_train(args):
                         criterion,
                         metric,
                         dev_data_loader,
-                        epoch,
-                        step,
                         width_mult=100)
+                print("eval done total : %s s" % (time.time() - tic_eval))
                 for idx, width_mult in enumerate(args.width_mult_list):
                     net_config = utils.dynabert_config(ofa_model, width_mult)
                     ofa_model.set_net_config(net_config)
                     tic_eval = time.time()
                     if args.task_name == "mnli":
                         acc = evaluate(ofa_model, criterion, metric,
-                                       dev_data_loader_matched, epoch, step,
-                                       width_mult)
+                                       dev_data_loader_matched, width_mult)
                         evaluate(ofa_model, criterion, metric,
-                                 dev_data_loader_mismatched, epoch, step,
-                                 width_mult)
+                                 dev_data_loader_mismatched, width_mult)
                         print("eval done total : %s s" %
                               (time.time() - tic_eval))
                     else:
                         acc = evaluate(ofa_model, criterion, metric,
-                                       dev_data_loader, epoch, step, width_mult)
+                                       dev_data_loader, width_mult)
                         print("eval done total : %s s" %
                               (time.time() - tic_eval))
 
