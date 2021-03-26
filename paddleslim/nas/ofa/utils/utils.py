@@ -65,6 +65,9 @@ def remove_model_fn(model, state_dict):
     for name, param in model.state_dict().items():
         keys.append(name)
     for name, param in state_dict.items():
+        if len(name.split('.')) <= 2:
+            new_dict[name] = param
+            continue
         if name.split('.')[-2] == 'fn':
             tmp_n = name.split('.')[:-2] + [name.split('.')[-1]]
             tmp_n = '.'.join(tmp_n)
@@ -81,7 +84,10 @@ def compute_start_end(kernel_size, sub_kernel_size):
     center = kernel_size // 2
     sub_center = sub_kernel_size // 2
     start = center - sub_center
-    end = center + sub_center + 1
+    if sub_kernel_size % 2 == 0:
+        end = center + sub_center
+    else:
+        end = center + sub_center + 1
     assert end - start == sub_kernel_size
     return start, end
 
