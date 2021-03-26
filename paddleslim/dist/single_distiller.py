@@ -383,9 +383,9 @@ def pdist(input, batch_size=32, squared=False, eps=1e-12):
 def RK_Distance(teacher_var_name, student_var_name, program, batch_size=32):
     """
     distance-wise loss in relation knowledge distillation loss
-    args:
-    teacher_var_name, student_var_name, program, batch_size
-    return:
+    Args:
+       teacher_var_name, student_var_name, program, batch_size
+    Returns:
     distance_wise distill loss
     """
     teacher_var = program.global_block().var(teacher_var_name)
