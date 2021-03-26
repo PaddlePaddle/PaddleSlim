@@ -218,7 +218,7 @@ def hard_distill_loss(teacher_var_name,
                       program,
                       batch_size=32):
     """ 
-     hard sample distill loss
+     Hard sample distill loss
      Args:
          teacher_var_name(str): name of teacher_var
          student_var_name(str): name of student_var
@@ -273,7 +273,7 @@ def soft_hard_distill_loss(teacher_var_name,
                            batch_size=32):
 
     """
-    soft hard sample distill loss with tanh function reweight
+    Soft hard sample distill loss with tanh function reweight
     Args:
        teacher_var_name(str): The name of teacher_var.
        student_var_name(str): The name of student_var.
@@ -330,7 +330,7 @@ def soft_hard_distill_loss(teacher_var_name,
 def RK_Angle(teacher_var_name, student_var_name, program, batch_size=32):
 
     """
-    angle-wise loss in relation knowledge distill loss
+    Angle-wise loss in relation knowledge distill loss
     Args:
        teacher_var_name(str): The name of teacher_var.
        student_var_name(str): The name of student_var.
@@ -369,7 +369,7 @@ def RK_Angle(teacher_var_name, student_var_name, program, batch_size=32):
 
 def pdist(input, batch_size=32, squared=False, eps=1e-12):
     """
-    function to compute distance
+    Function to compute distance
     """
     e_square = fluid.layers.reduce_sum(fluid.layers.square(input), dim=-1)
     e_a = fluid.layers.unsqueeze(e_square, axes=[1])
@@ -389,7 +389,7 @@ def pdist(input, batch_size=32, squared=False, eps=1e-12):
 
 def RK_Distance(teacher_var_name, student_var_name, program, batch_size=32):
     """
-    distance-wise loss in relation knowledge distill loss
+    Distance-wise loss in relation knowledge distill loss
     Args:
        teacher_var_name(str): The name of teacher_var.
        student_var_name(str): The name of student_var.
