@@ -77,7 +77,7 @@ class UnstructurePruner():
                 np.array(paddle.static.global_scope().find_var(param.name)
                          .get_tensor()).flatten())
         data = np.concatenate(data, axis=0)
-        print(np.sort(np.abs(data))[int(0.1 * len(data))])
+        print(np.sort(np.abs(data))[int(ratio * len(data))])
 
     def sparse_by_layer(self, program):
         """
