@@ -703,12 +703,10 @@ class Convert:
 
         if isinstance(network, Layer):
             for idx, (name, sublayer) in enumerate(network.named_sublayers()):
-                #print(name, model[idx])
                 if len(name.split('.')) > 1:
                     net = split_prefix(network, name.split('.')[:-1])
                 else:
                     net = network
-                #print(name.split('.')[:-1], name.split('.')[-1])
                 setattr(net, name.split('.')[-1], model[idx])
 
         return network
