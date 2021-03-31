@@ -2,7 +2,7 @@
 
 ## 简介
 
-在模型压缩中，常见的稀疏方式为结构化和非结构化稀疏，前者在某个特定维度（特征通道、卷积核等等）上进行稀疏化操作；后者以每一个参数为单元进行稀疏化，所以更加依赖于硬件对稀疏后矩阵运算的加速能力。本目录即在PaddlePaddle和PaddleSlim框架下开发的非结构化稀疏算法，MobileNetV1在ImageNet上的稀疏化实验中，剪裁率53.00%，达到无损的表现。
+在模型压缩中，常见的稀疏方式为结构化和非结构化稀疏，前者在某个特定维度（特征通道、卷积核等等）上进行稀疏化操作；后者以每一个参数为单元进行稀疏化，所以更加依赖于硬件对稀疏后矩阵运算的加速能力。本目录即在PaddlePaddle和PaddleSlim框架下开发的非结构化稀疏算法，MobileNetV1在ImageNet上的稀疏化实验中，剪裁率55.19%，达到无损的表现。
 
 ## 版本要求
 ```bash
@@ -18,6 +18,7 @@ paddleslim>=2.0.0
 训练前：
 - 预训练模型下载，并放到某目录下，通过train.py中的--pretrained_model设置。
 - 训练数据下载后，可以通过重写../imagenet_reader.py文件，并在train.py文件中调用实现。
+- 开发者可以通过重写UnstructurePruner.mask_parameters()和UnstructurePruner.update_threshold()来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
 
 训练：
 ```bash
@@ -29,7 +30,7 @@ CUDA_VISIBLE_DEVICES=2,3 python3 train-dygraph.py --data imagenet --lr 0.1 --pha
 CUDA_VISIBLE_DEVICES=0 python3 train.py --pretrained_model models/ --phase test --data imagenet
 ```
 
-代码示例：
+剪裁训练代码示例：
 ```python
 model = mobilenet_v1(num_classes=class_dim, pretrained=True)
 #STEP1: initialize the pruner
@@ -52,8 +53,16 @@ for epoch in range(epochs):
     if epoch % args.model_period == 0:
         # STEP4: same purpose as STEP3
         pruner.update_params()
-        paddle.save(model.state_dict(), "model.pdparams")
-        paddle.save(opt.state_dict(), "opt.pdopt")
+        paddle.save(model.state_dict(), "model-pruned.pdparams")
+        paddle.save(opt.state_dict(), "opt-pruned.pdopt")
+```
+
+剪裁后测试代码示例：
+```python
+model = mobilenet_v1(num_classes=class_dim, pretrained=True)
+model.set_state_dict(paddle.load("model-pruned.pdparams"))
+print(UnstructurePruner.total_sparse(model)) #注意，total_sparse为静态方法(static method)，可以不创建实例(instance)直接调用，方便只做测试的写法。
+test()
 ```
 
 更多使用参数请参照如下，请按照实际数据集和GPU资源进行调整：
@@ -128,3 +137,4 @@ optional arguments:
 ## TODO
 
 - [ ] 完成实验，验证动态图下的效果，并得到压缩模型。
+- [ ] 扩充衡量parameter重要性的方法（目前仅为绝对值）。

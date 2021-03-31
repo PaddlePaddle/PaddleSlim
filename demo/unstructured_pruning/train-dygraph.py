@@ -38,7 +38,7 @@ add_arg('log_period',       int, 100,                 "Log period in batches.")
 add_arg('phase',            str, "train",              "Whether to train or test the pruned model.")
 add_arg('test_period',      int, 1,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
-add_arg('model_period',     int, 10,             "The period to save model in epochs.")
+add_arg('model_period',     int, 1,             "The period to save model in epochs.")
 add_arg('resume_epoch',     int, 0,             "The epoch to resume training.")
 # yapf: enable
 
@@ -114,7 +114,7 @@ def compress(args):
         batch_size=batch_size_per_card,
         shuffle=True,
         return_list=True,
-        num_workers=32)
+        num_workers=4)
     valid_loader = paddle.io.DataLoader(
         val_dataset,
         places=places,
@@ -131,7 +131,6 @@ def compress(args):
 
     def test(epoch):
         model.eval()
-        _logger.info(pruner.total_sparse())
         acc_top1_ns = []
         acc_top5_ns = []
         for batch_id, data in enumerate(valid_loader):
@@ -185,6 +184,7 @@ def compress(args):
             opt.step()
             opt.clear_grad()
             pruner.step()
+            return
 
     if args.phase == 'pretrain':
         pruner = UnstructurePruner(model, mode='ratio', ratio=0.0)
@@ -196,20 +196,24 @@ def compress(args):
                 paddle.save(opt.state_dict(), "dymodels/opt.pdopt")
     elif args.phase == 'prune':
         pruner = UnstructurePruner(model, mode=args.pruning_mode)
-        test(0)
+        # test(0)
         for i in range(args.resume_epoch, args.num_epochs):
             train(i)
             if i % args.test_period == 0:
                 pruner.update_params()
-                test(i)
+                _logger.info(UnstructurePruner.total_sparse(model))
+                # test(i)
             if i % args.model_period == 0:
                 pruner.update_params()
+                print('saving model')
+                _logger.info(UnstructurePruner.total_sparse(model))
                 paddle.save(model.state_dict(),
                             "dymodels/model-pruned.pdparams")
                 paddle.save(opt.state_dict(), "dymodels/opt-pruned.pdopt")
     elif args.phase == 'test':
         model.set_state_dict(paddle.load("dymodels/model-pruned.pdparams"))
         opt.set_state_dict(paddle.load("dymodels/opt-pruned.pdopt"))
+        _logger.info(UnstructurePruner.total_sparse(model))
         test(0)
 
 

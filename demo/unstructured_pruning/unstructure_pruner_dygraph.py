@@ -70,7 +70,11 @@ class UnstructurePruner():
         for name, sub_layer in self.model.named_sublayers():
             sub_layer.register_forward_pre_hook(self._forward_pre_hook)
 
-    def _update_threshold(self):
+    def update_threshold(self):
+        '''
+        Update the threshold after each optimization step.
+        User should overwrite this method togther with self.mask_parameters()
+        '''
         params_flatten = []
         for name, sub_layer in self.model.named_sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
@@ -88,7 +92,7 @@ class UnstructurePruner():
         Update the threshold after each optimization step.
         """
         if self.mode == 'ratio':
-            self._update_threshold()
+            self.update_threshold()
         elif self.mode == 'threshold':
             return
 
@@ -113,13 +117,17 @@ class UnstructurePruner():
                 param_tmp.stop_gradient = True
                 paddle.assign(param_tmp, output=param)
 
-    def total_sparse(self):
+    @staticmethod
+    def total_sparse(model):
         """
-        The function is used to get the whole model's density (1-sparsity).
+        This static function is used to get the whole model's density (1-sparsity).
+        It is static because during testing, we can calculate sparsity without initializing a pruner instance.
+        Args:
+          - model(Paddle.Model): The sparse model.
         """
         total = 0
         values = 0
-        for name, sub_layer in self.model.named_sublayers():
+        for name, sub_layer in model.named_sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
                 total += np.product(param.shape)
                 values += len(paddle.nonzero(param))
