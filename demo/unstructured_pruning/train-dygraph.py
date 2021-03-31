@@ -39,6 +39,7 @@ add_arg('phase',            str, "train",              "Whether to train or test
 add_arg('test_period',      int, 1,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('model_period',     int, 10,             "The period to save model in epochs.")
+add_arg('resume_epoch',     int, 0,             "The epoch to resume training.")
 # yapf: enable
 
 model_list = models.__all__
