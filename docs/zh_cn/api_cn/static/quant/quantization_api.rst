@@ -251,8 +251,8 @@ convert
 
 **返回**
 
-- **program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``float32`` 类型，但其数值范围可用int8表示。
-- **int8_program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``int8`` 类型。当 ``save_int8`` 为False 时，不返回该值。
+- **program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``float32`` 类型，但其数值范围可用int8表示。该模型用于预测部署。
+- **int8_program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``int8`` 类型。当 ``save_int8`` 为False 时，不返回该值。该模型不可以用于预测部署。
 
 .. note::
 

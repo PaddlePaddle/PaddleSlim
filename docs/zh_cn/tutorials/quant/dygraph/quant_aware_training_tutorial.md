@@ -2,6 +2,7 @@
 
 在线量化是在模型训练的过程中建模定点量化对模型的影响，通过在模型计算图中插入量化节点，在训练建模量化对模型精度的影响降低量化损失。
 
+> 注意：目前动态图量化训练还不支持有控制流逻辑的模型，如果量化训练中出现Warning，推荐使用静态图量化训练功能。
 
 PaddleSlim包含`QAT量化训练`和`PACT改进的量化训练`两种量化方法
 
@@ -63,6 +64,8 @@ quanter.save_quantized_model(
   path,
   input_spec=[paddle.static.InputSpec()])
 ```
+
+量化预测模型可以使用`netron`软件打开，进行可视化查看。该量化预测模型和普通FP32预测模型一样，可以使用PaddleLite和PaddleInference加载预测，具体请参考`推理部署`章节。
 
 ## PACT在线量化
 

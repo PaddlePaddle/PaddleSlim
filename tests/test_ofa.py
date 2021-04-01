@@ -31,7 +31,7 @@ class ModelConv(nn.Layer):
     def __init__(self):
         super(ModelConv, self).__init__()
         with supernet(
-                kernel_size=(3, 5, 7),
+                kernel_size=(3, 4, 5, 7),
                 channel=((4, 8, 12), (8, 12, 16), (8, 12, 16),
                          (8, 12, 16))) as ofa_super:
             models = []
