@@ -3,8 +3,9 @@ import os
 import sys
 import argparse
 import numpy as np
+sys.path.append(os.path.join(os.path.dirname("__file__"), os.path.pardir))
+sys.path.append(os.path.join(os.path.dirname("__file__")))
 from unstructure_pruner_dygraph import UnstructurePruner
-sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from utility import add_arguments, print_arguments
 import models
 import paddle.vision.transforms as T
@@ -14,13 +15,14 @@ from paddle.vision.models import mobilenet_v1
 import time
 import logging
 from paddleslim.common import get_logger
+import paddle.distributed as dist
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
+add_arg('batch_size',       int,  64*4,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
 add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
@@ -40,6 +42,7 @@ add_arg('test_period',      int, 1,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('model_period',     int, 1,             "The period to save model in epochs.")
 add_arg('resume_epoch',     int, 0,             "The epoch to resume training.")
+add_arg('num_workers',     int, 4,             "number of workers when loading dataset.")
 # yapf: enable
 
 model_list = models.__all__
@@ -77,6 +80,7 @@ def create_optimizer(args, step_per_epoch, model):
 
 
 def compress(args):
+    dist.init_parallel_env()
     train_reader = None
     test_reader = None
     if args.data == "mnist":
@@ -106,7 +110,6 @@ def compress(args):
     places = paddle.static.cuda_places(
     ) if args.use_gpu else paddle.static.cpu_places()
     batch_size_per_card = int(args.batch_size / len(places))
-
     train_loader = paddle.io.DataLoader(
         train_dataset,
         places=places,
@@ -114,20 +117,23 @@ def compress(args):
         batch_size=batch_size_per_card,
         shuffle=True,
         return_list=True,
-        num_workers=4)
+        num_workers=args.num_workers,
+        use_shared_memory=True)
     valid_loader = paddle.io.DataLoader(
         val_dataset,
         places=places,
         drop_last=False,
         return_list=True,
         batch_size=batch_size_per_card,
-        shuffle=False)
+        shuffle=False,
+        use_shared_memory=True)
     step_per_epoch = int(np.ceil(len(train_dataset) * 1. / args.batch_size))
 
     # model definition
     model = mobilenet_v1(num_classes=class_dim, pretrained=True)
+    dp_model = paddle.DataParallel(model)
 
-    opt, learning_rate = create_optimizer(args, step_per_epoch, model)
+    opt, learning_rate = create_optimizer(args, step_per_epoch, dp_model)
 
     def test(epoch):
         model.eval()
@@ -183,46 +189,45 @@ def compress(args):
             loss.backward()
             opt.step()
             opt.clear_grad()
-            pruner.step()
-            return
+            if args.pruning_mode == 'prune': pruner.step()
 
     if args.phase == 'pretrain':
-        pruner = UnstructurePruner(model, mode='ratio', ratio=0.0)
+        # pruner = UnstructurePruner(model, mode='ratio', ratio=0.0)
         for i in range(args.resume_epoch, args.num_epochs):
             train(i)
             if i % args.test_period == 0: test(i)
             if i % args.model_period == 0:
-                paddle.save(model.state_dict(), "dymodels/model.pdparams")
+                paddle.save(dp_model.state_dict(), "dymodels/model.pdparams")
                 paddle.save(opt.state_dict(), "dymodels/opt.pdopt")
     elif args.phase == 'prune':
-        pruner = UnstructurePruner(model, mode=args.pruning_mode)
-        # test(0)
+        pruner = UnstructurePruner(
+            model, mode=args.pruning_mode, ratio=args.ratio)
+        test(0)
         for i in range(args.resume_epoch, args.num_epochs):
             train(i)
             if i % args.test_period == 0:
                 pruner.update_params()
-                _logger.info(UnstructurePruner.total_sparse(model))
-                # test(i)
+                _logger.info(UnstructurePruner.total_sparse(dp_model))
+                test(i)
             if i % args.model_period == 0:
                 pruner.update_params()
-                print('saving model')
-                _logger.info(UnstructurePruner.total_sparse(model))
-                paddle.save(model.state_dict(),
+                _logger.info(UnstructurePruner.total_sparse(dp_model))
+                paddle.save(dp_model.state_dict(),
                             "dymodels/model-pruned.pdparams")
                 paddle.save(opt.state_dict(), "dymodels/opt-pruned.pdopt")
     elif args.phase == 'test':
-        model.set_state_dict(paddle.load("dymodels/model-pruned.pdparams"))
+        dp_model.set_state_dict(paddle.load("dymodels/model-pruned.pdparams"))
         opt.set_state_dict(paddle.load("dymodels/opt-pruned.pdopt"))
-        _logger.info(UnstructurePruner.total_sparse(model))
+        _logger.info(UnstructurePruner.total_sparse(dp_model))
         test(0)
 
 
 def main():
-    paddle.disable_static()
     args = parser.parse_args()
     print_arguments(args)
     compress(args)
 
 
 if __name__ == '__main__':
-    main()
+    dist.spawn(main, nprocs=2, gpus='2,3')
+    # main()

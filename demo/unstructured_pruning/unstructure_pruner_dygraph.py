@@ -20,11 +20,12 @@ class UnstructurePruner():
     def __init__(self,
                  model,
                  mode,
-                 threshold=None,
-                 ratio=None,
+                 threshold=0.01,
+                 ratio=0.3,
                  weights_keywords=['conv']):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
+        '''
         if mode == 'ratio' and ratio is None:
             _logger.info(
                 "The ratio mode is selected without setting the RATIO, default: 0.3"
@@ -36,6 +37,7 @@ class UnstructurePruner():
                 "The threshold mode is selected without setting the THRESHOLD, default: 0.01"
             )
             threshold = 0.01
+        '''
         self.model = model
         self.mode = mode
         self.threshold = threshold
