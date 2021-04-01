@@ -68,6 +68,9 @@ model.evaluate(val_dataset, batch_size=256, verbose=1)
 ### 4.1 将模型转换为模拟量化模型
 
 当使用普通在线量化时`weight_preprocess_type` 用默认设置None即可，当需要使用PACT在线量化时，则设置为'PACT'。
+
+注意，目前PACT在线量化产出的量化模型，使用PaddleLite在ARM CPU上部署时，精度正确，但是使用PaddleInference在NV GPU和Intel CPU上部署时，可能存在精度问题。所以，请合理选择在线量化方法的种类。
+
 ```python
 quant_config = {
     # weight preprocess type, default is None and no preprocessing is performed.
@@ -104,4 +107,14 @@ quanter.save_quantized_model(
     input_spec=inputs)
 ```
 
-导出之后，可以在`path`路径下找到导出的量化预测模型
+导出之后，可以在`path`路径下找到导出的量化预测模型。
+
+根据部署业务场景，可以使用PaddleLite将该量化模型部署到移动端（ARM CPU），或者使用PaddleInference将该量化模型部署到服务器端（NV GPU和Intel CPU）。
+
+导出的量化模型相比原始FP32模型，模型体积没有明显差别，这是因为量化预测模型中的权重依旧保存为FP32类型。在部署时，使用PaddleLite opt工具转换量化预测模型后，模型体积才会真实减小。
+
+部署参考文档：
+* 部署[文档](../../deploy/index.html)
+* PaddleLite部署量化模型[文档](https://paddle-lite.readthedocs.io/zh/latest/user_guides/quant_aware.html)
+* PaddleInference Intel CPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_x86_cpu_int8.html)
+* PaddleInference NV GPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_trt.html)

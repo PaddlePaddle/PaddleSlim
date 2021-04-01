@@ -21,7 +21,8 @@ paddle.enable_static()
 ```
 
 ## 2. 构建网络
-该章节构造一个用于对MNIST数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[1, 28, 28]`，输出类别数为10。               为了方便展示示例，我们在`paddleslim.models`下预定义了用于构建分类模型的方法，执行以下代码构建分类模型：
+该章节构造一个用于对MNIST数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[1, 28, 28]`，输出类别数为10。               
+为了方便展示示例，我们在`paddleslim.models`下预定义了用于构建分类模型的方法，执行以下代码构建分类模型：
 
 
 
@@ -136,6 +137,7 @@ quant_program = slim.quant.quant_aware(train_program, exe.place, for_test=False)
 val_quant_program = slim.quant.quant_aware(val_program, exe.place, for_test=True)
 ```
 
+注意，如果静态图模型中有控制流OP，不可以使用静态离线量化方法。
 
 ## 5. 训练和测试量化后的模型
 微调量化后的模型，训练一个epoch后测试。
@@ -156,22 +158,26 @@ test(val_quant_program)
 
 ## 6. 保存量化后的模型
 
-在``4. 量化``中使用接口``slim.quant.quant_aware``接口得到的模型只适合训练时使用，为了得到最终使用时的模型，需要使用[slim.quant.convert](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#convert)接口，然后使用[fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/save_inference_model_cn.html#save-inference-model)保存模型。``float_prog``的参数数据类型是float32，但是数据范围是int8, 保存之后可使用fluid或者paddle-lite加载使用，paddle-lite在使用时，会先将类型转换为int8。``int8_prog``的参数数据类型是int8, 保存后可看到量化后模型大小，不可加载使用。
+在``4. 量化``中使用接口``slim.quant.quant_aware``接口得到的模型只适合训练时使用，为了得到最终使用时的模型，需要使用[slim.quant.convert](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#convert)接口，然后使用[fluid.io.save_inference_model](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/save_inference_model_cn.html#save-inference-model)保存模型。
 
 
 ```python
-float_prog, int8_prog = slim.quant.convert(val_quant_program, exe.place, save_int8=True)
-target_vars = [float_prog.global_block().var(outputs[-1])]
+quant_infer_program = slim.quant.convert(val_quant_program, exe.place)
+target_vars = [quant_infer_program.global_block().var(outputs[-1])]
 paddle.static.save_inference_model(
-        path_prefix='./inference_model/float',
+        path_prefix='./quant_infer_model',
         feed_vars=[image],
         fetch_vars=target_vars,
         executor=exe,
         program=float_prog)
-paddle.static.save_inference_model(
-        path_prefix='./inference_model/int8',
-        feed_vars=[image],
-        fetch_vars=target_vars,
-        executor=exe,
-        program=int8_prog)
 ```
+
+根据业务场景，可以使用PaddleLite将该量化模型部署到移动端（ARM CPU），或者使用PaddleInference将该量化模型部署到服务器端（NV GPU和Intel CPU）。
+
+保存的量化模型相比原始FP32模型，模型体积没有明显差别，这是因为量化预测模型中的权重依旧保存为FP32类型。在部署时，使用PaddleLite opt工具转换量化预测模型后，模型体积才会真实减小。
+
+部署参考文档：
+* 部署[简介](../../deploy/index.html)
+* PaddleLite部署量化模型[文档](https://paddle-lite.readthedocs.io/zh/latest/user_guides/quant_aware.html)
+* PaddleInference Intel CPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_x86_cpu_int8.html)
+* PaddleInference NV GPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_trt.html)
