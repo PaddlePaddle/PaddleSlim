@@ -9,6 +9,9 @@
 - 在CPU上转换量化模型：在CPU上使用DNNL库转化量化模型为INT8模型。
 - 在CPU上部署预测：在CPU上部署样例并进行预测。
 
+参考资料：
+* PaddleInference Intel CPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_x86_cpu_int8.html)
+
 ## 1. 准备
 
 #### 安装Paddle和PaddleSlim

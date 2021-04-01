@@ -152,6 +152,7 @@ slim.quant.quant_post_static(
         batch_nums=10)
 ```
 
+注意，如果静态图模型中有控制流OP，不可以使用静态离线量化方法。
 
 加载保存在文件夹``'./quant_post_static_model'``下的量化后的模型进行测试，可看到精度和``3.2 训练和测试``中得到的测试精度相近，因此静态离线量化过程对于此分类模型几乎无损。
 
@@ -162,3 +163,13 @@ quant_post_static_prog, feed_target_names, fetch_targets = paddle.static.load_in
         executor=exe)
 test(quant_post_static_prog, fetch_targets)
 ```
+
+根据部署业务场景，可以使用PaddleLite将该量化模型部署到移动端（ARM CPU），或者使用PaddleInference将该量化模型部署到服务器端（NV GPU和Intel CPU）。
+
+保存的量化模型相比原始FP32模型，模型体积没有明显差别，这是因为量化预测模型中的权重依旧保存为FP32类型。在部署时，使用PaddleLite opt工具转换量化预测模型后，模型体积才会真实减小。
+
+部署参考文档：
+* 部署[简介](../../deploy/index.html)
+* PaddleLite部署量化模型[文档](https://paddle-lite.readthedocs.io/zh/latest/user_guides/quant_aware.html)
+* PaddleInference Intel CPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_x86_cpu_int8.html)
+* PaddleInference NV GPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_trt.html)
