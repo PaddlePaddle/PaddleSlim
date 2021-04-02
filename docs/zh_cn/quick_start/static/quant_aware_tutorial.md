@@ -136,7 +136,7 @@ quant_program = slim.quant.quant_aware(train_program, exe.place, for_test=False)
 val_quant_program = slim.quant.quant_aware(val_program, exe.place, for_test=True)
 ```
 
-注意，如果静态图模型中有控制流OP，不可以使用静态离线量化方法。
+注意，静态图量化训练方法不支持有控制流OP的模型，请改用动态图量化训练方法。
 
 ## 5. 训练和测试量化后的模型
 微调量化后的模型，训练一个epoch后测试。

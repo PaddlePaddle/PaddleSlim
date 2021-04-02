@@ -6,8 +6,6 @@ PaddleSlim使用的是模拟量化训练方案，一般模拟量化需要先对�
 
 下面该教程将以图像分类模型MobileNetV1为例，说明如何快速使用[PaddleSlim的模型量化接口]()。
 
-> 注意：目前动态图量化训练还不支持有控制流逻辑的模型，如果量化训练中出现Warning，推荐使用静态图量化训练功能。
-
 该示例包含以下步骤：
 
 1. 导入依赖
@@ -71,8 +69,6 @@ model.evaluate(val_dataset, batch_size=256, verbose=1)
 
 当使用普通在线量化时`weight_preprocess_type` 用默认设置None即可，当需要使用PACT在线量化时，则设置为'PACT'。
 
-注意，目前PACT在线量化产出的量化模型，使用PaddleLite在ARM CPU上部署时，精度正确，但是使用PaddleInference在NV GPU和Intel CPU上部署时，可能存在精度问题。所以，请合理选择在线量化方法的种类。
-
 ```python
 quant_config = {
     # weight preprocess type, default is None and no preprocessing is performed.
@@ -84,6 +80,10 @@ quant_config = {
 quanter = QAT(config=quant_config)
 quanter.quantize(net)
 ```
+
+注意：
+* 目前PACT在线量化产出的量化模型，使用PaddleLite在ARM CPU上部署时，精度正确，但是使用PaddleInference在NV GPU和Intel CPU上部署时，可能存在精度问题。所以，请合理选择在线量化方法的种类。
+* 对于使用动态图QAT量化训练功能的模型，在组网时请不要使用`paddle.nn.functional.`下的API。
 
 ### 4.2 训练量化模型
 

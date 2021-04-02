@@ -83,7 +83,7 @@ paddleslim.quant.quant_post_static(
         batch_nums=10)
 ```
 
-注意，使用离线量化方法后模型精度完全错误，可能是模型中存在控制流OP，目前离线量化方法还不支持对这类模型进行量化。
+注意，目前离线量化方法还不支持存在控制流OP的模型。
 
 根据部署业务场景，可以使用PaddleLite将该量化模型部署到移动端（ARM CPU），或者使用PaddleInference将该量化模型部署到服务器端（NV GPU和Intel CPU）。
 

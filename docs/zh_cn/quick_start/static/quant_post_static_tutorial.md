@@ -140,7 +140,6 @@ paddle.static.save_inference_model(
 
 调用静态离线量化接口，加载文件夹``'./inference_model'``训练好的分类模型，并使用10个batch的数据进行参数校正。此过程无需训练，只需跑前向过程来计算量化所需参数。静态离线量化后的模型保存在文件夹``'./quant_post_static_model'``下。
 
-
 ```python
 slim.quant.quant_post_static(
         executor=exe,
@@ -152,7 +151,7 @@ slim.quant.quant_post_static(
         batch_nums=10)
 ```
 
-注意，如果静态图模型中有控制流OP，不可以使用静态离线量化方法。
+注意，目前离线量化方法还不支持存在控制流OP的模型。
 
 加载保存在文件夹``'./quant_post_static_model'``下的量化后的模型进行测试，可看到精度和``3.2 训练和测试``中得到的测试精度相近，因此静态离线量化过程对于此分类模型几乎无损。
 
