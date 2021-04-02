@@ -13,6 +13,7 @@ class UnstructurePruner():
 
     def __init__(self,
                  program,
+                 batch_size,
                  mode,
                  threshold,
                  ratio_value=0.5,
@@ -20,7 +21,8 @@ class UnstructurePruner():
                  scope=None,
                  place=None):
         self.threshold = threshold
-        self.threshold_value = threshold_value
+        self.threshold_values = np.ones((batch_size, 1), dtype='float32')
+        self.threshold_values.fill(threshold_value)
         self.mode = mode
         self.ratio_value = ratio_value
         assert self.mode in [
@@ -42,7 +44,7 @@ class UnstructurePruner():
         for param, mask in zip(parameters, masks):
             if not 'weights' in param.name: continue
             paddle.assign(
-                mask * (paddle.abs(param) >= self.threshold), output=mask)
+                mask * (paddle.abs(param) >= self.threshold[0, 0]), output=mask)
             paddle.assign(param * mask, output=param)
 
     def _apply_masks(self, program, mask_func):
@@ -119,8 +121,9 @@ class UnstructurePruner():
             params_flatten.append(v_param.flatten())
         params_flatten = np.concatenate(params_flatten, axis=0)
         total_len = len(params_flatten)
-        self.threshold_value = np.sort(np.abs(params_flatten))[max(
-            0, int(self.ratio_value * total_len) - 1)]
+        self.threshold_values.fill(
+            np.sort(np.abs(params_flatten))[max(
+                0, int(self.ratio_value * total_len) - 1)])
 
     def step(self):
         """
