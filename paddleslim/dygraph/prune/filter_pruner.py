@@ -66,9 +66,10 @@ class FilterPruner(Pruner):
         # 1. depthwise conv2d layer
         self.skip_vars = []
         for sub_layer in model.sublayers():
-            if isinstance(sub_layer, SKIP_LAYERS) or (isinstance(
-                    sub_layer, paddle.nn.layer.conv.Conv2D) and
-                                                      sub_layer._groups > 1):
+            #if isinstance(sub_layer, SKIP_LAYERS) or (isinstance(
+            #        sub_layer, paddle.nn.layer.conv.Conv2D) and
+            #                                          sub_layer._groups > 1):
+            if isinstance(sub_layer, SKIP_LAYERS):
                 for param in sub_layer.parameters():
                     self.skip_vars.append(param.name)
 
@@ -241,8 +242,7 @@ class FilterPruner(Pruner):
         baseline = None
         ratios = np.arange(0.1, 1, step=0.1)
         for group in self.var_group.groups:
-            var_name = group[0][0]
-            dims = group[0][1]
+            var_name, dims = group.master
 
             if target_vars is not None and var_name not in target_vars:
                 continue
@@ -326,8 +326,10 @@ class FilterPruner(Pruner):
         if isinstance(pruned_dims, int):
             pruned_dims = [pruned_dims]
         group = self.var_group.find_group(var_name, pruned_dims)
-        _logger.debug("found group with {}: {}".format(var_name, group))
+        _logger.info("found group with {}: {}".format(var_name, group))
         plan = PruningPlan(self.model.full_name)
+        if group is None:
+            return plan
         group_dict = {}
         for sub_layer in self.model.sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
@@ -350,14 +352,18 @@ class FilterPruner(Pruner):
                 dims = _item['pruned_dims']
                 transforms = _item['transforms']
                 var_shape = _item['var'].shape
+                op = _item['op']
                 if isinstance(dims, int):
                     dims = [dims]
                 for trans in transforms:
                     src_mask = self._transform_mask(src_mask, trans)
                 current_mask = src_mask
-                assert len(current_mask) == var_shape[dims[
-                    0]], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; dims: {dims}; var name: {_name}; len(mask): {len(mask)}"
-                plan.add(_name, PruningMask(dims, current_mask, pruned_ratio))
+                groups = op.attr('groups')
+                if groups is None or groups == 1:
+                    assert len(current_mask) == var_shape[dims[
+                        0]], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; dims: {dims}; var name: {_name}; len(mask): {len(mask)}"
+                plan.add(_name,
+                         PruningMask(dims, current_mask, pruned_ratio, op))
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":

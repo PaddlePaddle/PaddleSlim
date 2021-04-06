@@ -16,14 +16,15 @@
 import logging
 from ..core import GraphWrapper
 from ..common import get_logger
-from .prune_walker import PRUNE_WORKER
+from .prune_walker import PRUNE_WORKER, UnsupportOpError
+from .group import Group, PruneInfo
 
 __all__ = ["collect_convs"]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 
-def collect_convs(params, graph, visited={}):
+def collect_convs(params, graph, visited={}, skip_stranger=True):
     """Collect convolution layers of graph into groups. The layers in the same group is relative on pruning operation.
     A group is a list of tuple with format (param_name, axis) in which `param_name` is the name of parameter and `axis` is the axis to be pruned on.
 
@@ -49,7 +50,7 @@ def collect_convs(params, graph, visited={}):
        graph(paddle.static.Program | GraphWrapper): The graph used to search the groups.
 
     Returns:
-       list<list<tuple>>: The groups.
+       list<Group>: The groups.
 
     """
     if not isinstance(graph, GraphWrapper):
@@ -71,7 +72,8 @@ def collect_convs(params, graph, visited={}):
                     cls = PRUNE_WORKER.get(op.type())
                     walker = cls(op,
                                  pruned_params=pruned_params,
-                                 visited=visited)
+                                 visited=visited,
+                                 skip_stranger=skip_stranger)
                     break
         else:
             cls = PRUNE_WORKER.get(target_op.type())
@@ -82,23 +84,17 @@ def collect_convs(params, graph, visited={}):
                 continue
             walker = cls(target_op,
                          pruned_params=pruned_params,
-                         visited=visited)
-
-        walker.prune(param, pruned_axis=0, pruned_idx=[])
-        groups.append(pruned_params)
-    visited = set()
-    uniq_groups = []
-    for group in groups:
-        repeat_group = False
-        simple_group = []
-        for param, axis, pruned_idx in group:
-            param = param.name()
-            if axis == 0:
-                if param in visited:
-                    repeat_group = True
-                else:
-                    visited.add(param)
-            simple_group.append((param, axis, pruned_idx))
-        if not repeat_group:
-            uniq_groups.append(simple_group)
-    return uniq_groups
+                         visited=visited,
+                         skip_stranger=skip_stranger)
+        try:
+            _logger.info(f"parse {param.name()}")
+            walker.prune(param, pruned_axis=0, pruned_idx=[])
+        except UnsupportOpError as e:
+            _logger.warn(e)
+        else:
+            group = Group(master=(param.name(), 0))
+            #            print(f"for {param.name()}; pruned_params: {pruned_params}")
+            for _param, _axis, _transform, _op in pruned_params:
+                group.add(PruneInfo(_param.name(), _axis, _transform, _op))
+            groups.append(group)
+    return groups

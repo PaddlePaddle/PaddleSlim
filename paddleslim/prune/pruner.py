@@ -80,36 +80,30 @@ class Pruner():
             tuple: ``(pruned_program, param_backup, param_shape_backup)``. ``pruned_program`` is the pruned program. ``param_backup`` is a dict to backup the values of parameters. ``param_shape_backup`` is a dict to backup the shapes of parameters.
         """
 
+        assert (not self.pruned_weights), "The weights have been pruned once."
         self.pruned_list = []
         graph = GraphWrapper(program.clone())
         param_backup = {} if param_backup else None
         param_shape_backup = {} if param_shape_backup else None
 
         pruned_params = []
-        visited = {}
-        for param, ratio in zip(params, ratios):
-            _logger.info("pruning: {}".format(param))
-            if graph.var(param) is None:
-                _logger.warn(
-                    "Variable[{}] to be pruned is not in current graph.".format(
-                        param))
-                continue
-            group = collect_convs([param], graph,
-                                  visited)[0]  # [(name, axis, pruned_idx)]
-            if group is None or len(group) == 0:
-                continue
-            assert (
-                not self.pruned_weights), "The weights have been pruned once."
-            group_values = []
-            for name, axis, pruned_idx in group:
-                var = scope.find_var(name)
-                if var is not None:
-                    values = np.array(var.get_tensor())
-                    group_values.append((name, values, axis, pruned_idx))
 
-            scores = self.criterion(group_values,
-                                    graph)  # [(name, axis, score, pruned_idx)]
-            g = self._transform(self.idx_selector(scores, ratio))
+        groups = collect_convs(params, graph)
+        ratios = dict(zip(params, ratios))
+
+        values = {}
+        for _group in groups:
+            for _var_name in _group.variables():
+                var = scope.find_var(_var_name)
+                if var is not None:
+                    value = np.array(var.get_tensor())
+                    values[_var_name] = value
+
+        for _group in groups:
+            scores = self.criterion(_group, values, graph)
+            idx = self.idx_selector(_group, scores,
+                                    ratios)  # name, axis, idx, transform
+            g = self._transform(idx)
             pruned_params.extend(g)
 
         merge_pruned_params = {}

@@ -27,7 +27,7 @@ CRITERION = Registry('criterion')
 
 
 @CRITERION.register
-def l1_norm(group, graph):
+def l1_norm(group, values, graph):
     """Compute l1-norm scores of parameter on given axis.
 
     This function return a list of parameters' l1-norm scores on given axis.
@@ -43,12 +43,17 @@ def l1_norm(group, graph):
        list: A list of tuple storing l1-norm on given axis.
     """
     scores = []
-    for name, value, axis, pruned_idx in group:
+    for prune_info in group:
+        name = prune_info.name
+        value = values[name]
+        axis = prune_info.axis
+        transform = prune_info.transform
 
         reduce_dims = [i for i in range(len(value.shape)) if i != axis]
         score = np.sum(np.abs(value), axis=tuple(reduce_dims))
-        scores.append((name, axis, score, pruned_idx))
-
+        if name not in scores:
+            scores[name] = {}
+        scores[name][axis] = score
     return scores
 
 

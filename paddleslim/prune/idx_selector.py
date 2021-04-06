@@ -26,7 +26,7 @@ IDX_SELECTOR = Registry('idx_selector')
 
 
 @IDX_SELECTOR.register
-def default_idx_selector(group, ratio):
+def default_idx_selector(group, scores, ratios):
     """Get the pruned indexes by given ratio.
 
     This function return a list of parameters' pruned indexes on given axis.
@@ -53,15 +53,18 @@ def default_idx_selector(group, ratio):
        list: pruned indexes
 
     """
-    name, axis, score, _ = group[
-        0]  # sort channels by the first convolution's score
+    name = group.master.name
+    axis = group.master.axis
+    score = scores[name][axis]
+    # sort channels by the first convolution's score
     sorted_idx = score.argsort()
-
+    ratio = ratios[name]
     pruned_num = int(round(len(sorted_idx) * ratio))
     pruned_idx = sorted_idx[:pruned_num]
     idxs = []
-    for name, axis, score, transforms in group:
-        idxs.append((name, axis, pruned_idx, transforms))
+    for _prune_info in group:
+        idxs.append((_prune_info.name, _prune_info.axis, pruned_idx,
+                     _prune_info.transform))
     return idxs
 
 

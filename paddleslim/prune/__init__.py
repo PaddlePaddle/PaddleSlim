@@ -27,6 +27,8 @@ from .group_param import *
 from ..prune import group_param
 from .criterion import *
 from ..prune import criterion
+from .group import *
+from ..prune import criterion
 
 from .idx_selector import *
 from ..prune import idx_selector
@@ -40,3 +42,4 @@ __all__ += prune_io.__all__
 __all__ += group_param.__all__
 __all__ += criterion.__all__
 __all__ += idx_selector.__all__
+__all__ += group.__all__
