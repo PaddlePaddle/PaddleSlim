@@ -67,7 +67,7 @@ model.evaluate(val_dataset, batch_size=256, verbose=1)
 
 ### 4.1 将模型转换为模拟量化模型
 
-当使用普通在线量化时`weight_preprocess_type` 用默认设置None即可，当需要使用PACT在线量化时，则设置为'PACT'。
+当使用普通量化策略时`weight_preprocess_type` 用默认设置None即可，当需要使用PACT量化策略时，则设置为'PACT'。
 
 ```python
 quant_config = {
@@ -82,7 +82,7 @@ quanter.quantize(net)
 ```
 
 注意：
-* 目前PACT在线量化产出的量化模型，使用PaddleLite在ARM CPU上部署时，精度正确，但是使用PaddleInference在NV GPU和Intel CPU上部署时，可能存在精度问题。所以，请合理选择在线量化方法的种类。
+* 目前PACT量化策略产出的量化模型，使用PaddleLite在ARM CPU上部署时，精度正确，但是使用PaddleInference在NV GPU和Intel CPU上部署时，可能存在精度问题。所以，请合理选择在线量化方法的种类。
 * 对于使用动态图QAT量化训练功能的模型，在组网时请不要使用`paddle.nn.functional.`下的API。
 
 ### 4.2 训练量化模型
