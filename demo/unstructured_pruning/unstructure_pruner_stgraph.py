@@ -1,12 +1,19 @@
 import numpy as np
 import paddle
+from paddleslim.core.graph_wrapper import GraphWrapper
 
 
 class UnstructurePruner():
     """
     The unstructure pruner.
+
     Args:
       - program(paddle.static.Program): The model to be pruned.
+      - batch_size(int): batch size.
+      - mode('ratio' | 'threshold'): the mode to prune the model.
+      - threshold(paddle.static.data): the placeholder for the threshold in static graph.
+      - ratio_value(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.5.
+      - threshold_value(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-5.
       - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
     """
@@ -30,6 +37,7 @@ class UnstructurePruner():
         ], "mode must be selected from 'ratio' and 'threshold'"
         self.scope = paddle.static.global_scope() if scope == None else scope
         self.place = paddle.static.CPUPlace() if place is None else place
+        self.skip_params = self.get_skip_params(program)
         self.masks = self._apply_masks(program, self.mask_parameters)
 
     def mask_parameters(self, parameters, masks):
@@ -42,7 +50,8 @@ class UnstructurePruner():
           - masks(list<Tensor>): The masks used to keep zero values in parameters.
         """
         for param, mask in zip(parameters, masks):
-            if not 'weights' in param.name: continue
+            if not self._should_prune_param(param.name):
+                continue
             paddle.assign(
                 mask * (paddle.abs(param) >= self.threshold[0, 0]), output=mask)
             paddle.assign(param * mask, output=param)
@@ -100,6 +109,8 @@ class UnstructurePruner():
         
         Args:
           - program(paddle.static.Program): The current model.
+        Returns:
+          - layer_sparse(Dict<string, float>): sparsity for each parameter.
         """
         layer_sparse = {}
         for param in program.all_parameters():
@@ -111,11 +122,12 @@ class UnstructurePruner():
     def update_threshold(self):
         '''
         Update the threshold after each optimization step in RATIO mode.
-        User should overwrite this method togther with self.mask_parameters()
+        User should overwrite this method togther with self.mask_parameters().
         '''
         params_flatten = []
         for param in self.masks:
-            if not 'weight' in param: continue
+            if not self._should_prune_param(param):
+                continue
             t_param = self.scope.find_var(param).get_tensor()
             v_param = np.array(t_param)
             params_flatten.append(v_param.flatten())
@@ -150,8 +162,11 @@ class UnstructurePruner():
         """
         The function is used to get the whole model's density (1-sparsity).
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
+
         Args:
           - program(paddle.static.Program): The current model.
+        Returns:
+          - density(float): the model's density.
         """
         total = 0
         values = 0
@@ -162,4 +177,28 @@ class UnstructurePruner():
             values += np.count_nonzero(
                 np.array(paddle.static.global_scope().find_var(param.name)
                          .get_tensor()))
-        return float(values) / total
+        density = float(values) / total
+        return desity
+
+    def get_skip_params(self, program):
+        """
+        The function is used to get a set of all the skipped parameters when performing pruning.
+        By default, the normalization-related ones will not be pruned.
+        Developers could overwrite this function to define their own skip-parameters.
+
+        Args:
+          - program(paddle.static.Program): the current model.
+        Returns:
+          - skip_params(Set<String>): a set of parameters' names.
+        """
+        skip_params = set()
+        graph = GraphWrapper(program)
+        for op in graph.ops():
+            if 'norm' in op.type() and 'grad' not in op.type():
+                for input in op.all_inputs():
+                    skip_params.add(input.name())
+        return skip_params
+
+    def _should_prune_param(self, param):
+        should_prune = param not in self.skip_params
+        return should_prune

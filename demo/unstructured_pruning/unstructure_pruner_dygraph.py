@@ -14,22 +14,15 @@ class UnstructurePruner():
       - mode(ratio | threshold): Pruning mode, whether by the given ratio or threshold.
       - threshold(float): The parameters whose absolute values are smaller than the THRESHOLD will be zeros. Default: None
       - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: None
-      - weights_keywords(List<String>): A list of string containing the keywords, meaning if this keyword is a substring of the parameter name, the parameter will be pruned. This argument could be used to ignore BN if you don't want to prune them. 
     """
 
-    def __init__(self,
-                 model,
-                 mode,
-                 threshold=0.01,
-                 ratio=0.3,
-                 weights_keywords=['conv']):
+    def __init__(self, model, mode, threshold=0.01, ratio=0.3):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
         self.model = model
         self.mode = mode
         self.threshold = threshold
         self.ratio = ratio
-        self.weights_keywords = weights_keywords
         self._apply_masks()
 
     def mask_parameters(self, param, mask):
@@ -66,7 +59,7 @@ class UnstructurePruner():
         '''
         params_flatten = []
         for name, sub_layer in self.model.named_sublayers():
-            if not self.check_valid_layer(sub_layer):
+            if not self.should_prune_layer(sub_layer):
                 continue
             for param in sub_layer.parameters(include_sublayers=False):
                 t_param = param.value().get_tensor()
@@ -87,7 +80,7 @@ class UnstructurePruner():
             return
 
     def _forward_pre_hook(self, layer, input):
-        if not self.check_valid_layer(layer):
+        if not self.should_prune_layer(layer):
             return input
         for param in layer.parameters(include_sublayers=False):
             mask = self.masks.get(param.name)
@@ -111,8 +104,11 @@ class UnstructurePruner():
         """
         This static function is used to get the whole model's density (1-sparsity).
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
+        
         Args:
           - model(Paddle.Model): The sparse model.
+        Returns:
+          - ratio(float): The model's density.
         """
         total = 0
         values = 0
@@ -123,16 +119,19 @@ class UnstructurePruner():
         ratio = float(values) / total
         return ratio
 
-    def check_valid_layer(self, layer):
+    def should_prune_layer(self, layer):
         """
         This function is used to check whether the given sublayer is valid to be pruned. 
         Usually, the convolutions are to be pruned while we skip the BN-related parameters.
         Developers could overwrite this function to define their own according to their model architectures.
+
         Args:
           - layer(): the sublayer waiting to be checked.
         Return:
-          - valid(bool): whether the sublayer is valid (prune) or not (skip the pruning for this sublayer).
+          - should_prune(bool): whether the sublayer should be pruned or not.
         """
         if type(layer).__name__.split('.')[-1] in paddle.nn.norm.__all__:
-            return False
-        return True
+            should_prune = False
+        else:
+            should_prune = True
+        return should_prune

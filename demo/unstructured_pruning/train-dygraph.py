@@ -193,7 +193,6 @@ def compress(args):
                 pruner.step()
 
     if args.phase == 'pretrain':
-        # pruner = UnstructurePruner(model, mode='ratio', ratio=0.0)
         for i in range(args.resume_epoch, args.num_epochs):
             train(i)
             if i % args.test_period == 0: test(i)
@@ -203,7 +202,6 @@ def compress(args):
     elif args.phase == 'prune':
         pruner = UnstructurePruner(
             model, mode=args.pruning_mode, ratio=args.ratio)
-        # test(0)
         for i in range(args.resume_epoch, args.num_epochs):
             train(i)
             if i % args.test_period == 0:

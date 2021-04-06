@@ -24,7 +24,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
+add_arg('batch_size',       int,  64*8,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
 add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
@@ -263,7 +263,7 @@ def compress(args):
                 test(i, val_program)
             if i > args.resume_epoch and i % args.model_period == 0:
                 pruner.update_params()
-                fluid.io.save_params(executor=exe, dirname=args.model_path)
+                # fluid.io.save_params(executor=exe, dirname=args.model_path)
     elif args.phase == 'test':
         test(0, val_program)
 
