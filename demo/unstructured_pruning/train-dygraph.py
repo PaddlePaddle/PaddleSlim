@@ -22,7 +22,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64*4,                 "Minibatch size.")
+add_arg('batch_size',       int,  64,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
 add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
@@ -189,7 +189,8 @@ def compress(args):
             loss.backward()
             opt.step()
             opt.clear_grad()
-            if args.pruning_mode == 'prune': pruner.step()
+            if args.phase == 'prune':
+                pruner.step()
 
     if args.phase == 'pretrain':
         # pruner = UnstructurePruner(model, mode='ratio', ratio=0.0)
@@ -202,7 +203,7 @@ def compress(args):
     elif args.phase == 'prune':
         pruner = UnstructurePruner(
             model, mode=args.pruning_mode, ratio=args.ratio)
-        test(0)
+        # test(0)
         for i in range(args.resume_epoch, args.num_epochs):
             train(i)
             if i % args.test_period == 0:
@@ -229,5 +230,5 @@ def main():
 
 
 if __name__ == '__main__':
-    dist.spawn(main, nprocs=2, gpus='2,3')
-    # main()
+    # dist.spawn(main, nprocs=2, gpus='2,3')
+    main()

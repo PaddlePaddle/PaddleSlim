@@ -25,19 +25,6 @@ class UnstructurePruner():
                  weights_keywords=['conv']):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
-        '''
-        if mode == 'ratio' and ratio is None:
-            _logger.info(
-                "The ratio mode is selected without setting the RATIO, default: 0.3"
-            )
-            ratio = 0.3
-            threshold = 0.0
-        if mode == 'threshold' and threshold is None:
-            _logger.info(
-                "The threshold mode is selected without setting the THRESHOLD, default: 0.01"
-            )
-            threshold = 0.01
-        '''
         self.model = model
         self.mode = mode
         self.threshold = threshold
@@ -79,8 +66,9 @@ class UnstructurePruner():
         '''
         params_flatten = []
         for name, sub_layer in self.model.named_sublayers():
+            if not self.check_valid_layer(sub_layer):
+                continue
             for param in sub_layer.parameters(include_sublayers=False):
-                if not 'conv' in param.name: continue
                 t_param = param.value().get_tensor()
                 v_param = np.array(t_param)
                 params_flatten.append(v_param.flatten())
@@ -99,12 +87,11 @@ class UnstructurePruner():
             return
 
     def _forward_pre_hook(self, layer, input):
+        if not self.check_valid_layer(layer):
+            return input
         for param in layer.parameters(include_sublayers=False):
             mask = self.masks.get(param.name)
-            for word in self.weights_keywords:
-                if word in param.name:
-                    self.mask_parameters(param, mask)
-                    return input
+            self.mask_parameters(param, mask)
         return input
 
     def update_params(self):
@@ -135,3 +122,17 @@ class UnstructurePruner():
                 values += len(paddle.nonzero(param))
         ratio = float(values) / total
         return ratio
+
+    def check_valid_layer(self, layer):
+        """
+        This function is used to check whether the given sublayer is valid to be pruned. 
+        Usually, the convolutions are to be pruned while we skip the BN-related parameters.
+        Developers could overwrite this function to define their own according to their model architectures.
+        Args:
+          - layer(): the sublayer waiting to be checked.
+        Return:
+          - valid(bool): whether the sublayer is valid (prune) or not (skip the pruning for this sublayer).
+        """
+        if type(layer).__name__.split('.')[-1] in paddle.nn.norm.__all__:
+            return False
+        return True

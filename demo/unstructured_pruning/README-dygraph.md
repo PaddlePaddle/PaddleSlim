@@ -19,6 +19,7 @@ paddleslim>=2.0.0
 - 预训练模型下载，并放到某目录下，通过train.py中的--pretrained_model设置。
 - 训练数据下载后，可以通过重写../imagenet_reader.py文件，并在train.py文件中调用实现。
 - 开发者可以通过重写UnstructurePruner.mask_parameters()和UnstructurePruner.update_threshold()来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
+- 开发者可以通过重写UnstructurePruner.check_valid_layer()来定义哪些层的参数不做剪裁。目前为所有归一化层的参数均会被跳过剪裁。
 
 训练：
 ```bash
