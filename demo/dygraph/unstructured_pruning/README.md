@@ -34,7 +34,7 @@ python3 eval --pruned_model models/ --data cifar10
 ```python
 model = mobilenet_v1(num_classes=class_dim, pretrained=True)
 #STEP1: initialize the pruner
-pruner = UnstructurePruner(model, mode='ratio', ratio=0.5)
+pruner = UnstructuredPruner(model, mode='ratio', ratio=0.5)
 
 for epoch in range(epochs):
     for batch_id, data in enumerate(train_loader):
@@ -61,7 +61,7 @@ for epoch in range(epochs):
 ```python
 model = mobilenet_v1(num_classes=class_dim, pretrained=True)
 model.set_state_dict(paddle.load("model-pruned.pdparams"))
-print(UnstructurePruner.total_sparse(model)) #注意，total_sparse为静态方法(static method)，可以不创建实例(instance)直接调用，方便只做测试的写法。
+print(UnstructuredPruner.total_sparse(model)) #注意，total_sparse为静态方法(static method)，可以不创建实例(instance)直接调用，方便只做测试的写法。
 test()
 ```
 
