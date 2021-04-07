@@ -178,7 +178,7 @@ class UnstructurePruner():
                 np.array(paddle.static.global_scope().find_var(param.name)
                          .get_tensor()))
         density = float(values) / total
-        return desity
+        return density
 
     def get_skip_params(self, program):
         """
