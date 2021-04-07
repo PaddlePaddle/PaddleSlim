@@ -36,31 +36,31 @@ QAT
 
 .. code-block:: python
 
-{
-    # weight预处理方法，默认为None，代表不进行预处理；当需要使用`PACT`方法时设置为`"PACT"`
-    'weight_preprocess_type': None,
+    {
+        # weight预处理方法，默认为None，代表不进行预处理；当需要使用`PACT`方法时设置为`"PACT"`
+        'weight_preprocess_type': None,
 
-    # activation预处理方法，默认为None，代表不进行预处理`
-    'activation_preprocess_type': None,
+        # activation预处理方法，默认为None，代表不进行预处理`
+        'activation_preprocess_type': None,
 
-    # weight量化方法, 默认为'channel_wise_abs_max', 此外还支持'channel_wise_abs_max'
-    'weight_quantize_type': 'channel_wise_abs_max',
+        # weight量化方法, 默认为'channel_wise_abs_max', 此外还支持'channel_wise_abs_max'
+        'weight_quantize_type': 'channel_wise_abs_max',
 
-    # activation量化方法, 默认为'moving_average_abs_max', 此外还支持'abs_max'
-    'activation_quantize_type': 'moving_average_abs_max',
+        # activation量化方法, 默认为'moving_average_abs_max', 此外还支持'abs_max'
+        'activation_quantize_type': 'moving_average_abs_max',
 
-    # weight量化比特数, 默认为 8
-    'weight_bits': 8,
+        # weight量化比特数, 默认为 8
+        'weight_bits': 8,
 
-    # activation量化比特数, 默认为 8
-    'activation_bits': 8,
+        # activation量化比特数, 默认为 8
+        'activation_bits': 8,
 
-    # 'moving_average_abs_max'的滑动平均超参, 默认为0.9
-    'moving_rate': 0.9,
+        # 'moving_average_abs_max'的滑动平均超参, 默认为0.9
+        'moving_rate': 0.9,
 
-    # 需要量化的算子类型
-    'quantizable_layer_type': ['Conv2D', 'Linear'],
-}
+        # 需要量化的算子类型
+        'quantizable_layer_type': ['Conv2D', 'Linear'],
+    }
 ..
 
  
@@ -94,6 +94,8 @@ QAT
    .. py:method:: save_quantized_model(model, path, input_spec=None)
 
    将指定的动态图量化模型导出为静态图预测模型，用于预测部署。
+   
+   量化预测模型可以使用`netron`软件打开，进行可视化查看。该量化预测模型和普通FP32预测模型一样，可以使用PaddleLite和PaddleInference加载预测，具体请参考`推理部署`章节。
    
    **参数：**
    

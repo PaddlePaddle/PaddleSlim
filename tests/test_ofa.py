@@ -19,17 +19,19 @@ import unittest
 import paddle
 import paddle.nn as nn
 from paddle.nn import ReLU
+from paddle.vision.models import resnet50
 from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
 from paddleslim.nas.ofa.convert_super import supernet
 from paddleslim.nas.ofa.layers import Block, SuperSeparableConv2D
+from paddleslim.nas.ofa.convert_super import Convert, supernet
 
 
 class ModelConv(nn.Layer):
     def __init__(self):
         super(ModelConv, self).__init__()
         with supernet(
-                kernel_size=(3, 5, 7),
+                kernel_size=(3, 4, 5, 7),
                 channel=((4, 8, 12), (8, 12, 16), (8, 12, 16),
                          (8, 12, 16))) as ofa_super:
             models = []
@@ -413,15 +415,37 @@ class TestExport(unittest.TestCase):
         for name, param in self.origin_model.named_parameters():
             origin_dict[name] = param.shape
         self.ofa_model.export(
-            self.origin_model,
             config,
             input_shapes=[[1, 64]],
-            input_dtypes=['int64'])
+            input_dtypes=['int64'],
+            origin_model=self.origin_model)
         for name, param in self.origin_model.named_parameters():
             if name in config.keys():
                 if 'expand_ratio' in config[name]:
                     assert origin_dict[name][-1] == param.shape[-1] * config[
                         name]['expand_ratio']
+
+
+class TestShortCut(unittest.TestCase):
+    def setUp(self):
+        model = resnet50()
+        sp_net_config = supernet(expand_ratio=[0.25, 0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+        self.images = paddle.randn(shape=[2, 3, 224, 224], dtype='float32')
+        self._test_clear_search_space()
+
+    def _test_clear_search_space(self):
+        self.ofa_model = OFA(self.model)
+        self.ofa_model.set_epoch(0)
+        outs, _ = self.ofa_model(self.images)
+        self.config = self.ofa_model.current_config
+
+    def test_export_model(self):
+        self.ofa_model.export(
+            self.config,
+            input_shapes=[[2, 3, 224, 224]],
+            input_dtypes=['float32'])
+        assert len(self.ofa_model.ofa_layers) == 38
 
 
 if __name__ == '__main__':

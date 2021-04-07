@@ -2,11 +2,7 @@
 
 在线量化是在模型训练的过程中建模定点量化对模型的影响，通过在模型计算图中插入量化节点，在训练建模量化对模型精度的影响降低量化损失。
 
-
-PaddleSlim包含`QAT量化训练`和`PACT改进的量化训练`两种量化方法
-
-- QAT
-- PACT
+PaddleSlim动态图量化训练功能那，包含普通策略和PACT策略。
 
 ## 使用方法
 
@@ -40,7 +36,7 @@ quant_config = {
 
 ### 2. 转换量化模型
 
-在确认好我们的量化配置以后，我们可以根据这个配置把我们定义好的一个普通模型转换为一个模拟量化模型。我们根据量化原理中介绍的PACT方法，定义好PACT函数pact和其对应的优化器pact_opt。在这之后就可以进行转换，转换的方式也很简单:
+在确认好我们的量化配置以后，我们可以根据这个配置把我们定义好的一个普通模型转换为一个模拟量化模型。转换的方式也很简单:
 
 ```python
 import paddleslim
@@ -60,13 +56,15 @@ quanter.quantize(net)
 import paddleslim
 quanter.save_quantized_model(
   model,
-  path,
+  save_path,
   input_spec=[paddle.static.InputSpec()])
 ```
 
-## PACT在线量化
+量化预测模型可以使用`netron`软件打开，进行可视化查看。该量化预测模型和普通FP32预测模型一样，可以使用PaddleLite和PaddleInference加载预测，具体请参考`推理部署`章节。
 
-PACT方法是对普通在线量化方法的改进，对于一些量化敏感的模型，例如MobileNetV3，PACT方法一般都能降低量化模型的精度损失。
+## PACT量化策略
+
+PACT量化策略是对普通量化策略的改进，对于一些量化敏感的模型，例如MobileNetV3，PACT量化策略一般都能降低量化模型的精度损失。
 
 使用方法上与普通在线量化方法相近：
 

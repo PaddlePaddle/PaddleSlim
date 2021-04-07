@@ -31,7 +31,7 @@ class TestConvertSuper(unittest.TestCase):
         assert len(sp_model.sublayers()) == 151
 
 
-class TestConvertSuper(unittest.TestCase):
+class TestConvertSuperCase1(unittest.TestCase):
     def setUp(self):
         class Model(nn.Layer):
             def __init__(self):

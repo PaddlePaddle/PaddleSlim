@@ -124,10 +124,10 @@ def do_train(args):
     ofa_model.model.set_state_dict(sd)
     best_config = utils.dynabert_config(ofa_model, args.width_mult)
     ofa_model.export(
-        origin_model,
         best_config,
         input_shapes=[[1, args.max_seq_length], [1, args.max_seq_length]],
-        input_dtypes=['int64', 'int64'])
+        input_dtypes=['int64', 'int64'],
+        origin_model=origin_model)
     for name, sublayer in origin_model.named_sublayers():
         if isinstance(sublayer, paddle.nn.MultiHeadAttention):
             sublayer.num_heads = int(args.width_mult * sublayer.num_heads)
