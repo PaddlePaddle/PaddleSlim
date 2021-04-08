@@ -224,10 +224,13 @@ quant_aware
 
 .. note::
 
+   - 传入此接口的训练模型和测试模型需要保证组网相同（不包括训练模型中的loss计算等），否则可能导致产出量化模型的精度错误。
+   - 此接口不支持具有控制流OP的模型。
    - 此接口会改变program 结构，并且可能增加一些persistable的变量，所以加载模型参数时请注意和相应的 program 对应。
    - 此接口底层经历了 fluid.Program -> fluid.framework.IrGraph -> fluid.Program 的转变，在 ``fluid.framework.IrGraph`` 中没有 ``Parameter`` 的概念，``Variable`` 只有 persistable 和not persistable的区别，所以在保存和加载参数时，请使用 ``fluid.io.save_persistables`` 和 ``fluid.io.load_persistables`` 接口。
    - 由于此接口会根据 program 的结构和量化配置来对program 添加op，所以 ``Paddle`` 中一些通过 ``fuse op`` 来加速训练的策略不能使用。已知以下策略在使用量化时必须设为False ： ``fuse_all_reduce_ops, sync_batch_norm`` 。
    - 如果传入的 program 中存在和任何op都没有连接的 ``Variable`` ，则会在量化的过程中被优化掉。
+   - 对量化模型进行再训练，需要调小学习率，保证最终收敛。
 
 
 
