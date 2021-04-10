@@ -312,7 +312,7 @@ class SuperConv2D(nn.Conv2D):
             stride=self._stride,
             padding=padding,
             dilation=self._dilation,
-            groups=self._groups,
+            groups=groups,
             data_format=self._data_format)
         return out
 
@@ -617,7 +617,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             output_padding=output_padding,
             stride=self._stride,
             dilation=self._dilation,
-            groups=self._groups,
+            groups=groups,
             output_size=output_size,
             data_format=self._data_format)
         return out

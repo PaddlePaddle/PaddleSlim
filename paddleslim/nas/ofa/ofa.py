@@ -533,24 +533,41 @@ class OFA(OFABase):
             input_dtypes.append(v.numpy().dtype)
 
         ### find shortcut block using static model
+        model_to_traverse = self.model._layers if isinstance(
+            self.model, DataParallel) else self.model
         _st_prog = dygraph2program(
-            self.model, inputs=input_shapes, dtypes=input_dtypes)
+            model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
         self._same_ss = check_search_space(GraphWrapper(_st_prog))
 
         if self._same_ss != None:
-            self._same_ss = sorted(self._same_ss)
             self._param2key = {}
             self._broadcast = True
 
             ### the name of sublayer is the key in search space
             ### param.name is the name in self._same_ss
-            model_to_traverse = self.model._layers if isinstance(
-                self.model, DataParallel) else self.model
             for name, sublayer in model_to_traverse.named_sublayers():
                 if isinstance(sublayer, BaseBlock):
                     for param in sublayer.parameters():
                         if self._find_ele(param.name, self._same_ss):
                             self._param2key[param.name] = name
+
+            ### double clear same search space to avoid outputs weights in same ss.
+            tmp_same_ss = []
+            for ss in self._same_ss:
+                per_ss = []
+                for key in ss:
+                    if key not in self._param2key.keys():
+                        continue
+
+                    if self._param2key[key] in self._ofa_layers.keys() and \
+                       ('expand_ratio' in self._ofa_layers[self._param2key[key]] or \
+                       'channel' in self._ofa_layers[self._param2key[key]]):
+                        per_ss.append(key)
+                    else:
+                        logging.info("{} not in ss".format(key))
+                if len(per_ss) != 0:
+                    tmp_same_ss.append(per_ss)
+            self._same_ss = tmp_same_ss
 
             for per_ss in self._same_ss:
                 for ss in per_ss[1:]:
