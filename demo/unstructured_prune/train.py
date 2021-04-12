@@ -27,9 +27,9 @@ add_arg('lr',               float,  0.1,               "The learning rate used t
 add_arg('lr_strategy',      str,  "cosine_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
-add_arg('threshold_value',        float,  1e-5,               "The threshold to set zeros, the abs(weights) lower than which will be zeros.")
+add_arg('threshold',        float,  1e-5,               "The threshold to set zeros, the abs(weights) lower than which will be zeros.")
 add_arg('pruning_mode',            str,  'ratio',               "the pruning mode: whether by ratio or by threshold.")
-add_arg('ratio_value',        float,  0.5,               "The threshold to set zeros, the abs(weights) lower than which will be zeros.")
+add_arg('ratio',        float,  0.5,               "The ratio to set zeros, the smaller portion will be zeros.")
 add_arg('num_epochs',       int,  120,               "The number of total epochs.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
 add_arg('data',             str, "mnist",                 "Which data to use. 'mnist' or 'imagenet'.")
@@ -102,7 +102,7 @@ def compress(args):
     image = paddle.static.data(
         name='image', shape=[None] + image_shape, dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-    threshold = paddle.static.data(
+    threshold_ph = paddle.static.data(
         name='pruning_threshold', shape=[None, 1], dtype='float32')
 
     batch_size_per_card = int(args.batch_size / len(places))
@@ -144,8 +144,9 @@ def compress(args):
         paddle.static.default_main_program(),
         batch_size=args.batch_size,
         mode=args.pruning_mode,
-        threshold=threshold,
-        ratio_value=args.ratio_value,
+        threshold_ph=threshold_ph,
+        ratio=args.ratio,
+        threshold=args.threshold,
         place=place)
 
     exe.run(paddle.static.default_startup_program())
@@ -176,7 +177,7 @@ def compress(args):
                 feed={
                     "image": data[0].get('image'),
                     "label": data[0].get('label'),
-                    "pruning_threshold": pruner.threshold_values
+                    "pruning_threshold": pruner.threshold
                 },
                 fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
@@ -201,7 +202,7 @@ def compress(args):
                 feed={
                     "image": data[0].get('image'),
                     "label": data[0].get('label'),
-                    "pruning_threshold": pruner.threshold_values
+                    "pruning_threshold": pruner.threshold
                 },
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
             end_time = time.time()

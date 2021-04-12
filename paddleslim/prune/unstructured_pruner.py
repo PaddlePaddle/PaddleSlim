@@ -13,34 +13,37 @@ class UnstructuredPruner():
     Args:
       - program(paddle.static.Program): The model to be pruned.
       - batch_size(int): batch size.
-      - mode('ratio' | 'threshold'): the mode to prune the model.
-      - threshold(paddle.static.data): the placeholder for the threshold in static graph.
-      - ratio_value(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.5.
-      - threshold_value(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-5.
+      - mode(str): the mode to prune the model, must be selected from 'ratio' and 'threshold'.
+      - threshold_ph(paddle.static.data): the placeholder for the threshold in static graph.
+      - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.5.
+      - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-5.
       - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
+      - skip_params_func(): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params.
     """
 
     def __init__(self,
                  program,
                  batch_size,
                  mode,
-                 threshold,
-                 ratio_value=0.5,
-                 threshold_value=1e-5,
+                 threshold_ph,
+                 ratio=0.5,
+                 threshold=1e-5,
                  scope=None,
-                 place=None):
-        self.threshold = threshold
-        self.threshold_values = np.ones((batch_size, 1), dtype='float32')
-        self.threshold_values.fill(threshold_value)
+                 place=None,
+                 skip_params_func=None):
+        self.threshold_ph = threshold_ph
+        self.threshold = np.ones((batch_size, 1), dtype='float32')
+        self.threshold.fill(threshold)
         self.mode = mode
-        self.ratio_value = ratio_value
+        self.ratio = ratio
         assert self.mode in [
             'ratio', 'threshold'
         ], "mode must be selected from 'ratio' and 'threshold'"
         self.scope = paddle.static.global_scope() if scope == None else scope
         self.place = paddle.static.CPUPlace() if place is None else place
-        self.skip_params = self.get_skip_params(program)
+        if skip_params_func is None: skip_params_func = self._get_skip_params
+        self.skip_params = skip_params_func(program)
         self.masks = self._apply_masks(program, self.mask_parameters)
 
     def mask_parameters(self, parameters, masks):
@@ -57,7 +60,7 @@ class UnstructuredPruner():
                 continue
             abs_tmp = paddle.abs(param)
             with paddle.utils.unique_name.guard("bool_"):
-                bool_tmp = (abs_tmp >= self.threshold[0, 0])
+                bool_tmp = (abs_tmp >= self.threshold_ph[0, 0])
                 paddle.assign(mask * bool_tmp, output=mask)
                 paddle.assign(param * mask, output=param)
 
@@ -138,9 +141,9 @@ class UnstructuredPruner():
             params_flatten.append(v_param.flatten())
         params_flatten = np.concatenate(params_flatten, axis=0)
         total_len = len(params_flatten)
-        self.threshold_values.fill(
+        self.threshold.fill(
             np.sort(np.abs(params_flatten))[max(
-                0, int(self.ratio_value * total_len) - 1)])
+                0, int(self.ratio * total_len) - 1)])
 
     def step(self):
         """
@@ -183,11 +186,11 @@ class UnstructuredPruner():
         density = float(values) / total
         return density
 
-    def get_skip_params(self, program):
+    def _get_skip_params(self, program):
         """
         The function is used to get a set of all the skipped parameters when performing pruning.
         By default, the normalization-related ones will not be pruned.
-        Developers could overwrite this function to define their own skip-parameters.
+        Developers could replace it by passing their own function when initializing the UnstructuredPruner instance.
 
         Args:
           - program(paddle.static.Program): the current model.

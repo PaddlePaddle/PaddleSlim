@@ -8,4 +8,3 @@ python3.7 train.py \
           --ratio=0.45 \
           --threshold=1e-5 \
           --lr=0.075 \
-          --pretrained_model="/PaddleSlim/demo/pretrained_model/MobileNetV1_pretrained"

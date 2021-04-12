@@ -37,7 +37,7 @@ add_arg('log_period',       int, 100,                 "Log period in batches.")
 add_arg('test_period',      int, 1,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('model_period',     int, 10,             "The period to save model in epochs.")
-add_arg('resume_epoch',     int, 0,             "The epoch to resume training.")
+add_arg('resume_epoch',     int, -1,             "The epoch to resume training.")
 add_arg('num_workers',     int, 4,             "number of workers when loading dataset.")
 # yapf: enable
 
@@ -183,8 +183,11 @@ def compress(args):
             pruner.step()
 
     pruner = UnstructuredPruner(
-        dp_model, mode=args.pruning_mode, ratio=args.ratio)
-    for i in range(args.resume_epoch, args.num_epochs):
+        dp_model,
+        mode=args.pruning_mode,
+        ratio=args.ratio,
+        threshold=args.threshold)
+    for i in range(args.resume_epoch + 1, args.num_epochs):
         train(i)
         if i % args.test_period == 0:
             pruner.update_params()
@@ -192,7 +195,7 @@ def compress(args):
                 "The current density of the pruned model is: {}%".format(
                     round(100 * UnstructuredPruner.total_sparse(dp_model), 2)))
             test(i)
-        if i % args.model_period == 0:
+        if i > args.resume_epoch and i % args.model_period == 0:
             pruner.update_params()
             paddle.save(dp_model.state_dict(),
                         os.path.join(args.model_path, "model-pruned.pdparams"))

@@ -12,19 +12,26 @@ class UnstructuredPruner():
     """
     The unstructure pruner.
     Args:
-      - model(Paddle.Model): The model to be pruned.
-      - mode(ratio | threshold): Pruning mode, whether by the given ratio or threshold.
-      - threshold(float): The parameters whose absolute values are smaller than the THRESHOLD will be zeros. Default: None
-      - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: None
+      - model(Paddle.nn.Layer): The model to be pruned.
+      - mode(str): Pruning mode, must be selected from 'ratio' and 'threshold'.
+      - threshold(float): The parameters whose absolute values are smaller than the THRESHOLD will be zeros. Default: 0.01
+      - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: 0.3
     """
 
-    def __init__(self, model, mode, threshold=0.01, ratio=0.3):
+    def __init__(self,
+                 model,
+                 mode,
+                 threshold=0.01,
+                 ratio=0.3,
+                 skip_params_func=None):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
         self.model = model
         self.mode = mode
         self.threshold = threshold
         self.ratio = ratio
+        if skip_params_func is None: skip_params_func = self._get_skip_params
+        self.skip_params = skip_params_func(model)
         self._apply_masks()
 
     def mask_parameters(self, param, mask):
@@ -61,7 +68,7 @@ class UnstructuredPruner():
         '''
         params_flatten = []
         for name, sub_layer in self.model.named_sublayers():
-            if not self.should_prune_layer(sub_layer):
+            if not self._should_prune_layer(sub_layer):
                 continue
             for param in sub_layer.parameters(include_sublayers=False):
                 t_param = param.value().get_tensor()
@@ -82,7 +89,7 @@ class UnstructuredPruner():
             return
 
     def _forward_pre_hook(self, layer, input):
-        if not self.should_prune_layer(layer):
+        if not self._should_prune_layer(layer):
             return input
         for param in layer.parameters(include_sublayers=False):
             mask = self.masks.get(param.name)
@@ -121,19 +128,24 @@ class UnstructuredPruner():
         ratio = float(values) / total
         return ratio
 
-    def should_prune_layer(self, layer):
+    def _get_skip_params(self, model):
         """
-        This function is used to check whether the given sublayer is valid to be pruned. 
-        Usually, the convolutions are to be pruned while we skip the BN-related parameters.
-        Developers could overwrite this function to define their own according to their model architectures.
+        This function is used to check whether the given model's layers are valid to be pruned. 
+        Usually, the convolutions are to be pruned while we skip the normalization-related parameters.
+        Deverlopers could replace this function by passing their own when initializing the UnstructuredPuner instance.
 
         Args:
-          - layer(Paddle.nn.Layer): the sublayer waiting to be checked.
+          - model(Paddle.nn.Layer): the current model waiting to be checked.
         Return:
-          - should_prune(bool): whether the sublayer should be pruned or not.
+          - skip_params(set<String>): a set of parameters' names
         """
-        if type(layer).__name__.split('.')[-1] in paddle.nn.norm.__all__:
-            should_prune = False
-        else:
-            should_prune = True
+        skip_params = set()
+        for _, sub_layer in model.named_sublayers():
+            if type(sub_layer).__name__.split('.')[
+                    -1] in paddle.nn.norm.__all__:
+                skip_params.add(sub_layer.full_name())
+        return skip_params
+
+    def _should_prune_layer(self, layer):
+        should_prune = layer.full_name() not in self.skip_params
         return should_prune

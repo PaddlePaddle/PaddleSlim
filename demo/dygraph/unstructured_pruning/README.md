@@ -8,7 +8,7 @@
 ```bash
 python3.5+
 paddlepaddle>=2.0.0
-paddleslim>=2.0.0
+paddleslim>=2.1.0
 ```
 
 请参照github安装[paddlepaddle](https://github.com/PaddlePaddle/Paddle)和[paddleslim](https://github.com/PaddlePaddle/PaddleSlim)。
@@ -18,7 +18,26 @@ paddleslim>=2.0.0
 训练前：
 - 训练数据下载后，可以通过重写../imagenet_reader.py文件，并在train.py/evaluate.py文件中调用实现。
 - 开发者可以通过重写paddleslim.dygraph.prune.unstructured_pruner.py中的UnstructuredPruner.mask_parameters()和UnstructuredPruner.update_threshold()来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
-- 开发者可以通过重写paddleslim.dygraph.prune.unstructured_pruner.py中的UnstructuredPruner.should_prune_layer()来定义哪些层的参数不做剪裁。目前为所有归一化层的参数均会被跳过剪裁。
+- 开发可以在初始化UnstructuredPruner时，传入自定义的skip_params_func，来定义哪些参数不参与剪裁。skip_params_func示例代码如下(路径：paddleslim.dygraph.prune.unstructured_pruner._get_skip_params())。默认为所有的归一化层的参数不参与剪裁。
+
+```python
+def _get_skip_params(model):
+    """
+    This function is used to check whether the given model's layers are valid to be pruned.
+    Usually, the convolutions are to be pruned while we skip the normalization-related parameters.
+    Deverlopers could replace this function by passing their own when initializing the UnstructuredPuner instance.
+
+    Args:
+      - model(Paddle.nn.Layer): the current model waiting to be checked.
+    Return:
+      - skip_params(set<String>): a set of parameters' names
+    """
+    skip_params = set()
+    for _, sub_layer in model.named_sublayers():
+        if type(sub_layer).__name__.split('.')[-1] in paddle.nn.norm.__all__:
+            skip_params.add(sub_layer.full_name())
+    return skip_params
+```
 
 训练：
 ```bash

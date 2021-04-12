@@ -8,7 +8,7 @@
 ```bash
 python3.5+
 paddlepaddle>=2.0.0
-paddleslim>=2.0.0
+paddleslim>=2.1.0
 ```
 
 请参照github安装[paddlepaddle](https://github.com/PaddlePaddle/Paddle)和[paddleslim](https://github.com/PaddlePaddle/PaddleSlim)。
@@ -19,7 +19,27 @@ paddleslim>=2.0.0
 - 预训练模型下载，并放到某目录下，通过train.py中的--pretrained_model设置。
 - 训练数据下载后，可以通过重写../imagenet_reader.py文件，并在train.py文件中调用实现。
 - 开发者可以通过重写paddleslim.prune.unstructured_pruner.py中的UnstructuredPruner.mask_parameters()和UnstructuredPruner.update_threshold()来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
-- 开发可以通过重写paddleslim.prune.unstructured_pruner.py中的UnstructurePruner.get_skip_params()来定义哪些参数在不能被剪裁。默认为所有的归一化层的参数不参与剪裁。
+- 开发可以在初始化UnstructuredPruner时，传入自定义的skip_params_func，来定义哪些参数不参与剪裁。skip_params_func示例代码如下(路径：paddleslim.prune.unstructured_pruner._get_skip_params())。默认为所有的归一化层的参数不参与剪裁。
+
+```python
+def _get_skip_params(program):
+    """
+    The function is used to get a set of all the skipped parameters when performing pruning.
+    By default, the normalization-related ones will not be pruned.
+    Developers could replace it by passing their own function when initializing the UnstructuredPruner instance.
+    Args:
+      - program(paddle.static.Program): the current model.
+    Returns:
+      - skip_params(Set<String>): a set of parameters' names.
+    """
+    skip_params = set()
+    graph = paddleslim.core.GraphWrapper(program)
+    for op in graph.ops():
+        if 'norm' in op.type() and 'grad' not in op.type():
+            for input in op.all_inputs():
+                skip_params.add(input.name())
+    return skip_params
+```
 
 训练：
 ```bash
@@ -50,8 +70,8 @@ opt, learning_rate = create_optimizer(args, step_per_epoch)
 opt.minimize(avg_cost)
 
 #STEP1: initialize the pruner and the 'threshold' placeholder
-threshold = paddle.static.data(name='pruning_threshold', shape=[None, 1], dtype='float32')
-pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', threshold=threshold, ratio_value=0.5, place=place)
+threshold_ph = paddle.static.data(name='pruning_threshold', shape=[None, 1], dtype='float32')
+pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', threshold_ph=threshold_ph, ratio=0.5, place=place)
 
 exe.run(paddle.static.default_startup_program())
 paddle.fluid.io.load_vars(exe, args.pretrained_model)
@@ -63,7 +83,7 @@ for epoch in range(epochs):
             feed={
                 "image": data[0].get('image'),
                 "label": data[0].get('label'),
-                "pruning_threshold": pruner.threshold_value
+                "pruning_threshold": pruner.threshold
             },
             fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])  
         learning_rate.step()
