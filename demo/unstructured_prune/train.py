@@ -102,8 +102,6 @@ def compress(args):
     image = paddle.static.data(
         name='image', shape=[None] + image_shape, dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-    threshold_ph = paddle.static.data(
-        name='pruning_threshold', shape=[None, 1], dtype='float32')
 
     batch_size_per_card = int(args.batch_size / len(places))
     train_loader = paddle.io.DataLoader(
@@ -144,7 +142,6 @@ def compress(args):
         paddle.static.default_main_program(),
         batch_size=args.batch_size,
         mode=args.pruning_mode,
-        threshold_ph=threshold_ph,
         ratio=args.ratio,
         threshold=args.threshold,
         place=place)
@@ -176,8 +173,7 @@ def compress(args):
                 program,
                 feed={
                     "image": data[0].get('image'),
-                    "label": data[0].get('label'),
-                    "pruning_threshold": pruner.threshold
+                    "label": data[0].get('label')
                 },
                 fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
@@ -201,8 +197,7 @@ def compress(args):
                 train_program,
                 feed={
                     "image": data[0].get('image'),
-                    "label": data[0].get('label'),
-                    "pruning_threshold": pruner.threshold
+                    "label": data[0].get('label')
                 },
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
             end_time = time.time()

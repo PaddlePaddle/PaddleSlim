@@ -210,6 +210,4 @@ def main():
 
 
 if __name__ == '__main__':
-    #TODO: duplicate logs when training using dist.spawn(), pending this function until clarification from the developer.
-    # dist.spawn(main, nprocs=2, gpus='2,3')
     main()

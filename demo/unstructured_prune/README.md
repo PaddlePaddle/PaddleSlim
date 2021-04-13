@@ -18,7 +18,7 @@ paddleslim>=2.1.0
 训练前：
 - 预训练模型下载，并放到某目录下，通过train.py中的--pretrained_model设置。
 - 训练数据下载后，可以通过重写../imagenet_reader.py文件，并在train.py文件中调用实现。
-- 开发者可以通过重写paddleslim.prune.unstructured_pruner.py中的UnstructuredPruner.mask_parameters()和UnstructuredPruner.update_threshold()来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
+- 开发者可以通过重写paddleslim.prune.unstructured_pruner.py中的UnstructuredPruner.update_threshold()来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
 - 开发可以在初始化UnstructuredPruner时，传入自定义的skip_params_func，来定义哪些参数不参与剪裁。skip_params_func示例代码如下(路径：paddleslim.prune.unstructured_pruner._get_skip_params())。默认为所有的归一化层的参数不参与剪裁。
 
 ```python
@@ -69,9 +69,8 @@ val_program = paddle.static.default_main_program().clone(for_test=True)
 opt, learning_rate = create_optimizer(args, step_per_epoch)
 opt.minimize(avg_cost)
 
-#STEP1: initialize the pruner and the 'threshold' placeholder
-threshold_ph = paddle.static.data(name='pruning_threshold', shape=[None, 1], dtype='float32')
-pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', threshold_ph=threshold_ph, ratio=0.5, place=place)
+#STEP1: initialize the pruner
+pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', ratio=0.5, place=place)
 
 exe.run(paddle.static.default_startup_program())
 paddle.fluid.io.load_vars(exe, args.pretrained_model)
@@ -82,8 +81,7 @@ for epoch in range(epochs):
             train_program,
             feed={
                 "image": data[0].get('image'),
-                "label": data[0].get('label'),
-                "pruning_threshold": pruner.threshold
+                "label": data[0].get('label')
             },
             fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])  
         learning_rate.step()

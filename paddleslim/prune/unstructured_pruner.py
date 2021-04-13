@@ -14,29 +14,25 @@ class UnstructuredPruner():
       - program(paddle.static.Program): The model to be pruned.
       - batch_size(int): batch size.
       - mode(str): the mode to prune the model, must be selected from 'ratio' and 'threshold'.
-      - threshold_ph(paddle.static.data): the placeholder for the threshold in static graph.
       - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.5.
       - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-5.
       - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
-      - skip_params_func(): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params.
+      - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params.
     """
 
     def __init__(self,
                  program,
                  batch_size,
                  mode,
-                 threshold_ph,
                  ratio=0.5,
                  threshold=1e-5,
                  scope=None,
                  place=None,
                  skip_params_func=None):
-        self.threshold_ph = threshold_ph
-        self.threshold = np.ones((batch_size, 1), dtype='float32')
-        self.threshold.fill(threshold)
         self.mode = mode
         self.ratio = ratio
+        self.threshold = threshold
         assert self.mode in [
             'ratio', 'threshold'
         ], "mode must be selected from 'ratio' and 'threshold'"
@@ -44,27 +40,9 @@ class UnstructuredPruner():
         self.place = paddle.static.CPUPlace() if place is None else place
         if skip_params_func is None: skip_params_func = self._get_skip_params
         self.skip_params = skip_params_func(program)
-        self.masks = self._apply_masks(program, self.mask_parameters)
+        self.masks = self._apply_masks(program)
 
-    def mask_parameters(self, parameters, masks):
-        """
-        Update masks and parameters. It is executed before each iteration.
-        User can overwrite this function in subclass to implememt different pruning stragies.
-
-        Args:
-          - parameters(list<Tensor>): The parameters to be pruned.
-          - masks(list<Tensor>): The masks used to keep zero values in parameters.
-        """
-        for param, mask in zip(parameters, masks):
-            if not self._should_prune_param(param.name):
-                continue
-            abs_tmp = paddle.abs(param)
-            with paddle.utils.unique_name.guard("bool_"):
-                bool_tmp = (abs_tmp >= self.threshold_ph[0, 0])
-                paddle.assign(mask * bool_tmp, output=mask)
-                paddle.assign(param * mask, output=param)
-
-    def _apply_masks(self, program, mask_func):
+    def _apply_masks(self, program):
         params = []
         masks = []
         for param in program.all_parameters():
@@ -81,12 +59,6 @@ class UnstructuredPruner():
             params.append(param)
             masks.append(mask)
 
-        with paddle.static.program_guard(main_program=program):
-            ops = paddle.static.default_main_program().global_block().ops
-            ori_len = len(ops)
-            mask_func(params, masks)
-            ops = ops[:ori_len] + ops[ori_len:]
-            program.global_block().ops = ops
         d_masks = {}
         for _param, _mask in zip(params, masks):
             d_masks[_param.name] = _mask.name
@@ -130,7 +102,7 @@ class UnstructuredPruner():
     def update_threshold(self):
         '''
         Update the threshold after each optimization step in RATIO mode.
-        User should overwrite this method togther with self.mask_parameters().
+        User should overwrite this method to define their own weight importance (Default is based on their absolute values).
         '''
         params_flatten = []
         for param in self.masks:
@@ -141,18 +113,32 @@ class UnstructuredPruner():
             params_flatten.append(v_param.flatten())
         params_flatten = np.concatenate(params_flatten, axis=0)
         total_len = len(params_flatten)
-        self.threshold.fill(
-            np.sort(np.abs(params_flatten))[max(
-                0, int(self.ratio * total_len) - 1)])
+        self.threshold = np.sort(np.abs(params_flatten))[max(
+            0, int(self.ratio * total_len) - 1)]
+
+    def _update_params_masks(self):
+        for param in self.masks:
+            if not self._should_prune_param(param):
+                continue
+            mask_name = self.masks[param]
+            t_param = self.scope.find_var(param).get_tensor()
+            t_mask = self.scope.find_var(mask_name).get_tensor()
+            v_param = np.array(t_param)
+            v_param[np.abs(v_param) < self.threshold] = 0
+            v_mask = (v_param != 0).astype(v_param.dtype)
+            t_mask.set(v_mask, self.place)
+            v_param = np.array(t_param) * np.array(t_mask)
+            t_param.set(v_param, self.place)
 
     def step(self):
         """
         Update the threshold after each optimization step.
         """
         if self.mode == 'threshold':
-            return
+            pass
         elif self.mode == 'ratio':
             self.update_threshold()
+        self._update_params_masks()
 
     def update_params(self):
         """

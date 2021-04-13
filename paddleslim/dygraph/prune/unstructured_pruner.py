@@ -16,6 +16,7 @@ class UnstructuredPruner():
       - mode(str): Pruning mode, must be selected from 'ratio' and 'threshold'.
       - threshold(float): The parameters whose absolute values are smaller than the THRESHOLD will be zeros. Default: 0.01
       - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: 0.3
+      - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
     """
 
     def __init__(self,
