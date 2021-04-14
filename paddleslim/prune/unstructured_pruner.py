@@ -74,6 +74,8 @@ class UnstructuredPruner():
         Args:
           - program(paddle.static.Program): The model which have all the parameters.
           - ratio(float): The ratio illustrated above.
+        Return:
+          - threshold(float): a threshold corresponding to the input ratio.
         """
         data = []
         for param in program.all_parameters():
@@ -81,7 +83,8 @@ class UnstructuredPruner():
                 np.array(paddle.static.global_scope().find_var(param.name)
                          .get_tensor()).flatten())
         data = np.concatenate(data, axis=0)
-        print(np.sort(np.abs(data))[int(ratio * len(data))])
+        threshold = np.sort(np.abs(data))[max(0, int(ratio * len(data) - 1))]
+        return threshold
 
     def sparse_by_layer(self, program):
         """
@@ -93,10 +96,13 @@ class UnstructuredPruner():
           - layer_sparse(Dict<string, float>): sparsity for each parameter.
         """
         layer_sparse = {}
+        total = 0
+        values = 0
         for param in program.all_parameters():
-            mask = np.array(paddle.static.global_scope().find_var(
-                param.name + '_mask').get_tensor())
-            layer_sparse[param.name] = np.sum(mask) / np.product(param.shape)
+            value = np.count_nonzero(
+                np.array(paddle.static.global_scope().find_var(param.name)
+                         .get_tensor()))
+            layer_sparse[param.name] = value / np.product(param.shape)
         return layer_sparse
 
     def update_threshold(self):
