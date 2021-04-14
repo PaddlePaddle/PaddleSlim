@@ -43,7 +43,7 @@ python quant_post_static.py --model_path ./inference_model/MobileNet --save_path
 
 运行以上命令后，可在``${save_path}``下看到量化后的模型文件和参数文件。
 
-> 使用的量化算法为``'KL'``, 使用训练集中的160张图片进行量化参数的校正。
+> 使用的量化算法为``'hist'``, 使用训练集中的32张图片进行量化参数的校正。
 
 
 ### 测试精度
@@ -67,6 +67,6 @@ python eval.py --model_path ./quant_model_train/MobileNet --model_name __model__
 
 精度输出为
 ```
-top1_acc/top5_acc= [0.70141864 0.89086477]
+top1_acc/top5_acc= [0.70328485 0.89183184]
 ```
-从以上精度对比可以看出，对``mobilenet``在``imagenet``上的分类模型进行离线量化后 ``top1``精度损失为``0.77%``， ``top5``精度损失为``0.46%``.
+从以上精度对比可以看出，对``mobilenet``在``imagenet``上的分类模型进行离线量化后 ``top1``精度损失为``0.59%``， ``top5``精度损失为``0.36%``.
