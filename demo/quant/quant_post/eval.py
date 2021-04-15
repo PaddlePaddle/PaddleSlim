@@ -45,7 +45,7 @@ def eval(args):
         exe,
         model_filename=args.model_name,
         params_filename=args.params_name)
-    val_reader = paddle.batch(reader.val(), batch_size=128)
+    val_reader = paddle.batch(reader.val(), batch_size=1)
 
     image = paddle.static.data(
         name='image', shape=[None, 3, 224, 224], dtype='float32')
@@ -60,29 +60,26 @@ def eval(args):
         # top1_acc, top5_acc
         if len(feed_target_names) == 1:
             # eval "infer model", which input is image, output is classification probability
-            image = [img[0] for img in data]
-            label = [d[1] for d in data]
+            image = data[0][0].reshape((1, 3, 224, 224))
+            label = [[d[1]] for d in data]
             pred = exe.run(val_program,
                            feed={feed_target_names[0]: image},
                            fetch_list=fetch_targets)
             pred = np.array(pred[0])
             label = np.array(label)
             sort_array = pred.argsort(axis=1)
-            top_1_pred = sort_array[:, -1:]
-            top_5_pred = sort_array[:, -5:]
+            top_1_pred = sort_array[:, -1:][:, ::-1]
+            top_1 = np.mean(label == top_1_pred)
+            top_5_pred = sort_array[:, -5:][:, ::-1]
             acc_num = 0
-            acc_1 = 0
             for i in range(len(label)):
-                if label[i] == top_1_pred[i]:
-                    acc_1 += 1
-                if label[i] in top_5_pred[i]:
+                if label[i][0] in top_5_pred[i]:
                     acc_num += 1
-            top_1 = float(acc_1) / len(label)
             top_5 = float(acc_num) / len(label)
             results.append([top_1, top_5])
         else:
             # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
-            image = [img[0] for img in data]
+            image = data[0][0].reshape((1, 3, 224, 224))
             label = [[d[1]] for d in data]
             result = exe.run(val_program,
                              feed={
