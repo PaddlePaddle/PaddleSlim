@@ -8,6 +8,8 @@ NVIDIA TensorRT 是一个高性能的深度学习预测库，适用于Nvidia GPU
 - 产出量化模型：使用PaddleSlim量化训练或离线量化得到量化模型。注意模型中被量化的算子的参数值应该在INT8范围内，但是类型仍为float型。
 - 在Nvidia GPU上部署预测：在GPU上以INT8类型进行预测部署。
 
+参考资料：
+* PaddleInference NV GPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_trt.html)
 
 ## 1. 准备环境
 
