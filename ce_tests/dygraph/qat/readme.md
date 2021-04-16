@@ -19,7 +19,7 @@
 
 如下是对`mobilenet_v1`模型进行转换的示例。
 ```
-python test/save_quant_model.py --load_model_path output_models/quant_dygraph/mobilenet_v1 --save_model_path int8_models/mobilenet_v1
+python src/save_quant_model.py --load_model_path output_models/quant_dygraph/mobilenet_v1 --save_model_path int8_models/mobilenet_v1
 ```
 
 4. 测试量化模型

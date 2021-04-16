@@ -9,7 +9,7 @@ output_dir=$PWD/output_models
 
 for model in mobilenet_v1 mobilenet_v2 resnet50 vgg16 
 do
-    python ./train/qat.py \
+    python ./src/qat.py \
         --arch=${model} \
         --data=${data_path} \
         --epoch=${epoch} \
