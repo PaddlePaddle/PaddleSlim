@@ -48,6 +48,7 @@ def collect_convs(params, graph, visited={}, skip_stranger=True):
     Args:
        params(list): A list of convolution layer's parameter names. It will collect all the groups that contains anyone of these parameters.
        graph(paddle.static.Program | GraphWrapper): The graph used to search the groups.
+       skip_stranger(bool): Whether to skip current tensor when visit unregistered operators that not in OPS_UNCHANGE_SHAPE. False means visit all unregistered operators by default worker. Default: True.
 
     Returns:
        list<Group>: The groups.
@@ -63,7 +64,6 @@ def collect_convs(params, graph, visited={}, skip_stranger=True):
             _logger.warning(
                 f"Cann't found relative variables of {_param} because {_param} is not in target program or model. Please make sure {_param} is in your program if you are using static API of PaddlePaddle. And make sure your model in correctly mode and contains {_param} if you are using dynamic API of PaddlePaddle."
             )
-            groups.append([])
             continue
         target_op = param.outputs()[0]
         if target_op.type() == 'conditional_block':
@@ -78,23 +78,21 @@ def collect_convs(params, graph, visited={}, skip_stranger=True):
         else:
             cls = PRUNE_WORKER.get(target_op.type())
             if cls is None:
-                _logger.info("No walker for operator: {}".format(target_op.type(
-                )))
-                groups.append(pruned_params)
+                _logger.warning("No walker for operator: {}".format(
+                    target_op.type()))
                 continue
             walker = cls(target_op,
                          pruned_params=pruned_params,
                          visited=visited,
                          skip_stranger=skip_stranger)
         try:
-            _logger.info(f"parse {param.name()}")
             walker.prune(param, pruned_axis=0, pruned_idx=[])
         except UnsupportOpError as e:
             _logger.warn(e)
         else:
-            group = Group(master=(param.name(), 0))
-            #            print(f"for {param.name()}; pruned_params: {pruned_params}")
-            for _param, _axis, _transform, _op in pruned_params:
-                group.add(PruneInfo(_param.name(), _axis, _transform, _op))
-            groups.append(group)
+            if len(pruned_params) != 0:
+                group = Group(master=({"name": param.name(), "axis": 0}))
+                for _param, _axis, _transform, _op in pruned_params:
+                    group.add(PruneInfo(_param.name(), _axis, _transform, _op))
+                groups.append(group)
     return groups

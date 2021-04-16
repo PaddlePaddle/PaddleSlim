@@ -103,8 +103,7 @@ class Pruner():
             scores = self.criterion(_group, values, graph)
             idx = self.idx_selector(_group, scores,
                                     ratios)  # name, axis, idx, transform
-            g = self._transform(idx)
-            pruned_params.extend(g)
+            pruned_params.extend(idx)
 
         merge_pruned_params = {}
         for param, pruned_axis, pruned_idx in pruned_params:
@@ -118,32 +117,35 @@ class Pruner():
                 pruned_idx = np.concatenate(merge_pruned_params[param_name][
                     pruned_axis])
                 param = graph.var(param_name)
+                _groups = 1
                 if not lazy:
-                    _logger.debug("{}\t{}\t{}\t{}".format(
-                        param.name(), pruned_axis,
-                        param.shape()[pruned_axis], len(pruned_idx)))
-                    origin_shape = copy.deepcopy(param.shape())
-                    if param_shape_backup is not None:
-                        param_shape_backup[param.name()] = origin_shape
-                    new_shape = list(param.shape())
-                    new_shape[pruned_axis] -= len(pruned_idx)
-                    param.set_shape(new_shape)
-                    # update groups of depthwise conv2d
-                    for op in param.outputs():
-                        if op.type() in ["conv2d", "depthwise_conv2d"
-                                         ] and op.attr("groups") > 1:
-                            assert origin_shape[
-                                1] == 1, "Only support for depthwise when groups > 1."
-                            new_groups = int(
-                                op.attr("groups") * new_shape[pruned_axis] /
-                                origin_shape[pruned_axis])
-                            _logger.debug(
-                                f"change groups of conv({param.name()}) from {op.attr('groups')} to {new_groups}; origin_shape: {origin_shape}; new_shape: {new_shape}"
-                            )
-                            op.set_attr("groups", new_groups)
+                    # update groups of conv2d
+                    if pruned_axis == 1:
+                        for op in param.outputs():
+                            if op.type() in ["conv2d", "depthwise_conv2d"
+                                             ] and op.attr("groups") > 1:
+                                _groups = op.attr("groups")
+                                _filter_num = param.shape()[1]
+                                new_groups = int(
+                                    (_groups * _filter_num - len(pruned_idx)) /
+                                    _filter_num)
+                                _logger.info(
+                                    f"change groups of {op.type()}({param.name()}) from {op.attr('groups')} to {new_groups};"
+                                )
+                                op.set_attr("groups", new_groups)
+                    if _groups == 1:
+                        origin_shape = copy.deepcopy(param.shape())
+                        if param_shape_backup is not None:
+                            param_shape_backup[param.name()] = origin_shape
+                        new_shape = list(param.shape())
+                        new_shape[pruned_axis] -= len(pruned_idx)
+                        param.set_shape(new_shape)
 
-                if not only_graph:
-                    param_t = scope.find_var(param.name()).get_tensor()
+                if not only_graph and (_groups == 1 or pruned_axis != 1):
+                    _var = scope.find_var(param.name())
+                    if _var is None:
+                        continue
+                    param_t = _var.get_tensor()
                     if param_backup is not None and (
                             param.name() not in param_backup):
                         param_backup[param.name()] = copy.deepcopy(
@@ -156,32 +158,13 @@ class Pruner():
                             lazy=lazy)
                         param_t.set(pruned_param, place)
                     except IndexError as e:
-                        _logger.error("Pruning {}, but get [{}]".format(
-                            param.name(), e))
+                        _logger.error(
+                            "Pruning {} with shape {}, but get [{}]; ".format(
+                                param.name(), param_t.shape, e))
 
         graph.infer_shape()
         self.pruned_weights = (not only_graph)
         return graph.program, param_backup, param_shape_backup
-
-    def _transform(self, group):
-        ret = []
-        for name, axis, pruned_idx, transforms in group:
-            src = pruned_idx
-            for trans in transforms:
-                src_start = trans['src_start']
-                src_end = trans['src_end']
-                target_start = trans['target_start']
-                target_end = trans['target_end']
-                target = []
-                for idx in src:
-                    if idx >= src_start and idx < src_end:
-                        idx -= src_start
-                        idx += target_start
-                        if idx < target_end:
-                            target.append(idx)
-                src = target
-            ret.append((name, axis, src))
-        return ret
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
         """

@@ -52,7 +52,10 @@ class VarGroup():
         program = dygraph2program(model, inputs=inputs)
         graph = GraphWrapper(program)
         visited = {}
-        params = [_param.name for _param in model.parameters()]
+        params = [
+            _param.name for _param in model.parameters()
+            if len(_param.shape) == 4
+        ]
         self.groups = collect_convs(params, graph)
         _logger.info("Found {} groups.".format(len(self.groups)))
 

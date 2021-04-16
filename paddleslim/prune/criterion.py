@@ -35,20 +35,26 @@ def l1_norm(group, values, graph):
     and 'axis' is the axis reducing on and `score` is a np.array storing the l1-norm of strucure on `axis`.
 
     Args:
-       group(list): A group of parameters. The first parameter of the group is convolution layer's weight
-                    while the others are parameters affected by pruning the first one. Each parameter in group
-                    is represented as tuple '(name, values, axis)' in which `name` is the parameter's name and
-                    and `values` is the values of parameter and `axis` is the axis reducing on pruning on.
+       group(Group): A group of pruning operations.
+       values(dict): The key is the name of tensor in group, and the value of dict is the
+                     values of tensor.
+       graph(GraphWrapper): The graph stores structure information of network.
+
     Returns:
-       list: A list of tuple storing l1-norm on given axis.
+       dict: The key is name of tensor, the value is a dict
+             with axis as key and l1-norm scores as value.
     """
-    scores = []
-    for prune_info in group:
+    scores = {}
+
+    for prune_info in group.all_prune_info():
         name = prune_info.name
+        if name not in values:
+            _logger.warning(
+                "The value of tensor '{}' is not found, so it will not be used when evaluating importance of pruned structures."
+            )
+            continue
         value = values[name]
         axis = prune_info.axis
-        transform = prune_info.transform
-
         reduce_dims = [i for i in range(len(value.shape)) if i != axis]
         score = np.sum(np.abs(value), axis=tuple(reduce_dims))
         if name not in scores:
@@ -58,10 +64,15 @@ def l1_norm(group, values, graph):
 
 
 @CRITERION.register
-def geometry_median(group, graph):
-    scores = []
-    name, value, axis, _ = group[0]
-    assert (len(value.shape) == 4)
+def geometry_median(group, values, graph):
+    name = group.master["name"]
+    axis = group.master["axis"]
+    if name not in values:
+        _logger.warning("The value of tensor '{}' is not found.")
+        return None
+    value = values[name]
+    assert (len(value.shape) == 4,
+            "geometry_median only support for weight of conv2d.")
 
     def get_distance_sum(value, out_idx):
         w = value.view()
@@ -78,30 +89,23 @@ def geometry_median(group, graph):
 
     tmp = np.array(dist_sum_list)
 
-    for name, value, axis, idx in group:
-        scores.append((name, axis, tmp, idx))
+    scores = {}
+    for prune_info in group.all_prune_info():
+        name = prune_info.name
+        axis = prune_info.axis
+        scores[name][axis] = tmp
     return scores
 
 
 @CRITERION.register
-def bn_scale(group, graph):
-    """Compute l1-norm scores of parameter on given axis.
-
-    This function return a list of parameters' l1-norm scores on given axis.
-    Each element of list is a tuple with format (name, axis, score) in which 'name' is parameter's name
-    and 'axis' is the axis reducing on and `score` is a np.array storing the l1-norm of strucure on `axis`.
-
-    Args:
-       group(list): A group of parameters. The first parameter of the group is convolution layer's weight
-                    while the others are parameters affected by pruning the first one. Each parameter in group
-                    is represented as tuple '(name, values, axis)' in which `name` is the parameter's name and
-                    and `values` is the values of parameter and `axis` is the axis reducing on pruning on.
-    Returns:
-       list: A list of tuple storing l1-norm on given axis.
+def bn_scale(group, values, graph):
+    """Compute scores by scales of batch_norm layer.
     """
     assert (isinstance(graph, GraphWrapper))
 
     # step1: Get first convolution
+    conv_weight = group.master["name"]
+    axis = group.master["axis"]
     conv_weight, value, axis, _ = group[0]
     param_var = graph.var(conv_weight)
     conv_op = param_var.outputs()[0]
@@ -116,12 +120,16 @@ def bn_scale(group, graph):
 
     # steps3: Find scale of bn
     score = None
-    for name, value, aixs, _ in group:
-        if bn_scale_param == name:
+    for prune_info in group.all_prune_info():
+        if prune_info.name not in values:
+            raise SystemExit("Can't find values of scales in BatchNorm.")
+        value = values[prune_info.name]
+        if bn_scale_param == prune_info.name:
             score = np.abs(value.reshape([-1]))
 
-    scores = []
-    for name, value, axis, idx in group:
-        scores.append((name, axis, score, idx))
-
+    scores = {}
+    for prune_info in group.all_prune_info():
+        name = prune_info.name
+        axis = prune_info.axis
+        scores[name][axis] = tmp
     return scores
