@@ -1,4 +1,4 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ from .rl_nas import *
 from ..nas import darts
 from .darts import *
 from .ofa import *
+from .gp_nas import GPNAS
 
 __all__ = []
 __all__ += sa_nas.__all__
