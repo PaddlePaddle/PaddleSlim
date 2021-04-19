@@ -679,6 +679,7 @@ class Convert:
                 layer = Block(SuperEmbedding(**new_attr_dict), key=key)
                 model[idx] = layer
 
+                
         def split_prefix(net, name_list):
             if len(name_list) > 1:
                 net = split_prefix(getattr(net, name_list[0]), name_list[1:])
@@ -687,7 +688,8 @@ class Convert:
             else:
                 raise NotImplementedError("name error")
             return net
-
+        
+        
         def get_split_names(layer, name_list):
             if name_list:
                 self.name_list.append(name_list)
