@@ -51,7 +51,9 @@ RunConfig = namedtuple(
         # list, elactic depth of the model in training, default: None
         'elastic_depth',
         # list, the number of sub-network to train per mini-batch data, used to get current epoch, default: None
-        'dynamic_batch_size'
+        'dynamic_batch_size',
+        # the shape of weights in the skip_layers will not change in the training, default: None
+        'skip_layers'
     ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
@@ -117,7 +119,7 @@ class OFABase(Layer):
                 config.update(kwargs)
         else:
             config = dict()
-        logging.debug(self.model, config)
+        _logger.debug(self.model, config)
 
         return block.fn(*inputs, **config)
 
@@ -185,6 +187,7 @@ class OFA(OFABase):
                 depth_list = list(set(self.run_config.elastic_depth))
                 depth_list.sort()
                 self._ofa_layers['depth'] = depth_list
+                self._layers['depth'] = depth_list
 
         if self.elastic_order is None:
             self.elastic_order = []
@@ -198,6 +201,7 @@ class OFA(OFABase):
                 depth_list = list(set(self.run_config.elastic_depth))
                 depth_list.sort()
                 self._ofa_layers['depth'] = depth_list
+                self._layers['depth'] = depth_list
                 self.elastic_order.append('depth')
 
             # final, elastic width
@@ -234,7 +238,7 @@ class OFA(OFABase):
 
     def _prepare_distill(self):
         if self.distill_config.teacher_model == None:
-            logging.error(
+            _logger.error(
                 'If you want to add distill, please input instance of teacher model'
             )
 
@@ -289,6 +293,7 @@ class OFA(OFABase):
 
     def _reset_hook_before_forward(self):
         self.Tacts, self.Sacts = {}, {}
+        self.hooks = []
         if self._mapping_layers != None:
 
             def get_activation(mem, name):
@@ -300,11 +305,19 @@ class OFA(OFABase):
             def add_hook(net, mem, mapping_layers):
                 for idx, (n, m) in enumerate(net.named_sublayers()):
                     if n in mapping_layers:
-                        m.register_forward_post_hook(get_activation(mem, n))
+                        self.hooks.append(
+                            m.register_forward_post_hook(
+                                get_activation(mem, n)))
 
             add_hook(self.model, self.Sacts, self._mapping_layers)
             add_hook(self.ofa_teacher_model.model, self.Tacts,
                      self._mapping_layers)
+
+    def _remove_hook_after_forward(self):
+        for hook in self.hooks:
+            hook.remove()
+        self.hooks = []
+        self.Tacts, self.Sacts = {}, {}
 
     def _compute_epochs(self):
         if getattr(self, 'epoch', None) == None:
@@ -564,7 +577,7 @@ class OFA(OFABase):
                        'channel' in self._ofa_layers[self._param2key[key]]):
                         per_ss.append(key)
                     else:
-                        logging.info("{} not in ss".format(key))
+                        _logger.info("{} not in ss".format(key))
                 if len(per_ss) != 0:
                     tmp_same_ss.append(per_ss)
             self._same_ss = tmp_same_ss
@@ -578,6 +591,15 @@ class OFA(OFABase):
                         self._ofa_layers[self._param2key[ss]].pop('channel')
                     if len(self._ofa_layers[self._param2key[ss]]) == 0:
                         self._ofa_layers.pop(self._param2key[ss])
+
+        if self.run_config != None and getattr(self.run_config, 'skip_layers',
+                                               None) != None:
+            for skip_layer in self.run_config.skip_layers:
+                if skip_layer in self._ofa_layers.keys():
+                    self._ofa_layers.pop(skip_layer)
+                else:
+                    _logger.info('skip layer: {} is not in search space.'.
+                                 format(skip_layer))
 
     def _broadcast_ss(self):
         """ broadcast search space after random sample."""
@@ -647,4 +669,9 @@ class OFA(OFABase):
         if self._broadcast:
             self._broadcast_ss()
 
-        return self.model.forward(*inputs, **kwargs), teacher_output
+        student_output = self.model.forward(*inputs, **kwargs)
+
+        if self._add_teacher:
+            self._remove_hook_after_forward()
+
+        return student_output, teacher_output

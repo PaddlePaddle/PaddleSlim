@@ -929,10 +929,11 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                  weight_attr=None,
                  bias_attr=None,
                  data_format='NCHW',
+                 use_global_stats=None,
                  name=None):
-        super(SuperBatchNorm2D, self).__init__(num_features, momentum, epsilon,
-                                               weight_attr, bias_attr,
-                                               data_format, name)
+        super(SuperBatchNorm2D, self).__init__(
+            num_features, momentum, epsilon, weight_attr, bias_attr,
+            data_format, use_global_stats, name)
 
     def forward(self, input):
         self._check_data_format(self._data_format)
@@ -954,7 +955,8 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
             training=self.training,
             momentum=self._momentum,
             epsilon=self._epsilon,
-            data_format=self._data_format)
+            data_format=self._data_format,
+            use_global_stats=self._use_global_stats)
 
 
 class SuperSyncBatchNorm(nn.SyncBatchNorm):
