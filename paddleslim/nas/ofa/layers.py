@@ -1,4 +1,4 @@
-#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,8 @@ __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
     'SuperBatchNorm2D', 'SuperLinear', 'SuperInstanceNorm2D',
     'SuperGroupConv2D', 'SuperDepthwiseConv2D', 'SuperGroupConv2DTranspose',
-    'SuperDepthwiseConv2DTranspose', 'SuperLayerNorm', 'SuperEmbedding'
+    'SuperDepthwiseConv2DTranspose', 'SuperLayerNorm', 'SuperEmbedding',
+    'SuperSyncBatchNorm'
 ]
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -954,6 +955,42 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
             momentum=self._momentum,
             epsilon=self._epsilon,
             data_format=self._data_format)
+
+
+class SuperSyncBatchNorm(nn.SyncBatchNorm):
+    def __init__(self,
+                 num_features,
+                 momentum=0.9,
+                 epsilon=1e-05,
+                 weight_attr=None,
+                 bias_attr=None,
+                 data_format='NCHW',
+                 name=None):
+        super(SuperSyncBatchNorm,
+              self).__init__(num_features, momentum, epsilon, weight_attr,
+                             bias_attr, data_format, name)
+
+    def forward(self, input):
+
+        feature_dim = int(input.shape[1])
+
+        weight = self.weight[:feature_dim]
+        bias = self.bias[:feature_dim]
+        mean = self._mean[:feature_dim]
+        variance = self._variance[:feature_dim]
+
+        mean_out = mean
+        # variance and variance out share the same memory
+        variance_out = variance
+
+        attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
+                 "is_test", not self.training, "data_layout", self._data_format,
+                 "use_mkldnn", False, "fuse_with_relu", False,
+                 "use_global_stats", False, 'trainable_statistics', False)
+        sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
+            input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
+
+        return sync_batch_norm_out
 
 
 class SuperInstanceNorm2D(nn.InstanceNorm2D):
