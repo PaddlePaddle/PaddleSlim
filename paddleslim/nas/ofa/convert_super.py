@@ -286,10 +286,10 @@ class Convert:
                     **new_attr_dict
                 ) if pd_ver == 185 else layers.SuperBatchNorm2D(**new_attr_dict)
                 model[idx] = layer
-                
-            elif isinstance(layer,  SyncBatchNorm) and (
-                                getattr(self.context, 'expand', None) != None or
-                                getattr(self.context, 'channel', None) != None):
+
+            elif isinstance(layer, SyncBatchNorm) and (
+                    getattr(self.context, 'expand', None) != None or
+                    getattr(self.context, 'channel', None) != None):
                 # num_features in SyncBatchNorm don't change after last weight operators
                 if idx > last_weight_layer_idx:
                     continue
@@ -302,9 +302,10 @@ class Convert:
                 self._change_name(layer, pd_ver)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
                 new_attr_dict['num_features'] = None
-                    
-                new_key = 'num_channels' if 'num_channels' in new_attr_dict.keys() else 'num_features'
-                
+
+                new_key = 'num_channels' if 'num_channels' in new_attr_dict.keys(
+                ) else 'num_features'
+
                 if self.context.expand:
                     new_attr_dict[new_key] = int(
                         self.context.expand *
@@ -679,7 +680,6 @@ class Convert:
                 layer = Block(SuperEmbedding(**new_attr_dict), key=key)
                 model[idx] = layer
 
-                
         def split_prefix(net, name_list):
             if len(name_list) > 1:
                 net = split_prefix(getattr(net, name_list[0]), name_list[1:])
@@ -688,15 +688,14 @@ class Convert:
             else:
                 raise NotImplementedError("name error")
             return net
-        
-        
+
         def get_split_names(layer, name_list):
             if name_list:
                 self.name_list.append(name_list)
             for _, (name, sublayer) in enumerate(layer.named_children()):
                 if sublayer.named_children():
-                    get_split_names(sublayer, name_list+[name])
-             
+                    get_split_names(sublayer, name_list + [name])
+
         if isinstance(network, Layer):
             curr_id = 0
             self.name_list = []
