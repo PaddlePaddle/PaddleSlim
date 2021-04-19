@@ -99,26 +99,17 @@ class Convert:
 
         first_weight_layer_idx = -1
         last_weight_layer_idx = -1
-        output_layers_idx = []
-        find_output_layer = False
         weight_layer_count = 0
         # NOTE: pre_channel store for shortcut module
         pre_channel = None
         cur_channel = None
         for idx, layer in enumerate(model):
             cls_name = layer.__class__.__name__.lower()
-            if 'head' in cls_name:
-                find_output_layer = True
-            if 'conv' in cls_name   or 'linear' in cls_name or 'embedding' in cls_name:
+            if 'conv' in cls_name or 'linear' in cls_name or 'embedding' in cls_name:
                 weight_layer_count += 1
                 last_weight_layer_idx = idx
                 if first_weight_layer_idx == -1:
                     first_weight_layer_idx = idx
-            if find_output_layer:
-                output_layers_idx.append(idx)
-                
-        if last_weight_layer_idx not in output_layers_idx:
-            output_layers_idx.append(last_weight_layer_idx)
 
         if getattr(self.context, 'channel', None) != None:
             assert len(
@@ -182,7 +173,7 @@ class Convert:
                                                         attr_dict[in_key])
 
                     ### last super convolution
-                    if idx in output_layers_idx:
+                    if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
                         new_attr_dict[out_key[1:]] = int(self.context.expand *
@@ -208,7 +199,7 @@ class Convert:
                     else:
                         new_attr_dict[in_key[1:]] = max(pre_channel)
 
-                    if idx in output_layers_idx:
+                    if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
                         new_attr_dict[out_key[1:]] = max(cur_channel)
@@ -396,7 +387,7 @@ class Convert:
                         new_attr_dict[in_key[1:]] = int(self.context.expand *
                                                         attr_dict[in_key])
                     ### last super convolution transpose
-                    if idx in output_layers_idx:
+                    if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
                         new_attr_dict[out_key[1:]] = int(self.context.expand *
@@ -422,7 +413,7 @@ class Convert:
                     else:
                         new_attr_dict[in_key[1:]] = max(pre_channel)
 
-                    if idx in output_layers_idx:
+                    if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
                         new_attr_dict[out_key[1:]] = max(cur_channel)
@@ -501,7 +492,7 @@ class Convert:
                         new_attr_dict[in_key[1:]] = int(self.context.expand *
                                                         attr_dict[in_key])
 
-                    if idx in output_layers_idx:
+                    if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = int(attr_dict[out_key])
                     else:
                         new_attr_dict[out_key[1:]] = int(self.context.expand *
@@ -517,7 +508,7 @@ class Convert:
                     else:
                         new_attr_dict[in_key[1:]] = max(pre_channel)
 
-                    if idx in output_layers_idx:
+                    if idx == last_weight_layer_idx:
                         new_attr_dict[out_key[1:]] = int(attr_dict[out_key])
                     else:
                         new_attr_dict[out_key[1:]] = max(cur_channel)
