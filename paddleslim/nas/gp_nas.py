@@ -28,14 +28,14 @@ class GPNAS(object):
     scenarios and may obtain efficient networks for different deployment platforms.
     """
 
-    def __init__(self):
+    def __init__(self, c_flag=2, m_flag=2):
 
         self.hp_mat = 0.0000001
         self.hp_cov = 0.01
         self.cov_w = None
         self.w = None
-        self.c_flag = 2
-        self.m_flag = 2
+        self.c_flag = c_flag
+        self.m_flag = m_flag
 
     def _get_corelation(self, mat1, mat2):
         """

@@ -47,7 +47,23 @@ if __name__ == '__main__':
         stage1_file, 1)
     X_train_stage2, Y_train_stage2, X_test_stage2, Y_test_stage2 = preprare_trainning_data(
         stage2_file, 2)
-    gpnas = GPNAS()
+    gpnas = GPNAS(1, 1)
+    w = gpnas.get_initial_mean(X_test_stage1, Y_test_stage1)
+    init_cov = gpnas.get_initial_cov(X_train_stage1)
+    error_list = np.array(
+        Y_test_stage2.reshape(len(Y_test_stage2), 1) - gpnas.get_predict(
+            X_test_stage2))
+    print('RMSE trainning on stage1 testing on stage2:', np.sqrt(
+        np.dot(error_list.T, error_list) / len(error_list)))
+    gpnas.get_posterior_mean(X_train_stage2[0::3], Y_train_stage2[0::3])
+    gpnas.get_posterior_mean(X_train_stage2[1::3], Y_train_stage2[1::3])
+    gpnas.get_posterior_cov(X_train_stage2[1::3], Y_train_stage2[1::3])
+    error_list = np.array(
+        Y_test_stage2.reshape(len(Y_test_stage2), 1) - gpnas.get_predict_jiont(
+            X_test_stage2, X_train_stage2[::1], Y_train_stage2[::1]))
+    print('RMSE using stage1 as prior:', np.sqrt(
+        np.dot(error_list.T, error_list) / len(error_list)))
+    gpnas = GPNAS(2, 2)
     w = gpnas.get_initial_mean(X_test_stage1, Y_test_stage1)
     init_cov = gpnas.get_initial_cov(X_train_stage1)
     error_list = np.array(
