@@ -22,7 +22,7 @@ from .utils.utils import get_paddle_version
 pd_ver = get_paddle_version()
 if pd_ver == 185:
     import paddle.fluid.dygraph.nn as nn
-    from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding, SyncBatchNorm
+    from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
     from paddle.fluid import ParamAttr
     from .layers_old import *
     from . import layers_old as layers
@@ -99,17 +99,26 @@ class Convert:
 
         first_weight_layer_idx = -1
         last_weight_layer_idx = -1
+        output_layers_idx = []
+        find_output_layer = False
         weight_layer_count = 0
         # NOTE: pre_channel store for shortcut module
         pre_channel = None
         cur_channel = None
         for idx, layer in enumerate(model):
             cls_name = layer.__class__.__name__.lower()
-            if 'conv' in cls_name or 'linear' in cls_name or 'embedding' in cls_name:
+            if 'head' in cls_name:
+                find_output_layer = True
+            if 'conv' in cls_name   or 'linear' in cls_name or 'embedding' in cls_name:
                 weight_layer_count += 1
                 last_weight_layer_idx = idx
                 if first_weight_layer_idx == -1:
                     first_weight_layer_idx = idx
+            if find_output_layer:
+                output_layers_idx.append(idx)
+                
+        if last_weight_layer_idx not in output_layers_idx:
+            output_layers_idx.append(last_weight_layer_idx)
 
         if getattr(self.context, 'channel', None) != None:
             assert len(
@@ -173,7 +182,7 @@ class Convert:
                                                         attr_dict[in_key])
 
                     ### last super convolution
-                    if idx == last_weight_layer_idx:
+                    if idx in output_layers_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
                         new_attr_dict[out_key[1:]] = int(self.context.expand *
@@ -199,7 +208,7 @@ class Convert:
                     else:
                         new_attr_dict[in_key[1:]] = max(pre_channel)
 
-                    if idx == last_weight_layer_idx:
+                    if idx in output_layers_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
                         new_attr_dict[out_key[1:]] = max(cur_channel)
@@ -286,10 +295,10 @@ class Convert:
                     **new_attr_dict
                 ) if pd_ver == 185 else layers.SuperBatchNorm2D(**new_attr_dict)
                 model[idx] = layer
-
-            elif isinstance(layer, SyncBatchNorm) and (
-                    getattr(self.context, 'expand', None) != None or
-                    getattr(self.context, 'channel', None) != None):
+                
+            elif isinstance(layer,  SyncBatchNorm) and (
+                                getattr(self.context, 'expand', None) != None or
+                                getattr(self.context, 'channel', None) != None):
                 # num_features in SyncBatchNorm don't change after last weight operators
                 if idx > last_weight_layer_idx:
                     continue
@@ -297,24 +306,14 @@ class Convert:
                 attr_dict = layer.__dict__
                 new_attr_name = ['momentum', 'epsilon', 'bias_attr']
 
-                if pd_ver == 185:
-                    new_attr_name += [
-                        'param_attr', 'act', 'dtype', 'in_place', 'data_layout',
-                        'is_test', 'use_global_stats', 'trainable_statistics'
-                    ]
-                else:
-                    new_attr_name += ['weight_attr', 'data_format', 'name']
+                new_attr_name += ['weight_attr', 'data_format', 'name']
 
                 self._change_name(layer, pd_ver)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
-                if pd_ver == 185:
-                    new_attr_dict['num_channels'] = None
-                else:
-                    new_attr_dict['num_features'] = None
-
-                new_key = 'num_channels' if 'num_channels' in new_attr_dict.keys(
-                ) else 'num_features'
-
+                new_attr_dict['num_features'] = None
+                    
+                new_key = 'num_channels' if 'num_channels' in new_attr_dict.keys() else 'num_features'
+                
                 if self.context.expand:
                     new_attr_dict[new_key] = int(
                         self.context.expand *
@@ -331,10 +330,7 @@ class Convert:
 
                 del layer, attr_dict
 
-                layer = layers.SuperSyncBatchNorm(
-                    **new_attr_dict
-                ) if pd_ver == 185 else layers.SuperSyncBatchNorm(
-                    **new_attr_dict)
+                layer = layers.SuperSyncBatchNorm(**new_attr_dict)
                 model[idx] = layer
 
             ### assume output_size = None, filter_size != None
@@ -400,7 +396,7 @@ class Convert:
                         new_attr_dict[in_key[1:]] = int(self.context.expand *
                                                         attr_dict[in_key])
                     ### last super convolution transpose
-                    if idx == last_weight_layer_idx:
+                    if idx in output_layers_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
                         new_attr_dict[out_key[1:]] = int(self.context.expand *
@@ -426,7 +422,7 @@ class Convert:
                     else:
                         new_attr_dict[in_key[1:]] = max(pre_channel)
 
-                    if idx == last_weight_layer_idx:
+                    if idx in output_layers_idx:
                         new_attr_dict[out_key[1:]] = attr_dict[out_key]
                     else:
                         new_attr_dict[out_key[1:]] = max(cur_channel)
@@ -505,7 +501,7 @@ class Convert:
                         new_attr_dict[in_key[1:]] = int(self.context.expand *
                                                         attr_dict[in_key])
 
-                    if idx == last_weight_layer_idx:
+                    if idx in output_layers_idx:
                         new_attr_dict[out_key[1:]] = int(attr_dict[out_key])
                     else:
                         new_attr_dict[out_key[1:]] = int(self.context.expand *
@@ -521,7 +517,7 @@ class Convert:
                     else:
                         new_attr_dict[in_key[1:]] = max(pre_channel)
 
-                    if idx == last_weight_layer_idx:
+                    if idx in output_layers_idx:
                         new_attr_dict[out_key[1:]] = int(attr_dict[out_key])
                     else:
                         new_attr_dict[out_key[1:]] = max(cur_channel)
@@ -701,13 +697,23 @@ class Convert:
                 raise NotImplementedError("name error")
             return net
 
+        def get_split_names(layer, name_list):
+            if name_list:
+                self.name_list.append(name_list)
+            for _, (name, sublayer) in enumerate(layer.named_children()):
+                if sublayer.named_children():
+                    get_split_names(sublayer, name_list+[name])
+             
         if isinstance(network, Layer):
-            for idx, (name, sublayer) in enumerate(network.named_sublayers()):
-                if len(name.split('.')) > 1:
-                    net = split_prefix(network, name.split('.')[:-1])
+            curr_id = 0
+            self.name_list = []
+            get_split_names(network, [])
+            for idx, nl in enumerate(self.name_list):
+                if len(nl) > 1:
+                    net = split_prefix(network, nl[:-1])
                 else:
                     net = network
-                setattr(net, name.split('.')[-1], model[idx])
+                setattr(net, nl[-1], model[idx])
 
         return network
 
