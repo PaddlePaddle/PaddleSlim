@@ -21,7 +21,7 @@ from paddleslim.nas import GPNAS
 # [CVPR 2021 NAS国际比赛Track2 studio地址](https://aistudio.baidu.com/aistudio/competition/detail/71?lang=en)
 # [AI studio GP-NAS demo](https://aistudio.baidu.com/aistudio/projectdetail/1824958) 
 # demo 基于paddleslim自研NAS算法GP-NAS:Gaussian Process based Neural Architecture Search 
-# 基于本demo的改进版属于paddle解决方案，可以获得双倍奖金
+# 基于本demo的改进版可以获得双倍奖金
 
 
 def preprare_trainning_data(file_name, t_flag):
@@ -53,13 +53,13 @@ if __name__ == '__main__':
     error_list = np.array(
         Y_test_stage2.reshape(len(Y_test_stage2), 1) - gpnas.get_predict(
             X_test_stage2))
-    print('RMSE trainning on stage1 testing on stage2:', np.sqrt(
-        np.dot(error_list.T, error_list) / len(error_list)))
+    print('RMSE trainning on stage1 testing on stage2:',
+          np.sqrt(np.dot(error_list.T, error_list) / len(error_list)))
     gpnas.get_posterior_mean(X_train_stage2[0::3], Y_train_stage2[0::3])
     gpnas.get_posterior_mean(X_train_stage2[1::3], Y_train_stage2[1::3])
     gpnas.get_posterior_cov(X_train_stage2[1::3], Y_train_stage2[1::3])
     error_list = np.array(
         Y_test_stage2.reshape(len(Y_test_stage2), 1) - gpnas.get_predict_jiont(
             X_test_stage2, X_train_stage2[::1], Y_train_stage2[::1]))
-    print('RMSE using stage1 as prior:', np.sqrt(
-        np.dot(error_list.T, error_list) / len(error_list)))
+    print('RMSE using stage1 as prior:',
+          np.sqrt(np.dot(error_list.T, error_list) / len(error_list)))
