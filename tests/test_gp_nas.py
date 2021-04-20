@@ -25,7 +25,7 @@ from static_case import StaticCase
 # [CVPR 2021 NAS国际比赛Track2 studio地址](https://aistudio.baidu.com/aistudio/competition/detail/71?lang=en)
 # [AI studio GP-NAS demo](https://aistudio.baidu.com/aistudio/projectdetail/1824958) 
 # demo 基于paddleslim自研NAS算法GP-NAS:Gaussian Process based Neural Architecture Search 
-# 基于本demo的改进版属于paddle解决方案，可以获得双倍奖金
+# 基于本demo的改进版属于paddle解决方案，可以获得双倍比赛奖金
 
 
 class TestGPNAS(StaticCase):
