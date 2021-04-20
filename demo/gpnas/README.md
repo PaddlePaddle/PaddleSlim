@@ -1,8 +1,11 @@
 # GP-NAS使用示例
 
 CVPR2021_NAS_competition_gpnas_demo.py演示如何使用GP-NAS参加[CVPR 2021 NAS国际比赛](https://www.cvpr21-nas.com/competition) Track2 demo
+
 [CVPR 2021 NAS国际比赛Track2 studio地址](https://aistudio.baidu.com/aistudio/competition/detail/71?lang=en)
+
 [AI studio GP-NAS demo](https://aistudio.baidu.com/aistudio/projectdetail/1824958)
+
 基于本demo的改进版方案，可以获得双倍奖金
 
 # CVPR 2021 NAS国际比赛背景
