@@ -30,6 +30,7 @@ class ModelCase1(nn.Layer):
         super(ModelCase1, self).__init__()
         models = [SuperConv2D(3, 4, 3, bias_attr=False)]
         models += [SuperConv2D(4, 4, 3, groups=4)]
+        models += [SuperSyncBatchNorm(4)]
         models += [SuperConv2D(4, 4, 3, groups=2)]
         models += [SuperConv2DTranspose(4, 4, 3, bias_attr=False)]
         models += [SuperConv2DTranspose(4, 4, 3, groups=4)]
