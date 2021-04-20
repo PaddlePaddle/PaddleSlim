@@ -103,6 +103,7 @@ class Pruner():
             scores = self.criterion(_group, values, graph)
             idx = self.idx_selector(_group, scores,
                                     ratios)  # name, axis, idx, transform
+            idx = self._transform(idx)
             pruned_params.extend(idx)
 
         merge_pruned_params = {}
@@ -159,12 +160,33 @@ class Pruner():
                         param_t.set(pruned_param, place)
                     except IndexError as e:
                         _logger.error(
-                            "Pruning {} with shape {}, but get [{}]; ".format(
-                                param.name(), param_t.shape, e))
+                            "Pruning {} with shape {} on axis {}, but get [{}]; ".
+                            format(param.name(),
+                                   param_t.shape(), pruned_axis, e))
 
         graph.infer_shape()
         self.pruned_weights = (not only_graph)
         return graph.program, param_backup, param_shape_backup
+
+    def _transform(self, group):
+        ret = []
+        for name, axis, pruned_idx, transforms in group:
+            src = pruned_idx
+            for trans in transforms:
+                src_start = trans['src_start']
+                src_end = trans['src_end']
+                src_len = src_end - src_start
+                target_start = trans['target_start']
+                target_end = trans['target_end']
+                starts = np.array(range(target_start, target_end, src_len))
+                target = []
+                for idx in src:
+                    if idx >= src_start and idx < src_end:
+                        idx -= src_start
+                        target.extend(list(idx + starts))
+                src = target
+            ret.append((name, axis, src))
+        return ret
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
         """

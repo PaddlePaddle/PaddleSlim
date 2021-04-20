@@ -26,8 +26,6 @@ class VarGroup():
     def _to_dict(self, group):
         ret = {}
         for _name, _axis, _transforms, _op in group:
-            if isinstance(_axis, int):
-                _axis = [_axis]
             if _name not in ret:
                 ret[_name] = []
             # Variable can be pruned on multiple axies.
@@ -38,13 +36,23 @@ class VarGroup():
             })
         return ret
 
-    def find_group(self, var_name, axis):
+    def find_group_by_master(self, var_name, axis):
         for group in self.groups:
-            prune_infos = group.get_prune_info(var_name, axis)
-            if prune_infos is not None:
+            if group.master['name'] == var_name and group.master[
+                    'axis'] == axis:
                 return self._to_dict([(prune_info.name, prune_info.axis,
                                        prune_info.transform, prune_info.op)
                                       for prune_info in group.all_prune_info()])
+
+    def find_group(self, var_name, axis):
+        assert (axis is None or isinstance(axis, int))
+        for group in self.groups:
+            prune_infos = group.get_prune_info(var_name, axis)
+            if prune_infos is not None:
+                return self._to_dict([
+                    (prune_info.name, prune_info.axis, prune_info.transform,
+                     prune_info.op) for prune_info in group.all_prune_info()
+                ]), group.master["name"], group.master["axis"]
 
     def _parse_model(self, model, inputs):
         _logger.debug("Parsing model with input: {}".format(inputs))

@@ -34,8 +34,7 @@ class PruneInfo(object):
         assert (isinstance(axis, int))
         self.name = name
         self.axis = axis
-        if isinstance(self.axis, int):
-            self.axis = [self.axis]
+        assert (isinstance(self.axis, int))
         self.transform = transform
         self.op = op
         self.is_parameter = is_parameter

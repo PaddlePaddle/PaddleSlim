@@ -24,7 +24,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 PRUNE_WORKER = Registry('prune_worker')
 
-SKIPPED_OPS = []
+SKIPPED_OPS = ['shape']
 
 # operators in OPS_UNCHANGE_SHAPE will be visited by default worker
 # who keep shape of output same with shape of input.
@@ -34,7 +34,6 @@ OPS_UNCHANGE_SHAPE += [
     'roi_align',
     'sigmoid',
     'swish',
-    'slice',
     'pad3d',
     'bilinear_interp_v2',
     'dropout',
@@ -107,7 +106,6 @@ class PruneWorker(object):
         cls = PRUNE_WORKER.get(op.type())
         if cls is None:
             if op.type() in SKIPPED_OPS:
-                _logger.warn("Skip operator [{}]".format(op.type()))
                 return
             if op.type() in OPS_UNCHANGE_SHAPE or not self.skip_stranger:
                 cls = PRUNE_WORKER.get("default_worker")
@@ -155,6 +153,7 @@ class conv2d(PruneWorker):
             return worker._prune(var, pruned_axis, pruned_idx)
 
         data_format = self.op.attr("data_format")
+        groups = self.op.attr("groups")
         channel_axis = 1
         if data_format == "NHWC":
             channel_axis = 3
@@ -162,35 +161,28 @@ class conv2d(PruneWorker):
             assert pruned_axis == channel_axis, "The Input of conv2d can only be pruned at channel axis, but got {}; var: {}".format(
                 pruned_axis, var.name())
             filter_var = self.op.inputs("Filter")[0]
-            self._visit(filter_var, 1)
             self.append_pruned_vars(filter_var, 1, pruned_idx)
-            for op in filter_var.outputs():
-                self._prune_op(op, filter_var, 1, pruned_idx)
+            if groups is None or groups == 1:
+                self._visit_and_search(filter_var, 1, pruned_idx)
 
         elif var in self.op.inputs("Filter"):
             assert pruned_axis in [0, 1]
 
             self.append_pruned_vars(var, pruned_axis, pruned_idx)
 
-            for op in var.outputs():
-                self._prune_op(op, var, pruned_axis, pruned_idx)
+            if groups is None or groups == 1 or pruned_axis == 0:
+                self._visit_and_search(var, pruned_axis, pruned_idx)
 
             if pruned_axis == 0:
                 if len(self.op.inputs("Bias")) > 0:
                     self.append_pruned_vars(
                         self.op.inputs("Bias"), channel_axis, pruned_idx)
                 output_var = self.op.outputs("Output")[0]
-                self._visit(output_var, channel_axis)
-                next_ops = output_var.outputs()
-                for op in next_ops:
-                    self._prune_op(op, output_var, channel_axis, pruned_idx)
+                self._visit_and_search(output_var, channel_axis, pruned_idx)
 
             elif pruned_axis == 1:
                 input_var = self.op.inputs("Input")[0]
-                self._visit(input_var, channel_axis)
-                pre_ops = input_var.inputs()
-                for op in pre_ops:
-                    self._prune_op(op, input_var, channel_axis, pruned_idx)
+                self._visit_and_search(input_var, channel_axis, pruned_idx)
         elif var in self.op.outputs("Output"):
             assert pruned_axis == channel_axis, "pruned_axis: {}; var: {}".format(
                 pruned_axis, var.name())
@@ -477,6 +469,113 @@ class sum(PruneWorker):
 
 
 @PRUNE_WORKER.register
+class split(PruneWorker):
+    def __init__(self, op, pruned_params, visited, skip_stranger):
+        super(split, self).__init__(op, pruned_params, visited, skip_stranger)
+        self.in_var = op.inputs("X")[0]
+        self.out_vars = op.outputs("Out")
+        self.axis = op.attr("axis")
+        self.num = op.attr("num")
+
+    def _prune(self, var, pruned_axis, transforms):
+        if var == self.in_var:
+            if pruned_axis != self.axis:
+                for out_var in self.out_vars:
+                    self._visit_and_search(out_var, pruned_axis, transforms)
+            else:
+                raise UnsupportOpError(
+                    "Unsupport pruning input of split operator directly.")
+        elif var in self.out_vars:
+            if pruned_axis != self.axis:
+                self._visit_and_search(self.in_var, pruned_axis, transforms)
+            else:
+                trans = {
+                    "src_start": 0,
+                    "src_end": var.shape()[pruned_axis],
+                    "target_start": 0,
+                    "target_end": self.in_var.shape()[pruned_axis],
+                    "target_len": self.in_var.shape()[pruned_axis]
+                }
+                self._visit_and_search(self.in_var, pruned_axis,
+                                       transforms + [trans])
+
+            for out_var in self.out_vars:
+                if var != out_var:
+                    self._visit_and_search(out_var, pruned_axis, transforms)
+
+
+@PRUNE_WORKER.register
+class concat(PruneWorker):
+    def __init__(self, op, pruned_params, visited, skip_stranger):
+        super(concat, self).__init__(op, pruned_params, visited, skip_stranger)
+
+    def _prune(self, var, pruned_axis, transforms):
+        axis = self.op.attr("axis")
+        if var in self.op.outputs("Out"):
+            self._visit(var, pruned_axis)
+            start = 0
+            if axis == pruned_axis:
+                for _, in_var in enumerate(self.op.inputs("X")):
+                    idx = []
+                    transoform = {
+                        'src_start': start,
+                        'src_end': start + in_var.shape()[pruned_axis],
+                        'target_start': 0,
+                        'target_end': in_var.shape()[pruned_axis],
+                        'target_len': in_var.shape()[pruned_axis],
+                        'stride': 1
+                    }
+                    start += in_var.shape()[pruned_axis]
+
+                    self._visit(in_var, pruned_axis)
+                    pre_ops = in_var.inputs()
+                    for op in pre_ops:
+                        self._prune_op(op, in_var, pruned_axis,
+                                       transforms + [transoform])
+            else:
+                for _, in_var in enumerate(self.op.inputs("X")):
+                    self._visit(in_var, pruned_axis)
+                    pre_ops = in_var.inputs()
+                    for op in pre_ops:
+                        self._prune_op(op, in_var, pruned_axis, transforms)
+        elif var in self.op.inputs("X"):
+            self._visit(var, pruned_axis)
+            if axis == pruned_axis:
+                idx = []
+                target_start = 0
+                for v in self.op.inputs("X"):
+                    if v.name() != var.name():
+                        target_start += v.shape()[pruned_axis]
+                    else:
+                        break
+                target_end = target_start + v.shape()[pruned_axis]
+                out_var = self.op.outputs("Out")[0]
+                next_ops = out_var.outputs()
+
+                transform = {
+                    'src_start': 0,
+                    'src_end': var.shape()[pruned_axis],
+                    'target_start': target_start,
+                    'target_end': target_end,
+                    'target_len': out_var.shape()[pruned_axis],
+                    'stride': 1
+                }
+
+                self._visit(out_var, pruned_axis)
+                for op in next_ops:
+                    # The output of concat can be visited repeatedly
+                    c_visited = {}
+                    self._prune_op(
+                        op,
+                        out_var,
+                        pruned_axis,
+                        transforms + [transform],
+                        visited=c_visited)
+                    # Add nodes searched from concat into global visited array.
+                    self.visited.update(c_visited)
+
+
+@PRUNE_WORKER.register
 class depthwise_conv2d(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(depthwise_conv2d, self).__init__(op, pruned_params, visited,
@@ -504,6 +603,7 @@ class depthwise_conv2d(PruneWorker):
             # It will not pruning number of kernels in depthwise conv2d,
             # so it is not neccesary to search succeed operators. 
             # self._visit_and_search(_filter, 1, transforms)
+            self._visit(_filter, 1)
             self._visit_and_search(_out, channel_axis, transforms)
         elif var == _filter:
             assert (
@@ -521,6 +621,7 @@ class depthwise_conv2d(PruneWorker):
             # It will not pruning number of kernels in depthwise conv2d,
             # so it is not neccesary to search succeed operators. 
             # self._visit_and_search(_filter, 1, transforms)
+            self._visit(_filter, 1)
             self._visit_and_search(_in_var, channel_axis, transforms)
 
 
@@ -551,9 +652,6 @@ class matmul(PruneWorker):
         super(matmul, self).__init__(op, pruned_params, visited, skip_stranger)
 
     def _prune(self, var, pruned_axis, pruned_idx):
-        _logger.info(
-            f"-------------meet matmul------------------{var in self.op.inputs('X')}; {pruned_axis}"
-        )
         x = self.op.inputs("X")[0]
         y = self.op.inputs("Y")[0]
         out = self.op.outputs("Out")[0]

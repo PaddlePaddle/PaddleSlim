@@ -305,13 +305,13 @@ class FilterPruner(Pruner):
         """
         raise NotImplemented("cal_mask is not implemented")
 
-    def prune_var(self, var_name, pruned_dims, pruned_ratio, apply="impretive"):
+    def prune_var(self, var_name, pruned_axis, pruned_ratio, apply="impretive"):
         """
         Pruning a variable.
         Parameters:
             var_name(str): The name of variable.
-            pruned_dims(list<int>): The axies to be pruned. For convolution with format [out_c, in_c, k, k],
-                             'axis=[0]' means pruning filters and 'axis=[0, 1]' means pruning kernels.
+            pruned_axis(int): The axis to be pruned. For convolution with format [out_c, in_c, k, k],
+                             'axis=0' means pruning filters.
             pruned_ratio(float): The ratio of pruned values in one variable.
 
         Returns:
@@ -323,13 +323,16 @@ class FilterPruner(Pruner):
                 f"{var_name} is skiped beacause it is not support for pruning derectly."
             )
             return
-        if isinstance(pruned_dims, int):
-            pruned_dims = [pruned_dims]
-        group = self.var_group.find_group(var_name, pruned_dims)
-        _logger.info("found group with {}: {}".format(var_name, group))
+        group = self.var_group.find_group_by_master(var_name, pruned_axis)
         plan = PruningPlan(self.model.full_name)
         if group is None:
+            _logger.debug(
+                f"Can not find group with master ['name': {var_name}, 'axis': {pruned_axis}]"
+            )
             return plan
+        _logger.info(
+            f"Pruning variable [{var_name}] and its relatives {list(group.keys())}"
+        )
         group_dict = {}
         for sub_layer in self.model.sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
@@ -344,7 +347,7 @@ class FilterPruner(Pruner):
                         })
                     _logger.debug(f"set value of {param.name} into group")
 
-        mask = self.cal_mask(var_name, pruned_ratio, group_dict)
+        mask = self.cal_mask(var_name, pruned_axis, pruned_ratio, group_dict)
         for _name in group_dict:
             # Varibales can be pruned on multiple axies. 
             for _item in group_dict[_name]:
@@ -377,17 +380,11 @@ class FilterPruner(Pruner):
             target_start = transform['target_start']
             target_end = transform['target_end']
             target_len = transform['target_len']
-            stride = transform['stride']
             mask = mask[src_start:src_end]
-
-            mask = mask.repeat(stride) if stride > 1 else mask
-
+            if "stride" in transform:
+                stride = transform['stride']
+                mask = mask.repeat(stride) if stride > 1 else mask
             dst_mask = np.ones([target_len])
-            # for depthwise conv2d with:
-            # input shape:  (1, 4, 32, 32)
-            # filter shape: (32, 1, 3, 3)
-            # groups: 4
-            # if we pruning input channels by 50%(from 4 to 2), the output channel should be 50% * 4 * 8.
             expand = int((target_end - target_start) / len(mask))
             dst_mask[target_start:target_end] = list(mask) * expand
         elif "stride" in transform:

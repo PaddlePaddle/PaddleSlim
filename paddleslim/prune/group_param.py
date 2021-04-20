@@ -12,11 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import copy
 import logging
 from ..core import GraphWrapper
 from ..common import get_logger
-from .prune_walker import PRUNE_WORKER, UnsupportOpError
+from .prune_worker import PRUNE_WORKER, UnsupportOpError
 from .group import Group, PruneInfo
 
 __all__ = ["collect_convs"]
@@ -57,6 +57,7 @@ def collect_convs(params, graph, visited={}, skip_stranger=True):
     if not isinstance(graph, GraphWrapper):
         graph = GraphWrapper(graph)
     groups = []
+    unsupported_warnings = set()
     for _param in params:
         pruned_params = []
         param = graph.var(_param)
@@ -70,7 +71,7 @@ def collect_convs(params, graph, visited={}, skip_stranger=True):
             for op in param.outputs():
                 if op.type() in PRUNE_WORKER._module_dict.keys():
                     cls = PRUNE_WORKER.get(op.type())
-                    walker = cls(op,
+                    worker = cls(op,
                                  pruned_params=pruned_params,
                                  visited=visited,
                                  skip_stranger=skip_stranger)
@@ -78,21 +79,26 @@ def collect_convs(params, graph, visited={}, skip_stranger=True):
         else:
             cls = PRUNE_WORKER.get(target_op.type())
             if cls is None:
-                _logger.warning("No walker for operator: {}".format(
+                _logger.warning("No worker for operator: {}".format(
                     target_op.type()))
                 continue
-            walker = cls(target_op,
+            worker = cls(target_op,
                          pruned_params=pruned_params,
                          visited=visited,
                          skip_stranger=skip_stranger)
         try:
-            walker.prune(param, pruned_axis=0, pruned_idx=[])
+            visited_backup = copy.deepcopy(worker.visited)
+            worker.prune(param, pruned_axis=0, pruned_idx=[])
         except UnsupportOpError as e:
-            _logger.warn(e)
+            visited.clear()
+            visited.update(visited_backup)
+            unsupported_warnings.add(e.args)
         else:
             if len(pruned_params) != 0:
                 group = Group(master=({"name": param.name(), "axis": 0}))
                 for _param, _axis, _transform, _op in pruned_params:
                     group.add(PruneInfo(_param.name(), _axis, _transform, _op))
                 groups.append(group)
+    for warn in unsupported_warnings:
+        _logger.warning(warn)
     return groups

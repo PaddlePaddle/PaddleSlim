@@ -56,7 +56,7 @@ def default_idx_selector(group, scores, ratios):
         if groups is not None and groups > max_groups:
             max_groups = groups
     if max_groups > 1:
-        score = score.reshape([groups, -1])
+        score = score.reshape([max_groups, -1])
         group_size = score.shape[1]
         # get score for each group of channels
         score = np.mean(score, axis=1)
@@ -68,12 +68,13 @@ def default_idx_selector(group, scores, ratios):
     if max_groups > 1:
         correct_idx = []
         for idx in pruned_idx:
-            for offset in range(groups_size):
-                correct_idx.append(idx * groups_size + offset)
+            for offset in range(group_size):
+                correct_idx.append(idx * group_size + offset)
         pruned_idx = correct_idx[:]
     ret = []
     for _prune_info in group.all_prune_info():
-        ret.append((_prune_info.name, _prune_info.axis[0], pruned_idx))
+        ret.append((_prune_info.name, _prune_info.axis, pruned_idx,
+                    _prune_info.transform))
     return ret
 
 
@@ -115,6 +116,6 @@ def optimal_threshold(group, scores, ratios):
 
     idxs = []
     for _prune_info in group.all_prune_info():
-        idxs.append(
-            (_prune_info.name, _prune_info.axis, _prune_info.pruned_idx))
+        idxs.append((_prune_info.name, _prune_info.axis, pruned_idx,
+                     _prune_info.transform))
     return idxs

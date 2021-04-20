@@ -50,8 +50,8 @@ def l1_norm(group, values, graph):
         name = prune_info.name
         if name not in values:
             _logger.warning(
-                "The value of tensor '{}' is not found, so it will not be used when evaluating importance of pruned structures."
-            )
+                "The value of tensor '{}' is not found, so it will not be used when evaluating importance of pruned structures.".
+                format(name))
             continue
         value = values[name]
         axis = prune_info.axis
