@@ -245,11 +245,6 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
         var_node = graph._find_node_by_name(op_node.outputs, out_name)
         _insert_dequant_abs_max_op(graph, scope, var_node, scale_var, config)
 
-    # free float embedding params memory
-    _clear_var(embedding_node.name(), scope)
-    graph.safe_remove_nodes(embedding_node)
-
-
 def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
     """
     quantize embedding using log
@@ -439,31 +434,39 @@ def quant_embedding(program, place, config=None, scope=None):
     """
     config = config or {}
     config = _merge_config(copy.deepcopy(_default_config), config)
-    scope = paddle.static.global_scope() if scope is None else scope
 
+    scope = paddle.static.global_scope() if scope is None else scope
     graph = IrGraph(core.Graph(program.desc), for_test=True)
+
     quantize_params_map = {}
     all_op = graph.all_op_nodes()
+
     for op in all_op:
-        if op.inputs == [] and op.outputs == []:
-            continue
         op_type = op.name()
         if op_type in config['quantize_op_types']:
             weight_name = op.input('W')[0]
             if weight_name in quantize_params_map.values():
                 continue
-            embedding_node = graph._find_node_by_name(op.inputs,
+
+            weight_data = _get_var_tensor(scope, weight_name)
+            if tensor_data.dtype != np.float32:
+                _logger.info("For %s, the dtype of %s isn't fp32, so skip "
+                            "quantizing it." % (op_type, weight_name))
+
+            weight_node = graph._find_node_by_name(op.inputs,
                                                       op.input('W')[0])
-            for op_node in embedding_node.outputs:
+            for op_node in weight_node.outputs:
                 if op_node.name() == 'fused_embedding_seq_pool':
                     _split_embedding_seq_pool(graph, op_node)
+
             if config[op_type]['quantize_type'] == 'abs_max':
                 _quant_embedding_abs_max(graph, scope, place, config[op_type],
-                                         weight_name, embedding_node)
+                                         weight_name, weight_node)
             elif config[op_type]['quantize_type'] == 'log':
                 _quant_embedding_log(graph, scope, place, config[op_type],
-                                     weight_name, embedding_node)
+                                     weight_name, weight_node)
             quantize_params_map[weight_name] = _get_quant_var_name(weight_name)
+
     for op in all_op:
         if op.name() == 'fused_embedding_seq_pool':
             graph.safe_remove_nodes(op)
