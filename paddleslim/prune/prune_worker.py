@@ -28,7 +28,9 @@ SKIPPED_OPS = ['shape']
 
 # operators in OPS_UNCHANGE_SHAPE will be visited by default worker
 # who keep shape of output same with shape of input.
-OPS_UNCHANGE_SHAPE = os.getenv('OPS_UNCHANGE_SHAPE', [])
+OPS_UNCHANGE_SHAPE = os.getenv('OPS_UNCHANGE_SHAPE', None)
+OPS_UNCHANGE_SHAPE = [] if OPS_UNCHANGE_SHAPE is None else OPS_UNCHANGE_SHAPE.strip(
+).split(",")
 OPS_UNCHANGE_SHAPE += [
     'nearest_interp_v2',
     'roi_align',
@@ -38,6 +40,8 @@ OPS_UNCHANGE_SHAPE += [
     'bilinear_interp_v2',
     'dropout',
     'cast',
+    'hard_swish',
+    'hard_sigmoid',
 ]
 
 
