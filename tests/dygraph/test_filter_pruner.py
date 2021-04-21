@@ -99,6 +99,7 @@ class TestFilterPruner(unittest.TestCase):
                 plan = pruner.sensitive_prune(0.01, align=4)
                 for param in net.parameters():
                     if param.name in self._param_names:
+                        print(f"name: {param.name}; shape: {param.shape}")
                         self.assertTrue(param.shape[0] % 4 == 0)
                 pruner.restore()
 

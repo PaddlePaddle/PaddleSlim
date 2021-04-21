@@ -24,7 +24,7 @@ __all__ = ["collect_convs"]
 _logger = get_logger(__name__, level=logging.INFO)
 
 
-def collect_convs(params, graph, visited={}, skip_stranger=True):
+def collect_convs(params, graph, visited=None, skip_stranger=True):
     """Collect convolution layers of graph into groups. The layers in the same group is relative on pruning operation.
     A group is a list of tuple with format (param_name, axis) in which `param_name` is the name of parameter and `axis` is the axis to be pruned on.
 
@@ -56,6 +56,8 @@ def collect_convs(params, graph, visited={}, skip_stranger=True):
     """
     if not isinstance(graph, GraphWrapper):
         graph = GraphWrapper(graph)
+    if visited is None:
+        visited = {}
     groups = []
     unsupported_warnings = set()
     for _param in params:

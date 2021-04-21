@@ -60,12 +60,15 @@ class TestPrune(StaticCase):
 
         self.assertTrue(len(collected_groups) == len(expected_groups))
         for _collected, _expected in zip(collected_groups, expected_groups):
-            for _name, _axis, _ in _collected:
+            for _info in _collected.all_prune_info():
+                _name = _info.name
+                _axis = _info.axis
                 if _name in params:
                     self.assertTrue((_name, _axis) in _expected)
             for _name, _axis in _expected:
                 if _name in params:
-                    self.assertTrue((_name, _axis, []) in _collected)
+                    self.assertTrue(
+                        _collected.get_prune_info(_name, _axis) is not None)
 
 
 if __name__ == '__main__':

@@ -79,15 +79,12 @@ class Pruner():
         Returns:
             tuple: ``(pruned_program, param_backup, param_shape_backup)``. ``pruned_program`` is the pruned program. ``param_backup`` is a dict to backup the values of parameters. ``param_shape_backup`` is a dict to backup the shapes of parameters.
         """
-
-        assert (not self.pruned_weights), "The weights have been pruned once."
         self.pruned_list = []
         graph = GraphWrapper(program.clone())
         param_backup = {} if param_backup else None
         param_shape_backup = {} if param_shape_backup else None
 
         pruned_params = []
-
         groups = collect_convs(params, graph)
         ratios = dict(zip(params, ratios))
 

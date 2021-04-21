@@ -93,6 +93,8 @@ def geometry_median(group, values, graph):
     for prune_info in group.all_prune_info():
         name = prune_info.name
         axis = prune_info.axis
+        if name not in scores:
+            scores[name] = {}
         scores[name][axis] = tmp
     return scores
 
@@ -106,7 +108,7 @@ def bn_scale(group, values, graph):
     # step1: Get first convolution
     conv_weight = group.master["name"]
     axis = group.master["axis"]
-    conv_weight, value, axis, _ = group[0]
+    value = values[conv_weight]
     param_var = graph.var(conv_weight)
     conv_op = param_var.outputs()[0]
 
@@ -120,16 +122,16 @@ def bn_scale(group, values, graph):
 
     # steps3: Find scale of bn
     score = None
-    for prune_info in group.all_prune_info():
-        if prune_info.name not in values:
-            raise SystemExit("Can't find values of scales in BatchNorm.")
-        value = values[prune_info.name]
-        if bn_scale_param == prune_info.name:
-            score = np.abs(value.reshape([-1]))
+    if bn_scale_param not in values:
+        raise SystemExit("Can't find values of scales in BatchNorm.")
+    value = values[bn_scale_param]
+    score = np.abs(value.reshape([-1]))
 
     scores = {}
     for prune_info in group.all_prune_info():
         name = prune_info.name
         axis = prune_info.axis
-        scores[name][axis] = tmp
+        if name not in scores:
+            scores[name] = {}
+        scores[name][axis] = score
     return scores

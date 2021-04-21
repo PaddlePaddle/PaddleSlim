@@ -16,7 +16,7 @@ __all__ = ['Status', 'FilterPruner']
 _logger = get_logger(__name__, logging.INFO)
 
 CONV_OP_TYPE = paddle.nn.Conv2D
-FILTER_DIM = [0]
+FILTER_DIM = 0
 CONV_WEIGHT_NAME = "weight"
 SKIP_LAYERS = (paddle.nn.Conv2DTranspose, paddle.nn.layer.conv.Conv2DTranspose)
 
@@ -171,11 +171,11 @@ class FilterPruner(Pruner):
                     break
         return ratios
 
-    def _round_to(self, ratios, dims=[0], factor=8):
+    def _round_to(self, ratios, dims=0, factor=8):
         ret = {}
         for name in ratios:
             ratio = ratios[name]
-            dim = self._var_shapes[name][dims[0]]
+            dim = self._var_shapes[name][dims]
             remained = round((1 - ratio) * dim / factor) * factor
             if remained == 0:
                 remained = factor
@@ -187,14 +187,14 @@ class FilterPruner(Pruner):
     def get_ratios_by_sensitivity(self,
                                   pruned_flops,
                                   align=None,
-                                  dims=[0],
+                                  dims=0,
                                   skip_vars=[]):
         """
          Get a group of ratios by sensitivities.
          Args:
              pruned_flops(float): The excepted rate of FLOPs to be pruned. It should be in range (0, 1).
              align(int, optional): Round the size of each pruned dimension to multiple of 'align' if 'align' is not None. Default: None.
-             dims(list, optional): The dims to be pruned on. [0] means pruning channels of output for convolution. Default: [0].
+             dims(int, optional): The dims to be pruned on. 0 means pruning channels of output for convolution. Default: 0.
              skip_vars(list, optional): The names of tensors whose sensitivity won't be computed. "None" means skip nothing. Default: None.
 
         Returns:
@@ -202,7 +202,7 @@ class FilterPruner(Pruner):
         """
         base_flops = flops(self.model, self.inputs)
 
-        _logger.debug("Base FLOPs: {}".format(base_flops))
+        _logger.info("Base FLOPs: {}".format(base_flops))
         low = 0.
         up = 1.0
         history = set()
@@ -215,7 +215,6 @@ class FilterPruner(Pruner):
                 ratios = self._round_to(ratios, dims=dims, factor=align)
             plan = self.prune_vars(ratios, axis=dims)
             c_flops = flops(self.model, self.inputs)
-            _logger.debug("FLOPs after pruning: {}".format(c_flops))
             c_pruned_flops = (base_flops - c_flops) / base_flops
             plan.restore(self.model)
             _logger.debug("Seaching ratios, pruned FLOPs: {}".format(
@@ -242,8 +241,8 @@ class FilterPruner(Pruner):
         baseline = None
         ratios = np.arange(0.1, 1, step=0.1)
         for group in self.var_group.groups:
-            var_name, dims = group.master
-
+            var_name = group.master['name']
+            dims = group.master['axis']
             if target_vars is not None and var_name not in target_vars:
                 continue
             if skip_vars is not None and var_name in skip_vars:
@@ -282,7 +281,6 @@ class FilterPruner(Pruner):
         self.restore()
         ratios, pruned_flops = self.get_ratios_by_sensitivity(
             pruned_flops, align=align, dims=FILTER_DIM, skip_vars=skip_vars)
-        _logger.debug("ratios: {}".format(ratios))
         self.plan = self.prune_vars(ratios, FILTER_DIM)
         self.plan._pruned_flops = pruned_flops
         return self.plan
@@ -291,7 +289,7 @@ class FilterPruner(Pruner):
         if self.plan is not None:
             self.plan.restore(self.model)
 
-    def cal_mask(self, var_name, pruned_ratio, group):
+    def cal_mask(self, var_name, pruned_axis, pruned_ratio, group):
         """
         
         {
@@ -318,6 +316,7 @@ class FilterPruner(Pruner):
             plan: An instance of PruningPlan that can be applied on model by calling 'plan.apply(model)'.
 
         """
+        assert (isinstance(pruned_axis, int))
         if var_name in self.skip_vars:
             _logger.warn(
                 f"{var_name} is skiped beacause it is not support for pruning derectly."

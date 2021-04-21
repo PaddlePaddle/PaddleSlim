@@ -44,6 +44,10 @@ OPS_UNCHANGE_SHAPE += [
     'hard_sigmoid',
 ]
 
+OPS_UNSUPPORTED = os.getenv('OPS_UNSUPPORTED', None)
+OPS_UNSUPPORTED = [] if OPS_UNSUPPORTED is None else OPS_UNSUPPORTED.strip(
+).split(",")
+
 
 class UnsupportOpError(Exception):
     pass
@@ -107,6 +111,11 @@ class PruneWorker(object):
             return
         if visited is not None:
             self.visited = visited
+
+        if op.type() in OPS_UNSUPPORTED:
+            raise UnsupportOpError("Unsupported operator named {}".format(
+                op.type()))
+
         cls = PRUNE_WORKER.get(op.type())
         if cls is None:
             if op.type() in SKIPPED_OPS:
