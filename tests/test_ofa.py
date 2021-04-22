@@ -37,6 +37,7 @@ class ModelConv(nn.Layer):
             models = []
             models += [nn.Conv2D(3, 4, 3, padding=1)]
             models += [nn.InstanceNorm2D(4)]
+            models += [nn.SyncBatchNorm(4)]
             models += [ReLU()]
             models += [nn.Conv2D(4, 4, 3, groups=4)]
             models += [nn.InstanceNorm2D(4)]
