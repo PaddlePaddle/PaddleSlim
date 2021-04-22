@@ -75,19 +75,19 @@ class TestSensitivity(StaticCase):
             print("acc_val_mean: {}".format(acc_val_mean))
             return acc_val_mean
 
-#        sensitivity(
-#            eval_program,
-#            place, ["conv4_weights"],
-#            eval_func,
-#            sensitivities_file="./sensitivities_file_0",
-#            pruned_ratios=[0.1, 0.2])
-#
-#        sensitivity(
-#            eval_program,
-#            place, ["conv4_weights"],
-#            eval_func,
-#            sensitivities_file="./sensitivities_file_1",
-#            pruned_ratios=[0.3, 0.4])
+        sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func,
+            sensitivities_file="./sensitivities_file_0",
+            pruned_ratios=[0.1, 0.2])
+
+        sensitivity(
+            eval_program,
+            place, ["conv4_weights"],
+            eval_func,
+            sensitivities_file="./sensitivities_file_1",
+            pruned_ratios=[0.3, 0.4])
 
         params_sens = sensitivity(
             eval_program,
@@ -97,9 +97,9 @@ class TestSensitivity(StaticCase):
             sensitivities_file="./sensitivites_file_params",
             pruned_ratios=[0.1, 0.2, 0.3, 0.4])
 
-        #        sens_0 = load_sensitivities('./sensitivities_file_0')
-        #        sens_1 = load_sensitivities('./sensitivities_file_1')
-        #        sens = merge_sensitive([sens_0, sens_1])
+        sens_0 = load_sensitivities('./sensitivities_file_0')
+        sens_1 = load_sensitivities('./sensitivities_file_1')
+        sens = merge_sensitive([sens_0, sens_1])
         origin_sens = sensitivity(
             eval_program,
             place, ["conv4_weights"],
@@ -108,8 +108,8 @@ class TestSensitivity(StaticCase):
             pruned_ratios=[0.1, 0.2, 0.3, 0.4])
         self.assertTrue(params_sens == origin_sens)
 
+        self.assertTrue(sens == origin_sens)
 
-#        self.assertTrue(sens == origin_sens)
 
 if __name__ == '__main__':
     unittest.main()
