@@ -9,7 +9,7 @@ from .var_group import *
 from .pruning_plan import *
 from .pruner import Pruner
 from paddleslim.analysis import dygraph_flops as flops
-from .var_group import VarGroup
+from .var_group import DygraphPruningCollections
 
 __all__ = ['Status', 'FilterPruner']
 
@@ -59,8 +59,8 @@ class FilterPruner(Pruner):
     def __init__(self, model, inputs, sen_file=None):
         super(FilterPruner, self).__init__(model, inputs)
         self._status = Status(sen_file)
-        # sensitive and var_group are just used in filter pruning
-        self.var_group = VarGroup(model, inputs)
+        # sensitive and collections are just used in filter pruning
+        self.collections = DygraphPruningCollections(model, inputs)
 
         # skip vars in:
         # 1. depthwise conv2d layer
@@ -240,9 +240,9 @@ class FilterPruner(Pruner):
         sensitivities = self._status.sensitivies
         baseline = None
         ratios = np.arange(0.1, 1, step=0.1)
-        for group in self.var_group.groups:
-            var_name = group.master['name']
-            dims = group.master['axis']
+        for _collection in self.collections:
+            var_name = _collection.master_name
+            dims = _collection.master_axis
             if target_vars is not None and var_name not in target_vars:
                 continue
             if skip_vars is not None and var_name in skip_vars:
@@ -289,18 +289,7 @@ class FilterPruner(Pruner):
         if self.plan is not None:
             self.plan.restore(self.model)
 
-    def cal_mask(self, var_name, pruned_axis, pruned_ratio, group):
-        """
-        
-        {
-          var_name: {
-                        'layer': sub_layer,
-                        'var': variable,
-                        'value': np.array([]),
-                        'pruned_dims': [1],
-                      }
-        }
-        """
+    def cal_mask(self, pruned_ratio, collection):
         raise NotImplemented("cal_mask is not implemented")
 
     def prune_var(self, var_name, pruned_axis, pruned_ratio, apply="impretive"):
@@ -322,50 +311,34 @@ class FilterPruner(Pruner):
                 f"{var_name} is skiped beacause it is not support for pruning derectly."
             )
             return
-        group = self.var_group.find_group_by_master(var_name, pruned_axis)
+        collection = self.collections.find_collection_by_master(var_name,
+                                                                pruned_axis)
         plan = PruningPlan(self.model.full_name)
-        if group is None:
+        if collection is None:
             _logger.debug(
-                f"Can not find group with master ['name': {var_name}, 'axis': {pruned_axis}]"
+                f"Can not find collection with master ['name': {var_name}, 'axis': {pruned_axis}]"
             )
             return plan
         _logger.info(
-            f"Pruning variable [{var_name}] and its relatives {list(group.keys())}"
+            f"Pruning variable [{var_name}] and its relatives {list(collection.variables())}"
         )
-        group_dict = {}
-        for sub_layer in self.model.sublayers():
-            for param in sub_layer.parameters(include_sublayers=False):
-                if param.name in group:
-                    group_dict[param.name] = group[param.name]
-                    # Varibales can be pruned on multiple axies.
-                    for _item in group_dict[param.name]:
-                        _item.update({
-                            'layer': sub_layer,
-                            'var': param,
-                            'value': np.array(param.value().get_tensor())
-                        })
-                    _logger.debug(f"set value of {param.name} into group")
 
-        mask = self.cal_mask(var_name, pruned_axis, pruned_ratio, group_dict)
-        for _name in group_dict:
+        mask = self.cal_mask(pruned_ratio, collection)
+        for _detail in collection.all_pruning_details():
             # Varibales can be pruned on multiple axies. 
-            for _item in group_dict[_name]:
-                src_mask = copy.deepcopy(mask)
-                dims = _item['pruned_dims']
-                transforms = _item['transforms']
-                var_shape = _item['var'].shape
-                op = _item['op']
-                if isinstance(dims, int):
-                    dims = [dims]
-                for trans in transforms:
-                    src_mask = self._transform_mask(src_mask, trans)
-                current_mask = src_mask
-                groups = op.attr('groups')
-                if groups is None or groups == 1:
-                    assert len(current_mask) == var_shape[dims[
-                        0]], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; dims: {dims}; var name: {_name}; len(mask): {len(mask)}"
-                plan.add(_name,
-                         PruningMask(dims, current_mask, pruned_ratio, op))
+            src_mask = copy.deepcopy(mask)
+            var_shape = _detail.var.shape()
+            for tran in _detail.transform:
+                src_mask = self._transform_mask(src_mask, tran)
+            current_mask = src_mask
+            groups = _detail.op.attr('groups')
+            if groups is None or groups == 1:
+                assert len(current_mask) == var_shape[
+                    _detail.
+                    axis], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; axis: {_detail.axis}; var name: {_name}; len(mask): {len(mask)}"
+            plan.add(_detail.name,
+                     PruningMask(_detail.axis, current_mask, pruned_ratio,
+                                 _detail.op))
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":

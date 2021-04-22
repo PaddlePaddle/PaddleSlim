@@ -795,9 +795,8 @@ class squeeze2(PruneWorker):
         axes = self.op.attr("axes")
         in_var = self.op.inputs("X")[0]
         out_var = self.op.outputs("Out")[0]
-        if axes is None:
-            axes = [axis for axis in in_var.shape() if axis == 1]
-
+        if axes is None or len(axes) == 0:
+            axes = [i for i, axis in enumerate(in_var.shape()) if axis == 1]
         squeeze_num = 0
         if in_var == var:
             for axis in axes:

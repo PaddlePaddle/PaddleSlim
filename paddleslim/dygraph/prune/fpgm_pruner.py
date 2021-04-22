@@ -15,16 +15,18 @@ class FPGMFilterPruner(FilterPruner):
     def __init__(self, model, inputs, sen_file=None):
         super(FPGMFilterPruner, self).__init__(model, inputs, sen_file=sen_file)
 
-    def cal_mask(self, var_name, pruned_axis, pruned_ratio, group):
-        value = group[var_name][pruned_axis]['value']
+    def cal_mask(self, pruned_ratio, collection):
+        var_name = collection.master_name
+        pruned_axis = collection.master_axis
+        value = collection.values[var_name]
         groups = 1
-        for _name in group:
-            for _item in group[_name]:
-                assert (isinstance(_item['pruned_dims'], int))
-                if _item['pruned_dims'] == 1 and "op" in _item:
-                    groups = _item['op'].attr('groups')
-                    if groups is not None and groups > 1:
-                        break
+        for _detail in collection.all_pruning_details():
+            assert (isinstance(_detail.axis, int))
+            if _detail.axis == 1:
+                _groups = _detail.op.attr('groups')
+                if _groups is not None and _groups > 1:
+                    groups = _groups
+                    break
 
         dist_sum_list = []
         for out_i in range(value.shape[0]):

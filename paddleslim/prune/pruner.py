@@ -18,7 +18,7 @@ import copy
 import numpy as np
 from functools import reduce
 from ..core import VarWrapper, OpWrapper, GraphWrapper
-from .group_param import collect_convs
+from .collections import StaticPruningCollections
 from .criterion import CRITERION
 from .idx_selector import IDX_SELECTOR
 from ..common import get_logger
@@ -85,20 +85,19 @@ class Pruner():
         param_shape_backup = {} if param_shape_backup else None
 
         pruned_params = []
-        groups = collect_convs(params, graph)
+        collections = StaticPruningCollections(params, graph)
         ratios = dict(zip(params, ratios))
-
         values = {}
-        for _group in groups:
-            for _var_name in _group.variables():
+        for _collection in collections:
+            for _var_name in _collection.variables():
                 var = scope.find_var(_var_name)
                 if var is not None:
                     value = np.array(var.get_tensor())
                     values[_var_name] = value
 
-        for _group in groups:
-            scores = self.criterion(_group, values, graph)
-            idx = self.idx_selector(_group, scores,
+        for _collection in collections:
+            scores = self.criterion(_collection, values, graph)
+            idx = self.idx_selector(_collection, scores,
                                     ratios)  # name, axis, idx, transform
             idx = self._transform(idx)
             pruned_params.extend(idx)
@@ -165,9 +164,9 @@ class Pruner():
         self.pruned_weights = (not only_graph)
         return graph.program, param_backup, param_shape_backup
 
-    def _transform(self, group):
+    def _transform(self, items):
         ret = []
-        for name, axis, pruned_idx, transforms in group:
+        for name, axis, pruned_idx, transforms in items:
             src = pruned_idx
             for trans in transforms:
                 src_start = trans['src_start']

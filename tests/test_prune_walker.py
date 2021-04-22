@@ -22,6 +22,7 @@ from static_case import StaticCase
 from layers import conv_bn_layer
 import random
 from paddleslim.core import GraphWrapper
+from paddleslim.prune.prune_worker import PRUNE_WORKER
 
 
 class TestPrune(StaticCase):
@@ -115,6 +116,85 @@ class TestPrune(StaticCase):
                              feed={"image": x,
                                    "label": label},
                              fetch_list=[cost.name])
+
+
+class TestUnsqueeze2(StaticCase):
+    def test_prune(self):
+        main_program = fluid.Program()
+        startup_program = fluid.Program()
+        with fluid.program_guard(main_program, startup_program):
+            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+            conv1 = conv_bn_layer(input, 8, 3, "conv1", act='relu')
+            out = paddle.unsqueeze(conv1, axis=[0])
+
+        graph = GraphWrapper(main_program)
+        cls = PRUNE_WORKER.get("unsqueeze2")
+        out_var = graph.var(out.name)
+        in_var = graph.var(conv1.name)
+        op = out_var.inputs()[0]
+        # pruning out
+        pruned_params = []
+        ret = {}
+        worker = cls(op, pruned_params, {}, True)
+        worker.prune(out_var, 2, [])
+        for var, axis, _, _ in pruned_params:
+            ret[var.name()] = axis
+        self.assertTrue(ret == {
+            'conv1_weights': 0,
+            'conv1_bn_scale': 0,
+            'conv1_bn_offset': 0,
+            'conv1_bn_mean': 0,
+            'conv1_bn_variance': 0
+        })
+
+        # pruning in
+        pruned_params = []
+        ret = {}
+        worker = cls(op, pruned_params, {}, True)
+        worker.prune(in_var, 1, [])
+        for var, axis, _, _ in pruned_params:
+            ret[var.name()] = axis
+        self.assertTrue(ret == {})
+
+
+class TestSqueeze2(StaticCase):
+    def test_prune(self):
+        main_program = fluid.Program()
+        startup_program = fluid.Program()
+        with fluid.program_guard(main_program, startup_program):
+            input = fluid.data(name="image", shape=[1, 3, 16, 16])
+            conv1 = conv_bn_layer(
+                input, 8, 3, "conv1", act='relu')  #[1, 8, 1, 1]
+            out = paddle.squeeze(conv1)
+
+        graph = GraphWrapper(main_program)
+        cls = PRUNE_WORKER.get("squeeze2")
+        out_var = graph.var(out.name)
+        in_var = graph.var(conv1.name)
+        op = out_var.inputs()[0]
+        # pruning out
+        pruned_params = []
+        ret = {}
+        worker = cls(op, pruned_params, {}, True)
+        worker.prune(out_var, 0, [])
+        for var, axis, _, _ in pruned_params:
+            ret[var.name()] = axis
+        self.assertTrue(ret == {
+            'conv1_weights': 0,
+            'conv1_bn_scale': 0,
+            'conv1_bn_offset': 0,
+            'conv1_bn_mean': 0,
+            'conv1_bn_variance': 0
+        })
+
+        # pruning in
+        pruned_params = []
+        ret = {}
+        worker = cls(op, pruned_params, {}, True)
+        worker.prune(in_var, 1, [])
+        for var, axis, _, _ in pruned_params:
+            ret[var.name()] = axis
+        self.assertTrue(ret == {})
 
 
 if __name__ == '__main__':

@@ -51,8 +51,8 @@ def default_idx_selector(group, scores, ratios):
 
     # get max convolution groups attribution
     max_groups = 1
-    for prune_info in group.all_prune_info():
-        groups = prune_info.op.attr("groups")
+    for pruning_details in group.all_pruning_details():
+        groups = pruning_details.op.attr("groups")
         if groups is not None and groups > max_groups:
             max_groups = groups
     if max_groups > 1:
@@ -72,9 +72,9 @@ def default_idx_selector(group, scores, ratios):
                 correct_idx.append(idx * group_size + offset)
         pruned_idx = correct_idx[:]
     ret = []
-    for _prune_info in group.all_prune_info():
-        ret.append((_prune_info.name, _prune_info.axis, pruned_idx,
-                    _prune_info.transform))
+    for _pruning_details in group.all_pruning_details():
+        ret.append((_pruning_details.name, _pruning_details.axis, pruned_idx,
+                    _pruning_details.transform))
     return ret
 
 
@@ -115,7 +115,7 @@ def optimal_threshold(group, scores, ratios):
     pruned_idx = np.squeeze(np.argwhere(score < th))
 
     idxs = []
-    for _prune_info in group.all_prune_info():
-        idxs.append((_prune_info.name, _prune_info.axis, pruned_idx,
-                     _prune_info.transform))
+    for _pruning_details in group.all_pruning_details():
+        idxs.append((_pruning_details.name, _pruning_details.axis, pruned_idx,
+                     _pruning_details.transform))
     return idxs

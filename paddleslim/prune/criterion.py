@@ -46,15 +46,15 @@ def l1_norm(group, values, graph):
     """
     scores = {}
 
-    for prune_info in group.all_prune_info():
-        name = prune_info.name
+    for pruning_details in group.all_pruning_details():
+        name = pruning_details.name
         if name not in values:
             _logger.warning(
                 "The value of tensor '{}' is not found, so it will not be used when evaluating importance of pruned structures.".
                 format(name))
             continue
         value = values[name]
-        axis = prune_info.axis
+        axis = pruning_details.axis
         reduce_dims = [i for i in range(len(value.shape)) if i != axis]
         score = np.sum(np.abs(value), axis=tuple(reduce_dims))
         if name not in scores:
@@ -90,9 +90,9 @@ def geometry_median(group, values, graph):
     tmp = np.array(dist_sum_list)
 
     scores = {}
-    for prune_info in group.all_prune_info():
-        name = prune_info.name
-        axis = prune_info.axis
+    for pruning_details in group.all_pruning_details():
+        name = pruning_details.name
+        axis = pruning_details.axis
         if name not in scores:
             scores[name] = {}
         scores[name][axis] = tmp
@@ -128,9 +128,9 @@ def bn_scale(group, values, graph):
     score = np.abs(value.reshape([-1]))
 
     scores = {}
-    for prune_info in group.all_prune_info():
-        name = prune_info.name
-        axis = prune_info.axis
+    for pruning_details in group.all_pruning_details():
+        name = pruning_details.name
+        axis = pruning_details.axis
         if name not in scores:
             scores[name] = {}
         scores[name][axis] = score

@@ -23,15 +23,12 @@ from .prune_worker import *
 from ..prune import prune_worker
 from .prune_io import *
 from ..prune import prune_io
-from .group_param import *
-from ..prune import group_param
 from .criterion import *
 from ..prune import criterion
-from .group import *
-from ..prune import group
+from .collections import *
+from ..prune import collections
 from .unstructured_pruner import *
 from ..prune import unstructured_pruner
-
 from .idx_selector import *
 from ..prune import idx_selector
 __all__ = []
@@ -41,8 +38,7 @@ __all__ += auto_pruner.__all__
 __all__ += sensitive.__all__
 __all__ += prune_worker.__all__
 __all__ += prune_io.__all__
-__all__ += group_param.__all__
 __all__ += criterion.__all__
 __all__ += unstructured_pruner.__all__
 __all__ += idx_selector.__all__
-__all__ += group.__all__
+__all__ += collections.__all__
