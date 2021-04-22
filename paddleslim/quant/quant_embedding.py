@@ -245,6 +245,7 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
         var_node = graph._find_node_by_name(op_node.outputs, out_name)
         _insert_dequant_abs_max_op(graph, scope, var_node, scale_var, config)
 
+
 def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
     """
     quantize embedding using log
@@ -451,10 +452,10 @@ def quant_embedding(program, place, config=None, scope=None):
             weight_data = _get_var_tensor(scope, weight_name)
             if tensor_data.dtype != np.float32:
                 _logger.info("For %s, the dtype of %s isn't fp32, so skip "
-                            "quantizing it." % (op_type, weight_name))
+                             "quantizing it." % (op_type, weight_name))
 
-            weight_node = graph._find_node_by_name(op.inputs,
-                                                      op.input('W')[0])
+            weight_node = graph._find_node_by_name(op.inputs, op.input('W')[0])
+
             for op_node in weight_node.outputs:
                 if op_node.name() == 'fused_embedding_seq_pool':
                     _split_embedding_seq_pool(graph, op_node)
