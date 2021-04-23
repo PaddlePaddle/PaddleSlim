@@ -108,7 +108,7 @@ quant_post_static
 **使用条件:**
 
 * 有训练好的预测模型
-* 有少量校准数据，比如100~500张图片
+* 有少量校准数据，比如几十到几百张图片
 
 **使用步骤：**
 
@@ -136,10 +136,12 @@ quant_post_static
 - **params_filename(str, optional)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
 - **save_model_filename(str)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``__model__`` 。
 - **save_params_filename(str)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``__params__`` 。
-- **batch_size(int)** - 每个batch的图片数量。默认值为16 。
+- **batch_size(int)** - 每个batch的图片数量。默认值为32 。
 - **batch_nums(int, optional)** - 迭代次数。如果设置为 ``None`` ，则会一直运行到 ``sample_generator`` 迭代结束， 否则，迭代次数为 ``batch_nums``, 也就是说参与对 ``Scale`` 进行校正的样本个数为 ``'batch_nums' * 'batch_size'`` .
 - **scope(fluid.Scope, optional)** - 用来获取和写入 ``Variable`` , 如果设置为 ``None`` ,则使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . 默认值是 ``None`` .
-- **algo(str)** - 量化时使用的算法名称，可为 ``'KL'`` 或者 ``'abs_max'`` 。该参数仅针对激活值的量化，因为参数值的量化使用的方式为 ``'channel_wise_abs_max'`` . 当 ``algo`` 设置为 ``'abs_max'`` 时，使用校正数据的激活值的绝对值的最大值当作 ``Scale`` 值，当设置为 ``'KL'`` 时，则使用KL散度的方法来计算 ``Scale`` 值。默认值为 ``'KL'`` 。
+- **algo(str)** - 量化时使用的算法名称，可为 ``'KL'``，``'mse'``, ``'hist'``， ``'avg'``，或者 ``'abs_max'`` 。该参数仅针对激活值的量化，因为参数值的量化使用的方式为 ``'channel_wise_abs_max'`` . 当 ``algo`` 设置为 ``'abs_max'`` 时，使用校正数据的激活值的绝对值的最大值当作 ``Scale`` 值，当设置为 ``'KL'`` 时，则使用KL散度的方法来计算 ``Scale`` 值,当设置为 ``'avg'`` 时，使用校正数据激活值的最大绝对值平均数作为 ``Scale`` 值,当设置为 ``'hist'`` 时，则使用基于百分比的直方图的方法来计算 ``Scale`` 值, 当设置为 ``'mse'`` 时，则使用搜索最小mse损失的方法来计算 ``Scale`` 值。默认值为 ``'hist'`` 。
+- **hist_percent(float)** -  ``'hist'`` 方法的百分位数。默认值为0.9999。
+- **bias_correction(bool)** -  是否使用 bias correction 算法。默认值为 False 。
 - **quantizable_op_type(list[str])** -  需要量化的 op 类型列表。默认值为 ``["conv2d", "depthwise_conv2d", "mul"]`` 。
 - **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。如果设置为True, 则按照 `量化配置 <#id2>`_  中 ``QUANT_DEQUANT_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES`` 定义的op进行量化。  
 - **weight_bits(int)** - weight的量化比特位数, 默认值为8。
