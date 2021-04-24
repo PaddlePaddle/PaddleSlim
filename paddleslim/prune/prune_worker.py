@@ -24,7 +24,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 PRUNE_WORKER = Registry('prune_worker')
 
-SKIPPED_OPS = ['shape']
+SKIPPED_OPS = ['shape', 'reduce_mean']
 
 # operators in OPS_UNCHANGE_SHAPE will be visited by default worker
 # who keep shape of output same with shape of input.
@@ -43,10 +43,6 @@ OPS_UNCHANGE_SHAPE += [
     'hard_swish',
     'hard_sigmoid',
 ]
-
-OPS_UNSUPPORTED = os.getenv('OPS_UNSUPPORTED', None)
-OPS_UNSUPPORTED = [] if OPS_UNSUPPORTED is None else OPS_UNSUPPORTED.strip(
-).split(",")
 
 
 class UnsupportOpError(Exception):
@@ -70,6 +66,9 @@ class PruneWorker(object):
         self.pruned_params = pruned_params
         self.visited = visited
         self.skip_stranger = skip_stranger
+        self.ops_unsupported = os.getenv('OPS_UNSUPPORTED', None)
+        self.ops_unsupported = [] if self.ops_unsupported is None else self.ops_unsupported.strip(
+        ).split(",")
 
     def prune(self, var, pruned_axis, pruned_idx):
         """ 
@@ -111,8 +110,7 @@ class PruneWorker(object):
             return
         if visited is not None:
             self.visited = visited
-
-        if op.type() in OPS_UNSUPPORTED:
+        if op.type() in self.ops_unsupported:
             raise UnsupportOpError("Unsupported operator named {}".format(
                 op.type()))
 
@@ -158,11 +156,13 @@ class conv2d(PruneWorker):
                 num_filters % num_channels == 0)
 
     def _prune(self, var, pruned_axis, pruned_idx):
-
         if self._is_depthwise_conv(self.op):
             _logger.debug(f"Meet conv2d who is depthwise conv2d actually.")
             worker = depthwise_conv2d(
-                self.op, self.pruned_params, visited=self.visited)
+                self.op,
+                self.pruned_params,
+                visited=self.visited,
+                skip_stranger=self.skip_stranger)
             return worker._prune(var, pruned_axis, pruned_idx)
 
         data_format = self.op.attr("data_format")
@@ -202,7 +202,6 @@ class conv2d(PruneWorker):
 
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 0)
-
             self.append_pruned_vars(filter_var, 0, pruned_idx)
 
             for op in filter_var.outputs():
@@ -619,9 +618,7 @@ class depthwise_conv2d(PruneWorker):
             self._visit(_filter, 1)
             self._visit_and_search(_out, channel_axis, transforms)
         elif var == _filter:
-            assert (
-                pruned_axis == 0,
-                "The filter of depthwise conv2d can only be pruned at axis 0.")
+            assert pruned_axis == 0, "The filter of depthwise conv2d can only be pruned at axis 0."
             self.append_pruned_vars(_filter, 1, transforms)
             self._visit_and_search(_in_var, channel_axis, transforms)
             self._visit_and_search(_out, channel_axis, transforms)
@@ -660,9 +657,10 @@ class mul(PruneWorker):
 
 
 @PRUNE_WORKER.register
-class matmul(PruneWorker):
+class matmul_v2(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
-        super(matmul, self).__init__(op, pruned_params, visited, skip_stranger)
+        super(matmul_v2, self).__init__(op, pruned_params, visited,
+                                        skip_stranger)
 
     def _prune(self, var, pruned_axis, pruned_idx):
         x = self.op.inputs("X")[0]
@@ -703,8 +701,9 @@ class momentum(PruneWorker):
                                        skip_stranger)
 
     def _prune(self, var, pruned_axis, pruned_idx):
+        print(f'----------meet momentum: {var}--------')
         if var in self.op.inputs("Param"):
-            _logger.debug("pruning momentum, var:{}".format(var.name()))
+            _logger.info("pruning momentum, var:{}".format(var.name()))
             velocity_var = self.op.inputs("Velocity")[0]
             self.append_pruned_vars(velocity_var, pruned_axis, pruned_idx)
 
@@ -800,8 +799,7 @@ class squeeze2(PruneWorker):
         squeeze_num = 0
         if in_var == var:
             for axis in axes:
-                assert (axis != pruned_axis,
-                        "Can not pruning axis that will be squeezed.")
+                assert axis != pruned_axis, "Can not pruning axis that will be squeezed."
                 if axis < pruned_axis:
                     squeeze_num += 1
             pruned_axis -= squeeze_num

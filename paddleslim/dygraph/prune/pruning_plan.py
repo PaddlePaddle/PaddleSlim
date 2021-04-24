@@ -21,16 +21,6 @@ class PruningMask():
     def dims(self):
         return self._dims
 
-    @dims.setter
-    def dims(self, value):
-        if not isinstance(value, int):
-            raise ValueError("The dims of PruningMask must be instance of int.")
-        if self._mask is not None:
-            assert len(self._mask.shape) == len(
-                value
-            ), "The length of value must be same with length of mask's shape in current PruningMask instance."
-        self._dims = value
-
     @property
     def mask(self):
         return self._mask

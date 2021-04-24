@@ -16,7 +16,7 @@ sys.path.append("../")
 import unittest
 import paddle.fluid as fluid
 from layers import conv_bn_layer
-from paddleslim.prune import collect_convs
+from paddleslim.prune import StaticPruningCollections
 from static_case import StaticCase
 
 
@@ -41,12 +41,9 @@ class TestPrune(StaticCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
-        collected_groups = collect_convs(
+        collections = StaticPruningCollections(
             ["conv1_weights", "conv2_weights", "conv3_weights", "dummy"],
             main_program)
-        while [] in collected_groups:
-            collected_groups.remove([])
-        print(collected_groups)
 
         params = set([
             param.name for param in main_program.all_parameters()
@@ -58,17 +55,13 @@ class TestPrune(StaticCase):
                             ('conv4_weights', 0), ('conv5_weights', 1)],
                            [('conv3_weights', 0), ('conv4_weights', 1)]]
 
-        self.assertTrue(len(collected_groups) == len(expected_groups))
-        for _collected, _expected in zip(collected_groups, expected_groups):
-            for _info in _collected.all_prune_info():
+        self.assertTrue(len(collections._collections) == len(expected_groups))
+        for _collected, _expected in zip(collections, expected_groups):
+            for _info in _collected.all_pruning_details():
                 _name = _info.name
                 _axis = _info.axis
                 if _name in params:
                     self.assertTrue((_name, _axis) in _expected)
-            for _name, _axis in _expected:
-                if _name in params:
-                    self.assertTrue(
-                        _collected.get_prune_info(_name, _axis) is not None)
 
 
 if __name__ == '__main__':
