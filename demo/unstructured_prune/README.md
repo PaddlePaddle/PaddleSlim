@@ -1,8 +1,10 @@
-# 非结构化稀疏 -- 静态图剪裁（包括按照阈值和比例剪裁两种模式）
+# 非结构化稀疏 -- 静态图剪裁（包括按照阈值和比例剪裁两种模式）示例
 
 ## 简介
 
-在模型压缩中，常见的稀疏方式为结构化和非结构化稀疏，前者在某个特定维度（特征通道、卷积核等等）上进行稀疏化操作；后者以每一个参数为单元进行稀疏化，所以更加依赖于硬件对稀疏后矩阵运算的加速能力。本目录即在PaddlePaddle和PaddleSlim框架下开发的非结构化稀疏算法，MobileNetV1在ImageNet上的稀疏化实验中，剪裁率55.19%，达到无损的表现。
+在模型压缩中，常见的稀疏方式为结构化和非结构化稀疏，前者在某个特定维度（特征通道、卷积核等等）上进行稀疏化操作；后者以每一个参数为单元进行稀疏化，并不会改变参数矩阵的形状，所以更加依赖于硬件对稀疏后矩阵运算的加速能力。本目录即在PaddlePaddle和PaddleSlim框架下开发的非结构化稀疏算法，`MobileNetV1`在`ImageNet`上的稀疏化实验中，剪裁率55.19%，达到无损的表现。
+
+本示例将演示基于不同的剪裁模式（阈值/比例）进行非结构化稀疏。默认会自动下载并使用`MNIST`数据集。当前示例目前支持`MobileNetV1`，使用其他模型可以按照下面的**训练代码示例**进>行API调用。
 
 ## 版本要求
 ```bash
@@ -11,15 +13,36 @@ paddlepaddle>=2.0.0
 paddleslim>=2.1.0
 ```
 
-请参照github安装[paddlepaddle](https://github.com/PaddlePaddle/Paddle)和[paddleslim](https://github.com/PaddlePaddle/PaddleSlim)。
+请参照github安装[PaddlePaddle](https://github.com/PaddlePaddle/Paddle)和[PaddleSlim](https://github.com/PaddlePaddle/PaddleSlim)。
 
-## 使用
+## 数据准备
 
-训练前：
-- 预训练模型下载，并放到某目录下，通过train.py中的--pretrained_model设置。
-- 训练数据下载后，可以通过重写../imagenet_reader.py文件，并在train.py文件中调用实现。
-- 开发者可以通过重写paddleslim.prune.unstructured_pruner.py中的UnstructuredPruner.update_threshold()来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
-- 开发可以在初始化UnstructuredPruner时，传入自定义的skip_params_func，来定义哪些参数不参与剪裁。skip_params_func示例代码如下(路径：paddleslim.prune.unstructured_pruner._get_skip_params())。默认为所有的归一化层的参数不参与剪裁。
+本示例支持`MNIST`和`ImageNet`两种数据。默认情况下，会自动下载并使用`MNIST`数据，如果需要使用`ImageNet`数据。请按以下步骤操作：
+
+- 根据分类模型中[ImageNet数据准备文档](https://github.com/PaddlePaddle/models/tree/develop/PaddleCV/image_classification#%E6%95%B0%E6%8D%AE%E5%87%86%E5%A4%87)下载数据到`PaddleSlim/demo/data/ILSVRC2012`路径下。
+- 使用`train.py`和`evaluate.py`运行脚本时，指定`--data`选项为`imagenet`。
+
+如果想要使用自定义的数据集，需要重写`../imagenet_reader.py`文件，并在`train.py`中调用实现。
+
+## 下载预训练模型
+
+如果使用`ImageNet`数据，建议在预训练模型的基础上进行剪裁，请从[这里](http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar)下载预训练模型。
+
+下载并解压预训练模型到当前路径：
+
+```
+wget http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar
+tar -xf MobileNetV1_pretrained.tar
+```
+
+使用`train.py`脚本时，指定`--pretrained_model`加载预训练模型，`MNIST`数据无需指定。
+
+## 自定义稀疏化方法
+
+默认根据参数的绝对值大小进行稀疏化，且不稀疏归一化层参数。如果开发者想更改相应的逻辑，可按照下述操作：
+
+- 可以通过重写`paddleslim.prune.unstructured_pruner.py`中的`UnstructuredPruner.update_threshold()`来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
+- 可以在初始化`UnstructuredPruner`时，传入自定义的`skip_params_func`，来定义哪些参数不参与剪裁。`skip_params_func`示例代码如下(路径：`paddleslim.prune.unstructured_pruner._get_skip_params()`)。默认为所有的归一化层的参数不参与剪裁。
 
 ```python
 def _get_skip_params(program):
@@ -41,12 +64,25 @@ def _get_skip_params(program):
     return skip_params
 ```
 
-训练：
+## 训练
+
+按照阈值剪裁：
 ```bash
-CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data mnist --lr 0.1 --pruning_mode ratio --ratio=0.5
+CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
 ```
 
-推理：
+按照比例剪裁（训练速度较慢，推荐按照阈值剪裁）：
+```bash
+CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.5
+```
+
+恢复训练(请替代命令中的`dir/to/the/saved/pruned/model`和`INTERRUPTED_EPOCH`)：
+```
+CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
+                                            --pretrained_model dir/to/the/saved/pruned/model --resume_epoch INTERRUPTED_EPOCH
+```
+
+## 推理
 ```bash
 CUDA_VISIBLE_DEVICES=0 python3.7 evaluate.py --pruned_model models/ --data imagenet
 ```
@@ -70,7 +106,8 @@ opt, learning_rate = create_optimizer(args, step_per_epoch)
 opt.minimize(avg_cost)
 
 #STEP1: initialize the pruner
-pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', ratio=0.5, place=place)
+pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='threshold', threshold=0.01, place=place) # 按照阈值剪裁
+# pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', ratio=0.5, place=place) # 按照比例剪裁
 
 exe.run(paddle.static.default_startup_program())
 paddle.fluid.io.load_vars(exe, args.pretrained_model)
@@ -103,7 +140,8 @@ for epoch in range(epochs):
 ```python
 # intialize the model instance in static mode
 # load weights
-print(UnstructuredPruner.total_sparse(paddle.static.default_main_program())) #注意，total_sparse为静态方法(static method)，可以不创建实例(instance)直接调用，方便只做测试的写法。
+print(UnstructuredPruner.total_sparse(paddle.static.default_main_program()))
+#注意，total_sparse为静态方法(static method)，可以不创建实例(instance)直接调用，方便只做测试的写法。
 test()
 ```
 
@@ -113,16 +151,16 @@ python3.7 train.py --h
 python3.7 evaluate.py --h
 ```
 
+## 接口介绍
+
+该示例使用了`paddleslim.unstructured_pruner`工具类，用户接口使用介绍请参考：[API文档]()。
+
+
 ## 实验结果
 
 | 模型 | 数据集 | 压缩方法 | 压缩率| Top-1/Top-5 Acc | lr | threshold | epoch |
 |:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
 | MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
-| MobileNetV1 | ImageNet |   ratio  | -55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.005 | - | 68 |
+| MobileNetV1 | ImageNet |   ratio  | -55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.05 | - | 68 |
 | YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
-| YOLO v3     |  VOC     |threshold | -55.15% | 75.45%(-0.79%) | 0.005 | 0.05 |12.8w|
-
-## TODO
-
-- [ ] 完成实验，验证动态图下的效果，并得到压缩模型。
-- [ ] 扩充衡量parameter重要性的方法（目前仅为绝对值）。
+| YOLO v3     |  VOC     |threshold | -56.50% | 77.02%(+0.78%) | 0.001 | 0.01 |102k iterations|

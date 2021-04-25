@@ -80,6 +80,28 @@ class UnstructuredPruner():
         self.threshold = np.sort(np.abs(params_flatten))[max(
             0, round(self.ratio * total_length) - 1)].item()
 
+    def summarize_weights(self, model, ratio=0.1):
+        """
+        The function is used to get the weights corresponding to a given ratio
+        when you are uncertain about the threshold in __init__() function above.
+        For example, when given 0.1 as ratio, the function will print the weight value,
+        the abs(weights) lower than which count for 10% of the total numbers.
+        Args:
+          - model(paddle.nn.Layer): The model which have all the parameters.
+          - ratio(float): The ratio illustrated above.
+        Return:
+          - threshold(float): a threshold corresponding to the input ratio.
+        """
+        data = []
+        for name, sub_layer in model.named_sublayers():
+            if not self._should_prune_layer(sub_layer):
+                continue
+            for param in sub_layer.parameters(include_sublayers=False):
+                data.append(np.array(param.value().get_tensor()).flatten())
+        data = np.concatenate(data, axis=0)
+        threshold = np.sort(np.abs(data))[max(0, int(ratio * len(data) - 1))]
+        return threshold
+
     def step(self):
         """
         Update the threshold after each optimization step.
@@ -116,7 +138,7 @@ class UnstructuredPruner():
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
         
         Args:
-          - model(Paddle.Model): The sparse model.
+          - model(paddle.nn.Layer): The sparse model.
         Returns:
           - ratio(float): The model's density.
         """
