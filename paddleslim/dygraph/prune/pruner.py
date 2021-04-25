@@ -44,6 +44,7 @@ class Pruner(object):
         Returns:
             plan(PruningPlan): The pruning plan.
         """
+        axis = axis[0] if isinstance(axis, list) else axis
         global_plan = PruningPlan(self.model.full_name)
         for var, ratio in ratios.items():
             if not global_plan.contains(var, axis):

@@ -305,6 +305,8 @@ class FilterPruner(Pruner):
             plan: An instance of PruningPlan that can be applied on model by calling 'plan.apply(model)'.
 
         """
+        pruned_axis = pruned_axis[0] if isinstance(pruned_axis,
+                                                   list) else pruned_axis
         assert (isinstance(pruned_axis, int))
         if var_name in self.skip_vars:
             _logger.warn(
