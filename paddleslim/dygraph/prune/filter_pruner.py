@@ -353,9 +353,6 @@ class FilterPruner(Pruner):
             target_end = transform['target_end']
             target_len = transform['target_len']
             mask = mask[src_start:src_end]
-            if "stride" in transform:
-                stride = transform['stride']
-                mask = mask.repeat(stride) if stride > 1 else mask
             dst_mask = np.ones([target_len])
             expand = int((target_end - target_start) / len(mask))
             dst_mask[target_start:target_end] = list(mask) * expand

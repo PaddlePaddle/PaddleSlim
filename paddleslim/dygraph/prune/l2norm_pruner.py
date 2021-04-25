@@ -33,7 +33,7 @@ class L2NormFilterPruner(FilterPruner):
         scores = np.sqrt(np.sum(np.square(value), axis=tuple(reduce_dims)))
         if groups > 1:
             scores = scores.reshape([groups, -1])
-            scores = np.mean(l1norm, axis=1)
+            scores = np.mean(scores, axis=1)
 
         sorted_idx = scores.argsort()
         pruned_num = int(round(len(sorted_idx) * pruned_ratio))

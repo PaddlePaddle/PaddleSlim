@@ -104,9 +104,69 @@ class TestFilterPruner(unittest.TestCase):
                 pruner.restore()
 
 
+class TestPruningGroupConv2d(unittest.TestCase):
+    def __init__(self, methodName='runTest'):
+        super(TestPruningGroupConv2d, self).__init__(methodName)
+
+    def runTest(self):
+        with fluid.unique_name.guard():
+            net = paddle.vision.models.mobilenet_v1()
+            ratios = {}
+            for param in net.parameters():
+                if len(param.shape) == 4:
+                    ratios[param.name] = 0.5
+            pruners = []
+            pruner = L1NormFilterPruner(net, [1, 3, 128, 128])
+            pruners.append(pruner)
+            pruner = FPGMFilterPruner(net, [1, 3, 128, 128])
+            pruners.append(pruner)
+            pruner = L2NormFilterPruner(net, [1, 3, 128, 128])
+            pruners.append(pruner)
+
+            shapes = {}
+            for pruner in pruners:
+                plan = pruner.prune_vars(ratios, 0)
+                for param in net.parameters():
+                    if param.name not in shapes:
+                        shapes[param.name] = param.shape
+                    assert (shapes[param.name] == param.shape)
+                pruner.restore()
+
+
+#class TestStrideTransform(unittest.TestCase):
+#    def __init__(self, methodName='runTest'):
+#        super(TestStrideTransform, self).__init__(methodName)
+#
+#    def runTest(self):
+#        with fluid.unique_name.guard():
+#            
+#            net = paddle.vision.models.mobilenet_v1()
+#            ratios = {}
+#            for param in net.parameters():
+#                if len(param.shape) == 4:
+#                    ratios[param.name] = 0.5
+#            pruners = []
+#            pruner = L1NormFilterPruner(net, [1, 3, 128, 128])
+#            pruners.append(pruner)
+#            pruner = FPGMFilterPruner(net, [1, 3, 128, 128])
+#            pruners.append(pruner)
+#            pruner = L2NormFilterPruner(net, [1, 3, 128, 128])
+#            pruners.append(pruner)
+#
+#            shapes = {}
+#            for pruner in pruners:
+#                plan = pruner.prune_vars(ratios, 0)
+#                for param in net.parameters():
+#                    if param.name not in shapes:
+#                        shapes[param.name] = param.shape
+#                    assert(shapes[param.name] == param.shape)
+#                pruner.restore()
+
+
 def add_cases(suite):
-    suite.addTest(TestStatus())
-    suite.addTest(TestFilterPruner(param_names=["conv2d_0.w_0"]))
+    #    suite.addTest(TestStatus())
+    #    suite.addTest(TestFilterPruner(param_names=["conv2d_0.w_0"]))
+    suite.addTest(TestPruningGroupConv2d())
 
 
 def load_tests(loader, standard_tests, pattern):

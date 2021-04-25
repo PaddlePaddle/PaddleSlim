@@ -657,10 +657,9 @@ class mul(PruneWorker):
 
 
 @PRUNE_WORKER.register
-class matmul_v2(PruneWorker):
+class matmul(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
-        super(matmul_v2, self).__init__(op, pruned_params, visited,
-                                        skip_stranger)
+        super(matmul, self).__init__(op, pruned_params, visited, skip_stranger)
 
     def _prune(self, var, pruned_axis, pruned_idx):
         x = self.op.inputs("X")[0]
@@ -676,6 +675,13 @@ class matmul_v2(PruneWorker):
             elif pruned_axis == 1:
                 self.append_pruned_vars(y, 1, pruned_idx)
                 self._visit_and_search(y, 1, pruned_idx)
+
+
+@PRUNE_WORKER.register
+class matmul_v2(matmul):
+    def __init__(self, op, pruned_params, visited, skip_stranger):
+        super(matmul_v2, self).__init__(op, pruned_params, visited,
+                                        skip_stranger)
 
 
 @PRUNE_WORKER.register
@@ -701,9 +707,7 @@ class momentum(PruneWorker):
                                        skip_stranger)
 
     def _prune(self, var, pruned_axis, pruned_idx):
-        print(f'----------meet momentum: {var}--------')
         if var in self.op.inputs("Param"):
-            _logger.info("pruning momentum, var:{}".format(var.name()))
             velocity_var = self.op.inputs("Velocity")[0]
             self.append_pruned_vars(velocity_var, pruned_axis, pruned_idx)
 
@@ -715,7 +719,6 @@ class adam(PruneWorker):
 
     def _prune(self, var, pruned_axis, pruned_idx):
         if var in self.op.inputs("Param"):
-            _logger.debug("pruning momentum, var:{}".format(var.name()))
             moment1_var = self.op.inputs("Moment1")[0]
             self.append_pruned_vars(moment1_var, pruned_axis, pruned_idx)
             moment2_var = self.op.inputs("Moment2")[0]
@@ -760,6 +763,7 @@ class flatten_contiguous_range(PruneWorker):
                                                        visited, skip_stranger)
 
     def _prune(self, var, pruned_axis, transforms):
+
         start_axis = self.op.attr("start_axis")
         stop_axis = self.op.attr("stop_axis")
         if var in self.op.inputs("X"):
