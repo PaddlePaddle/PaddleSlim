@@ -140,7 +140,6 @@ def compress(args):
 
     pruner = UnstructuredPruner(
         paddle.static.default_main_program(),
-        batch_size=args.batch_size,
         mode=args.pruning_mode,
         ratio=args.ratio,
         threshold=args.threshold,

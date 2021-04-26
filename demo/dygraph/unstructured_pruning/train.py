@@ -3,7 +3,7 @@ import os
 import sys
 import argparse
 import numpy as np
-from paddleslim.dygraph.prune.unstructured_pruner import UnstructuredPruner
+from paddleslim import UnstructuredPruner
 sys.path.append(
     os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
 from utility import add_arguments, print_arguments
@@ -35,6 +35,7 @@ parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], 
 add_arg('data',             str, "cifar10",                 "Which data to use. 'cifar10' or 'imagenet'.")
 add_arg('log_period',       int, 100,                 "Log period in batches.")
 add_arg('test_period',      int, 1,                 "Test period in epoches.")
+add_arg('pretrained_model', str, None,              "The pretrained model the load. Default: None.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('model_period',     int, 10,             "The period to save model in epochs.")
 add_arg('resume_epoch',     int, -1,             "The epoch to resume training.")
@@ -117,12 +118,13 @@ def compress(args):
 
     # model definition
     model = mobilenet_v1(num_classes=class_dim, pretrained=True)
-    dp_model = paddle.DataParallel(model)
+    if args.pretrained_model is not None:
+        model.set_state_dict(paddle.load(args.pretrained_model))
 
-    opt, learning_rate = create_optimizer(args, step_per_epoch, dp_model)
+    opt, learning_rate = create_optimizer(args, step_per_epoch, model)
 
     def test(epoch):
-        dp_model.eval()
+        model.eval()
         acc_top1_ns = []
         acc_top5_ns = []
         for batch_id, data in enumerate(valid_loader):
@@ -133,7 +135,7 @@ def compress(args):
                 y_data = paddle.unsqueeze(y_data, 1)
             end_time = time.time()
 
-            logits = dp_model(x_data)
+            logits = model(x_data)
             loss = F.cross_entropy(logits, y_data)
             acc_top1 = paddle.metric.accuracy(logits, y_data, k=1)
             acc_top5 = paddle.metric.accuracy(logits, y_data, k=5)
@@ -157,7 +159,7 @@ def compress(args):
                 acc_top5_ns, dtype="object"))))
 
     def train(epoch):
-        dp_model.train()
+        model.train()
         for batch_id, data in enumerate(train_loader):
             start_time = time.time()
             x_data = data[0]
@@ -165,7 +167,7 @@ def compress(args):
             if args.data == 'cifar10':
                 y_data = paddle.unsqueeze(y_data, 1)
 
-            logits = dp_model(x_data)
+            logits = model(x_data)
             loss = F.cross_entropy(logits, y_data)
             acc_top1 = paddle.metric.accuracy(logits, y_data, k=1)
             acc_top5 = paddle.metric.accuracy(logits, y_data, k=5)
@@ -183,7 +185,7 @@ def compress(args):
             pruner.step()
 
     pruner = UnstructuredPruner(
-        dp_model,
+        model,
         mode=args.pruning_mode,
         ratio=args.ratio,
         threshold=args.threshold)
@@ -193,11 +195,11 @@ def compress(args):
             pruner.update_params()
             _logger.info(
                 "The current density of the pruned model is: {}%".format(
-                    round(100 * UnstructuredPruner.total_sparse(dp_model), 2)))
+                    round(100 * UnstructuredPruner.total_sparse(model), 2)))
             test(i)
         if i > args.resume_epoch and i % args.model_period == 0:
             pruner.update_params()
-            paddle.save(dp_model.state_dict(),
+            paddle.save(model.state_dict(),
                         os.path.join(args.model_path, "model-pruned.pdparams"))
             paddle.save(opt.state_dict(),
                         os.path.join(args.model_path, "opt-pruned.pdopt"))

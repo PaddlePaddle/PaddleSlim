@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 sys.path.append(
     os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
-from paddleslim.dygraph.prune.unstructured_pruner import UnstructuredPruner
+from paddleslim import UnstructuredPruner
 from utility import add_arguments, print_arguments
 import paddle.vision.transforms as T
 import paddle.nn.functional as F
