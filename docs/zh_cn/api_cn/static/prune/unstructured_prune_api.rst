@@ -75,7 +75,7 @@ UnstrucuturedPruner
 
   **参数：**
 
-  -  **program(paddle.static.Program)** - 要计算稠密度的目标网络.
+  -  **program(paddle.static.Program)** - 要计算稠密度的目标网络。
 
   **返回：**
   

@@ -23,7 +23,7 @@ UnstructuredPruner
 
 **示例代码：**
 
-此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里<https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
+此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
 
 .. code-block:: python
 
@@ -38,7 +38,7 @@ UnstructuredPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里<https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
+  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
 
   .. code-block:: python
 
@@ -54,7 +54,7 @@ UnstructuredPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里<https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
+  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
 
   .. code-block:: python
 
@@ -78,7 +78,7 @@ UnstructuredPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里<https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
+  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
 
   .. code-block:: python
 
@@ -102,7 +102,7 @@ UnstructuredPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里<https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
+  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
 
   .. code-block:: python
 
