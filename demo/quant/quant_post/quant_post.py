@@ -11,7 +11,7 @@ import numpy as np
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
-from paddleslim.quant import quant_post
+from paddleslim.quant import quant_post_static
 from utility import add_arguments, print_arguments
 import imagenet_reader as reader
 _logger = get_logger(__name__, level=logging.INFO)
@@ -28,6 +28,8 @@ add_arg('model_filename',       str, None,                 "model file name")
 add_arg('params_filename',      str, None,                 "params file name")
 add_arg('algo',         str, 'hist',               "calibration algorithm")
 add_arg('hist_percent',         float, 0.9999,             "The percentile of algo:hist")
+add_arg('bias_correction',         bool, False,             "Whether to use bias correction")
+
 # yapf: enable
 
 
@@ -40,7 +42,7 @@ def quantize(args):
     assert os.path.isdir(args.model_path), "args.model_path must be a dir"
 
     exe = paddle.static.Executor(place)
-    quant_post(
+    quant_post_static(
         executor=exe,
         model_dir=args.model_path,
         quantize_model_path=args.save_path,
@@ -50,7 +52,8 @@ def quantize(args):
         batch_size=args.batch_size,
         batch_nums=args.batch_num,
         algo=args.algo,
-        hist_percent=args.hist_percent)
+        hist_percent=args.hist_percent,
+        bias_correction=args.bias_correction)
 
 
 def main():
