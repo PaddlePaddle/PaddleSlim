@@ -151,11 +151,6 @@ python3.7 train.py --h
 python3.7 evaluate.py --h
 ```
 
-## 接口介绍
-
-该示例使用了`paddleslim.unstructured_pruner`工具类，用户接口使用介绍请参考：[API文档]()。
-
-
 ## 实验结果
 
 | 模型 | 数据集 | 压缩方法 | 压缩率| Top-1/Top-5 Acc | lr | threshold | epoch |

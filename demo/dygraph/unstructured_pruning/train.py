@@ -3,7 +3,7 @@ import os
 import sys
 import argparse
 import numpy as np
-from paddleslim.dygraph.prune.unstructured_pruner import UnstructuredPruner
+from paddleslim import UnstructuredPruner
 sys.path.append(
     os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
 from utility import add_arguments, print_arguments
