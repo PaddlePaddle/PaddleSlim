@@ -27,21 +27,21 @@ IDX_SELECTOR = Registry('idx_selector')
 
 @IDX_SELECTOR.register
 def default_idx_selector(group, scores, ratios):
-    """Get the pruned indexes by scores of master tensor.
+    """Get the pruned indices by scores of master tensor.
 
-    This function return a list of parameters' pruned indexes on given axis.
-    Each element of list is a tuple with format (name, axis, indexes)
+    This function return a list of parameters' pruned indices on given axis.
+    Each element of list is a tuple with format (name, axis, indices)
     in which 'name' is parameter's name and 'axis' is the axis pruning on and
-    `indexes` is indexes to be pruned.
+    `indices` is indices to be pruned.
 
     Args:
        group(Group): A group of pruning operations.
        scores(dict): The key is name of tensor, the value is a dict with axis as key and scores as value.
-       ratios(doct): The pruned ratio of each tensor. The key is name of tensor and the value is the pruned ratio. 
+       ratios(dict): The pruned ratio of each tensor. The key is name of tensor and the value is the pruned ratio. 
      
     Returns:
 
-       list: pruned indexes with format (name, axis, pruned_indexes).
+       list: pruned indices with format (name, axis, pruned_indices).
 
     """
     # sort channels by the master convolution's score
@@ -64,7 +64,7 @@ def default_idx_selector(group, scores, ratios):
     ratio = ratios[name]
     pruned_num = int(round(len(sorted_idx) * ratio))
     pruned_idx = sorted_idx[:pruned_num]
-    # convert indexes of channel groups to indexes of channels.
+    # convert indices of channel groups to indices of channels.
     if max_groups > 1:
         correct_idx = []
         for idx in pruned_idx:
@@ -80,20 +80,20 @@ def default_idx_selector(group, scores, ratios):
 
 @IDX_SELECTOR.register
 def optimal_threshold(group, scores, ratios):
-    """Get the pruned indexes by scores of master tensor.
+    """Get the pruned indices by scores of master tensor.
 
-    This function return a list of parameters' pruned indexes on given axis.
-    Each element of list is a tuple with format (name, axis, indexes)
+    This function return a list of parameters' pruned indices on given axis.
+    Each element of list is a tuple with format (name, axis, indices)
     in which 'name' is parameter's name and 'axis' is the axis pruning on and
-    `indexes` is indexes to be pruned.
+    `indices` is indices to be pruned.
 
     Args:
        group(Group): A group of pruning operations.
        scores(dict): The key is name of tensor, the value is a dict with axis as key and scores as value.
-       ratios(doct): The pruned ratio of each tensor. The key is name of tensor and the value is the pruned ratio. 
+       ratios(dict): The pruned ratio of each tensor. The key is name of tensor and the value is the pruned ratio. 
      
     Returns:
-       list: pruned indexes with format (name, axis, pruned_indexes).
+       list: pruned indices with format (name, axis, pruned_indices).
     """
     # sort channels by the master tensor
     name = group.master["name"]

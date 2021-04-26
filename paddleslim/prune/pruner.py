@@ -186,11 +186,11 @@ class Pruner():
 
     def _prune_tensor(self, tensor, pruned_idx, pruned_axis, lazy=False):
         """
-        Pruning a array by indexes on given axis.
+        Pruning a array by indices on given axis.
 
         Args:
             tensor(numpy.array): The target array to be pruned.
-            pruned_idx(list<int>): The indexes to be pruned.
+            pruned_idx(list<int>): The indices to be pruned.
             pruned_axis(int): The axis of given array to be pruned on. 
             lazy(bool): True means setting the pruned elements to zero.
                         False means remove the pruned elements from memory.

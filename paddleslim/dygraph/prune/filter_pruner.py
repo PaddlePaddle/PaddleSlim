@@ -300,6 +300,8 @@ class FilterPruner(Pruner):
             pruned_axis(int): The axis to be pruned. For convolution with format [out_c, in_c, k, k],
                              'axis=0' means pruning filters.
             pruned_ratio(float): The ratio of pruned values in one variable.
+            apply(str): How to apply pruning plan to graph. It can be 'impretive', 'lazy' or None. None
+                        means just returning an instance of 'PruningPlan' but not applying it to graph.
 
         Returns:
             plan: An instance of PruningPlan that can be applied on model by calling 'plan.apply(model)'.
@@ -310,7 +312,7 @@ class FilterPruner(Pruner):
         assert (isinstance(pruned_axis, int))
         if var_name in self.skip_vars:
             _logger.warn(
-                f"{var_name} is skiped beacause it is not support for pruning derectly."
+                f"{var_name} is skiped beacause it is not supported for pruning directly."
             )
             return
         collection = self.collections.find_collection_by_master(var_name,

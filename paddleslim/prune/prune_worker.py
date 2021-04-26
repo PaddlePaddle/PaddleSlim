@@ -77,7 +77,7 @@ class PruneWorker(object):
         Args:
             var(Variable): The root variable of searching. It can be the input or output of current operator.
             pruned_axis(int): The axis to be pruned of root variable.
-            pruned_idx(int): The indexes to be pruned in `pruned_axis` of root variable.
+            pruned_idx(int): The indices to be pruned in `pruned_axis` of root variable.
         """
         if self._visit(var, pruned_axis):
             self._prune(var, pruned_axis, pruned_idx)

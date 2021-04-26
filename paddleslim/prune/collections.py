@@ -32,8 +32,8 @@ class PruningDetails(object):
     Args:
         var(VarWrapper): The variable to be pruned.
         axis(int): The axis to be pruned on.
-        transform(dict): Information used to convert pruned indexes of master
-                         tensor to indexes of current tensor.
+        transform(dict): Information used to convert pruned indices of master
+                         tensor to indices of current tensor.
         op(OpWrapper): The operator with current tensor as input.
         is_parameter(bool): whether the tensor is parameter. Default: True.
     """
@@ -67,7 +67,7 @@ class PruningCollection(object):
 
     For the network defined above, if weight of conv1 is pruned on 0-axis,
     weight of'conv2' should be pruned on 1-axis. The pruning operations on 0-axis of
-    'conv1' and that on 1-aixs of 'conv2' is a collection. And the {'name': conv1.weight_name, 'axis': 0}
+    'conv1' and those on 1-axis of 'conv2' is a collection. And the {'name': conv1.weight_name, 'axis': 0}
     is the master of current collection.
      
     Args:
@@ -128,11 +128,7 @@ class PruningCollections(object):
     def __iter__(self):
         return iter(self._collections)
 
-    def create_pruning_collections(self,
-                                   params,
-                                   graph,
-                                   visited=None,
-                                   skip_stranger=True):
+    def create_pruning_collections(self, params, graph, skip_stranger=True):
         """Collect convolution layers of graph into groups. The layers in the same group is relative on pruning operation.
         A group is a list of tuple with format (param_name, axis) in which `param_name` is the name of parameter and `axis` is the axis to be pruned on.
     
@@ -164,8 +160,7 @@ class PruningCollections(object):
         """
         if not isinstance(graph, GraphWrapper):
             graph = GraphWrapper(graph)
-        if visited is None:
-            visited = {}
+        visited = {}
         collections = []
         unsupported_warnings = set()
         for _param in params:
@@ -173,7 +168,7 @@ class PruningCollections(object):
             param = graph.var(_param)
             if param is None:
                 _logger.warning(
-                    f"Cann't found relative variables of {_param} because {_param} is not in target program or model. Please make sure {_param} is in your program if you are using static API of PaddlePaddle. And make sure your model in correctly mode and contains {_param} if you are using dynamic API of PaddlePaddle."
+                    f"Couldn't find relative variables of {_param} because {_param} is not in target program or model. Please make sure {_param} is in your program if you are using static API of PaddlePaddle. And make sure your model in correct mode and contains {_param} if you are using dynamic API of PaddlePaddle."
                 )
                 continue
             target_op = param.outputs()[0]
