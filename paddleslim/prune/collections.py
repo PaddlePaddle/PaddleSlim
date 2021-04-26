@@ -215,7 +215,7 @@ class PruningCollections(object):
 
 
 class StaticPruningCollections(PruningCollections):
-    def __init__(self, params, graph, visited=None, skip_stranger=True):
+    def __init__(self, params, graph, skip_stranger=True):
         super(StaticPruningCollections, self).__init__()
         self._collections = self.create_pruning_collections(
-            params, graph, visited=visited, skip_stranger=skip_stranger)
+            params, graph, skip_stranger=skip_stranger)
