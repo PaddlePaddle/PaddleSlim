@@ -3,15 +3,15 @@ import logging
 import paddle
 from paddle.fluid.dygraph import TracedLayer
 from paddleslim.core import GraphWrapper, dygraph2program
-from paddleslim.prune import collect_convs
+from paddleslim.prune import PruningCollections
 from paddleslim.common import get_logger
 
-__all__ = ["VarGroup"]
+__all__ = ["DygraphPruningCollections"]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 
-class VarGroup():
+class DygraphPruningCollections(PruningCollections):
     """
     A tool used to parse dygraph and store information of variables' relationship.
     Args:
@@ -20,40 +20,29 @@ class VarGroup():
     """
 
     def __init__(self, model, inputs):
-        self.groups = []
-        self._parse_model(model, inputs)
-
-    def _to_dict(self, group):
-        ret = {}
-        for _name, _axis, _transforms in group:
-            if isinstance(_axis, int):
-                _axis = [_axis]
-            if _name not in ret:
-                ret[_name] = []
-            # Variable can be pruned on multiple axies.
-            ret[_name].append({'pruned_dims': _axis, 'transforms': _transforms})
-        return ret
-
-    def find_group(self, var_name, axis):
-        for group in self.groups:
-            for _name, _axis, _stride in group:
-                if isinstance(_axis, int):
-                    _axis = [_axis]
-                if _name == var_name and _axis == axis:
-                    return self._to_dict(group)
-
-    def _parse_model(self, model, inputs):
         _logger.debug("Parsing model with input: {}".format(inputs))
         # model can be in training mode, because some model contains auxiliary parameters for training.
         program = dygraph2program(model, inputs=inputs)
         graph = GraphWrapper(program)
-        visited = {}
-        for name, param in model.named_parameters():
-            group = collect_convs([param.name], graph,
-                                  visited)[0]  # [(name, axis, pruned_idx)]
-            if len(group) > 0:
-                self.groups.append(group)
-        _logger.info("Found {} groups.".format(len(self.groups)))
+        params = [
+            _param.name for _param in model.parameters()
+            if len(_param.shape) == 4
+        ]
+        self._collections = self.create_pruning_collections(params, graph)
+        _logger.info("Found {} collections.".format(len(self._collections)))
+
+        _name2values = {}
+        for param in model.parameters():
+            _name2values[param.name] = np.array(param.value().get_tensor())
+        for collection in self._collections:
+            collection.values = _name2values
+
+    def find_collection_by_master(self, var_name, axis):
+        for _collection in self._collections:
+            if _collection.master['name'] == var_name and _collection.master[
+                    'axis'] == axis:
+                return _collection
 
     def __str__(self):
-        return "\n".join([str(group) for group in self.groups])
+        return "\n".join(
+            [str(_collection) for _collection in self._collections])
