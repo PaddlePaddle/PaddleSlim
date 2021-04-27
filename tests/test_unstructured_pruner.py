@@ -42,7 +42,7 @@ class TestUnstructuredPruner(StaticCase):
         exe.run(self.startup_program, scope=self.scope)
 
         self.pruner = UnstructuredPruner(
-            self.main_program, 16, 'ratio', scope=self.scope, place=place)
+            self.main_program, 'ratio', scope=self.scope, place=place)
 
     def test_unstructured_prune(self):
         for param in self.main_program.global_block().all_parameters():
