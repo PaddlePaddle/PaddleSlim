@@ -306,9 +306,12 @@ class SuperConv2D(nn.Conv2D):
             ### ratio before depthwise conv is not equal to 1.0, the shape of the weight
             ### about this depthwise conv is changed, but out_nc is not change,
             ### so need to change bias shape according to the weight_out_nc.
-            ### if groups > 1, the actual output of conv is weight_out_nc * groups,
+            ### if in_nc > groups > 1, the actual output of conv is weight_out_nc * groups,
             ### so slice the shape of bias by weight_out_nc and groups.
-            bias = self.bias[:weight_out_nc * groups]
+            ### if in_nc = groups, slice the shape of bias by weight_out_nc.
+            if groups != in_nc:
+                weight_out_nc = weight_out_nc * groups
+            bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
 
@@ -612,7 +615,9 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             output_padding = 0
 
         if self.bias is not None:
-            bias = self.bias[:weight_out_nc * groups]
+            if groups != in_nc:
+                weight_out_nc = weight_out_nc * groups
+            bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
 

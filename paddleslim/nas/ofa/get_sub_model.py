@@ -167,7 +167,7 @@ def _find_weight_ops(op, graph, weights):
     pre_ops = graph.pre_ops(op)
     for pre_op in pre_ops:
         ### if depthwise conv is one of elementwise's input, 
-        ### consider it in this same search space
+        ### add it into this same search space
         if _is_depthwise(pre_op):
             for inp in pre_op.all_inputs():
                 if inp._var.persistable:
