@@ -10,26 +10,16 @@ __all__ = ['PruningPlan', 'PruningMask']
 
 
 class PruningMask():
-    def __init__(self, dims, mask, ratio):
+    def __init__(self, dims, mask, ratio, op):
+        assert (isinstance(dims, int))
         self._dims = dims
         self._mask = mask
         self._pruned_ratio = ratio
+        self._op = op
 
     @property
     def dims(self):
         return self._dims
-
-    @dims.setter
-    def dims(self, value):
-        if not isinstance(value, collections.Iterator):
-            raise ValueError(
-                "The dims of PruningMask must be instance of collections.Iterator."
-            )
-        if self._mask is not None:
-            assert len(self._mask.shape) == len(
-                value
-            ), "The length of value must be same with length of mask's shape in current PruningMask instance."
-        self._dims = list(value)
 
     @property
     def mask(self):
@@ -128,8 +118,7 @@ class PruningPlan():
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
                         expand_mask_shape = [1] * len(value.shape)
-                        for i in dims:
-                            expand_mask_shape[i] = value.shape[i]
+                        expand_mask_shape[dims] = value.shape[dims]
                         _logger.debug("Expanded mask shape: {}".format(
                             expand_mask_shape))
                         expand_mask = mask.reshape(expand_mask_shape).astype(
@@ -158,13 +147,25 @@ class PruningPlan():
                 if param.name in self._masks:
                     for _mask in self._masks[param.name]:
                         dims = _mask.dims
+                        assert (isinstance(dims, int))
                         mask = _mask.mask
-                        assert len(
-                            dims
-                        ) == 1, "Imperative mode only support for pruning on one dimension, but get dims {} when pruning parameter {}".format(
-                            dims, param.name)
+                        bool_mask = np.array(mask).astype(bool)
                         t_value = param.value().get_tensor()
                         value = np.array(t_value).astype("float32")
+
+                        groups = _mask._op.attr('groups')
+                        if dims == 1 and groups is not None and groups > 1 and len(
+                                value.shape) == 4:
+                            filter_size = value.shape[1]
+                            except_num = np.sum(bool_mask)
+                            assert (except_num % filter_size == 0)
+                            new_groups = int(except_num / filter_size)
+                            sub_layer._origin_groups = sub_layer._groups
+                            sub_layer._groups = new_groups
+                            _logger.info("change groups from {} to {} for {}.".
+                                         format(groups, new_groups, param.name))
+                            continue
+
                         # The name of buffer can not contains "."
                         backup_name = param.name.replace(".", "_") + "_backup"
                         if backup_name not in sub_layer._buffers:
@@ -172,9 +173,8 @@ class PruningPlan():
                                                       paddle.to_tensor(value))
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
-                        bool_mask = np.array(mask).astype(bool)
                         pruned_value = np.apply_along_axis(
-                            lambda data: data[bool_mask], dims[0], value)
+                            lambda data: data[bool_mask], dims, value)
                         p = t_value._place()
                         if p.is_cpu_place():
                             place = paddle.CPUPlace()
@@ -186,18 +186,6 @@ class PruningPlan():
                             place = paddle.CUDAPlace(p.gpu_device_id())
 
                         t_value.set(pruned_value, place)
-                        if isinstance(
-                                sub_layer, paddle.nn.layer.conv.Conv2D
-                        ) and sub_layer._groups > 1 and len(param.shape) == 4:
-                            assert param.shape[
-                                1] == 1, "It just supports depthwise conv2d when groups > 1."
-                            new_groups = int(bool_mask.sum() *
-                                             sub_layer._groups / len(bool_mask))
-                            _logger.debug(
-                                "Update groups of depthwise conv2d form {} to {}".
-                                format(sub_layer._groups, new_groups))
-                            sub_layer._origin_groups = sub_layer._groups
-                            sub_layer._groups = new_groups
 
                     # for training
                     if param.trainable:
