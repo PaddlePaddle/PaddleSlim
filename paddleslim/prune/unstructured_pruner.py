@@ -12,7 +12,6 @@ class UnstructuredPruner():
 
     Args:
       - program(paddle.static.Program): The model to be pruned.
-      - batch_size(int): batch size.
       - mode(str): the mode to prune the model, must be selected from 'ratio' and 'threshold'.
       - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.5.
       - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-5.
@@ -23,7 +22,6 @@ class UnstructuredPruner():
 
     def __init__(self,
                  program,
-                 batch_size,
                  mode,
                  ratio=0.5,
                  threshold=1e-5,
