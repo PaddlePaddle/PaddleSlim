@@ -116,7 +116,7 @@ class TestOFAV2Export(unittest.TestCase):
 class TestShortcutSkiplayers(unittest.TestCase):
     def setUp(self):
         model = ModelShortcut()
-        sp_net_config = supernet(expand_ratio=[1.0])
+        sp_net_config = supernet(expand_ratio=[0.5, 1.0])
         self.model = Convert(sp_net_config).convert(model)
         self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
         self.init_config()
@@ -128,6 +128,10 @@ class TestShortcutSkiplayers(unittest.TestCase):
         self.run_config = RunConfig(**default_run_config)
 
     def test_shortcut(self):
+        self.ofa_model.set_epoch(0)
+        self.ofa_model.set_task('expand_ratio')
+        for i in range(5):
+            self.ofa_model(self.images)
         assert list(self.ofa_model._ofa_layers.keys()) == ['branch2.0', 'out.0']
 
 
