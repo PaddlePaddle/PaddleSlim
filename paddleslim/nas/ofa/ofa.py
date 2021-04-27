@@ -540,6 +540,14 @@ class OFA(OFABase):
         else:
             return False
 
+    def _clear_width(self, key):
+        if 'expand_ratio' in self._ofa_layers[key]:
+            self._ofa_layers[key].pop('expand_ratio')
+        elif 'channel' in self._ofa_layers[key]:
+            self._ofa_layers[key].pop('channel')
+        if len(self._ofa_layers[key]) == 0:
+            self._ofa_layers.pop(key)
+
     def _clear_search_space(self, *inputs, **kwargs):
         """ find shortcut in model, and clear up the search space """
         input_shapes = []
@@ -556,7 +564,8 @@ class OFA(OFABase):
             self.model, DataParallel) else self.model
         _st_prog = dygraph2program(
             model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss = check_search_space(GraphWrapper(_st_prog))
+        self._same_ss, self._depthwise_conv = check_search_space(
+            GraphWrapper(_st_prog))
 
         if self._same_ss != None:
             self._param2key = {}
@@ -580,7 +589,8 @@ class OFA(OFABase):
 
                     ### if skip_layers and same ss both have same layer, 
                     ### the layers related to this layer need to add to skip_layers 
-                    if self._param2key[key] in self._skip_layers:
+                    if self._skip_layers != None and self._param2key[
+                            key] in self._skip_layers:
                         self._skip_layers += [self._param2key[sk] for sk in ss]
                         per_ss = []
                         break
@@ -597,19 +607,23 @@ class OFA(OFABase):
 
             self._same_ss = tmp_same_ss
 
-            for skip_layer in self._skip_layers:
-                if skip_layer in self._ofa_layers.keys():
-                    self._ofa_layers.pop(skip_layer)
+            ### clear layer in ofa_layers set by skip layers
+            if self._skip_layers != None:
+                for skip_layer in self._skip_layers:
+                    if skip_layer in self._ofa_layers.keys():
+                        self._ofa_layers.pop(skip_layer)
 
             for per_ss in self._same_ss:
                 for ss in per_ss[1:]:
-                    if 'expand_ratio' in self._ofa_layers[self._param2key[ss]]:
-                        self._ofa_layers[self._param2key[ss]].pop(
-                            'expand_ratio')
-                    elif 'channel' in self._ofa_layers[self._param2key[ss]]:
-                        self._ofa_layers[self._param2key[ss]].pop('channel')
-                    if len(self._ofa_layers[self._param2key[ss]]) == 0:
-                        self._ofa_layers.pop(self._param2key[ss])
+                    self._clear_width(self._param2key[ss])
+
+            ### clear depthwise conv from search space because of its output channel cannot change
+            for name, sublayer in model_to_traverse.named_sublayers():
+                if isinstance(sublayer, BaseBlock):
+                    for param in sublayer.parameters():
+                        if param.name in self._depthwise_conv and name in self._ofa_layers.keys(
+                        ):
+                            self._clear_width(name)
 
     def _broadcast_ss(self):
         """ broadcast search space after random sample."""

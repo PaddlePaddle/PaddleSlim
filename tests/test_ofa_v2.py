@@ -48,11 +48,26 @@ class ModelShortcut(nn.Layer):
         self.branch1 = nn.Sequential(
             nn.Conv2D(12, 12, 1),
             nn.BatchNorm2D(12),
-            nn.ReLU(), nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+            nn.ReLU(),
+            nn.Conv2D(
+                12, 12, 1, groups=12),
+            nn.BatchNorm2D(12),
+            nn.ReLU(),
+            nn.Conv2D(
+                12, 12, 1, groups=12),
+            nn.BatchNorm2D(12),
+            nn.ReLU())
         self.branch2 = nn.Sequential(
             nn.Conv2D(12, 12, 1),
             nn.BatchNorm2D(12),
-            nn.ReLU(), nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+            nn.ReLU(),
+            nn.Conv2D(
+                12, 12, 1, groups=12),
+            nn.BatchNorm2D(12),
+            nn.ReLU(),
+            nn.Conv2D(12, 12, 1),
+            nn.BatchNorm2D(12),
+            nn.ReLU())
         self.out = nn.Sequential(
             nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
 
@@ -109,12 +124,11 @@ class TestShortcutSkiplayers(unittest.TestCase):
         self.ofa_model._clear_search_space(self.images)
 
     def init_config(self):
-        default_run_config = {'skip_layers': ['branch1.3']}
+        default_run_config = {'skip_layers': ['branch1.6']}
         self.run_config = RunConfig(**default_run_config)
 
     def test_shortcut(self):
-        assert list(self.ofa_model._ofa_layers.keys(
-        )) == ['branch1.0', 'branch2.0', 'out.0']
+        assert list(self.ofa_model._ofa_layers.keys()) == ['branch2.0', 'out.0']
 
 
 class TestShortcutSkiplayersCase1(TestShortcutSkiplayers):
@@ -125,12 +139,11 @@ class TestShortcutSkiplayersCase1(TestShortcutSkiplayers):
 
 class TestShortcutSkiplayersCase2(TestShortcutSkiplayers):
     def init_config(self):
-        default_run_config = {'skip_layers': ['branch1.0']}
+        default_run_config = {'skip_layers': ['branch2.0']}
         self.run_config = RunConfig(**default_run_config)
 
     def test_shortcut(self):
-        assert list(self.ofa_model._ofa_layers.keys(
-        )) == ['conv1.0', 'branch2.0', 'out.0']
+        assert list(self.ofa_model._ofa_layers.keys()) == ['conv1.0', 'out.0']
 
 
 if __name__ == '__main__':
