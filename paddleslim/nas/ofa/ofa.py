@@ -108,7 +108,9 @@ class OFABase(Layer):
         if getattr(self, 'current_config', None) != None:
             ### if block is fixed, donnot join key into candidate
             ### concrete config as parameter in kwargs
-            if block.fixed == False:
+            if block.fixed == False and (
+                    self._skip_layers != None and
+                    self._key2name[block.key] not in self._skip_layers):
                 assert self._key2name[
                     block.
                     key] in self.current_config, 'DONNT have {} layer in config.'.format(
@@ -177,6 +179,7 @@ class OFA(OFABase):
         self._mapping_layers = None
         self._build_ss = False
         self._broadcast = False
+        self._skip_layers = None
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
@@ -228,6 +231,11 @@ class OFA(OFABase):
                     assert isinstance(
                         run_config.init_learning_rate[idx], list
                     ), "each candidate in init_learning_rate must be list"
+
+        ### remove skip layers in search space
+        if self.run_config != None and getattr(self.run_config, 'skip_layers',
+                                               None) != None:
+            self._skip_layers = self.run_config.skip_layers
 
         ### =================  add distill prepare ======================
         if self.distill_config != None:
@@ -316,8 +324,6 @@ class OFA(OFABase):
     def _remove_hook_after_forward(self):
         for hook in self.hooks:
             hook.remove()
-        self.hooks = []
-        self.Tacts, self.Sacts = {}, {}
 
     def _compute_epochs(self):
         if getattr(self, 'epoch', None) == None:
@@ -572,15 +578,28 @@ class OFA(OFABase):
                     if key not in self._param2key.keys():
                         continue
 
+                    ### if skip_layers and same ss both have same layer, 
+                    ### the layers related to this layer need to add to skip_layers 
+                    if self._param2key[key] in self._skip_layers:
+                        self._skip_layers += [self._param2key[sk] for sk in ss]
+                        per_ss = []
+                        break
+
                     if self._param2key[key] in self._ofa_layers.keys() and \
                        ('expand_ratio' in self._ofa_layers[self._param2key[key]] or \
                        'channel' in self._ofa_layers[self._param2key[key]]):
                         per_ss.append(key)
                     else:
                         _logger.info("{} not in ss".format(key))
+
                 if len(per_ss) != 0:
                     tmp_same_ss.append(per_ss)
+
             self._same_ss = tmp_same_ss
+
+            for skip_layer in self._skip_layers:
+                if skip_layer in self._ofa_layers.keys():
+                    self._ofa_layers.pop(skip_layer)
 
             for per_ss in self._same_ss:
                 for ss in per_ss[1:]:
@@ -591,15 +610,6 @@ class OFA(OFABase):
                         self._ofa_layers[self._param2key[ss]].pop('channel')
                     if len(self._ofa_layers[self._param2key[ss]]) == 0:
                         self._ofa_layers.pop(self._param2key[ss])
-
-        if self.run_config != None and getattr(self.run_config, 'skip_layers',
-                                               None) != None:
-            for skip_layer in self.run_config.skip_layers:
-                if skip_layer in self._ofa_layers.keys():
-                    self._ofa_layers.pop(skip_layer)
-                else:
-                    _logger.info('skip layer: {} is not in search space.'.
-                                 format(skip_layer))
 
     def _broadcast_ss(self):
         """ broadcast search space after random sample."""
