@@ -128,7 +128,18 @@ class PruningCollections(object):
     def __iter__(self):
         return iter(self._collections)
 
-    def create_pruning_collections(self, params, graph, skip_stranger=True):
+    def _find_leaves(self, graph):
+        ret = []
+        for _var in graph.vars():
+            if len(_var.outputs()) == 0:
+                ret.append(_var.name())
+        return ret
+
+    def create_pruning_collections(self,
+                                   params,
+                                   graph,
+                                   skip_stranger=True,
+                                   skip_vars=None):
         """Collect convolution layers of graph into groups. The layers in the same group is relative on pruning operation.
         A group is a list of tuple with format (param_name, axis) in which `param_name` is the name of parameter and `axis` is the axis to be pruned on.
     
@@ -153,6 +164,7 @@ class PruningCollections(object):
            params(list): A list of convolution layer's parameter names. It will collect all the groups that contains anyone of these parameters.
            graph(paddle.static.Program | GraphWrapper): The graph used to search the groups.
            skip_stranger(bool): Whether to skip current tensor when visit unregistered operators that not in OPS_UNCHANGE_SHAPE. False means visit all unregistered operators by default worker. Default: True.
+           skip_vars(list<str>): Names of variables that will be skipped. None means skipping all leaves in given graph. '[]' means skipping nothing. Default: None.
     
         Returns:
            list<Group>: The groups.
@@ -160,6 +172,13 @@ class PruningCollections(object):
         """
         if not isinstance(graph, GraphWrapper):
             graph = GraphWrapper(graph)
+
+        if skip_vars is None:
+            skip_vars = self._find_leaves(graph)
+            _logger.warning(
+                "Leaves {} will be skipped when parsing graph. You can set skipped variables by option 'skip_vars'.".
+                format(skip_vars))
+
         visited = {}
         collections = []
         unsupported_warnings = set()
@@ -180,7 +199,6 @@ class PruningCollections(object):
                                      pruned_params=pruned_params,
                                      visited=visited,
                                      skip_stranger=skip_stranger)
-                        break
             else:
                 cls = PRUNE_WORKER.get(target_op.type())
                 if cls is None:
@@ -191,6 +209,7 @@ class PruningCollections(object):
                              pruned_params=pruned_params,
                              visited=visited,
                              skip_stranger=skip_stranger)
+                worker.skip_vars = skip_vars
             try:
                 visited_backup = copy.deepcopy(worker.visited)
                 worker.prune(param, pruned_axis=0, pruned_idx=[])
