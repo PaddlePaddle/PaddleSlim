@@ -156,7 +156,7 @@ def _is_depthwise(op):
     elif 'conv' in op.type():
         for inp in op.all_inputs():
             if not inp._var.persistable and op.attr('groups') == inp._var.shape[
-                    1]:
+                    1] and inp._var.shape[0] == inp._var.shape[1]:
                 return True
     return False
 
@@ -179,6 +179,7 @@ def _find_weight_ops(op, graph, weights):
                     weights.append(inp._var.name)
             return weights
         return _find_weight_ops(pre_op, graph, weights)
+    return weights
 
 
 def _find_pre_elementwise_add(op, graph):
