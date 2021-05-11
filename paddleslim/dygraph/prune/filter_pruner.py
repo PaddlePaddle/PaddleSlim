@@ -258,7 +258,7 @@ class FilterPruner(Pruner):
                     continue
                 if baseline is None:
                     baseline = eval_func()
-                plan = self.prune_var(var_name, dims, ratio, apply="lazy")
+                plan = self.prune_var(var_name, dims, ratio)
                 pruned_metric = eval_func()
                 loss = (baseline - pruned_metric) / baseline
                 _logger.info("pruned param: {}; {}; loss={}".format(
