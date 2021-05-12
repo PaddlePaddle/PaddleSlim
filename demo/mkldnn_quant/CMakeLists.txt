@@ -40,6 +40,7 @@ if(WITH_MKL)
     set(MKLDNN_LIB ${MKLDNN_PATH}/lib/libmkldnn.so.0)
   endif()
 else()
+  include_directories("${PADDLE_LIB}/third_party/install/openblas/include")
   set(MATH_LIB ${PADDLE_LIB}/third_party/install/openblas/lib/libopenblas${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
 
