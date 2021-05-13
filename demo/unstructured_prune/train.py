@@ -105,7 +105,6 @@ def compress(args):
     image = paddle.static.data(
         name='image', shape=[None] + image_shape, dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-
     batch_size_per_card = int(args.batch_size / len(places))
     train_loader = paddle.io.DataLoader(
         train_dataset,
@@ -176,12 +175,7 @@ def compress(args):
         for batch_id, data in enumerate(valid_loader):
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(
-                program,
-                feed={
-                    "image": data[0].get('image'),
-                    "label": data[0].get('label')
-                },
-                fetch_list=[acc_top1.name, acc_top5.name])
+                program, feed=data, fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
             if batch_id % args.log_period == 0:
                 _logger.info(
@@ -201,20 +195,16 @@ def compress(args):
         train_run_cost = 0.0
         total_samples = 0
         reader_start = time.time()
-
         for batch_id, data in enumerate(train_loader):
             train_reader_cost += time.time() - reader_start
             train_start = time.time()
             loss_n, acc_top1_n, acc_top5_n = exe.run(
                 train_program,
-                feed={
-                    "image": data[0].get('image'),
-                    "label": data[0].get('label')
-                },
+                feed=data,
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
             pruner.step()
             train_run_cost += time.time() - train_start
-            total_samples += batch_size_per_card
+            total_samples += args.batch_size
             loss_n = np.mean(loss_n)
             acc_top1_n = np.mean(acc_top1_n)
             acc_top5_n = np.mean(acc_top5_n)
@@ -232,7 +222,6 @@ def compress(args):
                 train_run_cost = 0.0
                 total_samples = 0
             learning_rate.step()
-            batch_id += 1
             reader_start = time.time()
 
     build_strategy = paddle.static.BuildStrategy()

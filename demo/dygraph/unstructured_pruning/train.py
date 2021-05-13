@@ -76,8 +76,16 @@ def create_optimizer(args, step_per_epoch, model):
 
 
 def compress(args):
-    dist.init_parallel_env()
-    paddle.set_device('gpu' if args.use_gpu else 'cpu')
+    if args.use_gpu:
+        place = paddle.set_device('gpu')
+    else:
+        place = paddle.set_device('cpu')
+
+    trainer_num = paddle.distributed.get_world_size()
+    use_data_parallel = trainer_num != 1
+    if use_data_parallel:
+        dist.init_parallel_env()
+
     train_reader = None
     test_reader = None
     if args.data == "imagenet":
@@ -96,30 +104,32 @@ def compress(args):
         class_dim = 10
     else:
         raise ValueError("{} is not supported.".format(args.data))
-    places = paddle.static.cuda_places(
-    ) if args.use_gpu else paddle.static.cpu_places()
+
+    batch_sampler = paddle.io.DistributedBatchSampler(
+        train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
+
     train_loader = paddle.io.DataLoader(
         train_dataset,
-        places=places,
-        drop_last=True,
-        batch_size=args.batch_size // ParallelEnv().nranks,
-        shuffle=True,
+        places=place,
+        batch_sampler=batch_sampler,
         return_list=True,
         num_workers=args.num_workers,
         use_shared_memory=True)
+
     valid_loader = paddle.io.DataLoader(
         val_dataset,
-        places=places,
+        places=place,
         drop_last=False,
         return_list=True,
         batch_size=64,
         shuffle=False,
         use_shared_memory=True)
-    step_per_epoch = int(np.ceil(len(train_dataset) * 1. / args.batch_size))
-
+    step_per_epoch = int(
+        np.ceil(len(train_dataset) / args.batch_size / ParallelEnv().nranks))
     # model definition
-    # model = mobilenet_v1(num_classes=class_dim, pretrained=True)
-    model = paddle.DataParallel(model)
+    model = mobilenet_v1(num_classes=class_dim, pretrained=True)
+    if ParallelEnv().nranks > 1:
+        model = paddle.DataParallel(model)
 
     if args.pretrained_model is not None:
         model.set_state_dict(paddle.load(args.pretrained_model))
@@ -187,7 +197,7 @@ def compress(args):
             opt.clear_grad()
             pruner.step()
             train_run_cost += time.time() - train_start
-            total_samples += args.batch_size // ParallelEnv().nranks
+            total_samples += args.batch_size * ParallelEnv().nranks
 
             if batch_id % args.log_period == 0:
                 _logger.info(
