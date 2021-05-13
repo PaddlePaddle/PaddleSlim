@@ -107,6 +107,7 @@ class TestSensitivity(StaticCase):
             sensitivities_file="./sensitivities_file_2",
             pruned_ratios=[0.1, 0.2, 0.3, 0.4])
         self.assertTrue(params_sens == origin_sens)
+
         self.assertTrue(sens == origin_sens)
 
 
