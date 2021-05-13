@@ -258,7 +258,7 @@ class FilterPruner(Pruner):
                     continue
                 if baseline is None:
                     baseline = eval_func()
-                plan = self.prune_var(var_name, dims, ratio, apply="lazy")
+                plan = self.prune_var(var_name, dims, ratio)
                 pruned_metric = eval_func()
                 loss = (baseline - pruned_metric) / baseline
                 _logger.info("pruned param: {}; {}; loss={}".format(
@@ -333,13 +333,14 @@ class FilterPruner(Pruner):
             src_mask = copy.deepcopy(mask)
             var_shape = _detail.var.shape()
             for tran in _detail.transform:
+
                 src_mask = self._transform_mask(src_mask, tran)
             current_mask = src_mask
             groups = _detail.op.attr('groups')
             if groups is None or groups == 1:
                 assert len(current_mask) == var_shape[
                     _detail.
-                    axis], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; axis: {_detail.axis}; var name: {_name}; len(mask): {len(mask)}"
+                    axis], f"The length of current_mask must be equal to the size of dimension to be pruned on. But get: len(current_mask): {len(current_mask)}; var_shape: {var_shape}; axis: {_detail.axis}; var name: {_detail.name}; len(mask): {len(mask)}"
             plan.add(_detail.name,
                      PruningMask(_detail.axis, current_mask, pruned_ratio,
                                  _detail.op))

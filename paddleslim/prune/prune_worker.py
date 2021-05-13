@@ -50,7 +50,12 @@ class UnsupportOpError(Exception):
 
 
 class PruneWorker(object):
-    def __init__(self, op, pruned_params, visited, skip_stranger=True):
+    def __init__(self,
+                 op,
+                 pruned_params,
+                 visited,
+                 skip_stranger=True,
+                 skip_vars=[]):
         """
         A wrapper of operator used to infer the information of all the related variables.
 
@@ -59,6 +64,7 @@ class PruneWorker(object):
             pruned_params(list): The list to store the information of pruning that infered by worker.
             visited(dict): The auxiliary dict to record the visited operators and variables. The key is a encoded string of operator id and variable name.
             skip_stranger(bool): Whether to raise exception when visit unregistered operators that not in OPS_UNCHANGE_SHAPE. False means visit all unregistered operators by default waorker. Default: True.
+            skip_vars(list<str>): The variables in 'skip_vars' and their relatives will be skipped. Default: [].
 
         Return: A instance of PruneWorker.
         """
@@ -69,6 +75,7 @@ class PruneWorker(object):
         self.ops_unsupported = os.getenv('OPS_UNSUPPORTED', None)
         self.ops_unsupported = [] if self.ops_unsupported is None else self.ops_unsupported.strip(
         ).split(",")
+        self.skip_vars = skip_vars
 
     def prune(self, var, pruned_axis, pruned_idx):
         """ 
@@ -79,6 +86,9 @@ class PruneWorker(object):
             pruned_axis(int): The axis to be pruned of root variable.
             pruned_idx(int): The indices to be pruned in `pruned_axis` of root variable.
         """
+        if var.name() in self.skip_vars:
+            raise UnsupportOpError("Variable {} was skipped.".format(var.name(
+            )))
         if self._visit(var, pruned_axis):
             self._prune(var, pruned_axis, pruned_idx)
 
@@ -130,6 +140,7 @@ class PruneWorker(object):
             f"visit {op.type()} by var [{var.name()}] on axis [{pruned_axis}];\t visited={self.visited}\n"
         )
         worker = cls(op, self.pruned_params, self.visited, self.skip_stranger)
+        worker.skip_vars = self.skip_vars
         worker.prune(var, pruned_axis, pruned_idx)
 
     def append_pruned_vars(self, var, axis, transforms):
@@ -598,7 +609,7 @@ class depthwise_conv2d(PruneWorker):
         _filter = self.op.inputs("Filter")[0]
         _out = self.op.outputs("Output")[0]
         _in_var = self.op.inputs("Input")[0]
-
+        _groups = self.op.attr("groups")
         data_format = self.op.attr("data_format")
         channel_axis = 1
         if data_format == "NHWC":
@@ -608,15 +619,23 @@ class depthwise_conv2d(PruneWorker):
             assert pruned_axis == channel_axis, "The Input of conv2d can only be pruned at channel axis, but got {}".format(
                 pruned_axis)
             # pruning number of filters
-            self.append_pruned_vars(_filter, 0, transforms)
+            assert (_filter.shape()[0] % _groups == 0)
+            stride = _filter.shape()[0] / _groups
+            self.append_pruned_vars(_filter, 0, transforms + [{
+                "stride": stride
+            }])
             # kernel_number * groups will be pruned by reducing groups
             self.append_pruned_vars(_filter, 1, transforms)
-            self._visit_and_search(_filter, 0, transforms)
+            self._visit_and_search(_filter, 0, transforms + [{
+                "stride": stride
+            }])
             # It will not pruning number of kernels in depthwise conv2d,
             # so it is not neccesary to search succeed operators. 
             # self._visit_and_search(_filter, 1, transforms)
             self._visit(_filter, 1)
-            self._visit_and_search(_out, channel_axis, transforms)
+            self._visit_and_search(_out, channel_axis, transforms + [{
+                "stride": stride
+            }])
         elif var == _filter:
             assert pruned_axis == 0, "The filter of depthwise conv2d can only be pruned at axis 0."
             self.append_pruned_vars(_filter, 1, transforms)
