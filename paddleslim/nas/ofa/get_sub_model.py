@@ -37,12 +37,14 @@ def get_prune_params_config(graph, origin_model_config):
         ### TODO(ceci3):
         ### 1. fix config when this op is concat by graph.pre_ops(op)
         ### 2. add kernel_size in config
-        ### 3. add channel in config
         for inp in op.all_inputs():
             n_ops = graph.next_ops(op)
             if inp._var.name in origin_model_config.keys():
-                if 'expand_ratio' in origin_model_config[inp._var.name].keys():
-                    tmp = origin_model_config[inp._var.name]['expand_ratio']
+                if 'expand_ratio' in origin_model_config[inp._var.name].keys(
+                ) or 'channel' in origin_model_config[inp._var.name].keys():
+                    key = 'channel' if 'channel' in origin_model_config[
+                        inp._var.name].keys() else 'expand_ratio'
+                    tmp = origin_model_config[inp._var.name][key]
                     if len(inp._var.shape) > 1:
                         if inp._var.name in param_config.keys():
                             param_config[inp._var.name].append(tmp)
@@ -59,9 +61,14 @@ def get_prune_params_config(graph, origin_model_config):
                     if next_inp._var.persistable == True:
                         if next_inp._var.name in origin_model_config.keys():
                             if 'expand_ratio' in origin_model_config[
-                                    next_inp._var.name].keys():
+                                    next_inp._var.name].keys(
+                                    ) or 'channel' in origin_model_config[
+                                        next_inp._var.name].keys():
+                                key = 'channel' if 'channel' in origin_model_config[
+                                    next_inp._var.name].keys(
+                                    ) else 'expand_ratio'
                                 tmp = origin_model_config[next_inp._var.name][
-                                    'expand_ratio']
+                                    key]
                                 pre = tmp if precedor is None else precedor
                                 if len(next_inp._var.shape) > 1:
                                     param_config[next_inp._var.name] = [pre]
@@ -78,9 +85,19 @@ def get_prune_params_config(graph, origin_model_config):
     return param_config
 
 
+def get_actual_shape(inp, param_shape):
+    if inp == None:
+        chn = int(param_shape)
+    else:
+        if isinstance(inp, float):
+            chn = int(param_shape * inp)
+        else:
+            chn = int(inp)
+    return chn
+
+
 def prune_params(model, param_config, super_model_sd=None):
     """ Prune parameters according to the config.
-
         Parameters:
             model(paddle.nn.Layer): instance of model.
             param_config(dict): prune config of each weight.
@@ -104,25 +121,18 @@ def prune_params(model, param_config, super_model_sd=None):
                     in_exp = param_config[param.name][0]
                     out_exp = param_config[param.name][1]
                     if sublayer.__class__.__name__.lower() in CONV_TYPES:
-                        in_chn = int(value.shape[1]) if in_exp == None else int(
-                            value.shape[1] * in_exp)
-                        out_chn = int(value.shape[
-                            0]) if out_exp == None else int(value.shape[0] *
-                                                            out_exp)
+                        in_chn = get_actual_shape(in_exp, value.shape[1])
+                        out_chn = get_actual_shape(out_exp, value.shape[0])
                         prune_value = super_value[:out_chn, :in_chn, ...] \
                                          if super_model_sd != None else value[:out_chn, :in_chn, ...]
                     else:
-                        in_chn = int(value.shape[0]) if in_exp == None else int(
-                            value.shape[0] * in_exp)
-                        out_chn = int(value.shape[
-                            1]) if out_exp == None else int(value.shape[1] *
-                                                            out_exp)
+                        in_chn = get_actual_shape(in_exp, value.shape[0])
+                        out_chn = get_actual_shape(out_exp, value.shape[1])
                         prune_value = super_value[:in_chn, :out_chn, ...] \
                                          if super_model_sd != None else value[:in_chn, :out_chn, ...]
                 else:
-                    out_chn = int(value.shape[0]) if param_config[param.name][
-                        0] == None else int(value.shape[0] *
-                                            param_config[param.name][0])
+                    out_chn = get_actual_shape(param_config[param.name][0],
+                                               value.shape[0])
                     prune_value = super_value[:out_chn, ...] \
                                      if super_model_sd != None else value[:out_chn, ...]
 
@@ -140,7 +150,7 @@ def prune_params(model, param_config, super_model_sd=None):
             if param.trainable:
                 param.clear_gradient()
 
-    ### initialize param which not in sublayers, such as create persistable inputs by create_parameters 
+    ### initialize param which not in sublayers, such as create persistable inputs by create_parameters
     if super_model_sd != None and len(super_model_sd) != 0:
         for k, v in super_model_sd.items():
             setattr(model, k, v)
@@ -151,12 +161,13 @@ def _is_depthwise(op):
        The shape of input and the shape of output in depthwise conv must be same in superlayer,
        so depthwise op cannot be consider as weight op
     """
-    if op.type() == 'depthwise_conv':
+    if op.type() == 'depthwise_conv2d':
         return True
     elif 'conv' in op.type():
         for inp in op.all_inputs():
-            if not inp._var.persistable and op.attr('groups') == inp._var.shape[
-                    1] and inp._var.shape[0] == inp._var.shape[1]:
+            if inp._var.persistable and (
+                    op.attr('groups') == inp._var.shape[0] and
+                    op.attr('groups') * inp._var.shape[1] == inp._var.shape[0]):
                 return True
     return False
 
@@ -237,3 +248,36 @@ def check_search_space(graph):
     depthwise_conv = sorted(depthwise_conv)
 
     return (final_search_space, depthwise_conv)
+
+
+def broadcast_search_space(same_search_space, param2key, origin_config):
+    """
+    Inplace broadcast the origin_config according to the same search space.
+
+    Args:
+        same_search_space(list<list>): broadcast according this list, each list in same_search_space means the channel must be consistent.
+        param2key(dict): the name of layers corresponds to the name of parameter.
+        origin_config(dict): the search space which can be searched.
+    """
+    for per_ss in same_search_space:
+        for ss in per_ss[1:]:
+            key = param2key[ss]
+            pre_key = param2key[per_ss[0]]
+            if key in origin_config:
+                if 'expand_ratio' in origin_config[pre_key]:
+                    origin_config[key].update({
+                        'expand_ratio': origin_config[pre_key]['expand_ratio']
+                    })
+                elif 'channel' in origin_config[pre_key]:
+                    origin_config[key].update({
+                        'channel': origin_config[pre_key]['channel']
+                    })
+            else:
+                if 'expand_ratio' in origin_config[pre_key]:
+                    origin_config[key] = {
+                        'expand_ratio': origin_config[pre_key]['expand_ratio']
+                    }
+                elif 'channel' in origin_config[pre_key]:
+                    origin_config[key] = {
+                        'channel': origin_config[pre_key]['channel']
+                    }

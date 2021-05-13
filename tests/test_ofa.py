@@ -449,5 +449,21 @@ class TestShortCut(unittest.TestCase):
         assert len(self.ofa_model.ofa_layers) == 38
 
 
+class TestExportCase1(unittest.TestCase):
+    def setUp(self):
+        model = ModelLinear1()
+        data_np = np.random.random((3, 64)).astype(np.int64)
+        self.data = paddle.to_tensor(data_np)
+        self.ofa_model = OFA(model)
+        self.ofa_model.set_epoch(0)
+        outs, _ = self.ofa_model(self.data)
+        self.config = self.ofa_model.current_config
+
+    def test_export_model(self):
+        self.ofa_model.export(
+            self.config, input_shapes=[[3, 64]], input_dtypes=['int64'])
+        assert len(self.ofa_model.ofa_layers) == 4
+
+
 if __name__ == '__main__':
     unittest.main()
