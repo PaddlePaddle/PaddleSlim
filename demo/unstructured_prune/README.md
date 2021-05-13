@@ -73,7 +73,7 @@ CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_
 
 按照比例剪裁（训练速度较慢，推荐按照阈值剪裁）：
 ```bash
-CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.5
+CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
 恢复训练(请替代命令中的`dir/to/the/saved/pruned/model`和`INTERRUPTED_EPOCH`)：
@@ -107,7 +107,7 @@ opt.minimize(avg_cost)
 
 #STEP1: initialize the pruner
 pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='threshold', threshold=0.01, place=place) # 按照阈值剪裁
-# pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', ratio=0.5, place=place) # 按照比例剪裁
+# pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', ratio=0.55, place=place) # 按照比例剪裁
 
 exe.run(paddle.static.default_startup_program())
 paddle.fluid.io.load_vars(exe, args.pretrained_model)
@@ -157,5 +157,6 @@ python3.7 evaluate.py --h
 |:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
 | MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
 | MobileNetV1 | ImageNet |   ratio  | -55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.05 | - | 68 |
+| MobileNetV1 | ImageNet |   threshold  | -49.49% | 71.22%/89.78% (+0.23%/+0.10%) | 0.05 | 0.01 | 93 |
 | YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
-| YOLO v3     |  VOC     |threshold | -56.50% | 77.02%(+0.78%) | 0.001 | 0.01 |102k iterations|
+| YOLO v3     |  VOC     |threshold | -56.50% | 77.21%(+0.97%) | 0.001 | 0.01 |150k iterations|

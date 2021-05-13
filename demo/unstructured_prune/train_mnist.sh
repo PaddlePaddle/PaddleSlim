@@ -5,6 +5,5 @@ python3.7 train.py \
           --batch_size=256 \
           --data="mnist" \
           --pruning_mode="threshold" \
-          --ratio=0.45 \
-          --threshold=1e-5 \
-          --lr=0.075 \
+          --threshold=0.01 \
+          --lr=0.05 \

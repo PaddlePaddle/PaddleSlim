@@ -5,6 +5,6 @@ python3.7 train.py \
           --batch_size 256 \
           --data imagenet \
           --pruning_mode ratio \
-          --ratio 0.45 \
-          --lr 0.075 \
-          --pretrained_model /PaddleSlim/demo/pretrained_model/MobileNetV1_pretrained
+          --ratio 0.55 \
+          --lr 0.05 \
+          --pretrained_model ./MobileNetV1_pretrained

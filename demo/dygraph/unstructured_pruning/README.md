@@ -63,7 +63,7 @@ python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshol
 
 按照比例剪裁（训练速度较慢，推荐按照阈值剪裁）：
 ```bash
-python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.5
+python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
 GPU多卡训练：
@@ -83,7 +83,7 @@ python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshol
 
 ## 推理：
 ```bash
-python3.7 eval --pruned_model models/ --data imagenet
+python3.7 evalualte.py --pruned_model models/ --data imagenet
 ```
 
 剪裁训练代码示例：
@@ -124,8 +124,8 @@ test()
 
 更多使用参数请参照shell文件或者运行如下命令查看：
 ```bash
-python3.7 train --h
-python3.7 evaluate --h
+python3.7 train.py --h
+python3.7 evaluate.py --h
 ```
 
 ## 实验结果
@@ -134,5 +134,6 @@ python3.7 evaluate --h
 |:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
 | MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
 | MobileNetV1 | ImageNet |   ratio  | -55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.005 | - | 68 |
+| MobileNetV1 | ImageNet |   threshold  | -49.49% | 71.22%/89.78% (+0.23%/+0.10%) | 0.05 | 0.01 | 93 |
 | YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
-| YOLO v3     |  VOC     |threshold | -56.50% | 77.02%（+0.78%） | 0.001 | 0.01 | 102k iterations |
+| YOLO v3     |  VOC     |threshold | -56.50% | 77.21% (+0.97%) | 0.001 | 0.01 | 150k iterations |
