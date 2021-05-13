@@ -105,11 +105,13 @@ class Convert:
         cur_channel = None
         for idx, layer in enumerate(model):
             cls_name = layer.__class__.__name__.lower()
-            if 'conv' in cls_name or 'linear' in cls_name or 'embedding' in cls_name:
-                weight_layer_count += 1
-                last_weight_layer_idx = idx
-                if first_weight_layer_idx == -1:
-                    first_weight_layer_idx = idx
+            ### basic api in paddle
+            if len(layer.sublayers()) == 0:
+                if 'conv' in cls_name or 'linear' in cls_name or 'embedding' in cls_name:
+                    weight_layer_count += 1
+                    last_weight_layer_idx = idx
+                    if first_weight_layer_idx == -1:
+                        first_weight_layer_idx = idx
 
         if getattr(self.context, 'channel', None) != None:
             assert len(

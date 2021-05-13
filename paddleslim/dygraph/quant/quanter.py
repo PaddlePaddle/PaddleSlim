@@ -213,7 +213,12 @@ class QAT(object):
 
     def save_quantized_model(self, model, path, input_spec=None):
         if self.weight_preprocess is not None or self.act_preprocess is not None:
+            training = model.training
             model = self._remove_preprocess(model)
+            if training:
+                model.train()
+            else:
+                model.eval()
 
         self.imperative_qat.save_quantized_model(
             layer=model, path=path, input_spec=input_spec)
