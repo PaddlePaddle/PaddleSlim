@@ -40,10 +40,11 @@ def get_prune_params_config(graph, origin_model_config):
         for inp in op.all_inputs():
             n_ops = graph.next_ops(op)
             if inp._var.name in origin_model_config.keys():
-                if 'expand_ratio' in origin_model_config[inp._var.name].keys(
-                ) or 'channel' in origin_model_config[inp._var.name].keys():
+                if 'expand_ratio' in origin_model_config[
+                        inp._var.name] or 'channel' in origin_model_config[
+                            inp._var.name]:
                     key = 'channel' if 'channel' in origin_model_config[
-                        inp._var.name].keys() else 'expand_ratio'
+                        inp._var.name] else 'expand_ratio'
                     tmp = origin_model_config[inp._var.name][key]
                     if len(inp._var.shape) > 1:
                         if inp._var.name in param_config.keys():
@@ -61,12 +62,11 @@ def get_prune_params_config(graph, origin_model_config):
                     if next_inp._var.persistable == True:
                         if next_inp._var.name in origin_model_config.keys():
                             if 'expand_ratio' in origin_model_config[
-                                    next_inp._var.name].keys(
-                                    ) or 'channel' in origin_model_config[
-                                        next_inp._var.name].keys():
+                                    next_inp._var.
+                                    name] or 'channel' in origin_model_config[
+                                        next_inp._var.name]:
                                 key = 'channel' if 'channel' in origin_model_config[
-                                    next_inp._var.name].keys(
-                                    ) else 'expand_ratio'
+                                    next_inp._var.name] else 'expand_ratio'
                                 tmp = origin_model_config[next_inp._var.name][
                                     key]
                                 pre = tmp if precedor is None else precedor
@@ -85,15 +85,15 @@ def get_prune_params_config(graph, origin_model_config):
     return param_config
 
 
-def get_actual_shape(inp, param_shape):
-    if inp == None:
-        chn = int(param_shape)
+def get_actual_shape(transform, channel):
+    if transform == None:
+        channel = int(channel)
     else:
-        if isinstance(inp, float):
-            chn = int(param_shape * inp)
+        if isinstance(transform, float):
+            channel = int(channel * transform)
         else:
-            chn = int(inp)
-    return chn
+            channel = int(transform)
+    return channel
 
 
 def prune_params(model, param_config, super_model_sd=None):
@@ -252,7 +252,7 @@ def check_search_space(graph):
 
 def broadcast_search_space(same_search_space, param2key, origin_config):
     """
-    Inplace broadcast the origin_config according to the same search space.
+    Inplace broadcast the origin_config according to the same search space. Such as: same_search_space = [['conv1_weight', 'conv3_weight']], param2key = {'conv1_weight': 'conv1.conv', 'conv3_weight': 'conv3.weight'}, origin_config= {'conv1.weight': {'channel': 10}, 'conv2.weight': {'channel': 20}}, the result after this function is origin_config={'conv1.weight': {'channel': 10}, 'conv2.weight': {'channel': 20}, 'conv3.weight': {'channel': 10}}
 
     Args:
         same_search_space(list<list>): broadcast according this list, each list in same_search_space means the channel must be consistent.
