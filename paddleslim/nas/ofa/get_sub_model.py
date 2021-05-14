@@ -157,13 +157,13 @@ def prune_params(model, param_config, super_model_sd=None):
 
 
 def _is_depthwise(op):
-    """Check if this op is depthwise conv.
+    """Check if this op is depthwise conv. Only Cin == Cout == groups be consider as depthwise conv.
        The shape of input and the shape of output in depthwise conv must be same in superlayer,
        so depthwise op cannot be consider as weight op
     """
-    if op.type() == 'depthwise_conv2d':
-        return True
-    elif 'conv' in op.type():
+    #if op.type() == 'depthwise_conv2d': ### depthwise_conv2d in paddle is Cout % Cin =0
+    #    return True
+    if 'conv' in op.type():
         for inp in op.all_inputs():
             if inp._var.persistable and (
                     op.attr('groups') == inp._var.shape[0] and
