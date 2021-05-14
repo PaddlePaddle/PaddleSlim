@@ -68,19 +68,21 @@ def _get_skip_params(program):
 
 按照阈值剪裁：
 ```bash
-CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
+CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --batch_size 512 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
 ```
 
 按照比例剪裁（训练速度较慢，推荐按照阈值剪裁）：
 ```bash
-CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
+CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --batch_size 512 --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
 恢复训练(请替代命令中的`dir/to/the/saved/pruned/model`和`INTERRUPTED_EPOCH`)：
 ```
-CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
+CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --batch_size 512 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
                                             --pretrained_model dir/to/the/saved/pruned/model --resume_epoch INTERRUPTED_EPOCH
 ```
+
+**注意**，上述命令中的`batch_size`为多张卡上总的`batch_size`，即一张卡的`batch_size`为256。
 
 ## 推理
 ```bash
@@ -116,10 +118,7 @@ for epoch in range(epochs):
     for batch_id, data in enumerate(train_loader):
         loss_n, acc_top1_n, acc_top5_n = exe.run(
             train_program,
-            feed={
-                "image": data[0].get('image'),
-                "label": data[0].get('label')
-            },
+            feed=data,
             fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])  
         learning_rate.step()
         #STEP2: update the pruner's threshold given the updated parameters

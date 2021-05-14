@@ -76,8 +76,10 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3
 python3.7 -m paddle.distributed.launch \
 --gpus="0,1,2,3" \
 --log_dir="train_mbv1_imagenet_threshold_001_log" \
-train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
+train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 --batch_size 256
 ```
+
+**注意**，这里的batch_size为单卡上的。
 
 恢复训练（请替代命令中的`dir/to/the/saved/pruned/model`和`INTERRUPTED_EPOCH`）：
 ```bash
@@ -101,6 +103,7 @@ for epoch in range(epochs):
         loss = calculate_loss()
         loss.backward()
         opt.step()
+        learning_rate.step()
         opt.clear_grad()
         #STEP2: update the pruner's threshold given the updated parameters
         pruner.step()
