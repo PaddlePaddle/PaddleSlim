@@ -1,9 +1,8 @@
 #!/bin/bash  
 export CUDA_VISIBLE_DEVICES=3
 python3.7 train.py \
-          --batch_size=128 \
+          --batch_size=256 \
           --lr=0.05 \
-          --ratio=0.45 \
-          --threshold=1e-5 \
+          --threshold=0.01 \
           --pruning_mode="threshold" \
           --data="cifar10" \

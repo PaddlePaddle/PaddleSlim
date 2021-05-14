@@ -169,6 +169,8 @@ class Pruner():
         for name, axis, pruned_idx, transforms in items:
             src = pruned_idx
             for trans in transforms:
+                if 'src_start' not in trans:
+                    continue
                 src_start = trans['src_start']
                 src_end = trans['src_end']
                 src_len = src_end - src_start
