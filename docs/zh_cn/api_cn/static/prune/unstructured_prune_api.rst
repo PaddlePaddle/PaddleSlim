@@ -24,13 +24,30 @@ UnstrucuturedPruner
 
 **示例代码：**
 
-此示例不能直接运行，因为需要加载数据和模型，详细demo请参照 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/unstructured_prune>`_
-
 .. code-block:: python
 
-  from paddleslim.prune import UnstructuredPruner
-  pruner = UnstructuredPruner()
+  import paddle as paddle
+  import paddle.fluid as fluid
+  from paddleslim.prune import UnstructuredPruner 
 
+  paddle.enable_static()
+
+  train_program = paddle.static.default_main_program()
+  startup_program = paddle.static.default_startup_program()
+
+  with fluid.program_guard(train_program, startup_program):
+      image = fluid.data(name='x', shape=[None, 1, 28, 28])
+      label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+      conv = fluid.layers.conv2d(image, 32, 1)
+      feature = fluid.layers.fc(conv, 10, act='softmax')
+      cost = fluid.layers.cross_entropy(input=feature, label=label)
+      avg_cost = fluid.layers.mean(x=cost)
+
+  place = paddle.static.cpu_places()[0]
+  exe = paddle.static.Executor(place)
+  exe.run(startup_program)
+
+  pruner = UnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.5, place=place)
 ..
 
   .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.step()
@@ -39,33 +56,71 @@ UnstrucuturedPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要加载数据和模型，详细demo请参照 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/unstructured_prune>`_
-
   .. code-block:: python
 
+    import paddle as paddle
+    import paddle.fluid as fluid 
     from paddleslim.prune import UnstructuredPruner
-    
-    pruner = UnstructuredPruner(
-            paddle.static.default_main_program(), 'ratio', scope=paddle.static.global_scope(), place=paddle.static.cpu_places()[0])
-    pruner.step()
 
+    paddle.enable_static()
+
+    train_program = paddle.static.default_main_program()
+    startup_program = paddle.static.default_startup_program()
+
+    with fluid.program_guard(train_program, startup_program):
+        image = fluid.data(name='x', shape=[None, 1, 28, 28])
+        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+        conv = fluid.layers.conv2d(image, 32, 1)
+        feature = fluid.layers.fc(conv, 10, act='softmax')
+        cost = fluid.layers.cross_entropy(input=feature, label=label)
+        avg_cost = fluid.layers.mean(x=cost)
+
+    place = paddle.static.cpu_places()[0]
+    exe = paddle.static.Executor(place)
+    exe.run(startup_program)
+
+    pruner = UnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.5, place=place)
+    print(pruner.threshold)
+    pruner.step()
+    print(pruner.threshold) # 可以看出，这里的threshold和上面打印的不同，这是因为step函数根据设定的ratio更新了threshold数值，便于剪裁操作。
   ..
 
   .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.update_params()
 
-  每一步优化后，重制模型中本来是0的权重。这一步通常用于模型evaluation和save之前，确保模型的稀疏率。
+  每一步优化后，重制模型中本来是0的权重。这一步通常用于模型evaluation和save之前，确保模型的稀疏率。但是，在训练过程中，由于step()函数会调用该方法，故不需要开发者在训练过程中额外调用了。
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要加载数据和模型，详细demo请参照 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/unstructured_prune>`_
-
   .. code-block:: python
 
+    import paddle as paddle
+    import paddle.fluid as fluid
     from paddleslim.prune import UnstructuredPruner
 
-    pruner = UnstructuredPruner(
-            paddle.static.default_main_program(), 'ratio', scope=paddle.static.global_scope(), place=paddle.static.cpu_places()[0])
+    paddle.enable_static()
+
+    train_program = paddle.static.default_main_program()
+    startup_program = paddle.static.default_startup_program()
+
+    with fluid.program_guard(train_program, startup_program):
+        image = fluid.data(name='x', shape=[None, 1, 28, 28])
+        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+        conv = fluid.layers.conv2d(image, 32, 1)
+        feature = fluid.layers.fc(conv, 10, act='softmax')
+        cost = fluid.layers.cross_entropy(input=feature, label=label)
+        avg_cost = fluid.layers.mean(x=cost)
+
+    place = paddle.static.cpu_places()[0]
+    exe = paddle.static.Executor(place)
+    exe.run(startup_program)
+
+    pruner = UnstructuredPruner(paddle.static.default_main_program(), 'threshold', threshold=0.5, place=place)
+    density = UnstructuredPruner.total_sparse(paddle.static.default_main_program())
+    print(density)
+    pruner.step()
     pruner.update_params()
+    density = UnstructuredPruner.total_sparse(paddle.static.default_main_program())
+    print(density) # 可以看出，这里打印的模型稠密度与上述不同，这是因为update_params()函数置零了所有绝对值小于0.5的权重。
 
   ..
 
@@ -83,13 +138,31 @@ UnstrucuturedPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要加载数据和模型，详细demo请参照 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/unstructured_prune>`_
-
   .. code-block:: python
 
+    import paddle as paddle
+    import paddle.fluid as fluid
     from paddleslim.prune import UnstructuredPruner
 
+    paddle.enable_static()
+
+    train_program = paddle.static.default_main_program()
+    startup_program = paddle.static.default_startup_program()
+
+    with fluid.program_guard(train_program, startup_program):
+        image = fluid.data(name='x', shape=[None, 1, 28, 28])
+        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+        conv = fluid.layers.conv2d(image, 32, 1)
+        feature = fluid.layers.fc(conv, 10, act='softmax')
+        cost = fluid.layers.cross_entropy(input=feature, label=label)
+        avg_cost = fluid.layers.mean(x=cost)
+
+    place = paddle.static.cpu_places()[0]
+    exe = paddle.static.Executor(place)
+    exe.run(startup_program)
+
     density = UnstructuredPruner.total_sparse(paddle.static.default_main_program())
+    print(density)
 
   ..
 
@@ -108,14 +181,31 @@ UnstrucuturedPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要加载数据和模型，详细demo请参照 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/unstructured_prune>`_
-
   .. code-block:: python
 
+    import paddle as paddle
+    import paddle.fluid as fluid
     from paddleslim.prune import UnstructuredPruner
 
-    pruner = UnstructuredPruner(
-        paddle.static.default_main_program(), 'ratio', scope=paddle.static.global_scope(), place=paddle.static.cpu_places()[0])
-    threshold = pruner.summarize_weights(paddle.static.default_main_program(), 1.0)
+    paddle.enable_static()
+
+    train_program = paddle.static.default_main_program()
+    startup_program = paddle.static.default_startup_program()
+
+    with fluid.program_guard(train_program, startup_program):
+        image = fluid.data(name='x', shape=[None, 1, 28, 28])
+        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+        conv = fluid.layers.conv2d(image, 32, 1)
+        feature = fluid.layers.fc(conv, 10, act='softmax')
+        cost = fluid.layers.cross_entropy(input=feature, label=label)
+        avg_cost = fluid.layers.mean(x=cost)
+
+    place = paddle.static.cpu_places()[0]
+    exe = paddle.static.Executor(place)
+    exe.run(startup_program)
+
+    threshold = pruner.summarize_weights(paddle.static.default_main_program(), ratio=0.5)
+    print(threshold)
+
   ..
 
