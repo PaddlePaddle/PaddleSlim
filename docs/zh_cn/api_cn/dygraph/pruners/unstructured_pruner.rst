@@ -7,7 +7,7 @@ UnstructuredPruner
 .. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.3, skip_params_func=None)
 
 
-`源代码 <https://github.com/minghaoBD/PaddleSlim/blob/update_unstructured_pruning_docs/paddleslim/dygraph/prune/unstructured_pruner.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
 
 对于神经网络中的参数进行非结构化稀疏。非结构化稀疏是指，根据某些衡量指标，将不重要的参数置0。其不按照固定结构剪裁（例如一个通道等），这是和结构化剪枝的主要区别。
 
