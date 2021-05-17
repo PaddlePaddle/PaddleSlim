@@ -23,6 +23,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
 add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
+add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('lr',               float,  0.1,               "The learning rate used to fine-tune pruned model.")
 add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
@@ -121,7 +122,7 @@ def compress(args):
         places=place,
         drop_last=False,
         return_list=True,
-        batch_size=64,
+        batch_size=args.batch_size_for_validation,
         shuffle=False,
         use_shared_memory=True)
     step_per_epoch = int(
@@ -146,15 +147,12 @@ def compress(args):
             y_data = paddle.to_tensor(data[1])
             if args.data == 'cifar10':
                 y_data = paddle.unsqueeze(y_data, 1)
-            end_time = time.time()
 
             logits = model(x_data)
             loss = F.cross_entropy(logits, y_data)
             acc_top1 = paddle.metric.accuracy(logits, y_data, k=1)
             acc_top5 = paddle.metric.accuracy(logits, y_data, k=5)
-
-            acc_top1_ns.append(acc_top1.numpy())
-            acc_top5_ns.append(acc_top5.numpy())
+            end_time = time.time()
             if batch_id % args.log_period == 0:
                 _logger.info(
                     "Eval epoch[{}] batch[{}] - acc_top1: {}; acc_top5: {}; time: {}".
