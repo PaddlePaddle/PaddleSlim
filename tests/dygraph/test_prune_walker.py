@@ -25,7 +25,7 @@ class TestWalker(unittest.TestCase):
         net = Net()
         x = np.random.uniform(-1, 1, x_shape).astype('float32')
         pruner = L1NormFilterPruner(net, [paddle.to_tensor(x)])
-        pruner.prune_vars({"conv2d_0.w_0": 0.2}, [0])
+        pruner.prune_vars({"conv2d_0.w_0": 0.2}, 0)
         self.assertTrue(net.linear.weight.shape == [5400, 5])
 
 

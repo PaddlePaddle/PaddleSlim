@@ -19,7 +19,9 @@ from .layers_base import BaseBlock
 
 __all__ = ['get_prune_params_config', 'prune_params', 'check_search_space']
 
-WEIGHT_OP = ['conv2d', 'conv3d', 'conv1d', 'linear', 'embedding']
+WEIGHT_OP = [
+    'conv2d', 'linear', 'embedding', 'conv2d_transpose', 'depthwise_conv2d'
+]
 CONV_TYPES = [
     'conv2d', 'conv3d', 'conv1d', 'superconv2d', 'supergroupconv2d',
     'superdepthwiseconv2d'
@@ -95,6 +97,7 @@ def prune_params(model, param_config, super_model_sd=None):
                 name = l_name + '.' + p_name
                 super_t_value = super_model_sd[name].value().get_tensor()
                 super_value = np.array(super_t_value).astype("float32")
+                super_model_sd.pop(name)
 
             if param.name in param_config.keys():
                 if len(param_config[param.name]) > 1:
@@ -137,13 +140,40 @@ def prune_params(model, param_config, super_model_sd=None):
             if param.trainable:
                 param.clear_gradient()
 
+    ### initialize param which not in sublayers, such as create persistable inputs by create_parameters 
+    if super_model_sd != None and len(super_model_sd) != 0:
+        for k, v in super_model_sd.items():
+            setattr(model, k, v)
+
+
+def _is_depthwise(op):
+    """Check if this op is depthwise conv.
+       The shape of input and the shape of output in depthwise conv must be same in superlayer,
+       so depthwise op cannot be consider as weight op
+    """
+    if op.type() == 'depthwise_conv':
+        return True
+    elif 'conv' in op.type():
+        for inp in op.all_inputs():
+            if not inp._var.persistable and op.attr('groups') == inp._var.shape[
+                    1]:
+                return True
+    return False
+
 
 def _find_weight_ops(op, graph, weights):
     """ Find the vars come from operators with weight.
     """
     pre_ops = graph.pre_ops(op)
     for pre_op in pre_ops:
-        if pre_op.type() in WEIGHT_OP:
+        ### if depthwise conv is one of elementwise's input, 
+        ### add it into this same search space
+        if _is_depthwise(pre_op):
+            for inp in pre_op.all_inputs():
+                if inp._var.persistable:
+                    weights.append(inp._var.name)
+
+        if pre_op.type() in WEIGHT_OP and not _is_depthwise(pre_op):
             for inp in pre_op.all_inputs():
                 if inp._var.persistable:
                     weights.append(inp._var.name)
@@ -168,16 +198,22 @@ def check_search_space(graph):
     """ Find the shortcut in the model and set same config for this situation.
     """
     same_search_space = []
+    depthwise_conv = []
     for op in graph.ops():
-        if op.type() == 'elementwise_add':
+        if op.type() == 'elementwise_add' or op.type() == 'elementwise_mul':
             inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
             if (not inp1._var.persistable) and (not inp2._var.persistable):
                 pre_ele_op = _find_pre_elementwise_add(op, graph)
                 if pre_ele_op != None:
                     same_search_space.append(pre_ele_op)
 
+        if _is_depthwise(op):
+            for inp in op.all_inputs():
+                if inp._var.persistable:
+                    depthwise_conv.append(inp._var.name)
+
     if len(same_search_space) == 0:
-        return None
+        return None, None
 
     same_search_space = sorted([sorted(x) for x in same_search_space])
     final_search_space = []
@@ -196,5 +232,7 @@ def check_search_space(graph):
                         break
                 if not merged:
                     final_search_space.append(l)
+    final_search_space = sorted([sorted(x) for x in final_search_space])
+    depthwise_conv = sorted(depthwise_conv)
 
-    return final_search_space
+    return (final_search_space, depthwise_conv)

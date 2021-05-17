@@ -98,7 +98,7 @@ def sensitivity(program,
                 params=[name],
                 ratios=[ratio],
                 place=place,
-                lazy=True,
+                lazy=False,
                 only_graph=False,
                 param_backup=True)
             if eval_args is None:
@@ -108,7 +108,6 @@ def sensitivity(program,
             loss = (baseline - pruned_metric) / baseline
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))
-
             sensitivities[name][ratio] = loss
 
             _save_sensitivities(sensitivities, sensitivities_file)

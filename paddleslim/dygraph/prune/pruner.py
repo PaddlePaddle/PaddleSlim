@@ -39,11 +39,12 @@ class Pruner(object):
         Args:
             ratios(dict<str, float>): The key is the name of variable to be pruned and the
                                       value is the pruned ratio.
-            axis(list): The dimensions to be pruned on.
+            axis(int): The dimension to be pruned on.
 
         Returns:
             plan(PruningPlan): The pruning plan.
         """
+        axis = axis[0] if isinstance(axis, list) else axis
         global_plan = PruningPlan(self.model.full_name)
         for var, ratio in ratios.items():
             if not global_plan.contains(var, axis):
