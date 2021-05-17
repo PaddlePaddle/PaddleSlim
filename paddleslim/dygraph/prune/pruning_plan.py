@@ -142,7 +142,7 @@ class PruningPlan():
         on one dimension.
         """
 
-        for name, sub_layer in model.named_sublayers():
+        for name, sub_layer in model.named_sublayers(include_self=True):
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
                     for _mask in self._masks[param.name]:
@@ -152,7 +152,6 @@ class PruningPlan():
                         bool_mask = np.array(mask).astype(bool)
                         t_value = param.value().get_tensor()
                         value = np.array(t_value).astype("float32")
-
                         groups = _mask._op.attr('groups')
                         if dims == 1 and groups is not None and groups > 1 and len(
                                 value.shape) == 4:
@@ -192,7 +191,7 @@ class PruningPlan():
                         param.clear_gradient()
 
     def restore(self, model):
-        for name, sub_layer in model.named_sublayers():
+        for name, sub_layer in model.named_sublayers(include_self=True):
             for param in sub_layer.parameters(include_sublayers=False):
                 backup_name = "_".join([param.name.replace(".", "_"), "backup"])
                 if backup_name in sub_layer._buffers:

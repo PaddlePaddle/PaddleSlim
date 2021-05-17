@@ -19,7 +19,7 @@ class DygraphPruningCollections(PruningCollections):
       - inputs(Variable|list|dict): The dummy inputs of target model. It will be used in calling `model.forward(inputs)`.
     """
 
-    def __init__(self, model, inputs):
+    def __init__(self, model, inputs, skip_leaves=True):
         _logger.debug("Parsing model with input: {}".format(inputs))
         # model can be in training mode, because some model contains auxiliary parameters for training.
         program = dygraph2program(model, inputs=inputs)
@@ -28,7 +28,8 @@ class DygraphPruningCollections(PruningCollections):
             _param.name for _param in model.parameters()
             if len(_param.shape) == 4
         ]
-        self._collections = self.create_pruning_collections(params, graph)
+        self._collections = self.create_pruning_collections(
+            params, graph, skip_leaves=skip_leaves)
         _logger.info("Found {} collections.".format(len(self._collections)))
 
         _name2values = {}

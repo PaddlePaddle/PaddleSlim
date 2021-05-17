@@ -659,20 +659,99 @@ class mul(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(mul, self).__init__(op, pruned_params, visited, skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
-        if var in self.op.inputs("X"):
-            assert pruned_axis == 1, "The Input of conv2d can only be pruned at axis 1, but got {}".format(
-                pruned_axis)
-            idx = []
-            feature_map_size = var.shape()[2] * var.shape()[3]
-            range_idx = np.array(range(feature_map_size))
-            for i in pruned_idx:
-                idx += list(range_idx + i * feature_map_size)
-            param_var = self.op.inputs("Y")[0]
-            self.append_pruned_vars(param_var, 0, idx)
+    def _prune(self, var, pruned_axis, trans):
+        x_num_col_dims = self.op.attr("x_num_col_dims")
+        y_num_col_dims = self.op.attr("y_num_col_dims")
+        x = self.op.inputs("X")[0]
+        y = self.op.inputs("Y")[0]
+        out = self.op.outputs("Out")[0]
+        x_shape = x.shape()
+        y_shape = y.shape()
+        if var == x:
+            if y_num_col_dims > 1 and pruned_axis >= x_num_col_dims:
+                raise UnsupportOpError(
+                    "Unsupport pruning x of mul when y_num_col_dims > 1 and pruned_axis >= x_num_col_dims"
+                )
+            tile = 1
+            repeat = 1
+            if pruned_axis < x_num_col_dims:
+                for i in range(0, pruned_axis):
+                    tile *= x_shape[i]
+                for i in range(pruned_axis + 1, x_num_col_dims):
+                    repeat *= x_shape[i]
+                self.append_pruned_vars(out, 0, trans + [{
+                    "tile": tile,
+                    "repeat": repeat
+                }])
+                self._visit_and_search(out, 0, trans + [{
+                    "tile": tile,
+                    "repeat": repeat
+                }])
+            else:
+                for i in range(x_num_col_dims, pruned_axis):
+                    tile *= x_shape[i]
+                for i in range(pruned_axis + 1, len(x_shape)):
+                    repeat *= x_shape[i]
 
-            for op in param_var.outputs():
-                self._prune_op(op, param_var, 0, pruned_idx)
+                self.append_pruned_vars(y, 0, trans + [{
+                    "tile": tile,
+                    "repeat": repeat
+                }])
+                self._visit_and_search(y, 0, trans + [{
+                    "tile": tile,
+                    "repeat": repeat
+                }])
+        elif var == y:
+            if (pruned_axis < y_num_col_dims) and (
+                    1 < len(x_shape) - x_num_col_dims):
+                raise UnsupportOpError(
+                    "Unsupport pruning y of mul when pruned_axis < y_num_col_dims and 1 < len(x_shape) - x_num_col_dims."
+                )
+
+            tile = 1
+            repeat = 1
+            if pruned_axis >= y_num_col_dims:
+                for i in range(y_num_col_dims, pruned_axis):
+                    tile *= y_shape[i]
+                for i in range(pruned_axis + 1, len(y_shape)):
+                    repeat *= y_shape[i]
+                self.append_pruned_vars(out, 1, trans + [{
+                    "tile": tile,
+                    "repeat": repeat
+                }])
+                self._visit_and_search(out, 1, trans + [{
+                    "tile": tile,
+                    "repeat": repeat
+                }])
+            else:
+                for i in range(0, pruned_axis):
+                    tile *= y_shape[i]
+                for i in range(pruned_axis + 1, y_num_col_dims):
+                    repeat *= y_shape[i]
+                self.append_pruned_vars(x,
+                                        len(x_shape) - 1, trans + [{
+                                            "tile": tile,
+                                            "repeat": repeat
+                                        }])
+                self._visit_and_search(x,
+                                       len(x_shape) - 1, trans + [{
+                                           "tile": tile,
+                                           "repeat": repeat
+                                       }])
+        elif var == out:
+            if (pruned_axis == 0 and x_num_col_dims != 1) or (
+                    pruned_axis == 1 and (len(y_shape) - y_num_col_dims) != 1):
+                raise UnsupportOpError(
+                    "Unsupport pruning out of mul when pruned_axis={}; x_num_col_dims: {}; y_num_col_dims: {}; y_shape: {}.".
+                    format(pruned_axis, x_num_col_dims, y_num_col_dims,
+                           y_shape))
+
+            if pruned_axis == 0:
+                self.append_pruned_vars(x, 0, trans)
+                self._visit_and_search(x, 0, trans)
+            elif pruned_axis == 1:
+                self.append_pruned_vars(y, len(y_shape) - 1, trans)
+                self._visit_and_search(y, len(y_shape) - 1, trans)
 
 
 @PRUNE_WORKER.register

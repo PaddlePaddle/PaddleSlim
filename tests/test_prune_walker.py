@@ -372,38 +372,44 @@ class TestElementwiseMul(TestPruneWorker):
 
 
 class TestActivation(TestPruneWorker):
-    def __init__(self, methodName="test_prune",
-                 op=paddle.nn.functional.sigmoid):
+    def __init__(self,
+                 methodName="check",
+                 op=paddle.nn.functional.sigmoid,
+                 **kwargs):
         super(TestActivation, self).__init__(methodName)
         self.act = op
+        self.kwargs = kwargs
 
     def define_layer(self, input):
         conv1 = paddle.static.nn.conv2d(
             input, 3, 3, name="conv1", bias_attr=False)
         self.input = conv1
-        tmp = self.act(conv1)
+        tmp = self.act(conv1, **self.kwargs)
         self.output = tmp
         conv2 = paddle.static.nn.conv2d(
             tmp, 3, 3, name="conv2", bias_attr=False)
 
     def set_cases(self):
         self.cases.append((self.in_var, 1, {'conv2.w_0': [1]}))
-        self.cases.append((self.out_var, 1, {
-            'conv1.w_0': [0],
-            'conv2.w_0': [1]
-        }))
+        self.cases.append((self.out_var, 1, {'conv1.w_0': [0], }))
 
-    def test_prune(self):
+    def check(self):
         self.check_in_out()
 
 
-suite = unittest.TestSuite()
-suite.addTest(TestActivation(op=paddle.fluid.layers.resize_bilinear))
-suite.addTest(TestActivation(op=paddle.fluid.layers.resize_nearest))
-suite.addTest(TestActivation(op=paddle.floor))
-suite.addTest(TestActivation(op=paddle.scale))
-suite.addTest(
-    TestActivation(op=paddle.fluid.layers.nn.uniform_random_batch_size_like))
+act_suite = unittest.TestSuite()
+act_suite.addTest(
+    TestActivation(
+        op=paddle.fluid.layers.resize_bilinear, scale=2.))
+act_suite.addTest(
+    TestActivation(
+        op=paddle.fluid.layers.resize_nearest, scale=2.))
+act_suite.addTest(TestActivation(op=paddle.floor))
+act_suite.addTest(TestActivation(op=paddle.scale))
+act_suite.addTest(
+    TestActivation(
+        op=paddle.fluid.layers.nn.uniform_random_batch_size_like,
+        shape=[8, 8, 16, 16]))
 
 
 class TestDepthwiseConv2d(TestPruneWorker):
@@ -432,21 +438,75 @@ class TestDepthwiseConv2d(TestPruneWorker):
 
 
 class TestMul(TestPruneWorker):
-    def __init__(self, methodName="test_prune"):
+    def __init__(self,
+                 methodName="check",
+                 x_num_col_dims=1,
+                 y_num_col_dims=1,
+                 ret=[]):
         super(TestMul, self).__init__(methodName)
+        self.x_num_col_dims = x_num_col_dims
+        self.y_num_col_dims = y_num_col_dims
+        self.ret = ret
 
     def define_layer(self, input):
-        x = fluid.data(name="x", shape=[1, 4, 3, 3])
-        y = fluid.data(name="y", shape=[36, 7])
+        x = fluid.data(name="x", shape=[1, 1, 1, 1])
+        y = fluid.data(name="y", shape=[1, 1, 1, 1])
         self.input = x
-        out = paddle.fluid.layers.mul(x, y)
+        self.y = y
+        out = paddle.fluid.layers.mul(x,
+                                      y,
+                                      x_num_col_dims=self.x_num_col_dims,
+                                      y_num_col_dims=self.y_num_col_dims)
         self.output = out
 
     def set_cases(self):
-        self.cases.append((self.in_var, 1, {'y': [0]}))
+        y = self.graph.var(self.y.name)
+        x = self.in_var
+        out = self.out_var
+        self.cases.append((x, 0, self.ret[0]))
+        self.cases.append((x, 1, self.ret[1]))
+        self.cases.append((x, 2, self.ret[2]))
+        self.cases.append((x, 3, self.ret[3]))
 
-    def test_prune(self):
+        self.cases.append((y, 0, self.ret[4]))
+        self.cases.append((y, 1, self.ret[5]))
+        self.cases.append((y, 2, self.ret[6]))
+        self.cases.append((y, 3, self.ret[7]))
+
+        self.cases.append((out, 0, self.ret[8]))
+        self.cases.append((out, 1, self.ret[9]))
+
+    def check(self):
         self.check_in_out()
+
+
+mul_suite = unittest.TestSuite()
+ret = [{
+    'mul_0.tmp_0': [0]
+}] + [{
+    'y': [0]
+}] * 3 + [{}] + [{
+    'mul_0.tmp_0': [1]
+}] * 3 + [{
+    'x': [0]
+}, {}]
+mul_suite.addTest(TestMul(x_num_col_dims=1, y_num_col_dims=1, ret=ret))
+ret = [{
+    'mul_0.tmp_0': [0]
+}] * 2 + [{}] * 4 + [{
+    'mul_0.tmp_0': [1]
+}] * 2 + [{}] * 2
+mul_suite.addTest(TestMul(x_num_col_dims=2, y_num_col_dims=2, ret=ret))
+ret = [{
+    'mul_0.tmp_0': [0]
+}] * 3 + [{}] + [{
+    'x': [3]
+}] * 3 + [{
+    'mul_0.tmp_0': [1]
+}] + [{}, {
+    'y': [3]
+}]
+mul_suite.addTest(TestMul(x_num_col_dims=3, y_num_col_dims=3, ret=ret))
 
 
 class TestMatmul(TestPruneWorker):
@@ -555,4 +615,7 @@ class TestAffineChannel(TestPruneWorker):
 
 
 if __name__ == '__main__':
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(mul_suite)
+    runner.run(act_suite)
     unittest.main()
