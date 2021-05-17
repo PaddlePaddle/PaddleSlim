@@ -7,6 +7,12 @@ __all__ = ["UnstructuredPruner"]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
+NORMS_ALL = [
+    'BatchNorm', 'GroupNorm', 'LayerNorm', 'SpectralNorm', 'BatchNorm1D',
+    'BatchNorm2D', 'BatchNorm3D', 'InstanceNorm1D', 'InstanceNorm2D',
+    'InstanceNorm3D', 'SyncBatchNorm', 'LocalResponseNorm'
+]
+
 
 class UnstructuredPruner():
     """
@@ -164,8 +170,7 @@ class UnstructuredPruner():
         """
         skip_params = set()
         for _, sub_layer in model.named_sublayers():
-            if type(sub_layer).__name__.split('.')[
-                    -1] in paddle.nn.norm.__all__:
+            if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
                 skip_params.add(sub_layer.full_name())
         return skip_params
 

@@ -302,7 +302,16 @@ class SuperConv2D(nn.Conv2D):
             padding = self._padding
 
         if self.bias is not None:
-            bias = self.bias[:out_nc]
+            ### if conv is depthwise conv, expand_ratio=0, but conv' expand 
+            ### ratio before depthwise conv is not equal to 1.0, the shape of the weight
+            ### about this depthwise conv is changed, but out_nc is not change,
+            ### so need to change bias shape according to the weight_out_nc.
+            ### if in_nc > groups > 1, the actual output of conv is weight_out_nc * groups,
+            ### so slice the shape of bias by weight_out_nc and groups.
+            ### if in_nc = groups, slice the shape of bias by weight_out_nc.
+            if groups != in_nc:
+                weight_out_nc = weight_out_nc * groups
+            bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
 
@@ -313,7 +322,7 @@ class SuperConv2D(nn.Conv2D):
             stride=self._stride,
             padding=padding,
             dilation=self._dilation,
-            groups=self._groups,
+            groups=groups,
             data_format=self._data_format)
         return out
 
@@ -606,7 +615,9 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             output_padding = 0
 
         if self.bias is not None:
-            bias = self.bias[:out_nc]
+            if groups != in_nc:
+                weight_out_nc = weight_out_nc * groups
+            bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
 
@@ -618,7 +629,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             output_padding=output_padding,
             stride=self._stride,
             dilation=self._dilation,
-            groups=self._groups,
+            groups=groups,
             output_size=output_size,
             data_format=self._data_format)
         return out
@@ -929,10 +940,11 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                  weight_attr=None,
                  bias_attr=None,
                  data_format='NCHW',
+                 use_global_stats=None,
                  name=None):
-        super(SuperBatchNorm2D, self).__init__(num_features, momentum, epsilon,
-                                               weight_attr, bias_attr,
-                                               data_format, name)
+        super(SuperBatchNorm2D, self).__init__(
+            num_features, momentum, epsilon, weight_attr, bias_attr,
+            data_format, use_global_stats, name)
 
     def forward(self, input):
         self._check_data_format(self._data_format)
@@ -954,7 +966,8 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
             training=self.training,
             momentum=self._momentum,
             epsilon=self._epsilon,
-            data_format=self._data_format)
+            data_format=self._data_format,
+            use_global_stats=self._use_global_stats)
 
 
 class SuperSyncBatchNorm(nn.SyncBatchNorm):

@@ -36,6 +36,10 @@ paddleslim>=2.1.0
 - 开发可以在初始化`UnstructuredPruner`时，传入自定义的`skip_params_func`，来定义哪些参数不参与剪裁。`skip_params_func`示例代码如下(路径：`paddleslim.dygraph.prune.unstructured_pruner._get_skip_params())`。默认为所有的归一化层的参数不参与剪裁。
 
 ```python
+NORMS_ALL = [ 'BatchNorm', 'GroupNorm', 'LayerNorm', 'SpectralNorm', 'BatchNorm1D',
+    'BatchNorm2D', 'BatchNorm3D', 'InstanceNorm1D', 'InstanceNorm2D',
+    'InstanceNorm3D', 'SyncBatchNorm', 'LocalResponseNorm' ]
+
 def _get_skip_params(model):
     """
     This function is used to check whether the given model's layers are valid to be pruned.
@@ -49,7 +53,7 @@ def _get_skip_params(model):
     """
     skip_params = set()
     for _, sub_layer in model.named_sublayers():
-        if type(sub_layer).__name__.split('.')[-1] in paddle.nn.norm.__all__:
+        if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
             skip_params.add(sub_layer.full_name())
     return skip_params
 ```
@@ -63,7 +67,7 @@ python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshol
 
 按照比例剪裁（训练速度较慢，推荐按照阈值剪裁）：
 ```bash
-python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.5
+python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
 GPU多卡训练：
@@ -72,8 +76,10 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3
 python3.7 -m paddle.distributed.launch \
 --gpus="0,1,2,3" \
 --log_dir="train_mbv1_imagenet_threshold_001_log" \
-train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
+train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 --batch_size 256
 ```
+
+**注意**，这里的batch_size为单卡上的。
 
 恢复训练（请替代命令中的`dir/to/the/saved/pruned/model`和`INTERRUPTED_EPOCH`）：
 ```bash
@@ -83,7 +89,7 @@ python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshol
 
 ## 推理：
 ```bash
-python3.7 eval --pruned_model models/ --data imagenet
+python3.7 evalualte.py --pruned_model models/ --data imagenet
 ```
 
 剪裁训练代码示例：
@@ -97,6 +103,7 @@ for epoch in range(epochs):
         loss = calculate_loss()
         loss.backward()
         opt.step()
+        learning_rate.step()
         opt.clear_grad()
         #STEP2: update the pruner's threshold given the updated parameters
         pruner.step()
@@ -124,8 +131,8 @@ test()
 
 更多使用参数请参照shell文件或者运行如下命令查看：
 ```bash
-python3.7 train --h
-python3.7 evaluate --h
+python3.7 train.py --h
+python3.7 evaluate.py --h
 ```
 
 ## 实验结果
@@ -134,5 +141,6 @@ python3.7 evaluate --h
 |:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
 | MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
 | MobileNetV1 | ImageNet |   ratio  | -55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.005 | - | 68 |
+| MobileNetV1 | ImageNet |   threshold  | -49.49% | 71.22%/89.78% (+0.23%/+0.10%) | 0.05 | 0.01 | 93 |
 | YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
-| YOLO v3     |  VOC     |threshold | -56.50% | 77.02%（+0.78%） | 0.001 | 0.01 | 102k iterations |
+| YOLO v3     |  VOC     |threshold | -56.50% | 77.21% (+0.97%) | 0.001 | 0.01 | 150k iterations |
