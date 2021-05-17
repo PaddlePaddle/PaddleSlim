@@ -33,7 +33,7 @@ def compress(args):
     test_reader = None
     if args.data == "imagenet":
         import imagenet_reader as reader
-        val_dataset = reader.ImageNetDataset(data_dir='/data', mode='val')
+        val_dataset = reader.ImageNetDataset(mode='val')
         class_dim = 1000
     elif args.data == "cifar10":
         normalize = T.Normalize(
@@ -47,13 +47,12 @@ def compress(args):
 
     places = paddle.static.cuda_places(
     ) if args.use_gpu else paddle.static.cpu_places()
-    batch_size_per_card = int(args.batch_size / len(places))
     valid_loader = paddle.io.DataLoader(
         val_dataset,
         places=places,
         drop_last=False,
         return_list=True,
-        batch_size=batch_size_per_card,
+        batch_size=args.batch_size,
         shuffle=False,
         use_shared_memory=True)
 
@@ -70,15 +69,12 @@ def compress(args):
             y_data = paddle.to_tensor(data[1])
             if args.data == 'cifar10':
                 y_data = paddle.unsqueeze(y_data, 1)
-            end_time = time.time()
 
             logits = model(x_data)
             loss = F.cross_entropy(logits, y_data)
             acc_top1 = paddle.metric.accuracy(logits, y_data, k=1)
             acc_top5 = paddle.metric.accuracy(logits, y_data, k=5)
-
-            acc_top1_ns.append(acc_top1.numpy())
-            acc_top5_ns.append(acc_top5.numpy())
+            end_time = time.time()
             if batch_id % args.log_period == 0:
                 _logger.info(
                     "Eval epoch[{}] batch[{}] - acc_top1: {}; acc_top5: {}; time: {}".
