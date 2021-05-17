@@ -20,7 +20,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64*12,                 "Minibatch size.")
+add_arg('batch_size',       int,  64,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
 add_arg('pruned_model', str,  "models",                "Whether to use pretrained model.")
@@ -44,8 +44,8 @@ def compress(args):
         image_shape = "1,28,28"
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_dataset = reader.ImageNetDataset(data_dir='/data', mode='train')
-        val_dataset = reader.ImageNetDataset(data_dir='/data', mode='val')
+        train_dataset = reader.ImageNetDataset(mode='train')
+        val_dataset = reader.ImageNetDataset(mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -71,7 +71,6 @@ def compress(args):
         use_shared_memory=True,
         batch_size=batch_size_per_card,
         shuffle=False)
-    step_per_epoch = int(np.ceil(len(train_dataset) * 1. / args.batch_size))
 
     # model definition
     model = models.__dict__[args.model]()
@@ -103,12 +102,7 @@ def compress(args):
         for batch_id, data in enumerate(valid_loader):
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(
-                program,
-                feed={
-                    "image": data[0].get('image'),
-                    "label": data[0].get('label'),
-                },
-                fetch_list=[acc_top1.name, acc_top5.name])
+                program, feed=data, fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
             if batch_id % args.log_period == 0:
                 _logger.info(
