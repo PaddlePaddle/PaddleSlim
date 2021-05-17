@@ -19,12 +19,12 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64,                 "Minibatch size.")
+add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
 add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
 add_arg('lr',               float,  0.1,               "The learning rate used to fine-tune pruned model.")
-add_arg('lr_strategy',      str,  "cosine_decay",   "The learning rate decay strategy.")
+add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
 add_arg('threshold',        float,  1e-5,               "The threshold to set zeros, the abs(weights) lower than which will be zeros.")
@@ -86,8 +86,8 @@ def compress(args):
         args.pretrained_model = False
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_dataset = reader.ImageNetDataset(data_dir='/data', mode='train')
-        val_dataset = reader.ImageNetDataset(data_dir='/data', mode='val')
+        train_dataset = reader.ImageNetDataset(mode='train')
+        val_dataset = reader.ImageNetDataset(mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -95,14 +95,16 @@ def compress(args):
     image_shape = [int(m) for m in image_shape.split(",")]
     assert args.model in model_list, "{} is not in lists: {}".format(args.model,
                                                                      model_list)
-    places = paddle.static.cuda_places(
-    ) if args.use_gpu else paddle.static.cpu_places()
+    if args.use_gpu:
+        places = paddle.static.cuda_places()
+    else:
+        places = paddle.static.cpu_places()
+
     place = places[0]
     exe = paddle.static.Executor(place)
     image = paddle.static.data(
         name='image', shape=[None] + image_shape, dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-
     batch_size_per_card = int(args.batch_size / len(places))
     train_loader = paddle.io.DataLoader(
         train_dataset,
@@ -148,6 +150,10 @@ def compress(args):
     exe.run(paddle.static.default_startup_program())
 
     if args.pretrained_model:
+        assert os.path.exists(
+            args.
+            pretrained_model), "Pretrained model path {} doesn't exist".format(
+                args.pretrained_model)
 
         def if_exist(var):
             return os.path.exists(os.path.join(args.pretrained_model, var.name))
@@ -169,12 +175,7 @@ def compress(args):
         for batch_id, data in enumerate(valid_loader):
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(
-                program,
-                feed={
-                    "image": data[0].get('image'),
-                    "label": data[0].get('label')
-                },
-                fetch_list=[acc_top1.name, acc_top5.name])
+                program, feed=data, fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
             if batch_id % args.log_period == 0:
                 _logger.info(
@@ -190,28 +191,38 @@ def compress(args):
             np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
 
     def train(epoch, program):
+        train_reader_cost = 0.0
+        train_run_cost = 0.0
+        total_samples = 0
+        reader_start = time.time()
         for batch_id, data in enumerate(train_loader):
-            start_time = time.time()
+            train_reader_cost += time.time() - reader_start
+            train_start = time.time()
             loss_n, acc_top1_n, acc_top5_n = exe.run(
                 train_program,
-                feed={
-                    "image": data[0].get('image'),
-                    "label": data[0].get('label')
-                },
+                feed=data,
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
-            end_time = time.time()
+            pruner.step()
+            train_run_cost += time.time() - train_start
+            total_samples += args.batch_size
             loss_n = np.mean(loss_n)
             acc_top1_n = np.mean(acc_top1_n)
             acc_top5_n = np.mean(acc_top5_n)
             if batch_id % args.log_period == 0:
                 _logger.info(
-                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; time: {}".
+                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; avg_reader_cost: {:.5f} sec, avg_batch_cost: {:.5f} sec, avg_samples: {:.5f}, ips: {:.5f} images/sec".
                     format(epoch, batch_id,
                            learning_rate.get_lr(), loss_n, acc_top1_n,
-                           acc_top5_n, end_time - start_time))
+                           acc_top5_n, train_reader_cost / args.log_period, (
+                               train_reader_cost + train_run_cost
+                           ) / args.log_period, total_samples / args.log_period,
+                           total_samples / (train_reader_cost + train_run_cost
+                                            )))
+                train_reader_cost = 0.0
+                train_run_cost = 0.0
+                total_samples = 0
             learning_rate.step()
-            pruner.step()
-            batch_id += 1
+            reader_start = time.time()
 
     build_strategy = paddle.static.BuildStrategy()
     exec_strategy = paddle.static.ExecutionStrategy()
@@ -227,10 +238,10 @@ def compress(args):
             round(100 * UnstructuredPruner.total_sparse(
                 paddle.static.default_main_program()), 2)))
 
-        if i % args.test_period == 0:
+        if (i + 1) % args.test_period == 0:
             pruner.update_params()
             test(i, val_program)
-        if i > args.resume_epoch and i % args.model_period == 0:
+        if (i + 1) % args.model_period == 0:
             pruner.update_params()
             # NOTE: We are using fluid.io.save_params() because the pretrained model is from an older version which requires this API. 
             #       Please consider using paddle.static.save(program, model_path) as long as it becomes possible.

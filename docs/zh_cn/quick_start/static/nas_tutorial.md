@@ -52,7 +52,7 @@ def build_program(archs):
         output = static.nn.fc(output, size=10)
 
         softmax_out = F.softmax(output)
-        cost = F.cross_entropy(softmax_out, label=label)
+        cost = F.cross_entropy(softmax_out, label=gt)
         avg_cost = paddle.mean(cost)
         acc_top1 = paddle.metric.accuracy(input=softmax_out, label=gt, k=1)
         acc_top5 = paddle.metric.accuracy(input=softmax_out, label=gt, k=5)

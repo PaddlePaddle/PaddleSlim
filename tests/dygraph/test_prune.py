@@ -43,7 +43,7 @@ class TestPrune(unittest.TestCase):
         paddle.disable_static()
         model = net(pretrained=False)
         pruner = L1NormFilterPruner(model, [1, 3, 16, 16])
-        pruner.prune_vars(ratios, [0])
+        pruner.prune_vars(ratios, 0)
         shapes = {}
         for param in model.parameters():
             shapes[param.name] = param.shape
