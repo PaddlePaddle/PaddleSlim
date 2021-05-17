@@ -15,7 +15,7 @@ DATA_DIM = 224
 THREAD = 16
 BUF_SIZE = 10240
 
-DATA_DIR = './data/ILSVRC2012/'
+DATA_DIR = 'data/ILSVRC2012/'
 DATA_DIR = os.path.join(os.path.split(os.path.realpath(__file__))[0], DATA_DIR)
 
 img_mean = np.array([0.485, 0.456, 0.406]).reshape((3, 1, 1))
