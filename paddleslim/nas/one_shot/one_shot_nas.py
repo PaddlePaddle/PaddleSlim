@@ -34,7 +34,7 @@ def OneShotSearch(model, eval_func, strategy='sa', search_steps=100):
         list<int>: The best tokens searched.
     """
     super_net = None
-    for layer in model.sublayers(include_sublayers=False):
+    for layer in model.sublayers(include_self=True):
         print("layer: {}".format(layer))
         if isinstance(layer, OneShotSuperNet):
             super_net = layer

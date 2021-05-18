@@ -77,6 +77,7 @@ class ModelShortcut(nn.Layer):
         y = x + y
         z = self.branch2(y)
         z = z + y
+        z = self.out(z)
         return z
 
 
