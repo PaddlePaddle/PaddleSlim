@@ -10,13 +10,14 @@ This tutorial shows how to do training-aware quantization using [API](https://pa
 6. Save model after quantization
 
 ## 1. Necessary imports
-PaddleSlim depends on Paddle1.7. Please make true that you have installed Paddle correctly. Then do the necessary imports:
+Please make true that you have installed Paddle correctly. Then do the necessary imports:
 
 ```python
 import paddle
 import paddle.fluid as fluid
 import paddleslim as slim
 import numpy as np
+paddle.enable_static()
 ```
 
 ## 2. Model architecture
