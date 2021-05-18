@@ -45,6 +45,7 @@ UnstructuredPruner
 
   .. code-block:: python
 
+    import paddle
     from paddleslim import UnstructuredPruner
     from paddle.vision.models import LeNet as net
     import numpy as np
@@ -67,6 +68,7 @@ UnstructuredPruner
 
   .. code-block:: python
 
+    import paddle
     from paddleslim import UnstructuredPruner
     from paddle.vision.models import LeNet as net
     import numpy as np
@@ -101,6 +103,7 @@ UnstructuredPruner
 
   .. code-block:: python
 
+    import paddle
     from paddleslim import UnstructuredPruner
     from paddle.vision.models import LeNet as net
     import numpy as np
@@ -129,6 +132,7 @@ UnstructuredPruner
 
   .. code-block:: python
 
+    import paddle
     from paddleslim import UnstructuredPruner
     from paddle.vision.models import LeNet as net
     import numpy as np
