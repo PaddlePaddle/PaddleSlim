@@ -29,7 +29,7 @@ if pd_ver == 185:
     Layer = paddle.fluid.dygraph.Layer
 else:
     import paddle.nn as nn
-    from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
+    from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding, SyncBatchNorm
     from paddle import ParamAttr
     from .layers import *
     from . import layers
@@ -105,11 +105,13 @@ class Convert:
         cur_channel = None
         for idx, layer in enumerate(model):
             cls_name = layer.__class__.__name__.lower()
-            if 'conv' in cls_name or 'linear' in cls_name or 'embedding' in cls_name:
-                weight_layer_count += 1
-                last_weight_layer_idx = idx
-                if first_weight_layer_idx == -1:
-                    first_weight_layer_idx = idx
+            ### basic api in paddle
+            if len(layer.sublayers()) == 0:
+                if 'conv' in cls_name or 'linear' in cls_name or 'embedding' in cls_name:
+                    weight_layer_count += 1
+                    last_weight_layer_idx = idx
+                    if first_weight_layer_idx == -1:
+                        first_weight_layer_idx = idx
 
         if getattr(self.context, 'channel', None) != None:
             assert len(
@@ -285,6 +287,44 @@ class Convert:
                 layer = layers.SuperBatchNorm(
                     **new_attr_dict
                 ) if pd_ver == 185 else layers.SuperBatchNorm2D(**new_attr_dict)
+                model[idx] = layer
+
+            elif isinstance(layer, SyncBatchNorm) and (
+                    getattr(self.context, 'expand', None) != None or
+                    getattr(self.context, 'channel', None) != None):
+                # num_features in SyncBatchNorm don't change after last weight operators
+                if idx > last_weight_layer_idx:
+                    continue
+
+                attr_dict = layer.__dict__
+                new_attr_name = ['momentum', 'epsilon', 'bias_attr']
+
+                new_attr_name += ['weight_attr', 'data_format', 'name']
+
+                self._change_name(layer, pd_ver)
+                new_attr_dict = dict.fromkeys(new_attr_name, None)
+                new_attr_dict['num_features'] = None
+
+                new_key = 'num_channels' if 'num_channels' in new_attr_dict.keys(
+                ) else 'num_features'
+
+                if self.context.expand:
+                    new_attr_dict[new_key] = int(
+                        self.context.expand *
+                        layer._parameters['weight'].shape[0])
+                elif self.context.channel:
+                    new_attr_dict[new_key] = max(cur_channel)
+                else:
+                    new_attr_dict[new_key] = attr_dict[
+                        '_num_channels'] if '_num_channels' in attr_dict.keys(
+                        ) else attr_dict['_num_features']
+
+                for attr in new_attr_name:
+                    new_attr_dict[attr] = attr_dict['_' + attr]
+
+                del layer, attr_dict
+
+                layer = layers.SuperSyncBatchNorm(**new_attr_dict)
                 model[idx] = layer
 
             ### assume output_size = None, filter_size != None
@@ -651,13 +691,23 @@ class Convert:
                 raise NotImplementedError("name error")
             return net
 
+        def get_split_names(layer, name_list):
+            if name_list:
+                self.name_list.append(name_list)
+            for _, (name, sublayer) in enumerate(layer.named_children()):
+                if sublayer.named_children():
+                    get_split_names(sublayer, name_list + [name])
+
         if isinstance(network, Layer):
-            for idx, (name, sublayer) in enumerate(network.named_sublayers()):
-                if len(name.split('.')) > 1:
-                    net = split_prefix(network, name.split('.')[:-1])
+            curr_id = 0
+            self.name_list = []
+            get_split_names(network, [])
+            for idx, nl in enumerate(self.name_list):
+                if len(nl) > 1:
+                    net = split_prefix(network, nl[:-1])
                 else:
                     net = network
-                setattr(net, name.split('.')[-1], model[idx])
+                setattr(net, nl[-1], model[idx])
 
         return network
 

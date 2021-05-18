@@ -256,6 +256,16 @@ class TestImperativeQatPACT(unittest.TestCase):
         _logger.info("After quantization: top1: {}, top5: {}".format(top1_1,
                                                                      top5_1))
 
+        # test for saving model in train mode
+        lenet.train()
+        quanter.save_quantized_model(
+            lenet,
+            './dygraph_qat',
+            input_spec=[
+                paddle.static.InputSpec(
+                    shape=[None, 1, 28, 28], dtype='float32')
+            ])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -40,6 +40,47 @@ class ModelV1(nn.Layer):
         return self.cls + self.model(inputs)
 
 
+class ModelShortcut(nn.Layer):
+    def __init__(self):
+        super(ModelShortcut, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2D(3, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.branch1 = nn.Sequential(
+            nn.Conv2D(12, 12, 1),
+            nn.BatchNorm2D(12),
+            nn.ReLU(),
+            nn.Conv2D(
+                12, 12, 1, groups=12),
+            nn.BatchNorm2D(12),
+            nn.ReLU(),
+            nn.Conv2D(
+                12, 12, 1, groups=12),
+            nn.BatchNorm2D(12),
+            nn.ReLU())
+        self.branch2 = nn.Sequential(
+            nn.Conv2D(12, 12, 1),
+            nn.BatchNorm2D(12),
+            nn.ReLU(),
+            nn.Conv2D(
+                12, 12, 1, groups=12),
+            nn.BatchNorm2D(12),
+            nn.ReLU(),
+            nn.Conv2D(12, 12, 1),
+            nn.BatchNorm2D(12),
+            nn.ReLU())
+        self.out = nn.Sequential(
+            nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y = self.branch1(x)
+        y = x + y
+        z = self.branch2(y)
+        z = z + y
+        z = self.out(z)
+        return z
+
+
 class TestOFAV2(unittest.TestCase):
     def setUp(self):
         model = ModelV1()
@@ -71,6 +112,43 @@ class TestOFAV2Export(unittest.TestCase):
             input_shapes=[1, 3, 32, 32],
             input_dtypes=['float32'],
             origin_model=origin_model)
+
+
+class TestShortcutSkiplayers(unittest.TestCase):
+    def setUp(self):
+        model = ModelShortcut()
+        sp_net_config = supernet(expand_ratio=[0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+        self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
+        self.init_config()
+        self.ofa_model = OFA(self.model, run_config=self.run_config)
+        self.ofa_model._clear_search_space(self.images)
+
+    def init_config(self):
+        default_run_config = {'skip_layers': ['branch1.6']}
+        self.run_config = RunConfig(**default_run_config)
+
+    def test_shortcut(self):
+        self.ofa_model.set_epoch(0)
+        self.ofa_model.set_task('expand_ratio')
+        for i in range(5):
+            self.ofa_model(self.images)
+        assert list(self.ofa_model._ofa_layers.keys()) == ['branch2.0', 'out.0']
+
+
+class TestShortcutSkiplayersCase1(TestShortcutSkiplayers):
+    def init_config(self):
+        default_run_config = {'skip_layers': ['conv1.0']}
+        self.run_config = RunConfig(**default_run_config)
+
+
+class TestShortcutSkiplayersCase2(TestShortcutSkiplayers):
+    def init_config(self):
+        default_run_config = {'skip_layers': ['branch2.0']}
+        self.run_config = RunConfig(**default_run_config)
+
+    def test_shortcut(self):
+        assert list(self.ofa_model._ofa_layers.keys()) == ['conv1.0', 'out.0']
 
 
 if __name__ == '__main__':

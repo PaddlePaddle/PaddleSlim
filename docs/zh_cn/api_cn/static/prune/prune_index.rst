@@ -6,3 +6,4 @@
    :maxdepth: 1
 
    prune_api.rst
+   unstructured_prune_api.rst
