@@ -3,7 +3,7 @@ sys.path.append("../../")
 import unittest
 import paddle
 import numpy as np
-from paddleslim.dygraph.prune.unstructured_pruner import UnstructuredPruner
+from paddleslim import UnstructuredPruner
 from paddle.vision.models import mobilenet_v1
 
 
@@ -36,6 +36,20 @@ class TestUnstructuredPruner(unittest.TestCase):
 
         self.pruner.update_params()
         self.assertEqual(cur_density, UnstructuredPruner.total_sparse(self.net))
+
+    def test_summarize_weights(self):
+        max_value = -float("inf")
+        threshold = self.pruner.summarize_weights(self.net, 1.0)
+        for name, sub_layer in self.net.named_sublayers():
+            if not self.pruner._should_prune_layer(sub_layer):
+                continue
+            for param in sub_layer.parameters(include_sublayers=False):
+                max_value = max(
+                    max_value,
+                    np.max(np.abs(np.array(param.value().get_tensor()))))
+        print("The returned threshold is {}.".format(threshold))
+        print("The max_value is {}.".format(max_value))
+        self.assertEqual(max_value, threshold)
 
 
 if __name__ == "__main__":

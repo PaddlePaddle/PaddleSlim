@@ -15,7 +15,7 @@ DATA_DIM = 224
 THREAD = 16
 BUF_SIZE = 10240
 
-DATA_DIR = 'data/ILSVRC2012/'
+DATA_DIR = './data/ILSVRC2012/'
 DATA_DIR = os.path.join(os.path.split(os.path.realpath(__file__))[0], DATA_DIR)
 
 img_mean = np.array([0.485, 0.456, 0.406]).reshape((3, 1, 1))
@@ -147,7 +147,7 @@ def _reader_creator(file_list,
                 if mode == 'train' and os.getenv('PADDLE_TRAINING_ROLE'):
                     # distributed mode if the env var `PADDLE_TRAINING_ROLE` exits
                     trainer_id = int(os.getenv("PADDLE_TRAINER_ID", "0"))
-                    trainer_count = int(os.getenv("PADDLE_TRAINERS_NUM", "1"))
+                    trainer_count = int(os.getenv("PADDLE_TRAINERS", "1"))
                     per_node_lines = len(full_lines) // trainer_count
                     lines = full_lines[trainer_id * per_node_lines:(
                         trainer_id + 1) * per_node_lines]
@@ -200,6 +200,7 @@ def test(data_dir=DATA_DIR):
 class ImageNetDataset(Dataset):
     def __init__(self, data_dir=DATA_DIR, mode='train'):
         super(ImageNetDataset, self).__init__()
+        self._data_dir = data_dir
         train_file_list = os.path.join(data_dir, 'train_list.txt')
         val_file_list = os.path.join(data_dir, 'val_list.txt')
         test_file_list = os.path.join(data_dir, 'test_list.txt')
@@ -211,7 +212,7 @@ class ImageNetDataset(Dataset):
                 if os.getenv('PADDLE_TRAINING_ROLE'):
                     # distributed mode if the env var `PADDLE_TRAINING_ROLE` exits
                     trainer_id = int(os.getenv("PADDLE_TRAINER_ID", "0"))
-                    trainer_count = int(os.getenv("PADDLE_TRAINERS_NUM", "1"))
+                    trainer_count = int(os.getenv("PADDLE_TRAINERS", "1"))
                     per_node_lines = len(full_lines) // trainer_count
                     lines = full_lines[trainer_id * per_node_lines:(
                         trainer_id + 1) * per_node_lines]
@@ -229,7 +230,7 @@ class ImageNetDataset(Dataset):
 
     def __getitem__(self, index):
         sample = self.data[index]
-        data_path = os.path.join(DATA_DIR, sample[0])
+        data_path = os.path.join(self._data_dir, sample[0])
         if self.mode == 'train':
             data, label = process_image(
                 [data_path, sample[1]],

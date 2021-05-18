@@ -7,3 +7,4 @@ Pruners
    l1norm_filter_pruner.rst
    l2norm_filter_pruner.rst
    fpgm_filter_pruner.rst
+   unstructured_pruner.rst
