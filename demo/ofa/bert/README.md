@@ -44,7 +44,7 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         </td>
                 </tr>
                 <tr>
-                        <td rowspan=4 align=center> T4 </td>
+                        <td rowspan=8 align=center> T4 </td>
                         <td rowspan=4 align=center> 16 </td>
                         <td rowspan=2 align=center> BERT </td>
                         <td style="text-align:center">
@@ -77,6 +77,41 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         </td>
                         <td style="text-align:center">
                                 <span style="font-size:18px">14.93</span>
+                        </td>
+                </tr>
+		<tr>
+			<td rowspan=4 align=center> 40 </td>
+                        <td rowspan=2 align=center> BERT </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">N</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">252.78</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">Y</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">53.67</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td rowspan=2 align=center>Compressed BERT </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">N</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">168.71</span>
+                        </td>
+                </tr>
+                <tr>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">Y</span>
+                        </td>
+                        <td style="text-align:center">
+                                <span style="font-size:18px">37.22</span>
                         </td>
                 </tr>
                 <tr>
