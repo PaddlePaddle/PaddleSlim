@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
 add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
+add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
 add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
@@ -123,7 +124,7 @@ def compress(args):
         drop_last=False,
         return_list=False,
         use_shared_memory=True,
-        batch_size=batch_size_per_card,
+        batch_size=args.batch_size_for_validation,
         shuffle=False)
     step_per_epoch = int(np.ceil(len(train_dataset) * 1. / args.batch_size))
 

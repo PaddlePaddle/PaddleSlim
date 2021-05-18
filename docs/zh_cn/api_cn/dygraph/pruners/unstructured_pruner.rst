@@ -7,7 +7,7 @@ UnstructuredPruner
 .. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.3, skip_params_func=None)
 
 
-`源代码 <https://github.com/minghaoBD/PaddleSlim/blob/update_unstructured_pruning_docs/paddleslim/dygraph/prune/unstructured_pruner.py>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
 
 对于神经网络中的参数进行非结构化稀疏。非结构化稀疏是指，根据某些衡量指标，将不重要的参数置0。其不按照固定结构剪裁（例如一个通道等），这是和结构化剪枝的主要区别。
 
@@ -23,11 +23,16 @@ UnstructuredPruner
 
 **示例代码：**
 
-此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
-
 .. code-block:: python
 
+  import paddle
   from paddleslim import UnstructuredPruner
+  from paddle.vision.models import LeNet as net
+  import numpy as np
+
+  place = paddle.set_device('cpu')
+  model = net(num_classes=10)
+
   pruner = UnstructuredPruner(model, mode='ratio', ratio=0.5)
 
 ..
@@ -38,13 +43,19 @@ UnstructuredPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
-
   .. code-block:: python
 
     from paddleslim import UnstructuredPruner
+    from paddle.vision.models import LeNet as net
+    import numpy as np
+
+    place = paddle.set_device('cpu')
+    model = net(num_classes=10)
     pruner = UnstructuredPruner(model, mode='ratio', ratio=0.5)
+
+    print(pruner.threshold)
     pruner.step()
+    print(pruner.threshold) # 可以看出，这里的threshold和上面打印的不同，这是因为step函数根据设定的ratio更新了threshold数值，便于剪裁操作。
 
   ..
 
@@ -54,13 +65,23 @@ UnstructuredPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
-
   .. code-block:: python
 
     from paddleslim import UnstructuredPruner
-    pruner = UnstructuredPruner(model, mode='ratio', ratio=0.5)
+    from paddle.vision.models import LeNet as net
+    import numpy as np
+
+    place = paddle.set_device('cpu')
+    model = net(num_classes=10)
+    pruner = UnstructuredPruner(model, mode='threshold', threshold=0.5)
+
+    density = UnstructuredPruner.total_sparse(model)
+    print(density)
+    model(paddle.to_tensor(
+                np.random.uniform(0, 1, [16, 1, 28, 28]), dtype='float32'))
     pruner.update_params()
+    density = UnstructuredPruner.total_sparse(model)
+    print(density) # 可以看出，这里打印的模型稠密度与上述不同，这是因为update_params()函数置零了所有绝对值小于0.5的权重。
 
   ..
 
@@ -78,13 +99,17 @@ UnstructuredPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
-
   .. code-block:: python
 
     from paddleslim import UnstructuredPruner
-    density = UnstructuredPruner.total_sparse(model)
+    from paddle.vision.models import LeNet as net
+    import numpy as np
 
+    place = paddle.set_device('cpu')
+    model = net(num_classes=10)
+    density = UnstructuredPruner.total_sparse(model)
+    print(density)
+    
   ..
 
   .. py:method:: paddleslim.UnstructuredPruner.summarize_weights(model, ratio=0.1)
@@ -102,12 +127,17 @@ UnstructuredPruner
 
   **示例代码：**
 
-  此示例不能直接运行，因为需要定义和加载模型，详细用法请参考 `这里 <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/dygraph/unstructured_pruning>`_
-
   .. code-block:: python
 
     from paddleslim import UnstructuredPruner
+    from paddle.vision.models import LeNet as net
+    import numpy as np
+
+    place = paddle.set_device('cpu')
+    model = net(num_classes=10)
     pruner = UnstructuredPruner(model, mode='ratio', ratio=0.5)
-    threshold = pruner.summarize_weights(model, ratio=0.1)
+
+    threshold = pruner.summarize_weights(model, 0.5)
+    print(threshold)
 
   ..
