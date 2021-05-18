@@ -31,7 +31,7 @@ from .layers_base import BaseBlock
 from .utils.utils import search_idx
 from ...common import get_logger
 from ...core import GraphWrapper, dygraph2program
-from .get_sub_model import get_prune_params_config, prune_params, check_search_space
+from .get_sub_model import get_prune_params_config, prune_params, check_search_space, broadcast_search_space
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -156,7 +156,6 @@ class OFA(OFABase):
           sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
           sp_model = Convert(sp_net_config).convert(model)
           ofa_model = OFA(sp_model)
-
     """
 
     def __init__(self,
@@ -461,6 +460,23 @@ class OFA(OFABase):
 
     def _export_sub_model_config(self, origin_model, config, input_shapes,
                                  input_dtypes):
+        param2name = {}
+        for name, sublayer in origin_model.named_sublayers():
+            for param in sublayer.parameters(include_sublayers=False):
+                if name.split('.')[-1] == 'fn':
+                    ### if sublayer is Block, the name of the param.name has 'fn', the config always donnot have 'fn'
+                    param2name[param.name] = name[:-3]
+                else:
+                    param2name[param.name] = name
+
+        program = dygraph2program(
+            origin_model, inputs=input_shapes, dtypes=input_dtypes)
+        graph = GraphWrapper(program)
+
+        same_config, _ = check_search_space(graph)
+        if same_config != None:
+            broadcast_search_space(same_config, param2name, config)
+
         origin_model_config = {}
         for name, sublayer in origin_model.named_sublayers():
             if isinstance(sublayer, BaseBlock):
@@ -469,9 +485,6 @@ class OFA(OFABase):
                 if name in config.keys():
                     origin_model_config[param.name] = config[name]
 
-        program = dygraph2program(
-            origin_model, inputs=input_shapes, dtypes=input_dtypes)
-        graph = GraphWrapper(program)
         param_prune_config = get_prune_params_config(graph, origin_model_config)
         return param_prune_config
 
@@ -493,7 +506,6 @@ class OFA(OFABase):
             .. code-block:: python
               from paddle.vision.models import mobilenet_v1
               origin_model = mobilenet_v1()
-
               config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
               origin_model = ofa_model.export(origin_model, config, input_shapes=[1, 3, 28, 28], input_dtypes=['float32'])
         """
@@ -505,7 +517,6 @@ class OFA(OFABase):
             origin_model = self.model
         origin_model = origin_model._layers if isinstance(
             origin_model, DataParallel) else origin_model
-
         param_config = self._export_sub_model_config(origin_model, config,
                                                      input_shapes, input_dtypes)
         prune_params(origin_model, param_config, super_sd)
@@ -602,7 +613,6 @@ class OFA(OFABase):
                         per_ss.append(key)
                     else:
                         _logger.info("{} not in ss".format(key))
-
                 if len(per_ss) != 0:
                     tmp_same_ss.append(per_ss)
 
@@ -625,33 +635,6 @@ class OFA(OFABase):
                         if param.name in self._depthwise_conv and name in self._ofa_layers.keys(
                         ):
                             self._clear_width(name)
-
-    def _broadcast_ss(self):
-        """ broadcast search space after random sample."""
-        for per_ss in self._same_ss:
-            for ss in per_ss[1:]:
-                key = self._param2key[ss]
-                pre_key = self._param2key[per_ss[0]]
-                if key in self.current_config:
-                    if 'expand_ratio' in self.current_config[pre_key]:
-                        self.current_config[key].update({
-                            'expand_ratio':
-                            self.current_config[pre_key]['expand_ratio']
-                        })
-                    elif 'channel' in self.current_config[pre_key]:
-                        self.current_config[key].update({
-                            'channel': self.current_config[pre_key]['channel']
-                        })
-                else:
-                    if 'expand_ratio' in self.current_config[pre_key]:
-                        self.current_config[key] = {
-                            'expand_ratio':
-                            self.current_config[pre_key]['expand_ratio']
-                        }
-                    elif 'channel' in self.current_config[pre_key]:
-                        self.current_config[key] = {
-                            'channel': self.current_config[pre_key]['channel']
-                        }
 
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
@@ -692,7 +675,8 @@ class OFA(OFABase):
             kwargs['depth'] = self.current_config['depth']
 
         if self._broadcast:
-            self._broadcast_ss()
+            broadcast_search_space(self._same_ss, self._param2key,
+                                   self.current_config)
 
         student_output = self.model.forward(*inputs, **kwargs)
 
