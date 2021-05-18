@@ -129,7 +129,7 @@ class TestPruningGroupConv2d(unittest.TestCase):
                 for param in net.parameters():
                     if param.name not in shapes:
                         shapes[param.name] = param.shape
-                    assert (shapes[param.name] == param.shape)
+                    self.assertTrue(shapes[param.name] == param.shape)
                 pruner.restore()
 
 
@@ -181,7 +181,8 @@ class TestPruningMul(unittest.TestCase):
                 for param in net.parameters():
                     if param.name not in shapes:
                         shapes[param.name] = param.shape
-                    assert (shapes[param.name] == param.shape)
+
+                    self.assertTrue(shapes[param.name] == param.shape)
                 pruner.restore()
 
 

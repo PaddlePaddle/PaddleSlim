@@ -139,7 +139,7 @@ class PruningCollections(object):
                                    params,
                                    graph,
                                    skip_stranger=True,
-                                   skip_vars=[],
+                                   skip_vars=None,
                                    skip_leaves=True):
         """Collect convolution layers of graph into groups. The layers in the same group is relative on pruning operation.
         A group is a list of tuple with format (param_name, axis) in which `param_name` is the name of parameter and `axis` is the axis to be pruned on.
@@ -174,12 +174,12 @@ class PruningCollections(object):
         if not isinstance(graph, GraphWrapper):
             graph = GraphWrapper(graph)
 
+        skip_vars = [] if skip_vars is None else skip_vars
         if skip_leaves:
             leaves = self._find_leaves(graph)
             skip_vars.extend(leaves)
             _logger.warning(
                 "Leaves {} will be skipped when parsing graph.".format(leaves))
-
         visited = {}
         collections = []
         unsupported_warnings = set()
