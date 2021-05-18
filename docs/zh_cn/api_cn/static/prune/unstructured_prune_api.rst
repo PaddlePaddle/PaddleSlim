@@ -26,7 +26,7 @@ UnstrucuturedPruner
 
 .. code-block:: python
 
-  import paddle as paddle
+  import paddle
   import paddle.fluid as fluid
   from paddleslim.prune import UnstructuredPruner 
 
@@ -58,7 +58,7 @@ UnstrucuturedPruner
 
   .. code-block:: python
 
-    import paddle as paddle
+    import paddle
     import paddle.fluid as fluid 
     from paddleslim.prune import UnstructuredPruner
 
@@ -93,7 +93,7 @@ UnstrucuturedPruner
 
   .. code-block:: python
 
-    import paddle as paddle
+    import paddle
     import paddle.fluid as fluid
     from paddleslim.prune import UnstructuredPruner
 
@@ -140,7 +140,7 @@ UnstrucuturedPruner
 
   .. code-block:: python
 
-    import paddle as paddle
+    import paddle
     import paddle.fluid as fluid
     from paddleslim.prune import UnstructuredPruner
 
@@ -183,7 +183,7 @@ UnstrucuturedPruner
 
   .. code-block:: python
 
-    import paddle as paddle
+    import paddle
     import paddle.fluid as fluid
     from paddleslim.prune import UnstructuredPruner
 
@@ -204,6 +204,7 @@ UnstrucuturedPruner
     exe = paddle.static.Executor(place)
     exe.run(startup_program)
 
+    pruner = UnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.5, place=place)
     threshold = pruner.summarize_weights(paddle.static.default_main_program(), ratio=0.5)
     print(threshold)
 
