@@ -1,4 +1,4 @@
-#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,63 +23,19 @@ import paddle.fluid.core as core
 
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
+from .layers_base import *
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
-    'SuperBatchNorm2D', 'SuperLinear', 'SuperInstanceNorm2D', 'Block',
+    'SuperBatchNorm2D', 'SuperLinear', 'SuperInstanceNorm2D',
     'SuperGroupConv2D', 'SuperDepthwiseConv2D', 'SuperGroupConv2DTranspose',
-    'SuperDepthwiseConv2DTranspose', 'SuperLayerNorm', 'SuperEmbedding'
+    'SuperDepthwiseConv2DTranspose', 'SuperLayerNorm', 'SuperEmbedding',
+    'SuperSyncBatchNorm'
 ]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 ### TODO: if task is elastic width, need to add re_organize_middle_weight in 1x1 conv in MBBlock
-
-_cnt = 0
-
-
-def counter():
-    global _cnt
-    _cnt += 1
-    return _cnt
-
-
-class BaseBlock(paddle.nn.Layer):
-    def __init__(self, key=None):
-        super(BaseBlock, self).__init__()
-        if key is not None:
-            self._key = str(key)
-        else:
-            self._key = self.__class__.__name__ + str(counter())
-
-    # set SuperNet class
-    def set_supernet(self, supernet):
-        self.__dict__['supernet'] = supernet
-
-    @property
-    def key(self):
-        return self._key
-
-
-class Block(BaseBlock):
-    """
-    Model is composed of nest blocks.
-
-    Parameters:
-        fn(paddle.nn.Layer): instance of super layers, such as: SuperConv2D(3, 5, 3).
-        fixed(bool, optional): whether to fix the shape of the weight in this layer. Default: False.
-        key(str, optional): key of this layer, one-to-one correspondence between key and candidate config. Default: None.
-    """
-
-    def __init__(self, fn, fixed=False, key=None):
-        super(Block, self).__init__(key)
-        self.fn = fn
-        self.fixed = fixed
-        self.candidate_config = self.fn.candidate_config
-
-    def forward(self, *inputs, **kwargs):
-        out = self.supernet.layers_forward(self, *inputs, **kwargs)
-        return out
 
 
 class SuperConv2D(nn.Conv2D):
@@ -346,7 +302,16 @@ class SuperConv2D(nn.Conv2D):
             padding = self._padding
 
         if self.bias is not None:
-            bias = self.bias[:out_nc]
+            ### if conv is depthwise conv, expand_ratio=0, but conv' expand 
+            ### ratio before depthwise conv is not equal to 1.0, the shape of the weight
+            ### about this depthwise conv is changed, but out_nc is not change,
+            ### so need to change bias shape according to the weight_out_nc.
+            ### if in_nc > groups > 1, the actual output of conv is weight_out_nc * groups,
+            ### so slice the shape of bias by weight_out_nc and groups.
+            ### if in_nc = groups, slice the shape of bias by weight_out_nc.
+            if groups != in_nc:
+                weight_out_nc = weight_out_nc * groups
+            bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
 
@@ -357,7 +322,7 @@ class SuperConv2D(nn.Conv2D):
             stride=self._stride,
             padding=padding,
             dilation=self._dilation,
-            groups=self._groups,
+            groups=groups,
             data_format=self._data_format)
         return out
 
@@ -650,7 +615,9 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             output_padding = 0
 
         if self.bias is not None:
-            bias = self.bias[:out_nc]
+            if groups != in_nc:
+                weight_out_nc = weight_out_nc * groups
+            bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
 
@@ -662,7 +629,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             output_padding=output_padding,
             stride=self._stride,
             dilation=self._dilation,
-            groups=self._groups,
+            groups=groups,
             output_size=output_size,
             data_format=self._data_format)
         return out
@@ -973,10 +940,11 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                  weight_attr=None,
                  bias_attr=None,
                  data_format='NCHW',
+                 use_global_stats=None,
                  name=None):
-        super(SuperBatchNorm2D, self).__init__(num_features, momentum, epsilon,
-                                               weight_attr, bias_attr,
-                                               data_format, name)
+        super(SuperBatchNorm2D, self).__init__(
+            num_features, momentum, epsilon, weight_attr, bias_attr,
+            data_format, use_global_stats, name)
 
     def forward(self, input):
         self._check_data_format(self._data_format)
@@ -998,7 +966,44 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
             training=self.training,
             momentum=self._momentum,
             epsilon=self._epsilon,
-            data_format=self._data_format)
+            data_format=self._data_format,
+            use_global_stats=self._use_global_stats)
+
+
+class SuperSyncBatchNorm(nn.SyncBatchNorm):
+    def __init__(self,
+                 num_features,
+                 momentum=0.9,
+                 epsilon=1e-05,
+                 weight_attr=None,
+                 bias_attr=None,
+                 data_format='NCHW',
+                 name=None):
+        super(SuperSyncBatchNorm,
+              self).__init__(num_features, momentum, epsilon, weight_attr,
+                             bias_attr, data_format, name)
+
+    def forward(self, input):
+
+        feature_dim = int(input.shape[1])
+
+        weight = self.weight[:feature_dim]
+        bias = self.bias[:feature_dim]
+        mean = self._mean[:feature_dim]
+        variance = self._variance[:feature_dim]
+
+        mean_out = mean
+        # variance and variance out share the same memory
+        variance_out = variance
+
+        attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
+                 "is_test", not self.training, "data_layout", self._data_format,
+                 "use_mkldnn", False, "fuse_with_relu", False,
+                 "use_global_stats", False, 'trainable_statistics', False)
+        sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
+            input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
+
+        return sync_batch_norm_out
 
 
 class SuperInstanceNorm2D(nn.InstanceNorm2D):

@@ -208,11 +208,17 @@ class QAT(object):
             act_quantize_layer=self.act_quantize)
 
     def quantize(self, model):
+        self._model = copy.deepcopy(model)
         self.imperative_qat.quantize(model)
 
     def save_quantized_model(self, model, path, input_spec=None):
         if self.weight_preprocess is not None or self.act_preprocess is not None:
+            training = model.training
             model = self._remove_preprocess(model)
+            if training:
+                model.train()
+            else:
+                model.eval()
 
         self.imperative_qat.save_quantized_model(
             layer=model, path=path, input_spec=input_spec)
@@ -230,8 +236,8 @@ class QAT(object):
         with paddle.utils.unique_name.guard():
             if hasattr(model, "_layers"):
                 model = model._layers
-            model.__init__()
+            model = self._model
             self.imperative_qat.quantize(model)
-            state_dict = model.state_dict()
             model.set_state_dict(state_dict)
+
         return model

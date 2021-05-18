@@ -20,15 +20,18 @@ import paddle.fluid as fluid
 from .utils.utils import get_paddle_version, remove_model_fn
 pd_ver = get_paddle_version()
 if pd_ver == 185:
-    from .layers_old import BaseBlock, SuperConv2D, SuperLinear
+    from .layers_old import SuperConv2D, SuperLinear
     Layer = paddle.fluid.dygraph.Layer
+    DataParallel = paddle.fluid.dygraph.DataParallel
 else:
-    from .layers import BaseBlock, SuperConv2D, SuperLinear
+    from .layers import SuperConv2D, SuperLinear
     Layer = paddle.nn.Layer
+    DataParallel = paddle.DataParallel
+from .layers_base import BaseBlock
 from .utils.utils import search_idx
 from ...common import get_logger
 from ...core import GraphWrapper, dygraph2program
-from .get_sub_model import get_prune_params_config, prune_params
+from .get_sub_model import get_prune_params_config, prune_params, check_search_space, broadcast_search_space
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -48,7 +51,9 @@ RunConfig = namedtuple(
         # list, elactic depth of the model in training, default: None
         'elastic_depth',
         # list, the number of sub-network to train per mini-batch data, used to get current epoch, default: None
-        'dynamic_batch_size'
+        'dynamic_batch_size',
+        # the shape of weights in the skip_layers will not change in the training, default: None
+        'skip_layers'
     ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
@@ -75,19 +80,26 @@ class OFABase(Layer):
     def __init__(self, model):
         super(OFABase, self).__init__()
         self.model = model
-        self._layers, self._elastic_task = self.get_layers()
+        self._ofa_layers, self._elastic_task, self._key2name, self._layers = self.get_layers(
+        )
 
     def get_layers(self):
+        ofa_layers = dict()
         layers = dict()
+        key2name = dict()
         elastic_task = set()
-        for name, sublayer in self.model.named_sublayers():
+        model_to_traverse = self.model._layers if isinstance(
+            self.model, DataParallel) else self.model
+        for name, sublayer in model_to_traverse.named_sublayers():
             if isinstance(sublayer, BaseBlock):
                 sublayer.set_supernet(self)
                 if not sublayer.fixed:
+                    ofa_layers[name] = sublayer.candidate_config
                     layers[sublayer.key] = sublayer.candidate_config
+                    key2name[sublayer.key] = name
                     for k in sublayer.candidate_config.keys():
                         elastic_task.add(k)
-        return layers, elastic_task
+        return ofa_layers, elastic_task, key2name, layers
 
     def forward(self, *inputs, **kwargs):
         raise NotImplementedError
@@ -96,18 +108,27 @@ class OFABase(Layer):
         if getattr(self, 'current_config', None) != None:
             ### if block is fixed, donnot join key into candidate
             ### concrete config as parameter in kwargs
-            if block.fixed == False:
-                assert block.key in self.current_config, 'DONNT have {} layer in config.'.format(
-                    block.key)
-                config = self.current_config[block.key]
+            if block.fixed == False and (
+                    self._skip_layers != None and
+                    self._key2name[block.key] not in self._skip_layers) and  \
+                    (block.fn.weight.name not in self._depthwise_conv):
+                assert self._key2name[
+                    block.
+                    key] in self.current_config, 'DONNT have {} layer in config.'.format(
+                        self._key2name[block.key])
+                config = self.current_config[self._key2name[block.key]]
             else:
                 config = dict()
                 config.update(kwargs)
         else:
             config = dict()
-        logging.debug(self.model, config)
+        _logger.debug(self.model, config)
 
         return block.fn(*inputs, **config)
+
+    @property
+    def ofa_layers(self):
+        return self._ofa_layers
 
     @property
     def layers(self):
@@ -135,7 +156,6 @@ class OFA(OFABase):
           sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
           sp_model = Convert(sp_net_config).convert(model)
           ofa_model = OFA(sp_model)
-
     """
 
     def __init__(self,
@@ -156,6 +176,10 @@ class OFA(OFABase):
         self.task_idx = 0
         self._add_teacher = False
         self.netAs_param = []
+        self._mapping_layers = None
+        self._build_ss = False
+        self._broadcast = False
+        self._skip_layers = None
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
@@ -165,7 +189,8 @@ class OFA(OFABase):
             if getattr(self.run_config, 'elastic_depth', None) != None:
                 depth_list = list(set(self.run_config.elastic_depth))
                 depth_list.sort()
-                self.layers['depth'] = depth_list
+                self._ofa_layers['depth'] = depth_list
+                self._layers['depth'] = depth_list
 
         if self.elastic_order is None:
             self.elastic_order = []
@@ -178,7 +203,8 @@ class OFA(OFABase):
             if getattr(self.run_config, 'elastic_depth', None) != None:
                 depth_list = list(set(self.run_config.elastic_depth))
                 depth_list.sort()
-                self.layers['depth'] = depth_list
+                self._ofa_layers['depth'] = depth_list
+                self._layers['depth'] = depth_list
                 self.elastic_order.append('depth')
 
             # final, elastic width
@@ -206,6 +232,11 @@ class OFA(OFABase):
                         run_config.init_learning_rate[idx], list
                     ), "each candidate in init_learning_rate must be list"
 
+        ### remove skip layers in search space
+        if self.run_config != None and getattr(self.run_config, 'skip_layers',
+                                               None) != None:
+            self._skip_layers = self.run_config.skip_layers
+
         ### =================  add distill prepare ======================
         if self.distill_config != None:
             self._add_teacher = True
@@ -215,7 +246,7 @@ class OFA(OFABase):
 
     def _prepare_distill(self):
         if self.distill_config.teacher_model == None:
-            logging.error(
+            _logger.error(
                 'If you want to add distill, please input instance of teacher model'
             )
 
@@ -236,9 +267,14 @@ class OFA(OFABase):
         # if mapping layer is NOT None, add hook and compute distill loss about mapping layers.
         mapping_layers = getattr(self.distill_config, 'mapping_layers', None)
         if mapping_layers != None:
+            if isinstance(self.model, DataParallel):
+                for idx, name in enumerate(mapping_layers):
+                    if name[:7] != '_layers':
+                        mapping_layers[idx] = '_layers.' + name
+            self._mapping_layers = mapping_layers
             self.netAs = []
             for name, sublayer in self.model.named_sublayers():
-                if name in mapping_layers:
+                if name in self._mapping_layers:
                     if self.distill_config.mapping_op != None:
                         if self.distill_config.mapping_op.lower() == 'conv2d':
                             netA = SuperConv2D(
@@ -265,8 +301,8 @@ class OFA(OFABase):
 
     def _reset_hook_before_forward(self):
         self.Tacts, self.Sacts = {}, {}
-        mapping_layers = getattr(self.distill_config, 'mapping_layers', None)
-        if mapping_layers != None:
+        self.hooks = []
+        if self._mapping_layers != None:
 
             def get_activation(mem, name):
                 def get_output_hook(layer, input, output):
@@ -277,10 +313,17 @@ class OFA(OFABase):
             def add_hook(net, mem, mapping_layers):
                 for idx, (n, m) in enumerate(net.named_sublayers()):
                     if n in mapping_layers:
-                        m.register_forward_post_hook(get_activation(mem, n))
+                        self.hooks.append(
+                            m.register_forward_post_hook(
+                                get_activation(mem, n)))
 
-            add_hook(self.model, self.Sacts, mapping_layers)
-            add_hook(self.ofa_teacher_model.model, self.Tacts, mapping_layers)
+            add_hook(self.model, self.Sacts, self._mapping_layers)
+            add_hook(self.ofa_teacher_model.model, self.Tacts,
+                     self._mapping_layers)
+
+    def _remove_hook_after_forward(self):
+        for hook in self.hooks:
+            hook.remove()
 
     def _compute_epochs(self):
         if getattr(self, 'epoch', None) == None:
@@ -326,7 +369,7 @@ class OFA(OFABase):
 
     def _sample_config(self, task, sample_type='random', phase=None):
         config = self._sample_from_nestdict(
-            self.layers, sample_type=sample_type, task=task, phase=phase)
+            self._ofa_layers, sample_type=sample_type, task=task, phase=phase)
         return config
 
     def set_task(self, task, phase=None):
@@ -356,7 +399,13 @@ class OFA(OFABase):
 
     def _progressive_shrinking(self):
         epoch = self._compute_epochs()
-        self.task_idx, phase_idx = search_idx(epoch, self.run_config.n_epochs)
+        phase_idx = None
+        if len(self.elastic_order) != 1:
+            assert self.run_config.n_epochs is not None, \
+                "if not use set_task() to set current task, please set n_epochs in run_config " \
+                "for to compute which task in this epoch."
+            self.task_idx, phase_idx = search_idx(epoch,
+                                                  self.run_config.n_epochs)
         self.task = self.elastic_order[:self.task_idx + 1]
         if 'width' in self.task:
             ### change width in task to concrete config
@@ -365,8 +414,6 @@ class OFA(OFABase):
                 self.task.append('expand_ratio')
             if 'channel' in self._elastic_task:
                 self.task.append('channel')
-        if len(self.run_config.n_epochs[self.task_idx]) == 1:
-            phase_idx = None
         return self._sample_config(task=self.task, phase=phase_idx)
 
     def calc_distill_loss(self):
@@ -413,33 +460,39 @@ class OFA(OFABase):
 
     def _export_sub_model_config(self, origin_model, config, input_shapes,
                                  input_dtypes):
-        super_model_config = {}
-        for name, sublayer in self.model.named_sublayers():
-            if isinstance(sublayer, BaseBlock):
-                for param in sublayer.parameters():
-                    super_model_config[name] = sublayer.key
-
-        for name, value in super_model_config.items():
-            super_model_config[name] = config[value] if value in config.keys(
-            ) else {}
-
-        origin_model_config = {}
+        param2name = {}
         for name, sublayer in origin_model.named_sublayers():
             for param in sublayer.parameters(include_sublayers=False):
-                if name in super_model_config.keys():
-                    origin_model_config[param.name] = super_model_config[name]
+                if name.split('.')[-1] == 'fn':
+                    ### if sublayer is Block, the name of the param.name has 'fn', the config always donnot have 'fn'
+                    param2name[param.name] = name[:-3]
+                else:
+                    param2name[param.name] = name
 
         program = dygraph2program(
             origin_model, inputs=input_shapes, dtypes=input_dtypes)
         graph = GraphWrapper(program)
+
+        same_config, _ = check_search_space(graph)
+        if same_config != None:
+            broadcast_search_space(same_config, param2name, config)
+
+        origin_model_config = {}
+        for name, sublayer in origin_model.named_sublayers():
+            if isinstance(sublayer, BaseBlock):
+                sublayer = sublayer.fn
+            for param in sublayer.parameters(include_sublayers=False):
+                if name in config.keys():
+                    origin_model_config[param.name] = config[name]
+
         param_prune_config = get_prune_params_config(graph, origin_model_config)
         return param_prune_config
 
     def export(self,
-               origin_model,
                config,
                input_shapes,
                input_dtypes,
+               origin_model=None,
                load_weights_from_supernet=True):
         """
         Export the weights according origin model and sub model config.
@@ -453,14 +506,17 @@ class OFA(OFABase):
             .. code-block:: python
               from paddle.vision.models import mobilenet_v1
               origin_model = mobilenet_v1()
-
               config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
               origin_model = ofa_model.export(origin_model, config, input_shapes=[1, 3, 28, 28], input_dtypes=['float32'])
         """
         super_sd = None
-        if load_weights_from_supernet:
+        if load_weights_from_supernet and origin_model != None:
             super_sd = remove_model_fn(origin_model, self.model.state_dict())
 
+        if origin_model == None:
+            origin_model = self.model
+        origin_model = origin_model._layers if isinstance(
+            origin_model, DataParallel) else origin_model
         param_config = self._export_sub_model_config(origin_model, config,
                                                      input_shapes, input_dtypes)
         prune_params(origin_model, param_config, super_sd)
@@ -482,6 +538,104 @@ class OFA(OFABase):
         """
         self.net_config = net_config
 
+    def _find_ele(self, inp, targets):
+        def _roll_eles(target_list, types=(list, set, tuple)):
+            if isinstance(target_list, types):
+                for targ in target_list:
+                    for v in _roll_eles(targ, types):
+                        yield v
+            else:
+                yield target_list
+
+        if inp in list(_roll_eles(targets)):
+            return True
+        else:
+            return False
+
+    def _clear_width(self, key):
+        if 'expand_ratio' in self._ofa_layers[key]:
+            self._ofa_layers[key].pop('expand_ratio')
+        elif 'channel' in self._ofa_layers[key]:
+            self._ofa_layers[key].pop('channel')
+        if len(self._ofa_layers[key]) == 0:
+            self._ofa_layers.pop(key)
+
+    def _clear_search_space(self, *inputs, **kwargs):
+        """ find shortcut in model, and clear up the search space """
+        input_shapes = []
+        input_dtypes = []
+        for n in inputs:
+            input_shapes.append(n.shape)
+            input_dtypes.append(n.numpy().dtype)
+        for n, v in kwargs.items():
+            input_shapes.append(v.shape)
+            input_dtypes.append(v.numpy().dtype)
+
+        ### find shortcut block using static model
+        model_to_traverse = self.model._layers if isinstance(
+            self.model, DataParallel) else self.model
+        _st_prog = dygraph2program(
+            model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
+        self._same_ss, self._depthwise_conv = check_search_space(
+            GraphWrapper(_st_prog))
+
+        if self._same_ss != None:
+            self._param2key = {}
+            self._broadcast = True
+
+            ### the name of sublayer is the key in search space
+            ### param.name is the name in self._same_ss
+            for name, sublayer in model_to_traverse.named_sublayers():
+                if isinstance(sublayer, BaseBlock):
+                    for param in sublayer.parameters():
+                        if self._find_ele(param.name, self._same_ss):
+                            self._param2key[param.name] = name
+
+            ### double clear same search space to avoid outputs weights in same ss.
+            tmp_same_ss = []
+            for ss in self._same_ss:
+                per_ss = []
+                for key in ss:
+                    if key not in self._param2key.keys():
+                        continue
+
+                    ### if skip_layers and same ss both have same layer, 
+                    ### the layers related to this layer need to add to skip_layers 
+                    if self._skip_layers != None and self._param2key[
+                            key] in self._skip_layers:
+                        self._skip_layers += [self._param2key[sk] for sk in ss]
+                        per_ss = []
+                        break
+
+                    if self._param2key[key] in self._ofa_layers.keys() and \
+                       ('expand_ratio' in self._ofa_layers[self._param2key[key]] or \
+                       'channel' in self._ofa_layers[self._param2key[key]]):
+                        per_ss.append(key)
+                    else:
+                        _logger.info("{} not in ss".format(key))
+                if len(per_ss) != 0:
+                    tmp_same_ss.append(per_ss)
+
+            self._same_ss = tmp_same_ss
+
+            ### clear layer in ofa_layers set by skip layers
+            if self._skip_layers != None:
+                for skip_layer in self._skip_layers:
+                    if skip_layer in self._ofa_layers.keys():
+                        self._ofa_layers.pop(skip_layer)
+
+            for per_ss in self._same_ss:
+                for ss in per_ss[1:]:
+                    self._clear_width(self._param2key[ss])
+
+            ### clear depthwise conv from search space because of its output channel cannot change
+            for name, sublayer in model_to_traverse.named_sublayers():
+                if isinstance(sublayer, BaseBlock):
+                    for param in sublayer.parameters():
+                        if param.name in self._depthwise_conv and name in self._ofa_layers.keys(
+                        ):
+                            self._clear_width(name)
+
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
         teacher_output = None
@@ -492,6 +646,10 @@ class OFA(OFABase):
         # ============================================================
 
         # ====================   student process  =====================
+        if not self._build_ss and self.net_config == None:
+            self._clear_search_space(*inputs, **kwargs)
+            self._build_ss = True
+
         if getattr(self.run_config, 'dynamic_batch_size', None) != None:
             self.dynamic_iter += 1
             if self.dynamic_iter == self.run_config.dynamic_batch_size[
@@ -516,4 +674,13 @@ class OFA(OFABase):
         if 'depth' in self.current_config:
             kwargs['depth'] = self.current_config['depth']
 
-        return self.model.forward(*inputs, **kwargs), teacher_output
+        if self._broadcast:
+            broadcast_search_space(self._same_ss, self._param2key,
+                                   self.current_config)
+
+        student_output = self.model.forward(*inputs, **kwargs)
+
+        if self._add_teacher:
+            self._remove_hook_after_forward()
+
+        return student_output, teacher_output
