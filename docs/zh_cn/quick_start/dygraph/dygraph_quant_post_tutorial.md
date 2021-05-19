@@ -90,7 +90,7 @@ paddleslim.quant.quant_post_static(
 导出的量化模型相比原始FP32模型，模型体积没有明显差别，这是因为量化预测模型中的权重依旧保存为FP32类型。在部署时，使用PaddleLite opt工具转换量化预测模型后，模型体积才会真实减小。
 
 部署参考文档：
-* 部署[文档](../../deploy/index.html)
+* 部署[文档](https://paddleslim.readthedocs.io/zh_CN/latest/deploy/index.html)
 * PaddleLite部署量化模型[文档](https://paddle-lite.readthedocs.io/zh/latest/user_guides/quant_aware.html)
 * PaddleInference Intel CPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_x86_cpu_int8.html)
 * PaddleInference NV GPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_trt.html)
