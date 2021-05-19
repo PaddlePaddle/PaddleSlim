@@ -78,10 +78,12 @@ quant_post_dynamic
 
 .. code-block:: python
 
+   import paddle
    import paddle.fluid as fluid
    import paddle.dataset.mnist as reader
    from paddleslim.quant import quant_post_dynamic
    
+   paddle.enable_static()
    quant_post_dynamic(
            model_dir='./model_path',
            save_model_dir='./save_path',
@@ -166,9 +168,11 @@ quant_post_static
 
 .. code-block:: python
 
+   import paddle
    import paddle.fluid as fluid
    import paddle.dataset.mnist as reader
    from paddleslim.quant import quant_post_static
+   paddle.enable_static()
    val_reader = reader.train()
    use_gpu = True
    place = fluid.CUDAPlace(0) if use_gpu else fluid.CPUPlace()
@@ -265,10 +269,11 @@ convert
 .. code-block:: python
 
    #encoding=utf8
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.quant as quant
    
-   
+   paddle.enable_static()
    train_program = fluid.Program()
    
    with fluid.program_guard(train_program):
@@ -398,9 +403,11 @@ fluid.Program
 
 .. code-block:: python
 
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.quant as quant
    
+   paddle.enable_static()
    train_program = fluid.Program()
    with fluid.program_guard(train_program):
        input_word = fluid.data(name="input_word", shape=[None, 1], dtype='int64')
