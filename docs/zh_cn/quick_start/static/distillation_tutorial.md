@@ -28,6 +28,7 @@ paddle.enable_static()
 选择`ResNet50`作为teacher对`MobileNet`结构的student进行蒸馏训练。
 
 ```python
+import paddleslim as slim
 model = slim.models.MobileNet()
 student_program = paddle.static.Program()
 student_startup = paddle.static.Program()

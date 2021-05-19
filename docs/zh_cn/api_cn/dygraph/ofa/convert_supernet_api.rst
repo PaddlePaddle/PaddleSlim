@@ -61,7 +61,7 @@ PaddleSlim提供了三种方式构造超网络，下面分别介绍这三种方�
 
   model = mobilenet_v1()
   sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
-  sp_model = Convert(sp_net_config).convert(self.model)
+  sp_model = Convert(sp_net_config).convert(model)
 
 方式二
 ------------------
