@@ -42,7 +42,7 @@ To generate fake quantized model with quant-aware strategy, see [Quant-aware tra
 
 #### 2.2 Post-training quantization
 
-To generate post-training fake quantized model, see [Offline post-training quantization tutorial](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_post_demo/#_1)
+To generate post-training fake quantized model, see [Offline post-training quantization tutorial](https://paddleslim.readthedocs.io/en/latest/quick_start/index_en.html)
 
 ## 3. Convert the fake quantized model to DNNL INT8 model
 In order to deploy an INT8 model on the CPU, we need to collect scales, remove all fake_quantize/fake_dequantize operators, optimize the graph and quantize it, turning it into the final DNNL INT8 model. This is done by the script [save_quant_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py). Copy the script to the directory where the demo is located: `/PATH_TO_PaddleSlim/demo/mkldnn_quant/` and run it as follows:
