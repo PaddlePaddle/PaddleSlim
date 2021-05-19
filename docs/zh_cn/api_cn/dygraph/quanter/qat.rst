@@ -86,7 +86,7 @@ QAT
           'quantizable_layer_type': ['Conv2D', 'Linear'],
       }
       quanter = QAT(config=quant_config)
-      quanter.quantize(lenet)
+      quanter.quantize(net)
       paddle.summary(net, (1, 3, 224, 224))
    
    ..  
@@ -119,7 +119,7 @@ QAT
           'quantizable_layer_type': ['Conv2D', 'Linear'],
       }
       quanter = QAT(config=quant_config)
-      quanter.quantize(lenet)
+      quanter.quantize(net)
       paddle.summary(net, (1, 3, 224, 224))
 
       quanter.save_quantized_model(
