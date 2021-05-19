@@ -20,6 +20,7 @@
 
 ```python
 import paddle
+import paddleslim
 import paddle.vision.models as models
 from paddle.static import InputSpec as Input
 from paddle.vision.datasets import Cifar10
@@ -61,7 +62,7 @@ model.evaluate(val_dataset, batch_size=256, verbose=1)
 
 训练完成后导出预测模型:
 ```python
-paddle.jit.save(net, "./fp32_inference_model", input_spec=[inputs])
+paddle.jit.save(net, "./fp32_inference_model", input_spec=inputs)
 ```
 
 
@@ -79,7 +80,7 @@ paddleslim.quant.quant_post_static(
         model_filename='fp32_inference_model.pdmodel',
         params_filename='fp32_inference_model.pdiparams',
         quantize_model_path='./quant_post_static_model',
-        sample_generator=train_dataset,
+        sample_generator=paddle.dataset.cifar.test10(),
         batch_nums=10)
 ```
 
