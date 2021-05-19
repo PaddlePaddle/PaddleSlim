@@ -79,7 +79,7 @@ LIB_ROOT/
 
 ### 2.1 将模型导出为inference model
 
-* 可以参考[量化训练教程](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/quant_aware_tutorial.html#id9)，在训练完成后导出inference model。
+* 可以参考[量化训练教程](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/quant/index.html)，在训练完成后导出inference model。
 
 ```
 inference/
