@@ -1,6 +1,6 @@
 # OFA压缩PaddleNLP-BERT模型
 
-BERT-base模型是一个迁移能力很强的通用语义表示模型，但是模型中也有一些参数冗余。本教程将介绍如何使用PaddleSlim对[PaddleNLP](https://github.com/PaddlePaddle/models/tree/develop/PaddleNLP/)中BERT-base模型进行压缩。  
+BERT-base模型是一个迁移能力很强的通用语义表示模型，但是模型中也有一些参数冗余。本教程将介绍如何使用PaddleSlim对[PaddleNLP](https://paddlenlp.readthedocs.io/zh/latest/)中BERT-base模型进行压缩。  
 本教程只会演示如何快速启动相应训练，详细教程请参考: [BERT](https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/nlp/paddlenlp_slim_ofa_tutorial.md)
 
 ## 1. 压缩结果
@@ -185,7 +185,7 @@ pip install paddlepaddle_gpu>=2.0rc1
 ```
 
 ### 2.2 Fine-tuing
-首先需要对Pretrain-Model在实际的下游任务上进行Fine-tuning，得到需要压缩的模型。Fine-tuning流程参考[Fine-tuning教程](https://github.com/PaddlePaddle/models/tree/develop/PaddleNLP/examples/bert)
+首先需要对Pretrain-Model在实际的下游任务上进行Fine-tuning，得到需要压缩的模型。Fine-tuning流程参考[Fine-tuning教程](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/language_model/bert)
 Fine-tuning 在dev上的结果如压缩结果表1-1『Baseline』那一列所示。
 
 ### 2.3 压缩训练
