@@ -20,9 +20,10 @@ L2NormFilterPruner
 **示例代码：**
 
 .. code-block:: python
-
+   from paddle.vision.models import mobilenet_v1
    from paddleslim import L2NormFilterPruner
-   pruner = L2NormFilterPruner()       
+   net = mobilenet_v1(pretrained=False) 
+   pruner = L2NormFilterPruner(net, [1, 3, 224, 224])
 ..
  
    .. py:method:: prune_var(var_name, pruned_dims, pruned_ratio, apply="impretive")
@@ -48,12 +49,12 @@ L2NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
-
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L2NormFilterPruner
       net = mobilenet_v1(pretrained=False) 
       pruner = L2NormFilterPruner(net, [1, 3, 224, 224])
-      plan = pruner.prun_var("conv2d_26.w_0", [0])
+      plan = pruner.prune_var("conv2d_26.w_0", [0], pruned_ratio=0.5)
       print(f"plan: {plan}")
       paddle.summary(net, (1, 3, 224, 224))
    
@@ -80,12 +81,12 @@ L2NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
-
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L2NormFilterPruner
       net = mobilenet_v1(pretrained=False) 
       pruner = L2NormFilterPruner(net, [1, 3, 224, 224])
-      plan = pruner.prun_vars({"conv2d_26.w_0": 0.5}, [0])
+      plan = pruner.prune_vars({"conv2d_26.w_0": 0.5}, [0])
       print(f"plan: {plan}")
       paddle.summary(net, (1, 3, 224, 224))
 
@@ -128,7 +129,7 @@ L2NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
-
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L2NormFilterPruner
       import paddle.vision.transforms as T
@@ -188,7 +189,7 @@ L2NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
-
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L2NormFilterPruner
       import paddle.vision.transforms as T

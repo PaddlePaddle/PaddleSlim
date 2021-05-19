@@ -30,6 +30,8 @@ import numpy as np
 ```
 
 ## 2. initial SANAS instance
+
+Please set a unused port when build instance of SANAS.
 ```python
 sanas = slim.nas.SANAS(configs=[('MobileNetV2Space')], server_addr=("", 8337), save_checkpoint=None)
 ```

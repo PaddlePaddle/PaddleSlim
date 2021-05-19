@@ -13,7 +13,7 @@ by a demo of MobileNetV1 model on MNIST dataset. This tutorial following workflo
 
 PaddleSlim dependents on Paddle1.7. Please ensure that you have installed paddle correctly. Import Paddle and PaddleSlim as below:
 
-```
+```python
 import paddle
 import paddle.fluid as fluid
 import paddleslim as slim
@@ -25,7 +25,8 @@ This tutorial trains and verifies distillation model on the MNIST dataset. The i
 Select `ResNet50` as the teacher to perform distillation training on the students of the` MobileNet` architecture.
 
 ```python
-model = slim.models.MobileNet()
+paddle.enable_static()
+teacher_model = slim.models.MobileNet()
 student_program = fluid.Program()
 student_startup = fluid.Program()
 with fluid.program_guard(student_program, student_startup):

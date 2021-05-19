@@ -21,8 +21,10 @@ FPGMFilterPruner
 
 .. code-block:: python
 
+   from paddle.vision.models import mobilenet_v1
    from paddleslim import FPGMFilterPruner
-   pruner = FPGMFilterPruner()       
+   net = mobilenet_v1(pretrained=False) 
+   pruner = FPGMFilterPruner(net, [1, 3, 224, 224])
 ..
  
    .. py:method:: prune_var(var_name, pruned_dims, pruned_ratio, apply="impretive")
@@ -49,11 +51,12 @@ FPGMFilterPruner
 
    .. code-block:: python
 
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import FPGMFilterPruner
       net = mobilenet_v1(pretrained=False) 
       pruner = FPGMFilterPruner(net, [1, 3, 224, 224])
-      plan = pruner.prun_var("conv2d_26.w_0", [0])
+      plan = pruner.prune_var("conv2d_26.w_0", [0], pruned_ratio=0.5)
       print(f"plan: {plan}")
       paddle.summary(net, (1, 3, 224, 224))
    
@@ -81,11 +84,12 @@ FPGMFilterPruner
 
    .. code-block:: python
 
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import FPGMFilterPruner
       net = mobilenet_v1(pretrained=False) 
       pruner = FPGMFilterPruner(net, [1, 3, 224, 224])
-      plan = pruner.prun_vars({"conv2d_26.w_0": 0.5}, [0])
+      plan = pruner.prune_vars({"conv2d_26.w_0": 0.5}, [0])
       print(f"plan: {plan}")
       paddle.summary(net, (1, 3, 224, 224))
 
@@ -129,6 +133,7 @@ FPGMFilterPruner
 
    .. code-block:: python
 
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import FPGMFilterPruner
       import paddle.vision.transforms as T
@@ -189,6 +194,7 @@ FPGMFilterPruner
 
    .. code-block:: python
 
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import FPGMFilterPruner
       import paddle.vision.transforms as T
