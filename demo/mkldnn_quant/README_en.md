@@ -13,7 +13,7 @@ The process comprises the following steps:
 
 #### Install PaddleSlim
 
-For PaddleSlim installation, please see [Paddle Installation Document](https://paddlepaddle.github.io/PaddleSlim/install.html)
+For PaddleSlim installation, please see [Paddle Installation Document](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#quant-aware)
 ```
 git clone https://github.com/PaddlePaddle/PaddleSlim.git
 cd PaddleSlim
@@ -34,11 +34,11 @@ One can generate fake-quantized model with post-training or quant-aware strategy
 
 #### 2.1 Quant-aware training
 
-To generate fake quantized model with quant-aware strategy, see [Quant-aware training tutorial](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
+To generate fake quantized model with quant-aware strategy, see [Quant-aware training tutorial](https://paddleslim.readthedocs.io/en/latest/quick_start/quant_aware_tutorial_en.html)
 
 **The parameters during quant-aware training:**
 - **quantize_op_types:** A list of operators to insert `fake_quantize` and `fake_dequantize` ops around them. In PaddlePaddle, quantization of following operators is supported for CPU: `depthwise_conv2d`, `conv2d`, `fc`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`. However, inserting fake_quantize/fake_dequantize operators during training is needed only for the first four of them (`depthwise_conv2d`, `conv2d`, `fc`, `matmul`), so setting the `quantize_op_types` parameter to the list of those four ops is enough. Scala data needed for quantization of the other five operators is reused from the fake ops or gathered from the `out_threshold` attributes of the operators.
-- **Other parameters:** Please read [PaddleSlim quant_aware API](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#quant_aware)
+- **Other parameters:** Please read [PaddleSlim quant_aware API](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#quant-aware)
 
 #### 2.2 Post-training quantization
 
@@ -55,7 +55,7 @@ python save_quant_model.py --quant_model_path=/PATH/TO/SAVE/FLOAT32/quant/MODEL 
 - **int8_model_save_path:** The final INT8 model output path after the quant model is optimized and quantized by DNNL.
 - **ops_to_quantize:** A comma separated list of specified op types to be quantized. It is optional. If the option is skipped, all quantizable operators will be quantized. Skipping the option is recommended in the first approach as it usually yields best performance and accuracy for image classification models and NLP models listed in the Benchmark..
 - **--op_ids_to_skip:** "A comma-separated list of operator ID numbers. It is optional. Default value is none. The op ids in this list will not be quantized and will adopt FP32 type. To get the ID of a specific op, first run the script using the `--debug` option, and open the generated file `int8_<number>_cpu_quantize_placement_pass.dot` to find the op that does not need to be quantified, and the ID number is in parentheses after the Op name.
-- **--debug:** Generate models graph or not. If this option is present, .dot files with graphs of the model will be generated after each optimization step that modifies the graph. For the description of DOT format, please read [DOT](https://graphviz.gitlab.io/_pages/doc/info/lang.html). To open the `*.dot` file, please use any Graphviz tool available on the system(such as the `xdot` tool on Linux or the `dot` tool on Windows. For Graphviz documentation, see [Graphviz](http://www. graphviz.org/documentation/).
+- **--debug:** Generate models graph or not. If this option is present, .dot files with graphs of the model will be generated after each optimization step that modifies the graph. For the description of DOT format, please read [DOT](https://graphviz.gitlab.io/_pages/doc/info/lang.html). To open the `*.dot` file, please use any Graphviz tool available on the system(such as the `xdot` tool on Linux or the `dot` tool on Windows. For Graphviz documentation, see [Graphviz](http://www.graphviz.org/documentation/).
   
 - **Note:**
   - The DNNL supported quantizable ops are `conv2d`, `depthwise_conv2d`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`, `scale`, `concat`.
