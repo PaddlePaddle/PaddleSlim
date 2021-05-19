@@ -232,7 +232,7 @@ exe.run(startup_program)
 ```
 
 #### 9.5 定义输入数据
-由于本示例中对cifar10中的图片进行了一些额外的预处理操作，和[快速开始](https://paddlepaddle.github.io/PaddleSlim/quick_start/nas_tutorial.html)示例中的reader不同，所以需要自定义cifar10的reader，不能直接调用paddle中封装好的`paddle.dataset.cifar10`的reader。自定义cifar10的reader文件位于[demo/nas](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/nas/darts_cifar10_reader.py)中。
+由于本示例中对cifar10中的图片进行了一些额外的预处理操作，和[快速开始](https://paddleslim.readthedocs.io/zh_CN/latest/deploy/index.html)示例中的reader不同，所以需要自定义cifar10的reader，不能直接调用paddle中封装好的`paddle.dataset.cifar10`的reader。自定义cifar10的reader文件位于[demo/nas](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/nas/darts_cifar10_reader.py)中。
 
 **注意：**本示例为了简化代码直接调用`paddle.dataset.cifar10`定义训练数据和预测数据，实际训练需要使用自定义cifar10文件中的reader。
 ```python
