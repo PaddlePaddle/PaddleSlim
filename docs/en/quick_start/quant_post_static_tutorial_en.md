@@ -1,6 +1,6 @@
 # Post-training Quantization of image classification model - quick start
 
-This tutorial shows how to do post training quantization using [API](https://paddlepaddle.github.io/PaddleSlim/api_en/paddleslim.quant.html#paddleslim.quant.quanter.quant_post) in PaddleSlim. We use MobileNetV1 to train image classification model as example. The tutorial contains follow sections:
+This tutorial shows how to do post training quantization using [API](https://paddleslim.readthedocs.io/en/latest/api_en/index_en.html) in PaddleSlim. We use MobileNetV1 to train image classification model as example. The tutorial contains follow sections:
 
 1. Necessary imports
 2. Model architecture
