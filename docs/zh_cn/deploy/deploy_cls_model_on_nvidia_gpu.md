@@ -1,1 +1,1 @@
-https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/quant/index.html
+../../../demo/quant/deploy/TensorRT/README.md
