@@ -41,7 +41,7 @@ pruning_period: 20
 在配置好ImageNet数据集后，用以下命令启动训练即可:
 
 ```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python distill.py
+CUDA_VISIBLE_DEVICES=0,1,2,3 python train.py
 ```
 
 ### 3. 训练结果
