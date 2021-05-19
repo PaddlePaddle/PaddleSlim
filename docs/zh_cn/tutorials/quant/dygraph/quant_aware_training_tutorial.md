@@ -39,7 +39,10 @@ quant_config = {
 在确认好我们的量化配置以后，我们可以根据这个配置把我们定义好的一个普通模型转换为一个模拟量化模型。转换的方式也很简单:
 
 ```python
+import paddle
 import paddleslim
+from paddle.vision.models import mobilenet_v1
+net = mobilenet_v1()
 quanter = paddleslim.QAT(config=quant_config)
 quanter.quantize(net)
 ```
@@ -55,9 +58,9 @@ quanter.quantize(net)
 ```python
 import paddleslim
 quanter.save_quantized_model(
-  model,
+  net,
   save_path,
-  input_spec=[paddle.static.InputSpec()])
+  input_spec=[paddle.static.InputSpec(shape=[None, 3, 224, 224], dtype='float32')])
 ```
 
 量化预测模型可以使用`netron`软件打开，进行可视化查看。该量化预测模型和普通FP32预测模型一样，可以使用PaddleLite和PaddleInference加载预测，具体请参考`推理部署`章节。
