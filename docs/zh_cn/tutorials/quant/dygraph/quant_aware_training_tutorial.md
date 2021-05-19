@@ -57,6 +57,7 @@ quanter.quantize(net)
 
 ```python
 import paddleslim
+save_path = './model'
 quanter.save_quantized_model(
   net,
   save_path,
