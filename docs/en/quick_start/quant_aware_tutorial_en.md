@@ -57,7 +57,7 @@ Define functions to train and test model. We only need call the functions when f
 def train(prog):
     iter = 0
     for data in train_reader():
-        acc1, acc5, loss = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
+        acc1, acc5, loss, out = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
         if iter % 100 == 0:
             print('train iter={}, top1={}, top5={}, loss={}'.format(iter, acc1.mean(), acc5.mean(), loss.mean()))
         iter += 1
@@ -66,7 +66,7 @@ def test(prog):
     iter = 0
     res = [[], []]
     for data in train_reader():
-        acc1, acc5, loss = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
+        acc1, acc5, loss, out = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
         if iter % 100 == 0:
             print('test iter={}, top1={}, top5={}, loss={}'.format(iter, acc1.mean(), acc5.mean(), loss.mean()))
         res[0].append(acc1.mean())
