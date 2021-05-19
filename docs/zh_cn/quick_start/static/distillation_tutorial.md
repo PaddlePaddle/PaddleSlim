@@ -15,7 +15,7 @@
 
 PaddleSlim依赖Paddle2.0版本，请确认已正确安装Paddle，然后按以下方式导入Paddle和PaddleSlim:
 
-```
+```python
 import paddle
 import numpy as np
 import paddleslim as slim
