@@ -18,9 +18,9 @@
 
 - 如果量化模型在ARM上线，则需要使用[Paddle-Lite](https://paddle-lite.readthedocs.io/zh/latest/index.html).
 
-    -  Paddle-Lite会对量化模型进行模型转化和优化，转化方法见[链接](https://paddle-lite.readthedocs.io/zh/latest/user_guides/model_quantization.html#paddle-lite)。
+    -  Paddle-Lite会对量化模型进行模型转化和优化，转化方法见[链接](https://paddle-lite.readthedocs.io/zh/latest/index.html#sec-user-guides)。
 
-    - 转化之后可以像非量化模型一样使用[Paddle-Lite API](https://paddle-lite.readthedocs.io/zh/latest/user_guides/tutorial.html#lite)进行加载预测。
+    - 转化之后可以像非量化模型一样使用[Paddle-Lite API](https://paddle-lite.readthedocs.io/zh/latest/index.html)进行加载预测。
 
 - 如果量化模型在GPU上线，则需要使用[Paddle-TensorRT 预测接口](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/performance_improving/inference_improving/paddle_tensorrt_infer.html).
 
