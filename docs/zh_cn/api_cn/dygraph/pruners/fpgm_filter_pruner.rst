@@ -47,7 +47,6 @@ FPGMFilterPruner
    
    **示例：**
    
-   点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
 
@@ -80,7 +79,6 @@ FPGMFilterPruner
    
    **示例：**
    
-   点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
 
@@ -129,7 +127,6 @@ FPGMFilterPruner
    
    **示例：**
    
-   点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
 
@@ -190,7 +187,6 @@ FPGMFilterPruner
    
    **示例：**
    
-   点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
 

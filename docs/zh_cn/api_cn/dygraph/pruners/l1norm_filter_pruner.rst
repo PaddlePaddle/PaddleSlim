@@ -20,6 +20,7 @@ L1NormFilterPruner
 **示例代码：**
 
 .. code-block:: python
+
     from paddle.vision.models import mobilenet_v1
     from paddleslim import L1NormFilterPruner
     net = mobilenet_v1(pretrained=False) 
@@ -77,9 +78,8 @@ L1NormFilterPruner
    
    **示例：**
    
-   点击 `AIStudio <>`_ 执行以下示例代码。
-
    .. code-block:: python
+
       import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
@@ -125,9 +125,9 @@ L1NormFilterPruner
    
    **示例：**
    
-   点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
+
       import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
@@ -185,9 +185,9 @@ L1NormFilterPruner
    
    **示例：**
    
-   点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
+
       import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
