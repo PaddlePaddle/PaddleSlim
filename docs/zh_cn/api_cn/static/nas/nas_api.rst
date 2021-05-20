@@ -49,7 +49,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
    from paddleslim.nas import SANAS
    config = [('MobileNetV2Space')]
    paddle.enable_static()
-   sanas = SANAS(configs=config, server_addr=（"", 8881))
+   sanas = SANAS(configs=config, , server_addr=("",8821))
 
 .. note::
 
@@ -88,7 +88,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       paddle.enable_static()
-      sanas = SANAS(configs=config, server_addr=（"", 8882))
+      sanas = SANAS(configs=config, , server_addr=("",8822))
       input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
       archs = sanas.next_archs()
       for arch in archs:
@@ -142,7 +142,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       paddle.enable_static()
-      sanas = SANAS(configs=config, server_addr=（"", 8884))
+      sanas = SANAS(configs=config, server_addr=("",8823))
       input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
       tokens = ([0] * 25)
       archs = sanas.tokens2arch(tokens)[0]
@@ -233,7 +233,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
    config = [('MobileNetV2Space')]
 
    paddle.enable_static()
-   rlnas = RLNAS(key='lstm', configs=config, server_addr=（"", 8886))
+   rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8824))
 
 
 .. py:method:: next_archs(obs=None)
@@ -255,7 +255,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   paddle.enable_static()
-  rlnas = RLNAS(key='lstm', configs=config, server_addr=（"", 8887))
+  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8825))
   input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
   archs = rlnas.next_archs(1)[0]
   for arch in archs:
@@ -307,7 +307,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   paddle.enable_static()
-  rlnas = RLNAS(key='lstm', configs=config, server_addr=（"", 8889))
+  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8826))
   archs = rlnas.final_archs(1)
   print(archs)
 
@@ -330,7 +330,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   paddle.enable_static()
-  rlnas = RLNAS(key='lstm', configs=config, server_addr=（"", 8891))
+  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8827))
   input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
   tokens = ([0] * 25)
   archs = rlnas.tokens2arch(tokens)[0]

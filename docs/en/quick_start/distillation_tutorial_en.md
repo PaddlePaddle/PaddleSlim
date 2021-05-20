@@ -13,10 +13,11 @@ by a demo of MobileNetV1 model on MNIST dataset. This tutorial following workflo
 
 PaddleSlim dependents on Paddle1.7. Please ensure that you have installed paddle correctly. Import Paddle and PaddleSlim as below:
 
-```
+```python
 import paddle
 import paddle.fluid as fluid
 import paddleslim as slim
+paddle.enable_static()
 ```
 
 ## 2. Define student_program and teacher_program

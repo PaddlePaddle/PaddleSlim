@@ -26,6 +26,7 @@ merge
 **使用示例：**
 
 .. code-block:: python
+
    import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
@@ -121,7 +122,8 @@ l2_loss
 **使用示例：**
 
 .. code-block:: python
-   import paddle
+
+   import paddle 
    import paddle.fluid as fluid
    import paddleslim.dist as dist
    paddle.enable_static()
