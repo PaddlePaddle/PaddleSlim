@@ -25,6 +25,7 @@ This tutorial trains and verifies distillation model on the MNIST dataset. The i
 Select `ResNet50` as the teacher to perform distillation training on the students of the` MobileNet` architecture.
 
 ```python
+import paddleslim as slim
 model = slim.models.MobileNet()
 student_program = fluid.Program()
 student_startup = fluid.Program()
