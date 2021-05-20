@@ -240,10 +240,8 @@ def compress(args):
                 paddle.static.default_main_program()), 2)))
 
         if (i + 1) % args.test_period == 0:
-            pruner.update_params()
             test(i, val_program)
         if (i + 1) % args.model_period == 0:
-            pruner.update_params()
             # NOTE: We are using fluid.io.save_params() because the pretrained model is from an older version which requires this API. 
             #       Please consider using paddle.static.save(program, model_path) as long as it becomes possible.
             fluid.io.save_params(executor=exe, dirname=args.model_path)

@@ -1,6 +1,6 @@
 import numpy as np
-from paddleslim.common import get_logger
-from paddleslim.core import GraphWrapper
+from ..common import get_logger
+from ..core import GraphWrapper
 import paddle
 
 __all__ = ["UnstructuredPruner"]
