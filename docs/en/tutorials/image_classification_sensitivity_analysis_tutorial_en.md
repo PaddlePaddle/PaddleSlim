@@ -209,7 +209,7 @@ print(ratios)
 
 ### 8.2 Pruning test network
 
-Note：The `only_graph` should be set to True while pruning test network. [Pruner API](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/#pruner)
+Note：The `only_graph` should be set to True while pruning test network. [Pruner API](https://paddleslim.readthedocs.io/en/latest/api_en/index_en.html)
 
 
 ```python

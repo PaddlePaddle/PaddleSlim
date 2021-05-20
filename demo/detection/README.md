@@ -142,7 +142,7 @@ Pascal VOC数据集上蒸馏通道剪裁模型库如下。
 
 ### 训练策略
 
-- 蒸馏模型训练时teacher模型使用[PaddleDetection模型库](https://paddledetection.readthedocs.io/zh/latest/MODEL_ZOO_cn.html)发布的模型权重作为预训练权重。
+- 蒸馏模型训练时teacher模型使用[PaddleDetection模型库](https://paddledetection.readthedocs.io/MODEL_ZOO_cn.html)发布的模型权重作为预训练权重。
 - 蒸馏模型训练时student模型使用backbone的预训练权重
 - 蒸馏策略`l2_distiil`为使用teacher模型和student模型特征图的L2损失作为蒸馏损失进行蒸馏，为`slim/distillation/distill.py`的默认策略
 - 蒸馏策略`split_distiil`为使用YOLOv3细粒度损失进行蒸馏，通过`-o use_fine_grained_loss=true`指定
