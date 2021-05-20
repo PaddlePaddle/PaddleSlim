@@ -80,7 +80,7 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                         </td>
                 </tr>
                 <tr>
-		        <td rowspan=4 align=center> 40 </td>
+                        <td rowspan=4 align=center> 40 </td>
                         <td rowspan=2 align=center> BERT </td>
                         <td style="text-align:center">
                                 <span style="font-size:18px">N</span>
