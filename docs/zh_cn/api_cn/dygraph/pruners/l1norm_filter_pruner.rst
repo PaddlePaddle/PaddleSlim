@@ -20,9 +20,10 @@ L1NormFilterPruner
 **示例代码：**
 
 .. code-block:: python
-
-   from paddleslim import L1NormFilterPruner
-   pruner = L1NormFilterPruner()       
+    from paddle.vision.models import mobilenet_v1
+    from paddleslim import L1NormFilterPruner
+    net = mobilenet_v1(pretrained=False) 
+    pruner = L1NormFilterPruner(net, [1, 3, 224, 224])
 ..
  
    .. py:method:: prune_var(var_name, pruned_dims, pruned_ratio, apply="impretive")
@@ -48,7 +49,7 @@ L1NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
-
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
       net = mobilenet_v1(pretrained=False) 
@@ -80,7 +81,7 @@ L1NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
-
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
       net = mobilenet_v1(pretrained=False) 
@@ -128,7 +129,7 @@ L1NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
-
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
       import paddle.vision.transforms as T
@@ -188,7 +189,7 @@ L1NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
-
+      import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
       import paddle.vision.transforms as T

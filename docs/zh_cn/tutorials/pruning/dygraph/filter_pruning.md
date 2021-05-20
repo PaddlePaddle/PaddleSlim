@@ -7,6 +7,7 @@
 PaddlePaddle提供的`vision`模块提供了一些构建好的分类模型结构，并提供在`ImageNet`数据集上的预训练模型。为了简化教程，我们不再重新定义网络结构，而是直接从`vision`模块导入模型结构。代码如下所示，我们导入`MobileNetV1`模型，并查看模型的结构信息。
 
 ```python
+from __future__ import print_function
 import paddle
 from paddle.vision.models import mobilenet_v1
 net = mobilenet_v1(pretrained=False)
@@ -30,7 +31,6 @@ val_dataset = paddle.vision.datasets.Cifar10(mode="test", backend="cv2",transfor
 我们可以通过以下代码查看训练集和测试集的样本数量，并尝试取出训练集中的第一个样本，观察其图片的`shape`和对应的`label`。
 
 ```python
-from __future__ import print_function
 print(f'train samples count: {len(train_dataset)}')
 print(f'val samples count: {len(val_dataset)}')
 for data in train_dataset:
