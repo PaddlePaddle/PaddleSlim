@@ -38,7 +38,7 @@ L1NormFilterPruner
    
    - **pruned_ratio(float)** - 待剪裁掉的输出通道比例。
    
-   - **apply(str)** - 实施剪裁操作的类型，候选值为："impretive"，"lazy" 和 ``None`` 。如果设置为"impretive"，则会从输出特征图中真正的删掉待剪裁的通道。如果设置为"lazy"，则仅会将待剪裁的通道置为 ``0`` 。如果设置为None，则仅会生成并返回剪裁计划，并不会将剪裁真正实施到原模型上，剪裁计划相关信息存储在类型为 `paddleslim.PruningPlan <>`_ 的实例中。该选项默认为"impretive"。
+   - **apply(str)** - 实施剪裁操作的类型，候选值为："impretive"，"lazy" 和 ``None`` 。如果设置为"impretive"，则会从输出特征图中真正的删掉待剪裁的通道。如果设置为"lazy"，则仅会将待剪裁的通道置为 ``0`` 。如果设置为None，则仅会生成并返回剪裁计划，并不会将剪裁真正实施到原模型上，剪裁计划相关信息存储在类型为 ``paddleslim.PruningPlan`` 的实例中。该选项默认为"impretive"。
    
    **返回：**
    
@@ -46,9 +46,8 @@ L1NormFilterPruner
    
    **示例：**
    
-   点击 `AIStudio <>`_ 执行以下示例代码。
-
    .. code-block:: python
+
       import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
@@ -70,7 +69,7 @@ L1NormFilterPruner
    
    - **axis(list<int>)** - 待废弃选项。卷积层 ``weight`` 变量中 ``Filter`` 数量所在轴，一般情况下设置为 ``[0]`` 即可。
    
-   - **apply(str)** - 实施剪裁操作的类型，候选值为："impretive"，"lazy" 和 ``None`` 。如果设置为"impretive"，则会从输出特征图中真正的删掉待剪裁的通道。如果设置为"lazy"，则仅会将待剪裁的通道置为 ``0`` 。如果设置为None，则仅会生成并返回剪裁计划，并不会将剪裁真正实施到原模型上，剪裁计划相关信息存储在类型为 `paddleslim.PruningPlan <>`_ 的实例中。该选项默认为"impretive"。
+   - **apply(str)** - 实施剪裁操作的类型，候选值为："impretive"，"lazy" 和 ``None`` 。如果设置为"impretive"，则会从输出特征图中真正的删掉待剪裁的通道。如果设置为"lazy"，则仅会将待剪裁的通道置为 ``0`` 。如果设置为None，则仅会生成并返回剪裁计划，并不会将剪裁真正实施到原模型上，剪裁计划相关信息存储在类型为 ``paddleslim.PruningPlan`` 的实例中。该选项默认为"impretive"。
    
    **返回：**
    
