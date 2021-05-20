@@ -16,6 +16,7 @@ import paddle
 import paddle.fluid as fluid
 import paddleslim as slim
 import numpy as np
+paddle.enable_static()
 ```
 ## 2. Model architecture
 
@@ -39,10 +40,10 @@ To speed up training process, we select MNIST dataset to train image classificat
 
 ```python
 import paddle.dataset.mnist as reader
+paddle.enable_static()
 train_reader = paddle.fluid.io.batch(
         reader.train(), batch_size=128, drop_last=True)
 test_reader = paddle.fluid.io.batch(
-cs/en/quick_start/quant_aware_tutorial_en.md
         reader.train(), batch_size=128, drop_last=True)
 train_feeder = fluid.DataFeeder(inputs, fluid.CPUPlace())
 ```
@@ -55,7 +56,7 @@ Define functions to train and test model. We only need call the functions when f
 def train(prog):
     iter = 0
     for data in train_reader():
-        acc1, acc5, loss = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
+        acc1, acc5, loss, out = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
         if iter % 100 == 0:
             print('train', acc1.mean(), acc5.mean(), loss.mean())
         iter += 1
@@ -64,7 +65,7 @@ def test(prog, outputs=outputs):
     iter = 0
     res = [[], []]
     for data in train_reader():
-        acc1, acc5, loss = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
+        acc1, acc5, loss, out = exe.run(prog, feed=train_feeder.feed(data), fetch_list=outputs)
         if iter % 100 == 0:
             print('test', acc1.mean(), acc5.mean(), loss.mean())
         res[0].append(acc1.mean())

@@ -168,7 +168,7 @@ paddle.static.save_inference_model(
         feed_vars=[image],
         fetch_vars=target_vars,
         executor=exe,
-        program=float_prog)
+        program=quant_infer_program)
 ```
 
 根据业务场景，可以使用PaddleLite将该量化模型部署到移动端（ARM CPU），或者使用PaddleInference将该量化模型部署到服务器端（NV GPU和Intel CPU）。

@@ -26,9 +26,10 @@ merge
 **使用示例：**
 
 .. code-block:: python
-
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
+   paddle.enable_static()
    student_program = fluid.Program()
    with fluid.program_guard(student_program):
        x = fluid.layers.data(name='x', shape=[1, 28, 28])
@@ -73,9 +74,10 @@ fsp_loss出自论文 `A Gift from Knowledge Distillation: Fast Optimization, Net
 **使用示例：**
 
 .. code-block:: python
-
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
+   paddle.enable_static()
    student_program = fluid.Program()
    with fluid.program_guard(student_program):
        x = fluid.layers.data(name='x', shape=[1, 28, 28])
@@ -119,9 +121,10 @@ l2_loss
 **使用示例：**
 
 .. code-block:: python
-
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
+   paddle.enable_static()
    student_program = fluid.Program()
    with fluid.program_guard(student_program):
        x = fluid.layers.data(name='x', shape=[1, 28, 28])
@@ -169,9 +172,10 @@ soft_label_loss出自论文 `Distilling the Knowledge in a Neural Network <https
 **使用示例：**
 
 .. code-block:: python
-
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
+   paddle.enable_static()
    student_program = fluid.Program()
    with fluid.program_guard(student_program):
        x = fluid.layers.data(name='x', shape=[1, 28, 28])
@@ -215,9 +219,10 @@ loss
 **使用示例：**
 
 .. code-block:: python
-
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
+   paddle.enable_static()
    student_program = fluid.Program()
    with fluid.program_guard(student_program):
        x = fluid.layers.data(name='x', shape=[1, 28, 28])

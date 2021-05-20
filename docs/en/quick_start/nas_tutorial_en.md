@@ -111,6 +111,7 @@ archs = sanas.next_archs()[0]
 ### 7.2 build program
 Get program according to the function in Step3 and model architecture from Step 7.1.
 ```python
+paddle.enable_static()
 exe, train_program, eval_program, inputs, avg_cost, acc_top1, acc_top5 = build_program(archs)
 ```
 
