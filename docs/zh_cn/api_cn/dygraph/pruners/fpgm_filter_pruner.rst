@@ -5,7 +5,7 @@ FPGMFilterPruner
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/dygraph/prune/fpgm_pruner.py>`_
 
-用于剪裁卷积层输出通道的的剪裁器。该剪裁器按论文 `Filter Pruning via Geometric Median for Deep Convolutional Neural Networks Acceleration <https://arxiv.org/abs/1811.00250>_` 中的统计方法对单个卷积层内的 ``Filters`` 的重要性进行排序，并按指定比例剪裁掉相对不重要的 ``Filters`` 。对 ``Filters`` 的剪裁等价于剪裁卷积层的输出通道数。
+用于剪裁卷积层输出通道的的剪裁器。该剪裁器按论文 `Filter Pruning via Geometric Median for Deep Convolutional Neural Networks Acceleration <https://arxiv.org/abs/1811.00250>`_ 中的统计方法对单个卷积层内的 ``Filters`` 的重要性进行排序，并按指定比例剪裁掉相对不重要的 ``Filters`` 。对 ``Filters`` 的剪裁等价于剪裁卷积层的输出通道数。
 
 **参数：**
 
@@ -39,7 +39,7 @@ FPGMFilterPruner
    
    - **pruned_ratio(float)** - 待剪裁掉的输出通道比例。
    
-   - **apply(str)** - 实施剪裁操作的类型，候选值为："impretive"，"lazy" 和 ``None`` 。如果设置为"impretive"，则会从输出特征图中真正的删掉待剪裁的通道。如果设置为"lazy"，则仅会将待剪裁的通道置为 ``0`` 。如果设置为None，则仅会生成并返回剪裁计划，并不会将剪裁真正实施到原模型上，剪裁计划相关信息存储在类型为 `paddleslim.PruningPlan <>`_ 的实例中。该选项默认为"impretive"。
+   - **apply(str)** - 实施剪裁操作的类型，候选值为："impretive"，"lazy" 和 ``None`` 。如果设置为"impretive"，则会从输出特征图中真正的删掉待剪裁的通道。如果设置为"lazy"，则仅会将待剪裁的通道置为 ``0`` 。如果设置为None，则仅会生成并返回剪裁计划，并不会将剪裁真正实施到原模型上，剪裁计划相关信息存储在类型为 ``paddleslim.PruningPlan`` 的实例中。该选项默认为"impretive"。
    
    **返回：**
    
@@ -71,7 +71,7 @@ FPGMFilterPruner
    
    - **axis(list<int>)** - 待废弃选项。卷积层 ``weight`` 变量中 ``Filter`` 数量所在轴，一般情况下设置为 ``[0]`` 即可。
    
-   - **apply(str)** - 实施剪裁操作的类型，候选值为："impretive"，"lazy" 和 ``None`` 。如果设置为"impretive"，则会从输出特征图中真正的删掉待剪裁的通道。如果设置为"lazy"，则仅会将待剪裁的通道置为 ``0`` 。如果设置为None，则仅会生成并返回剪裁计划，并不会将剪裁真正实施到原模型上，剪裁计划相关信息存储在类型为 `paddleslim.PruningPlan <>`_ 的实例中。该选项默认为"impretive"。
+   - **apply(str)** - 实施剪裁操作的类型，候选值为："impretive"，"lazy" 和 ``None`` 。如果设置为"impretive"，则会从输出特征图中真正的删掉待剪裁的通道。如果设置为"lazy"，则仅会将待剪裁的通道置为 ``0`` 。如果设置为None，则仅会生成并返回剪裁计划，并不会将剪裁真正实施到原模型上，剪裁计划相关信息存储在类型为 ``paddleslim.PruningPlan`` 的实例中。该选项默认为"impretive"。
    
    **返回：**
    
