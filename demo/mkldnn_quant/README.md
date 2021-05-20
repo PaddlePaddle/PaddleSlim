@@ -38,15 +38,15 @@ import numpy as np
 
 #### 2.1 量化训练
 
-量化训练流程可以参考 [分类模型的量化训练流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_aware_demo/)
+量化训练流程可以参考 [分类模型的量化训练流程](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/quant/static/quant_aware_tutorial.html)
 
 **量化训练过程中config参数：**
 - **quantize_op_types:** 目前CPU上量化支持的算子为 `depthwise_conv2d`, `conv2d`, `mul`, `matmul`, `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`。但是在量化训练阶段插入fake_quantize/fake_dequantize算子时，只需在前四种op前后插入fake_quantize/fake_dequantize 算子，因为后面四种算子 `transpose2`, `reshape2`, `pool2d`, `scale`, `concat`的scales将从其他op的`out_threshold`属性获取。所以，在使用PaddleSlim量化训练时，只可以对 `depthwise_conv2d`, `conv2d`, `mul`, `matmul`进行量化，不支持其他op。
-- **其他参数:** 请参考 [PaddleSlim quant_aware API](https://paddlepaddle.github.io/PaddleSlim/api/quantization_api/#quant_aware)
+- **其他参数:** 请参考 [PaddleSlim quant_aware API](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/quant/quantization_api.html#quant-aware)
 
 #### 2.2 离线量化
 
-离线量化模型产出可以参考[分类模型的静态离线量化流程](https://paddlepaddle.github.io/PaddleSlim/tutorials/quant_post_demo/#_1)
+离线量化模型产出可以参考[分类模型的静态离线量化流程](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/quant/static/quant_post_tutorial.html)
 
 在使用PaddleSlim离线量化时，只可以对 `depthwise_conv2d`, `conv2d`, `mul`, `matmul`进行量化，不支持其他op。
 
