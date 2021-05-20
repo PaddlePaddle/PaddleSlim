@@ -1,6 +1,6 @@
 # Pruning of image classification model - sensitivity
 
-In this tutorial, you will learn how to use [sensitivity API of PaddleSlim](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/#sensitivity) by a demo of MobileNetV1 model on MNIST dataset。
+In this tutorial, you will learn how to use [sensitivity API of PaddleSlim](https://paddleslim.readthedocs.io/en/latest/api_en/index_en.html) by a demo of MobileNetV1 model on MNIST dataset。
 This tutorial following workflow:
 
 1. Import dependency
@@ -108,7 +108,7 @@ params = params[:5]
 
 ### 7.1 Compute in single process
 
-Apply sensitivity analysis on pretrained model by calling [sensitivity API](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/#sensitivity).
+Apply sensitivity analysis on pretrained model by calling [sensitivity API](https://paddleslim.readthedocs.io/en/latest/api_en/index_en.html).
 
 The sensitivities will be appended into the file given by option `sensitivities_file` during computing.
 The information in this file won`t be computed repeatedly.
@@ -198,7 +198,7 @@ Pruning model according to the sensitivities generated in section 7.3.3.
 
 ### 8.1 Get pruning ratios
 
-Get a group of ratios by calling [get_ratios_by_loss](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/#get_ratios_by_loss) fuction：
+Get a group of ratios by calling [get_ratios_by_loss](https://paddleslim.readthedocs.io/en/latest/api_en/index_en.html) fuction：
 
 
 ```python
@@ -225,7 +225,9 @@ pruned_val_program, _, _ = pruner.prune(
 print("FLOPs after pruning: {}".format(slim.analysis.flops(pruned_val_program)))
 ```
 
-### 8.3 Pruning training network
+### 8.3 Pruning test network
+
+Note：The `only_graph` should be set to True while pruning test network. [Pruner API](https://paddleslim.readthedocs.io/en/latest/api_en/index_en.html)
 
 
 ```python

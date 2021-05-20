@@ -17,6 +17,7 @@ PaddleSlim dependents on Paddle1.7. Please ensure that you have installed paddle
 import paddle
 import paddle.fluid as fluid
 import paddleslim as slim
+paddle.enable_static()
 ```
 
 ## 2. Define student_program and teacher_program
@@ -25,8 +26,8 @@ This tutorial trains and verifies distillation model on the MNIST dataset. The i
 Select `ResNet50` as the teacher to perform distillation training on the students of the` MobileNet` architecture.
 
 ```python
-paddle.enable_static()
-teacher_model = slim.models.MobileNet()
+import paddleslim as slim
+model = slim.models.MobileNet()
 student_program = fluid.Program()
 student_startup = fluid.Program()
 with fluid.program_guard(student_program, student_startup):
