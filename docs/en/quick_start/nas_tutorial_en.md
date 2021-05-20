@@ -1,6 +1,6 @@
 # Nerual Architecture Search for Image Classification
 
-This tutorial shows how to use [API](../api/nas_api.md) about SANAS in PaddleSlim. We start experiment based on MobileNetV2 as example. The tutorial contains follow section.
+This tutorial shows how to use [API](https://paddleslim.readthedocs.io/en/latest/api_en/paddleslim.nas.html) about SANAS in PaddleSlim. We start experiment based on MobileNetV2 as example. The tutorial contains follow section.
 
 1. necessary imports
 2. initial SANAS instance

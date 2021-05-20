@@ -4,7 +4,7 @@
 
 ## 接口介绍
 
-请参考 [知识蒸馏API文档](https://paddlepaddle.github.io/PaddleSlim/api/single_distiller_api/)。
+请参考 [知识蒸馏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/dist/single_distiller_api.html)。
 
 ### 1. 蒸馏训练配置
 
@@ -37,4 +37,4 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python distill.py
 
 经过120轮的蒸馏训练，MobileNet模型的Top-1/Top-5准确率达到72.77%/90.68%, Top-1/Top-5性能提升+1.78%/+1.00%
 
-详细实验数据请参见[PaddleSlim模型库蒸馏部分](https://paddlepaddle.github.io/PaddleSlim/model_zoo/#13)
+详细实验数据请参见[PaddleSlim模型库蒸馏部分](https://paddleslim.readthedocs.io/zh_CN/latest/model_zoo.html#id5)
