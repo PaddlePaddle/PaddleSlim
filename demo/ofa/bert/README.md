@@ -79,8 +79,8 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
                                 <span style="font-size:18px">14.93</span>
                         </td>
                 </tr>
-		<tr>
-			<td rowspan=4 align=center> 40 </td>
+                <tr>
+		        <td rowspan=4 align=center> 40 </td>
                         <td rowspan=2 align=center> BERT </td>
                         <td style="text-align:center">
                                 <span style="font-size:18px">N</span>
@@ -268,10 +268,10 @@ python -u ./run_glue_ofa.py --model_type bert \
 python3.7 -u ./export_model.py --model_type bert \
                              --model_name_or_path ${PATH_OF_QQP_MODEL_AFTER_OFA} \
                              --max_seq_length 128     \
-			     --sub_model_output_dir ./tmp/$TASK_NAME/dynamic_model \
+                             --sub_model_output_dir ./tmp/$TASK_NAME/dynamic_model \
                              --static_sub_model ./tmp/$TASK_NAME/static_model \
-			     --n_gpu 1 \
-			     --width_mult  0.6666666666666666
+                             --n_gpu 1 \
+                             --width_mult  0.6666666666666666
 ```
 
 其中参数释义如下：
