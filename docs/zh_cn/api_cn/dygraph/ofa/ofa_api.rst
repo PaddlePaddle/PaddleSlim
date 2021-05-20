@@ -54,6 +54,8 @@ DistillConfig
 .. code-block:: python
 
   from paddleslim.nas.ofa import DistillConfig
+  from paddle.vision.models import mobilenet_v1
+  teacher_model = mobilenet_v1()
   default_distill_config = {
       'lambda_distill': 0.01,
       'teacher_model': teacher_model,
