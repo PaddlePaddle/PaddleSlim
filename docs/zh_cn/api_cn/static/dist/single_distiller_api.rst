@@ -75,6 +75,7 @@ fsp_loss出自论文 `A Gift from Knowledge Distillation: Fast Optimization, Net
 **使用示例：**
 
 .. code-block:: python
+
    import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
@@ -174,6 +175,7 @@ soft_label_loss出自论文 `Distilling the Knowledge in a Neural Network <https
 **使用示例：**
 
 .. code-block:: python
+
    import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
@@ -221,6 +223,7 @@ loss
 **使用示例：**
 
 .. code-block:: python
+
    import paddle
    import paddle.fluid as fluid
    import paddleslim.dist as dist
