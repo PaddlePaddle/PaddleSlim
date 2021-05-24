@@ -3,7 +3,7 @@
 本示例介绍如何使用Embedding量化的接口 [paddleslim.quant.quant_embedding]() 。``quant_embedding``接口将网络中的Embedding参数从``float32``类型量化到 ``8-bit``整数类型，在几乎不损失模型精度的情况下减少模型的存储空间和显存占用。
 
 
-接口介绍请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
+接口介绍请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-embedding'>量化API文档</a>。
 
 该接口对program的修改：
 

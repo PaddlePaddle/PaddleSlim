@@ -8,7 +8,7 @@ import random
 import io
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("fluid")
+logger = logging.getLogger("paddle")
 logger.setLevel(logging.INFO)
 
 
@@ -64,8 +64,8 @@ class Word2VecReader(object):
         self.id_frequencys = [
             float(count) / word_all_count for count in self.id_counts_
         ]
-        print("dict_size = " + str(self.dict_size) + " word_all_count = " +
-              str(word_all_count))
+        print("dict_size = " + str(self.dict_size) + " word_all_count = " + str(
+            word_all_count))
 
         self.random_generator = NumpyRandomInt(1, self.window_size_ + 1)
 

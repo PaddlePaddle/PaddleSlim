@@ -191,7 +191,7 @@ class MobileNetV1Space(SearchSpaceBase):
                     num_groups=filter_num1,
                     stride=stride,
                     scale=self.scale,
-                    kernel_size=kernel_size,
+                    kernel_size=int(kernel_size),
                     name='mobilenetv1_{}'.format(str(i + 1)))
 
             ### return_block and end_points means block num
