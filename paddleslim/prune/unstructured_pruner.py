@@ -2,6 +2,7 @@ import numpy as np
 from ..common import get_logger
 from ..core import GraphWrapper
 import paddle
+import copy
 
 __all__ = ["UnstructuredPruner"]
 
@@ -74,7 +75,7 @@ class UnstructuredPruner():
             ops = paddle.static.default_main_program().global_block().ops
             ori_len = len(ops)
             mask_func(params, masks)
-            ops = ops[:ori_len] + ops[ori_len:]
+            ops = ops[ori_len:] + ops[ori_len:]
             program.global_block().ops = ops
 
         d_masks = {}
@@ -136,9 +137,18 @@ class UnstructuredPruner():
             v_param = np.array(t_param)
             params_flatten.append(v_param.flatten())
         params_flatten = np.concatenate(params_flatten, axis=0)
-        total_len = len(params_flatten)
-        self.threshold = np.sort(np.abs(params_flatten))[max(
-            0, int(self.ratio * total_len) - 1)]
+        # self.threshold = np.sort(np.abs(params_flatten))[max(
+        #     0, int(self.ratio * total_len) - 1)]
+        self.threshold = self._partition_sort(params_flatten)
+
+    def _partition_sort(self, params):
+        total_len = len(params)
+        params_zeros = params[params == 0]
+        params_nonzeros = params[params != 0]
+        new_ratio = max((self.ratio * total_len - len(params_zeros)),
+                        0) / len(params_nonzeros)
+        return np.sort(np.abs(params_nonzeros))[max(
+            0, int(new_ratio * len(params_nonzeros)) - 1)]
 
     def update_masks(self):
         for param in self.masks:

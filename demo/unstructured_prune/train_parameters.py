@@ -43,7 +43,7 @@ add_arg('stable_epochs',    int, 2,              "The epoch numbers used to stab
 add_arg('pruning_epochs',   int, 35,             "The epoch numbers used to prune the model by a ratio step. Default: 35")
 add_arg('tunning_epochs',   int, 20,             "The epoch numbers used to tune the after-pruned models. Default: 20")
 add_arg('ratio_steps_per_epoch', int, 30,        "How many times you want to increase your ratio during each epoch. Default: 30")
-
+add_arg('initial_ratio',    float, 0.05,         "The initial pruning ratio used at the start of pruning stage. Default: 0.05")
 # yapf: enable
 
 model_list = models.__all__
@@ -85,7 +85,8 @@ def prepare_training_hyper_parameters(args, step_per_epoch):
     ratio_increment_period = int(step_per_epoch / args.ratio_steps_per_epoch)
 
     for i in range(total_pruning_steps):
-        ratios.append(((i * range_one / total_pruning_steps) - 1)**3 + 1)
+        ratio = ((i * range_one / total_pruning_steps) - 1)**3 + 1
+        ratios.append(max(ratio, args.initial_ratio))
     ratios.reverse()
 
     return ratios, ratio_increment_period
@@ -224,7 +225,19 @@ def compress(args):
                 train_program,
                 feed=data,
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
-            if epoch >= args.stable_epochs: pruner.step()
+            ori_ratio = pruner.ratio
+            if len(
+                    ratios_stack
+            ) > 0 and epoch >= args.stable_epochs and epoch < args.stable_epochs + args.pruning_epochs:
+                if (batch_id + 1) % ratio_increment_period == 0:
+                    pruner.ratio = ratios_stack.pop()
+            elif len(
+                    ratios_stack
+            ) == 0 or epoch >= args.stable_epochs + args.pruning_epochs:
+                pruner.ratio = args.ratio
+
+            if ori_ratio != pruner.ratio and epoch >= args.stable_epochs:
+                pruner.step()
             train_run_cost += time.time() - train_start
             total_samples += args.batch_size
             loss_n = np.mean(loss_n)
@@ -240,6 +253,10 @@ def compress(args):
                                              ) / args.log_period, total_samples
                            / args.log_period, total_samples / (
                                train_reader_cost + train_run_cost)))
+                _logger.info(
+                    "The current density of the pruned model is: {}%".format(
+                        round(100 * UnstructuredPruner.total_sparse(
+                            paddle.static.default_main_program()), 2)))
                 train_reader_cost = 0.0
                 train_run_cost = 0.0
                 total_samples = 0
@@ -255,13 +272,6 @@ def compress(args):
             build_strategy=build_strategy,
             exec_strategy=exec_strategy)
     for i in range(args.resume_epoch + 1, args.num_epochs):
-        if i >= args.stable_epochs and i < args.stable_epochs + args.pruning_epochs and len(
-                ratios_stack) > 0:
-            if (i + 1) % ratio_steps_per_epoch == 0:
-                pruner.ratio = ratios_stack.pop()
-        elif i >= args.stable_epochs + args.pruning_epochs or len(
-                ratios_stack) == 0:
-            pruner.ratio = max(pruner.ratio, args.ratio)
         train(i, train_program)
         _logger.info("The current density of the pruned model is: {}%".format(
             round(100 * UnstructuredPruner.total_sparse(
