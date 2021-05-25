@@ -44,7 +44,7 @@ with fluid.program_guard(student_program, student_startup):
 
 
 ```python
-model = slim.models.ResNet50()
+teacher_model = slim.models.ResNet50()
 teacher_program = fluid.Program()
 teacher_startup = fluid.Program()
 with fluid.program_guard(teacher_program, teacher_startup):

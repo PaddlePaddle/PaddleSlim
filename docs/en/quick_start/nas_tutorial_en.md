@@ -33,7 +33,7 @@ import numpy as np
 
 Please set a unused port when build instance of SANAS.
 ```python
-sanas = slim.nas.SANAS(configs=[('MobileNetV2Space')], server_addr=("", 8337), save_checkpoint=None)
+sanas = slim.nas.SANAS(configs=[('MobileNetV2Space')], server_addr=("", 8771), save_checkpoint=None)
 ```
 
 ## 3. define function about building program

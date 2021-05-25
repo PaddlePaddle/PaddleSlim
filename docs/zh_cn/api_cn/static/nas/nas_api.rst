@@ -115,7 +115,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       paddle.enable_static()
-      sanas = SANAS(configs=config, server_addr=（"", 8883))
+      sanas = SANAS(configs=config, server_addr=("", 8883))
       archs = sanas.next_archs()
       
       ### 假设网络计算出来的score是1，实际代码中使用时需要返回真实score。
@@ -163,7 +163,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       paddle.enable_static()
-      sanas = SANAS(configs=config, server_addr=（"", 8885))
+      sanas = SANAS(configs=config, server_addr=("", 8885))
       print(sanas.current_info())
 
 
@@ -280,7 +280,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   paddle.enable_static()
-  rlnas = RLNAS(key='lstm', configs=config, server_addr=（"", 8888))
+  rlnas = RLNAS(key='lstm', configs=config, server_addr=("", 8888))
   rlnas.next_archs(1)
   rlnas.reward(1.0)
 
