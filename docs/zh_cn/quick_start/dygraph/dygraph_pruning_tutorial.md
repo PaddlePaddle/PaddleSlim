@@ -15,7 +15,7 @@
 
 请确认已正确安装Paddle，版本依赖关系可见[PaddleSlim Rep主页](https://github.com/PaddlePaddle/PaddleSlim)。然后按以下方式导入Paddle和PaddleSlim:
 
-```
+```python
 import paddle
 import paddle.vision.models as models
 from paddle.static import InputSpec as Input
@@ -29,7 +29,7 @@ from paddleslim.dygraph import L1NormFilterPruner
 该章节构造一个用于对CIFAR10数据进行分类的分类模型，选用`MobileNetV1`，并将输入大小设置为`[3, 32, 32]`，输出类别数为10。
 为了方便展示示例，我们使用Paddle提供的[预定义分类模型](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api/paddle/vision/models/mobilenetv1/MobileNetV1_cn.html#mobilenetv1)和[高层API]()，执行以下代码构建分类模型：
 
-```
+```python
 net = models.mobilenet_v1(pretrained=False, scale=1.0, num_classes=10)
 inputs = [Input([None, 3, 32, 32], 'float32', name='image')]
 labels = [Input([None, 1], 'int64', name='label')]
@@ -55,7 +55,7 @@ train_dataset = Cifar10(mode='train', transform=transform)
 
 对模型进行预训练，为之后的裁剪做准备。
 执行以下代码对模型进行预训练
-```
+```python
 model.fit(train_dataset, epochs=2, batch_size=128, verbose=1)
 ```
 
@@ -64,7 +64,7 @@ model.fit(train_dataset, epochs=2, batch_size=128, verbose=1)
 
 ### 4.1 计算剪裁之前的FLOPs
 
-```
+```python
 FLOPs = paddle.flops(net, input_size=[1, 3, 32, 32], print_detail=True)
 ```
 
@@ -73,7 +73,7 @@ FLOPs = paddle.flops(net, input_size=[1, 3, 32, 32], print_detail=True)
 对网络模型两个不同的网络层按照参数名分别进行比例为50%，60%的裁剪。
 代码如下所示：
 
-```
+```python
 pruner = L1NormFilterPruner(net, [1, 3, 32, 32])
 pruner.prune_vars({'conv2d_22.w_0':0.5, 'conv2d_20.w_0':0.6}, axis=0)
 ```
@@ -82,7 +82,7 @@ pruner.prune_vars({'conv2d_22.w_0':0.5, 'conv2d_20.w_0':0.6}, axis=0)
 
 ### 4.3 计算剪裁之后的FLOPs
 
-```
+```python
 FLOPs = paddle.flops(net, input_size=[1, 3, 32, 32], print_detail=True)
 ```
 
@@ -93,7 +93,7 @@ FLOPs = paddle.flops(net, input_size=[1, 3, 32, 32], print_detail=True)
 对模型进行裁剪会导致模型精度有一定程度下降。
 以下代码评估裁剪后模型的精度：
 
-```
+```python
 model.evaluate(val_dataset, batch_size=128, verbose=1)
 ```
 
@@ -101,7 +101,17 @@ model.evaluate(val_dataset, batch_size=128, verbose=1)
 对模型进行finetune会有助于模型恢复原有精度。
 以下代码对裁剪过后的模型进行评估后执行了一个`epoch`的微调，再对微调过后的模型重新进行评估：
 
-```
+```python
+
+optimizer = paddle.optimizer.Momentum(
+        learning_rate=0.1,
+        parameters=net.parameters())
+
+model.prepare(
+        optimizer,
+        paddle.nn.CrossEntropyLoss(),
+        paddle.metric.Accuracy(topk=(1, 5)))
+
 model.fit(train_dataset, epochs=1, batch_size=128, verbose=1)
 model.evaluate(val_dataset, batch_size=128, verbose=1)
 ```
