@@ -40,9 +40,9 @@ add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('model_period',     int, 10,             "The period to save model in epochs.")
 add_arg('resume_epoch',     int, -1,             "The epoch to resume training.")
 add_arg('stable_epochs',    int, 2,              "The epoch numbers used to stablize the model before pruning. Default: 2")
-add_arg('pruning_epochs',   int, 35,             "The epoch numbers used to prune the model by a ratio step. Default: 35")
-add_arg('tunning_epochs',   int, 20,             "The epoch numbers used to tune the after-pruned models. Default: 20")
-add_arg('ratio_steps_per_epoch', int, 30,        "How many times you want to increase your ratio during each epoch. Default: 30")
+add_arg('pruning_epochs',   int, 70,             "The epoch numbers used to prune the model by a ratio step. Default: 35")
+add_arg('tunning_epochs',   int, 40,             "The epoch numbers used to tune the after-pruned models. Default: 20")
+add_arg('ratio_steps_per_epoch', int, 15,        "How many times you want to increase your ratio during each epoch. Default: 30")
 add_arg('initial_ratio',    float, 0.05,         "The initial pruning ratio used at the start of pruning stage. Default: 0.05")
 # yapf: enable
 
@@ -87,6 +87,22 @@ def prepare_training_hyper_parameters(args, step_per_epoch):
     for i in range(total_pruning_steps):
         ratio = ((i * range_one / total_pruning_steps) - 1)**3 + 1
         ratios.append(max(ratio, args.initial_ratio))
+    ratios.reverse()
+
+    return ratios, ratio_increment_period
+
+
+def prepare_training_hyper_parameters_y(args, step_per_epoch):
+    total_pruning_steps = args.ratio_steps_per_epoch * args.pruning_epochs
+    ratios = []
+    y_min = 1 - args.ratio**3
+    y_max = (1 - args.ratio)**3 + 1
+    ratio_increment_period = int(step_per_epoch / args.ratio_steps_per_epoch)
+    for i in range(total_pruning_steps):
+        ratio_tmp = ((i / total_pruning_steps) - args.ratio)**3 + 1
+        ratio_tmp = (ratio_tmp - y_min) * (args.ratio - args.initial_ratio) / (
+            y_max - y_min) + args.initial_ratio
+        ratios.append(ratio_tmp)
     ratios.reverse()
 
     return ratios, ratio_increment_period
@@ -167,7 +183,7 @@ def compress(args):
         threshold=0.0,
         place=place)
 
-    ratios_stack, ratio_increment_period = prepare_training_hyper_parameters(
+    ratios_stack, ratio_increment_period = prepare_training_hyper_parameters_y(
         args, step_per_epoch)
 
     exe.run(paddle.static.default_startup_program())
@@ -193,7 +209,7 @@ def compress(args):
         acc_top5_ns = []
 
         _logger.info("The current density of the inference model is {}%".format(
-            round(100 * UnstructuredPruner.total_sparse(
+            round(100 * UnstructuredPruner.total_sparse_conv1x1(
                 paddle.static.default_main_program()), 2)))
         for batch_id, data in enumerate(valid_loader):
             start_time = time.time()
@@ -253,10 +269,6 @@ def compress(args):
                                              ) / args.log_period, total_samples
                            / args.log_period, total_samples / (
                                train_reader_cost + train_run_cost)))
-                _logger.info(
-                    "The current density of the pruned model is: {}%".format(
-                        round(100 * UnstructuredPruner.total_sparse(
-                            paddle.static.default_main_program()), 2)))
                 train_reader_cost = 0.0
                 train_run_cost = 0.0
                 total_samples = 0
@@ -274,7 +286,7 @@ def compress(args):
     for i in range(args.resume_epoch + 1, args.num_epochs):
         train(i, train_program)
         _logger.info("The current density of the pruned model is: {}%".format(
-            round(100 * UnstructuredPruner.total_sparse(
+            round(100 * UnstructuredPruner.total_sparse_conv1x1(
                 paddle.static.default_main_program()), 2)))
 
         if (i + 1) % args.test_period == 0:

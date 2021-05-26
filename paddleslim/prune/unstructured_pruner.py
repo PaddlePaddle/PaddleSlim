@@ -1,6 +1,6 @@
 import numpy as np
-from ..common import get_logger
-from ..core import GraphWrapper
+from paddleslim.common import get_logger
+from paddleslim.core import GraphWrapper
 import paddle
 import copy
 
@@ -51,7 +51,6 @@ class UnstructuredPruner():
         """
 
         for param, mask in zip(parameters, masks):
-            # paddle.assign(mask * (param != 0), output=mask)
             paddle.assign(param * mask, output=param)
 
     def _apply_masks(self, program, mask_func):
@@ -75,7 +74,7 @@ class UnstructuredPruner():
             ops = paddle.static.default_main_program().global_block().ops
             ori_len = len(ops)
             mask_func(params, masks)
-            ops = ops[ori_len:] + ops[ori_len:]
+            ops = ops[ori_len:] + ops[:ori_len]
             program.global_block().ops = ops
 
         d_masks = {}
@@ -137,8 +136,6 @@ class UnstructuredPruner():
             v_param = np.array(t_param)
             params_flatten.append(v_param.flatten())
         params_flatten = np.concatenate(params_flatten, axis=0)
-        # self.threshold = np.sort(np.abs(params_flatten))[max(
-        #     0, int(self.ratio * total_len) - 1)]
         self.threshold = self._partition_sort(params_flatten)
 
     def _partition_sort(self, params):
@@ -233,6 +230,21 @@ class UnstructuredPruner():
                 for input in op.all_inputs():
                     skip_params.add(input.name())
         return skip_params
+
+    @staticmethod
+    def total_sparse_conv1x1(program):
+        total = 0
+        values = 0
+        for param in program.all_parameters():
+            if not (len(param.shape) == 4 and param.shape[2] == 1 and
+                    param.shape[3] == 1):
+                continue
+            total += np.product(param.shape)
+            values += np.count_nonzero(
+                np.array(paddle.static.global_scope().find_var(param.name)
+                         .get_tensor()))
+        density = float(values) / total
+        return density
 
     def _should_prune_param(self, param):
         should_prune = param not in self.skip_params
