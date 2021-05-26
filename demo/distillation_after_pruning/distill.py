@@ -138,7 +138,7 @@ def compress(args):
                 drop_last=False,
                 return_list=False,
                 use_shared_memory=True,
-                batch_size=args.batch_size,
+                batch_size=16,
                 shuffle=False)
             # model definition
             model = models.__dict__[args.model]()
@@ -186,8 +186,12 @@ def compress(args):
     merge(teacher_program, student_program, data_name_map, place)
 
     with paddle.static.program_guard(student_program, s_startup):
-        distill_loss = soft_label_loss("teacher_fc_0.tmp_0", "fc_0.tmp_0",
-                                       student_program)
+        distill_loss = soft_label_loss(
+            "teacher_fc_0.tmp_0",
+            "fc_0.tmp_0",
+            student_program,
+            student_temperature=10.0,
+            teacher_temperature=10.0)
         loss = avg_cost + distill_loss
         lr, opt = create_optimizer(args)
         opt.minimize(loss)
@@ -199,6 +203,7 @@ def compress(args):
             os.path.join(args.student_pretrained_model, var.name))
         return exist
 
+    # paddle.static.load(student_program, args.student_pretrained_model, exe, predicate=if_exist_student)
     paddle.fluid.io.load_vars(
         exe,
         args.student_pretrained_model,
@@ -219,6 +224,7 @@ def compress(args):
         student_program).with_data_parallel(
             loss_name=loss.name, build_strategy=build_strategy)
 
+    max_acc = 0.0
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):
             loss_1, loss_2, loss_3 = exe.run(
@@ -250,10 +256,16 @@ def compress(args):
                         "valid_epoch {} step {} loss {:.6f}, top1 {:.6f}, top5 {:.6f}".
                         format(epoch_id, step_id, val_loss[0], val_acc1[0],
                                val_acc5[0]))
-            if args.save_inference:
-                paddle.fluid.io.save_inference_model(
-                    os.path.join("./saved_models", str(epoch_id)), ["image"],
-                    [out], exe, student_program)
+            cur_acc = np.mean(val_acc1s)
+            if args.save_inference and cur_acc > max_acc:
+                #                 paddle.fluid.io.save_inference_model(
+                #                     os.path.join("./saved_models", str(epoch_id)), ["image"],
+                #                     [out], exe, student_program)
+                max_acc = cur_acc
+                paddle.fluid.io.save_params(
+                    executor=exe,
+                    dirname="./saved_models",
+                    main_program=student_program)
             _logger.info("epoch {} top1 {:.6f}, top5 {:.6f}".format(
                 epoch_id, np.mean(val_acc1s), np.mean(val_acc5s)))
 
