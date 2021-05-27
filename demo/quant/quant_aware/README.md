@@ -4,11 +4,31 @@
 
 ## 接口介绍
 
-请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
+请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-aware'>量化API文档</a>。
 
-## 分类模型的离线量化流程
+## 分类模型的量化训练流程
 
-### 1. 配置量化参数
+### 准备数据
+
+在``demo``文件夹下创建``data``文件夹，将``ImageNet``数据集解压在``data``文件夹下，解压后``data/ILSVRC2012``文件夹下应包含以下文件：
+- ``'train'``文件夹，训练图片
+- ``'train_list.txt'``文件
+- ``'val'``文件夹，验证图片
+- ``'val_list.txt'``文件
+
+### 准备需要量化的模型
+
+使用以下命令下载训练好的模型并解压。
+
+```
+mkdir pretrain
+cd pretrain
+wget http://paddle-imagenet-models-name.bj.bcebos.com/MobileNetV1_pretrained.tar
+tar xf MobileNetV1_pretrained.tar
+cd ..
+```
+
+### 配置量化参数
 
 ```
 quant_config = {
@@ -20,12 +40,11 @@ quant_config = {
     'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
     'dtype': 'int8',
     'window_size': 10000,
-    'moving_rate': 0.9,
-    'quant_weight_only': False
+    'moving_rate': 0.9
 }
 ```
 
-### 2. 对训练和测试program插入可训练量化op
+### 对训练和测试program插入可训练量化op
 
 ```
 val_program = quant_aware(val_program, place, quant_config, scope=None, for_test=True)
@@ -33,45 +52,23 @@ val_program = quant_aware(val_program, place, quant_config, scope=None, for_test
 compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, for_test=False)
 ```
 
-### 3.关掉指定build策略
+### 关掉指定build策略
 
 ```
-build_strategy = fluid.BuildStrategy()
+build_strategy = paddle.static.BuildStrategy()
 build_strategy.fuse_all_reduce_ops = False
 build_strategy.sync_batch_norm = False
-exec_strategy = fluid.ExecutionStrategy()
+exec_strategy = paddle.static.ExecutionStrategy()
 compiled_train_prog = compiled_train_prog.with_data_parallel(
         loss_name=avg_cost.name,
         build_strategy=build_strategy,
         exec_strategy=exec_strategy)
 ```
 
-### 4. freeze program
+
+### 训练命令
 
 ```
-float_program, int8_program = convert(val_program, 
-                                      place,
-                                      quant_config,
-                                      scope=None,
-                                      save_int8=True)
+python train.py --model MobileNet --pretrained_model ./pretrain/MobileNetV1_pretrained --checkpoint_dir ./output/mobilenetv1 --num_epochs 30
 ```
-
-### 5.保存预测模型
-
-```
-fluid.io.save_inference_model(
-    dirname=float_path,
-    feeded_var_names=[image.name],
-    target_vars=[out], executor=exe,
-    main_program=float_program,
-    model_filename=float_path + '/model',
-    params_filename=float_path + '/params')
-
-fluid.io.save_inference_model(
-    dirname=int8_path,
-    feeded_var_names=[image.name],
-    target_vars=[out], executor=exe,
-    main_program=int8_program,
-    model_filename=int8_path + '/model',
-    params_filename=int8_path + '/params')
-```
+运行之后，可看到``best_model``的最后测试结果，和MobileNet量化前的精度top1=70.99%, top5=89.68%非常相近。
