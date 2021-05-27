@@ -1,3 +1,5 @@
+[完整代码](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/ofa)
+
 # OFA压缩PaddleNLP-BERT模型
 
 BERT-base模型是一个迁移能力很强的通用语义表示模型，但是模型中也有一些参数冗余。本教程将介绍如何使用PaddleSlim对[PaddleNLP](https://paddlenlp.readthedocs.io/zh/latest/)中BERT-base模型进行压缩。  
