@@ -225,7 +225,7 @@ def check_search_space(graph):
                     depthwise_conv.append(inp._var.name)
 
     if len(same_search_space) == 0:
-        return None, None
+        return None, []
 
     same_search_space = sorted([sorted(x) for x in same_search_space])
     final_search_space = []
