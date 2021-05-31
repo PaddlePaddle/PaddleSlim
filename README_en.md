@@ -82,19 +82,19 @@ pip install paddleslim==1.2.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 ## Usage
 
-- [QuickStart](https://paddlepaddle.github.io/PaddleSlim/quick_start/index_en.html): Introduce how to use PaddleSlim by simple examples.
+- [QuickStart](https://paddleslim.readthedocs.io/en/latest/quick_start/index_en.html): Introduce how to use PaddleSlim by simple examples.
 - Dynamic graph
-  - Pruning: [Tutorial](dygraph_docs/), [Demo](demo/dygraph/pruning)
+  - Pruning: [Tutorial](https://paddleslim.readthedocs.io/en/latest/tutorials/image_classification_sensitivity_analysis_tutorial_en.html), [Demo](demo/dygraph/pruning)
   - Quantization: [Demo](demo/dygraph/quant)
 
 
-- [Advanced Tutorials](https://paddlepaddle.github.io/PaddleSlim/tutorials/index_en.html)：Tutorials about advanced usage of PaddleSlim.
+- [Advanced Tutorials](https://paddleslim.readthedocs.io/en/latest/tutorials/index_en.html)：Tutorials about advanced usage of PaddleSlim.
 
-- [Model Zoo](https://paddlepaddle.github.io/PaddleSlim/model_zoo_en.html)：Benchmark and pretrained models.
+- [Model Zoo](https://paddleslim.readthedocs.io/en/latest/model_zoo_en.html)：Benchmark and pretrained models.
 
-- [API Documents](https://paddlepaddle.github.io/PaddleSlim/api_en/index_en.html)
+- [API Documents](https://paddleslim.readthedocs.io/en/latest/api_en/index_en.html)
 
-- [Algorithm Background](https://paddlepaddle.github.io/PaddleSlim/algo/algo.html): Introduce the background of quantization, pruning, distillation, NAS.
+- [Algorithm Background](https://paddleslim.readthedocs.io/en/latest/intro_en.html): Introduce the background of quantization, pruning, distillation, NAS.
 
 - [PaddleDetection](https://github.com/PaddlePaddle/PaddleDetection/tree/master/slim): Introduce how to use PaddleSlim in PaddleDetection library.
 

@@ -7,7 +7,7 @@ PaddleSlim提供了4种网络结构搜索的方法：基于模拟退火进行网
 | [Once-For-All](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/nas/dygraph/nas_ofa.html)    | OFA是一种基于One-Shot NAS的压缩方案。这种方式比较高效，其优势是只需要训练一个超网络就可以从中选择满足不同延时要求的子模型。 | Once-For-All   |
 | [SANAS](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/static/nas_tutorial.html)            | SANAS是基于模拟退火的方式进行网络结构搜索，在机器资源不多的情况下，选择这种方式一般能得到比强化学习更好的模型。             | \              |
 | [RLNAS](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/nas/nas_api.html#rlnas)            | RLNAS是基于强化学习的方式进行网络结构搜索，这种方式需要耗费大量机器资源。 | ENAS、NasNet、MNasNet  |
-| [DARTS](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/darts.html)            | DARTS是基于梯度的方式进行网络结构搜索，可以大大缩短搜索时长。             | DARTS、PCDARTS              |
+| [DARTS](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/index.html)            | DARTS是基于梯度的方式进行网络结构搜索，可以大大缩短搜索时长。             | DARTS、PCDARTS              |
 
 ## 参考文献
 [1] H. Cai, C. Gan, T. Wang, Z. Zhang, and S. Han. Once for all: Train one network and specialize it for efficient deployment. In International Conference on Learning Representations, 2020.  

@@ -22,7 +22,7 @@ def cal_mask(self, var_name, pruned_ratio, group):
 
 如图1-1所示，在给定模型中有两个卷积层，第一个卷积层有3个`filters`，第二个卷积层有2个`filters`。如果删除第一个卷积绿色的`filter`，第一个卷积的输出特征图的通道数也会减1，同时需要删掉第二个卷积层绿色的`kernels`。如上所述的两个卷积共同组成一个group，表示如下：
 
-```python
+```
 group = {
             "conv_1.weight":{
                 "pruned_dims": [0],
@@ -94,7 +94,7 @@ class L2NormFilterPruner(FilterPruner):
 
 如上述代码所示，我们重载了`FilterPruner`基类的`cal_mask`方法，并在`L1NormFilterPruner`代码基础上，修改了计算通道重要性的语句，将其修改为了计算L2Norm的逻辑：
 
-```python
+```
 scores = np.sqrt(np.sum(np.square(value), axis=tuple(reduce_dims)))
 ```
 

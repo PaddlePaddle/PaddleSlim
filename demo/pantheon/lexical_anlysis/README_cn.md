@@ -12,7 +12,7 @@ BiGRU 是使用双向GRU网络从头训练LAC任务；BERT fine-tuned 是在BERT
 
 ## 简介
 
-Lexical Analysis of Chinese，简称 LAC，是一个联合的词法分析模型，在单个模型中完成中文分词、词性标注、专名识别任务。我们在自建的数据集上对分词、词性标注、专名识别进行整体的评估效果。我们使用经过finetune的 [ERNIE](https://github.com/PaddlePaddle/LARK/tree/develop/ERNIE) 模型作为Teacher模型，使用GRU作为Student模型，使用Pantheon框架进行在线蒸馏。
+Lexical Analysis of Chinese，简称 LAC，是一个联合的词法分析模型，在单个模型中完成中文分词、词性标注、专名识别任务。我们在自建的数据集上对分词、词性标注、专名识别进行整体的评估效果。我们使用经过finetune的 ERNIE 模型作为Teacher模型，使用GRU作为Student模型，使用Pantheon框架进行在线蒸馏。
 
 #### 1. 下载训练数据集
 

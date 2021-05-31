@@ -11,7 +11,7 @@ BiGRU is to train a BiGRU based LAC model from scratch; BERT fine-tuned is to fi
 
 ## Introduction
 
-Lexical Analysis of Chinese, or LAC for short, is a lexical analysis model that completes the tasks of Chinese word segmentation, part-of-speech tagging, and named entity recognition in a single model. We conduct an overall evaluation of word segmentation, part-of-speech tagging, and named entity recognition on a self-built dataset. We use the finetuned [ERNIE](https://github.com/PaddlePaddle/LARK/tree/develop/ERNIE) model as the Teacher model and GRU as the Student model, which are needed by the Pantheon framework for online distillation.
+Lexical Analysis of Chinese, or LAC for short, is a lexical analysis model that completes the tasks of Chinese word segmentation, part-of-speech tagging, and named entity recognition in a single model. We conduct an overall evaluation of word segmentation, part-of-speech tagging, and named entity recognition on a self-built dataset. We use the finetuned ERNIE model as the Teacher model and GRU as the Student model, which are needed by the Pantheon framework for online distillation.
 
 #### 1. Download the training data set
 
