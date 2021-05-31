@@ -1,0 +1,17 @@
+python3.7 train.py \
+    --batch_size 256 \
+    --save_model True \
+    --num_epochs 77 \
+    --data imagenet \
+    --model_period 5 \
+    --model_path ./models \
+    --student_pretrained_model ./MobileNetV1_pretrained \
+    --test_period 5 \
+    --ratio 0.70 \
+    --pruning_mode ratio \
+    --initial_ratio 0.05 \
+    --stable_epochs 0 \
+    --pruning_epochs 49 \
+    --tunning_epochs 28 \
+    --ratio_steps_per_epoch 15 \
+    --lr 0.0075
