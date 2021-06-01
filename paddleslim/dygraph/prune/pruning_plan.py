@@ -119,7 +119,7 @@ class PruningPlan():
 
             t_value.set(pruned_value, place)
 
-    def apply(self, model, lazy=False, opt=False):
+    def apply(self, model, lazy=False, opt=None):
         if lazy:
             self.lazy_apply(model)
         else:
