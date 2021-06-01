@@ -95,11 +95,35 @@ class PruningPlan():
             for name, mask in self._masks.items()
         ]) + details
 
-    def apply(self, model, lazy=False):
+    def _prune_opt(self, param_name, dims, bool_mask, opt):
+        if opt is None:
+            return
+        for k, v in opt._accumulators.items():
+            var_tmp = v.get(param_name)
+            if var_tmp is None: continue
+            t_value = var_tmp.value().get_tensor()
+            value = np.array(t_value).astype("float32")
+
+            pruned_value = np.apply_along_axis(lambda data: data[bool_mask],
+                                               dims, value)
+
+            p = t_value._place()
+            if p.is_cpu_place():
+                place = paddle.CPUPlace()
+            elif p.is_cuda_pinned_place():
+                place = paddle.CUDAPinnedPlace()
+            else:
+                p = core.Place()
+                p.set_place(t_value._place())
+                place = paddle.CUDAPlace(p.gpu_device_id())
+
+            t_value.set(pruned_value, place)
+
+    def apply(self, model, lazy=False, opt=False):
         if lazy:
             self.lazy_apply(model)
         else:
-            self.imperative_apply(model)
+            self.imperative_apply(model, opt)
 
     def lazy_apply(self, model):
         for name, sub_layer in model.named_sublayers():
@@ -136,7 +160,7 @@ class PruningPlan():
 
                         t_value.set(value * expand_mask, place)
 
-    def imperative_apply(self, model):
+    def imperative_apply(self, model, opt=None):
         """
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
@@ -175,6 +199,8 @@ class PruningPlan():
                                           format(param.name))
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims, value)
+                        self._prune_opt(param.name, dims, bool_mask, opt)
+
                         p = t_value._place()
                         if p.is_cpu_place():
                             place = paddle.CPUPlace()
@@ -184,7 +210,6 @@ class PruningPlan():
                             p = core.Place()
                             p.set_place(t_value._place())
                             place = paddle.CUDAPlace(p.gpu_device_id())
-
                         t_value.set(pruned_value, place)
 
                     # for training

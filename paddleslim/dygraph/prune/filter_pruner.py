@@ -61,7 +61,6 @@ class FilterPruner(Pruner):
         self._status = Status(sen_file)
         # sensitive and collections are just used in filter pruning
         self.collections = DygraphPruningCollections(model, inputs)
-
         # skip vars in:
         # 1. depthwise conv2d layer
         self.skip_vars = []
@@ -292,7 +291,12 @@ class FilterPruner(Pruner):
     def cal_mask(self, pruned_ratio, collection):
         raise NotImplemented("cal_mask is not implemented")
 
-    def prune_var(self, var_name, pruned_axis, pruned_ratio, apply="impretive"):
+    def prune_var(self,
+                  var_name,
+                  pruned_axis,
+                  pruned_ratio,
+                  apply="impretive",
+                  opt=None):
         """
         Pruning a variable.
         Parameters:
@@ -347,7 +351,7 @@ class FilterPruner(Pruner):
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":
-            plan.apply(self.model, lazy=False)
+            plan.apply(self.model, lazy=False, opt=opt)
         return plan
 
     def _transform_mask(self, mask, transform):

@@ -30,10 +30,15 @@ class Pruner(object):
     def status(self, data=None, eval_func=None, status_file=None):
         raise NotImplemented("status is not implemented")
 
-    def prune_var(self, var_name, axis, pruned_ratio, apply="impretive"):
+    def prune_var(self,
+                  var_name,
+                  axis,
+                  pruned_ratio,
+                  apply="impretive",
+                  opt=None):
         raise NotImplemented("prune_var is not implemented")
 
-    def prune_vars(self, ratios, axis, apply="impretive"):
+    def prune_vars(self, ratios, axis, apply="impretive", opt=None):
         """
         Pruning variables by given ratios.
         Args:
@@ -48,11 +53,11 @@ class Pruner(object):
         global_plan = PruningPlan(self.model.full_name)
         for var, ratio in ratios.items():
             if not global_plan.contains(var, axis):
-                plan = self.prune_var(var, axis, ratio, apply=None)
+                plan = self.prune_var(var, axis, ratio, apply=None, opt=opt)
                 global_plan.extend(plan)
         if apply == "lazy":
             global_plan.apply(self.model, lazy=True)
         elif apply == "impretive":
-            global_plan.apply(self.model, lazy=False)
+            global_plan.apply(self.model, lazy=False, opt=opt)
         self.plan = global_plan
         return global_plan
