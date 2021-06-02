@@ -215,7 +215,7 @@ class FilterPruner(Pruner):
             plan = self.prune_vars(ratios, axis=dims)
             c_flops = flops(self.model, self.inputs)
             c_pruned_flops = (base_flops - c_flops) / base_flops
-            plan.restore(self.model)
+            plan.restore(self.model, opt=self.opt)
             _logger.debug("Seaching ratios, pruned FLOPs: {}".format(
                 c_pruned_flops))
             key = str(round(c_pruned_flops, 4))
@@ -264,7 +264,7 @@ class FilterPruner(Pruner):
                     var_name, ratio, loss))
                 sensitivities[var_name][ratio] = loss
                 self._status.save(status_file)
-                plan.restore(model)
+                plan.restore(model, opt=self.opt)
 
         return sensitivities
 
@@ -286,7 +286,7 @@ class FilterPruner(Pruner):
 
     def restore(self):
         if self.plan is not None:
-            self.plan.restore(self.model)
+            self.plan.restore(self.model, opt=self.opt)
 
     def cal_mask(self, pruned_ratio, collection):
         raise NotImplemented("cal_mask is not implemented")

@@ -100,7 +100,10 @@ class PruningPlan():
             return
         for k, v in opt._accumulators.items():
             var_tmp = v.get(param_name)
-            if var_tmp is None: continue
+            #NOTE: var_tmp.shape == [1] is used to skip variables like beta1_pow_acc in Adam optimizer. Its shape is [1] and there's no need to prune this one-value variable.
+            if var_tmp is None or var_tmp.shape == [1]:
+                if var_tmp is not None: print(var_tmp.name, var_tmp.shape)
+                continue
             t_value = var_tmp.value().get_tensor()
             value = np.array(t_value).astype("float32")
 
@@ -118,6 +121,45 @@ class PruningPlan():
                 place = paddle.CUDAPlace(p.gpu_device_id())
 
             t_value.set(pruned_value, place)
+
+    def _buffer_opt(self, param_name, sub_layer, opt):
+        if opt is None:
+            return
+        for k, v in opt._accumulators.items():
+            var_tmp = v.get(param_name)
+            if var_tmp is None: continue
+            backup_name = var_tmp.name.replace(".", "_") + "_backup"
+            if backup_name not in sub_layer._buffers:
+                sub_layer.register_buffer(
+                    backup_name, paddle.to_tensor(var_tmp.value().get_tensor()))
+                _logger.debug("Backup values of {} into buffers.".format(
+                    var_tmp.name))
+
+    def _restore_opt(self, param_name, sub_layer, opt):
+        if opt is None:
+            return
+        for k, v in opt._accumulators.items():
+            var_tmp = v.get(param_name)
+            if var_tmp is None: continue
+            backup_name = var_tmp.name.replace(".", "_") + "_backup"
+            if backup_name in sub_layer._buffers:
+                _logger.debug("Restore values of variable: {}".format(
+                    var_tmp.name))
+                t_value = var_tmp.value().get_tensor()
+                t_backup = sub_layer._buffers[backup_name].value().get_tensor()
+
+                p = t_value._place()
+                if p.is_cpu_place():
+                    place = paddle.CPUPlace()
+                elif p.is_cuda_pinned_place():
+                    place = paddle.CUDAPinnedPlace()
+                else:
+                    p = core.Place()
+                    p.set_place(t_value._place())
+                    place = paddle.CUDAPlace(p.gpu_device_id())
+
+                t_value.set(np.array(t_backup).astype("float32"), place)
+                del sub_layer._buffers[backup_name]
 
     def apply(self, model, lazy=False, opt=None):
         if lazy:
@@ -165,7 +207,6 @@ class PruningPlan():
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
-
         for name, sub_layer in model.named_sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
@@ -197,6 +238,9 @@ class PruningPlan():
                                                       paddle.to_tensor(value))
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
+                        # save optimizer accumulators into layer buffer
+                        self._buffer_opt(param.name, sub_layer, opt)
+
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims, value)
                         self._prune_opt(param.name, dims, bool_mask, opt)
@@ -216,9 +260,11 @@ class PruningPlan():
                     if param.trainable:
                         param.clear_gradient()
 
-    def restore(self, model):
+    def restore(self, model, opt=None):
         for name, sub_layer in model.named_sublayers():
             for param in sub_layer.parameters(include_sublayers=False):
+                # restore optimizer accumulators from layer buffer
+                self._restore_opt(param.name, sub_layer, opt)
                 backup_name = "_".join([param.name.replace(".", "_"), "backup"])
                 if backup_name in sub_layer._buffers:
                     _logger.debug("Restore values of variable: {}".format(
