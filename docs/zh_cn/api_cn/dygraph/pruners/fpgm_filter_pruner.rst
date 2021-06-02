@@ -15,7 +15,7 @@ FPGMFilterPruner
 
 - **sen_file(str)** - 存储敏感度信息的文件，需要指定为绝对路径。在调用当前剪裁器的 ``sensitive`` 方法时，敏感度信息会以增量的形式追加到文件 ``sen_file`` 中。如果用户不需要敏感度剪裁策略，可以将该选项设置为 ``None`` 。默认为None。
 
-- **opt(paddle.optimizer.Optimizer)** - 动态图模型训练时用到的优化器。传入该参数是为了解决上述 ``model(paddle.nn.Layer)`` 不含有优化器，导致不能剪裁到优化器参数（例如 ``Momentum`` 中的 ``velocity`` ）的问题。是否传入 ``optimizer`` 参数的逻辑为：若已经初始化了 ``optimizer`` 对象，则传入；否则，不传入。默认为None。
+- **opt(paddle.optimizer.Optimizer)** - 动态图模型训练时用到的优化器。传入该参数是为了解决上述 ``model(paddle.nn.Layer)`` 不含有优化器，导致不能剪裁到优化器参数（例如 ``Momentum`` 中的 ``velocity`` ）的问题。是否传入 ``optimizer`` 参数的逻辑为：若已经初始化了 ``optimizer`` 对象，则传入；否则，在调用 ``pruner.prune_vars()`` 之后初始化 ``optimize`` 。默认为None。
 
 **返回：** 一个剪裁器实例。
 
@@ -28,6 +28,7 @@ FPGMFilterPruner
    from paddleslim import FPGMFilterPruner
    net = mobilenet_v1(pretrained=False)
    pruner = FPGMFilterPruner(net, [1, 3, 224, 224])
+   pruner.prune_var("conv2d_26.w_0", [0], pruned_ratio=0.5)
    optimizer = paddle.optimizer.Momentum(
         learning_rate=0.1,
         parameters=net.parameters())
