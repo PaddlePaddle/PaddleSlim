@@ -1,7 +1,7 @@
 L1NormFilterPruner
 ==================
 
-.. py:class:: paddleslim.L1NormFilterPruner(model, inputs, sen_file=None)
+.. py:class:: paddleslim.L1NormFilterPruner(model, inputs, sen_file=None, opt=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/paddleslim/dygraph/prune/l1norm_pruner.py#L14>`_
 
@@ -15,16 +15,39 @@ L1NormFilterPruner
 
 - **sen_file(str)** - 存储敏感度信息的文件，需要指定为绝对路径。在调用当前剪裁器的 ``sensitive`` 方法时，敏感度信息会以增量的形式追加到文件 ``sen_file`` 中。如果用户不需要敏感度剪裁策略，可以将该选项设置为 ``None`` 。默认为None。
 
+- **opt(paddle.optimizer.Optimizer)** - 动态图模型训练时用到的优化器。传入该参数是为了解决上述model(paddle.nn.Layer)不含有优化器，导致不能剪裁到优化器参数（例如Momentum中的velocity）的问题。是否传入optimizer参数的逻辑为：若已经>初始化了optimizer对象，则传入；否则，不传入。默认为None。
+
 **返回：** 一个剪裁器实例。
 
-**示例代码：**
+**示例代码1：**
 
 .. code-block:: python
+
+    import paddle
     from paddle.vision.models import mobilenet_v1
     from paddleslim import L1NormFilterPruner
     net = mobilenet_v1(pretrained=False) 
     pruner = L1NormFilterPruner(net, [1, 3, 224, 224])
+    optimizer = paddle.optimizer.Momentum(
+        learning_rate=0.1,
+        parameters=net.parameters())
 ..
+
+**示例代码2：**
+
+.. code-block:: python
+
+   import paddle
+   from paddle.vision.models import mobilenet_v1
+   from paddleslim import L1NormFilterPruner
+   net = mobilenet_v1(pretrained=False)
+   optimizer = paddle.optimizer.Momentum(
+        learning_rate=0.1,
+        parameters=net.parameters())
+   pruner = L1NormFilterPruner(net, [1, 3, 224, 224], opt=optimizer)
+..
+
+**注意：** 上述两段代码展示了如何在pruner中是否调用optimizer，在示例代码1中，初始化optimizer时传入的parameters为剪裁后的net.parameters()，故无需在初始化pruner时传入optimizer；反之在示例代码2中，optimizer中的parameter为剪裁前，故需要传入给pruner一并剪裁optimizer中的相关参数。
  
    .. py:method:: prune_var(var_name, pruned_dims, pruned_ratio, apply="impretive")
 
@@ -49,6 +72,7 @@ L1NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
+
       import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
@@ -57,8 +81,7 @@ L1NormFilterPruner
       plan = pruner.prun_var("conv2d_26.w_0", [0])
       print(f"plan: {plan}")
       paddle.summary(net, (1, 3, 224, 224))
-   
-   ..  
+   ..
 
    .. py:method:: prune_vars(ratios, axis, apply="impretive")
 
@@ -81,6 +104,7 @@ L1NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
+
       import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
@@ -89,7 +113,6 @@ L1NormFilterPruner
       plan = pruner.prun_vars({"conv2d_26.w_0": 0.5}, [0])
       print(f"plan: {plan}")
       paddle.summary(net, (1, 3, 224, 224))
-
    ..
 
    .. py:method:: sensitive(eval_func=None, sen_file=None, target_vars=None, skip_vars=[])
@@ -121,7 +144,7 @@ L1NormFilterPruner
               0.2: 0.4
              }
          }
-      
+      .. 
       其中，``weight_0`` 是卷积层权重变量的名称， ``sensitivities['weight_0']`` 是一个字典， key是用 ``float`` 类型数值表示的剪裁率，value是对应剪裁率下整个模型的精度损失比例。
    
    **示例：**
@@ -129,6 +152,7 @@ L1NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
+
       import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
@@ -165,7 +189,7 @@ L1NormFilterPruner
       pruner = L1NormFilterPruner(net, [1, 3, 224, 224])
       sen = pruner.sensitive(eval_func=eval_fn, sen_file="./sen.pickle")
       print(f"sen: {sen}")
-
+   .. 
 
    .. py:method:: sensitive_prune(pruned_flops, skip_vars=[], align=None)
 
@@ -189,6 +213,7 @@ L1NormFilterPruner
    点击 `AIStudio <>`_ 执行以下示例代码。
 
    .. code-block:: python
+
       import paddle
       from paddle.vision.models import mobilenet_v1
       from paddleslim import L1NormFilterPruner
@@ -226,6 +251,4 @@ L1NormFilterPruner
       sen = pruner.sensitive(eval_func=eval_fn, sen_file="./sen.pickle")
       plan = pruner.sensitive_prune(0.5, align=8)
       print(f"plan: {plan}")
-
-
-
+   ..
