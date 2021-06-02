@@ -79,7 +79,7 @@ pruner.prune_vars({'conv2d_22.w_0':0.5, 'conv2d_20.w_0':0.6}, axis=0)
 ```
 
 以上操作会按照网络结构中不同网路层的冗余程度对网络层进行不同程度的裁剪并修改网络模型结构。
-**注意：** 需要将optimizer传入pruner中，这是为了保证optimizer中的参数可以被剪裁到。例如：momentum中的velocity。但是如果在prune之后定义optimizer，则无需传入了，因为初始化optimizer时会指定parameters=net.parameters()。
+**注意：** 需要将`optimizer`传入`pruner`中，这是为了保证`optimizer`中的参数可以被剪裁到。例如：`momentum`中的`velocity`。但是如果在`pruner`后定义`optimizer`，则无需传入了，因为初始化`optimizer`时会指定`parameters=net.parameters()`。
 
 ### 4.3 计算剪裁之后的FLOPs
 

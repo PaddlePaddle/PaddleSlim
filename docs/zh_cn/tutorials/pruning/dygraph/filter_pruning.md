@@ -82,7 +82,7 @@ from paddleslim.dygraph import L1NormFilterPruner
 pruner = L1NormFilterPruner(net, [1, 3, 224, 224], opt=optimizer)
 ```
 
-**注意：** 需要将optimizer传入pruner中，这是为了保证optimizer中的参数可以被剪裁到。例如：momentum中的velocity。但是如果在pruner之后定义optimizer，则无需传入了，因为初始化optimizer时会指定parameters=net.parameters()。
+**注意：** 需要将`optimizer`传入`pruner`中，这是为了保证`optimizer`中的参数可以被剪裁到。例如：`momentum`中的`velocity`。但是如果在`pruner`后定义`optimizer`，则无需传入了，因为初始化`optimizer`时会指定`parameters=net.parameters()`。
 
 如果本地文件系统已有一个存储敏感度信息（见4.1节）的文件，声明`L1NormFilterPruner`对象时，可以通过指定`sen_file`选项加载计算好的敏感度信息，如下：
 
