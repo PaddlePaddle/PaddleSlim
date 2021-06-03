@@ -938,3 +938,20 @@ class unsqueeze2(PruneWorker):
                     squeeze_num += 1
             pruned_axis -= squeeze_num
             self._visit_and_search(in_var, pruned_axis, transforms)
+
+
+@PRUNE_WORKER.register
+class average_accumulates(PruneWorker):
+    def __init__(self, op, pruned_params, visited, skip_stranger):
+        super(average_accumulates, self).__init__(op, pruned_params, visited,
+                                                  skip_stranger)
+
+    def _prune(self, var, pruned_axis, transforms):
+        in_var = self.op.inputs("param")[0]
+        out_var_1 = self.op.outputs("out_sum_1")[0]
+        out_var_2 = self.op.outputs("out_sum_2")[0]
+        out_var_3 = self.op.outputs("out_sum_3")[0]
+        if in_var == var:
+            self.append_pruned_vars(out_var_1, pruned_axis, pruned_idx)
+            self.append_pruned_vars(out_var_1, pruned_axis, pruned_idx)
+            self.append_pruned_vars(out_var_1, pruned_axis, pruned_idx)
