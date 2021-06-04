@@ -14,6 +14,7 @@ import models
 from utility import add_arguments, print_arguments
 import paddle.vision.transforms as T
 import cifar
+from paddleslim.core import GraphWrapper
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -60,6 +61,22 @@ def piecewise_decay(args, step_per_epoch):
         momentum=args.momentum_rate,
         weight_decay=paddle.regularizer.L2Decay(args.l2_decay))
     return optimizer, learning_rate
+
+
+def get_skip_params(program):
+    skip_params = set()
+    graph = GraphWrapper(program)
+    for op in graph.ops():
+        if 'norm' in op.type() and 'grad' not in op.type():
+            for input in op.all_inputs():
+                skip_params.add(input.name())
+
+    for param in program.all_parameters():
+        cond = len(param.shape) == 4 and param.shape[2] == 1 and param.shape[
+            3] == 1
+        if not cond: skip_params.add(param.name)
+
+    return skip_params
 
 
 class ToArray(object):
@@ -190,7 +207,8 @@ def compress(args):
         mode=args.pruning_mode,
         ratio=0.0,
         threshold=0.0,
-        place=place)
+        place=place,
+        skip_params_func=get_skip_params)
 
     ratios_stack, ratio_increment_period = prepare_training_hyper_parameters_y(
         args, step_per_epoch)
@@ -310,11 +328,6 @@ def main():
     paddle.enable_static()
     args = parser.parse_args()
     print_arguments(args)
-    args.step_epochs = [
-        args.stable_epochs + args.pruning_epochs,
-        args.stable_epochs + args.pruning_epochs + int(args.tunning_epochs / 2)
-    ]
-    args.num_epochs = args.stable_epochs + args.pruning_epochs + args.tunning_epochs
     compress(args)
 
 
