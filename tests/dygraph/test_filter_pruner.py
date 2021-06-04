@@ -72,11 +72,11 @@ class TestFilterPruner(unittest.TestCase):
                 paddle.metric.Accuracy(topk=(1, 5)))
             model.fit(self.train_dataset, epochs=1, batch_size=128, verbose=1)
             pruners = []
-            pruner = L1NormFilterPruner(net, [1, 1, 28, 28])
+            pruner = L1NormFilterPruner(net, [1, 1, 28, 28], opt=optimizer)
             pruners.append(pruner)
-            pruner = FPGMFilterPruner(net, [1, 1, 28, 28])
+            pruner = FPGMFilterPruner(net, [1, 1, 28, 28], opt=optimizer)
             pruners.append(pruner)
-            pruner = L2NormFilterPruner(net, [1, 1, 28, 28])
+            pruner = L2NormFilterPruner(net, [1, 1, 28, 28], opt=optimizer)
             pruners.append(pruner)
 
             def eval_fn():
@@ -90,6 +90,10 @@ class TestFilterPruner(unittest.TestCase):
                     eval_func=eval_fn,
                     sen_file=sen_file,
                     target_vars=self._param_names)
+                model.fit(self.train_dataset,
+                          epochs=1,
+                          batch_size=128,
+                          verbose=1)
                 base_acc = eval_fn()
                 plan = pruner.sensitive_prune(0.01)
                 pruner.restore()
@@ -165,7 +169,7 @@ class TestPruningGroupConv2d(unittest.TestCase):
 
 def add_cases(suite):
     #    suite.addTest(TestStatus())
-    #    suite.addTest(TestFilterPruner(param_names=["conv2d_0.w_0"]))
+    suite.addTest(TestFilterPruner(param_names=["conv2d_0.w_0"]))
     suite.addTest(TestPruningGroupConv2d())
 
 
