@@ -170,17 +170,6 @@ class UnstructuredPruner():
             v_mask = (v_param != 0).astype(v_param.dtype)
             t_mask.set(v_mask, self.place)
 
-    def set_static_masks(self):
-        for param in self.masks:
-            if not self._should_prune_param(param):
-                continue
-            mask_name = self.masks[param]
-            t_param = self.scope.find_var(param).get_tensor()
-            t_mask = self.scope.find_var(mask_name).get_tensor()
-            v_param = np.array(t_param)
-            v_mask = (v_param != 0).astype(v_param.dtype)
-            t_mask.set(v_mask, self.place)
-
     def step(self):
         """
         Update the threshold after each optimization step.

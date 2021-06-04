@@ -123,13 +123,11 @@ def create_optimizer(args):
 def prepare_training_hyper_parameters_y(args, step_per_epoch):
     total_pruning_steps = args.ratio_steps_per_epoch * args.pruning_epochs
     ratios = []
-    y_min = 1 - args.ratio**3
-    y_max = (1 - args.ratio)**3 + 1
     ratio_increment_period = int(step_per_epoch / args.ratio_steps_per_epoch)
     for i in range(total_pruning_steps):
-        ratio_tmp = ((i / total_pruning_steps) - args.ratio)**3 + 1
-        ratio_tmp = (ratio_tmp - y_min) * (args.ratio - args.initial_ratio) / (
-            y_max - y_min) + args.initial_ratio
+        ratio_tmp = ((i / total_pruning_steps) - 1.0)**3 + 1
+        ratio_tmp = ratio_tmp * (args.ratio - args.initial_ratio
+                                 ) + args.initial_ratio
         ratios.append(ratio_tmp)
     ratios.reverse()
 

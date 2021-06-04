@@ -44,7 +44,7 @@ add_arg('pruning_mode',            str,  'ratio',               "the pruning mod
 add_arg('ratio',        float,  0.85,               "The ratio to set zeros, the smaller portion will be zeros.")
 add_arg('threshold',        float,  0.01,               "The threshold to set zeros, the smaller portion will be zeros.")
 add_arg('test_period',      int, 10,                 "Test period in epoches.")
-add_arg('student_pretrained_model', str,  "/code/models/models-post40/",                "Whether to use pretrained model.")
+add_arg('student_pretrained_model', str,  "/root/paddlejob/workspace/env_run/models/models-GMP-seperate70",                "Whether to use pretrained model.")
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -203,7 +203,6 @@ def compress(args):
             os.path.join(args.student_pretrained_model, var.name))
         return exist
 
-    # paddle.static.load(student_program, args.student_pretrained_model, exe, predicate=if_exist_student)
     paddle.fluid.io.load_vars(
         exe,
         args.student_pretrained_model,
@@ -237,7 +236,6 @@ def compress(args):
                     format(epoch_id, step_id,
                            lr.get_lr(), loss_1[0], loss_2[0], loss_3[0]))
             lr.step()
-            # if epoch_id == 0 and step_id == 0: pruner.step()
         _logger.info("The current density of the pruned model is: {}%".format(
             round(100 * UnstructuredPruner.total_sparse_conv1x1(
                 student_program), 2)))
@@ -258,9 +256,6 @@ def compress(args):
                                val_acc5[0]))
             cur_acc = np.mean(val_acc1s)
             if args.save_inference and cur_acc > max_acc:
-                #                 paddle.fluid.io.save_inference_model(
-                #                     os.path.join("./saved_models", str(epoch_id)), ["image"],
-                #                     [out], exe, student_program)
                 max_acc = cur_acc
                 paddle.fluid.io.save_params(
                     executor=exe,
