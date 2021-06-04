@@ -73,12 +73,13 @@ FLOPs = paddle.flops(net, input_size=[1, 3, 32, 32], print_detail=True)
 对网络模型两个不同的网络层按照参数名分别进行比例为50%，60%的裁剪。
 代码如下所示：
 
-```
-pruner = L1NormFilterPruner(net, [1, 3, 32, 32])
+```python
+pruner = L1NormFilterPruner(net, [1, 3, 32, 32], opt=optimizer)
 pruner.prune_vars({'conv2d_22.w_0':0.5, 'conv2d_20.w_0':0.6}, axis=0)
 ```
 
 以上操作会按照网络结构中不同网路层的冗余程度对网络层进行不同程度的裁剪并修改网络模型结构。
+**注意：** 需要将`optimizer`传入`pruner`中，这是为了保证`optimizer`中的参数可以被剪裁到。例如：`momentum`中的`velocity`。但是如果在`pruner`后定义`optimizer`，则无需传入了，因为初始化`optimizer`时会指定`parameters=net.parameters()`。
 
 ### 4.3 计算剪裁之后的FLOPs
 
@@ -101,7 +102,7 @@ model.evaluate(val_dataset, batch_size=128, verbose=1)
 对模型进行finetune会有助于模型恢复原有精度。
 以下代码对裁剪过后的模型进行评估后执行了一个`epoch`的微调，再对微调过后的模型重新进行评估：
 
-```
+```python
 model.fit(train_dataset, epochs=1, batch_size=128, verbose=1)
 model.evaluate(val_dataset, batch_size=128, verbose=1)
 ```

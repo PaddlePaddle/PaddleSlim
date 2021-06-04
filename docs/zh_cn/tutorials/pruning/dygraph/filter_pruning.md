@@ -79,13 +79,15 @@ PaddleSlim提供了工具类`Pruner`来进行重要性分析和剪裁操作，�
 
 ```python
 from paddleslim.dygraph import L1NormFilterPruner
-pruner = L1NormFilterPruner(net, [1, 3, 224, 224])
+pruner = L1NormFilterPruner(net, [1, 3, 224, 224], opt=optimizer)
 ```
+
+**注意：** 需要将`optimizer`传入`pruner`中，这是为了保证`optimizer`中的参数可以被剪裁到。例如：`momentum`中的`velocity`。但是如果在`pruner`后定义`optimizer`，则无需传入了，因为初始化`optimizer`时会指定`parameters=net.parameters()`。
 
 如果本地文件系统已有一个存储敏感度信息（见4.1节）的文件，声明`L1NormFilterPruner`对象时，可以通过指定`sen_file`选项加载计算好的敏感度信息，如下：
 
 ```python
-#pruner = L1NormFilterPruner(net, [1, 3, 224, 224]), sen_file="./sen.pickle")
+#pruner = L1NormFilterPruner(net, [1, 3, 224, 224]), sen_file="./sen.pickle", opt=optimizer)
 ```
 
 ### 4.1 卷积重要性分析
@@ -167,13 +169,6 @@ print(f"before fine-tuning: {result}")
 对剪裁后的模型重新训练, 并再测试集上测试精度，如下：
 
 ```python
-optimizer = paddle.optimizer.Momentum(
-        learning_rate=0.1,
-        parameters=net.parameters())
-model.prepare(
-        optimizer,
-        paddle.nn.CrossEntropyLoss(),
-        paddle.metric.Accuracy(topk=(1, 5)))
 model.fit(train_dataset, epochs=2, batch_size=128, verbose=1)
 result = model.evaluate(val_dataset,batch_size=128, log_freq=10)
 print(f"after fine-tuning: {result}")
