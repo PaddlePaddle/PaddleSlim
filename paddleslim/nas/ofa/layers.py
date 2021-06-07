@@ -1008,7 +1008,7 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
 
 class SuperInstanceNorm2D(nn.InstanceNorm2D):
     """
-    This interface is used to construct a callable object of the ``SuperBatchNorm2D`` class. 
+    This interface is used to construct a callable object of the ``SuperInstanceNorm2D`` class. 
 
     Parameters:
         num_features(int): Indicate the number of channels of the input ``Tensor``.

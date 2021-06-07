@@ -40,8 +40,6 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['supernet', 'Convert']
 
-WEIGHT_LAYER = ['conv', 'linear', 'embedding']
-
 
 class Convert:
     """
