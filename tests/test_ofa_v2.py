@@ -81,6 +81,24 @@ class ModelShortcut(nn.Layer):
         return z
 
 
+class ModelTest(nn.Layer):
+    def __init__(self):
+        super(ModelTest, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2D(3, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.conv2 = nn.Sequential(
+            nn.Conv2D(15, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+
+    def forward(self, x):
+        y = self.conv1(x)
+        y = paddle.concat([x, y], axis=1)
+        y = self.conv2(y)
+        y = paddle.reshape(
+            y, shape=[y.shape[0], y.shape[1], y.shape[2], y.shape[3]])
+        y = paddle.reshape(y, shape=[y.shape[0], -1])
+        return y
+
+
 class TestOFAV2(unittest.TestCase):
     def setUp(self):
         model = ModelV1()
@@ -150,6 +168,27 @@ class TestShortcutSkiplayersCase2(TestShortcutSkiplayers):
 
     def test_shortcut(self):
         assert list(self.ofa_model.get_final_search_space.keys()) == ['conv1.0']
+
+
+class TestConcatExport(unittest.TestCase):
+    def setUp(self):
+        model = ModelTest()
+        sp_net_config = supernet(expand_ratio=[0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+        self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
+        self.ofa_model = OFA(self.model)
+        self.ofa_model.set_epoch(0)
+        self.ofa_model.set_task('expand_ratio')
+
+    def test_concat(self):
+        origin_model = ModelTest()
+        self.ofa_model(self.images)
+        net_config = {'conv1.0': {'expand_ratio': 0.5}, 'conv2.0': {}}
+        self.ofa_model.export(
+            net_config,
+            input_shapes=[1, 3, 32, 32],
+            input_dtypes=['float32'],
+            origin_model=origin_model)
 
 
 if __name__ == '__main__':

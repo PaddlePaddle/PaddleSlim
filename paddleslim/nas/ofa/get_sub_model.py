@@ -58,6 +58,9 @@ def _get_precedor_of_concat(op, graph, origin_model_config):
     precedor = []
     weights = _find_weight_ops(op, graph, weights, mode='pre')
     for weight in weights:
+        if weight is None:
+            precedor.append(1.0)
+            continue
         if weight.name in origin_model_config.keys():
             if 'expand_ratio' in origin_model_config[
                     weight.name] or 'channel' in origin_model_config[
@@ -140,6 +143,8 @@ def get_prune_params_config(graph, origin_model_config):
                 _find_weight_ops(
                     n_op, graph, weights, mode='next', all_weight_op=True)
                 for var in weights:
+                    if var is None:
+                        continue
                     if var.name not in origin_model_config and var.name not in param_config:
                         if len(var.shape) > 1:
                             param_config[var.name] = [precedor, None]
@@ -178,7 +183,6 @@ def _find_weight_ops(op, graph, weights, mode='pre', all_weight_op=False):
         raise NotImplementedError(
             "there is something wrong in parameter \'mode\', \'mode\' must in ['pre', 'next'], but now is {}".
             format(mode))
-
     for f_op in find_ops:
         find_weight_op = False
         ### if op == 'batch_norm', pre_ops of batch_norm will have itself.
@@ -204,6 +208,8 @@ def _find_weight_ops(op, graph, weights, mode='pre', all_weight_op=False):
                     weights.append(inp._var)
             return weights
         if find_weight_op == False:
+            if len(f_op.all_inputs()[0].inputs()) == 0:
+                weights.append(None)
             _find_weight_ops(f_op, graph, weights)
     return weights
 
@@ -329,7 +335,8 @@ def check_search_space(graph):
             if find_unknown == False:
                 tmp_op = _find_weight_ops(op, graph, tmp_op, mode='pre')
                 for t_op in tmp_op:
-                    pre_reshape_dynamic_weight_op.add(t_op.name)
+                    if t_op is not None:
+                        pre_reshape_dynamic_weight_op.add(t_op.name)
                 tmp_op = []
         if op.type() == 'elementwise_add' or op.type() == 'elementwise_mul':
             inp1, inp2 = sorted(op.all_inputs())[0], sorted(op.all_inputs())[1]
