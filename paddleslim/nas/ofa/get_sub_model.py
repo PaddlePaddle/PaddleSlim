@@ -34,19 +34,49 @@ CONV_TYPES = [
 ALL_WEIGHT_OP = [
     'conv2d', 'mul', 'matmul', 'elementwise_add', 'embedding',
     'conv2d_transpose', 'depthwise_conv2d', 'batch_norm', 'layer_norm',
-    'instance_norm'
+    'instance_norm', 'sync_batch_norm'
 ]
 
 
-def _is_dynamic_weight_op(op):
-    if op.type() in DYNAMIC_WEIGHT_OP:
+def _is_dynamic_weight_op(op, all_weight_op=False):
+    if all_weight_op == True:
+        weight_ops = ALL_WEIGHT_OP
+    else:
+        weight_ops = DYNAMIC_WEIGHT_OP
+    if op.type() in weight_ops:
         if op.type() in ['mul', 'matmul']:
-            for inp in op.all_inputs():
+            for inp in sorted(op.all_inputs()):
                 if inp._var.persistable == True:
                     return True
             return False
         return True
     return False
+
+
+def _get_precedor_of_concat(op, graph, origin_model_config):
+    weights = []
+    precedor = []
+    weights = _find_weight_ops(op, graph, weights, mode='pre')
+    for weight in weights:
+        if weight.name in origin_model_config.keys():
+            if 'expand_ratio' in origin_model_config[
+                    weight.name] or 'channel' in origin_model_config[
+                        weight.name]:
+                key = 'channel' if 'channel' in origin_model_config[
+                    weight.name] else 'expand_ratio'
+                precedor.append(origin_model_config[weight.name][key])
+        else:
+            precedor.append(1.0)
+    sum_prune_shape = 0
+    sum_inputs_shape = 0
+    if len(weights) != 0:
+        for idx, inp in enumerate(sorted(op.all_inputs())):
+            sum_prune_shape += inp.shape()[1] * precedor[idx]
+            sum_inputs_shape += inp.shape()[1]
+        return float(sum_prune_shape) / float(sum_inputs_shape)
+
+    else:
+        return None
 
 
 def get_prune_params_config(graph, origin_model_config):
@@ -55,42 +85,37 @@ def get_prune_params_config(graph, origin_model_config):
     param_config = {}
     precedor = None
     for op in graph.ops():
-        ### TODO(ceci3):
-        ### 1. fix config when this op is concat by graph.pre_ops(op)
-        ### 2. add kernel_size in config
-        for inp in op.all_inputs():
-            if op.type() == 'slice' and inp._var.persistable == True:
-                for outp in op.all_outputs():
-                    outp._var.persistable = True
-            n_ops = graph.next_ops(op)
-            if inp._var.name in origin_model_config.keys():
-                if 'expand_ratio' in origin_model_config[
-                        inp._var.name] or 'channel' in origin_model_config[
-                            inp._var.name]:
-                    key = 'channel' if 'channel' in origin_model_config[
-                        inp._var.name] else 'expand_ratio'
-                    tmp = origin_model_config[inp._var.name][key]
-                    if len(inp._var.shape) > 1:
-                        if inp._var.name in param_config.keys():
-                            param_config[inp._var.name].append(tmp)
-                        ### first op
-                        else:
-                            param_config[inp._var.name] = [precedor, tmp]
+        ### TODO(ceci3): add kernel_size in config
+        ### if axis of concat is not 1, treat it as normal op.
+        ### NOTE: only support data_format = 'NCHW' now.
+        if op.type() == 'concat' and int(op.attr('axis')) == 1:
+            precedor = _get_precedor_of_concat(op, graph, origin_model_config)
+        else:
+            _find_ofa_layers(op, graph)
+            for inp in sorted(op.all_inputs()):
+                if inp._var.name in origin_model_config.keys():
+                    if 'expand_ratio' in origin_model_config[
+                            inp._var.name] or 'channel' in origin_model_config[
+                                inp._var.name]:
+                        key = 'channel' if 'channel' in origin_model_config[
+                            inp._var.name] else 'expand_ratio'
+                        tmp = origin_model_config[inp._var.name][key]
+                        if len(inp._var.shape) == 1:
+                            param_config[inp._var.name] = [tmp]
+                        precedor = tmp
                     else:
-                        param_config[inp._var.name] = [tmp]
-                    precedor = tmp
-                else:
-                    precedor = None
-            ### find all next ops:
-            ###   a. if next op with weight, the prune ratio of input channel in the 
-            ###      next op is equal to the current op.
-            ###   b. if next op without weight, find all the next op with weight of the next op by dfs 
-            for n_op in n_ops:
-                _find_ofa_layers(graph, n_op)
-                has_persistable = False
-                for next_inp in n_op.all_inputs():
+                        precedor = None
+        ### find all next ops:
+        ###   a. if next op with weight, the prune ratio of input channel in the 
+        ###      next op is equal to the current op.
+        ###   b. if next op without weight, find all the next op with weight of the next op by dfs 
+        n_ops = sorted(graph.next_ops(op))
+        for n_op in n_ops:
+            _find_ofa_layers(n_op, graph)
+            if _is_dynamic_weight_op(n_op):
+                for next_inp in sorted(n_op.all_inputs()):
                     if next_inp._var.persistable == True:
-                        has_persistable = True
+                        next_inp = _clear_ofa_layers(next_inp)
                         ### the key of *_norm will not in origin_model_config
                         ### so if n_op is *_norm, will pass to else branch certainly.
                         if next_inp._var.name in origin_model_config.keys():
@@ -98,49 +123,88 @@ def get_prune_params_config(graph, origin_model_config):
                                     next_inp._var.
                                     name] or 'channel' in origin_model_config[
                                         next_inp._var.name]:
+                                key = 'channel' if 'channel' in origin_model_config[
+                                    next_inp._var.name] else 'expand_ratio'
+                                tmp = origin_model_config[next_inp._var.name][
+                                    key]
                                 if len(next_inp._var.shape) > 1:
                                     param_config[
-                                        next_inp._var.name] = [precedor]
+                                        next_inp._var.name] = [precedor, tmp]
                             else:
                                 if len(next_inp._var.
                                        shape) > 1 and precedor != None:
                                     param_config[
                                         next_inp._var.name] = [precedor, None]
-                        else:
-                            param_config[next_inp._var.name] = [precedor]
-                if has_persistable == False:
-                    weights = []
-                    _find_next_all_weight_ops(n_op, graph, weights)
-                    for var in weights:
-                        if var.name not in origin_model_config.keys() and len(
-                                var.shape) > 1:
+            else:
+                weights = []
+                _find_weight_ops(
+                    n_op, graph, weights, mode='next', all_weight_op=True)
+                for var in weights:
+                    if var.name not in origin_model_config and var.name not in param_config:
+                        if len(var.shape) > 1:
                             param_config[var.name] = [precedor, None]
                         else:
                             param_config[var.name] = [precedor]
-
     return param_config
 
 
-def _find_ofa_layers(graph, op):
+def _find_ofa_layers(op, graph):
     ### find slice op add by ofa layers and set the 
     ### output.persistable = True if input.persistable = True
-    for pre_op in graph.pre_ops(op):
+    for pre_op in sorted(graph.pre_ops(op)):
         if pre_op.type() == 'slice' and op.type() in ALL_WEIGHT_OP:
             ### slice op has only one input and one output
-            if pre_op.all_inputs()[0]._var.persistable == True:
-                pre_op.all_outputs()[0]._var.persistable = True
+            if sorted(pre_op.all_inputs())[0]._var.persistable == True:
+                sorted(pre_op.all_outputs())[0]._var.persistable = True
 
 
-def _find_next_all_weight_ops(op, graph, weights):
-    next_ops = graph.next_ops(op)
-    for next_op in next_ops:
-        for inp in next_op.all_inputs():
-            if inp._var.persistable:
-                weights.append(inp._var)
-        if _is_dynamic_weight_op(next_op) and not _is_depthwise(next_op):
+def _clear_ofa_layers(inp):
+    pre_op = inp.inputs()
+    if len(pre_op) != 0 and pre_op[0].type() == 'slice':
+        pre_inp = pre_op[0].all_inputs()[0]
+        return pre_inp
+    else:
+        return inp
+
+
+def _find_weight_ops(op, graph, weights, mode='pre', all_weight_op=False):
+    """ Find the vars come from operators with weight.
+    """
+    if mode == 'pre':
+        find_ops = sorted(graph.pre_ops(op))
+    elif mode == 'next':
+        find_ops = sorted(graph.next_ops(op))
+    else:
+        raise NotImplementedError(
+            "there is something wrong in parameter \'mode\', \'mode\' must in ['pre', 'next'], but now is {}".
+            format(mode))
+
+    for f_op in find_ops:
+        find_weight_op = False
+        ### if op == 'batch_norm', pre_ops of batch_norm will have itself.
+        ### because the mean and variance is the inputs and outputs at the same time.
+        if f_op == op:
+            continue
+        _find_ofa_layers(f_op, graph)
+        ### if depthwise conv is one of elementwise's input, 
+        ### add it into this same search space
+        if _is_depthwise(f_op):
+            for inp in sorted(f_op.all_inputs()):
+                if inp._var.persistable:
+                    inp = _clear_ofa_layers(inp)
+                    weights.append(inp._var)
+
+        if _is_dynamic_weight_op(f_op,
+                                 all_weight_op) and not _is_depthwise(f_op):
+            for inp in sorted(f_op.all_inputs()):
+                if inp._var.persistable:
+                    if _is_dynamic_weight_op(f_op):
+                        find_weight_op = True
+                    inp = _clear_ofa_layers(inp)
+                    weights.append(inp._var)
             return weights
-        else:
-            return _find_next_all_weight_ops(next_op, graph, weights)
+        if find_weight_op == False:
+            _find_weight_ops(f_op, graph, weights)
     return weights
 
 
@@ -223,7 +287,7 @@ def _is_depthwise(op):
     #if op.type() == 'depthwise_conv2d': ### depthwise_conv2d in paddle is Cout % Cin =0
     #    return True
     if 'conv' in op.type():
-        for inp in op.all_inputs():
+        for inp in sorted(op.all_inputs()):
             if inp._var.persistable and (
                     op.attr('groups') == inp._var.shape[0] and
                     op.attr('groups') * inp._var.shape[1] == inp._var.shape[0]):
@@ -231,38 +295,20 @@ def _is_depthwise(op):
     return False
 
 
-def _find_pre_dynamic_weight_ops(op, graph, weights):
-    """ Find the vars come from operators with weight.
-    """
-    pre_ops = graph.pre_ops(op)
-    for pre_op in pre_ops:
-        ### if depthwise conv is one of elementwise's input, 
-        ### add it into this same search space
-        if _is_depthwise(pre_op):
-            for inp in pre_op.all_inputs():
-                if inp._var.persistable:
-                    weights.append(inp._var.name)
-
-        if _is_dynamic_weight_op(pre_op) and not _is_depthwise(pre_op):
-            for inp in pre_op.all_inputs():
-                if inp._var.persistable:
-                    weights.append(inp._var.name)
-            return weights
-        return _find_pre_dynamic_weight_ops(pre_op, graph, weights)
-    return weights
-
-
 def _find_pre_elementwise_add(op, graph):
     """ Find precedors of the elementwise_add operator in the model.
     """
     same_prune_before_elementwise_add = []
-    pre_ops = graph.pre_ops(op)
+    pre_ops = sorted(graph.pre_ops(op))
     for pre_op in pre_ops:
         if _is_dynamic_weight_op(pre_op):
             return
-        same_prune_before_elementwise_add = _find_pre_dynamic_weight_ops(
-            pre_op, graph, same_prune_before_elementwise_add)
-    return same_prune_before_elementwise_add
+        same_prune_before_elementwise_add = _find_weight_ops(
+            pre_op, graph, same_prune_before_elementwise_add, mode='pre')
+        new_same_prune_before_elementwise_add = []
+        for key in same_prune_before_elementwise_add:
+            new_same_prune_before_elementwise_add.append(key.name)
+    return new_same_prune_before_elementwise_add
 
 
 def check_search_space(graph):
@@ -270,21 +316,36 @@ def check_search_space(graph):
     """
     same_search_space = []
     depthwise_conv = []
+    pre_reshape_dynamic_weight_op = set()
+    tmp_op = []
     for op in graph.ops():
+        ### if current op is reshape, and all dim in the shape cannot change,
+        ### the output channel of precedor dynamic op of this op cannot change too.
+        if op.type() == 'reshape2':
+            find_unknown = False
+            for shape in op.attr('shape')[1:]:
+                if shape == -1:
+                    find_unknown = True
+            if find_unknown == False:
+                tmp_op = _find_weight_ops(op, graph, tmp_op, mode='pre')
+                for t_op in tmp_op:
+                    pre_reshape_dynamic_weight_op.add(t_op.name)
+                tmp_op = []
         if op.type() == 'elementwise_add' or op.type() == 'elementwise_mul':
-            inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
+            inp1, inp2 = sorted(op.all_inputs())[0], sorted(op.all_inputs())[1]
             if (not inp1._var.persistable) and (not inp2._var.persistable):
                 pre_ele_op = _find_pre_elementwise_add(op, graph)
                 if pre_ele_op != None:
                     same_search_space.append(pre_ele_op)
-
         if _is_depthwise(op):
-            for inp in op.all_inputs():
+            for inp in sorted(op.all_inputs()):
                 if inp._var.persistable:
                     depthwise_conv.append(inp._var.name)
 
+    pre_reshape_dynamic_weight_op = sorted(pre_reshape_dynamic_weight_op)
+
     if len(same_search_space) == 0:
-        return None, []
+        return None, [], pre_reshape_dynamic_weight_op
 
     same_search_space = sorted([sorted(x) for x in same_search_space])
     final_search_space = []
@@ -303,10 +364,19 @@ def check_search_space(graph):
                         break
                 if not merged:
                     final_search_space.append(l)
+    ### if there is the output channel cannot be changed in same search space
+    for tmp_ss in final_search_space:
+        cannot_change = False
+        for s in tmp_ss:
+            if s in pre_reshape_dynamic_weight_op:
+                cannot_change = True
+                pre_reshape_dynamic_weight_op.append(s)
+        if cannot_change == True:
+            final_search_space.remove(tmp_ss)
     final_search_space = sorted([sorted(x) for x in final_search_space])
     depthwise_conv = sorted(depthwise_conv)
-
-    return (final_search_space, depthwise_conv)
+    pre_reshape_dynamic_weight_op = sorted(set(pre_reshape_dynamic_weight_op))
+    return (final_search_space, depthwise_conv, pre_reshape_dynamic_weight_op)
 
 
 def broadcast_search_space(same_search_space, param2key, origin_config):

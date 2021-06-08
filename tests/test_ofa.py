@@ -446,7 +446,7 @@ class TestShortCut(unittest.TestCase):
             self.config,
             input_shapes=[[2, 3, 224, 224]],
             input_dtypes=['float32'])
-        assert len(self.ofa_model.ofa_layers) == 38
+        assert len(self.ofa_model.get_final_search_space) == 37
 
 
 class TestExportCase1(unittest.TestCase):

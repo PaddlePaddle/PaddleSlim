@@ -474,7 +474,7 @@ class OFA(OFABase):
             origin_model, inputs=input_shapes, dtypes=input_dtypes)
         graph = GraphWrapper(program)
 
-        same_config, _ = check_search_space(graph)
+        same_config, _, _ = check_search_space(graph)
         if same_config != None:
             broadcast_search_space(same_config, param2name, config)
 
@@ -518,10 +518,21 @@ class OFA(OFABase):
             origin_model = self.model
         origin_model = origin_model._layers if isinstance(
             origin_model, DataParallel) else origin_model
+
+        _logger.info("start get prune ratio about all weights, please wait...")
         param_config = self._export_sub_model_config(origin_model, config,
                                                      input_shapes, input_dtypes)
+        _logger.info("get prune ratio about all weights done")
         prune_params(origin_model, param_config, super_sd)
         return origin_model
+
+    @property
+    def get_final_search_space(self):
+        new_ofa_layers = dict()
+        for name, search_space in self._ofa_layers.items():
+            if len(search_space) != 0:
+                new_ofa_layers[name] = self._ofa_layers[name]
+        return new_ofa_layers
 
     @property
     def get_current_config(self):
@@ -558,8 +569,6 @@ class OFA(OFABase):
             self._ofa_layers[key].pop('expand_ratio')
         elif 'channel' in self._ofa_layers[key]:
             self._ofa_layers[key].pop('channel')
-        if len(self._ofa_layers[key]) == 0:
-            self._ofa_layers.pop(key)
 
     def _clear_search_space(self, *inputs, **kwargs):
         """ find shortcut in model, and clear up the search space """
@@ -571,13 +580,14 @@ class OFA(OFABase):
         for n, v in kwargs.items():
             input_shapes.append(v.shape)
             input_dtypes.append(v.numpy().dtype)
+        self._build_ss = True
 
         ### find shortcut block using static model
         model_to_traverse = self.model._layers if isinstance(
             self.model, DataParallel) else self.model
         _st_prog = dygraph2program(
             model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss, self._depthwise_conv = check_search_space(
+        self._same_ss, self._depthwise_conv, self.pre_reshape_op = check_search_space(
             GraphWrapper(_st_prog))
 
         if self._same_ss != None:
@@ -619,23 +629,27 @@ class OFA(OFABase):
 
             self._same_ss = tmp_same_ss
 
+            for per_ss in self._same_ss:
+                for ss in per_ss[1:]:
+                    self._clear_width(self._param2key[ss])
+
+            ### clear depthwise conv from search space because of its output channel cannot change;
+            ### clear reshape op which all dims in the shape cannot change from search space 
+            ### because of its output channel cannot change;
+            cannot_change_op = sorted(
+                set(self._depthwise_conv + self.pre_reshape_op))
+            for name, sublayer in model_to_traverse.named_sublayers():
+                if isinstance(sublayer, BaseBlock):
+                    for param in sublayer.parameters():
+                        if param.name in cannot_change_op and name in self._ofa_layers.keys(
+                        ):
+                            self._clear_width(name)
+
             ### clear layer in ofa_layers set by skip layers
             if self._skip_layers != None:
                 for skip_layer in self._skip_layers:
                     if skip_layer in self._ofa_layers.keys():
                         self._ofa_layers.pop(skip_layer)
-
-            for per_ss in self._same_ss:
-                for ss in per_ss[1:]:
-                    self._clear_width(self._param2key[ss])
-
-            ### clear depthwise conv from search space because of its output channel cannot change
-            for name, sublayer in model_to_traverse.named_sublayers():
-                if isinstance(sublayer, BaseBlock):
-                    for param in sublayer.parameters():
-                        if param.name in self._depthwise_conv and name in self._ofa_layers.keys(
-                        ):
-                            self._clear_width(name)
 
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
@@ -648,8 +662,9 @@ class OFA(OFABase):
 
         # ====================   student process  =====================
         if not self._build_ss and self.net_config == None:
+            _logger.info("start clear search space, please wait...")
             self._clear_search_space(*inputs, **kwargs)
-            self._build_ss = True
+            _logger.info("clear search space done")
 
         if getattr(self.run_config, 'dynamic_batch_size', None) != None:
             self.dynamic_iter += 1

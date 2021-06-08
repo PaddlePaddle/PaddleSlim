@@ -133,7 +133,8 @@ class TestShortcutSkiplayers(unittest.TestCase):
         self.ofa_model.set_task('expand_ratio')
         for i in range(5):
             self.ofa_model(self.images)
-        assert list(self.ofa_model._ofa_layers.keys()) == ['branch2.0', 'out.0']
+        assert list(self.ofa_model.get_final_search_space.keys(
+        )) == ['branch2.0']
 
 
 class TestShortcutSkiplayersCase1(TestShortcutSkiplayers):
@@ -148,7 +149,7 @@ class TestShortcutSkiplayersCase2(TestShortcutSkiplayers):
         self.run_config = RunConfig(**default_run_config)
 
     def test_shortcut(self):
-        assert list(self.ofa_model._ofa_layers.keys()) == ['conv1.0', 'out.0']
+        assert list(self.ofa_model.get_final_search_space.keys()) == ['conv1.0']
 
 
 if __name__ == '__main__':
