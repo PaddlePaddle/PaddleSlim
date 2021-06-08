@@ -209,4 +209,5 @@ def get_ratios_by_loss(sensitivities, loss):
                         _logger.info(losses, ratio, (r1 - r0) / (l1 - l0), i)
 
                 break
+            if i == 0: ratios[param] = 0.0
     return ratios
