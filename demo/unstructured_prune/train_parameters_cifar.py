@@ -36,7 +36,7 @@ add_arg('ratio',        float,  0.90,               "The ratio to set zeros, the
 add_arg('num_epochs',       int,  300,               "The number of total epochs.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[220, 260], help="piecewise decay step")
 add_arg('data',             str, "cifar100",                 "Which data to use. 'mnist' or 'imagenet'.")
-add_arg('log_period',       int, 100,                 "Log period in batches.")
+add_arg('log_period',       int, 10000,                 "Log period in batches.")
 add_arg('test_period',      int, 1,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('model_period',     int, 10,             "The period to save model in epochs.")
@@ -97,11 +97,31 @@ def cosine_decay(args, step_per_epoch):
     return optimizer, learning_rate
 
 
+def linear_decay(args, step_per_epoch):
+    lr_scheduler = paddle.optimizer.lr.PolynomialDecay(
+        learning_rate=args.lr,
+        decay_steps=args.tunning_epochs * step_per_epoch,
+        verbose=False)
+    learning_rate = paddle.optimizer.lr.LinearWarmup(
+        learning_rate=lr_scheduler,
+        warmup_steps=args.stable_epochs + args.pruning_epochs,
+        start_lr=args.lr - 1e-5,
+        end_lr=args.lr,
+        verbose=False)
+    optimizer = paddle.optimizer.Momentum(
+        learning_rate=learning_rate,
+        momentum=args.momentum_rate,
+        weight_decay=paddle.regularizer.L2Decay(args.l2_decay))
+    return optimizer, learning_rate
+
+
 def create_optimizer(args, step_per_epoch):
     if args.lr_strategy == "piecewise_decay":
         return piecewise_decay(args, step_per_epoch)
     elif args.lr_strategy == "cosine_decay":
         return cosine_decay(args, step_per_epoch)
+    elif args.lr_strategy == "linear_decay":
+        return linear_decay(args, step_per_epoch)
 
 
 def prepare_training_hyper_parameters_y(args, step_per_epoch):
@@ -235,26 +255,29 @@ def compress(args):
         acc_top1_ns = []
         acc_top5_ns = []
 
-        _logger.info("The current density of the inference model is {}%".format(
-            round(100 * UnstructuredPruner.total_sparse_conv1x1(
-                paddle.static.default_main_program()), 2)))
+        # _logger.info("The current density of the inference model is {}%".format(
+        #     round(100 * UnstructuredPruner.total_sparse_conv1x1(
+        #         paddle.static.default_main_program()), 2)))
         for batch_id, data in enumerate(valid_loader):
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(
                 program, feed=data, fetch_list=[acc_top1.name, acc_top5.name])
             end_time = time.time()
             if batch_id % args.log_period == 0:
-                _logger.info(
-                    "Eval epoch[{}] batch[{}] - acc_top1: {}; acc_top5: {}; time: {}".
-                    format(epoch, batch_id,
-                           np.mean(acc_top1_n),
-                           np.mean(acc_top5_n), end_time - start_time))
+                pass
+                # _logger.info(
+                #     "Eval epoch[{}] batch[{}] - acc_top1: {}; acc_top5: {}; time: {}".
+                #     format(epoch, batch_id,
+                #            np.mean(acc_top1_n),
+                #            np.mean(acc_top5_n), end_time - start_time))
             acc_top1_ns.append(np.mean(acc_top1_n))
             acc_top5_ns.append(np.mean(acc_top5_n))
 
-        _logger.info("Final eval epoch[{}] - acc_top1: {}; acc_top5: {}".format(
-            epoch,
-            np.mean(np.array(acc_top1_ns)), np.mean(np.array(acc_top5_ns))))
+        _logger.info(
+            "Final eval epoch[{}] ratio: {} - acc_top1: {}; acc_top5: {}".
+            format(epoch, pruner.ratio,
+                   np.mean(np.array(acc_top1_ns)),
+                   np.mean(np.array(acc_top5_ns))))
 
     def train(epoch, program):
         train_reader_cost = 0.0
@@ -286,7 +309,8 @@ def compress(args):
             loss_n = np.mean(loss_n)
             acc_top1_n = np.mean(acc_top1_n)
             acc_top5_n = np.mean(acc_top5_n)
-            if batch_id % args.log_period == 0:
+            '''
+            if batch_id % args.log_period == 0:   
                 _logger.info(
                     "epoch[{}]-batch[{}] lr: {:.6f}; ratio: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; avg_reader_cost: {:.5f} sec, avg_batch_cost: {:.5f} sec, avg_samples: {:.5f}, ips: {:.5f} images/sec".
                     format(epoch, batch_id,
@@ -299,6 +323,7 @@ def compress(args):
                 train_reader_cost = 0.0
                 train_run_cost = 0.0
                 total_samples = 0
+            '''
             learning_rate.step()
             reader_start = time.time()
 
@@ -312,9 +337,9 @@ def compress(args):
             exec_strategy=exec_strategy)
     for i in range(args.resume_epoch + 1, args.num_epochs):
         train(i, train_program)
-        _logger.info("The current density of the pruned model is: {}%".format(
-            round(100 * UnstructuredPruner.total_sparse_conv1x1(
-                paddle.static.default_main_program()), 2)))
+        # _logger.info("The current density of the pruned model is: {}%".format(
+        #     round(100 * UnstructuredPruner.total_sparse_conv1x1(
+        #         paddle.static.default_main_program()), 2)))
 
         if (i + 1) % args.test_period == 0:
             test(i, val_program)

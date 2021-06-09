@@ -4,15 +4,17 @@
 python3.7 train_parameters.py \
           --batch_size 256 \
           --data imagenet \
-          --model MobileNetSensitive30 \
           --pruning_mode ratio \
-          --ratio 0.70 \
-          --initial_ratio 0.10 \
-          --lr 0.005 \
-          --pretrained_model MobileNetV1_sensitive-30 \
-          --num_epochs 120 \
+          --ratio 0.8 \
+          --lr 0.0005 \
+          --pretrained_model modelsS30-singlegpu \
+          --model MobileNetSensitive30 \
+          --num_epochs 30 \
           --test_period 5 \
-          --model_path "./models" \
+          --model_path "./modelsS30-singlegpu" \
+          --initial_ratio 0.80 \
           --stable_epochs 0 \
-          --pruning_epochs 28 \
-          --tunning_epochs 16
+          --pruning_epochs 0 \
+          --tunning_epochs 30 \
+          --ratio_steps_per_epoch 2 \
+          --step_epochs 15

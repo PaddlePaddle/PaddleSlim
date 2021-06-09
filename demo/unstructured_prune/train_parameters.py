@@ -13,6 +13,7 @@ sys.path.append(os.path.join(os.path.dirname("__file__"), os.path.pardir))
 import models
 from utility import add_arguments, print_arguments
 import paddle.vision.transforms as T
+from paddleslim.core import GraphWrapper
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -78,30 +79,29 @@ def create_optimizer(args, step_per_epoch):
         return cosine_decay(args, step_per_epoch)
 
 
-def prepare_training_hyper_parameters(args, step_per_epoch):
-    total_pruning_steps = args.ratio_steps_per_epoch * args.pruning_epochs
-    ratios = []
-    range_one = -(1 - args.ratio)**(1. / 3.) + 1
-    ratio_increment_period = int(step_per_epoch / args.ratio_steps_per_epoch)
+def get_skip_params(program):
+    skip_params = set()
+    graph = GraphWrapper(program)
+    for op in graph.ops():
+        if 'norm' in op.type() and 'grad' not in op.type():
+            for input in op.all_inputs():
+                skip_params.add(input.name())
+    for param in program.all_parameters():
+        cond = 'conv5' in param.name and 'conv5_6' not in param.name and len(
+            param.shape) == 4 and param.shape[2] == 1 and param.shape[3] == 1
+        if not cond: skip_params.add(param.name)
 
-    for i in range(total_pruning_steps):
-        ratio = ((i * range_one / total_pruning_steps) - 1)**3 + 1
-        ratios.append(max(ratio, args.initial_ratio))
-    ratios.reverse()
-
-    return ratios, ratio_increment_period
+    return skip_params
 
 
 def prepare_training_hyper_parameters_y(args, step_per_epoch):
     total_pruning_steps = args.ratio_steps_per_epoch * args.pruning_epochs
     ratios = []
-    y_min = 1 - args.ratio**3
-    y_max = (1 - args.ratio)**3 + 1
     ratio_increment_period = int(step_per_epoch / args.ratio_steps_per_epoch)
     for i in range(total_pruning_steps):
-        ratio_tmp = ((i / total_pruning_steps) - args.ratio)**3 + 1
-        ratio_tmp = (ratio_tmp - y_min) * (args.ratio - args.initial_ratio) / (
-            y_max - y_min) + args.initial_ratio
+        ratio_tmp = ((i / total_pruning_steps) - 1.0)**3 + 1
+        ratio_tmp = ratio_tmp * (args.ratio - args.initial_ratio
+                                 ) + args.initial_ratio
         ratios.append(ratio_tmp)
     ratios.reverse()
 
@@ -181,7 +181,8 @@ def compress(args):
         mode=args.pruning_mode,
         ratio=0.0,
         threshold=0.0,
-        place=place)
+        place=place,
+        skip_params_func=get_skip_params)
 
     ratios_stack, ratio_increment_period = prepare_training_hyper_parameters_y(
         args, step_per_epoch)
@@ -301,10 +302,10 @@ def main():
     paddle.enable_static()
     args = parser.parse_args()
     print_arguments(args)
-    args.step_epochs = [
-        args.stable_epochs + args.pruning_epochs,
-        args.stable_epochs + args.pruning_epochs + int(args.tunning_epochs / 2)
-    ]
+    # args.step_epochs = [
+    #     args.stable_epochs + args.pruning_epochs,
+    #     args.stable_epochs + args.pruning_epochs + int(args.tunning_epochs / 2)
+    # ]
     args.num_epochs = args.stable_epochs + args.pruning_epochs + args.tunning_epochs
     compress(args)
 
