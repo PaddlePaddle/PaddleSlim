@@ -56,7 +56,17 @@ def _is_dynamic_weight_op(op, all_weight_op=False):
 def _get_precedor_of_concat(op, graph, origin_model_config):
     weights = []
     precedor = []
-    weights = _find_weight_ops(op, graph, weights, mode='pre')
+    for inp in sorted(op.all_inputs()):
+        weight = []
+        pre_op = inp.inputs()
+        if len(pre_op) == 0:
+            weights = weights + [None]
+            continue
+        weight = _find_weight_ops(pre_op[0], graph, weight, mode='pre')
+        if weight == []:
+            weights = weights + [None]
+        else:
+            weights = weights + weight
     for weight in weights:
         if weight is None:
             precedor.append(1.0)
@@ -208,8 +218,6 @@ def _find_weight_ops(op, graph, weights, mode='pre', all_weight_op=False):
                     weights.append(inp._var)
             return weights
         if find_weight_op == False:
-            if len(f_op.all_inputs()[0].inputs()) == 0:
-                weights.append(None)
             _find_weight_ops(f_op, graph, weights)
     return weights
 
@@ -313,7 +321,8 @@ def _find_pre_elementwise_add(op, graph):
             pre_op, graph, same_prune_before_elementwise_add, mode='pre')
         new_same_prune_before_elementwise_add = []
         for key in same_prune_before_elementwise_add:
-            new_same_prune_before_elementwise_add.append(key.name)
+            if key is not None:
+                new_same_prune_before_elementwise_add.append(key.name)
     return new_same_prune_before_elementwise_add
 
 
