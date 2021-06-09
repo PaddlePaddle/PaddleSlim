@@ -5,7 +5,10 @@ import paddle.fluid as fluid
 from paddle.fluid.initializer import MSRA
 from paddle.fluid.param_attr import ParamAttr
 
-__all__ = ['MobileNet', 'MobileNetSensitive30', 'MobileNetCifar']
+__all__ = [
+    'MobileNet', 'MobileNetSensitive30', 'MobileNetSensitive50',
+    'MobileNetCifar'
+]
 
 train_parameters = {
     "input_size": [3, 224, 224],
@@ -505,6 +508,157 @@ class MobileNetSensitive30(MobileNet):
             num_filters1=967,
             num_filters2=516,
             num_groups=967,
+            stride=1,
+            scale=scale,
+            name="conv6")
+
+        input = fluid.layers.pool2d(
+            input=input,
+            pool_size=0,
+            pool_stride=1,
+            pool_type='avg',
+            global_pooling=True)
+        with fluid.name_scope('last_fc'):
+            output = fluid.layers.fc(input=input,
+                                     size=class_dim,
+                                     param_attr=ParamAttr(
+                                         initializer=MSRA(),
+                                         name="fc7_weights"),
+                                     bias_attr=ParamAttr(name="fc7_offset"))
+
+        return output
+
+
+class MobileNetSensitive50(MobileNet):
+    def net(self, input, class_dim=1000, scale=1.0):
+        # conv1: 112x112
+        input = self.conv_bn_layer(
+            input,
+            filter_size=3,
+            channels=3,
+            num_filters=int(32 * scale),
+            stride=2,
+            padding=1,
+            name="conv1")
+
+        # 56x56
+        input = self.depthwise_separable(
+            input,
+            num_filters1=32,
+            num_filters2=34,
+            num_groups=32,
+            stride=1,
+            scale=scale,
+            name="conv2_1")
+
+        input = self.depthwise_separable(
+            input,
+            num_filters1=34,
+            num_filters2=42,
+            num_groups=34,
+            stride=2,
+            scale=scale,
+            name="conv2_2")
+
+        # 28x28
+        input = self.depthwise_separable(
+            input,
+            num_filters1=42,
+            num_filters2=116,
+            num_groups=42,
+            stride=1,
+            scale=scale,
+            name="conv3_1")
+
+        input = self.depthwise_separable(
+            input,
+            num_filters1=116,
+            num_filters2=138,
+            num_groups=116,
+            stride=2,
+            scale=scale,
+            name="conv3_2")
+
+        # 14x14
+        input = self.depthwise_separable(
+            input,
+            num_filters1=138,
+            num_filters2=221,
+            num_groups=138,
+            stride=1,
+            scale=scale,
+            name="conv4_1")
+
+        input = self.depthwise_separable(
+            input,
+            num_filters1=221,
+            num_filters2=307,
+            num_groups=221,
+            stride=2,
+            scale=scale,
+            name="conv4_2")
+
+        # 14x14
+        input = self.depthwise_separable(
+            input,
+            num_filters1=307,
+            num_filters2=473,
+            num_groups=307,
+            stride=1,
+            scale=scale,
+            name="conv5" + "_" + str(1))
+
+        input = self.depthwise_separable(
+            input,
+            num_filters1=473,
+            num_filters2=475,
+            num_groups=473,
+            stride=1,
+            scale=scale,
+            name="conv5" + "_" + str(2))
+
+        input = self.depthwise_separable(
+            input,
+            num_filters1=475,
+            num_filters2=428,
+            num_groups=475,
+            stride=1,
+            scale=scale,
+            name="conv5" + "_" + str(3))
+
+        input = self.depthwise_separable(
+            input,
+            num_filters1=428,
+            num_filters2=416,
+            num_groups=428,
+            stride=1,
+            scale=scale,
+            name="conv5" + "_" + str(4))
+
+        input = self.depthwise_separable(
+            input,
+            num_filters1=416,
+            num_filters2=446,
+            num_groups=416,
+            stride=1,
+            scale=scale,
+            name="conv5" + "_" + str(5))
+
+        # 7x7
+        input = self.depthwise_separable(
+            input,
+            num_filters1=446,
+            num_filters2=925,
+            num_groups=446,
+            stride=2,
+            scale=scale,
+            name="conv5_6")
+
+        input = self.depthwise_separable(
+            input,
+            num_filters1=925,
+            num_filters2=370,
+            num_groups=925,
             stride=1,
             scale=scale,
             name="conv6")
