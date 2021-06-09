@@ -31,6 +31,13 @@ pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 pip install paddleslim==2.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
+安装develop版本：
+```bash
+git clone https://github.com/PaddlePaddle/PaddleSlim -b develop && cd PaddleSlim
+pip install -r requirements.txt
+python setup.py build && python setup.py install
+```
+
 ## 最近更新
 
 2021.5.20： 发布V2.1.0版本，扩展离线量化方法，新增非结构化稀疏，增强剪枝功能，修复OFA功能若干bug。
