@@ -610,7 +610,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             padding = self._padding
 
         if output_size is None:
-            output_padding = self.output_padding
+            output_padding = self._output_padding
         else:
             output_padding = 0
 

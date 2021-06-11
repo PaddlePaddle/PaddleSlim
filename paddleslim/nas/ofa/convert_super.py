@@ -431,8 +431,6 @@ class Convert:
                 for attr in new_attr_name:
                     if attr == 'weight_attr':
                         new_attr_dict[attr] = attr_dict['_param_attr']
-                    elif attr == 'output_padding':
-                        new_attr_dict[attr] = attr_dict[attr]
                     else:
                         new_attr_dict[attr] = attr_dict['_' + attr]
 
