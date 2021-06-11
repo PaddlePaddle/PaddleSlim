@@ -243,8 +243,6 @@ class OFA(OFABase):
             self._add_teacher = True
             self._prepare_distill()
 
-        self.model.train()
-
     def _prepare_distill(self):
         if self.distill_config.teacher_model == None:
             _logger.error(
