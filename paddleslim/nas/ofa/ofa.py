@@ -108,9 +108,9 @@ class OFABase(Layer):
         if getattr(self, 'current_config', None) != None:
             ### if block is fixed, donnot join key into candidate
             ### concrete config as parameter in kwargs
-            if block.fixed == False and (
-                    self._skip_layers != None and
-                    self._key2name[block.key] not in self._skip_layers) and  \
+            if block.fixed == False and (self._skip_layers == None or
+                    (self._skip_layers != None and
+                    self._key2name[block.key] not in self._skip_layers)) and  \
                     (block.fn.weight.name not in self._depthwise_conv):
                 assert self._key2name[
                     block.
@@ -180,6 +180,7 @@ class OFA(OFABase):
         self._build_ss = False
         self._broadcast = False
         self._skip_layers = None
+        self._depthwise_conv = []
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
