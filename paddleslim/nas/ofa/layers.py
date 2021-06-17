@@ -961,15 +961,16 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         mean_out_tmp = mean
         variance_out_tmp = variance
 
-        if use_global_stats == None:
-            use_global_stats = not training
+        if self._use_global_stats == None:
+            self._use_global_stats = not self.training
             trainable_statistics = False
         else:
-            trainable_statistics = not use_global_stats
+            trainable_statistics = not self._use_global_stats
 
-        attrs = ("momentum", momentum, "epsilon", epsilon, "is_test",
-                 not training, "data_layout", data_format, "use_mkldnn", False,
-                 "fuse_with_relu", False, "use_global_stats", use_global_stats,
+        attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
+                 "is_test", not self.training, "data_layout", self._data_format,
+                 "use_mkldnn", False, "fuse_with_relu", False,
+                 "use_global_stats", self._use_global_stats,
                  "trainable_statistics", trainable_statistics)
 
         if feature_dim != self._mean.shape[0]:
