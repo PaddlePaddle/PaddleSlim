@@ -949,7 +949,6 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
     def forward(self, input):
         self._check_data_format(self._data_format)
         self._check_input_dim(input)
-
         feature_dim = int(input.shape[1])
 
         weight = self.weight[:feature_dim]
@@ -957,17 +956,36 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         mean = self._mean[:feature_dim]
         variance = self._variance[:feature_dim]
 
-        return F.batch_norm(
-            input,
-            mean,
-            variance,
-            weight=weight,
-            bias=bias,
-            training=self.training,
-            momentum=self._momentum,
-            epsilon=self._epsilon,
-            data_format=self._data_format,
-            use_global_stats=self._use_global_stats)
+        mean_out = self._mean
+        variance_out = self._variance
+        mean_out_tmp = mean
+        variance_out_tmp = variance
+
+        if use_global_stats == None:
+            use_global_stats = not training
+            trainable_statistics = False
+        else:
+            trainable_statistics = not use_global_stats
+
+        attrs = ("momentum", momentum, "epsilon", epsilon, "is_test",
+                 not training, "data_layout", data_format, "use_mkldnn", False,
+                 "fuse_with_relu", False, "use_global_stats", use_global_stats,
+                 "trainable_statistics", trainable_statistics)
+
+        if feature_dim != self._mean.shape[0]:
+            batch_norm_out = core.ops.batch_norm(input, weight, bias, mean,
+                                                 variance, mean_out_tmp,
+                                                 variance_out_tmp, *attrs)
+            self._mean[:feature_dim] = mean
+            self._variance[:feature_dim] = variance
+            mean_out[:feature_dim] = mean_out_tmp
+            variance_out[:feature_dim] = variance_out_tmp
+        else:
+            batch_norm_out = core.ops.batch_norm(input, weight, bias,
+                                                 self._mean, self._variance,
+                                                 mean_out, variance_out, *attrs)
+
+        return batch_norm_out[0]
 
 
 class SuperSyncBatchNorm(nn.SyncBatchNorm):
@@ -984,7 +1002,7 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
                              bias_attr, data_format, name)
 
     def forward(self, input):
-
+        self._check_data_format()
         feature_dim = int(input.shape[1])
 
         weight = self.weight[:feature_dim]
@@ -992,23 +1010,34 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
         mean = self._mean[:feature_dim]
         variance = self._variance[:feature_dim]
 
-        mean_out = mean
-        # variance and variance out share the same memory
-        variance_out = variance
+        mean_out = self._mean
+        variance_out = self._variance
+        mean_out_tmp = mean
+        variance_out_tmp = variance
 
         attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
                  "is_test", not self.training, "data_layout", self._data_format,
                  "use_mkldnn", False, "fuse_with_relu", False,
                  "use_global_stats", False, 'trainable_statistics', False)
-        sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
-            input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
+        if feature_dim != self._mean.shape[0]:
+            sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
+                input, weight, bias, mean, variance, mean_out_tmp,
+                variance_out_tmp, *attrs)
+            self._mean[:feature_dim] = mean
+            self._variance[:feature_dim] = variance
+            mean_out[:feature_dim] = mean_out_tmp
+            variance_out[:feature_dim] = variance_out_tmp
+        else:
+            sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
+                input, weight, bias, self._mean, self._variance, mean_out,
+                variance_out, *attrs)
 
         return sync_batch_norm_out
 
 
 class SuperInstanceNorm2D(nn.InstanceNorm2D):
     """
-    This interface is used to construct a callable object of the ``SuperBatchNorm2D`` class. 
+    This interface is used to construct a callable object of the ``SuperInstanceNorm2D`` class. 
 
     Parameters:
         num_features(int): Indicate the number of channels of the input ``Tensor``.
