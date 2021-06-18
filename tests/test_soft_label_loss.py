@@ -55,11 +55,8 @@ class TestSoftLabelLoss(StaticCase):
             for op in block.ops:
                 loss_ops.append(op.type)
         self.assertTrue(set(merged_ops).difference(set(loss_ops)) == set())
-        self.assertTrue(
-            set(loss_ops).difference(set(merged_ops)) == {
-                'cross_entropy', 'softmax', 'reduce_mean', 'fill_constant',
-                'elementwise_div'
-            })
+        self.assertTrue({'cross_entropy', 'softmax', 'reduce_mean'}.issubset(
+            set(loss_ops).difference(set(merged_ops))))
 
 
 if __name__ == '__main__':
