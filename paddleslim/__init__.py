@@ -19,10 +19,9 @@ from paddleslim import nas
 from paddleslim import analysis
 from paddleslim import dist
 from paddleslim import quant
-from paddleslim import pantheon
 from paddleslim import dygraph
 __all__ = [
-    'models', 'prune', 'nas', 'analysis', 'dist', 'quant', 'pantheon', 'dygraph'
+    'models', 'prune', 'nas', 'analysis', 'dist', 'quant', 'dygraph'
 ]
 
 from paddleslim.dygraph import *
