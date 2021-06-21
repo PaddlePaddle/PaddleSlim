@@ -12,8 +12,9 @@ _logger = get_logger(__name__, logging.INFO)
 
 
 class FPGMFilterPruner(FilterPruner):
-    def __init__(self, model, inputs, sen_file=None):
-        super(FPGMFilterPruner, self).__init__(model, inputs, sen_file=sen_file)
+    def __init__(self, model, inputs, sen_file=None, opt=None):
+        super(FPGMFilterPruner, self).__init__(
+            model, inputs, sen_file=sen_file, opt=opt)
 
     def cal_mask(self, pruned_ratio, collection):
         var_name = collection.master_name

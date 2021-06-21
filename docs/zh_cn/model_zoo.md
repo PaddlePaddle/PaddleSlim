@@ -199,7 +199,7 @@ PaddleLite版本： v2.3
 | BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
 | BlazeFace-NASV2 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
 
-Note: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。BlazeFace-NASV2的详细配置在[这里](https://github.com/PaddlePaddle/PaddleDetection/blob/master/configs/face_detection/blazeface_nas_v2.yml).
+Note: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。BlazeFace-NASV2的详细配置在[这里](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.1/static/configs/face_detection/blazeface_nas_v2.yml)。
 
 ## 3. 图像分割
 
