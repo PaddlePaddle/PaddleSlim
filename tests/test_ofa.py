@@ -449,11 +449,11 @@ class TestExportCase1(unittest.TestCase):
         self.ofa_model.set_epoch(0)
         outs, _ = self.ofa_model(self.data)
         self.config = self.ofa_model.current_config
+        
 
     def test_export_model(self):
         self.ofa_model.export(
             self.config, input_shapes=[[3, 64]], input_dtypes=['int64'])
-        print(self.ofa_model.ofa_layers)
         assert len(self.ofa_model.ofa_layers) == 4
 
 
