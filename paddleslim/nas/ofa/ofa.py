@@ -486,7 +486,10 @@ class OFA(OFABase):
                     elif len(param.shape)==2:
                         pruned_param[name] = param[:prune_shape[0], :prune_shape[1]]
                     else:
-                        pruned_param[name] = param[:prune_shape[1]] 
+                        if isinstance(sublayer, SuperLinear):
+                            pruned_param[name] = param[:prune_shape[1]] 
+                        else:
+                            pruned_param[name] = param[:prune_shape[0]] 
                 else:
                     pruned_param[name] = param[:prune_shape]
 
