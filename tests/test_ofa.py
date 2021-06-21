@@ -402,16 +402,7 @@ class TestExport(unittest.TestCase):
         self.ofa_model = OFA(model)
 
     def test_ofa(self):
-        config = {
-            'embedding_1': {
-                'expand_ratio': (2.0)
-            },
-            'linear_3': {
-                'expand_ratio': (2.0)
-            },
-            'linear_4': {},
-            'linear_5': {}
-        }
+        config = self.ofa_model._sample_config(task='expand_ratio', phase=None)
         origin_dict = {}
         for name, param in self.origin_model.named_parameters():
             origin_dict[name] = param.shape
@@ -462,6 +453,7 @@ class TestExportCase1(unittest.TestCase):
     def test_export_model(self):
         self.ofa_model.export(
             self.config, input_shapes=[[3, 64]], input_dtypes=['int64'])
+        print(self.ofa_model.ofa_layers)
         assert len(self.ofa_model.ofa_layers) == 4
 
 
