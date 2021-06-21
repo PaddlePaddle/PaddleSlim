@@ -131,7 +131,8 @@ class PruningPlan():
             backup_name = var_tmp.name.replace(".", "_") + "_backup"
             if backup_name not in sub_layer._buffers:
                 sub_layer.register_buffer(
-                    backup_name, paddle.to_tensor(var_tmp.value().get_tensor()))
+                    backup_name,
+                    paddle.to_tensor(np.array(var_tmp.value().get_tensor())))
                 _logger.debug("Backup values of {} into buffers.".format(
                     var_tmp.name))
 
