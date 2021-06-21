@@ -27,11 +27,11 @@ FLOPs
 **示例：**
 
 .. code-block:: python
-
+    import paddle 
     import paddle.fluid as fluid
     from paddle.fluid.param_attr import ParamAttr
     from paddleslim.analysis import flops
-    
+    paddle.enable_static()
     def conv_bn_layer(input,
                       num_filters,
                       filter_size,
@@ -103,10 +103,11 @@ model_size
 
 .. code-block:: python
 
+    import paddle
     import paddle.fluid as fluid
     from paddle.fluid.param_attr import ParamAttr
     from paddleslim.analysis import model_size
-    
+    paddle.enable_static() 
     def conv_layer(input,
                       num_filters,
                       filter_size,

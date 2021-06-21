@@ -56,12 +56,11 @@ class FilterPruner(Pruner):
     
     """
 
-    def __init__(self, model, inputs, sen_file=None):
-        super(FilterPruner, self).__init__(model, inputs)
+    def __init__(self, model, inputs, sen_file=None, opt=None):
+        super(FilterPruner, self).__init__(model, inputs, opt=opt)
         self._status = Status(sen_file)
         # sensitive and collections are just used in filter pruning
         self.collections = DygraphPruningCollections(model, inputs)
-
         # skip vars in:
         # 1. depthwise conv2d layer
         self.skip_vars = []
@@ -216,7 +215,7 @@ class FilterPruner(Pruner):
             plan = self.prune_vars(ratios, axis=dims)
             c_flops = flops(self.model, self.inputs)
             c_pruned_flops = (base_flops - c_flops) / base_flops
-            plan.restore(self.model)
+            plan.restore(self.model, opt=self.opt)
             _logger.debug("Seaching ratios, pruned FLOPs: {}".format(
                 c_pruned_flops))
             key = str(round(c_pruned_flops, 4))
@@ -265,7 +264,7 @@ class FilterPruner(Pruner):
                     var_name, ratio, loss))
                 sensitivities[var_name][ratio] = loss
                 self._status.save(status_file)
-                plan.restore(model)
+                plan.restore(model, opt=self.opt)
 
         return sensitivities
 
@@ -287,7 +286,7 @@ class FilterPruner(Pruner):
 
     def restore(self):
         if self.plan is not None:
-            self.plan.restore(self.model)
+            self.plan.restore(self.model, opt=self.opt)
 
     def cal_mask(self, pruned_ratio, collection):
         raise NotImplemented("cal_mask is not implemented")
@@ -347,7 +346,7 @@ class FilterPruner(Pruner):
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":
-            plan.apply(self.model, lazy=False)
+            plan.apply(self.model, lazy=False, opt=self.opt)
         return plan
 
     def _transform_mask(self, mask, transform):

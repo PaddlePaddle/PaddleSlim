@@ -38,7 +38,15 @@ Pruner
    - **params(list<str>)** - 需要被裁剪的卷积层的参数的名称列表。可以通过以下方式查看模型中所有参数的名称:
    
    .. code-block:: python
-   
+
+      import paddle
+      paddle.enable_static()
+      program = paddle.static.Program()
+      with paddle.static.program_guard(main_program=program):
+          net = paddle.vision.models.mobilenet_v1()
+          data = paddle.static.data(name="data", shape=[1,3,32,32])
+          net(data)
+
       for block in program.blocks:
           for param in block.all_parameters():
               print("param: {}; shape: {}".format(param.name, param.shape))
@@ -68,11 +76,11 @@ Pruner
    点击 `AIStudio <https://aistudio.baidu.com/aistudio/projectDetail/200786>`_ 执行以下示例代码。
 
    .. code-block:: python
-   
+      import paddle   
       import paddle.fluid as fluid
       from paddle.fluid.param_attr import ParamAttr
       from paddleslim.prune import Pruner
-      
+      paddle.enable_static()
       def conv_bn_layer(input,
                         num_filters,
                         filter_size,
@@ -209,7 +217,7 @@ sensitivity
    from paddle.fluid.param_attr import ParamAttr
    from paddleslim.prune import sensitivity
    import paddle.dataset.mnist as reader
-   
+   paddle.enable_static()   
    def conv_bn_layer(input,
                      num_filters,
                      filter_size,

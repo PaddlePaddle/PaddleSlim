@@ -22,7 +22,7 @@ def cal_mask(self, var_name, pruned_ratio, group):
 
 如图1-1所示，在给定模型中有两个卷积层，第一个卷积层有3个`filters`，第二个卷积层有2个`filters`。如果删除第一个卷积绿色的`filter`，第一个卷积的输出特征图的通道数也会减1，同时需要删掉第二个卷积层绿色的`kernels`。如上所述的两个卷积共同组成一个group，表示如下：
 
-```python
+```
 group = {
             "conv_1.weight":{
                 "pruned_dims": [0],
@@ -70,9 +70,9 @@ from paddleslim.dygraph import FilterPruner
 
 class L2NormFilterPruner(FilterPruner):
 
-    def __init__(self, model, input_shape, sen_file=None):
+    def __init__(self, model, input_shape, sen_file=None, opt=None):
         super(L2NormFilterPruner, self).__init__(
-            model, input_shape, sen_file=sen_file)
+            model, input_shape, sen_file=sen_file, opt=opt)
 
     def cal_mask(self, var_name, pruned_ratio, group):
         value = group[var_name]['value']
@@ -94,7 +94,7 @@ class L2NormFilterPruner(FilterPruner):
 
 如上述代码所示，我们重载了`FilterPruner`基类的`cal_mask`方法，并在`L1NormFilterPruner`代码基础上，修改了计算通道重要性的语句，将其修改为了计算L2Norm的逻辑：
 
-```python
+```
 scores = np.sqrt(np.sum(np.square(value), axis=tuple(reduce_dims)))
 ```
 
@@ -148,9 +148,9 @@ from paddleslim.dygraph import FilterPruner
 
 class FPGMFilterPruner(FilterPruner):
 
-    def __init__(self, model, input_shape, sen_file=None):
+    def __init__(self, model, input_shape, sen_file=None, opt=None):
         super(FPGMFilterPruner, self).__init__(
-            model, input_shape, sen_file=sen_file)
+            model, input_shape, sen_file=sen_file, opt=opt)
 
     def cal_mask(self, var_name, pruned_ratio, group):
         value = group[var_name]['value']
@@ -223,7 +223,7 @@ print(result)
 ### 5.2 计算敏感度
 
 ```python
-pruner = FPGMFilterPruner(net, [1, 3, 32, 32])
+pruner = FPGMFilterPruner(net, [1, 3, 32, 32], opt=optimizer)
 def eval_fn():
         result = model.evaluate(
             val_dataset,
@@ -250,13 +250,6 @@ print(f"before fine-tuning: {result}")
 ### 5.4 重训练
 
 ```python
-optimizer = paddle.optimizer.Momentum(
-        learning_rate=0.1,
-        parameters=net.parameters())
-model.prepare(
-        optimizer,
-        paddle.nn.CrossEntropyLoss(),
-        paddle.metric.Accuracy(topk=(1, 5)))
 model.fit(train_dataset, epochs=2, batch_size=128, verbose=1)
 result = model.evaluate(val_dataset,batch_size=128, log_freq=10)
 print(f"after fine-tuning: {result}")

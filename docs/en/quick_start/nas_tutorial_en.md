@@ -1,6 +1,6 @@
 # Nerual Architecture Search for Image Classification
 
-This tutorial shows how to use [API](../api/nas_api.md) about SANAS in PaddleSlim. We start experiment based on MobileNetV2 as example. The tutorial contains follow section.
+This tutorial shows how to use [API](https://paddleslim.readthedocs.io/en/latest/api_en/paddleslim.nas.html) about SANAS in PaddleSlim. We start experiment based on MobileNetV2 as example. The tutorial contains follow section.
 
 1. necessary imports
 2. initial SANAS instance
@@ -30,6 +30,8 @@ import numpy as np
 ```
 
 ## 2. initial SANAS instance
+
+Please set a unused port when build instance of SANAS.
 ```python
 sanas = slim.nas.SANAS(configs=[('MobileNetV2Space')], server_addr=("", 8337), save_checkpoint=None)
 ```
@@ -111,6 +113,7 @@ archs = sanas.next_archs()[0]
 ### 7.2 build program
 Get program according to the function in Step3 and model architecture from Step 7.1.
 ```python
+paddle.enable_static()
 exe, train_program, eval_program, inputs, avg_cost, acc_top1, acc_top5 = build_program(archs)
 ```
 

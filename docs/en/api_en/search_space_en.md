@@ -47,8 +47,8 @@ For example, how to add a search space with resnet block. New search space can N
 
 ```python
 ### import necessary head file
-from .search_space_base import SearchSpaceBase
-from .search_space_registry import SEARCHSPACE
+from paddleslim.nas import SearchSpaceBase
+from paddleslim.nas import SEARCHSPACE
 import numpy as np
 
 ### use decorator SEARCHSPACE.register to register yourself search space to search space NameSpace
