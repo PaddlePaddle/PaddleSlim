@@ -45,8 +45,7 @@ model_list = [m for m in dir(models) if "__" not in m]
 
 
 def piecewise_decay(args):
-    step = int(
-        math.ceil(float(args.total_images) / args.batch_size))
+    step = int(math.ceil(float(args.total_images) / args.batch_size))
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = paddle.optimizer.lr.PiecewiseDecay(
@@ -59,8 +58,7 @@ def piecewise_decay(args):
 
 
 def cosine_decay(args):
-    step = int(
-        math.ceil(float(args.total_images) / args.batch_size))
+    step = int(math.ceil(float(args.total_images) / args.batch_size))
     learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
         learning_rate=args.lr, T_max=step * args.num_epochs, verbose=False)
     optimizer = paddle.optimizer.Momentum(
@@ -100,12 +98,10 @@ def compress(args):
     places = paddle.static.cuda_places(
     ) if args.use_gpu else paddle.static.cpu_places()
     place = places[0]
-    
     if args.use_gpu:
         devices_num = paddle.fluid.core.get_cuda_device_count()
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
-    
     with paddle.static.program_guard(student_program, s_startup):
         with paddle.fluid.unique_name.guard():
             image = paddle.static.data(
