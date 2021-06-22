@@ -22,7 +22,7 @@ _logger.setLevel(logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64,                 "Minibatch size.")
+add_arg('batch_size',       int,  256,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('save_inference',   bool, False,                "Whether to save inference model.")
 add_arg('total_images',     int,  1281167,              "Training image number.")
@@ -45,12 +45,8 @@ model_list = [m for m in dir(models) if "__" not in m]
 
 
 def piecewise_decay(args):
-    if args.use_gpu:
-        devices_num = paddle.fluid.core.get_cuda_device_count()
-    else:
-        devices_num = int(os.environ.get('CPU_NUM', 1))
     step = int(
-        math.ceil(float(args.total_images) / args.batch_size) / devices_num)
+        math.ceil(float(args.total_images) / args.batch_size))
     bd = [step * e for e in args.step_epochs]
     lr = [args.lr * (0.1**i) for i in range(len(bd) + 1)]
     learning_rate = paddle.optimizer.lr.PiecewiseDecay(
@@ -63,12 +59,8 @@ def piecewise_decay(args):
 
 
 def cosine_decay(args):
-    if args.use_gpu:
-        devices_num = paddle.fluid.core.get_cuda_device_count()
-    else:
-        devices_num = int(os.environ.get('CPU_NUM', 1))
     step = int(
-        math.ceil(float(args.total_images) / args.batch_size) / devices_num)
+        math.ceil(float(args.total_images) / args.batch_size))
     learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
         learning_rate=args.lr, T_max=step * args.num_epochs, verbose=False)
     optimizer = paddle.optimizer.Momentum(
@@ -108,7 +100,12 @@ def compress(args):
     places = paddle.static.cuda_places(
     ) if args.use_gpu else paddle.static.cpu_places()
     place = places[0]
-
+    
+    if args.use_gpu:
+        devices_num = paddle.fluid.core.get_cuda_device_count()
+    else:
+        devices_num = int(os.environ.get('CPU_NUM', 1))
+    
     with paddle.static.program_guard(student_program, s_startup):
         with paddle.fluid.unique_name.guard():
             image = paddle.static.data(
@@ -120,7 +117,7 @@ def compress(args):
                 places=places,
                 feed_list=[image, label],
                 drop_last=True,
-                batch_size=args.batch_size,
+                batch_size=int(args.batch_size / devices_num),
                 return_list=False,
                 shuffle=True,
                 use_shared_memory=True,
