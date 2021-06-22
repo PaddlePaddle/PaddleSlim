@@ -13,7 +13,7 @@
 默认配置:
 
 ```yaml
-batch_size: 64
+batch_size: 256
 init_lr: 0.1
 lr_strategy: piecewise_decay
 l2_decay: 3e-5
