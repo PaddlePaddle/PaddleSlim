@@ -17,6 +17,7 @@ class DygraphPruningCollections(PruningCollections):
     Args:
       - model(nn.Layer): The dygraph to be parsed.
       - inputs(Variable|list|dict): The dummy inputs of target model. It will be used in calling `model.forward(inputs)`.
+      - skip_leaves(bool): Whether to skip the last convolution layers.
     """
 
     def __init__(self, model, inputs, skip_leaves=True):
