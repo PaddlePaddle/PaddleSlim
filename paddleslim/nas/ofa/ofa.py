@@ -111,7 +111,7 @@ class OFABase(Layer):
             if block.fixed == False and (self._skip_layers == None or
                     (self._skip_layers != None and
                     self._key2name[block.key] not in self._skip_layers)) and  \
-                    (block.fn.weight.name not in self._depthwise_conv):
+                    (block.fn.weight.name not in self._cannot_changed_layer):
                 assert self._key2name[
                     block.
                     key] in self.current_config, 'DONNT have {} layer in config.'.format(
@@ -180,7 +180,7 @@ class OFA(OFABase):
         self._build_ss = False
         self._broadcast = False
         self._skip_layers = None
-        self._depthwise_conv = []
+        self._cannot_changed_layer = []
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
@@ -474,7 +474,7 @@ class OFA(OFABase):
             origin_model, inputs=input_shapes, dtypes=input_dtypes)
         graph = GraphWrapper(program)
 
-        same_config, _ = check_search_space(graph)
+        same_config, _, _ = check_search_space(graph)
         if same_config != None:
             broadcast_search_space(same_config, param2name, config)
 
@@ -577,9 +577,8 @@ class OFA(OFABase):
             self.model, DataParallel) else self.model
         _st_prog = dygraph2program(
             model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss, self._depthwise_conv = check_search_space(
+        self._same_ss, depthwise_conv, fixed_by_input = check_search_space(
             GraphWrapper(_st_prog))
-
         if self._same_ss != None:
             self._param2key = {}
             self._broadcast = True
@@ -619,6 +618,13 @@ class OFA(OFABase):
 
             self._same_ss = tmp_same_ss
 
+            tmp_fixed_by_input = []
+            for ss in self._same_ss:
+                for key in fixed_by_input:
+                    if key in ss:
+                        tmp_fixed_by_input += ss
+            fixed_by_input += tmp_fixed_by_input
+
             ### clear layer in ofa_layers set by skip layers
             if self._skip_layers != None:
                 for skip_layer in self._skip_layers:
@@ -629,11 +635,13 @@ class OFA(OFABase):
                 for ss in per_ss[1:]:
                     self._clear_width(self._param2key[ss])
 
+            self._cannot_changed_layer = sorted(
+                set(fixed_by_input + depthwise_conv))
             ### clear depthwise conv from search space because of its output channel cannot change
             for name, sublayer in model_to_traverse.named_sublayers():
                 if isinstance(sublayer, BaseBlock):
                     for param in sublayer.parameters():
-                        if param.name in self._depthwise_conv and name in self._ofa_layers.keys(
+                        if param.name in self._cannot_changed_layer and name in self._ofa_layers.keys(
                         ):
                             self._clear_width(name)
 
