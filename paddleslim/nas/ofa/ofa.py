@@ -473,7 +473,7 @@ class OFA(OFABase):
             origin_model, inputs=input_shapes, dtypes=input_dtypes)
         graph = GraphWrapper(program)
 
-        same_config, _ = check_search_space(graph)
+        same_config, _, _ = check_search_space(graph)
         if same_config != None:
             broadcast_search_space(same_config, param2name, config)
 
