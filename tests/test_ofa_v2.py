@@ -80,6 +80,28 @@ class ModelShortcut(nn.Layer):
         z = self.out(z)
         return z
 
+class ModelElementwise(nn.Layer):
+    def __init__(self):
+        super(ModelElementwise, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2D(3, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.conv2 = nn.Sequential(
+            nn.Conv2D(12, 24, 3), nn.BatchNorm2D(24), nn.ReLU())
+        self.conv3 = nn.Sequential(
+            nn.Conv2D(24, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.out = nn.Sequential(
+            nn.Conv2D(12, 6, 1), nn.BatchNorm2D(6), nn.ReLU())
+
+    def forward(self, x):
+        d = paddle.randn(shape=[2, 12, x.shape[2], x.shape[3]], dtype='float32')
+        d = nn.functional.softmax(d)
+
+        x = self.conv1(x)
+        x = x + d
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.out(x)
+        return x
 
 class TestOFAV2(unittest.TestCase):
     def setUp(self):
@@ -113,6 +135,20 @@ class TestOFAV2Export(unittest.TestCase):
             input_dtypes=['float32'],
             origin_model=origin_model)
 
+class Testelementwise(unittest.TestCase):
+    def setUp(self):
+        model = ModelElementwise()
+        sp_net_config = supernet(expand_ratio=[0.25, 0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+        self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
+
+    def test_ofa(self):
+        self.ofa_model = OFA(self.model)
+        self.ofa_model.set_epoch(0)
+        self.ofa_model.set_task('expand_ratio')
+        out, _ = self.ofa_model(self.images)
+        assert list(self.ofa_model._ofa_layers.keys(
+        )) == ['conv2.0', 'conv3.0', 'out.0']
 
 class TestShortcutSkiplayers(unittest.TestCase):
     def setUp(self):

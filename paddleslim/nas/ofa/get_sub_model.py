@@ -211,10 +211,21 @@ def check_search_space(graph):
     """
     same_search_space = []
     depthwise_conv = []
+    fixed_by_input = []
     for op in graph.ops():
         if op.type() == 'elementwise_add' or op.type() == 'elementwise_mul':
             inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
             if (not inp1._var.persistable) and (not inp2._var.persistable):
+                pre_fixed_op_1, pre_fixed_op_2 = [], []
+                pre_fixed_op_1 = _find_weight_ops(inp1.inputs()[0], graph,
+                                                  pre_fixed_op_1)
+                pre_fixed_op_2 = _find_weight_ops(inp2.inputs()[0], graph,
+                                                  pre_fixed_op_2)
+                if not pre_fixed_op_1:
+                    fixed_by_input += pre_fixed_op_2
+                if not pre_fixed_op_2:
+                    fixed_by_input += pre_fixed_op_1
+
                 pre_ele_op = _find_pre_elementwise_add(op, graph)
                 if pre_ele_op != None:
                     same_search_space.append(pre_ele_op)
@@ -225,7 +236,7 @@ def check_search_space(graph):
                     depthwise_conv.append(inp._var.name)
 
     if len(same_search_space) == 0:
-        return None, []
+        return None, [], []
 
     same_search_space = sorted([sorted(x) for x in same_search_space])
     final_search_space = []
@@ -247,7 +258,7 @@ def check_search_space(graph):
     final_search_space = sorted([sorted(x) for x in final_search_space])
     depthwise_conv = sorted(depthwise_conv)
 
-    return (final_search_space, depthwise_conv)
+    return (final_search_space, depthwise_conv, fixed_by_input)
 
 
 def broadcast_search_space(same_search_space, param2key, origin_config):
@@ -273,11 +284,12 @@ def broadcast_search_space(same_search_space, param2key, origin_config):
                         'channel': origin_config[pre_key]['channel']
                     })
             else:
-                if 'expand_ratio' in origin_config[pre_key]:
-                    origin_config[key] = {
-                        'expand_ratio': origin_config[pre_key]['expand_ratio']
-                    }
-                elif 'channel' in origin_config[pre_key]:
-                    origin_config[key] = {
-                        'channel': origin_config[pre_key]['channel']
-                    }
+                if pre_key in origin_config:
+                    if 'expand_ratio' in origin_config[pre_key]:
+                        origin_config[key] = {
+                            'expand_ratio': origin_config[pre_key]['expand_ratio']
+                        }
+                    elif 'channel' in origin_config[pre_key]:
+                        origin_config[key] = {
+                            'channel': origin_config[pre_key]['channel']
+                        }
