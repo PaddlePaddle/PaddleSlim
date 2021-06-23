@@ -528,77 +528,6 @@ class split(PruneWorker):
 
 
 @PRUNE_WORKER.register
-class concat(PruneWorker):
-    def __init__(self, op, pruned_params, visited, skip_stranger):
-        super(concat, self).__init__(op, pruned_params, visited, skip_stranger)
-
-    def _prune(self, var, pruned_axis, transforms):
-        axis = self.op.attr("axis")
-        if var in self.op.outputs("Out"):
-            self._visit(var, pruned_axis)
-            start = 0
-            if axis == pruned_axis:
-                for _, in_var in enumerate(self.op.inputs("X")):
-                    idx = []
-                    transoform = {
-                        'src_start': start,
-                        'src_end': start + in_var.shape()[pruned_axis],
-                        'target_start': 0,
-                        'target_end': in_var.shape()[pruned_axis],
-                        'target_len': in_var.shape()[pruned_axis],
-                        'stride': 1
-                    }
-                    start += in_var.shape()[pruned_axis]
-
-                    self._visit(in_var, pruned_axis)
-                    pre_ops = in_var.inputs()
-                    for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis,
-                                       transforms + [transoform])
-            else:
-                for _, in_var in enumerate(self.op.inputs("X")):
-                    self._visit(in_var, pruned_axis)
-                    pre_ops = in_var.inputs()
-                    for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis, transforms)
-        elif var in self.op.inputs("X"):
-            self._visit(var, pruned_axis)
-            if axis == pruned_axis:
-                idx = []
-                target_start = 0
-                for v in self.op.inputs("X"):
-                    if v.name() != var.name():
-                        target_start += v.shape()[pruned_axis]
-                    else:
-                        break
-                target_end = target_start + v.shape()[pruned_axis]
-                out_var = self.op.outputs("Out")[0]
-                next_ops = out_var.outputs()
-
-                transform = {
-                    'src_start': 0,
-                    'src_end': var.shape()[pruned_axis],
-                    'target_start': target_start,
-                    'target_end': target_end,
-                    'target_len': out_var.shape()[pruned_axis],
-                    'stride': 1
-                }
-
-                self._visit(out_var, pruned_axis)
-                for op in next_ops:
-                    # The output of concat can be visited repeatedly
-                    c_visited = {}
-                    self._prune_op(
-                        op,
-                        out_var,
-                        pruned_axis,
-                        transforms + [transform],
-                        visited=c_visited)
-                    # Add nodes searched from concat into global visited array.
-                    self.visited.update(c_visited)
-
-
-@PRUNE_WORKER.register
 class depthwise_conv2d(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(depthwise_conv2d, self).__init__(op, pruned_params, visited,
@@ -763,16 +692,54 @@ class matmul(PruneWorker):
         x = self.op.inputs("X")[0]
         y = self.op.inputs("Y")[0]
         out = self.op.outputs("Out")[0]
-        if var == x and pruned_axis == 1:
-            self.append_pruned_vars(y, 0, pruned_idx)
-            self._visit_and_search(y, 0, pruned_idx)
+        x_shape_len = len(x.shape())
+        y_shape_len = len(y.shape())
+        mappings = []
+        if x_shape_len == 1 and y_shape_len == 1:
+            mappings = [(0, 0, 0)]
+        elif x_shape_len == 1 and y_shape_len == 2:
+            mappings = [(0, 0, -1), (-1, 1, 0)]
+        elif x_shape_len == 3 and y_shape_len == 1:
+            mappings = [(1, -1, 1), (2, 0, -1)]
+        elif x_shape_len == 2 and y_shape_len == 3:
+            mappings = [(0, -1, 1), (1, 1, -1), (-1, 2, 2)]
+        elif x_shape_len == 3 and y_shape_len == 3:
+            mappings = [(1, -1, 1), (2, 1, -1), (-1, 2, 2)]
+        elif x_shape_len > 3 and y_shape_len > 3:
+            mappings = [(x_shape_len - 2, -1, x_shape_len - 2),
+                        (x_shape_len - 1, x_shape_len - 2, -1),
+                        (-1, x_shape_len - 1, x_shape_len - 1)]
+
+        if var == x:
+            for x_i, y_i, out_i in mappings:
+                if pruned_axis == x_i:
+                    if y_i != -1:
+                        self.append_pruned_vars(y, y_i, pruned_idx)
+                        self._visit_and_search(y, y_i, pruned_idx)
+                    if out_i != -1:
+                        self.append_pruned_vars(out, out_i, pruned_idx)
+                        self._visit_and_search(out, out_i, pruned_idx)
+                    break
+        if var == y:
+            for x_i, y_i, out_i in mappings:
+                if pruned_axis == y_i:
+                    if x_i != -1:
+                        self.append_pruned_vars(x, x_i, pruned_idx)
+                        self._visit_and_search(x, x_i, pruned_idx)
+                    if out_i != -1:
+                        self.append_pruned_vars(out, out_i, pruned_idx)
+                        self._visit_and_search(out, out_i, pruned_idx)
+                    break
         if var == out:
-            if pruned_axis == 0:
-                self.append_pruned_vars(x, 0, pruned_idx)
-                self._visit_and_search(x, 0, pruned_idx)
-            elif pruned_axis == 1:
-                self.append_pruned_vars(y, 1, pruned_idx)
-                self._visit_and_search(y, 1, pruned_idx)
+            for x_i, y_i, out_i in mappings:
+                if pruned_axis == out_i:
+                    if x_i != -1:
+                        self.append_pruned_vars(x, x_i, pruned_idx)
+                        self._visit_and_search(x, x_i, pruned_idx)
+                    if y_i != -1:
+                        self.append_pruned_vars(y, y_i, pruned_idx)
+                        self._visit_and_search(y, y_i, pruned_idx)
+                    break
 
 
 @PRUNE_WORKER.register
