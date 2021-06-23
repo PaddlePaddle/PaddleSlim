@@ -96,6 +96,7 @@ class ModelElementwise(nn.Layer):
     def forward(self, x):
         d = paddle.randn(shape=[2, 12, x.shape[2], x.shape[3]], dtype='float32')
         d = nn.functional.softmax(d)
+
         x = self.conv1(x)
         x = x + d
         x = self.conv2(x)
