@@ -53,11 +53,14 @@ class FilterPruner(Pruner):
         sen_file(str, optional): The absolute path of file that stores computed sensitivities. If it is
                               set rightly, 'FilterPruner::sensitive' function can not be called anymore
                               in next step. Default: None.
+        opt(paddle.optimizer.Optimizer): The model's optimizer. Default: None.
+        skip_leaves(bool): Whether to skip the last convolution layers.
     
     """
 
-    def __init__(self, model, inputs, sen_file=None, skip_leaves=True):
-        super(FilterPruner, self).__init__(model, inputs)
+    def __init__(self, model, inputs, sen_file=None, opt=None,
+                 skip_leaves=True):
+        super(FilterPruner, self).__init__(model, inputs, opt=opt)
         self._status = Status(sen_file)
         self.skip_leaves = skip_leaves
         # sensitive and collections are just used in filter pruning
@@ -218,7 +221,7 @@ class FilterPruner(Pruner):
             plan = self.prune_vars(ratios, axis=dims)
             c_flops = flops(self.model, self.inputs)
             c_pruned_flops = (base_flops - c_flops) / base_flops
-            plan.restore(self.model)
+            plan.restore(self.model, opt=self.opt)
             _logger.debug("Seaching ratios, pruned FLOPs: {}".format(
                 c_pruned_flops))
             key = str(round(c_pruned_flops, 4))
@@ -267,7 +270,7 @@ class FilterPruner(Pruner):
                     var_name, ratio, loss))
                 sensitivities[var_name][ratio] = loss
                 self._status.save(status_file)
-                plan.restore(model)
+                plan.restore(model, opt=self.opt)
 
         return sensitivities
 
@@ -289,7 +292,7 @@ class FilterPruner(Pruner):
 
     def restore(self):
         if self.plan is not None:
-            self.plan.restore(self.model)
+            self.plan.restore(self.model, opt=self.opt)
 
     def cal_mask(self, pruned_ratio, collection):
         raise NotImplemented("cal_mask is not implemented")
@@ -349,7 +352,7 @@ class FilterPruner(Pruner):
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":
-            plan.apply(self.model, lazy=False)
+            plan.apply(self.model, lazy=False, opt=self.opt)
         return plan
 
     def _transform_mask(self, mask, transform):
