@@ -27,11 +27,13 @@ else:
     from .layers import SuperConv2D, SuperLinear
     Layer = paddle.nn.Layer
     DataParallel = paddle.DataParallel
-from .layers_base import BaseBlock
+from .layers_base import BaseBlock, Block
 from .utils.utils import search_idx
 from ...common import get_logger
 from ...core import GraphWrapper, dygraph2program
-from .get_sub_model import get_prune_params_config, prune_params, check_search_space, broadcast_search_space
+from .get_sub_model import check_search_space, broadcast_search_space
+from paddle.fluid import core
+import numbers
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -458,37 +460,41 @@ class OFA(OFABase):
     ### TODO: complete it
     def search(self, eval_func, condition):
         pass
+    
+    def _get_model_pruned_weight(self):
 
-    def _export_sub_model_config(self, origin_model, config, input_shapes,
-                                 input_dtypes):
-        param2name = {}
-        for name, sublayer in origin_model.named_sublayers():
-            for param in sublayer.parameters(include_sublayers=False):
-                if name.split('.')[-1] == 'fn':
-                    ### if sublayer is Block, the name of the param.name has 'fn', the config always donnot have 'fn'
-                    param2name[param.name] = name[:-3]
-                else:
-                    param2name[param.name] = name
+        pruned_param = {}
+        for l_name, sublayer in self.model.named_sublayers():
 
-        program = dygraph2program(
-            origin_model, inputs=input_shapes, dtypes=input_dtypes)
-        graph = GraphWrapper(program)
-
-        same_config, _ = check_search_space(graph)
-        if same_config != None:
-            broadcast_search_space(same_config, param2name, config)
-
-        origin_model_config = {}
-        for name, sublayer in origin_model.named_sublayers():
-            if isinstance(sublayer, BaseBlock):
+            if getattr(sublayer, 'cur_config', None) == None:
+                continue
+            if isinstance(sublayer, Block):
                 sublayer = sublayer.fn
-            for param in sublayer.parameters(include_sublayers=False):
-                if name in config.keys():
-                    origin_model_config[param.name] = config[name]
 
-        param_prune_config = get_prune_params_config(graph, origin_model_config)
-        return param_prune_config
+            assert 'prune_dim' in sublayer.cur_config, 'The layer {} do not have prune_dim in cur_config.'.format(l_name)
+            prune_shape = sublayer.cur_config['prune_dim']
 
+            for p_name, param in sublayer.named_parameters(include_sublayers=False):
+                origin_param = param.value().get_tensor()
+                param = np.array(origin_param).astype("float32")
+
+                name = l_name + '.' + p_name
+                if isinstance(prune_shape, list):
+
+                    if len(param.shape)==4:
+                        pruned_param[name] = param[:prune_shape[0], :prune_shape[1], :prune_shape[2], :prune_shape[3]]
+                    elif len(param.shape)==2:
+                        pruned_param[name] = param[:prune_shape[0], :prune_shape[1]]
+                    else:
+                        if isinstance(sublayer, SuperLinear):
+                            pruned_param[name] = param[:prune_shape[1]] 
+                        else:
+                            pruned_param[name] = param[:prune_shape[0]] 
+                else:
+                    pruned_param[name] = param[:prune_shape]
+
+            return pruned_param
+    
     def export(self,
                config,
                input_shapes,
@@ -510,18 +516,71 @@ class OFA(OFABase):
               config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
               origin_model = ofa_model.export(origin_model, config, input_shapes=[1, 3, 28, 28], input_dtypes=['float32'])
         """
-        super_sd = None
-        if load_weights_from_supernet and origin_model != None:
-            super_sd = remove_model_fn(origin_model, self.model.state_dict())
+        self.set_net_config(config)
+        self.model.eval()
+        def build_input(input_size, dtypes):
+            if isinstance(input_size, list) and all(isinstance(i, numbers.Number) for i in input_size):
+                if isinstance(dtypes, list):
+                    dtype = dtypes[0]
+                else:
+                    dtype = dtypes
+                return paddle.cast(paddle.rand(list(input_size)), dtype)
+            if isinstance(input_size, dict):
+                inputs = {}
+                if isinstance(dtypes, list):
+                    dtype = dtypes[0]
+                else:
+                    dtype = dtypes
+                for key, value in input_size.items():
+                    inputs[key] = paddle.cast(paddle.rand(list(value)), dtype)
+                return inputs
+            if isinstance(input_size, list):
+                return [build_input(i, dtype) for i, dtype in zip(input_size, dtypes)]
 
+
+        data = build_input(input_shapes, input_dtypes)
+
+        if isinstance(data, list):
+            self.forward(*data)
+        else:
+            self.forward(data)
+
+        super_model_state_dict = None
+        if load_weights_from_supernet and origin_model != None:
+            super_model_state_dict = remove_model_fn(origin_model, self.model.state_dict())
+        
         if origin_model == None:
             origin_model = self.model
+
         origin_model = origin_model._layers if isinstance(
             origin_model, DataParallel) else origin_model
-        param_config = self._export_sub_model_config(origin_model, config,
-                                                     input_shapes, input_dtypes)
-        prune_params(origin_model, param_config, super_sd)
+
+        _logger.info("Start to get pruned params, please wait...")
+        pruned_param = self._get_model_pruned_weight()
+        pruned_state_dict = remove_model_fn(origin_model, pruned_param)
+        _logger.info("Start to get pruned model, please wait...")
+        for l_name, sublayer in origin_model.named_sublayers():
+            for p_name, param in sublayer.named_parameters(include_sublayers=False):
+                name = l_name + '.' + p_name
+                t_value = param.value().get_tensor()
+                if name in pruned_state_dict:
+                    p = t_value._place()
+                    if p.is_cpu_place():
+                        place = core.CPUPlace()
+                    elif p.is_cuda_pinned_place():
+                        place = core.CUDAPinnedPlace()
+                    else:
+                        place = core.CUDAPlace(p.gpu_device_id())
+                    t_value.set(pruned_state_dict[name], place)
+
+        if super_model_state_dict != None and len(super_model_state_dict) != 0:
+             for k, v in super_model_state_dict.items():
+                 setattr(origin_model, k, v)
+
+
         return origin_model
+
+
 
     @property
     def get_current_config(self):
