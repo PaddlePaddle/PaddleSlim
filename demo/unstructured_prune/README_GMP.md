@@ -73,6 +73,22 @@ def _get_skip_params(program):
 CUDA_VISIBLE_DEVICES=2,3 python3.7 train_parameters_easy.py --batch_size 256 --data imagenet --lr 0.005 --pruning_mode ratio --ratio 0.75 --initial_ratio 0.15 --num_epochs 108 --test_period 5 --stable_epochs 0 --pruning_epochs 54 --tunning_epochs 54 --pruning_steps 100 --step_epochs 71 88
 ```
 
+关键参数的设置：
+
+lr：假设预训练模型时，lr从0.1衰减到0.001，那么此时的lr=0.01（即log中值）。本示例中，预训练从0.1衰减到0.0001，金丝取0.005。
+
+ratio：剪裁的最终稀疏度。实测0.75会达到比较理想的精度和加速收益平衡。
+
+initial_ratio：剪裁的初始稀疏度。设置为0.15即可。
+
+stable_epochs：剪枝前的稳定训练，实验看来对结果影响不大，设置为0。
+
+pruning_epochs, tunning_epochs：两者之和为预训练时长的80%，两者等长。如果发现tunning_epoch期间，精度恢复不达预期，可以适当增加该长度。
+
+pruning_steps：在pruning_epochs中，增加多少次ratio，使其从初始数值增加到最终数值。
+
+step_epochs：lr piecewise decay的时间，实验看来在pruning_epochs+tunning_epochs/3，pruning_epochs+2*tunning_epochs/3 衰减两次比较好。
+
 ## 推理
 ```bash
 CUDA_VISIBLE_DEVICES=0 python3.7 evaluate.py --pruned_model models --data imagenet
