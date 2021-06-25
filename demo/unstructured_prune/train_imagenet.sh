@@ -9,11 +9,11 @@ python3.7 train_parameters_easy.py \
           --lr 0.005 \
           --pretrained_model /code/docker-volumn/models/pretrained_model/MobileNetV1_pretrained \
           --model MobileNet \
-          --num_epochs 2 \
+          --num_epochs 108 \
           --test_period 5 \
           --model_path "./models" \
           --initial_ratio 0.15 \
           --stable_epochs 0 \
-          --pruning_epochs 1 \
-          --tunning_epochs 1 \
+          --pruning_epochs 54 \
+          --tunning_epochs 54 \
           --step_epochs 71 88
