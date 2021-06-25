@@ -27,14 +27,14 @@ Select `ResNet50` as the teacher to perform distillation training on the student
 
 ```python
 import paddleslim as slim
-model = slim.models.MobileNet()
+student_model = slim.models.MobileNet()
 student_program = fluid.Program()
 student_startup = fluid.Program()
 with fluid.program_guard(student_program, student_startup):
     image = fluid.data(
         name='image', shape=[None] + [1, 28, 28], dtype='float32')
     label = fluid.data(name='label', shape=[None, 1], dtype='int64')
-    out = model.net(input=image, class_dim=10)
+    out = student_model.net(input=image, class_dim=10)
     cost = fluid.layers.cross_entropy(input=out, label=label)
     avg_cost = fluid.layers.mean(x=cost)
     acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
@@ -44,7 +44,7 @@ with fluid.program_guard(student_program, student_startup):
 
 
 ```python
-model = slim.models.ResNet50()
+teacher_model = slim.models.ResNet50()
 teacher_program = fluid.Program()
 teacher_startup = fluid.Program()
 with fluid.program_guard(teacher_program, teacher_startup):
