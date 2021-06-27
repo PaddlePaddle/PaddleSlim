@@ -18,30 +18,7 @@ from collections import namedtuple
 import paddle.nn as nn
 from .losses import *
 
-__all__ = ['DistillConfig', 'Distill', 'add_distill_hook']
-
-
-def _get_activation(outs, name):
-    def get_output_hook(layer, input, output):
-        outs[name] = output
-
-    return get_output_hook
-
-
-def add_distill_hook(net, outs, mapping_layers_name, layers_type):
-    """
-        Get output by name.
-        outs(dict): save the middle outputs of model according to the name.
-        mapping_layers(list): name of middle layers.
-        layers_type(list): type of the middle layers to calculate distill loss.
-    """
-    ### TODO: support DP model
-    for idx, (n, m) in enumerate(net.named_sublayers()):
-        if n in mapping_layers_name:
-            midx = mapping_layers_name.index(n)
-            m.register_forward_post_hook(
-                _get_activation(outs, layers_type[midx]))
-
+__all__ = ['DistillConfig', 'Distill', 'AdaptorBase']
 
 DistillConfig = namedtuple(
     'DistillConfig',
@@ -52,24 +29,57 @@ DistillConfig = namedtuple(
 DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
 
-def transpose_config(config):
-    assert 's_feature_idx' in config
-    assert 't_feature_idx' in config
-    assert 'feature_type' in config
-    assert 'loss_function' in config
+class LayerConfig:
+    def __init__(self,
+                 s_feature_idx,
+                 t_feature_idx,
+                 feature_type,
+                 loss_function,
+                 weight=1.0,
+                 align=False,
+                 align_shape=None):
+        self.s_feature_idx = s_feature_idx
+        self.t_feature_idx = t_feature_idx
+        self.feature_type = feature_type
+        if loss_function in ['l1', 'l2', 'smooth_l1']:
+            self.loss_function = 'DistillationDistanceLoss'
+        elif loss_function in ['dml']:
+            self.loss_function = 'DistillationDMLLoss'
+        elif loss_function in ['rkl']:
+            self.loss_function = 'DistillationRKDLoss'
+        else:
+            raise NotImplementedError("loss function is not support!!!")
+        self.weight = weight
+        self.align = align
+        self.align_shape = align_shape
 
-    if config['loss_function'] in ['l1', 'l2', 'smooth_l1']:
-        config['loss_function'] = 'DistillationDistanceLoss'
-    elif config['loss_function'] in ['dml']:
-        config['loss_function'] = 'DistillationDMLLoss'
-    elif config['loss_function'] in ['rkl']:
-        config['loss_function'] = 'DistillationRKDLoss'
-    else:
-        raise NotImplementedError("loss function is not support!!!")
-    config['weight'] = config['weight'] if 'weight' in config else 1
-    ### TODO: add align in loss
-    config['align'] = config['align'] if 'align' in config else False
-    return config
+
+class AdaptorBase:
+    def __init__(self, model):
+        self.model = model
+
+    def _get_activation(self, outs, name):
+        def get_output_hook(layer, input, output):
+            outs[name] = output
+
+        return get_output_hook
+
+    def add_distill_hook(self, outs, mapping_layers_name, layers_type):
+        """
+            Get output by name.
+            outs(dict): save the middle outputs of model according to the name.
+            mapping_layers(list): name of middle layers.
+            layers_type(list): type of the middle layers to calculate distill loss.
+        """
+        ### TODO: support DP model
+        for idx, (n, m) in enumerate(self.model.named_sublayers()):
+            if n in mapping_layers_name:
+                midx = mapping_layers_name.index(n)
+                m.register_forward_post_hook(
+                    self._get_activation(outs, layers_type[midx]))
+
+    def mapping_layers(self):
+        raise NotImplementedError("function mapping_layers is not implemented")
 
 
 class Distill(nn.Layer):
@@ -80,16 +90,16 @@ class Distill(nn.Layer):
         self._distill_configs = distill_configs
         self._student_models = student_models
         self._teacher_models = teacher_models
-        self._adaptors_S = adaptors_S
-        self._adaptors_T = adaptors_T
+        self._adaptors_S = adaptors_S(self._student_models)
+        self._adaptors_T = adaptors_T(self._teacher_models)
 
-        self.stu_outs_dict, self.tea_outs_dict = self.prepare_outputs()
+        self.stu_outs_dict, self.tea_outs_dict = self._prepare_outputs()
 
         self.configs = []
         for c in self._distill_configs:
-            self.configs.append(transpose_config(c))
+            self.configs.append(LayerConfig(**c).__dict__)
 
-        self.get_distill_idx()
+        self.distill_idx = self.get_distill_idx()
         self._loss_config_list = []
         for c in self.configs:
             loss_config = {}
@@ -104,29 +114,37 @@ class Distill(nn.Layer):
             self._loss_config_list.append(loss_config)
         self.prepare_loss()
 
+    def _prepare_hook(self, adaptors, outs_dict):
+        mapping_layers = adaptors.mapping_layers()
+        for layer_type, layer in mapping_layers.items():
+            if isinstance(layer, str):
+                adaptors.add_distill_hook(outs_dict, [layer], [layer_type])
+        return outs_dict
+
     def get_distill_idx(self):
-        self.distill_idx = {}
+        distill_idx = {}
         for config in self._distill_configs:
-            if config['feature_type'] not in self.distill_idx:
-                self.distill_idx[config['feature_type']] = [[
+            if config['feature_type'] not in distill_idx:
+                distill_idx[config['feature_type']] = [[
                     int(config['s_feature_idx']), int(config['t_feature_idx'])
                 ]]
             else:
-                self.distill_idx[config['feature_type']].append([
+                distill_idx[config['feature_type']].append([
                     int(config['s_feature_idx']), int(config['t_feature_idx'])
                 ])
+        return distill_idx
 
     def prepare_loss(self):
         self.distill_loss = CombinedLoss(self._loss_config_list)
 
-    def prepare_outputs(self):
+    def _prepare_outputs(self):
         stu_outs_dict = collections.OrderedDict()
         tea_outs_dict = collections.OrderedDict()
-        stu_outs_dict = self._adaptors_S(self._student_models, stu_outs_dict)
-        tea_outs_dict = self._adaptors_T(self._teacher_models, tea_outs_dict)
+        stu_outs_dict = self._prepare_hook(self._adaptors_S, stu_outs_dict)
+        tea_outs_dict = self._prepare_hook(self._adaptors_T, tea_outs_dict)
         return stu_outs_dict, tea_outs_dict
 
-    def post_outputs(self):
+    def _post_outputs(self):
         final_keys = []
         for key, value in self.stu_outs_dict.items():
             if len(key.split('_')) == 1:
@@ -152,7 +170,7 @@ class Distill(nn.Layer):
     def forward(self, *inputs, **kwargs):
         stu_batch_outs = self._student_models.forward(*inputs, **kwargs)
         tea_batch_outs = self._teacher_models.forward(*inputs, **kwargs)
-        distill_inputs = self.post_outputs()
+        distill_inputs = self._post_outputs()
         ### batch is None just for now
         distill_outputs = self.distill_loss(distill_inputs, None)
         distill_loss = distill_outputs['loss']

@@ -7,7 +7,7 @@ import paddle
 from paddle.fluid.log_helper import get_logger
 from paddle.vision.models import MobileNetV1
 import paddle.vision.transforms as T
-from paddleslim.dygraph.dist import Distill, DistillConfig, add_distill_hook
+from paddleslim.dygraph.dist import Distill, DistillConfig, AdaptorBase
 
 _logger = get_logger(
     __name__, logging.INFO, fmt='%(asctime)s-%(levelname)s: %(message)s')
@@ -34,16 +34,14 @@ class TestImperativeDistill(unittest.TestCase):
         test_reader = paddle.io.DataLoader(
             val_dataset, places=place, batch_size=64)
 
-        def adaptor(model, mapping_layers):
-            mapping_keys = ['hidden', 'logits']
-            for k in mapping_keys:
-                mapping_layers[k] = []
-            add_distill_hook(model, mapping_layers, ['conv1'], ['hidden_0'])
-            add_distill_hook(model, mapping_layers, ['conv2_2'], ['hidden_1'])
-            add_distill_hook(model, mapping_layers, ['conv3_2', 'conv4_2'],
-                             ['hidden_2', 'hidden_3'])
-            add_distill_hook(model, mapping_layers, ['fc'], ['logits_0'])
-            return mapping_layers
+        class Adaptor(AdaptorBase):
+            def mapping_layers(self):
+                mapping_layers = {}
+                mapping_layers['hidden_0'] = 'conv1'
+                mapping_layers['hidden_1'] = 'conv2_2'
+                mapping_layers['hidden_2'] = 'conv3_2'
+                mapping_layers['logits_0'] = 'fc'
+                return mapping_layers
 
         def test(model):
             model.eval()
@@ -67,12 +65,12 @@ class TestImperativeDistill(unittest.TestCase):
 
         def train(model):
             adam = paddle.optimizer.Adam(
-                learning_rate=0.001, parameters=distill_model.parameters())
+                learning_rate=0.001, parameters=model.parameters())
 
             for batch_id, data in enumerate(train_reader):
                 img = paddle.to_tensor(data[0])
                 label = paddle.to_tensor(data[1])
-                student_out, teacher_out, distill_loss = distill_model(img)
+                student_out, teacher_out, distill_loss = model(img)
                 loss = paddle.nn.functional.loss.cross_entropy(student_out,
                                                                label)
                 avg_loss = paddle.mean(loss)
@@ -104,7 +102,7 @@ class TestImperativeDistill(unittest.TestCase):
         }]
 
         distill_model = Distill(distill_configs, self.s_model, self.t_model,
-                                adaptor, adaptor)
+                                Adaptor, Adaptor)
         train(distill_model)
 
 
