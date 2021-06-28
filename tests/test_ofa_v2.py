@@ -93,7 +93,6 @@ class TestOFAV2(unittest.TestCase):
         self.ofa_model.set_epoch(0)
         self.ofa_model.set_task('expand_ratio')
         out, _ = self.ofa_model(self.images)
-        print(self.ofa_model.get_current_config)
 
 
 class TestOFAV2Export(unittest.TestCase):

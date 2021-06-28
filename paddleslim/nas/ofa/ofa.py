@@ -465,7 +465,6 @@ class OFA(OFABase):
 
         pruned_param = {}
         for l_name, sublayer in self.model.named_sublayers():
-
             if getattr(sublayer, 'cur_config', None) == None:
                 continue
             if isinstance(sublayer, Block):
@@ -492,13 +491,15 @@ class OFA(OFABase):
                                                    prune_shape[1]]
                     else:
                         if isinstance(sublayer, SuperLinear):
+                            print('SuperLinear')
                             pruned_param[name] = param[:prune_shape[1]]
                         else:
+                            print('NOt SuperLinear')
                             pruned_param[name] = param[:prune_shape[0]]
                 else:
                     pruned_param[name] = param[:prune_shape]
 
-            return pruned_param
+        return pruned_param
 
     def export(self,
                config,
