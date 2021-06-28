@@ -113,7 +113,8 @@ class OFABase(Layer):
                     self._key2name[block.key] not in self._skip_layers)) and  \
                     (block.fn.weight.name not in self._cannot_changed_layer):
                 assert self._key2name[
-                    block.key] in self.current_config, 'DONNT have {} layer in config.'.format(
+                    block.
+                    key] in self.current_config, 'DONNT have {} layer in config.'.format(
                         self._key2name[block.key])
                 config = self.current_config[self._key2name[block.key]]
             else:
