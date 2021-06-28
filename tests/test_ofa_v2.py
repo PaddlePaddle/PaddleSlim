@@ -80,6 +80,7 @@ class ModelShortcut(nn.Layer):
         z = self.out(z)
         return z
 
+
 class ModelElementwise(nn.Layer):
     def __init__(self):
         super(ModelElementwise, self).__init__()
@@ -102,6 +103,51 @@ class ModelElementwise(nn.Layer):
         x = self.conv3(x)
         x = self.out(x)
         return x
+
+
+class ModelMultiExit(nn.Layer):
+    def __init__(self):
+        super(ModelMultiExit, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2D(3, 12, 3), nn.BatchNorm2D(12), nn.ReLU())
+        self.block1 = nn.Sequential(
+            nn.Conv2D(12, 24, 7),
+            nn.BatchNorm2D(24),
+            nn.ReLU(),
+            nn.MaxPool2D(
+                kernel_size=3, stride=2, padding=0),
+            nn.Conv2D(24, 24, 7),
+            nn.BatchNorm2D(24),
+            nn.ReLU(),
+            nn.MaxPool2D(
+                kernel_size=3, stride=2, padding=0))
+        self.block2 = nn.Sequential(
+            nn.Conv2D(24, 24, 1),
+            nn.BatchNorm2D(24),
+            nn.ReLU(),
+            nn.MaxPool2D(
+                kernel_size=3, stride=2, padding=1))
+
+        self.out1 = nn.Sequential(
+            nn.Conv2D(24, 24, 1), nn.BatchNorm2D(24), nn.ReLU())
+
+        self.out2 = nn.Sequential(
+            nn.Conv2D(48, 24, 7),
+            nn.BatchNorm2D(24),
+            nn.ReLU(), nn.Conv2D(24, 24, 3), nn.BatchNorm2D(24), nn.ReLU())
+
+    def forward(self, x):
+        x = self.conv1(x)
+
+        b1 = self.block1(x)
+        adapt = nn.UpsamplingBilinear2D(size=[b1.shape[2], b1.shape[2]])
+        b2 = self.block2(b1)
+        up = adapt(b2)
+        y1 = self.out1(b1)
+        y2 = paddle.concat([b1, up], axis=1)
+        y2 = self.out2(y2)
+        return [y1, y2]
+
 
 class TestOFAV2(unittest.TestCase):
     def setUp(self):
@@ -135,6 +181,7 @@ class TestOFAV2Export(unittest.TestCase):
             input_dtypes=['float32'],
             origin_model=origin_model)
 
+
 class Testelementwise(unittest.TestCase):
     def setUp(self):
         model = ModelElementwise()
@@ -142,13 +189,29 @@ class Testelementwise(unittest.TestCase):
         self.model = Convert(sp_net_config).convert(model)
         self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
 
-    def test_ofa(self):
+    def test_elementwise(self):
+        self.ofa_model = OFA(self.model)
+        self.ofa_model.set_epoch(0)
+        self.ofa_model.set_task('expand_ratio')
+        out, _ = self.ofa_model(self.images)
+        assert list(self.ofa_model._ofa_layers.keys()) == ['conv2.0', 'conv3.0']
+
+
+class TestMultiExit(unittest.TestCase):
+    def setUp(self):
+        self.images = paddle.randn(shape=[1, 3, 224, 224], dtype='float32')
+        model = ModelMultiExit()
+        sp_net_config = supernet(expand_ratio=[0.25, 0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+
+    def test_multiexit(self):
         self.ofa_model = OFA(self.model)
         self.ofa_model.set_epoch(0)
         self.ofa_model.set_task('expand_ratio')
         out, _ = self.ofa_model(self.images)
         assert list(self.ofa_model._ofa_layers.keys(
-        )) == ['conv2.0', 'conv3.0', 'out.0']
+        )) == ['conv1.0', 'block1.0', 'block1.4', 'block2.0', 'out2.0']
+
 
 class TestShortcutSkiplayers(unittest.TestCase):
     def setUp(self):
@@ -169,7 +232,7 @@ class TestShortcutSkiplayers(unittest.TestCase):
         self.ofa_model.set_task('expand_ratio')
         for i in range(5):
             self.ofa_model(self.images)
-        assert list(self.ofa_model._ofa_layers.keys()) == ['branch2.0', 'out.0']
+        assert list(self.ofa_model._ofa_layers.keys()) == ['branch2.0']
 
 
 class TestShortcutSkiplayersCase1(TestShortcutSkiplayers):
@@ -184,7 +247,7 @@ class TestShortcutSkiplayersCase2(TestShortcutSkiplayers):
         self.run_config = RunConfig(**default_run_config)
 
     def test_shortcut(self):
-        assert list(self.ofa_model._ofa_layers.keys()) == ['conv1.0', 'out.0']
+        assert list(self.ofa_model._ofa_layers.keys()) == ['conv1.0']
 
 
 if __name__ == '__main__':

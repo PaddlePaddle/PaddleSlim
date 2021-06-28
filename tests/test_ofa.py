@@ -446,7 +446,7 @@ class TestShortCut(unittest.TestCase):
             self.config,
             input_shapes=[[2, 3, 224, 224]],
             input_dtypes=['float32'])
-        assert len(self.ofa_model.ofa_layers) == 38
+        assert len(self.ofa_model.ofa_layers) == 37
 
 
 class TestExportCase1(unittest.TestCase):
@@ -462,7 +462,7 @@ class TestExportCase1(unittest.TestCase):
     def test_export_model(self):
         self.ofa_model.export(
             self.config, input_shapes=[[3, 64]], input_dtypes=['int64'])
-        assert len(self.ofa_model.ofa_layers) == 4
+        assert len(self.ofa_model.ofa_layers) == 3
 
 
 if __name__ == '__main__':

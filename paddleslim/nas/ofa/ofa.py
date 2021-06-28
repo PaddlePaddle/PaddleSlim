@@ -343,6 +343,7 @@ class OFA(OFABase):
     def _sample_from_nestdict(self, cands, sample_type, task, phase):
         sample_cands = dict()
         for k, v in cands.items():
+
             if isinstance(v, dict):
                 sample_cands[k] = self._sample_from_nestdict(
                     v, sample_type=sample_type, task=task, phase=phase)
@@ -474,7 +475,7 @@ class OFA(OFABase):
             origin_model, inputs=input_shapes, dtypes=input_dtypes)
         graph = GraphWrapper(program)
 
-        same_config, _, _ = check_search_space(graph)
+        same_config, _, _, _ = check_search_space(graph)
         if same_config != None:
             broadcast_search_space(same_config, param2name, config)
 
@@ -577,8 +578,9 @@ class OFA(OFABase):
             self.model, DataParallel) else self.model
         _st_prog = dygraph2program(
             model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss, depthwise_conv, fixed_by_input = check_search_space(
+        self._same_ss, depthwise_conv, fixed_by_input, output_conv = check_search_space(
             GraphWrapper(_st_prog))
+        self._cannot_changed_layer = output_conv
 
         if self._same_ss != None:
             self._param2key = {}
@@ -619,12 +621,21 @@ class OFA(OFABase):
 
             self._same_ss = tmp_same_ss
 
+            ### if fixed_by_input layer in a same ss, 
+            ### layers in this same ss should all be fixed 
             tmp_fixed_by_input = []
             for ss in self._same_ss:
                 for key in fixed_by_input:
                     if key in ss:
                         tmp_fixed_by_input += ss
             fixed_by_input += tmp_fixed_by_input
+
+            # tmp_output_conv = []
+            # for ss in self._same_ss:
+            #     for key in output_conv:
+            #         if key in ss:
+            #             tmp_output_conv += ss
+            # output_conv += tmp_output_conv
 
             ### clear layer in ofa_layers set by skip layers
             if self._skip_layers != None:
@@ -637,14 +648,16 @@ class OFA(OFABase):
                     self._clear_width(self._param2key[ss])
 
             self._cannot_changed_layer = sorted(
-                set(fixed_by_input + depthwise_conv))
-            ### clear depthwise conv from search space because of its output channel cannot change
-            for name, sublayer in model_to_traverse.named_sublayers():
-                if isinstance(sublayer, BaseBlock):
-                    for param in sublayer.parameters():
-                        if param.name in self._cannot_changed_layer and name in self._ofa_layers.keys(
-                        ):
-                            self._clear_width(name)
+                set(output_conv + fixed_by_input + depthwise_conv))
+        ### clear depthwise convs from search space because of its output channel cannot change
+        ### clear output convs from search space because of model output shape cannot change
+        ### clear convs that operate with fixed input 
+        for name, sublayer in model_to_traverse.named_sublayers():
+            if isinstance(sublayer, BaseBlock):
+                for param in sublayer.parameters():
+                    if param.name in self._cannot_changed_layer and name in self._ofa_layers.keys(
+                    ):
+                        self._clear_width(name)
 
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
@@ -681,13 +694,13 @@ class OFA(OFABase):
             self.current_config = self.net_config
 
         _logger.debug("Current config is {}".format(self.current_config))
+
         if 'depth' in self.current_config:
             kwargs['depth'] = self.current_config['depth']
 
         if self._broadcast:
             broadcast_search_space(self._same_ss, self._param2key,
                                    self.current_config)
-
         student_output = self.model.forward(*inputs, **kwargs)
 
         if self._add_teacher:
