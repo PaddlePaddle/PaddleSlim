@@ -741,11 +741,9 @@ class OFA(OFABase):
         _logger.debug("Current config is {}".format(self.current_config))
         if 'depth' in self.current_config:
             kwargs['depth'] = self.current_config['depth']
-
         if self._broadcast:
             broadcast_search_space(self._same_ss, self._param2key,
                                    self.current_config)
-
         student_output = self.model.forward(*inputs, **kwargs)
 
         if self._add_teacher:

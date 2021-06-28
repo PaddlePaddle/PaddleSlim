@@ -39,7 +39,6 @@ def get_actual_shape(transform, channel):
     return channel
 
 
-
 def _is_depthwise(op):
     """Check if this op is depthwise conv. Only Cin == Cout == groups be consider as depthwise conv.
        The shape of input and the shape of output in depthwise conv must be same in superlayer,
