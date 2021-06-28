@@ -460,7 +460,7 @@ class OFA(OFABase):
     ### TODO: complete it
     def search(self, eval_func, condition):
         pass
-    
+
     def _get_model_pruned_weight(self):
 
         pruned_param = {}
@@ -471,30 +471,35 @@ class OFA(OFABase):
             if isinstance(sublayer, Block):
                 sublayer = sublayer.fn
 
-            assert 'prune_dim' in sublayer.cur_config, 'The layer {} do not have prune_dim in cur_config.'.format(l_name)
+            assert 'prune_dim' in sublayer.cur_config, 'The layer {} do not have prune_dim in cur_config.'.format(
+                l_name)
             prune_shape = sublayer.cur_config['prune_dim']
 
-            for p_name, param in sublayer.named_parameters(include_sublayers=False):
+            for p_name, param in sublayer.named_parameters(
+                    include_sublayers=False):
                 origin_param = param.value().get_tensor()
                 param = np.array(origin_param).astype("float32")
 
                 name = l_name + '.' + p_name
                 if isinstance(prune_shape, list):
 
-                    if len(param.shape)==4:
-                        pruned_param[name] = param[:prune_shape[0], :prune_shape[1], :prune_shape[2], :prune_shape[3]]
-                    elif len(param.shape)==2:
-                        pruned_param[name] = param[:prune_shape[0], :prune_shape[1]]
+                    if len(param.shape) == 4:
+                        pruned_param[name] = param[:prune_shape[
+                            0], :prune_shape[1], :prune_shape[2], :prune_shape[
+                                3]]
+                    elif len(param.shape) == 2:
+                        pruned_param[name] = param[:prune_shape[0], :
+                                                   prune_shape[1]]
                     else:
                         if isinstance(sublayer, SuperLinear):
-                            pruned_param[name] = param[:prune_shape[1]] 
+                            pruned_param[name] = param[:prune_shape[1]]
                         else:
-                            pruned_param[name] = param[:prune_shape[0]] 
+                            pruned_param[name] = param[:prune_shape[0]]
                 else:
                     pruned_param[name] = param[:prune_shape]
 
             return pruned_param
-    
+
     def export(self,
                config,
                input_shapes,
@@ -518,8 +523,10 @@ class OFA(OFABase):
         """
         self.set_net_config(config)
         self.model.eval()
+
         def build_input(input_size, dtypes):
-            if isinstance(input_size, list) and all(isinstance(i, numbers.Number) for i in input_size):
+            if isinstance(input_size, list) and all(
+                    isinstance(i, numbers.Number) for i in input_size):
                 if isinstance(dtypes, list):
                     dtype = dtypes[0]
                 else:
@@ -535,8 +542,10 @@ class OFA(OFABase):
                     inputs[key] = paddle.cast(paddle.rand(list(value)), dtype)
                 return inputs
             if isinstance(input_size, list):
-                return [build_input(i, dtype) for i, dtype in zip(input_size, dtypes)]
-
+                return [
+                    build_input(i, dtype)
+                    for i, dtype in zip(input_size, dtypes)
+                ]
 
         data = build_input(input_shapes, input_dtypes)
 
@@ -547,8 +556,9 @@ class OFA(OFABase):
 
         super_model_state_dict = None
         if load_weights_from_supernet and origin_model != None:
-            super_model_state_dict = remove_model_fn(origin_model, self.model.state_dict())
-        
+            super_model_state_dict = remove_model_fn(origin_model,
+                                                     self.model.state_dict())
+
         if origin_model == None:
             origin_model = self.model
 
@@ -560,7 +570,8 @@ class OFA(OFABase):
         pruned_state_dict = remove_model_fn(origin_model, pruned_param)
         _logger.info("Start to get pruned model, please wait...")
         for l_name, sublayer in origin_model.named_sublayers():
-            for p_name, param in sublayer.named_parameters(include_sublayers=False):
+            for p_name, param in sublayer.named_parameters(
+                    include_sublayers=False):
                 name = l_name + '.' + p_name
                 t_value = param.value().get_tensor()
                 if name in pruned_state_dict:
@@ -574,13 +585,10 @@ class OFA(OFABase):
                     t_value.set(pruned_state_dict[name], place)
 
         if super_model_state_dict != None and len(super_model_state_dict) != 0:
-             for k, v in super_model_state_dict.items():
-                 setattr(origin_model, k, v)
-
+            for k, v in super_model_state_dict.items():
+                setattr(origin_model, k, v)
 
         return origin_model
-
-
 
     @property
     def get_current_config(self):
