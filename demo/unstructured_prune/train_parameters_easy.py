@@ -225,7 +225,7 @@ def compress(args):
         train_run_cost = 0.0
         total_samples = 0
         reader_start = time.time()
-        global_batch_id = 0
+        global_batch_id = epoch * step_per_epoch
         for batch_id, data in enumerate(train_loader):
             train_reader_cost += time.time() - reader_start
             train_start = time.time()
