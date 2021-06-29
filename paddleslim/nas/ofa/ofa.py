@@ -483,18 +483,15 @@ class OFA(OFABase):
                 if isinstance(prune_shape, list):
 
                     if len(param.shape) == 4:
-                        pruned_param[name] = param[:prune_shape[
-                            0], :prune_shape[1], :prune_shape[2], :prune_shape[
-                                3]]
+                        pruned_param[name] = param[:prune_shape[0], :
+                                                   prune_shape[1], :, :]
                     elif len(param.shape) == 2:
                         pruned_param[name] = param[:prune_shape[0], :
                                                    prune_shape[1]]
                     else:
                         if isinstance(sublayer, SuperLinear):
-                            print('SuperLinear')
                             pruned_param[name] = param[:prune_shape[1]]
                         else:
-                            print('NOt SuperLinear')
                             pruned_param[name] = param[:prune_shape[0]]
                 else:
                     pruned_param[name] = param[:prune_shape]
