@@ -329,6 +329,8 @@ def broadcast_search_space(same_search_space, param2key, origin_config):
                         'channel': origin_config[pre_key]['channel']
                     })
             else:
+                # if the pre_key is removed from config for some reasons 
+                # such as it is fixed by hand or by elementwise op
                 if pre_key in origin_config:
                     if 'expand_ratio' in origin_config[pre_key]:
                         origin_config[key] = {

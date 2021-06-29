@@ -630,13 +630,6 @@ class OFA(OFABase):
                         tmp_fixed_by_input += ss
             fixed_by_input += tmp_fixed_by_input
 
-            # tmp_output_conv = []
-            # for ss in self._same_ss:
-            #     for key in output_conv:
-            #         if key in ss:
-            #             tmp_output_conv += ss
-            # output_conv += tmp_output_conv
-
             ### clear layer in ofa_layers set by skip layers
             if self._skip_layers != None:
                 for skip_layer in self._skip_layers:
