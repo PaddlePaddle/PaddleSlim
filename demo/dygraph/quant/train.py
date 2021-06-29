@@ -44,7 +44,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',               int,    256,                                         "Single Card Minibatch size.")
+add_arg('batch_size',               int,    64,                                         "Single Card Minibatch size.")
 add_arg('use_gpu',                  bool,   True,                                        "Whether to use GPU or not.")
 add_arg('model',                    str,    "mobilenet_v3",                              "The target model.")
 add_arg('pretrained_model',         str,    "MobileNetV3_large_x1_0_ssld_pretrained",    "Whether to use pretrained model.")
