@@ -698,13 +698,13 @@ class matmul(PruneWorker):
             mappings = [(0, 0, 0)]
         elif x_shape_len == 1 and y_shape_len == 2:
             mappings = [(0, 0, -1), (-1, 1, 0)]
+        elif x_shape_len == 2 and y_shape_len == 2:
+            mappings = [(0, -1, 0), (1, 0, -1), (-1, 1, 1)]
         elif x_shape_len == 3 and y_shape_len == 1:
             mappings = [(1, -1, 1), (2, 0, -1)]
         elif x_shape_len == 2 and y_shape_len == 3:
             mappings = [(0, -1, 1), (1, 1, -1), (-1, 2, 2)]
-        elif x_shape_len == 3 and y_shape_len == 3:
-            mappings = [(1, -1, 1), (2, 1, -1), (-1, 2, 2)]
-        elif x_shape_len > 3 and y_shape_len > 3:
+        elif x_shape_len >= 3 and y_shape_len >= 3:
             mappings = [(x_shape_len - 2, -1, x_shape_len - 2),
                         (x_shape_len - 1, x_shape_len - 2, -1),
                         (-1, x_shape_len - 1, x_shape_len - 1)]
@@ -716,7 +716,7 @@ class matmul(PruneWorker):
                         self.append_pruned_vars(y, y_i, pruned_idx)
                         self._visit_and_search(y, y_i, pruned_idx)
                     if out_i != -1:
-                        self.append_pruned_vars(out, out_i, pruned_idx)
+                        #self.append_pruned_vars(out, out_i, pruned_idx)
                         self._visit_and_search(out, out_i, pruned_idx)
                     break
         if var == y:
@@ -726,7 +726,7 @@ class matmul(PruneWorker):
                         self.append_pruned_vars(x, x_i, pruned_idx)
                         self._visit_and_search(x, x_i, pruned_idx)
                     if out_i != -1:
-                        self.append_pruned_vars(out, out_i, pruned_idx)
+                        #self.append_pruned_vars(out, out_i, pruned_idx)
                         self._visit_and_search(out, out_i, pruned_idx)
                     break
         if var == out:

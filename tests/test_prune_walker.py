@@ -512,10 +512,12 @@ mul_suite.addTest(TestMul(x_num_col_dims=3, y_num_col_dims=3, ret=ret))
 class TestMatmul(TestPruneWorker):
     def __init__(self, methodName="test_prune"):
         super(TestMatmul, self).__init__(methodName)
+        self.x_shape = [6, 8]
+        self.y_shape = [8, 7]
 
     def define_layer(self, input):
-        x = fluid.data(name="x", shape=[6, 8])
-        y = fluid.data(name="y", shape=[8, 7])
+        x = fluid.data(name="x", shape=self.x_shape)
+        y = fluid.data(name="y", shape=self.y_shape)
         self.input = x
         out = paddle.matmul(x, y)
         self.output = out
@@ -527,6 +529,66 @@ class TestMatmul(TestPruneWorker):
 
     def test_prune(self):
         self.check_in_out()
+
+
+class TestMatmulCase2(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase2, self).__init__(methodName)
+        self.x_shape = [8]
+        self.y_shape = [7]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 0, {'y': [0]}))
+        self.cases.append((self.out_var, 0, {'x': [0], 'y': [0]}))
+
+
+class TestMatmulCase3(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase3, self).__init__(methodName)
+        self.x_shape = [7]
+        self.y_shape = [7, 8]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 0, {'y': [0]}))
+        self.cases.append((self.out_var, 0, {'y': [1]}))
+
+
+class TestMatmulCase4(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase4, self).__init__(methodName)
+        self.x_shape = [8, 7, 7]
+        self.y_shape = [7]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 1, {}))
+        self.cases.append((self.in_var, 2, {'y': [0]}))
+        self.cases.append((self.out_var, 1, {'x': [1]}))
+
+
+class TestMatmulCase5(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase5, self).__init__(methodName)
+        self.x_shape = [7, 7]
+        self.y_shape = [7, 8, 9]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 0, {}))
+        self.cases.append((self.in_var, 1, {'y': [1]}))
+        self.cases.append((self.out_var, 1, {'x': [0]}))
+        self.cases.append((self.out_var, 2, {'y': [2]}))
+
+
+class TestMatmulCase6(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase6, self).__init__(methodName)
+        self.x_shape = [7, 7, 7]
+        self.y_shape = [7, 7, 9]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 1, {}))
+        self.cases.append((self.in_var, 2, {'y': [1]}))
+        self.cases.append((self.out_var, 1, {'x': [1]}))
+        self.cases.append((self.out_var, 2, {'y': [2]}))
 
 
 class TestSplit(TestPruneWorker):
