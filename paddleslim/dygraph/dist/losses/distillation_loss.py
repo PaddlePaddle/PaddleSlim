@@ -60,7 +60,7 @@ class DistillationDistanceLoss(DistanceLoss):
         assert isinstance(model_name_pairs, list)
         self.key = key
         self.model_name_pairs = model_name_pairs
-        self.name = name + "_l2"
+        self.name = name + "_" + mode
 
     def forward(self, predicts, batch):
         loss_dict = dict()
