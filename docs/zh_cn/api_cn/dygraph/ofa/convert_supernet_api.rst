@@ -85,8 +85,8 @@ PaddleSlim提供了三种方式构造超网络，下面分别介绍这三种方�
       models += [nn.Conv2D(4, 4, 3, groups=4)]
       self.models = paddle.nn.Sequential(*models)
 
-     def forward(self, inputs):
-       return self.models(inputs)
+    def forward(self, inputs):
+        return self.models(inputs)
 
 方式三
 ------------------
