@@ -89,8 +89,10 @@ python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshol
 
 ## 推理：
 ```bash
-python3.7 evalualte.py --pruned_model models/ --data imagenet
+python3.7 evalualte.py --pruned_model models/model-pruned.pdparams --data imagenet
 ```
+
+**注意：上述`pruned_model` 参数应该指向存储的*.pdparams文件。**
 
 剪裁训练代码示例：
 ```python
