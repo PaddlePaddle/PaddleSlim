@@ -18,15 +18,7 @@ from collections import namedtuple
 import paddle.nn as nn
 from .losses import *
 
-__all__ = ['DistillConfig', 'Distill', 'AdaptorBase']
-
-DistillConfig = namedtuple(
-    'DistillConfig',
-    [
-        ### list(dict): config of each mapping layers.
-        'layers_config',
-    ])
-DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
+__all__ = ['Distill', 'AdaptorBase']
 
 
 class LayerConfig:
@@ -57,6 +49,7 @@ class LayerConfig:
 class AdaptorBase:
     def __init__(self, model):
         self.model = model
+        self.add_tensor = False
 
     def _get_activation(self, outs, name):
         def get_output_hook(layer, input, output):
@@ -64,7 +57,7 @@ class AdaptorBase:
 
         return get_output_hook
 
-    def add_distill_hook(self, outs, mapping_layers_name, layers_type):
+    def _add_distill_hook(self, outs, mapping_layers_name, layers_type):
         """
             Get output by name.
             outs(dict): save the middle outputs of model according to the name.
@@ -118,7 +111,15 @@ class Distill(nn.Layer):
         mapping_layers = adaptors.mapping_layers()
         for layer_type, layer in mapping_layers.items():
             if isinstance(layer, str):
-                adaptors.add_distill_hook(outs_dict, [layer], [layer_type])
+                adaptors._add_distill_hook(outs_dict, [layer], [layer_type])
+        return outs_dict
+
+    def _get_model_intermediate_output(self, adaptors, outs_dict):
+        mapping_layers = adaptors.mapping_layers()
+        for layer_type, layer in mapping_layers.items():
+            if isinstance(layer, str):
+                continue
+            outs_dict[layer_type] = layer
         return outs_dict
 
     def get_distill_idx(self):
@@ -170,6 +171,14 @@ class Distill(nn.Layer):
     def forward(self, *inputs, **kwargs):
         stu_batch_outs = self._student_models.forward(*inputs, **kwargs)
         tea_batch_outs = self._teacher_models.forward(*inputs, **kwargs)
+        if self._adaptors_S.add_tensor == False:
+            self._adaptors_S.add_tensor = True
+        if self._adaptors_T.add_tensor == False:
+            self._adaptors_T.add_tensor = True
+        self.stu_outs_dict = self._get_model_intermediate_output(
+            self._adaptors_S, self.stu_outs_dict)
+        self.tea_outs_dict = self._get_model_intermediate_output(
+            self._adaptors_T, self.tea_outs_dict)
         distill_inputs = self._post_outputs()
         ### batch is None just for now
         distill_outputs = self.distill_loss(distill_inputs, None)

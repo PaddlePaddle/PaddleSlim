@@ -4,10 +4,11 @@ import logging
 import numpy as np
 import unittest
 import paddle
-from paddle.fluid.log_helper import get_logger
+import paddle.nn as nn
 from paddle.vision.models import MobileNetV1
 import paddle.vision.transforms as T
-from paddleslim.dygraph.dist import Distill, DistillConfig, AdaptorBase
+from paddleslim.dygraph.dist import Distill, AdaptorBase
+from paddleslim.common.log_helper import get_logger
 
 _logger = get_logger(
     __name__, logging.INFO, fmt='%(asctime)s-%(levelname)s: %(message)s')
@@ -15,9 +16,44 @@ _logger = get_logger(
 
 class TestImperativeDistill(unittest.TestCase):
     def setUp(self):
-        self.s_model = MobileNetV1()
-        self.t_model = MobileNetV1()
+        self.s_model, self.t_model = self.prepare_model()
         self.t_model.eval()
+        self.distill_configs = self.prepare_config()
+        self.adaptor = self.prepare_adaptor()
+
+    def prepare_model(self):
+        return MobileNetV1(), MobileNetV1()
+
+    def prepare_config(self):
+        distill_configs = [{
+            's_feature_idx': 0,
+            't_feature_idx': 0,
+            'feature_type': 'hidden',
+            'loss_function': 'l2'
+        }, {
+            's_feature_idx': 1,
+            't_feature_idx': 1,
+            'feature_type': 'hidden',
+            'loss_function': 'l2'
+        }, {
+            's_feature_idx': 0,
+            't_feature_idx': 0,
+            'feature_type': 'logits',
+            'loss_function': 'l2'
+        }]
+        return distill_configs
+
+    def prepare_adaptor(self):
+        class Adaptor(AdaptorBase):
+            def mapping_layers(self):
+                mapping_layers = {}
+                mapping_layers['hidden_0'] = 'conv1'
+                mapping_layers['hidden_1'] = 'conv2_2'
+                mapping_layers['hidden_2'] = 'conv3_2'
+                mapping_layers['logits_0'] = 'fc'
+                return mapping_layers
+
+        return Adaptor
 
     def test_distill(self):
         transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
@@ -33,15 +69,6 @@ class TestImperativeDistill(unittest.TestCase):
             train_dataset, drop_last=True, places=place, batch_size=64)
         test_reader = paddle.io.DataLoader(
             val_dataset, places=place, batch_size=64)
-
-        class Adaptor(AdaptorBase):
-            def mapping_layers(self):
-                mapping_layers = {}
-                mapping_layers['hidden_0'] = 'conv1'
-                mapping_layers['hidden_1'] = 'conv2_2'
-                mapping_layers['hidden_2'] = 'conv3_2'
-                mapping_layers['logits_0'] = 'fc'
-                return mapping_layers
 
         def test(model):
             model.eval()
@@ -84,6 +111,44 @@ class TestImperativeDistill(unittest.TestCase):
             test(self.s_model)
             self.s_model.train()
 
+        distill_model = Distill(self.distill_configs, self.s_model,
+                                self.t_model, self.adaptor, self.adaptor)
+        train(distill_model)
+
+
+class TestImperativeDistillCase1(TestImperativeDistill):
+    def prepare_model(self):
+        class Model(nn.Layer):
+            def __init__(self):
+                super(Model, self).__init__()
+                self.conv1 = nn.Conv2D(3, 3, 3, padding=1)
+                self.conv2 = nn.Conv2D(3, 3, 3, padding=1)
+                self.conv3 = nn.Conv2D(3, 3, 3, padding=1)
+                self.fc = nn.Linear(3072, 10)
+
+            def forward(self, x):
+                self.conv1_out = self.conv1(x)
+                conv2_out = self.conv2(self.conv1_out)
+                self.conv3_out = self.conv3(conv2_out)
+                out = paddle.reshape(self.conv3_out, shape=[x.shape[0], -1])
+                out = self.fc(out)
+                return out
+
+        return Model(), Model()
+
+    def prepare_adaptor(self):
+        class Adaptor(AdaptorBase):
+            def mapping_layers(self):
+                mapping_layers = {}
+                mapping_layers['hidden_1'] = 'conv2'
+                if self.add_tensor:
+                    mapping_layers['hidden_0'] = self.model.conv1_out
+                    mapping_layers['hidden_2'] = self.model.conv3_out
+                return mapping_layers
+
+        return Adaptor
+
+    def prepare_config(self):
         distill_configs = [{
             's_feature_idx': 0,
             't_feature_idx': 0,
@@ -91,19 +156,11 @@ class TestImperativeDistill(unittest.TestCase):
             'loss_function': 'l2'
         }, {
             's_feature_idx': 1,
-            't_feature_idx': 1,
+            't_feature_idx': 2,
             'feature_type': 'hidden',
             'loss_function': 'l2'
-        }, {
-            's_feature_idx': 0,
-            't_feature_idx': 0,
-            'feature_type': 'logits',
-            'loss_function': 'l2'
         }]
-
-        distill_model = Distill(distill_configs, self.s_model, self.t_model,
-                                Adaptor, Adaptor)
-        train(distill_model)
+        return distill_configs
 
 
 if __name__ == '__main__':
