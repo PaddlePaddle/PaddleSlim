@@ -479,7 +479,6 @@ class TestExportCase2(unittest.TestCase):
     def test_export_model_linear2(self):
         config = self.ofa_model._sample_config(
             task='expand_ratio', phase=None, sample_type='smallest')
-        print(config)
         ex_model = self.ofa_model.export(
             config, input_shapes=[[3, 64]], input_dtypes=['int64'])
         ex_model(self.data)

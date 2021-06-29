@@ -33,6 +33,7 @@ from ...common import get_logger
 from ...core import GraphWrapper, dygraph2program
 from .get_sub_model import check_search_space, broadcast_search_space
 from paddle.fluid import core
+from paddle.fluid.framework import Variable
 import numbers
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -465,12 +466,11 @@ class OFA(OFABase):
 
         pruned_param = {}
         for l_name, sublayer in self.model.named_sublayers():
+
             if getattr(sublayer, 'cur_config', None) == None:
                 continue
-            if isinstance(sublayer, Block):
-                sublayer = sublayer.fn
 
-            assert 'prune_dim' in sublayer.cur_config, 'The layer {} do not have prune_dim in cur_config.'.format(
+            assert 'prune_dim' in sublayer.cur_config, 'The laycer {} do not have prune_dim in cur_config.'.format(
                 l_name)
             prune_shape = sublayer.cur_config['prune_dim']
 
@@ -551,7 +551,6 @@ class OFA(OFABase):
             self.forward(*data)
         else:
             self.forward(data)
-
         super_model_state_dict = None
         if load_weights_from_supernet and origin_model != None:
             super_model_state_dict = remove_model_fn(origin_model,
@@ -631,11 +630,26 @@ class OFA(OFABase):
         input_shapes = []
         input_dtypes = []
         for n in inputs:
-            input_shapes.append(n.shape)
-            input_dtypes.append(n.numpy().dtype)
-        for n, v in kwargs.items():
-            input_shapes.append(v.shape)
-            input_dtypes.append(v.numpy().dtype)
+            if isinstance(n, Variable):
+                input_shapes.append(n)
+                input_dtypes.append(n.numpy().dtype)
+
+        for key, val in kwargs.items():
+            if isinstance(val, Variable):
+                input_shapes.append(val)
+                input_dtypes.append(val.numpy().dtype)
+            elif isinstance(val, dict):
+                input_shape = {}
+                input_dtype = {}
+                for k, v in val.items():
+                    input_shape[k] = v
+                    input_dtype[k] = v.numpy().dtype
+                input_shapes.append(input_shape)
+                input_dtypes.append(input_dtype)
+            else:
+                _logger.error(
+                    "Cannot figure out the type of inputs! Right now, the type of inputs can be only Variable or dict."
+                )
 
         ### find shortcut block using static model
         model_to_traverse = self.model._layers if isinstance(
