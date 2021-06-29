@@ -11,6 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import paddle
+import paddle.nn as nn
+
+from .basic_loss import L1Loss
+from .basic_loss import L2Loss
+from .basic_loss import SmoothL1Loss
+from .basic_loss import CELoss
+from .basic_loss import DMLLoss
+from .basic_loss import DistanceLoss
+from .basic_loss import RKdAngle, RkdDistance
+
+from .distillation_loss import DistillationDistanceLoss
+from .distillation_loss import DistillationDMLLoss
+from .distillation_loss import DistillationRKDLoss
 
 
 class CombinedLoss(nn.Layer):
