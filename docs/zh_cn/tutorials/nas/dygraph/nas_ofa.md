@@ -16,13 +16,13 @@ OFA的基本流程分为以下步骤：
    PaddleSlim提供了三种获得超网络的方式，具体可以参考[超网络转换](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/dygraph/ofa/convert_supernet_api.html)。
 
 ```python
-  import paddle
-  from paddle.vision.models import mobilenet_v1
-  from paddleslim.nas.ofa.convert_super import Convert, supernet
+import paddle
+from paddle.vision.models import mobilenet_v1
+from paddleslim.nas.ofa.convert_super import Convert, supernet
 
-  model = mobilenet_v1()
-  sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
-  sp_model = Convert(sp_net_config).convert(model)
+model = mobilenet_v1()
+sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+sp_model = Convert(sp_net_config).convert(model)
 ```
 
 ### 2. 训练配置
