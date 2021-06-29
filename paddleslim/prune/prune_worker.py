@@ -621,7 +621,6 @@ class mul(PruneWorker):
                     tile *= x_shape[i]
                 for i in range(pruned_axis + 1, len(x_shape)):
                     repeat *= x_shape[i]
-
                 self.append_pruned_vars(y, 0, trans + [{
                     "tile": tile,
                     "repeat": repeat
