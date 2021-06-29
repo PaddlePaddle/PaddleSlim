@@ -19,7 +19,10 @@ import paddle
 
 # basic loss
 from paddleslim.dygraph.dist.losses import CombinedLoss
+
+# basic loss
 from paddleslim.dygraph.dist.losses import DistanceLoss
+from paddleslim.dygraph.dist.losses import CELoss
 
 # distillation loss
 from paddleslim.dygraph.dist.losses import DistillationDistanceLoss
@@ -30,8 +33,8 @@ import numpy as np
 
 
 class TestDistanceLoss(unittest.TestCase):
-    """
-    loss test should contains:
+    """TestDistanceLoss
+    TestDistanceLoss contains:
         1. unittest of basic loss
         2. unittest of distillation loss
     """
@@ -109,7 +112,7 @@ class TestDistanceLoss(unittest.TestCase):
             "feat_x": paddle.rand(shape),
             "feat_y": paddle.rand(shape),
         }
-        self.calc_dist_distance_loss(predicts, pairs, key=None)
+        self.calc_distillation_distance_loss(predicts, pairs, key=None)
 
         predicts = {
             "feat_x": {
@@ -119,9 +122,9 @@ class TestDistanceLoss(unittest.TestCase):
                 "feat_loss": paddle.rand(shape),
             },
         }
-        self.calc_dist_distance_loss(predicts, pairs, key="feat_loss")
+        self.calc_distillation_distance_loss(predicts, pairs, key="feat_loss")
 
-    def calc_dist_distance_loss(self, predicts, pairs, key=None):
+    def calc_distillation_distance_loss(self, predicts, pairs, key=None):
         modes = ["l1", "l2", "smooth_l1"]
         reductions = ["none", "mean", "sum"]
         devices = ["cpu"]
@@ -148,6 +151,59 @@ class TestDistanceLoss(unittest.TestCase):
                         pd_result = pd_result_dict[k].numpy()
                         np_result = np_result_dict[k]
                         self.assertTrue(np.allclose(np_result, pd_result))
+
+
+class TestCELoss(unittest.TestCase):
+    def stable_softmax(self, x):
+        shiftx = (x - np.max(x)).clip(-64.)
+        exps = np.exp(shiftx)
+        return exps / np.sum(exps)
+
+    def ref_log_softmax(self, x):
+        shiftx = (x - np.max(x))
+        out = shiftx - np.log(np.exp(shiftx).sum())
+        return out
+
+    def log_softmax(self, x, axis=-1):
+        softmax_out = np.apply_along_axis(self.stable_softmax, axis, x)
+        a = np.apply_along_axis(self.stable_softmax, axis, x)
+        return np.log(softmax_out)
+
+    def gen_onehot(self, class_num, label):
+        return np.eye(class_num)[label]
+
+    def calc_ce_loss(self, x, label, batch_size, class_num):
+        if isinstance(x, paddle.Tensor):
+            x = x.numpy().astype("float64")
+        if isinstance(label, paddle.Tensor):
+            label = label.numpy()
+        label = self.gen_onehot(class_num, batch_size)
+        x = self.log_softmax(x, axis=-1)
+
+        loss = -np.sum(x * label, axis=-1)
+        loss = np.mean(loss)
+        return loss
+
+    def test_ce_loss_hard_label(self, ):
+        batch_size = 2
+        class_num = 3
+
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+        for device in devices:
+            paddle.set_device(device)
+            x = paddle.rand([batch_size, class_num])
+            pd_x = paddle.nn.functional.softmax(x, axis=-1)
+            print("pd_x: ", pd_x)
+            label = paddle.randint(0, class_num, shape=[batch_size, ])
+
+            loss_func = CELoss()
+            pd_loss = loss_func(x, label).numpy()
+            np_loss = self.calc_ce_loss(x, label, batch_size, class_num)
+            print(pd_loss)
+            print(np_loss)
+            self.assertTrue(np.allclose(np_loss, pd_loss))
 
 
 if __name__ == '__main__':
