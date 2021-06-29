@@ -165,7 +165,7 @@ class PruningCollections(object):
            params(list): A list of convolution layer's parameter names. It will collect all the groups that contains anyone of these parameters.
            graph(paddle.static.Program | GraphWrapper): The graph used to search the groups.
            skip_stranger(bool): Whether to skip current tensor when visit unregistered operators that not in OPS_UNCHANGE_SHAPE. False means visit all unregistered operators by default worker. Default: True.
-           skip_vars(list<str>): Names of variables that will be skipped. None means skipping all leaves in given graph. `None` means skipping nothing. Default: None.
+           skip_vars(list<str>): Names of variables that will be skipped. Default: None.
            skip_leaves(bool): Whether to skip the last convolution layers.
     
         Returns:
