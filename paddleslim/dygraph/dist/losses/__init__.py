@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import copy
 import paddle
 import paddle.nn as nn
 
@@ -35,6 +37,7 @@ class CombinedLoss(nn.Layer):
 
     def __init__(self, loss_config_list=None):
         super().__init__()
+        loss_config_list = copy.deepcopy(loss_config_list)
         self.loss_func = []
         self.loss_weight = []
         assert isinstance(loss_config_list, list), (
@@ -53,13 +56,14 @@ class CombinedLoss(nn.Layer):
         loss_dict = {}
         for idx, loss_func in enumerate(self.loss_func):
             loss = loss_func(input, batch, **kargs)
-            if isinstance(loss, paddle.Tensor):
-                loss = {"loss_{}_{}".format(str(loss), idx): loss}
             weight = self.loss_weight[idx]
-            loss = {
-                "{}_{}".format(key, idx): loss[key] * weight
-                for key in loss
-            }
+            if isinstance(loss, paddle.Tensor):
+                loss = {"loss_{}_{}".format(str(loss), idx): loss * weight}
+            else:
+                loss = {
+                    "{}_{}".format(key, idx): loss[key] * weight
+                    for key in loss
+                }
             loss_dict.update(loss)
         loss_dict["loss"] = paddle.add_n(list(loss_dict.values()))
         return loss_dict

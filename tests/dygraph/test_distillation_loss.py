@@ -14,6 +14,8 @@
 import sys
 sys.path.append("../../")
 
+import copy
+
 import unittest
 import paddle
 
@@ -550,7 +552,7 @@ class TestRKDLoss(unittest.TestCase):
                 np_result = np_result_dict[k]
                 self.assertTrue(np.allclose(np_result, pd_result, rtol=1e-5))
 
-    def test_distillation_dml_loss(self, ):
+    def test_distillation_rkd_loss(self, ):
         shape = [32, 16]
         x_feat_name = "student"
         y_feat_name = "teacher"
@@ -571,6 +573,122 @@ class TestRKDLoss(unittest.TestCase):
             },
         }
         self.calc_distillation_rkd_loss(predicts, pairs, key="feat")
+
+
+class TestCombinedLoss(unittest.TestCase):
+    def stable_softmax(self, x):
+        shiftx = (x - np.max(x)).clip(-64.)
+        exps = np.exp(shiftx)
+        return exps / np.sum(exps)
+
+    def ref_softmax(self, x, axis=-1, dtype=None):
+        if isinstance(x, paddle.Tensor):
+            x = x.numpy()
+        x_t = x.copy()
+        if dtype is not None:
+            x_t = x_t.astype(dtype)
+        return np.apply_along_axis(self.stable_softmax, axis, x_t)
+
+    def kldiv_loss(self, x, target, reduction="batchmean"):
+        output = target * (np.log(target) - x)
+        loss = np.where(target >= 0, output, np.zeros_like(x))
+
+        if reduction == "batchmean":
+            if len(x.shape) > 0:
+                return loss.sum() / x.shape[0]
+            else:
+                return loss.sum()
+        if reduction == "mean":
+            return loss.mean()
+        if reduction == "sum":
+            return loss.sum()
+        return loss
+
+    def np_dml_loss(self, x, target, act="softmax"):
+        if isinstance(x, paddle.Tensor):
+            x = x.numpy()
+        if isinstance(target, paddle.Tensor):
+            target = target.numpy()
+        soft_x = self.ref_softmax(x, axis=-1)
+        soft_target = self.ref_softmax(target, axis=-1)
+
+        log_soft_x = np.log(soft_x)
+        log_soft_target = np.log(soft_target)
+        loss = (self.kldiv_loss(log_soft_x, soft_target) + self.kldiv_loss(
+            log_soft_target, soft_x)) / 2.0
+        return loss
+
+    def dist_np_dml_loss(
+            self,
+            predicts,
+            model_name_pairs=(["", ""]),
+            key=None,
+            act="softmax",
+            name="loss_dml", ):
+        loss_dict = dict()
+        for idx, pair in enumerate(model_name_pairs):
+            out1 = predicts[pair[0]]
+            out2 = predicts[pair[1]]
+            if key is not None:
+                out1 = out1[key]
+                out2 = out2[key]
+            loss_dict["{}_{}_{}_{}".format(name, pair[0], pair[1],
+                                           idx)] = self.np_dml_loss(out1, out2)
+        return loss_dict
+
+    def np_combined_loss(self, predicts, loss_cfg_list):
+        # NOTE, dml is set as the list for combined loss
+        loss_dict = dict()
+        for idx, loss_func in enumerate(loss_cfg_list):
+            cfg = copy.deepcopy(loss_func["DistillationDMLLoss"])
+            weight = cfg.pop("weight")
+            loss = self.dist_np_dml_loss(predicts, **cfg)
+
+            if isinstance(loss, np.ndarray):
+                loss = {"loss_{}_{}".format(str(loss), idx): loss}
+            else:
+                loss = {
+                    "{}_{}".format(key, idx): loss[key] * weight
+                    for key in loss
+                }
+            loss_dict.update(loss)
+        loss_dict["loss"] = np.sum(list(loss_dict.values()))
+
+        return loss_dict
+
+    def test_combined_loss(self, ):
+        shape = [32, 16]
+        x_feat_name = "student"
+        y_feat_name = "teacher"
+        pairs = [[x_feat_name, y_feat_name]]
+        paddle.seed(0)
+        predicts = {
+            "student": paddle.rand(shape),
+            "teacher": paddle.rand(shape),
+        }
+
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+
+        loss_cfg_list = [{
+            "DistillationDMLLoss": {
+                "weight": 1.0,
+                "act": "softmax",
+                "model_name_pairs": pairs,
+                "key": None
+            }
+        }, ]
+
+        for device in devices:
+            paddle.set_device(device)
+            loss_func = CombinedLoss(loss_config_list=loss_cfg_list)
+            pd_result_dict = loss_func(predicts, None)
+            np_result_dict = self.np_combined_loss(predicts, loss_cfg_list)
+            for k in pd_result_dict:
+                pd_result = pd_result_dict[k].numpy()
+                np_result = np_result_dict[k]
+                self.assertTrue(np.allclose(np_result, pd_result))
 
 
 if __name__ == '__main__':
