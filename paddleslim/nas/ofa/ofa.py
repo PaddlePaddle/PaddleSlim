@@ -114,7 +114,7 @@ class OFABase(Layer):
             if block.fixed == False and (self._skip_layers == None or
                     (self._skip_layers != None and
                     self._key2name[block.key] not in self._skip_layers)) and  \
-                    (block.fn.weight.name not in self._depthwise_conv):
+                    (block.fn.weight.name not in self._cannot_changed_layer):
                 assert self._key2name[
                     block.
                     key] in self.current_config, 'DONNT have {} layer in config.'.format(
@@ -183,7 +183,7 @@ class OFA(OFABase):
         self._build_ss = False
         self._broadcast = False
         self._skip_layers = None
-        self._depthwise_conv = []
+        self._cannot_changed_layer = []
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
@@ -346,6 +346,7 @@ class OFA(OFABase):
     def _sample_from_nestdict(self, cands, sample_type, task, phase):
         sample_cands = dict()
         for k, v in cands.items():
+
             if isinstance(v, dict):
                 sample_cands[k] = self._sample_from_nestdict(
                     v, sample_type=sample_type, task=task, phase=phase)
@@ -656,8 +657,9 @@ class OFA(OFABase):
             self.model, DataParallel) else self.model
         _st_prog = dygraph2program(
             model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss, self._depthwise_conv = check_search_space(
+        self._same_ss, depthwise_conv, fixed_by_input, output_conv = check_search_space(
             GraphWrapper(_st_prog))
+        self._cannot_changed_layer = output_conv
 
         if self._same_ss != None:
             self._param2key = {}
@@ -698,6 +700,15 @@ class OFA(OFABase):
 
             self._same_ss = tmp_same_ss
 
+            ### if fixed_by_input layer in a same ss, 
+            ### layers in this same ss should all be fixed 
+            tmp_fixed_by_input = []
+            for ss in self._same_ss:
+                for key in fixed_by_input:
+                    if key in ss:
+                        tmp_fixed_by_input += ss
+            fixed_by_input += tmp_fixed_by_input
+
             ### clear layer in ofa_layers set by skip layers
             if self._skip_layers != None:
                 for skip_layer in self._skip_layers:
@@ -708,13 +719,17 @@ class OFA(OFABase):
                 for ss in per_ss[1:]:
                     self._clear_width(self._param2key[ss])
 
-            ### clear depthwise conv from search space because of its output channel cannot change
-            for name, sublayer in model_to_traverse.named_sublayers():
-                if isinstance(sublayer, BaseBlock):
-                    for param in sublayer.parameters():
-                        if param.name in self._depthwise_conv and name in self._ofa_layers.keys(
-                        ):
-                            self._clear_width(name)
+            self._cannot_changed_layer = sorted(
+                set(output_conv + fixed_by_input + depthwise_conv))
+        ### clear depthwise convs from search space because of its output channel cannot change
+        ### clear output convs from search space because of model output shape cannot change
+        ### clear convs that operate with fixed input 
+        for name, sublayer in model_to_traverse.named_sublayers():
+            if isinstance(sublayer, BaseBlock):
+                for param in sublayer.parameters():
+                    if param.name in self._cannot_changed_layer and name in self._ofa_layers.keys(
+                    ):
+                        self._clear_width(name)
 
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
@@ -751,6 +766,7 @@ class OFA(OFABase):
             self.current_config = self.net_config
 
         _logger.debug("Current config is {}".format(self.current_config))
+
         if 'depth' in self.current_config:
             kwargs['depth'] = self.current_config['depth']
         if self._broadcast:

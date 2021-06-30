@@ -81,6 +81,74 @@ class ModelShortcut(nn.Layer):
         return z
 
 
+class ModelElementwise(nn.Layer):
+    def __init__(self):
+        super(ModelElementwise, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2D(3, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.conv2 = nn.Sequential(
+            nn.Conv2D(12, 24, 3), nn.BatchNorm2D(24), nn.ReLU())
+        self.conv3 = nn.Sequential(
+            nn.Conv2D(24, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.out = nn.Sequential(
+            nn.Conv2D(12, 6, 1), nn.BatchNorm2D(6), nn.ReLU())
+
+    def forward(self, x):
+        d = paddle.randn(shape=[2, 12, x.shape[2], x.shape[3]], dtype='float32')
+        d = nn.functional.softmax(d)
+
+        x = self.conv1(x)
+        x = x + d
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.out(x)
+        return x
+
+
+class ModelMultiExit(nn.Layer):
+    def __init__(self):
+        super(ModelMultiExit, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2D(3, 12, 3), nn.BatchNorm2D(12), nn.ReLU())
+        self.block1 = nn.Sequential(
+            nn.Conv2D(12, 24, 7),
+            nn.BatchNorm2D(24),
+            nn.ReLU(),
+            nn.MaxPool2D(
+                kernel_size=3, stride=2, padding=0),
+            nn.Conv2D(24, 24, 7),
+            nn.BatchNorm2D(24),
+            nn.ReLU(),
+            nn.MaxPool2D(
+                kernel_size=3, stride=2, padding=0))
+        self.block2 = nn.Sequential(
+            nn.Conv2D(24, 24, 1),
+            nn.BatchNorm2D(24),
+            nn.ReLU(),
+            nn.MaxPool2D(
+                kernel_size=3, stride=2, padding=1))
+
+        self.out1 = nn.Sequential(
+            nn.Conv2D(24, 24, 1), nn.BatchNorm2D(24), nn.ReLU())
+
+        self.out2 = nn.Sequential(
+            nn.Conv2D(48, 24, 7),
+            nn.BatchNorm2D(24),
+            nn.ReLU(), nn.Conv2D(24, 24, 3), nn.BatchNorm2D(24), nn.ReLU())
+
+    def forward(self, x):
+        x = self.conv1(x)
+
+        b1 = self.block1(x)
+        adapt = nn.UpsamplingBilinear2D(size=[b1.shape[2], b1.shape[2]])
+        b2 = self.block2(b1)
+        up = adapt(b2)
+        y1 = self.out1(b1)
+        y2 = paddle.concat([b1, up], axis=1)
+        y2 = self.out2(y2)
+        return [y1, y2]
+
+
 class ModelInputDict(nn.Layer):
     def __init__(self):
         super(ModelInputDict, self).__init__()
@@ -132,6 +200,37 @@ class TestOFAV2Export(unittest.TestCase):
             origin_model=origin_model)
 
 
+class Testelementwise(unittest.TestCase):
+    def setUp(self):
+        model = ModelElementwise()
+        sp_net_config = supernet(expand_ratio=[0.25, 0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+        self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
+
+    def test_elementwise(self):
+        self.ofa_model = OFA(self.model)
+        self.ofa_model.set_epoch(0)
+        self.ofa_model.set_task('expand_ratio')
+        out, _ = self.ofa_model(self.images)
+        assert list(self.ofa_model._ofa_layers.keys()) == ['conv2.0', 'conv3.0']
+
+
+class TestMultiExit(unittest.TestCase):
+    def setUp(self):
+        self.images = paddle.randn(shape=[1, 3, 224, 224], dtype='float32')
+        model = ModelMultiExit()
+        sp_net_config = supernet(expand_ratio=[0.25, 0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+
+    def test_multiexit(self):
+        self.ofa_model = OFA(self.model)
+        self.ofa_model.set_epoch(0)
+        self.ofa_model.set_task('expand_ratio')
+        out, _ = self.ofa_model(self.images)
+        assert list(self.ofa_model._ofa_layers.keys(
+        )) == ['conv1.0', 'block1.0', 'block1.4', 'block2.0', 'out2.0']
+
+
 class TestShortcutSkiplayers(unittest.TestCase):
     def setUp(self):
         model = ModelShortcut()
@@ -151,7 +250,7 @@ class TestShortcutSkiplayers(unittest.TestCase):
         self.ofa_model.set_task('expand_ratio')
         for i in range(5):
             self.ofa_model(self.images)
-        assert list(self.ofa_model._ofa_layers.keys()) == ['branch2.0', 'out.0']
+        assert list(self.ofa_model._ofa_layers.keys()) == ['branch2.0']
 
 
 class TestShortcutSkiplayersCase1(TestShortcutSkiplayers):
@@ -166,7 +265,36 @@ class TestShortcutSkiplayersCase2(TestShortcutSkiplayers):
         self.run_config = RunConfig(**default_run_config)
 
     def test_shortcut(self):
-        assert list(self.ofa_model._ofa_layers.keys()) == ['conv1.0', 'out.0']
+        assert list(self.ofa_model._ofa_layers.keys()) == ['conv1.0']
+
+
+class TestInputDict(unittest.TestCase):
+    def setUp(self):
+        model = ModelInputDict()
+
+        sp_net_config = supernet(expand_ratio=[0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+        self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
+        self.images2 = {
+            'data': paddle.randn(
+                shape=[2, 12, 32, 32], dtype='float32')
+        }
+        default_run_config = {'skip_layers': ['conv1.0', 'conv2.0']}
+        self.run_config = RunConfig(**default_run_config)
+
+        self.ofa_model = OFA(self.model, run_config=self.run_config)
+        self.ofa_model._clear_search_space(self.images, data=self.images2)
+
+    def test_export(self):
+
+        config = self.ofa_model._sample_config(
+            task="expand_ratio", sample_type="smallest")
+        self.ofa_model.export(
+            config,
+            input_shapes=[[1, 3, 32, 32], {
+                'data': [1, 12, 32, 32]
+            }],
+            input_dtypes=['float32', 'float32'])
 
 
 class TestInputDict(unittest.TestCase):
