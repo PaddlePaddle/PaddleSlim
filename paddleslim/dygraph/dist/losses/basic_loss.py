@@ -22,10 +22,12 @@ from paddle.nn import SmoothL1Loss
 
 
 class CELoss(nn.Layer):
-    def __init__(self, epsilon=None):
+    def __init__(self, epsilon=None, label_act="softmax"):
         super().__init__()
         if epsilon is not None and (epsilon <= 0 or epsilon >= 1):
             epsilon = None
+        assert label_act in ["softmax", None]
+        self.label_act = label_act
         self.epsilon = epsilon
 
     def _labelsmoothing(self, target, class_num):
@@ -45,7 +47,8 @@ class CELoss(nn.Layer):
             loss = paddle.sum(x * label, axis=-1)
         else:
             if label.shape[-1] == x.shape[-1]:
-                label = F.softmax(label, axis=-1)
+                if self.label_act == "softmax":
+                    label = F.softmax(label, axis=-1)
                 soft_label = True
             else:
                 soft_label = False
