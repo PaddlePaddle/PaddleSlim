@@ -142,10 +142,19 @@ class ModelConv2(nn.Layer):
 class ModelLinear(nn.Layer):
     def __init__(self):
         super(ModelLinear, self).__init__()
-        with supernet(expand_ratio=(1.0, 2.0, 4.0)) as ofa_super:
+        with supernet(expand_ratio=(1, 2, 4)) as ofa_super:
             models = []
             models += [nn.Embedding(num_embeddings=64, embedding_dim=64)]
-            models += [nn.Linear(64, 128)]
+            weight_attr = paddle.ParamAttr(
+                learning_rate=0.5,
+                regularizer=paddle.regularizer.L2Decay(1.0),
+                trainable=True)
+            bias_attr = paddle.ParamAttr(
+                initializer=paddle.nn.initializer.Constant(value=1.0))
+            models += [
+                nn.Linear(
+                    64, 128, weight_attr=weight_attr, bias_attr=bias_attr)
+            ]
             models += [nn.LayerNorm(128)]
             models += [nn.Linear(128, 256)]
             models = ofa_super.convert(models)
@@ -402,16 +411,7 @@ class TestExport(unittest.TestCase):
         self.ofa_model = OFA(model)
 
     def test_ofa(self):
-        config = {
-            'embedding_1': {
-                'expand_ratio': (2.0)
-            },
-            'linear_3': {
-                'expand_ratio': (2.0)
-            },
-            'linear_4': {},
-            'linear_5': {}
-        }
+        config = self.ofa_model._sample_config(task='expand_ratio', phase=None)
         origin_dict = {}
         for name, param in self.origin_model.named_parameters():
             origin_dict[name] = param.shape
@@ -459,9 +459,29 @@ class TestExportCase1(unittest.TestCase):
         outs, _ = self.ofa_model(self.data)
         self.config = self.ofa_model.current_config
 
-    def test_export_model(self):
-        self.ofa_model.export(
+    def test_export_model_linear1(self):
+        ex_model = self.ofa_model.export(
             self.config, input_shapes=[[3, 64]], input_dtypes=['int64'])
+        assert len(self.ofa_model.ofa_layers) == 3
+        ex_model(self.data)
+
+
+class TestExportCase2(unittest.TestCase):
+    def setUp(self):
+        model = ModelLinear()
+        data_np = np.random.random((3, 64)).astype(np.int64)
+        self.data = paddle.to_tensor(data_np)
+        self.ofa_model = OFA(model)
+        self.ofa_model.set_epoch(0)
+        outs, _ = self.ofa_model(self.data)
+        self.config = self.ofa_model.current_config
+
+    def test_export_model_linear2(self):
+        config = self.ofa_model._sample_config(
+            task='expand_ratio', phase=None, sample_type='smallest')
+        ex_model = self.ofa_model.export(
+            config, input_shapes=[[3, 64]], input_dtypes=['int64'])
+        ex_model(self.data)
         assert len(self.ofa_model.ofa_layers) == 3
 
 
