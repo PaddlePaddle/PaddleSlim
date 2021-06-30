@@ -153,16 +153,14 @@ def check_search_space(graph):
                         fixed_by_input += pre_fixed_op_2
                     if not pre_fixed_op_2:
                         fixed_by_input += pre_fixed_op_1
-                else:
+                elif (not inp1.inputs() and inp2.inputs()) or (
+                        inp1.inputs() and not inp2.inputs()):
                     pre_fixed_op = []
-                    if not inp1.inputs() and inp2.inputs():
-                        pre_fixed_op = _find_weight_ops(inp2.inputs()[0], graph,
-                                                        pre_fixed_op)
-                        fixed_by_input += pre_fixed_op
-                    if inp1.inputs() and not inp2.inputs():
-                        pre_fixed_op = _find_weight_ops(inp1.inputs()[0], graph,
-                                                        pre_fixed_op)
-                        fixed_by_input += pre_fixed_op
+                    inputs = inp1.inputs() if not inp2.inputs(
+                    ) else inp2.inputs()
+                    pre_fixed_op = _find_weight_ops(inputs[0], graph,
+                                                    pre_fixed_op)
+                    fixed_by_input += pre_fixed_op
 
                 pre_ele_op = _find_pre_elementwise_op(op, graph)
                 if pre_ele_op != None:
