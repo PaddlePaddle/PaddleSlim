@@ -34,7 +34,8 @@ import numpy as np
 
 ## 2. 初始化SANAS搜索实例
 ```python
-sanas = slim.nas.SANAS(configs=[('MobileNetV2Space')], server_addr=("", 8337), save_checkpoint=None)
+port = np.random.randint(8337, 8773)
+sanas = slim.nas.SANAS(configs=[('MobileNetV2Space')], server_addr=("", port), save_checkpoint=None)
 ```
 
 ## 3. 构建网络

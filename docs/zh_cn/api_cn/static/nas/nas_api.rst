@@ -49,7 +49,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
    from paddleslim.nas import SANAS
    config = [('MobileNetV2Space')]
    paddle.enable_static()
-   sanas = SANAS(configs=config, , server_addr=("",8821))
+   sanas = SANAS(configs=config, server_addr=("",8821))
 
 .. note::
 
