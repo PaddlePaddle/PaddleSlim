@@ -23,6 +23,7 @@ from paddleslim.dygraph.dist.losses import CombinedLoss
 # basic loss
 from paddleslim.dygraph.dist.losses import DistanceLoss
 from paddleslim.dygraph.dist.losses import CELoss
+from paddleslim.dygraph.dist.losses import DMLLoss
 
 # distillation loss
 from paddleslim.dygraph.dist.losses import DistillationDistanceLoss
@@ -105,24 +106,24 @@ class TestDistanceLoss(unittest.TestCase):
 
     def test_distillation_distance_loss(self, ):
         shape = [20, 10]
-        x_feat_name = "feat_x"
-        y_feat_name = "feat_y"
+        x_feat_name = "student"
+        y_feat_name = "teacher"
         pairs = [[x_feat_name, y_feat_name]]
         predicts = {
-            "feat_x": paddle.rand(shape),
-            "feat_y": paddle.rand(shape),
+            "student": paddle.rand(shape),
+            "teacher": paddle.rand(shape),
         }
         self.calc_distillation_distance_loss(predicts, pairs, key=None)
 
         predicts = {
-            "feat_x": {
-                "feat_loss": paddle.rand(shape),
+            "student": {
+                "feat": paddle.rand(shape),
             },
-            "feat_y": {
-                "feat_loss": paddle.rand(shape),
+            "teacher": {
+                "feat": paddle.rand(shape),
             },
         }
-        self.calc_distillation_distance_loss(predicts, pairs, key="feat_loss")
+        self.calc_distillation_distance_loss(predicts, pairs, key="feat")
 
     def calc_distillation_distance_loss(self, predicts, pairs, key=None):
         modes = ["l1", "l2", "smooth_l1"]
@@ -282,6 +283,128 @@ class TestCELoss(unittest.TestCase):
             pd_loss = loss_func(x, label).numpy()
             np_loss = self.np_cross_entropy_soft(x, label)
             self.assertTrue(np.allclose(np_loss, pd_loss))
+
+
+class TestDMLLoss(unittest.TestCase):
+    """TestDMLLoss
+    TestDMLLoss contains:
+        1. unittest of basic loss
+        2. unittest of distillation loss
+    """
+
+    def stable_softmax(self, x):
+        shiftx = (x - np.max(x)).clip(-64.)
+        exps = np.exp(shiftx)
+        return exps / np.sum(exps)
+
+    def ref_softmax(self, x, axis=-1, dtype=None):
+        if isinstance(x, paddle.Tensor):
+            x = x.numpy()
+        x_t = x.copy()
+        if dtype is not None:
+            x_t = x_t.astype(dtype)
+        return np.apply_along_axis(self.stable_softmax, axis, x_t)
+
+    def kldiv_loss(self, x, target, reduction="batchmean"):
+        output = target * (np.log(target) - x)
+        loss = np.where(target >= 0, output, np.zeros_like(x))
+
+        if reduction == "batchmean":
+            if len(x.shape) > 0:
+                return loss.sum() / x.shape[0]
+            else:
+                return loss.sum()
+        if reduction == "mean":
+            return loss.mean()
+        if reduction == "sum":
+            return loss.sum()
+        return loss
+
+    def np_dml_loss(self, x, target, act="softmax"):
+        if isinstance(x, paddle.Tensor):
+            x = x.numpy()
+        if isinstance(target, paddle.Tensor):
+            target = target.numpy()
+        soft_x = self.ref_softmax(x, axis=-1)
+        soft_target = self.ref_softmax(target, axis=-1)
+
+        log_soft_x = np.log(soft_x)
+        log_soft_target = np.log(soft_target)
+        loss = (self.kldiv_loss(log_soft_x, soft_target) + self.kldiv_loss(
+            log_soft_target, soft_x)) / 2.0
+        return loss
+
+    def test_basic_dml_loss(self, ):
+        batch_size = 32
+        class_num = 1000
+
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+        for device in devices:
+            paddle.set_device(device)
+            x = paddle.rand([batch_size, class_num])
+            target = paddle.rand([batch_size, class_num])
+
+            loss_func = DMLLoss(act="softmax")
+            pd_loss = loss_func(x, target).numpy()
+            np_loss = self.np_dml_loss(x, target)
+            self.assertTrue(np.allclose(np_loss, pd_loss))
+
+    def dist_np_dml_loss(
+            self,
+            predicts,
+            model_name_pairs=(["", ""]),
+            key=None,
+            name="loss_dml", ):
+        loss_dict = dict()
+        for idx, pair in enumerate(model_name_pairs):
+            out1 = predicts[pair[0]]
+            out2 = predicts[pair[1]]
+            if key is not None:
+                out1 = out1[key]
+                out2 = out2[key]
+            loss_dict["{}_{}_{}_{}".format(name, pair[0], pair[1],
+                                           idx)] = self.np_dml_loss(out1, out2)
+        return loss_dict
+
+    def calc_distillation_dml_loss(self, predicts, pairs, key=None):
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+
+        for device in devices:
+            paddle.set_device(device)
+            loss_func = DistillationDMLLoss(
+                act="softmax", model_name_pairs=pairs, key=key)
+            np_result_dict = self.dist_np_dml_loss(
+                predicts, model_name_pairs=pairs, key=key)
+            pd_result_dict = loss_func(predicts, None)
+            for k in np_result_dict:
+                pd_result = pd_result_dict[k].numpy()
+                np_result = np_result_dict[k]
+                self.assertTrue(np.allclose(np_result, pd_result))
+
+    def test_distillation_dml_loss(self, ):
+        shape = [20, 10]
+        x_feat_name = "student"
+        y_feat_name = "teacher"
+        pairs = [[x_feat_name, y_feat_name]]
+        predicts = {
+            "student": paddle.rand(shape),
+            "teacher": paddle.rand(shape),
+        }
+        self.calc_distillation_dml_loss(predicts, pairs, key=None)
+
+        predicts = {
+            "student": {
+                "feat": paddle.rand(shape),
+            },
+            "teacher": {
+                "feat": paddle.rand(shape),
+            },
+        }
+        self.calc_distillation_dml_loss(predicts, pairs, key="feat")
 
 
 if __name__ == '__main__':

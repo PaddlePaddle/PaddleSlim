@@ -41,8 +41,8 @@ class DistillationDMLLoss(DMLLoss):
             if self.key is not None:
                 out1 = out1[self.key]
                 out2 = out2[self.key]
-            loss_dict["{}_{}".format(self.name, idx)] = super().forward(out1,
-                                                                        out2)
+            loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1],
+                                           idx)] = super().forward(out1, out2)
         return loss_dict
 
 
