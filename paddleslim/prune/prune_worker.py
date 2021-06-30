@@ -549,21 +549,21 @@ class depthwise_conv2d(PruneWorker):
                 pruned_axis)
             # pruning number of filters
             assert (_filter.shape()[0] % _groups == 0)
-            stride = _filter.shape()[0] / _groups
+            repeat = int(_filter.shape()[0] / _groups)
             self.append_pruned_vars(_filter, 0, transforms + [{
-                "stride": stride
+                "repeat": repeat
             }])
             # kernel_number * groups will be pruned by reducing groups
             self.append_pruned_vars(_filter, 1, transforms)
             self._visit_and_search(_filter, 0, transforms + [{
-                "stride": stride
+                "repeat": repeat
             }])
             # It will not pruning number of kernels in depthwise conv2d,
             # so it is not neccesary to search succeed operators. 
             # self._visit_and_search(_filter, 1, transforms)
             self._visit(_filter, 1)
             self._visit_and_search(_out, channel_axis, transforms + [{
-                "stride": stride
+                "repeat": repeat
             }])
         elif var == _filter:
             assert pruned_axis == 0, "The filter of depthwise conv2d can only be pruned at axis 0."
