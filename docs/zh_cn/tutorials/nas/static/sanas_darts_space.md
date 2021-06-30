@@ -44,7 +44,7 @@ from paddleslim.nas import SANAS
 
 BATCH_SIZE=96
 SERVER_ADDRESS = ""
-PORT = 8377
+PORT = np.random.randint(8337, 8773)
 SEARCH_STEPS = 300
 RETAIN_EPOCH=30
 MAX_PARAMS=3.77

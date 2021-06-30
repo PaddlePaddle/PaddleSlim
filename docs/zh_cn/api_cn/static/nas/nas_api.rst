@@ -94,6 +94,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       for arch in archs:
           output = arch(input)
           input = output
+
       print(output)
    
    .. py:method:: reward(score)
