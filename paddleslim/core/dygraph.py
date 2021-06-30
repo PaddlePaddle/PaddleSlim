@@ -64,6 +64,7 @@ def extract_vars(inputs):
                     f"Variable is excepted, but get an element with type({type(_value)}) from inputs whose type is dict. And the key of element is {_key}."
                 )
     elif isinstance(inputs, (tuple, list)):
+
         for _value in inputs:
             vars.extend(extract_vars(_value))
     if len(vars) == 0:
@@ -99,7 +100,6 @@ def dygraph2program(layer,
                     extract_outputs_fn=None,
                     dtypes=None):
     assert isinstance(layer, Layer)
-
     extract_inputs_fn = extract_inputs_fn if extract_inputs_fn is not None else extract_vars
     extract_outputs_fn = extract_outputs_fn if extract_outputs_fn is not None else extract_vars
     tracer = _dygraph_tracer()._get_program_desc_tracer()
@@ -116,6 +116,7 @@ def dygraph2program(layer,
         else:
             inputs = to_variables(inputs)
             input_var_list = extract_inputs_fn(inputs)
+
         original_outputs = layer(*inputs)
         # 'original_outputs' may be dict, so we should convert it to list of varibles.
         # And should not create new varibles in 'extract_vars'.
