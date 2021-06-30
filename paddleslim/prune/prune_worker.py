@@ -918,6 +918,6 @@ class average_accumulates(PruneWorker):
         out_var_2 = self.op.outputs("out_sum_2")[0]
         out_var_3 = self.op.outputs("out_sum_3")[0]
         if in_var == var:
-            self.append_pruned_vars(out_var_1, pruned_axis, pruned_idx)
-            self.append_pruned_vars(out_var_1, pruned_axis, pruned_idx)
-            self.append_pruned_vars(out_var_1, pruned_axis, pruned_idx)
+            self.append_pruned_vars(out_var_1, pruned_axis, transforms)
+            self.append_pruned_vars(out_var_2, pruned_axis, transforms)
+            self.append_pruned_vars(out_var_3, pruned_axis, transforms)

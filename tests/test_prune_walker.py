@@ -324,6 +324,7 @@ class TestPruneWorker(unittest.TestCase):
                 if var.name() not in ret:
                     ret[var.name()] = []
                 ret[var.name()].append(axis)
+            print(f"excepted: {_ret}; but get {ret}")
             self.assertTrue(ret == _ret)
 
 
@@ -519,12 +520,14 @@ class TestMatmul(TestPruneWorker):
         x = fluid.data(name="x", shape=self.x_shape)
         y = fluid.data(name="y", shape=self.y_shape)
         self.input = x
+        self.y = y
         out = paddle.matmul(x, y)
         self.output = out
 
     def set_cases(self):
+        self.y_var = self.graph.var(self.y.name)
         self.cases.append((self.in_var, 1, {'y': [0]}))
-        self.cases.append((self.out_var, 0, {'x': [0]}))
+        self.cases.append((self.y_var, 0, {'x': [1]}))
         self.cases.append((self.out_var, 1, {'y': [1]}))
 
     def test_prune(self):
@@ -644,6 +647,33 @@ class TestAdam(TestPruneWorker):
             'conv1.w_0': [0],
             'conv1.w_0_moment1_0': [0],
             'conv1.w_0_moment2_0': [0]
+        }))
+
+    def test_prune(self):
+        self.check_in_out()
+
+
+class TestAverageAccumulates(TestPruneWorker):
+    def define_layer(self, input):
+        self.input = input
+        conv1 = paddle.static.nn.conv2d(
+            input, 3, 8, name="conv1", bias_attr=False)
+        self.output = conv1
+        out = paddle.mean(conv1)
+        opt = paddle.optimizer.Adam()
+        opt.minimize(out)
+        model_average = fluid.optimizer.ModelAverage(
+            0.15, min_average_window=10000, max_average_window=12500)
+
+    def set_cases(self):
+        weight_var = self.graph.var('conv1.w_0')
+        self.cases.append((weight_var, 0, {
+            'conv1.w_0': [0],
+            'conv1.w_0_moment1_0': [0],
+            'conv1.w_0_moment2_0': [0],
+            'conv1.w_0_sum_1_0': [0],
+            'conv1.w_0_sum_2_0': [0],
+            'conv1.w_0_sum_3_0': [0]
         }))
 
     def test_prune(self):
