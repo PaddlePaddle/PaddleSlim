@@ -77,13 +77,14 @@ class DistillationDistanceLoss(DistanceLoss):
 
 
 class DistillationRKDLoss(nn.Layer):
-    def __init__(self, model_name_pairs=[], key=None):
+    def __init__(self, model_name_pairs=[], key=None, name="loss_rkd"):
         super().__init__()
         self.model_name_pairs = model_name_pairs
         self.key = key
 
         self.rkd_angle_loss_func = RKdAngle()
         self.rkd_dist_func = RkdDistance()
+        self.name = name
 
     def forward(self, predicts, batch):
         loss_dict = dict()

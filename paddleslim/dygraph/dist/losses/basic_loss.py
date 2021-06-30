@@ -121,7 +121,7 @@ def pdist(e, squared=False, eps=1e-12):
 class RKdAngle(nn.Layer):
     # reference: https://github.com/lenscloth/RKD/blob/master/metric/loss.py
     def __init__(self):
-        super(RKdAngle, self).__init__()
+        super().__init__()
 
     def forward(self, student, teacher):
         # reshape for feature map distillation
@@ -145,7 +145,7 @@ class RKdAngle(nn.Layer):
 class RkdDistance(nn.Layer):
     # reference: https://github.com/lenscloth/RKD/blob/master/metric/loss.py
     def __init__(self, eps=1e-12):
-        super(RkdDistance, self).__init__()
+        super().__init__()
         self.eps = eps
 
     def forward(self, student, teacher):

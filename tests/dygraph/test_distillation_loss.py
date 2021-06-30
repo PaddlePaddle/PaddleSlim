@@ -24,6 +24,8 @@ from paddleslim.dygraph.dist.losses import CombinedLoss
 from paddleslim.dygraph.dist.losses import DistanceLoss
 from paddleslim.dygraph.dist.losses import CELoss
 from paddleslim.dygraph.dist.losses import DMLLoss
+from paddleslim.dygraph.dist.losses import RkdDistance
+from paddleslim.dygraph.dist.losses import RKdAngle
 
 # distillation loss
 from paddleslim.dygraph.dist.losses import DistillationDistanceLoss
@@ -405,6 +407,170 @@ class TestDMLLoss(unittest.TestCase):
             },
         }
         self.calc_distillation_dml_loss(predicts, pairs, key="feat")
+
+
+class TestRKDLoss(unittest.TestCase):
+    def pdist(self, e, squared=False, eps=1e-12):
+        e_square = np.power(e, 2).sum(axis=1)
+        prod = np.matmul(e, e.transpose())
+        res = (
+            np.expand_dims(e_square, 1) + np.expand_dims(e_square, 0) - 2 * prod
+        ).clip(eps, sys.float_info.max)
+        if not squared:
+            res = np.sqrt(res)
+        return res
+
+    def p_normalize(self, x, axis=1, p=2, epsilon=1e-12, keepdims=True):
+        xp = np.power(np.abs(x), p)
+        s = np.sum(xp, axis=axis, keepdims=keepdims)
+        r = np.maximum(np.power(s, 1.0 / p), epsilon)
+        return x / r
+
+    def np_smooth_l1_loss(self, x, y):
+        diff = np.abs(x - y)
+        diff_square = 0.5 * np.square(diff)
+        loss = np.where(diff >= 1, diff - 0.5, diff_square).mean()
+        return loss
+
+    def np_rkd_distance(self, student, teacher, eps=1e-12):
+        if isinstance(student, paddle.Tensor):
+            student = student.numpy()
+        if isinstance(teacher, paddle.Tensor):
+            teacher = teacher.numpy()
+        bs = student.shape[0]
+        student = student.reshape([bs, -1])
+        teacher = teacher.reshape([bs, -1])
+
+        t_d = self.pdist(teacher, squared=False)
+        mean_td = t_d.mean()
+        t_d = t_d / (mean_td + eps)
+
+        d = self.pdist(student, squared=False)
+        mean_d = d.mean()
+        d = d / (mean_d + eps)
+
+        loss = self.np_smooth_l1_loss(d, t_d)
+        return loss
+
+    def np_rkd_angle(self, student, teacher):
+        if isinstance(student, paddle.Tensor):
+            student = student.numpy()
+        if isinstance(teacher, paddle.Tensor):
+            teacher = teacher.numpy()
+
+        # reshape for feature map distillation
+        bs = student.shape[0]
+        student = student.reshape([bs, -1])
+        teacher = teacher.reshape([bs, -1])
+
+        td = np.expand_dims(teacher, 0) - np.expand_dims(teacher, 1)
+        norm_td = self.p_normalize(td, axis=2, p=2)
+        t_angle = np.matmul(norm_td, norm_td.transpose([0, 2, 1])).reshape(
+            [-1, 1])
+
+        sd = np.expand_dims(student, 0) - np.expand_dims(student, 1)
+        norm_sd = self.p_normalize(sd, axis=2, p=2)
+        s_angle = np.matmul(norm_sd, norm_sd.transpose([0, 2, 1])).reshape(
+            [-1, 1])
+
+        loss = self.np_smooth_l1_loss(s_angle, t_angle)
+        return loss
+
+    def test_rkd_distance_loss(self, ):
+        batch_size = 32
+        feat_dim = 100
+
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+        for device in devices:
+            paddle.set_device(device)
+            paddle.seed(0)
+            x = paddle.rand([batch_size, feat_dim])
+            y = paddle.rand([batch_size, feat_dim])
+
+            loss_func = RkdDistance()
+            pd_loss = loss_func(x, y).numpy()
+            np_loss = self.np_rkd_distance(x, y)
+            # NOTE: sqrt is included and seed is set for stability
+            self.assertTrue(np.allclose(np_loss, pd_loss))
+
+    def test_rkd_angle_loss(self, ):
+        batch_size = 32
+        feat_dim = 100
+
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+        for device in devices:
+            paddle.set_device(device)
+            paddle.seed(0)
+            x = paddle.rand([batch_size, feat_dim])
+            y = paddle.rand([batch_size, feat_dim])
+
+            loss_func = RKdAngle()
+            pd_loss = loss_func(x, y).numpy()
+            np_loss = self.np_rkd_angle(x, y)
+            # NOTE: sqrt is included and seed is set for stability
+            self.assertTrue(np.allclose(np_loss, pd_loss))
+
+    def dist_np_rkd_loss(
+            self,
+            predicts,
+            model_name_pairs=(["", ""]),
+            key=None,
+            name="loss_rkd", ):
+        loss_dict = dict()
+        for idx, pair in enumerate(model_name_pairs):
+            out1 = predicts[pair[0]]
+            out2 = predicts[pair[1]]
+            if key is not None:
+                out1 = out1[key]
+                out2 = out2[key]
+            loss_dict["{}_{}_{}_angle_{}".format(name, pair[0], pair[
+                1], idx)] = self.np_rkd_angle(out1, out2)
+
+            loss_dict["{}_{}_{}_dist_{}".format(name, pair[0], pair[
+                1], idx)] = self.np_rkd_distance(out1, out2)
+        return loss_dict
+
+    def calc_distillation_rkd_loss(self, predicts, pairs, key=None):
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+
+        for device in devices:
+            paddle.set_device(device)
+            loss_func = DistillationRKDLoss(model_name_pairs=pairs, key=key)
+            np_result_dict = self.dist_np_rkd_loss(
+                predicts, model_name_pairs=pairs, key=key)
+            pd_result_dict = loss_func(predicts, None)
+            for k in np_result_dict:
+                pd_result = pd_result_dict[k].numpy()
+                np_result = np_result_dict[k]
+                self.assertTrue(np.allclose(np_result, pd_result, rtol=1e-5))
+
+    def test_distillation_dml_loss(self, ):
+        shape = [32, 16]
+        x_feat_name = "student"
+        y_feat_name = "teacher"
+        pairs = [[x_feat_name, y_feat_name]]
+        paddle.seed(0)
+        predicts = {
+            "student": paddle.rand(shape),
+            "teacher": paddle.rand(shape),
+        }
+        self.calc_distillation_rkd_loss(predicts, pairs, key=None)
+
+        predicts = {
+            "student": {
+                "feat": paddle.rand(shape),
+            },
+            "teacher": {
+                "feat": paddle.rand(shape),
+            },
+        }
+        self.calc_distillation_rkd_loss(predicts, pairs, key="feat")
 
 
 if __name__ == '__main__':
