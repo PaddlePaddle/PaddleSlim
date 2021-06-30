@@ -79,7 +79,7 @@ L1NormFilterPruner
       from paddleslim import L1NormFilterPruner
       net = mobilenet_v1(pretrained=False) 
       pruner = L1NormFilterPruner(net, [1, 3, 224, 224])
-      plan = pruner.prun_var("conv2d_26.w_0", [0])
+      plan = pruner.prune_var("conv2d_26.w_0", [0])
       print(f"plan: {plan}")
       paddle.summary(net, (1, 3, 224, 224))
    ..
@@ -111,7 +111,7 @@ L1NormFilterPruner
       from paddleslim import L1NormFilterPruner
       net = mobilenet_v1(pretrained=False) 
       pruner = L1NormFilterPruner(net, [1, 3, 224, 224])
-      plan = pruner.prun_vars({"conv2d_26.w_0": 0.5}, [0])
+      plan = pruner.prune_vars({"conv2d_26.w_0": 0.5}, [0])
       print(f"plan: {plan}")
       paddle.summary(net, (1, 3, 224, 224))
    ..

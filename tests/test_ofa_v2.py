@@ -81,6 +81,25 @@ class ModelShortcut(nn.Layer):
         return z
 
 
+class ModelInputDict(nn.Layer):
+    def __init__(self):
+        super(ModelInputDict, self).__init__()
+        self.conv0 = nn.Sequential(
+            nn.Conv2D(3, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.conv1 = nn.Sequential(
+            nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.conv2 = nn.Sequential(
+            nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.conv3 = nn.Sequential(
+            nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+
+    def forward(self, x, data):
+        x = self.conv1(self.conv0(x))
+        y = self.conv2(x)
+        y = y + data['data']
+        return self.conv3(y)
+
+
 class TestOFAV2(unittest.TestCase):
     def setUp(self):
         model = ModelV1()
@@ -93,7 +112,6 @@ class TestOFAV2(unittest.TestCase):
         self.ofa_model.set_epoch(0)
         self.ofa_model.set_task('expand_ratio')
         out, _ = self.ofa_model(self.images)
-        print(self.ofa_model.get_current_config)
 
 
 class TestOFAV2Export(unittest.TestCase):
@@ -149,6 +167,35 @@ class TestShortcutSkiplayersCase2(TestShortcutSkiplayers):
 
     def test_shortcut(self):
         assert list(self.ofa_model._ofa_layers.keys()) == ['conv1.0', 'out.0']
+
+
+class TestInputDict(unittest.TestCase):
+    def setUp(self):
+        model = ModelInputDict()
+
+        sp_net_config = supernet(expand_ratio=[0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+        self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
+        self.images2 = {
+            'data': paddle.randn(
+                shape=[2, 12, 32, 32], dtype='float32')
+        }
+        default_run_config = {'skip_layers': ['conv1.0', 'conv2.0']}
+        self.run_config = RunConfig(**default_run_config)
+
+        self.ofa_model = OFA(self.model, run_config=self.run_config)
+        self.ofa_model._clear_search_space(self.images, data=self.images2)
+
+    def test_export(self):
+
+        config = self.ofa_model._sample_config(
+            task="expand_ratio", sample_type="smallest")
+        self.ofa_model.export(
+            config,
+            input_shapes=[[1, 3, 32, 32], {
+                'data': [1, 12, 32, 32]
+            }],
+            input_dtypes=['float32', 'float32'])
 
 
 if __name__ == '__main__':
