@@ -16,16 +16,17 @@ class Pruner(object):
     Args:
         model(paddle.nn.Layer): The target model to be pruned.
         input_shape(list<int>): The input shape of model. It is used to trace the graph of the model.
-        
+        opt(paddle.optimizer.Optimizer): The model's optimizer. Default: None.
     """
 
-    def __init__(self, model, inputs):
+    def __init__(self, model, inputs, opt=None):
         self.model = model
         self.inputs = inputs
         self._var_shapes = {}
         for var in model.parameters():
             self._var_shapes[var.name] = var.shape
         self.plan = None
+        self.opt = opt
 
     def status(self, data=None, eval_func=None, status_file=None):
         raise NotImplemented("status is not implemented")
@@ -53,6 +54,6 @@ class Pruner(object):
         if apply == "lazy":
             global_plan.apply(self.model, lazy=True)
         elif apply == "impretive":
-            global_plan.apply(self.model, lazy=False)
+            global_plan.apply(self.model, lazy=False, opt=self.opt)
         self.plan = global_plan
         return global_plan
