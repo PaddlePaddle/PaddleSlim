@@ -92,7 +92,7 @@ class Distill(nn.Layer):
         for c in self._distill_configs:
             self.configs.append(LayerConfig(**c).__dict__)
 
-        self.distill_idx = self.get_distill_idx()
+        self.distill_idx = self._get_distill_idx()
         self._loss_config_list = []
         for c in self.configs:
             loss_config = {}
@@ -105,7 +105,7 @@ class Distill(nn.Layer):
             loss_config[str(c['loss_function'])][
                 'model_name_pairs'] = [['student', 'teacher']]
             self._loss_config_list.append(loss_config)
-        self.prepare_loss()
+        self._prepare_loss()
 
     def _prepare_hook(self, adaptors, outs_dict):
         mapping_layers = adaptors.mapping_layers()
@@ -122,7 +122,7 @@ class Distill(nn.Layer):
             outs_dict[layer_type] = layer
         return outs_dict
 
-    def get_distill_idx(self):
+    def _get_distill_idx(self):
         distill_idx = {}
         for config in self._distill_configs:
             if config['feature_type'] not in distill_idx:
@@ -135,7 +135,7 @@ class Distill(nn.Layer):
                 ])
         return distill_idx
 
-    def prepare_loss(self):
+    def _prepare_loss(self):
         self.distill_loss = CombinedLoss(self._loss_config_list)
 
     def _prepare_outputs(self):
