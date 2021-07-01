@@ -177,6 +177,7 @@ class SuperConv2D(nn.Conv2D):
             data_format=data_format)
 
         self.candidate_config = candidate_config
+        self.cur_config = None
         if len(candidate_config.items()) != 0:
             for k, v in candidate_config.items():
                 candidate_config[k] = list(set(v))
@@ -314,7 +315,7 @@ class SuperConv2D(nn.Conv2D):
             bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
-
+        self.cur_config['prune_dim'] = list(weight.shape)
         out = F.conv2d(
             input,
             weight,
@@ -482,6 +483,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             data_format=data_format)
 
         self.candidate_config = candidate_config
+        self.cur_config = None
         if len(self.candidate_config.items()) != 0:
             for k, v in candidate_config.items():
                 candidate_config[k] = list(set(v))
@@ -620,7 +622,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
-
+        self.cur_config['prune_dim'] = list(weight.shape)
         out = F.conv2d_transpose(
             input,
             weight,
@@ -733,6 +735,7 @@ class SuperSeparableConv2D(nn.Layer):
         ])
 
         self.candidate_config = candidate_config
+        self.cur_config = None
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self.conv[0]._out_channels
@@ -784,7 +787,7 @@ class SuperSeparableConv2D(nn.Layer):
             bias = self.conv[2].bias[:out_nc]
         else:
             bias = self.conv[2].bias
-
+        self.cur_config['prune_dim'] = list(weight.shape)
         conv1_out = F.conv2d(
             norm_out,
             weight,
@@ -864,6 +867,7 @@ class SuperLinear(nn.Linear):
         self._in_features = in_features
         self._out_features = out_features
         self.candidate_config = candidate_config
+        self.cur_config = None
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self._out_features
@@ -896,7 +900,7 @@ class SuperLinear(nn.Linear):
             bias = self.bias[:out_nc]
         else:
             bias = self.bias
-
+        self.cur_config['prune_dim'] = list(weight.shape)
         out = F.linear(x=input, weight=weight, bias=bias, name=self.name)
         return out
 
@@ -945,11 +949,11 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         super(SuperBatchNorm2D, self).__init__(
             num_features, momentum, epsilon, weight_attr, bias_attr,
             data_format, use_global_stats, name)
+        self.cur_config = None
 
     def forward(self, input):
         self._check_data_format(self._data_format)
         self._check_input_dim(input)
-
         feature_dim = int(input.shape[1])
 
         weight = self.weight[:feature_dim]
@@ -957,17 +961,38 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         mean = self._mean[:feature_dim]
         variance = self._variance[:feature_dim]
 
-        return F.batch_norm(
-            input,
-            mean,
-            variance,
-            weight=weight,
-            bias=bias,
-            training=self.training,
-            momentum=self._momentum,
-            epsilon=self._epsilon,
-            data_format=self._data_format,
-            use_global_stats=self._use_global_stats)
+        mean_out = self._mean
+        variance_out = self._variance
+        mean_out_tmp = mean
+        variance_out_tmp = variance
+
+        if self._use_global_stats == None:
+            self._use_global_stats = not self.training
+            trainable_statistics = False
+        else:
+            trainable_statistics = not self._use_global_stats
+
+        attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
+                 "is_test", not self.training, "data_layout", self._data_format,
+                 "use_mkldnn", False, "fuse_with_relu", False,
+                 "use_global_stats", self._use_global_stats,
+                 "trainable_statistics", trainable_statistics)
+
+        if feature_dim != self._mean.shape[0]:
+            batch_norm_out = core.ops.batch_norm(input, weight, bias, mean,
+                                                 variance, mean_out_tmp,
+                                                 variance_out_tmp, *attrs)
+            self._mean[:feature_dim] = mean
+            self._variance[:feature_dim] = variance
+            mean_out[:feature_dim] = mean_out_tmp
+            variance_out[:feature_dim] = variance_out_tmp
+        else:
+            batch_norm_out = core.ops.batch_norm(input, weight, bias,
+                                                 self._mean, self._variance,
+                                                 mean_out, variance_out, *attrs)
+
+        self.cur_config = {'prune_dim': feature_dim}
+        return batch_norm_out[0]
 
 
 class SuperSyncBatchNorm(nn.SyncBatchNorm):
@@ -982,9 +1007,10 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
         super(SuperSyncBatchNorm,
               self).__init__(num_features, momentum, epsilon, weight_attr,
                              bias_attr, data_format, name)
+        self.cur_config = None
 
     def forward(self, input):
-
+        self._check_data_format()
         feature_dim = int(input.shape[1])
 
         weight = self.weight[:feature_dim]
@@ -992,23 +1018,35 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
         mean = self._mean[:feature_dim]
         variance = self._variance[:feature_dim]
 
-        mean_out = mean
-        # variance and variance out share the same memory
-        variance_out = variance
+        mean_out = self._mean
+        variance_out = self._variance
+        mean_out_tmp = mean
+        variance_out_tmp = variance
+        self.cur_config = {'prune_dim': feature_dim}
 
         attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
                  "is_test", not self.training, "data_layout", self._data_format,
                  "use_mkldnn", False, "fuse_with_relu", False,
                  "use_global_stats", False, 'trainable_statistics', False)
-        sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
-            input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
+        if feature_dim != self._mean.shape[0]:
+            sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
+                input, weight, bias, mean, variance, mean_out_tmp,
+                variance_out_tmp, *attrs)
+            self._mean[:feature_dim] = mean
+            self._variance[:feature_dim] = variance
+            mean_out[:feature_dim] = mean_out_tmp
+            variance_out[:feature_dim] = variance_out_tmp
+        else:
+            sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
+                input, weight, bias, self._mean, self._variance, mean_out,
+                variance_out, *attrs)
 
         return sync_batch_norm_out
 
 
 class SuperInstanceNorm2D(nn.InstanceNorm2D):
     """
-    This interface is used to construct a callable object of the ``SuperBatchNorm2D`` class. 
+    This interface is used to construct a callable object of the ``SuperInstanceNorm2D`` class. 
 
     Parameters:
         num_features(int): Indicate the number of channels of the input ``Tensor``.
@@ -1049,6 +1087,7 @@ class SuperInstanceNorm2D(nn.InstanceNorm2D):
         super(SuperInstanceNorm2D, self).__init__(num_features, epsilon,
                                                   momentum, weight_attr,
                                                   bias_attr, data_format, name)
+        self.cur_config = None
 
     def forward(self, input):
         self._check_input_dim(input)
@@ -1060,7 +1099,7 @@ class SuperInstanceNorm2D(nn.InstanceNorm2D):
         else:
             scale = self.scale[:feature_dim]
             bias = self.bias[:feature_dim]
-
+        self.cur_config = {'prune_dim': feature_dim}
         return F.instance_norm(input, scale, bias, eps=self._epsilon)
 
 
@@ -1112,6 +1151,7 @@ class SuperLayerNorm(nn.LayerNorm):
                  name=None):
         super(SuperLayerNorm, self).__init__(normalized_shape, epsilon,
                                              weight_attr, bias_attr, name)
+        self.cur_config = None
 
     def forward(self, input):
         ### TODO(ceci3): fix if normalized_shape is not a single number
@@ -1127,6 +1167,8 @@ class SuperLayerNorm(nn.LayerNorm):
             bias = self.bias[:feature_dim]
         else:
             bias = None
+        self.cur_config = {'prune_dim': feature_dim}
+
         out, _, _ = core.ops.layer_norm(input, weight, bias, 'epsilon',
                                         self._epsilon, 'begin_norm_axis',
                                         begin_norm_axis)
@@ -1191,6 +1233,7 @@ class SuperEmbedding(nn.Embedding):
                                              padding_idx, sparse, weight_attr,
                                              name)
         self.candidate_config = candidate_config
+        self.cur_config = None
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self._embedding_dim
@@ -1216,6 +1259,7 @@ class SuperEmbedding(nn.Embedding):
             out_nc = self._embedding_dim
 
         weight = self.weight[:, :out_nc]
+        self.cur_config = {'prune_dim': list(weight.shape)}
         return F.embedding(
             input,
             weight=weight,

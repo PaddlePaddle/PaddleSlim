@@ -131,7 +131,8 @@ class PruningPlan():
             backup_name = var_tmp.name.replace(".", "_") + "_backup"
             if backup_name not in sub_layer._buffers:
                 sub_layer.register_buffer(
-                    backup_name, paddle.to_tensor(var_tmp.value().get_tensor()))
+                    backup_name,
+                    paddle.to_tensor(np.array(var_tmp.value().get_tensor())))
                 _logger.debug("Backup values of {} into buffers.".format(
                     var_tmp.name))
 
@@ -207,7 +208,8 @@ class PruningPlan():
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
-        for name, sub_layer in model.named_sublayers():
+
+        for name, sub_layer in model.named_sublayers(include_self=True):
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
                     for _mask in self._masks[param.name]:
@@ -217,7 +219,6 @@ class PruningPlan():
                         bool_mask = np.array(mask).astype(bool)
                         t_value = param.value().get_tensor()
                         value = np.array(t_value).astype("float32")
-
                         groups = _mask._op.attr('groups')
                         if dims == 1 and groups is not None and groups > 1 and len(
                                 value.shape) == 4:
@@ -261,7 +262,7 @@ class PruningPlan():
                         param.clear_gradient()
 
     def restore(self, model, opt=None):
-        for name, sub_layer in model.named_sublayers():
+        for name, sub_layer in model.named_sublayers(include_self=True):
             for param in sub_layer.parameters(include_sublayers=False):
                 # restore optimizer accumulators from layer buffer
                 self._restore_opt(param.name, sub_layer, opt)
