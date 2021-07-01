@@ -324,6 +324,7 @@ class TestPruneWorker(unittest.TestCase):
                 if var.name() not in ret:
                     ret[var.name()] = []
                 ret[var.name()].append(axis)
+            print(f"excepted: {_ret}; but get {ret}")
             self.assertTrue(ret == _ret)
 
 
@@ -372,38 +373,44 @@ class TestElementwiseMul(TestPruneWorker):
 
 
 class TestActivation(TestPruneWorker):
-    def __init__(self, methodName="test_prune",
-                 op=paddle.nn.functional.sigmoid):
+    def __init__(self,
+                 methodName="check",
+                 op=paddle.nn.functional.sigmoid,
+                 **kwargs):
         super(TestActivation, self).__init__(methodName)
         self.act = op
+        self.kwargs = kwargs
 
     def define_layer(self, input):
         conv1 = paddle.static.nn.conv2d(
             input, 3, 3, name="conv1", bias_attr=False)
         self.input = conv1
-        tmp = self.act(conv1)
+        tmp = self.act(conv1, **self.kwargs)
         self.output = tmp
         conv2 = paddle.static.nn.conv2d(
             tmp, 3, 3, name="conv2", bias_attr=False)
 
     def set_cases(self):
         self.cases.append((self.in_var, 1, {'conv2.w_0': [1]}))
-        self.cases.append((self.out_var, 1, {
-            'conv1.w_0': [0],
-            'conv2.w_0': [1]
-        }))
+        self.cases.append((self.out_var, 1, {'conv1.w_0': [0], }))
 
-    def test_prune(self):
+    def check(self):
         self.check_in_out()
 
 
-suite = unittest.TestSuite()
-suite.addTest(TestActivation(op=paddle.fluid.layers.resize_bilinear))
-suite.addTest(TestActivation(op=paddle.fluid.layers.resize_nearest))
-suite.addTest(TestActivation(op=paddle.floor))
-suite.addTest(TestActivation(op=paddle.scale))
-suite.addTest(
-    TestActivation(op=paddle.fluid.layers.nn.uniform_random_batch_size_like))
+act_suite = unittest.TestSuite()
+act_suite.addTest(
+    TestActivation(
+        op=paddle.fluid.layers.resize_bilinear, scale=2.))
+act_suite.addTest(
+    TestActivation(
+        op=paddle.fluid.layers.resize_nearest, scale=2.))
+act_suite.addTest(TestActivation(op=paddle.floor))
+act_suite.addTest(TestActivation(op=paddle.scale))
+act_suite.addTest(
+    TestActivation(
+        op=paddle.fluid.layers.nn.uniform_random_batch_size_like,
+        shape=[8, 8, 16, 16]))
 
 
 class TestDepthwiseConv2d(TestPruneWorker):
@@ -432,41 +439,159 @@ class TestDepthwiseConv2d(TestPruneWorker):
 
 
 class TestMul(TestPruneWorker):
-    def __init__(self, methodName="test_prune"):
+    def __init__(self,
+                 methodName="check",
+                 x_num_col_dims=1,
+                 y_num_col_dims=1,
+                 ret=[]):
         super(TestMul, self).__init__(methodName)
+        self.x_num_col_dims = x_num_col_dims
+        self.y_num_col_dims = y_num_col_dims
+        self.ret = ret
 
     def define_layer(self, input):
-        x = fluid.data(name="x", shape=[1, 4, 3, 3])
-        y = fluid.data(name="y", shape=[36, 7])
+        x = fluid.data(name="x", shape=[1, 1, 1, 1])
+        y = fluid.data(name="y", shape=[1, 1, 1, 1])
         self.input = x
-        out = paddle.fluid.layers.mul(x, y)
+        self.y = y
+        out = paddle.fluid.layers.mul(x,
+                                      y,
+                                      x_num_col_dims=self.x_num_col_dims,
+                                      y_num_col_dims=self.y_num_col_dims)
         self.output = out
 
     def set_cases(self):
-        self.cases.append((self.in_var, 1, {'y': [0]}))
+        y = self.graph.var(self.y.name)
+        x = self.in_var
+        out = self.out_var
+        self.cases.append((x, 0, self.ret[0]))
+        self.cases.append((x, 1, self.ret[1]))
+        self.cases.append((x, 2, self.ret[2]))
+        self.cases.append((x, 3, self.ret[3]))
 
-    def test_prune(self):
+        self.cases.append((y, 0, self.ret[4]))
+        self.cases.append((y, 1, self.ret[5]))
+        self.cases.append((y, 2, self.ret[6]))
+        self.cases.append((y, 3, self.ret[7]))
+
+        self.cases.append((out, 0, self.ret[8]))
+        self.cases.append((out, 1, self.ret[9]))
+
+    def check(self):
         self.check_in_out()
+
+
+mul_suite = unittest.TestSuite()
+ret = [{
+    'mul_0.tmp_0': [0]
+}] + [{
+    'y': [0]
+}] * 3 + [{}] + [{
+    'mul_0.tmp_0': [1]
+}] * 3 + [{
+    'x': [0]
+}, {}]
+mul_suite.addTest(TestMul(x_num_col_dims=1, y_num_col_dims=1, ret=ret))
+ret = [{
+    'mul_0.tmp_0': [0]
+}] * 2 + [{}] * 4 + [{
+    'mul_0.tmp_0': [1]
+}] * 2 + [{}] * 2
+mul_suite.addTest(TestMul(x_num_col_dims=2, y_num_col_dims=2, ret=ret))
+ret = [{
+    'mul_0.tmp_0': [0]
+}] * 3 + [{}] + [{
+    'x': [3]
+}] * 3 + [{
+    'mul_0.tmp_0': [1]
+}] + [{}, {
+    'y': [3]
+}]
+mul_suite.addTest(TestMul(x_num_col_dims=3, y_num_col_dims=3, ret=ret))
 
 
 class TestMatmul(TestPruneWorker):
     def __init__(self, methodName="test_prune"):
         super(TestMatmul, self).__init__(methodName)
+        self.x_shape = [6, 8]
+        self.y_shape = [8, 7]
 
     def define_layer(self, input):
-        x = fluid.data(name="x", shape=[6, 8])
-        y = fluid.data(name="y", shape=[8, 7])
+        x = fluid.data(name="x", shape=self.x_shape)
+        y = fluid.data(name="y", shape=self.y_shape)
         self.input = x
+        self.y = y
         out = paddle.matmul(x, y)
         self.output = out
 
     def set_cases(self):
+        self.y_var = self.graph.var(self.y.name)
         self.cases.append((self.in_var, 1, {'y': [0]}))
-        self.cases.append((self.out_var, 0, {'x': [0]}))
+        self.cases.append((self.y_var, 0, {'x': [1]}))
         self.cases.append((self.out_var, 1, {'y': [1]}))
 
     def test_prune(self):
         self.check_in_out()
+
+
+class TestMatmulCase2(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase2, self).__init__(methodName)
+        self.x_shape = [8]
+        self.y_shape = [7]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 0, {'y': [0]}))
+        self.cases.append((self.out_var, 0, {'x': [0], 'y': [0]}))
+
+
+class TestMatmulCase3(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase3, self).__init__(methodName)
+        self.x_shape = [7]
+        self.y_shape = [7, 8]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 0, {'y': [0]}))
+        self.cases.append((self.out_var, 0, {'y': [1]}))
+
+
+class TestMatmulCase4(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase4, self).__init__(methodName)
+        self.x_shape = [8, 7, 7]
+        self.y_shape = [7]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 1, {}))
+        self.cases.append((self.in_var, 2, {'y': [0]}))
+        self.cases.append((self.out_var, 1, {'x': [1]}))
+
+
+class TestMatmulCase5(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase5, self).__init__(methodName)
+        self.x_shape = [7, 7]
+        self.y_shape = [7, 8, 9]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 0, {}))
+        self.cases.append((self.in_var, 1, {'y': [1]}))
+        self.cases.append((self.out_var, 1, {'x': [0]}))
+        self.cases.append((self.out_var, 2, {'y': [2]}))
+
+
+class TestMatmulCase6(TestMatmul):
+    def __init__(self, methodName="test_prune"):
+        super(TestMatmulCase6, self).__init__(methodName)
+        self.x_shape = [7, 7, 7]
+        self.y_shape = [7, 7, 9]
+
+    def set_cases(self):
+        self.cases.append((self.in_var, 1, {}))
+        self.cases.append((self.in_var, 2, {'y': [1]}))
+        self.cases.append((self.out_var, 1, {'x': [1]}))
+        self.cases.append((self.out_var, 2, {'y': [2]}))
 
 
 class TestSplit(TestPruneWorker):
@@ -528,6 +653,33 @@ class TestAdam(TestPruneWorker):
         self.check_in_out()
 
 
+class TestAverageAccumulates(TestPruneWorker):
+    def define_layer(self, input):
+        self.input = input
+        conv1 = paddle.static.nn.conv2d(
+            input, 3, 8, name="conv1", bias_attr=False)
+        self.output = conv1
+        out = paddle.mean(conv1)
+        opt = paddle.optimizer.Adam()
+        opt.minimize(out)
+        model_average = fluid.optimizer.ModelAverage(
+            0.15, min_average_window=10000, max_average_window=12500)
+
+    def set_cases(self):
+        weight_var = self.graph.var('conv1.w_0')
+        self.cases.append((weight_var, 0, {
+            'conv1.w_0': [0],
+            'conv1.w_0_moment1_0': [0],
+            'conv1.w_0_moment2_0': [0],
+            'conv1.w_0_sum_1_0': [0],
+            'conv1.w_0_sum_2_0': [0],
+            'conv1.w_0_sum_3_0': [0]
+        }))
+
+    def test_prune(self):
+        self.check_in_out()
+
+
 class TestAffineChannel(TestPruneWorker):
     def __init__(self, methodName="test_prune"):
         super(TestAffineChannel, self).__init__(methodName)
@@ -555,4 +707,7 @@ class TestAffineChannel(TestPruneWorker):
 
 
 if __name__ == '__main__':
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(mul_suite)
+    runner.run(act_suite)
     unittest.main()

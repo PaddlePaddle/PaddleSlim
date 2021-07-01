@@ -169,20 +169,25 @@ class Pruner():
         for name, axis, pruned_idx, transforms in items:
             src = pruned_idx
             for trans in transforms:
-                if 'src_start' not in trans:
-                    continue
-                src_start = trans['src_start']
-                src_end = trans['src_end']
-                src_len = src_end - src_start
-                target_start = trans['target_start']
-                target_end = trans['target_end']
-                starts = np.array(range(target_start, target_end, src_len))
                 target = []
-                for idx in src:
-                    if idx >= src_start and idx < src_end:
-                        idx -= src_start
-                        target.extend(list(idx + starts))
+                if 'src_start' in trans:
+                    src_start = trans['src_start']
+                    src_end = trans['src_end']
+                    src_len = src_end - src_start
+                    target_start = trans['target_start']
+                    target_end = trans['target_end']
+                    starts = np.array(range(target_start, target_end, src_len))
+                    for idx in src:
+                        if idx >= src_start and idx < src_end:
+                            idx -= src_start
+                            target.extend(list(idx + starts))
+                elif "repeat" in trans:
+                    repeat = trans['repeat']
+                    for idx in src:
+                        idx = idx * repeat
+                        target.extend(range(idx, idx + repeat))
                 src = target
+
             ret.append((name, axis, src))
         return ret
 

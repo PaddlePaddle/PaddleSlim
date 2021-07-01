@@ -53,14 +53,20 @@ class FilterPruner(Pruner):
         sen_file(str, optional): The absolute path of file that stores computed sensitivities. If it is
                               set rightly, 'FilterPruner::sensitive' function can not be called anymore
                               in next step. Default: None.
+        opt(paddle.optimizer.Optimizer): The model's optimizer. Default: None.
+        skip_leaves(bool): Whether to skip the last convolution layers.
     
     """
 
-    def __init__(self, model, inputs, sen_file=None, opt=None):
+    def __init__(self, model, inputs, sen_file=None, opt=None,
+                 skip_leaves=True):
         super(FilterPruner, self).__init__(model, inputs, opt=opt)
         self._status = Status(sen_file)
+        self.skip_leaves = skip_leaves
         # sensitive and collections are just used in filter pruning
-        self.collections = DygraphPruningCollections(model, inputs)
+        self.collections = DygraphPruningCollections(
+            model, inputs, skip_leaves=self.skip_leaves)
+
         # skip vars in:
         # 1. depthwise conv2d layer
         self.skip_vars = []
@@ -364,6 +370,8 @@ class FilterPruner(Pruner):
             stride = transform['stride']
             mask = mask.repeat(stride) if stride > 1 else mask
             return mask
+        elif "repeat" in transform and "tile" in transform:
+            return np.tile(mask.repeat(transform["repeat"]), transform["tile"])
         else:
             return mask
         return dst_mask
