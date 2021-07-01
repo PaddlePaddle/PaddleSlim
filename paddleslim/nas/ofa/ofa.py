@@ -254,11 +254,9 @@ class OFA(OFABase):
 
         # load teacher parameter
         if self.distill_config.teacher_model_path != None:
-            if not isinstance(self.distill_config.teacher_model_path, dict):
-                param_state_dict = paddle.load(
-                    self.distill_config.teacher_model_path)
-            else:
-                param_state_dict = self.distill_config.teacher_model_path
+            param_state_dict = self.distill_config.teacher_model_path if isinstance(
+                self.distill_config.teacher_model_path,
+                dict) else paddle.load(self.distill_config.teacher_model_path)
             self.distill_config.teacher_model.set_dict(param_state_dict)
 
         self.ofa_teacher_model = OFABase(self.distill_config.teacher_model)
