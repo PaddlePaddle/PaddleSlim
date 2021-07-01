@@ -62,8 +62,10 @@ class UnstructuredPruner():
                 tmp_array = np.ones(param.shape, dtype=np.float32)
                 mask_name = "_".join([param.name.replace(".", "_"), "mask"])
                 if mask_name not in sub_layer._buffers:
-                    sub_layer.register_buffer(mask_name,
-                                              paddle.to_tensor(tmp_array))
+                    sub_layer.register_buffer(
+                        mask_name,
+                        paddle.to_tensor(tmp_array),
+                        persistable=False)
                 self.masks[param.name] = sub_layer._buffers[mask_name]
         for name, sub_layer in self.model.named_sublayers():
             sub_layer.register_forward_pre_hook(self._forward_pre_hook)

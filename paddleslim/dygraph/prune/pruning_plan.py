@@ -78,6 +78,8 @@ class PruningPlan():
         return self._masks
 
     def extend(self, plan):
+        if plan is None:
+            return
         assert (isinstance(plan, PruningPlan))
         for var_name in plan.masks:
             for mask in plan.masks[var_name]:
@@ -132,7 +134,8 @@ class PruningPlan():
             if backup_name not in sub_layer._buffers:
                 sub_layer.register_buffer(
                     backup_name,
-                    paddle.to_tensor(np.array(var_tmp.value().get_tensor())))
+                    paddle.to_tensor(np.array(var_tmp.value().get_tensor())),
+                    persistable=False)
                 _logger.debug("Backup values of {} into buffers.".format(
                     var_tmp.name))
 
@@ -180,8 +183,10 @@ class PruningPlan():
                         # The name of buffer can not contains "."
                         backup_name = param.name.replace(".", "_") + "_backup"
                         if backup_name not in sub_layer._buffers:
-                            sub_layer.register_buffer(backup_name,
-                                                      paddle.to_tensor(value))
+                            sub_layer.register_buffer(
+                                backup_name,
+                                paddle.to_tensor(value),
+                                persistable=False)
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
                         expand_mask_shape = [1] * len(value.shape)
@@ -235,8 +240,10 @@ class PruningPlan():
                         # The name of buffer can not contains "."
                         backup_name = param.name.replace(".", "_") + "_backup"
                         if backup_name not in sub_layer._buffers:
-                            sub_layer.register_buffer(backup_name,
-                                                      paddle.to_tensor(value))
+                            sub_layer.register_buffer(
+                                backup_name,
+                                paddle.to_tensor(value),
+                                persistable=False)
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
                         # save optimizer accumulators into layer buffer
