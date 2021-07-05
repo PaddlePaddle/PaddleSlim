@@ -44,7 +44,7 @@ from paddleslim.nas import SANAS
 
 BATCH_SIZE=96
 SERVER_ADDRESS = ""
-PORT = 8377
+PORT = np.random.randint(8337, 8773)
 SEARCH_STEPS = 300
 RETAIN_EPOCH=30
 MAX_PARAMS=3.77
@@ -208,6 +208,7 @@ archs = sa_nas.next_archs()[0]
 #### 9.2 构造训练和预测program
 根据上一步中获得的模型结构分别构造训练program和预测program。
 ```python
+paddle.enable_static()
 train_program = fluid.Program()
 test_program = fluid.Program()
 startup_program = fluid.Program()
@@ -244,6 +245,7 @@ test_loader.set_sample_list_generator(test_reader, places=place)
 
 #### 9.6 启动训练和评估
 ```python
+valid_top1_list = []
 for epoch_id in range(RETAIN_EPOCH):
     train_top1 = train(train_program, exe, epoch_id, train_loader, train_fetch_list)
     print("TRAIN: Epoch {}, train_acc {:.6f}".format(epoch_id, train_top1))
