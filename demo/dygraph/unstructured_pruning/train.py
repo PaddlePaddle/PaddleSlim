@@ -191,7 +191,7 @@ def compress(args):
             opt.clear_grad()
             pruner.step()
             train_run_cost += time.time() - train_start
-            total_samples += args.batch_size * ParallelEnv().nranks
+            total_samples += args.batch_size
 
             if batch_id % args.log_period == 0:
                 _logger.info(
