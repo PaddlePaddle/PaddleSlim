@@ -373,6 +373,7 @@ class TestOFACase2(TestOFA):
         self.data = paddle.to_tensor(data_np)
 
     def init_config(self):
+        teacher_model_state_dict = self.teacher_model.state_dict()
         default_run_config = {
             'train_batch_size': 1,
             'n_epochs': [[2, 5]],
@@ -384,6 +385,7 @@ class TestOFACase2(TestOFA):
         default_distill_config = {
             'teacher_model': self.teacher_model,
             'mapping_layers': ['models.3.fn'],
+            'teacher_model_path': teacher_model_state_dict
         }
         self.distill_config = DistillConfig(**default_distill_config)
         self.elastic_order = None

@@ -246,8 +246,6 @@ class OFA(OFABase):
             self._add_teacher = True
             self._prepare_distill()
 
-        self.model.train()
-
     def _prepare_distill(self):
         if self.distill_config.teacher_model == None:
             _logger.error(
@@ -259,8 +257,9 @@ class OFA(OFABase):
 
         # load teacher parameter
         if self.distill_config.teacher_model_path != None:
-            param_state_dict, _ = paddle.load_dygraph(
-                self.distill_config.teacher_model_path)
+            param_state_dict = self.distill_config.teacher_model_path if isinstance(
+                self.distill_config.teacher_model_path,
+                dict) else paddle.load(self.distill_config.teacher_model_path)
             self.distill_config.teacher_model.set_dict(param_state_dict)
 
         self.ofa_teacher_model = OFABase(self.distill_config.teacher_model)
