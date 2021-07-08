@@ -105,6 +105,9 @@ class PruneWorker(object):
 
     def _visit_and_search(self, var, axis, transforms):
         self._visit(var, axis)
+        if var.name() in self.skip_vars:
+            raise UnsupportOpError("Variable {} was skipped.".format(var.name(
+            )))
         pre_ops = var.inputs()
         for op in pre_ops:
             self._prune_op(op, var, axis, transforms)
@@ -123,7 +126,6 @@ class PruneWorker(object):
         if op.type() in self.ops_unsupported:
             raise UnsupportOpError("Unsupported operator named {}".format(
                 op.type()))
-
         cls = PRUNE_WORKER.get(op.type())
         if cls is None:
             if op.type() in SKIPPED_OPS:
@@ -214,10 +216,7 @@ class conv2d(PruneWorker):
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 0)
             self.append_pruned_vars(filter_var, 0, pruned_idx)
-
-            for op in filter_var.outputs():
-                self._prune_op(op, filter_var, 0, pruned_idx)
-
+            self._visit_and_search(filter_var, 0, pruned_idx)
             if len(self.op.inputs("Bias")) > 0:
                 self.append_pruned_vars(
                     self.op.inputs("Bias")[0], channel_axis, pruned_idx)
@@ -240,8 +239,7 @@ class conv2d_transpose(PruneWorker):
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 0)
             self.append_pruned_vars(filter_var, 0, pruned_idx)
-            for op in filter_var.outputs():
-                self._prune_op(op, filter_var, 0, pruned_idx)
+            self._visit_and_serch(filter_var, 0, pruned_idx)
 
         elif var in self.op.inputs("Filter"):
             _logger.warn("Skip pruning output channels of conv2d_transpose!")
@@ -252,20 +250,14 @@ class conv2d_transpose(PruneWorker):
 
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 1)
-
             self.append_pruned_vars(filter_var, 1, pruned_idx)
-
-            for op in filter_var.outputs():
-                self._prune_op(op, filter_var, 1, pruned_idx)
+            self._visit_and_search(filter_var, 1, pruned_idx)
 
             if len(self.op.inputs("Bias")) > 0:
                 self.append_pruned_vars(
                     self.op.inputs("Bias")[0], channel_axis, pruned_idx)
-
             output_var = self.op.outputs("Output")[0]
-            next_ops = output_var.outputs()
-            for op in next_ops:
-                self._prune_op(op, output_var, channel_axis, pruned_idx)
+            self._visit_and_search(output_var, channel_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
@@ -281,22 +273,15 @@ class batch_norm(PruneWorker):
 
         if var in self.op.outputs("Y"):
             in_var = self.op.inputs("X")[0]
-            self._visit(in_var, pruned_axis)
-            pre_ops = in_var.inputs()
-            for op in pre_ops:
-                self._prune_op(op, in_var, pruned_axis, pruned_idx)
+            self._visit_and_search(in_var, pruned_axis, pruned_idx)
 
         for param in ["Scale", "Bias", "Mean", "Variance"]:
             param_var = self.op.inputs(param)[0]
-            for op in param_var.outputs():
-                self._prune_op(op, param_var, 0, pruned_idx)
+            self._visit_and_search(param_var, 0, pruned_idx)
             self.append_pruned_vars(param_var, 0, pruned_idx)
 
         out_var = self.op.outputs("Y")[0]
-        self._visit(out_var, pruned_axis)
-        next_ops = out_var.outputs()
-        for op in next_ops:
-            self._prune_op(op, out_var, pruned_axis, pruned_idx)
+        self._visit_and_search(out_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
@@ -475,20 +460,13 @@ class sum(PruneWorker):
     def _prune(self, var, pruned_axis, pruned_idx):
         if var in self.op.outputs("Out"):
             for in_var in self.op.inputs("X"):
-                pre_ops = in_var.inputs()
-                for op in pre_ops:
-                    self._prune_op(op, in_var, pruned_axis, pruned_idx)
+                self._visit_and_search(in_var, pruned_axis, pruned_idx)
         elif var in self.op.inputs("X"):
             for in_var in self.op.inputs("X"):
                 if in_var != var:
-                    pre_ops = in_var.inputs()
-                    for op in pre_ops:
-                        self._prune_op(op, in_var, pruned_axis, pruned_idx)
+                    self._visit_and_search(in_var, pruned_axis, pruned_idx)
         out_var = self.op.outputs("Out")[0]
-        self._visit(out_var, pruned_axis)
-        next_ops = out_var.outputs()
-        for op in next_ops:
-            self._prune_op(op, out_var, pruned_axis, pruned_idx)
+        self._visit_and_search(otu_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
@@ -756,12 +734,10 @@ class scale(PruneWorker):
     def _prune(self, var, pruned_axis, pruned_idx):
         if var in self.op.inputs("X"):
             out_var = self.op.outputs("Out")[0]
-            for op in out_var.outputs():
-                self._prune_op(op, out_var, pruned_axis, pruned_idx)
+            self._visit_and_search(out_var, pruned_axis, pruned_idx)
         elif var in self.op.outputs("Out"):
             in_var = self.op.inputs("X")[0]
-            for op in in_var.inputs():
-                self._prune_op(op, in_var, pruned_axis, pruned_idx)
+            self._visit_and_search(in_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
@@ -802,22 +778,15 @@ class affine_channel(PruneWorker):
 
         if var in self.op.outputs("Out"):
             in_var = self.op.inputs("X")[0]
-            self._visit(in_var, pruned_axis)
-            pre_ops = in_var.inputs()
-            for op in pre_ops:
-                self._prune_op(op, in_var, pruned_axis, pruned_idx)
+            self._visit_and_search(in_var, pruned_axis, pruned_idx)
 
         for param in ["Scale", "Bias"]:
             param_var = self.op.inputs(param)[0]
-            for op in param_var.outputs():
-                self._prune_op(op, param_var, 0, pruned_idx)
+            self._visit_and_search(param_var, 0, pruned_idx)
             self.append_pruned_vars(param_var, 0, pruned_idx)
 
         out_var = self.op.outputs("Out")[0]
-        self._visit(out_var, pruned_axis)
-        next_ops = out_var.outputs()
-        for op in next_ops:
-            self._prune_op(op, out_var, pruned_axis, pruned_idx)
+        self._visit_and_search(out_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
@@ -843,12 +812,9 @@ class flatten_contiguous_range(PruneWorker):
                 out_pruned_axis = start_axis + pruned_axis - stop_axis
 
             self._visit(in_var, pruned_axis)
-            self._visit(out_var, out_pruned_axis)
             transform = {'stride': stride}
-            next_ops = out_var.outputs()
-            for op in next_ops:
-                self._prune_op(op, out_var, out_pruned_axis,
-                               transforms + [transform])
+            self._visit_and_search(out_var, out_pruned_axis,
+                                   transforms + [transform])
 
 
 @PRUNE_WORKER.register
