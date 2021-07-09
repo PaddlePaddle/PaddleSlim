@@ -239,7 +239,7 @@ class conv2d_transpose(PruneWorker):
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 0)
             self.append_pruned_vars(filter_var, 0, pruned_idx)
-            self._visit_and_serch(filter_var, 0, pruned_idx)
+            self._visit_and_search(filter_var, 0, pruned_idx)
 
         elif var in self.op.inputs("Filter"):
             _logger.warn("Skip pruning output channels of conv2d_transpose!")
@@ -251,6 +251,7 @@ class conv2d_transpose(PruneWorker):
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 1)
             self.append_pruned_vars(filter_var, 1, pruned_idx)
+
             self._visit_and_search(filter_var, 1, pruned_idx)
 
             if len(self.op.inputs("Bias")) > 0:
@@ -466,7 +467,7 @@ class sum(PruneWorker):
                 if in_var != var:
                     self._visit_and_search(in_var, pruned_axis, pruned_idx)
         out_var = self.op.outputs("Out")[0]
-        self._visit_and_search(otu_var, pruned_axis, pruned_idx)
+        self._visit_and_search(out_var, pruned_axis, pruned_idx)
 
 
 @PRUNE_WORKER.register
