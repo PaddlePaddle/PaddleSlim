@@ -12,5 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .quanter import QAT
-__all__ = ['QAT']
+from . import qat
+from . import ptq
+
+from .qat import *
+from .ptq import *
+
+__all__ = []
+__all__ += qat.__all__
+__all__ += ptq.__all__
