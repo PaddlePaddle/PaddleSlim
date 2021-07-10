@@ -201,6 +201,50 @@ class TestSqueeze2(StaticCase):
         self.assertTrue(ret == {})
 
 
+class TestSum(StaticCase):
+    def test_prune(self):
+        main_program = fluid.Program()
+        startup_program = fluid.Program()
+        with fluid.unique_name.guard():
+            with fluid.program_guard(main_program, startup_program):
+                input = fluid.data(name="image", shape=[1, 3, 16, 16])
+                conv1 = conv_bn_layer(
+                    input, 8, 3, "conv1", act='relu')  #[1, 8, 1, 1]
+                conv2 = conv_bn_layer(
+                    input, 8, 3, "conv2", act='relu')  #[1, 8, 1, 1]
+                out = conv1 + conv2
+
+        graph = GraphWrapper(main_program)
+        cls = PRUNE_WORKER.get("sum")
+        out_var = graph.var(out.name)
+        in_var = graph.var(conv1.name)
+        op = out_var.inputs()[0]
+        # pruning out
+        pruned_params = []
+        ret = {}
+        worker = cls(op, pruned_params, {}, True)
+        worker.prune(out_var, 1, [])
+        for var, axis, _, _ in pruned_params:
+            ret[var.name()] = axis
+        self.assertTrue(ret == {
+            'conv1_weights': 0,
+            'conv1_bn_scale': 0,
+            'conv1_bn_offset': 0,
+            'conv1_bn_mean': 0,
+            'conv1_bn_variance': 0
+        })
+
+        # pruning inputs
+        pruned_params = []
+        worker = cls(op, pruned_params, {}, True)
+        worker.skip_vars = [out.name]
+        try:
+            worker.prune(in_var, 0, [])
+        except UnsupportOpError as e:
+            print(e)
+        self.assertTrue(pruned_params == [])
+
+
 class TestUnsupportAndDefault(StaticCase):
     def test_prune(self):
         main_program = fluid.Program()
@@ -324,7 +368,6 @@ class TestPruneWorker(unittest.TestCase):
                 if var.name() not in ret:
                     ret[var.name()] = []
                 ret[var.name()].append(axis)
-            print(f"excepted: {_ret}; but get {ret}")
             self.assertTrue(ret == _ret)
 
 
