@@ -20,6 +20,7 @@ import os
 import numpy as np
 import six
 import logging
+from distutils.util import strtobool
 
 
 def print_arguments(args):
@@ -54,7 +55,7 @@ def add_arguments(argname, type, default, help, argparser, **kwargs):
         add_argument("name", str, "Jonh", "User name.", parser)
         args = parser.parse_args()
     """
-    type = distutils.util.strtobool if type == bool else type
+    type = strtobool if type == bool else type
     argparser.add_argument(
         "--" + argname,
         default=default,

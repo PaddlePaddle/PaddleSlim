@@ -1,11 +1,16 @@
-model_path=$1
-test_samples=1000  # if set as -1, use all test samples
 data_path='/dataset/ILSVRC2012/'
-batch_size=16
 
-echo "--------eval model: ${model_name}-------------"
-python ./src/eval.py \
+model_path=$1
+use_gpu=$2
+ir_optim=False
+echo "--------test model: ${model_path}-------------"
+
+python ./src/test.py \
    --model_path=$model_path \
    --data_dir=${data_path} \
-   --test_samples=${test_samples} \
-   --batch_size=${batch_size}
+   --test_samples=-1 \
+   --batch_size=32 \
+   --use_gpu=${use_gpu} \
+   --ir_optim=${ir_optim}
+
+echo "\n"

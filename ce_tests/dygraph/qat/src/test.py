@@ -17,11 +17,14 @@ import imagenet_dataset as dataset
 
 
 def eval(args):
+    # create predictor
     model_file = os.path.join(args.model_path, args.model_filename)
     params_file = os.path.join(args.model_path, args.params_filename)
     config = paddle_infer.Config(model_file, params_file)
-    config.enable_mkldnn()
-    config.switch_ir_optim(False)
+    if args.use_gpu:
+        config.enable_use_gpu(1000, 0)
+    if not args.ir_optim:
+        config.switch_ir_optim(False)
 
     predictor = paddle_infer.create_predictor(config)
 
@@ -30,21 +33,25 @@ def eval(args):
     output_names = predictor.get_output_names()
     output_handle = predictor.get_output_handle(output_names[0])
 
-    val_dataset = dataset.ImageNetDataset(data_dir=args.data_dir, mode='val')
+    # prepare data
+    val_dataset = dataset.ImageNetDataset(
+        path=os.path.join(args.data_dir, 'val_hapi'), mode='val')
     eval_loader = paddle.io.DataLoader(
-        val_dataset, batch_size=args.batch_size, drop_last=True)
+        val_dataset, batch_size=args.batch_size, num_workers=5)
 
     cost_time = 0.
     total_num = 0.
     correct_1_num = 0
     correct_5_num = 0
     for batch_id, data in enumerate(eval_loader()):
+        # set input
         img_np = np.array([tensor.numpy() for tensor in data[0]])
         label_np = np.array([tensor.numpy() for tensor in data[1]])
 
         input_handle.reshape(img_np.shape)
         input_handle.copy_from_cpu(img_np)
 
+        # run
         t1 = time.time()
         predictor.run()
         t2 = time.time()
@@ -52,6 +59,7 @@ def eval(args):
 
         output_data = output_handle.copy_to_cpu()
 
+        # calculate accuracy
         for i in range(len(label_np)):
             label = label_np[i][0]
             result = output_data[i, :]
@@ -76,7 +84,11 @@ def eval(args):
 
     acc1 = correct_1_num / total_num
     acc5 = correct_5_num / total_num
-    print("End test: test_acc1 {:.3f}, test_acc5 {:.5f}".format(acc1, acc5))
+    avg_time = cost_time / total_num
+    print("End test: test image {}".format(total_num))
+    print("test_acc1 {:.4f}, test_acc5 {:.4f}, avg time {:.5f} sec/img".format(
+        acc1, acc5, avg_time))
+    print("\n")
 
 
 def main():
@@ -89,7 +101,9 @@ def main():
             "The ImageNet dataset root dir.")
     add_arg('test_samples', int, -1,
             "Test samples. If set -1, use all test samples")
-    add_arg('batch_size', int, 16, "Batch size.")
+    add_arg('batch_size', int, 10, "Batch size.")
+    add_arg('use_gpu', bool, False, "Use gpu.")
+    add_arg('ir_optim', bool, False, "Enable ir optim.")
 
     args = parser.parse_args()
     print_arguments(args)
