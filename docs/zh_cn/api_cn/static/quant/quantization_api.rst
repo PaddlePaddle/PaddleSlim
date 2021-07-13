@@ -216,15 +216,15 @@ quant_post_static
         executor=exe,
         model_filename='__model__',
         params_filename='__params__')
-   quant_post_static(
-           executor=exe,
-           model_dir='./model_path',
-           quantize_model_path='./save_path',
-           sample_generator=val_reader,
-           model_filename='__model__',
-           params_filename='__params__',
-           batch_size=16,
-           batch_nums=10)
+    quant_post_static(
+        executor=exe,
+        model_dir='./model_path',
+        quantize_model_path='./save_path',
+        sample_generator=val_reader,
+        model_filename='__model__',
+        params_filename='__params__',
+        batch_size=16,
+        batch_nums=10)
 
 更详细的用法请参考 `离线量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post>`_ 。
 
