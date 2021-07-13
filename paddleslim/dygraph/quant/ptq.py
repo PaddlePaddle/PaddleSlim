@@ -1,4 +1,4 @@
-# Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -94,6 +94,12 @@ class PTQ(object):
         assert isinstance(model, paddle.nn.Layer), \
             "The model must be the instance of paddle.nn.Layer."
 
-        model.eval()
+        training = model.training
+        if training:
+            model.eval()
+
         self.ptq.save_quantized_model(
             model=model, path=path, input_spec=input_spec)
+
+        if training:
+            model.train()
