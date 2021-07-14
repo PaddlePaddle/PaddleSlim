@@ -1,4 +1,4 @@
-# Copyright (c) 2020  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ class PACT(paddle.nn.Layer):
         super(PACT, self).__init__()
         alpha_attr = paddle.ParamAttr(
             name=self.full_name() + ".pact",
-            initializer=paddle.nn.initializer.Constant(value=20),
+            initializer=paddle.nn.initializer.Constant(value=100),
             learning_rate=1000.0)
 
         self.alpha = self.create_parameter(
@@ -207,11 +207,48 @@ class QAT(object):
             weight_quantize_layer=self.weight_quantize,
             act_quantize_layer=self.act_quantize)
 
-    def quantize(self, model):
+    def quantize(self, model, inplace=False):
+        """
+        Quantize the input model.
+
+        Args:
+            model(paddle.nn.Layer): The model to be quantized.
+            inplace(bool): Whether apply quantization to the input model.
+                           Default: False.
+        Returns:
+            quantized_model(paddle.nn.Layer): The quantized model.
+        """
+        assert isinstance(model, paddle.nn.Layer), \
+            "The model must be the instance of paddle.nn.Layer."
+
         self._model = copy.deepcopy(model)
-        self.imperative_qat.quantize(model)
+
+        if inplace:
+            self.imperative_qat.quantize(model)
+            quant_model = model
+        else:
+            quant_model = copy.deepcopy(model)
+            self.imperative_qat.quantize(quant_model)
+
+        return quant_model
 
     def save_quantized_model(self, model, path, input_spec=None):
+        """
+        Save the quantized inference model.
+
+        Args:
+            model (Layer): The model to be saved.
+            path (str): The path prefix to save model. The format is 
+                ``dirname/file_prefix`` or ``file_prefix``.
+            input_spec (list[InputSpec|Tensor], optional): Describes the input
+                of the saved model's forward method, which can be described by
+                InputSpec or example Tensor. If None, all input variables of 
+                the original Layer's forward method would be the inputs of
+                the saved model. Default: None.
+
+        Returns:
+            None
+        """
         if self.weight_preprocess is not None or self.act_preprocess is not None:
             training = model.training
             model = self._remove_preprocess(model)
