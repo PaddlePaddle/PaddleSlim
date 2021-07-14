@@ -22,16 +22,25 @@ from collections.abc import Iterable
 
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer, Conv2D, BatchNorm, Pool2D, to_variable
+from paddle.fluid.dygraph import Embedding, LayerNorm, Linear
+from paddle.fluid.dygraph import Conv2D, BatchNorm, Pool2D
+from paddle.fluid.dygraph import Layer
 from paddle.fluid.dygraph import to_variable
 from paddle.fluid.initializer import NormalInitializer
 from paddle.fluid import ParamAttr
 from paddle.fluid.initializer import MSRA, ConstantInitializer
 
 ConvBN_PRIMITIVES = [
-    'std_conv_bn_3', 'std_conv_bn_5', 'std_conv_bn_7', 'dil_conv_bn_3',
-    'dil_conv_bn_5', 'dil_conv_bn_7', 'avg_pool_3', 'max_pool_3',
-    'skip_connect', 'none'
+    'std_conv_bn_3',
+    'std_conv_bn_5',
+    'std_conv_bn_7',
+    'dil_conv_bn_3',
+    'dil_conv_bn_5',
+    'dil_conv_bn_7',
+    'avg_pool_3',
+    'max_pool_3',
+    'skip_connect',
+    'none',
 ]
 
 
