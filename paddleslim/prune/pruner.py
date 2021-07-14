@@ -119,8 +119,10 @@ class Pruner():
                     # update groups of conv2d
                     if pruned_axis == 1:
                         for op in param.outputs():
-                            if op.type() in ["conv2d", "depthwise_conv2d"
-                                             ] and op.attr("groups") > 1:
+                            if op.type() in [
+                                    "conv2d", "conv2d_grad", "depthwise_conv2d",
+                                    "depthwise_conv2d_grad"
+                            ] and op.attr("groups") > 1:
                                 _groups = op.attr("groups")
                                 _filter_num = param.shape()[1]
                                 new_groups = int(
