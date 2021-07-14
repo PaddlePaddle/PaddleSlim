@@ -18,7 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-from collections import Iterable
+from collections.abc import Iterable
 
 import paddle
 import paddle.fluid as fluid
@@ -299,13 +299,11 @@ class EncoderLayer(Layer):
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],  # zero 2
             [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]  # dil_conv3 3
         ]
-        self.gumbel_alphas = to_variable(
-            np.array(mrpc_arch).astype(np.float32))
+        self.gumbel_alphas = to_variable(np.array(mrpc_arch).astype(np.float32))
         self.gumbel_alphas.stop_gradient = True
         print("gumbel_alphas: \n", self.gumbel_alphas.numpy())
 
-    def forward(self, enc_input_0, enc_input_1, epoch, flops=[],
-                model_size=[]):
+    def forward(self, enc_input_0, enc_input_1, epoch, flops=[], model_size=[]):
         alphas = self.gumbel_alphas if self.use_fixed_gumbel else gumbel_softmax(
             self.alphas, epoch)
 
