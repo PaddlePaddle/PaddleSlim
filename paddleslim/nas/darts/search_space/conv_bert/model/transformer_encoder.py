@@ -18,20 +18,29 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-from collections import Iterable
+from collections.abc import Iterable
 
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer, Conv2D, BatchNorm, Pool2D, to_variable
+from paddle.fluid.dygraph import Embedding, LayerNorm, Linear
+from paddle.fluid.dygraph import Conv2D, BatchNorm, Pool2D
+from paddle.fluid.dygraph import Layer
 from paddle.fluid.dygraph import to_variable
 from paddle.fluid.initializer import NormalInitializer
 from paddle.fluid import ParamAttr
 from paddle.fluid.initializer import MSRA, ConstantInitializer
 
 ConvBN_PRIMITIVES = [
-    'std_conv_bn_3', 'std_conv_bn_5', 'std_conv_bn_7', 'dil_conv_bn_3',
-    'dil_conv_bn_5', 'dil_conv_bn_7', 'avg_pool_3', 'max_pool_3',
-    'skip_connect', 'none'
+    'std_conv_bn_3',
+    'std_conv_bn_5',
+    'std_conv_bn_7',
+    'dil_conv_bn_3',
+    'dil_conv_bn_5',
+    'dil_conv_bn_7',
+    'avg_pool_3',
+    'max_pool_3',
+    'skip_connect',
+    'none',
 ]
 
 
@@ -299,13 +308,11 @@ class EncoderLayer(Layer):
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],  # zero 2
             [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]  # dil_conv3 3
         ]
-        self.gumbel_alphas = to_variable(
-            np.array(mrpc_arch).astype(np.float32))
+        self.gumbel_alphas = to_variable(np.array(mrpc_arch).astype(np.float32))
         self.gumbel_alphas.stop_gradient = True
         print("gumbel_alphas: \n", self.gumbel_alphas.numpy())
 
-    def forward(self, enc_input_0, enc_input_1, epoch, flops=[],
-                model_size=[]):
+    def forward(self, enc_input_0, enc_input_1, epoch, flops=[], model_size=[]):
         alphas = self.gumbel_alphas if self.use_fixed_gumbel else gumbel_softmax(
             self.alphas, epoch)
 

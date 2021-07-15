@@ -39,9 +39,11 @@ class PruningDetails(object):
     """
 
     def __init__(self, var, axis, transform, op, is_parameter=True):
-        assert (isinstance(var, VarWrapper),
-                "name should be VarWrapper, but get type = ".format(type(var)))
-        assert (isinstance(axis, int))
+        assert isinstance(
+            var,
+            VarWrapper), "name should be VarWrapper, but get type = {}".format(
+                type(var))
+        assert isinstance(axis, int)
         self.name = var.name()
         self.var = var
         self.axis = axis
