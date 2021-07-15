@@ -71,8 +71,8 @@ def geometry_median(group, values, graph):
         _logger.warning("The value of tensor '{}' is not found.")
         return None
     value = values[name]
-    assert (len(value.shape) == 4,
-            "geometry_median only support for weight of conv2d.")
+    assert len(
+        value.shape) == 4, "geometry_median only support for weight of conv2d."
 
     def get_distance_sum(value, out_idx):
         w = value.view()
