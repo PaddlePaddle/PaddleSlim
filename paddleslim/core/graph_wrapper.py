@@ -17,7 +17,7 @@ import copy
 import pickle
 import numpy as np
 from collections import OrderedDict
-from collections import Iterable
+from collections.abc import Iterable
 from paddle.fluid.framework import Program, program_guard, Parameter, Variable
 
 __all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper']

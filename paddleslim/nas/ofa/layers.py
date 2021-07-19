@@ -39,8 +39,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class SuperConv2D(nn.Conv2D):
-    """
-    This interface is used to construct a callable object of the ``SuperConv2D``  class.
+    """This interface is used to construct a callable object of the ``SuperConv2D``  class.
 
     Note: the channel in config need to less than first defined.
 
@@ -116,7 +115,7 @@ class SuperConv2D(nn.Conv2D):
             of conv2d. If it is set to None or one attribute of ParamAttr, conv2d
             will create ParamAttr as param_attr. If the Initializer of the param_attr
             is not set, the parameter is initialized with :math:`Normal(0.0, std)`,
-            and the :math:`std` is :math:`(\\frac{2.0 }{filter\_elem\_num})^{0.5}`. Default: None.
+            and the :math:`std` is :math:`(\\frac{2.0 }{filter\\_elem\\_num})^{0.5}`. Default: None.
         bias_attr (ParamAttr or bool, optional): The attribute for the bias of conv2d.
             If it is set to False, no bias will be added to the output units.
             If it is set to None or one attribute of ParamAttr, conv2d
@@ -371,7 +370,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
     `conv2dtranspose <http://www.matthewzeiler.com/wp-content/uploads/2017/07/cvpr2010.pdf>`_ .
     For each input :math:`X`, the equation is:
     .. math::
-        Out = \sigma (W \\ast X + b)
+        Out = \\sigma (W \\ast X + b)
     Where:
     * :math:`X`: Input value, a ``Tensor`` with NCHW format.
     * :math:`W`: Filter value, a ``Tensor`` with shape [MCHW] .
@@ -387,10 +386,10 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
           Output shape: :math:`(N, C_{out}, H_{out}, W_{out})`
         Where
         .. math::
-           H^\prime_{out} &= (H_{in} - 1) * strides[0] - 2 * paddings[0] + dilations[0] * (H_f - 1) + 1 \\\\
-           W^\prime_{out} &= (W_{in} - 1) * strides[1] - 2 * paddings[1] + dilations[1] * (W_f - 1) + 1 \\\\
-           H_{out} &\in [ H^\prime_{out}, H^\prime_{out} + strides[0] ) \\\\
-           W_{out} &\in [ W^\prime_{out}, W^\prime_{out} + strides[1] )
+           H^\\prime_{out} &= (H_{in} - 1) * strides[0] - 2 * paddings[0] + dilations[0] * (H_f - 1) + 1 \\\\
+           W^\\prime_{out} &= (W_{in} - 1) * strides[1] - 2 * paddings[1] + dilations[1] * (W_f - 1) + 1 \\\\
+           H_{out} &\\in [ H^\\prime_{out}, H^\\prime_{out} + strides[0] ) \\\\
+           W_{out} &\\in [ W^\\prime_{out}, W^\\prime_{out} + strides[1] )
     Parameters:
         num_channels(int): The number of channels in the input image.
         num_filters(int): The number of the filter. It is as same as the output
@@ -809,12 +808,12 @@ class SuperLinear(nn.Linear):
         Out = XW + b
     where :math:`W` is the weight and :math:`b` is the bias.
     Linear layer takes only one multi-dimensional tensor as input with the
-    shape :math:`[batch\_size, *, in\_features]` , where :math:`*` means any
+    shape :math:`[batch\\_size, *, in\\_features]` , where :math:`*` means any
     number of additional dimensions. It multiplies input tensor with the weight
-    (a 2-D tensor of shape :math:`[in\_features, out\_features]` ) and produces
-    an output tensor of shape :math:`[batch\_size, *, out\_features]` .
-    If :math:`bias\_attr` is not False, the bias (a 1-D tensor of
-    shape :math:`[out\_features]` ) will be created and added to the output.
+    (a 2-D tensor of shape :math:`[in\\_features, out\\_features]` ) and produces
+    an output tensor of shape :math:`[batch\\_size, *, out\\_features]` .
+    If :math:`bias\\_attr` is not False, the bias (a 1-D tensor of
+    shape :math:`[out\\_features]` ) will be created and added to the output.
     Parameters:
         in_features (int): The number of input units.
         out_features (int): The number of output units.
@@ -838,8 +837,8 @@ class SuperLinear(nn.Linear):
         **weight** (Parameter): the learnable weight of this layer.
         **bias** (Parameter): the learnable bias of this layer.
     Shape:
-        - input: Multi-dimentional tensor with shape :math:`[batch\_size, *, in\_features]` .
-        - output: Multi-dimentional tensor with shape :math:`[batch\_size, *, out\_features]` .
+        - input: Multi-dimentional tensor with shape :math:`[batch\\_size, *, in\\_features]` .
+        - output: Multi-dimentional tensor with shape :math:`[batch\\_size, *, out\\_features]` .
     Examples:
         .. code-block:: python
           import numpy as np
@@ -1184,9 +1183,9 @@ class SuperEmbedding(nn.Embedding):
             of the dictionary of embeddings.
         embedding_dim:  Just one element which indicate the size of each embedding vector respectively.
         padding_idx(int|long|None): padding_idx needs to be in the interval [-num_embeddings, num_embeddings).
-            If :math:`padding\_idx < 0`, the :math:`padding\_idx` will automatically be converted
-            to :math:`vocab\_size + padding\_idx` . It will output all-zero padding data whenever lookup
-            encounters :math:`padding\_idx` in id. And the padding data will not be updated while training.
+            If :math:`padding\\_idx < 0`, the :math:`padding\\_idx` will automatically be converted
+            to :math:`vocab\\_size + padding\\_idx` . It will output all-zero padding data whenever lookup
+            encounters :math:`padding\\_idx` in id. And the padding data will not be updated while training.
             If set None, it makes no effect to output. Default: None.
         sparse(bool): The flag indicating whether to use sparse update. This parameter only
             affects the performance of the backwards gradient update. It is recommended to set
