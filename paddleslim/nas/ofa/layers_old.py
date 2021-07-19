@@ -879,16 +879,30 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
         mean = self._mean[:feature_dim]
         variance = self._variance[:feature_dim]
 
-        mean_out = mean
-        variance_out = variance
+        mean_out = self._mean
+        variance_out = self._variance
+        mean_out_tmp = mean
+        variance_out_tmp = variance
 
         attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
                  "is_test", not self.training, "data_layout", self._data_layout,
                  "use_mkldnn", False, "fuse_with_relu", self._fuse_with_relu,
                  "use_global_stats", self._use_global_stats,
                  'trainable_statistics', self._trainable_statistics)
-        batch_norm_out = core.ops.batch_norm(
-            input, weight, bias, mean, variance, mean_out, variance_out, *attrs)
+
+        if feature_dim != self._mean.shape[0]:
+            batch_norm_out = core.ops.batch_norm(input, weight, bias, mean,
+                                                 variance, mean_out_tmp,
+                                                 variance_out_tmp, *attrs)
+            self._mean[:feature_dim] = mean
+            self._variance[:feature_dim] = variance
+            mean_out[:feature_dim] = mean_out_tmp
+            variance_out[:feature_dim] = variance_out_tmp
+        else:
+            batch_norm_out = core.ops.batch_norm(input, weight, bias,
+                                                 self._mean, self._variance,
+                                                 mean_out, variance_out, *attrs)
+
         return dygraph_utils._append_activation_in_dygraph(
             batch_norm_out[0], act=self._act)
 

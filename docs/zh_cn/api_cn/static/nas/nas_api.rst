@@ -49,7 +49,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
    from paddleslim.nas import SANAS
    config = [('MobileNetV2Space')]
    paddle.enable_static()
-   sanas = SANAS(configs=config, , server_addr=("",8821))
+   sanas = SANAS(configs=config, server_addr=("",8821))
 
 .. note::
 
@@ -88,12 +88,13 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       paddle.enable_static()
-      sanas = SANAS(configs=config, , server_addr=("",8822))
+      sanas = SANAS(configs=config, server_addr=("",8822))
       input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
       archs = sanas.next_archs()
       for arch in archs:
           output = arch(input)
           input = output
+
       print(output)
    
    .. py:method:: reward(score)
@@ -115,7 +116,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       paddle.enable_static()
-      sanas = SANAS(configs=config, server_addr=（"", 8883))
+      sanas = SANAS(configs=config, server_addr=("", 8823))
       archs = sanas.next_archs()
       
       ### 假设网络计算出来的score是1，实际代码中使用时需要返回真实score。
@@ -142,7 +143,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       paddle.enable_static()
-      sanas = SANAS(configs=config, server_addr=("",8823))
+      sanas = SANAS(configs=config, server_addr=("", 8824))
       input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
       tokens = ([0] * 25)
       archs = sanas.tokens2arch(tokens)[0]
@@ -163,7 +164,7 @@ SANAS（Simulated Annealing Neural Architecture Search）是基于模拟退火�
       from paddleslim.nas import SANAS
       config = [('MobileNetV2Space')]
       paddle.enable_static()
-      sanas = SANAS(configs=config, server_addr=（"", 8885))
+      sanas = SANAS(configs=config, server_addr=("", 8825))
       print(sanas.current_info())
 
 
@@ -233,7 +234,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
    config = [('MobileNetV2Space')]
 
    paddle.enable_static()
-   rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8824))
+   rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8826))
 
 
 .. py:method:: next_archs(obs=None)
@@ -255,7 +256,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   paddle.enable_static()
-  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8825))
+  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8827))
   input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
   archs = rlnas.next_archs(1)[0]
   for arch in archs:
@@ -280,7 +281,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   paddle.enable_static()
-  rlnas = RLNAS(key='lstm', configs=config, server_addr=（"", 8888))
+  rlnas = RLNAS(key='lstm', configs=config, server_addr=("", 8828))
   rlnas.next_archs(1)
   rlnas.reward(1.0)
 
@@ -307,7 +308,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   paddle.enable_static()
-  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8826))
+  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8829))
   archs = rlnas.final_archs(1)
   print(archs)
 
@@ -330,7 +331,7 @@ RLNAS (Reinforcement Learning Neural Architecture Search）是基于强化学习
   from paddleslim.nas import RLNAS
   config = [('MobileNetV2Space')]
   paddle.enable_static()
-  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8827))
+  rlnas = RLNAS(key='lstm', configs=config, server_addr=("",8830))
   input = paddle.static.data(name='input', shape=[None, 3, 32, 32], dtype='float32')
   tokens = ([0] * 25)
   archs = rlnas.tokens2arch(tokens)[0]

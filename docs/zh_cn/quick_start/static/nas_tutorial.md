@@ -34,7 +34,8 @@ import numpy as np
 
 ## 2. 初始化SANAS搜索实例
 ```python
-sanas = slim.nas.SANAS(configs=[('MobileNetV2Space')], server_addr=("", 8337), save_checkpoint=None)
+port = np.random.randint(8337, 8773)
+sanas = slim.nas.SANAS(configs=[('MobileNetV2Space')], server_addr=("", port), save_checkpoint=None)
 ```
 
 ## 3. 构建网络
@@ -60,7 +61,6 @@ def build_program(archs):
 
         optimizer = paddle.optimizer.Adam(learning_rate=0.1)
         optimizer.minimize(avg_cost)
-
         place = paddle.CPUPlace()
         exe = static.Executor(place)
         exe.run(startup_program)
@@ -160,8 +160,8 @@ sanas.reward(float(finally_reward[1]))
 ```python
 for step in range(3):
     archs = sanas.next_archs()[0]
-    exe, train_program, eval_program, inputs, avg_cost, acc_top1, acc_top5 = build_program(archs)
-    train_loader, eval_loader = input_data(inputs)
+    exe, train_program, eval_program, (images,label), avg_cost, acc_top1, acc_top5 = build_program(archs)
+    train_loader, eval_loader = input_data(images, label)
 
     current_flops = slim.analysis.flops(train_program)
     if current_flops > 321208544:

@@ -17,15 +17,38 @@
 主要代码实现如下：
 
 ```python
-import paddleslim
-model_dir = path/to/fp32_model_params
-save_model_dir = path/to/save_model_path
-paddleslim.quant.quant_post_dynamic(model_dir=model_dir,
-                   save_model_dir=save_model_dir,
-                   weight_bits=8,
-                   quantizable_op_type=['conv2d', 'mul'],
-                   weight_quantize_type="channel_wise_abs_max",
-                   generate_test_model=False)
+import paddle
+import paddle.fluid as fluid
+import paddle.dataset.mnist as reader
+from paddleslim.models import MobileNet
+from paddleslim.quant import quant_post_dynamic
+
+paddle.enable_static()
+image = paddle.static.data(name='image', shape=[None, 1, 28, 28], dtype='float32')
+model = MobileNet()
+out = model.net(input=image, class_dim=10)
+main_prog = paddle.static.default_main_program()
+val_prog = main_prog.clone(for_test=True)
+place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
+exe = paddle.static.Executor(place)
+exe.run(paddle.static.default_startup_program())
+
+paddle.fluid.io.save_inference_model(
+    dirname='./model_path',
+    feeded_var_names=[image.name],
+    target_vars=[out],
+    main_program=val_prog,
+    executor=exe,
+    model_filename='__model__',
+    params_filename='__params__')
+
+quant_post_dynamic(
+        model_dir='./model_path',
+        save_model_dir='./save_path',
+        model_filename='__model__',
+        params_filename='__params__',
+        save_model_filename='__model__',
+        save_params_filename='__params__')
 ```
 
 ## 静态离线量化
@@ -47,16 +70,44 @@ paddleslim.quant.quant_post_dynamic(model_dir=model_dir,
 主要代码实现如下：
 
 ```python
-import paddleslim
+import paddle
+import paddle.fluid as fluid
+import paddle.dataset.mnist as reader
+from paddleslim.models import MobileNet
+from paddleslim.quant import quant_post_static
+
+paddle.enable_static()
+val_reader = reader.test()
+use_gpu = True
+place = fluid.CUDAPlace(0) if use_gpu else fluid.CPUPlace()
+exe = fluid.Executor(place)
+paddle.enable_static()
+image = paddle.static.data(name='image', shape=[None, 1, 28, 28], dtype='float32')
+model = MobileNet()
+out = model.net(input=image, class_dim=10)
+main_prog = paddle.static.default_main_program()
+val_prog = main_prog.clone(for_test=True)
+place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
 exe = paddle.static.Executor(place)
-paddleslim.quant.quant_post(
-  executor=exe,
-  model_dir=model_path,
-  quantize_model_path=save_path,
-  sample_generator=reader,
-  model_filename=model_filename,
-  params_filename=params_filename,
-  batch_nums=batch_num)
+exe.run(paddle.static.default_startup_program())
+
+paddle.fluid.io.save_inference_model(
+    dirname='./model_path',
+    feeded_var_names=[image.name],
+    target_vars=[out],
+    main_program=val_prog,
+    executor=exe,
+    model_filename='__model__',
+    params_filename='__params__')
+quant_post_static(
+        executor=exe,
+        model_dir='./model_path',
+        quantize_model_path='./save_path',
+        sample_generator=val_reader,
+        model_filename='__model__',
+        params_filename='__params__',
+        batch_size=16,
+        batch_nums=10)
 ```
 
 详细代码与例程请参考：[静态离线量化](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post)

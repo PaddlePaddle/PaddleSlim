@@ -119,8 +119,10 @@ class Pruner():
                     # update groups of conv2d
                     if pruned_axis == 1:
                         for op in param.outputs():
-                            if op.type() in ["conv2d", "depthwise_conv2d"
-                                             ] and op.attr("groups") > 1:
+                            if op.type() in [
+                                    "conv2d", "conv2d_grad", "depthwise_conv2d",
+                                    "depthwise_conv2d_grad"
+                            ] and op.attr("groups") > 1:
                                 _groups = op.attr("groups")
                                 _filter_num = param.shape()[1]
                                 new_groups = int(
@@ -169,20 +171,25 @@ class Pruner():
         for name, axis, pruned_idx, transforms in items:
             src = pruned_idx
             for trans in transforms:
-                if 'src_start' not in trans:
-                    continue
-                src_start = trans['src_start']
-                src_end = trans['src_end']
-                src_len = src_end - src_start
-                target_start = trans['target_start']
-                target_end = trans['target_end']
-                starts = np.array(range(target_start, target_end, src_len))
                 target = []
-                for idx in src:
-                    if idx >= src_start and idx < src_end:
-                        idx -= src_start
-                        target.extend(list(idx + starts))
+                if 'src_start' in trans:
+                    src_start = trans['src_start']
+                    src_end = trans['src_end']
+                    src_len = src_end - src_start
+                    target_start = trans['target_start']
+                    target_end = trans['target_end']
+                    starts = np.array(range(target_start, target_end, src_len))
+                    for idx in src:
+                        if idx >= src_start and idx < src_end:
+                            idx -= src_start
+                            target.extend(list(idx + starts))
+                elif "repeat" in trans:
+                    repeat = trans['repeat']
+                    for idx in src:
+                        idx = idx * repeat
+                        target.extend(range(idx, idx + repeat))
                 src = target
+
             ret.append((name, axis, src))
         return ret
 
