@@ -55,12 +55,3 @@ class ImageNetDataset(DatasetFolder):
 
     def __len__(self):
         return len(self.samples)
-
-    def test_reader(self):
-        def reader():
-            for img_path, label in self.samples:
-                img = cv2.imread(img_path).astype(np.float32)
-                label = np.array([label]).astype(np.int64)
-                yield self.transform(img), label
-
-        return reader

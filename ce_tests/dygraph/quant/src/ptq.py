@@ -24,21 +24,13 @@ import math
 import numpy as np
 
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.parallel import ParallelEnv
-from paddle.io import BatchSampler, DataLoader
-
-import paddle.hapi as hapi
-from paddle.hapi.model import Input
-from paddle.metric.metrics import Accuracy
 import paddle.vision.models as models
 
 from imagenet_dataset import ImageNetDataset
-from paddle.fluid.contrib.slim.quantization import *
 from paddleslim import PTQ
 
 
-def test(model, dataset, batch_num, batch_size):
+def calibrate(model, dataset, batch_num, batch_size):
     data_loader = paddle.io.DataLoader(
         dataset, batch_size=batch_size, num_workers=5)
 
@@ -69,18 +61,15 @@ def main():
     fp32_model.eval()
 
     val_dataset = ImageNetDataset(
-        os.path.join(FLAGS.data, "val_hapi"), mode='val')
+        os.path.join(FLAGS.data, FLAGS.val_dir), mode='val')
 
-    # 2 quantization
-    #config = default_ptq_config
-    #config = PTQConfig(KLQuantizer(), PerChannelAbsmaxQuantizer())
-    #ptq = ImperativePTQ(config)
+    # 2 quantizations
     ptq = PTQ()
     quant_model = ptq.quantize(fp32_model)
 
     print("Calibrate")
-    test(quant_model, val_dataset, FLAGS.quant_batch_num,
-         FLAGS.quant_batch_size)
+    calibrate(quant_model, val_dataset, FLAGS.quant_batch_num,
+              FLAGS.quant_batch_size)
 
     # 3 save
     quant_output_dir = os.path.join(FLAGS.output_dir, FLAGS.arch, "int8_infer",
@@ -109,6 +98,10 @@ if __name__ == '__main__':
         default="/dataset/ILSVRC2012",
         help='path to dataset (should have subdirectories named "train" and "val"'
     )
+    parser.add_argument(
+        '--val_dir',
+        default="val_hapi",
+        help='the dir that saves val images for paddle.Model')
 
     # train
     parser.add_argument(

@@ -24,112 +24,82 @@ import math
 import numpy as np
 
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.parallel import ParallelEnv
-from paddle.io import BatchSampler, DataLoader
+from paddle.distributed import ParallelEnv
 
-import paddle.hapi as hapi
-from paddle.hapi.model import Input
+from paddle.optimizer.lr import PiecewiseDecay
 from paddle.metric.metrics import Accuracy
 import paddle.vision.models as models
 
-from imagenet_dataset import ImageNetDataset
+from paddleslim import QAT
 from paddle.fluid.contrib.slim.quantization import ImperativeQuantAware
-from paddleslim.dygraph.quant import QAT
-from paddle.fluid.dygraph import TracedLayer
+
+from imagenet_dataset import ImageNetDataset
 
 
 def make_optimizer(step_per_epoch, parameter_list=None):
+    assert FLAGS.lr_scheduler == 'piecewise'
+
     base_lr = FLAGS.lr
     lr_scheduler = FLAGS.lr_scheduler
     momentum = FLAGS.momentum
     weight_decay = FLAGS.weight_decay
+    milestones = FLAGS.milestones
 
-    if lr_scheduler == 'piecewise':
-        milestones = FLAGS.milestones
-        boundaries = [step_per_epoch * e for e in milestones]
-        values = [base_lr * (0.1**i) for i in range(len(boundaries) + 1)]
-        learning_rate = fluid.layers.piecewise_decay(
-            boundaries=boundaries, values=values)
-    elif lr_scheduler == 'cosine':
-        learning_rate = fluid.layers.cosine_decay(base_lr, step_per_epoch,
-                                                  FLAGS.epoch)
-    else:
-        raise ValueError(
-            "Expected lr_scheduler in ['piecewise', 'cosine'], but got {}".
-            format(lr_scheduler))
+    boundaries = [step_per_epoch * e for e in milestones]
+    values = [base_lr * (0.1**i) for i in range(len(boundaries) + 1)]
+    learning_rate = PiecewiseDecay(boundaries=boundaries, values=values)
 
-    learning_rate = fluid.layers.linear_lr_warmup(
-        learning_rate=learning_rate,
-        warmup_steps=5 * step_per_epoch,
-        start_lr=0.,
-        end_lr=base_lr)
-
-    optimizer = fluid.optimizer.Momentum(
+    optimizer = paddle.optimizer.Momentum(
         learning_rate=learning_rate,
         momentum=momentum,
-        regularization=fluid.regularizer.L2Decay(weight_decay),
-        parameter_list=parameter_list)
+        weight_decay=weight_decay,
+        parameters=parameter_list)
 
     return optimizer
 
 
 def main():
+    # create model
     model_list = [x for x in models.__dict__["__all__"]]
-    assert FLAGS.arch in model_list, "Expected FLAGS.arch in {}, but received {}".format(
+    assert FLAGS.arch in model_list, \
+        "Expected FLAGS.arch in {}, but received {}".format(
         model_list, FLAGS.arch)
     model = models.__dict__[FLAGS.arch](pretrained=not FLAGS.resume)
 
+    # quantize model
     if FLAGS.enable_quant:
-        print("quantize model")
-        if FLAGS.use_slim:
+        if not FLAGS.use_naive_api:
             print("use slim api")
-            from paddleslim.dygraph.quant import QAT
             quant_config = {
-                'weight_preprocess_type': None,
-                'activation_preprocess_type': None,
                 'weight_quantize_type': FLAGS.weight_quantize_type,
-                'activation_quantize_type': 'moving_average_abs_max',
-                'weight_bits': 8,
-                'activation_bits': 8,
-                'window_size': 10000,
-                'moving_rate': 0.9,
-                'quantizable_layer_type': ['Conv2D', 'Linear'],
             }
             dygraph_qat = QAT(quant_config)
         else:
+            print("use navie api")
             dygraph_qat = ImperativeQuantAware(
-                weight_quantize_type=FLAGS.weight_quantize_type,
-                activation_quantize_type='moving_average_abs_max',
-                quantizable_layer_type=[
-                    'Conv2D',
-                    'Linear',
-                ], )
+                weight_quantize_type=FLAGS.weight_quantize_type, )
         dygraph_qat.quantize(model)
 
-    model = hapi.Model(model)
+    # prepare
+    model = paddle.Model(model)
     if FLAGS.resume is not None:
         print("Resume from " + FLAGS.resume)
         model.load(FLAGS.resume)
 
     train_dataset = ImageNetDataset(
-        os.path.join(FLAGS.data, 'train'),
-        mode='train',
-        image_size=FLAGS.image_size,
-        resize_short_size=FLAGS.resize_short_size)
+        os.path.join(FLAGS.data, 'train'), mode='train')
     val_dataset = ImageNetDataset(
-        os.path.join(FLAGS.data, 'val_hapi'),
-        mode='val',
-        image_size=FLAGS.image_size,
-        resize_short_size=FLAGS.resize_short_size)
+        os.path.join(FLAGS.data, FLAGS.val_dir), mode='val')
 
     optim = make_optimizer(
         np.ceil(
-            len(train_dataset) * 1. / FLAGS.batch_size / ParallelEnv().nranks),
+            float(len(train_dataset)) / FLAGS.batch_size /
+            ParallelEnv().nranks),
         parameter_list=model.parameters())
 
     model.prepare(optim, paddle.nn.CrossEntropyLoss(), Accuracy(topk=(1, 5)))
 
+    # test
     if FLAGS.eval_only:
         model.evaluate(
             val_dataset,
@@ -137,6 +107,7 @@ def main():
             num_workers=FLAGS.num_workers)
         return
 
+    # train
     output_dir = os.path.join(FLAGS.output_dir, "checkpoint",
                               FLAGS.arch + "_checkpoint",
                               time.strftime('%Y-%m-%d-%H-%M', time.localtime()))
@@ -150,6 +121,7 @@ def main():
               save_dir=output_dir,
               num_workers=FLAGS.num_workers)
 
+    # save
     if FLAGS.enable_quant:
         quant_output_dir = os.path.join(FLAGS.output_dir, FLAGS.arch, "model")
         input_spec = paddle.static.InputSpec(
@@ -181,12 +153,9 @@ if __name__ == '__main__':
         help='path to dataset '
         '(should have subdirectories named "train" and "val"')
     parser.add_argument(
-        "--image-size", default=224, type=int, help="intput image size")
-    parser.add_argument(
-        "--resize-short-size",
-        default=256,
-        type=int,
-        help="short size of keeping ratio resize")
+        '--val_dir',
+        default="val_hapi",
+        help='the dir that saves val images for paddle.Model')
 
     # train
     parser.add_argument(
@@ -220,7 +189,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--enable_quant", action='store_true', help="enable quant model")
     parser.add_argument(
-        "--use_slim", action='store_true', help="use paddleslim api")
+        "--use_naive_api", action='store_true', help="use the navie api")
     parser.add_argument(
         "--weight_quantize_type", type=str, default='abs_max', help="")
 
