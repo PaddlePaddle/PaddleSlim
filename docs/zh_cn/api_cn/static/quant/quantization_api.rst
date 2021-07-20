@@ -307,10 +307,11 @@ convert
 .. code-block:: python
 
    #encoding=utf8
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.quant as quant
    
-   
+   paddle.enable_static()
    train_program = fluid.Program()
    
    with fluid.program_guard(train_program):
