@@ -306,14 +306,12 @@ convert
 
 .. code-block:: python
 
-   #encoding=utf8
    import paddle
    import paddle.fluid as fluid
    import paddleslim.quant as quant
    
    paddle.enable_static()
    train_program = fluid.Program()
-   
    with fluid.program_guard(train_program):
        image = fluid.data(name='x', shape=[None, 1, 28, 28])
        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
