@@ -654,8 +654,17 @@ class OFA(OFABase):
         ### find shortcut block using static model
         model_to_traverse = self.model._layers if isinstance(
             self.model, DataParallel) else self.model
+
+        ### change mode to eval for convert graph to program
+        train_mode = False
+        if model_to_traverse.training == True:
+            train_mode = True
+        model_to_traverse.eval()
         _st_prog = dygraph2program(
             model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
+        if train_mode == True:
+            model_to_traverse.train()
+
         self._same_ss, depthwise_conv, fixed_by_input, output_conv = check_search_space(
             GraphWrapper(_st_prog))
         self._cannot_changed_layer = output_conv
@@ -775,5 +784,6 @@ class OFA(OFABase):
 
         if self._add_teacher:
             self._remove_hook_after_forward()
-
-        return student_output, teacher_output
+            return student_output, teacher_output
+        else:
+            return student_output
