@@ -21,7 +21,19 @@ from static_case import StaticCase
 
 
 class TestQuantEmbedding(StaticCase):
+    def set_config(self):
+        self.config = {
+            'quantize_op_types': ['lookup_table'],
+            'lookup_table': {
+                'quantize_type': 'abs_max',
+                'quantize_bits': 8,
+                'dtype': 'int8'
+            }
+        }
+
     def test_quant_embedding(self):
+        self.set_config()
+
         train_program = paddle.static.Program()
         with paddle.static.program_guard(train_program):
             input_word = paddle.static.data(
@@ -43,6 +55,18 @@ class TestQuantEmbedding(StaticCase):
         exe.run(paddle.static.default_startup_program())
 
         quant_program = quant.quant_embedding(infer_program, place)
+
+
+class TestQuantEmbeddingInt16(StaticCase):
+    def set_config(self):
+        self.config = {
+            'quantize_op_types': ['lookup_table'],
+            'lookup_table': {
+                'quantize_type': 'abs_max',
+                'quantize_bits': 16,
+                'dtype': 'int16'
+            }
+        }
 
 
 if __name__ == '__main__':

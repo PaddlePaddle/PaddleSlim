@@ -37,8 +37,8 @@ _default_single_config = {
 }
 SUPPORT_OP_TYPES = ['lookup_table', 'fused_embedding_seq_pool', 'pyramid_hash']
 SUPPORT_QUANTIZE_TYPES = ['abs_max', 'log']
-SUPPORT_QUANTIZE_BITS = [8]
-SUPPORT_DTYPE = ['int8']
+SUPPORT_QUANTIZE_BITS = [8, 16]
+SUPPORT_DTYPE = ['int8', 'int16']
 
 _default_config = {"quantize_op_types": SUPPORT_OP_TYPES, }
 
@@ -125,7 +125,7 @@ def _get_quant_var_name(var_name):
     """
     get quantized var name
     """
-    return var_name + '.int8'
+    return var_name + '.int'
 
 
 def _get_dequant_var_name(var_name):
@@ -149,6 +149,11 @@ def _clear_var(var_name, scope):
     """
     tensor = scope.find_var(var_name).get_tensor()
     tensor._clear()
+
+
+def _get_var_dtype(config):
+    return core.VarDesc.VarType.INT8 if config['dtype'] == 'int8' \
+        else  core.VarDesc.VarType.INT16
 
 
 def _quant_embedding_abs_max(graph, scope, place, config, var_name,
@@ -230,7 +235,7 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
         _get_quant_var_name(var_name),
         var_type=embedding_node.type(),
         shape=embedding_node.shape(),
-        var_dtype=core.VarDesc.VarType.INT8)
+        var_dtype=_get_var_dtype(config))
     # create var in scope
     scope.var(_get_quant_var_name(var_name))
     scope.var(_get_scale_var_name(var_name))
@@ -345,7 +350,7 @@ def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
         _get_quant_var_name(var_name),
         var_type=embedding_node.type(),
         shape=embedding_node.shape(),
-        var_dtype=core.VarDesc.VarType.INT8)
+        var_dtype=_get_var_dtype(config))
     # create var in scope
     scope.var(_get_quant_var_name(var_name))
     scope.var(_get_dict_var_name(var_name))
