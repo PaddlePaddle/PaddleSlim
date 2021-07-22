@@ -350,7 +350,7 @@ def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
         _get_quant_var_name(var_name),
         var_type=embedding_node.type(),
         shape=embedding_node.shape(),
-        var_dtype=_get_var_dtype(config))
+        var_dtype=core.VarDesc.VarType.INT8)
     # create var in scope
     scope.var(_get_quant_var_name(var_name))
     scope.var(_get_dict_var_name(var_name))
