@@ -57,7 +57,7 @@ class TestQuantEmbedding(StaticCase):
         quant_program = quant.quant_embedding(infer_program, place)
 
 
-class TestQuantEmbeddingInt16(StaticCase):
+class TestQuantEmbeddingInt16(TestQuantEmbedding):
     def set_config(self):
         self.config = {
             'quantize_op_types': ['lookup_table'],
