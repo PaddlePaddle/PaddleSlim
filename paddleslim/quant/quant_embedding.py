@@ -35,7 +35,10 @@ _default_single_config = {
     "quantize_bits": 8,
     "dtype": "int8"
 }
-SUPPORT_OP_TYPES = ['lookup_table', 'fused_embedding_seq_pool', 'pyramid_hash']
+SUPPORT_OP_TYPES = [
+    'lookup_table', 'lookup_table_v2', 'fused_embedding_seq_pool',
+    'pyramid_hash'
+]
 SUPPORT_QUANTIZE_TYPES = ['abs_max', 'log']
 SUPPORT_QUANTIZE_BITS = [8, 16]
 SUPPORT_DTYPE = ['int8', 'int16']
