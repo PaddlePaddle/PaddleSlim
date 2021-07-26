@@ -20,6 +20,14 @@ from paddle.nn import L1Loss
 from paddle.nn import MSELoss as L2Loss
 from paddle.nn import SmoothL1Loss
 
+__all__ = [
+    "CELoss",
+    "DMLLoss",
+    "DistanceLoss",
+    "RKdAngle",
+    "RkdDistance",
+]
+
 
 class CELoss(nn.Layer):
     """

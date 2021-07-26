@@ -16,6 +16,9 @@ import copy
 import paddle
 import paddle.nn as nn
 
+from . import basic_loss
+from . import distillation_loss
+
 from .basic_loss import L1Loss
 from .basic_loss import L2Loss
 from .basic_loss import SmoothL1Loss
@@ -50,10 +53,13 @@ class CombinedLoss(nn.Layer):
         self.loss_weight = []
         assert isinstance(loss_config_list, list), (
             'operator config should be a list')
+        supported_loss_list = basic_loss.__all__ + distillation_loss.__all__
         for config in loss_config_list:
             assert isinstance(config,
                               dict) and len(config) == 1, "yaml format error"
             name = list(config)[0]
+            assert name in supported_loss_list, \
+                "loss name must be in {} but got: {}".format(name, supported_loss_list)
             param = config[name]
             assert "weight" in param, "weight must be in param, but param just contains {}".format(
                 param.keys())

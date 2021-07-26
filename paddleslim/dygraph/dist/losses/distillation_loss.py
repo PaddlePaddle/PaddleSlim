@@ -20,6 +20,12 @@ from .basic_loss import DistanceLoss
 from .basic_loss import RkdDistance
 from .basic_loss import RKdAngle
 
+__all__ = [
+    "DistillationDMLLoss",
+    "DistillationDistanceLoss",
+    "DistillationRKDLoss",
+]
+
 
 class DistillationDMLLoss(DMLLoss):
     """
