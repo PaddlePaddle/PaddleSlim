@@ -263,7 +263,7 @@ class TestCELoss(unittest.TestCase):
         for device in devices:
             paddle.set_device(device)
             x = paddle.rand([batch_size, class_num])
-            label = paddle.randint(0, class_num, shape=[batch_size, ])
+            label = paddle.randint(0, class_num, shape=[batch_size, 1])
 
             loss_func = CELoss()
             pd_loss = loss_func(x, label).numpy()

@@ -22,13 +22,27 @@ from paddle.nn import SmoothL1Loss
 
 
 class CELoss(nn.Layer):
-    def __init__(self, epsilon=None, label_act="softmax"):
+    """
+    CELoss: cross entropy loss
+    Args:
+        epsilon(float | None): label smooth epsilon. If it is None or not in range (0, 1),
+                                  then label smooth will not be used.
+        label_act(string | None): activation function, it works when the label is also the logits
+                                  rather than the groundtruth label.
+        axis(int): axis used to calculate cross entropy loss.
+
+    """
+
+    def __init__(self, epsilon=None, label_act="softmax", axis=-1):
         super().__init__()
         if epsilon is not None and (epsilon <= 0 or epsilon >= 1):
             epsilon = None
         assert label_act in ["softmax", None]
-        self.label_act = label_act
+        if epsilon is not None and (epsilon >= 1 or epsilon <= 0):
+            epsilon = None
         self.epsilon = epsilon
+        self.label_act = label_act
+        self.axis = axis
 
     def _labelsmoothing(self, target, class_num):
         if target.shape[-1] != class_num:
@@ -40,19 +54,22 @@ class CELoss(nn.Layer):
         return soft_target
 
     def forward(self, x, label):
+        assert len(x.shape) == len(label.shape), \
+            "x and label shape length should be same but got {} for x.shape and {} for label.shape".format(x.shape, label.shape)
         if self.epsilon is not None:
             class_num = x.shape[-1]
             label = self._labelsmoothing(label, class_num)
-            x = -F.log_softmax(x, axis=-1)
-            loss = paddle.sum(x * label, axis=-1)
+            x = -F.log_softmax(x, axis=self.axis)
+            loss = paddle.sum(x * label, axis=self.axis)
         else:
-            if label.shape[-1] == x.shape[-1]:
+            if label.shape[self.axis] == x.shape[self.axis]:
                 if self.label_act == "softmax":
-                    label = F.softmax(label, axis=-1)
+                    label = F.softmax(label, axis=self.axis)
                 soft_label = True
             else:
                 soft_label = False
-            loss = F.cross_entropy(x, label=label, soft_label=soft_label)
+            loss = F.cross_entropy(
+                x, label=label, soft_label=soft_label, axis=self.axis)
         loss = loss.mean()
         return loss
 
@@ -60,14 +77,17 @@ class CELoss(nn.Layer):
 class DMLLoss(nn.Layer):
     """
     DMLLoss
+    Args:
+        act(string | None): activation function used to activate the input tensor
+        axis(int): axis used to build activation function
     """
 
-    def __init__(self, act=None):
+    def __init__(self, act=None, axis=-1):
         super().__init__()
         if act is not None:
             assert act in ["softmax", "sigmoid"]
         if act == "softmax":
-            self.act = nn.Softmax(axis=-1)
+            self.act = nn.Softmax(axis=axis)
         elif act == "sigmoid":
             self.act = nn.Sigmoid()
         else:
@@ -88,8 +108,14 @@ class DMLLoss(nn.Layer):
 
 class DistanceLoss(nn.Layer):
     """
-    DistanceLoss:
+    DistanceLoss
+    Args:
         mode: loss mode
+        kargs(dict): used to build corresponding loss function, for more details, please
+                     refer to:
+                     L1loss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/L1Loss_cn.html#l1loss
+                     L2Loss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/MSELoss_cn.html#mseloss
+                     SmoothL1Loss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/SmoothL1Loss_cn.html#smoothl1loss
     """
 
     def __init__(self, mode="l2", **kargs):
@@ -119,7 +145,10 @@ def pdist(e, squared=False, eps=1e-12):
 
 
 class RKdAngle(nn.Layer):
-    # reference: https://github.com/lenscloth/RKD/blob/master/metric/loss.py
+    """
+    RKdAngle loss, see https://arxiv.org/abs/1904.05068
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -143,7 +172,12 @@ class RKdAngle(nn.Layer):
 
 
 class RkdDistance(nn.Layer):
-    # reference: https://github.com/lenscloth/RKD/blob/master/metric/loss.py
+    """
+    RkdDistance loss, see https://arxiv.org/abs/1904.05068
+    Args:
+        eps(float): epsilon for the pdist function
+    """
+
     def __init__(self, eps=1e-12):
         super().__init__()
         self.eps = eps
@@ -153,11 +187,11 @@ class RkdDistance(nn.Layer):
         student = student.reshape([bs, -1])
         teacher = teacher.reshape([bs, -1])
 
-        t_d = pdist(teacher, squared=False)
+        t_d = pdist(teacher, squared=False, eps=self.eps)
         mean_td = t_d.mean()
         t_d = t_d / (mean_td + self.eps)
 
-        d = pdist(student, squared=False)
+        d = pdist(student, squared=False, eps=self.eps)
         mean_d = d.mean()
         d = d / (mean_d + self.eps)
 

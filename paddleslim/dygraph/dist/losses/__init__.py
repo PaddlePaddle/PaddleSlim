@@ -31,8 +31,16 @@ from .distillation_loss import DistillationRKDLoss
 
 class CombinedLoss(nn.Layer):
     """
-    CombinedLoss:
-        a combionation of loss function
+    CombinedLoss: a combination of loss function.
+    Args:
+        loss_config_list: a config list used to build loss function. A demo is as follows,
+                          which is used to calculate dml loss between Student output and
+                          Teacher output. Parameter weight is needed for the loss weight.
+                            - DistillationDMLLoss:
+                                weight: 1.0
+                                act: "softmax"
+                                model_name_pairs:
+                                - ["Student", "Teacher"]
     """
 
     def __init__(self, loss_config_list=None):
