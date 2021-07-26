@@ -66,8 +66,8 @@ def transform_and_save_int8_model(original_path, save_path):
     place = fluid.CPUPlace()
     exe = fluid.Executor(place)
     inference_scope = fluid.executor.global_scope()
-    model_filename = 'int8_infer.pdmodel'
-    params_filename = 'int8_infer.pdiparams'
+    model_filename = 'model.pdmodel'
+    params_filename = 'model.pdiparams'
 
     with fluid.scope_guard(inference_scope):
         if os.path.exists(os.path.join(original_path, '__model__')):

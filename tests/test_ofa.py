@@ -373,6 +373,7 @@ class TestOFACase2(TestOFA):
         self.data = paddle.to_tensor(data_np)
 
     def init_config(self):
+        teacher_model_state_dict = self.teacher_model.state_dict()
         default_run_config = {
             'train_batch_size': 1,
             'n_epochs': [[2, 5]],
@@ -384,6 +385,7 @@ class TestOFACase2(TestOFA):
         default_distill_config = {
             'teacher_model': self.teacher_model,
             'mapping_layers': ['models.3.fn'],
+            'teacher_model_path': teacher_model_state_dict
         }
         self.distill_config = DistillConfig(**default_distill_config)
         self.elastic_order = None
@@ -446,7 +448,7 @@ class TestShortCut(unittest.TestCase):
             self.config,
             input_shapes=[[2, 3, 224, 224]],
             input_dtypes=['float32'])
-        assert len(self.ofa_model.ofa_layers) == 38
+        assert len(self.ofa_model.ofa_layers) == 37
 
 
 class TestExportCase1(unittest.TestCase):
@@ -462,8 +464,8 @@ class TestExportCase1(unittest.TestCase):
     def test_export_model_linear1(self):
         ex_model = self.ofa_model.export(
             self.config, input_shapes=[[3, 64]], input_dtypes=['int64'])
+        assert len(self.ofa_model.ofa_layers) == 3
         ex_model(self.data)
-        assert len(self.ofa_model.ofa_layers) == 4
 
 
 class TestExportCase2(unittest.TestCase):
@@ -482,7 +484,7 @@ class TestExportCase2(unittest.TestCase):
         ex_model = self.ofa_model.export(
             config, input_shapes=[[3, 64]], input_dtypes=['int64'])
         ex_model(self.data)
-        assert len(self.ofa_model.ofa_layers) == 4
+        assert len(self.ofa_model.ofa_layers) == 3
 
 
 if __name__ == '__main__':

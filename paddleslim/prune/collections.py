@@ -39,9 +39,11 @@ class PruningDetails(object):
     """
 
     def __init__(self, var, axis, transform, op, is_parameter=True):
-        assert (isinstance(var, VarWrapper),
-                "name should be VarWrapper, but get type = ".format(type(var)))
-        assert (isinstance(axis, int))
+        assert isinstance(
+            var,
+            VarWrapper), "name should be VarWrapper, but get type = {}".format(
+                type(var))
+        assert isinstance(axis, int)
         self.name = var.name()
         self.var = var
         self.axis = axis
@@ -139,7 +141,8 @@ class PruningCollections(object):
                                    params,
                                    graph,
                                    skip_stranger=True,
-                                   skip_vars=None):
+                                   skip_vars=None,
+                                   skip_leaves=True):
         """Collect convolution layers of graph into groups. The layers in the same group is relative on pruning operation.
         A group is a list of tuple with format (param_name, axis) in which `param_name` is the name of parameter and `axis` is the axis to be pruned on.
     
@@ -164,7 +167,8 @@ class PruningCollections(object):
            params(list): A list of convolution layer's parameter names. It will collect all the groups that contains anyone of these parameters.
            graph(paddle.static.Program | GraphWrapper): The graph used to search the groups.
            skip_stranger(bool): Whether to skip current tensor when visit unregistered operators that not in OPS_UNCHANGE_SHAPE. False means visit all unregistered operators by default worker. Default: True.
-           skip_vars(list<str>): Names of variables that will be skipped. None means skipping all leaves in given graph. '[]' means skipping nothing. Default: None.
+           skip_vars(list<str>): Names of variables that will be skipped. Default: None.
+           skip_leaves(bool): Whether to skip the last convolution layers.
     
         Returns:
            list<Group>: The groups.
@@ -173,12 +177,12 @@ class PruningCollections(object):
         if not isinstance(graph, GraphWrapper):
             graph = GraphWrapper(graph)
 
-        if skip_vars is None:
-            skip_vars = self._find_leaves(graph)
+        skip_vars = [] if skip_vars is None else skip_vars
+        if skip_leaves:
+            leaves = self._find_leaves(graph)
+            skip_vars.extend(leaves)
             _logger.warning(
-                "Leaves {} will be skipped when parsing graph. You can set skipped variables by option 'skip_vars'.".
-                format(skip_vars))
-
+                "Leaves {} will be skipped when parsing graph.".format(leaves))
         visited = {}
         collections = []
         unsupported_warnings = set()
@@ -234,7 +238,7 @@ class PruningCollections(object):
 
 
 class StaticPruningCollections(PruningCollections):
-    def __init__(self, params, graph, skip_stranger=True):
+    def __init__(self, params, graph, skip_stranger=True, skip_leaves=True):
         super(StaticPruningCollections, self).__init__()
         self._collections = self.create_pruning_collections(
-            params, graph, skip_stranger=skip_stranger)
+            params, graph, skip_stranger=skip_stranger, skip_leaves=skip_leaves)
