@@ -2,6 +2,7 @@ import numpy as np
 from ..common import get_logger
 from ..core import GraphWrapper
 import paddle
+import copy
 
 __all__ = ["UnstructuredPruner"]
 
@@ -35,14 +36,35 @@ class UnstructuredPruner():
             'ratio', 'threshold'
         ], "mode must be selected from 'ratio' and 'threshold'"
         self.scope = paddle.static.global_scope() if scope == None else scope
-        self.place = paddle.CPUPlace() if place is None else place
+        self.place = paddle.static.cpu_places()[0] if place is None else place
         if skip_params_func is None: skip_params_func = self._get_skip_params
         self.skip_params = skip_params_func(program)
-        self.masks = self._apply_masks(program)
+        self.masks = self._apply_masks(program, self.mask_parameters)
 
-    def _apply_masks(self, program):
+    def mask_parameters(self, parameters, masks, program):
+        """
+        Update masks and parameters. It is executed before each iteration.
+        User can overwrite this function in subclass to implememt different pruning stragies.
+        Args:
+          - parameters(list<Tensor>): The parameters to be pruned.
+          - masks(list<Tensor>): The masks used to keep zero values in parameters.
+          - program(paddle.static.Program): The model to add mask op to.
+        """
+        block = program.global_block()
+        for param, mask in zip(parameters, masks):
+            block._prepend_op(
+                type='elementwise_mul',
+                inputs={'X': param,
+                        'Y': mask},
+                outputs={'Out': param},
+                attrs={'axis': -1,
+                       'use_mkldnn': False})
+
+    def _apply_masks(self, program, mask_func):
         params = []
         masks = []
+        self.no_grad_set = set()
+
         for param in program.all_parameters():
             mask = program.global_block().create_var(
                 name=param.name + "_mask",
@@ -56,6 +78,13 @@ class UnstructuredPruner():
                 np.ones(mask.shape).astype("float32"), self.place)
             params.append(param)
             masks.append(mask)
+            self.no_grad_set.add(param.name + "_mask")
+
+        with paddle.static.program_guard(main_program=program):
+            ops = program.global_block().ops
+            ori_len = len(ops)
+            mask_func(params, masks, program)
+            program.global_block().ops = ops
 
         d_masks = {}
         for _param, _mask in zip(params, masks):
@@ -116,11 +145,18 @@ class UnstructuredPruner():
             v_param = np.array(t_param)
             params_flatten.append(v_param.flatten())
         params_flatten = np.concatenate(params_flatten, axis=0)
-        total_len = len(params_flatten)
-        self.threshold = np.sort(np.abs(params_flatten))[max(
-            0, int(self.ratio * total_len) - 1)]
+        self.threshold = self._partition_sort(params_flatten)
 
-    def _update_params_masks(self):
+    def _partition_sort(self, params):
+        total_len = len(params)
+        params_zeros = params[params == 0]
+        params_nonzeros = params[params != 0]
+        new_ratio = max((self.ratio * total_len - len(params_zeros)),
+                        0) / len(params_nonzeros)
+        return np.sort(np.abs(params_nonzeros))[max(
+            0, int(new_ratio * len(params_nonzeros)) - 1)]
+
+    def update_masks(self):
         for param in self.masks:
             if not self._should_prune_param(param):
                 continue
@@ -131,8 +167,17 @@ class UnstructuredPruner():
             v_param[np.abs(v_param) < self.threshold] = 0
             v_mask = (v_param != 0).astype(v_param.dtype)
             t_mask.set(v_mask, self.place)
-            v_param = np.array(t_param) * np.array(t_mask)
-            t_param.set(v_param, self.place)
+
+    def set_static_masks(self):
+        for param in self.masks:
+            if not self._should_prune_param(param):
+                continue
+            mask_name = self.masks[param]
+            t_param = self.scope.find_var(param).get_tensor()
+            t_mask = self.scope.find_var(mask_name).get_tensor()
+            v_param = np.array(t_param)
+            v_mask = (v_param != 0).astype(v_param.dtype)
+            t_mask.set(v_mask, self.place)
 
     def step(self):
         """
@@ -142,7 +187,7 @@ class UnstructuredPruner():
             pass
         elif self.mode == 'ratio':
             self.update_threshold()
-        self._update_params_masks()
+        self.update_masks()
 
     def update_params(self):
         """
@@ -194,6 +239,21 @@ class UnstructuredPruner():
                 for input in op.all_inputs():
                     skip_params.add(input.name())
         return skip_params
+
+    @staticmethod
+    def total_sparse_conv1x1(program):
+        total = 0
+        values = 0
+        for param in program.all_parameters():
+            if not (len(param.shape) == 4 and param.shape[2] == 1 and
+                    param.shape[3] == 1):
+                continue
+            total += np.product(param.shape)
+            values += np.count_nonzero(
+                np.array(paddle.static.global_scope().find_var(param.name)
+                         .get_tensor()))
+        density = float(values) / total
+        return density
 
     def _should_prune_param(self, param):
         should_prune = param not in self.skip_params

@@ -1,0 +1,12 @@
+python3.7 -m paddle.distributed.launch --selected_gpus=0,1,2,3 train.py \
+          --batch_size 10 \
+          --data imagenet \
+          --pruning_mode ratio \
+          --ratio 0.75 \
+          --lr 0.005 \
+          --pretrained_model MobileNetV1_pretrained \
+          --model MobileNet \
+          --num_epochs 108 \
+          --test_period 5 \
+          --model_period 5 \
+          --model_path "./models"

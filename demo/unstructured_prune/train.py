@@ -13,6 +13,8 @@ sys.path.append(os.path.join(os.path.dirname("__file__"), os.path.pardir))
 import models
 from utility import add_arguments, print_arguments
 import paddle.vision.transforms as T
+from paddle.fluid.incubate.fleet.collective import fleet, DistributedStrategy
+from paddle.fluid.incubate.fleet.base import role_maker
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -39,6 +41,11 @@ add_arg('test_period',      int, 10,                 "Test period in epoches.")
 add_arg('model_path',       str, "./models",         "The path to save model.")
 add_arg('model_period',     int, 10,             "The period to save model in epochs.")
 add_arg('resume_epoch',     int, -1,             "The epoch to resume training.")
+add_arg('stable_epochs',    int, 2,              "The epoch numbers used to stablize the model before pruning. Default: 2")
+add_arg('pruning_epochs',   int, 70,             "The epoch numbers used to prune the model by a ratio step. Default: 35")
+add_arg('tunning_epochs',   int, 40,             "The epoch numbers used to tune the after-pruned models. Default: 20")
+add_arg('ratio_steps_per_epoch', int, 15,        "How many times you want to increase your ratio during each epoch. Default: 30")
+add_arg('initial_ratio',    float, 0.05,         "The initial pruning ratio used at the start of pruning stage. Default: 0.05")
 # yapf: enable
 
 model_list = models.__all__
@@ -74,6 +81,9 @@ def create_optimizer(args, step_per_epoch):
 
 
 def compress(args):
+    role = role_maker.PaddleCloudRoleMaker(is_collective=True)
+    fleet.init(role)
+
     train_reader = None
     test_reader = None
     if args.data == "mnist":
@@ -106,14 +116,19 @@ def compress(args):
     image = paddle.static.data(
         name='image', shape=[None] + image_shape, dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-    batch_size_per_card = int(args.batch_size / len(places))
-    train_loader = paddle.io.DataLoader(
+
+    batch_size_per_card = args.batch_size
+    batch_sampler = paddle.io.DistributedBatchSampler(
         train_dataset,
-        places=places,
-        feed_list=[image, label],
-        drop_last=True,
         batch_size=batch_size_per_card,
         shuffle=True,
+        drop_last=True)
+
+    train_loader = paddle.io.DataLoader(
+        train_dataset,
+        places=place,
+        batch_sampler=batch_sampler,
+        feed_list=[image, label],
         return_list=False,
         use_shared_memory=True,
         num_workers=32)
@@ -126,7 +141,8 @@ def compress(args):
         use_shared_memory=True,
         batch_size=args.batch_size_for_validation,
         shuffle=False)
-    step_per_epoch = int(np.ceil(len(train_dataset) * 1. / args.batch_size))
+    step_per_epoch = int(
+        np.ceil(len(train_dataset) * 1. / args.batch_size / len(places)))
 
     # model definition
     model = models.__dict__[args.model]()
@@ -139,14 +155,25 @@ def compress(args):
     val_program = paddle.static.default_main_program().clone(for_test=True)
 
     opt, learning_rate = create_optimizer(args, step_per_epoch)
-    opt.minimize(avg_cost)
+
+    dist_strategy = DistributedStrategy()
+    sync_bn = True
+    dist_strategy.sync_batch_norm = sync_bn
+    exec_strategy = paddle.static.ExecutionStrategy()
+    dist_strategy.exec_strategy = exec_strategy
+    dist_strategy.fuse_all_reduce_ops = False
+
+    train_program = paddle.static.default_main_program()
 
     pruner = UnstructuredPruner(
-        paddle.static.default_main_program(),
+        train_program,
         mode=args.pruning_mode,
         ratio=args.ratio,
         threshold=args.threshold,
         place=place)
+
+    opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
+    opt.minimize(avg_cost, no_grad_set=pruner.no_grad_set)
 
     exe.run(paddle.static.default_startup_program())
 
@@ -200,7 +227,7 @@ def compress(args):
             train_reader_cost += time.time() - reader_start
             train_start = time.time()
             loss_n, acc_top1_n, acc_top5_n = exe.run(
-                train_program,
+                program,
                 feed=data,
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
             pruner.step()
@@ -211,14 +238,14 @@ def compress(args):
             acc_top5_n = np.mean(acc_top5_n)
             if batch_id % args.log_period == 0:
                 _logger.info(
-                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; avg_reader_cost: {:.5f} sec, avg_batch_cost: {:.5f} sec, avg_samples: {:.5f}, ips: {:.5f} images/sec".
+                    "epoch[{}]-batch[{}] lr: {:.6f} ratio: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; avg_reader_cost: {:.5f} sec, avg_batch_cost: {:.5f} sec, avg_samples: {:.5f}, ips: {:.5f} images/sec".
                     format(epoch, batch_id,
-                           learning_rate.get_lr(), loss_n, acc_top1_n,
-                           acc_top5_n, train_reader_cost / args.log_period, (
-                               train_reader_cost + train_run_cost
-                           ) / args.log_period, total_samples / args.log_period,
-                           total_samples / (train_reader_cost + train_run_cost
-                                            )))
+                           learning_rate.get_lr(), pruner.ratio, loss_n,
+                           acc_top1_n, acc_top5_n, train_reader_cost /
+                           args.log_period, (train_reader_cost + train_run_cost
+                                             ) / args.log_period, total_samples
+                           / args.log_period, total_samples / (
+                               train_reader_cost + train_run_cost)))
                 train_reader_cost = 0.0
                 train_run_cost = 0.0
                 total_samples = 0
@@ -228,11 +255,7 @@ def compress(args):
     build_strategy = paddle.static.BuildStrategy()
     exec_strategy = paddle.static.ExecutionStrategy()
 
-    train_program = paddle.static.CompiledProgram(
-        paddle.static.default_main_program()).with_data_parallel(
-            loss_name=avg_cost.name,
-            build_strategy=build_strategy,
-            exec_strategy=exec_strategy)
+    compiled_train_program = fleet.main_program
     for i in range(args.resume_epoch + 1, args.num_epochs):
         train(i, train_program)
         _logger.info("The current density of the pruned model is: {}%".format(
