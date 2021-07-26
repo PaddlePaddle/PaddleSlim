@@ -145,8 +145,6 @@ def compress(args):
             start_time = time.time()
             x_data = data[0]
             y_data = paddle.to_tensor(data[1])
-            if args.data == 'cifar10':
-                y_data = paddle.unsqueeze(y_data, 1)
 
             logits = model(x_data)
             loss = F.cross_entropy(logits, y_data)
@@ -180,8 +178,6 @@ def compress(args):
             train_reader_cost += time.time() - reader_start
             x_data = data[0]
             y_data = paddle.to_tensor(data[1])
-            if args.data == 'cifar10':
-                y_data = paddle.unsqueeze(y_data, 1)
 
             train_start = time.time()
             logits = model(x_data)
@@ -195,7 +191,7 @@ def compress(args):
             opt.clear_grad()
             pruner.step()
             train_run_cost += time.time() - train_start
-            total_samples += args.batch_size * ParallelEnv().nranks
+            total_samples += args.batch_size
 
             if batch_id % args.log_period == 0:
                 _logger.info(

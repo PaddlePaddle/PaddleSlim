@@ -231,12 +231,6 @@ pruned_val_program, _, _ = pruner.prune(
 print("FLOPs after pruning: {}".format(slim.analysis.flops(pruned_val_program)))
 ```
 
-测试一下剪裁后的模型在测试集上的精度：
-
-```python
-test(pruned_val_program)
-```
-
 ### 8.3 剪裁训练网络
 
 ```python
@@ -251,6 +245,11 @@ pruned_program, _, _ = pruner.prune(
 print("FLOPs after pruning: {}".format(slim.analysis.flops(pruned_program)))
 ```
 
+测试一下剪裁后的模型在测试集上的精度：
+
+```python
+test(pruned_val_program)
+```
 
 ### 8.4 训练剪裁后的模型
 

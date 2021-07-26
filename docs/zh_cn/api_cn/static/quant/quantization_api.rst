@@ -74,16 +74,35 @@ quant_post_dynamic
 
 .. warning::
 
-   此示例不能直接运行，因为需要加载 ``${model_dir}`` 下的模型，所以不能直接运行。
+   此api需要加载 ``${model_path}`` 下的模型，所以示例中首先导出了inference model。
 
 .. code-block:: python
 
    import paddle
    import paddle.fluid as fluid
    import paddle.dataset.mnist as reader
+   from paddleslim.models import MobileNet
    from paddleslim.quant import quant_post_dynamic
    
    paddle.enable_static()
+   image = paddle.static.data(name='image', shape=[None, 1, 28, 28], dtype='float32')
+   model = MobileNet()
+   out = model.net(input=image, class_dim=10) 
+   main_prog = paddle.static.default_main_program()
+   val_prog = main_prog.clone(for_test=True)
+   place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
+   exe = paddle.static.Executor(place)
+   exe.run(paddle.static.default_startup_program())
+   
+   paddle.fluid.io.save_inference_model(
+       dirname='./model_path',
+       feeded_var_names=[image.name],
+       target_vars=[out],
+       main_program=val_prog,
+       executor=exe,
+       model_filename='__model__',
+       params_filename='__params__')
+   
    quant_post_dynamic(
            model_dir='./model_path',
            save_model_dir='./save_path',
@@ -164,29 +183,48 @@ quant_post_static
 
 .. warning::
 
-   此示例不能直接运行，因为需要加载 ``${model_dir}`` 下的模型，所以不能直接运行。
+   此api需要加载 ``${model_path}`` 下的模型，所以示例中首先导出了inference model。
 
 .. code-block:: python
 
-   import paddle
-   import paddle.fluid as fluid
-   import paddle.dataset.mnist as reader
-   from paddleslim.quant import quant_post_static
-   paddle.enable_static()
-   val_reader = reader.train()
-   use_gpu = True
-   place = fluid.CUDAPlace(0) if use_gpu else fluid.CPUPlace()
-   
-   exe = fluid.Executor(place)
-   quant_post_static(
-           executor=exe,
-           model_dir='./model_path',
-           quantize_model_path='./save_path',
-           sample_generator=val_reader,
-           model_filename='__model__',
-           params_filename='__params__',
-           batch_size=16,
-           batch_nums=10)
+    import paddle
+    import paddle.fluid as fluid
+    import paddle.dataset.mnist as reader
+    from paddleslim.models import MobileNet
+    from paddleslim.quant import quant_post_static
+
+    paddle.enable_static()
+    val_reader = reader.test()
+    use_gpu = True
+    place = fluid.CUDAPlace(0) if use_gpu else fluid.CPUPlace()
+    exe = fluid.Executor(place)
+    paddle.enable_static()
+    image = paddle.static.data(name='image', shape=[None, 1, 28, 28], dtype='float32')
+    model = MobileNet()
+    out = model.net(input=image, class_dim=10)
+    main_prog = paddle.static.default_main_program()
+    val_prog = main_prog.clone(for_test=True)
+    place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
+    exe.run(paddle.static.default_startup_program())
+
+    paddle.fluid.io.save_inference_model(
+        dirname='./model_path',
+        feeded_var_names=[image.name],
+        target_vars=[out],
+        main_program=val_prog,
+        executor=exe,
+        model_filename='__model__',
+        params_filename='__params__')
+    quant_post_static(
+        executor=exe,
+        model_dir='./model_path',
+        quantize_model_path='./save_path',
+        sample_generator=val_reader,
+        model_filename='__model__',
+        params_filename='__params__',
+        batch_size=16,
+        batch_nums=10)
 
 更详细的用法请参考 `离线量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post>`_ 。
 
@@ -268,14 +306,12 @@ convert
 
 .. code-block:: python
 
-   #encoding=utf8
    import paddle
    import paddle.fluid as fluid
    import paddleslim.quant as quant
    
    paddle.enable_static()
    train_program = fluid.Program()
-   
    with fluid.program_guard(train_program):
        image = fluid.data(name='x', shape=[None, 1, 28, 28])
        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
@@ -402,7 +438,7 @@ fluid.Program
 **代码示例**
 
 .. code-block:: python
-
+   
    import paddle
    import paddle.fluid as fluid
    import paddleslim.quant as quant
@@ -425,12 +461,27 @@ fluid.Program
    exe = fluid.Executor(place)
    exe.run(fluid.default_startup_program())
    
+   # 量化为8比特，Embedding参数的体积减小4倍，精度有轻微损失
    config = {
-            'quantize_op_types': ['lookup_table'], 
+            'quantize_op_types': ['lookup_table'],
             'lookup_table': {
-                'quantize_type': 'abs_max'
-                }
+               'quantize_type': 'abs_max',
+               'quantize_bits': 8,
+               'dtype': 'int8'
+               }
             }
+
+   '''
+   # 量化为16比特，Embedding参数的体积减小2倍，精度损失很小
+   config = {
+            'quantize_op_types': ['lookup_table'],
+            'lookup_table': {
+               'quantize_type': 'abs_max',
+               'quantize_bits': 16,
+               'dtype': 'int16'
+               }
+            }
+   '''
    quant_program = quant.quant_embedding(infer_program, place, config)
 
 更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_embedding>`_ 

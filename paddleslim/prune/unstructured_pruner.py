@@ -35,7 +35,7 @@ class UnstructuredPruner():
             'ratio', 'threshold'
         ], "mode must be selected from 'ratio' and 'threshold'"
         self.scope = paddle.static.global_scope() if scope == None else scope
-        self.place = paddle.static.CPUPlace() if place is None else place
+        self.place = paddle.CPUPlace() if place is None else place
         if skip_params_func is None: skip_params_func = self._get_skip_params
         self.skip_params = skip_params_func(program)
         self.masks = self._apply_masks(program)

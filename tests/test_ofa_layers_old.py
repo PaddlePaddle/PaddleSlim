@@ -122,6 +122,16 @@ class ModelCase3(nn.Layer):
         return inputs
 
 
+class ModelCase4(nn.Layer):
+    def __init__(self):
+        super(ModelCase4, self).__init__()
+        models = [SuperBatchNorm(4)]
+        self.models = paddle.nn.Sequential(*models)
+
+    def forward(self, inputs):
+        return self.models(inputs)
+
+
 class TestCase(unittest.TestCase):
     def setUp(self):
         self.model = ModelCase1()
@@ -145,6 +155,16 @@ class TestCase3(TestCase):
         self.model = ModelCase3()
         data_np = np.random.random((1, 3, 64, 64)).astype(np.float32)
         self.data = paddle.to_tensor(data_np)
+
+
+class TestCase4(TestCase):
+    def setUp(self):
+        self.model = ModelCase4()
+        data_np = np.random.random((1, 3, 64, 64)).astype(np.float32)
+        self.data = paddle.to_tensor(data_np)
+
+    def test_ofa(self):
+        out = self.model(self.data)
 
 
 if __name__ == '__main__':
