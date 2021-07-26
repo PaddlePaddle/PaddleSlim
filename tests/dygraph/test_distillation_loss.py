@@ -495,7 +495,9 @@ class TestRKDLoss(unittest.TestCase):
             pd_loss = loss_func(x, y).numpy()
             np_loss = self.np_rkd_distance(x, y)
             # NOTE: sqrt is included and seed is set for stability
-            self.assertTrue(np.allclose(np_loss, pd_loss))
+            self.assertTrue(
+                np.allclose(
+                    np_loss, pd_loss, rtol=1e-5, atol=1e-07))
 
     def test_rkd_angle_loss(self, ):
         batch_size = 32
