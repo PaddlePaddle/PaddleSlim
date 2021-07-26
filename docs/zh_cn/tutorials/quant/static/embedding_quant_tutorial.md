@@ -1,8 +1,9 @@
 # Embedding量化
 
-Embedding量化将网络中的Embedding参数从`float32`类型量化到 `8-bit`整数类型，在几乎不损失模型精度的情况下减少模型的存储空间和显存占用。
+Embedding量化将网络中的Embedding参数从`float32`类型量化到 `8-bit`或者 `16-bit` 整数类型，在几乎不损失模型精度的情况下减少模型的存储空间和显存占用。
 
-Embedding量化仅能减少模型参数的体积，并不能显著提升模型预测速度。
+Embedding量化仅能减少模型参数的体积，加快加载Embedding参数的速度，并不能显著提升模型预测速度。
+
 ## 使用方法
 
 在预测时调用paddleslim `quant_embedding`接口，主要实现代码如下：
@@ -29,12 +30,28 @@ place = fluid.CUDAPlace(0) if use_gpu else fluid.CPUPlace()
 exe = fluid.Executor(place)
 exe.run(fluid.default_startup_program())
 
+# 量化为8比特，Embedding参数的体积减小4倍，精度有轻微损失
 config = {
          'quantize_op_types': ['lookup_table'],
          'lookup_table': {
-             'quantize_type': 'abs_max'
+             'quantize_type': 'abs_max',
+             'quantize_bits': 8,
+             'dtype': 'int8'
              }
          }
+
+'''
+# 量化为16比特，Embedding参数的体积减小2倍，精度损失很小
+config = {
+         'quantize_op_types': ['lookup_table'],
+         'lookup_table': {
+             'quantize_type': 'abs_max',
+             'quantize_bits': 16,
+             'dtype': 'int16'
+             }
+         }
+'''
+
 quant_program = quant.quant_embedding(infer_program, place, config)
 ```
 
