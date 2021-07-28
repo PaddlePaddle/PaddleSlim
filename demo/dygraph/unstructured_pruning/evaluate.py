@@ -67,6 +67,8 @@ def compress(args):
             start_time = time.time()
             x_data = data[0]
             y_data = paddle.to_tensor(data[1])
+            if args.data == 'cifar10':
+                y_data = paddle.unsqueeze(y_data, 1)
 
             logits = model(x_data)
             loss = F.cross_entropy(logits, y_data)
