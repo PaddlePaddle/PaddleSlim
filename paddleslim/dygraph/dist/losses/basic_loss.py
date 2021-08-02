@@ -21,12 +21,53 @@ from paddle.nn import MSELoss as L2Loss
 from paddle.nn import SmoothL1Loss
 
 __all__ = [
-    "CELoss",
-    "DMLLoss",
-    "DistanceLoss",
-    "RKdAngle",
-    "RkdDistance",
+    "CELoss", "DMLLoss", "DistanceLoss", "RKdAngle", "RkdDistance",
+    "SpatialATLoss"
 ]
+
+
+class ShapeAlign(nn.Layer):
+    """
+    Align the feature map between student and teacher.
+    Args:
+        align_type(str): reshape tensor by which op, choice in ['1x1conv','3x3conv','1x1conv+bn','3x3conv+bn','linear']
+        in_channel(int): input channel number
+        out_channel(int): output channel number
+    """
+
+    def __init__(self, align_type, in_channel, out_channel):
+        super(ShapeAlign, self).__init__()
+        self._in_channel = in_channel
+        self._out_channel = out_channel
+        assert align_type.lower() in [
+            '1x1conv', '3x3conv', '1x1conv+bn', '3x3conv+bn', 'linear'
+        ], "only support 1x1conv, 3x3conv, 1x1conv+bn, 3x3conv+bn, linear for now"
+        if align_type.lower() == '1x1conv':
+            self.align_op = paddle.nn.Conv2D(
+                in_channel, out_channel, kernel_size=1, stride=1, padding=0)
+        elif align_type.lower() == '3x3conv':
+            self.align_op = paddle.nn.Conv2D(
+                in_channel, out_channel, kernel_size=3, stride=1, padding=1)
+        elif align_type.lower() == '1x1conv+bn':
+            self.align_op = paddle.nn.Sequential(
+                paddle.nn.Conv2d(
+                    in_channel, out_channel, kernel_size=1, stride=1,
+                    padding=0),
+                paddle.nn.BatchNorm2d(out_channel))
+        elif align_type.lower() == '3x3conv+bn':
+            self.align_op = paddle.nn.Sequential(
+                paddle.nn.Conv2D(
+                    in_channel, out_channel, kernel_size=3, stride=1,
+                    padding=1),
+                paddle.nn.BatchNorm2d(out_channel))
+        elif align_type.lower() == 'linear':
+            self.align_op = paddle.nn.Linear(in_channel, out_channel)
+
+    def forward(self, feat):
+        assert feat.shape[
+            1] == self._in_channel, "input feature channel number must equal to in_channel"
+        out = self.align_op(feat)
+        return out
 
 
 class CELoss(nn.Layer):

@@ -40,6 +40,16 @@ class TestImperativeDistill(unittest.TestCase):
             't_feature_idx': 0,
             'feature_type': 'logits',
             'loss_function': 'l2'
+        }, {
+            's_feature_idx': 2,
+            't_feature_idx': 2,
+            'feature_type': 'hidden',
+            'loss_function': 'l2',
+            'align': True,
+            'transpose_model': 'student',
+            'align_type': ['3x3conv'],
+            'in_channels': [256],
+            'out_channels': [256]
         }]
         return distill_configs
 

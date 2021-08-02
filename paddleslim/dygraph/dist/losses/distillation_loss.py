@@ -19,6 +19,7 @@ from .basic_loss import DMLLoss
 from .basic_loss import DistanceLoss
 from .basic_loss import RkdDistance
 from .basic_loss import RKdAngle
+from .basic_loss import ShapeAlign
 
 __all__ = [
     "DistillationDMLLoss",
@@ -75,6 +76,11 @@ class DistillationDistanceLoss(DistanceLoss):
                  mode="l2",
                  model_name_pairs=[],
                  key=None,
+                 align=False,
+                 transpose_model=None,
+                 align_type=[],
+                 in_channels=[],
+                 out_channels=[],
                  name="loss_distance",
                  **kargs):
         super().__init__(mode=mode, **kargs)
@@ -82,15 +88,46 @@ class DistillationDistanceLoss(DistanceLoss):
         self.key = key
         self.model_name_pairs = model_name_pairs
         self.name = name + "_" + mode
+        if align:
+            assert transpose_model is not None, "if align is True, please set transpose_model"
+            assert transpose_model in [
+                'teacher', 'student'
+            ], "please choose 'teacher' or 'student' to be transposed"
+            assert align_type is not None, "if align is True, please set align_type"
+            assert len(
+                in_channels) > 0, "if align is True, please set in_channels"
+            assert len(
+                out_channels) > 0, "if align is True, please set out_channels"
+
+        self.transpose_model = transpose_model
+        self.align_type = align_type
+
+        self.align = None
+        if align:
+            self.align = nn.LayerList()
+            for idx in range(len(model_name_pairs)):
+                if align_type[idx] is not None:
+                    name = '{}'.format(idx)
+                    self.align.add_sublayer(name,
+                                            ShapeAlign(align_type[idx],
+                                                       in_channels[idx],
+                                                       out_channels[idx]))
 
     def forward(self, predicts, batch):
         loss_dict = dict()
+        align_idx = 0
         for idx, pair in enumerate(self.model_name_pairs):
             out1 = predicts[pair[0]]
             out2 = predicts[pair[1]]
             if self.key is not None:
                 out1 = out1[self.key]
                 out2 = out2[self.key]
+            if self.align is not None and self.align_type[idx] is not None:
+                if self.transpose_model == 'student':
+                    out1 = self.align[align_idx](out1)
+                else:
+                    out2 = self.align[align_idx](out2)
+                align_idx += 1
             loss = super().forward(out1, out2)
             loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1],
                                            idx)] = loss

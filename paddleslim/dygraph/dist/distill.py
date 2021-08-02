@@ -22,14 +22,18 @@ __all__ = ['Distill', 'AdaptorBase']
 
 
 class LayerConfig:
-    def __init__(self,
-                 s_feature_idx,
-                 t_feature_idx,
-                 feature_type,
-                 loss_function,
-                 weight=1.0,
-                 align=False,
-                 align_shape=None):
+    def __init__(
+            self,
+            s_feature_idx,
+            t_feature_idx,
+            feature_type,
+            loss_function,
+            weight=1.0,
+            align=False,
+            transpose_model=None,
+            align_type=[],
+            in_channels=[],
+            out_channels=[], ):
         self.s_feature_idx = s_feature_idx
         self.t_feature_idx = t_feature_idx
         self.feature_type = feature_type
@@ -43,7 +47,10 @@ class LayerConfig:
             raise NotImplementedError("loss function is not support!!!")
         self.weight = weight
         self.align = align
-        self.align_shape = align_shape
+        self.transpose_model = transpose_model
+        self.align_type = align_type
+        self.in_channels = in_channels
+        self.out_channels = out_channels
 
 
 class AdaptorBase:
@@ -104,6 +111,15 @@ class Distill(nn.Layer):
             ### TODO: support list of student models and teacher_models
             loss_config[str(c['loss_function'])][
                 'model_name_pairs'] = [['student', 'teacher']]
+            loss_config[str(c['loss_function'])]['align'] = c['align']
+            loss_config[str(c['loss_function'])]['transpose_model'] = c[
+                'transpose_model']
+            loss_config[str(c['loss_function'])]['align_type'] = c['align_type']
+            loss_config[str(c['loss_function'])]['in_channels'] = c[
+                'in_channels']
+            loss_config[str(c['loss_function'])]['out_channels'] = c[
+                'out_channels']
+
             self._loss_config_list.append(loss_config)
         self._prepare_loss()
 

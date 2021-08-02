@@ -26,6 +26,7 @@ from .basic_loss import CELoss
 from .basic_loss import DMLLoss
 from .basic_loss import DistanceLoss
 from .basic_loss import RKdAngle, RkdDistance
+from .basic_loss import ShapeAlign
 
 from .distillation_loss import DistillationDistanceLoss
 from .distillation_loss import DistillationDMLLoss
