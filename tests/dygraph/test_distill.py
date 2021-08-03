@@ -29,17 +29,32 @@ class TestImperativeDistill(unittest.TestCase):
             's_feature_idx': 0,
             't_feature_idx': 0,
             'feature_type': 'hidden',
-            'loss_function': 'l2'
+            'loss_function': 'l2',
+            'align': True,
+            'transpose_model': 'student',
+            'align_type': ['1x1conv'],
+            'in_channels': [32],
+            'out_channels': [32]
         }, {
             's_feature_idx': 1,
             't_feature_idx': 1,
             'feature_type': 'hidden',
-            'loss_function': 'l2'
+            'loss_function': 'l2',
+            'align': True,
+            'transpose_model': 'student',
+            'align_type': ['1x1conv+bn'],
+            'in_channels': [128],
+            'out_channels': [128]
         }, {
             's_feature_idx': 0,
             't_feature_idx': 0,
             'feature_type': 'logits',
-            'loss_function': 'l2'
+            'loss_function': 'l2',
+            'align': True,
+            'transpose_model': 'student',
+            'align_type': ['linear'],
+            'in_channels': [1000],
+            'out_channels': [1000]
         }, {
             's_feature_idx': 2,
             't_feature_idx': 2,

@@ -122,6 +122,7 @@ class DistillationDistanceLoss(DistanceLoss):
             if self.key is not None:
                 out1 = out1[self.key]
                 out2 = out2[self.key]
+
             if self.align is not None and self.align_type[idx] is not None:
                 if self.transpose_model == 'student':
                     out1 = self.align[align_idx](out1)

@@ -50,16 +50,16 @@ class ShapeAlign(nn.Layer):
                 in_channel, out_channel, kernel_size=3, stride=1, padding=1)
         elif align_type.lower() == '1x1conv+bn':
             self.align_op = paddle.nn.Sequential(
-                paddle.nn.Conv2d(
+                paddle.nn.Conv2D(
                     in_channel, out_channel, kernel_size=1, stride=1,
                     padding=0),
-                paddle.nn.BatchNorm2d(out_channel))
+                paddle.nn.BatchNorm2D(out_channel))
         elif align_type.lower() == '3x3conv+bn':
             self.align_op = paddle.nn.Sequential(
                 paddle.nn.Conv2D(
                     in_channel, out_channel, kernel_size=3, stride=1,
                     padding=1),
-                paddle.nn.BatchNorm2d(out_channel))
+                paddle.nn.BatchNorm2D(out_channel))
         elif align_type.lower() == 'linear':
             self.align_op = paddle.nn.Linear(in_channel, out_channel)
 
