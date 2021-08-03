@@ -27,10 +27,12 @@ from .basic_loss import DMLLoss
 from .basic_loss import DistanceLoss
 from .basic_loss import RKdAngle, RkdDistance
 from .basic_loss import ShapeAlign
+from .basic_loss import SpatialATLoss
 
 from .distillation_loss import DistillationDistanceLoss
 from .distillation_loss import DistillationDMLLoss
 from .distillation_loss import DistillationRKDLoss
+from .distillation_loss import DistillationSpatialATLoss
 
 
 class CombinedLoss(nn.Layer):
@@ -65,6 +67,58 @@ class CombinedLoss(nn.Layer):
             assert "weight" in param, "weight must be in param, but param just contains {}".format(
                 param.keys())
             self.loss_weight.append(param.pop("weight"))
+
+            # create align ops
+            if "align" in param and param.pop("align") == True:
+                assert "transpose_model" in param, "To align, transpose_model must be in param, but param just contains {}".format(
+                    param.keys())
+                assert "align_type" in param, "To align, align_type must be in param, but param just contains {}".format(
+                    param.keys())
+                assert "in_channels" in param, "To align, in_channels must be in param, but param just contains {}".format(
+                    param.keys())
+                assert "out_channels" in param, "To align, out_channels must be in param, but param just contains {}".format(
+                    param.keys())
+                transpose_model = param["transpose_model"]
+                align_type = param.pop("align_type")
+                in_channels = param.pop("in_channels")
+                out_channels = param.pop("out_channels")
+                assert type(
+                    transpose_model
+                ), "To align, transpose_model must be a list, but it is {}".format(
+                    type(transpose_model))
+                assert type(
+                    align_type
+                ), "To align, align_type must be a list, but it is {}".format(
+                    type(align_type))
+                assert type(
+                    in_channels
+                ), "To align, in_channels must be a list, but it is {}".format(
+                    type(in_channels))
+                assert type(
+                    out_channels
+                ), "To align, out_channels must be a list, but it is {}".format(
+                    type(out_channels))
+                if not (len(in_channels) == len(out_channels) and
+                        len(in_channels) == len(param["model_name_pairs"]) and
+                        len(in_channels) == len(transpose_model)):
+                    raise AssertionError(
+                        "To align, len(in_channels) and len(out_channels) and len(model_name_pairs) and len(transpose_model) should be all same, but len(in_channels) is {}, len(out_channels) is {}, len(model_name_pairs) is {},  len(transpose_model) is {}.".
+                        format(
+                            len(in_channels),
+                            len(out_channels),
+                            len(param["model_name_pairs"]),
+                            len(transpose_model)))
+                align_ops = []
+                for idx in range(len(param["model_name_pairs"])):
+                    if align_type[idx] is not None:
+                        align_ops.append(
+                            ShapeAlign(align_type[idx], in_channels[idx],
+                                       out_channels[idx]))
+                    else:
+                        align_ops.append(None)
+
+                param['align_ops'] = align_ops
+
             self.loss_func.append(eval(name)(**param))
 
     def forward(self, input, batch, **kargs):

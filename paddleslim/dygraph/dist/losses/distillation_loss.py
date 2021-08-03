@@ -20,11 +20,11 @@ from .basic_loss import DistanceLoss
 from .basic_loss import RkdDistance
 from .basic_loss import RKdAngle
 from .basic_loss import ShapeAlign
+from .basic_loss import SpatialATLoss
 
 __all__ = [
-    "DistillationDMLLoss",
-    "DistillationDistanceLoss",
-    "DistillationRKDLoss",
+    "DistillationDMLLoss", "DistillationDistanceLoss", "DistillationRKDLoss",
+    "DistillationSpatialATLoss"
 ]
 
 
@@ -69,53 +69,27 @@ class DistillationDistanceLoss(DistanceLoss):
         model_name_pairs(list | tuple): model name pairs to extract submodel output.
         key(string | None): key of the tensor used to calculate loss if the submodel.
         name(string): loss name.
-        kargs(dict): used to build corresponding loss function.
+        kwargs(dict): used to build corresponding loss function.
     """
 
     def __init__(self,
                  mode="l2",
                  model_name_pairs=[],
                  key=None,
-                 align=False,
-                 transpose_model=None,
-                 align_type=[],
-                 in_channels=[],
-                 out_channels=[],
+                 align_ops=None,
+                 transpose_model=[],
                  name="loss_distance",
-                 **kargs):
-        super().__init__(mode=mode, **kargs)
+                 **kwargs):
+        super().__init__(mode=mode, **kwargs)
         assert isinstance(model_name_pairs, list)
         self.key = key
         self.model_name_pairs = model_name_pairs
         self.name = name + "_" + mode
-        if align:
-            assert transpose_model is not None, "if align is True, please set transpose_model"
-            assert transpose_model in [
-                'teacher', 'student'
-            ], "please choose 'teacher' or 'student' to be transposed"
-            assert align_type is not None, "if align is True, please set align_type"
-            assert len(
-                in_channels) > 0, "if align is True, please set in_channels"
-            assert len(
-                out_channels) > 0, "if align is True, please set out_channels"
-
+        self.align_ops = align_ops
         self.transpose_model = transpose_model
-        self.align_type = align_type
-
-        self.align = None
-        if align:
-            self.align = nn.LayerList()
-            for idx in range(len(model_name_pairs)):
-                if align_type[idx] is not None:
-                    name = '{}'.format(idx)
-                    self.align.add_sublayer(name,
-                                            ShapeAlign(align_type[idx],
-                                                       in_channels[idx],
-                                                       out_channels[idx]))
 
     def forward(self, predicts, batch):
         loss_dict = dict()
-        align_idx = 0
         for idx, pair in enumerate(self.model_name_pairs):
             out1 = predicts[pair[0]]
             out2 = predicts[pair[1]]
@@ -123,12 +97,11 @@ class DistillationDistanceLoss(DistanceLoss):
                 out1 = out1[self.key]
                 out2 = out2[self.key]
 
-            if self.align is not None and self.align_type[idx] is not None:
+            if self.align_ops is not None and self.align_ops[idx] is not None:
                 if self.transpose_model == 'student':
-                    out1 = self.align[align_idx](out1)
+                    out1 = self.align_ops[idx](out1)
                 else:
-                    out2 = self.align[align_idx](out2)
-                align_idx += 1
+                    out2 = self.align_ops[idx](out2)
             loss = super().forward(out1, out2)
             loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1],
                                            idx)] = loss
@@ -171,4 +144,48 @@ class DistillationRKDLoss(nn.Layer):
 
             loss_dict["{}_{}_{}_dist_{}".format(self.name, pair[0], pair[
                 1], idx)] = self.rkd_dist_func(out1, out2)
+        return loss_dict
+
+
+class DistillationSpatialATLoss(SpatialATLoss):
+    """
+    DistillationSpatialATLoss
+    Args:
+        model_name_pairs(list | tuple): model name pairs to extract submodel output.
+        key(string | None): key of the tensor used to calculate loss if the submodel.
+        spatial_wise_align(bool): whether to align feature map between student and teacher.
+        name(string): loss name.
+    """
+
+    def __init__(self,
+                 mode='dist',
+                 model_name_pairs=[],
+                 key=None,
+                 align_ops=None,
+                 transpose_model=None,
+                 name="loss_spatial_att",
+                 **kwargs):
+        super().__init__(mode, **kwargs)
+        self.key = key
+        self.model_name_pairs = model_name_pairs
+        self.name = name + "_" + mode
+        self.align_ops = align_ops
+        self.transpose_model = transpose_model
+
+    def forward(self, predicts, batch):
+        loss_dict = dict()
+        for idx, pair in enumerate(self.model_name_pairs):
+            out1 = predicts[pair[0]]
+            out2 = predicts[pair[1]]
+            if self.key is not None:
+                out1 = out1[self.key]
+                out2 = out2[self.key]
+            if self.align_ops is not None and self.align_ops[idx] is not None:
+                if self.transpose_model == 'student':
+                    out1 = self.align_ops[idx](out1)
+                else:
+                    out2 = self.align_ops[idx](out2)
+            loss = super().forward(out1, out2)
+            loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1],
+                                           idx)] = loss
         return loss_dict

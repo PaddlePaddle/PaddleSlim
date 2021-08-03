@@ -21,8 +21,8 @@ from paddle.nn import MSELoss as L2Loss
 from paddle.nn import SmoothL1Loss
 
 __all__ = [
-    "CELoss", "DMLLoss", "DistanceLoss", "RKdAngle", "RkdDistance",
-    "SpatialATLoss"
+    "ShapeAlign", "CELoss", "DMLLoss", "DistanceLoss", "RKdAngle",
+    "RkdDistance", "SpatialATLoss"
 ]
 
 
@@ -65,7 +65,7 @@ class ShapeAlign(nn.Layer):
 
     def forward(self, feat):
         assert feat.shape[
-            1] == self._in_channel, "input feature channel number must equal to in_channel"
+            1] == self._in_channel, "input feature channel number must be equal to in_channel"
         out = self.align_op(feat)
         return out
 
@@ -160,22 +160,22 @@ class DistanceLoss(nn.Layer):
     DistanceLoss
     Args:
         mode: loss mode
-        kargs(dict): used to build corresponding loss function, for more details, please
+        kwargs(dict): used to build corresponding loss function, for more details, please
                      refer to:
                      L1loss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/L1Loss_cn.html#l1loss
                      L2Loss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/MSELoss_cn.html#mseloss
                      SmoothL1Loss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/SmoothL1Loss_cn.html#smoothl1loss
     """
 
-    def __init__(self, mode="l2", **kargs):
+    def __init__(self, mode="l2", **kwargs):
         super().__init__()
         assert mode in ["l1", "l2", "smooth_l1"]
         if mode == "l1":
-            self.loss_func = nn.L1Loss(**kargs)
+            self.loss_func = nn.L1Loss(**kwargs)
         elif mode == "l2":
-            self.loss_func = nn.MSELoss(**kargs)
+            self.loss_func = nn.MSELoss(**kwargs)
         elif mode == "smooth_l1":
-            self.loss_func = nn.SmoothL1Loss(**kargs)
+            self.loss_func = nn.SmoothL1Loss(**kwargs)
 
     def forward(self, x, y):
         return self.loss_func(x, y)
@@ -245,4 +245,37 @@ class RkdDistance(nn.Layer):
         d = d / (mean_d + self.eps)
 
         loss = F.smooth_l1_loss(d, t_d, reduction="mean")
+        return loss
+
+
+class SpatialATLoss(nn.Layer):
+    def __init__(self, mode='dist', **kwargs):
+        super().__init__()
+
+        assert mode in ["dist", "l1", "l2", "smooth_l1"]
+        self.mode = mode
+        if mode == 'dist':
+            self.p = kwargs['p'] if 'p' in kwargs else 2
+        elif mode == "l1":
+            self.loss_func = nn.L1Loss(**kwargs)
+        elif mode == "l2":
+            self.loss_func = nn.MSELoss(**kwargs)
+        elif mode == "smooth_l1":
+            self.loss_func = nn.SmoothL1Loss(**kwargs)
+        else:
+            raise NotImplementedError("loss function is not support!!!")
+
+    def forward(self, student, teacher):
+        t_spatial_pool = paddle.reshape(
+            paddle.mean(
+                teacher, axis=[1]),
+            [teacher.shape[0], 1, teacher.shape[2], teacher.shape[3]])
+        s_spatial_pool = paddle.reshape(
+            paddle.mean(
+                student, axis=[1]),
+            [student.shape[0], 1, student.shape[2], student.shape[3]])
+        if self.mode == 'dist':
+            loss = paddle.dist(t_spatial_pool, s_spatial_pool, self.p)
+        else:
+            loss = self.loss_func(t_spatial_pool, s_spatial_pool)
         return loss
