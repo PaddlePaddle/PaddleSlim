@@ -461,12 +461,27 @@ fluid.Program
    exe = fluid.Executor(place)
    exe.run(fluid.default_startup_program())
    
+   # 量化为8比特，Embedding参数的体积减小4倍，精度有轻微损失
    config = {
-            'quantize_op_types': ['lookup_table'], 
+            'quantize_op_types': ['lookup_table'],
             'lookup_table': {
-                'quantize_type': 'abs_max'
-                }
+               'quantize_type': 'abs_max',
+               'quantize_bits': 8,
+               'dtype': 'int8'
+               }
             }
+
+   '''
+   # 量化为16比特，Embedding参数的体积减小2倍，精度损失很小
+   config = {
+            'quantize_op_types': ['lookup_table'],
+            'lookup_table': {
+               'quantize_type': 'abs_max',
+               'quantize_bits': 16,
+               'dtype': 'int16'
+               }
+            }
+   '''
    quant_program = quant.quant_embedding(infer_program, place, config)
 
 更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_embedding>`_ 

@@ -12,4 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from . import distill
+from .distill import *
+
 __all__ = []
+
+__all__ += distill.__all__
