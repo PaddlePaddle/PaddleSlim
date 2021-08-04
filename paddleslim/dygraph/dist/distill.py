@@ -97,7 +97,6 @@ class Distill(nn.Layer):
         self.distill_idx = self._get_distill_idx()
         self._loss_config_list = []
         for c in self.configs:
-
             loss_config = {}
             loss_func_name = c.pop("loss_function")
             loss_config[loss_func_name] = {}

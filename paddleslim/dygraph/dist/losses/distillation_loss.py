@@ -96,9 +96,8 @@ class DistillationDistanceLoss(DistanceLoss):
             if self.key is not None:
                 out1 = out1[self.key]
                 out2 = out2[self.key]
-
             if self.align_ops is not None and self.align_ops[idx] is not None:
-                if self.transpose_model == 'student':
+                if self.transpose_model[idx] == 'student':
                     out1 = self.align_ops[idx](out1)
                 else:
                     out2 = self.align_ops[idx](out2)
@@ -162,7 +161,7 @@ class DistillationSpatialATLoss(SpatialATLoss):
                  model_name_pairs=[],
                  key=None,
                  align_ops=None,
-                 transpose_model=None,
+                 transpose_model=[],
                  name="loss_spatial_att",
                  **kwargs):
         super().__init__(mode, **kwargs)
@@ -181,7 +180,7 @@ class DistillationSpatialATLoss(SpatialATLoss):
                 out1 = out1[self.key]
                 out2 = out2[self.key]
             if self.align_ops is not None and self.align_ops[idx] is not None:
-                if self.transpose_model == 'student':
+                if self.transpose_model[idx] == 'student':
                     out1 = self.align_ops[idx](out1)
                 else:
                     out2 = self.align_ops[idx](out2)

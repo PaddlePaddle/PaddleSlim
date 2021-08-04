@@ -694,5 +694,80 @@ class TestCombinedLoss(unittest.TestCase):
                 self.assertTrue(np.allclose(np_result, pd_result))
 
 
+class TestSpatialATLoss(unittest.TestCase):
+    def calc_distillation_spatial_at_loss(self,
+                                          predicts,
+                                          pairs,
+                                          key=None,
+                                          mode='dist',
+                                          p=None,
+                                          expected_ans=None):
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+
+        for device in devices:
+            paddle.set_device(device)
+            if p is None:
+                loss_func = DistillationSpatialATLoss(
+                    model_name_pairs=pairs, key=key, mode=mode)
+            else:
+                loss_func = DistillationSpatialATLoss(
+                    model_name_pairs=pairs, key=key, mode=mode, p=p)
+
+            pd_result_dict = loss_func(predicts, key)
+            for k in pd_result_dict:
+                pd_result = pd_result_dict[k].numpy()
+                self.assertTrue(np.allclose(pd_result, expected_ans))
+
+    def test_distillation_spatial_at_loss(self, ):
+        shape = [32, 16, 10, 10]
+        x_feat_name = "student"
+        y_feat_name = "teacher"
+        pairs = [[x_feat_name, y_feat_name]]
+        paddle.seed(100)
+
+        s_tensor = paddle.rand(shape)
+        t_tensor = paddle.rand(shape)
+        predicts = {
+            "student": s_tensor,
+            "teacher": t_tensor,
+        }
+        self.calc_distillation_spatial_at_loss(
+            predicts,
+            pairs,
+            key=None,
+            mode='dist',
+            p=2,
+            expected_ans=np.array([5.7318664]))
+        self.calc_distillation_spatial_at_loss(
+            predicts,
+            pairs,
+            key=None,
+            mode='l1',
+            expected_ans=np.array([0.08109209]))
+
+        predicts = {
+            "student": {
+                "feat": s_tensor,
+            },
+            "teacher": {
+                "feat": t_tensor,
+            },
+        }
+        self.calc_distillation_spatial_at_loss(
+            predicts,
+            pairs,
+            key="feat",
+            mode='l2',
+            expected_ans=np.array([0.01026697]))
+        self.calc_distillation_spatial_at_loss(
+            predicts,
+            pairs,
+            key="feat",
+            mode='smooth_l1',
+            expected_ans=np.array([0.00513348]))
+
+
 if __name__ == '__main__':
     unittest.main()

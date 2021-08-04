@@ -254,8 +254,9 @@ class SpatialATLoss(nn.Layer):
 
         assert mode in ["dist", "l1", "l2", "smooth_l1"]
         self.mode = mode
+
         if mode == 'dist':
-            self.p = kwargs['p'] if 'p' in kwargs else 2
+            self.p = kwargs.pop("p") if 'p' in kwargs else 2
         elif mode == "l1":
             self.loss_func = nn.L1Loss(**kwargs)
         elif mode == "l2":
