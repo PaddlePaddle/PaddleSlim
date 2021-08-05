@@ -28,12 +28,11 @@ from paddleslim.dygraph.dist.losses import CELoss
 from paddleslim.dygraph.dist.losses import DMLLoss
 from paddleslim.dygraph.dist.losses import RkdDistance
 from paddleslim.dygraph.dist.losses import RKdAngle
-from paddleslim.dygraph.dist.losses import SpatialATLoss
 # distillation loss
 from paddleslim.dygraph.dist.losses import DistillationDistanceLoss
 from paddleslim.dygraph.dist.losses import DistillationRKDLoss
 from paddleslim.dygraph.dist.losses import DistillationDMLLoss
-from paddleslim.dygraph.dist.losses import DistillationSpatialATLoss
+from paddleslim.dygraph.dist.losses import DistillationFeatureLoss
 
 import numpy as np
 
@@ -694,33 +693,28 @@ class TestCombinedLoss(unittest.TestCase):
                 self.assertTrue(np.allclose(np_result, pd_result))
 
 
-class TestSpatialATLoss(unittest.TestCase):
-    def calc_distillation_spatial_at_loss(self,
-                                          predicts,
-                                          pairs,
-                                          key=None,
-                                          mode='dist',
-                                          p=None,
-                                          expected_ans=None):
+class TestFeatureLoss(unittest.TestCase):
+    def calc_distillation_feature_loss(self,
+                                       mode,
+                                       predicts,
+                                       pairs,
+                                       key=None,
+                                       expected_ans=None,
+                                       **kwargs):
         devices = ["cpu"]
         if paddle.is_compiled_with_cuda():
             devices.append("gpu")
 
         for device in devices:
             paddle.set_device(device)
-            if p is None:
-                loss_func = DistillationSpatialATLoss(
-                    model_name_pairs=pairs, key=key, mode=mode)
-            else:
-                loss_func = DistillationSpatialATLoss(
-                    model_name_pairs=pairs, key=key, mode=mode, p=p)
-
+            loss_func = DistillationFeatureLoss(
+                model_name_pairs=pairs, key=key, mode=mode, **kwargs)
             pd_result_dict = loss_func(predicts, key)
             for k in pd_result_dict:
                 pd_result = pd_result_dict[k].numpy()
                 self.assertTrue(np.allclose(pd_result, expected_ans))
 
-    def test_distillation_spatial_at_loss(self, ):
+    def test_distillation_at_loss(self, ):
         shape = [32, 16, 10, 10]
         x_feat_name = "student"
         y_feat_name = "teacher"
@@ -733,19 +727,13 @@ class TestSpatialATLoss(unittest.TestCase):
             "student": s_tensor,
             "teacher": t_tensor,
         }
-        self.calc_distillation_spatial_at_loss(
-            predicts,
-            pairs,
+        self.calc_distillation_feature_loss(
+            mode='att',
+            predicts=predicts,
+            pairs=pairs,
             key=None,
-            mode='dist',
-            p=2,
-            expected_ans=np.array([5.7318664]))
-        self.calc_distillation_spatial_at_loss(
-            predicts,
-            pairs,
-            key=None,
-            mode='l1',
-            expected_ans=np.array([0.08109209]))
+            expected_ans=np.array([0.0009311]),
+            p=2)
 
         predicts = {
             "student": {
@@ -755,18 +743,44 @@ class TestSpatialATLoss(unittest.TestCase):
                 "feat": t_tensor,
             },
         }
-        self.calc_distillation_spatial_at_loss(
-            predicts,
-            pairs,
+        self.calc_distillation_feature_loss(
+            mode='channel_att',
+            predicts=predicts,
+            pairs=pairs,
             key="feat",
-            mode='l2',
-            expected_ans=np.array([0.01026697]))
-        self.calc_distillation_spatial_at_loss(
-            predicts,
-            pairs,
+            expected_ans=np.array([0.00116215]),
+            p=1)
+        self.calc_distillation_feature_loss(
+            mode='ft',
+            predicts=predicts,
+            pairs=pairs,
             key="feat",
-            mode='smooth_l1',
-            expected_ans=np.array([0.00513348]))
+            expected_ans=np.array([0.01448038]))
+        self.calc_distillation_feature_loss(
+            mode='cc',
+            predicts=predicts,
+            pairs=pairs,
+            key="feat",
+            expected_ans=np.array([1.7762775]))
+        self.calc_distillation_feature_loss(
+            mode='sp',
+            predicts=predicts,
+            pairs=pairs,
+            key="feat",
+            expected_ans=np.array([1.3410619e-05]))
+        self.calc_distillation_feature_loss(
+            mode='nst',
+            predicts=predicts,
+            pairs=pairs,
+            key="feat",
+            expected_ans=np.array([0.05421638]))
+        self.calc_distillation_feature_loss(
+            mode='ab',
+            predicts=predicts,
+            pairs=pairs,
+            key="feat",
+            expected_ans=np.array([1.0861329]),
+            margin=1.5)
 
 
 if __name__ == '__main__':

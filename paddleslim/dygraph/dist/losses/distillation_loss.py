@@ -20,11 +20,18 @@ from .basic_loss import DistanceLoss
 from .basic_loss import RkdDistance
 from .basic_loss import RKdAngle
 from .basic_loss import ShapeAlign
-from .basic_loss import SpatialATLoss
+from .basic_loss import ATLoss
+from .basic_loss import ChannelATLoss
+from .basic_loss import FTLoss
+from .basic_loss import CCLoss
+from .basic_loss import SPLoss
+from .basic_loss import NSTLoss
+from .basic_loss import ABLoss
+from .basic_loss import VIDLoss
 
 __all__ = [
     "DistillationDMLLoss", "DistillationDistanceLoss", "DistillationRKDLoss",
-    "DistillationSpatialATLoss"
+    "DistillationFeatureLoss"
 ]
 
 
@@ -68,6 +75,8 @@ class DistillationDistanceLoss(DistanceLoss):
         mode: loss mode
         model_name_pairs(list | tuple): model name pairs to extract submodel output.
         key(string | None): key of the tensor used to calculate loss if the submodel.
+        align_ops(list): list of align operations if align.
+        transpose_model(list): list of model name to be transposed if align.
         name(string): loss name.
         kwargs(dict): used to build corresponding loss function.
     """
@@ -146,30 +155,76 @@ class DistillationRKDLoss(nn.Layer):
         return loss_dict
 
 
-class DistillationSpatialATLoss(SpatialATLoss):
+class DistillationFeatureLoss(nn.Layer):
     """
-    DistillationSpatialATLoss
+    DistillationFeatureLoss
     Args:
+        mode: loss mode
         model_name_pairs(list | tuple): model name pairs to extract submodel output.
         key(string | None): key of the tensor used to calculate loss if the submodel.
-        spatial_wise_align(bool): whether to align feature map between student and teacher.
+        align_ops(list): list of align operations if align.
+        transpose_model(list): list of model name to be transposed if align.
         name(string): loss name.
     """
 
     def __init__(self,
-                 mode='dist',
+                 mode="att",
                  model_name_pairs=[],
                  key=None,
                  align_ops=None,
                  transpose_model=[],
-                 name="loss_spatial_att",
+                 name="loss_feature",
                  **kwargs):
-        super().__init__(mode, **kwargs)
+        super().__init__()
+        assert mode in [
+            "att", "channel_att", "ft", "cc", "pkt", "sp", "nst", "ab", "vid"
+        ]
         self.key = key
         self.model_name_pairs = model_name_pairs
-        self.name = name + "_" + mode
         self.align_ops = align_ops
         self.transpose_model = transpose_model
+        self.name = name
+        if mode == 'att':
+            self.distill_func = ATLoss(**kwargs)
+        elif mode == 'channel_att':
+            self.distill_func = ChannelATLoss(**kwargs)
+        elif mode == 'ft':
+            self.distill_func = FTLoss(**kwargs)
+        elif mode == 'cc':
+            self.distill_func = CCLoss()
+        elif mode == 'sp':
+            self.distill_func = SPLoss(**kwargs)
+        elif mode == 'nst':
+            self.distill_func = NSTLoss()
+        elif mode == 'ab':
+            self.distill_func = ABLoss(**kwargs)
+        elif mode == 'vid':
+            if not ("in_channels" in kwargs and "mid_channels" in kwargs and
+                    "out_channels" in kwargs):
+                raise AssertionError(
+                    "In VID, in_channels, mid_channels and out_channels must be in param, but param just contains {}".
+                    format(kwargs.keys()))
+            in_channels = kwargs.pop("in_channels")
+            mid_channels = kwargs.pop("mid_channels")
+            out_channels = kwargs.pop("out_channels")
+            if not (len(in_channels) == len(out_channels) and
+                    len(in_channels) == len(mid_channels) and
+                    len(in_channels) == len(model_name_pairs)):
+                raise AssertionError(
+                    "In VID, len(in_channels) and len(mid_channels) and len(out_channels) and len(model_name_pairs) should be all same, but len(in_channels) is {}, len(out_channels) is {}, len(model_name_pairs) is {}.".
+                    format(
+                        len(in_channels),
+                        len(mid_channels),
+                        len(out_channels), len(model_name_pairs)))
+            self.distill_func = []
+
+            for idx in range(len(model_name_pairs)):
+                self.distill_func.append(
+                    VIDLoss(
+                        in_channels=in_channels[idx],
+                        mid_channels=mid_channels[idx],
+                        out_channels=out_channels[idx],
+                        **kwargs))
 
     def forward(self, predicts, batch):
         loss_dict = dict()
@@ -184,7 +239,10 @@ class DistillationSpatialATLoss(SpatialATLoss):
                     out1 = self.align_ops[idx](out1)
                 else:
                     out2 = self.align_ops[idx](out2)
-            loss = super().forward(out1, out2)
+            if type(self.distill_func) is list:
+                loss = self.distill_func[idx](out1, out2)
+            else:
+                loss = self.distill_func(out1, out2)
             loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1],
                                            idx)] = loss
         return loss_dict

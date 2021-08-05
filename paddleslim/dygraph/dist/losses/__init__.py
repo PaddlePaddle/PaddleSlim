@@ -27,12 +27,12 @@ from .basic_loss import DMLLoss
 from .basic_loss import DistanceLoss
 from .basic_loss import RKdAngle, RkdDistance
 from .basic_loss import ShapeAlign
-from .basic_loss import SpatialATLoss
+from .basic_loss import ATLoss, ChannelATLoss, FTLoss, CCLoss, SPLoss, NSTLoss, ABLoss, VIDLoss
 
 from .distillation_loss import DistillationDistanceLoss
 from .distillation_loss import DistillationDMLLoss
 from .distillation_loss import DistillationRKDLoss
-from .distillation_loss import DistillationSpatialATLoss
+from .distillation_loss import DistillationFeatureLoss
 
 
 class CombinedLoss(nn.Layer):

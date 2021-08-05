@@ -22,7 +22,8 @@ from paddle.nn import SmoothL1Loss
 
 __all__ = [
     "ShapeAlign", "CELoss", "DMLLoss", "DistanceLoss", "RKdAngle",
-    "RkdDistance", "SpatialATLoss"
+    "RkdDistance", "ATLoss", "ChannelATLoss", "FTLoss", "CCLoss", "SPLoss",
+    "NSTLoss", "ABLoss", "VIDLoss"
 ]
 
 
@@ -248,35 +249,195 @@ class RkdDistance(nn.Layer):
         return loss
 
 
-class SpatialATLoss(nn.Layer):
-    def __init__(self, mode='dist', **kwargs):
+class ATLoss(nn.Layer):
+    """
+	Paying More Attention to Attention: Improving the Performance of Convolutional
+	Neural Netkworks wia Attention Transfer
+	https://arxiv.org/abs/1612.03928
+	"""
+
+    def __init__(self, p=2, eps=1e-6, **kwargs):
         super().__init__()
+        self.p = p
+        self.eps = eps
+        self.loss_func = nn.MSELoss(**kwargs)
 
-        assert mode in ["dist", "l1", "l2", "smooth_l1"]
-        self.mode = mode
-
-        if mode == 'dist':
-            self.p = kwargs.pop("p") if 'p' in kwargs else 2
-        elif mode == "l1":
-            self.loss_func = nn.L1Loss(**kwargs)
-        elif mode == "l2":
-            self.loss_func = nn.MSELoss(**kwargs)
-        elif mode == "smooth_l1":
-            self.loss_func = nn.SmoothL1Loss(**kwargs)
-        else:
-            raise NotImplementedError("loss function is not support!!!")
+    def attention_map(self, fm):
+        am = paddle.pow(paddle.abs(fm), self.p)
+        am = paddle.sum(am, axis=1, keepdim=True)
+        norm = paddle.norm(am, axis=[2, 3], keepdim=True)
+        am = paddle.divide(am, norm + self.eps)
+        return am
 
     def forward(self, student, teacher):
-        t_spatial_pool = paddle.reshape(
-            paddle.mean(
-                teacher, axis=[1]),
-            [teacher.shape[0], 1, teacher.shape[2], teacher.shape[3]])
-        s_spatial_pool = paddle.reshape(
-            paddle.mean(
-                student, axis=[1]),
-            [student.shape[0], 1, student.shape[2], student.shape[3]])
-        if self.mode == 'dist':
-            loss = paddle.dist(t_spatial_pool, s_spatial_pool, self.p)
-        else:
-            loss = self.loss_func(t_spatial_pool, s_spatial_pool)
+        return self.loss_func(
+            self.attention_map(student), self.attention_map(teacher))
+
+
+class ChannelATLoss(nn.Layer):
+    """
+    Channel Distillation: Channel-Wise Attention for Knowledge Distillation
+    https://arxiv.org/abs/2006.01683
+    """
+
+    def __init__(self, p=2):
+        super().__init__()
+        self.p = p
+
+    def forward(self, student, teacher):
+        s = paddle.mean(student, axis=[2, 3], keepdim=False)
+        t = paddle.mean(teacher, axis=[2, 3], keepdim=False)
+        return paddle.mean(paddle.pow(s - t, self.p))
+
+
+class FTLoss(nn.Layer):
+    '''
+	Paraphrasing Complex Network: Network Compression via Factor Transfer
+	https://arxiv.org/abs/1802.04977
+	'''
+
+    ### TODO: to use this loss, need to train Paraphraser
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.loss_func = paddle.nn.loss.L1Loss(**kwargs)
+
+    def forward(self, factor_s, factor_t):
+        s = F.normalize(paddle.reshape(factor_s, [factor_s.shape[0], -1]))
+        t = F.normalize(paddle.reshape(factor_t, [factor_t.shape[0], -1]))
+
+        return self.loss_func(s, t)
+
+
+class CCLoss(nn.Layer):
+    '''
+	Correlation Congruence for Knowledge Distillation
+	http://openaccess.thecvf.com/content_ICCV_2019/papers/
+    
+	'''
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, student, teacher):
+        delta = paddle.abs(student - teacher)
+        return paddle.mean((delta[:-1] * delta[1:]).sum(1))
+
+
+class SPLoss(nn.Layer):
+    """
+    Similarity-Preserving Knowledge Distillation
+    https://arxiv.org/abs/1907.09682
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.loss_func = nn.MSELoss(**kwargs)
+
+    def forward(self, student, teacher):
+        fm = paddle.reshape(student, [student.shape[0], -1])
+        fm_t = paddle.transpose(fm, [1, 0])
+        sp = F.normalize(paddle.matmul(fm, fm_t), p=2, axis=-1)
+
+        t_fm = paddle.reshape(teacher, [teacher.shape[0], -1])
+        t_fm_t = paddle.transpose(t_fm, [1, 0])
+        t_sp = F.normalize(paddle.matmul(t_fm, t_fm_t), p=2, axis=-1)
+        loss = self.loss_func(sp, t_sp)
+
+        return loss
+
+
+class NSTLoss(nn.Layer):
+    """
+    Like What You Like: Knowledge Distill via Neuron Selectivity Transfer
+    https://arxiv.org/abs/1707.01219
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def poly_kernel(self, fm1, fm2):
+        fm1 = fm1.unsqueeze(1)
+        fm2 = fm2.unsqueeze(2)
+        out = (fm1 * fm2).sum(-1).pow(2)
+        return out
+
+    def forward(self, student, teacher):
+        fm_s = paddle.reshape(student, [student.shape[0], student.shape[1], -1])
+        fm_s = F.normalize(fm_s, axis=2)
+
+        fm_t = paddle.reshape(teacher, [teacher.shape[0], teacher.shape[1], -1])
+        fm_t = F.normalize(fm_t, axis=2)
+
+        loss = self.poly_kernel(fm_t, fm_t).mean() + self.poly_kernel(
+            fm_s, fm_s).mean() - 2 * self.poly_kernel(fm_s, fm_t).mean()
+
+        return loss
+
+
+class ABLoss(nn.Layer):
+    """
+    Knowledge Transfer via Distillation of Activation Boundaries Formed by Hidden Neurons
+    https://arxiv.org/abs/1811.03233
+    """
+
+    def __init__(self, margin=1.):
+        super().__init__()
+        self.margin = margin
+
+    def forward(self, student, teacher):
+        loss = ((student + self.margin).pow(2) * (paddle.logical_and(
+            (student > -self.margin), (teacher <= 0))) +
+                (student - self.margin).pow(2) * (paddle.logical_and(
+                    (student <= self.margin), (teacher > 0))))
+        loss = loss.mean()
+        return loss
+
+
+class VIDLoss(nn.Layer):
+    """
+    Variational Information Distillation for Knowledge Transfer
+	https://zpascal.net/cvpr2019/Ahn_Variational_Information_Distillation_for_Knowledge_Transfer_CVPR_2019_paper.pdf
+    """
+
+    def __init__(self,
+                 in_channels,
+                 mid_channels,
+                 out_channels,
+                 init_pred_var=5.0,
+                 eps=1e-6):
+        super().__init__()
+        self.in_channels = in_channels
+        self.mid_channels = mid_channels
+        self.out_channels = out_channels
+        self.init_pred_var = init_pred_var
+        self.eps = eps
+
+        def conv1x1(in_channels, out_channels, stride=1):
+            return nn.Conv2D(
+                in_channels,
+                out_channels,
+                kernel_size=1,
+                padding=0,
+                stride=stride)
+
+        self.regressor = nn.Sequential(
+            conv1x1(in_channels, mid_channels),
+            nn.ReLU(),
+            conv1x1(mid_channels, mid_channels),
+            nn.ReLU(),
+            conv1x1(mid_channels, out_channels), )
+        init_scale = paddle.log(
+            paddle.exp(paddle.to_tensor([init_pred_var - eps])) - 1.0)
+        self.log_scale = paddle.create_parameter(
+            shape=[out_channels],
+            dtype='float32',
+            default_initializer=nn.initializer.Constant(init_scale))
+
+    def forward(self, student, teacher):
+        pred_mean = self.regressor(student)
+        pred_var = paddle.log(1.0 + paddle.exp(self.log_scale)) + self.eps
+        pred_var = paddle.reshape(pred_var, [1, -1, 1, 1])
+        neg_log_prob = 0.5 * (
+            (pred_mean - teacher)**2 / pred_var + paddle.log(pred_var))
+        loss = paddle.mean(neg_log_prob)
         return loss

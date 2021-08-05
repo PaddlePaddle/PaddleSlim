@@ -32,14 +32,19 @@ class LayerConfig:
         self.s_feature_idx = s_feature_idx
         self.t_feature_idx = t_feature_idx
         self.feature_type = feature_type
+        print('LayerConfig', loss_function)
         if loss_function in ['l1', 'l2', 'smooth_l1']:
             self.loss_function = 'DistillationDistanceLoss'
         elif loss_function in ['dml']:
             self.loss_function = 'DistillationDMLLoss'
         elif loss_function in ['rkl']:
             self.loss_function = 'DistillationRKDLoss'
-        elif loss_function in ['spatial_att']:
-            self.loss_function = 'DistillationSpatialATLoss'
+        elif loss_function in [
+                'att', 'channel_att', 'ft', 'cc', 'pkt', 'sp', 'nst', 'ab',
+                'vid'
+        ]:
+            self.loss_function = 'DistillationFeatureLoss'
+            self.mode = loss_function
         else:
             raise NotImplementedError("loss function is not support!!!")
         self.weight = weight
