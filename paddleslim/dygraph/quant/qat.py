@@ -207,7 +207,7 @@ class QAT(object):
             weight_quantize_layer=self.weight_quantize,
             act_quantize_layer=self.act_quantize)
 
-    def quantize(self, model, inplace=False):
+    def quantize(self, model, inplace=True):
         """
         Quantize the input model.
 
