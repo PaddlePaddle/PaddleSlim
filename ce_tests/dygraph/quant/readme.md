@@ -2,7 +2,7 @@
 
 安装需要测试的Paddle版本和PaddleSlim版本。
 
-准备ImageNet数据集，数据集需要满足paddle hapi的要求。假定解压到`/dataset/ILSVRC2012`文件夹，该文件夹下有`train文件夹、val_hapi文件夹、train_list.txt和val_list.txt文件`。如果数据集有问题，可以私聊。
+准备ImageNet数据集，数据集需要满足paddle hapi的要求。假定解压到`/dataset/ILSVRC2012`文件夹，该文件夹下有`train文件夹、val文件夹、train_list.txt和val_list.txt文件`。
 
 通过`export CUDA_VISIBLE_DEVICES=xx`指定需要使用的GPU ID。
 
