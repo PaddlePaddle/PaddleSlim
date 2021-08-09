@@ -35,7 +35,7 @@ def eval(args):
 
     # prepare data
     val_dataset = dataset.ImageNetDataset(
-        path=os.path.join(args.data_dir, 'val_hapi'), mode='val')
+        path=os.path.join(args.data_dir, 'val'), mode='val')
     eval_loader = paddle.io.DataLoader(
         val_dataset, batch_size=args.batch_size, num_workers=5)
 

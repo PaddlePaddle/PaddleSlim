@@ -60,8 +60,7 @@ def main():
     fp32_model = models.__dict__[FLAGS.arch](pretrained=True)
     fp32_model.eval()
 
-    val_dataset = ImageNetDataset(
-        os.path.join(FLAGS.data, FLAGS.val_dir), mode='val')
+    val_dataset = ImageNetDataset(FLAGS.data, mode='val')
 
     # 2 quantizations
     ptq = PTQ()
@@ -98,11 +97,6 @@ if __name__ == '__main__':
         default="/dataset/ILSVRC2012",
         help='path to dataset (should have subdirectories named "train" and "val"'
     )
-    parser.add_argument(
-        '--val_dir',
-        default="val_hapi",
-        help='the dir that saves val images for paddle.Model')
-
     # train
     parser.add_argument(
         "--quant_batch_num", default=10, type=int, help="batch num for quant")
