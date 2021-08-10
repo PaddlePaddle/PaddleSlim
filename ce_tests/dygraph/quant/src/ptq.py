@@ -100,7 +100,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--val_dir',
-        default="val_hapi",
+        default="val",
         help='the dir that saves val images for paddle.Model')
 
     # train
