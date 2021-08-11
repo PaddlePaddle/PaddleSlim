@@ -1,35 +1,21 @@
-# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
-import cv2
-import math
-import random
 import numpy as np
 from PIL import Image
-
-from paddle.vision.datasets import DatasetFolder
+from paddle.io import Dataset
 from paddle.vision.transforms import transforms
 
 
-class ImageNetDataset(DatasetFolder):
+class ImageNetDataset(Dataset):
     def __init__(self,
-                 path,
+                 data_dir,
                  mode='train',
                  image_size=224,
                  resize_short_size=256):
-        super(ImageNetDataset, self).__init__(path)
+        super(ImageNetDataset, self).__init__()
+        train_file_list = os.path.join(data_dir, 'train_list.txt')
+        val_file_list = os.path.join(data_dir, 'val_list.txt')
+        test_file_list = os.path.join(data_dir, 'test_list.txt')
+        self.data_dir = data_dir
         self.mode = mode
 
         normalize = transforms.Normalize(
@@ -47,11 +33,35 @@ class ImageNetDataset(DatasetFolder):
                 normalize
             ])
 
-    def __getitem__(self, idx):
-        img_path, label = self.samples[idx]
+        if mode == 'train':
+            with open(train_file_list) as flist:
+                full_lines = [line.strip() for line in flist]
+                np.random.shuffle(full_lines)
+                if os.getenv('PADDLE_TRAINING_ROLE'):
+                    # distributed mode if the env var `PADDLE_TRAINING_ROLE` exits
+                    trainer_id = int(os.getenv("PADDLE_TRAINER_ID", "0"))
+                    trainer_count = int(os.getenv("PADDLE_TRAINERS_NUM", "1"))
+                    per_node_lines = len(full_lines) // trainer_count
+                    lines = full_lines[trainer_id * per_node_lines:(
+                        trainer_id + 1) * per_node_lines]
+                    print(
+                        "read images from %d, length: %d, lines length: %d, total: %d"
+                        % (trainer_id * per_node_lines, per_node_lines,
+                           len(lines), len(full_lines)))
+                else:
+                    lines = full_lines
+            self.data = [line.split() for line in lines]
+        else:
+            with open(val_file_list) as flist:
+                lines = [line.strip() for line in flist]
+                self.data = [line.split() for line in lines]
+
+    def __getitem__(self, index):
+        img_path, label = self.data[index]
+        img_path = os.path.join(self.data_dir, img_path)
         img = Image.open(img_path).convert('RGB')
         label = np.array([label]).astype(np.int64)
         return self.transform(img), label
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.data)

@@ -60,8 +60,7 @@ def main():
     fp32_model = models.__dict__[FLAGS.arch](pretrained=True)
     fp32_model.eval()
 
-    val_dataset = ImageNetDataset(
-        os.path.join(FLAGS.data, FLAGS.val_dir), mode='val')
+    val_dataset = ImageNetDataset(FLAGS.data, mode='val')
 
     # 2 quantizations
     ptq = PTQ()
