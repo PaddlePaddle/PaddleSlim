@@ -34,8 +34,7 @@ def eval(args):
     output_handle = predictor.get_output_handle(output_names[0])
 
     # prepare data
-    val_dataset = dataset.ImageNetDataset(
-        path=os.path.join(args.data_dir, 'val'), mode='val')
+    val_dataset = dataset.ImageNetDataset(args.data_dir, mode='val')
     eval_loader = paddle.io.DataLoader(
         val_dataset, batch_size=args.batch_size, num_workers=5)
 
