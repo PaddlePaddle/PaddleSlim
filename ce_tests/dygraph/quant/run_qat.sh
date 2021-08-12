@@ -1,5 +1,5 @@
-data_path="/dataset/ILSVRC2012"
-val_dir="val_hapi"
+data_path="/root/datasets/ILSVRC2012"
+val_dir="val"
 epoch=1
 lr=0.0001
 batch_size=32
