@@ -93,3 +93,5 @@ quanter.save_quantized_model(net, 'save_dir', input_spec=[paddle.static.InputSpe
 | ----------- | --------------------------- | ------------ | --------------------------- |
 | MobileNetV1 | 70.99/89.65                 | 普通在线量化 | 70.63/89.65                 |
 | MobileNetV3 | 78.96/94.48                 | PACT在线量化 | 77.52/93.77                 |
+
+注：在batch_size=256时能达到上表中理想的量化精度，但显存需求较大，因此在train.py中batch_size设置为128。
