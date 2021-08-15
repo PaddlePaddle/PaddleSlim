@@ -86,10 +86,8 @@ def main():
         print("Resume from " + FLAGS.resume)
         model.load(FLAGS.resume)
 
-    train_dataset = ImageNetDataset(
-        os.path.join(FLAGS.data, 'train'), mode='train')
-    val_dataset = ImageNetDataset(
-        os.path.join(FLAGS.data, FLAGS.val_dir), mode='val')
+    train_dataset = ImageNetDataset(FLAGS.data, mode='train')
+    val_dataset = ImageNetDataset(FLAGS.data, mode='val')
 
     optim = make_optimizer(
         np.ceil(
@@ -152,10 +150,6 @@ if __name__ == '__main__':
         default="",
         help='path to dataset '
         '(should have subdirectories named "train" and "val"')
-    parser.add_argument(
-        '--val_dir',
-        default="val",
-        help='the dir that saves val images for paddle.Model')
 
     # train
     parser.add_argument(
