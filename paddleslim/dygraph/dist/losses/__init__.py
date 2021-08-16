@@ -30,6 +30,7 @@ from .basic_loss import RKdAngle, RkdDistance
 from .distillation_loss import DistillationDistanceLoss
 from .distillation_loss import DistillationDMLLoss
 from .distillation_loss import DistillationRKDLoss
+from .distillation_loss import SegPairWiseLoss, SegChannelwiseLoss
 
 
 class CombinedLoss(nn.Layer):
@@ -44,6 +45,8 @@ class CombinedLoss(nn.Layer):
                                 act: "softmax"
                                 model_name_pairs:
                                 - ["Student", "Teacher"]
+                           Another example is {'DistillationDistanceLoss': {'weight': 1.0,
+                           'key': 'hidden_0_0', 'model_name_pairs': [['student', 'teacher']]}
     """
 
     def __init__(self, loss_config_list=None):
@@ -79,5 +82,8 @@ class CombinedLoss(nn.Layer):
                     for key in loss
                 }
             loss_dict.update(loss)
-        loss_dict["loss"] = paddle.add_n(list(loss_dict.values()))
+        if loss_dict == {}:
+            loss_dict["loss"] = paddle.to_tensor(0.)
+        else:
+            loss_dict["loss"] = paddle.add_n(list(loss_dict.values()))
         return loss_dict

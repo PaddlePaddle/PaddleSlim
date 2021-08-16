@@ -21,11 +21,7 @@ from paddle.nn import MSELoss as L2Loss
 from paddle.nn import SmoothL1Loss
 
 __all__ = [
-    "CELoss",
-    "DMLLoss",
-    "DistanceLoss",
-    "RKdAngle",
-    "RkdDistance",
+    "CELoss", "DMLLoss", "DistanceLoss", "RKdAngle", "RkdDistance", "KLLoss"
 ]
 
 
@@ -111,6 +107,49 @@ class DMLLoss(nn.Layer):
         loss = (F.kl_div(
             log_out1, out2, reduction='batchmean') + F.kl_div(
                 log_out2, out1, reduction='batchmean')) / 2.0
+        return loss
+
+
+class KLLoss(nn.Layer):
+    """
+    KLLoss.
+    Args:
+        act(string | None): activation function used for the input and label tensor.
+            It supports None, softmax and sigmoid. Default: softmax.
+        axis(int): the axis for the act. Default: -1.
+        reduction(str): the reduction params for F.kl_div. Default: mean.
+    """
+
+    def __init__(self, act='softmax', axis=-1, reduction='mean'):
+        super().__init__()
+
+        assert act in ['softmax', 'sigmoid', None]
+        self.reduction = reduction
+
+        if act == 'softmax':
+            self.act = nn.Softmax(axis=axis)
+        elif act == 'sigmoid':
+            self.act = nn.Sigmoid()
+        else:
+            self.act = None
+
+    def forward(self, input, label):
+        """
+        Args:
+            input(Tensor): The input tensor.
+            label(Tensor): The label tensor. The shape of label is the same as input.
+        Returns:
+            Tensor: The kl loss.
+        """
+        assert input.shape == label.shape, \
+            "The shape of label should be the same as input."
+
+        if self.act is not None:
+            input = self.act(input)
+            label = self.act(label)
+        log_input = paddle.log(input)
+
+        loss = F.kl_div(log_input, label, reduction=self.reduction)
         return loss
 
 
