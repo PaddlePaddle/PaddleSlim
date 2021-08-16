@@ -60,8 +60,7 @@ def main():
     fp32_model = models.__dict__[FLAGS.arch](pretrained=True)
     fp32_model.eval()
 
-    val_dataset = ImageNetDataset(
-        os.path.join(FLAGS.data, FLAGS.val_dir), mode='val')
+    val_dataset = ImageNetDataset(FLAGS.data, mode='val')
 
     # 2 quantizations
     ptq = PTQ()
@@ -100,7 +99,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--val_dir',
-        default="val_hapi",
+        default="val",
         help='the dir that saves val images for paddle.Model')
 
     # train
