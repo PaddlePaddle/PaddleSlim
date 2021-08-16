@@ -13,11 +13,11 @@
 # limitations under the License.
 
 from . import qat
-#from . import ptq
+from . import ptq
 
 from .qat import *
-#from .ptq import *
+from .ptq import *
 
 __all__ = []
 __all__ += qat.__all__
-#__all__ += ptq.__all__
+__all__ += ptq.__all__
