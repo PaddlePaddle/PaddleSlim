@@ -18,6 +18,7 @@ import copy
 
 import unittest
 import paddle
+import paddle.nn.functional as F
 
 # basic loss
 from paddleslim.dygraph.dist.losses import CombinedLoss
@@ -33,6 +34,8 @@ from paddleslim.dygraph.dist.losses import RKdAngle
 from paddleslim.dygraph.dist.losses import DistillationDistanceLoss
 from paddleslim.dygraph.dist.losses import DistillationRKDLoss
 from paddleslim.dygraph.dist.losses import DistillationDMLLoss
+from paddleslim.dygraph.dist.losses import SegPairWiseLoss
+from paddleslim.dygraph.dist.losses import SegChannelwiseLoss
 
 import numpy as np
 
@@ -691,6 +694,96 @@ class TestCombinedLoss(unittest.TestCase):
                 pd_result = pd_result_dict[k].numpy()
                 np_result = np_result_dict[k]
                 self.assertTrue(np.allclose(np_result, pd_result))
+
+
+class TestSegPairWiseLoss(unittest.TestCase):
+    def calculate_gt_loss(self, x, y):
+        pool_x = F.adaptive_avg_pool2d(x, [2, 2])
+        pool_y = F.adaptive_avg_pool2d(y, [2, 2])
+        loss = F.mse_loss(pool_x, pool_y)
+        return loss
+
+    def test_seg_pair_wise_loss(self):
+        shape = [1, 3, 10, 10]
+        x = paddle.rand(shape)
+        y = paddle.rand(shape)
+        model_name_pairs = [['student', 'teacher']]
+        key = 'hidden_0_0'
+
+        inputs = {
+            model_name_pairs[0][0]: {
+                key: x
+            },
+            model_name_pairs[0][1]: {
+                key: y
+            }
+        }
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+
+        for device in devices:
+            paddle.set_device(device)
+            loss_func = SegPairWiseLoss(model_name_pairs, key)
+            pd_loss_dict = loss_func(inputs, None)
+            pd_loss = pd_loss_dict['seg_pair_wise_loss_student_teacher_0']
+            gt_loss = self.calculate_gt_loss(x, y)
+            self.assertTrue(np.allclose(pd_loss.numpy(), gt_loss.numpy()))
+
+
+class TestSegChannelWiseLoss(unittest.TestCase):
+    def init(self):
+        self.act_name = None
+        self.act_func = None
+
+    def calculate_gt_loss(self, x, y, act=None):
+        if act is not None:
+            x = act(x)
+            y = act(y)
+        x = paddle.log(x)
+        loss = F.kl_div(x, y)
+        return loss
+
+    def test_seg_pair_wise_loss(self):
+        self.init()
+
+        shape = [1, 3, 10, 10]
+        x = paddle.rand(shape)
+        y = paddle.rand(shape)
+        model_name_pairs = [['student', 'teacher']]
+        key = 'hidden_0_0'
+
+        inputs = {
+            model_name_pairs[0][0]: {
+                key: x
+            },
+            model_name_pairs[0][1]: {
+                key: y
+            }
+        }
+        devices = ["cpu"]
+        if paddle.is_compiled_with_cuda():
+            devices.append("gpu")
+
+        for device in devices:
+            paddle.set_device(device)
+            loss_func = SegChannelwiseLoss(model_name_pairs, key, self.act_name)
+            pd_loss_dict = loss_func(inputs, None)
+            pd_loss = pd_loss_dict['seg_ch_wise_loss_student_teacher_0']
+            gt_loss = self.calculate_gt_loss(x, y, self.act_func)
+            self.assertTrue(np.allclose(pd_loss.numpy(), gt_loss.numpy()))
+
+
+class TestSegChannelWiseLoss1(TestSegChannelWiseLoss):
+    def init(self):
+        self.act_name = "softmax"
+        self.act_func = F.softmax
+
+
+class TestSegChannelWiseLoss1(TestSegChannelWiseLoss):
+    def init(self):
+        self.act_name = "sigmoid"
+        self.act_func = F.sigmoid
 
 
 if __name__ == '__main__':
