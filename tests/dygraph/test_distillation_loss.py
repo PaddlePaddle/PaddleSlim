@@ -732,13 +732,21 @@ class TestSegPairWiseLoss(unittest.TestCase):
 
 
 class TestSegChannelWiseLoss(unittest.TestCase):
-    def calculate_gt_loss(self, x, y):
-        x = paddle.log(F.softmax(x))
-        y = F.softmax(y)
+    def init(self):
+        self.act_name = None
+        self.act_func = None
+
+    def calculate_gt_loss(self, x, y, act=None):
+        if act is not None:
+            x = act(x)
+            y = act(y)
+        x = paddle.log(x)
         loss = F.kl_div(x, y)
         return loss
 
     def test_seg_pair_wise_loss(self):
+        self.init()
+
         shape = [1, 3, 10, 10]
         x = paddle.rand(shape)
         y = paddle.rand(shape)
@@ -759,11 +767,23 @@ class TestSegChannelWiseLoss(unittest.TestCase):
 
         for device in devices:
             paddle.set_device(device)
-            loss_func = SegChannelwiseLoss(model_name_pairs, key)
+            loss_func = SegChannelwiseLoss(model_name_pairs, key, self.act_name)
             pd_loss_dict = loss_func(inputs, None)
             pd_loss = pd_loss_dict['seg_ch_wise_loss_student_teacher_0']
-            gt_loss = self.calculate_gt_loss(x, y)
+            gt_loss = self.calculate_gt_loss(x, y, self.act_func)
             self.assertTrue(np.allclose(pd_loss.numpy(), gt_loss.numpy()))
+
+
+class TestSegChannelWiseLoss1(TestSegChannelWiseLoss):
+    def init(self):
+        self.act_name = "softmax"
+        self.act_func = F.softmax
+
+
+class TestSegChannelWiseLoss1(TestSegChannelWiseLoss):
+    def init(self):
+        self.act_name = "sigmoid"
+        self.act_func = F.sigmoid
 
 
 if __name__ == '__main__':

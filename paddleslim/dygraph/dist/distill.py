@@ -42,8 +42,7 @@ class LayerConfig:
         elif hasattr(losses, loss_function):
             self.loss_function = loss_function
         else:
-            raise NotImplementedError("loss function (%s) is not support!!!" %
-                                      loss_function)
+            raise NotImplementedError("loss function is not support!!!")
         self.weight = weight
         self.align = align
         self.align_shape = align_shape
@@ -84,6 +83,8 @@ class Distill(nn.Layer):
     def __init__(self, distill_configs, student_models, teacher_models,
                  adaptors_S, adaptors_T):
         super(Distill, self).__init__()
+        assert student_models.training, "The student model should be eval mode."
+
         self._distill_configs = distill_configs
         self._student_models = student_models
         self._teacher_models = teacher_models
@@ -161,8 +162,6 @@ class Distill(nn.Layer):
     def forward(self, *inputs, **kwargs):
         stu_batch_outs = self._student_models.forward(*inputs, **kwargs)
         tea_batch_outs = self._teacher_models.forward(*inputs, **kwargs)
-        if not self._student_models.training:
-            stu_batch_outs = [i.detach() for i in stu_batch_outs]
         if not self._teacher_models.training:
             tea_batch_outs = [i.detach() for i in tea_batch_outs]
 
