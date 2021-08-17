@@ -2,7 +2,7 @@
 
 安装需要测试的Paddle版本和PaddleSlim版本。
 
-准备ImageNet数据集，数据集需要满足paddle hapi的要求。假定解压到`/dataset/ILSVRC2012`文件夹，该文件夹下有`train文件夹、val文件夹、train_list.txt和val_list.txt文件`。
+准备ImageNet数据集。假定解压到`/dataset/ILSVRC2012`文件夹，该文件夹下有`train文件夹、val文件夹、train_list.txt和val_list.txt文件`。
 
 通过`export CUDA_VISIBLE_DEVICES=xx`指定需要使用的GPU ID。
 
@@ -41,7 +41,7 @@ sh run_convert.sh output_qat/mobilenet_v1 int8_qat_models/mobilenet_v1
 
 使用`run_test.sh`脚本测试原始FP32模型（共4个）的精度，可以开启GPU，举例如下。
 ```
-sh run_test.sh output_ptq/mobilenet_v1/fp32_infer/mobilenet_v1 True
+sh run_test.sh output_ptq/mobilenet_v1/fp32_infer/ True
 ```
 
 使用`run_test.sh`脚本测试转换前PTQ和QAT量化模型(分别4个)的精度，可以开启GPU，举例如下。
@@ -56,4 +56,4 @@ sh run_test.sh int8_qat_models/mobilenet_v1 False
 
 5. 测试目标
 
-使用动态图量化训练功能，产出`mobilenet_v1`,`mobilenet_v2`,`resnet50`,`vgg16`量化模型，测试转换前后量化模型精度在1%误差范围内。
+使用动态图离线量化功能，产出`mobilenet_v1`,`mobilenet_v2`,`resnet50`,`vgg16`量化模型，测试转换前后量化模型精度在1%误差范围内。
