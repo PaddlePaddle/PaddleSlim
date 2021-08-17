@@ -96,11 +96,7 @@ class DistillationDistanceLoss(DistanceLoss):
             if self.key is not None:
                 out1 = out1[self.key]
                 out2 = out2[self.key]
-            if isinstance(out1, list):
-                assert len(out1) == 1
-            if isinstance(out2, list):
-                assert len(out2) == 1
-            loss = super().forward(out1[0], out2[0])
+            loss = super().forward(out1, out2)
             loss_dict["{}_{}_{}_{}".format(self.name, pair[0], pair[1],
                                            idx)] = loss
         return loss_dict
