@@ -13,9 +13,6 @@ python3.7 -m paddle.distributed.launch \
           --pretrained_model "MobileNetV1_pretrained" \
           --model_path "./models" \
           --step_epochs  71 88 \
-          --initial_ratio 0.15 \
-          --pruning_steps 100 \
-          --stable_epochs 0 \
-          --pruning_epochs 54 \
-          --tunning_epochs 54 \
-          --last_epoch -1
+          --last_epoch -1 \
+          --is_distributed True \
+          --pruning_strategy base

@@ -4,13 +4,13 @@
 
 在模型压缩中，常见的稀疏方式为结构化和非结构化稀疏，前者在某个特定维度（特征通道、卷积核等等）上进行稀疏化操作；后者以每一个参数为单元进行稀疏化，并不会改变参数矩阵的形状，所以更加依赖于硬件对稀疏后矩阵运算的加速能力。本目录即在PaddlePaddle和PaddleSlim框架下开发的非结构化稀疏算法，`MobileNetV1`在`ImageNet`上的稀疏化实验中，剪裁率55.19%，达到无损的表现。
 
-本示例将演示基于不同的剪裁模式（阈值/比例）进行非结构化稀疏。默认会自动下载并使用`MNIST`数据集。当前示例目前支持`MobileNetV1`，使用其他模型可以按照下面的**训练代码示例**进>行API调用。
+本示例将演示基于不同的剪裁模式（阈值/比例）进行非结构化稀疏。默认会自动下载并使用`MNIST`数据集。当前示例目前支持`MobileNetV1`，使用其他模型可以按照下面的**训练代码示例**进>行API调用。另外，为提升大稀疏度下的稀疏模型精度，我们引入了GMP训练策略(Gradual Magnititude Pruning)，使得稀疏度在训练过程中逐步增加。GMP训练策略将在【这里】介绍。
 
 ## 版本要求
 ```bash
 python3.5+
-paddlepaddle>=2.0.0
-paddleslim>=2.1.0
+paddlepaddle>=2.2.0
+paddleslim>=2.2.0
 ```
 
 请参照github安装[PaddlePaddle](https://github.com/PaddlePaddle/Paddle)和[PaddleSlim](https://github.com/PaddlePaddle/PaddleSlim)。
@@ -66,23 +66,38 @@ def _get_skip_params(program):
 
 ## 训练
 
-按照阈值剪裁：
+按照阈值剪裁，单卡训练：
 ```bash
-CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --batch_size 512 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
+CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
 ```
 
-按照比例剪裁（训练速度较慢，推荐按照阈值剪裁）：
+按照比例剪裁，单卡训练：
 ```bash
-CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --batch_size 512 --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
+CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
-恢复训练(请替代命令中的`dir/to/the/saved/pruned/model`和`INTERRUPTED_EPOCH`)：
-```
-CUDA_VISIBLE_DEVICES=2,3 python3.7 train.py --batch_size 512 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
-                                            --pretrained_model dir/to/the/saved/pruned/model --resume_epoch INTERRUPTED_EPOCH
+多卡训练：由于静态图多卡训练方式与非结构化稀疏中的mask逻辑存在兼容性问题，会在一定程度上影响训练精度，我们建议使用fleet方式启动稀疏化多卡训练，实测精度与单卡一致。
+```bash
+python3.7 -m paddle.distributed.launch \
+          --selected_gpus="0,1,2,3" \
+          train.py \
+          --batch_size 64 \
+          --data imagenet \
+          --lr 0.05 \
+          --pruning_mode ratio \
+          --ratio 0.55 \
+          --is_distributed True
 ```
 
-**注意**，上述命令中的`batch_size`为多张卡上总的`batch_size`，即一张卡的`batch_size`为256。
+**注意**，多卡启动时，需要指定`is_distributed=True`以启动fleet多卡环境。
+
+恢复训练(请替代命令中的`dir/to/the/saved/pruned/model`和`LAST_EPOCH`)：
+```
+CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
+                                            --checkpoint dir/to/the/saved/pruned/model --last_epoch LAST_EPOCH
+```
+
+**注意**，上述命令中的`batch_size`为单张卡上的`batch_size`。
 
 ## 推理
 ```bash
@@ -155,7 +170,11 @@ python3.7 evaluate.py --h
 | 模型 | 数据集 | 压缩方法 | 压缩率| Top-1/Top-5 Acc | lr | threshold | epoch |
 |:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
 | MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
-| MobileNetV1 | ImageNet |   ratio  | -55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.05 | - | 68 |
-| MobileNetV1 | ImageNet |   threshold  | -49.49% | 71.22%/89.78% (+0.23%/+0.10%) | 0.05 | 0.01 | 93 |
+| MobileNetV1 | ImageNet |   ratio  | 55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.05 | - | 68 |
+| MobileNetV1 | ImageNet |   threshold  | 49.49% | 71.22%/89.78% (+0.23%/+0.10%) | 0.05 | 0.01 | 93 |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 75% | 70.49%/89.48% (-0.5%/-0.20%) | 0.005 | - | 108 |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 80% | 70.02%/89.26% (-0.97%/-0.42%) | 0.005 | - | 108 |
 | YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
-| YOLO v3     |  VOC     |threshold | -56.50% | 77.21%(+0.97%) | 0.001 | 0.01 |150k iterations|
+| YOLO v3     |  VOC     |threshold | 56.50% | 77.21%(+0.97%) | 0.001 | 0.01 |150k iterations|
+
+**注意**，上述`ratio, 1x1conv, GMP`代表根据比例剪裁，只稀疏啊1x1conv层参数，并且使用GMP训练方式。

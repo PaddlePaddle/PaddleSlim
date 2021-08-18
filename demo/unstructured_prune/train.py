@@ -7,7 +7,7 @@ import functools
 import time
 import numpy as np
 import paddle.fluid as fluid
-from paddleslim.prune.unstructured_pruner import UnstructuredPrunerGMP
+from paddleslim.prune.unstructured_pruner import UnstructuredPruner, make_unstructured_pruner
 from paddleslim.common import get_logger
 sys.path.append(os.path.join(os.path.dirname("__file__"), os.path.pardir))
 import models
@@ -24,6 +24,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
 add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
+add_arg('is_distributed',   bool, False,               "Whether to use distributed training.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
 add_arg('pretrained_model', str,  None,                "Whether to use pretrained model.")
 add_arg('checkpoint',       str, None, "The model to load for resuming training.")
@@ -31,6 +32,7 @@ add_arg('lr',               float,  0.1,               "The learning rate used t
 add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
+add_arg('pruning_strategy', str,    'base',            "The pruning strategy, currently we support base and gmp.")
 add_arg('threshold',        float,  1e-5,               "The threshold to set zeros, the abs(weights) lower than which will be zeros.")
 add_arg('pruning_mode',            str,  'ratio',               "the pruning mode: whether by ratio or by threshold.")
 add_arg('ratio',            float,  0.75,               "The ratio to set zeros, the smaller portion will be zeros.")
@@ -47,6 +49,7 @@ add_arg('pruning_epochs',   int, 54,             "The epoch numbers used to prun
 add_arg('tunning_epochs',   int, 54,             "The epoch numbers used to tune the after-pruned models. Default: 40")
 add_arg('pruning_steps',    int, 100,        "How many times you want to increase your ratio during training. Default: 100")
 add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used at the start of pruning stage. Default: 0.05")
+add_arg('skip_params_type', str, None,           "Which kind of params should be skipped, we only support exclude_conv1x1 for now. Default: None")
 # yapf: enable
 
 model_list = models.__all__
@@ -87,10 +90,11 @@ def create_optimizer(args, step_per_epoch):
 
 
 def compress(args):
-    # Fleet step 1: initialize the parallel environment
-    role = role_maker.PaddleCloudRoleMaker(is_collective=True)
-    fleet.init(role)
-    env = os.environ
+    if args.is_distributed:
+        # Fleet step 1: initialize the parallel environment
+        role = role_maker.PaddleCloudRoleMaker(is_collective=True)
+        fleet.init(role)
+        env = os.environ
 
     train_reader = None
     test_reader = None
@@ -123,20 +127,35 @@ def compress(args):
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
 
     batch_size_per_card = args.batch_size
-    batch_sampler = paddle.io.DistributedBatchSampler(
-        train_dataset,
-        batch_size=batch_size_per_card,
-        shuffle=True,
-        drop_last=True)
+    if args.is_distributed:
+        batch_sampler = paddle.io.DistributedBatchSampler(
+            train_dataset,
+            batch_size=batch_size_per_card,
+            shuffle=True,
+            drop_last=True)
 
-    train_loader = paddle.io.DataLoader(
-        train_dataset,
-        places=place,
-        batch_sampler=batch_sampler,
-        feed_list=[image, label],
-        return_list=False,
-        use_shared_memory=True,
-        num_workers=32)
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            places=place,
+            batch_sampler=batch_sampler,
+            feed_list=[image, label],
+            return_list=False,
+            use_shared_memory=True,
+            num_workers=32)
+        num_trainers = int(env.get('PADDLE_TRAINERS_NUM', 0))
+    else:
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            places=places,
+            feed_list=[image, label],
+            drop_last=True,
+            batch_size=batch_size_per_card,
+            shuffle=True,
+            return_list=False,
+            use_shared_memory=True,
+            num_workers=32)
+        num_trainers = 1
+
     valid_loader = paddle.io.DataLoader(
         val_dataset,
         places=place,
@@ -147,7 +166,6 @@ def compress(args):
         batch_size=args.batch_size_for_validation,
         shuffle=False)
 
-    num_trainers = int(env.get('PADDLE_TRAINERS_NUM', 0))
     step_per_epoch = int(
         np.ceil(len(train_dataset) * 1. / args.batch_size / num_trainers))
 
@@ -163,37 +181,44 @@ def compress(args):
 
     opt, learning_rate = create_optimizer(args, step_per_epoch)
 
-    dist_strategy = DistributedStrategy()
-    sync_bn = True
-    dist_strategy.sync_batch_norm = sync_bn
-    exec_strategy = paddle.static.ExecutionStrategy()
-    dist_strategy.exec_strategy = exec_strategy
-    dist_strategy.fuse_all_reduce_ops = False
+    if args.is_distributed:
+        dist_strategy = DistributedStrategy()
+        dist_strategy.sync_batch_norm = False
+        dist_strategy.exec_strategy = paddle.static.ExecutionStrategy()
+        dist_strategy.fuse_all_reduce_ops = False
+    else:
+        build_strategy = paddle.static.BuildStrategy()
+        exec_strategy = paddle.static.ExecutionStrategy()
 
     train_program = paddle.static.default_main_program()
 
-    # GMP pruner step 1: define configs
-    gmp_pruner_configs = {
-        'stable_iterations': args.stable_epochs * step_per_epoch,
-        'pruning_iterations': args.pruning_epochs * step_per_epoch,
-        'tunning_iterations': args.tunning_epochs * step_per_epoch,
-        'resume_iteration': (args.last_epoch + 1) * step_per_epoch,
-        'pruning_steps': args.pruning_steps,
-        'initial_ratio': args.initial_ratio,
-    }
+    if args.pruning_strategy == 'gmp':
+        # GMP pruner step 1: define configs
+        configs = {
+            'pruning_strategy': 'gmp',
+            'stable_iterations': args.stable_epochs * step_per_epoch,
+            'pruning_iterations': args.pruning_epochs * step_per_epoch,
+            'tunning_iterations': args.tunning_epochs * step_per_epoch,
+            'resume_iteration': (args.last_epoch + 1) * step_per_epoch,
+            'pruning_steps': args.pruning_steps,
+            'initial_ratio': args.initial_ratio,
+        }
+    elif args.pruning_strategy == 'base':
+        configs = None
 
-    # GMP pruner step 2: construct a pruner object.
-    pruner = UnstructuredPrunerGMP(
+    pruner = make_unstructured_pruner(
         train_program,
         mode=args.pruning_mode,
         ratio=args.ratio,
         threshold=args.threshold,
+        skip_params_type=args.skip_params_type,
         place=place,
-        configs=gmp_pruner_configs)
+        configs=configs)
 
-    # Fleet step 2: decorate the origial optimizer and minimize it
-    opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
-    opt.minimize(avg_cost, no_grad_set=pruner.no_grad_set)
+    if args.is_distributed:
+        # Fleet step 2: decorate the origial optimizer and minimize it
+        opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
+        opt.minimize(avg_cost, no_grad_set=pruner.no_grad_set)
 
     exe.run(paddle.static.default_startup_program())
     if args.last_epoch > -1:
@@ -224,7 +249,7 @@ def compress(args):
 
         _logger.info(
             "The current sparsity of the inference model is {}%".format(
-                round(100 * UnstructuredPrunerGMP.total_sparse(
+                round(100 * UnstructuredPruner.total_sparse(
                     paddle.static.default_main_program()), 2)))
         for batch_id, data in enumerate(valid_loader):
             start_time = time.time()
@@ -266,24 +291,29 @@ def compress(args):
             acc_top5_n = np.mean(acc_top5_n)
             if batch_id % args.log_period == 0:
                 _logger.info(
-                    "epoch[{}]-batch[{}] lr: {:.6f} ratio: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; avg_reader_cost: {:.5f} sec, avg_batch_cost: {:.5f} sec, avg_samples: {:.5f}, ips: {:.5f} images/sec".
+                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; avg_reader_cost: {:.5f} sec, avg_batch_cost: {:.5f} sec, avg_samples: {:.5f}, ips: {:.5f} images/sec".
                     format(epoch, batch_id,
-                           learning_rate.get_lr(), pruner.ratio, loss_n,
-                           acc_top1_n, acc_top5_n, train_reader_cost /
-                           args.log_period, (train_reader_cost + train_run_cost
-                                             ) / args.log_period, total_samples
-                           / args.log_period, total_samples / (
-                               train_reader_cost + train_run_cost)))
+                           learning_rate.get_lr(), loss_n, acc_top1_n,
+                           acc_top5_n, train_reader_cost / args.log_period, (
+                               train_reader_cost + train_run_cost
+                           ) / args.log_period, total_samples / args.log_period,
+                           total_samples / (train_reader_cost + train_run_cost
+                                            )))
                 train_reader_cost = 0.0
                 train_run_cost = 0.0
                 total_samples = 0
             learning_rate.step()
             reader_start = time.time()
 
-    build_strategy = paddle.static.BuildStrategy()
-    exec_strategy = paddle.static.ExecutionStrategy()
-    # Fleet step 3: get the compiled program from fleet
-    compiled_train_program = fleet.main_program
+    if args.is_distributed:
+        # Fleet step 3: get the compiled program from fleet
+        compiled_train_program = fleet.main_program
+    else:
+        compiled_train_program = paddle.static.CompiledProgram(
+            paddle.static.default_main_program()).with_data_parallel(
+                loss_name=avg_cost.name,
+                build_strategy=build_strategy,
+                exec_strategy=exec_strategy)
 
     for i in range(args.last_epoch + 1, args.num_epochs):
         train(i, compiled_train_program)
@@ -291,14 +321,18 @@ def compress(args):
         pruner.update_params()
 
         _logger.info("The current sparsity of the pruned model is: {}%".format(
-            round(100 * UnstructuredPrunerGMP.total_sparse(
+            round(100 * UnstructuredPruner.total_sparse(
                 paddle.static.default_main_program()), 2)))
 
         if (i + 1) % args.test_period == 0:
             test(i, val_program)
         if (i + 1) % args.model_period == 0:
-            # Fleet step 4: save the persistable variables
-            fleet.save_persistables(executor=exe, dirname=args.model_path)
+            if args.is_distributed:
+                # Fleet step 4: save the persistable variables
+                fleet.save_persistables(executor=exe, dirname=args.model_path)
+            else:
+                paddle.fluid.io.save_persistables(
+                    executor, dirname=args.model_path)
 
 
 def main():
