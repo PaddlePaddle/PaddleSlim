@@ -9,8 +9,8 @@
 ## 版本要求
 ```bash
 python3.5+
-paddlepaddle>=2.0.0
-paddleslim>=2.1.0
+paddlepaddle>=2.2.0
+paddleslim>=2.2.0
 ```
 
 请参照github安装[paddlepaddle](https://github.com/PaddlePaddle/Paddle)和[paddleslim](https://github.com/PaddlePaddle/PaddleSlim)。
@@ -76,15 +76,15 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3
 python3.7 -m paddle.distributed.launch \
 --gpus="0,1,2,3" \
 --log_dir="train_mbv1_imagenet_threshold_001_log" \
-train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 --batch_size 256
+train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 --batch_size 64
 ```
 
 **注意**，这里的batch_size为单卡上的。
 
-恢复训练（请替代命令中的`dir/to/the/saved/pruned/model`和`INTERRUPTED_EPOCH`）：
+恢复训练（请替代命令中的`dir/to/the/saved/pruned/model`和`LAST_EPOCH`）：
 ```bash
 python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
-                                            --pretrained_model dir/to/the/saved/pruned/model --resume_epoch INTERRUPTED_EPOCH
+                                            --pretrained_model dir/to/the/saved/pruned/model --resume_epoch LAST_EPOCH
 ```
 
 ## 推理：
@@ -118,8 +118,8 @@ for epoch in range(epochs):
     if epoch % args.model_period == 0:
         # STEP4: same purpose as STEP3
         pruner.update_params()
-        paddle.save(model.state_dict(), "model-pruned.pdparams")
-        paddle.save(opt.state_dict(), "opt-pruned.pdopt")
+        paddle.save(model.state_dict(), "model.pdparams")
+        paddle.save(opt.state_dict(), "model.pdopt")
 ```
 
 剪裁后测试代码示例：
@@ -144,5 +144,7 @@ python3.7 evaluate.py --h
 | MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
 | MobileNetV1 | ImageNet |   ratio  | -55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.005 | - | 68 |
 | MobileNetV1 | ImageNet |   threshold  | -49.49% | 71.22%/89.78% (+0.23%/+0.10%) | 0.05 | 0.01 | 93 |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 75% | 70.49%/89.48% (-0.5%/-0.20%) | 0.005 | - | 108 |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 80% | 70.02%/89.26% (-0.97%/-0.42%) | 0.005 | - | 108 |
 | YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
 | YOLO v3     |  VOC     |threshold | -56.50% | 77.21% (+0.97%) | 0.001 | 0.01 | 150k iterations |

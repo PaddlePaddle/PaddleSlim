@@ -22,29 +22,29 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64,                 "Minibatch size.")
-add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation.")
-add_arg('lr',               float,  0.005,               "The learning rate used to fine-tune pruned model.")
-add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
-add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
-add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
-add_arg('ratio',            float,  0.5,               "The ratio to set zeros, the smaller part bounded by the ratio will be zeros.")
-add_arg('pruning_mode',            str,  'ratio',               "the pruning mode: whether by ratio or by threshold.")
-add_arg('threshold',            float,  1e-5,               "The threshold to set zeros.")
-add_arg('num_epochs',       int,  108,               "The number of total epochs.")
-parser.add_argument('--step_epochs', nargs='+', type=int, default=[71, 88], help="piecewise decay step")
-add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'.")
-add_arg('log_period',       int, 100,                 "Log period in batches.")
-add_arg('test_period',      int, 5,                 "Test period in epoches.")
+add_arg('batch_size',       int,  64,                 "Minibatch size. Default: 64")
+add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation. Default: 64")
+add_arg('lr',               float,  0.05,               "The learning rate used to fine-tune pruned model. Default: 0.05")
+add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy. Default: piecewise_decay")
+add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter. Default: 3e-5")
+add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate. Default: 0.9")
+add_arg('ratio',            float,  0.55,               "The ratio to set zeros, the smaller part bounded by the ratio will be zeros. Default: 0.55")
+add_arg('pruning_mode',            str,  'ratio',               "the pruning mode: whether by ratio or by threshold. Default: ratio")
+add_arg('threshold',            float,  0.01,               "The threshold to set zeros. Default: 0.01")
+add_arg('num_epochs',       int,  120,               "The number of total epochs. Default: 120")
+parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
+add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'. Default: imagenet")
+add_arg('log_period',       int, 100,                 "Log period in batches. Default: 100")
+add_arg('test_period',      int, 5,                 "Test period in epoches. Default: 5")
 add_arg('pretrained_model', str, None,              "The pretrained model the load. Default: None.")
 add_arg('checkpoint',       str, None,              "The checkpoint path to resume training. Default: None.")
-add_arg('model_path',       str, "./models",         "The path to save model.")
+add_arg('model_path',       str, "./models",         "The path to save model. Default: ./models")
 add_arg('model_period',     int, 10,             "The period to save model in epochs.")
-add_arg('last_epoch',     int, -1,             "The last epoch we'll train from.")
-add_arg('num_workers',     int, 16,             "number of workers when loading dataset.")
+add_arg('last_epoch',     int, -1,             "The last epoch we'll train from. Default: -1")
+add_arg('num_workers',     int, 16,             "number of workers when loading dataset. Default: 16")
 add_arg('stable_epochs',    int, 0,              "The epoch numbers used to stablize the model before pruning. Default: 0")
-add_arg('pruning_epochs',   int, 54,             "The epoch numbers used to prune the model by a ratio step. Default: 54")
-add_arg('tunning_epochs',   int, 54,             "The epoch numbers used to tune the after-pruned models. Default: 54")
+add_arg('pruning_epochs',   int, 60,             "The epoch numbers used to prune the model by a ratio step. Default: 60")
+add_arg('tunning_epochs',   int, 60,             "The epoch numbers used to tune the after-pruned models. Default: 60")
 add_arg('pruning_steps', int, 100,        "How many times you want to increase your ratio during training. Default: 100")
 add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used at the start of pruning stage. Default: 0.15")
 add_arg('pruning_strategy', str, 'base',         "Which training strategy to use in pruning, we only support base and gmp for now. Default: base")
@@ -213,9 +213,9 @@ def compress(args):
 
             if batch_id % args.log_period == 0:
                 _logger.info(
-                    "epoch[{}]-batch[{}] lr: {:.6f} ratio: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; avg_reader_cost: {:.5f} sec, avg_batch_cost: {:.5f} sec, avg_samples: {:.5f}, ips: {:.5f} images/sec".
+                    "epoch[{}]-batch[{}] lr: {:.6f} - loss: {}; acc_top1: {}; acc_top5: {}; avg_reader_cost: {:.5f} sec, avg_batch_cost: {:.5f} sec, avg_samples: {:.5f}, ips: {:.5f} images/sec".
                     format(epoch, batch_id,
-                           opt.get_lr(), pruner.ratio,
+                           opt.get_lr(),
                            np.mean(loss.numpy()),
                            np.mean(acc_top1.numpy()),
                            np.mean(acc_top5.numpy()), train_reader_cost /

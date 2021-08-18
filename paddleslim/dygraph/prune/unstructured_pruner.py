@@ -23,20 +23,23 @@ class UnstructuredPruner():
       - model(Paddle.nn.Layer): The model to be pruned.
       - mode(str): Pruning mode, must be selected from 'ratio' and 'threshold'.
       - threshold(float): The parameters whose absolute values are smaller than the THRESHOLD will be zeros. Default: 0.01
-      - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: 0.3
+      - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: 0.55
+      - skip_params_type(str): The argument to control which type of ops will be ignored. Currently we only support None or exclude_conv1x1 as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
+      - configs(dict): The dictionary contains all the configs for pruner defined in its subclass. Here in this base class, it takes no effect. Default: None
     """
 
     def __init__(self,
                  model,
                  mode,
                  threshold=0.01,
-                 ratio=0.3,
+                 ratio=0.55,
                  skip_params_type=None,
                  skip_params_func=None,
                  configs=None):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
+        assert skip_params_type is None or skip_params_type == 'exclude_conv1x1', "skip_params_type only supports None or exclude_conv1x1 for now."
         self.model = model
         self.mode = mode
         self.threshold = threshold
@@ -210,11 +213,25 @@ class UnstructuredPruner():
 
 
 class UnstructuredPrunerGMP(UnstructuredPruner):
+    """
+    The unstructure pruner using GMP training strategy (Gradual Magnitute Pruning). In this subclass of UnstructuredPruner, most methods are inheritated apart from the step(), since we add some ratio increment logics here.
+    Conceptually, the algorithm divide the training into three phases: stable, pruning and tuning. And the ratio is increasing from initial_ratio gradually and nonlinearly w.r.t. the training epochs/iterations.
+
+    Args:
+      - model(Paddle.nn.Layer): The model to be pruned.
+      - mode(str): Pruning mode, must be selected from 'ratio' and 'threshold'.
+      - threshold(float): The parameters whose absolute values are smaller than the THRESHOLD will be zeros. Default: 0.01
+      - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: 0.55
+      - skip_params_type(str): The argument to control which type of ops will be ignored. Currently we only support None or exclude_conv1x1 as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
+      - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
+      - configs(Dict): The dictionary contains all the configs for GMP pruner. Default: None
+    """
+
     def __init__(self,
                  model,
                  mode,
                  threshold=0.01,
-                 ratio=0.3,
+                 ratio=0.55,
                  skip_params_type=None,
                  skip_params_func=None,
                  configs=None):
@@ -282,10 +299,18 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
 def make_unstructured_pruner(model,
                              mode,
                              threshold=0.01,
-                             ratio=0.3,
+                             ratio=0.55,
                              skip_params_type=None,
                              skip_params_func=None,
                              configs=None):
+    '''
+    The entry function for different UnstructuredPruner classes.
+    
+    Args:
+      They are exactly the same with class::UnstructuredPruner.
+    Returns:
+      - pruner(UnstructuredPruner): The pruner object.
+    '''
     if configs is None or configs.get('pruning_strategy') == 'base':
         return UnstructuredPruner(
             model,
