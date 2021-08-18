@@ -89,8 +89,6 @@ python3.7 -m paddle.distributed.launch \
           --is_distributed True
 ```
 
-**注意**，多卡启动时，需要指定`is_distributed=True`以启动fleet多卡环境。
-
 恢复训练(请替代命令中的`dir/to/the/saved/pruned/model`和`LAST_EPOCH`)：
 ```
 CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \

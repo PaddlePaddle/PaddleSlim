@@ -4,15 +4,7 @@ python3.7 -m paddle.distributed.launch \
           --batch_size 64 \
           --data imagenet \
           --pruning_mode ratio \
-          --ratio 0.75 \
-          --lr 0.005 \
+          --ratio 0.55 \
+          --lr 0.05 \
           --model MobileNet \
-          --num_epochs 108 \
-          --test_period 5 \
-          --model_period 10 \
-          --pretrained_model "MobileNetV1_pretrained" \
-          --model_path "./models" \
-          --step_epochs  71 88 \
-          --last_epoch -1 \
-          --is_distributed True \
-          --pruning_strategy base
+          --pretrained_model "MobileNetV1_pretrained"

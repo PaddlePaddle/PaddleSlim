@@ -21,34 +21,32 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
-add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation.")
-add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
-add_arg('is_distributed',   bool, False,               "Whether to use distributed training.")
+add_arg('batch_size',       int,  64,                 "Minibatch size. Default: 64")
+add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation. Default: 64")
 add_arg('model',            str,  "MobileNet",                "The target model.")
-add_arg('pretrained_model', str,  None,                "Whether to use pretrained model.")
-add_arg('checkpoint',       str, None, "The model to load for resuming training.")
-add_arg('lr',               float,  0.1,               "The learning rate used to fine-tune pruned model.")
-add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
-add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
-add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
-add_arg('pruning_strategy', str,    'base',            "The pruning strategy, currently we support base and gmp.")
-add_arg('threshold',        float,  1e-5,               "The threshold to set zeros, the abs(weights) lower than which will be zeros.")
-add_arg('pruning_mode',            str,  'ratio',               "the pruning mode: whether by ratio or by threshold.")
-add_arg('ratio',            float,  0.75,               "The ratio to set zeros, the smaller portion will be zeros.")
-add_arg('num_epochs',       int,  108,               "The number of total epochs.")
-parser.add_argument('--step_epochs', nargs='+', type=int, default=[71, 88], help="piecewise decay step")
-add_arg('data',             str, "imagenet",                 "Which data to use. 'mnist' or 'imagenet'.")
-add_arg('log_period',       int, 100,                 "Log period in batches.")
-add_arg('test_period',      int, 5,                 "Test period in epoches.")
-add_arg('model_path',       str, "./models",         "The path to save model.")
-add_arg('model_period',     int, 10,             "The period to save model in epochs.")
-add_arg('last_epoch',     int, -1,             "The last epoch we could train from.")
-add_arg('stable_epochs',    int, 0,              "The epoch numbers used to stablize the model before pruning. Default: 2")
-add_arg('pruning_epochs',   int, 54,             "The epoch numbers used to prune the model by a ratio step. Default: 70")
-add_arg('tunning_epochs',   int, 54,             "The epoch numbers used to tune the after-pruned models. Default: 40")
-add_arg('pruning_steps',    int, 100,        "How many times you want to increase your ratio during training. Default: 100")
-add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used at the start of pruning stage. Default: 0.05")
+add_arg('pretrained_model', str,  None,                "Whether to use pretrained model. Default: None")
+add_arg('checkpoint',       str, None, "The model to load for resuming training. Default: None")
+add_arg('lr',               float,  0.1,               "The learning rate used to fine-tune pruned model. Default: 0.1")
+add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy. Default: piecewise_decay")
+add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter. Default: 3e-5")
+add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate. Default: 0.9")
+add_arg('pruning_strategy', str,    'base',            "The pruning strategy, currently we support base and gmp. Default: base")
+add_arg('threshold',        float,  0.01,               "The threshold to set zeros, the abs(weights) lower than which will be zeros. Default: 0.01")
+add_arg('pruning_mode',            str,  'ratio',               "the pruning mode: whether by ratio or by threshold. Default: ratio")
+add_arg('ratio',            float,  0.55,               "The ratio to set zeros, the smaller portion will be zeros. Default: 0.55")
+add_arg('num_epochs',       int,  120,               "The number of total epochs. Default: 120")
+parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
+add_arg('data',             str, "imagenet",                 "Which data to use. 'mnist' or 'imagenet'. Default: imagenet")
+add_arg('log_period',       int, 100,                 "Log period in batches. Default: 100")
+add_arg('test_period',      int, 5,                 "Test period in epoches. Default: 5")
+add_arg('model_path',       str, "./models",         "The path to save model. Default: ./models")
+add_arg('model_period',     int, 10,             "The period to save model in epochs. Default: 10")
+add_arg('last_epoch',     int, -1,             "The last epoch we could train from. Default: -1")
+add_arg('stable_epochs',    int, 0,              "The epoch numbers used to stablize the model before pruning. Default: 0")
+add_arg('pruning_epochs',   int, 60,             "The epoch numbers used to prune the model by a ratio step. Default: 60")
+add_arg('tunning_epochs',   int, 60,             "The epoch numbers used to tune the after-pruned models. Default: 60")
+add_arg('pruning_steps',    int, 120,        "How many times you want to increase your ratio during training. Default: 120")
+add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used at the start of pruning stage. Default: 0.15")
 add_arg('skip_params_type', str, None,           "Which kind of params should be skipped, we only support exclude_conv1x1 for now. Default: None")
 # yapf: enable
 
@@ -90,11 +88,13 @@ def create_optimizer(args, step_per_epoch):
 
 
 def compress(args):
-    if args.is_distributed:
-        # Fleet step 1: initialize the parallel environment
+    env = os.environ
+    num_trainers = int(env.get('PADDLE_TRAINERS_NUM', 1))
+    use_data_parallel = num_trainers > 1
+
+    if use_data_parallel:
         role = role_maker.PaddleCloudRoleMaker(is_collective=True)
         fleet.init(role)
-        env = os.environ
 
     train_reader = None
     test_reader = None
@@ -127,34 +127,20 @@ def compress(args):
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
 
     batch_size_per_card = args.batch_size
-    if args.is_distributed:
-        batch_sampler = paddle.io.DistributedBatchSampler(
-            train_dataset,
-            batch_size=batch_size_per_card,
-            shuffle=True,
-            drop_last=True)
+    batch_sampler = paddle.io.DistributedBatchSampler(
+        train_dataset,
+        batch_size=batch_size_per_card,
+        shuffle=True,
+        drop_last=True)
 
-        train_loader = paddle.io.DataLoader(
-            train_dataset,
-            places=place,
-            batch_sampler=batch_sampler,
-            feed_list=[image, label],
-            return_list=False,
-            use_shared_memory=True,
-            num_workers=32)
-        num_trainers = int(env.get('PADDLE_TRAINERS_NUM', 0))
-    else:
-        train_loader = paddle.io.DataLoader(
-            train_dataset,
-            places=places,
-            feed_list=[image, label],
-            drop_last=True,
-            batch_size=batch_size_per_card,
-            shuffle=True,
-            return_list=False,
-            use_shared_memory=True,
-            num_workers=32)
-        num_trainers = 1
+    train_loader = paddle.io.DataLoader(
+        train_dataset,
+        places=place,
+        batch_sampler=batch_sampler,
+        feed_list=[image, label],
+        return_list=False,
+        use_shared_memory=True,
+        num_workers=32)
 
     valid_loader = paddle.io.DataLoader(
         val_dataset,
@@ -181,14 +167,11 @@ def compress(args):
 
     opt, learning_rate = create_optimizer(args, step_per_epoch)
 
-    if args.is_distributed:
+    if use_data_parallel:
         dist_strategy = DistributedStrategy()
         dist_strategy.sync_batch_norm = False
         dist_strategy.exec_strategy = paddle.static.ExecutionStrategy()
         dist_strategy.fuse_all_reduce_ops = False
-    else:
-        build_strategy = paddle.static.BuildStrategy()
-        exec_strategy = paddle.static.ExecutionStrategy()
 
     train_program = paddle.static.default_main_program()
 
@@ -215,7 +198,7 @@ def compress(args):
         place=place,
         configs=configs)
 
-    if args.is_distributed:
+    if use_data_parallel:
         # Fleet step 2: decorate the origial optimizer and minimize it
         opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
         opt.minimize(avg_cost, no_grad_set=pruner.no_grad_set)
@@ -305,15 +288,12 @@ def compress(args):
             learning_rate.step()
             reader_start = time.time()
 
-    if args.is_distributed:
+    if use_data_parallel:
         # Fleet step 3: get the compiled program from fleet
         compiled_train_program = fleet.main_program
     else:
         compiled_train_program = paddle.static.CompiledProgram(
-            paddle.static.default_main_program()).with_data_parallel(
-                loss_name=avg_cost.name,
-                build_strategy=build_strategy,
-                exec_strategy=exec_strategy)
+            paddle.static.default_main_program())
 
     for i in range(args.last_epoch + 1, args.num_epochs):
         train(i, compiled_train_program)
@@ -327,7 +307,7 @@ def compress(args):
         if (i + 1) % args.test_period == 0:
             test(i, val_program)
         if (i + 1) % args.model_period == 0:
-            if args.is_distributed:
+            if use_data_parallel:
                 # Fleet step 4: save the persistable variables
                 fleet.save_persistables(executor=exe, dirname=args.model_path)
             else:

@@ -16,18 +16,20 @@ class UnstructuredPruner():
     Args:
       - program(paddle.static.Program): The model to be pruned.
       - mode(str): the mode to prune the model, must be selected from 'ratio' and 'threshold'.
-      - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.5.
-      - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-5.
+      - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.55.
+      - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-2.
       - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
-      - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params.
+      - skip_params_type(str): The argument to control which type of ops will be ignored. Currently we only support None or exclude_conv1x1 as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
+      - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. Default: None
+      - configs(dict): The dictionary contains all the configs for pruner defined in its subclass. Here in this base class, it takes no effect. Default: None
     """
 
     def __init__(self,
                  program,
                  mode,
-                 ratio=0.5,
-                 threshold=1e-5,
+                 ratio=0.55,
+                 threshold=1e-2,
                  scope=None,
                  place=None,
                  skip_params_type=None,
@@ -39,6 +41,8 @@ class UnstructuredPruner():
         assert self.mode in [
             'ratio', 'threshold'
         ], "mode must be selected from 'ratio' and 'threshold'"
+        assert skip_params_type is None or skip_params_type == 'exclude_conv1x1', "skip_params_type only supports None or exclude_conv1x1 for now."
+
         self.scope = paddle.static.global_scope() if scope == None else scope
         self.place = paddle.static.cpu_places()[0] if place is None else place
 
@@ -169,7 +173,7 @@ class UnstructuredPruner():
         return np.sort(np.abs(params_nonzeros))[max(
             0, int(new_ratio * len(params_nonzeros)) - 1)]
 
-    def update_masks(self):
+    def _update_masks(self):
         for param in self.masks:
             if not self._should_prune_param(param):
                 continue
@@ -181,30 +185,19 @@ class UnstructuredPruner():
             v_mask = (v_param != 0).astype(v_param.dtype)
             t_mask.set(v_mask, self.place)
 
-    def set_static_masks(self):
-        for param in self.masks:
-            if not self._should_prune_param(param):
-                continue
-            mask_name = self.masks[param]
-            t_param = self.scope.find_var(param).get_tensor()
-            t_mask = self.scope.find_var(mask_name).get_tensor()
-            v_param = np.array(t_param)
-            v_mask = (v_param != 0).astype(v_param.dtype)
-            t_mask.set(v_mask, self.place)
-
     def step(self):
         """
-        Update the threshold after each optimization step.
+        Update the threshold and masks.
         """
         if self.mode == 'threshold':
             pass
         elif self.mode == 'ratio':
             self.update_threshold()
-        self.update_masks()
+        self._update_masks()
 
     def update_params(self):
         """
-        Update the parameters given self.masks, usually called before saving models.
+        Update the parameters given self.masks, usually called before saving or evaluating models.
         """
         for param in self.masks:
             mask = self.masks[param]
@@ -296,11 +289,27 @@ class UnstructuredPruner():
 
 
 class UnstructuredPrunerGMP(UnstructuredPruner):
+    """
+    The unstructure pruner using GMP training strategy (Gradual Magnitute Pruning). In this subclass of UnstructuredPruner, most methods are inheritated apart from the step(), since we add some ratio increment logics here.
+    Conceptually, the algorithm divide the training into three phases: stable, pruning and tuning. And the ratio is increasing from initial_ratio gradually and nonlinearly w.r.t. the training epochs/iterations.
+
+    Args:
+      - program(paddle.static.Program): The model to be pruned.
+      - mode(str): the mode to prune the model, must be selected from 'ratio' and 'threshold'.
+      - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.55.
+      - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-2.
+      - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
+      - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
+      - skip_params_type(str): The argument to control which type of ops will be ignored. Currently we only support None or exclude_conv1x1 as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
+      - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. Default: None
+      - configs(Dict): The dictionary contains all the configs for GMP pruner. Default: None
+    """
+
     def __init__(self,
                  program,
                  mode,
-                 ratio=0.5,
-                 threshold=1e-5,
+                 ratio=0.55,
+                 threshold=1e-2,
                  scope=None,
                  place=None,
                  skip_params_type=None,
@@ -352,6 +361,9 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
                 self.ratio = self.ratios_stack.pop()
 
     def step(self):
+        """
+        Update the threshold and masks.
+        """
         ori_ratio = self.ratio
         if self.cur_iteration % self.ratio_increment_period == 0:
             if len(self.ratios_stack) > 0:
@@ -363,19 +375,27 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
         # This condition check would save training time dramatically since we only update the threshold by the triger of self.ratio_increment_period.
         if ori_ratio != self.ratio:
             self.update_threshold()
-            self.update_masks()
+            self._update_masks()
         self.cur_iteration += 1
 
 
 def make_unstructured_pruner(program,
                              mode,
-                             ratio=0.5,
-                             threshold=1e-5,
+                             ratio=0.55,
+                             threshold=1e-2,
                              scope=None,
                              place=None,
                              skip_params_type=None,
                              skip_params_func=None,
                              configs=None):
+    '''
+    The entry function for different UnstructuredPruner classes.
+    
+    Args:
+      They are exactly the same with class::UnstructuredPruner.
+    Returns:
+      - pruner(UnstructuredPruner): The pruner object.
+    '''
     if configs is None or configs.get('pruning_strategy') == 'base':
         return UnstructuredPruner(
             program,

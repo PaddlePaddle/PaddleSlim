@@ -8,10 +8,7 @@ python3.7 -m paddle.distributed.launch \
           --lr 0.005 \
           --model MobileNet \
           --num_epochs 108 \
-          --test_period 5 \
-          --model_period 10 \
           --pretrained_model "MobileNetV1_pretrained" \
-          --model_path "./models" \
           --step_epochs  71 88 \
           --initial_ratio 0.15 \
           --pruning_steps 100 \
@@ -19,6 +16,4 @@ python3.7 -m paddle.distributed.launch \
           --pruning_epochs 54 \
           --tunning_epochs 54 \
           --last_epoch -1 \
-          --skip_params_type exclude_conv1x1 \
-          --is_distributed True \
           --pruning_strategy gmp
