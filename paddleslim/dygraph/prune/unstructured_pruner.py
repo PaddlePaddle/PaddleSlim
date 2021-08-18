@@ -3,7 +3,7 @@ import paddle
 import logging
 from paddleslim.common import get_logger
 
-__all__ = ["UnstructuredPruner"]
+__all__ = ["UnstructuredPruner", "UnstructuredPrunerGMP"]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -30,7 +30,8 @@ class UnstructuredPruner():
                  mode,
                  threshold=0.01,
                  ratio=0.3,
-                 skip_params_func=None):
+                 skip_params_func=None,
+                 configs=None):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
         self.model = model
@@ -49,8 +50,6 @@ class UnstructuredPruner():
           - parameters(list<Tensor>): The parameters to be pruned.
           - masks(list<Tensor>): The masks used to keep zero values in parameters.
         """
-        bool_tmp = (paddle.abs(param) >= self.threshold)
-        paddle.assign(mask * bool_tmp, output=mask)
         param_tmp = param * mask
         param_tmp.stop_gradient = True
         paddle.assign(param_tmp, output=param)
@@ -86,6 +85,14 @@ class UnstructuredPruner():
         self.threshold = np.sort(np.abs(params_flatten))[max(
             0, round(self.ratio * total_length) - 1)].item()
 
+    def _update_masks(self):
+        for name, sub_layer in self.model.named_sublayers():
+            if not self._should_prune_layer(sub_layer): continue
+            for param in sub_layer.parameters(include_sublayers=False):
+                mask = self.masks.get(param.name)
+                bool_tmp = (paddle.abs(param) >= self.threshold)
+                paddle.assign(bool_tmp, output=mask)
+
     def summarize_weights(self, model, ratio=0.1):
         """
         The function is used to get the weights corresponding to a given ratio
@@ -114,8 +121,9 @@ class UnstructuredPruner():
         """
         if self.mode == 'ratio':
             self.update_threshold()
+            self._update_masks()
         elif self.mode == 'threshold':
-            return
+            self._update_masks()
 
     def _forward_pre_hook(self, layer, input):
         if not self._should_prune_layer(layer):
@@ -140,13 +148,13 @@ class UnstructuredPruner():
     @staticmethod
     def total_sparse(model):
         """
-        This static function is used to get the whole model's density (1-sparsity).
+        This static function is used to get the whole model's sparsity.
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
         
         Args:
           - model(paddle.nn.Layer): The sparse model.
         Returns:
-          - ratio(float): The model's density.
+          - ratio(float): The model's sparsity.
         """
         total = 0
         values = 0
@@ -154,7 +162,7 @@ class UnstructuredPruner():
             for param in sub_layer.parameters(include_sublayers=False):
                 total += np.product(param.shape)
                 values += len(paddle.nonzero(param))
-        ratio = float(values) / total
+        ratio = 1 - float(values) / total
         return ratio
 
     def _get_skip_params(self, model):
@@ -177,3 +185,72 @@ class UnstructuredPruner():
     def _should_prune_layer(self, layer):
         should_prune = layer.full_name() not in self.skip_params
         return should_prune
+
+
+class UnstructuredPrunerGMP(UnstructuredPruner):
+    def __init__(self,
+                 model,
+                 mode,
+                 threshold=0.01,
+                 ratio=0.3,
+                 skip_params_func=None,
+                 configs=None):
+
+        assert mode == 'ratio', "Mode must be RATIO in GMP pruner."
+        assert configs is not None, "Configs must be passed in for GMP pruner."
+
+        super(UnstructuredPrunerGMP, self).__init__(model, mode, threshold,
+                                                    ratio, skip_params_func)
+        self.stable_iterations = configs.get('stable_iterations')
+        self.pruning_iterations = configs.get('pruning_iterations')
+        self.tunning_iterations = configs.get('tunning_iterations')
+        self.pruning_steps = configs.get('pruning_steps')
+        self.initial_ratio = configs.get('initial_ratio')
+        self.ratio = 0.0
+        self.target_ratio = ratio
+        self.cur_iteration = configs.get('resume_iteration')
+
+        self._prepare_training_hyper_parameters()
+
+    def _prepare_training_hyper_parameters(self):
+        self.ratios_stack = []
+        self.ratio_increment_period = int(self.pruning_iterations /
+                                          self.pruning_steps)
+        for i in range(self.pruning_steps):
+            ratio_tmp = ((i / self.pruning_steps) - 1.0)**3 + 1
+            ratio_tmp = ratio_tmp * (self.target_ratio - self.initial_ratio
+                                     ) + self.initial_ratio
+            self.ratios_stack.append(ratio_tmp)
+
+        stable_steps = int(
+            float(self.stable_iterations) / self.pruning_iterations *
+            self.pruning_steps)
+        tunning_steps = int(
+            float(self.tunning_iterations) / self.pruning_iterations *
+            self.pruning_steps)
+        stable_ratios_stack = [0.0] * stable_steps
+        tunning_ratios_stack = [self.target_ratio] * tunning_steps
+
+        self.ratios_stack = stable_ratios_stack + self.ratios_stack + tunning_ratios_stack
+        self.ratios_stack.reverse()
+
+        # pop out used ratios to resume training
+        for i in range(self.cur_iteration):
+            if len(self.
+                   ratios_stack) > 0 and i % self.ratio_increment_period == 0:
+                self.ratio = self.ratios_stack.pop()
+
+    def step(self):
+        ori_ratio = self.ratio
+        if self.cur_iteration % self.ratio_increment_period == 0:
+            if len(self.ratios_stack) > 0:
+                self.ratio = self.ratios_stack.pop()
+            else:
+                self.ratio = self.target_ratio
+
+        # Update the threshold and masks only when a new ratio has been set.
+        # This condition check would save training time dramatically since we only update the threshold by the triger of self.ratio_increment_period.
+        if ori_ratio != self.ratio:
+            self.update_threshold()
+            self._update_masks()
+        self.cur_iteration += 1
