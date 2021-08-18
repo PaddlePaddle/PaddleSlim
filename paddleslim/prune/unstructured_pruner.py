@@ -4,7 +4,7 @@ from ..core import GraphWrapper
 import paddle
 import copy
 
-__all__ = ["UnstructuredPruner"]
+__all__ = ["UnstructuredPruner", "UnstructuredPrunerGMP"]
 
 
 class UnstructuredPruner():
@@ -28,7 +28,8 @@ class UnstructuredPruner():
                  threshold=1e-5,
                  scope=None,
                  place=None,
-                 skip_params_func=None):
+                 skip_params_func=None,
+                 configs=None):
         self.mode = mode
         self.ratio = ratio
         self.threshold = threshold
@@ -129,7 +130,8 @@ class UnstructuredPruner():
             value = np.count_nonzero(
                 np.array(paddle.static.global_scope().find_var(param.name)
                          .get_tensor()))
-            layer_sparse[param.name] = value / np.product(param.shape)
+            layer_sparse[param.name] = 1 - float(value) / np.product(
+                param.shape)
         return layer_sparse
 
     def update_threshold(self):
@@ -203,13 +205,13 @@ class UnstructuredPruner():
     @staticmethod
     def total_sparse(program):
         """
-        The function is used to get the whole model's density (1-sparsity).
+        The function is used to get the whole model's sparsity.
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
 
         Args:
           - program(paddle.static.Program): The current model.
         Returns:
-          - density(float): the model's density.
+          - sparsity(float): the model's sparsity.
         """
         total = 0
         values = 0
@@ -218,8 +220,8 @@ class UnstructuredPruner():
             values += np.count_nonzero(
                 np.array(paddle.static.global_scope().find_var(param.name)
                          .get_tensor()))
-        density = float(values) / total
-        return density
+        sparsity = 1 - float(values) / total
+        return sparsity
 
     def _get_skip_params(self, program):
         """
@@ -242,6 +244,15 @@ class UnstructuredPruner():
 
     @staticmethod
     def total_sparse_conv1x1(program):
+        """
+        The function is used to get the model's spasity for all the 1x1 convolutional weights.
+        It is static because during testing, we can calculate sparsity without initializing a pruner instance.
+
+        Args:
+          - program(paddle.static.Program): The current model.
+        Returns:
+          - sparsity(float): the model's sparsity.
+        """
         total = 0
         values = 0
         for param in program.all_parameters():
@@ -252,9 +263,77 @@ class UnstructuredPruner():
             values += np.count_nonzero(
                 np.array(paddle.static.global_scope().find_var(param.name)
                          .get_tensor()))
-        density = float(values) / total
-        return density
+        sparsity = 1 - float(values) / total
+        return sparsity
 
     def _should_prune_param(self, param):
         should_prune = param not in self.skip_params
         return should_prune
+
+
+class UnstructuredPrunerGMP(UnstructuredPruner):
+    def __init__(self,
+                 program,
+                 mode,
+                 ratio=0.5,
+                 threshold=1e-5,
+                 scope=None,
+                 place=None,
+                 skip_params_func=None,
+                 configs=None):
+        assert mode == 'ratio', "Mode must be RATIO in GMP pruner."
+        assert configs is not None, "Please pass in a valid config dictionary."
+        super(UnstructuredPrunerGMP, self).__init__(
+            program, mode, ratio, threshold, scope, place, skip_params_func)
+        self.stable_iterations = configs.get('stable_iterations')
+        self.pruning_iterations = configs.get('pruning_iterations')
+        self.tunning_iterations = configs.get('tunning_iterations')
+        self.pruning_steps = configs.get('pruning_steps')
+        self.initial_ratio = configs.get('initial_ratio')
+        self.target_ratio = ratio
+        self.cur_iteration = configs.get('resume_iteration')
+
+        self._prepare_training_hyper_parameters()
+
+    def _prepare_training_hyper_parameters(self):
+        self.ratios_stack = []
+        self.ratio_increment_period = int(self.pruning_iterations /
+                                          self.pruning_steps)
+        for i in range(self.pruning_steps):
+            ratio_tmp = ((i / self.pruning_steps) - 1.0)**3 + 1
+            ratio_tmp = ratio_tmp * (self.target_ratio - self.initial_ratio
+                                     ) + self.initial_ratio
+            self.ratios_stack.append(ratio_tmp)
+
+        stable_steps = int(
+            float(self.stable_iterations) / self.pruning_iterations *
+            self.pruning_steps)
+        tunning_steps = int(
+            float(self.tunning_iterations) / self.pruning_iterations *
+            self.pruning_steps)
+        stable_ratios_stack = [0.0] * stable_steps
+        tunning_ratios_stack = [self.target_ratio] * tunning_steps
+
+        self.ratios_stack = stable_ratios_stack + self.ratios_stack + tunning_ratios_stack
+        self.ratios_stack.reverse()
+
+        # pop out used ratios to resume training
+        for i in range(self.cur_iteration):
+            if len(self.
+                   ratios_stack) > 0 and i % self.ratio_increment_period == 0:
+                self.ratio = self.ratios_stack.pop()
+
+    def step(self):
+        ori_ratio = self.ratio
+        if self.cur_iteration % self.ratio_increment_period == 0:
+            if len(self.ratios_stack) > 0:
+                self.ratio = self.ratios_stack.pop()
+            else:
+                self.ratio = self.target_ratio
+
+        # Update the threshold and masks only when a new ratio has been set.
+        # This condition check would save training time dramatically since we only update the threshold by the triger of self.ratio_increment_period.
+        if ori_ratio != self.ratio:
+            self.update_threshold()
+            self.update_masks()
+        self.cur_iteration += 1

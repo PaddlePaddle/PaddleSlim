@@ -1,4 +1,4 @@
-data_path="/dataset/ILSVRC2012"
+data_path="/root/datasets/ILSVRC2012"
 quant_batch_num=10
 quant_batch_size=10
 
