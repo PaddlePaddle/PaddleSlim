@@ -18,4 +18,6 @@ python3.7 -m paddle.distributed.launch \
           --stable_epochs 0 \
           --pruning_epochs 54 \
           --tunning_epochs 54 \
-          --last_epoch -1
+          --last_epoch -1 \
+          --pruning_strategy gmp \
+          --skip_params_type exclude_conv1x1 \

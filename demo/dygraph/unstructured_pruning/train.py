@@ -3,7 +3,7 @@ import os
 import sys
 import argparse
 import numpy as np
-from paddleslim import UnstructuredPrunerGMP
+from paddleslim import UnstructuredPruner, make_unstructured_pruner
 sys.path.append(
     os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
 from utility import add_arguments, print_arguments
@@ -47,6 +47,8 @@ add_arg('pruning_epochs',   int, 54,             "The epoch numbers used to prun
 add_arg('tunning_epochs',   int, 54,             "The epoch numbers used to tune the after-pruned models. Default: 54")
 add_arg('pruning_steps', int, 100,        "How many times you want to increase your ratio during training. Default: 100")
 add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used at the start of pruning stage. Default: 0.15")
+add_arg('pruning_strategy', str, 'base',         "Which training strategy to use in pruning, we only support base and gmp for now. Default: base")
+add_arg('skip_params_type', str, None,           "Which kind of params should be skipped, we only support exclude_conv1x1 for now. Default: None")
 # yapf: enable
 
 
@@ -227,23 +229,28 @@ def compress(args):
 
             reader_start = time.time()
 
-    # GMP pruner step 1: define configs
-    gmp_pruner_configs = {
-        'stable_iterations': args.stable_epochs * step_per_epoch,
-        'pruning_iterations': args.pruning_epochs * step_per_epoch,
-        'tunning_iterations': args.tunning_epochs * step_per_epoch,
-        'resume_iteration': (args.last_epoch + 1) * step_per_epoch,
-        'pruning_steps': args.pruning_steps,
-        'initial_ratio': args.initial_ratio,
-    }
+    if args.pruning_strategy == 'gmp':
+        # GMP pruner step 1: define configs
+        configs = {
+            'pruning_strategy': 'gmp',
+            'stable_iterations': args.stable_epochs * step_per_epoch,
+            'pruning_iterations': args.pruning_epochs * step_per_epoch,
+            'tunning_iterations': args.tunning_epochs * step_per_epoch,
+            'resume_iteration': (args.last_epoch + 1) * step_per_epoch,
+            'pruning_steps': args.pruning_steps,
+            'initial_ratio': args.initial_ratio,
+        }
+    else:
+        configs = None
 
     # GMP pruner step 2: construct a pruner object
-    pruner = UnstructuredPrunerGMP(
+    pruner = make_unstructured_pruner(
         model,
         mode=args.pruning_mode,
         ratio=args.ratio,
         threshold=args.threshold,
-        configs=gmp_pruner_configs)
+        skip_params_type=args.skip_params_type,
+        configs=configs)
 
     for i in range(args.last_epoch + 1, args.num_epochs):
         train(i)
@@ -253,7 +260,7 @@ def compress(args):
         if (i + 1) % args.test_period == 0:
             _logger.info(
                 "The current sparsity of the pruned model is: {}%".format(
-                    round(100 * UnstructuredPrunerGMP.total_sparse(model), 2)))
+                    round(100 * UnstructuredPruner.total_sparse(model), 2)))
             test(i)
 
         if (i + 1) % args.model_period == 0:

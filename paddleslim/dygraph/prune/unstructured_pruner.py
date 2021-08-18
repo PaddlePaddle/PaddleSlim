@@ -3,7 +3,9 @@ import paddle
 import logging
 from paddleslim.common import get_logger
 
-__all__ = ["UnstructuredPruner", "UnstructuredPrunerGMP"]
+__all__ = [
+    "make_unstructured_pruner", "UnstructuredPruner", "UnstructuredPrunerGMP"
+]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -30,6 +32,7 @@ class UnstructuredPruner():
                  mode,
                  threshold=0.01,
                  ratio=0.3,
+                 skip_params_type=None,
                  skip_params_func=None,
                  configs=None):
         assert mode in ('ratio', 'threshold'
@@ -38,7 +41,15 @@ class UnstructuredPruner():
         self.mode = mode
         self.threshold = threshold
         self.ratio = ratio
-        if skip_params_func is None: skip_params_func = self._get_skip_params
+
+        # Prority: passed-in skip_params_func > skip_params_type (exclude_conv1x1) > built-in _get_skip_params
+        if skip_params_func is not None:
+            skip_params_func = skip_params_func
+        elif skip_params_type == 'exclude_conv1x1':
+            skip_params_func = self._get_skip_params_conv1x1
+        elif skip_params_func is None:
+            skip_params_func = self._get_skip_params
+
         self.skip_params = skip_params_func(model)
         self._apply_masks()
 
@@ -182,6 +193,17 @@ class UnstructuredPruner():
                 skip_params.add(sub_layer.full_name())
         return skip_params
 
+    def _get_skip_params_conv1x1(self, model):
+        skip_params = set()
+        for _, sub_layer in model.named_sublayers():
+            if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
+                skip_params.add(sub_layer.full_name())
+            for param in sub_layer.parameters(include_sublayers=False):
+                cond = len(param.shape) == 4 and param.shape[
+                    2] == 1 and param.shape[3] == 1
+                if not cond: skip_params.add(sub_layer.full_name())
+        return skip_params
+
     def _should_prune_layer(self, layer):
         should_prune = layer.full_name() not in self.skip_params
         return should_prune
@@ -193,15 +215,14 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
                  mode,
                  threshold=0.01,
                  ratio=0.3,
+                 skip_params_type=None,
                  skip_params_func=None,
                  configs=None):
 
         assert mode == 'ratio', "Mode must be RATIO in GMP pruner."
         assert configs is not None, "Configs must be passed in for GMP pruner."
-        assert pruning_iterations / pruning_steps > 10, "To guarantee the performance of GMP pruner, pruning iterations must be larger than pruning steps by a margin."
-
-        super(UnstructuredPrunerGMP, self).__init__(model, mode, threshold,
-                                                    ratio, skip_params_func)
+        super(UnstructuredPrunerGMP, self).__init__(
+            model, mode, threshold, ratio, skip_params_type, skip_params_func)
         self.stable_iterations = configs.get('stable_iterations')
         self.pruning_iterations = configs.get('pruning_iterations')
         self.tunning_iterations = configs.get('tunning_iterations')
@@ -211,6 +232,7 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
         self.target_ratio = ratio
         self.cur_iteration = configs.get('resume_iteration')
 
+        assert self.pruning_iterations / self.pruning_steps > 10, "To guarantee the performance of GMP pruner, pruning iterations must be larger than pruning steps by a margin."
         self._prepare_training_hyper_parameters()
 
     def _prepare_training_hyper_parameters(self):
@@ -255,3 +277,31 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
             self.update_threshold()
             self._update_masks()
         self.cur_iteration += 1
+
+
+def make_unstructured_pruner(model,
+                             mode,
+                             threshold=0.01,
+                             ratio=0.3,
+                             skip_params_type=None,
+                             skip_params_func=None,
+                             configs=None):
+    if configs is None or configs.get('pruning_strategy') == 'base':
+        return UnstructuredPruner(
+            model,
+            mode,
+            threshold=threshold,
+            ratio=ratio,
+            skip_params_type=skip_params_type,
+            skip_params_func=skip_params_func)
+    elif configs is not None and configs.get('pruning_strategy') == 'gmp':
+        return UnstructuredPrunerGMP(
+            model,
+            mode,
+            threshold=threshold,
+            ratio=ratio,
+            skip_params_type=skip_params_type,
+            skip_params_func=skip_params_func,
+            configs=configs)
+    raise ValueError("{} is not supported.".format(
+        configs.get('pruning_strategy')))
