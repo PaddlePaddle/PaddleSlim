@@ -283,6 +283,8 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
                  configs=None):
         assert mode == 'ratio', "Mode must be RATIO in GMP pruner."
         assert configs is not None, "Please pass in a valid config dictionary."
+        assert pruning_iterations / pruning_steps > 10, "To guarantee the performance of GMP pruner, pruning iterations must be larger than pruning steps by a margin."
+
         super(UnstructuredPrunerGMP, self).__init__(
             program, mode, ratio, threshold, scope, place, skip_params_func)
         self.stable_iterations = configs.get('stable_iterations')
