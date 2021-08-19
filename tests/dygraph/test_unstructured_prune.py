@@ -3,7 +3,7 @@ sys.path.append("../../")
 import unittest
 import paddle
 import numpy as np
-from paddleslim import UnstructuredPruner
+from paddleslim import make_unstructured_pruner, UnstructuredPruner
 from paddle.vision.models import mobilenet_v1
 
 
@@ -15,27 +15,34 @@ class TestUnstructuredPruner(unittest.TestCase):
 
     def _gen_model(self):
         self.net = mobilenet_v1(num_classes=10, pretrained=False)
-        self.pruner = UnstructuredPruner(
-            self.net, mode='ratio', ratio=0.98, threshold=0.0)
+        self.net_conv1x1 = mobilenet_v1(num_classes=10, pretrained=False)
+        self.pruner = make_unstructured_pruner(
+            self.net, mode='ratio', ratio=0.55)
+        self.pruner_conv1x1 = make_unstructured_pruner(
+            self.net_conv1x1,
+            mode='ratio',
+            ratio=0.55,
+            skip_params_type='exclude_conv1x1')
 
     def test_prune(self):
-        ori_density = UnstructuredPruner.total_sparse(self.net)
+        ori_sparsity = UnstructuredPruner.total_sparse(self.net)
         ori_threshold = self.pruner.threshold
         self.pruner.step()
         self.net(
             paddle.to_tensor(
                 np.random.uniform(0, 1, [16, 3, 32, 32]), dtype='float32'))
-        cur_density = UnstructuredPruner.total_sparse(self.net)
+        cur_sparsity = UnstructuredPruner.total_sparse(self.net)
         cur_threshold = self.pruner.threshold
         print("Original threshold: {}".format(ori_threshold))
         print("Current threshold: {}".format(cur_threshold))
-        print("Original density: {}".format(ori_density))
-        print("Current density: {}".format(cur_density))
+        print("Original sparsity: {}".format(ori_sparsity))
+        print("Current sparsity: {}".format(cur_sparsity))
         self.assertLessEqual(ori_threshold, cur_threshold)
-        self.assertLessEqual(cur_density, ori_density)
+        self.assertGreaterEqual(cur_sparsity, ori_sparsity)
 
         self.pruner.update_params()
-        self.assertEqual(cur_density, UnstructuredPruner.total_sparse(self.net))
+        self.assertEqual(cur_sparsity,
+                         UnstructuredPruner.total_sparse(self.net))
 
     def test_summarize_weights(self):
         max_value = -float("inf")
@@ -50,6 +57,16 @@ class TestUnstructuredPruner(unittest.TestCase):
         print("The returned threshold is {}.".format(threshold))
         print("The max_value is {}.".format(max_value))
         self.assertEqual(max_value, threshold)
+
+    def test_unstructured_prune_conv1x1(self):
+        print(self.pruner.skip_params)
+        print(self.pruner_conv1x1.skip_params)
+        self.assertTrue(
+            len(self.pruner.skip_params) < len(self.pruner_conv1x1.skip_params))
+        self.pruner_conv1x1.step()
+        self.pruner_conv1x1.update_params()
+        cur_sparsity = UnstructuredPruner.total_sparse_conv1x1(self.net_conv1x1)
+        self.assertTrue(abs(cur_sparsity - 0.55) < 0.01)
 
 
 if __name__ == "__main__":

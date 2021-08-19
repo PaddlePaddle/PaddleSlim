@@ -4,7 +4,7 @@ import unittest
 from static_case import StaticCase
 import paddle.fluid as fluid
 import paddle
-from paddleslim.prune import UnstructuredPrunerGMP
+from paddleslim.prune import make_unstructured_pruner, UnstructuredPrunerGMP
 from layers import conv_bn_layer
 import numpy as np
 
@@ -42,20 +42,23 @@ class TestUnstructuredPruner(StaticCase):
         exe.run(self.startup_program, scope=self.scope)
 
         configs = {
+            'pruning_strategy': 'gmp',
             'stable_iterations': 0,
             'pruning_iterations': 1000,
             'tunning_iterations': 1000,
-            'resume_iteration': 0,
+            'resume_iteration': 500,
             'pruning_steps': 20,
             'initial_ratio': 0.05,
         }
-
-        self.pruner = UnstructuredPrunerGMP(
+        self.pruner = make_unstructured_pruner(
             self.main_program,
             'ratio',
             scope=self.scope,
             place=place,
-            configs=configs)
+            configs=configs,
+            ratio=0.55)
+        print(self.pruner.ratio)
+        self.assertGreater(self.pruner.ratio, 0.3)
 
     def test_unstructured_prune_gmp(self):
         last_ratio = 0.0
@@ -64,9 +67,8 @@ class TestUnstructuredPruner(StaticCase):
             self.pruner.step()
             last_ratio = ratio
             ratio = self.pruner.ratio
-            print(ratio)
             self.assertGreaterEqual(ratio, last_ratio)
-        self.assertEqual(ratio, 0.5)
+        self.assertEqual(ratio, 0.55)
 
 
 if __name__ == '__main__':

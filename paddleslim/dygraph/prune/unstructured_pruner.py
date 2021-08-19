@@ -179,6 +179,31 @@ class UnstructuredPruner():
         ratio = 1 - float(values) / total
         return ratio
 
+    @staticmethod
+    def total_sparse_conv1x1(model):
+        """
+        This static function is used to get the partial model's sparsity in terms of conv1x1 layers.
+        It is static because during testing, we can calculate sparsity without initializing a pruner instance.
+        
+        Args:
+          - model(paddle.nn.Layer): The sparse model.
+        Returns:
+          - ratio(float): The model's sparsity.
+        """
+        total = 0
+        values = 0
+        for name, sub_layer in model.named_sublayers():
+            if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
+                continue
+            for param in sub_layer.parameters(include_sublayers=False):
+                cond = len(param.shape) == 4 and param.shape[
+                    2] == 1 and param.shape[3] == 1
+                if not cond: continue
+                total += np.product(param.shape)
+                values += len(paddle.nonzero(param))
+        ratio = 1 - float(values) / total
+        return ratio
+
     def _get_skip_params(self, model):
         """
         This function is used to check whether the given model's layers are valid to be pruned. 
@@ -319,7 +344,7 @@ def make_unstructured_pruner(model,
             ratio=ratio,
             skip_params_type=skip_params_type,
             skip_params_func=skip_params_func)
-    elif configs is not None and configs.get('pruning_strategy') == 'gmp':
+    elif configs.get('pruning_strategy') == 'gmp':
         return UnstructuredPrunerGMP(
             model,
             mode,
