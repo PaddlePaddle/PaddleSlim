@@ -4,8 +4,7 @@
 UnstructuredPruner
 ----------
 
-.. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.3, skip_params_func=None)
-
+.. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, skip_params_type=None, skip_params_func=None, configs=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
 
@@ -17,7 +16,9 @@ UnstructuredPruner
 - **mode(str)** - 稀疏化的模式，目前支持的模式有：'ratio'和'threshold'。在'ratio'模式下，会给定一个固定比例，例如0.5，然后所有参数中重要性较低的50%会被置0。类似的，在'threshold'模式下，会给定一个固定阈值，例如1e-5，然后重要性低于1e-5的参数会被置0。
 - **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
 - **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
+- **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
+- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见UnstructuredPrunerGMP。
 
 **返回：** 一个UnstructuredPruner类的实例。
 
@@ -33,7 +34,7 @@ UnstructuredPruner
   place = paddle.set_device('cpu')
   model = net(num_classes=10)
 
-  pruner = UnstructuredPruner(model, mode='ratio', ratio=0.5)
+  pruner = UnstructuredPruner(model, mode='ratio', ratio=0.55)
 
 ..
 
@@ -52,7 +53,7 @@ UnstructuredPruner
 
     place = paddle.set_device('cpu')
     model = net(num_classes=10)
-    pruner = UnstructuredPruner(model, mode='ratio', ratio=0.5)
+    pruner = UnstructuredPruner(model, mode='ratio', ratio=0.55)
 
     print(pruner.threshold)
     pruner.step()
@@ -77,27 +78,27 @@ UnstructuredPruner
     model = net(num_classes=10)
     pruner = UnstructuredPruner(model, mode='threshold', threshold=0.5)
 
-    density = UnstructuredPruner.total_sparse(model)
-    print(density)
+    sparsity = UnstructuredPruner.total_sparse(model)
+    print(sparsity)
     model(paddle.to_tensor(
                 np.random.uniform(0, 1, [16, 1, 28, 28]), dtype='float32'))
     pruner.update_params()
-    density = UnstructuredPruner.total_sparse(model)
-    print(density) # 可以看出，这里打印的模型稠密度与上述不同，这是因为update_params()函数置零了所有绝对值小于0.5的权重。
+    sparsity = UnstructuredPruner.total_sparse(model)
+    print(sparsity) # 可以看出，这里打印的模型稀疏度与上述不同，这是因为update_params()函数置零了所有绝对值小于0.5的权重。
 
   ..
 
   ..  py:method:: paddleslim.UnstructuredPruner.total_sparse(model)
 
-  UnstructuredPruner中的静态方法，用于计算给定的模型（model）的稠密度（1-稀疏度）并返回。该方法为静态方法，是考虑到在单单做模型评价的时候，我们就不需要初始化一个UnstructuredPruner示例了。
+  UnstructuredPruner中的静态方法，用于计算给定的模型（model）的稀疏度并返回。该方法为静态方法，是考虑到在单单做模型评价的时候，我们就不需要初始化一个UnstructuredPruner示例了。
 
   **参数：**
 
-  -  **model(paddle.nn.Layer)** - 要计算稠密度的目标网络。
+  -  **model(paddle.nn.Layer)** - 要计算稀疏度的目标网络。
 
   **返回：**
   
-  - **density(float)** - 模型的稠密度。
+  - **sparsity(float)** - 模型的稀疏度。
 
   **示例代码：**
 
@@ -110,9 +111,37 @@ UnstructuredPruner
 
     place = paddle.set_device('cpu')
     model = net(num_classes=10)
-    density = UnstructuredPruner.total_sparse(model)
-    print(density)
+    sparsity = UnstructuredPruner.total_sparse(model)
+    print(sparsity)
     
+  ..
+
+  ..  py:method:: paddleslim.UnstructuredPruner.total_sparse_conv1x1(model)
+
+  UnstructuredPruner中的静态方法，用于计算给定的模型（model）的1x1卷积的稀疏度并返回。该方法为静态方法，是考虑到在单单做模型评价的时候，我们就不需要初始化一个UnstructuredPruner示例了。
+
+  **参数：**
+
+  -  **model(paddle.nn.Layer)** - 要计算稀疏度的目标网络。
+
+  **返回：**
+
+  - **sparsity(float)** - 模型的1x1卷积稀疏度。
+
+  **示例代码：**
+
+  .. code-block:: python
+
+    import paddle
+    from paddleslim import UnstructuredPruner
+    from paddle.vision.models import LeNet as net
+    import numpy as np
+
+    place = paddle.set_device('cpu')
+    model = net(num_classes=10)
+    sparsity = UnstructuredPruner.total_sparse_conv1x1(model)
+    print(sparsity)
+
   ..
 
   .. py:method:: paddleslim.UnstructuredPruner.summarize_weights(model, ratio=0.1)
@@ -139,9 +168,140 @@ UnstructuredPruner
 
     place = paddle.set_device('cpu')
     model = net(num_classes=10)
-    pruner = UnstructuredPruner(model, mode='ratio', ratio=0.5)
+    pruner = UnstructuredPruner(model, mode='ratio', ratio=0.55)
 
     threshold = pruner.summarize_weights(model, 0.5)
     print(threshold)
 
   ..
+
+UnstructuredPrunerGMP
+----------
+
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
+
+.. py:class:: paddleslim.UnstructuredPrunerGMP(model, mode, threshold=0.01, ratio=0.55, skip_params_type=None, skip_params_func=None, configs=None)
+
+该类是UnstructuredPruner的一个子类，通过覆盖step()方法，优化了训练策略，使稀疏化训练更易恢复到稠密模型精度。其他方法均继承自父类。
+
+**参数：**
+
+- **model(paddle.nn.Layer)** - 待剪裁的动态图模型。
+- **mode(str)** - 稀疏化的模式，在这个类中，只有'ratio'模式被支持。
+- **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
+- **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
+- **skip_params_type(str)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
+- **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
+- **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。
+
+**返回：** 一个UnstructuredPrunerGMP类的实例
+
+.. code-block:: python
+
+  import paddle
+  from paddleslim import UnstructuredPrunerGMP
+  from paddle.vision.models import LeNet as net
+  import numpy as np
+
+  place = paddle.set_device('cpu')
+  model = net(num_classes=10)
+
+  configs = {
+      'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
+      'stable_iterations': 0,
+      'pruning_iterations': 1000,
+      'tunning_iterations': 1000,
+      'resume_iteration': 0,
+      'pruning_steps': 10,
+      'initial_ratio': 0.15,
+  }
+
+  pruner = UnstructuredPrunerGMP(model, mode='ratio', ratio=0.55)
+
+..
+
+  .. py:method:: paddleslim.UnstructuredPrunerGMP.step()
+
+  更新稀疏化的阈值：根据优化后的模型参数和设定的比例，重新计算阈值。
+
+  **示例代码：**
+
+  .. code-block:: python
+
+    import paddle
+    from paddleslim import UnstructuredPrunerGMP
+    from paddle.vision.models import LeNet as net
+    import numpy as np
+
+    place = paddle.set_device('cpu')
+    model = net(num_classes=10)
+
+    configs = {
+        'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
+        'stable_iterations': 0,
+        'pruning_iterations': 1000,
+        'tunning_iterations': 1000,
+        'resume_iteration': 0,
+        'pruning_steps': 10,
+        'initial_ratio': 0.15,
+    }
+
+    pruner = UnstructuredPrunerGMP(model, mode='ratio', ratio=0.55, configs=configs)
+
+    print(pruner.threshold)
+    for i in range(200):
+        pruner.step()
+    print(pruner.threshold) # 可以看出，这里的threshold和上面打印的不同，这是因为step函数根据设定的ratio更新了threshold数值，便于剪裁操作。
+
+  ..
+
+make_unstructured_pruner
+----------
+
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
+
+.. py:method:: paddleslim.make_unstructured_pruner(model, mode, threshold=0.01, ratio=0.55, skip_params_type=None, skip_params_func=None, configs=None)
+
+这是构造非结构化稀疏示例的入口函数，由于可以选择是否GMP训练策略，所以我们引入了这个函数，输入和父类UnstructuredPruner一致。
+
+**参数：**
+
+- **model(paddle.nn.Layer)** - 待剪裁的动态图模型。
+- **mode(str)** - 稀疏化的模式，目前支持的模式有：'ratio'和'threshold'。在'ratio'模式下，会给定一个固定比例，例如0.5，然后所有参数中重要性较低的50%会被置0。类似的，在'threshold'模式下，会给定一个固定阈值，例如1e-5，然后重要性低于1e-5的参数会被置0。
+- **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
+- **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
+- **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表
+示只稀疏化1x1卷积。
+- **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
+- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见UnstructuredPrunerGMP。
+
+**返回：** 一个UnstructuredPruner类的实例。
+
+**示例代码：**
+
+.. code-block:: python
+
+  import paddle
+  from paddleslim import make_unstructured_pruner
+  from paddle.vision.models import LeNet as net
+  import numpy as np
+
+  place = paddle.set_device('cpu')
+  model = net(num_classes=10)
+
+  # 构建pruner
+  pruner = make_unstructured_pruner(model, 'ratio', ratio=0.55)
+
+  # 构建GMP pruner
+  configs = {
+      'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
+      'stable_iterations': 0,
+      'pruning_iterations': 1000,
+      'tunning_iterations': 1000,
+      'resume_iteration': 0,
+      'pruning_steps': 10,
+      'initial_ratio': 0.15,
+  }
+  pruner = make_unstructured_pruner(model, 'ratio', ratio=0.55, configs=configs)
+
+..
