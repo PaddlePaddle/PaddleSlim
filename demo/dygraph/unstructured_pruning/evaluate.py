@@ -92,7 +92,7 @@ def compress(args):
                 acc_top5_ns, dtype="object"))))
 
     model.set_state_dict(paddle.load(args.pruned_model))
-    _logger.info("The current density of the pruned model is: {}%".format(
+    _logger.info("The current sparsity of the pruned model is: {}%".format(
         round(100 * UnstructuredPruner.total_sparse(model), 2)))
     test(0)
 

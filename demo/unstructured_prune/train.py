@@ -93,6 +93,7 @@ def compress(args):
     use_data_parallel = num_trainers > 1
 
     if use_data_parallel:
+        # Fleet step 1: initialize the distributed environment
         role = role_maker.PaddleCloudRoleMaker(is_collective=True)
         fleet.init(role)
 
@@ -168,6 +169,7 @@ def compress(args):
     opt, learning_rate = create_optimizer(args, step_per_epoch)
 
     if use_data_parallel:
+        # Fleet step 2: distributed strategy
         dist_strategy = DistributedStrategy()
         dist_strategy.sync_batch_norm = False
         dist_strategy.exec_strategy = paddle.static.ExecutionStrategy()
@@ -176,7 +178,7 @@ def compress(args):
     train_program = paddle.static.default_main_program()
 
     if args.pruning_strategy == 'gmp':
-        # GMP pruner step 1: define configs
+        # GMP pruner step 0: define configs for GMP, no need to define configs for the base training.
         configs = {
             'pruning_strategy': 'gmp',
             'stable_iterations': args.stable_epochs * step_per_epoch,
@@ -189,6 +191,7 @@ def compress(args):
     elif args.pruning_strategy == 'base':
         configs = None
 
+    # GMP pruner step 1: initialize a pruner object by calling entry function.
     pruner = make_unstructured_pruner(
         train_program,
         mode=args.pruning_mode,
@@ -199,7 +202,7 @@ def compress(args):
         configs=configs)
 
     if use_data_parallel:
-        # Fleet step 2: decorate the origial optimizer and minimize it
+        # Fleet step 3: decorate the origial optimizer and minimize it
         opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
     opt.minimize(avg_cost, no_grad_set=pruner.no_grad_set)
 
@@ -264,7 +267,7 @@ def compress(args):
                 program,
                 feed=data,
                 fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
-            # GMP pruner step 3: step() to update ratios and other internal states of the pruner.
+            # GMP pruner step 2: step() to update ratios and other internal states of the pruner.
             pruner.step()
 
             train_run_cost += time.time() - train_start
@@ -289,7 +292,7 @@ def compress(args):
             reader_start = time.time()
 
     if use_data_parallel:
-        # Fleet step 3: get the compiled program from fleet
+        # Fleet step 4: get the compiled program from fleet
         compiled_train_program = fleet.main_program
     else:
         compiled_train_program = paddle.static.CompiledProgram(
@@ -297,7 +300,7 @@ def compress(args):
 
     for i in range(args.last_epoch + 1, args.num_epochs):
         train(i, compiled_train_program)
-        # GMP pruner step 4: update params before summrizing sparsity, saving model or evaluation. 
+        # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation. 
         pruner.update_params()
 
         _logger.info("The current sparsity of the pruned model is: {}%".format(
@@ -308,7 +311,6 @@ def compress(args):
             test(i, val_program)
         if (i + 1) % args.model_period == 0:
             if use_data_parallel:
-                # Fleet step 4: save the persistable variables
                 fleet.save_persistables(executor=exe, dirname=args.model_path)
             else:
                 paddle.fluid.io.save_persistables(

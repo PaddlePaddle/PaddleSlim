@@ -144,9 +144,17 @@ def compress(args):
     opt, learning_rate = create_optimizer(args, step_per_epoch, model)
 
     if args.checkpoint is not None and args.last_epoch > -1:
+        if args.checkpoint.endswith('pdparams'):
+            args.checkpoint = args.checkpoint[:-9]
+        if args.checkpoint.endswith('pdopt'):
+            args.checkpoint = args.checkpoint[:-6]
         model.set_state_dict(paddle.load(args.checkpoint + ".pdparams"))
         opt.set_state_dict(paddle.load(args.checkpoint + ".pdopt"))
     elif args.pretrained_model is not None:
+        if args.pretrained_model.endswith('pdparams'):
+            args.pretrained_model = args.pretrained_model[:-9]
+        if args.pretrained_model.endswith('pdopt'):
+            args.pretrained_model = args.pretrained_model[:-6]
         model.set_state_dict(paddle.load(args.pretrained_model + ".pdparams"))
 
     def test(epoch):
@@ -205,7 +213,7 @@ def compress(args):
             opt.step()
             learning_rate.step()
             opt.clear_grad()
-            # GMP pruner step 3: step() to update ratios and other internal states of the pruner.
+            # GMP pruner step 2: step() to update ratios and other internal states of the pruner.
             pruner.step()
 
             train_run_cost += time.time() - train_start
@@ -230,7 +238,7 @@ def compress(args):
             reader_start = time.time()
 
     if args.pruning_strategy == 'gmp':
-        # GMP pruner step 1: define configs
+        # GMP pruner step 0: define configs. No need to do this if you are not using 'gmp'
         configs = {
             'pruning_strategy': 'gmp',
             'stable_iterations': args.stable_epochs * step_per_epoch,
@@ -243,7 +251,7 @@ def compress(args):
     else:
         configs = None
 
-    # GMP pruner step 2: construct a pruner object
+    # GMP pruner step 1: initialize a pruner object
     pruner = make_unstructured_pruner(
         model,
         mode=args.pruning_mode,
@@ -254,7 +262,7 @@ def compress(args):
 
     for i in range(args.last_epoch + 1, args.num_epochs):
         train(i)
-        # GMP pruner step 4: update params before summrizing sparsity, saving model or evaluation.
+        # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation.
         pruner.update_params()
 
         if (i + 1) % args.test_period == 0:

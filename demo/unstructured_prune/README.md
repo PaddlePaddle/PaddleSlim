@@ -4,7 +4,7 @@
 
 在模型压缩中，常见的稀疏方式为结构化和非结构化稀疏，前者在某个特定维度（特征通道、卷积核等等）上进行稀疏化操作；后者以每一个参数为单元进行稀疏化，并不会改变参数矩阵的形状，所以更加依赖于硬件对稀疏后矩阵运算的加速能力。本目录即在PaddlePaddle和PaddleSlim框架下开发的非结构化稀疏算法，`MobileNetV1`在`ImageNet`上的稀疏化实验中，剪裁率55.19%，达到无损的表现。
 
-本示例将演示基于不同的剪裁模式（阈值/比例）进行非结构化稀疏。默认会自动下载并使用`MNIST`数据集。当前示例目前支持`MobileNetV1`，使用其他模型可以按照下面的**训练代码示例**进>行API调用。另外，为提升大稀疏度下的稀疏模型精度，我们引入了GMP训练策略(Gradual Magnititude Pruning)，使得稀疏度在训练过程中逐步增加。GMP训练策略将在【这里】介绍。
+本示例将演示基于不同的剪裁模式（阈值/比例）进行非结构化稀疏。默认会自动下载并使用`MNIST`数据集。当前示例目前支持`MobileNetV1`，使用其他模型可以按照下面的**训练代码示例**进行API调用。另外，为提升大稀疏度下的稀疏模型精度，我们引入了`GMP`训练策略(`Gradual Magnititude Pruning`)，使得稀疏度在训练过程中逐步增加。`GMP`训练策略在[这里](./README_GMP.md)介绍。
 
 ## 版本要求
 ```bash
@@ -66,17 +66,17 @@ def _get_skip_params(program):
 
 ## 训练
 
-按照阈值剪裁，单卡训练：
+按照阈值剪裁，GPU单卡训练：
 ```bash
 CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
 ```
 
-按照比例剪裁，单卡训练：
+按照比例剪裁，GPU单卡训练：
 ```bash
 CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
-多卡训练：由于静态图多卡训练方式与非结构化稀疏中的mask逻辑存在兼容性问题，会在一定程度上影响训练精度，我们建议使用fleet方式启动稀疏化多卡训练，实测精度与单卡一致。
+GPU多卡训练：由于静态图多卡训练方式与非结构化稀疏中的mask逻辑存在兼容性问题，会在一定程度上影响训练精度，我们建议使用[Fleet](https://www.paddlepaddle.org.cn/documentation/docs/zh/1.5/user_guides/howto/training/fleet_api_howto_cn.html)方式启动稀疏化多卡训练，实测精度与单卡一致。同时，为帮助开发者将`with_data_parallel`方式配置的分布式代码转换为`Fleet`我们在[示例代码](./train.py)里面也用`"Fleet step"`清晰标注出了用代码需要做的更改
 ```bash
 python3.7 -m paddle.distributed.launch \
           --selected_gpus="0,1,2,3" \
@@ -122,6 +122,7 @@ opt.minimize(avg_cost)
 
 #STEP1: initialize the pruner
 pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='threshold', threshold=0.01, place=place) # 按照阈值剪裁
+# pruner = make_unstructured_pruner(paddle.static.default_main_program(), mode='threshold', threshold=0.01, place=place) # 通过入口函数的方式初始化pruner，返回object与上述代码相同。
 # pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', ratio=0.55, place=place) # 按照比例剪裁
 
 exe.run(paddle.static.default_startup_program())
@@ -175,4 +176,4 @@ python3.7 evaluate.py --h
 | YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
 | YOLO v3     |  VOC     |threshold | 56.50% | 77.21%(+0.97%) | 0.001 | 0.01 |150k iterations|
 
-**注意**，上述`ratio, 1x1conv, GMP`代表根据比例剪裁，只稀疏啊1x1conv层参数，并且使用GMP训练方式。
+**注意**，上述`ratio, 1x1conv, GMP`代表根据比例剪裁，只稀疏化1x1conv层参数，并且使用GMP训练方式。
