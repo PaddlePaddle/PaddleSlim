@@ -201,7 +201,7 @@ def compress(args):
     if use_data_parallel:
         # Fleet step 2: decorate the origial optimizer and minimize it
         opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
-        opt.minimize(avg_cost, no_grad_set=pruner.no_grad_set)
+    opt.minimize(avg_cost, no_grad_set=pruner.no_grad_set)
 
     exe.run(paddle.static.default_startup_program())
     if args.last_epoch > -1:
