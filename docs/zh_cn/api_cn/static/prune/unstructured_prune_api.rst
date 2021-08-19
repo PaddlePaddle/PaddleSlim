@@ -258,7 +258,7 @@ UnstrucuturedPruner
 UnstrucuturedPrunerGMP
 ----------
 
-.. py:class:: paddleslim.prune.UnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, skip_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.prune.UnstructuredPrunerGMP(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, skip_params_type=None, skip_params_func=None, configs=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
 
@@ -276,7 +276,7 @@ UnstrucuturedPrunerGMP
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 - **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。 
 
-**返回：** 一个UnstructuredPruner类的实例
+**返回：** 一个UnstructuredPrunerGMP类的实例
 
 **示例代码：**
 
@@ -284,7 +284,7 @@ UnstrucuturedPrunerGMP
 
   import paddle
   import paddle.fluid as fluid
-  from paddleslim.prune import UnstructuredPruner 
+  from paddleslim.prune import UnstructuredPrunerGMP
 
   paddle.enable_static()
 
@@ -315,6 +315,7 @@ UnstrucuturedPrunerGMP
   pruner = UnstructuredPrunerGMP(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
 
   for i in range(2000):
+    pruner.step()
     print(pruner.ratio) # 可以看到ratio从0.15非线性的增加到0.55。
 ..
 
@@ -424,8 +425,8 @@ make_unstructured_pruner
       'resume_iteration': 0,
       'pruning_steps': 10,
       'initial_ratio': 0.15,
-   }
-   pruner = make_unstructured_pruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
+  }
+  pruner = make_unstructured_pruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
 
 ..
 

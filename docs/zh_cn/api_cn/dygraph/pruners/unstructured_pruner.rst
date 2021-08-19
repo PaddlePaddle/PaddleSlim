@@ -80,8 +80,7 @@ UnstructuredPruner
 
     sparsity = UnstructuredPruner.total_sparse(model)
     print(sparsity)
-    model(paddle.to_tensor(
-                np.random.uniform(0, 1, [16, 1, 28, 28]), dtype='float32'))
+    pruner.step()
     pruner.update_params()
     sparsity = UnstructuredPruner.total_sparse(model)
     print(sparsity) # 可以看出，这里打印的模型稀疏度与上述不同，这是因为update_params()函数置零了所有绝对值小于0.5的权重。
@@ -134,7 +133,7 @@ UnstructuredPruner
 
     import paddle
     from paddleslim import UnstructuredPruner
-    from paddle.vision.models import LeNet as net
+    from paddle.vision.models import MobileNetV1 as net
     import numpy as np
 
     place = paddle.set_device('cpu')
@@ -216,7 +215,7 @@ UnstructuredPrunerGMP
       'initial_ratio': 0.15,
   }
 
-  pruner = UnstructuredPrunerGMP(model, mode='ratio', ratio=0.55)
+  pruner = UnstructuredPrunerGMP(model, mode='ratio', ratio=0.55, configs=configs)
 
 ..
 
