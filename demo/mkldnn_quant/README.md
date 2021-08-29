@@ -67,7 +67,7 @@ python save_quant_model.py --quant_model_path=/PATH/TO/SAVE/FLOAT32/QUANT/MODEL 
 - **--op_ids_to_skip:** 以逗号隔开的op id号列表，可选，默认为空。这个列表中的op号将不量化，采用FP32类型。要获取特定op的ID，请先使用`--debug`选项运行脚本，并打开生成的文件`int8_<number>_cpu_quantize_placement_pass.dot`，找出不需量化的op, ID号在Op名称后面的括号中。
 - **--debug:** 添加此选项可在每个转换步骤之后生成一系列包含模型图的* .dot文件。 有关DOT格式的说明，请参见[DOT](https://graphviz.gitlab.io/_pages/doc/info/lang.html)。要打开`* .dot`文件，请使用系统上可用的任何Graphviz工具（例如Linux上的`xdot`工具或Windows上的`dot`工具有关文档，请参见[Graphviz](http://www.graphviz.org/documentation/)。
 - **注意：**
-  - 目前支持DNNL量化的op列表是`conv2d`, `depthwise_conv2d`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`,`scale`, `concat`。
+  - 目前支持DNNL量化的op列表是`conv2d`, `depthwise_conv2d`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`,`scale`, `concat`,`gru`,`lstm`。
   - 如果设置 `--op_ids_to_skip`,只需要传入所有量化op中想要保持FP32类型的op ID号即可。
   - 有时量化全部op不一定得到最优性能。例如：如果一个op是单个的INT8 op, 之前和之后的op都为float32 op,那么为了量化这个op，需要先做quantize，然后运行INT8 op, 再dequantize, 这样可能导致最终性能不如保持该op为fp32 op。如果用户使用默认设置性能较差，可以观察这个模型是否有单独的INT8 op，选出不同的`ops_to_quantize`组合，也可以通过`--op_ids_to_skip`排除部分可量化op ID，多运行几次获得最佳设置。
 
