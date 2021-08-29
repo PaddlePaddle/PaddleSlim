@@ -160,10 +160,8 @@ echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 ### 4.3 用户编写自己的测试
 
 如果用户编写自己的测试：
-1. 测试INT8模型
-    如果用户测试转化好的INT8模型，使用 `paddle::NativeConfig` 即可测试。在demo中，设置`use_analysis`为`false`。
-2. 测试FP32模型
-   如果用户要测试PF32模型，使用`paddle::AnalysisConfig`对原始FP32模型先优化（fuses等）再测试。在样例中，直接设置`use_analysis`为`true`。AnalysisConfig设置如下：
+1. 测试 Native FP32 模型（不经过MKLDNN优化的），可以使用 `paddle::NativeConfig` 测试。在demo中，设置`use_analysis`为`false`。
+2. 测试 MKLDNN FP32 或者 INT8 模型，需要开启`paddle::AnalysisConfig`，本案例中，直接设置`use_analysis`为`true`。AnalysisConfig设置如下：
 ```
 static void SetConfig(paddle::AnalysisConfig *cfg) {
   cfg->SetModel(FLAGS_infer_model);  // 必须。表示需要测试的模型
@@ -173,9 +171,8 @@ static void SetConfig(paddle::AnalysisConfig *cfg) {
   cfg->SetCpuMathLibraryNumThreads(FLAGS_num_threads);  //非必须。默认设置为1。表示多线程运行
 }
 ```
-- 在我们提供的样例中，只要设置`use_analysis`为true并且`infer_model`传入原始FP32模型，AnalysisConfig的上述设置将被执行，传入的FP32模型将被DNNL优化加速（包括fuses等）。
-- 如果infer_model传入INT8模型，则 `use_analysis`将不起任何作用，因为INT8模型已经被优化量化。
-- 如果infer_model传入PaddleSlim产出的quant模型，`use_analysis`即使设置为true不起作用，因为quant模型包含fake_quantize/fake_dequantize ops,无法fuse,无法优化。
+- 测试经过 MKLDNN 量化转化的 INT8模型时，仍需设置 `use_analysis`为true。
+- 当infer_model传入PaddleSlim产出的quant模型，`use_analysis`即使设置为true不起作用，因为quant模型包含fake_quantize/fake_dequantize ops,无法fuse,无法优化。
 
 ## 5. 精度和性能数据
 INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性能](https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0-alpha/docs/zh_cn/tutorials/image_classification_mkldnn_quant_tutorial.md)
@@ -183,4 +180,4 @@ INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性�
 ## FAQ
 
 - 自然语言处理模型在CPU上的部署和预测参考样例[ERNIE 模型 QUANT INT8 精度与性能复现](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c++/ernie/mkldnn)
-- 具体DNNL量化原理可以查看[SLIM Quant for INT8 DNNL](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/README.md)。
+- 具体DNNL量化原理可以查看[SLIM Quant for INT8 MKLDNN](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/README.md)。
