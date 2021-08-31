@@ -79,8 +79,8 @@ class PTQ(object):
         assert isinstance(model, paddle.nn.Layer), \
             "The model must be the instance of paddle.nn.Layer."
 
-        return self.ptq.quantize(model=model, inplace=inplace, fuse=fuse,
-                                 fuse_list=fuse_list)
+        return self.ptq.quantize(
+            model=model, inplace=inplace, fuse=fuse, fuse_list=fuse_list)
 
     def save_quantized_model(self, model, path, input_spec=None):
         """

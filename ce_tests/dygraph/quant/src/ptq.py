@@ -66,7 +66,7 @@ def main():
     fuse_list = []
     for name, layer in fp32_model.named_sublayers():
         if isinstance(layer, nn.Conv2D):
-           fuse_list.append([name])
+            fuse_list.append([name])
         if isinstance(layer, nn.BatchNorm2D):
             fuse_list[count].append(name)
             count += 1
@@ -100,8 +100,7 @@ if __name__ == '__main__':
         "--arch", type=str, default='mobilenet_v2', help="model name")
     parser.add_argument(
         "--output_dir", type=str, default='output', help="save dir")
-    parser.add_argument(
-        "--fuse", type=bool, default=False, help="fuse layers")
+    parser.add_argument("--fuse", type=bool, default=False, help="fuse layers")
 
     # data
     parser.add_argument(
