@@ -25,6 +25,7 @@ import numpy as np
 
 import paddle
 import paddle.vision.models as models
+import paddle.nn as nn
 
 from imagenet_dataset import ImageNetDataset
 from paddleslim import PTQ
@@ -59,12 +60,21 @@ def main():
         model_list, FLAGS.arch)
     fp32_model = models.__dict__[FLAGS.arch](pretrained=True)
     fp32_model.eval()
-
+    for name, layer in fp32_model.named_sublayers():
+        print(name, layer)
+    count = 0
+    fuse_list = []
+    for name, layer in fp32_model.named_sublayers():
+        if isinstance(layer, nn.Conv2D):
+           fuse_list.append([name])
+        if isinstance(layer, nn.BatchNorm2D):
+            fuse_list[count].append(name)
+            count += 1
     val_dataset = ImageNetDataset(FLAGS.data, mode='val')
 
     # 2 quantizations
     ptq = PTQ()
-    quant_model = ptq.quantize(fp32_model)
+    quant_model = ptq.quantize(fp32_model, fuse=FLAGS.fuse, fuse_list=fuse_list)
 
     print("Calibrate")
     calibrate(quant_model, val_dataset, FLAGS.quant_batch_num,
@@ -90,6 +100,8 @@ if __name__ == '__main__':
         "--arch", type=str, default='mobilenet_v2', help="model name")
     parser.add_argument(
         "--output_dir", type=str, default='output', help="save dir")
+    parser.add_argument(
+        "--fuse", type=bool, default=False, help="fuse layers")
 
     # data
     parser.add_argument(

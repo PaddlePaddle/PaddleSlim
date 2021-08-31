@@ -58,7 +58,7 @@ class PTQ(object):
 
         self.ptq = Q.ImperativePTQ(quant_config=quant_config)
 
-    def quantize(self, model, inplace=False):
+    def quantize(self, model, inplace=False, fuse=False, fuse_list=None):
         """
         Quantize the input model.
 
@@ -66,13 +66,21 @@ class PTQ(object):
             model(paddle.nn.Layer): The model to be quantized.
             inplace(bool): Whether apply quantization to the input model.
                            Default: False.
+            fuse(bool): Whether to fuse layers.
+                        Default: False.
+            fuse_list(list): The layers' names to be fused. For example,
+                "fuse_list = [["conv1", "bn1"], ["conv2", "bn2"]]".
+                A TypeError would be raised if "fuse" was set as
+                True but "fuse_list" was None.
+                Default: None.
         Returns:
             quantized_model(paddle.nn.Layer): The quantized model.
         """
         assert isinstance(model, paddle.nn.Layer), \
             "The model must be the instance of paddle.nn.Layer."
 
-        return self.ptq.quantize(model=model, inplace=inplace)
+        return self.ptq.quantize(model=model, inplace=inplace, fuse=fuse,
+                                 fuse_list=fuse_list)
 
     def save_quantized_model(self, model, path, input_spec=None):
         """
