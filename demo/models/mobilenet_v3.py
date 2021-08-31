@@ -77,7 +77,6 @@ class MobileNetV3():
             if_act=True,
             act='hard_swish',
             name='conv1')
-        print(conv.shape)
         i = 0
         for layer_cfg in cfg:
             conv = self.residual_unit(
@@ -115,8 +114,7 @@ class MobileNetV3():
             act=None,
             param_attr=ParamAttr(name='last_1x1_conv_weights'),
             bias_attr=False)
-        #conv = fluid.layers.hard_swish(conv)
-        conv = self.hard_swish(conv)
+        conv = fluid.layers.hard_swish(conv)
         out = fluid.layers.fc(input=conv,
                               size=class_dim,
                               param_attr=ParamAttr(name='fc_weights'),
@@ -162,8 +160,7 @@ class MobileNetV3():
             if act == 'relu':
                 bn = fluid.layers.relu(bn)
             elif act == 'hard_swish':
-                #bn = fluid.layers.hard_swish(bn)
-                bn = self.hard_swish(bn)
+                bn = fluid.layers.hard_swish(bn)
         return bn
 
     def hard_swish(self, x):
