@@ -70,6 +70,8 @@ def main():
         if isinstance(layer, nn.BatchNorm2D):
             fuse_list[count].append(name)
             count += 1
+    if FLAGS.arch == 'resnet50':
+        fuse_list = None
     val_dataset = ImageNetDataset(FLAGS.data, mode='val')
 
     # 2 quantizations

@@ -16,6 +16,7 @@ import copy
 import logging
 
 import paddle
+import paddle.nn as nn
 import paddle.fluid.contrib.slim.quantization as Q
 from paddle.fluid.contrib.slim.quantization import AbsmaxQuantizer
 from paddle.fluid.contrib.slim.quantization import HistQuantizer
@@ -70,8 +71,8 @@ class PTQ(object):
                         Default: False.
             fuse_list(list): The layers' names to be fused. For example,
                 "fuse_list = [["conv1", "bn1"], ["conv2", "bn2"]]".
-                A TypeError would be raised if "fuse" was set as
-                True but "fuse_list" was None.
+                The conv2d and bn layers will be fused automatically
+                if "fuse" was set as True but "fuse_list" was None.
                 Default: None.
         Returns:
             quantized_model(paddle.nn.Layer): The quantized model.
@@ -79,8 +80,37 @@ class PTQ(object):
         assert isinstance(model, paddle.nn.Layer), \
             "The model must be the instance of paddle.nn.Layer."
 
+        if fuse == True:
+            if fuse_list is None:
+                fuse_list = self.find_conv_bn_names(model)
+            _logger.info('The layers to be fused:')
+            for i in fuse_list:
+                _logger.info(i)
+
         return self.ptq.quantize(
             model=model, inplace=inplace, fuse=fuse, fuse_list=fuse_list)
+
+    def find_conv_bn_names(self, model):
+        """
+        Find the connected conv2d and bn layers of model.
+       
+        Args:
+            model(paddle.nn.Layer): The model to be fuseed.
+       
+        Returns:
+            fuse_list(list): The conv and bn layers to be fused.
+        """
+
+        last_layer = None
+        fuse_list = []
+        for name, layer in model.named_sublayers():
+            if isinstance(last_layer, nn.Conv2D) and isinstance(layer,
+                                                                nn.BatchNorm2D):
+                fuse_list.append([last_name, name])
+            last_name = name
+            last_layer = layer
+
+        return fuse_list
 
     def save_quantized_model(self, model, path, input_spec=None):
         """
