@@ -4,7 +4,7 @@ import logging
 from paddleslim.common import get_logger
 
 __all__ = [
-    "make_unstructured_pruner", "UnstructuredPruner", "UnstructuredPrunerGMP"
+    "make_unstructured_pruner", "UnstructuredPruner", "GMPUnstructuredPruner"
 ]
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -237,7 +237,7 @@ class UnstructuredPruner():
         return should_prune
 
 
-class UnstructuredPrunerGMP(UnstructuredPruner):
+class GMPUnstructuredPruner(UnstructuredPruner):
     """
     The unstructure pruner using GMP training strategy (Gradual Magnitute Pruning). In this subclass of UnstructuredPruner, most methods are inheritated apart from the step(), since we add some ratio increment logics here.
     Conceptually, the algorithm divide the training into three phases: stable, pruning and tuning. And the ratio is increasing from initial_ratio gradually and nonlinearly w.r.t. the training epochs/iterations.
@@ -263,7 +263,7 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
 
         assert mode == 'ratio', "Mode must be RATIO in GMP pruner."
         assert configs is not None, "Configs must be passed in for GMP pruner."
-        super(UnstructuredPrunerGMP, self).__init__(
+        super(GMPUnstructuredPruner, self).__init__(
             model, mode, threshold, ratio, skip_params_type, skip_params_func)
         self.stable_iterations = configs.get('stable_iterations')
         self.pruning_iterations = configs.get('pruning_iterations')
@@ -345,7 +345,7 @@ def make_unstructured_pruner(model,
             skip_params_type=skip_params_type,
             skip_params_func=skip_params_func)
     elif configs.get('pruning_strategy') == 'gmp':
-        return UnstructuredPrunerGMP(
+        return GMPUnstructuredPruner(
             model,
             mode,
             threshold=threshold,

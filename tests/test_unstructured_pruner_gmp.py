@@ -4,7 +4,7 @@ import unittest
 from static_case import StaticCase
 import paddle.fluid as fluid
 import paddle
-from paddleslim.prune import make_unstructured_pruner, UnstructuredPrunerGMP
+from paddleslim.prune import make_unstructured_pruner, GMPUnstructuredPruner
 from layers import conv_bn_layer
 import numpy as np
 

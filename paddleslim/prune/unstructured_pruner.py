@@ -5,7 +5,7 @@ import paddle
 import copy
 
 __all__ = [
-    "make_unstructured_pruner", "UnstructuredPruner", "UnstructuredPrunerGMP"
+    "make_unstructured_pruner", "UnstructuredPruner", "GMPUnstructuredPruner"
 ]
 
 
@@ -288,7 +288,7 @@ class UnstructuredPruner():
         return should_prune
 
 
-class UnstructuredPrunerGMP(UnstructuredPruner):
+class GMPUnstructuredPruner(UnstructuredPruner):
     """
     The unstructure pruner using GMP training strategy (Gradual Magnitute Pruning). In this subclass of UnstructuredPruner, most methods are inheritated apart from the step(), since we add some ratio increment logics here.
     Conceptually, the algorithm divide the training into three phases: stable, pruning and tuning. And the ratio is increasing from initial_ratio gradually and nonlinearly w.r.t. the training epochs/iterations.
@@ -318,7 +318,7 @@ class UnstructuredPrunerGMP(UnstructuredPruner):
         assert mode == 'ratio', "Mode must be RATIO in GMP pruner."
         assert configs is not None, "Please pass in a valid config dictionary."
 
-        super(UnstructuredPrunerGMP, self).__init__(
+        super(GMPUnstructuredPruner, self).__init__(
             program, mode, ratio, threshold, scope, place, skip_params_type,
             skip_params_func)
         self.stable_iterations = configs.get('stable_iterations')
@@ -407,7 +407,7 @@ def make_unstructured_pruner(program,
             skip_params_type=skip_params_type,
             skip_params_func=skip_params_func)
     elif configs is not None and configs.get('pruning_strategy') == 'gmp':
-        return UnstructuredPrunerGMP(
+        return GMPUnstructuredPruner(
             program,
             mode,
             ratio=ratio,

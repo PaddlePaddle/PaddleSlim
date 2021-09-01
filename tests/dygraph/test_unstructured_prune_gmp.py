@@ -3,7 +3,7 @@ sys.path.append("../../")
 import unittest
 import paddle
 import numpy as np
-from paddleslim import make_unstructured_pruner, UnstructuredPrunerGMP
+from paddleslim import make_unstructured_pruner, GMPUnstructuredPruner
 from paddle.vision.models import mobilenet_v1
 
 

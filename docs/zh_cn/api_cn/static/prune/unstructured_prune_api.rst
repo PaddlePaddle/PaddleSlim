@@ -20,7 +20,7 @@ UnstrucuturedPruner
 - **place(CPUPlace|CUDAPlace)** - 模型执行的设备，类型为CPUPlace或者CUDAPlace，默认（None）时代表CPUPlace。
 - **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
-- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见UnstructuredPrunerGMP。
+- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见GMPUnstructuredPruner。
 
 **返回：** 一个UnstructuredPruner类的实例
 
@@ -255,10 +255,10 @@ UnstrucuturedPruner
 
   ..
 
-UnstrucuturedPrunerGMP
+GMPUnstrucuturedPruner
 ----------
 
-.. py:class:: paddleslim.prune.UnstructuredPrunerGMP(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, skip_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.prune.GMPUnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, skip_params_type=None, skip_params_func=None, configs=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
 
@@ -276,7 +276,7 @@ UnstrucuturedPrunerGMP
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 - **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。 
 
-**返回：** 一个UnstructuredPrunerGMP类的实例
+**返回：** 一个GMPUnstructuredPruner类的实例
 
 **示例代码：**
 
@@ -284,7 +284,7 @@ UnstrucuturedPrunerGMP
 
   import paddle
   import paddle.fluid as fluid
-  from paddleslim.prune import UnstructuredPrunerGMP
+  from paddleslim.prune import GMPUnstructuredPruner
 
   paddle.enable_static()
 
@@ -312,14 +312,14 @@ UnstrucuturedPrunerGMP
     'pruning_steps': 10,
     'initial_ratio': 0.15,
   }
-  pruner = UnstructuredPrunerGMP(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
+  pruner = GMPUnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
 
   for i in range(2000):
     pruner.step()
     print(pruner.ratio) # 可以看到ratio从0.15非线性的增加到0.55。
 ..
 
-  .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPrunerGMP.step()
+  .. py:method:: paddleslim.prune.unstructured_pruner.GMPUnstructuredPruner.step()
 
   根据优化后的模型参数和设定的比例，重新计算阈值，并且更新mask。
 
@@ -329,7 +329,7 @@ UnstrucuturedPrunerGMP
 
     import paddle
     import paddle.fluid as fluid 
-    from paddleslim.prune import UnstructuredPrunerGMP
+    from paddleslim.prune import GMPUnstructuredPruner
 
     paddle.enable_static()
 
@@ -358,7 +358,7 @@ UnstrucuturedPrunerGMP
       'initial_ratio': 0.15,
     }
 
-    pruner = UnstructuredPrunerGMP(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
+    pruner = GMPUnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
     print(pruner.threshold)
     for i in range(200):
         pruner.step()
@@ -384,7 +384,7 @@ make_unstructured_pruner
 - **place(CPUPlace|CUDAPlace)** - 模型执行的设备，类型为CPUPlace或者CUDAPlace，默认（None）时代表CPUPlace。
 - **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
-- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见UnstructuredPrunerGMP。
+- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见GMPUnstructuredPruner。
 
 **返回：** 一个UnstructuredPruner类的实例
 
