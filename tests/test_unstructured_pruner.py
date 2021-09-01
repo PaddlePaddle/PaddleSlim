@@ -48,7 +48,7 @@ class TestUnstructuredPruner(StaticCase):
             'ratio',
             scope=self.scope,
             place=place,
-            skip_params_type='exclude_conv1x1')
+            prune_params_type='conv1x1_only')
 
     def test_unstructured_prune(self):
         for param in self.main_program.global_block().all_parameters():

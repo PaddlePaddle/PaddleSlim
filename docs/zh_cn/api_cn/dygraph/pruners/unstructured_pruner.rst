@@ -4,7 +4,7 @@
 UnstructuredPruner
 ----------
 
-.. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, skip_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, prune_params_type=None, skip_params_func=None, configs=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
 
@@ -16,7 +16,7 @@ UnstructuredPruner
 - **mode(str)** - 稀疏化的模式，目前支持的模式有：'ratio'和'threshold'。在'ratio'模式下，会给定一个固定比例，例如0.5，然后所有参数中重要性较低的50%会被置0。类似的，在'threshold'模式下，会给定一个固定阈值，例如1e-5，然后重要性低于1e-5的参数会被置0。
 - **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
 - **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
-- **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
+- **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化层的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 - **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见GMPUnstructuredPruner。
 
@@ -179,7 +179,7 @@ GMPUnstructuredPruner
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
 
-.. py:class:: paddleslim.GMPUnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, skip_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.GMPUnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, prune_params_type=None, skip_params_func=None, configs=None)
 
 该类是UnstructuredPruner的一个子类，通过覆盖step()方法，优化了训练策略，使稀疏化训练更易恢复到稠密模型精度。其他方法均继承自父类。
 
@@ -189,7 +189,7 @@ GMPUnstructuredPruner
 - **mode(str)** - 稀疏化的模式，在这个类中，只有'ratio'模式被支持。
 - **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
 - **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
-- **skip_params_type(str)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
+- **prune_params_type(str)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化层的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 - **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。
 
@@ -254,53 +254,3 @@ GMPUnstructuredPruner
 
   ..
 
-make_unstructured_pruner
-----------
-
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
-
-.. py:method:: paddleslim.make_unstructured_pruner(model, mode, threshold=0.01, ratio=0.55, skip_params_type=None, skip_params_func=None, configs=None)
-
-这是构造非结构化稀疏示例的入口函数，由于可以选择是否GMP训练策略，所以我们引入了这个函数，输入和父类UnstructuredPruner一致。
-
-**参数：**
-
-- **model(paddle.nn.Layer)** - 待剪裁的动态图模型。
-- **mode(str)** - 稀疏化的模式，目前支持的模式有：'ratio'和'threshold'。在'ratio'模式下，会给定一个固定比例，例如0.5，然后所有参数中重要性较低的50%会被置0。类似的，在'threshold'模式下，会给定一个固定阈值，例如1e-5，然后重要性低于1e-5的参数会被置0。
-- **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
-- **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
-- **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表
-示只稀疏化1x1卷积。
-- **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
-- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见GMPUnstructuredPruner。
-
-**返回：** 一个UnstructuredPruner类的实例。
-
-**示例代码：**
-
-.. code-block:: python
-
-  import paddle
-  from paddleslim import make_unstructured_pruner
-  from paddle.vision.models import LeNet as net
-  import numpy as np
-
-  place = paddle.set_device('cpu')
-  model = net(num_classes=10)
-
-  # 构建pruner
-  pruner = make_unstructured_pruner(model, 'ratio', ratio=0.55)
-
-  # 构建GMP pruner
-  configs = {
-      'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
-      'stable_iterations': 0,
-      'pruning_iterations': 1000,
-      'tunning_iterations': 1000,
-      'resume_iteration': 0,
-      'pruning_steps': 10,
-      'initial_ratio': 0.15,
-  }
-  pruner = make_unstructured_pruner(model, 'ratio', ratio=0.55, configs=configs)
-
-..

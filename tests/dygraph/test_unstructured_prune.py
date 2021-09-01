@@ -3,7 +3,7 @@ sys.path.append("../../")
 import unittest
 import paddle
 import numpy as np
-from paddleslim import make_unstructured_pruner, UnstructuredPruner
+from paddleslim import UnstructuredPruner
 from paddle.vision.models import mobilenet_v1
 
 
@@ -16,13 +16,12 @@ class TestUnstructuredPruner(unittest.TestCase):
     def _gen_model(self):
         self.net = mobilenet_v1(num_classes=10, pretrained=False)
         self.net_conv1x1 = mobilenet_v1(num_classes=10, pretrained=False)
-        self.pruner = make_unstructured_pruner(
-            self.net, mode='ratio', ratio=0.55)
-        self.pruner_conv1x1 = make_unstructured_pruner(
+        self.pruner = UnstructuredPruner(self.net, mode='ratio', ratio=0.55)
+        self.pruner_conv1x1 = UnstructuredPruner(
             self.net_conv1x1,
             mode='ratio',
             ratio=0.55,
-            skip_params_type='exclude_conv1x1')
+            prune_params_type='conv1x1_only')
 
     def test_prune(self):
         ori_sparsity = UnstructuredPruner.total_sparse(self.net)

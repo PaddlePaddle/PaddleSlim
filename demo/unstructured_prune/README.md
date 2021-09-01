@@ -122,7 +122,6 @@ opt.minimize(avg_cost)
 
 #STEP1: initialize the pruner
 pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='threshold', threshold=0.01, place=place) # 按照阈值剪裁
-# pruner = make_unstructured_pruner(paddle.static.default_main_program(), mode='threshold', threshold=0.01, place=place) # 通过入口函数的方式初始化pruner，返回object与上述代码相同。
 # pruner = UnstructuredPruner(paddle.static.default_main_program(), mode='ratio', ratio=0.55, place=place) # 按照比例剪裁
 
 exe.run(paddle.static.default_startup_program())

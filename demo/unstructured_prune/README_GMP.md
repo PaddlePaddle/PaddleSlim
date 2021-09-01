@@ -49,9 +49,9 @@ configs = {
     'initial_ratio': args.initial_ratio,
 }
 
-# 将configs作为参数传入到静态图或者动态图的入口函数（make_unstructured_pruner）即可
+# 将configs作为参数初始化GMPUnstructuredPruner即可。
 # 静态图
-pruner = make_unstructured_pruner(
+pruner = GMPUnstructuredPruner(
     train_program,
     mode='ratio', # 模式必须为'ratio'，'threshold'模式与GMP不兼容。
     ratio=args.ratio,
@@ -59,7 +59,7 @@ pruner = make_unstructured_pruner(
     configs=configs)
 
 # 动态图
-pruner = make_unstructured_pruner(
+pruner = GMPUnstructuredPruner(
     model,
     mode='ratio', # 模式必须为'ratio'，'threshold'模式与GMP不兼容。
     ratio=args.ratio,

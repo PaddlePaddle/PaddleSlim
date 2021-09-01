@@ -4,7 +4,7 @@ import unittest
 from static_case import StaticCase
 import paddle.fluid as fluid
 import paddle
-from paddleslim.prune import make_unstructured_pruner, GMPUnstructuredPruner
+from paddleslim.prune import UnstructuredPruner, GMPUnstructuredPruner
 from layers import conv_bn_layer
 import numpy as np
 
@@ -50,7 +50,7 @@ class TestUnstructuredPruner(StaticCase):
             'pruning_steps': 20,
             'initial_ratio': 0.05,
         }
-        self.pruner = make_unstructured_pruner(
+        self.pruner = GMPUnstructuredPruner(
             self.main_program,
             'ratio',
             scope=self.scope,

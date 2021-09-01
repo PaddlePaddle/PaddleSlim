@@ -3,7 +3,7 @@ import os
 import sys
 import argparse
 import numpy as np
-from paddleslim import UnstructuredPruner, make_unstructured_pruner
+from paddleslim import UnstructuredPruner, GMPUnstructuredPruner
 sys.path.append(
     os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
 from utility import add_arguments, print_arguments
@@ -48,7 +48,7 @@ add_arg('tunning_epochs',   int, 60,             "The epoch numbers used to tune
 add_arg('pruning_steps', int, 100,        "How many times you want to increase your ratio during training. Default: 100")
 add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used at the start of pruning stage. Default: 0.15")
 add_arg('pruning_strategy', str, 'base',         "Which training strategy to use in pruning, we only support base and gmp for now. Default: base")
-add_arg('skip_params_type', str, None,           "Which kind of params should be skipped, we only support exclude_conv1x1 for now. Default: None")
+add_arg('prune_params_type', str, None,           "Which kind of params should be pruned, we only support None (all but norms) and conv1x1_only for now. Default: None")
 # yapf: enable
 
 
@@ -86,6 +86,22 @@ def create_optimizer(args, step_per_epoch, model):
         return piecewise_decay(args, step_per_epoch, model)
     elif args.lr_strategy == "cosine_decay":
         return cosine_decay(args, step_per_epoch, model)
+
+
+def create_unstructured_pruner(model, args, configs=None):
+    if configs is None:
+        return UnstructuredPruner(
+            model,
+            mode=args.pruning_mode,
+            ratio=args.ratio,
+            threshold=args.threshold,
+            prune_params_type=args.prune_params_type)
+    else:
+        return GMPUnstructuredPruner(
+            model,
+            ratio=args.ratio,
+            prune_params_type=args.prune_params_type,
+            configs=configs)
 
 
 def compress(args):
@@ -172,13 +188,7 @@ def compress(args):
         configs = None
 
     # GMP pruner step 1: initialize a pruner object
-    pruner = make_unstructured_pruner(
-        model,
-        mode=args.pruning_mode,
-        ratio=args.ratio,
-        threshold=args.threshold,
-        skip_params_type=args.skip_params_type,
-        configs=configs)
+    pruner = create_unstructured_pruner(model, args, configs=configs)
 
     def test(epoch):
         model.eval()

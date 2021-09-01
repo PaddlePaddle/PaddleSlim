@@ -4,7 +4,7 @@
 UnstrucuturedPruner
 ----------
 
-.. py:class:: paddleslim.prune.UnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, skip_params_type, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.prune.UnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, prune_params_type, skip_params_func=None, configs=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
 
@@ -18,7 +18,7 @@ UnstrucuturedPruner
 - **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
 - **scope(paddle.static.Scope)** - 一个paddle.static.Scope对象，存储了所有变量的数值，默认（None）时表示paddle.static.global_scope。
 - **place(CPUPlace|CUDAPlace)** - 模型执行的设备，类型为CPUPlace或者CUDAPlace，默认（None）时代表CPUPlace。
-- **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
+- **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 - **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见GMPUnstructuredPruner。
 
@@ -258,7 +258,7 @@ UnstrucuturedPruner
 GMPUnstrucuturedPruner
 ----------
 
-.. py:class:: paddleslim.prune.GMPUnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, skip_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.prune.GMPUnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, prune_params_type=None, skip_params_func=None, configs=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
 
@@ -272,7 +272,7 @@ GMPUnstrucuturedPruner
 - **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
 - **scope(paddle.static.Scope)** - 一个paddle.static.Scope对象，存储了所有变量的数值，默认（None）时表示paddle.static.global_scope。
 - **place(CPUPlace|CUDAPlace)** - 模型执行的设备，类型为CPUPlace或者CUDAPlace，默认（None）时代表CPUPlace。
-- **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
+- **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 - **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。 
 
@@ -364,69 +364,4 @@ GMPUnstrucuturedPruner
         pruner.step()
     print(pruner.threshold) # 可以看出，这里的threshold和上面打印的不同，这是因为step函数根据设定的ratio更新了threshold数值，便于剪裁操作。
   ..
-
-make_unstructured_pruner
-----------
-
-.. py:method:: paddleslim.prune.make_unstructured_pruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, skip_params_type=None, skip_params_func=None, configs=None)
-
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
-
-这是构造非结构化稀疏示例的入口函数，由于可以选择是否GMP训练策略，所以我们引入了这个函数，输入和父类UnstructuredPruner一致。
-
-**参数：**
-
-- **program(paddle.static.Program)** - 一个paddle.static.Program对象，是待剪裁的模型。
-- **mode(str)** - 稀疏化的模式，目前支持的模式有：'ratio'和'threshold'。在'ratio'模式下，会给定一个固定比例，例如0.55，然后所有参数中重要性较低的50%会被置0。类似的，在'threshold'模式下，会给定一个固定阈值，例如1e-2，然后重要性低于1e-2的参数会被置0。
-- **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
-- **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
-- **scope(paddle.static.Scope)** - 一个paddle.static.Scope对象，存储了所有变量的数值，默认（None）时表示paddle.static.global_scope。
-- **place(CPUPlace|CUDAPlace)** - 模型执行的设备，类型为CPUPlace或者CUDAPlace，默认（None）时代表CPUPlace。
-- **skip_params_type(String)** - 用以指定哪些类型的参数跳过稀疏。目前只支持None和"exclude_conv1x1"两个选项，后者表示只稀疏化1x1卷积。
-- **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
-- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见GMPUnstructuredPruner。
-
-**返回：** 一个UnstructuredPruner类的实例
-
-**示例代码：**
-
-.. code-block:: python
-
-  import paddle
-  import paddle.fluid as fluid
-  from paddleslim.prune import make_unstructured_pruner
-
-  paddle.enable_static()
-
-  train_program = paddle.static.default_main_program()
-  startup_program = paddle.static.default_startup_program()
-
-  with fluid.program_guard(train_program, startup_program):
-      image = fluid.data(name='x', shape=[None, 1, 28, 28])
-      label = fluid.data(name='label', shape=[None, 1], dtype='int64')
-      conv = fluid.layers.conv2d(image, 32, 1)
-      feature = fluid.layers.fc(conv, 10, act='softmax')
-      cost = fluid.layers.cross_entropy(input=feature, label=label)
-      avg_cost = fluid.layers.mean(x=cost)
-
-  place = paddle.static.cpu_places()[0]
-  exe = paddle.static.Executor(place)
-  exe.run(startup_program)
-
-  # 构建pruner
-  pruner = make_unstructured_pruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place)
-
-  # 构建GMP pruner
-  configs = {
-      'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
-      'stable_iterations': 0,
-      'pruning_iterations': 1000,
-      'tunning_iterations': 1000,
-      'resume_iteration': 0,
-      'pruning_steps': 10,
-      'initial_ratio': 0.15,
-  }
-  pruner = make_unstructured_pruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
-
-..
 

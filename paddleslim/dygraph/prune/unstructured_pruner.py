@@ -3,9 +3,7 @@ import paddle
 import logging
 from paddleslim.common import get_logger
 
-__all__ = [
-    "make_unstructured_pruner", "UnstructuredPruner", "GMPUnstructuredPruner"
-]
+__all__ = ["UnstructuredPruner", "GMPUnstructuredPruner"]
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -24,9 +22,8 @@ class UnstructuredPruner():
       - mode(str): Pruning mode, must be selected from 'ratio' and 'threshold'.
       - threshold(float): The parameters whose absolute values are smaller than the THRESHOLD will be zeros. Default: 0.01
       - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: 0.55
-      - skip_params_type(str): The argument to control which type of ops will be ignored. Currently we only support None or exclude_conv1x1 as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
+      - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
-      - configs(dict): The dictionary contains all the configs for pruner defined in its subclass. Here in this base class, it takes no effect. Default: None
     """
 
     def __init__(self,
@@ -34,21 +31,20 @@ class UnstructuredPruner():
                  mode,
                  threshold=0.01,
                  ratio=0.55,
-                 skip_params_type=None,
-                 skip_params_func=None,
-                 configs=None):
+                 prune_params_type=None,
+                 skip_params_func=None):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
-        assert skip_params_type is None or skip_params_type == 'exclude_conv1x1', "skip_params_type only supports None or exclude_conv1x1 for now."
+        assert prune_params_type is None or prune_params_type == 'conv1x1_only', "prune_params_type only supports None or conv1x1_only for now."
         self.model = model
         self.mode = mode
         self.threshold = threshold
         self.ratio = ratio
 
-        # Prority: passed-in skip_params_func > skip_params_type (exclude_conv1x1) > built-in _get_skip_params
+        # Prority: passed-in skip_params_func > prune_params_type (conv1x1_only) > built-in _get_skip_params
         if skip_params_func is not None:
             skip_params_func = skip_params_func
-        elif skip_params_type == 'exclude_conv1x1':
+        elif prune_params_type == 'conv1x1_only':
             skip_params_func = self._get_skip_params_conv1x1
         elif skip_params_func is None:
             skip_params_func = self._get_skip_params
@@ -244,27 +240,22 @@ class GMPUnstructuredPruner(UnstructuredPruner):
 
     Args:
       - model(Paddle.nn.Layer): The model to be pruned.
-      - mode(str): Pruning mode, must be selected from 'ratio' and 'threshold'.
-      - threshold(float): The parameters whose absolute values are smaller than the THRESHOLD will be zeros. Default: 0.01
       - ratio(float): The parameters whose absolute values are in the smaller part decided by the ratio will be zeros. Default: 0.55
-      - skip_params_type(str): The argument to control which type of ops will be ignored. Currently we only support None or exclude_conv1x1 as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
+      - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
       - configs(Dict): The dictionary contains all the configs for GMP pruner. Default: None
     """
 
     def __init__(self,
                  model,
-                 mode,
-                 threshold=0.01,
                  ratio=0.55,
-                 skip_params_type=None,
+                 prune_params_type=None,
                  skip_params_func=None,
                  configs=None):
 
-        assert mode == 'ratio', "Mode must be RATIO in GMP pruner."
         assert configs is not None, "Configs must be passed in for GMP pruner."
         super(GMPUnstructuredPruner, self).__init__(
-            model, mode, threshold, ratio, skip_params_type, skip_params_func)
+            model, 'ratio', 0.0, ratio, prune_params_type, skip_params_func)
         self.stable_iterations = configs.get('stable_iterations')
         self.pruning_iterations = configs.get('pruning_iterations')
         self.tunning_iterations = configs.get('tunning_iterations')
@@ -319,39 +310,3 @@ class GMPUnstructuredPruner(UnstructuredPruner):
             self.update_threshold()
             self._update_masks()
         self.cur_iteration += 1
-
-
-def make_unstructured_pruner(model,
-                             mode,
-                             threshold=0.01,
-                             ratio=0.55,
-                             skip_params_type=None,
-                             skip_params_func=None,
-                             configs=None):
-    '''
-    The entry function for different UnstructuredPruner classes.
-    
-    Args:
-      They are exactly the same with class::UnstructuredPruner.
-    Returns:
-      - pruner(UnstructuredPruner): The pruner object.
-    '''
-    if configs is None or configs.get('pruning_strategy') == 'base':
-        return UnstructuredPruner(
-            model,
-            mode,
-            threshold=threshold,
-            ratio=ratio,
-            skip_params_type=skip_params_type,
-            skip_params_func=skip_params_func)
-    elif configs.get('pruning_strategy') == 'gmp':
-        return GMPUnstructuredPruner(
-            model,
-            mode,
-            threshold=threshold,
-            ratio=ratio,
-            skip_params_type=skip_params_type,
-            skip_params_func=skip_params_func,
-            configs=configs)
-    raise ValueError("{} is not supported.".format(
-        configs.get('pruning_strategy')))

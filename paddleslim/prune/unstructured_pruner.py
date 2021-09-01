@@ -4,9 +4,7 @@ from ..core import GraphWrapper
 import paddle
 import copy
 
-__all__ = [
-    "make_unstructured_pruner", "UnstructuredPruner", "GMPUnstructuredPruner"
-]
+__all__ = ["UnstructuredPruner", "GMPUnstructuredPruner"]
 
 
 class UnstructuredPruner():
@@ -20,9 +18,8 @@ class UnstructuredPruner():
       - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-2.
       - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
-      - skip_params_type(str): The argument to control which type of ops will be ignored. Currently we only support None or exclude_conv1x1 as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
+      - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. Default: None
-      - configs(dict): The dictionary contains all the configs for pruner defined in its subclass. Here in this base class, it takes no effect. Default: None
     """
 
     def __init__(self,
@@ -32,24 +29,23 @@ class UnstructuredPruner():
                  threshold=1e-2,
                  scope=None,
                  place=None,
-                 skip_params_type=None,
-                 skip_params_func=None,
-                 configs=None):
+                 prune_params_type=None,
+                 skip_params_func=None):
         self.mode = mode
         self.ratio = ratio
         self.threshold = threshold
         assert self.mode in [
             'ratio', 'threshold'
         ], "mode must be selected from 'ratio' and 'threshold'"
-        assert skip_params_type is None or skip_params_type == 'exclude_conv1x1', "skip_params_type only supports None or exclude_conv1x1 for now."
+        assert prune_params_type is None or prune_params_type == 'conv1x1_only', "prune_params_type only supports None or conv1x1_only for now."
 
         self.scope = paddle.static.global_scope() if scope == None else scope
         self.place = paddle.static.cpu_places()[0] if place is None else place
 
-        # Prority: passed-in skip_params_func > skip_params_type (exclude_conv1x1) > built-in _get_skip_params
+        # Prority: passed-in skip_params_func > prune_params_type (conv1x1_only) > built-in _get_skip_params
         if skip_params_func is not None:
             skip_params_func = skip_params_func
-        elif skip_params_type == 'exclude_conv1x1':
+        elif prune_params_type == 'conv1x1_only':
             skip_params_func = self._get_skip_params_conv1x1
         elif skip_params_func is None:
             skip_params_func = self._get_skip_params
@@ -295,37 +291,33 @@ class GMPUnstructuredPruner(UnstructuredPruner):
 
     Args:
       - program(paddle.static.Program): The model to be pruned.
-      - mode(str): the mode to prune the model, must be selected from 'ratio' and 'threshold'.
       - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.55.
-      - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-2.
       - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
-      - skip_params_type(str): The argument to control which type of ops will be ignored. Currently we only support None or exclude_conv1x1 as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
+      - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. Default: None
       - configs(Dict): The dictionary contains all the configs for GMP pruner. Default: None
     """
 
     def __init__(self,
                  program,
-                 mode,
                  ratio=0.55,
-                 threshold=1e-2,
                  scope=None,
                  place=None,
-                 skip_params_type=None,
+                 prune_params_type=None,
                  skip_params_func=None,
                  configs=None):
-        assert mode == 'ratio', "Mode must be RATIO in GMP pruner."
         assert configs is not None, "Please pass in a valid config dictionary."
 
         super(GMPUnstructuredPruner, self).__init__(
-            program, mode, ratio, threshold, scope, place, skip_params_type,
+            program, 'ratio', ratio, 0.0, scope, place, prune_params_type,
             skip_params_func)
         self.stable_iterations = configs.get('stable_iterations')
         self.pruning_iterations = configs.get('pruning_iterations')
         self.tunning_iterations = configs.get('tunning_iterations')
         self.pruning_steps = configs.get('pruning_steps')
         self.initial_ratio = configs.get('initial_ratio')
+        self.ratio = 0
         self.target_ratio = ratio
         self.cur_iteration = configs.get('resume_iteration')
 
@@ -377,45 +369,3 @@ class GMPUnstructuredPruner(UnstructuredPruner):
             self.update_threshold()
             self._update_masks()
         self.cur_iteration += 1
-
-
-def make_unstructured_pruner(program,
-                             mode,
-                             ratio=0.55,
-                             threshold=1e-2,
-                             scope=None,
-                             place=None,
-                             skip_params_type=None,
-                             skip_params_func=None,
-                             configs=None):
-    '''
-    The entry function for different UnstructuredPruner classes.
-    
-    Args:
-      They are exactly the same with class::UnstructuredPruner.
-    Returns:
-      - pruner(UnstructuredPruner): The pruner object.
-    '''
-    if configs is None or configs.get('pruning_strategy') == 'base':
-        return UnstructuredPruner(
-            program,
-            mode,
-            ratio=ratio,
-            threshold=threshold,
-            scope=scope,
-            place=place,
-            skip_params_type=skip_params_type,
-            skip_params_func=skip_params_func)
-    elif configs is not None and configs.get('pruning_strategy') == 'gmp':
-        return GMPUnstructuredPruner(
-            program,
-            mode,
-            ratio=ratio,
-            threshold=threshold,
-            scope=scope,
-            place=place,
-            skip_params_type=skip_params_type,
-            skip_params_func=skip_params_func,
-            configs=configs)
-    raise ValueError("{} is not supported.".format(
-        configs.get('pruning_strategy')))

@@ -3,7 +3,7 @@ sys.path.append("../../")
 import unittest
 import paddle
 import numpy as np
-from paddleslim import make_unstructured_pruner, GMPUnstructuredPruner
+from paddleslim import UnstructuredPruner, GMPUnstructuredPruner
 from paddle.vision.models import mobilenet_v1
 
 
@@ -24,7 +24,7 @@ class TestUnstructuredPruner(unittest.TestCase):
             'pruning_steps': 20,
             'initial_ratio': 0.05,
         }
-        self.pruner = make_unstructured_pruner(
+        self.pruner = GMPUnstructuredPruner(
             self.net, mode='ratio', ratio=0.55, configs=configs)
 
         self.assertGreater(self.pruner.ratio, 0.3)

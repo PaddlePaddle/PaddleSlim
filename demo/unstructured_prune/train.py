@@ -7,7 +7,7 @@ import functools
 import time
 import numpy as np
 import paddle.fluid as fluid
-from paddleslim.prune.unstructured_pruner import UnstructuredPruner, make_unstructured_pruner
+from paddleslim.prune.unstructured_pruner import UnstructuredPruner, GMPUnstructuredPruner
 from paddleslim.common import get_logger
 sys.path.append(os.path.join(os.path.dirname("__file__"), os.path.pardir))
 import models
@@ -47,7 +47,7 @@ add_arg('pruning_epochs',   int, 60,             "The epoch numbers used to prun
 add_arg('tunning_epochs',   int, 60,             "The epoch numbers used to tune the after-pruned models. Default: 60")
 add_arg('pruning_steps',    int, 120,        "How many times you want to increase your ratio during training. Default: 120")
 add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used at the start of pruning stage. Default: 0.15")
-add_arg('skip_params_type', str, None,           "Which kind of params should be skipped, we only support exclude_conv1x1 for now. Default: None")
+add_arg('prune_params_type', str, None,           "Which kind of params should be pruned, we only support None (all but norms) and conv1x1_only for now. Default: None")
 # yapf: enable
 
 model_list = models.__all__
@@ -85,6 +85,24 @@ def create_optimizer(args, step_per_epoch):
         return piecewise_decay(args, step_per_epoch)
     elif args.lr_strategy == "cosine_decay":
         return cosine_decay(args, step_per_epoch)
+
+
+def create_unstructured_pruner(program, args, place, configs):
+    if configs is None:
+        return UnstructuredPruner(
+            train_program,
+            mode=args.pruning_mode,
+            ratio=args.ratio,
+            threshold=args.threshold,
+            prune_params_type=args.prune_params_type,
+            place=place)
+    else:
+        return GMPUnstructuredPruner(
+            train_program,
+            ratio=args.ratio,
+            prune_params_type=args.prune_params_type,
+            place=place,
+            configs=configs)
 
 
 def compress(args):
@@ -192,14 +210,8 @@ def compress(args):
         configs = None
 
     # GMP pruner step 1: initialize a pruner object by calling entry function.
-    pruner = make_unstructured_pruner(
-        train_program,
-        mode=args.pruning_mode,
-        ratio=args.ratio,
-        threshold=args.threshold,
-        skip_params_type=args.skip_params_type,
-        place=place,
-        configs=configs)
+    pruner = create_unstructured_pruner(
+        train_program, args, place, configs=configs)
 
     if use_data_parallel:
         # Fleet step 3: decorate the origial optimizer and minimize it
