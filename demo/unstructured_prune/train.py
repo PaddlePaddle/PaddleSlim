@@ -168,8 +168,8 @@ def compress(args):
 
     opt, learning_rate = create_optimizer(args, step_per_epoch)
 
+    # Fleet step 2: distributed strategy
     if use_data_parallel:
-        # Fleet step 2: distributed strategy
         dist_strategy = DistributedStrategy()
         dist_strategy.sync_batch_norm = False
         dist_strategy.exec_strategy = paddle.static.ExecutionStrategy()

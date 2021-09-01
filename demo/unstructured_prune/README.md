@@ -68,17 +68,17 @@ def _get_skip_params(program):
 
 按照阈值剪裁，GPU单卡训练：
 ```bash
-CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
+CUDA_VISIBLE_DEVICES=0 python train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
 ```
 
 按照比例剪裁，GPU单卡训练：
 ```bash
-CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
+CUDA_VISIBLE_DEVICES=0 python train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
 GPU多卡训练：由于静态图多卡训练方式与非结构化稀疏中的mask逻辑存在兼容性问题，会在一定程度上影响训练精度，我们建议使用[Fleet](https://www.paddlepaddle.org.cn/documentation/docs/zh/1.5/user_guides/howto/training/fleet_api_howto_cn.html)方式启动稀疏化多卡训练，实测精度与单卡一致。同时，为帮助开发者将`with_data_parallel`方式配置的分布式代码转换为`Fleet`我们在[示例代码](./train.py)里面也用`"Fleet step"`清晰标注出了用代码需要做的更改
 ```bash
-python3.7 -m paddle.distributed.launch \
+python -m paddle.distributed.launch \
           --selected_gpus="0,1,2,3" \
           train.py \
           --batch_size 64 \
@@ -91,7 +91,7 @@ python3.7 -m paddle.distributed.launch \
 
 恢复训练(请替代命令中的`dir/to/the/saved/pruned/model`和`LAST_EPOCH`)：
 ```
-CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
+CUDA_VISIBLE_DEVICES=0 python train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
                                             --checkpoint dir/to/the/saved/pruned/model --last_epoch LAST_EPOCH
 ```
 
@@ -99,7 +99,7 @@ CUDA_VISIBLE_DEVICES=0 python3.7 train.py --batch_size 64 --data imagenet --lr 0
 
 ## 推理
 ```bash
-CUDA_VISIBLE_DEVICES=0 python3.7 evaluate.py --pruned_model models/ --data imagenet
+CUDA_VISIBLE_DEVICES=0 python evaluate.py --pruned_model models/ --data imagenet
 ```
 
 剪裁训练代码示例：
@@ -160,8 +160,8 @@ test()
 
 更多使用参数请参照shell文件，或者通过运行以下命令查看：
 ```bash
-python3.7 train.py --h
-python3.7 evaluate.py --h
+python train.py --h
+python evaluate.py --h
 ```
 
 ## 实验结果

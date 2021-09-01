@@ -1,6 +1,6 @@
 #!/bin/bash  
 export CUDA_VISIBLE_DEVICES=3
-python3.7 train.py \
+python train.py \
           --batch_size=256 \
           --lr=0.05 \
           --threshold=0.01 \

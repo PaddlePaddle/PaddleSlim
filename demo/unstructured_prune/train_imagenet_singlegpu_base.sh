@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=0 python3.7 train.py \
+CUDA_VISIBLE_DEVICES=0 python train.py \
           --batch_size 64 \
           --data imagenet \
           --pruning_mode ratio \

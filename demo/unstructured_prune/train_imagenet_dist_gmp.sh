@@ -1,4 +1,4 @@
-python3.7 -m paddle.distributed.launch \
+python -m paddle.distributed.launch \
           --selected_gpus="0,1,2,3" \
           train.py \
           --batch_size 64 \

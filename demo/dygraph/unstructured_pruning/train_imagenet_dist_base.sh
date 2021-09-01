@@ -1,5 +1,5 @@
 #!/bin/bash  
-python3.7 -m paddle.distributed.launch \
+python -m paddle.distributed.launch \
           --gpus='0,1,2,3' \
           --log_dir='log' \
           train.py \

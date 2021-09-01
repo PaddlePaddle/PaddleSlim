@@ -157,6 +157,29 @@ def compress(args):
             args.pretrained_model = args.pretrained_model[:-6]
         model.set_state_dict(paddle.load(args.pretrained_model + ".pdparams"))
 
+    if args.pruning_strategy == 'gmp':
+        # GMP pruner step 0: define configs. No need to do this if you are not using 'gmp'
+        configs = {
+            'pruning_strategy': 'gmp',
+            'stable_iterations': args.stable_epochs * step_per_epoch,
+            'pruning_iterations': args.pruning_epochs * step_per_epoch,
+            'tunning_iterations': args.tunning_epochs * step_per_epoch,
+            'resume_iteration': (args.last_epoch + 1) * step_per_epoch,
+            'pruning_steps': args.pruning_steps,
+            'initial_ratio': args.initial_ratio,
+        }
+    else:
+        configs = None
+
+    # GMP pruner step 1: initialize a pruner object
+    pruner = make_unstructured_pruner(
+        model,
+        mode=args.pruning_mode,
+        ratio=args.ratio,
+        threshold=args.threshold,
+        skip_params_type=args.skip_params_type,
+        configs=configs)
+
     def test(epoch):
         model.eval()
         acc_top1_ns = []
@@ -236,29 +259,6 @@ def compress(args):
                 total_samples = 0
 
             reader_start = time.time()
-
-    if args.pruning_strategy == 'gmp':
-        # GMP pruner step 0: define configs. No need to do this if you are not using 'gmp'
-        configs = {
-            'pruning_strategy': 'gmp',
-            'stable_iterations': args.stable_epochs * step_per_epoch,
-            'pruning_iterations': args.pruning_epochs * step_per_epoch,
-            'tunning_iterations': args.tunning_epochs * step_per_epoch,
-            'resume_iteration': (args.last_epoch + 1) * step_per_epoch,
-            'pruning_steps': args.pruning_steps,
-            'initial_ratio': args.initial_ratio,
-        }
-    else:
-        configs = None
-
-    # GMP pruner step 1: initialize a pruner object
-    pruner = make_unstructured_pruner(
-        model,
-        mode=args.pruning_mode,
-        ratio=args.ratio,
-        threshold=args.threshold,
-        skip_params_type=args.skip_params_type,
-        configs=configs)
 
     for i in range(args.last_epoch + 1, args.num_epochs):
         train(i)

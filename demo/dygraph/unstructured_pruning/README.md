@@ -62,18 +62,18 @@ def _get_skip_params(model):
 
 按照阈值剪裁：
 ```bash
-python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
+python train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
 ```
 
 按照比例剪裁（训练速度较慢，推荐按照阈值剪裁）：
 ```bash
-python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
+python train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
 GPU多卡训练：
 ```bash
 export CUDA_VISIBLE_DEVICES=0,1,2,3
-python3.7 -m paddle.distributed.launch \
+python -m paddle.distributed.launch \
 --gpus="0,1,2,3" \
 --log_dir="train_mbv1_imagenet_threshold_001_log" \
 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 --batch_size 64
@@ -83,13 +83,13 @@ train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 --b
 
 恢复训练（请替代命令中的`dir/to/the/saved/pruned/model`和`LAST_EPOCH`）：
 ```bash
-python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
+python train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
                                             --pretrained_model dir/to/the/saved/pruned/model --resume_epoch LAST_EPOCH
 ```
 
 ## 推理：
 ```bash
-python3.7 evaluate.py --pruned_model models/model-pruned.pdparams --data imagenet
+python evaluate.py --pruned_model models/model-pruned.pdparams --data imagenet
 ```
 
 **注意**，上述`pruned_model` 参数应该指向pdparams文件。
@@ -133,8 +133,8 @@ test()
 
 更多使用参数请参照shell文件或者运行如下命令查看：
 ```bash
-python3.7 train.py --h
-python3.7 evaluate.py --h
+python train.py --h
+python evaluate.py --h
 ```
 
 ## 实验结果
