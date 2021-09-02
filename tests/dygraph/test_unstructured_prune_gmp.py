@@ -16,7 +16,6 @@ class TestUnstructuredPruner(unittest.TestCase):
     def _gen_model(self):
         self.net = mobilenet_v1(num_classes=10, pretrained=False)
         configs = {
-            'pruning_strategy': 'gmp',
             'stable_iterations': 0,
             'pruning_iterations': 1000,
             'tunning_iterations': 1000,
@@ -25,7 +24,7 @@ class TestUnstructuredPruner(unittest.TestCase):
             'initial_ratio': 0.05,
         }
         self.pruner = GMPUnstructuredPruner(
-            self.net, mode='ratio', ratio=0.55, configs=configs)
+            self.net, ratio=0.55, configs=configs)
 
         self.assertGreater(self.pruner.ratio, 0.3)
 

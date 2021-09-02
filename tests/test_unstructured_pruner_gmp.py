@@ -42,7 +42,6 @@ class TestUnstructuredPruner(StaticCase):
         exe.run(self.startup_program, scope=self.scope)
 
         configs = {
-            'pruning_strategy': 'gmp',
             'stable_iterations': 0,
             'pruning_iterations': 1000,
             'tunning_iterations': 1000,
@@ -52,7 +51,6 @@ class TestUnstructuredPruner(StaticCase):
         }
         self.pruner = GMPUnstructuredPruner(
             self.main_program,
-            'ratio',
             scope=self.scope,
             place=place,
             configs=configs,
