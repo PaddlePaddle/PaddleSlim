@@ -17,7 +17,32 @@ UnstructuredPruner
 - **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
 - **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
 - **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化层的参数。
-- **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
+- **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。示例代码如下：
+
+.. code-block:: python
+
+  NORMS_ALL = [ 'BatchNorm', 'GroupNorm', 'LayerNorm', 'SpectralNorm', 'BatchNorm1D',
+      'BatchNorm2D', 'BatchNorm3D', 'InstanceNorm1D', 'InstanceNorm2D',
+      'InstanceNorm3D', 'SyncBatchNorm', 'LocalResponseNorm' ]
+
+  def _get_skip_params(model):
+      """
+      This function is used to check whether the given model's layers are valid to be pruned.
+      Usually, the convolutions are to be pruned while we skip the normalization-related parameters.
+      Deverlopers could replace this function by passing their own when initializing the UnstructuredPuner instance.
+
+      Args:
+        - model(Paddle.nn.Layer): the current model waiting to be checked.
+      Return:
+        - skip_params(set<String>): a set of parameters' names
+      """
+      skip_params = set()
+      for _, sub_layer in model.named_sublayers():
+          if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
+              skip_params.add(sub_layer.full_name())
+      return skip_params
+
+..
 
 **返回：** 一个UnstructuredPruner类的实例。
 

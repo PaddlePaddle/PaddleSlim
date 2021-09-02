@@ -87,7 +87,7 @@ def create_optimizer(args, step_per_epoch):
         return cosine_decay(args, step_per_epoch)
 
 
-def create_unstructured_pruner(program, args, place, configs):
+def create_unstructured_pruner(train_program, args, place, configs):
     if configs is None:
         return UnstructuredPruner(
             train_program,

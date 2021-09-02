@@ -23,7 +23,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,  64,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
-add_arg('pruned_model', str,  "dymodels/model-pruned.pdparams",                "Whether to use pretrained model.")
+add_arg('pruned_model', str,  "dymodels/model.pdparams",                "Whether to use pretrained model.")
 add_arg('data',             str, "cifar10",                 "Which data to use. 'cifar10' or 'imagenet'.")
 add_arg('log_period',       int, 100,                 "Log period in batches.")
 # yapf: enable

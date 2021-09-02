@@ -21,6 +21,29 @@ UnstrucuturedPruner
 - **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 
+.. code-block:: python
+
+  def _get_skip_params(program):
+      """
+      The function is used to get a set of all the skipped parameters when performing pruning.
+      By default, the normalization-related ones will not be pruned.
+      Developers could replace it by passing their own function when initializing the UnstructuredPruner instance.
+      Args:
+        - program(paddle.static.Program): the current model.
+      Returns:
+        - skip_params(Set<String>): a set of parameters' names.
+      """
+      skip_params = set()
+      graph = paddleslim.core.GraphWrapper(program)
+      for op in graph.ops():
+          if 'norm' in op.type() and 'grad' not in op.type():
+              for input in op.all_inputs():
+                  skip_params.add(input.name())
+      return skip_params
+
+..
+
+
 **返回：** 一个UnstructuredPruner类的实例
 
 **示例代码：**

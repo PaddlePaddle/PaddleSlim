@@ -89,7 +89,7 @@ python train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0
 
 ## 推理：
 ```bash
-python evaluate.py --pruned_model models/model-pruned.pdparams --data imagenet
+python evaluate.py --pruned_model models/model.pdparams --data imagenet
 ```
 
 **注意**，上述`pruned_model` 参数应该指向pdparams文件。
@@ -125,7 +125,7 @@ for epoch in range(epochs):
 剪裁后测试代码示例：
 ```python
 model = mobilenet_v1(num_classes=class_dim, pretrained=True)
-model.set_state_dict(paddle.load("model-pruned.pdparams"))
+model.set_state_dict(paddle.load("model.pdparams"))
 #注意，total_sparse为静态方法(static method)，可以不创建实例(instance)直接调用，方便只做测试的写法。
 print(UnstructuredPruner.total_sparse(model))
 test()
