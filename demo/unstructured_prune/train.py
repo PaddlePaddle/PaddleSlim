@@ -198,7 +198,6 @@ def compress(args):
     if args.pruning_strategy == 'gmp':
         # GMP pruner step 0: define configs for GMP, no need to define configs for the base training.
         configs = {
-            'pruning_strategy': 'gmp',
             'stable_iterations': args.stable_epochs * step_per_epoch,
             'pruning_iterations': args.pruning_epochs * step_per_epoch,
             'tunning_iterations': args.tunning_epochs * step_per_epoch,

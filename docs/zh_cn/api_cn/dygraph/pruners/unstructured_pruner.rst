@@ -4,7 +4,7 @@
 UnstructuredPruner
 ----------
 
-.. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, prune_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, prune_params_type=None, skip_params_func=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
 
@@ -18,7 +18,6 @@ UnstructuredPruner
 - **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
 - **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化层的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
-- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见GMPUnstructuredPruner。
 
 **返回：** 一个UnstructuredPruner类的实例。
 
@@ -40,7 +39,7 @@ UnstructuredPruner
 
   .. py:method:: paddleslim.UnstructuredPruner.step()
 
-  更新稀疏化的阈值，如果是'threshold'模式，则维持设定的阈值，如果是'ratio'模式，则根据优化后的模型参数和设定的比例，重新计算阈值。
+  更新稀疏化的阈值，如果是'threshold'模式，则维持设定的阈值，如果是'ratio'模式，则根据优化后的模型参数和设定的比例，重新计算阈值。该函数调用在训练过程中每个batch的optimizer.step()之后。
 
   **示例代码：**
 
@@ -179,19 +178,28 @@ GMPUnstructuredPruner
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
 
-.. py:class:: paddleslim.GMPUnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, prune_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.GMPUnstructuredPruner(model, ratio=0.55, prune_params_type=None, skip_params_func=None, configs=None)
 
 该类是UnstructuredPruner的一个子类，通过覆盖step()方法，优化了训练策略，使稀疏化训练更易恢复到稠密模型精度。其他方法均继承自父类。
 
 **参数：**
 
 - **model(paddle.nn.Layer)** - 待剪裁的动态图模型。
-- **mode(str)** - 稀疏化的模式，在这个类中，只有'ratio'模式被支持。
 - **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
-- **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
 - **prune_params_type(str)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化层的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
-- **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。
+- **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。各参数介绍如下：
+
+.. code-block:: python
+               
+  {'stable_iterations': int} # the duration of stable phase in terms of global iterations
+  {'pruning_iterations': int} # the duration of pruning phase in terms of global iterations
+  {'tunning_iterations': int} # the duration of tunning phase in terms of global iterations
+  {'resume_iteration': int} # the start timestamp you want to train from, in terms if global iteration
+  {'pruning_steps': int} # the total times you want to increase the ratio
+  {'initial_ratio': float} # the initial ratio value
+        
+..
 
 **返回：** 一个GMPUnstructuredPruner类的实例
 
@@ -206,7 +214,6 @@ GMPUnstructuredPruner
   model = net(num_classes=10)
 
   configs = {
-      'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
       'stable_iterations': 0,
       'pruning_iterations': 1000,
       'tunning_iterations': 1000,
@@ -215,13 +222,13 @@ GMPUnstructuredPruner
       'initial_ratio': 0.15,
   }
 
-  pruner = GMPUnstructuredPruner(model, mode='ratio', ratio=0.55, configs=configs)
+  pruner = GMPUnstructuredPruner(model, ratio=0.55, configs=configs)
 
 ..
 
   .. py:method:: paddleslim.GMPUnstructuredPruner.step()
 
-  更新稀疏化的阈值：根据优化后的模型参数和设定的比例，重新计算阈值。
+  更新稀疏化的阈值：根据优化后的模型参数和设定的比例，重新计算阈值。该函数调用在训练过程中每个batch的optimizer.step()之后。
 
   **示例代码：**
 
@@ -236,7 +243,6 @@ GMPUnstructuredPruner
     model = net(num_classes=10)
 
     configs = {
-        'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
         'stable_iterations': 0,
         'pruning_iterations': 1000,
         'tunning_iterations': 1000,
@@ -245,7 +251,7 @@ GMPUnstructuredPruner
         'initial_ratio': 0.15,
     }
 
-    pruner = GMPUnstructuredPruner(model, mode='ratio', ratio=0.55, configs=configs)
+    pruner = GMPUnstructuredPruner(model, ratio=0.55, configs=configs)
 
     print(pruner.threshold)
     for i in range(200):

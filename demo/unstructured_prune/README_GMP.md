@@ -40,7 +40,6 @@
 ```python
 # 将上述参数定义为配置字典
 configs = {
-    'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
     'stable_iterations': args.stable_epochs * step_per_epoch,
     'pruning_iterations': args.pruning_epochs * step_per_epoch,
     'tunning_iterations': args.tunning_epochs * step_per_epoch,

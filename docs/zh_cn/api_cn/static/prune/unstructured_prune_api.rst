@@ -4,7 +4,7 @@
 UnstrucuturedPruner
 ----------
 
-.. py:class:: paddleslim.prune.UnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, prune_params_type, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.prune.UnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, prune_params_type, skip_params_func=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
 
@@ -20,7 +20,6 @@ UnstrucuturedPruner
 - **place(CPUPlace|CUDAPlace)** - 模型执行的设备，类型为CPUPlace或者CUDAPlace，默认（None）时代表CPUPlace。
 - **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
-- **configs(Dict)** - 传入额外的训练参数。在该class中，默认为None。在子类中，可以传入不同的参数控制不同的稀疏化训练策略，详情见GMPUnstructuredPruner。
 
 **返回：** 一个UnstructuredPruner类的实例
 
@@ -54,7 +53,7 @@ UnstrucuturedPruner
 
   .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.step()
 
-  更新稀疏化的阈值，如果是'threshold'模式，则维持设定的阈值，如果是'ratio'模式，则根据优化后的模型参数和设定的比例，重新计算阈值。
+  更新稀疏化的阈值，如果是'threshold'模式，则维持设定的阈值，如果是'ratio'模式，则根据优化后的模型参数和设定的比例，重新计算阈值。该函数调用在训练过程中每个batch的optimizer.step()之后。
 
   **示例代码：**
 
@@ -258,7 +257,7 @@ UnstrucuturedPruner
 GMPUnstrucuturedPruner
 ----------
 
-.. py:class:: paddleslim.prune.GMPUnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, prune_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.prune.GMPUnstructuredPruner(program, ratio=0.55, scope=None, place=None, prune_params_type=None, skip_params_func=None, configs=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
 
@@ -267,14 +266,23 @@ GMPUnstrucuturedPruner
 **参数：**
 
 - **program(paddle.static.Program)** - 一个paddle.static.Program对象，是待剪裁的模型。
-- **mode(str)** - 稀疏化的模式，在这个类中，只有'ratio'模式被支持。
 - **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
-- **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
 - **scope(paddle.static.Scope)** - 一个paddle.static.Scope对象，存储了所有变量的数值，默认（None）时表示paddle.static.global_scope。
 - **place(CPUPlace|CUDAPlace)** - 模型执行的设备，类型为CPUPlace或者CUDAPlace，默认（None）时代表CPUPlace。
 - **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
-- **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。 
+- **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。具体描述如下：
+
+.. code-block:: python
+               
+  {'stable_iterations': int} # the duration of stable phase in terms of global iterations
+  {'pruning_iterations': int} # the duration of pruning phase in terms of global iterations
+  {'tunning_iterations': int} # the duration of tunning phase in terms of global iterations
+  {'resume_iteration': int} # the start timestamp you want to train from, in terms if global iteration
+  {'pruning_steps': int} # the total times you want to increase the ratio
+  {'initial_ratio': float} # the initial ratio value
+        
+..
 
 **返回：** 一个GMPUnstructuredPruner类的实例
 
@@ -304,7 +312,6 @@ GMPUnstrucuturedPruner
   exe.run(startup_program)
 
   configs = {
-    'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
     'stable_iterations': 0,
     'pruning_iterations': 1000,
     'tunning_iterations': 1000,
@@ -312,7 +319,7 @@ GMPUnstrucuturedPruner
     'pruning_steps': 10,
     'initial_ratio': 0.15,
   }
-  pruner = GMPUnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
+  pruner = GMPUnstructuredPruner(paddle.static.default_main_program(), ratio=0.55, place=place, configs=configs)
 
   for i in range(2000):
     pruner.step()
@@ -321,7 +328,7 @@ GMPUnstrucuturedPruner
 
   .. py:method:: paddleslim.prune.unstructured_pruner.GMPUnstructuredPruner.step()
 
-  根据优化后的模型参数和设定的比例，重新计算阈值，并且更新mask。
+  根据优化后的模型参数和设定的比例，重新计算阈值，并且更新mask。该函数调用在训练过程中每个batch的optimizer.step()之后。
 
   **示例代码：**
 
@@ -349,7 +356,6 @@ GMPUnstrucuturedPruner
     exe.run(startup_program)
 
     configs = {
-      'pruning_strategy': 'gmp', # pruning_strategy必须是'gmp'。
       'stable_iterations': 0,
       'pruning_iterations': 1000,
       'tunning_iterations': 1000,
@@ -358,7 +364,7 @@ GMPUnstrucuturedPruner
       'initial_ratio': 0.15,
     }
 
-    pruner = GMPUnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place, configs=configs)
+    pruner = GMPUnstructuredPruner(paddle.static.default_main_program(), ratio=0.55, place=place, configs=configs)
     print(pruner.threshold)
     for i in range(200):
         pruner.step()

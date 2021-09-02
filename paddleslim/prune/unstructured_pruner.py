@@ -296,7 +296,18 @@ class GMPUnstructuredPruner(UnstructuredPruner):
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
       - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. Default: None
-      - configs(Dict): The dictionary contains all the configs for GMP pruner. Default: None
+      - configs(Dict): The dictionary contains all the configs for GMP pruner. Default: None. The detailed description is as below:
+        
+        .. code-block:: python
+               
+               {'stable_iterations': int} # the duration of stable phase in terms of global iterations
+               {'pruning_iterations': int} # the duration of pruning phase in terms of global iterations
+               {'tunning_iterations': int} # the duration of tunning phase in terms of global iterations
+               {'resume_iteration': int} # the start timestamp you want to train from, in terms if global iteration
+               {'pruning_steps': int} # the total times you want to increase the ratio
+               {'initial_ratio': float} # the initial ratio value
+        
+        ..
     """
 
     def __init__(self,
