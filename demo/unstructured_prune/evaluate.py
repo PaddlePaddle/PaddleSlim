@@ -96,9 +96,10 @@ def compress(args):
         acc_top1_ns = []
         acc_top5_ns = []
 
-        _logger.info("The current density of the inference model is {}%".format(
-            round(100 * UnstructuredPruner.total_sparse(
-                paddle.static.default_main_program()), 2)))
+        _logger.info(
+            "The current sparsity of the inference model is {}%".format(
+                round(100 * UnstructuredPruner.total_sparse(
+                    paddle.static.default_main_program()), 2)))
         for batch_id, data in enumerate(valid_loader):
             start_time = time.time()
             acc_top1_n, acc_top5_n = exe.run(

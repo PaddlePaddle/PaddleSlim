@@ -39,6 +39,7 @@ DEFINE_bool(with_accuracy_layer,
 DEFINE_bool(use_analysis,
             false,
             "If use_analysis is set to true, the model will be optimized");
+DEFINE_int32(warmup_iter, 2, "number of warmup batches");            
 
 struct Timer {
   std::chrono::high_resolution_clock::time_point start;
@@ -181,7 +182,12 @@ void PredictionRun(paddle::PaddlePredictor *predictor,
   Timer run_timer;
   double elapsed_time = 0;
   int predicted_num = 0;
-
+  // warmup
+  for (int k = 0; k < FLAGS_warmup_iter; k++){
+        predictor->Run(inputs[k], &(*outputs)[k], FLAGS_batch_size);
+        LOG(INFO) <<"Warmup " << k << " batches";
+  }
+  // run
   for (int i = 0; i < iterations; i++) {
     run_timer.tic();
     predictor->Run(inputs[i], &(*outputs)[i], FLAGS_batch_size);
