@@ -4,13 +4,13 @@
 
 在模型压缩中，常见的稀疏方式为结构化和非结构化稀疏，前者在某个特定维度（特征通道、卷积核等等）上进行稀疏化操作；后者以每一个参数为单元进行稀疏化，并不会改变参数矩阵的形状，所以更加依赖于硬件对稀疏后矩阵运算的加速能力。本目录即在PaddlePaddle和PaddleSlim框架下开发的非结构化稀疏算法，`MobileNetV1`在`ImageNet`上的稀疏化实验中，剪裁率55.19%，达到无损的表现。
 
-本示例将演示基于不同的剪裁模式（阈值/比例）进行非结构化稀疏。默认会自动下载并使用`CIFAR-10`数据集。当前示例目前支持`MobileNetV1`，使用其他模型可以按照下面的训练代码示例进行API调用。
+本示例将演示基于不同的剪裁模式（阈值/比例）进行非结构化稀疏。默认会自动下载并使用`CIFAR-10`数据集。当前示例目前支持`MobileNetV1`，使用其他模型可以按照下面的训练代码示例进行API调用。此外，为保证大稀疏度（75%+）下模型的精度，我们引入了`GMP`训练策略，详细的介绍和使用请参照[介绍](../../unstructured_prune/README_GMP.md)。
 
 ## 版本要求
 ```bash
 python3.5+
-paddlepaddle>=2.0.0
-paddleslim>=2.1.0
+paddlepaddle>=2.2.0
+paddleslim>=2.2.0
 ```
 
 请参照github安装[paddlepaddle](https://github.com/PaddlePaddle/Paddle)和[paddleslim](https://github.com/PaddlePaddle/PaddleSlim)。
@@ -62,34 +62,34 @@ def _get_skip_params(model):
 
 按照阈值剪裁：
 ```bash
-python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
+python train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01
 ```
 
 按照比例剪裁（训练速度较慢，推荐按照阈值剪裁）：
 ```bash
-python3.7 train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
+python train.py --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
 GPU多卡训练：
 ```bash
 export CUDA_VISIBLE_DEVICES=0,1,2,3
-python3.7 -m paddle.distributed.launch \
+python -m paddle.distributed.launch \
 --gpus="0,1,2,3" \
 --log_dir="train_mbv1_imagenet_threshold_001_log" \
-train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 --batch_size 256
+train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 --batch_size 64
 ```
 
 **注意**，这里的batch_size为单卡上的。
 
-恢复训练（请替代命令中的`dir/to/the/saved/pruned/model`和`INTERRUPTED_EPOCH`）：
+恢复训练（请替代命令中的`dir/to/the/saved/pruned/model`和`LAST_EPOCH`）：
 ```bash
-python3.7 train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
-                                            --pretrained_model dir/to/the/saved/pruned/model --resume_epoch INTERRUPTED_EPOCH
+python train.py --data imagenet --lr 0.05 --pruning_mode threshold --threshold 0.01 \
+                                            --pretrained_model dir/to/the/saved/pruned/model --resume_epoch LAST_EPOCH
 ```
 
 ## 推理：
 ```bash
-python3.7 evaluate.py --pruned_model models/model-pruned.pdparams --data imagenet
+python evaluate.py --pruned_model models/model.pdparams --data imagenet
 ```
 
 **注意**，上述`pruned_model` 参数应该指向pdparams文件。
@@ -118,14 +118,14 @@ for epoch in range(epochs):
     if epoch % args.model_period == 0:
         # STEP4: same purpose as STEP3
         pruner.update_params()
-        paddle.save(model.state_dict(), "model-pruned.pdparams")
-        paddle.save(opt.state_dict(), "opt-pruned.pdopt")
+        paddle.save(model.state_dict(), "model.pdparams")
+        paddle.save(opt.state_dict(), "model.pdopt")
 ```
 
 剪裁后测试代码示例：
 ```python
 model = mobilenet_v1(num_classes=class_dim, pretrained=True)
-model.set_state_dict(paddle.load("model-pruned.pdparams"))
+model.set_state_dict(paddle.load("model.pdparams"))
 #注意，total_sparse为静态方法(static method)，可以不创建实例(instance)直接调用，方便只做测试的写法。
 print(UnstructuredPruner.total_sparse(model))
 test()
@@ -133,8 +133,8 @@ test()
 
 更多使用参数请参照shell文件或者运行如下命令查看：
 ```bash
-python3.7 train.py --h
-python3.7 evaluate.py --h
+python train.py --h
+python evaluate.py --h
 ```
 
 ## 实验结果
@@ -144,5 +144,7 @@ python3.7 evaluate.py --h
 | MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
 | MobileNetV1 | ImageNet |   ratio  | -55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.005 | - | 68 |
 | MobileNetV1 | ImageNet |   threshold  | -49.49% | 71.22%/89.78% (+0.23%/+0.10%) | 0.05 | 0.01 | 93 |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 75% | 70.49%/89.48% (-0.5%/-0.20%) | 0.005 | - | 108 |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 80% | 70.02%/89.26% (-0.97%/-0.42%) | 0.005 | - | 108 |
 | YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
 | YOLO v3     |  VOC     |threshold | -56.50% | 77.21% (+0.97%) | 0.001 | 0.01 | 150k iterations |

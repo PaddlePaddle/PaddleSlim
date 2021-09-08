@@ -23,7 +23,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,  64,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
-add_arg('pruned_model', str,  "dymodels/model-pruned.pdparams",                "Whether to use pretrained model.")
+add_arg('pruned_model', str,  "dymodels/model.pdparams",                "Whether to use pretrained model.")
 add_arg('data',             str, "cifar10",                 "Which data to use. 'cifar10' or 'imagenet'.")
 add_arg('log_period',       int, 100,                 "Log period in batches.")
 # yapf: enable
@@ -67,6 +67,8 @@ def compress(args):
             start_time = time.time()
             x_data = data[0]
             y_data = paddle.to_tensor(data[1])
+            if args.data == 'cifar10':
+                y_data = paddle.unsqueeze(y_data, 1)
 
             logits = model(x_data)
             loss = F.cross_entropy(logits, y_data)
@@ -90,7 +92,7 @@ def compress(args):
                 acc_top5_ns, dtype="object"))))
 
     model.set_state_dict(paddle.load(args.pruned_model))
-    _logger.info("The current density of the pruned model is: {}%".format(
+    _logger.info("The current sparsity of the pruned model is: {}%".format(
         round(100 * UnstructuredPruner.total_sparse(model), 2)))
     test(0)
 

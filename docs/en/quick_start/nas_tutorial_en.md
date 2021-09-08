@@ -165,7 +165,7 @@ for step in range(3):
     train_loader, eval_loader = input_data(images, label)
 
     current_flops = slim.analysis.flops(train_program)
-    if current_flops > 321208544:
+    if current_flops > 6555276:
         continue
 
     for epoch in range(7):

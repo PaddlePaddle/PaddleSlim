@@ -21,15 +21,28 @@ from static_case import StaticCase
 
 
 class TestQuantEmbedding(StaticCase):
+    def set_config(self):
+        self.config = {
+            'quantize_op_types': ['lookup_table_v2'],
+            'lookup_table': {
+                'quantize_type': 'abs_max',
+                'quantize_bits': 8,
+                'dtype': 'int8'
+            }
+        }
+
     def test_quant_embedding(self):
+        self.set_config()
+
         train_program = paddle.static.Program()
-        with paddle.static.program_guard(train_program):
+        startup_program = paddle.static.Program()
+        with paddle.static.program_guard(train_program, startup_program):
             input_word = paddle.static.data(
                 name="input_word", shape=[None, 1], dtype='int64')
             param_attr = paddle.ParamAttr(
                 name='emb',
                 initializer=paddle.nn.initializer.Uniform(-0.005, 0.005))
-            weight = train_program.global_block().create_parameter(
+            weight = paddle.static.create_parameter(
                 (100, 128), attr=param_attr, dtype="float32")
 
             input_emb = paddle.nn.functional.embedding(
@@ -37,12 +50,23 @@ class TestQuantEmbedding(StaticCase):
 
         infer_program = train_program.clone(for_test=True)
 
-        use_gpu = True
-        place = paddle.CUDAPlace(0) if use_gpu else paddle.CPUPlace()
+        place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        exe.run(paddle.static.default_startup_program())
+        exe.run(startup_program)
 
         quant_program = quant.quant_embedding(infer_program, place)
+
+
+class TestQuantEmbeddingInt16(TestQuantEmbedding):
+    def set_config(self):
+        self.config = {
+            'quantize_op_types': ['lookup_table'],
+            'lookup_table': {
+                'quantize_type': 'abs_max',
+                'quantize_bits': 16,
+                'dtype': 'int16'
+            }
+        }
 
 
 if __name__ == '__main__':

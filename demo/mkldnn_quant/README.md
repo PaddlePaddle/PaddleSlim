@@ -67,7 +67,7 @@ python save_quant_model.py --quant_model_path=/PATH/TO/SAVE/FLOAT32/QUANT/MODEL 
 - **--op_ids_to_skip:** 以逗号隔开的op id号列表，可选，默认为空。这个列表中的op号将不量化，采用FP32类型。要获取特定op的ID，请先使用`--debug`选项运行脚本，并打开生成的文件`int8_<number>_cpu_quantize_placement_pass.dot`，找出不需量化的op, ID号在Op名称后面的括号中。
 - **--debug:** 添加此选项可在每个转换步骤之后生成一系列包含模型图的* .dot文件。 有关DOT格式的说明，请参见[DOT](https://graphviz.gitlab.io/_pages/doc/info/lang.html)。要打开`* .dot`文件，请使用系统上可用的任何Graphviz工具（例如Linux上的`xdot`工具或Windows上的`dot`工具有关文档，请参见[Graphviz](http://www.graphviz.org/documentation/)。
 - **注意：**
-  - 目前支持DNNL量化的op列表是`conv2d`, `depthwise_conv2d`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`,`scale`, `concat`。
+  - 目前支持DNNL量化的op列表是`conv2d`, `depthwise_conv2d`, `fc`, `matmul`, `pool2d`, `reshape2`, `transpose2`,`scale`, `concat`,`gru`,`lstm`。
   - 如果设置 `--op_ids_to_skip`,只需要传入所有量化op中想要保持FP32类型的op ID号即可。
   - 有时量化全部op不一定得到最优性能。例如：如果一个op是单个的INT8 op, 之前和之后的op都为float32 op,那么为了量化这个op，需要先做quantize，然后运行INT8 op, 再dequantize, 这样可能导致最终性能不如保持该op为fp32 op。如果用户使用默认设置性能较差，可以观察这个模型是否有单独的INT8 op，选出不同的`ops_to_quantize`组合，也可以通过`--op_ids_to_skip`排除部分可量化op ID，多运行几次获得最佳设置。
 
@@ -160,10 +160,8 @@ echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 ### 4.3 用户编写自己的测试
 
 如果用户编写自己的测试：
-1. 测试INT8模型
-    如果用户测试转化好的INT8模型，使用 `paddle::NativeConfig` 即可测试。在demo中，设置`use_analysis`为`false`。
-2. 测试FP32模型
-   如果用户要测试PF32模型，使用`paddle::AnalysisConfig`对原始FP32模型先优化（fuses等）再测试。在样例中，直接设置`use_analysis`为`true`。AnalysisConfig设置如下：
+1. 测试 Native FP32 模型（不经过MKLDNN优化的），可以使用 `paddle::NativeConfig` 测试。在demo中，设置`use_analysis`为`false`。
+2. 测试 MKLDNN FP32 或者 INT8 模型，需要开启`paddle::AnalysisConfig`，本案例中，直接设置`use_analysis`为`true`。AnalysisConfig设置如下：
 ```
 static void SetConfig(paddle::AnalysisConfig *cfg) {
   cfg->SetModel(FLAGS_infer_model);  // 必须。表示需要测试的模型
@@ -173,9 +171,8 @@ static void SetConfig(paddle::AnalysisConfig *cfg) {
   cfg->SetCpuMathLibraryNumThreads(FLAGS_num_threads);  //非必须。默认设置为1。表示多线程运行
 }
 ```
-- 在我们提供的样例中，只要设置`use_analysis`为true并且`infer_model`传入原始FP32模型，AnalysisConfig的上述设置将被执行，传入的FP32模型将被DNNL优化加速（包括fuses等）。
-- 如果infer_model传入INT8模型，则 `use_analysis`将不起任何作用，因为INT8模型已经被优化量化。
-- 如果infer_model传入PaddleSlim产出的quant模型，`use_analysis`即使设置为true不起作用，因为quant模型包含fake_quantize/fake_dequantize ops,无法fuse,无法优化。
+- 测试经过 MKLDNN 量化转化的 INT8模型时，仍需设置 `use_analysis`为true。
+- 当infer_model传入PaddleSlim产出的quant模型，`use_analysis`即使设置为true不起作用，因为quant模型包含fake_quantize/fake_dequantize ops,无法fuse,无法优化。
 
 ## 5. 精度和性能数据
 INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性能](https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0-alpha/docs/zh_cn/tutorials/image_classification_mkldnn_quant_tutorial.md)
@@ -183,4 +180,4 @@ INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性�
 ## FAQ
 
 - 自然语言处理模型在CPU上的部署和预测参考样例[ERNIE 模型 QUANT INT8 精度与性能复现](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c++/ernie/mkldnn)
-- 具体DNNL量化原理可以查看[SLIM Quant for INT8 DNNL](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/README.md)。
+- 具体DNNL量化原理可以查看[SLIM Quant for INT8 MKLDNN](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/README.md)。
