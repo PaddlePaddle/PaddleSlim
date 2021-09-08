@@ -17,207 +17,183 @@ import collections
 from collections import namedtuple
 import paddle.nn as nn
 from . import losses
+from .losses.basic_loss import BASIC_LOSS
+from .distill_helpers import yaml2config
 
-__all__ = ['Distill', 'AdaptorBase']
-
+__all__ = ['Distill']
 
 class LayerConfig:
+    """ The key of config can be set"""
     def __init__(self,
-                 s_feature_idx,
-                 t_feature_idx,
-                 feature_type,
+                 model_name_pairs,
+                 layers_name,
                  loss_function,
                  weight=1.0,
-                 align=False,
-                 align_shape=None):
-        self.s_feature_idx = s_feature_idx
-        self.t_feature_idx = t_feature_idx
-        self.feature_type = feature_type
-        if loss_function in ['l1', 'l2', 'smooth_l1']:
-            self.loss_function = 'DistillationDistanceLoss'
-        elif loss_function in ['dml']:
-            self.loss_function = 'DistillationDMLLoss'
-        elif loss_function in ['rkl']:
-            self.loss_function = 'DistillationRKDLoss'
-        elif hasattr(losses, loss_function):
-            self.loss_function = loss_function
-        else:
-            raise NotImplementedError("loss function is not support!!!")
+                 temperature=1.0,
+                 align_params=None,
+                 **loss_params):
+        self.model_name_pairs = model_name_pairs
+        self.layers_name = layers_name
+        if loss_function not in BASIC_LOSS.module_dict:
+            raise NotImplementedError("loss function {} is not support. Support loss including {}".format(loss_function, BASIC_LOSS.module_dict.keys()))
+        self.loss_function = loss_function
         self.weight = weight
-        self.align = align
-        self.align_shape = align_shape
+        self.temperature = temperature
+        self.align_params = align_params
+        for k, v in loss_params.items():
+            setattr(self, k, v)
 
-
-class AdaptorBase:
-    def __init__(self, model):
-        self.model = model
-        self.add_tensor = False
-
-    def _get_activation(self, outs, name):
+def _add_hooks(model, outs, hook_layers_name):
+    """
+        Get output by layer name.
+        models(nn.Layer):  model need to be add hook.
+        outs(dict): save the middle outputs of model according to the name.
+        hook_layers_name(list): name of middle layers.
+    """
+    def _get_activation(outs, name):
+        ### TODO: need to support get input tensor
+        #outs[name] = {}
         def get_output_hook(layer, input, output):
+            #outs[name]["output"] = output
+            #outs[name]["input"] = input
             outs[name] = output
-
         return get_output_hook
 
-    def _add_distill_hook(self, outs, mapping_layers_name, layers_type):
-        """
-            Get output by layer name.
-            outs(dict): save the middle outputs of model according to the name.
-            mapping_layers(list): name of middle layers.
-            layers_type(list): type of the middle layers to calculate distill loss.
-        """
-
-        ### TODO: support DP model
-        for idx, (n, m) in enumerate(self.model.named_sublayers()):
-            if n in mapping_layers_name:
-                midx = mapping_layers_name.index(n)
-                m.register_forward_post_hook(
-                    self._get_activation(outs, layers_type[midx]))
-
-    def mapping_layers(self):
-        raise NotImplementedError("function mapping_layers is not implemented")
-
+    ### TODO: support DP model
+    for idx, (n, m) in enumerate(model.named_sublayers()):
+        if n in hook_layers_name:
+            m.register_forward_post_hook(_get_activation(outs, n))
 
 class Distill(nn.Layer):
-    ### TODO: support list of student model and teacher model
-    def __init__(self, distill_configs, student_models, teacher_models,
-                 adaptors_S, adaptors_T):
+    """
+        Distill API.
+        distill_configs(list(dict) | path): the list of distill config.
+        student_models(list(nn.Layer)): the list of student model, the state of student model must be training mode.
+        teacher_models(list(nn.Layer)): the list of teacher model, the state of student model must be evaluate mode.
+        return_model_outputs(bool): whether to return model output. Default: True.
+    """
+    def __init__(self, distill_configs, student_models, teacher_models, return_model_outputs=True):
         super(Distill, self).__init__()
-        assert student_models.training, "The student model should be eval mode."
+        if isinstance(student_models, nn.Layer):
+            student_models = [student_models]
+        if isinstance(teacher_models, nn.Layer):
+            teacher_models = [teacher_models]
+        for student_model in student_models:
+            assert student_model.training, "The student model should not be eval mode."
+        for teacher_model in teacher_models:
+            assert teacher_model.training is False, "The teacher model should be eval mode."
 
-        self._distill_configs = distill_configs
+        if isinstance(distill_configs, list):
+            self._distill_configs = distill_configs
+        elif os.path.exists(distill_configs):
+            if distill_configs.endswith(".yaml"):
+                self._distill_configs = yaml2config(distill_configs)
+            else:
+                raise NotImplementedError("distill config file type error!")
+        else:
+            raise NotImplementedError("distill config error!")
         self._student_models = student_models
         self._teacher_models = teacher_models
-        self._adaptors_S = adaptors_S(self._student_models)
-        self._adaptors_T = adaptors_T(self._teacher_models)
-
-        self.stu_outs_dict, self.tea_outs_dict = self._prepare_outputs()
-
-        self.configs = []
-        for c in self._distill_configs:
-            self.configs.append(LayerConfig(**c).__dict__)
-
-        self.distill_idx = self._get_distill_idx()
+        self._return_model_outputs = return_model_outputs
 
         self._loss_config_list = []
-        for c in self.configs:
-            loss_config = {}
-            loss_config[str(c['loss_function'])] = {}
-            loss_config[str(c['loss_function'])]['weight'] = c['weight']
-            loss_config[str(c['loss_function'])]['key'] = c[
-                'feature_type'] + '_' + str(c['s_feature_idx']) + '_' + str(c[
-                    't_feature_idx'])
-            ### TODO: support list of student models and teacher_models
-            loss_config[str(c['loss_function'])][
-                'model_name_pairs'] = [['student', 'teacher']]
-            self._loss_config_list.append(loss_config)
+        for c in self._distill_configs:
+            self._transpose_config(c)
+
+        self._hook_layers = self._extract_hook_position()
 
         # use self._loss_config_list to create all loss object
         self.distill_loss = losses.CombinedLoss(self._loss_config_list)
 
+        self._output_tensor_dict = self._prepare_outputs()
+
+    def parameters(self):
+        params = []
+        for s_model in self._student_models:
+            params.extend(s_model.parameters())
+        return params
+
+    def _extract_hook_position(self):
+        """ extrat hook position according to config"""
+        model_hook_layers = {}
+        for config in self._loss_config_list: 
+            model_name_pairs = config['model_name_pairs']
+            layers_name = config['layers_name']
+            for model_name_pair in model_name_pairs:
+                for idx, model_name in enumerate(model_name_pair):
+                    if model_name not in model_hook_layers:
+                        model_hook_layers[model_name] = [layers_name[idx]]
+                    else:
+                        model_hook_layers[model_name].append(layers_name[idx])
+        for model_name, hook_layers in model_hook_layers.items():
+            model_hook_layers[model_name] = list(set(hook_layers))
+        return model_hook_layers
+
+    def _transpose_config(self, config):
+        """ Transpose config to loss needed """
+        global_config = {}
+        if 'model_name_pairs' not in config:
+            global_config['model_name_pairs'] = [['student_0', 'teacher_0']]
+        else:
+            if isinstance(config['model_name_pairs'][0], str):
+                config['model_name_pairs'] = [config['model_name_pairs']]
+            global_config['model_name_pairs'] = config['model_name_pairs']
+            config.pop('model_name_pairs')
+
+        for key in config.keys():
+            if key != 'layers':
+                global_config[key] = config[key]
+
+        for per_layer_config in config['layers']:
+            per_layer_config.update(global_config)
+            self._loss_config_list.append(LayerConfig(**per_layer_config).__dict__)
+
     def _prepare_outputs(self):
         """
         Add hook to get the output tensor of target layer.
-        Returns:
-            stu_outs_dict(dict): the name and tensor for the student model,
-                such as {'hidden_0': tensor_0, ..}
-            tea_outs_dict(dict): the name and tensor for the teather model,
-                such as {'hidden_0': tensor_0, ..}    
         """
-        stu_outs_dict = collections.OrderedDict()
-        tea_outs_dict = collections.OrderedDict()
-        stu_outs_dict = self._prepare_hook(self._adaptors_S, stu_outs_dict)
-        tea_outs_dict = self._prepare_hook(self._adaptors_T, tea_outs_dict)
-        return stu_outs_dict, tea_outs_dict
+        outputs_tensor = {}
+        for idx, m in enumerate(self._student_models):
+            hook_layers = self._hook_layers['student_{}'.format(idx)]
+            stu_outs = collections.OrderedDict()
+            outputs_tensor['student_{}'.format(idx)] = self._prepare_hook(m, hook_layers, stu_outs)
+        for idx, m in enumerate(self._teacher_models):
+            hook_layers = self._hook_layers['teacher_{}'.format(idx)]
+            tea_outs = collections.OrderedDict()
+            outputs_tensor['teacher_{}'.format(idx)] = self._prepare_hook(m, hook_layers, tea_outs)
+        return outputs_tensor
 
-    def _prepare_hook(self, adaptors, outs_dict):
+    def _prepare_hook(self, model, hook_layers, outs_dict):
         """
         Add hook.
         """
-        mapping_layers = adaptors.mapping_layers()
-        for layer_type, layer in mapping_layers.items():
+        for layer in hook_layers:
             if isinstance(layer, str):
-                adaptors._add_distill_hook(outs_dict, [layer], [layer_type])
+                _add_hooks(model, outs_dict, layer)
         return outs_dict
-
-    def _get_distill_idx(self):
-        """
-        For each feature_type, get the feature index in the student and teacher models.
-        Returns:
-            distill_idx(dict): the feature index for each feature_type,
-                such as {'hidden': [[0, 0], [1, 1]], 'out': [[0, 0]]}
-        """
-        distill_idx = {}
-        for config in self._distill_configs:
-            if config['feature_type'] not in distill_idx:
-                distill_idx[config['feature_type']] = [[
-                    int(config['s_feature_idx']), int(config['t_feature_idx'])
-                ]]
-            else:
-                distill_idx[config['feature_type']].append([
-                    int(config['s_feature_idx']), int(config['t_feature_idx'])
-                ])
-        return distill_idx
 
     def forward(self, *inputs, **kwargs):
-        stu_batch_outs = self._student_models.forward(*inputs, **kwargs)
-        tea_batch_outs = self._teacher_models.forward(*inputs, **kwargs)
-        if not self._teacher_models.training:
-            tea_batch_outs = [i.detach() for i in tea_batch_outs]
+        students_batch_outs = []
+        teachers_batch_outs = []
+        for idx, student_model in enumerate(self._student_models):
+            stu_batch_outs = student_model.forward(*inputs, **kwargs)
+            students_batch_outs.append(stu_batch_outs)
+        for idx, teacher_model in enumerate(self._teacher_models):
+            tea_batch_outs = teacher_model.forward(*inputs, **kwargs)
+            if not teacher_model.training:
+                tea_batch_outs = [i.detach() for i in tea_batch_outs]
+            teachers_batch_outs.extend(tea_batch_outs)
 
-        # get all target tensor
-        if self._adaptors_S.add_tensor == False:
-            self._adaptors_S.add_tensor = True
-        if self._adaptors_T.add_tensor == False:
-            self._adaptors_T.add_tensor = True
-        self.stu_outs_dict = self._get_model_intermediate_output(
-            self._adaptors_S, self.stu_outs_dict)
-        self.tea_outs_dict = self._get_model_intermediate_output(
-            self._adaptors_T, self.tea_outs_dict)
-
-        distill_inputs = self._process_outputs()
+        if len(self._student_models) == 1:
+            students_batch_outs = students_batch_outs[0]
+        if len(self._teacher_models) == 1:
+            teachers_batch_outs = teachers_batch_outs[0]
 
         ### batch is None just for now
-        distill_outputs = self.distill_loss(distill_inputs, None)
+        distill_outputs = self.distill_loss(self._output_tensor_dict, None)
         distill_loss = distill_outputs['loss']
 
-        return stu_batch_outs, tea_batch_outs, distill_loss
-
-    def _get_model_intermediate_output(self, adaptors, outs_dict):
-        """
-        Use the adaptor get the target tensor.
-        Returns:
-            outs_dict(dict): the name and tensor for the target model,
-                such as {'hidden_0': tensor_0, ..}
-        """
-        mapping_layers = adaptors.mapping_layers()
-        for layer_type, layer in mapping_layers.items():
-            if isinstance(layer, str):
-                continue
-            outs_dict[layer_type] = layer
-        return outs_dict
-
-    def _process_outputs(self):
-        """
-        Process the target tensor to adapt for loss.
-        """
-        ### TODO: support list of student models and teacher_models
-        final_distill_dict = {
-            "student": collections.OrderedDict(),
-            "teacher": collections.OrderedDict()
-        }
-
-        for feature_type, dist_idx in self.distill_idx.items():
-            for idx, idx_list in enumerate(dist_idx):
-                sidx, tidx = idx_list[0], idx_list[1]
-                stu_out = self.stu_outs_dict[feature_type + '_' + str(sidx)]
-                tea_out = self.tea_outs_dict[feature_type + '_' + str(tidx)]
-                if not self._student_models.training:
-                    stu_out = stu_out.detach()
-                if not self._teacher_models.training:
-                    tea_out = tea_out.detach()
-
-                name_str = feature_type + '_' + str(sidx) + '_' + str(tidx)
-                final_distill_dict['student'][name_str] = stu_out
-                final_distill_dict['teacher'][name_str] = tea_out
-        return final_distill_dict
+        if self._return_model_outputs:
+            return distill_loss, students_batch_outs, teachers_batch_outs
+        else:
+            return distill_loss

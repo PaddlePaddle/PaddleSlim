@@ -19,18 +19,7 @@ import paddle.nn as nn
 from . import basic_loss
 from . import distillation_loss
 
-from .basic_loss import L1Loss
-from .basic_loss import L2Loss
-from .basic_loss import SmoothL1Loss
-from .basic_loss import CELoss
-from .basic_loss import DMLLoss
-from .basic_loss import DistanceLoss
-from .basic_loss import RKdAngle, RkdDistance
-
-from .distillation_loss import DistillationDistanceLoss
-from .distillation_loss import DistillationDMLLoss
-from .distillation_loss import DistillationRKDLoss
-from .distillation_loss import SegPairWiseLoss, SegChannelwiseLoss
+from .distillation_loss import DistillationLoss
 
 
 class CombinedLoss(nn.Layer):
@@ -40,13 +29,12 @@ class CombinedLoss(nn.Layer):
         loss_config_list: a config list used to build loss function. A demo is as follows,
                           which is used to calculate dml loss between Student output and
                           Teacher output. Parameter weight is needed for the loss weight.
-                            - DistillationDMLLoss:
+                              { loss_function: DMLLoss
                                 weight: 1.0
                                 act: "softmax"
-                                model_name_pairs:
-                                - ["Student", "Teacher"]
-                           Another example is {'DistillationDistanceLoss': {'weight': 1.0,
-                           'key': 'hidden_0_0', 'model_name_pairs': [['student', 'teacher']]}
+                                model_name_pairs:["student_0", "teacher_0"]}
+                           Another example is {loss_function: "MSELoss", 'weight': 1.0,
+                           'layers_name': ['conv0', 'conv0'], 'model_name_pairs': [['student', 'teacher']]}
     """
 
     def __init__(self, loss_config_list=None):
@@ -56,18 +44,12 @@ class CombinedLoss(nn.Layer):
         self.loss_weight = []
         assert isinstance(loss_config_list, list), (
             'operator config should be a list')
-        supported_loss_list = basic_loss.__all__ + distillation_loss.__all__
         for config in loss_config_list:
-            assert isinstance(config,
-                              dict) and len(config) == 1, "yaml format error"
-            name = list(config)[0]
-            assert name in supported_loss_list, \
-                "loss name must be in {} but got: {}".format(name, supported_loss_list)
-            param = config[name]
-            assert "weight" in param, "weight must be in param, but param just contains {}".format(
-                param.keys())
-            self.loss_weight.append(param.pop("weight"))
-            self.loss_func.append(eval(name)(**param))
+            assert isinstance(config, dict), "config must be a dict, but now is {}".format(type(config))
+            assert "weight" in config, "weight must be in param, but param just contains {}".format(
+                config.keys())
+            self.loss_weight.append(config.pop("weight"))
+            self.loss_func.append(DistillationLoss(**config))
 
     def forward(self, input, batch, **kargs):
         loss_dict = {}
