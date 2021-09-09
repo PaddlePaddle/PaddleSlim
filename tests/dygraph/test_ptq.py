@@ -30,38 +30,46 @@ _logger = get_logger(
 
 
 class ImperativeLenet(nn.Layer):
-    def __init__(self, num_classes=10, classifier_activation='softmax'):
+    def __init__(self, num_classes=10):
         super(ImperativeLenet, self).__init__()
-        self.features = paddle.nn.Sequential(
-            paddle.nn.Conv2D(
+        self.features = nn.Sequential(
+            nn.Conv2D(
                 in_channels=1,
                 out_channels=6,
                 kernel_size=3,
                 stride=1,
-                padding=1),
-            paddle.nn.AvgPool2D(
+                padding=1,
+                bias_attr=False),
+            nn.BatchNorm2D(6),
+            nn.ReLU(),
+            nn.MaxPool2D(
                 kernel_size=2, stride=2),
-            paddle.nn.Conv2D(
+            nn.Conv2D(
                 in_channels=6,
                 out_channels=16,
                 kernel_size=5,
                 stride=1,
                 padding=0),
-            paddle.nn.AvgPool2D(
+            nn.BatchNorm2D(16),
+            nn.PReLU(),
+            nn.MaxPool2D(
                 kernel_size=2, stride=2))
 
-        self.fc = paddle.nn.Sequential(
-            paddle.nn.Linear(
+        self.fc = nn.Sequential(
+            nn.Linear(
                 in_features=400, out_features=120),
-            paddle.nn.Linear(
+            nn.LeakyReLU(),
+            nn.Linear(
                 in_features=120, out_features=84),
-            paddle.nn.Linear(
-                in_features=84, out_features=num_classes), )
+            nn.Sigmoid(),
+            nn.Linear(
+                in_features=84, out_features=num_classes),
+            nn.Softmax())
 
     def forward(self, inputs):
         x = self.features(inputs)
 
-        x = paddle.flatten(x, 1)
+        x = fluid.layers.flatten(x, 1)
         x = self.fc(x)
         return x
 
@@ -166,7 +174,7 @@ class TestPTQ(unittest.TestCase):
 
         _logger.info("quantize the fp32 model")
         quanter = PTQ()
-        quant_lenet = quanter.quantize(fp32_lenet)
+        quant_lenet = quanter.quantize(fp32_lenet, fuse=True)
 
         _logger.info("calibrate")
         self.calibrate(quant_lenet, test_reader)
