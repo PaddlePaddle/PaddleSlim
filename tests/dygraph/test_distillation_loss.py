@@ -24,18 +24,14 @@ import paddle.nn.functional as F
 from paddleslim.dygraph.dist.losses import CombinedLoss
 
 # basic loss
-from paddleslim.dygraph.dist.losses import DistanceLoss
-from paddleslim.dygraph.dist.losses import CELoss
-from paddleslim.dygraph.dist.losses import DMLLoss
-from paddleslim.dygraph.dist.losses import RkdDistance
-from paddleslim.dygraph.dist.losses import RKdAngle
+from paddleslim.dygraph.dist.losses.basic_loss import DistanceLoss
+from paddleslim.dygraph.dist.losses.basic_loss import CELoss
+from paddleslim.dygraph.dist.losses.basic_loss import DMLLoss
+from paddleslim.dygraph.dist.losses.basic_loss import RkdDistance
+from paddleslim.dygraph.dist.losses.basic_loss import RKdAngle
 
 # distillation loss
-from paddleslim.dygraph.dist.losses import DistillationDistanceLoss
-from paddleslim.dygraph.dist.losses import DistillationRKDLoss
-from paddleslim.dygraph.dist.losses import DistillationDMLLoss
-from paddleslim.dygraph.dist.losses import SegPairWiseLoss
-from paddleslim.dygraph.dist.losses import SegChannelwiseLoss
+from paddleslim.dygraph.dist.losses import DistillationLoss
 
 import numpy as np
 
@@ -70,14 +66,13 @@ class TestDistanceLoss(unittest.TestCase):
             out = np.sum(diff)
         return out
 
-    def dist_np_distance_loss(
-            self,
-            predicts,
-            mode="l2",
-            reduction="none",
-            model_name_pairs=(["", ""]),
-            key=None,
-            name="loss_distance", ):
+    def dist_np_distance_loss(self,
+                              predicts,
+                              loss_function=None,
+                              mode="l2",
+                              reduction="none",
+                              model_name_pairs=(["", ""]),
+                              key=None):
         loss_dict = dict()
         for idx, pair in enumerate(model_name_pairs):
             out1 = predicts[pair[0]]
@@ -85,10 +80,12 @@ class TestDistanceLoss(unittest.TestCase):
             if key is not None:
                 out1 = out1[key]
                 out2 = out2[key]
+            else:
+                key = 0
             loss = self.np_distance_loss(
                 out1, out2, mode=mode, reduction=reduction)
-            loss_dict["{}_{}_{}_{}_{}".format(name, mode, pair[0], pair[1],
-                                              idx)] = loss
+            loss_dict["{}_{}_{}_{}_{}".format(
+                str(loss_function), pair[0], pair[1], key, key)] = loss
 
         return loss_dict
 
@@ -120,7 +117,7 @@ class TestDistanceLoss(unittest.TestCase):
             "student": paddle.rand(shape),
             "teacher": paddle.rand(shape),
         }
-        self.calc_distillation_distance_loss(predicts, pairs, key=None)
+        self.calc_distillation_distance_loss(predicts, pairs)
 
         predicts = {
             "student": {
@@ -143,13 +140,15 @@ class TestDistanceLoss(unittest.TestCase):
             paddle.set_device(device)
             for reduction in reductions:
                 for mode in modes:
-                    loss_func = DistillationDistanceLoss(
+                    loss_func = DistillationLoss(
                         mode=mode,
+                        loss_function='DistanceLoss',
                         model_name_pairs=pairs,
-                        key=key,
+                        layers_name=[key, key] if key != None else None,
                         reduction=reduction)
                     np_result_dict = self.dist_np_distance_loss(
                         predicts,
+                        loss_function='DistanceLoss',
                         mode=mode,
                         reduction=reduction,
                         model_name_pairs=pairs,
@@ -358,12 +357,11 @@ class TestDMLLoss(unittest.TestCase):
             np_loss = self.np_dml_loss(x, target)
             self.assertTrue(np.allclose(np_loss, pd_loss))
 
-    def dist_np_dml_loss(
-            self,
-            predicts,
-            model_name_pairs=(["", ""]),
-            key=None,
-            name="loss_dml", ):
+    def dist_np_dml_loss(self,
+                         predicts,
+                         loss_function=None,
+                         model_name_pairs=(["", ""]),
+                         key=None):
         loss_dict = dict()
         for idx, pair in enumerate(model_name_pairs):
             out1 = predicts[pair[0]]
@@ -371,8 +369,11 @@ class TestDMLLoss(unittest.TestCase):
             if key is not None:
                 out1 = out1[key]
                 out2 = out2[key]
-            loss_dict["{}_{}_{}_{}".format(name, pair[0], pair[1],
-                                           idx)] = self.np_dml_loss(out1, out2)
+            else:
+                key = 0
+            loss_dict["{}_{}_{}_{}_{}".format(
+                str(loss_function), pair[0], pair[1], key,
+                key)] = self.np_dml_loss(out1, out2)
         return loss_dict
 
     def calc_distillation_dml_loss(self, predicts, pairs, key=None):
@@ -382,11 +383,19 @@ class TestDMLLoss(unittest.TestCase):
 
         for device in devices:
             paddle.set_device(device)
-            loss_func = DistillationDMLLoss(
-                act="softmax", model_name_pairs=pairs, key=key)
+            loss_func = DistillationLoss(
+                act="softmax",
+                model_name_pairs=pairs,
+                loss_function='DMLLoss',
+                layers_name=[key, key] if key != None else None)
             np_result_dict = self.dist_np_dml_loss(
-                predicts, model_name_pairs=pairs, key=key)
+                predicts,
+                model_name_pairs=pairs,
+                loss_function='DMLLoss',
+                key=key)
             pd_result_dict = loss_func(predicts, None)
+            print(pd_result_dict.keys())
+            print(np_result_dict.keys())
             for k in np_result_dict:
                 pd_result = pd_result_dict[k].numpy()
                 np_result = np_result_dict[k]
@@ -526,7 +535,7 @@ class TestRKDLoss(unittest.TestCase):
             predicts,
             model_name_pairs=(["", ""]),
             key=None,
-            name="loss_rkd", ):
+            name="RKDLoss", ):
         loss_dict = dict()
         for idx, pair in enumerate(model_name_pairs):
             out1 = predicts[pair[0]]
@@ -534,11 +543,12 @@ class TestRKDLoss(unittest.TestCase):
             if key is not None:
                 out1 = out1[key]
                 out2 = out2[key]
-            loss_dict["{}_{}_{}_angle_{}".format(name, pair[0], pair[
-                1], idx)] = self.np_rkd_angle(out1, out2)
+            else:
+                key = 0
+            loss_dict["{}_{}_{}_{}_{}".format(name, pair[0], pair[
+                1], key, key)] = self.np_rkd_angle(
+                    out1, out2) + self.np_rkd_distance(out1, out2)
 
-            loss_dict["{}_{}_{}_dist_{}".format(name, pair[0], pair[
-                1], idx)] = self.np_rkd_distance(out1, out2)
         return loss_dict
 
     def calc_distillation_rkd_loss(self, predicts, pairs, key=None):
@@ -548,7 +558,10 @@ class TestRKDLoss(unittest.TestCase):
 
         for device in devices:
             paddle.set_device(device)
-            loss_func = DistillationRKDLoss(model_name_pairs=pairs, key=key)
+            loss_func = DistillationLoss(
+                model_name_pairs=pairs,
+                loss_function='RKDLoss',
+                layers_name=[key, key] if key != None else None)
             np_result_dict = self.dist_np_rkd_loss(
                 predicts, model_name_pairs=pairs, key=key)
             pd_result_dict = loss_func(predicts, None)
@@ -623,13 +636,12 @@ class TestCombinedLoss(unittest.TestCase):
             log_soft_target, soft_x)) / 2.0
         return loss
 
-    def dist_np_dml_loss(
-            self,
-            predicts,
-            model_name_pairs=(["", ""]),
-            key=None,
-            act="softmax",
-            name="loss_dml", ):
+    def dist_np_dml_loss(self,
+                         predicts,
+                         model_name_pairs=(["", ""]),
+                         loss_function=None,
+                         key=None,
+                         act="softmax"):
         loss_dict = dict()
         for idx, pair in enumerate(model_name_pairs):
             out1 = predicts[pair[0]]
@@ -637,20 +649,24 @@ class TestCombinedLoss(unittest.TestCase):
             if key is not None:
                 out1 = out1[key]
                 out2 = out2[key]
-            loss_dict["{}_{}_{}_{}".format(name, pair[0], pair[1],
-                                           idx)] = self.np_dml_loss(out1, out2)
+            loss_dict["{}_{}_{}_{}_0".format(
+                str(loss_function), pair[0], pair[1], idx)] = self.np_dml_loss(
+                    out1, out2)
         return loss_dict
 
     def np_combined_loss(self, predicts, loss_cfg_list):
         # NOTE, dml is set as the list for combined loss
         loss_dict = dict()
         for idx, loss_func in enumerate(loss_cfg_list):
-            cfg = copy.deepcopy(loss_func["DistillationDMLLoss"])
+            cfg = copy.deepcopy(loss_func)
             weight = cfg.pop("weight")
             loss = self.dist_np_dml_loss(predicts, **cfg)
 
             if isinstance(loss, np.ndarray):
-                loss = {"loss_{}_{}".format(str(loss), idx): loss}
+                loss = {
+                    "{}_{}_{}".format(loss_func['loss_function'],
+                                      str(loss), idx): loss
+                }
             else:
                 loss = {
                     "{}_{}".format(key, idx): loss[key] * weight
@@ -677,12 +693,10 @@ class TestCombinedLoss(unittest.TestCase):
             devices.append("gpu")
 
         loss_cfg_list = [{
-            "DistillationDMLLoss": {
-                "weight": 1.0,
-                "act": "softmax",
-                "model_name_pairs": pairs,
-                "key": None
-            }
+            "loss_function": "DMLLoss",
+            "weight": 1.0,
+            "act": "softmax",
+            "model_name_pairs": pairs
         }, ]
 
         for device in devices:
@@ -694,96 +708,6 @@ class TestCombinedLoss(unittest.TestCase):
                 pd_result = pd_result_dict[k].numpy()
                 np_result = np_result_dict[k]
                 self.assertTrue(np.allclose(np_result, pd_result))
-
-
-class TestSegPairWiseLoss(unittest.TestCase):
-    def calculate_gt_loss(self, x, y):
-        pool_x = F.adaptive_avg_pool2d(x, [2, 2])
-        pool_y = F.adaptive_avg_pool2d(y, [2, 2])
-        loss = F.mse_loss(pool_x, pool_y)
-        return loss
-
-    def test_seg_pair_wise_loss(self):
-        shape = [1, 3, 10, 10]
-        x = paddle.rand(shape)
-        y = paddle.rand(shape)
-        model_name_pairs = [['student', 'teacher']]
-        key = 'hidden_0_0'
-
-        inputs = {
-            model_name_pairs[0][0]: {
-                key: x
-            },
-            model_name_pairs[0][1]: {
-                key: y
-            }
-        }
-        devices = ["cpu"]
-        if paddle.is_compiled_with_cuda():
-            devices.append("gpu")
-
-        for device in devices:
-            paddle.set_device(device)
-            loss_func = SegPairWiseLoss(model_name_pairs, key)
-            pd_loss_dict = loss_func(inputs, None)
-            pd_loss = pd_loss_dict['seg_pair_wise_loss_student_teacher_0']
-            gt_loss = self.calculate_gt_loss(x, y)
-            self.assertTrue(np.allclose(pd_loss.numpy(), gt_loss.numpy()))
-
-
-class TestSegChannelWiseLoss(unittest.TestCase):
-    def init(self):
-        self.act_name = None
-        self.act_func = None
-
-    def calculate_gt_loss(self, x, y, act=None):
-        if act is not None:
-            x = act(x)
-            y = act(y)
-        x = paddle.log(x)
-        loss = F.kl_div(x, y)
-        return loss
-
-    def test_seg_pair_wise_loss(self):
-        self.init()
-
-        shape = [1, 3, 10, 10]
-        x = paddle.rand(shape)
-        y = paddle.rand(shape)
-        model_name_pairs = [['student', 'teacher']]
-        key = 'hidden_0_0'
-
-        inputs = {
-            model_name_pairs[0][0]: {
-                key: x
-            },
-            model_name_pairs[0][1]: {
-                key: y
-            }
-        }
-        devices = ["cpu"]
-        if paddle.is_compiled_with_cuda():
-            devices.append("gpu")
-
-        for device in devices:
-            paddle.set_device(device)
-            loss_func = SegChannelwiseLoss(model_name_pairs, key, self.act_name)
-            pd_loss_dict = loss_func(inputs, None)
-            pd_loss = pd_loss_dict['seg_ch_wise_loss_student_teacher_0']
-            gt_loss = self.calculate_gt_loss(x, y, self.act_func)
-            self.assertTrue(np.allclose(pd_loss.numpy(), gt_loss.numpy()))
-
-
-class TestSegChannelWiseLoss1(TestSegChannelWiseLoss):
-    def init(self):
-        self.act_name = "softmax"
-        self.act_func = F.softmax
-
-
-class TestSegChannelWiseLoss1(TestSegChannelWiseLoss):
-    def init(self):
-        self.act_name = "sigmoid"
-        self.act_func = F.sigmoid
 
 
 if __name__ == '__main__':

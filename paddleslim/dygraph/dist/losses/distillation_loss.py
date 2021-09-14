@@ -17,9 +17,8 @@ import paddle.nn as nn
 
 from .basic_loss import BASIC_LOSS
 
-__all__ = [
-    "DistillationLoss"
-]
+__all__ = ["DistillationLoss"]
+
 
 class DistillationLoss(nn.Layer):
     """
@@ -42,7 +41,8 @@ class DistillationLoss(nn.Layer):
         self.layers_name = layers_name
         self.loss_function = loss_function
         self.temperature = temperature
-        self.align_params = params.pop('align_params')
+        self.align_params = params.pop(
+            'align_params') if 'align_params' in params else None
         if self.align_params is not None:
             for attr, value in self.align_params.items():
                 setattr(self, attr, value)
@@ -52,12 +52,17 @@ class DistillationLoss(nn.Layer):
     def forward(self, predicts, batch):
         loss_dict = dict()
         for idx, pair in enumerate(self.model_name_pairs):
-            out1 = predicts[pair[0]][self.layers_name[0]]
-            out2 = predicts[pair[1]][self.layers_name[1]]
+            out1 = predicts[pair[0]]
+            out2 = predicts[pair[1]]
+            if self.layers_name != None:
+                assert len(self.layers_name
+                           ) == 2, "length of layers_name must be equal to 2."
+                out1 = out1[self.layers_name[0]]
+                out2 = out2[self.layers_name[1]]
             if self.temperature != 1.0:
                 out1 = out1 / self.temperature
                 out2 = out2 / self.temperature
             loss_dict["{}_{}_{}_{}_{}".format(self.loss_function, pair[0], pair[
-                1], self.layers_name[0], self.layers_name[1])] = self.loss_func(out1, out2)
+                1], self.layers_name[0] if self.layers_name != None else "0", \
+                self.layers_name[1] if self.layers_name != None else "0")] = self.loss_func(out1, out2)
         return loss_dict
-

@@ -252,25 +252,49 @@ class RkdDistance(nn.Layer):
         loss = F.smooth_l1_loss(d, t_d, reduction="mean")
         return loss
 
+
 @BASIC_LOSS.register
 class MSELoss(DistanceLoss):
     """ 
        MSELoss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/MSELoss_cn.html#mseloss
     """
+
     def __init__(self, **kargs):
         super().__init__(mode='l2', **kargs)
+
 
 @BASIC_LOSS.register
 class L1Loss(DistanceLoss):
     """
        L1loss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/L1Loss_cn.html#l1loss
     """
+
     def __init__(self, **kargs):
         super().__init__(mode='l1', **kargs)
 
+
+@BASIC_LOSS.register
 class SmoothL1Loss(DistanceLoss):
     """
        SmoothL1Loss: https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/nn/SmoothL1Loss_cn.html#smoothl1loss
     """
+
     def __init__(self, **kargs):
         super().__init__(mode='smooth_l1', **kargs)
+
+
+@BASIC_LOSS.register
+class RKDLoss(nn.Layer):
+    """
+       RKDLoss
+    """
+
+    def __init__(self, eps=1e-12):
+        super().__init__()
+        self.rkd_angle_loss_func = RKdAngle()
+        self.rkd_dist_func = RkdDistance(eps=eps)
+
+    def forward(self, student, teacher):
+        angle_loss = self.rkd_angle_loss_func(student, teacher)
+        dist_loss = self.rkd_dist_func(student, teacher)
+        return angle_loss + dist_loss
