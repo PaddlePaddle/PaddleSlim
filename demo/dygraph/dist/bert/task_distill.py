@@ -27,15 +27,13 @@ import paddle
 from paddle.io import DataLoader
 import paddle.nn as nn
 import paddle.nn.functional as F
-from paddle.metric import Metric, Accuracy, Precision, Recall
+from paddle.metric import Accuracy
 
 from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad, Dict
 from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
-from paddlenlp.transformers import LinearDecayWithWarmup
-from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
-from paddlenlp.transformers import TinyBertForSequenceClassification, TinyBertTokenizer
+import paddlenlp.transformers as T
 from paddleslim import Distill
 
 FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
@@ -54,8 +52,8 @@ METRIC_CLASSES = {
 }
 
 MODEL_CLASSES = {
-    "bert": (BertForSequenceClassification, BertTokenizer),
-    "tinybert": (TinyBertForSequenceClassification, TinyBertTokenizer),
+    "bert": (T.BertForSequenceClassification, T.BertTokenizer),
+    "tinybert": (T.TinyBertForSequenceClassification, T.TinyBertTokenizer),
 }
 
 
@@ -367,8 +365,8 @@ def do_train(args):
 
     warmup = args.warmup_steps if args.warmup_steps > 0 else args.warmup_proportion
 
-    lr_scheduler = LinearDecayWithWarmup(args.learning_rate, num_training_steps,
-                                         warmup)
+    lr_scheduler = T.LinearDecayWithWarmup(args.learning_rate,
+                                           num_training_steps, warmup)
 
     # Generate parameter names needed to perform weight decay.
     # All bias and LayerNorm parameters are excluded.
