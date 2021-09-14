@@ -83,6 +83,8 @@ class OFABase(Layer):
     def __init__(self, model):
         super(OFABase, self).__init__()
         self.model = model
+        self._skip_layers = None
+        self._cannot_changed_layer = []
         self._ofa_layers, self._elastic_task, self._key2name, self._layers = self.get_layers(
         )
 
