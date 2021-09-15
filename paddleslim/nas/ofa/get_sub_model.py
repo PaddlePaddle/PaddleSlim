@@ -21,18 +21,18 @@ __all__ = ['check_search_space']
 
 DYNAMIC_WEIGHT_OP = [
     'conv2d', 'mul', 'matmul', 'embedding', 'conv2d_transpose',
-    'depthwise_conv2d'
+    'depthwise_conv2d', 'matmul_v2'
 ]
 
 CONV_TYPES = [
     'conv2d', 'conv3d', 'conv1d', 'superconv2d', 'supergroupconv2d',
-    'superdepthwiseconv2d'
+    'superdepthwiseconv2d', 'matmul_v2'
 ]
 
 ALL_WEIGHT_OP = [
     'conv2d', 'mul', 'matmul', 'elementwise_add', 'embedding',
     'conv2d_transpose', 'depthwise_conv2d', 'batch_norm', 'layer_norm',
-    'instance_norm', 'sync_batch_norm'
+    'instance_norm', 'sync_batch_norm', 'matmul_v2'
 ]
 
 
