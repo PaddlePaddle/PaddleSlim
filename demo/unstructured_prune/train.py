@@ -325,7 +325,7 @@ def compress(args):
                 fleet.save_persistables(executor=exe, dirname=args.model_path)
             else:
                 paddle.fluid.io.save_persistables(
-                    executor, dirname=args.model_path)
+                    executor=exe, dirname=args.model_path)
 
 
 def main():
