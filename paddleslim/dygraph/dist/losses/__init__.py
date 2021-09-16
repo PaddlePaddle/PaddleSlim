@@ -45,7 +45,9 @@ class CombinedLoss(nn.Layer):
         assert isinstance(loss_config_list, list), (
             'operator config should be a list')
         for config in loss_config_list:
-            assert isinstance(config, dict), "config must be a dict, but now is {}".format(type(config))
+            assert isinstance(
+                config, dict), "config must be a dict, but now is {}".format(
+                    type(config))
             assert "weight" in config, "weight must be in param, but param just contains {}".format(
                 config.keys())
             self.loss_weight.append(config.pop("weight"))
@@ -64,6 +66,7 @@ class CombinedLoss(nn.Layer):
                     for key in loss
                 }
             loss_dict.update(loss)
+
         if loss_dict == {}:
             loss_dict["loss"] = paddle.to_tensor(0.)
         else:

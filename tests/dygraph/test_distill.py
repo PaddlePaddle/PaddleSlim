@@ -27,18 +27,21 @@ class TestImperativeDistill(unittest.TestCase):
         distill_configs = [{
             'loss_function': 'MSELoss',
             'layers': [
-              {"layers_name": ["conv1", "conv1"]},
-              {"layers_name": ["conv2_2", "conv2_2"]},
+                {
+                    "layers_name": ["conv1", "conv1"]
+                },
+                {
+                    "layers_name": ["conv2_2", "conv2_2"]
+                },
             ]
         }, {
             'loss_function': 'CELoss',
             'temperature': 1.0,
-            'layers': [
-              {"layers_name": ["fc", "fc"]},
-            ]
+            'layers': [{
+                "layers_name": ["fc", "fc"]
+            }, ]
         }]
         return distill_configs
-
 
     def test_distill(self):
         transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
@@ -96,8 +99,10 @@ class TestImperativeDistill(unittest.TestCase):
             test(self.s_model)
             self.s_model.train()
 
-        distill_model = Distill(self.distill_configs, self.s_model, self.t_model)
+        distill_model = Distill(self.distill_configs, self.s_model,
+                                self.t_model)
         train(distill_model)
+
 
 class TestImperativeDistillCase1(TestImperativeDistill):
     def prepare_model(self):
@@ -123,15 +128,19 @@ class TestImperativeDistillCase1(TestImperativeDistill):
         distill_configs = [{
             'loss_function': 'MSELoss',
             'layers': [
-              {"layers_name": ["conv1", "conv1"]},
-              {"layers_name": ["conv2", "conv3"]},
+                {
+                    "layers_name": ["conv1", "conv1"]
+                },
+                {
+                    "layers_name": ["conv2", "conv3"]
+                },
             ]
         }, {
             'loss_function': 'CELoss',
             'temperature': 1.0,
-            'layers': [
-              {"layers_name": ["fc", "fc"]},
-            ]
+            'layers': [{
+                "layers_name": ["fc", "fc"]
+            }, ]
         }]
         config2yaml(distill_configs, 'test.yaml')
         return './test.yaml'

@@ -22,8 +22,10 @@ from .distill_helpers import yaml2config
 
 __all__ = ['Distill']
 
+
 class LayerConfig:
     """ The key of config can be set"""
+
     def __init__(self,
                  model_name_pairs,
                  layers_name,
@@ -35,13 +37,17 @@ class LayerConfig:
         self.model_name_pairs = model_name_pairs
         self.layers_name = layers_name
         if loss_function not in BASIC_LOSS.module_dict:
-            raise NotImplementedError("loss function {} is not support. Support loss including {}".format(loss_function, BASIC_LOSS.module_dict.keys()))
+            raise NotImplementedError("loss function {} is not support. "
+                                      "Support loss including {}".format(
+                                          loss_function,
+                                          BASIC_LOSS.module_dict.keys()))
         self.loss_function = loss_function
         self.weight = weight
         self.temperature = temperature
         self.align_params = align_params
         for k, v in loss_params.items():
             setattr(self, k, v)
+
 
 def _add_hooks(model, outs, hook_layers_name):
     """
@@ -50,6 +56,7 @@ def _add_hooks(model, outs, hook_layers_name):
         outs(dict): save the middle outputs of model according to the name.
         hook_layers_name(list): name of middle layers.
     """
+
     def _get_activation(outs, name):
         ### TODO: need to support get input tensor
         #outs[name] = {}
@@ -57,12 +64,14 @@ def _add_hooks(model, outs, hook_layers_name):
             #outs[name]["output"] = output
             #outs[name]["input"] = input
             outs[name] = output
+
         return get_output_hook
 
     ### TODO: support DP model
     for idx, (n, m) in enumerate(model.named_sublayers()):
         if n in hook_layers_name:
             m.register_forward_post_hook(_get_activation(outs, n))
+
 
 class Distill(nn.Layer):
     """
@@ -72,7 +81,12 @@ class Distill(nn.Layer):
         teacher_models(list(nn.Layer)): the list of teacher model, the state of student model must be evaluate mode.
         return_model_outputs(bool): whether to return model output. Default: True.
     """
-    def __init__(self, distill_configs, student_models, teacher_models, return_model_outputs=True):
+
+    def __init__(self,
+                 distill_configs,
+                 student_models,
+                 teacher_models,
+                 return_model_outputs=True):
         super(Distill, self).__init__()
         if isinstance(student_models, nn.Layer):
             student_models = [student_models]
@@ -116,7 +130,7 @@ class Distill(nn.Layer):
     def _extract_hook_position(self):
         """ extrat hook position according to config"""
         model_hook_layers = {}
-        for config in self._loss_config_list: 
+        for config in self._loss_config_list:
             model_name_pairs = config['model_name_pairs']
             layers_name = config['layers_name']
             for model_name_pair in model_name_pairs:
@@ -146,7 +160,8 @@ class Distill(nn.Layer):
 
         for per_layer_config in config['layers']:
             per_layer_config.update(global_config)
-            self._loss_config_list.append(LayerConfig(**per_layer_config).__dict__)
+            self._loss_config_list.append(
+                LayerConfig(**per_layer_config).__dict__)
 
     def _prepare_outputs(self):
         """
@@ -156,11 +171,13 @@ class Distill(nn.Layer):
         for idx, m in enumerate(self._student_models):
             hook_layers = self._hook_layers['student_{}'.format(idx)]
             stu_outs = collections.OrderedDict()
-            outputs_tensor['student_{}'.format(idx)] = self._prepare_hook(m, hook_layers, stu_outs)
+            outputs_tensor['student_{}'.format(idx)] = self._prepare_hook(
+                m, hook_layers, stu_outs)
         for idx, m in enumerate(self._teacher_models):
             hook_layers = self._hook_layers['teacher_{}'.format(idx)]
             tea_outs = collections.OrderedDict()
-            outputs_tensor['teacher_{}'.format(idx)] = self._prepare_hook(m, hook_layers, tea_outs)
+            outputs_tensor['teacher_{}'.format(idx)] = self._prepare_hook(
+                m, hook_layers, tea_outs)
         return outputs_tensor
 
     def _prepare_hook(self, model, hook_layers, outs_dict):
