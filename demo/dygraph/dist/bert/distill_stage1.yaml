@@ -1,10 +1,10 @@
 - DistillConfig:
-    loss_function: MSELoss
+  - loss_function: MSELoss
     model_name_pairs:
     - - student_0
       - teacher_0
     weight: 1.0
-  - layers:
+    layers:
     - layers_name: ['tinybert.embeddings', 'bert.embeddings']
     - layers_name: ['tinybert.encoder.layers.0', 'bert.encoder.layers.1']
     - layers_name: ['tinybert.encoder.layers.1', 'bert.encoder.layers.3']
@@ -13,8 +13,14 @@
     - layers_name: ['tinybert.encoder.layers.4', 'bert.encoder.layers.9']
     - layers_name: ['tinybert.encoder.layers.5', 'bert.encoder.layers.11']
     - layers_name: ['tinybert.encoder.layers.0.self_attn', 'bert.encoder.layers.1.self_attn']
+      idx: [1, 1]
     - layers_name: ['tinybert.encoder.layers.1.self_attn', 'bert.encoder.layers.3.self_attn']
+      idx: [1, 1]
     - layers_name: ['tinybert.encoder.layers.2.self_attn', 'bert.encoder.layers.5.self_attn']
+      idx: [1, 1]
     - layers_name: ['tinybert.encoder.layers.3.self_attn', 'bert.encoder.layers.7.self_attn']
+      idx: [1, 1]
     - layers_name: ['tinybert.encoder.layers.4.self_attn', 'bert.encoder.layers.9.self_attn']
+      idx: [1, 1]
     - layers_name: ['tinybert.encoder.layers.5.self_attn', 'bert.encoder.layers.11.self_attn']
+      idx: [1, 1]

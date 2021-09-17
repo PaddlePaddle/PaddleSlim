@@ -35,6 +35,9 @@ from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
 import paddlenlp.transformers as T
 from paddleslim import Distill
+from distill_utils import attention_forward
+
+paddle.nn.MultiHeadAttention.forward = attention_forward
 
 FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)

@@ -15,6 +15,7 @@ import os
 import numpy as np
 import collections
 from collections import namedtuple
+import paddle
 import paddle.nn as nn
 from . import losses
 from .losses.basic_loss import BASIC_LOSS
@@ -30,6 +31,8 @@ class LayerConfig:
                  model_name_pairs,
                  layers_name,
                  loss_function,
+                 io=["output", "output"],
+                 idx=[None, None],
                  weight=1.0,
                  temperature=1.0,
                  align_params=None,
@@ -42,6 +45,8 @@ class LayerConfig:
                                           loss_function,
                                           BASIC_LOSS.module_dict.keys()))
         self.loss_function = loss_function
+        self.io = io
+        self.idx = idx
         self.weight = weight
         self.temperature = temperature
         self.align_params = align_params
@@ -49,7 +54,7 @@ class LayerConfig:
             setattr(self, k, v)
 
 
-def _add_hooks(model, outs, hook_layers_name):
+def _add_hooks(model, outs, layers_name, hook_layers_name, io='o', idx="None"):
     """
         Get output by layer name.
         models(nn.Layer):  model need to be add hook.
@@ -57,20 +62,26 @@ def _add_hooks(model, outs, hook_layers_name):
         hook_layers_name(list): name of middle layers.
     """
 
-    def _get_activation(outs, name):
-        ### TODO: need to support get input tensor
-        #outs[name] = {}
+    def _get_activation(outs, name, io, idx):
         def get_output_hook(layer, input, output):
-            #outs[name]["output"] = output
-            #outs[name]["input"] = input
-            outs[name] = output
+            if io == 'o':
+                if idx == "None":
+                    outs[name] = output
+                else:
+                    outs[name] = output[idx]
+            else:
+                if idx == "None":
+                    outs[name] = input
+                else:
+                    outs[name] = input[idx]
 
         return get_output_hook
 
     ### TODO: support DP model
-    for idx, (n, m) in enumerate(model.named_sublayers()):
-        if n in hook_layers_name:
-            m.register_forward_post_hook(_get_activation(outs, n))
+    for i, (n, m) in enumerate(model.named_sublayers()):
+        if n == layers_name:
+            m.register_forward_post_hook(
+                _get_activation(outs, hook_layers_name, io, idx))
 
 
 class Distill(nn.Layer):
@@ -120,6 +131,7 @@ class Distill(nn.Layer):
         self.distill_loss = losses.CombinedLoss(self._loss_config_list)
 
         self._output_tensor_dict = self._prepare_outputs()
+        self._check_hook_output = False
 
     def parameters(self):
         params = []
@@ -160,8 +172,16 @@ class Distill(nn.Layer):
 
         for per_layer_config in config['layers']:
             per_layer_config.update(global_config)
-            self._loss_config_list.append(
-                LayerConfig(**per_layer_config).__dict__)
+            layer_config = LayerConfig(**per_layer_config).__dict__
+            for idx in range(len(layer_config['layers_name'])):
+                ### slice 0 means "i" or "o".
+                postfix = '#' + layer_config['io'][idx][0] + '#' + str(
+                    layer_config['idx'][idx])
+                layer_config['layers_name'][idx] += postfix
+            ### io and idx only use to extract tensor from hook, so pop it here.
+            layer_config.pop('io')
+            layer_config.pop('idx')
+            self._loss_config_list.append(layer_config)
 
     def _prepare_outputs(self):
         """
@@ -185,8 +205,11 @@ class Distill(nn.Layer):
         Add hook.
         """
         for layer in hook_layers:
-            if isinstance(layer, str):
-                _add_hooks(model, outs_dict, layer)
+            tmp = layer.strip().split('#')
+            layer_name, io, idx = tmp[0], tmp[1], tmp[2]
+            if idx != "None":
+                idx = int(idx)
+            _add_hooks(model, outs_dict, layer_name, layer, io, idx)
         return outs_dict
 
     def forward(self, *inputs, **kwargs):
@@ -206,6 +229,14 @@ class Distill(nn.Layer):
         if len(self._teacher_models) == 1:
             teachers_batch_outs = teachers_batch_outs[0]
 
+        if self._check_hook_output is False:
+            self._check_hook_output = True
+            for mo, hook_out in self._output_tensor_dict.items():
+                for hook_name, hook_value in hook_out.items():
+                    hook_name = hook_name.strip().split('#')[0]
+                    assert type(hook_value) is paddle.Tensor, \
+                        "model: {} layer: {} has more than one output/input" \
+                        ", please specific the idx of output/input.".format(mo, hook_name)
         ### batch is None just for now
         distill_outputs = self.distill_loss(self._output_tensor_dict, None)
         distill_loss = distill_outputs['loss']
