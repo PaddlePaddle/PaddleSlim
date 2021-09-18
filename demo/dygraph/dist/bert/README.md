@@ -10,7 +10,7 @@
 TinyBERT中蒸馏的整体过程：首先进行通用蒸馏，然后用数据增强后的数据，在特定任务上进行蒸馏，本文主要进行了第二阶段的蒸馏，模型是利用第一阶段得到的通用小模型`tinybert-6l-768d-v2`进行初始化。
 
 <p align="center">
-<img src="./imgs/tinybert.png" width="950"/><br />
+<img src="./tinybert.png" width="950"/><br />
 TinyBERT蒸馏流程图
 </p>
 

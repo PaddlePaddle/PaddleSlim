@@ -103,8 +103,6 @@ class Distill(nn.Layer):
             student_models = [student_models]
         if isinstance(teacher_models, nn.Layer):
             teacher_models = [teacher_models]
-        for student_model in student_models:
-            assert student_model.training, "The student model should not be eval mode."
         for teacher_model in teacher_models:
             assert teacher_model.training is False, "The teacher model should be eval mode."
 

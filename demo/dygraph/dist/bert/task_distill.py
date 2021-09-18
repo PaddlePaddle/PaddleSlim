@@ -161,11 +161,6 @@ def parse_args():
         action="store_true",
         help="Whether to use augmentation data to train.", )
     parser.add_argument(
-        "--intermediate_distill",
-        action="store_true",
-        help="Whether distilling intermediate layers. If False, it means prediction layer distillation.",
-    )
-    parser.add_argument(
         "--weight_decay",
         default=0.0,
         type=float,
@@ -371,10 +366,17 @@ def do_train(args):
     lr_scheduler = T.LinearDecayWithWarmup(args.learning_rate,
                                            num_training_steps, warmup)
 
+    assert os.path.exists(
+        args.distill_config), "distill file {} not exist.".format(
+            args.distill_config)
+    distill_model = Distill(
+        args.distill_config, student_models=[student],
+        teacher_models=[teacher])
+
     # Generate parameter names needed to perform weight decay.
     # All bias and LayerNorm parameters are excluded.
     decay_params = [
-        p.name for n, p in student.named_parameters()
+        p.name for n, p in distill_model.named_parameters()
         if not any(nd in n for nd in ["bias", "norm"])
     ]
     optimizer = paddle.optimizer.AdamW(
@@ -382,7 +384,7 @@ def do_train(args):
         beta1=0.9,
         beta2=0.999,
         epsilon=args.adam_epsilon,
-        parameters=student.parameters(),
+        parameters=distill_model.parameters(),
         weight_decay=args.weight_decay,
         apply_decay_param_fun=lambda x: x in decay_params)
 
@@ -392,13 +394,6 @@ def do_train(args):
     global_step = 0
     tic_train = time.time()
     best_res = 0.0
-
-    assert os.path.exists(
-        args.distill_config), "distill file {} not exist.".format(
-            args.distill_config)
-    distill_model = Distill(
-        args.distill_config, student_models=[student],
-        teacher_models=[teacher])
 
     for epoch in range(num_train_epochs):
         for step, batch in enumerate(train_data_loader):
