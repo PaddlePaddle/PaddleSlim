@@ -35,7 +35,7 @@ from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
 import paddlenlp.transformers as T
 from paddleslim import Distill
-from distill_utils import attention_forward
+from tinybert_distill_utils import attention_forward
 
 paddle.nn.MultiHeadAttention.forward = attention_forward
 
