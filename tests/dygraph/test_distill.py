@@ -106,18 +106,29 @@ class TestImperativeDistill(unittest.TestCase):
 
 class TestImperativeDistillCase1(TestImperativeDistill):
     def prepare_model(self):
+        class convbn(nn.Layer):
+            def __init__(self):
+                super(convbn, self).__init__()
+                self.conv = nn.Conv2D(3, 3, 3, padding=1)
+                self.bn = nn.BatchNorm(3)
+
+            def forward(self, x):
+                conv_out = self.conv(x)
+                bn_out = self.bn(conv_out)
+                return tuple([conv_out, bn_out])
+
         class Model(nn.Layer):
             def __init__(self):
                 super(Model, self).__init__()
                 self.conv1 = nn.Conv2D(3, 3, 3, padding=1)
-                self.conv2 = nn.Conv2D(3, 3, 3, padding=1)
+                self.conv2 = convbn()
                 self.conv3 = nn.Conv2D(3, 3, 3, padding=1)
                 self.fc = nn.Linear(3072, 10)
 
             def forward(self, x):
                 self.conv1_out = self.conv1(x)
                 conv2_out = self.conv2(self.conv1_out)
-                self.conv3_out = self.conv3(conv2_out)
+                self.conv3_out = self.conv3(conv2_out[0])
                 out = paddle.reshape(self.conv3_out, shape=[x.shape[0], -1])
                 out = self.fc(out)
                 return out
@@ -129,17 +140,43 @@ class TestImperativeDistillCase1(TestImperativeDistill):
             'loss_function': 'MSELoss',
             'layers': [
                 {
-                    "layers_name": ["conv1", "conv1"]
+                    "layers_name": ["conv1", "conv1"],
+                    'align_params': {
+                        'align_type': '1x1conv',
+                        'in_channel': 3,
+                        'out_channel': 3
+                    }
                 },
                 {
-                    "layers_name": ["conv2", "conv3"]
+                    "layers_name": ["conv2", "conv3"],
+                    'io': ["input", "output"],
+                    'align_params': {
+                        'align_type': '3x3conv',
+                        'in_channel': 3,
+                        'out_channel': 3
+                    }
+                },
+                {
+                    "layers_name": ["conv2", "conv3"],
+                    'io': ["output", "output"],
+                    'idx': [1, None],
+                    'align_params': {
+                        'align_type': '1x1conv+bn',
+                        'in_channel': 3,
+                        'out_channel': 3
+                    }
                 },
             ]
         }, {
             'loss_function': 'CELoss',
             'temperature': 1.0,
             'layers': [{
-                "layers_name": ["fc", "fc"]
+                "layers_name": ["fc", "fc"],
+                'align_params': {
+                    'align_type': 'linear',
+                    'in_channel': 10,
+                    'out_channel': 10
+                }
             }, ]
         }]
         config2yaml(distill_configs, 'test.yaml')

@@ -232,7 +232,8 @@ class Distill(nn.Layer):
             for mo, hook_out in self._output_tensor_dict.items():
                 for hook_name, hook_value in hook_out.items():
                     hook_name = hook_name.strip().split('#')[0]
-                    assert type(hook_value) is paddle.Tensor, \
+                    assert type(hook_value) is paddle.Tensor or len(\
+                        hook_value) == 1, \
                         "model: {} layer: {} has more than one output/input" \
                         ", please specific the idx of output/input.".format(mo, hook_name)
         ### batch is None just for now
