@@ -31,7 +31,11 @@ import paddle.nn as nn
 
 from paddleslim import PTQ
 
-from mobilenet_v3 import MobileNetV3_large_x1_0
+import sys
+sys.path.append(os.path.dirname("__file__"))
+sys.path.append(
+    os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
+from models.dygraph.mobilenet_v3 import MobileNetV3_large_x1_0
 
 
 class ImageNetValDataset(Dataset):
@@ -64,50 +68,20 @@ class ImageNetValDataset(Dataset):
         return len(self.data)
 
 
-def load_dygraph_pretrain(model, path=None, load_static_weights=False):
-    if not (os.path.isdir(path) or os.path.exists(path + '.pdparams')):
-        raise ValueError("Model pretrain path {} does not "
-                         "exists.".format(path))
-    if load_static_weights:
-        pre_state_dict = load_program_state(path)
-        param_state_dict = {}
-        model_dict = model.state_dict()
-        for key in model_dict.keys():
-            weight_name = model_dict[key].name
-            if weight_name in pre_state_dict.keys():
-                print('Load weight: {}, shape: {}'.format(
-                    weight_name, pre_state_dict[weight_name].shape))
-                param_state_dict[key] = pre_state_dict[weight_name]
-            else:
-                param_state_dict[key] = model_dict[key]
-        model.set_dict(param_state_dict)
-        return
-
-    param_state_dict = paddle.load(path + ".pdparams")
-    model.set_dict(param_state_dict)
-    return
-
-
 def calibrate(model, dataset, batch_num, batch_size):
     data_loader = paddle.io.DataLoader(
         dataset, batch_size=batch_size, num_workers=5)
 
-    acc_list = []
     for idx, data in enumerate(data_loader()):
         img = data[0]
         label = data[1]
 
         out = model(img)
 
-        acc = paddle.metric.accuracy(out, label)
-        acc_list.append(acc.numpy())
-
         if (idx + 1) % 50 == 0:
             print("idx:" + str(idx))
         if (batch_num > 0) and (idx + 1 >= batch_num):
             break
-
-    return np.mean(acc_list)
 
 
 def main():
@@ -117,14 +91,13 @@ def main():
     assert FLAGS.model in model_list, "Expected FLAGS.model in {}, but received {}".format(
         model_list, FLAGS.model)
     if FLAGS.model == 'mobilenet_v3':
-        fp32_model = MobileNetV3_large_x1_0()
+        fp32_model = MobileNetV3_large_x1_0(skip_se_quant=True)
     else:
         fp32_model = models.__dict__[FLAGS.model](pretrained=True)
     if FLAGS.pretrain_weight:
         info_dict = paddle.load(FLAGS.pretrain_weight)
         fp32_model.load_dict(info_dict)
         print('Finish loading model weights:{}'.format(FLAGS.pretrain_weight))
-        #load_dygraph_pretrain(fp32_model, FLAGS.pretrain_weight, True)
     fp32_model.eval()
     for name, layer in fp32_model.named_sublayers():
         print(name, layer)

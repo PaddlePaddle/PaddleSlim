@@ -155,13 +155,13 @@ QAT
 静态离线量化
 -------------------
 
-.. py:class:: paddleslim.PTQ(cactivation_quantizer='KLQuantizer', weight_quantizer='PerChannelAbsmaxQuantizer', **kwargs)
+.. py:class:: paddleslim.PTQ(activation_quantizer='KLQuantizer', weight_quantizer='PerChannelAbsmaxQuantizer', **kwargs)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/quant/ptq.py>`_
 
 **参数：**
 
-- **cactivation_quantizer(str, Optional)** - 激活量化方式。 可选择`KLQuantizer`、`HistQuantizer`和`AbsmaxQuantizer`，默认为`KLQuantizer`。
+- **activation_quantizer(str, Optional)** - 激活量化方式。 可选择`KLQuantizer`、`HistQuantizer`和`AbsmaxQuantizer`，默认为`KLQuantizer`。
 
 - **weight_quantizer(str, Optional)** - 激活量化方式。 可选择`AbsmaxQuantizer`和`PerChannelAbsmaxQuantizer`，默认为`PerChannelAbsmaxQuantizer`。
 
@@ -203,7 +203,7 @@ QAT
 
     对模型进行离线量化的处理，插入量化-反量化节点。
     
-    **参数：**
+            **参数：**
     
     - **model(paddle.nn.Layer)** - 一个paddle Layer的实例，需要包含支持量化的算子，如：`Conv, Linear`。
     - **fuse(bool)** - 是否对模型进行fuse融合，默认是False。
@@ -214,7 +214,7 @@ QAT
     .. code-block:: python
         from paddleslim import PTQ
         from paddle.vision.models import mobilenet_v1
-        fp32_model = mobilenet_v1(pretrained=True) 
+        fp32_model = mobilenet_v1(pretrained=True)
         ptq = PTQ()
         quant_model = ptq.quantize(fp32_model)
     ..
@@ -235,7 +235,7 @@ QAT
     .. py:method:: save_quantized_model(model, path, input_spec=None)
 
     将指定的动态图量化模型导出为静态图预测模型，用于预测部署。
-    
+ 
     量化预测模型可以使用`VisualDL`软件打开，进行可视化查看。该量化预测模型和普通FP32预测模型一样，可以使用PaddleLite和PaddleInference加载预测，具体请参考`推理部署`章节。
     
     **参数：**
@@ -254,7 +254,7 @@ QAT
 
         from paddleslim import PTQ
         from paddle.vision.models import mobilenet_v1
-        fp32_model = mobilenet_v1(pretrained=True) 
+        fp32_model = mobilenet_v1(pretrained=True)
         ptq = PTQ()
         quant_model = ptq.quantize(fp32_model)
 
