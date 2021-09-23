@@ -7,7 +7,7 @@ import paddle
 import paddle.nn as nn
 from paddle.vision.models import MobileNetV1
 import paddle.vision.transforms as T
-from paddleslim.dygraph.dist import Distill, AdaptorBase
+from paddleslim.dygraph.dist import Distill, config2yaml
 from paddleslim.common.log_helper import get_logger
 
 _logger = get_logger(
@@ -19,41 +19,29 @@ class TestImperativeDistill(unittest.TestCase):
         self.s_model, self.t_model = self.prepare_model()
         self.t_model.eval()
         self.distill_configs = self.prepare_config()
-        self.adaptor = self.prepare_adaptor()
 
     def prepare_model(self):
         return MobileNetV1(), MobileNetV1()
 
     def prepare_config(self):
         distill_configs = [{
-            's_feature_idx': 0,
-            't_feature_idx': 0,
-            'feature_type': 'hidden',
-            'loss_function': 'l2'
+            'loss_function': 'MSELoss',
+            'layers': [
+                {
+                    "layers_name": ["conv1", "conv1"]
+                },
+                {
+                    "layers_name": ["conv2_2", "conv2_2"]
+                },
+            ]
         }, {
-            's_feature_idx': 1,
-            't_feature_idx': 1,
-            'feature_type': 'hidden',
-            'loss_function': 'l2'
-        }, {
-            's_feature_idx': 0,
-            't_feature_idx': 0,
-            'feature_type': 'logits',
-            'loss_function': 'l2'
+            'loss_function': 'CELoss',
+            'temperature': 1.0,
+            'layers': [{
+                "layers_name": ["fc", "fc"]
+            }, ]
         }]
         return distill_configs
-
-    def prepare_adaptor(self):
-        class Adaptor(AdaptorBase):
-            def mapping_layers(self):
-                mapping_layers = {}
-                mapping_layers['hidden_0'] = 'conv1'
-                mapping_layers['hidden_1'] = 'conv2_2'
-                mapping_layers['hidden_2'] = 'conv3_2'
-                mapping_layers['logits_0'] = 'fc'
-                return mapping_layers
-
-        return Adaptor
 
     def test_distill(self):
         transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
@@ -97,7 +85,7 @@ class TestImperativeDistill(unittest.TestCase):
             for batch_id, data in enumerate(train_reader):
                 img = paddle.to_tensor(data[0])
                 label = paddle.to_tensor(data[1])
-                student_out, teacher_out, distill_loss = model(img)
+                distill_loss, student_out, teacher_out = model(img)
                 loss = paddle.nn.functional.loss.cross_entropy(student_out,
                                                                label)
                 avg_loss = paddle.mean(loss)
@@ -112,7 +100,7 @@ class TestImperativeDistill(unittest.TestCase):
             self.s_model.train()
 
         distill_model = Distill(self.distill_configs, self.s_model,
-                                self.t_model, self.adaptor, self.adaptor)
+                                self.t_model)
         train(distill_model)
 
 
@@ -136,31 +124,26 @@ class TestImperativeDistillCase1(TestImperativeDistill):
 
         return Model(), Model()
 
-    def prepare_adaptor(self):
-        class Adaptor(AdaptorBase):
-            def mapping_layers(self):
-                mapping_layers = {}
-                mapping_layers['hidden_1'] = 'conv2'
-                if self.add_tensor:
-                    mapping_layers['hidden_0'] = self.model.conv1_out
-                    mapping_layers['hidden_2'] = self.model.conv3_out
-                return mapping_layers
-
-        return Adaptor
-
     def prepare_config(self):
         distill_configs = [{
-            's_feature_idx': 0,
-            't_feature_idx': 0,
-            'feature_type': 'hidden',
-            'loss_function': 'l2'
+            'loss_function': 'MSELoss',
+            'layers': [
+                {
+                    "layers_name": ["conv1", "conv1"]
+                },
+                {
+                    "layers_name": ["conv2", "conv3"]
+                },
+            ]
         }, {
-            's_feature_idx': 1,
-            't_feature_idx': 2,
-            'feature_type': 'hidden',
-            'loss_function': 'l2'
+            'loss_function': 'CELoss',
+            'temperature': 1.0,
+            'layers': [{
+                "layers_name": ["fc", "fc"]
+            }, ]
         }]
-        return distill_configs
+        config2yaml(distill_configs, 'test.yaml')
+        return './test.yaml'
 
 
 if __name__ == '__main__':

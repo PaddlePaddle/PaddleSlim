@@ -14,7 +14,9 @@
 
 from . import distill
 from .distill import *
+from .distill_helpers import *
 
 __all__ = []
 
 __all__ += distill.__all__
+__all__ += distill_helpers.__all__
