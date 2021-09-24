@@ -22,6 +22,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
+add_arg('use_gpu',          bool, True,               "Whether to use GPU for training or not. Default: True")
 add_arg('batch_size',       int,  64,                 "Minibatch size. Default: 64")
 add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation. Default: 64")
 add_arg('lr',               float,  0.05,               "The learning rate used to fine-tune pruned model. Default: 0.05")
@@ -105,7 +106,10 @@ def create_unstructured_pruner(model, args, configs=None):
 
 
 def compress(args):
-    place = paddle.set_device('gpu')
+    if args.use_gpu:
+        place = paddle.set_device('gpu')
+    else:
+        place = paddle.set_device('cpu')
 
     trainer_num = paddle.distributed.get_world_size()
     use_data_parallel = trainer_num != 1
