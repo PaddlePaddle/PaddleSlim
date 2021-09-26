@@ -16,13 +16,13 @@ TinyBERT蒸馏流程图
 
 
 在模型蒸馏中，较大的模型（在本例中是BERT base）通常被称为教师模型，较小的模型（在本例中是层数为6的BERT，下文都称TinyBERT6）通常被称为学生模型。
-知识的蒸馏通常是通过让学生模型学习相关的蒸馏相损失函数实现，在本实验中，蒸馏的学习目标由两个部分组成，分别是中间层的蒸馏损失和预测层的蒸馏损失。其中，中间层的蒸馏包括对Embedding层的蒸馏、对每个Transformer layer输出的蒸馏、以及对每个Transformer中attention矩阵（softmax之前的结果）的蒸馏，三者均采用的是均方误差损失函数。而预测层蒸馏的学习目标则是学生模型输出的logits和教师模型输出的logits的交叉熵损失。
+知识的蒸馏通常是通过让学生模型学习相关的蒸馏损失函数实现，在本实验中，蒸馏的学习目标由两个部分组成，分别是中间层的蒸馏损失和预测层的蒸馏损失。其中，中间层的蒸馏包括对Embedding层的蒸馏、对每个Transformer layer输出的蒸馏、以及对每个Transformer中attention矩阵（softmax之前的结果）的蒸馏，三者均采用的是均方误差损失函数。而预测层蒸馏的学习目标则是学生模型输出的logits和教师模型输出的logits的交叉熵损失。
 
 由于教师模型是12层，学生模型的层数少于教师模型的层数，因此需要选择一种layer mapping的方式。论文中采用了一种固定的映射方式，当学生模型的层数为教师模型的1/2时，学生第i层的attention矩阵，需要学习教师的第2i+1层的attention矩阵，Transformer layer输出同理。
 
 实验分为两个大的训练过程：先对BERT-base进行微调，得到教师模型，再进行蒸馏的训练。其中，蒸馏过程也分为两个步骤：先对中间层进行蒸馏多个epochs（论文中针对具体任务可能是10、20或者30个），再对预测层蒸馏3个epochs。
 
-需要注意的是，在使用不同教师模型时，`tinybert-6l-768d-v2`、`tinybert-4l-312d-v2`这两个v2版本的预训练模型中开放的从学生embedding输出、transformer中间层输出到教师相应输出的转换矩阵是每层独立的，而其他的`tinybert-6l-768d`、`tinybert-4l-312d`、`tinybert-6l-768d-zh`、`tinybert-4l-312-zh`则是多层之间的参数共用一个转换矩阵的。
+需要注意的是，在使用不同教师模型时，`tinybert-6l-768d-v2`、`tinybert-4l-312d-v2`这两个v2版本的预训练模型中从学生embedding输出、transformer中间层输出到教师相应输出的转换矩阵是每层独立的，而其他的`tinybert-6l-768d`、`tinybert-4l-312d`、`tinybert-6l-768d-zh`、`tinybert-4l-312-zh`则是多层之间的参数共用一个转换矩阵的。
 
 ### 安装PaddleNLP和Paddle
 本教程基于PaddleNLP中BERT模型进行压缩，依赖PaddleNLP和Paddle。

@@ -12,6 +12,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
+import numpy as np
 import paddle
 import paddle.nn as nn
 
@@ -86,33 +87,61 @@ class ShapeAlign(nn.Layer):
         out_channel(int): output channel number
     """
 
-    def __init__(self, align_type, in_channel, out_channel):
+    def __init__(self, align_type, in_channel, out_channel, weight_init=None):
         super(ShapeAlign, self).__init__()
         self._in_channel = in_channel
         self._out_channel = out_channel
         assert align_type.lower() in [
             '1x1conv', '3x3conv', '1x1conv+bn', '3x3conv+bn', 'linear'
         ], "only support 1x1conv, 3x3conv, 1x1conv+bn, 3x3conv+bn, linear for now"
+
+        if weight_init is not None:
+            assert 'initializer' in weight_init
+            init_mode = weight_init.pop('initializer')
+            weight_attr = paddle.framework.ParamAttr(
+                initializer=eval('paddle.nn.initializer.{}'.format(init_mode))(
+                    **weight_init))
+        else:
+            weight_attr = None
         if align_type.lower() == '1x1conv':
             self.align_op = paddle.nn.Conv2D(
-                in_channel, out_channel, kernel_size=1, stride=1, padding=0)
+                in_channel,
+                out_channel,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                weight_attr=weight_attr)
         elif align_type.lower() == '3x3conv':
             self.align_op = paddle.nn.Conv2D(
-                in_channel, out_channel, kernel_size=3, stride=1, padding=1)
+                in_channel,
+                out_channel,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                weight_attr=weight_attr)
         elif align_type.lower() == '1x1conv+bn':
             self.align_op = paddle.nn.Sequential(
                 paddle.nn.Conv2D(
-                    in_channel, out_channel, kernel_size=1, stride=1,
-                    padding=0),
+                    in_channel,
+                    out_channel,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                    weight_attr=weight_attr),
                 paddle.nn.BatchNorm2D(out_channel))
         elif align_type.lower() == '3x3conv+bn':
             self.align_op = paddle.nn.Sequential(
                 paddle.nn.Conv2D(
-                    in_channel, out_channel, kernel_size=3, stride=1,
-                    padding=1),
+                    in_channel,
+                    out_channel,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    weight_attr=weight_attr),
                 paddle.nn.BatchNorm2D(out_channel))
         elif align_type.lower() == 'linear':
-            self.align_op = paddle.nn.Linear(in_channel, out_channel)
+            self.align_op = paddle.nn.Linear(
+                in_channel, out_channel, weight_attr=weight_attr)
 
     def forward(self, feat):
         out = self.align_op(feat)

@@ -347,7 +347,6 @@ def do_train(args):
     teacher_model_class, _ = MODEL_CLASSES[args.teacher_model_type]
     teacher = teacher_model_class.from_pretrained(
         args.teacher_path, num_classes=num_classes)
-    teacher.eval()
 
     if paddle.distributed.get_world_size() > 1:
         student = paddle.DataParallel(student, find_unused_parameters=True)

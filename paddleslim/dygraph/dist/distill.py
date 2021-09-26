@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import numpy as np
+import copy
 import collections
-from collections import namedtuple
+import numpy as np
 import paddle
 import paddle.nn as nn
 from . import losses
@@ -89,7 +89,7 @@ class Distill(nn.Layer):
         Distill API.
         distill_configs(list(dict) | path): the list of distill config.
         student_models(list(nn.Layer)): the list of student model, the state of student model must be training mode.
-        teacher_models(list(nn.Layer)): the list of teacher model, the state of student model must be evaluate mode.
+        teacher_models(list(nn.Layer)): the list of teacher model.
         return_model_outputs(bool): whether to return model output. Default: True.
     """
 
@@ -103,8 +103,6 @@ class Distill(nn.Layer):
             student_models = [student_models]
         if isinstance(teacher_models, nn.Layer):
             teacher_models = [teacher_models]
-        for teacher_model in teacher_models:
-            assert teacher_model.training is False, "The teacher model should be eval mode."
 
         if isinstance(distill_configs, list):
             self._distill_configs = distill_configs
@@ -115,8 +113,8 @@ class Distill(nn.Layer):
                 raise NotImplementedError("distill config file type error!")
         else:
             raise NotImplementedError("distill config error!")
-        self._student_models = student_models
-        self._teacher_models = teacher_models
+        self._student_models = nn.LayerList(student_models)
+        self._teacher_models = nn.LayerList(teacher_models)
         self._return_model_outputs = return_model_outputs
 
         self._loss_config_list = []
@@ -132,10 +130,8 @@ class Distill(nn.Layer):
         self._check_hook_output = False
 
     def parameters(self):
-        params = []
-        for s_model in self._student_models:
-            params.extend(s_model.parameters())
-        return params
+        return self._student_models.parameters() + self.distill_loss.parameters(
+        )
 
     def _extract_hook_position(self):
         """ extrat hook position according to config"""
@@ -169,10 +165,10 @@ class Distill(nn.Layer):
                 global_config[key] = config[key]
 
         for per_layer_config in config['layers']:
-            per_layer_config.update(global_config)
+            per_layer_config.update(copy.deepcopy(global_config))
             layer_config = LayerConfig(**per_layer_config).__dict__
             for idx in range(len(layer_config['layers_name'])):
-                ### slice 0 means "i" or "o".
+                ### slice 0 from string "input" or "output", results is "i" or "o".
                 postfix = '#' + layer_config['io'][idx][0] + '#' + str(
                     layer_config['idx'][idx])
                 layer_config['layers_name'][idx] += postfix

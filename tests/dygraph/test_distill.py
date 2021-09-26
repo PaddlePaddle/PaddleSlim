@@ -175,7 +175,12 @@ class TestImperativeDistillCase1(TestImperativeDistill):
                 'align_params': {
                     'align_type': 'linear',
                     'in_channel': 10,
-                    'out_channel': 10
+                    'out_channel': 10,
+                    'weight_init': {
+                        'initializer': 'Normal',
+                        'mean': 0.0,
+                        'std': 0.02
+                    },
                 }
             }, ]
         }]
