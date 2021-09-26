@@ -33,11 +33,11 @@ from paddleslim.common import get_logger
 from paddleslim.dygraph.quant import QAT
 
 sys.path.append(os.path.join(os.path.dirname("__file__")))
-from mobilenet_v3 import MobileNetV3_large_x1_0
 from optimizer import create_optimizer
 sys.path.append(
     os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
 from utility import add_arguments, print_arguments
+from models.dygraph.mobilenet_v3 import MobileNetV3_large_x1_0
 
 _logger = get_logger(__name__, level=logging.INFO)
 

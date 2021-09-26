@@ -21,6 +21,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
+add_arg('use_gpu',          bool, True,               "Whether to use gpu for traning or not. Defauly: True")
 add_arg('batch_size',       int,  64,                 "Minibatch size. Default: 64")
 add_arg('batch_size_for_validation',       int,  64,                 "Minibatch size for validation. Default: 64")
 add_arg('model',            str,  "MobileNet",                "The target model.")
@@ -137,7 +138,10 @@ def compress(args):
     image_shape = [int(m) for m in image_shape.split(",")]
     assert args.model in model_list, "{} is not in lists: {}".format(args.model,
                                                                      model_list)
-    places = paddle.static.cuda_places()
+    if args.use_gpu:
+        places = paddle.static.cuda_places()
+    else:
+        places = paddle.static.cpu_places()
     place = places[0]
     exe = paddle.static.Executor(place)
 
@@ -325,7 +329,7 @@ def compress(args):
                 fleet.save_persistables(executor=exe, dirname=args.model_path)
             else:
                 paddle.fluid.io.save_persistables(
-                    executor, dirname=args.model_path)
+                    executor=exe, dirname=args.model_path)
 
 
 def main():

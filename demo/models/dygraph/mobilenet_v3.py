@@ -1,4 +1,4 @@
-# copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
+# copyright (c) 2021 PaddlePaddle Authors. All Rights Reserve.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,8 +50,10 @@ class MobileNetV3(nn.Layer):
                  scale=1.0,
                  model_name="small",
                  dropout_prob=0.2,
-                 class_dim=1000):
+                 class_dim=1000,
+                 skip_se_quant=False):
         super(MobileNetV3, self).__init__()
+        self.skip_se_quant = skip_se_quant
 
         inplanes = 16
         if model_name == "large":
@@ -121,6 +123,7 @@ class MobileNetV3(nn.Layer):
                     stride=s,
                     use_se=se,
                     act=nl,
+                    skip_se_quant=self.skip_se_quant,
                     name="conv" + str(i + 2)))
             self.block_list.append(block)
             inplanes = make_divisible(scale * c)
@@ -229,6 +232,7 @@ class ResidualUnit(nn.Layer):
                  stride,
                  use_se,
                  act=None,
+                 skip_se_quant=False,
                  name=''):
         super(ResidualUnit, self).__init__()
         self.if_shortcut = stride == 1 and in_c == out_c
@@ -254,7 +258,8 @@ class ResidualUnit(nn.Layer):
             act=act,
             name=name + "_depthwise")
         if self.if_se:
-            self.mid_se = SEModule(mid_c, name=name + "_se")
+            self.mid_se = SEModule(
+                mid_c, skip_se_quant=skip_se_quant, name=name + "_se")
         self.linear_conv = ConvBNLayer(
             in_c=mid_c,
             out_c=out_c,
@@ -277,7 +282,7 @@ class ResidualUnit(nn.Layer):
 
 
 class SEModule(nn.Layer):
-    def __init__(self, channel, reduction=4, name=""):
+    def __init__(self, channel, reduction=4, skip_se_quant=False, name=""):
         super(SEModule, self).__init__()
         self.avg_pool = AdaptiveAvgPool2D(1)
         self.conv1 = Conv2D(
@@ -296,6 +301,9 @@ class SEModule(nn.Layer):
             padding=0,
             weight_attr=ParamAttr(name + "_2_weights"),
             bias_attr=ParamAttr(name=name + "_2_offset"))
+        if skip_se_quant:
+            self.conv1.skip_quant = True
+            self.conv2.skip_quant = True
 
     def forward(self, inputs):
         outputs = self.avg_pool(inputs)
