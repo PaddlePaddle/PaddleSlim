@@ -41,15 +41,21 @@ class PTQ(object):
     """
 
     def __init__(self,
-                 activation_quantizer=Q.KLQuantizer(),
-                 weight_quantizer=Q.PerChannelAbsmaxQuantizer()):
+                 activation_quantizer='KLQuantizer',
+                 weight_quantizer='PerChannelAbsmaxQuantizer',
+                 **kwargs):
         """
         Args:
             activation_quantizer(Quantizer): The quantizer method for activation.
+                Can be set to `KLQuantizer`/`HistQuantizer`/`AbsmaxQuantizer`.
                 Default: KLQuantizer.
             weight_quantizer(Quantizer): The quantizer method for weight.
+                Can be set to `AbsmaxQuantizer`/`PerChannelAbsmaxQuantizer`.
                 Default: PerChannelAbsmaxQuantizer.
         """
+        print("activation_quantizer", activation_quantizer)
+        activation_quantizer = eval(activation_quantizer)(**kwargs)
+        weight_quantizer = eval(weight_quantizer)()
         assert isinstance(activation_quantizer, tuple(Q.SUPPORT_ACT_QUANTIZERS))
         assert isinstance(weight_quantizer, tuple(Q.SUPPORT_WT_QUANTIZERS))
 
