@@ -29,7 +29,7 @@ class ResNet():
 
     def net(self, input, class_dim=1000, conv1_name='conv1', fc_name=None):
         layers = self.layers
-        prefix_name = self.prefix_name if self.prefix_name is '' else self.prefix_name + '_'
+        prefix_name = self.prefix_name if self.prefix_name == '' else self.prefix_name + '_'
         supported_layers = [34, 50, 101, 152]
         assert layers in supported_layers, \
             "supported layers are {} but input layer is {}".format(supported_layers, layers)
@@ -137,12 +137,7 @@ class ResNet():
             else:
                 bn_name = "bn" + name[3:]
         else:
-            if name.split("_")[1] == "conv1":
-                bn_name = name.split("_", 1)[0] + "_bn_" + name.split("_",
-                                                                      1)[1]
-            else:
-                bn_name = name.split("_", 1)[0] + "_bn" + name.split("_",
-                                                                     1)[1][3:]
+            bn_name = name.split("_", 1)[0] + "_bn" + name.split("_", 1)[1][3:]
         return fluid.layers.batch_norm(
             input=conv,
             act=act,

@@ -17,7 +17,7 @@ import copy
 import pickle
 import numpy as np
 from collections import OrderedDict
-from collections import Iterable
+from collections.abc import Iterable
 from paddle.fluid.framework import Program, program_guard, Parameter, Variable
 
 __all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper']
@@ -56,6 +56,15 @@ class VarWrapper(object):
 
     def __repr__(self):
         return self._var.name
+
+    def __lt__(self, other):
+        return self._var.name < other._var.name
+
+    def __gt__(self, other):
+        return self._var.name > other._var.name
+
+    def __eq__(self, other):
+        return self._var.name == other._var.name
 
     def shape(self):
         """
@@ -143,6 +152,15 @@ class OpWrapper(object):
         return "op[id: {}, type: {}; inputs: {}]".format(self.idx(),
                                                          self.type(),
                                                          self.all_inputs())
+
+    def __lt__(self, other):
+        return self._op.idx < other._op.idx
+
+    def __gt__(self, other):
+        return self._op.idx > other._op.idx
+
+    def __eq__(self, other):
+        return self._op.idx == other._op.idx
 
     def is_bwd_op(self):
         """

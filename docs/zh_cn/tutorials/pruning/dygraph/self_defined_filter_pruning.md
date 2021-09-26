@@ -22,7 +22,7 @@ def cal_mask(self, var_name, pruned_ratio, group):
 
 如图1-1所示，在给定模型中有两个卷积层，第一个卷积层有3个`filters`，第二个卷积层有2个`filters`。如果删除第一个卷积绿色的`filter`，第一个卷积的输出特征图的通道数也会减1，同时需要删掉第二个卷积层绿色的`kernels`。如上所述的两个卷积共同组成一个group，表示如下：
 
-```python
+```
 group = {
             "conv_1.weight":{
                 "pruned_dims": [0],
@@ -69,32 +69,46 @@ import numpy as np
 from paddleslim.dygraph import FilterPruner
 
 class L2NormFilterPruner(FilterPruner):
-
-    def __init__(self, model, input_shape, sen_file=None):
+    def __init__(self, model, inputs, sen_file=None, opt=None):
         super(L2NormFilterPruner, self).__init__(
-            model, input_shape, sen_file=sen_file)
+            model, inputs, sen_file=sen_file, opt=opt)
 
-    def cal_mask(self, var_name, pruned_ratio, group):
-        value = group[var_name]['value']
-        pruned_dims = group[var_name]['pruned_dims']
-        reduce_dims = [
-                    i for i in range(len(value.shape)) if i not in pruned_dims
-                ]
+    def cal_mask(self, pruned_ratio, collection):
+        var_name = collection.master_name
+        pruned_axis = collection.master_axis
+        value = collection.values[var_name]
+        groups = 1
+        for _detail in collection.all_pruning_details():
+            assert (isinstance(_detail.axis, int))
+            if _detail.axis == 1:
+                _groups = _detail.op.attr('groups')
+                if _groups is not None and _groups > 1:
+                    groups = _groups
+                    break
 
-        # scores = np.mean(np.abs(value), axis=tuple(reduce_dims))
+        reduce_dims = [i for i in range(len(value.shape)) if i != pruned_axis]
         scores = np.sqrt(np.sum(np.square(value), axis=tuple(reduce_dims)))
+        if groups > 1:
+            scores = scores.reshape([groups, -1])
+            scores = np.mean(scores, axis=1)
+
         sorted_idx = scores.argsort()
         pruned_num = int(round(len(sorted_idx) * pruned_ratio))
         pruned_idx = sorted_idx[:pruned_num]
-        mask_shape = [value.shape[i] for i in pruned_dims]
+
+        mask_shape = [value.shape[pruned_axis]]
         mask = np.ones(mask_shape, dtype="int32")
+        if groups > 1:
+            mask = mask.reshape([groups, -1])
         mask[pruned_idx] = 0
-        return mask
+        return mask.reshape(mask_shape)
+
+
 ```
 
 如上述代码所示，我们重载了`FilterPruner`基类的`cal_mask`方法，并在`L1NormFilterPruner`代码基础上，修改了计算通道重要性的语句，将其修改为了计算L2Norm的逻辑：
 
-```python
+```
 scores = np.sqrt(np.sum(np.square(value), axis=tuple(reduce_dims)))
 ```
 
@@ -147,15 +161,22 @@ import numpy as np
 from paddleslim.dygraph import FilterPruner
 
 class FPGMFilterPruner(FilterPruner):
-
-    def __init__(self, model, input_shape, sen_file=None):
+    def __init__(self, model, inputs, sen_file=None, opt=None):
         super(FPGMFilterPruner, self).__init__(
-            model, input_shape, sen_file=sen_file)
+            model, inputs, sen_file=sen_file, opt=opt)
 
-    def cal_mask(self, var_name, pruned_ratio, group):
-        value = group[var_name]['value']
-        pruned_dims = group[var_name]['pruned_dims']
-        assert(pruned_dims == [0])
+    def cal_mask(self, pruned_ratio, collection):
+        var_name = collection.master_name
+        pruned_axis = collection.master_axis
+        value = collection.values[var_name]
+        groups = 1
+        for _detail in collection.all_pruning_details():
+            assert (isinstance(_detail.axis, int))
+            if _detail.axis == 1:
+                _groups = _detail.op.attr('groups')
+                if _groups is not None and _groups > 1:
+                    groups = _groups
+                    break
 
         dist_sum_list = []
         for out_i in range(value.shape[0]):
@@ -163,13 +184,19 @@ class FPGMFilterPruner(FilterPruner):
             dist_sum_list.append(dist_sum)
         scores = np.array(dist_sum_list)
 
+        if groups > 1:
+            scores = scores.reshape([groups, -1])
+            scores = np.mean(scores, axis=1)
+
         sorted_idx = scores.argsort()
         pruned_num = int(round(len(sorted_idx) * pruned_ratio))
         pruned_idx = sorted_idx[:pruned_num]
-        mask_shape = [value.shape[i] for i in pruned_dims]
+        mask_shape = [value.shape[pruned_axis]]
         mask = np.ones(mask_shape, dtype="int32")
+        if groups > 1:
+            mask = mask.reshape([groups, -1])
         mask[pruned_idx] = 0
-        return mask
+        return mask.reshape(mask_shape)
 
     def get_distance_sum(self, value, out_idx):
         w = value.view()
@@ -210,6 +237,7 @@ optimizer = paddle.optimizer.Momentum(
 
 inputs = [Input([None, 3, 32, 32], 'float32', name='image')]
 labels = [Input([None, 1], 'int64', name='label')]
+net = mobilenet_v1(pretrained=False)
 model = paddle.Model(net, inputs, labels)
 model.prepare(
         optimizer,
@@ -223,7 +251,7 @@ print(result)
 ### 5.2 计算敏感度
 
 ```python
-pruner = FPGMFilterPruner(net, [1, 3, 32, 32])
+pruner = FPGMFilterPruner(net, [1, 3, 32, 32], opt=optimizer)
 def eval_fn():
         result = model.evaluate(
             val_dataset,
@@ -250,13 +278,6 @@ print(f"before fine-tuning: {result}")
 ### 5.4 重训练
 
 ```python
-optimizer = paddle.optimizer.Momentum(
-        learning_rate=0.1,
-        parameters=net.parameters())
-model.prepare(
-        optimizer,
-        paddle.nn.CrossEntropyLoss(),
-        paddle.metric.Accuracy(topk=(1, 5)))
 model.fit(train_dataset, epochs=2, batch_size=128, verbose=1)
 result = model.evaluate(val_dataset,batch_size=128, log_freq=10)
 print(f"after fine-tuning: {result}")

@@ -16,51 +16,51 @@ OFA的基本流程分为以下步骤：
    PaddleSlim提供了三种获得超网络的方式，具体可以参考[超网络转换](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/dygraph/ofa/convert_supernet_api.html)。
 
 ```python
-  import paddle
-  from paddle.vision.models import mobilenet_v1
-  from paddleslim.nas.ofa.convert_super import Convert, supernet
+import paddle
+from paddle.vision.models import mobilenet_v1
+from paddleslim.nas.ofa.convert_super import Convert, supernet
 
-  model = mobilenet_v1()
-  sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
-  sp_model = Convert(sp_net_config).convert(model)
+model = mobilenet_v1()
+sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
+sp_model = Convert(sp_net_config).convert(model)
 ```
 
 ### 2. 训练配置
    训练配置默认根据论文中PS的训练模式进行配置，可进行配置的参数和含义可以参考: [RunConfig](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/dygraph/ofa/ofa_api.html)
 
 ```python
-  from paddleslim.nas.ofa import RunConfig
-  default_run_config = {
-      'train_batch_size': 256,
-      'n_epochs': [[1], [2, 3], [4, 5]],
-      'init_learning_rate': [[0.001], [0.003, 0.001], [0.003, 0.001]],
-      'dynamic_batch_size': [1, 1, 1],
-      'total_images': 1281167,
-      'elastic_depth': (2, 5, 8)
-  }
-  run_config = RunConfig(**default_run_config)
+from paddleslim.nas.ofa import RunConfig
+default_run_config = {
+    'train_batch_size': 256,
+    'n_epochs': [[1], [2, 3], [4, 5]],
+    'init_learning_rate': [[0.001], [0.003, 0.001], [0.003, 0.001]],
+    'dynamic_batch_size': [1, 1, 1],
+    'total_images': 1281167,
+    'elastic_depth': (2, 5, 8)
+}
+run_config = RunConfig(**default_run_config)
 ```
 
 ### 3. 蒸馏配置
   为OFA训练过程添加蒸馏配置，可进行配置的参数和含义可以参考: [DistillConfig](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/dygraph/ofa/ofa_api.html#distillconfig)
 
 ```python
-  from paddle.vision.models import mobilenet_v1
-  from paddleslim.nas.ofa import DistillConfig
-  teacher_model = mobilenet_v1()
+from paddle.vision.models import mobilenet_v1
+from paddleslim.nas.ofa import DistillConfig
+teacher_model = mobilenet_v1()
 
-  default_distill_config = {
-      'teacher_model': teacher_model
-  }
-  distill_config = DistillConfig(**default_distill_config)
+default_distill_config = {
+    'teacher_model': teacher_model
+}
+distill_config = DistillConfig(**default_distill_config)
 ```
 
 ### 4. 传入模型和相应配置
   用OFA封装模型、训练配置和蒸馏配置。配置完模型和正常模型训练流程相同。如果添加了蒸馏，则OFA封装后的模型会比原始模型多返回一组教师网络的输出。
 ```python
-  from paddleslim.nas.ofa import OFA
+from paddleslim.nas.ofa import OFA
 
-  ofa_model = OFA(model, run_config=run_config, distill_config=distill_config)
+ofa_model = OFA(model, run_config=run_config, distill_config=distill_config)
 ```
 
 ## 实验效果

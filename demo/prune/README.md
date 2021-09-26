@@ -69,7 +69,7 @@ python eval.py \
 
 ## 5. 接口介绍
 
-该示例使用了`paddleslim.Pruner`工具类，用户接口使用介绍请参考：[API文档](https://paddlepaddle.github.io/PaddleSlim/api/prune_api/)
+该示例使用了`paddleslim.Pruner`工具类，用户接口使用介绍请参考：[API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/index.html)
 
 在调用`paddleslim.Pruner`工具类时，需要指定待裁卷积层的参数名称。不同模型的参数命名不同，
 在`train.py`脚本中，提供了`get_pruned_params`方法，根据用户设置的选项`--model`确定要裁剪的参数。

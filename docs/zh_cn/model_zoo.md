@@ -142,7 +142,7 @@ Note: MobileNetV2_NAS 的token是：[4, 4, 5, 1, 1, 2, 1, 1, 0, 2, 6,�
 |   BlazeFace    | quant_post  |     8     |   640    | 87.8/85.1/74.9 (-3.7/-4.1/-4.8) |      228       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/blazeface_origin_quant_post.tar) |
 |   BlazeFace    | quant_aware |     8     |   640    | 90.5/87.9/77.6 (-1.0/-1.3/-2.1) |      228       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/blazeface_origin_quant_aware.tar) |
 | BlazeFace-Lite |      -      |     8     |   640    |         90.9/88.5/78.1          |      711       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_lite.tar) |
-| BlazeFace-Lite | quant_post  |     8     |   640    | 89.4/86.7/75.7 (-1.5/-1.8/-2.4) |      211       | [下载链接]((https://paddlemodels.bj.bcebos.com/PaddleSlim/blazeface_lite_quant_post.tar)) |
+| BlazeFace-Lite | quant_post  |     8     |   640    | 89.4/86.7/75.7 (-1.5/-1.8/-2.4) |      211       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/blazeface_lite_quant_post.tar) |
 | BlazeFace-Lite | quant_aware |     8     |   640    | 89.7/87.3/77.0 (-1.2/-1.2/-1.1) |      211       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/blazeface_lite_quant_aware.tar) |
 | BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
 | BlazeFace-NAS  | quant_post  |     8     |   640    | 81.6/78.3/63.6 (-2.1/-2.4/-2.2) |       71       | [下载链接](https://paddlemodels.bj.bcebos.com/PaddleSlim/blazeface_nas_quant_post.tar) |
@@ -199,7 +199,7 @@ PaddleLite版本： v2.3
 | BlazeFace-NAS  |      -      |     8     |   640    |         83.7/80.7/65.8          |      244       |       21.117     |[下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas.tar) |
 | BlazeFace-NASV2 |    SANAS    |     8     |   640    |         87.0/83.7/68.5          |      389       |       22.558     | [下载链接](https://paddlemodels.bj.bcebos.com/object_detection/blazeface_nas2.tar) |
 
-Note: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。BlazeFace-NASV2的详细配置在[这里](https://github.com/PaddlePaddle/PaddleDetection/blob/master/configs/face_detection/blazeface_nas_v2.yml).
+Note: 硬件延时时间是利用提供的硬件延时表得到的，硬件延时表是在855芯片上基于PaddleLite测试的结果。BlazeFace-NASV2的详细配置在[这里](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.1/static/configs/face_detection/blazeface_nas_v2.yml)。
 
 ## 3. 图像分割
 

@@ -10,12 +10,14 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**剪�
 
 ## 版本对齐
 
-|  PaddleSlim   | PaddlePaddle   | PaddleLite    | 备注        |
-| :-----------: | :------------: | :------------:| :----------:|
-| 1.0.1         | <=1.7          |       2.7     | 支持静态图  |
-| 1.1.1         | 1.8            |       2.7     | 支持静态图  |
-| 1.2.0         | 2.0Beta/RC     |       2.8     | 支持静态图  |
-| 2.0.0         | 2.0            |       2.8     | 支持动态图和静态图  |
+|  PaddleSlim   | PaddlePaddle   | PaddleLite    |
+| :-----------: | :------------: | :------------:|
+| 1.0.1         | <=1.7          |       2.7     |
+| 1.1.1         | 1.8            |       2.7     |
+| 1.2.0         | 2.0Beta/RC     |       2.8     |
+| 2.0.0         | 2.0            |       2.8     |
+| 2.1.0         | 2.1.0          |       2.8     |
+| 2.1.1         | 2.1.1          |       >=2.8     |
 
 
 ## 安装
@@ -27,11 +29,12 @@ pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 安装指定版本：
 ```bash
-pip install paddleslim==2.0.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install paddleslim==2.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ## 最近更新
 
+2021.5.20： 发布V2.1.0版本，扩展离线量化方法，新增非结构化稀疏，增强剪枝功能，修复OFA功能若干bug。
 2021.2.5： 发布V2.0.0版本，新增支持动态图，新增OFA压缩功能，优化剪枝功能。
 2020.9.16:  发布V1.2.0版本，新增PACT量化训练功能，新增DML(互蒸馏功能)，修复部分剪裁bug，加强对depthwise_conv2d的剪裁能力，优化剪裁和量化API的易用性和灵活性。
 
@@ -45,7 +48,7 @@ PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
   <th><a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/tutorials/quant/overview.md">Quantization</a></th>
   <th><a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/tutorials/pruning/overview.md">Pruning</a></th>
   <th><a href="https://github.com/PaddlePaddle/PaddleSlim/blob/release/2.0.0/docs/zh_cn/tutorials/nas/overview.md">NAS</a></th>
-  <th><a href="">Distilling</a></th>
+  <th><a href="https://github.com/PaddlePaddle/PaddleSlim/tree/release/2.0.0/docs/zh_cn/tutorials">Distilling</a></th>
 </tr>
 <tr valign="top">
   <td>

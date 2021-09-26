@@ -108,7 +108,7 @@ class TestQuantAwareCase2(StaticCase):
         val_prog = main_prog.clone(for_test=True)
 
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.static.CPUPlace()
+        ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(paddle.static.default_startup_program())
 
