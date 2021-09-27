@@ -64,9 +64,6 @@ def _add_hooks(model, outs, layers_name, hook_layers_name, io='o', idx="None"):
 
     def _get_activation(outs, name, io, idx):
         def get_output_hook(layer, input, output):
-            print('hook: ', name, output.detach().numpy())
-            print(max(output.detach().numpy().flatten()))
-            #print(np.sum(np.abs(output.detach().numpy().flatten())))
             if io == 'o':
                 if idx == "None":
                     outs[name] = output
@@ -83,8 +80,14 @@ def _add_hooks(model, outs, layers_name, hook_layers_name, io='o', idx="None"):
     ### TODO: support DP model
     for i, (n, m) in enumerate(model.named_sublayers()):
         if n == layers_name:
-            m.register_forward_post_hook(
+            hooks = m.register_forward_post_hook(
                 _get_activation(outs, hook_layers_name, io, idx))
+    return hooks
+
+
+def remove_hooks(hooks):
+    for hook in hooks:
+        hook.remove()
 
 
 class Distill(nn.Layer):
@@ -204,6 +207,7 @@ class Distill(nn.Layer):
         """
         Add hook.
         """
+        self.forward_hooks = []
         for layer in hook_layers:
             tmp = layer.strip().split('#')
             layer_name, io, idx = tmp[0], tmp[1], tmp[2]
@@ -211,7 +215,9 @@ class Distill(nn.Layer):
                 idx = int(idx)
             if in_forward:
                 if 'wrap_fn_' in layer_name:
-                    _add_hooks(model, outs_dict, layer_name, layer, io, idx)
+                    hooks = _add_hooks(model, outs_dict, layer_name, layer, io,
+                                       idx)
+                    self.forward_hooks.append(hooks)
             else:
                 if 'wrap_fn_' not in layer_name:
                     _add_hooks(model, outs_dict, layer_name, layer, io, idx)
@@ -228,17 +234,11 @@ class Distill(nn.Layer):
             teacher_model.forward(*inputs, **kwargs)
 
     def forward(self, *inputs, **kwargs):
-        ### run twice useless forward before start training.
         if self._check_hook_output is False:
             ### the first useless forward is to convert function to class. 
             self._useless_forward(*inputs, **kwargs)
-            update_output_tensor_dict = self._prepare_outputs(in_forward=True)
-            ### the second useless forward is to add hook to the above model.
-            self._useless_forward(*inputs, **kwargs)
-            ### update hook information.
-            for model, _ in self._output_tensor_dict.items():
-                self._output_tensor_dict[model].update(
-                    update_output_tensor_dict[model])
+
+        update_output_tensor_dict = self._prepare_outputs(in_forward=True)
 
         students_batch_outs = []
         teachers_batch_outs = []
@@ -255,6 +255,11 @@ class Distill(nn.Layer):
                 tea_batch_outs = [i.detach() for i in tea_batch_outs]
             teachers_batch_outs.extend(tea_batch_outs)
 
+        ### update hook information.
+        for model, _ in self._output_tensor_dict.items():
+            self._output_tensor_dict[model].update(update_output_tensor_dict[
+                model])
+
         if len(self._student_models) == 1:
             students_batch_outs = students_batch_outs[0]
         if len(self._teacher_models) == 1:
@@ -269,19 +274,11 @@ class Distill(nn.Layer):
                         hook_value) == 1, \
                         "model: {} layer: {} has more than one output/input" \
                         ", please specific the idx of output/input.".format(mo, hook_name)
-        for mo, hook_out in self._output_tensor_dict.items():
-            for hook_name, hook_value in hook_out.items():
-                for hook_name, hook_value in hook_out.items():
-                    hook_name = hook_name.strip().split('#')[0]
-                    if len(hook_value) == 1:
-                        hook_value = hook_value[0]
-                    #print("hook name: {}, value: {}".format(hook_name, hook_value.numpy()))
-                    print("hook name: {}, value: {}".format(
-                        hook_name, max(hook_value.numpy().flatten())))
-                    #print("hook name: {}_{}, value: {}".format(mo, hook_name, np.sum(np.abs(hook_value.numpy().flatten()))))
-                ### batch is None just for now
+        ### batch is None just for now
         distill_outputs = self.distill_loss(self._output_tensor_dict, None)
         distill_loss = distill_outputs['loss']
+
+        remove_hooks(self.forward_hooks)
 
         if self._return_model_outputs:
             return distill_loss, students_batch_outs, teachers_batch_outs

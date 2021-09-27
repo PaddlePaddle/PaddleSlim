@@ -26,6 +26,21 @@ def init_index():
     global_idx = 0
 
 
+class counter:
+    def __init__(self, times=1):
+        self.calls = 0
+        self.times = times
+
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            func(*args, **kwargs)
+            self.calls += 1
+            assert self.calls <= self.times, "function paddle_convert_fn only allow to call {} times.".format(
+                self.times)
+
+        return wrapper
+
+
 class wrapper(nn.Layer):
     def __init__(self, functional):
         super(wrapper, self).__init__()
@@ -56,6 +71,7 @@ def convert_fn(fn):
     return new_fn
 
 
+@counter()
 def paddle_convert_fn():
     init_index()
     not_convert = ['linear', 'conv1d', 'conv1d_transpose', \
