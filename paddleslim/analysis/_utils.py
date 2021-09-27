@@ -21,7 +21,7 @@ __all__ = ["get_key_from_op", "save_cls_model", "save_det_model", "save_seg_mode
 
 
 def get_key_from_op(op):
-    """Construct key of latency table according to info of graph's op
+    """Construct key of latency table according to the info of graph's op
     """
     param_key = ''
     op_type = op.type()
@@ -288,7 +288,6 @@ def sample_generator(input_shape, batch_num):
     def __reader__():
         for i in range(batch_num):
             image = np.random.random(input_shape).astype('float32')
-
             yield image
 
     return __reader__
@@ -365,11 +364,8 @@ def save_det_model(model, input_shape, save_dir, data_type, det_multi_input=Fals
 
     else:
         ptq = paddleslim.dygraph.quant.PTQ()
-
         quant_model = ptq.quantize(model, fuse=True, fuse_list=None)
-
         quant_model(data)
-        
         quantize_model_path = os.path.join(save_dir, 'int8model')
         if not os.path.exists(quantize_model_path):
             os.makedirs(quantize_model_path)

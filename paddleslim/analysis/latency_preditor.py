@@ -126,7 +126,7 @@ class TableLatencyPredictor(LatencyPredictor):
             data_type: Data type, fp32 or int8. Default : int8
             task_type: Task type, cls, det or seg, different task models need to use different quantization strategy. Default: cls.
         Returns:
-            latency(ms): The latency of the pbmodel.
+            latency(float): The latency of the pbmodel.
         """
 
         assert data_type in ['fp32', 'int8'], f'data_type must be one of [fp32, int8]'
