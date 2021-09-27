@@ -4,3 +4,4 @@ pyzmq
 matplotlib
 opencv-python
 pillow 
+pyyaml
