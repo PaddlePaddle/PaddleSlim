@@ -1,7 +1,5 @@
 # LatencyPredictor使用教程
 
-## 简介
-
 LatencyPredictor主要功能是根据提供的op-latency映射表，预估神经网络网络在特定硬件设备上的实际耗时。它基于Paddle-Lite开发，适用于使用Paddle-Lite部署的模型。映射表以key-value的形式存储，key包含了神经网络模型经过Paddle-Lite图优化后的各种融合op信息，value则代表在特定硬件上的实际耗时。
 
 ## 使用方法
