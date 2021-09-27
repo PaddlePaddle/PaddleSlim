@@ -73,8 +73,7 @@ class TableLatencyPredictor(LatencyPredictor):
             assert os.path.exists(self.table_file), f'{self.table_file} is not existed.'
         
     def set_det_multi_input(self, det_multi_input):
-        """If a detection model has multiple input, the det_multi_input should be True.
-           Since these models can only be tested by detect_system tool instead of paddlelite's benchmark tool
+        """If a detection model has multiple input, the self.det_multi_input should be True. Default: False.
         """
         self.det_multi_input = det_multi_input
 
@@ -86,6 +85,7 @@ class TableLatencyPredictor(LatencyPredictor):
             input_shape(list): The input shape of model.
             save_dir: Where to save the pbmodel.
             data_type: Data type, fp32 or int8.
+            task_type: Task type, cls, det or seg, different task models need to use different quantization strategy.
         Returns:
             pbmodel_file: The path of optimized pbmodel.
         """
@@ -124,6 +124,7 @@ class TableLatencyPredictor(LatencyPredictor):
             input_shape(list): The input shape of model. Default: [1,3,224,224].
             save_dir: Where to save the pbmodel.
             data_type: Data type, fp32 or int8. Default : int8
+            task_type: Task type, cls, det or seg, different task models need to use different quantization strategy. Default: cls.
         Returns:
             latency(ms): The latency of the pbmodel.
         """
