@@ -85,7 +85,7 @@ class TableLatencyPredictor(LatencyPredictor):
             input_shape(list): The input shape of model.
             save_dir: Where to save the pbmodel.
             data_type: Data type, fp32 or int8.
-            task_type: Task type, cls, det or seg, different task models need to use different quantization strategy.
+            task_type: Task type, cls, det or seg, different task models need to use different quantization strategies.
         Returns:
             pbmodel_file: The path of optimized pbmodel.
         """
@@ -124,7 +124,7 @@ class TableLatencyPredictor(LatencyPredictor):
             input_shape(list): The input shape of model. Default: [1,3,224,224].
             save_dir: Where to save the pbmodel.
             data_type: Data type, fp32 or int8. Default : int8
-            task_type: Task type, cls, det or seg, different task models need to use different quantization strategy. Default: cls.
+            task_type: Task type, cls, det or seg, different task models need to use different quantization strategies. Default: cls.
         Returns:
             latency(float): The latency of the pbmodel.
         """
