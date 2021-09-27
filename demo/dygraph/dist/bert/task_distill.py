@@ -35,9 +35,6 @@ from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
 import paddlenlp.transformers as T
 from paddleslim import Distill
-from tinybert_distill_utils import attention_forward
-
-paddle.nn.MultiHeadAttention.forward = attention_forward
 
 FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -347,6 +344,8 @@ def do_train(args):
     teacher_model_class, _ = MODEL_CLASSES[args.teacher_model_type]
     teacher = teacher_model_class.from_pretrained(
         args.teacher_path, num_classes=num_classes)
+    #for name, sublayer in student.named_sublayers():
+    #    print(name)
 
     if paddle.distributed.get_world_size() > 1:
         student = paddle.DataParallel(student, find_unused_parameters=True)
@@ -399,8 +398,16 @@ def do_train(args):
             global_step += 1
             input_ids, segment_ids, labels = batch
             loss, _, _ = distill_model(input_ids, segment_ids)
+            #print("=================================")
+            #for name, sublayer in student.named_sublayers():
+            #    print(name)
 
-            loss.backward()
+            #print("=================================")
+            #for name, sublayer in teacher.named_sublayers():
+            #    print(name)
+            #sys.exit(0)
+
+            loss.backward(retain_graph=True)
             optimizer.step()
             lr_scheduler.step()
             optimizer.clear_grad()
