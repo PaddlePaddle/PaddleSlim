@@ -10,8 +10,9 @@ LatencyPredictor主要功能是根据提供的op-latency映射表，预估神经
 
 ### 1. 准备映射表和opt优化工具
 
-1.1 映射表可以从这里下载
-1.2 opt编译请参考Paddle-Lite[文档](https://paddle-lite.readthedocs.io/zh/latest/user_guides/model_optimize_tool.html)，编译时需要关闭Paddle-Lite的内存复用功能，即注释掉这[几行代码](https://github.com/PaddlePaddle/Paddle-Lite/blob/d76f45be989d3e01cebf2ac18e047cfd37d52666/lite/core/optimizer/optimizer.cc#L266-L268)。
+1.1 映射表可以从这里下载  
+
+1.2 opt编译请参考Paddle-Lite[文档](https://paddle-lite.readthedocs.io/zh/latest/user_guides/model_optimize_tool.html)，要求源码编译。编译时需要关闭Paddle-Lite的内存复用功能，即注释掉这[几行代码](https://github.com/PaddlePaddle/Paddle-Lite/blob/d76f45be989d3e01cebf2ac18e047cfd37d52666/lite/core/optimizer/optimizer.cc#L266-L268)。
 
 ### 2. 构建LatencyPredictor
 

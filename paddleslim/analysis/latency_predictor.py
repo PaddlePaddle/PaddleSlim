@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import os
 import pickle
 import time
@@ -29,6 +28,7 @@ __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
 class LatencyPredictor(object):
     """Base class of latency predictor.
     """
+
     def predict_latency(self, model):
         """Get latency of model. It is an abstract method.
 
@@ -39,7 +39,6 @@ class LatencyPredictor(object):
             latency(float): The latency of given model on current evaluator.
         """
         raise NotImplementedError('Abstract method.')
-
 
     def _get_key_info_from_graph(self, graph):
         graph_keys = []
@@ -63,15 +62,16 @@ class TableLatencyPredictor(LatencyPredictor):
         self.table_dict = {}
         self._read_table()
         self.det_multi_input = False
-    
+
     def _read_table(self):
         if os.path.exists(self.table_file):
             with open(self.table_file, 'rb') as f:
                 self.table_dict = pickle.load(f)
             print('Successfully load {}'.format(self.table_file))
         else:
-            assert os.path.exists(self.table_file), f'{self.table_file} is not existed.'
-        
+            assert os.path.exists(
+                self.table_file), f'{self.table_file} is not existed.'
+
     def set_det_multi_input(self, det_multi_input):
         """If a detection model has multiple input, the self.det_multi_input should be True. Default: False.
         """
@@ -91,16 +91,30 @@ class TableLatencyPredictor(LatencyPredictor):
         """
 
         if task_type == 'cls':
-            model_file, param_file = save_cls_model(model=model, input_shape=input_shape, save_dir=save_dir, data_type=data_type)
+            model_file, param_file = save_cls_model(
+                model=model,
+                input_shape=input_shape,
+                save_dir=save_dir,
+                data_type=data_type)
 
         elif task_type == 'det':
-            model_file, param_file = save_det_model(model=model, input_shape=input_shape, save_dir=save_dir, data_type=data_type, det_multi_input=self.det_multi_input)
+            model_file, param_file = save_det_model(
+                model=model,
+                input_shape=input_shape,
+                save_dir=save_dir,
+                data_type=data_type,
+                det_multi_input=self.det_multi_input)
 
         elif task_type == 'seg':
-            model_file, param_file = save_seg_model(model=model, input_shape=input_shape, save_dir=save_dir, data_type=data_type)
+            model_file, param_file = save_seg_model(
+                model=model,
+                input_shape=input_shape,
+                save_dir=save_dir,
+                data_type=data_type)
 
         else:
-            assert task_type in ['cls', 'det', 'seg'], f'task_type must be one of [cls, det, seg]'
+            assert task_type in ['cls', 'det', 'seg'
+                                 ], f'task_type must be one of [cls, det, seg]'
 
         pb_model = os.path.join(save_dir, f'{data_type}pbmodel')
         if not os.path.exists(pb_model):
@@ -108,15 +122,21 @@ class TableLatencyPredictor(LatencyPredictor):
 
         cmd = f'{self.opt_path} --model_file={model_file} --param_file={param_file}  --optimize_out_type=protobuf --optimize_out={pb_model} --valid_targets=arm'
         print(f'commands:{cmd}')
-        m = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        m = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         out = m.communicate()
         print(out, 'opt done!')
 
         pbmodel_file = os.path.join(pb_model, 'model')
-        
+
         return pbmodel_file
 
-    def predict_latency(self, model, input_shape=[1,3,224,224], save_dir='', data_type='int8', task_type='cls'):
+    def predict_latency(self,
+                        model,
+                        input_shape=[1, 3, 224, 224],
+                        save_dir='',
+                        data_type='int8',
+                        task_type='cls'):
         """predict the latency of the model
         
         Args:
@@ -129,23 +149,32 @@ class TableLatencyPredictor(LatencyPredictor):
             latency(float): The latency of the pbmodel.
         """
 
-        assert data_type in ['fp32', 'int8'], f'data_type must be one of [fp32, int8]'
-        assert task_type in ['cls', 'det', 'seg'], f'task_type must be one of [cls, det, seg]'
+        assert data_type in ['fp32', 'int8'
+                             ], f'data_type must be one of [fp32, int8]'
+        assert task_type in ['cls', 'det', 'seg'
+                             ], f'task_type must be one of [cls, det, seg]'
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        pbmodel_file = self.opt_model(model=model, input_shape=input_shape, save_dir=save_dir, data_type=data_type, task_type=task_type)
+        pbmodel_file = self.opt_model(
+            model=model,
+            input_shape=input_shape,
+            save_dir=save_dir,
+            data_type=data_type,
+            task_type=task_type)
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
             program_desc_str = f.read()
-            program = paddle.fluid.proto.framework_pb2.ProgramDesc.FromString(program_desc_str)
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(program_desc_str)
+            program = paddle.fluid.proto.framework_pb2.ProgramDesc.FromString(
+                program_desc_str)
+            fluid_program = paddle.fluid.framework.Program.parse_from_string(
+                program_desc_str)
 
         graph = paddleslim.core.GraphWrapper(fluid_program)
         latency = 0.0
-        for op in graph.ops(): 
+        for op in graph.ops():
             param_key = get_key_from_op(op)
             if param_key != '':
                 assert param_key in self.table_dict, f'{param_key} is not in the tabel.'

@@ -17,7 +17,9 @@ import numpy as np
 
 import paddle
 import paddleslim
-__all__ = ["get_key_from_op", "save_cls_model", "save_det_model", "save_seg_model"]
+__all__ = [
+    "get_key_from_op", "save_cls_model", "save_det_model", "save_seg_model"
+]
 
 
 def get_key_from_op(op):
@@ -25,7 +27,7 @@ def get_key_from_op(op):
     """
     param_key = ''
     op_type = op.type()
-    
+
     if 'conv2d' in op_type:
         out_shape = op.all_outputs()[0].shape()
         data = op.all_inputs()
@@ -39,7 +41,7 @@ def get_key_from_op(op):
         dilation = op.attr('dilations')[1]
         int8 = op.attr('enable_int8')
         bit_length = op.attr('bit_length')
-        
+
         param_key = f'{op_type} in={in_shape} weight={weight_shape} out={out_shape} pad={padding} stride={stride} group={groups} dilation={dilation} quant={int8} bit_length={bit_length}'
 
     elif op_type == 'matmul' or op_type == 'matmul_v2':
@@ -48,18 +50,18 @@ def get_key_from_op(op):
         out_shape = op.all_outputs()[0].shape()
         int8 = op.attr('enable_int8')
         bit_length = op.attr('bit_length')
-        
+
         param_key = f'{op_type} X={X} Y={Y} out={out_shape} quant={int8} bit_length={bit_length}'
 
     elif 'batch_norm' in op_type or 'layer_norm' in op_type:
         out_shape = op.all_outputs()[-1].shape()
         data = op.all_inputs()
         in_shape = data[-1].shape()
-        
+
         param_key = f'{op_type} in={in_shape} out={out_shape}'
 
     elif 'pool2d' in op_type:
-        out_shape  = op.all_outputs()[0].shape()
+        out_shape = op.all_outputs()[0].shape()
         data = op.all_inputs()
         in_shape = data[-1].shape()
         kernel = op.attr('ksize')[1]
@@ -67,19 +69,22 @@ def get_key_from_op(op):
         padding = op.attr('paddings')[1]
         groups = op.attr('groups')
         flag_global = 1 if op.attr('global_pooling') else 0
-        if op.attr('adaptive') and out_shape[-1]==1:
+        if op.attr('adaptive') and out_shape[-1] == 1:
             flag_global = 1
         pooling_type = op.attr('pooling_type')
 
         param_key = f'{op_type} in={in_shape} out={out_shape} stride={stride} kernel={kernel}x{kernel} pad={padding} flag_global={flag_global} type={pooling_type})'
 
-    elif op_type in ['hard_swish', 'relu', 'leaky_relu', 'tanh', 'swish', 'softmax', 'hard_sigmoid', 'sigmoid', 'gelu']:
+    elif op_type in [
+            'hard_swish', 'relu', 'leaky_relu', 'tanh', 'swish', 'softmax',
+            'hard_sigmoid', 'sigmoid', 'gelu'
+    ]:
         out_shape = op.all_outputs()[0].shape()
         data = op.all_inputs()
         in_shape = data[-1].shape()
 
         param_key = f'{op_type} in={in_shape}'
-    
+
     elif op_type in ['fill_constant', 'range', 'cast'] or 'expand' in op_type:
 
         param_key = f'{op_type}'
@@ -89,27 +94,27 @@ def get_key_from_op(op):
         in_shape = op.all_inputs()[0].shape()
 
         param_key = f'{op_type} in={in_shape} out={out_shape}'
-        
+
     elif 'reshape' in op_type:
         out_shape = op.all_outputs()[0].shape()
         in_shape = op.all_inputs()[0].shape()
 
         param_key = f'{op_type} in={in_shape} out={out_shape}'
-    
+
     elif 'elementwise' in op_type:
         out_shape = op.all_outputs()[0].shape()
-        data=op.all_inputs()
-        x=data[0].shape()
-        y=data[1].shape()
-        axis=op.attr('axis')
+        data = op.all_inputs()
+        x = data[0].shape()
+        y = data[1].shape()
+        axis = op.attr('axis')
 
         param_key = f'{op_type} X={x} Y={y} axis={axis} out={out_shape}'
-        
+
     elif op_type == 'concat':
-        data = op.all_inputs() 
+        data = op.all_inputs()
         X = ""
         for x in data:
-            X += f"{x.shape()}" 
+            X += f"{x.shape()}"
         axis = op.attr('axis')
         out_shape = op.all_outputs()[0].shape()
 
@@ -138,10 +143,10 @@ def get_key_from_op(op):
         param_key = f'{op_type} in={in_shape} axes={axes}'
 
     elif op_type == 'stack':
-        data = op.all_inputs() 
+        data = op.all_inputs()
         X = "["
         for x in data:
-            X += f"{x.shape()}" 
+            X += f"{x.shape()}"
         X += "]"
         axis = op.attr('axis')
         out_shape = op.all_outputs()[0].shape()
@@ -160,33 +165,33 @@ def get_key_from_op(op):
     elif op_type == 'multiclass_nms3' or op_type == 'matrix_nms':
         boxs = op.all_inputs()[0].shape()
         scores = op.all_inputs()[-1].shape()
-        keep_top_k = op.attr('keep_top_k') 
+        keep_top_k = op.attr('keep_top_k')
         nms_top_k = op.attr('nms_top_k')
 
         param_key = f'{op_type} boxs={boxs} scores={scores} keep_top_k={keep_top_k} nms_top_k={nms_top_k}'
 
     elif 'transpose' in op_type:
         in_shape = op.all_inputs()[-1].shape()
-        
+
         param_key = f'{op_type} in={in_shape}'
 
     elif op_type == 'dropout':
         in_shape = op.all_inputs()[0].shape()
-        
+
         param_key = f'{op_type} in={in_shape}'
-    
+
     elif op_type == 'fc':
         data = op.all_inputs()
         in_shape = data[-2].shape()
         weight_shape = data[-1].shape()
-        out_shape = op.all_outputs()[0].shape()       
+        out_shape = op.all_outputs()[0].shape()
 
         param_key = f'{op_type} in={in_shape} weight={weight_shape} out={out_shape}'
 
     elif 'interp_v2' in op_type:
         in_shape = op.all_inputs()[-1].shape()
         out_shape = op.all_outputs()[0].shape()
-        
+
         param_key = f'{op_type} in={in_shape} out={out_shape}'
 
     elif op_type == 'shuffle_channel':
@@ -202,12 +207,12 @@ def get_key_from_op(op):
         sections = op.attr('sections')
 
         param_key = f'{op_type} in={in_shape} axis={axis} sections={sections}'
-    
+
     elif op_type == 'clip':
         in_shape = op.all_inputs()[-1].shape()
 
         param_key = f'{op_type} in={in_shape}'
-    
+
     elif op_type in ['unsqueeze2', 'squeeze2']:
         in_shape = op.all_inputs()[-1].shape()
         out_shape = op.all_outputs()[0].shape()
@@ -222,33 +227,33 @@ def get_key_from_op(op):
         stop_axis = op.attr(' stop_axis')
 
         param_key = f'{op_type} in={in_shape} start_axis={start_axis} stop_axis={stop_axis} out={out_shape}'
-    
+
     elif op_type == 'sum':
         in_shape1 = op.all_inputs()[0].shape()
         in_shape2 = op.all_inputs()[1].shape()
         out_shape = op.all_outputs()[0].shape()
 
         param_key = f'{op_type} in={in_shape1} in={in_shape2}  out={out_shape}'
-    
+
     elif op_type == 'calib':
         in_shape = op.all_inputs()[-1].shape()
         out_shape = op.all_inputs()[0].shape()
 
         param_key = f'{op_type} in={in_shape} out={out_shape}'
-    
+
     elif op_type == 'shape':
         in_shape = op.all_inputs()[-1].shape()
         param_key = f'{op_type} in={in_shape}'
-    
+
     elif op_type == 'uniform_random':
         shape = op.attr('shape')
 
         param_key = f'{op_type} shape={shape}'
-    
+
     elif op_type == 'floor':
         in_shape = op.all_inputs()[-1].shape()
         out_shape = op.all_outputs()[0].shape()
-        
+
         param_key = f'{op_type} in={in_shape} out={out_shape}'
 
     elif op_type == 'greater_equal':
@@ -275,7 +280,7 @@ def get_key_from_op(op):
 
     elif op_type in ['feed', 'fetch']:
         pass
-        
+
     else:
         print(op)
         print(op._op)
@@ -294,7 +299,13 @@ def sample_generator(input_shape, batch_num):
 
 
 def save_cls_model(model, input_shape, save_dir, data_type):
-    paddle.jit.save(model, path=os.path.join(save_dir, 'fp32model'), input_spec=[paddle.static.InputSpec(shape=input_shape, dtype='float32', name='x'),])
+    paddle.jit.save(
+        model,
+        path=os.path.join(save_dir, 'fp32model'),
+        input_spec=[
+            paddle.static.InputSpec(
+                shape=input_shape, dtype='float32', name='x'),
+        ])
     model_file = os.path.join(save_dir, 'fp32model.pdmodel')
     param_file = os.path.join(save_dir, 'fp32model.pdiparams')
 
@@ -307,7 +318,9 @@ def save_cls_model(model, input_shape, save_dir, data_type):
         if not os.path.exists(quantize_model_path):
             os.makedirs(quantize_model_path)
 
-        if not os.path.exists(os.path.join(quantize_model_path, '__model__')) or not os.path.exists(os.path.join(quantize_model_path, '__params__')):
+        if not os.path.exists(os.path.join(
+                quantize_model_path, '__model__')) or not os.path.exists(
+                    os.path.join(quantize_model_path, '__params__')):
             paddleslim.quant.quant_post_static(
                 executor=exe,
                 model_dir=save_dir,
@@ -319,17 +332,21 @@ def save_cls_model(model, input_shape, save_dir, data_type):
                 batch_nums=1,
                 weight_bits=8,
                 activation_bits=8)
-        
+
         else:
             print(f'{quantize_model_path} exists.')
-        
+
         model_file = os.path.join(quantize_model_path, '__model__')
         param_file = os.path.join(quantize_model_path, '__params__')
-            
+
     return model_file, param_file
 
 
-def save_det_model(model, input_shape, save_dir, data_type, det_multi_input=False):   
+def save_det_model(model,
+                   input_shape,
+                   save_dir,
+                   data_type,
+                   det_multi_input=False):
     model.eval()
     if det_multi_input:
         input_spec = [{
@@ -350,15 +367,20 @@ def save_det_model(model, input_shape, save_dir, data_type, det_multi_input=Fals
         }
     else:
         input_spec = [{
-            "image": paddle.static.InputSpec(shape=input_shape, name='image'),
+            "image": paddle.static.InputSpec(
+                shape=input_shape, name='image'),
         }]
         data = {
-            "image": paddle.randn(shape=input_shape, dtype='float32', name='image'),
+            "image": paddle.randn(
+                shape=input_shape, dtype='float32', name='image'),
         }
 
     if data_type == 'fp32':
         static_model = paddle.jit.to_static(model, input_spec=input_spec)
-        paddle.jit.save(static_model, path=os.path.join(save_dir, 'fp32model'), input_spec=input_spec)
+        paddle.jit.save(
+            static_model,
+            path=os.path.join(save_dir, 'fp32model'),
+            input_spec=input_spec)
         model_file = os.path.join(save_dir, 'fp32model.pdmodel')
         param_file = os.path.join(save_dir, 'fp32model.pdiparams')
 
@@ -369,8 +391,10 @@ def save_det_model(model, input_shape, save_dir, data_type, det_multi_input=Fals
         quantize_model_path = os.path.join(save_dir, 'int8model')
         if not os.path.exists(quantize_model_path):
             os.makedirs(quantize_model_path)
-        
-        ptq.save_quantized_model(quant_model, os.path.join(quantize_model_path, 'int8model'), input_spec)
+
+        ptq.save_quantized_model(quant_model,
+                                 os.path.join(quantize_model_path, 'int8model'),
+                                 input_spec)
 
         model_file = os.path.join(quantize_model_path, 'int8model.pdmodel')
         param_file = os.path.join(quantize_model_path, 'int8model.pdiparams')
@@ -378,9 +402,15 @@ def save_det_model(model, input_shape, save_dir, data_type, det_multi_input=Fals
     return model_file, param_file
 
 
-def save_seg_model(model, input_shape, save_dir, data_type):   
+def save_seg_model(model, input_shape, save_dir, data_type):
     if data_type == 'fp32':
-        paddle.jit.save(model, path=os.path.join(save_dir, 'fp32model'), input_spec=[paddle.static.InputSpec(shape=input_shape, dtype='float32', name='x'),])
+        paddle.jit.save(
+            model,
+            path=os.path.join(save_dir, 'fp32model'),
+            input_spec=[
+                paddle.static.InputSpec(
+                    shape=input_shape, dtype='float32', name='x'),
+            ])
         model_file = os.path.join(save_dir, 'fp32model.pdmodel')
         param_file = os.path.join(save_dir, 'fp32model.pdiparams')
 
@@ -397,16 +427,18 @@ def save_seg_model(model, input_shape, save_dir, data_type):
             'window_size': 10000,
             'moving_rate': 0.9,
             'quantizable_layer_type': ['Conv2D', 'Linear'],
-        }   
+        }
         quantizer = paddleslim.QAT(config=quant_config)
         quantizer.quantize(model)
         quantizer.save_quantized_model(
             model,
             save_dir,
-            input_spec=[paddle.static.InputSpec(shape=input_shape, dtype='float32')])
+            input_spec=[
+                paddle.static.InputSpec(
+                    shape=input_shape, dtype='float32')
+            ])
 
         model_file = f'{save_dir}.pdmodel'
         param_file = f'{save_dir}.pdiparams'
-    
-    return model_file, param_file
 
+    return model_file, param_file
