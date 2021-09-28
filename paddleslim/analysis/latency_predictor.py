@@ -20,7 +20,7 @@ import pickle
 import time
 import subprocess
 
-from _utils import get_key_from_op, save_cls_model, save_det_model, save_seg_model
+from ._utils import get_key_from_op, save_cls_model, save_det_model, save_seg_model
 import paddle
 import paddleslim
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
