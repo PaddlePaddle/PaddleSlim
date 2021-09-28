@@ -14,7 +14,7 @@
 from .flops import flops, dygraph_flops
 from .model_size import model_size
 from .latency import LatencyEvaluator, TableLatencyEvaluator
-from .LatencyPredictor import LatencyPredictor, TableLatencyPredictor
+from .latency_predictor import LatencyPredictor, TableLatencyPredictor
 from ._utils import get_key_from_op, save_cls_model, save_det_model, save_seg_model
 
 __all__ = [
