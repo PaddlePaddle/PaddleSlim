@@ -16,7 +16,7 @@ LatencyPredictor主要功能是根据提供的op-latency映射表，预估神经
 
 ### 2. 构建LatencyPredictor
 
-根据提供的映射表(*.pkl)路径和opt工具路径构建LatencyPredictor对象
+根据提供的映射表(*.pkl文件)路径和opt工具路径构建LatencyPredictor对象
 ```python
 import paddleslim
 
