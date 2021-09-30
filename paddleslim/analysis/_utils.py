@@ -1,4 +1,4 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -30,10 +30,8 @@ def get_key_from_op(op):
 
     if 'conv2d' in op_type:
         out_shape = op.all_outputs()[0].shape()
-        data = op.all_inputs()
-        in_shape = data[-1].shape()
-        weight_shape = data[-2].shape()
-        ch_out = weight_shape[0]
+        in_shape = op.all_inputs()[-1].shape()
+        weight_shape = op.all_inputs()[-2].shape()
         kernel = weight_shape[2]
         stride = op.attr('strides')[1]
         padding = op.attr('paddings')[1]
@@ -55,8 +53,7 @@ def get_key_from_op(op):
 
     elif 'batch_norm' in op_type or 'layer_norm' in op_type:
         out_shape = op.all_outputs()[-1].shape()
-        data = op.all_inputs()
-        in_shape = data[-1].shape()
+        in_shape = op.all_inputs()[-1].shape()
 
         param_key = f'{op_type} in={in_shape} out={out_shape}'
 
@@ -77,11 +74,9 @@ def get_key_from_op(op):
 
     elif op_type in [
             'hard_swish', 'relu', 'leaky_relu', 'tanh', 'swish', 'softmax',
-            'hard_sigmoid', 'sigmoid', 'gelu'
+            'hard_sigmoid', 'sigmoid', 'gelu', 'clip', 'shape', 'transpose'
     ]:
-        out_shape = op.all_outputs()[0].shape()
-        data = op.all_inputs()
-        in_shape = data[-1].shape()
+        in_shape = op.all_inputs()[-1].shape()
 
         param_key = f'{op_type} in={in_shape}'
 
@@ -89,13 +84,7 @@ def get_key_from_op(op):
 
         param_key = f'{op_type}'
 
-    elif op_type == 'scale':
-        out_shape = op.all_outputs()[0].shape()
-        in_shape = op.all_inputs()[0].shape()
-
-        param_key = f'{op_type} in={in_shape} out={out_shape}'
-
-    elif 'reshape' in op_type:
+    elif op_type in ['scale', 'reshape']:
         out_shape = op.all_outputs()[0].shape()
         in_shape = op.all_inputs()[0].shape()
 
@@ -103,9 +92,8 @@ def get_key_from_op(op):
 
     elif 'elementwise' in op_type:
         out_shape = op.all_outputs()[0].shape()
-        data = op.all_inputs()
-        x = data[0].shape()
-        y = data[1].shape()
+        x = op.all_inputs()[0].shape()
+        y = op.all_inputs()[1].shape()
         axis = op.attr('axis')
 
         param_key = f'{op_type} X={x} Y={y} axis={axis} out={out_shape}'
@@ -162,7 +150,7 @@ def get_key_from_op(op):
 
         param_key = f'{op_type} in={in_shape} out={out_shape} axes={axes} decrease_axis={decrease_axis} ends={ends}'
 
-    elif op_type == 'multiclass_nms3' or op_type == 'matrix_nms':
+    elif op_type in ['multiclass_nms3', 'matrix_nms']:
         boxs = op.all_inputs()[0].shape()
         scores = op.all_inputs()[-1].shape()
         keep_top_k = op.attr('keep_top_k')
@@ -170,29 +158,17 @@ def get_key_from_op(op):
 
         param_key = f'{op_type} boxs={boxs} scores={scores} keep_top_k={keep_top_k} nms_top_k={nms_top_k}'
 
-    elif 'transpose' in op_type:
-        in_shape = op.all_inputs()[-1].shape()
-
-        param_key = f'{op_type} in={in_shape}'
-
     elif op_type == 'dropout':
         in_shape = op.all_inputs()[0].shape()
 
         param_key = f'{op_type} in={in_shape}'
 
     elif op_type == 'fc':
-        data = op.all_inputs()
-        in_shape = data[-2].shape()
-        weight_shape = data[-1].shape()
+        in_shape = op.all_inputs()[-2].shape()
+        weight_shape = op.all_inputs()[-1].shape()
         out_shape = op.all_outputs()[0].shape()
 
         param_key = f'{op_type} in={in_shape} weight={weight_shape} out={out_shape}'
-
-    elif 'interp_v2' in op_type:
-        in_shape = op.all_inputs()[-1].shape()
-        out_shape = op.all_outputs()[0].shape()
-
-        param_key = f'{op_type} in={in_shape} out={out_shape}'
 
     elif op_type == 'shuffle_channel':
         in_shape = op.all_inputs()[-1].shape()
@@ -207,11 +183,6 @@ def get_key_from_op(op):
         sections = op.attr('sections')
 
         param_key = f'{op_type} in={in_shape} axis={axis} sections={sections}'
-
-    elif op_type == 'clip':
-        in_shape = op.all_inputs()[-1].shape()
-
-        param_key = f'{op_type} in={in_shape}'
 
     elif op_type in ['unsqueeze2', 'squeeze2']:
         in_shape = op.all_inputs()[-1].shape()
@@ -235,31 +206,20 @@ def get_key_from_op(op):
 
         param_key = f'{op_type} in={in_shape1} in={in_shape2}  out={out_shape}'
 
-    elif op_type == 'calib':
+    elif op_type in ['calib', 'floor'] or 'interp_v2' in op_type:
         in_shape = op.all_inputs()[-1].shape()
         out_shape = op.all_inputs()[0].shape()
 
         param_key = f'{op_type} in={in_shape} out={out_shape}'
-
-    elif op_type == 'shape':
-        in_shape = op.all_inputs()[-1].shape()
-        param_key = f'{op_type} in={in_shape}'
 
     elif op_type == 'uniform_random':
         shape = op.attr('shape')
 
         param_key = f'{op_type} shape={shape}'
 
-    elif op_type == 'floor':
-        in_shape = op.all_inputs()[-1].shape()
-        out_shape = op.all_outputs()[0].shape()
-
-        param_key = f'{op_type} in={in_shape} out={out_shape}'
-
     elif op_type == 'greater_equal':
-        data = op.all_inputs()
-        x = data[0].shape()
-        y = data[1].shape()
+        x = op.all_inputs()[0].shape()
+        y = op.all_inputs()[1].shape()
         out_shape = op.all_outputs()[0].shape()
 
         param_key = f'{op_type} X={x} Y={y} out={out_shape}'
@@ -318,23 +278,17 @@ def save_cls_model(model, input_shape, save_dir, data_type):
         if not os.path.exists(quantize_model_path):
             os.makedirs(quantize_model_path)
 
-        if not os.path.exists(os.path.join(
-                quantize_model_path, '__model__')) or not os.path.exists(
-                    os.path.join(quantize_model_path, '__params__')):
-            paddleslim.quant.quant_post_static(
-                executor=exe,
-                model_dir=save_dir,
-                quantize_model_path=quantize_model_path,
-                sample_generator=sample_generator(input_shape, 1),
-                model_filename=model_file.split('/')[-1],
-                params_filename=param_file.split('/')[-1],
-                batch_size=input_shape[0],
-                batch_nums=1,
-                weight_bits=8,
-                activation_bits=8)
-
-        else:
-            print(f'{quantize_model_path} exists.')
+        paddleslim.quant.quant_post_static(
+            executor=exe,
+            model_dir=save_dir,
+            quantize_model_path=quantize_model_path,
+            sample_generator=sample_generator(input_shape, 1),
+            model_filename=model_file.split('/')[-1],
+            params_filename=param_file.split('/')[-1],
+            batch_size=input_shape[0],
+            batch_nums=1,
+            weight_bits=8,
+            activation_bits=8)
 
         model_file = os.path.join(quantize_model_path, '__model__')
         param_file = os.path.join(quantize_model_path, '__params__')
