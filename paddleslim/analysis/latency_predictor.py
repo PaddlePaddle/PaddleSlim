@@ -1,6 +1,6 @@
 """Define latency predictor that predict the latency of model on devices.
 """
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -43,8 +43,8 @@ class LatencyPredictor(object):
     def _get_key_info_from_graph(self, graph):
         graph_keys = []
         for op in graph.ops():
-            param_key = get_key_from_op(args, op)
-            graph_keys.append(graph_keys)
+            param_key = get_key_from_op(op)
+            graph_keys.append(param_key)
         return graph_keys
 
 
@@ -56,21 +56,29 @@ class TableLatencyPredictor(LatencyPredictor):
       opt_path(str): The path of opt tool to convert a paddle model to an optimized pbmodel that fuses operators.
     """
 
-    def __init__(self, table_file, opt_path):
-        self.table_file = table_file
+    def __init__(self,
+                 opt_path,
+                 hardware='845',
+                 threads=4,
+                 power_mode=3,
+                 batchsize=1):
+        self.table_file = f'{hardware}_threads_{threads}_power_mode_{power_mode}_batchsize_{batchsize}.pkl'
         self.opt_path = opt_path
         self.table_dict = {}
         self._read_table()
         self.det_multi_input = False
 
     def _read_table(self):
-        if os.path.exists(self.table_file):
-            with open(self.table_file, 'rb') as f:
-                self.table_dict = pickle.load(f)
-            print('Successfully load {}'.format(self.table_file))
-        else:
-            assert os.path.exists(
-                self.table_file), f'{self.table_file} is not existed.'
+        if not os.path.exists(self.table_file):
+            subprocess.call(
+                f'wget https://paddle-slim-models.bj.bcebos.com/LatencyPredictor/{self.table_file}',
+                shell=True)
+
+        assert os.path.exists(
+            self.table_file), f'{self.table_file} is not existed.'
+        with open(self.table_file, 'rb') as f:
+            self.table_dict = pickle.load(f)
+        print('Successfully load {}'.format(self.table_file))
 
     def set_det_multi_input(self, det_multi_input):
         """If a detection model has multiple input, the self.det_multi_input should be True. Default: False.
