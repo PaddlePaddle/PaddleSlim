@@ -84,7 +84,7 @@ def get_key_from_op(op):
 
         param_key = f'{op_type}'
 
-    elif op_type in ['scale', 'reshape']:
+    elif op_type in ['scale'] or 'reshape' in op_type:
         out_shape = op.all_outputs()[0].shape()
         in_shape = op.all_inputs()[0].shape()
 
