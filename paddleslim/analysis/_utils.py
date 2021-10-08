@@ -74,8 +74,11 @@ def get_key_from_op(op):
 
     elif op_type in [
             'hard_swish', 'relu', 'leaky_relu', 'tanh', 'swish', 'softmax',
-            'hard_sigmoid', 'sigmoid', 'gelu', 'clip', 'shape', 'transpose'
-    ]:
+            'hard_sigmoid', 'sigmoid', 'gelu', 'clip', 'shape'
+    ] or 'transpose' in op_type or 'interp_v2' in op_type:
+        in_shape = op.all_inputs()[-1].shape()
+
+        param_key = f'{op_type} in={in_shape}'
         in_shape = op.all_inputs()[-1].shape()
 
         param_key = f'{op_type} in={in_shape}'
@@ -206,7 +209,7 @@ def get_key_from_op(op):
 
         param_key = f'{op_type} in={in_shape1} in={in_shape2}  out={out_shape}'
 
-    elif op_type in ['calib', 'floor'] or 'interp_v2' in op_type:
+    elif op_type in ['calib', 'floor']:
         in_shape = op.all_inputs()[-1].shape()
         out_shape = op.all_inputs()[0].shape()
 
