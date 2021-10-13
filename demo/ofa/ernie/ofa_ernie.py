@@ -36,9 +36,7 @@ import propeller.paddle as propeller
 
 from ernie.modeling_ernie import ErnieModelForSequenceClassification
 from ernie.tokenizing_ernie import ErnieTokenizer, ErnieTinyTokenizer
-from ernie.optimization import LinearDecay
 from ernie_supernet.importance import compute_neuron_head_importance, reorder_neuron_head
-from ernie_supernet.optimization import AdamW
 from ernie_supernet.modeling_ernie_supernet import get_config
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 
@@ -246,7 +244,11 @@ if __name__ == '__main__':
 
         g_clip = F.clip.GradientClipByGlobalNorm(1.0)  #experimental
         if args.use_lr_decay:
-            opt = AdamW(
+            lr_scheduler = P.optimizer.lr.LambdaDecay(
+                args.lr,
+                get_warmup_and_linear_decay(
+                    args.max_steps, int(args.warmup_proportion * args.max_steps)))
+            opt = paddle.optimizer.AdamW(
                 learning_rate=LinearDecay(args.lr,
                                           int(args.warmup_proportion *
                                               args.max_steps), args.max_steps),
@@ -254,7 +256,7 @@ if __name__ == '__main__':
                 weight_decay=args.wd,
                 grad_clip=g_clip)
         else:
-            opt = AdamW(
+            opt = paddle.optimizer.AdamW(
                 args.lr,
                 parameter_list=ofa_model.model.parameters(),
                 weight_decay=args.wd,
