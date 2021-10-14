@@ -70,7 +70,9 @@ class Convert:
                 w_attr.name = 'super_' + w_attr.name
 
         if has_bias:
-            if isinstance(layer._bias_attr, ParamAttr):
+            if isinstance(layer._bias_attr, str):
+                layer._bias_attr = 'super_' + layer._bias_attr
+            elif isinstance(layer._bias_attr, ParamAttr):
                 if layer._bias_attr != None and not isinstance(
                         layer._bias_attr,
                         bool) and layer._bias_attr.name != None:

@@ -42,7 +42,7 @@ from paddleslim.nas.ofa.convert_super import Convert, supernet
 
 
 def soft_cross_entropy(inp, target):
-    inp_likelihood = L.log_softmax(inp, axis=-1)
+    inp_likelihood = paddle.nn.functional.log_softmax(inp, axis=-1)
     target_prob = L.softmax(target, axis=-1)
     return -1. * L.mean(L.reduce_sum(inp_likelihood * target_prob, dim=-1))
 
@@ -175,22 +175,13 @@ if __name__ == '__main__':
         sentence, segments = tokenizer.build_for_ernie(seg_a, seg_b)
         return sentence, segments, label
 
-
     train_ds = feature_column.build_dataset('train', data_dir=os.path.join(args.data_dir, 'train'), shuffle=True, repeat=False, use_gz=False) \
                                    .map(map_fn) \
                                    .padded_batch(args.bsz, (0, 0, 0))
-
+    
     dev_ds = feature_column.build_dataset('dev', data_dir=os.path.join(args.data_dir, 'dev'), shuffle=False, repeat=False, use_gz=False) \
                                    .map(map_fn) \
                                    .padded_batch(args.bsz, (0, 0, 0))
-
-    shapes = ([-1, args.max_seqlen], [-1, args.max_seqlen], [-1])
-    types = ('int64', 'int64', 'int64')
-
-    train_ds.data_shapes = shapes
-    train_ds.data_types = types
-    dev_ds.data_shapes = shapes
-    dev_ds.data_types = types
 
     place = F.CUDAPlace(0)
     with FD.guard(place):
@@ -252,13 +243,14 @@ if __name__ == '__main__':
                 learning_rate=LinearDecay(args.lr,
                                           int(args.warmup_proportion *
                                               args.max_steps), args.max_steps),
-                parameter_list=ofa_model.model.parameters(),
+                parameters=ofa_model.model.parameters(),
                 weight_decay=args.wd,
                 grad_clip=g_clip)
         else:
+            lr_scheduler = None
             opt = paddle.optimizer.AdamW(
                 args.lr,
-                parameter_list=ofa_model.model.parameters(),
+                parameters=ofa_model.model.parameters(),
                 weight_decay=args.wd,
                 grad_clip=g_clip)
 
@@ -270,14 +262,8 @@ if __name__ == '__main__':
             else:
                 ofa_model.set_task('depth')
                 depth_mult_list = run_config.elastic_depth
-            for step, d in enumerate(
-                    tqdm(
-                        train_ds.start(place), desc='training')):
-                ids, sids, label = d
-
-                accumulate_gradients = dict()
-                for param in opt._parameter_list:
-                    accumulate_gradients[param.name] = 0.0
+            for step, (ids, sids, label) in enumerate(paddle.io.DataLoader(
+                    train_ds, places=place, batch_size=None)):
 
                 for depth_mult in depth_mult_list:
                     for width_mult in args.width_mult_list:
@@ -340,18 +326,11 @@ if __name__ == '__main__':
 
                         if step % 10 == 0:
                             print('train loss %.5f lr %.3e' %
-                                  (loss.numpy(), opt.current_step_lr()))
+                                  (loss.numpy(), opt.get_lr()))
 
                         loss.backward()
-                        param_grads = opt.backward(loss)
-                        for param in opt._parameter_list:
-                            accumulate_gradients[param.name] += param.gradient()
-                for k, v in param_grads:
-                    assert k.name in accumulate_gradients.keys(
-                    ), "{} not in accumulate_gradients".format(k.name)
-                    v.set_value(accumulate_gradients[k.name])
-                opt.apply_optimize(
-                    loss, startup_program=None, params_grads=param_grads)
+                opt.step()
+                lr_scheduler and lr_scheduler.step()
                 ofa_model.model.clear_gradients()
 
                 if step % 100 == 0:
@@ -363,14 +342,11 @@ if __name__ == '__main__':
 
                             acc = []
                             tea_acc = []
-                            with FD.base._switch_tracer_mode_guard_(
-                                    is_train=False):
+                            with paddle.no_grad():
                                 ofa_model.model.eval()
-                                for step, d in enumerate(
-                                        tqdm(
-                                            dev_ds.start(place),
-                                            desc='evaluating %d' % epoch)):
-                                    ids, sids, label = d
+                                for ids, sids, label in paddle.io.DataLoader(
+                                        dev_ds, places=place,
+                                        batch_size=None):
                                     [loss, logits,
                                      _], [_, tea_logits, _] = ofa_model(
                                          ids,

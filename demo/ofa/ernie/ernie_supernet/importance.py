@@ -50,8 +50,9 @@ def compute_neuron_head_importance(args, model, dev_ds, place, model_cfg):
         args.task, )
 
     for eval_task in eval_task_names:
-        for batch in dev_ds.start(place):
-            ids, sids, label = batch
+        for ids, sids, label in paddle.io.DataLoader(
+                dev_ds, places=place,
+                batch_size=None):
             out = model(
                 ids,
                 sids,
@@ -90,22 +91,22 @@ def reorder_neuron_head(model, head_importance, neuron_importance):
 def reorder_head(layer, idx):
     n, a = layer.n_head, layer.d_key
     index = L.reshape(
-        L.index_select(
+        paddle.index_select(
             L.reshape(
-                L.arange(
+                paddle.arange(
                     0, n * a, dtype='int64'), shape=[n, a]),
             idx,
-            dim=0),
+            0),
         shape=[-1])
 
     def reorder_head_matrix(linearLayer, index, dim=1):
-        W = L.index_select(linearLayer.weight, index, dim=dim).detach()
+        W = paddle.index_select(linearLayer.weight, index, dim).detach()
         if linearLayer.bias is not None:
             if dim == 0:
                 b = L.assign(linearLayer.bias).detach()
             else:
-                b = L.assign(L.index_select(
-                    linearLayer.bias, index, dim=0)).detach()
+                b = L.assign(paddle.index_select(
+                    linearLayer.bias, index, 0)).detach()
 
         linearLayer.weight.stop_gradient = True
         linearLayer.weight.set_value(W)
@@ -127,13 +128,13 @@ def reorder_head(layer, idx):
 
 def reorder_neuron(layer, index, dim=0):
     def reorder_neurons_matrix(linearLayer, index, dim):
-        W = L.index_select(linearLayer.weight, index, dim=dim).detach()
+        W = paddle.index_select(linearLayer.weight, index, dim).detach()
         if linearLayer.bias is not None:
             if dim == 0:
                 b = L.assign(linearLayer.bias).detach()
             else:
-                b = L.assign(L.index_select(
-                    linearLayer.bias, index, dim=0)).detach()
+                b = L.assign(paddle.index_select(
+                    linearLayer.bias, index, 0)).detach()
         linearLayer.weight.stop_gradient = True
         linearLayer.weight.set_value(W)
         linearLayer.weight.stop_gradient = False
