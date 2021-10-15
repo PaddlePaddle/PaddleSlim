@@ -68,8 +68,22 @@ class ModelCase2(paddle.nn.Layer):
         self.conv1 = Conv2D(3, 24, 3, stride=2, padding=1)
 
     def forward(self, inputs):
-        inputs = inputs['image']
-        return self.conv1(inputs)
+        image = inputs['image']
+
+        return self.conv1(image)
+
+
+class ModelCase3(paddle.nn.Layer):
+    def __init__(self):
+        super(ModelCase3, self).__init__()
+        self.conv1 = Conv2D(3, 24, 3, stride=2, padding=1)
+
+    def forward(self, inputs):
+        image = inputs['image']
+        im_shape = inputs['im_shape']
+        scale_factor = inputs['scale_factor']
+
+        return self.conv1(image), im_shape, scale_factor
 
 
 class TestCase1(unittest.TestCase):
@@ -218,6 +232,26 @@ class TestCase7(unittest.TestCase):
             threads=4,
             power_mode=3,
             batchsize=1)
+        latency = predictor.predict_latency(
+            model,
+            input_shape=[1, 3, 224, 224],
+            save_dir='./model',
+            data_type='fp32',
+            task_type='det')
+        assert latency > 0
+
+
+class TestCase8(unittest.TestCase):
+    def test_case8(self):
+        paddle.disable_static()
+        model = ModelCase3()
+        predictor = TableLatencyPredictor(
+            f'./{opt_tool}',
+            hardware='845',
+            threads=4,
+            power_mode=3,
+            batchsize=1)
+        predictor.set_det_multi_input(det_multi_input=True)
         latency = predictor.predict_latency(
             model,
             input_shape=[1, 3, 224, 224],
