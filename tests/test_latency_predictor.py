@@ -358,5 +358,31 @@ class TestCase9(unittest.TestCase):
             assert len(graph_keys) > 0
 
 
+class TestCase10(unittest.TestCase):
+    def test_case10(self):
+        paddle.disable_static()
+        model = ModelCase1()
+        predictor = TableLatencyPredictor(
+            f'./{opt_tool}',
+            hardware='845',
+            threads=4,
+            power_mode=3,
+            batchsize=1)
+        pbmodel_file = predictor.opt_model(
+            model,
+            input_shape=[1, 116, 28, 28],
+            save_dir='./model',
+            data_type='int8',
+            task_type='seg')
+        paddle.enable_static()
+        with open(pbmodel_file, "rb") as f:
+            program_desc_str = f.read()
+            fluid_program = paddle.fluid.framework.Program.parse_from_string(
+                program_desc_str)
+            graph = paddleslim.core.GraphWrapper(fluid_program)
+            graph_keys = predictor._get_key_info_from_graph(graph=graph)
+            assert len(graph_keys) > 0
+
+
 if __name__ == '__main__':
     unittest.main()
