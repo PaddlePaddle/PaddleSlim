@@ -18,7 +18,7 @@ import paddle
 import paddleslim
 from paddleslim.analysis import LatencyPredictor, TableLatencyPredictor
 from paddle.vision.models import mobilenet_v1, mobilenet_v2
-from paddle.nn import Conv2D, BatchNorm2D, ReLU
+from paddle.nn import Conv2D, BatchNorm2D, ReLU, LayerNorm
 import subprocess
 
 opt_tool = 'opt_ubuntu'  # use in linux
@@ -90,27 +90,35 @@ class ModelCase4(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase4, self).__init__()
         self.bn1 = BatchNorm2D(3)
+        self.ln1 = LayerNorm([3 * 16 * 16])
         self.relu1 = ReLU()
         self.fc1 = paddle.nn.Linear(3 * 16 * 16, 3 * 16 * 16)
 
     def forward(self, inputs):
         x = self.bn1(inputs)
         x = paddle.reshape(x, [1, 3 * 16 * 16])
+        x = self.ln1(x)
         x = self.fc1(x)
-        x = paddle.fluid.layers.unsqueeze(input=x, axes=[2, 3])
+        x = paddle.fluid.layers.unsqueeze(input=x, axes=[2])
         x = self.relu1(x)
-        scale = paddle.fluid.layers.fill_constant(
+        y = paddle.fluid.layers.fill_constant(
             x.shape, dtype=paddle.float32, value=1)
-        x = x * scale
-        return paddle.sum(x)
+        x = paddle.stack([x, y], axis=3)
+        x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
+        x = paddle.exp(x)
+        y += paddle.fluid.layers.uniform_random(y.shape)
+        y = paddle.fluid.layers.reduce_mean(y, dim=1, keep_dim=True)
+        return x + y
 
 
 class ModelCase5(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase5, self).__init__()
+        self.bn1 = BatchNorm2D(255)
 
     def forward(self, inputs):
         image = inputs['image']
+        image = self.bn1(image)
         img_size = paddle.fluid.data(
             name='img_size', shape=[None, 2], dtype='int64')
         anchors = [10, 13, 16, 30, 33, 23]
@@ -133,29 +141,6 @@ class ModelCase5(paddle.nn.Layer):
         box, var = paddle.fluid.layers.prior_box(
             input=image, image=image, min_sizes=[2.], clip=True, flip=True)
         return boxes, scores, box, var, out
-
-
-class ModelCase6(paddle.nn.Layer):
-    def __init__(self):
-        super(ModelCase6, self).__init__()
-        self.bn1 = BatchNorm2D(3)
-        self.relu1 = ReLU()
-        self.fc1 = paddle.nn.Linear(3 * 16 * 16, 3 * 16 * 16)
-
-    def forward(self, inputs):
-        x = self.bn1(inputs)
-        x = paddle.reshape(x, [1, 3 * 16 * 16])
-        x = self.fc1(x)
-        x = paddle.fluid.layers.unsqueeze(input=x, axes=[2])
-        x = self.relu1(x)
-        y = paddle.fluid.layers.fill_constant(
-            x.shape, dtype=paddle.float32, value=1)
-        x = paddle.stack([x, y], axis=3)
-        x = paddle.slice(x, axes=[0], start=[0], ends=[1])
-        x = paddle.exp(x)
-        y += paddle.fluid.layers.uniform_random(y.shape)
-        y = paddle.fluid.layers.reduce_mean(y, dim=1, keep_dim=True)
-        return paddle.sum(x + y)
 
 
 class TestCase1(unittest.TestCase):
@@ -278,25 +263,6 @@ class TestCase5(unittest.TestCase):
 class TestCase6(unittest.TestCase):
     def test_case6(self):
         paddle.disable_static()
-        model = mobilenet_v1()
-        predictor = TableLatencyPredictor(
-            f'./{opt_tool}',
-            hardware='845',
-            threads=4,
-            power_mode=3,
-            batchsize=1)
-        latency = predictor.predict_latency(
-            model,
-            input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='int8',
-            task_type='seg')
-        assert latency > 0
-
-
-class TestCase7(unittest.TestCase):
-    def test_case7(self):
-        paddle.disable_static()
         model = ModelCase2()
         predictor = TableLatencyPredictor(
             f'./{opt_tool}',
@@ -320,8 +286,8 @@ class TestCase7(unittest.TestCase):
         assert latency > 0
 
 
-class TestCase8(unittest.TestCase):
-    def test_case8(self):
+class TestCase7(unittest.TestCase):
+    def test_case7(self):
         paddle.disable_static()
         model = ModelCase3()
         predictor = TableLatencyPredictor(
@@ -340,8 +306,8 @@ class TestCase8(unittest.TestCase):
         assert latency > 0
 
 
-class TestCase9(unittest.TestCase):
-    def test_case9(self):
+class TestCase8(unittest.TestCase):
+    def test_case8(self):
         paddle.disable_static()
         model = ModelCase4()
         predictor = TableLatencyPredictor(
@@ -356,11 +322,18 @@ class TestCase9(unittest.TestCase):
             save_dir='./model',
             data_type='int8',
             task_type='cls')
-        assert os.path.exists(pbmodel_file)
+        paddle.enable_static()
+        with open(pbmodel_file, "rb") as f:
+            program_desc_str = f.read()
+            fluid_program = paddle.fluid.framework.Program.parse_from_string(
+                program_desc_str)
+            graph = paddleslim.core.GraphWrapper(fluid_program)
+            graph_keys = predictor._get_key_info_from_graph(graph=graph)
+            assert len(graph_keys) > 0
 
 
-class TestCase10(unittest.TestCase):
-    def test_case10(self):
+class TestCase9(unittest.TestCase):
+    def test_case9(self):
         paddle.disable_static()
         model = ModelCase5()
         predictor = TableLatencyPredictor(
@@ -375,7 +348,14 @@ class TestCase10(unittest.TestCase):
             save_dir='./model',
             data_type='fp32',
             task_type='det')
-        assert os.path.exists(pbmodel_file)
+        paddle.enable_static()
+        with open(pbmodel_file, "rb") as f:
+            program_desc_str = f.read()
+            fluid_program = paddle.fluid.framework.Program.parse_from_string(
+                program_desc_str)
+            graph = paddleslim.core.GraphWrapper(fluid_program)
+            graph_keys = predictor._get_key_info_from_graph(graph=graph)
+            assert len(graph_keys) > 0
 
 
 if __name__ == '__main__':
