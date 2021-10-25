@@ -21,12 +21,14 @@ include_directories("${PADDLE_LIB}/third_party/install/glog/include")
 include_directories("${PADDLE_LIB}/third_party/install/gflags/include")
 include_directories("${PADDLE_LIB}/third_party/install/xxhash/include")
 include_directories("${PADDLE_LIB}/third_party/install/cryptopp/include")
+include_directories("${PADDLE_LIB}/third_party/install/utf8proc/include")
 link_directories("${PADDLE_LIB}/third_party/install/protobuf/lib")
 link_directories("${PADDLE_LIB}/third_party/install/glog/lib")
 link_directories("${PADDLE_LIB}/third_party/install/gflags/lib")
 link_directories("${PADDLE_LIB}/third_party/install/xxhash/lib")
 link_directories("${PADDLE_LIB}/paddle/lib")
 link_directories("${PADDLE_LIB}/third_party/install/cryptopp/lib")
+link_directories("${PADDLE_LIB}/third_party/install/utf8proc/lib")
 
 add_executable(${DEMO_NAME} ${DEMO_NAME}.cc)
 
@@ -55,7 +57,7 @@ endif()
 
 set(EXTERNAL_LIB "-lrt -ldl -lpthread")
 set(DEPS ${DEPS}
-    ${MATH_LIB} ${MKLDNN_LIB} glog gflags xxhash protobuf cryptopp
+    ${MATH_LIB} ${MKLDNN_LIB} glog gflags xxhash protobuf cryptopp utf8proc
     ${EXTERNAL_LIB})
 
 target_link_libraries(${DEMO_NAME} ${DEPS})
