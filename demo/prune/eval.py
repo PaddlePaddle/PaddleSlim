@@ -13,6 +13,7 @@ from paddleslim.analysis import flops
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments
+import paddle.vision.transforms as T
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -34,7 +35,8 @@ def eval(args):
     train_reader = None
     test_reader = None
     if args.data == "mnist":
-        val_dataset = paddle.vision.datasets.MNIST(mode='test')
+        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        val_dataset = paddle.vision.datasets.MNIST(mode='test', transform=transform)
         class_dim = 10
         image_shape = "1,28,28"
     elif args.data == "imagenet":
