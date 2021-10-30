@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
   int height = 224;
   int width = 224;
   int nums = batch_size * channels * height * width;
-  input_shape = {batch_size, channels, height, width};
+  auto input_shape = {batch_size, channels, height, width};
   float* input = new float[nums];
   for (int i = 0; i < nums; ++i) input[i] = 0;
   auto input_names = predictor->GetInputNames();

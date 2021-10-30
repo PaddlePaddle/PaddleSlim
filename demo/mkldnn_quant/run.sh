@@ -10,7 +10,7 @@ with_analysis=${5:-$default_with_analysis}
 
 ITERATIONS=0
 
-GLOG_logtostderr=1 ./build/sample_tester \
+GLOG_logtostderr=1 ./build/sample_tester_fake_data \
     --infer_model=${MODEL_DIR} \
     --infer_data=${DATA_FILE} \
     --batch_size=1 \

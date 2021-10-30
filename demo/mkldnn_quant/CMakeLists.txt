@@ -9,7 +9,7 @@ message("flags" ${CMAKE_CXX_FLAGS})
 if(NOT DEFINED PADDLE_LIB)
   message(FATAL_ERROR "please set PADDLE_LIB with -DPADDLE_LIB=/path/paddle/lib")
 endif()
-set(DEMO_NAME sample_tester)
+set(DEMO_NAME sample_tester_fake_data)
 if(NOT DEFINED DEMO_NAME)
   message(FATAL_ERROR "please set DEMO_NAME with -DDEMO_NAME=demo_name")
 endif()
@@ -21,14 +21,12 @@ include_directories("${PADDLE_LIB}/third_party/install/glog/include")
 include_directories("${PADDLE_LIB}/third_party/install/gflags/include")
 include_directories("${PADDLE_LIB}/third_party/install/xxhash/include")
 include_directories("${PADDLE_LIB}/third_party/install/cryptopp/include")
-include_directories("${PADDLE_LIB}/third_party/install/utf8proc/include")
 link_directories("${PADDLE_LIB}/third_party/install/protobuf/lib")
 link_directories("${PADDLE_LIB}/third_party/install/glog/lib")
 link_directories("${PADDLE_LIB}/third_party/install/gflags/lib")
 link_directories("${PADDLE_LIB}/third_party/install/xxhash/lib")
 link_directories("${PADDLE_LIB}/paddle/lib")
 link_directories("${PADDLE_LIB}/third_party/install/cryptopp/lib")
-link_directories("${PADDLE_LIB}/third_party/install/utf8proc/lib")
 
 add_executable(${DEMO_NAME} ${DEMO_NAME}.cc)
 
@@ -57,7 +55,7 @@ endif()
 
 set(EXTERNAL_LIB "-lrt -ldl -lpthread")
 set(DEPS ${DEPS}
-    ${MATH_LIB} ${MKLDNN_LIB} glog gflags xxhash protobuf cryptopp utf8proc
+    ${MATH_LIB} ${MKLDNN_LIB} glog gflags xxhash protobuf cryptopp
     ${EXTERNAL_LIB})
 
 target_link_libraries(${DEMO_NAME} ${DEPS})
