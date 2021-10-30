@@ -309,25 +309,34 @@ int main(int argc, char *argv[]) {
   float* input = new float[nums];
   for (int i = 0; i < nums; ++i) input[i] = 0;
   auto input_names = predictor->GetInputNames();
-  std::cout<<"WARNING! input_names: "<<input_names.size()<<std::endl;
-  // PaddlePlace p = PaddlePlace::kCPU;
-  // PaddlePlace* place = &p;
-  // int size;
+  std::cout<<"WARNING! input_names[0]: "<<input_names[0]<<std::endl;
+  std::cout<<"WARNING! input_names[1]: "<<input_names[1]<<std::endl;
+  PaddlePlace p = PaddlePlace::kCPU;
+  int size;
 
-  // auto input_t = predictor->GetInputTensor(input_names[0]);
-  // input_t->Reshape(input_shape);
-  // input_t->copy_from_cpu<float>(input);
-  // input_t->data<float>(place, &size);
-  // input_t->mutable_data<float>(p);
+  auto input_t = predictor->GetInputTensor(input_names[0]);
+  input_t->Reshape(input_shape);
+  input_t->copy_from_cpu<float>(input);
+  input_t->data<float>(&p, &size);
+  input_t->mutable_data<float>(p);
   
-  // for (auto iter = 0; iter<5; iter++){
-  //   predictor->ZeroCopyRun();
-  //   LOG(INFO) <<"Warmup " << iter << " batches";
-  // }
+  for (auto iter = 0; iter<5; iter++){
+    predictor->ZeroCopyRun();
+    LOG(INFO) <<"Warmup " << iter << " batches";
+  }
+  Timer run_timer;
+  double elapsed_time=0;
+  run_timer.tic();
+  
+  for (auto iter = 0; iter<20; iter++){
+    predictor->ZeroCopyRun();
+  }
 
-  // for (auto iter = 0; iter<20; iter++){
-  //   predictor->ZeroCopyRun();
-  // }
+  elapsed_time+=run_timer.toc();
+  auto batch_latency = elapsed_time / iterations;
+  auto sample_latency = batch_latency / batch_size;
+  // How to calculate fps. Using 1000.f/amounts ?
+  std::cout<<"Sample_latency" << sample_latency << std::endl;
 
   // std::vector<float> out_data;
   // auto output_names = predictor->GetOutputNames();
