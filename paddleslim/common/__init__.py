@@ -22,9 +22,12 @@ from .server import Server
 from .client import Client
 from .meter import AvgrageMeter
 from .analyze_helper import VarCollector
+from paddleslim.common import wrapper_function
 
 __all__ = [
     'EvolutionaryController', 'SAController', 'get_logger', 'ControllerServer',
     'ControllerClient', 'lock', 'unlock', 'cached_reader', 'AvgrageMeter',
     'Server', 'Client', 'RLBaseController', 'VarCollector'
 ]
+
+__all__ += wrapper_function.__all__

@@ -362,13 +362,16 @@ def do_train(args):
     lr_scheduler = T.LinearDecayWithWarmup(args.learning_rate,
                                            num_training_steps, warmup)
 
+    ### step1: load distill config
     assert os.path.exists(
         args.distill_config), "distill file {} not exist.".format(
             args.distill_config)
+    ### step2: wrap the student model and teacher model by paddleslim.dygraph.dist.Distill
+    ### the distill config need to be passed into it.
     distill_model = Distill(
-        args.distill_config, student_models=[student],
-        teacher_models=[teacher])
+        args.distill_config, students=[student], teachers=[teacher])
 
+    ### step3: add parameter created by align op to optimizer
     # Generate parameter names needed to perform weight decay.
     # All bias and LayerNorm parameters are excluded.
     decay_params = [
@@ -395,6 +398,7 @@ def do_train(args):
         for step, batch in enumerate(train_data_loader):
             global_step += 1
             input_ids, segment_ids, labels = batch
+            ### step4: call distill_model instead of call student model and teacher model independently.
             loss, _, _ = distill_model(input_ids, segment_ids)
 
             loss.backward()

@@ -17,9 +17,10 @@ import collections
 import numpy as np
 import paddle
 import paddle.nn as nn
+from ...common.wrapper_function import init_index, functional2layer
 from . import losses
 from .losses.basic_loss import BASIC_LOSS
-from .distill_helpers import yaml2config, init_index, paddle_convert_fn
+from .distill_helpers import yaml2config
 
 __all__ = ['Distill']
 
@@ -85,7 +86,7 @@ def _add_hooks(model, outs, layers_name, hook_layers_name, io='o', idx="None"):
     return hooks
 
 
-def remove_hooks(hooks):
+def _remove_hooks(hooks):
     for hook in hooks:
         hook.remove()
 
@@ -93,49 +94,53 @@ def remove_hooks(hooks):
 class Distill(nn.Layer):
     """
         Distill API.
-        distill_configs(list(dict) | path): the list of distill config.
-        student_models(list(nn.Layer)): the list of student model, the state of student model must be training mode.
-        teacher_models(list(nn.Layer)): the list of teacher model.
+        configs(list(dict) | string): the list of distill config or the path of yaml file which contain the distill config.
+        students(list(nn.Layer)): the list of student model, the state of student model must be training mode.
+        teachers(list(nn.Layer)): the list of teacher model.
+        convert_fn(bool): convert the functional in paddlepaddle to nn.Layer. The detail of this convert operation please 
+                          reference to ```paddleslim.common.functional2layer```. Default: True.
         return_model_outputs(bool): whether to return model output. Default: True.
     """
 
     def __init__(self,
-                 distill_configs,
-                 student_models,
-                 teacher_models,
+                 configs,
+                 students,
+                 teachers,
                  convert_fn=True,
                  return_model_outputs=True):
         super(Distill, self).__init__()
         if convert_fn:
-            paddle_convert_fn()
-        if isinstance(student_models, nn.Layer):
-            student_models = [student_models]
-        if isinstance(teacher_models, nn.Layer):
-            teacher_models = [teacher_models]
+            functional2layer()
+        if isinstance(students, nn.Layer):
+            students = [students]
+        if isinstance(teachers, nn.Layer):
+            teachers = [teachers]
 
-        if isinstance(distill_configs, list):
-            self._distill_configs = distill_configs
-        elif os.path.exists(distill_configs):
-            if distill_configs.endswith(".yaml"):
-                self._distill_configs = yaml2config(distill_configs)
+        if isinstance(configs, list):
+            self._configs = configs
+        elif os.path.exists(configs):
+            if configs.endswith(".yaml"):
+                self._configs = yaml2config(configs)
             else:
                 raise NotImplementedError("distill config file type error!")
         else:
             raise NotImplementedError("distill config error!")
-        self._student_models = nn.LayerList(student_models)
-        self._teacher_models = nn.LayerList(teacher_models)
+        self._student_models = nn.LayerList(students)
+        self._teacher_models = nn.LayerList(teachers)
         self._return_model_outputs = return_model_outputs
 
         self._loss_config_list = []
-        for c in self._distill_configs:
-            self._transpose_config(c)
+        for c in self._configs:
+            unfold_layer_config = self._transpose_config(c)
+            self._loss_config_list.extend(unfold_layer_config)
 
-        self._hook_layers = self._extract_hook_position()
+        hook_layers = self._extract_hook_position()
+        self._hook_layers = hook_layers
 
         # use self._loss_config_list to create all loss object
         self.distill_loss = losses.CombinedLoss(self._loss_config_list)
 
-        self._output_tensor_dict = self._prepare_outputs()
+        self._output_tensor_dict = self._prepare_outputs(hook_layers)
         self._check_hook_output = False
 
     def parameters(self):
@@ -160,6 +165,7 @@ class Distill(nn.Layer):
 
     def _transpose_config(self, config):
         """ Transpose config to loss needed """
+        unfold_config = []
         global_config = {}
         if 'model_name_pairs' not in config:
             global_config['model_name_pairs'] = [['student_0', 'teacher_0']]
@@ -184,20 +190,21 @@ class Distill(nn.Layer):
             ### io and idx only use to extract tensor from hook, so pop it here.
             layer_config.pop('io')
             layer_config.pop('idx')
-            self._loss_config_list.append(layer_config)
+            unfold_config.append(layer_config)
+        return unfold_config
 
-    def _prepare_outputs(self, in_forward=False):
+    def _prepare_outputs(self, hook_layers, in_forward=False):
         """
         Add hook to get the output tensor of target layer.
         """
         outputs_tensor = {}
         for idx, m in enumerate(self._student_models):
-            hook_layers = self._hook_layers['student_{}'.format(idx)]
+            hook_layers = hook_layers['student_{}'.format(idx)]
             stu_outs = collections.OrderedDict()
             outputs_tensor['student_{}'.format(idx)] = self._prepare_hook(
                 m, hook_layers, stu_outs, in_forward=in_forward)
         for idx, m in enumerate(self._teacher_models):
-            hook_layers = self._hook_layers['teacher_{}'.format(idx)]
+            hook_layers = hook_layers['teacher_{}'.format(idx)]
             tea_outs = collections.OrderedDict()
             outputs_tensor['teacher_{}'.format(idx)] = self._prepare_hook(
                 m, hook_layers, tea_outs, in_forward=in_forward)
@@ -238,7 +245,8 @@ class Distill(nn.Layer):
             ### the first useless forward is to convert function to class. 
             self._useless_forward(*inputs, **kwargs)
 
-        update_output_tensor_dict = self._prepare_outputs(in_forward=True)
+        update_output_tensor_dict = self._prepare_outputs(
+            self._hook_layers, in_forward=True)
 
         students_batch_outs = []
         teachers_batch_outs = []
@@ -278,7 +286,7 @@ class Distill(nn.Layer):
         distill_outputs = self.distill_loss(self._output_tensor_dict, None)
         distill_loss = distill_outputs['loss']
 
-        remove_hooks(self.forward_hooks)
+        _remove_hooks(self.forward_hooks)
 
         if self._return_model_outputs:
             return distill_loss, students_batch_outs, teachers_batch_outs
