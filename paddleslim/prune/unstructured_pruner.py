@@ -174,6 +174,7 @@ class UnstructuredPruner():
         total_len = len(params)
         params_zeros = params[params == 0]
         params_nonzeros = params[params != 0]
+        if len(params_nonzeros) == 0: return 0
         new_ratio = max((self.ratio * total_len - len(params_zeros)),
                         0) / len(params_nonzeros)
         return np.sort(np.abs(params_nonzeros))[max(
@@ -253,6 +254,7 @@ class UnstructuredPruner():
             if 'norm' in op.type() and 'grad' not in op.type():
                 for input in op.all_inputs():
                     skip_params.add(input.name())
+        print(skip_params)
         return skip_params
 
     def _get_skip_params_conv1x1(self, program):
