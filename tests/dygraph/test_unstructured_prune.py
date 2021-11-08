@@ -16,12 +16,14 @@ class TestUnstructuredPruner(unittest.TestCase):
     def _gen_model(self):
         self.net = mobilenet_v1(num_classes=10, pretrained=False)
         self.net_conv1x1 = mobilenet_v1(num_classes=10, pretrained=False)
-        self.pruner = UnstructuredPruner(self.net, mode='ratio', ratio=0.55)
+        self.pruner = UnstructuredPruner(
+            self.net, mode='ratio', ratio=0.55, local_sparsity=True)
         self.pruner_conv1x1 = UnstructuredPruner(
             self.net_conv1x1,
             mode='ratio',
             ratio=0.55,
-            prune_params_type='conv1x1_only')
+            prune_params_type='conv1x1_only',
+            local_sparsity=False)
 
     def test_prune(self):
         ori_sparsity = UnstructuredPruner.total_sparse(self.net)
