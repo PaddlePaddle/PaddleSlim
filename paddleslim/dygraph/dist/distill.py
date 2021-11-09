@@ -99,7 +99,7 @@ class Distill(nn.Layer):
         teachers(list(nn.Layer)): the list of teacher model.
         convert_fn(bool): convert the functional in paddlepaddle to nn.Layer. The detail of this convert operation please 
                           reference to ```paddleslim.common.functional2layer```. Default: True.
-        return_model_outputs(bool): whether to return model output. Default: True.
+        return_model_outputs(bool): whether to return the origin outputs of the model. If set to True, will return distill loss, the output of students and the output of teachers, the output of each part will be returned as a list. Default: True.
     """
 
     def __init__(self,

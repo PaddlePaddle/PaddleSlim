@@ -114,6 +114,7 @@ def functional2layer():
                     return relu_out
         ```
         after this convert operation, we can get the output of softmax through ```register_forward_post_hook```.
+        The convert operation can applies to the layers in paddle.nn.functional.py.
     """
     init_index()
     not_convert = ['linear', 'conv1d', 'conv1d_transpose', \
