@@ -111,6 +111,33 @@ UnstructuredPruner
 
   ..
 
+  .. py:method:: paddleslim.UnstructuredPruner.set_static_masks()
+
+  这个API比较特殊，一般情况下不会用到。只有在【基于FP32稀疏化模型】进行量化训练时需要调用，因为需要固定住原本被置0的权重，保持0不变。
+
+  **示例代码：**
+
+  .. code-block:: python
+
+    import paddle
+    from paddleslim import UnstructuredPruner
+    from paddle.vision.models import LeNet as net
+    import numpy as np
+
+    place = paddle.set_device('cpu')
+    model = net(num_classes=10)
+    pruner = UnstructuredPruner(model, mode='threshold', threshold=0.5)
+
+    '''注释中为量化训练相关代码，以及参数导入
+    QAT configs and APIs
+    restore the sparse FP32 weights
+    '''
+
+    pruner.set_static_masks()
+    pruner.update_params()# 这一行代码需要在模型eval和保存前调用。
+
+  ..
+
   ..  py:method:: paddleslim.UnstructuredPruner.total_sparse(model)
 
   UnstructuredPruner中的静态方法，用于计算给定的模型（model）的稀疏度并返回。该方法为静态方法，是考虑到在单单做模型评价的时候，我们就不需要初始化一个UnstructuredPruner示例了。

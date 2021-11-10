@@ -148,6 +148,46 @@ UnstrucuturedPruner
 
   ..
 
+  .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.set_static_masks()
+
+  这个API比较特殊，一般情况下不会用到。只有在【基于FP32稀疏化模型】进行量化训练时需要调用，因为需要固定住原本被置0的权重，保持0不变。
+
+  **示例代码：**
+
+  .. code-block:: python
+
+    import paddle
+    import paddle.fluid as fluid
+    from paddleslim.prune import UnstructuredPruner
+
+    paddle.enable_static()
+
+    train_program = paddle.static.default_main_program()
+    startup_program = paddle.static.default_startup_program()
+
+    with fluid.program_guard(train_program, startup_program):
+        image = fluid.data(name='x', shape=[None, 1, 28, 28])
+        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+        conv = fluid.layers.conv2d(image, 32, 1)
+        feature = fluid.layers.fc(conv, 10, act='softmax')
+        cost = fluid.layers.cross_entropy(input=feature, label=label)
+        avg_cost = fluid.layers.mean(x=cost)
+
+    place = paddle.static.cpu_places()[0]
+    exe = paddle.static.Executor(place)
+    exe.run(startup_program)
+
+    pruner = UnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place)
+
+    '''注释中为量化训练相关代码，以及参数导入
+    QAT configs and APIs
+    restore the sparse FP32 weights
+    '''
+    pruner.set_static_masks()
+    pruner.update_params() # 这一行代码需要在模型eval和保存前调用。
+
+  ..
+
   .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.total_sparse(program)
 
   UnstructuredPruner中的静态方法，用于计算给定的模型（program）的稀疏度并返回。该方法为静态方法，是考虑到在单单做模型评价的时候，我们就不需要初始化一个UnstructuredPruner示例了。
