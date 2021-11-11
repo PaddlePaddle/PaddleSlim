@@ -151,7 +151,7 @@ UnstrucuturedPruner
 
   .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.set_static_masks()
 
-  这个API比较特殊，一般情况下不会用到。只有在【基于FP32稀疏化模型】进行量化训练时需要调用，因为需要固定住原本被置0的权重，保持0不变。
+  这个API比较特殊，一般情况下不会用到。只有在【基于FP32稀疏化模型】进行量化训练时需要调用，因为需要固定住原本被置0的权重，保持0不变。具体来说，对于输入的 parameters=[0, 3, 0, 4, 5.5, 0]，会生成对应的mask为：[0, 1, 0, 1, 1, 0]。而且在训练过程中，该 mask 数值不会随 parameters 更新（训练）而改变。在评估/保存模型之前，可以通过调用 pruner.update_params() 将mask应用到  parameters 上，从而达到『在训练过程中 parameters 中数值为0的参数不参与训练』的效果。
 
   **示例代码：**
 
