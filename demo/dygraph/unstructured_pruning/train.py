@@ -104,8 +104,8 @@ def create_unstructured_pruner(model, args, configs=None):
             model,
             ratio=args.ratio,
             prune_params_type=args.prune_params_type,
-            configs=configs,
-            local_sparsity=args.local_sparsity)
+            local_sparsity=args.local_sparsity,
+            configs=configs)
 
 
 def compress(args):
