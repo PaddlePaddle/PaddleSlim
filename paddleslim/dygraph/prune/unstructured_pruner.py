@@ -108,7 +108,7 @@ class UnstructuredPruner():
             if not self._should_prune_layer(sub_layer): continue
             for param in sub_layer.parameters(include_sublayers=False):
                 mask = self.masks.get(param.name)
-                bool_tmp = (paddl.abs(param) != 0.0)
+                bool_tmp = (paddle.abs(param) != 0.0)
                 paddle.assign(bool_tmp, output=mask)
 
     def summarize_weights(self, model, ratio=0.1):
