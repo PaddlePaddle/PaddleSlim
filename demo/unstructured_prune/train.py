@@ -49,6 +49,7 @@ add_arg('tunning_epochs',   int, 60,             "The epoch numbers used to tune
 add_arg('pruning_steps',    int, 120,        "How many times you want to increase your ratio during training. Default: 120")
 add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used at the start of pruning stage. Default: 0.15")
 add_arg('prune_params_type', str, None,           "Which kind of params should be pruned, we only support None (all but norms) and conv1x1_only for now. Default: None")
+add_arg('local_sparsity', bool, False,            "Whether to prune all the parameter matrix at the same ratio or not. Default: False")
 # yapf: enable
 
 model_list = models.__all__
@@ -96,13 +97,15 @@ def create_unstructured_pruner(train_program, args, place, configs):
             ratio=args.ratio,
             threshold=args.threshold,
             prune_params_type=args.prune_params_type,
-            place=place)
+            place=place,
+            local_sparsity=args.local_sparsity)
     else:
         return GMPUnstructuredPruner(
             train_program,
             ratio=args.ratio,
             prune_params_type=args.prune_params_type,
             place=place,
+            local_sparsity=args.local_sparsity,
             configs=configs)
 
 
