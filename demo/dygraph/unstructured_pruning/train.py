@@ -98,7 +98,7 @@ def create_unstructured_pruner(model, args, configs=None):
             ratio=args.ratio,
             threshold=args.threshold,
             prune_params_type=args.prune_params_type,
-            lcoal_sparsity=args.local_sparsity)
+            local_sparsity=args.local_sparsity)
     else:
         return GMPUnstructuredPruner(
             model,
