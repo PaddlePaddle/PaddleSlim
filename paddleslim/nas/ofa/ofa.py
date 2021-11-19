@@ -584,8 +584,7 @@ class OFA(OFABase):
                     t_value.set(pruned_state_dict[name], place)
 
         if super_model_state_dict != None and len(super_model_state_dict) != 0:
-            for k, v in super_model_state_dict.items():
-                setattr(origin_model, k, v)
+            origin_model.set_state_dict(super_model_state_dict)
 
         return origin_model
 
