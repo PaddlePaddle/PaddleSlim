@@ -64,6 +64,8 @@ class VarWrapper(object):
         return self._var.name > other._var.name
 
     def __eq__(self, other):
+        if other is None:
+            return False
         return self._var.name == other._var.name
 
     def shape(self):

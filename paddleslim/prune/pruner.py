@@ -49,6 +49,33 @@ class Pruner():
             self.idx_selector = idx_selector
 
         self.pruned_weights = False
+        self.cached_pruned_idx = {}
+
+    def _remove_unsupported_cases(self, params, ratios, graph):
+        """
+        Remove unsupportted parameters and ratios.
+        """
+        _params = []
+        _ratios = []
+        for param, ratio in zip(params, ratios):
+            supported = True
+            if ratio <= 0 or ratio >= 1:
+                continue
+            var = graph.var(param)
+            if var is None:
+                continue
+            for op in var.outputs():
+                groups = op.attr("groups")
+                if groups is not None and groups > 1:
+                    _logger.warn(
+                        f"Unsupported pruning grouped convolution directly. So {param} will be skipped."
+                    )
+                    supported = False
+                    break
+            if supported:
+                _params.append(param)
+                _ratios.append(ratio)
+        return _params, _ratios
 
     def prune(self,
               program,
@@ -83,7 +110,7 @@ class Pruner():
         graph = GraphWrapper(program.clone())
         param_backup = {} if param_backup else None
         param_shape_backup = {} if param_shape_backup else None
-
+        params, ratios = self._remove_unsupported_cases(params, ratios, graph)
         pruned_params = []
         collections = StaticPruningCollections(params, graph)
         ratios = dict(zip(params, ratios))
@@ -97,8 +124,9 @@ class Pruner():
 
         for _collection in collections:
             scores = self.criterion(_collection, values, graph)
-            idx = self.idx_selector(_collection, scores,
-                                    ratios)  # name, axis, idx, transform
+            idx = self.idx_selector(
+                _collection, scores, ratios,
+                self.cached_pruned_idx)  # name, axis, idx, transform
             idx = self._transform(idx)
             pruned_params.extend(idx)
 
@@ -158,9 +186,9 @@ class Pruner():
                         param_t.set(pruned_param, place)
                     except IndexError as e:
                         _logger.error(
-                            "Pruning {} with shape {} on axis {}, but get [{}]; ".
+                            "Pruning {} with shape {} on axis {}, but get [{}]; pruned_idx: {}".
                             format(param.name(),
-                                   param_t.shape(), pruned_axis, e))
+                                   param_t.shape(), pruned_axis, e, pruned_idx))
 
         graph.infer_shape()
         self.pruned_weights = (not only_graph)
