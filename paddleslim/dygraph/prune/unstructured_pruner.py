@@ -113,9 +113,11 @@ class UnstructuredPruner():
 
     def _update_masks(self):
         for name, sub_layer in self.model.named_sublayers():
-            if not self._should_prune_layer(sub_layer): continue
+            if not self._should_prune_layer(sub_layer):
+                continue
             for param in sub_layer.parameters(include_sublayers=False):
-                if param.name in self.skip_params: continue
+                if param.name in self.skip_params:
+                    continue
                 mask = self.masks.get(param.name)
                 if self.local_sparsity:
                     bool_tmp = (
