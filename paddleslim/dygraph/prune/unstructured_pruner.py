@@ -93,7 +93,8 @@ class UnstructuredPruner():
             if not self._should_prune_layer(sub_layer):
                 continue
             for param in sub_layer.parameters(include_sublayers=False):
-                if param.name in self.skip_params: continue
+                if param.name in self.skip_params:
+                    continue
                 t_param = param.value().get_tensor()
                 v_param = np.array(t_param)
                 if self.local_sparsity:
