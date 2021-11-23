@@ -251,7 +251,8 @@ QAT
     
 
     .. code-block:: python
-
+        
+        import paddle
         from paddleslim import PTQ
         from paddle.vision.models import mobilenet_v1
         fp32_model = mobilenet_v1(pretrained=True)
