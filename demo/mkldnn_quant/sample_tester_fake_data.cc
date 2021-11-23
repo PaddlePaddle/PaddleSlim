@@ -27,7 +27,7 @@ limitations under the License. */
 
 DEFINE_string(infer_model, "", "path to the model");
 DEFINE_string(infer_data, "", "path to the input data");
-DEFINE_int32(batch_size, 50, "inference batch size");
+DEFINE_int32(batch_size, 1, "inference batch size");
 DEFINE_int32(iterations,
              0,
              "number of batches to process. 0 means testing whole dataset");
@@ -105,55 +105,55 @@ class TensorReader {
   size_t numel_;
 };
 
-void SetInput(std::vector<std::vector<paddle::PaddleTensor>> *inputs,
-              std::vector<paddle::PaddleTensor> *labels_gt,
-              bool with_accuracy_layer = FLAGS_with_accuracy_layer,
-              int32_t batch_size = FLAGS_batch_size) {
-  std::ifstream file(FLAGS_infer_data, std::ios::binary);
-  if (!file) {
-    throw std::runtime_error("Couldn't open file: " + FLAGS_infer_data);
-  }
-
-  int64_t total_images{0};
-  file.seekg(0, std::ios::beg);
-  file.read(reinterpret_cast<char *>(&total_images), sizeof(total_images));
-  LOG(INFO) << "Total images in file: " << total_images;
-
-  std::vector<int> image_batch_shape{batch_size, 3, 224, 224};
-  std::vector<int> label_batch_shape{batch_size, 1};
-  auto images_offset_in_file = static_cast<size_t>(file.tellg());
-
-  TensorReader<float> image_reader(
-      file, images_offset_in_file, image_batch_shape, "image");
-
-  auto iterations_max = total_images / batch_size;
-  auto iterations = iterations_max;
-  if (FLAGS_iterations > 0 && FLAGS_iterations < iterations_max) {
-    iterations = FLAGS_iterations;
-  }
-
-  auto labels_offset_in_file =
-      images_offset_in_file + sizeof(float) * total_images * 3 * 224 * 224;
-
-  TensorReader<int64_t> label_reader(
-      file, labels_offset_in_file, label_batch_shape, "label");
-  for (auto i = 0; i < iterations; i++) {
-    auto images = image_reader.NextBatch();
-    std::vector<paddle::PaddleTensor> tmp_vec;
-    tmp_vec.push_back(std::move(images));
-    auto labels = label_reader.NextBatch();
-    if (with_accuracy_layer) {
-      tmp_vec.push_back(std::move(labels));
-    } else {
-      labels_gt->push_back(std::move(labels));
-    }
-    inputs->push_back(std::move(tmp_vec));
-    if (i > 0 && i % 100==0)  {
-      LOG(INFO) << "Read " << i * FLAGS_batch_size << " samples";
-    }
-  }
-}
-
+//void SetInput(std::vector<std::vector<paddle::PaddleTensor>> *inputs,
+//              std::vector<paddle::PaddleTensor> *labels_gt,
+//              bool with_accuracy_layer = FLAGS_with_accuracy_layer,
+//              int32_t batch_size = FLAGS_batch_size) {
+//  std::ifstream file(FLAGS_infer_data, std::ios::binary);
+//  if (!file) {
+//    throw std::runtime_error("Couldn't open file: " + FLAGS_infer_data);
+//  }
+//
+//  int64_t total_images{0};
+//  file.seekg(0, std::ios::beg);
+//  file.read(reinterpret_cast<char *>(&total_images), sizeof(total_images));
+//  LOG(INFO) << "Total images in file: " << total_images;
+//
+//  std::vector<int> image_batch_shape{batch_size, 3, 224, 224};
+//  std::vector<int> label_batch_shape{batch_size, 1};
+//  auto images_offset_in_file = static_cast<size_t>(file.tellg());
+//
+//  TensorReader<float> image_reader(
+//      file, images_offset_in_file, image_batch_shape, "image");
+//
+//  auto iterations_max = total_images / batch_size;
+//  auto iterations = iterations_max;
+//  if (FLAGS_iterations > 0 && FLAGS_iterations < iterations_max) {
+//    iterations = FLAGS_iterations;
+//  }
+//
+//  auto labels_offset_in_file =
+//      images_offset_in_file + sizeof(float) * total_images * 3 * 224 * 224;
+//
+//  TensorReader<int64_t> label_reader(
+//      file, labels_offset_in_file, label_batch_shape, "label");
+//  for (auto i = 0; i < iterations; i++) {
+//    auto images = image_reader.NextBatch();
+//    std::vector<paddle::PaddleTensor> tmp_vec;
+//    tmp_vec.push_back(std::move(images));
+//    auto labels = label_reader.NextBatch();
+//    if (with_accuracy_layer) {
+//      tmp_vec.push_back(std::move(labels));
+//    } else {
+//      labels_gt->push_back(std::move(labels));
+//    }
+//    inputs->push_back(std::move(tmp_vec));
+//    if (i > 0 && i % 100==0)  {
+//      LOG(INFO) << "Read " << i * FLAGS_batch_size << " samples";
+//    }
+//  }
+//}
+//
 static void PrintTime(int batch_size,
                       int num_threads,
                       double batch_latency,
@@ -300,7 +300,8 @@ int main(int argc, char *argv[]) {
   cfg.SwitchUseFeedFetchOps(false);
 
   auto predictor = paddle::CreatePaddlePredictor(cfg);
-  int batch_size = 1;
+  int batch_size = FLAGS_batch_size;
+  std::cout<<"WARNING!!!! FLAGS_batch_size" << FLAGS_batch_size << std::endl ;
   int channels = 3;
   int height = 224;
   int width = 224;
@@ -328,15 +329,17 @@ int main(int argc, char *argv[]) {
   Timer run_timer;
   double elapsed_time=0;
   run_timer.tic();
-  auto iterations = 20;
-  for (auto iter = 0; iter<iterations; iter++){
+  FLAGS_iterations= (FLAGS_iterations==0) ? (1000/FLAGS_batch_size) : FLAGS_iterations;
+  for (auto iter = 0; iter<FLAGS_iterations; iter++){
     predictor->ZeroCopyRun();
   }
 
+  LOG(INFO) <<"Iterations executed are " << FLAGS_iterations;
   elapsed_time+=run_timer.toc();
-  auto batch_latency = elapsed_time / iterations;
-  auto sample_latency = batch_latency / batch_size;
+  auto batch_latency = elapsed_time / FLAGS_iterations;
+  auto sample_latency = batch_latency / FLAGS_batch_size;
   // How to calculate fps. Using 1000.f/amounts ?
+  std::cout<<"WARNING!!!!!! batch_latency: " << batch_latency << std::endl;
   std::cout<<"WARNING!!!!!! Sample_latency: " << sample_latency << std::endl;
   std::cout<<"WARNING!!!!!! FPS: " << 1000.f/sample_latency << std::endl;
 
