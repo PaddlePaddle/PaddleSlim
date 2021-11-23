@@ -254,7 +254,6 @@ class UnstructuredPruner():
             if 'norm' in op.type() and 'grad' not in op.type():
                 for input in op.all_inputs():
                     skip_params.add(input.name())
-        print(skip_params)
         return skip_params
 
     def _get_skip_params_conv1x1(self, program):
