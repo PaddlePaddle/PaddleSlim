@@ -18,8 +18,9 @@ import os
 import pickle
 import time
 import subprocess
-
-from ._utils import get_key_from_op, save_cls_model, save_det_model, save_seg_model
+from .parse_ops import get_key_from_op
+from .extract_features import get_data_from_tables, get_features_from_paramkey
+from ._utils import save_cls_model, save_det_model, save_seg_model, load_predictor, nearest_interpolate, data_avg
 import paddle
 import paddleslim
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
@@ -97,7 +98,7 @@ class TableLatencyPredictor(LatencyPredictor):
         Returns:
             pbmodel_file: The path of optimized pbmodel.
         """
-
+        paddle.disable_static()
         if task_type == 'cls':
             model_file, param_file = save_cls_model(
                 model=model,
@@ -174,18 +175,51 @@ class TableLatencyPredictor(LatencyPredictor):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            program_desc_str = f.read()
-            program = paddle.fluid.proto.framework_pb2.ProgramDesc.FromString(
-                program_desc_str)
             fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                program_desc_str)
+                f.read())
 
         graph = paddleslim.core.GraphWrapper(fluid_program)
         latency = 0.0
         for op in graph.ops():
             param_key = get_key_from_op(op)
-            if param_key != '':
-                assert param_key in self.table_dict, f'{param_key} is not in the tabel.'
+            if param_key == '':
+                continue
+            if param_key in self.table_dict:
                 latency += self.table_dict[param_key]
+            else:
+                latency += self.op_predictor(op.type(), param_key, data_type)
+
+        return latency
+
+    def op_predictor(self, op_type, param_key, data_type):
+        """predict the latency of the operator which is not in the table
+        
+        Args:
+            op_type: The operator's type
+            param_key: The operator's parameter information.
+            data_type: Data type, fp32 or int8. Default : int8
+        Returns:
+            latency(float): The latency of the operator.
+        """
+
+        latency = 0.0
+        op_dir = self.table_file.split('.')[0]
+        if op_type in [
+                'depthwise_conv2d', 'conv2d', 'pool2d', 'matmul',
+                'elementwise_add', 'elementwise_mul', 'concat', 'calib', 'swish'
+        ]:
+            predictor = load_predictor(op_type, op_dir, data_type)
+            features = get_features_from_paramkey(param_key, op_type, data_type)
+            latency = predictor.predict([features])
+        elif op_type in ['range', 'expand_v2']:
+            latency = data_avg(self.table_dict, op_type)
+        else:
+            data = get_data_from_tables(
+                table_dict=self.table_dict,
+                op_type=op_type,
+                data_type=data_type)
+            features = get_features_from_paramkey(param_key, op_type, data_type)
+            latency = nearest_interpolate(features, data)
+            assert latency != None, f'{param_key} is not in the tabel.'
 
         return latency
