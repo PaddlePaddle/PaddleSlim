@@ -49,6 +49,7 @@ class Pruner():
             self.idx_selector = idx_selector
 
         self.pruned_weights = False
+
         self.cached_pruned_idx = {}
 
     def _remove_unsupported_cases(self, params, ratios, graph):
