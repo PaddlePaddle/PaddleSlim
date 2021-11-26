@@ -19,7 +19,7 @@ import paddle
 import paddleslim
 __all__ = [
     "save_cls_model", "save_det_model", "save_seg_model", "data_avg",
-    "nearest_interpolate", "load_predictor"
+    "nearest_interpolate", "load_predictor", "dowload_tools"
 ]
 
 
@@ -200,13 +200,21 @@ def nearest_interpolate(features, data):
 
 
 def dowload_predictor(op_dir, op):
+    """Dowload op predictors' model file
+        
+        Args:
+            op_dir(str): the dowload path of op predictor. Actually, it's the hardware information. 
+            op(str): the op type.
+        Returns:
+            op_path: The path of the file.
+        """
     if not os.path.exists(op_dir):
         os.makedirs(op_dir)
 
     op_path = os.path.join(op_dir, op + '_predictor.pkl')
     if not os.path.exists(op_path):
         subprocess.call(
-            f'wget -P {op_dir} https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{op}_predictor.pkl',
+            f'wget -P {op_dir} https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{op_path}',
             shell=True)
     return op_path
 
@@ -223,3 +231,21 @@ def load_predictor(op_type, op_dir, data_type='fp32'):
         model = pickle.load(f)
 
     return model
+
+
+def dowload_tools(platform='mac_intel', lite_version='v2_9'):
+    """Dowload tools for LatencyPredictor 
+        
+        Args:
+            platform(str): Operation platform, mac_intel or mac_M1 or ubuntu
+            lite_version(str): The version of PaddleLite, v2_9
+        Returns:
+            opt_path: The path of opt tool to convert a paddle model to an optimized pbmodel that fuses operators.
+        """
+    opt_name = '_'.join('opt', platform, lite_version)
+    opt_path = os.path.join('./tools', opt_name)
+    if not os.path.exists(opt_path):
+        subprocess.call(
+            f'wget -P {opt_path} https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{opt_name}',
+            shell=True)
+    return opt_path

@@ -20,7 +20,7 @@ import time
 import subprocess
 from .parse_ops import get_key_from_op
 from .extract_features import get_data_from_tables, get_features_from_paramkey
-from ._utils import save_cls_model, save_det_model, save_seg_model, load_predictor, nearest_interpolate, data_avg
+from ._utils import save_cls_model, save_det_model, save_seg_model, load_predictor, nearest_interpolate, data_avg, dowload_tools
 import paddle
 import paddleslim
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
@@ -53,18 +53,20 @@ class TableLatencyPredictor(LatencyPredictor):
     """The preditor used to get pbmodel's latency on some devices and infer engines.
 
     Args:
-      table_file(str): The path of file that records the devices latency of operators.
-      opt_path(str): The path of opt tool to convert a paddle model to an optimized pbmodel that fuses operators.
+        table_file(str): The path of file that records the devices latency of operators.
+        platform(str): Operation platform, mac_intel, mac_M1 or ubuntu
+        lite_version(str): The version of PaddleLite, v2_9
     """
 
     def __init__(self,
-                 opt_path,
                  hardware='845',
                  threads=4,
                  power_mode=3,
-                 batchsize=1):
+                 batchsize=1,
+                 platform='mac_intel',
+                 lite_version='v2_9'):
         self.table_file = f'{hardware}_threads_{threads}_power_mode_{power_mode}_batchsize_{batchsize}.pkl'
-        self.opt_path = opt_path
+        self.opt_path = dowload_tools(platform='mac_intel', lite_version='v2_9')
         self.table_dict = {}
         self._read_table()
         self.det_multi_input = False
