@@ -246,6 +246,6 @@ def dowload_tools(platform='mac_intel', lite_version='v2_9'):
     opt_path = os.path.join('./tools', opt_name)
     if not os.path.exists(opt_path):
         subprocess.call(
-            f'wget -P {opt_path} https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{opt_name}',
+            f'wget -P ./tools https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{opt_name}',
             shell=True)
     return opt_path
