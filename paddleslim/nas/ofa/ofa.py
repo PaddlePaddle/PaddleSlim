@@ -27,11 +27,14 @@ else:
     from .layers import SuperConv2D, SuperLinear
     Layer = paddle.nn.Layer
     DataParallel = paddle.DataParallel
-from .layers_base import BaseBlock
+from .layers_base import BaseBlock, Block
 from .utils.utils import search_idx
 from ...common import get_logger
 from ...core import GraphWrapper, dygraph2program
-from .get_sub_model import get_prune_params_config, prune_params, check_search_space
+from .get_sub_model import check_search_space, broadcast_search_space
+from paddle.fluid import core
+from paddle.fluid.framework import Variable
+import numbers
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -51,7 +54,9 @@ RunConfig = namedtuple(
         # list, elactic depth of the model in training, default: None
         'elastic_depth',
         # list, the number of sub-network to train per mini-batch data, used to get current epoch, default: None
-        'dynamic_batch_size'
+        'dynamic_batch_size',
+        # the shape of weights in the skip_layers will not change in the training, default: None
+        'skip_layers'
     ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
@@ -78,6 +83,8 @@ class OFABase(Layer):
     def __init__(self, model):
         super(OFABase, self).__init__()
         self.model = model
+        self._skip_layers = None
+        self._cannot_changed_layer = []
         self._ofa_layers, self._elastic_task, self._key2name, self._layers = self.get_layers(
         )
 
@@ -106,7 +113,10 @@ class OFABase(Layer):
         if getattr(self, 'current_config', None) != None:
             ### if block is fixed, donnot join key into candidate
             ### concrete config as parameter in kwargs
-            if block.fixed == False:
+            if block.fixed == False and (self._skip_layers == None or
+                    (self._skip_layers != None and
+                    self._key2name[block.key] not in self._skip_layers)) and  \
+                    (block.fn.weight.name not in self._cannot_changed_layer):
                 assert self._key2name[
                     block.
                     key] in self.current_config, 'DONNT have {} layer in config.'.format(
@@ -117,7 +127,7 @@ class OFABase(Layer):
                 config.update(kwargs)
         else:
             config = dict()
-        logging.debug(self.model, config)
+        _logger.debug(self.model, config)
 
         return block.fn(*inputs, **config)
 
@@ -151,7 +161,6 @@ class OFA(OFABase):
           sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
           sp_model = Convert(sp_net_config).convert(model)
           ofa_model = OFA(sp_model)
-
     """
 
     def __init__(self,
@@ -175,6 +184,8 @@ class OFA(OFABase):
         self._mapping_layers = None
         self._build_ss = False
         self._broadcast = False
+        self._skip_layers = None
+        self._cannot_changed_layer = []
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
@@ -185,6 +196,7 @@ class OFA(OFABase):
                 depth_list = list(set(self.run_config.elastic_depth))
                 depth_list.sort()
                 self._ofa_layers['depth'] = depth_list
+                self._layers['depth'] = depth_list
 
         if self.elastic_order is None:
             self.elastic_order = []
@@ -198,6 +210,7 @@ class OFA(OFABase):
                 depth_list = list(set(self.run_config.elastic_depth))
                 depth_list.sort()
                 self._ofa_layers['depth'] = depth_list
+                self._layers['depth'] = depth_list
                 self.elastic_order.append('depth')
 
             # final, elastic width
@@ -225,16 +238,19 @@ class OFA(OFABase):
                         run_config.init_learning_rate[idx], list
                     ), "each candidate in init_learning_rate must be list"
 
+        ### remove skip layers in search space
+        if self.run_config != None and getattr(self.run_config, 'skip_layers',
+                                               None) != None:
+            self._skip_layers = self.run_config.skip_layers
+
         ### =================  add distill prepare ======================
         if self.distill_config != None:
             self._add_teacher = True
             self._prepare_distill()
 
-        self.model.train()
-
     def _prepare_distill(self):
         if self.distill_config.teacher_model == None:
-            logging.error(
+            _logger.error(
                 'If you want to add distill, please input instance of teacher model'
             )
 
@@ -243,8 +259,9 @@ class OFA(OFABase):
 
         # load teacher parameter
         if self.distill_config.teacher_model_path != None:
-            param_state_dict, _ = paddle.load_dygraph(
-                self.distill_config.teacher_model_path)
+            param_state_dict = self.distill_config.teacher_model_path if isinstance(
+                self.distill_config.teacher_model_path,
+                dict) else paddle.load(self.distill_config.teacher_model_path)
             self.distill_config.teacher_model.set_dict(param_state_dict)
 
         self.ofa_teacher_model = OFABase(self.distill_config.teacher_model)
@@ -289,6 +306,7 @@ class OFA(OFABase):
 
     def _reset_hook_before_forward(self):
         self.Tacts, self.Sacts = {}, {}
+        self.hooks = []
         if self._mapping_layers != None:
 
             def get_activation(mem, name):
@@ -300,11 +318,17 @@ class OFA(OFABase):
             def add_hook(net, mem, mapping_layers):
                 for idx, (n, m) in enumerate(net.named_sublayers()):
                     if n in mapping_layers:
-                        m.register_forward_post_hook(get_activation(mem, n))
+                        self.hooks.append(
+                            m.register_forward_post_hook(
+                                get_activation(mem, n)))
 
             add_hook(self.model, self.Sacts, self._mapping_layers)
             add_hook(self.ofa_teacher_model.model, self.Tacts,
                      self._mapping_layers)
+
+    def _remove_hook_after_forward(self):
+        for hook in self.hooks:
+            hook.remove()
 
     def _compute_epochs(self):
         if getattr(self, 'epoch', None) == None:
@@ -323,6 +347,7 @@ class OFA(OFABase):
     def _sample_from_nestdict(self, cands, sample_type, task, phase):
         sample_cands = dict()
         for k, v in cands.items():
+
             if isinstance(v, dict):
                 sample_cands[k] = self._sample_from_nestdict(
                     v, sample_type=sample_type, task=task, phase=phase)
@@ -439,21 +464,41 @@ class OFA(OFABase):
     def search(self, eval_func, condition):
         pass
 
-    def _export_sub_model_config(self, origin_model, config, input_shapes,
-                                 input_dtypes):
-        origin_model_config = {}
-        for name, sublayer in origin_model.named_sublayers():
-            if isinstance(sublayer, BaseBlock):
-                sublayer = sublayer.fn
-            for param in sublayer.parameters(include_sublayers=False):
-                if name in config.keys():
-                    origin_model_config[param.name] = config[name]
+    def _get_model_pruned_weight(self):
 
-        program = dygraph2program(
-            origin_model, inputs=input_shapes, dtypes=input_dtypes)
-        graph = GraphWrapper(program)
-        param_prune_config = get_prune_params_config(graph, origin_model_config)
-        return param_prune_config
+        pruned_param = {}
+        for l_name, sublayer in self.model.named_sublayers():
+
+            if getattr(sublayer, 'cur_config', None) == None:
+                continue
+
+            assert 'prune_dim' in sublayer.cur_config, 'The laycer {} do not have prune_dim in cur_config.'.format(
+                l_name)
+            prune_shape = sublayer.cur_config['prune_dim']
+
+            for p_name, param in sublayer.named_parameters(
+                    include_sublayers=False):
+                origin_param = param.value().get_tensor()
+                param = np.array(origin_param).astype("float32")
+
+                name = l_name + '.' + p_name
+                if isinstance(prune_shape, list):
+
+                    if len(param.shape) == 4:
+                        pruned_param[name] = param[:prune_shape[0], :
+                                                   prune_shape[1], :, :]
+                    elif len(param.shape) == 2:
+                        pruned_param[name] = param[:prune_shape[0], :
+                                                   prune_shape[1]]
+                    else:
+                        if isinstance(sublayer, SuperLinear):
+                            pruned_param[name] = param[:prune_shape[1]]
+                        else:
+                            pruned_param[name] = param[:prune_shape[0]]
+                else:
+                    pruned_param[name] = param[:prune_shape]
+
+        return pruned_param
 
     def export(self,
                config,
@@ -473,22 +518,74 @@ class OFA(OFABase):
             .. code-block:: python
               from paddle.vision.models import mobilenet_v1
               origin_model = mobilenet_v1()
-
               config = {'conv2d_0': {'expand_ratio': 2}, 'conv2d_1': {'expand_ratio': 2}}
               origin_model = ofa_model.export(origin_model, config, input_shapes=[1, 3, 28, 28], input_dtypes=['float32'])
         """
-        super_sd = None
+        self.set_net_config(config)
+        self.model.eval()
+
+        def build_input(input_size, dtypes):
+            if isinstance(input_size, list) and all(
+                    isinstance(i, numbers.Number) for i in input_size):
+                if isinstance(dtypes, list):
+                    dtype = dtypes[0]
+                else:
+                    dtype = dtypes
+                return paddle.cast(paddle.rand(list(input_size)), dtype)
+            if isinstance(input_size, dict):
+                inputs = {}
+                if isinstance(dtypes, list):
+                    dtype = dtypes[0]
+                else:
+                    dtype = dtypes
+                for key, value in input_size.items():
+                    inputs[key] = paddle.cast(paddle.rand(list(value)), dtype)
+                return inputs
+            if isinstance(input_size, list):
+                return [
+                    build_input(i, dtype)
+                    for i, dtype in zip(input_size, dtypes)
+                ]
+
+        data = build_input(input_shapes, input_dtypes)
+
+        if isinstance(data, list):
+            self.forward(*data)
+        else:
+            self.forward(data)
+        super_model_state_dict = None
         if load_weights_from_supernet and origin_model != None:
-            super_sd = remove_model_fn(origin_model, self.model.state_dict())
+            super_model_state_dict = remove_model_fn(origin_model,
+                                                     self.model.state_dict())
 
         if origin_model == None:
             origin_model = self.model
+
         origin_model = origin_model._layers if isinstance(
             origin_model, DataParallel) else origin_model
 
-        param_config = self._export_sub_model_config(origin_model, config,
-                                                     input_shapes, input_dtypes)
-        prune_params(origin_model, param_config, super_sd)
+        _logger.info("Start to get pruned params, please wait...")
+        pruned_param = self._get_model_pruned_weight()
+        pruned_state_dict = remove_model_fn(origin_model, pruned_param)
+        _logger.info("Start to get pruned model, please wait...")
+        for l_name, sublayer in origin_model.named_sublayers():
+            for p_name, param in sublayer.named_parameters(
+                    include_sublayers=False):
+                name = l_name + '.' + p_name
+                t_value = param.value().get_tensor()
+                if name in pruned_state_dict:
+                    p = t_value._place()
+                    if p.is_cpu_place():
+                        place = core.CPUPlace()
+                    elif p.is_cuda_pinned_place():
+                        place = core.CUDAPinnedPlace()
+                    else:
+                        place = core.CUDAPlace(p.gpu_device_id())
+                    t_value.set(pruned_state_dict[name], place)
+
+        if super_model_state_dict != None and len(super_model_state_dict) != 0:
+            origin_model.set_state_dict(super_model_state_dict)
+
         return origin_model
 
     @property
@@ -521,73 +618,118 @@ class OFA(OFABase):
         else:
             return False
 
+    def _clear_width(self, key):
+        if 'expand_ratio' in self._ofa_layers[key]:
+            self._ofa_layers[key].pop('expand_ratio')
+        elif 'channel' in self._ofa_layers[key]:
+            self._ofa_layers[key].pop('channel')
+        if len(self._ofa_layers[key]) == 0:
+            self._ofa_layers.pop(key)
+
     def _clear_search_space(self, *inputs, **kwargs):
         """ find shortcut in model, and clear up the search space """
         input_shapes = []
         input_dtypes = []
         for n in inputs:
-            input_shapes.append(n.shape)
-            input_dtypes.append(n.numpy().dtype)
-        for n, v in kwargs.items():
-            input_shapes.append(v.shape)
-            input_dtypes.append(v.numpy().dtype)
+            if isinstance(n, Variable):
+                input_shapes.append(n)
+                input_dtypes.append(n.numpy().dtype)
+
+        for key, val in kwargs.items():
+            if isinstance(val, Variable):
+                input_shapes.append(val)
+                input_dtypes.append(val.numpy().dtype)
+            elif isinstance(val, dict):
+                input_shape = {}
+                input_dtype = {}
+                for k, v in val.items():
+                    input_shape[k] = v
+                    input_dtype[k] = v.numpy().dtype
+                input_shapes.append(input_shape)
+                input_dtypes.append(input_dtype)
+            else:
+                _logger.error(
+                    "Cannot figure out the type of inputs! Right now, the type of inputs can be only Variable or dict."
+                )
 
         ### find shortcut block using static model
+        model_to_traverse = self.model._layers if isinstance(
+            self.model, DataParallel) else self.model
         _st_prog = dygraph2program(
-            self.model, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss = check_search_space(GraphWrapper(_st_prog))
+            model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
+        self._same_ss, depthwise_conv, fixed_by_input, output_conv = check_search_space(
+            GraphWrapper(_st_prog))
+        self._cannot_changed_layer = output_conv
 
         if self._same_ss != None:
-            self._same_ss = sorted(self._same_ss)
             self._param2key = {}
             self._broadcast = True
 
             ### the name of sublayer is the key in search space
             ### param.name is the name in self._same_ss
-            model_to_traverse = self.model._layers if isinstance(
-                self.model, DataParallel) else self.model
             for name, sublayer in model_to_traverse.named_sublayers():
                 if isinstance(sublayer, BaseBlock):
                     for param in sublayer.parameters():
                         if self._find_ele(param.name, self._same_ss):
                             self._param2key[param.name] = name
 
+            ### double clear same search space to avoid outputs weights in same ss.
+            tmp_same_ss = []
+            for ss in self._same_ss:
+                per_ss = []
+                for key in ss:
+                    if key not in self._param2key.keys():
+                        continue
+
+                    ### if skip_layers and same ss both have same layer, 
+                    ### the layers related to this layer need to add to skip_layers 
+                    if self._skip_layers != None and self._param2key[
+                            key] in self._skip_layers:
+                        self._skip_layers += [self._param2key[sk] for sk in ss]
+                        per_ss = []
+                        break
+
+                    if self._param2key[key] in self._ofa_layers.keys() and \
+                       ('expand_ratio' in self._ofa_layers[self._param2key[key]] or \
+                       'channel' in self._ofa_layers[self._param2key[key]]):
+                        per_ss.append(key)
+                    else:
+                        _logger.info("{} not in ss".format(key))
+                if len(per_ss) != 0:
+                    tmp_same_ss.append(per_ss)
+
+            self._same_ss = tmp_same_ss
+
+            ### if fixed_by_input layer in a same ss, 
+            ### layers in this same ss should all be fixed 
+            tmp_fixed_by_input = []
+            for ss in self._same_ss:
+                for key in fixed_by_input:
+                    if key in ss:
+                        tmp_fixed_by_input += ss
+            fixed_by_input += tmp_fixed_by_input
+
+            ### clear layer in ofa_layers set by skip layers
+            if self._skip_layers != None:
+                for skip_layer in self._skip_layers:
+                    if skip_layer in self._ofa_layers.keys():
+                        self._ofa_layers.pop(skip_layer)
+
             for per_ss in self._same_ss:
                 for ss in per_ss[1:]:
-                    if 'expand_ratio' in self._ofa_layers[self._param2key[ss]]:
-                        self._ofa_layers[self._param2key[ss]].pop(
-                            'expand_ratio')
-                    elif 'channel' in self._ofa_layers[self._param2key[ss]]:
-                        self._ofa_layers[self._param2key[ss]].pop('channel')
-                    if len(self._ofa_layers[self._param2key[ss]]) == 0:
-                        self._ofa_layers.pop(self._param2key[ss])
+                    self._clear_width(self._param2key[ss])
 
-    def _broadcast_ss(self):
-        """ broadcast search space after random sample."""
-        for per_ss in self._same_ss:
-            for ss in per_ss[1:]:
-                key = self._param2key[ss]
-                pre_key = self._param2key[per_ss[0]]
-                if key in self.current_config:
-                    if 'expand_ratio' in self.current_config[pre_key]:
-                        self.current_config[key].update({
-                            'expand_ratio':
-                            self.current_config[pre_key]['expand_ratio']
-                        })
-                    elif 'channel' in self.current_config[pre_key]:
-                        self.current_config[key].update({
-                            'channel': self.current_config[pre_key]['channel']
-                        })
-                else:
-                    if 'expand_ratio' in self.current_config[pre_key]:
-                        self.current_config[key] = {
-                            'expand_ratio':
-                            self.current_config[pre_key]['expand_ratio']
-                        }
-                    elif 'channel' in self.current_config[pre_key]:
-                        self.current_config[key] = {
-                            'channel': self.current_config[pre_key]['channel']
-                        }
+            self._cannot_changed_layer = sorted(
+                set(output_conv + fixed_by_input + depthwise_conv))
+        ### clear depthwise convs from search space because of its output channel cannot change
+        ### clear output convs from search space because of model output shape cannot change
+        ### clear convs that operate with fixed input 
+        for name, sublayer in model_to_traverse.named_sublayers():
+            if isinstance(sublayer, BaseBlock):
+                for param in sublayer.parameters():
+                    if param.name in self._cannot_changed_layer and name in self._ofa_layers.keys(
+                    ):
+                        self._clear_width(name)
 
     def forward(self, *inputs, **kwargs):
         # =====================  teacher process  =====================
@@ -624,10 +766,15 @@ class OFA(OFABase):
             self.current_config = self.net_config
 
         _logger.debug("Current config is {}".format(self.current_config))
+
         if 'depth' in self.current_config:
             kwargs['depth'] = self.current_config['depth']
-
         if self._broadcast:
-            self._broadcast_ss()
+            broadcast_search_space(self._same_ss, self._param2key,
+                                   self.current_config)
+        student_output = self.model.forward(*inputs, **kwargs)
 
-        return self.model.forward(*inputs, **kwargs), teacher_output
+        if self._add_teacher:
+            self._remove_hook_after_forward()
+
+        return student_output, teacher_output

@@ -83,7 +83,7 @@ def test(program):
 
 ```python
 for data in train_reader():
-    acc1, acc5, loss = exe.run(train_program, feed=data_feeder.feed(data), fetch_list=outputs)
+    acc1, acc5, loss, _ = exe.run(train_program, feed=data_feeder.feed(data), fetch_list=outputs)
 print(np.mean(acc1), np.mean(acc5), np.mean(loss))
 ```
 
@@ -213,24 +213,9 @@ ratios = slim.prune.get_ratios_by_loss(s_0, loss)
 print(ratios)
 ```
 
-### 8.2 剪裁训练网络
+### 8.2 剪裁测试网络
 
-
-```python
-pruner = slim.prune.Pruner()
-print("FLOPs before pruning: {}".format(slim.analysis.flops(train_program)))
-pruned_program, _, _ = pruner.prune(
-        train_program,
-        fluid.global_scope(),
-        params=ratios.keys(),
-        ratios=ratios.values(),
-        place=place)
-print("FLOPs after pruning: {}".format(slim.analysis.flops(pruned_program)))
-```
-
-### 8.3 剪裁测试网络
-
->注意：对测试网络进行剪裁时，需要将`only_graph`设置为True，具体原因请参考[Pruner API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html#paddleslim.prune.Pruner)
+>注意：剪裁测试网络要在剪裁训练网络之前。对测试网络进行剪裁时，需要将`only_graph`设置为True，具体原因请参考[Pruner API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html#paddleslim.prune.Pruner)
 
 
 ```python
@@ -244,6 +229,20 @@ pruned_val_program, _, _ = pruner.prune(
         place=place,
         only_graph=True)
 print("FLOPs after pruning: {}".format(slim.analysis.flops(pruned_val_program)))
+```
+
+### 8.3 剪裁训练网络
+
+```python
+pruner = slim.prune.Pruner()
+print("FLOPs before pruning: {}".format(slim.analysis.flops(train_program)))
+pruned_program, _, _ = pruner.prune(
+        train_program,
+        fluid.global_scope(),
+        params=ratios.keys(),
+        ratios=ratios.values(),
+        place=place)
+print("FLOPs after pruning: {}".format(slim.analysis.flops(pruned_program)))
 ```
 
 测试一下剪裁后的模型在测试集上的精度：

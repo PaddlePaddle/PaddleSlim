@@ -10,26 +10,16 @@ __all__ = ['PruningPlan', 'PruningMask']
 
 
 class PruningMask():
-    def __init__(self, dims, mask, ratio):
+    def __init__(self, dims, mask, ratio, op):
+        assert (isinstance(dims, int))
         self._dims = dims
         self._mask = mask
         self._pruned_ratio = ratio
+        self._op = op
 
     @property
     def dims(self):
         return self._dims
-
-    @dims.setter
-    def dims(self, value):
-        if not isinstance(value, collections.Iterator):
-            raise ValueError(
-                "The dims of PruningMask must be instance of collections.Iterator."
-            )
-        if self._mask is not None:
-            assert len(self._mask.shape) == len(
-                value
-            ), "The length of value must be same with length of mask's shape in current PruningMask instance."
-        self._dims = list(value)
 
     @property
     def mask(self):
@@ -105,11 +95,78 @@ class PruningPlan():
             for name, mask in self._masks.items()
         ]) + details
 
-    def apply(self, model, lazy=False):
+    def _prune_opt(self, param_name, dims, bool_mask, opt):
+        if opt is None:
+            return
+        for k, v in opt._accumulators.items():
+            var_tmp = v.get(param_name)
+            #NOTE: var_tmp.shape == [1] is used to skip variables like beta1_pow_acc in Adam optimizer. Its shape is [1] and there's no need to prune this one-value variable.
+            if var_tmp is None or var_tmp.shape == [1]:
+                if var_tmp is not None: print(var_tmp.name, var_tmp.shape)
+                continue
+            t_value = var_tmp.value().get_tensor()
+            value = np.array(t_value).astype("float32")
+
+            pruned_value = np.apply_along_axis(lambda data: data[bool_mask],
+                                               dims, value)
+
+            p = t_value._place()
+            if p.is_cpu_place():
+                place = paddle.CPUPlace()
+            elif p.is_cuda_pinned_place():
+                place = paddle.CUDAPinnedPlace()
+            else:
+                p = core.Place()
+                p.set_place(t_value._place())
+                place = paddle.CUDAPlace(p.gpu_device_id())
+
+            t_value.set(pruned_value, place)
+
+    def _buffer_opt(self, param_name, sub_layer, opt):
+        if opt is None:
+            return
+        for k, v in opt._accumulators.items():
+            var_tmp = v.get(param_name)
+            if var_tmp is None: continue
+            backup_name = var_tmp.name.replace(".", "_") + "_backup"
+            if backup_name not in sub_layer._buffers:
+                sub_layer.register_buffer(
+                    backup_name,
+                    paddle.to_tensor(np.array(var_tmp.value().get_tensor())))
+                _logger.debug("Backup values of {} into buffers.".format(
+                    var_tmp.name))
+
+    def _restore_opt(self, param_name, sub_layer, opt):
+        if opt is None:
+            return
+        for k, v in opt._accumulators.items():
+            var_tmp = v.get(param_name)
+            if var_tmp is None: continue
+            backup_name = var_tmp.name.replace(".", "_") + "_backup"
+            if backup_name in sub_layer._buffers:
+                _logger.debug("Restore values of variable: {}".format(
+                    var_tmp.name))
+                t_value = var_tmp.value().get_tensor()
+                t_backup = sub_layer._buffers[backup_name].value().get_tensor()
+
+                p = t_value._place()
+                if p.is_cpu_place():
+                    place = paddle.CPUPlace()
+                elif p.is_cuda_pinned_place():
+                    place = paddle.CUDAPinnedPlace()
+                else:
+                    p = core.Place()
+                    p.set_place(t_value._place())
+                    place = paddle.CUDAPlace(p.gpu_device_id())
+
+                t_value.set(np.array(t_backup).astype("float32"), place)
+                del sub_layer._buffers[backup_name]
+
+    def apply(self, model, lazy=False, opt=None):
         if lazy:
             self.lazy_apply(model)
         else:
-            self.imperative_apply(model)
+            self.imperative_apply(model, opt)
 
     def lazy_apply(self, model):
         for name, sub_layer in model.named_sublayers():
@@ -128,8 +185,7 @@ class PruningPlan():
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
                         expand_mask_shape = [1] * len(value.shape)
-                        for i in dims:
-                            expand_mask_shape[i] = value.shape[i]
+                        expand_mask_shape[dims] = value.shape[dims]
                         _logger.debug("Expanded mask shape: {}".format(
                             expand_mask_shape))
                         expand_mask = mask.reshape(expand_mask_shape).astype(
@@ -147,24 +203,35 @@ class PruningPlan():
 
                         t_value.set(value * expand_mask, place)
 
-    def imperative_apply(self, model):
+    def imperative_apply(self, model, opt=None):
         """
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
 
-        for name, sub_layer in model.named_sublayers():
+        for name, sub_layer in model.named_sublayers(include_self=True):
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
                     for _mask in self._masks[param.name]:
                         dims = _mask.dims
+                        assert (isinstance(dims, int))
                         mask = _mask.mask
-                        assert len(
-                            dims
-                        ) == 1, "Imperative mode only support for pruning on one dimension, but get dims {} when pruning parameter {}".format(
-                            dims, param.name)
+                        bool_mask = np.array(mask).astype(bool)
                         t_value = param.value().get_tensor()
                         value = np.array(t_value).astype("float32")
+                        groups = _mask._op.attr('groups')
+                        if dims == 1 and groups is not None and groups > 1 and len(
+                                value.shape) == 4:
+                            filter_size = value.shape[1]
+                            except_num = np.sum(bool_mask)
+                            assert (except_num % filter_size == 0)
+                            new_groups = int(except_num / filter_size)
+                            sub_layer._origin_groups = sub_layer._groups
+                            sub_layer._groups = new_groups
+                            _logger.info("change groups from {} to {} for {}.".
+                                         format(groups, new_groups, param.name))
+                            continue
+
                         # The name of buffer can not contains "."
                         backup_name = param.name.replace(".", "_") + "_backup"
                         if backup_name not in sub_layer._buffers:
@@ -172,9 +239,13 @@ class PruningPlan():
                                                       paddle.to_tensor(value))
                             _logger.debug("Backup values of {} into buffers.".
                                           format(param.name))
-                        bool_mask = np.array(mask).astype(bool)
+                        # save optimizer accumulators into layer buffer
+                        self._buffer_opt(param.name, sub_layer, opt)
+
                         pruned_value = np.apply_along_axis(
-                            lambda data: data[bool_mask], dims[0], value)
+                            lambda data: data[bool_mask], dims, value)
+                        self._prune_opt(param.name, dims, bool_mask, opt)
+
                         p = t_value._place()
                         if p.is_cpu_place():
                             place = paddle.CPUPlace()
@@ -184,28 +255,17 @@ class PruningPlan():
                             p = core.Place()
                             p.set_place(t_value._place())
                             place = paddle.CUDAPlace(p.gpu_device_id())
-
                         t_value.set(pruned_value, place)
-                        if isinstance(
-                                sub_layer, paddle.nn.layer.conv.Conv2D
-                        ) and sub_layer._groups > 1 and len(param.shape) == 4:
-                            assert param.shape[
-                                1] == 1, "It just supports depthwise conv2d when groups > 1."
-                            new_groups = int(bool_mask.sum() *
-                                             sub_layer._groups / len(bool_mask))
-                            _logger.debug(
-                                "Update groups of depthwise conv2d form {} to {}".
-                                format(sub_layer._groups, new_groups))
-                            sub_layer._origin_groups = sub_layer._groups
-                            sub_layer._groups = new_groups
 
                     # for training
                     if param.trainable:
                         param.clear_gradient()
 
-    def restore(self, model):
-        for name, sub_layer in model.named_sublayers():
+    def restore(self, model, opt=None):
+        for name, sub_layer in model.named_sublayers(include_self=True):
             for param in sub_layer.parameters(include_sublayers=False):
+                # restore optimizer accumulators from layer buffer
+                self._restore_opt(param.name, sub_layer, opt)
                 backup_name = "_".join([param.name.replace(".", "_"), "backup"])
                 if backup_name in sub_layer._buffers:
                     _logger.debug("Restore values of variable: {}".format(

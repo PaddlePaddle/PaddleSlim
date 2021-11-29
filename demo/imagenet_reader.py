@@ -15,7 +15,7 @@ DATA_DIM = 224
 THREAD = 16
 BUF_SIZE = 10240
 
-DATA_DIR = './data/ILSVRC2012/'
+DATA_DIR = 'data/ILSVRC2012/'
 DATA_DIR = os.path.join(os.path.split(os.path.realpath(__file__))[0], DATA_DIR)
 
 img_mean = np.array([0.485, 0.456, 0.406]).reshape((3, 1, 1))
@@ -144,20 +144,7 @@ def _reader_creator(file_list,
                 full_lines = [line.strip() for line in flist]
                 if shuffle:
                     np.random.shuffle(full_lines)
-                if mode == 'train' and os.getenv('PADDLE_TRAINING_ROLE'):
-                    # distributed mode if the env var `PADDLE_TRAINING_ROLE` exits
-                    trainer_id = int(os.getenv("PADDLE_TRAINER_ID", "0"))
-                    trainer_count = int(os.getenv("PADDLE_TRAINERS_NUM", "1"))
-                    per_node_lines = len(full_lines) // trainer_count
-                    lines = full_lines[trainer_id * per_node_lines:(
-                        trainer_id + 1) * per_node_lines]
-                    print(
-                        "read images from %d, length: %d, lines length: %d, total: %d"
-                        % (trainer_id * per_node_lines, per_node_lines,
-                           len(lines), len(full_lines)))
-                else:
-                    lines = full_lines
-
+                lines = full_lines
                 for line in lines:
                     if mode == 'train' or mode == 'val':
                         img_path, label = line.split()
@@ -208,19 +195,7 @@ class ImageNetDataset(Dataset):
             with open(train_file_list) as flist:
                 full_lines = [line.strip() for line in flist]
                 np.random.shuffle(full_lines)
-                if os.getenv('PADDLE_TRAINING_ROLE'):
-                    # distributed mode if the env var `PADDLE_TRAINING_ROLE` exits
-                    trainer_id = int(os.getenv("PADDLE_TRAINER_ID", "0"))
-                    trainer_count = int(os.getenv("PADDLE_TRAINERS_NUM", "1"))
-                    per_node_lines = len(full_lines) // trainer_count
-                    lines = full_lines[trainer_id * per_node_lines:(
-                        trainer_id + 1) * per_node_lines]
-                    print(
-                        "read images from %d, length: %d, lines length: %d, total: %d"
-                        % (trainer_id * per_node_lines, per_node_lines,
-                           len(lines), len(full_lines)))
-                else:
-                    lines = full_lines
+                lines = full_lines
             self.data = [line.split() for line in lines]
         else:
             with open(val_file_list) as flist:

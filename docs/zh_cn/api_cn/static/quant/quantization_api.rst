@@ -74,13 +74,34 @@ quant_post_dynamic
 
 .. warning::
 
-   此示例不能直接运行，因为需要加载 ``${model_dir}`` 下的模型，所以不能直接运行。
+   此api需要加载 ``${model_path}`` 下的模型，所以示例中首先导出了inference model。
 
 .. code-block:: python
 
+   import paddle
    import paddle.fluid as fluid
    import paddle.dataset.mnist as reader
+   from paddleslim.models import MobileNet
    from paddleslim.quant import quant_post_dynamic
+   
+   paddle.enable_static()
+   image = paddle.static.data(name='image', shape=[None, 1, 28, 28], dtype='float32')
+   model = MobileNet()
+   out = model.net(input=image, class_dim=10) 
+   main_prog = paddle.static.default_main_program()
+   val_prog = main_prog.clone(for_test=True)
+   place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
+   exe = paddle.static.Executor(place)
+   exe.run(paddle.static.default_startup_program())
+   
+   paddle.fluid.io.save_inference_model(
+       dirname='./model_path',
+       feeded_var_names=[image.name],
+       target_vars=[out],
+       main_program=val_prog,
+       executor=exe,
+       model_filename='__model__',
+       params_filename='__params__')
    
    quant_post_dynamic(
            model_dir='./model_path',
@@ -108,7 +129,7 @@ quant_post_static
 **使用条件:**
 
 * 有训练好的预测模型
-* 有少量校准数据，比如100~500张图片
+* 有少量校准数据，比如几十到几百张图片
 
 **使用步骤：**
 
@@ -136,10 +157,12 @@ quant_post_static
 - **params_filename(str, optional)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
 - **save_model_filename(str)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``__model__`` 。
 - **save_params_filename(str)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``__params__`` 。
-- **batch_size(int)** - 每个batch的图片数量。默认值为16 。
+- **batch_size(int)** - 每个batch的图片数量。默认值为32 。
 - **batch_nums(int, optional)** - 迭代次数。如果设置为 ``None`` ，则会一直运行到 ``sample_generator`` 迭代结束， 否则，迭代次数为 ``batch_nums``, 也就是说参与对 ``Scale`` 进行校正的样本个数为 ``'batch_nums' * 'batch_size'`` .
 - **scope(fluid.Scope, optional)** - 用来获取和写入 ``Variable`` , 如果设置为 ``None`` ,则使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . 默认值是 ``None`` .
-- **algo(str)** - 量化时使用的算法名称，可为 ``'KL'`` 或者 ``'abs_max'`` 。该参数仅针对激活值的量化，因为参数值的量化使用的方式为 ``'channel_wise_abs_max'`` . 当 ``algo`` 设置为 ``'abs_max'`` 时，使用校正数据的激活值的绝对值的最大值当作 ``Scale`` 值，当设置为 ``'KL'`` 时，则使用KL散度的方法来计算 ``Scale`` 值。默认值为 ``'KL'`` 。
+- **algo(str)** - 量化时使用的算法名称，可为 ``'KL'``，``'mse'``, ``'hist'``， ``'avg'``，或者 ``'abs_max'`` 。该参数仅针对激活值的量化，因为参数值的量化使用的方式为 ``'channel_wise_abs_max'`` . 当 ``algo`` 设置为 ``'abs_max'`` 时，使用校正数据的激活值的绝对值的最大值当作 ``Scale`` 值，当设置为 ``'KL'`` 时，则使用KL散度的方法来计算 ``Scale`` 值，当设置为 ``'avg'`` 时，使用校正数据激活值的最大绝对值平均数作为 ``Scale`` 值，当设置为 ``'hist'`` 时，则使用基于百分比的直方图的方法来计算 ``Scale`` 值，当设置为 ``'mse'`` 时，则使用搜索最小mse损失的方法来计算 ``Scale`` 值。默认值为 ``'hist'`` 。
+- **hist_percent(float)** -  ``'hist'`` 方法的百分位数。默认值为0.9999。
+- **bias_correction(bool)** -  是否使用 bias correction 算法。默认值为 False 。
 - **quantizable_op_type(list[str])** -  需要量化的 op 类型列表。默认值为 ``["conv2d", "depthwise_conv2d", "mul"]`` 。
 - **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。如果设置为True, 则按照 `量化配置 <#id2>`_  中 ``QUANT_DEQUANT_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES`` 定义的op进行量化。  
 - **weight_bits(int)** - weight的量化比特位数, 默认值为8。
@@ -160,27 +183,48 @@ quant_post_static
 
 .. warning::
 
-   此示例不能直接运行，因为需要加载 ``${model_dir}`` 下的模型，所以不能直接运行。
+   此api需要加载 ``${model_path}`` 下的模型，所以示例中首先导出了inference model。
 
 .. code-block:: python
 
-   import paddle.fluid as fluid
-   import paddle.dataset.mnist as reader
-   from paddleslim.quant import quant_post_static
-   val_reader = reader.train()
-   use_gpu = True
-   place = fluid.CUDAPlace(0) if use_gpu else fluid.CPUPlace()
-   
-   exe = fluid.Executor(place)
-   quant_post_static(
-           executor=exe,
-           model_dir='./model_path',
-           quantize_model_path='./save_path',
-           sample_generator=val_reader,
-           model_filename='__model__',
-           params_filename='__params__',
-           batch_size=16,
-           batch_nums=10)
+    import paddle
+    import paddle.fluid as fluid
+    import paddle.dataset.mnist as reader
+    from paddleslim.models import MobileNet
+    from paddleslim.quant import quant_post_static
+
+    paddle.enable_static()
+    val_reader = reader.test()
+    use_gpu = True
+    place = fluid.CUDAPlace(0) if use_gpu else fluid.CPUPlace()
+    exe = fluid.Executor(place)
+    paddle.enable_static()
+    image = paddle.static.data(name='image', shape=[None, 1, 28, 28], dtype='float32')
+    model = MobileNet()
+    out = model.net(input=image, class_dim=10)
+    main_prog = paddle.static.default_main_program()
+    val_prog = main_prog.clone(for_test=True)
+    place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
+    exe.run(paddle.static.default_startup_program())
+
+    paddle.fluid.io.save_inference_model(
+        dirname='./model_path',
+        feeded_var_names=[image.name],
+        target_vars=[out],
+        main_program=val_prog,
+        executor=exe,
+        model_filename='__model__',
+        params_filename='__params__')
+    quant_post_static(
+        executor=exe,
+        model_dir='./model_path',
+        quantize_model_path='./save_path',
+        sample_generator=val_reader,
+        model_filename='__model__',
+        params_filename='__params__',
+        batch_size=16,
+        batch_nums=10)
 
 更详细的用法请参考 `离线量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post>`_ 。
 
@@ -251,8 +295,8 @@ convert
 
 **返回**
 
-- **program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``float32`` 类型，但其数值范围可用int8表示。
-- **int8_program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``int8`` 类型。当 ``save_int8`` 为False 时，不返回该值。
+- **program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``float32`` 类型，但其数值范围可用int8表示。该模型用于预测部署。
+- **int8_program (fluid.Program)** - freezed program，可用于保存inference model，参数为 ``int8`` 类型。当 ``save_int8`` 为False 时，不返回该值。该模型不可以用于预测部署。
 
 .. note::
 
@@ -262,13 +306,12 @@ convert
 
 .. code-block:: python
 
-   #encoding=utf8
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.quant as quant
    
-   
+   paddle.enable_static()
    train_program = fluid.Program()
-   
    with fluid.program_guard(train_program):
        image = fluid.data(name='x', shape=[None, 1, 28, 28])
        label = fluid.data(name='label', shape=[None, 1], dtype='int64')
@@ -395,10 +438,12 @@ fluid.Program
 **代码示例**
 
 .. code-block:: python
-
+   
+   import paddle
    import paddle.fluid as fluid
    import paddleslim.quant as quant
    
+   paddle.enable_static()
    train_program = fluid.Program()
    with fluid.program_guard(train_program):
        input_word = fluid.data(name="input_word", shape=[None, 1], dtype='int64')
@@ -416,12 +461,27 @@ fluid.Program
    exe = fluid.Executor(place)
    exe.run(fluid.default_startup_program())
    
+   # 量化为8比特，Embedding参数的体积减小4倍，精度有轻微损失
    config = {
-            'quantize_op_types': ['lookup_table'], 
+            'quantize_op_types': ['lookup_table'],
             'lookup_table': {
-                'quantize_type': 'abs_max'
-                }
+               'quantize_type': 'abs_max',
+               'quantize_bits': 8,
+               'dtype': 'int8'
+               }
             }
+
+   '''
+   # 量化为16比特，Embedding参数的体积减小2倍，精度损失很小
+   config = {
+            'quantize_op_types': ['lookup_table'],
+            'lookup_table': {
+               'quantize_type': 'abs_max',
+               'quantize_bits': 16,
+               'dtype': 'int16'
+               }
+            }
+   '''
    quant_program = quant.quant_embedding(infer_program, place, config)
 
 更详细的用法请参考 `Embedding量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_embedding>`_ 

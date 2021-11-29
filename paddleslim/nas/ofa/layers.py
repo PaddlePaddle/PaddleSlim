@@ -1,4 +1,4 @@
-#   Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserve.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,8 @@ __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
     'SuperBatchNorm2D', 'SuperLinear', 'SuperInstanceNorm2D',
     'SuperGroupConv2D', 'SuperDepthwiseConv2D', 'SuperGroupConv2DTranspose',
-    'SuperDepthwiseConv2DTranspose', 'SuperLayerNorm', 'SuperEmbedding'
+    'SuperDepthwiseConv2DTranspose', 'SuperLayerNorm', 'SuperEmbedding',
+    'SuperSyncBatchNorm'
 ]
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -38,8 +39,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class SuperConv2D(nn.Conv2D):
-    """
-    This interface is used to construct a callable object of the ``SuperConv2D``  class.
+    """This interface is used to construct a callable object of the ``SuperConv2D``  class.
 
     Note: the channel in config need to less than first defined.
 
@@ -115,7 +115,7 @@ class SuperConv2D(nn.Conv2D):
             of conv2d. If it is set to None or one attribute of ParamAttr, conv2d
             will create ParamAttr as param_attr. If the Initializer of the param_attr
             is not set, the parameter is initialized with :math:`Normal(0.0, std)`,
-            and the :math:`std` is :math:`(\\frac{2.0 }{filter\_elem\_num})^{0.5}`. Default: None.
+            and the :math:`std` is :math:`(\\frac{2.0 }{filter\\_elem\\_num})^{0.5}`. Default: None.
         bias_attr (ParamAttr or bool, optional): The attribute for the bias of conv2d.
             If it is set to False, no bias will be added to the output units.
             If it is set to None or one attribute of ParamAttr, conv2d
@@ -176,6 +176,7 @@ class SuperConv2D(nn.Conv2D):
             data_format=data_format)
 
         self.candidate_config = candidate_config
+        self.cur_config = None
         if len(candidate_config.items()) != 0:
             for k, v in candidate_config.items():
                 candidate_config[k] = list(set(v))
@@ -301,10 +302,19 @@ class SuperConv2D(nn.Conv2D):
             padding = self._padding
 
         if self.bias is not None:
-            bias = self.bias[:out_nc]
+            ### if conv is depthwise conv, expand_ratio=0, but conv' expand 
+            ### ratio before depthwise conv is not equal to 1.0, the shape of the weight
+            ### about this depthwise conv is changed, but out_nc is not change,
+            ### so need to change bias shape according to the weight_out_nc.
+            ### if in_nc > groups > 1, the actual output of conv is weight_out_nc * groups,
+            ### so slice the shape of bias by weight_out_nc and groups.
+            ### if in_nc = groups, slice the shape of bias by weight_out_nc.
+            if groups != in_nc:
+                weight_out_nc = weight_out_nc * groups
+            bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
-
+        self.cur_config['prune_dim'] = list(weight.shape)
         out = F.conv2d(
             input,
             weight,
@@ -312,7 +322,7 @@ class SuperConv2D(nn.Conv2D):
             stride=self._stride,
             padding=padding,
             dilation=self._dilation,
-            groups=self._groups,
+            groups=groups,
             data_format=self._data_format)
         return out
 
@@ -360,7 +370,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
     `conv2dtranspose <http://www.matthewzeiler.com/wp-content/uploads/2017/07/cvpr2010.pdf>`_ .
     For each input :math:`X`, the equation is:
     .. math::
-        Out = \sigma (W \\ast X + b)
+        Out = \\sigma (W \\ast X + b)
     Where:
     * :math:`X`: Input value, a ``Tensor`` with NCHW format.
     * :math:`W`: Filter value, a ``Tensor`` with shape [MCHW] .
@@ -376,10 +386,10 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
           Output shape: :math:`(N, C_{out}, H_{out}, W_{out})`
         Where
         .. math::
-           H^\prime_{out} &= (H_{in} - 1) * strides[0] - 2 * paddings[0] + dilations[0] * (H_f - 1) + 1 \\\\
-           W^\prime_{out} &= (W_{in} - 1) * strides[1] - 2 * paddings[1] + dilations[1] * (W_f - 1) + 1 \\\\
-           H_{out} &\in [ H^\prime_{out}, H^\prime_{out} + strides[0] ) \\\\
-           W_{out} &\in [ W^\prime_{out}, W^\prime_{out} + strides[1] )
+           H^\\prime_{out} &= (H_{in} - 1) * strides[0] - 2 * paddings[0] + dilations[0] * (H_f - 1) + 1 \\\\
+           W^\\prime_{out} &= (W_{in} - 1) * strides[1] - 2 * paddings[1] + dilations[1] * (W_f - 1) + 1 \\\\
+           H_{out} &\\in [ H^\\prime_{out}, H^\\prime_{out} + strides[0] ) \\\\
+           W_{out} &\\in [ W^\\prime_{out}, W^\\prime_{out} + strides[1] )
     Parameters:
         num_channels(int): The number of channels in the input image.
         num_filters(int): The number of the filter. It is as same as the output
@@ -472,6 +482,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             data_format=data_format)
 
         self.candidate_config = candidate_config
+        self.cur_config = None
         if len(self.candidate_config.items()) != 0:
             for k, v in candidate_config.items():
                 candidate_config[k] = list(set(v))
@@ -605,10 +616,12 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             output_padding = 0
 
         if self.bias is not None:
-            bias = self.bias[:out_nc]
+            if groups != in_nc:
+                weight_out_nc = weight_out_nc * groups
+            bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
-
+        self.cur_config['prune_dim'] = list(weight.shape)
         out = F.conv2d_transpose(
             input,
             weight,
@@ -617,7 +630,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             output_padding=output_padding,
             stride=self._stride,
             dilation=self._dilation,
-            groups=self._groups,
+            groups=groups,
             output_size=output_size,
             data_format=self._data_format)
         return out
@@ -721,6 +734,7 @@ class SuperSeparableConv2D(nn.Layer):
         ])
 
         self.candidate_config = candidate_config
+        self.cur_config = None
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self.conv[0]._out_channels
@@ -772,7 +786,7 @@ class SuperSeparableConv2D(nn.Layer):
             bias = self.conv[2].bias[:out_nc]
         else:
             bias = self.conv[2].bias
-
+        self.cur_config['prune_dim'] = list(weight.shape)
         conv1_out = F.conv2d(
             norm_out,
             weight,
@@ -794,12 +808,12 @@ class SuperLinear(nn.Linear):
         Out = XW + b
     where :math:`W` is the weight and :math:`b` is the bias.
     Linear layer takes only one multi-dimensional tensor as input with the
-    shape :math:`[batch\_size, *, in\_features]` , where :math:`*` means any
+    shape :math:`[batch\\_size, *, in\\_features]` , where :math:`*` means any
     number of additional dimensions. It multiplies input tensor with the weight
-    (a 2-D tensor of shape :math:`[in\_features, out\_features]` ) and produces
-    an output tensor of shape :math:`[batch\_size, *, out\_features]` .
-    If :math:`bias\_attr` is not False, the bias (a 1-D tensor of
-    shape :math:`[out\_features]` ) will be created and added to the output.
+    (a 2-D tensor of shape :math:`[in\\_features, out\\_features]` ) and produces
+    an output tensor of shape :math:`[batch\\_size, *, out\\_features]` .
+    If :math:`bias\\_attr` is not False, the bias (a 1-D tensor of
+    shape :math:`[out\\_features]` ) will be created and added to the output.
     Parameters:
         in_features (int): The number of input units.
         out_features (int): The number of output units.
@@ -823,8 +837,8 @@ class SuperLinear(nn.Linear):
         **weight** (Parameter): the learnable weight of this layer.
         **bias** (Parameter): the learnable bias of this layer.
     Shape:
-        - input: Multi-dimentional tensor with shape :math:`[batch\_size, *, in\_features]` .
-        - output: Multi-dimentional tensor with shape :math:`[batch\_size, *, out\_features]` .
+        - input: Multi-dimentional tensor with shape :math:`[batch\\_size, *, in\\_features]` .
+        - output: Multi-dimentional tensor with shape :math:`[batch\\_size, *, out\\_features]` .
     Examples:
         .. code-block:: python
           import numpy as np
@@ -852,6 +866,7 @@ class SuperLinear(nn.Linear):
         self._in_features = in_features
         self._out_features = out_features
         self.candidate_config = candidate_config
+        self.cur_config = None
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self._out_features
@@ -884,7 +899,7 @@ class SuperLinear(nn.Linear):
             bias = self.bias[:out_nc]
         else:
             bias = self.bias
-
+        self.cur_config['prune_dim'] = list(weight.shape)
         out = F.linear(x=input, weight=weight, bias=bias, name=self.name)
         return out
 
@@ -928,15 +943,16 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                  weight_attr=None,
                  bias_attr=None,
                  data_format='NCHW',
+                 use_global_stats=None,
                  name=None):
-        super(SuperBatchNorm2D, self).__init__(num_features, momentum, epsilon,
-                                               weight_attr, bias_attr,
-                                               data_format, name)
+        super(SuperBatchNorm2D, self).__init__(
+            num_features, momentum, epsilon, weight_attr, bias_attr,
+            data_format, use_global_stats, name)
+        self.cur_config = None
 
     def forward(self, input):
         self._check_data_format(self._data_format)
         self._check_input_dim(input)
-
         feature_dim = int(input.shape[1])
 
         weight = self.weight[:feature_dim]
@@ -944,21 +960,92 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         mean = self._mean[:feature_dim]
         variance = self._variance[:feature_dim]
 
-        return F.batch_norm(
-            input,
-            mean,
-            variance,
-            weight=weight,
-            bias=bias,
-            training=self.training,
-            momentum=self._momentum,
-            epsilon=self._epsilon,
-            data_format=self._data_format)
+        mean_out = self._mean
+        variance_out = self._variance
+        mean_out_tmp = mean
+        variance_out_tmp = variance
+
+        if self._use_global_stats == None:
+            self._use_global_stats = not self.training
+            trainable_statistics = False
+        else:
+            trainable_statistics = not self._use_global_stats
+
+        attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
+                 "is_test", not self.training, "data_layout", self._data_format,
+                 "use_mkldnn", False, "fuse_with_relu", False,
+                 "use_global_stats", self._use_global_stats,
+                 "trainable_statistics", trainable_statistics)
+
+        if feature_dim != self._mean.shape[0]:
+            batch_norm_out = core.ops.batch_norm(input, weight, bias, mean,
+                                                 variance, mean_out_tmp,
+                                                 variance_out_tmp, *attrs)
+            self._mean[:feature_dim].set_value(mean)
+            self._variance[:feature_dim].set_value(variance)
+            mean_out[:feature_dim].set_value(mean_out_tmp)
+            variance_out[:feature_dim].set_value(variance_out_tmp)
+        else:
+            batch_norm_out = core.ops.batch_norm(input, weight, bias,
+                                                 self._mean, self._variance,
+                                                 mean_out, variance_out, *attrs)
+
+        self.cur_config = {'prune_dim': feature_dim}
+        return batch_norm_out[0]
+
+
+class SuperSyncBatchNorm(nn.SyncBatchNorm):
+    def __init__(self,
+                 num_features,
+                 momentum=0.9,
+                 epsilon=1e-05,
+                 weight_attr=None,
+                 bias_attr=None,
+                 data_format='NCHW',
+                 name=None):
+        super(SuperSyncBatchNorm,
+              self).__init__(num_features, momentum, epsilon, weight_attr,
+                             bias_attr, data_format, name)
+        self.cur_config = None
+
+    def forward(self, input):
+        self._check_data_format()
+        feature_dim = int(input.shape[1])
+
+        weight = self.weight[:feature_dim]
+        bias = self.bias[:feature_dim]
+        mean = self._mean[:feature_dim]
+        variance = self._variance[:feature_dim]
+
+        mean_out = self._mean
+        variance_out = self._variance
+        mean_out_tmp = mean
+        variance_out_tmp = variance
+        self.cur_config = {'prune_dim': feature_dim}
+
+        attrs = ("momentum", self._momentum, "epsilon", self._epsilon,
+                 "is_test", not self.training, "data_layout", self._data_format,
+                 "use_mkldnn", False, "fuse_with_relu", False,
+                 "use_global_stats", False, 'trainable_statistics', False)
+        if feature_dim != self._mean.shape[0]:
+            sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
+                input, weight, bias, mean, variance, mean_out_tmp,
+                variance_out_tmp, *attrs)
+            self._mean[:feature_dim].set_value(mean)
+            self._variance[:feature_dim].set_value(variance)
+            mean_out[:feature_dim].set_value(mean_out_tmp)
+            variance_out[:feature_dim].set_value(variance_out_tmp)
+        else:
+            sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
+                input, weight, bias, self._mean, self._variance, mean_out,
+                variance_out, *attrs)
+
+        return sync_batch_norm_out
 
 
 class SuperInstanceNorm2D(nn.InstanceNorm2D):
     """
-    This interface is used to construct a callable object of the ``SuperBatchNorm2D`` class. 
+    This interface is used to construct a callable object of the ``SuperInstanceNorm2D`` class. 
 
     Parameters:
         num_features(int): Indicate the number of channels of the input ``Tensor``.
@@ -999,6 +1086,7 @@ class SuperInstanceNorm2D(nn.InstanceNorm2D):
         super(SuperInstanceNorm2D, self).__init__(num_features, epsilon,
                                                   momentum, weight_attr,
                                                   bias_attr, data_format, name)
+        self.cur_config = None
 
     def forward(self, input):
         self._check_input_dim(input)
@@ -1010,7 +1098,7 @@ class SuperInstanceNorm2D(nn.InstanceNorm2D):
         else:
             scale = self.scale[:feature_dim]
             bias = self.bias[:feature_dim]
-
+        self.cur_config = {'prune_dim': feature_dim}
         return F.instance_norm(input, scale, bias, eps=self._epsilon)
 
 
@@ -1062,6 +1150,7 @@ class SuperLayerNorm(nn.LayerNorm):
                  name=None):
         super(SuperLayerNorm, self).__init__(normalized_shape, epsilon,
                                              weight_attr, bias_attr, name)
+        self.cur_config = None
 
     def forward(self, input):
         ### TODO(ceci3): fix if normalized_shape is not a single number
@@ -1077,6 +1166,8 @@ class SuperLayerNorm(nn.LayerNorm):
             bias = self.bias[:feature_dim]
         else:
             bias = None
+        self.cur_config = {'prune_dim': feature_dim}
+
         out, _, _ = core.ops.layer_norm(input, weight, bias, 'epsilon',
                                         self._epsilon, 'begin_norm_axis',
                                         begin_norm_axis)
@@ -1092,9 +1183,9 @@ class SuperEmbedding(nn.Embedding):
             of the dictionary of embeddings.
         embedding_dim:  Just one element which indicate the size of each embedding vector respectively.
         padding_idx(int|long|None): padding_idx needs to be in the interval [-num_embeddings, num_embeddings).
-            If :math:`padding\_idx < 0`, the :math:`padding\_idx` will automatically be converted
-            to :math:`vocab\_size + padding\_idx` . It will output all-zero padding data whenever lookup
-            encounters :math:`padding\_idx` in id. And the padding data will not be updated while training.
+            If :math:`padding\\_idx < 0`, the :math:`padding\\_idx` will automatically be converted
+            to :math:`vocab\\_size + padding\\_idx` . It will output all-zero padding data whenever lookup
+            encounters :math:`padding\\_idx` in id. And the padding data will not be updated while training.
             If set None, it makes no effect to output. Default: None.
         sparse(bool): The flag indicating whether to use sparse update. This parameter only
             affects the performance of the backwards gradient update. It is recommended to set
@@ -1141,6 +1232,7 @@ class SuperEmbedding(nn.Embedding):
                                              padding_idx, sparse, weight_attr,
                                              name)
         self.candidate_config = candidate_config
+        self.cur_config = None
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self._embedding_dim
@@ -1166,6 +1258,7 @@ class SuperEmbedding(nn.Embedding):
             out_nc = self._embedding_dim
 
         weight = self.weight[:, :out_nc]
+        self.cur_config = {'prune_dim': list(weight.shape)}
         return F.embedding(
             input,
             weight=weight,

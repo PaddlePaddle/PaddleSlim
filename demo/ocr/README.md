@@ -1,4 +1,4 @@
-[English](README_en.md) | 简体中文
+English | 简体中文
 
 # SlimOCR模型库
 

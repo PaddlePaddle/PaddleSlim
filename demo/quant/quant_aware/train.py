@@ -6,6 +6,7 @@ import argparse
 import functools
 import math
 import time
+import random
 import numpy as np
 import paddle.fluid as fluid
 sys.path[0] = os.path.join(
@@ -13,6 +14,7 @@ sys.path[0] = os.path.join(
 from paddleslim.common import get_logger
 from paddleslim.analysis import flops
 from paddleslim.quant import quant_aware, convert
+import paddle.vision.transforms as T
 import models
 from utility import add_arguments, print_arguments
 
@@ -35,9 +37,10 @@ add_arg('num_epochs',       int,  1,               "The number of total epochs."
 add_arg('total_images',     int,  1281167,               "The number of total training images.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
 add_arg('config_file',      str, None,                 "The config file for compression with yaml format.")
-add_arg('data',             str, "imagenet",             "Which data to use. 'mnist' or 'imagenet'")
+add_arg('data',             str, "imagenet",             "Which data to use. 'mnist', 'cifar10' or 'imagenet'")
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('checkpoint_dir',         str, "output",           "checkpoint save dir")
+add_arg('ce_test',                 bool,   False,       "Whether to CE test.")
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -81,6 +84,17 @@ def create_optimizer(args):
 
 
 def compress(args):
+    num_workers = 4
+    shuffle = True
+    if args.ce_test:
+        # set seed
+        seed = 111
+        paddle.seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        num_workers = 0
+        shuffle = False
+
     ############################################################################################################
     # 1. quantization configs
     ############################################################################################################
@@ -105,11 +119,21 @@ def compress(args):
         'moving_rate': 0.9,
     }
 
+    pretrain = True
     if args.data == "mnist":
         train_dataset = paddle.vision.datasets.MNIST(mode='train')
         val_dataset = paddle.vision.datasets.MNIST(mode='test')
         class_dim = 10
         image_shape = "1,28,28"
+    elif args.data == "cifar10":
+        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        train_dataset = paddle.vision.datasets.Cifar10(
+            mode="train", backend="cv2", transform=transform)
+        val_dataset = paddle.vision.datasets.Cifar10(
+            mode="test", backend="cv2", transform=transform)
+        class_dim = 10
+        image_shape = "3, 32, 32"
+        pretrain = False
     elif args.data == "imagenet":
         import imagenet_reader as reader
         train_dataset = reader.ImageNetDataset(mode='train')
@@ -153,11 +177,12 @@ def compress(args):
     exe = paddle.static.Executor(place)
     exe.run(paddle.static.default_startup_program())
 
-    assert os.path.exists(
-        args.pretrained_model), "pretrained_model doesn't exist"
+    if pretrain:
+        assert os.path.exists(
+            args.pretrained_model), "pretrained_model doesn't exist"
 
-    if args.pretrained_model:
-        paddle.static.load(train_prog, args.pretrained_model, exe)
+        if args.pretrained_model:
+            paddle.static.load(train_prog, args.pretrained_model, exe)
 
     places = paddle.static.cuda_places(
     ) if args.use_gpu else paddle.static.cpu_places()
@@ -170,8 +195,8 @@ def compress(args):
         batch_size=args.batch_size,
         return_list=False,
         use_shared_memory=True,
-        shuffle=True,
-        num_workers=4)
+        shuffle=shuffle,
+        num_workers=num_workers)
     valid_loader = paddle.io.DataLoader(
         val_dataset,
         places=place,

@@ -24,6 +24,7 @@ import argparse
 import functools
 import math
 import time
+import random
 import numpy as np
 from paddle.distributed import ParallelEnv
 from paddle.static import load_program_state
@@ -33,18 +34,18 @@ from paddleslim.common import get_logger
 from paddleslim.dygraph.quant import QAT
 
 sys.path.append(os.path.join(os.path.dirname("__file__")))
-from mobilenet_v3 import MobileNetV3_large_x1_0
 from optimizer import create_optimizer
 sys.path.append(
     os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
 from utility import add_arguments, print_arguments
+from models.dygraph.mobilenet_v3 import MobileNetV3_large_x1_0
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',               int,    256,                                         "Single Card Minibatch size.")
+add_arg('batch_size',               int,    128,                                         "Single Card Minibatch size.")
 add_arg('use_gpu',                  bool,   True,                                        "Whether to use GPU or not.")
 add_arg('model',                    str,    "mobilenet_v3",                              "The target model.")
 add_arg('pretrained_model',         str,    "MobileNetV3_large_x1_0_ssld_pretrained",    "Whether to use pretrained model.")
@@ -53,6 +54,7 @@ add_arg('lr_strategy',              str,    "piecewise_decay",                  
 add_arg('l2_decay',                 float,  3e-5,                                        "The l2_decay parameter.")
 add_arg('ls_epsilon',               float,  0.0,                                         "Label smooth epsilon.")
 add_arg('use_pact',                 bool,   False,                                       "Whether to use PACT method.")
+add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
 add_arg('momentum_rate',            float,  0.9,                                         "The value of momentum_rate.")
 add_arg('num_epochs',               int,    1,                                           "The number of total epochs.")
 add_arg('total_images',             int,    1281167,                                     "The number of total training images.")
@@ -88,6 +90,17 @@ def load_dygraph_pretrain(model, path=None, load_static_weights=False):
 
 
 def compress(args):
+    num_workers = 4
+    shuffle = True
+    if args.ce_test:
+        # set seed
+        seed = 111
+        paddle.seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        num_workers = 0
+        shuffle = False
+
     if args.data == "cifar10":
         transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
         train_dataset = paddle.vision.datasets.Cifar10(
@@ -172,13 +185,16 @@ def compress(args):
         net = paddle.DataParallel(net)
 
     train_batch_sampler = paddle.io.DistributedBatchSampler(
-        train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        drop_last=True)
     train_loader = paddle.io.DataLoader(
         train_dataset,
         batch_sampler=train_batch_sampler,
         places=place,
         return_list=True,
-        num_workers=4)
+        num_workers=num_workers)
 
     valid_loader = paddle.io.DataLoader(
         val_dataset,
@@ -187,7 +203,7 @@ def compress(args):
         shuffle=False,
         drop_last=False,
         return_list=True,
-        num_workers=4)
+        num_workers=num_workers)
 
     @paddle.no_grad()
     def test(epoch, net):
