@@ -1,4 +1,4 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ class QuantConfig:
         optimize_model=False,
         is_use_cache_file=False,
         cache_dir="./temp_post_training"):
-        """init func"""
+        """QuantConfig init"""
         self.executor=executor
         self.place=place
         self.float_infer_model_path = float_infer_model_path
@@ -81,7 +81,7 @@ class QuantConfig:
         self.cache_dir=cache_dir
 g_quant_config = None
 g_min_emd_loss = float('inf')
-
+g_quant_model_cache_path = "quant_model_tmp"
 def make_feed_dict(feed_target_names, data):
     """construct feed dictionary"""
     feed_dict = {}
@@ -133,33 +133,39 @@ def convert_model_out_2_nparr(model_out):
     return out_nparr
 
 def eval_quant_model():
-    """eval quant model accuracy"""
+    """Eval quant model accuracy.
+       Post quantization does not change the parameter value. Therefore, the closer the output distribution of the quantization model and the float model, the better the accuracy is maintained, 
+       which has been verified in classification, detection, and nlp tasks. So the reward here is the earth mover distance between the output of the quantization model and the float model. 
+       This distance measurement method is also verified on various tasks, and the stability is better than other distance measurement methods such as mse.
+    """
     float_scope = paddle.static.Scope()
     quant_scope = paddle.static.Scope()
     with paddle.static.scope_guard(float_scope):
         [infer_prog_float, feed_target_names_float, fetch_targets_float] = \
-            fluid.io.load_inference_model(dirname=args.model_path, \
-            model_filename=args.input_model_filename, \
-            params_filename=args.input_params_filename, \
-            executor=exe)
+            fluid.io.load_inference_model(dirname=g_quant_config.float_infer_model_path, \
+            model_filename=g_quant_config.model_filename, \
+            params_filename=g_quant_config.params_filename, \
+            executor=g_quant_config.executor)
 
     with paddle.static.scope_guard(quant_scope):
         [infer_prog_quant, feed_target_names_quant, fetch_targets_quant] = \
-            fluid.io.load_inference_model(dirname=args.save_path, \
-            model_filename=args.save_model_filename, \
-            params_filename=args.save_params_filename, \
-            executor=exe)
+            fluid.io.load_inference_model(dirname=g_quant_model_cache_path, \
+            model_filename=g_quant_config.save_model_filename, \
+            params_filename=g_quant_config.save_params_filename, \
+            executor=g_quant_config.executor)
 
+    out_float_list = []
+    out_quant_list = []
     emd_sum = 0
     out_len_sum = 0
+    valid_data_num = 0
     max_eval_data_num = 200
     for i, data in enumerate(g_quant_config.eval_sample_generator()):
-        #print('data shape: ', data.shape)
         with paddle.static.scope_guard(float_scope):
-            out_float = exe.run(infer_prog_float, \
+            out_float = g_quant_config.executor.run(infer_prog_float, \
                 fetch_list=fetch_targets_float, feed=make_feed_dict(feed_target_names_float, data)) 
         with paddle.static.scope_guard(quant_scope):
-            out_quant = exe.run(infer_prog_quant, \
+            out_quant = g_quant_config.executor.run(infer_prog_quant, \
                 fetch_list=fetch_targets_quant, feed=make_feed_dict(feed_target_names_quant, data)) 
 
         out_float = convert_model_out_2_nparr(out_float)
@@ -196,23 +202,21 @@ def quantize(cfg):
     algo = cfg["algo"]
     hist_percent = cfg["hist_percent"]
     bias_correct = cfg["bias_correct"]
-    activation_quantize_method = cfg["activation_quantize_method"]
     batch_size = cfg["batch_size"]
     batch_num = cfg["batch_num"]
 
-    quant_model_cache = "quant_model_tmp"
     quant_post( \
         executor=g_quant_config.executor, \
         scope=g_quant_config.scope, \
         model_dir=g_quant_config.float_infer_model_path, \
-        quantize_model_path=g_quant_config.quantize_model_path, \
+        quantize_model_path=g_quant_model_cache_path, \
         sample_generator=g_quant_config.train_sample_generator, \
         model_filename=g_quant_config.model_filename, \
         params_filename=g_quant_config.params_filename, \
         save_model_filename=g_quant_config.save_model_filename, \
         save_params_filename=g_quant_config.save_params_filename, \
         quantizable_op_type=g_quant_config.quantizable_op_type, \
-        activation_quantize_type=activation_quantize_method, \
+        activation_quantize_type="moving_average_abs_max", \
         weight_quantize_type=g_quant_config.weight_quantize_type, \
         algo=algo, \
         hist_percent=hist_percent, \
@@ -226,8 +230,8 @@ def quantize(cfg):
         g_min_emd_loss = emd_loss
         if os.path.exists(g_quant_config.quantize_model_path):
             shutil.rmtree(g_quant_config.quantize_model_path)
-        os.system(quant_model_cache, g_quant_config.quantize_model_path)
-    return mse_loss
+        os.system("cp -r {0} {1}".format(g_quant_model_cache_path, g_quant_config.quantize_model_path))
+    return emd_loss
     
 def quant_post_hpo(
     executor,
@@ -250,7 +254,57 @@ def quant_post_hpo(
     is_use_cache_file=False,
     cache_dir="./temp_post_training",
     runcount_limit=30):
-    """doc"""
+    """
+    The function utilizes static post training quantization method to
+    quantize the fp32 model. It uses calibrate data to calculate the
+    scale factor of quantized variables, and inserts fake quantization
+    and dequantization operators to obtain the quantized model.
+
+    Args:
+        executor(paddle.static.Executor): The executor to load, run and save the
+            quantized model.
+        place(paddle.CPUPlace or paddle.CUDAPlace): This parameter represents
+            the executor run on which device.
+        model_dir(str): The path of fp32 model that will be quantized, and
+            the model and params that saved by ``paddle.static.io.save_inference_model``
+            are under the path.
+        quantize_model_path(str): The path to save quantized model using api
+            ``paddle.static.io.save_inference_model``.
+        train_sample_generator(Python Generator): The sample generator provides
+            calibrate data for DataLoader, and it only returns a sample every time.
+        eval_sample_generator(Python Generator): The sample generator provides
+            evalution data for DataLoader, and it only returns a sample every time.
+        model_filename(str, optional): The name of model file. If parameters
+            are saved in separate files, set it as 'None'. Default: 'None'.
+        params_filename(str, optional): The name of params file.
+                When all parameters are saved in a single file, set it
+                as filename. If parameters are saved in separate files,
+                set it as 'None'. Default : 'None'.
+        save_model_filename(str): The name of model file to save the quantized inference program.  Default: '__model__'.
+        save_params_filename(str): The name of file to save all related parameters.
+                If it is set None, parameters will be saved in separate files. Default: '__params__'.
+        scope(paddle.static.Scope, optional): The scope to run program, use it to load
+                        and save variables. If scope is None, will use paddle.static.global_scope().
+        quantizable_op_type(list[str], optional): The list of op types
+                        that will be quantized. Default: ["conv2d", "depthwise_conv2d",
+                        "mul"].
+        is_full_quantize(bool): if True, apply quantization to all supported quantizable op type.
+                        If False, only apply quantization to the input quantizable_op_type. Default is False.
+        weight_bits(int, optional): quantization bit number for weights.
+        activation_bits(int): quantization bit number for activation.
+        weight_quantize_type(str): quantization type for weights,
+                support 'abs_max' and 'channel_wise_abs_max'. Compared to 'abs_max',
+                the model accuracy is usually higher when using 'channel_wise_abs_max'.
+        optimize_model(bool, optional): If set optimize_model as True, it applies some
+                passes to optimize the model before quantization. So far, the place of
+                executor must be cpu it supports fusing batch_norm into convs.
+        is_use_cache_file(bool): This param is deprecated.
+        cache_dir(str): This param is deprecated.
+        runcount_limit(int): max. number of model quantization.
+    Returns:
+        None
+    """
+
     global g_quant_config
     g_quant_config = QuantConfig(
         executor,
@@ -278,14 +332,11 @@ def quant_post_hpo(
     bias_correct = CategoricalHyperparameter("bias_correct", [True, False], default_value=False)
     weight_quantize_method = CategoricalHyperparameter("weight_quantize_method", \
         [weight_quantize_type], default_value=weight_quantize_type)
-    activation_quantize_method = CategoricalHyperparameter("activation_quantize_method", \
-        ['moving_average_abs_max', 'range_abs_max'], \
-        default_value="moving_average_abs_max")
     hist_percent = UniformFloatHyperparameter("hist_percent", 0.98, 0.999, default_value=0.99)
     batch_size = UniformIntegerHyperparameter("batch_size", 10, 30, default_value=10)
     batch_num = UniformIntegerHyperparameter("batch_num", 10, 30, default_value=10)
         
-    cs.add_hyperparameters([algo, bias_correct, weight_quantize_method, activation_quantize_method, \
+    cs.add_hyperparameters([algo, bias_correct, weight_quantize_method, \
                             hist_percent, batch_size, batch_num])
 
     scenario = Scenario({"run_obj": "quality",  # we optimize quality (alternative runtime)
@@ -303,7 +354,7 @@ def quant_post_hpo(
     # Example call of the function with default values
     # It returns: Status, Cost, Runtime, Additional Infos
     def_value = smac.get_tae_runner().run(cs.get_default_configuration(), 1)[1]
-    print("Value for default configuration: %.2f" % def_value)
+    print("Value for default configuration: %.8f" % def_value)
 
     # Start optimization
     try:
@@ -312,6 +363,6 @@ def quant_post_hpo(
         incumbent = smac.solver.incumbent
 
     inc_value = smac.get_tae_runner().run(incumbent, 1)[1]
-    print("Optimized Value: %.2f" % inc_value)
+    print("Optimized Value: %.8f" % inc_value)
     print("quantize completed")
 
