@@ -66,7 +66,7 @@ class TableLatencyPredictor(LatencyPredictor):
                  platform='mac_intel',
                  lite_version='v2_9'):
         self.table_file = f'{hardware}_threads_{threads}_power_mode_{power_mode}_batchsize_{batchsize}.pkl'
-        self.opt_path = dowload_tools(platform='mac_intel', lite_version='v2_9')
+        self.opt_path = dowload_tools(platform, lite_version)
         self.table_dict = {}
         self._read_table()
         self.det_multi_input = False
@@ -183,7 +183,7 @@ class TableLatencyPredictor(LatencyPredictor):
         graph = paddleslim.core.GraphWrapper(fluid_program)
         latency = 0.0
         for op in graph.ops():
-            param_key = get_key_from_op(op)
+            param_key = get_key_from_op(op, data_type)
             if param_key == '':
                 continue
             if param_key in self.table_dict:

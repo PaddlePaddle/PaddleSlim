@@ -15,7 +15,7 @@
 __all__ = ["get_key_from_op"]
 
 
-def get_key_from_op(op):
+def get_key_from_op(op, data_type='fp32'):
     """Construct key of latency table according to the info of graph's op
     """
     param_key = ''

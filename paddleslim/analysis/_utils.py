@@ -17,6 +17,7 @@ import numpy as np
 import pickle
 import paddle
 import paddleslim
+import subprocess
 __all__ = [
     "save_cls_model", "save_det_model", "save_seg_model", "data_avg",
     "nearest_interpolate", "load_predictor", "dowload_tools"
@@ -242,10 +243,11 @@ def dowload_tools(platform='mac_intel', lite_version='v2_9'):
         Returns:
             opt_path: The path of opt tool to convert a paddle model to an optimized pbmodel that fuses operators.
         """
-    opt_name = '_'.join('opt', platform, lite_version)
+    opt_name = '_'.join(['opt', platform, lite_version])
     opt_path = os.path.join('./tools', opt_name)
     if not os.path.exists(opt_path):
         subprocess.call(
             f'wget -P ./tools https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{opt_name}',
             shell=True)
+        subprocess.call(f'chmod +x {opt_path}', shell=True)
     return opt_path
