@@ -18,6 +18,7 @@ import pickle
 import paddle
 import paddleslim
 import subprocess
+import sklearn
 __all__ = [
     "save_cls_model", "save_det_model", "save_seg_model", "data_avg",
     "nearest_interpolate", "load_predictor", "dowload_tools"
