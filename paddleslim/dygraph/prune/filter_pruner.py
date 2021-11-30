@@ -265,7 +265,7 @@ class FilterPruner(Pruner):
                     baseline = eval_func()
                 plan = self.prune_var(var_name, dims, ratio)
                 pruned_metric = eval_func()
-                loss = (baseline - pruned_metric) / baseline + 1e-3
+                loss = (baseline - pruned_metric) / (baseline + 1e-3)
                 _logger.info("pruned param: {}; {}; loss={}".format(
                     var_name, ratio, loss))
                 sensitivities[var_name][ratio] = loss
