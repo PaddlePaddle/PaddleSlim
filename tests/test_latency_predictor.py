@@ -281,7 +281,11 @@ class TestCase7(unittest.TestCase):
         paddle.disable_static()
         model = ModelCase3()
         predictor = TableLatencyPredictor(
-            hardware='710', threads=4, power_mode=0, batchsize=1)
+            hardware='710',
+            threads=4,
+            power_mode=0,
+            batchsize=1,
+            platform='ubuntu')
         predictor.set_det_multi_input(det_multi_input=True)
         latency = predictor.predict_latency(
             model,
@@ -297,7 +301,11 @@ class TestCase8(unittest.TestCase):
         paddle.disable_static()
         model = ModelCase4()
         predictor = TableLatencyPredictor(
-            hardware='710', threads=4, power_mode=0, batchsize=1)
+            hardware='710',
+            threads=4,
+            power_mode=0,
+            batchsize=1,
+            platform='ubuntu')
         pbmodel_file = predictor.opt_model(
             model,
             input_shape=[1, 3, 16, 16],
@@ -319,7 +327,11 @@ class TestCase9(unittest.TestCase):
         paddle.disable_static()
         model = ModelCase5()
         predictor = TableLatencyPredictor(
-            hardware='710', threads=4, power_mode=0, batchsize=1)
+            hardware='710',
+            threads=4,
+            power_mode=0,
+            batchsize=1,
+            platform='ubuntu')
         pbmodel_file = predictor.opt_model(
             model,
             input_shape=[1, 255, 13, 13],
@@ -341,7 +353,11 @@ class TestCase10(unittest.TestCase):
         paddle.disable_static()
         model = ModelCase1()
         predictor = TableLatencyPredictor(
-            hardware='710', threads=4, power_mode=0, batchsize=1)
+            hardware='710',
+            threads=4,
+            power_mode=0,
+            batchsize=1,
+            platform='ubuntu')
         pbmodel_file = predictor.opt_model(
             model,
             input_shape=[1, 116, 28, 28],
