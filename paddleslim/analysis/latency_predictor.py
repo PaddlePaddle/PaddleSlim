@@ -41,10 +41,10 @@ class LatencyPredictor(object):
         """
         raise NotImplementedError('Abstract method.')
 
-    def _get_key_info_from_graph(self, graph):
+    def _get_key_info_from_graph(self, graph, data_type='fp32'):
         graph_keys = []
         for op in graph.ops():
-            param_key = get_key_from_op(op)
+            param_key = get_key_from_op(op, data_type)
             graph_keys.append(param_key)
         return graph_keys
 
@@ -74,7 +74,7 @@ class TableLatencyPredictor(LatencyPredictor):
     def _read_table(self):
         if not os.path.exists(self.table_file):
             subprocess.call(
-                f'wget https://paddle-slim-models.bj.bcebos.com/LatencyPredictor/{self.table_file}',
+                f'wget https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}',
                 shell=True)
 
         assert os.path.exists(
