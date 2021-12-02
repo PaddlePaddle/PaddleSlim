@@ -186,7 +186,6 @@ void PredictionRun(paddle::PaddlePredictor *predictor,
   for (int k = 0; k < FLAGS_warmup_iter; k++){
         predictor->Run(inputs[k], &(*outputs)[k], FLAGS_batch_size);
         LOG(INFO) <<"Warmup " << k << " batches";
-	std::cout<<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Warning! Warning! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< "<<  k << " batches" << std::endl;
   }
   // run
   for (int i = 0; i < iterations; i++) {
@@ -197,7 +196,6 @@ void PredictionRun(paddle::PaddlePredictor *predictor,
     predicted_num += FLAGS_batch_size;
     if (predicted_num % 100 == 0) {
       LOG(INFO) << "Infer " << predicted_num << " samples";
-      std::cout<<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Inference <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< "<<  predicted_num << " batches" << std::endl;
     }
   }
 

@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
 
   auto predictor = paddle::CreatePaddlePredictor(cfg);
   int batch_size = FLAGS_batch_size;
-  std::cout<<"WARNING!!!! FLAGS_batch_size " << FLAGS_batch_size << std::endl ;
+  std::cout<<"Batch size " << FLAGS_batch_size << std::endl ;
   int channels = 3;
   int height = 224;
   int width = 224;
@@ -108,8 +108,7 @@ int main(int argc, char *argv[]) {
   auto batch_latency = elapsed_time / FLAGS_iterations;
   auto sample_latency = batch_latency / FLAGS_batch_size;
   // How to calculate fps. Using 1000.f/amounts ?
-  std::cout<<"WARNING!!!!!! batch_latency: " << batch_latency << std::endl;
-  std::cout<<"WARNING!!!!!! Sample_latency: " << sample_latency << std::endl;
-  std::cout<<"WARNING!!!!!! FPS: " << 1000.f/sample_latency << std::endl;
-
+  std::cout<<"Batch_latency: " << batch_latency << std::endl;
+  std::cout<<"Sample_latency: " << sample_latency << std::endl;
+  std::cout<<"FPS: " << 1000.f/sample_latency << std::endl;
 }
