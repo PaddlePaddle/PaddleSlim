@@ -14,17 +14,16 @@
 import sys
 import os
 sys.path.append(".")
-sys.path[0] = os.path.join(
-    os.path.dirname("__file__"), os.path.pardir)
+sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 
-import unittest
 import paddle
+import paddle.dataset.mnist as reader
+import unittest
 from paddleslim.quant import quant_post_hpo
 from static_case import StaticCase
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
-import paddle.dataset.mnist as reader
 import numpy as np
 
 

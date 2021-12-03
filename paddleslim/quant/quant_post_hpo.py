@@ -16,15 +16,15 @@
 import os
 import cv2
 import sys
-import shutil
-import logging
-import paddle
-import argparse
-import functools
 import math
 import time
 import numpy as np
+import shutil
+import paddle
 import paddle.fluid as fluid
+import logging
+import argparse
+import functools
 from scipy.stats import wasserstein_distance
 
 # smac
@@ -37,51 +37,57 @@ from smac.scenario.scenario import Scenario
 from paddleslim.common import get_logger
 from paddleslim.quant import quant_post
 
+
 class QuantConfig:
     """quant config"""
-    def __init__(self, 
-        executor,
-        place,
-        float_infer_model_path,
-        quantize_model_path,
-        train_sample_generator=None,
-        eval_sample_generator=None,
-        model_filename=None,
-        params_filename=None,
-        save_model_filename='__model__',
-        save_params_filename='__params__',
-        scope=None,
-        quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
-        is_full_quantize=False,
-        weight_bits=8,
-        activation_bits=8,
-        weight_quantize_type='channel_wise_abs_max',
-        optimize_model=False,
-        is_use_cache_file=False,
-        cache_dir="./temp_post_training"):
+
+    def __init__(self,
+                 executor,
+                 place,
+                 float_infer_model_path,
+                 quantize_model_path,
+                 train_sample_generator=None,
+                 eval_sample_generator=None,
+                 model_filename=None,
+                 params_filename=None,
+                 save_model_filename='__model__',
+                 save_params_filename='__params__',
+                 scope=None,
+                 quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
+                 is_full_quantize=False,
+                 weight_bits=8,
+                 activation_bits=8,
+                 weight_quantize_type='channel_wise_abs_max',
+                 optimize_model=False,
+                 is_use_cache_file=False,
+                 cache_dir="./temp_post_training"):
         """QuantConfig init"""
-        self.executor=executor
-        self.place=place
+        self.executor = executor
+        self.place = place
         self.float_infer_model_path = float_infer_model_path
-        self.quantize_model_path=quantize_model_path
-        self.train_sample_generator=train_sample_generator
-        self.eval_sample_generator=eval_sample_generator
-        self.model_filename=model_filename
-        self.params_filename=params_filename
-        self.save_model_filename=save_model_filename
-        self.save_params_filename=save_params_filename
-        self.scope=scope
-        self.quantizable_op_type=quantizable_op_type
-        self.is_full_quantize=is_full_quantize
-        self.weight_bits=weight_bits
-        self.activation_bits=activation_bits
-        self.weight_quantize_type=weight_quantize_type
-        self.optimize_model=optimize_model
-        self.is_use_cache_file=is_use_cache_file
-        self.cache_dir=cache_dir
+        self.quantize_model_path = quantize_model_path
+        self.train_sample_generator = train_sample_generator
+        self.eval_sample_generator = eval_sample_generator
+        self.model_filename = model_filename
+        self.params_filename = params_filename
+        self.save_model_filename = save_model_filename
+        self.save_params_filename = save_params_filename
+        self.scope = scope
+        self.quantizable_op_type = quantizable_op_type
+        self.is_full_quantize = is_full_quantize
+        self.weight_bits = weight_bits
+        self.activation_bits = activation_bits
+        self.weight_quantize_type = weight_quantize_type
+        self.optimize_model = optimize_model
+        self.is_use_cache_file = is_use_cache_file
+        self.cache_dir = cache_dir
+
+
 g_quant_config = None
 g_min_emd_loss = float('inf')
 g_quant_model_cache_path = "quant_model_tmp"
+
+
 def make_feed_dict(feed_target_names, data):
     """construct feed dictionary"""
     feed_dict = {}
@@ -92,24 +98,28 @@ def make_feed_dict(feed_target_names, data):
             feed_dict[feed_target_names[i]] = data[i]
     return feed_dict
 
+
 def standardization(data):
     """standardization numpy array"""
     mu = np.mean(data, axis=0)
     sigma = np.std(data, axis=0)
     return (data - mu) / sigma
 
+
 def cal_emd_lose(out_float_list, out_quant_list, out_len):
     """caculate earch move distance"""
     emd_sum = 0
     if out_len >= 3:
         for index in range(len(out_float_list)):
-            emd_sum += wasserstein_distance(out_float_list[index], out_quant_list[index])
+            emd_sum += wasserstein_distance(out_float_list[index],
+                                            out_quant_list[index])
     else:
         out_float = np.concatenate(out_float_list)
         out_quant = np.concatenate(out_quant_list)
         emd_sum += wasserstein_distance(out_float, out_quant)
     emd_sum /= float(len(out_float_list))
     return emd_sum
+
 
 def have_invalid_num(np_arr):
     """check have invalid number in numpy array"""
@@ -119,6 +129,7 @@ def have_invalid_num(np_arr):
             have_invalid_num = True
             break
     return have_invalid_num
+
 
 def convert_model_out_2_nparr(model_out):
     """convert model output to numpy array"""
@@ -131,6 +142,7 @@ def convert_model_out_2_nparr(model_out):
     out_nparr = np.concatenate(out_list)
     out_nparr = np.squeeze(out_nparr.flatten())
     return out_nparr
+
 
 def eval_quant_model():
     """Eval quant model accuracy.
@@ -163,10 +175,10 @@ def eval_quant_model():
     for i, data in enumerate(g_quant_config.eval_sample_generator()):
         with paddle.static.scope_guard(float_scope):
             out_float = g_quant_config.executor.run(infer_prog_float, \
-                fetch_list=fetch_targets_float, feed=make_feed_dict(feed_target_names_float, data)) 
+                fetch_list=fetch_targets_float, feed=make_feed_dict(feed_target_names_float, data))
         with paddle.static.scope_guard(quant_scope):
             out_quant = g_quant_config.executor.run(infer_prog_quant, \
-                fetch_list=fetch_targets_quant, feed=make_feed_dict(feed_target_names_quant, data)) 
+                fetch_list=fetch_targets_quant, feed=make_feed_dict(feed_target_names_quant, data))
 
         out_float = convert_model_out_2_nparr(out_float)
         out_quant = convert_model_out_2_nparr(out_quant)
@@ -193,12 +205,14 @@ def eval_quant_model():
         if valid_data_num >= max_eval_data_num:
             break
 
-    emd_sum = cal_emd_lose(out_float_list, out_quant_list, out_len_sum / float(valid_data_num))
+    emd_sum = cal_emd_lose(out_float_list, out_quant_list,
+                           out_len_sum / float(valid_data_num))
     print("output diff:", emd_sum)
     return float(emd_sum)
 
+
 def quantize(cfg):
-    """model quantize job""" 
+    """model quantize job"""
     algo = cfg["algo"]
     hist_percent = cfg["hist_percent"]
     bias_correct = cfg["bias_correct"]
@@ -223,37 +237,38 @@ def quantize(cfg):
         bias_correction=bias_correct, \
         batch_size=batch_size, \
         batch_nums=batch_num)
-    
+
     global g_min_emd_loss
     emd_loss = eval_quant_model()
     if emd_loss < g_min_emd_loss:
         g_min_emd_loss = emd_loss
         if os.path.exists(g_quant_config.quantize_model_path):
             shutil.rmtree(g_quant_config.quantize_model_path)
-        os.system("cp -r {0} {1}".format(g_quant_model_cache_path, g_quant_config.quantize_model_path))
+        os.system("cp -r {0} {1}".format(g_quant_model_cache_path,
+                                         g_quant_config.quantize_model_path))
     return emd_loss
-    
-def quant_post_hpo(
-    executor,
-    place,
-    model_dir,
-    quantize_model_path,
-    train_sample_generator=None,
-    eval_sample_generator=None,
-    model_filename=None,
-    params_filename=None,
-    save_model_filename='__model__',
-    save_params_filename='__params__',
-    scope=None,
-    quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
-    is_full_quantize=False,
-    weight_bits=8,
-    activation_bits=8,
-    weight_quantize_type='channel_wise_abs_max',
-    optimize_model=False,
-    is_use_cache_file=False,
-    cache_dir="./temp_post_training",
-    runcount_limit=30):
+
+
+def quant_post_hpo(executor,
+                   place,
+                   model_dir,
+                   quantize_model_path,
+                   train_sample_generator=None,
+                   eval_sample_generator=None,
+                   model_filename=None,
+                   params_filename=None,
+                   save_model_filename='__model__',
+                   save_params_filename='__params__',
+                   scope=None,
+                   quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
+                   is_full_quantize=False,
+                   weight_bits=8,
+                   activation_bits=8,
+                   weight_quantize_type='channel_wise_abs_max',
+                   optimize_model=False,
+                   is_use_cache_file=False,
+                   cache_dir="./temp_post_training",
+                   runcount_limit=30):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -307,49 +322,42 @@ def quant_post_hpo(
 
     global g_quant_config
     g_quant_config = QuantConfig(
-        executor,
-        place,
-        model_dir,
-        quantize_model_path,
-        train_sample_generator,
-        eval_sample_generator,
-        model_filename,
-        params_filename,
-        save_model_filename,
-        save_params_filename,
-        scope,
-        quantizable_op_type,
-        is_full_quantize,
-        weight_bits,
-        activation_bits,
-        weight_quantize_type,
-        optimize_model,
-        is_use_cache_file,
-        cache_dir)
+        executor, place, model_dir, quantize_model_path, train_sample_generator,
+        eval_sample_generator, model_filename, params_filename,
+        save_model_filename, save_params_filename, scope, quantizable_op_type,
+        is_full_quantize, weight_bits, activation_bits, weight_quantize_type,
+        optimize_model, is_use_cache_file, cache_dir)
     cs = ConfigurationSpace()
 
-    algo = CategoricalHyperparameter("algo", ["KL", "hist", "avg", "mse"], default_value="KL")
-    bias_correct = CategoricalHyperparameter("bias_correct", [True, False], default_value=False)
+    algo = CategoricalHyperparameter(
+        "algo", ["KL", "hist", "avg", "mse"], default_value="KL")
+    bias_correct = CategoricalHyperparameter(
+        "bias_correct", [True, False], default_value=False)
     weight_quantize_method = CategoricalHyperparameter("weight_quantize_method", \
         [weight_quantize_type], default_value=weight_quantize_type)
-    hist_percent = UniformFloatHyperparameter("hist_percent", 0.98, 0.999, default_value=0.99)
-    batch_size = UniformIntegerHyperparameter("batch_size", 10, 30, default_value=10)
-    batch_num = UniformIntegerHyperparameter("batch_num", 10, 30, default_value=10)
-        
+    hist_percent = UniformFloatHyperparameter(
+        "hist_percent", 0.98, 0.999, default_value=0.99)
+    batch_size = UniformIntegerHyperparameter(
+        "batch_size", 10, 30, default_value=10)
+    batch_num = UniformIntegerHyperparameter(
+        "batch_num", 10, 30, default_value=10)
+
     cs.add_hyperparameters([algo, bias_correct, weight_quantize_method, \
                             hist_percent, batch_size, batch_num])
 
-    scenario = Scenario({"run_obj": "quality",  # we optimize quality (alternative runtime)
-                     "runcount-limit": runcount_limit,  # max. number of function evaluations; for this example set to a low number
-                     "cs": cs,  # configuration space
-                     "deterministic": "True",
-                     "limit_resources": "False",
-                     "memory_limit": 4096  # adapt this to reasonable value for your hardware
-                     })
+    scenario = Scenario({
+        "run_obj": "quality",  # we optimize quality (alternative runtime)
+        "runcount-limit":
+        runcount_limit,  # max. number of function evaluations; for this example set to a low number
+        "cs": cs,  # configuration space
+        "deterministic": "True",
+        "limit_resources": "False",
+        "memory_limit": 4096  # adapt this to reasonable value for your hardware
+    })
 
     # To optimize, we pass the function to the SMAC-object
-    smac = SMAC4HPO(scenario=scenario, rng=np.random.RandomState(42),
-              tae_runner=quantize)
+    smac = SMAC4HPO(
+        scenario=scenario, rng=np.random.RandomState(42), tae_runner=quantize)
 
     # Example call of the function with default values
     # It returns: Status, Cost, Runtime, Additional Infos
@@ -365,4 +373,3 @@ def quant_post_hpo(
     inc_value = smac.get_tae_runner().run(incumbent, 1)[1]
     print("Optimized Value: %.8f" % inc_value)
     print("quantize completed")
-

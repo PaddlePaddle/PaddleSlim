@@ -1,12 +1,12 @@
 import os
 import sys
-import logging
-import paddle
-import argparse
-import functools
 import math
 import time
 import numpy as np
+import paddle
+import logging
+import argparse
+import functools
 
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
