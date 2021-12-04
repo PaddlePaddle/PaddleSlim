@@ -57,7 +57,8 @@ def convert_fn(fn):
         model = inspect.currentframe().f_back.f_locals['self']
         ### TODO(ceci3): length of sublayers is 0 means not call a nn.Layer in __init__ function.
         ### this condition maybe not rigorous, need to change it later.
-        if len(model.sublayers()) == 0:
+        ### model.training set to False is to avoid only eval student model.
+        if len(model.sublayers()) == 0 or model.training == False:
             result = eval('F.origin_{}'.format(fn.__name__))(*x, **kwargs)
             return result
         else:

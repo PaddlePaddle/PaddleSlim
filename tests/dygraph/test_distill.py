@@ -24,6 +24,7 @@ class TestImperativeDistill(unittest.TestCase):
         return MobileNetV1(), MobileNetV1()
 
     def prepare_config(self):
+        self.convert_fn = False
         distill_configs = [{
             'loss_function': 'MSELoss',
             'layers': [
@@ -99,8 +100,11 @@ class TestImperativeDistill(unittest.TestCase):
             test(self.s_model)
             self.s_model.train()
 
-        distill_model = Distill(self.distill_configs, self.s_model,
-                                self.t_model)
+        distill_model = Distill(
+            self.distill_configs,
+            self.s_model,
+            self.t_model,
+            convert_fn=self.convert_fn)
         train(distill_model)
 
 
@@ -130,12 +134,14 @@ class TestImperativeDistillCase1(TestImperativeDistill):
                 conv2_out = self.conv2(self.conv1_out)
                 self.conv3_out = self.conv3(conv2_out[0])
                 out = paddle.reshape(self.conv3_out, shape=[x.shape[0], -1])
+                out = paddle.nn.functional.softmax(out)
                 out = self.fc(out)
                 return out
 
         return Model(), Model()
 
     def prepare_config(self):
+        self.convert_fn = True
         distill_configs = [{
             'loss_function': 'MSELoss',
             'layers': [

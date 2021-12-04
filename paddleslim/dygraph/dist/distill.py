@@ -199,15 +199,15 @@ class Distill(nn.Layer):
         """
         outputs_tensor = {}
         for idx, m in enumerate(self._student_models):
-            hook_layers = hook_layers['student_{}'.format(idx)]
+            tmp_hook_layers = hook_layers['student_{}'.format(idx)]
             stu_outs = collections.OrderedDict()
             outputs_tensor['student_{}'.format(idx)] = self._prepare_hook(
-                m, hook_layers, stu_outs, in_forward=in_forward)
+                m, tmp_hook_layers, stu_outs, in_forward=in_forward)
         for idx, m in enumerate(self._teacher_models):
-            hook_layers = hook_layers['teacher_{}'.format(idx)]
+            tmp_hook_layers = hook_layers['teacher_{}'.format(idx)]
             tea_outs = collections.OrderedDict()
             outputs_tensor['teacher_{}'.format(idx)] = self._prepare_hook(
-                m, hook_layers, tea_outs, in_forward=in_forward)
+                m, tmp_hook_layers, tea_outs, in_forward=in_forward)
         return outputs_tensor
 
     def _prepare_hook(self, model, hook_layers, outs_dict, in_forward):
