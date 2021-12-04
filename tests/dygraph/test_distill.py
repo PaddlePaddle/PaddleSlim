@@ -172,6 +172,17 @@ class TestImperativeDistillCase1(TestImperativeDistill):
                         'out_channel': 3
                     }
                 },
+                {
+                    "layers_name": ["conv2", "conv3"],
+                    'io': ["output", "output"],
+                    'idx': [1, None],
+                    'align_params': {
+                        'align_type': '3x3conv+bn',
+                        'in_channel': 3,
+                        'out_channel': 3,
+                        'transpose_model': 'student'
+                    }
+                },
             ]
         }, {
             'loss_function': 'CELoss',
