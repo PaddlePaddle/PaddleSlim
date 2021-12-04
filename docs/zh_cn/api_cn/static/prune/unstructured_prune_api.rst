@@ -4,7 +4,7 @@
 UnstrucuturedPruner
 ----------
 
-.. py:class:: paddleslim.prune.UnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, prune_params_type, skip_params_func=None)
+.. py:class:: paddleslim.prune.UnstructuredPruner(program, mode, ratio=0.55, threshold=1e-2, scope=None, place=None, prune_params_type, skip_params_func=None, local_sparsity=False)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
 
@@ -43,6 +43,7 @@ UnstrucuturedPruner
 
 ..
 
+- **local_sparsity(bool)** - 剪裁比例（ratio）应用的范围：local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。
 
 **返回：** 一个UnstructuredPruner类的实例
 
@@ -280,7 +281,7 @@ UnstrucuturedPruner
 GMPUnstrucuturedPruner
 ----------
 
-.. py:class:: paddleslim.prune.GMPUnstructuredPruner(program, ratio=0.55, scope=None, place=None, prune_params_type=None, skip_params_func=None, configs=None)
+.. py:class:: paddleslim.prune.GMPUnstructuredPruner(program, ratio=0.55, scope=None, place=None, prune_params_type=None, skip_params_func=None, local_sparsity=False, configs=None)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/prune/unstructured_pruner.py>`_
 
@@ -294,6 +295,7 @@ GMPUnstrucuturedPruner
 - **place(CPUPlace|CUDAPlace)** - 模型执行的设备，类型为CPUPlace或者CUDAPlace，默认（None）时代表CPUPlace。
 - **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
+- **local_sparsity(bool)** - 剪裁比例（ratio）应用的范围：local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。
 - **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。具体描述如下：
 
 .. code-block:: python

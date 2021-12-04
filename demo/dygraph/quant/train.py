@@ -24,6 +24,7 @@ import argparse
 import functools
 import math
 import time
+import random
 import numpy as np
 from paddle.distributed import ParallelEnv
 from paddle.static import load_program_state
@@ -53,6 +54,7 @@ add_arg('lr_strategy',              str,    "piecewise_decay",                  
 add_arg('l2_decay',                 float,  3e-5,                                        "The l2_decay parameter.")
 add_arg('ls_epsilon',               float,  0.0,                                         "Label smooth epsilon.")
 add_arg('use_pact',                 bool,   False,                                       "Whether to use PACT method.")
+add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
 add_arg('momentum_rate',            float,  0.9,                                         "The value of momentum_rate.")
 add_arg('num_epochs',               int,    1,                                           "The number of total epochs.")
 add_arg('total_images',             int,    1281167,                                     "The number of total training images.")
@@ -88,6 +90,17 @@ def load_dygraph_pretrain(model, path=None, load_static_weights=False):
 
 
 def compress(args):
+    num_workers = 4
+    shuffle = True
+    if args.ce_test:
+        # set seed
+        seed = 111
+        paddle.seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        num_workers = 0
+        shuffle = False
+
     if args.data == "cifar10":
         transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
         train_dataset = paddle.vision.datasets.Cifar10(
@@ -172,13 +185,16 @@ def compress(args):
         net = paddle.DataParallel(net)
 
     train_batch_sampler = paddle.io.DistributedBatchSampler(
-        train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        drop_last=True)
     train_loader = paddle.io.DataLoader(
         train_dataset,
         batch_sampler=train_batch_sampler,
         places=place,
         return_list=True,
-        num_workers=4)
+        num_workers=num_workers)
 
     valid_loader = paddle.io.DataLoader(
         val_dataset,
@@ -187,7 +203,7 @@ def compress(args):
         shuffle=False,
         drop_last=False,
         return_list=True,
-        num_workers=4)
+        num_workers=num_workers)
 
     @paddle.no_grad()
     def test(epoch, net):
