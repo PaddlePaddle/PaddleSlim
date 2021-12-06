@@ -413,7 +413,7 @@ class TestCase11(unittest.TestCase):
             threads=4,
             power_mode=0,
             batchsize=1,
-            platform='mac_intel')
+            platform='ubuntu')
         latency = predictor.predict_latency(
             model,
             input_shape=[1, 3, 250, 250],
