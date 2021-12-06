@@ -1,10 +1,14 @@
 - DistillConfig:
-    loss_function: MSELoss
+  - loss_function: MSELoss
     model_name_pairs:
     - - student_0
       - teacher_0
     weight: 1.0
-  - layers:
+    align_params:
+        align_type: linear
+        in_channel: 768
+        out_channel: 768
+    layers:
     - layers_name: ['tinybert.embeddings', 'bert.embeddings']
     - layers_name: ['tinybert.encoder.layers.0', 'bert.encoder.layers.1']
     - layers_name: ['tinybert.encoder.layers.1', 'bert.encoder.layers.3']
@@ -12,9 +16,22 @@
     - layers_name: ['tinybert.encoder.layers.3', 'bert.encoder.layers.7']
     - layers_name: ['tinybert.encoder.layers.4', 'bert.encoder.layers.9']
     - layers_name: ['tinybert.encoder.layers.5', 'bert.encoder.layers.11']
-    - layers_name: ['tinybert.encoder.layers.0.self_attn', 'bert.encoder.layers.1.self_attn']
-    - layers_name: ['tinybert.encoder.layers.1.self_attn', 'bert.encoder.layers.3.self_attn']
-    - layers_name: ['tinybert.encoder.layers.2.self_attn', 'bert.encoder.layers.5.self_attn']
-    - layers_name: ['tinybert.encoder.layers.3.self_attn', 'bert.encoder.layers.7.self_attn']
-    - layers_name: ['tinybert.encoder.layers.4.self_attn', 'bert.encoder.layers.9.self_attn']
-    - layers_name: ['tinybert.encoder.layers.5.self_attn', 'bert.encoder.layers.11.self_attn']
+
+  - loss_function: MSELoss
+    model_name_pairs:
+    - - student_0
+      - teacher_0
+    weight: 1.0
+    layers:
+    - layers_name: ['tinybert.encoder.layers.0.self_attn.wrap_fn_softmax_0', 'bert.encoder.layers.1.self_attn.wrap_fn_softmax_2']
+      io: ['input', 'input']
+    - layers_name: ['tinybert.encoder.layers.1.self_attn.wrap_fn_softmax_2', 'bert.encoder.layers.3.self_attn.wrap_fn_softmax_6']
+      io: ['input', 'input']
+    - layers_name: ['tinybert.encoder.layers.2.self_attn.wrap_fn_softmax_4', 'bert.encoder.layers.5.self_attn.wrap_fn_softmax_10']
+      io: ['input', 'input']
+    - layers_name: ['tinybert.encoder.layers.3.self_attn.wrap_fn_softmax_6', 'bert.encoder.layers.7.self_attn.wrap_fn_softmax_14']
+      io: ['input', 'input']
+    - layers_name: ['tinybert.encoder.layers.4.self_attn.wrap_fn_softmax_8', 'bert.encoder.layers.9.self_attn.wrap_fn_softmax_18']
+      io: ['input', 'input']
+    - layers_name: ['tinybert.encoder.layers.5.self_attn.wrap_fn_softmax_10', 'bert.encoder.layers.11.self_attn.wrap_fn_softmax_22']
+      io: ['input', 'input']

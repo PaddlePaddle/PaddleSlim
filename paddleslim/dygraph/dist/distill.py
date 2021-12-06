@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import numpy as np
+import copy
 import collections
-from collections import namedtuple
+import numpy as np
+import paddle
 import paddle.nn as nn
+from ...common.wrapper_function import init_index, functional2layer
 from . import losses
 from .losses.basic_loss import BASIC_LOSS
 from .distill_helpers import yaml2config
@@ -30,6 +32,8 @@ class LayerConfig:
                  model_name_pairs,
                  layers_name,
                  loss_function,
+                 io=["output", "output"],
+                 idx=[None, None],
                  weight=1.0,
                  temperature=1.0,
                  align_params=None,
@@ -42,6 +46,8 @@ class LayerConfig:
                                           loss_function,
                                           BASIC_LOSS.module_dict.keys()))
         self.loss_function = loss_function
+        self.io = io
+        self.idx = idx
         self.weight = weight
         self.temperature = temperature
         self.align_params = align_params
@@ -49,7 +55,7 @@ class LayerConfig:
             setattr(self, k, v)
 
 
-def _add_hooks(model, outs, hook_layers_name):
+def _add_hooks(model, outs, layers_name, hook_layers_name, io='o', idx="None"):
     """
         Get output by layer name.
         models(nn.Layer):  model need to be add hook.
@@ -57,75 +63,89 @@ def _add_hooks(model, outs, hook_layers_name):
         hook_layers_name(list): name of middle layers.
     """
 
-    def _get_activation(outs, name):
-        ### TODO: need to support get input tensor
-        #outs[name] = {}
+    def _get_activation(outs, name, io, idx):
         def get_output_hook(layer, input, output):
-            #outs[name]["output"] = output
-            #outs[name]["input"] = input
-            outs[name] = output
+            if io == 'o':
+                if idx == "None":
+                    outs[name] = output
+                else:
+                    outs[name] = output[idx]
+            else:
+                if idx == "None":
+                    outs[name] = input
+                else:
+                    outs[name] = input[idx]
 
         return get_output_hook
 
     ### TODO: support DP model
-    for idx, (n, m) in enumerate(model.named_sublayers()):
-        if n in hook_layers_name:
-            m.register_forward_post_hook(_get_activation(outs, n))
+    for i, (n, m) in enumerate(model.named_sublayers()):
+        if n == layers_name:
+            hooks = m.register_forward_post_hook(
+                _get_activation(outs, hook_layers_name, io, idx))
+    return hooks
+
+
+def _remove_hooks(hooks):
+    for hook in hooks:
+        hook.remove()
 
 
 class Distill(nn.Layer):
     """
         Distill API.
-        distill_configs(list(dict) | path): the list of distill config.
-        student_models(list(nn.Layer)): the list of student model, the state of student model must be training mode.
-        teacher_models(list(nn.Layer)): the list of teacher model, the state of student model must be evaluate mode.
-        return_model_outputs(bool): whether to return model output. Default: True.
+        configs(list(dict) | string): the list of distill config or the path of yaml file which contain the distill config.
+        students(list(nn.Layer)): the list of student model, the state of student model must be training mode.
+        teachers(list(nn.Layer)): the list of teacher model.
+        convert_fn(bool): convert the functional in paddlepaddle to nn.Layer. The detail of this convert operation please 
+                          reference to ```paddleslim.common.functional2layer```. Default: True.
+        return_model_outputs(bool): whether to return the origin outputs of the model. If set to True, will return distill loss, the output of students and the output of teachers, the output of each part will be returned as a list. Default: True.
     """
 
     def __init__(self,
-                 distill_configs,
-                 student_models,
-                 teacher_models,
+                 configs,
+                 students,
+                 teachers,
+                 convert_fn=True,
                  return_model_outputs=True):
         super(Distill, self).__init__()
-        if isinstance(student_models, nn.Layer):
-            student_models = [student_models]
-        if isinstance(teacher_models, nn.Layer):
-            teacher_models = [teacher_models]
-        for student_model in student_models:
-            assert student_model.training, "The student model should not be eval mode."
-        for teacher_model in teacher_models:
-            assert teacher_model.training is False, "The teacher model should be eval mode."
+        if convert_fn:
+            functional2layer()
+        if isinstance(students, nn.Layer):
+            students = [students]
+        if isinstance(teachers, nn.Layer):
+            teachers = [teachers]
 
-        if isinstance(distill_configs, list):
-            self._distill_configs = distill_configs
-        elif os.path.exists(distill_configs):
-            if distill_configs.endswith(".yaml"):
-                self._distill_configs = yaml2config(distill_configs)
+        if isinstance(configs, list):
+            self._configs = configs
+        elif os.path.exists(configs):
+            if configs.endswith(".yaml"):
+                self._configs = yaml2config(configs)
             else:
                 raise NotImplementedError("distill config file type error!")
         else:
             raise NotImplementedError("distill config error!")
-        self._student_models = student_models
-        self._teacher_models = teacher_models
+        self._student_models = nn.LayerList(students)
+        self._teacher_models = nn.LayerList(teachers)
         self._return_model_outputs = return_model_outputs
 
         self._loss_config_list = []
-        for c in self._distill_configs:
-            self._transpose_config(c)
+        for c in self._configs:
+            unfold_layer_config = self._transpose_config(c)
+            self._loss_config_list.extend(unfold_layer_config)
 
-        self._hook_layers = self._extract_hook_position()
+        hook_layers = self._extract_hook_position()
+        self._hook_layers = hook_layers
 
         # use self._loss_config_list to create all loss object
         self.distill_loss = losses.CombinedLoss(self._loss_config_list)
 
-        self._output_tensor_dict = self._prepare_outputs()
+        self._output_tensor_dict = self._prepare_outputs(hook_layers)
+        self._check_hook_output = False
 
     def parameters(self):
-        params = []
-        for s_model in self._student_models:
-            params.extend(s_model.parameters())
-        return params
+        return self._student_models.parameters() + self.distill_loss.parameters(
+        )
 
     def _extract_hook_position(self):
         """ extrat hook position according to config"""
@@ -145,6 +165,7 @@ class Distill(nn.Layer):
 
     def _transpose_config(self, config):
         """ Transpose config to loss needed """
+        unfold_config = []
         global_config = {}
         if 'model_name_pairs' not in config:
             global_config['model_name_pairs'] = [['student_0', 'teacher_0']]
@@ -159,56 +180,113 @@ class Distill(nn.Layer):
                 global_config[key] = config[key]
 
         for per_layer_config in config['layers']:
-            per_layer_config.update(global_config)
-            self._loss_config_list.append(
-                LayerConfig(**per_layer_config).__dict__)
+            per_layer_config.update(copy.deepcopy(global_config))
+            layer_config = LayerConfig(**per_layer_config).__dict__
+            for idx in range(len(layer_config['layers_name'])):
+                ### slice 0 from string "input" or "output", results is "i" or "o".
+                postfix = '#' + layer_config['io'][idx][0] + '#' + str(
+                    layer_config['idx'][idx])
+                layer_config['layers_name'][idx] += postfix
+            ### io and idx only use to extract tensor from hook, so pop it here.
+            layer_config.pop('io')
+            layer_config.pop('idx')
+            unfold_config.append(layer_config)
+        return unfold_config
 
-    def _prepare_outputs(self):
+    def _prepare_outputs(self, hook_layers, in_forward=False):
         """
         Add hook to get the output tensor of target layer.
         """
         outputs_tensor = {}
         for idx, m in enumerate(self._student_models):
-            hook_layers = self._hook_layers['student_{}'.format(idx)]
+            tmp_hook_layers = hook_layers['student_{}'.format(idx)]
             stu_outs = collections.OrderedDict()
             outputs_tensor['student_{}'.format(idx)] = self._prepare_hook(
-                m, hook_layers, stu_outs)
+                m, tmp_hook_layers, stu_outs, in_forward=in_forward)
         for idx, m in enumerate(self._teacher_models):
-            hook_layers = self._hook_layers['teacher_{}'.format(idx)]
+            tmp_hook_layers = hook_layers['teacher_{}'.format(idx)]
             tea_outs = collections.OrderedDict()
             outputs_tensor['teacher_{}'.format(idx)] = self._prepare_hook(
-                m, hook_layers, tea_outs)
+                m, tmp_hook_layers, tea_outs, in_forward=in_forward)
         return outputs_tensor
 
-    def _prepare_hook(self, model, hook_layers, outs_dict):
+    def _prepare_hook(self, model, hook_layers, outs_dict, in_forward):
         """
         Add hook.
         """
+        self.forward_hooks = []
         for layer in hook_layers:
-            if isinstance(layer, str):
-                _add_hooks(model, outs_dict, layer)
+            tmp = layer.strip().split('#')
+            layer_name, io, idx = tmp[0], tmp[1], tmp[2]
+            if idx != "None":
+                idx = int(idx)
+            if in_forward:
+                if 'wrap_fn_' in layer_name:
+                    hooks = _add_hooks(model, outs_dict, layer_name, layer, io,
+                                       idx)
+                    self.forward_hooks.append(hooks)
+            else:
+                if 'wrap_fn_' not in layer_name:
+                    _add_hooks(model, outs_dict, layer_name, layer, io, idx)
         return outs_dict
 
+    def _useless_forward(self, *inputs, **kwargs):
+        for idx, student_model in enumerate(self._student_models):
+            ### initialize global index before each forward
+            init_index()
+            student_model.forward(*inputs, **kwargs)
+        for idx, teacher_model in enumerate(self._teacher_models):
+            ### initialize global index before each forward
+            init_index()
+            teacher_model.forward(*inputs, **kwargs)
+
     def forward(self, *inputs, **kwargs):
+        if self._check_hook_output is False:
+            ### the first useless forward is to convert function to class. 
+            self._useless_forward(*inputs, **kwargs)
+
+        update_output_tensor_dict = self._prepare_outputs(
+            self._hook_layers, in_forward=True)
+
         students_batch_outs = []
         teachers_batch_outs = []
         for idx, student_model in enumerate(self._student_models):
+            ### initialize global index before each forward
+            init_index()
             stu_batch_outs = student_model.forward(*inputs, **kwargs)
             students_batch_outs.append(stu_batch_outs)
         for idx, teacher_model in enumerate(self._teacher_models):
+            ### initialize global index before each forward
+            init_index()
             tea_batch_outs = teacher_model.forward(*inputs, **kwargs)
             if not teacher_model.training:
                 tea_batch_outs = [i.detach() for i in tea_batch_outs]
             teachers_batch_outs.extend(tea_batch_outs)
+
+        ### update hook information.
+        for model, _ in self._output_tensor_dict.items():
+            self._output_tensor_dict[model].update(update_output_tensor_dict[
+                model])
 
         if len(self._student_models) == 1:
             students_batch_outs = students_batch_outs[0]
         if len(self._teacher_models) == 1:
             teachers_batch_outs = teachers_batch_outs[0]
 
+        if self._check_hook_output is False:
+            self._check_hook_output = True
+            for mo, hook_out in self._output_tensor_dict.items():
+                for hook_name, hook_value in hook_out.items():
+                    hook_name = hook_name.strip().split('#')[0]
+                    assert type(hook_value) is paddle.Tensor or len(\
+                        hook_value) == 1, \
+                        "model: {} layer: {} has more than one output/input" \
+                        ", please specific the idx of output/input.".format(mo, hook_name)
         ### batch is None just for now
         distill_outputs = self.distill_loss(self._output_tensor_dict, None)
         distill_loss = distill_outputs['loss']
+
+        _remove_hooks(self.forward_hooks)
 
         if self._return_model_outputs:
             return distill_loss, students_batch_outs, teachers_batch_outs
