@@ -7,6 +7,7 @@ import paddle
 import argparse
 import functools
 import math
+import random
 import time
 import numpy as np
 sys.path.append(
@@ -43,6 +44,7 @@ add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
 add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used, support l1_norm and batch_norm_scale.")
 add_arg('use_gpu',   bool, True,                "Whether to GPUs.")
 add_arg('checkpoint',   str, None,                "The path of checkpoint which is used for resume training.")
+add_arg('ce_test',          bool, False, "Whether to CE test.")
 # yapf: enable
 
 model_list = models.__all__
@@ -109,6 +111,16 @@ def create_optimizer(args, parameters, steps_per_epoch):
 
 
 def compress(args):
+    num_workers = 4
+    shuffle = True
+    if args.ce_test:
+        # set seed
+        seed = 111
+        paddle.seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        num_workers = 0
+        shuffle = False
 
     paddle.set_device('gpu' if args.use_gpu else 'cpu')
     train_reader = None
@@ -187,7 +199,8 @@ def compress(args):
               batch_size=args.batch_size // ParallelEnv().nranks,
               verbose=1,
               save_dir=args.model_path,
-              num_workers=8)
+              num_workers=num_workers,
+              shuffle=shuffle)
 
 
 def main():
