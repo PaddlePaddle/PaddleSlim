@@ -29,11 +29,18 @@ add_arg('params_filename',      str, None,                 "params file name")
 add_arg('max_model_quant_count',    int, 30,                 "max model quant count")
 
 def quantize(args):
-    val_reader = reader.train()
     place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
 
     assert os.path.exists(args.model_path), "args.model_path doesn't exist"
     assert os.path.isdir(args.model_path), "args.model_path must be a dir"
+
+    def reader_generator(imagenet_reader):
+        def gen():
+            for i, data in enumerate(imagenet_reader()):
+                image, label = data
+                image = np.expand_dims(image, axis=0)
+                yield image
+        return gen
 
     exe = paddle.static.Executor(place)
     quant_post_hpo(
@@ -41,8 +48,8 @@ def quantize(args):
         place,
         args.model_path,
         args.save_path,
-        train_sample_generator=val_reader,
-        eval_sample_generator=val_reader,
+        train_sample_generator=reader_generator(reader.train()),
+        eval_sample_generator=reader_generator(reader.val()),
         model_filename=args.model_filename,
         params_filename=args.params_filename,
         save_model_filename='__model__',
