@@ -133,6 +133,35 @@ class ModelCase5(paddle.nn.Layer):
         return boxes, scores, box, var, out
 
 
+class ModelCase6(paddle.nn.Layer):
+    def __init__(self):
+        super(ModelCase6, self).__init__()
+        self.bn1 = BatchNorm2D(3)
+        self.relu1 = ReLU()
+        self.fc1 = paddle.nn.Linear(3 * 16 * 16, 3 * 16 * 16)
+        self.dp = paddle.nn.Dropout(p=0.5)
+
+    def forward(self, inputs):
+        x = self.bn1(inputs)
+        x = paddle.reshape(x, [1, 3 * 16 * 16])
+        x = self.fc1(x)
+        x = paddle.fluid.layers.unsqueeze(input=x, axes=[2])
+        x = self.relu1(x)
+        y = paddle.fluid.layers.fill_constant(
+            x.shape, dtype=paddle.float32, value=1)
+        x = paddle.stack([x, y], axis=3)
+        x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
+        x = paddle.exp(x)
+        y += paddle.fluid.layers.uniform_random(y.shape)
+        y = paddle.expand(y, shape=paddle.shape(x))
+        x = x + y
+        out = paddle.concat([x, x])
+        out = self.dp(out)
+        out = channel_shuffle(out, 2)
+        out1, out2 = paddle.split(out, num_or_sections=2, axis=2)
+        return out1, out2
+
+
 class TestCase1(unittest.TestCase):
     def test_case1(self):
         paddle.disable_static()
@@ -378,12 +407,13 @@ class TestCase11(unittest.TestCase):
     def test_case11(self):
         paddle.disable_static()
         model = mobilenet_v2()
+        model2 = ModelCase6()
         predictor = TableLatencyPredictor(
             hardware='710',
             threads=4,
             power_mode=0,
             batchsize=1,
-            platform='ubuntu')
+            platform='mac_intel')
         latency = predictor.predict_latency(
             model,
             input_shape=[1, 3, 250, 250],
@@ -396,6 +426,13 @@ class TestCase11(unittest.TestCase):
             input_shape=[1, 3, 250, 250],
             save_dir='./model',
             data_type='int8',
+            task_type='cls')
+        assert latency > 0
+        latency = predictor.predict_latency(
+            model2,
+            input_shape=[1, 3, 16, 16],
+            save_dir='./model',
+            data_type='fp32',
             task_type='cls')
         assert latency > 0
 

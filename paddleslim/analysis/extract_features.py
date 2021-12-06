@@ -49,7 +49,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
     """
     features = []
 
-    if 'conv2d' in param_key:
+    if 'conv2d' in op_type:
         flag_quant = 'quant=None' if data_type == 'fp32' else 'quant=True'
         if flag_quant not in param_key:
             return None
@@ -98,7 +98,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
                 params
             ]
 
-    elif 'matmul' in param_key:
+    elif 'matmul' in op_type:
         X = re.search(r'X=(\(-*\d*, \d*\))',
                       param_key).group().split('=')[-1].strip('('
                                                               ')').split(', ')
@@ -113,19 +113,19 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [b, c, flops, params]
 
-    elif ('batch_norm' in param_key or 'layer_norm' in param_key):
-        inputs = re.search(r'in=(\(-*\d*, \d*, \d*, \d*\))',
+    elif ('batch_norm' in op_type or 'layer_norm' in op_type):
+        inputs = re.search(r'in=(\((-?\d+,* *)+\))',
                            param_key).group().split('=')[-1].strip(
                                '('
                                ')').split(', ')
 
-        cin = int(inputs[1])
-        in_h = int(inputs[2])
-        in_w = int(inputs[3])
+        features = [0, 0, 0]
+        for i in range(1, len(inputs)):
+            if inputs[i] == '':
+                continue
+            features[i - 1] = int(inputs[i])
 
-        features = [cin, in_h, in_w]
-
-    elif 'pool2d' in param_key:
+    elif 'pool2d' in op_type:
 
         inputs = re.search(r'in=(\(-*\d*, \d*, \d*, \d*\))',
                            param_key).group().split('=')[-1].strip(
@@ -151,12 +151,34 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [cin, kernel, stride, in_h * in_w, out_h * out_w]
 
-    elif ('hard_swish' in param_key or 'relu' in param_key or
-          'leaky_relu' in param_key or 'tanh' in param_key or
-          'swish' in param_key or 'softmax' in param_key or
-          'hard_sigmoid' in param_key or 'sigmoid' in param_key or
-          'gelu' in param_key or 'clip' in param_key or 'shape' in param_key or
-          'transpose' in param_key or 'interp_v2' in param_key):
+    elif ('reshape' in op_type or 'scale' in op_type):
+        inputs = re.search(r'in=(\((-?\d+,* *)+\))',
+                           param_key).group().split('=')[-1].strip(
+                               '('
+                               ')').split(',')
+        outputs = re.search(r'out=(\((-?\d+,* *)+\))',
+                            param_key).group().split('=')[-1].strip(
+                                '('
+                                ')').split(',')
+
+        # inputs[4], ouputs[4]
+        features = [0, 0, 0, 0, 0, 0, 0, 0]
+        for i in range(len(inputs)):
+            if inputs[i] == '':
+                continue
+            features[i] = int(inputs[i])
+        for i in range(len(outputs)):
+            if outputs[i] == '':
+                continue
+            features[i + 4] = int(outputs[i])
+
+    elif ('hard_swish' in op_type or 'relu' in op_type or
+          'leaky_relu' in op_type or 'tanh' in op_type or 'swish' in op_type or
+          'softmax' in op_type or 'hard_sigmoid' in op_type or
+          'sigmoid' in op_type or 'gelu' in op_type or 'clip' in op_type or
+          'shape' in op_type or 'transpose' in op_type or
+          'interp_v2' in op_type):
+
         inputs = re.search(r'in=(\((-?\d+,* *)+\))',
                            param_key).group().split('=')[-1].strip(
                                '('
@@ -171,19 +193,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [cin, in_h, in_w]
 
-    elif ('reshape' in param_key or 'scale' in param_key):
-        inputs = re.search(r'in=(\(-*\d*, \d*, \d*, \d*\))',
-                           param_key).group().split('=')[-1].strip(
-                               '('
-                               ')').split(', ')
-
-        cin = int(inputs[1])
-        in_h = int(inputs[2])
-        in_w = int(inputs[3])
-
-        features = [cin, in_h, in_w]
-
-    elif 'elementwise' in param_key:
+    elif 'elementwise' in op_type:
         X = re.search(r'X=\((-?\d+,* *)+\)',
                       param_key).group().split('=')[-1].strip('('
                                                               ')').split(',')
@@ -204,7 +214,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
                 continue
             features[i + 2] = int(Y[i])
 
-    elif 'concat' in param_key:
+    elif 'concat' in op_type:
         inputs = re.search(r'in=(\((-?\d+,* *)+\))+',
                            param_key).group().split('=')[-1].strip(
                                '('
@@ -224,7 +234,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
         for i in range(len(channels)):
             features[i + 1] = channels[i]
 
-    elif 'yolo_box' in param_key:
+    elif 'yolo_box' in op_type:
         outputs = re.search(r'out=(\(-?\d*, \d*, \d*\))',
                             param_key).group().split('=')[-1].strip(
                                 '('
@@ -243,7 +253,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [cin, h * w, cout, class_num]
 
-    elif 'prior_box' in param_key:
+    elif 'prior_box' in op_type:
         outputs = re.search(r'out=(\(-?\d*, \d*, \d*\))',
                             param_key).group().split('=')[-1].strip(
                                 '('
@@ -262,34 +272,45 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [cin, h * w, cout, max_sizes]
 
-    elif 'slice' in param_key:
-        inputs = re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))',
+    elif 'slice' in op_type:
+        inputs = re.search(r'in=\((-?\d+,* *)+\)',
                            param_key).group().split('=')[-1].strip(
                                '('
-                               ')').split(', ')
-        features = [int(inputs[1]), int(inputs[2]), int(inputs[3])]
+                               ')').split(',')
+        features = [0, 0, 0, 0]
+        for i in range(len(inputs)):
+            if inputs[i] == '':
+                continue
+            features[i] = int(inputs[i])
 
     # elif 'stack' in param_key and op_type == 'stack':
 
     #     print(param_key)
 
-    elif 'exp' in param_key:
-        inputs = re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))',
+    elif 'exp' in op_type:
+        inputs = re.search(r'in=\((-?\d+,* *)+\)',
                            param_key).group().split('=')[-1].strip(
                                '('
-                               ')').split(', ')
-
-        features = [int(inputs[1]), int(inputs[2]), int(inputs[3])]
+                               ')').split(',')
+        features = [0, 0, 0, 0]
+        for i in range(len(inputs)):
+            if inputs[i] == '':
+                continue
+            features[i] = int(inputs[i])
 
     elif 'dropout' in param_key:
-        inputs = re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))',
+        inputs = re.search(r'in=\((-?\d+,* *)+\)',
                            param_key).group().split('=')[-1].strip(
                                '('
-                               ')').split(', ')
+                               ')').split(',')
 
-        features = [int(inputs[1]), int(inputs[2]), int(inputs[3])]
+        features = [0, 0, 0, 0]
+        for i in range(len(inputs)):
+            if inputs[i] == '':
+                continue
+            features[i] = int(inputs[i])
 
-    elif 'fc' in param_key:
+    elif 'fc' in op_type:
         weight = re.search(r'weight=(\(\d*, \d*, \d*, \d*\))',
                            param_key).group().split('=')[-1].strip(
                                '('
@@ -303,7 +324,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [cin, cout, flops, params]
 
-    elif 'shuffle_channel' in param_key:
+    elif 'shuffle_channel' in op_type:
         inputs = re.search(r'in=(\(-*\d*, \d*, \d*, \d*\))',
                            param_key).group().split('=')[-1].strip(
                                '('
@@ -315,7 +336,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [cin, in_h, in_w, group]
 
-    elif 'split' in param_key:
+    elif 'split' in op_type:
         inputs = re.search(r'in=(\(-*\d*, \d*, \d*, \d*\))',
                            param_key).group().split('=')[-1].strip(
                                '('
@@ -326,21 +347,18 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [cin, in_h, in_w]
 
-    elif 'squeeze' in param_key:
+    elif 'squeeze' in op_type:
         inputs = re.search(r'in=\((-?\d+,* *)+\)',
                            param_key).group().split('=')[-1].strip(
                                '('
-                               ')').split(', ')
-        cin = int(inputs[1])
-        in_h = 0
-        in_w = 0
-        if len(inputs) == 4:
-            in_h = int(inputs[2])
-            in_w = int(inputs[2])
+                               ')').split(',')
+        features = [0, 0, 0, 0]
+        for i in range(len(inputs)):
+            if inputs[i] == '':
+                continue
+            features[i] = int(inputs[i])
 
-        features = [cin, in_h, in_w]
-
-    elif 'flatten_contiguous_range' in param_key:
+    elif 'flatten_contiguous_range' in op_type:
         inputs = re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))',
                            param_key).group().split('=')[-1].strip(
                                '('
@@ -348,13 +366,13 @@ def get_features_from_paramkey(param_key, op_type, data_type):
 
         features = [int(inputs[1]), int(inputs[2]), int(inputs[3])]
 
-    elif 'sum' in param_key:
+    elif 'sum' in op_type:
         inputs = re.findall(r'(in=\(-?\d*, \d*, \d*, \d*\))', param_key)
 
         input1 = inputs[0].split('=')[-1].strip('(' ')').split(', ')
         input2 = inputs[1].split('=')[-1].strip('(' ')').split(', ')
 
-    elif ('calib' in param_key or 'floor' in param_key):
+    elif ('calib' in op_type or 'floor' in op_type):
         if re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))', param_key) == None:
             return None
         inputs = re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))',
@@ -371,36 +389,50 @@ def get_features_from_paramkey(param_key, op_type, data_type):
             int(outputs[3]), int(outputs[3])
         ]
 
-    elif 'uniform_random' in param_key:
-        shape = re.search(r'shape=(\(-?\d*, \d*, \d*, \d*\))',
+    elif 'uniform_random' in op_type:
+        shape = re.search(r'shape=\[(-?\d+,* *)+\]',
                           param_key).group().split('=')[-1].strip(
-                              '('
-                              ')').split(', ')
+                              '['
+                              ']').split(',')
+        features = [0, 0, 0, 0]
+        for i in range(len(shape)):
+            if shape[i] == '':
+                continue
+            features[i] = int(shape[i])
 
-    elif 'greater_equal' in param_key:
-        outputs = re.search(r'out=(\(-?\d*, \d*, \d*\))',
+    elif 'greater_equal' in op_type:
+        print(param_key)
+        outputs = re.search(r'out=\((-?\d+,* *)+\)',
                             param_key).group().split('=')[-1].strip(
                                 '('
-                                ')').split(', ')
+                                ')').split(',')
+        features = [0, 0, 0, 0]
+        for i in range(len(outputs)):
+            if outputs[i] == '':
+                continue
+            features[i] = int(outputs[i])
 
-    elif 'reduce_mean' in param_key:
-        inputs = re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))',
+    elif 'reduce_mean' in op_type:
+        inputs = re.search(r'in=\((-?\d+,* *)+\)',
                            param_key).group().split('=')[-1].strip(
                                '('
-                               ')').split(', ')
-        outputs = re.search(r'out=(\(-?\d*, \d*, \d*\))',
+                               ')').split(',')
+        outputs = re.search(r'out=\((-?\d+,* *)+\)',
                             param_key).group().split('=')[-1].strip(
                                 '('
-                                ')').split(', ')
+                                ')').split(',')
+        features = [0, 0, 0, 0, 0, 0, 0, 0]
+        for i in range(len(inputs)):
+            if inputs[i] == '':
+                continue
+            features[i] = int(inputs[i])
+        for i in range(len(outputs)):
+            if outputs[i] == '':
+                continue
+            features[i + 4] = int(outputs[i])
 
-    elif 'pad3d' in param_key:
-        inputs = re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))',
-                           param_key).group().split('=')[-1].strip(
-                               '('
-                               ')').split(', ')
-        outputs = re.search(r'out=(\(-?\d*, \d*, \d*\))',
-                            param_key).group().split('=')[-1].strip(
-                                '('
-                                ')').split(', ')
+    # elif 'pad3d' in op_type:
+    #     inputs = re.search(r'in=(\(-?\d*, \d*, \d*, \d*\))', param_key).group().split('=')[-1].strip('(' ')').split(', ')
+    #     outputs = re.search(r'out=(\(-?\d*, \d*, \d*\))', param_key).group().split('=')[-1].strip('(' ')').split(', ')
 
     return features
