@@ -31,6 +31,7 @@ try:
     ], "training-aware and post-training quant is not supported in 2.0 alpha version paddle"
     from .quanter import quant_aware, convert, quant_post_static, quant_post_dynamic
     from .quanter import quant_post, quant_post_only_weight
+    from .quant_post_hpo import quant_post_hpo
 except Exception as e:
     _logger.warning(e)
     _logger.warning(
