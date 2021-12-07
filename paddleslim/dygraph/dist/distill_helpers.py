@@ -13,7 +13,7 @@
 # limitations under the License.
 import yaml
 
-__all__ = ['config2yaml']
+__all__ = ['config2yaml', 'yaml2config']
 
 
 def yaml2config(yaml_path):

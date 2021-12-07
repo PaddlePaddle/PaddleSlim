@@ -38,9 +38,9 @@ class CombinedLoss(nn.Layer):
     """
 
     def __init__(self, loss_config_list=None):
-        super().__init__()
+        super(CombinedLoss, self).__init__()
         loss_config_list = copy.deepcopy(loss_config_list)
-        self.loss_func = []
+        self.loss_func = nn.LayerList()
         self.loss_weight = []
         assert isinstance(loss_config_list, list), (
             'operator config should be a list')
