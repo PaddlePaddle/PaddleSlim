@@ -6,3 +6,4 @@ opencv-python
 pillow 
 pyyaml
 scikit-learn
+smac
