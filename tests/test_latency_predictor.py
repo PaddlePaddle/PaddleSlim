@@ -153,13 +153,36 @@ class ModelCase6(paddle.nn.Layer):
         x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
         x = paddle.exp(x)
         y += paddle.fluid.layers.uniform_random(y.shape)
-        y = paddle.expand(y, shape=paddle.shape(x))
-        x = x + y
-        out = paddle.concat([x, x])
+        y = paddle.expand(y, shape=[1, 768, 768, 2])
+        x = paddle.expand(x, shape=[1, 768, 768, 2])
+        out = paddle.concat([x, y])
         out = self.dp(out)
         out = channel_shuffle(out, 2)
-        out1, out2 = paddle.split(out, num_or_sections=2, axis=2)
+        out1, out2 = paddle.split(out, num_or_sections=2, axis=1)
         return out1, out2
+
+
+class ModelCase7(paddle.nn.Layer):
+    def __init__(self):
+        super(ModelCase7, self).__init__()
+        self.bn1 = BatchNorm2D(255)
+
+    def forward(self, inputs):
+        image = inputs['image']
+        image = self.bn1(image)
+        img_size = paddle.fluid.data(
+            name='img_size', shape=[None, 2], dtype='int64')
+        anchors = [10, 13, 16, 30, 33, 23]
+        boxes, scores = paddle.fluid.layers.yolo_box(
+            x=image,
+            img_size=img_size,
+            class_num=80,
+            anchors=anchors,
+            conf_thresh=0.01,
+            downsample_ratio=32)
+        box, var = paddle.fluid.layers.prior_box(
+            input=image, image=image, min_sizes=[2.], clip=True, flip=True)
+        return boxes, scores, box, var
 
 
 class TestCase1(unittest.TestCase):
@@ -408,6 +431,7 @@ class TestCase11(unittest.TestCase):
         paddle.disable_static()
         model = mobilenet_v2()
         model2 = ModelCase6()
+        model3 = ModelCase7()
         predictor = TableLatencyPredictor(
             hardware='710',
             threads=4,
@@ -434,6 +458,13 @@ class TestCase11(unittest.TestCase):
             save_dir='./model',
             data_type='fp32',
             task_type='cls')
+        assert latency > 0
+        latency = predictor.predict_latency(
+            model3,
+            input_shape=[1, 255, 14, 14],
+            save_dir='./model',
+            data_type='fp32',
+            task_type='det')
         assert latency > 0
 
 

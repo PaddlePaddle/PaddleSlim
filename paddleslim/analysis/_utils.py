@@ -174,15 +174,6 @@ def save_seg_model(model, input_shape, save_dir, data_type):
     return model_file, param_file
 
 
-def data_avg(table_dict, op_type):
-    res = []
-    for param_key in table_dict:
-        if op_type == param_key:
-            res.append(table_dict[param_key])
-    res = np.array(res)
-    return np.mean(res)
-
-
 def nearest_interpolate(features, data):
     def distance(x, y):
         x = np.array(x)

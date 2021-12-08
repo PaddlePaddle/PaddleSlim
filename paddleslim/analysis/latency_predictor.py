@@ -213,8 +213,6 @@ class TableLatencyPredictor(LatencyPredictor):
             predictor = load_predictor(op_type, op_dir, data_type)
             features = get_features_from_paramkey(param_key, op_type, data_type)
             latency = predictor.predict([features])
-        elif op_type in ['range', 'expand_v2']:
-            latency = data_avg(self.table_dict, op_type)
         else:
             data = get_data_from_tables(
                 table_dict=self.table_dict,
