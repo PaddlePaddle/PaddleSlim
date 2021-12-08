@@ -20,7 +20,7 @@ import time
 import subprocess
 from .parse_ops import get_key_from_op
 from .extract_features import get_data_from_tables, get_features_from_paramkey
-from ._utils import save_cls_model, save_det_model, save_seg_model, load_predictor, nearest_interpolate, data_avg, dowload_tools
+from ._utils import save_cls_model, save_det_model, save_seg_model, load_predictor, nearest_interpolate, dowload_tools
 import paddle
 import paddleslim
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
