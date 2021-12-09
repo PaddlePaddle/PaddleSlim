@@ -376,34 +376,4 @@ def get_features_from_paramkey(param_key, op_type, data_type):
                 continue
             features[i] = int(shape[i])
 
-    elif 'greater_equal' in op_type:
-        outputs = re.search(r'out=\((-?\d+,* *)+\)',
-                            param_key).group().split('=')[-1].strip(
-                                '('
-                                ')').split(',')
-        features = [0, 0, 0, 0]
-        for i in range(len(outputs)):
-            if outputs[i] == '':
-                continue
-            features[i] = int(outputs[i])
-
-    elif 'reduce_mean' in op_type:
-        inputs = re.search(r'in=\((-?\d+,* *)+\)',
-                           param_key).group().split('=')[-1].strip(
-                               '('
-                               ')').split(',')
-        outputs = re.search(r'out=\((-?\d+,* *)+\)',
-                            param_key).group().split('=')[-1].strip(
-                                '('
-                                ')').split(',')
-        features = [0, 0, 0, 0, 0, 0, 0, 0]
-        for i in range(len(inputs)):
-            if inputs[i] == '':
-                continue
-            features[i] = int(inputs[i])
-        for i in range(len(outputs)):
-            if outputs[i] == '':
-                continue
-            features[i + 4] = int(outputs[i])
-
     return features
