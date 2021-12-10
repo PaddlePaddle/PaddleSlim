@@ -92,10 +92,10 @@ def make_feed_dict(feed_target_names, data):
     """construct feed dictionary"""
     feed_dict = {}
     if len(feed_target_names) == 1:
-        feed_dict[feed_target_names[0]] = np.array(data)
+        feed_dict[feed_target_names[0]] = data
     else:
         for i in range(len(feed_target_names)):
-            feed_dict[feed_target_names[i]] = np.array(data[i])
+            feed_dict[feed_target_names[i]] = data[i]
     return feed_dict
 
 
@@ -330,7 +330,7 @@ def quant_post_hpo(executor,
     cs = ConfigurationSpace()
 
     algo = CategoricalHyperparameter(
-        "algo", ["KL", "hist", "avg", "mse"], default_value="avg")
+        "algo", ["KL", "hist", "avg", "mse"], default_value="KL")
     bias_correct = CategoricalHyperparameter(
         "bias_correct", [True, False], default_value=False)
     weight_quantize_method = CategoricalHyperparameter("weight_quantize_method", \
