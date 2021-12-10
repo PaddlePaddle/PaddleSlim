@@ -1,4 +1,4 @@
-# 静态离线量化超参搜索示例
+# 使用infermodel进行量化训练示例
 
 本示例将介绍如何使用infermodel进行蒸馏量化训练，使用接口``paddleslim.quant.quant_aware_with_infermodel``来进行量化蒸馏训练，
 使用接口``paddleslim.quant.export_quant_infermodel``来进行量化蒸馏训练。
