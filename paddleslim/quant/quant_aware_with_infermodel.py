@@ -17,6 +17,7 @@ import copy
 import os
 import argparse
 import json
+import six
 from collections import namedtuple
 import time
 import shutil
@@ -24,6 +25,8 @@ import numpy as np
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.layer_helper import LayerHelper
+from paddle.fluid import unique_name
+from paddle.fluid import core
 from paddle.fluid.framework import Parameter
 from paddleslim.dist import merge, l2_loss, soft_label_loss, fsp_loss
 from paddleslim.core import GraphWrapper
@@ -109,6 +112,26 @@ def _remove_fetch_node(program):
                 removed += 1
 
 
+def _recover_reserve_space_with_bn(program):
+    """Add the outputs which is only used for training and not saved in
+       inference program."""
+    for block_idx in six.moves.range(program.num_blocks):
+        block = program.block(block_idx)
+        for op in block.ops:
+            if op.type == "batch_norm":
+                if "ReserveSpace" not in op.output_names or len(
+                        op.output("ReserveSpace")) == 0:
+                    reserve_space = block.create_var(
+                        name=unique_name.generate_with_ignorable_key(".".join(
+                            ["reserve_space", 'tmp'])),
+                        dtype=block.var(op.input("X")[0]).dtype,
+                        type=core.VarDesc.VarType.LOD_TENSOR,
+                        persistable=False,
+                        stop_gradient=True)
+                    op.desc.set_output("ReserveSpace", [reserve_space.name])
+    return program
+
+
 def _recover_param_attr(program):
     """recover parameters attribute. 
        Params in infermodel are stored in the form of variable, which can not be trained."""
@@ -163,6 +186,7 @@ def build_distill_prog_with_infermodel(executor, place, train_config):
     test_program = train_program.clone(for_test=True)
 
     train_program = _recover_param_attr(train_program)
+    train_program = _recover_reserve_space_with_bn(train_program)
     for var in train_program.list_vars():
         var.stop_gradient = False
     train_graph = GraphWrapper(train_program)
@@ -348,12 +372,12 @@ def quant_aware_with_infermodel(executor,
             if iter_num > 0 and iter_num % save_iter_step == 0:
                 checkpoint_name = "epoch_" + str(epoch) + "_iter_" + str(
                     iter_num)
-                test_callback(compiled_test_prog, test_feed_names,
-                              test_fetch_list, checkpoint_name)
                 paddle.static.save(
                     program=test_program,
                     model_path=os.path.join(
                         train_config["quant_model_ckpt_path"], checkpoint_name))
+                test_callback(compiled_test_prog, test_feed_names,
+                              test_fetch_list, checkpoint_name)
             iter_sum += 1
             if train_config["max_iter"] >= 0 and iter_sum > train_config[
                     "max_iter"]:

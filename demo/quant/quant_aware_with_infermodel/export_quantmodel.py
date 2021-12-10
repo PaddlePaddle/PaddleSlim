@@ -13,7 +13,7 @@ sys.path[0] = os.path.join(
 sys.path[1] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger
-from paddleslim.quant import quant_post_hpo
+from paddleslim.quant import export_quant_infermodel
 from utility import add_arguments, print_arguments
 import imagenet_reader as reader
 _logger = get_logger(__name__, level=logging.INFO)
@@ -21,24 +21,26 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
-add_arg('checkpoint_path',       str,  "./inference_model/MobileNet_checkpoints/",  "model dir to save quanted model checkpoints")
-add_arg('infermodel_save_path',       str, None,                 "quant infer model save path")
+add_arg('use_gpu',                   bool,   True,      "Whether to use GPU or not.")
+add_arg('batch_size',                int,    4,         "train batch size.")
+add_arg('num_epoch',                 int,    1,         "train epoch num.")
+add_arg('save_iter_step',            int,    1,         "save train checkpoint every save_iter_step iter num.")
+add_arg('learning_rate',             float,  0.0001,    "learning rate.")
+add_arg('weight_decay',              float,  0.00004,   "weight decay.")
+add_arg('use_pact',                  bool,   True,      "whether use pact quantization.")
+add_arg('checkpoint_path',           str,    None,      "model dir to save quanted model checkpoints")
+add_arg('model_path',                str,    None,      "model dir")
+add_arg('model_filename',            str,    None,      "model file name")
+add_arg('params_filename',           str,    None,      "params file name")
+add_arg('teacher_model_path',        str,    None,      "model dir")
+add_arg('teacher_model_filename',    str,    None,      "model file name")
+add_arg('teacher_params_filename',   str,    None,      "params file name")
+add_arg('distill_node_name_list',    str,    None,      "distill node name list", nargs="+")
+add_arg('checkpoint_filename',       str,    None,      "checkpoint filename to export infer model")
+add_arg('infermodel_save_path',      str,    None,      "infer model export path")
 
 def export(args):
     place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
-
-    assert os.path.exists(args.model_path), "args.model_path doesn't exist"
-    assert os.path.isdir(args.model_path), "args.model_path must be a dir"
-
-    def reader_generator(imagenet_reader):
-        def gen():
-            for i, data in enumerate(imagenet_reader()):
-                image, label = data
-                image = np.expand_dims(image, axis=0)
-                yield image
-        return gen
-
     exe = paddle.static.Executor(place)
 
     quant_config = {
@@ -48,31 +50,32 @@ def export(args):
         'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul']
     }
     train_config={
-        "num_epoch": 1000, # training epoch num
-        "save_iter_step": 5,
-        "learning_rate": 0.0001,
-        "weight_decay": 0.0001,
-        "use_pact": False,
-        "quant_model_ckpt_path":checkpoint_path,
-        "teacher_model_path": model_path,
-        "teacher_model_filename": model_filename,
-        "teacher_params_filename": params_filename,
-        "model_path": model_path,
-        "model_filename": model_filename,
-        "params_filename": params_filename,
-        "distill_node_pair": ["teacher_fc_0.tmp_0", "fc_0.tmp_0", "teacher_batch_norm_24.tmp_4", "batch_norm_24.tmp_4",
-            "teacher_batch_norm_22.tmp_4", "batch_norm_22.tmp_4", "teacher_batch_norm_18.tmp_4", "batch_norm_18.tmp_4",
-            "teacher_batch_norm_13.tmp_4", "batch_norm_13.tmp_4", "teacher_batch_norm_5.tmp_4", "batch_norm_5.tmp_4"]
+        "num_epoch": args.num_epoch, # training epoch num
+        "max_iter": -1,
+        "save_iter_step": args.save_iter_step,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
+        "use_pact": args.use_pact,
+        "quant_model_ckpt_path":args.checkpoint_path,
+        "teacher_model_path": args.teacher_model_path,
+        "teacher_model_filename": args.teacher_model_filename,
+        "teacher_params_filename": args.teacher_params_filename,
+        "model_path": args.model_path,
+        "model_filename": args.model_filename,
+        "params_filename": args.params_filename,
+        "distill_node_pair": args.distill_node_name_list
     }
+
     export_quant_infermodel(exe, place,
         scope=None,
         quant_config=quant_config,
         train_config=train_config,
-        checkpoint_path=args.checkpoint_path,
+        checkpoint_path=os.path.join(args.checkpoint_path, args.checkpoint_filename),
         export_infermodel_path=args.infermodel_save_path)
 
 def main():
     args = parser.parse_args()
+    args.use_pact = bool(args.use_pact)
     print_arguments(args)
     export(args)
 
