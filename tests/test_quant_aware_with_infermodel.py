@@ -51,9 +51,9 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
         main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
 
-        #place = paddle.CPUPlace()
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        #place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
+        #) else paddle.CPUPlace()
+        place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(paddle.static.default_startup_program())
 
@@ -138,6 +138,7 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
         }
         train_config = {
             "num_epoch": 1,  # training epoch num
+            "max_iter": 20,
             "save_iter_step": 10,
             "learning_rate": 0.0001,
             "weight_decay": 0.0001,
@@ -203,9 +204,9 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
                 checkpoint_path=checkpoint_path,
                 export_infermodel_path=quant_infermodel_save_path)
 
-        #place = paddle.CPUPlace()
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        #place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
+        #) else paddle.CPUPlace()
+        place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
 
         test_quant_aware_with_infermodel(exe, place)

@@ -40,6 +40,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 _train_config_default = {
     # configs of training aware quantization with infermodel
     "num_epoch": 1000,  # training epoch num
+    "max_iter": -1,
     "save_iter_step": 1000,
     "learning_rate": 0.0001,
     "weight_decay": 0.0001,
@@ -69,6 +70,8 @@ def _parse_train_configs(train_config):
 
     assert isinstance(configs['num_epoch'], int), \
         "'num_epoch' must be int value'"
+    assert isinstance(configs['max_iter'], int), \
+        "'max_iter' must be int value'"
     assert isinstance(configs['save_iter_step'], int), \
         "'save_iter_step' must be int value'"
     assert isinstance(configs['learning_rate'], float), \
@@ -334,6 +337,7 @@ def quant_aware_with_infermodel(executor,
     compiled_test_prog = _compile_program(test_program, test_fetch_list[0].name)
     num_epoch = train_config["num_epoch"]
     save_iter_step = train_config["save_iter_step"]
+    iter_sum = 0
     for epoch in range(num_epoch):
         for iter_num, feed_dict in enumerate(train_reader()):
             np_probs_float = executor.run(compiled_train_prog, \
@@ -350,6 +354,10 @@ def quant_aware_with_infermodel(executor,
                     program=test_program,
                     model_path=os.path.join(
                         train_config["quant_model_ckpt_path"], checkpoint_name))
+            iter_sum += 1
+            if train_config["max_iter"] >= 0 and iter_sum > train_config[
+                    "max_iter"]:
+                return
 
 
 def export_quant_infermodel(
@@ -400,6 +408,51 @@ def export_quant_infermodel(
     test_program = distill_program_info.test_program
     test_feed_names = distill_program_info.test_feed_names
     test_fetch_list = distill_program_info.test_fetch_list
+
+    ############################################################################
+    # quant
+    ############################################################################
+    def pact(x):
+        """clip feature value range"""
+        helper = LayerHelper("pact", **locals())
+        dtype = 'float32'
+        init_thres = 16
+        u_param_attr = paddle.ParamAttr(
+            name=x.name + '_pact',
+            initializer=paddle.nn.initializer.Constant(value=init_thres),
+            regularizer=paddle.regularizer.L2Decay(0.0001),
+            learning_rate=1)
+        u_param = helper.create_parameter(
+            attr=u_param_attr, shape=[1], dtype=dtype)
+
+        part_a = paddle.nn.functional.relu(x - u_param)
+        part_b = paddle.nn.functional.relu(-u_param - x)
+        x = x - part_a + part_b
+        return x
+
+    def get_optimizer():
+        """optimizer for pact params"""
+        return paddle.optimizer.Momentum(0.0001, 0.9)
+
+    use_pact = train_config["use_pact"]
+    if use_pact:
+        act_preprocess_func = pact
+        optimizer_func = get_optimizer
+        pact_executor = executor
+    else:
+        act_preprocess_func = None
+        optimizer_func = None
+        pact_executor = None
+
+    test_program = quant_aware(
+        test_program,
+        place,
+        quant_config,
+        scope=None,
+        act_preprocess_func=act_preprocess_func,
+        optimizer_func=optimizer_func,
+        executor=pact_executor,
+        for_test=True)
 
     paddle.static.load(
         executor=executor,
