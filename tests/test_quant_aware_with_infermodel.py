@@ -137,8 +137,8 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
             'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul']
         }
         train_config = {
-            "num_epoch": 1000,  # training epoch num
-            "save_iter_step": 5,
+            "num_epoch": 1,  # training epoch num
+            "save_iter_step": 10,
             "learning_rate": 0.0001,
             "weight_decay": 0.0001,
             "use_pact": False,
@@ -209,7 +209,7 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
         exe = paddle.static.Executor(place)
 
         test_quant_aware_with_infermodel(exe, place)
-        checkpoint_path = "./quantaware_with_infermodel_checkpoints/epoch_0_iter_5"
+        checkpoint_path = "./quantaware_with_infermodel_checkpoints/epoch_0_iter_10"
         quant_infermodel_save_path = "././quantaware_with_infermodel_export/"
         test_export_quant_infermodel(exe, place, checkpoint_path,
                                      quant_infermodel_save_path)
