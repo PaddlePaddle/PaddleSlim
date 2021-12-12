@@ -212,6 +212,13 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
         quant_infermodel_save_path = "././quantaware_with_infermodel_export/"
         test_export_quant_infermodel(exe, place, checkpoint_path,
                                      quant_infermodel_save_path)
+        train_config["use_pact"] = True
+        test_quant_aware_with_infermodel(exe, place)
+        train_config["use_pact"] = False
+        checkpoint_path = "./quantaware_with_infermodel_checkpoints/epoch_0_iter_10"
+        quant_infermodel_save_path = "././quantaware_with_infermodel_export/"
+        test_export_quant_infermodel(exe, place, checkpoint_path,
+                                     quant_infermodel_save_path)
 
 
 if __name__ == '__main__':
