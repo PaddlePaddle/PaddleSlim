@@ -38,7 +38,7 @@ python quant_aware_with_infermodel.py \
     --save_iter_step=100 \
     --learning_rate=0.0001 \
     --weight_decay=0.00004 \
-    --use_pact=False \
+    --use_pact=True \
     --checkpoint_path="./inference_model/MobileNet_quantaware_ckpt/" \
     --model_path="./inference_model/MobileNet/" \
     --model_filename="model" \
@@ -56,7 +56,7 @@ python quant_aware_with_infermodel.py \
 - ``save_iter_step``: 每隔save_iter_step保存一次checkpoint
 - ``learning_rate``: 量化训练学习率，推荐使用float模型训练最小一级学习率
 - ``weight_decay``: 推荐使用float模型训练weight decay设置
-- ``use_pact``: 是否使用pact量化算法
+- ``use_pact``: 是否使用pact量化算法, 推荐使用
 - ``checkpoint_path``: 量化训练模型checkpoint保存路径
 - ``model_path``: 需要量化的模型所在路径
 - ``model_filename``: 如果需要量化的模型的参数文件保存在一个文件中，则设置为该模型的模型文件名称，如果参数文件保存在多个文件中，则不需要设置。
@@ -117,5 +117,5 @@ python ../quant_post/eval.py --model_path ./inference_model/MobileNet_epoch_0_it
 ```
 精度输出为:
 ```
-top1_acc/top5_acc= [0.70334 0.89374]]
+top1_acc/top5_acc= [0.70516 0.89452]]
 ```

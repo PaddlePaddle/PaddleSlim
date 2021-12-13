@@ -126,7 +126,6 @@ def quantize(args):
         def gen():
             for i, data in enumerate(train_reader()):
                 imgs = np.float32([item[0] for item in data])
-                print("image shape: ", imgs.shape)
                 yield {"image":imgs}
         return gen
     quant_aware_with_infermodel(

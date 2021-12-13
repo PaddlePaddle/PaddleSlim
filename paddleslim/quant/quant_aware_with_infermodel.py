@@ -160,7 +160,7 @@ def _parse_distill_loss(train_config):
               train_config["distill_node_pair"][i * 2 + 1])
         distill_loss += l2_loss(train_config["distill_node_pair"][i * 2],
                                 train_config["distill_node_pair"][i * 2 + 1])
-    print(distill_loss)
+    print("distill loss: ", distill_loss)
     return distill_loss
 
 DistillProgramInfo = namedtuple("DistillProgramInfo", \
