@@ -58,7 +58,12 @@ class Convert:
     def __init__(self, context):
         self.context = context
 
-    def _change_name(self, layer, pd_ver, has_bias=True, conv=False, use_bn_old=False):
+    def _change_name(self,
+                     layer,
+                     pd_ver,
+                     has_bias=True,
+                     conv=False,
+                     use_bn_old=False):
         if conv:
             w_attr = layer._param_attr
         else:
@@ -241,13 +246,14 @@ class Convert:
                     layer = Block(SuperGroupConv2D(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            elif (isinstance(layer, nn.BatchNorm2D) or isinstance(layer, nn.BatchNorm)) and (
-                                getattr(self.context, 'expand', None) != None or
-                                getattr(self.context, 'channel', None) != None):
+            elif (isinstance(layer, nn.BatchNorm2D) or
+                  isinstance(layer, nn.BatchNorm)) and (
+                      getattr(self.context, 'expand', None) != None or
+                      getattr(self.context, 'channel', None) != None):
                 # num_features in BatchNorm don't change after last weight operators
                 if idx > last_weight_layer_idx:
                     continue
-                
+
                 use_bn_old = False
                 if isinstance(layer, nn.BatchNorm):
                     use_bn_old = True
@@ -287,9 +293,10 @@ class Convert:
 
                 del layer, attr_dict
 
-                layer = layers.SuperBatchNorm(
+                layer = layers_old.SuperBatchNorm(
                     **new_attr_dict
-                ) if pd_ver == 185 or use_bn_old else layers.SuperBatchNorm2D(**new_attr_dict)
+                ) if pd_ver == 185 or use_bn_old else layers.SuperBatchNorm2D(
+                    **new_attr_dict)
                 model[idx] = layer
 
             elif isinstance(layer, SyncBatchNorm) and (
