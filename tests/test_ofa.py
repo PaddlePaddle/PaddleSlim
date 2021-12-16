@@ -321,7 +321,7 @@ class TestOFA(unittest.TestCase):
                         ofa_model.set_epoch(epoch_id)
                     for model_no in range(self.run_config.dynamic_batch_size[
                             idx]):
-                        output, _ = ofa_model(self.data)
+                        output = ofa_model(self.data)
                         loss = paddle.mean(output)
                         if self.distill_config.mapping_layers != None:
                             dis_loss = ofa_model.calc_distill_loss()
@@ -440,7 +440,7 @@ class TestShortCut(unittest.TestCase):
     def _test_clear_search_space(self):
         self.ofa_model = OFA(self.model)
         self.ofa_model.set_epoch(0)
-        outs, _ = self.ofa_model(self.images)
+        outs = self.ofa_model(self.images)
         self.config = self.ofa_model.current_config
 
     def test_export_model(self):
@@ -458,7 +458,7 @@ class TestExportCase1(unittest.TestCase):
         self.data = paddle.to_tensor(data_np)
         self.ofa_model = OFA(model)
         self.ofa_model.set_epoch(0)
-        outs, _ = self.ofa_model(self.data)
+        outs = self.ofa_model(self.data)
         self.config = self.ofa_model.current_config
 
     def test_export_model_linear1(self):
@@ -475,7 +475,7 @@ class TestExportCase2(unittest.TestCase):
         self.data = paddle.to_tensor(data_np)
         self.ofa_model = OFA(model)
         self.ofa_model.set_epoch(0)
-        outs, _ = self.ofa_model(self.data)
+        outs = self.ofa_model(self.data)
         self.config = self.ofa_model.current_config
 
     def test_export_model_linear2(self):
@@ -486,6 +486,62 @@ class TestExportCase2(unittest.TestCase):
         ex_model(self.data)
         assert len(self.ofa_model.ofa_layers) == 3
 
+class TestManualSetting(unittest.TestCase):
+    def setUp(self):
+        self._init_model()
+
+    def _init_model(self):
+        model = ModelOriginLinear()
+        data_np = np.random.random((3, 64)).astype(np.int64)
+        self.data = paddle.to_tensor(data_np)
+        sp_net_config = supernet(expand_ratio=[0.25, 0.5, 1.0])
+        self.model = Convert(sp_net_config).convert(model)
+
+    def test_setting_byhand(self):
+        self.ofa_model1 = OFA(self.model)
+        for key, value in self.ofa_model1._ofa_layers.items():
+            if 'expand_ratio' in value:
+                assert value['expand_ratio'] == [0.25, 0.5, 1.0]
+        self.ofa_model1._clear_search_space(self.data)
+        assert len(self.ofa_model1._ofa_layers) == 3
+        
+        ofa_layers = {'models.0': {'expand_ratio': [0.5, 1.0]}, 
+                      'models.1': {'expand_ratio': [0.25, 1.0]},
+                      'models.3': {'expand_ratio': [0.25, 1.0]}, 
+                      'models.4': {}}
+        same_search_space = [['models.1', 'models.3']]
+        skip_layers = ['models.0']
+        cfg = {'ofa_layers': ofa_layers, 'same_search_space': same_search_space, 'skip_layers': skip_layers}
+        run_config = RunConfig(**cfg)
+        self.ofa_model2 = OFA(self.model, run_config=run_config)
+        self.ofa_model2._clear_search_space(self.data)
+        #print(self.ofa_model2._ofa_layers)
+        assert self.ofa_model2._ofa_layers['models.1']['expand_ratio'] == [0.25, 1.0]
+        assert len(self.ofa_model2._ofa_layers) == 2
+        #print(self.ofa_model_1._ofa_layers)
+        
+    def test_tokenize(self):
+        self.ofa_model = OFA(self.model)
+        self.ofa_model.set_task('expand_ratio')
+        self.ofa_model._clear_search_space(self.data)
+        self.ofa_model.tokenize()
+        assert self.ofa_model.token_map == {'expand_ratio': {'models.0': {0: 0.25, 1: 0.5, 2: 1.0}, 'models.1': {0: 0.25, 1: 0.5, 2: 1.0}, 'models.3': {0: 0.25, 1: 0.5, 2: 1.0}}}
+        assert self.ofa_model.search_cands == [[0, 1, 2], [0, 1, 2], [0, 1, 2]]
+        
+        ofa_layers = {'models.0': {'expand_ratio': [0.5, 1.0]}, 
+                      'models.1': {'expand_ratio': [0.25, 1.0]},
+                      'models.3': {'expand_ratio': [0.25, 1.0]}, 
+                      'models.4': {}}
+        same_search_space = [['models.1', 'models.3']]
+        cfg = {'ofa_layers': ofa_layers, 'same_search_space': same_search_space}
+        run_config = RunConfig(**cfg)
+        self.ofa_model2 = OFA(self.model, run_config=run_config)
+        self.ofa_model2.set_task('expand_ratio')
+        self.ofa_model2._clear_search_space(self.data)
+        self.ofa_model2.tokenize()
+        assert self.ofa_model2.token_map == {'expand_ratio': {'models.0': {1: 0.5, 2: 1.0}, 'models.1': {0: 0.25, 2: 1.0}}}
+        assert self.ofa_model2.search_cands == [[1, 2], [0, 2]]
+        
 
 if __name__ == '__main__':
     unittest.main()

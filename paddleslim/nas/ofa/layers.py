@@ -315,6 +315,7 @@ class SuperConv2D(nn.Conv2D):
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
+        self.cur_config['prune_group'] = groups
         out = F.conv2d(
             input,
             weight,
@@ -622,6 +623,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
+        self.cur_config['prune_group'] = groups
         out = F.conv2d_transpose(
             input,
             weight,
