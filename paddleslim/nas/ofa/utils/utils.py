@@ -35,7 +35,6 @@ if pd_ver == 185:
 else:
     Layer = paddle.nn.Layer
 
-
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['set_state_dict']
@@ -60,8 +59,8 @@ def set_state_dict(model, state_dict):
             param.set_value(state_dict[tmp_n])
         else:
             _logger.info('{} is not in state_dict'.format(tmp_n))
-            
-            
+
+
 def build_input(input_size, dtypes):
     if isinstance(input_size, list) and all(
             isinstance(i, numbers.Number) for i in input_size):
@@ -80,10 +79,8 @@ def build_input(input_size, dtypes):
             inputs[key] = paddle.cast(paddle.rand(list(value)), dtype)
         return inputs
     if isinstance(input_size, list):
-        return [
-            build_input(i, dtype)
-            for i, dtype in zip(input_size, dtypes)
-        ]
+        return [build_input(i, dtype) for i, dtype in zip(input_size, dtypes)]
+
 
 def remove_model_fn(model, state_dict):
     new_dict = {}
@@ -105,8 +102,8 @@ def remove_model_fn(model, state_dict):
         else:
             _logger.debug('{} is not in state_dict'.format(tmp_n))
     return new_dict
-                
-                
+
+
 def compute_start_end(kernel_size, sub_kernel_size):
     center = kernel_size // 2
     sub_center = sub_kernel_size // 2
