@@ -104,8 +104,9 @@ class OFABase(Layer):
                 sublayer.set_supernet(self)
                 if not sublayer.fixed:
                     config = sublayer.candidate_config
-                    for k,v in config.items():
-                        if isinstance(v, list) or isinstance(v, set) or isinstance(v,tuple):
+                    for k, v in config.items():
+                        if isinstance(v, list) or isinstance(
+                                v, set) or isinstance(v, tuple):
                             sublayer.candidate_config[k] = sorted(list(v))
                     ofa_layers[name] = sublayer.candidate_config
                     layers[sublayer.key] = sublayer.candidate_config
@@ -196,7 +197,7 @@ class OFA(OFABase):
         self._cannot_changed_layer = []
         self.token_map = {}
         self.search_cands = []
-        
+
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
             assert isinstance(self.elastic_order,
@@ -232,9 +233,10 @@ class OFA(OFABase):
 
         if getattr(self.run_config, 'ofa_layers', None) != None:
             for key in self.run_config.ofa_layers:
-                assert key in self._ofa_layers, "layer {} is not in current _ofa_layers".format(key)
+                assert key in self._ofa_layers, "layer {} is not in current _ofa_layers".format(
+                    key)
                 self._ofa_layers[key] = self.run_config.ofa_layers[key]
-                
+
         if getattr(self.run_config, 'n_epochs', None) != None:
             assert len(self.run_config.n_epochs) == len(self.elastic_order)
             for idx in range(len(run_config.n_epochs)):
@@ -257,8 +259,9 @@ class OFA(OFABase):
         if self.run_config != None and getattr(self.run_config, 'skip_layers',
                                                None) != None:
             self._skip_layers = self.run_config.skip_layers
-        
-        if self.run_config != None and getattr(self.run_config, 'same_search_space', None) != None:
+
+        if self.run_config != None and getattr(
+                self.run_config, 'same_search_space', None) != None:
             self._same_ss_by_hand = self.run_config.same_search_space
         else:
             self._same_ss_by_hand = None
@@ -412,7 +415,7 @@ class OFA(OFABase):
         for name, cands in self._ofa_layers.items():
             if self.task in cands:
                 all_tokens += list(cands[self.task])
-                
+
         all_tokens = sorted(list(set(all_tokens)))
         self.token_map[self.task] = {}
         for name, cands in self._ofa_layers.items():
@@ -424,20 +427,20 @@ class OFA(OFABase):
                     key = all_tokens.index(cand)
                     self.token_map[self.task][name][key] = cand
             else:
-                raise NotImplementedError(
-                                "Task {} not in ofa layers".format(self.task))
-        
+                raise NotImplementedError("Task {} not in ofa layers".format(
+                    self.task))
+
         self.search_cands = []
         for layer, t_map in self.token_map[self.task].items():
             self.search_cands.append(list(t_map.keys()))
-            
+
     def decode_token(self, token):
-        config = []
+        config = {}
         for i, name in enumerate(self.token_map[self.task].keys()):
-            config.append(self.token_map[self.task][name][token[i]])
-        self.net_config = net_config
+            config[name] = self.token_map[self.task][name][token[i]]
+        self.net_config = config
         return config
-    
+
     def set_task(self, task, phase=None):
         """
         set task in the ofa training progress.
@@ -700,15 +703,15 @@ class OFA(OFABase):
                 self.model, DataParallel) else self.model
             _st_prog = dygraph2program(
                 model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
-            
+
         else:
             model_to_traverse = self.model._layers if isinstance(
-            self.model, DataParallel) else self.model
+                self.model, DataParallel) else self.model
 
             model_to_traverse.eval()
             _st_prog = dygraph2program(model_to_traverse, inputs=input_spec)
             model_to_traverse.train()
-            
+
         if self._same_ss_by_hand is None:
             self._same_ss, depthwise_conv, fixed_by_input, output_conv = check_search_space(
                 GraphWrapper(_st_prog))
@@ -847,4 +850,4 @@ class OFA(OFABase):
             self._remove_hook_after_forward()
             return student_output, teacher_output
 
-        return student_output #, teacher_output
+        return student_output  #, teacher_output

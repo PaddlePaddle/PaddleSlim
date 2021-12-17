@@ -25,6 +25,7 @@ from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
 from paddleslim.nas.ofa.convert_super import supernet
 from paddleslim.nas.ofa.layers import Block, SuperSeparableConv2D
 from paddleslim.nas.ofa.convert_super import Convert, supernet
+from paddle.static import InputSpec
 
 
 class ModelConv(nn.Layer):
@@ -486,6 +487,7 @@ class TestExportCase2(unittest.TestCase):
         ex_model(self.data)
         assert len(self.ofa_model.ofa_layers) == 3
 
+
 class TestManualSetting(unittest.TestCase):
     def setUp(self):
         self._init_model()
@@ -504,34 +506,73 @@ class TestManualSetting(unittest.TestCase):
                 assert value['expand_ratio'] == [0.25, 0.5, 1.0]
         self.ofa_model1._clear_search_space(self.data)
         assert len(self.ofa_model1._ofa_layers) == 3
-        
-        ofa_layers = {'models.0': {'expand_ratio': [0.5, 1.0]}, 
-                      'models.1': {'expand_ratio': [0.25, 1.0]},
-                      'models.3': {'expand_ratio': [0.25, 1.0]}, 
-                      'models.4': {}}
+
+        ofa_layers = {
+            'models.0': {
+                'expand_ratio': [0.5, 1.0]
+            },
+            'models.1': {
+                'expand_ratio': [0.25, 1.0]
+            },
+            'models.3': {
+                'expand_ratio': [0.25, 1.0]
+            },
+            'models.4': {}
+        }
         same_search_space = [['models.1', 'models.3']]
         skip_layers = ['models.0']
-        cfg = {'ofa_layers': ofa_layers, 'same_search_space': same_search_space, 'skip_layers': skip_layers}
+        cfg = {
+            'ofa_layers': ofa_layers,
+            'same_search_space': same_search_space,
+            'skip_layers': skip_layers
+        }
         run_config = RunConfig(**cfg)
         self.ofa_model2 = OFA(self.model, run_config=run_config)
         self.ofa_model2._clear_search_space(self.data)
         #print(self.ofa_model2._ofa_layers)
-        assert self.ofa_model2._ofa_layers['models.1']['expand_ratio'] == [0.25, 1.0]
+        assert self.ofa_model2._ofa_layers['models.1'][
+            'expand_ratio'] == [0.25, 1.0]
         assert len(self.ofa_model2._ofa_layers) == 2
         #print(self.ofa_model_1._ofa_layers)
-        
+
     def test_tokenize(self):
         self.ofa_model = OFA(self.model)
         self.ofa_model.set_task('expand_ratio')
         self.ofa_model._clear_search_space(self.data)
         self.ofa_model.tokenize()
-        assert self.ofa_model.token_map == {'expand_ratio': {'models.0': {0: 0.25, 1: 0.5, 2: 1.0}, 'models.1': {0: 0.25, 1: 0.5, 2: 1.0}, 'models.3': {0: 0.25, 1: 0.5, 2: 1.0}}}
+        assert self.ofa_model.token_map == {
+            'expand_ratio': {
+                'models.0': {
+                    0: 0.25,
+                    1: 0.5,
+                    2: 1.0
+                },
+                'models.1': {
+                    0: 0.25,
+                    1: 0.5,
+                    2: 1.0
+                },
+                'models.3': {
+                    0: 0.25,
+                    1: 0.5,
+                    2: 1.0
+                }
+            }
+        }
         assert self.ofa_model.search_cands == [[0, 1, 2], [0, 1, 2], [0, 1, 2]]
-        
-        ofa_layers = {'models.0': {'expand_ratio': [0.5, 1.0]}, 
-                      'models.1': {'expand_ratio': [0.25, 1.0]},
-                      'models.3': {'expand_ratio': [0.25, 1.0]}, 
-                      'models.4': {}}
+
+        ofa_layers = {
+            'models.0': {
+                'expand_ratio': [0.5, 1.0]
+            },
+            'models.1': {
+                'expand_ratio': [0.25, 1.0]
+            },
+            'models.3': {
+                'expand_ratio': [0.25, 1.0]
+            },
+            'models.4': {}
+        }
         same_search_space = [['models.1', 'models.3']]
         cfg = {'ofa_layers': ofa_layers, 'same_search_space': same_search_space}
         run_config = RunConfig(**cfg)
@@ -539,9 +580,29 @@ class TestManualSetting(unittest.TestCase):
         self.ofa_model2.set_task('expand_ratio')
         self.ofa_model2._clear_search_space(self.data)
         self.ofa_model2.tokenize()
-        assert self.ofa_model2.token_map == {'expand_ratio': {'models.0': {1: 0.5, 2: 1.0}, 'models.1': {0: 0.25, 2: 1.0}}}
+        assert self.ofa_model2.token_map == {
+            'expand_ratio': {
+                'models.0': {
+                    1: 0.5,
+                    2: 1.0
+                },
+                'models.1': {
+                    0: 0.25,
+                    2: 1.0
+                }
+            }
+        }
         assert self.ofa_model2.search_cands == [[1, 2], [0, 2]]
-        
+
+        token = [1, 2]
+        config = self.ofa_model2.decode_token(token)
+        assert config == {'models.0': 0.5, 'models.1': 1.0}
+
+    def test_input_spec(self):
+        self.ofa_model = OFA(self.model)
+        self.ofa_model.set_task('expand_ratio')
+        self.ofa_model._clear_search_space(input_spec=[self.data])
+
 
 if __name__ == '__main__':
     unittest.main()
