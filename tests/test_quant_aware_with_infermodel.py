@@ -32,7 +32,7 @@ import numpy as np
 
 class TestQuantAwareWithInferModelCase1(StaticCase):
     def test_accuracy(self):
-        float_infer_model_path = "./mv1_float_infermodel/"
+        float_infer_model_path_prefix = "./mv1_float_inference"
 
         image = paddle.static.data(
             name='image', shape=[None, 1, 28, 28], dtype='float32')
@@ -120,14 +120,12 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
 
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
-        paddle.fluid.io.save_inference_model(
-            dirname=float_infer_model_path,
-            feeded_var_names=[image.name, label.name],
+        paddle.static.save_inference_model(
+            path_prefix=float_infer_model_path_prefix,
+            feed_vars=[image, label],
             target_vars=[avg_cost, acc_top1, acc_top5],
-            main_program=val_prog,
             executor=exe,
-            model_filename='model',
-            params_filename='params')
+            program=val_prog)
 
         quant_config = {
             'weight_quantize_type': 'channel_wise_abs_max',
@@ -144,12 +142,8 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
             "use_pact": False,
             "quant_model_ckpt_path":
             "./quantaware_with_infermodel_checkpoints/",
-            "teacher_model_path": float_infer_model_path,
-            "teacher_model_filename": "model",
-            "teacher_params_filename": "params",
-            "model_path": float_infer_model_path,
-            "model_filename": "model",
-            "params_filename": "params",
+            "teacher_model_path_prefix": float_infer_model_path_prefix,
+            "model_path_prefix": float_infer_model_path_prefix,
             "distill_node_pair": [
                 "teacher_fc_0.tmp_0", "fc_0.tmp_0",
                 "teacher_batch_norm_24.tmp_4", "batch_norm_24.tmp_4",
@@ -209,14 +203,14 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
 
         test_quant_aware_with_infermodel(exe, place)
         checkpoint_path = "./quantaware_with_infermodel_checkpoints/epoch_0_iter_10"
-        quant_infermodel_save_path = "././quantaware_with_infermodel_export/"
+        quant_infermodel_save_path = "./quantaware_with_infermodel_export"
         test_export_quant_infermodel(exe, place, checkpoint_path,
                                      quant_infermodel_save_path)
         train_config["use_pact"] = True
         test_quant_aware_with_infermodel(exe, place)
         train_config["use_pact"] = False
         checkpoint_path = "./quantaware_with_infermodel_checkpoints/epoch_0_iter_10"
-        quant_infermodel_save_path = "././quantaware_with_infermodel_export/"
+        quant_infermodel_save_path = "./quantaware_with_infermodel_export"
         test_export_quant_infermodel(exe, place, checkpoint_path,
                                      quant_infermodel_save_path)
 

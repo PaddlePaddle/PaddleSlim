@@ -29,6 +29,7 @@ from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
 from paddle.fluid import core
 from paddle.fluid.contrib.slim.quantization import WeightQuantization
+from paddle.fluid.layer_helper import LayerHelper
 
 from ..common import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
@@ -561,3 +562,25 @@ def quant_post_dynamic(model_dir,
 # For compatibility, we keep quant_post_only_weight api for now,
 # and it will be deprecated in the future.
 quant_post_only_weight = quant_post_dynamic
+
+
+def pact(x, name=None):
+    helper = LayerHelper("pact", **locals())
+    dtype = 'float32'
+    init_thres = 20
+    u_param_attr = fluid.ParamAttr(
+        name=x.name + '_pact',
+        initializer=fluid.initializer.ConstantInitializer(value=init_thres),
+        regularizer=fluid.regularizer.L2Decay(0.0001),
+        learning_rate=1)
+    u_param = helper.create_parameter(attr=u_param_attr, shape=[1], dtype=dtype)
+    x = fluid.layers.elementwise_sub(
+        x, fluid.layers.relu(fluid.layers.elementwise_sub(x, u_param)))
+    x = fluid.layers.elementwise_add(
+        x, fluid.layers.relu(fluid.layers.elementwise_sub(-u_param, x)))
+
+    return x
+
+
+def get_pact_optimizer():
+    return fluid.optimizer.MomentumOptimizer(0.0001, 0.9)

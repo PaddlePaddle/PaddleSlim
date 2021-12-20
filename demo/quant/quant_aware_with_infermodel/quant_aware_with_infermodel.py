@@ -1,3 +1,17 @@
+# Copyright (c) 2021  PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import sys
 import math
@@ -21,33 +35,25 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('use_gpu',                   bool,   True,      "whether to use GPU or not.")
-add_arg('batch_size',                int,    1,         "train batch size.")
-add_arg('num_epoch',                 int,    1,         "train epoch num.")
-add_arg('save_iter_step',            int,    1,         "save train checkpoint every save_iter_step iter num.")
-add_arg('learning_rate',             float,  0.0001,    "learning rate.")
-add_arg('weight_decay',              float,  0.00004,   "weight decay.")
-add_arg('use_pact',                  bool,   True,     "whether use pact quantization.")
-add_arg('checkpoint_path',           str,    None,      "model dir to save quanted model checkpoints")
-add_arg('model_path',                str,    None,      "model dir")
-add_arg('model_filename',            str,    None,      "model file name")
-add_arg('params_filename',           str,    None,      "params file name")
-add_arg('teacher_model_path',        str,    None,      "model dir")
-add_arg('teacher_model_filename',    str,    None,      "model file name")
-add_arg('teacher_params_filename',   str,    None,      "params file name")
-add_arg('distill_node_name_list',    str,    None,      "distill node name list", nargs="+")
+add_arg('use_gpu',                     bool,   True,      "whether to use GPU or not.")
+add_arg('batch_size',                  int,    1,         "train batch size.")
+add_arg('num_epoch',                   int,    1,         "train epoch num.")
+add_arg('save_iter_step',              int,    1,         "save train checkpoint every save_iter_step iter num.")
+add_arg('learning_rate',               float,  0.0001,    "learning rate.")
+add_arg('weight_decay',                float,  0.00004,   "weight decay.")
+add_arg('use_pact',                    bool,   True,      "whether use pact quantization.")
+add_arg('checkpoint_path',             str,    None,      "model dir to save quanted model checkpoints")
+add_arg('model_path_prefix',           str,    None,      "storage directory of model + model name (excluding suffix)")
+add_arg('teacher_model_path_prefix',   str,    None,      "storage directory of teacher model + teacher model name (excluding suffix)")
+add_arg('distill_node_name_list',      str,    None,      "distill node name list", nargs="+")
 
 
 DATA_DIR = "../../data/ILSVRC2012/"
 def eval(exe, place, compiled_test_program, test_feed_names, test_fetch_list):
     val_reader = paddle.batch(reader.val(), batch_size=1)
     image = paddle.static.data(
-        name='image', shape=[None, 3, 224, 224], dtype='float32')
+        name='x', shape=[None, 3, 224, 224], dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-
-    valid_loader = paddle.io.DataLoader.from_generator(
-        feed_list=[image], capacity=512, use_double_buffer=True, iterable=True)
-    valid_loader.set_sample_list_generator(val_reader, place)
 
     results = []
     for batch_id, data in enumerate(val_reader()):
@@ -87,11 +93,8 @@ def eval(exe, place, compiled_test_program, test_feed_names, test_fetch_list):
     return result
 
 def quantize(args):
-    #place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
-    place = paddle.CPUPlace()
-
-    assert os.path.exists(args.model_path), "args.model_path doesn't exist"
-    assert os.path.isdir(args.model_path), "args.model_path must be a dir"
+    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
+    #place = paddle.CPUPlace()
 
     exe = paddle.static.Executor(place)
     quant_config = {
@@ -100,7 +103,6 @@ def quantize(args):
         'not_quant_pattern': ['skip_quant'],
         'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul']
     }
-    print(args.model_path, args.model_filename, args.params_filename)
     train_config={
         "num_epoch": args.num_epoch, # training epoch num
         "max_iter": -1,
@@ -109,12 +111,8 @@ def quantize(args):
         "weight_decay": args.weight_decay,
         "use_pact": args.use_pact,
         "quant_model_ckpt_path":args.checkpoint_path,
-        "teacher_model_path": args.teacher_model_path,
-        "teacher_model_filename": args.teacher_model_filename,
-        "teacher_params_filename": args.teacher_params_filename,
-        "model_path": args.model_path,
-        "model_filename": args.model_filename,
-        "params_filename": args.params_filename,
+        "teacher_model_path_prefix": args.teacher_model_path_prefix,
+        "model_path_prefix": args.model_path_prefix,
         "distill_node_pair": args.distill_node_name_list
     }
     def test_callback(compiled_test_program, feed_names, fetch_list, checkpoint_name):
@@ -126,7 +124,7 @@ def quantize(args):
         def gen():
             for i, data in enumerate(train_reader()):
                 imgs = np.float32([item[0] for item in data])
-                yield {"image":imgs}
+                yield {"x":imgs}
         return gen
     quant_aware_with_infermodel(
         exe,

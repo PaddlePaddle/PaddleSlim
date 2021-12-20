@@ -24,14 +24,13 @@ import shutil
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.layer_helper import LayerHelper
 from paddle.fluid import unique_name
 from paddle.fluid import core
 from paddle.fluid.framework import Parameter
 from paddleslim.dist import merge, l2_loss, soft_label_loss, fsp_loss
 from paddleslim.core import GraphWrapper
 from paddleslim.quant import quant_aware, convert
-from .quanter import _quant_config_default, _parse_configs
+from .quanter import _quant_config_default, _parse_configs, pact, get_pact_optimizer
 import logging
 logging.getLogger().setLevel(logging.INFO)
 from ..common import get_logger
@@ -43,18 +42,23 @@ _logger = get_logger(__name__, level=logging.INFO)
 _train_config_default = {
     # configs of training aware quantization with infermodel
     "num_epoch": 1000,  # training epoch num
-    "max_iter": -1,
-    "save_iter_step": 1000,
-    "learning_rate": 0.0001,
-    "weight_decay": 0.0001,
-    "use_pact": False,
+    "max_iter": -1,  # max training iteration num
+    "save_iter_step":
+    1000,  # save quant model checkpoint every save_iter_step iteration
+    "learning_rate": 0.0001,  # learning rate
+    "weight_decay": 0.0001,  # weight decay
+    "use_pact": False,  # use pact quantization or not
+    # quant model checkpoints save path
     "quant_model_ckpt_path": "./quant_model_checkpoints/",
-    "teacher_model_path": None,
-    "teacher_model_filename": "__model__",
-    "teacher_params_filename": None,
-    "model_path": None,
-    "model_filename": "__model__",
-    "params_filename": None,
+    # storage directory of teacher model + teacher model name (excluding suffix)
+    "teacher_model_path_prefix": None,
+    # storage directory of model + model name (excluding suffix)
+    "model_path_prefix": None,
+    """ distillation node configuration: 
+        the name of the distillation supervision nodes is configured as a list, 
+        and the teacher node and student node are arranged in pairs.
+        for example, ["teacher_fc_0.tmp_0", "fc_0.tmp_0", "teacher_batch_norm_24.tmp_4", "batch_norm_24.tmp_4"]
+    """
     "distill_node_pair": None
 }
 
@@ -72,23 +76,29 @@ def _parse_train_configs(train_config):
     configs.update(train_config)
 
     assert isinstance(configs['num_epoch'], int), \
-        "'num_epoch' must be int value'"
+        "'num_epoch' must be int value"
     assert isinstance(configs['max_iter'], int), \
-        "'max_iter' must be int value'"
+        "'max_iter' must be int value"
     assert isinstance(configs['save_iter_step'], int), \
-        "'save_iter_step' must be int value'"
+        "'save_iter_step' must be int value"
     assert isinstance(configs['learning_rate'], float), \
-        "'learning_rate' must be float'"
+        "'learning_rate' must be float"
     assert isinstance(configs['weight_decay'], float), \
-        "'weight_decay' must be float'"
+        "'weight_decay' must be float"
     assert isinstance(configs['use_pact'], bool), \
-        "'use_pact' must be bool'"
+        "'use_pact' must be bool"
     assert isinstance(configs['quant_model_ckpt_path'], str), \
-        "'quant_model_ckpt_path' must be str'"
-    assert isinstance(configs['teacher_model_path'], str), \
-        "'teacher_model_path' must both be float'"
-    assert isinstance(configs['model_path'], str), \
-        "'model_path' must both be str'"
+        "'quant_model_ckpt_path' must be str"
+    assert isinstance(configs['teacher_model_path_prefix'], str), \
+        "'teacher_model_path_prefix' must both be string"
+    assert isinstance(configs['model_path_prefix'], str), \
+        "'model_path_prefix' must both be str"
+    assert isinstance(configs['distill_node_pair'], list), \
+        "'distill_node_pair' must both be list"
+    assert len(configs['distill_node_pair']) > 0, \
+        "'distill_node_pair' not configured with distillation nodes"
+    assert len(configs['distill_node_pair']) % 2 == 0, \
+        "'distill_node_pair' distillation nodes need to be configured in pairs"
     return train_config
 
 
@@ -160,7 +170,6 @@ def _parse_distill_loss(train_config):
               train_config["distill_node_pair"][i * 2 + 1])
         distill_loss += l2_loss(train_config["distill_node_pair"][i * 2],
                                 train_config["distill_node_pair"][i * 2 + 1])
-    print("distill loss: ", distill_loss)
     return distill_loss
 
 DistillProgramInfo = namedtuple("DistillProgramInfo", \
@@ -171,17 +180,13 @@ DistillProgramInfo = namedtuple("DistillProgramInfo", \
 
 def build_distill_prog_with_infermodel(executor, place, train_config):
     """build distill program with infermodel"""
-    [train_program, feed_target_names, fetch_targets]= fluid.io.load_inference_model( \
-        dirname=train_config["model_path"], \
-        executor=executor, \
-        model_filename=train_config["model_filename"], \
-        params_filename=train_config["params_filename"])
+    [train_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
+        path_prefix=train_config["model_path_prefix"], \
+        executor=executor)
     _remove_fetch_node(train_program)
-    [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= fluid.io.load_inference_model( \
-        dirname=train_config["teacher_model_path"], \
-        executor=executor, \
-        model_filename=train_config["teacher_model_filename"], \
-        params_filename=train_config["teacher_params_filename"])
+    [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
+        path_prefix=train_config["teacher_model_path_prefix"], \
+        executor=executor)
     _remove_fetch_node(teacher_program)
     test_program = train_program.clone(for_test=True)
 
@@ -271,8 +276,8 @@ def quant_aware_with_infermodel(executor,
                 default config. It must be same with config that used in
                 'quant_aware'. Default is None.
         train_config(dict):train aware configs, include num_epoch, save_iter_step, learning_rate,
-                weight_decay, use_pact, quant_model_ckpt_path, teacher_model_path, teacher_model_filename,
-                teacher_params_filename, model_path, model_filename, params_filename,
+                weight_decay, use_pact, quant_model_ckpt_path,
+                model_path_prefix, teacher_model_path_prefix,
                 distill_node_pair(teacher_node_name1, node_name1, teacher_node_name2, teacher_node_name2, ...)
         test_callback(callback function): callback function include two params: compiled test quant program and checkpoint save filename.
                 user can implement test logic.
@@ -303,32 +308,10 @@ def quant_aware_with_infermodel(executor,
     ############################################################################
     # quant
     ############################################################################
-    def pact(x):
-        """clip feature value range"""
-        helper = LayerHelper("pact", **locals())
-        dtype = 'float32'
-        init_thres = 16
-        u_param_attr = paddle.ParamAttr(
-            name=x.name + '_pact',
-            initializer=paddle.nn.initializer.Constant(value=init_thres),
-            regularizer=paddle.regularizer.L2Decay(0.0001),
-            learning_rate=1)
-        u_param = helper.create_parameter(
-            attr=u_param_attr, shape=[1], dtype=dtype)
-
-        part_a = paddle.nn.functional.relu(x - u_param)
-        part_b = paddle.nn.functional.relu(-u_param - x)
-        x = x - part_a + part_b
-        return x
-
-    def get_optimizer():
-        """optimizer for pact params"""
-        return paddle.optimizer.Momentum(0.0001, 0.9)
-
     use_pact = train_config["use_pact"]
     if use_pact:
         act_preprocess_func = pact
-        optimizer_func = get_optimizer
+        optimizer_func = get_pact_optimizer
         pact_executor = executor
     else:
         act_preprocess_func = None
@@ -391,7 +374,7 @@ def export_quant_infermodel(
         quant_config=None,
         train_config=None,
         checkpoint_path=None,
-        export_infermodel_path="./export_quant_infermodel/"):
+        export_inference_model_path_prefix="./export_quant_infermodel"):
     """export quant model checkpoints to infermodel.
     Args:
         executor(paddle.static.Executor): The executor to load, run and save the
@@ -409,11 +392,11 @@ def export_quant_infermodel(
                 default config. It must be same with config that used in
                 'quant_aware'. Default is None.
         train_config(dict):train aware configs, include num_epoch, save_iter_step, learning_rate,
-                weight_decay, use_pact, quant_model_ckpt_path, teacher_model_path, teacher_model_filename,
-                teacher_params_filename, model_path, model_filename, params_filename,
+                weight_decay, use_pact, quant_model_ckpt_path,
+                model_path_prefix, teacher_model_path_prefix, 
                 distill_node_pair(teacher_node_name1, node_name1, teacher_node_name2, teacher_node_name2, ...)
         checkpoint_path(str): checkpoint path need to export quant infer model.
-        export_infermodel_path(str): export infer model path.
+        export_inference_model_path_prefix(str): export infer model path prefix, storage directory of model + model name (excluding suffix).
     Returns:
         None
     """
@@ -436,32 +419,10 @@ def export_quant_infermodel(
     ############################################################################
     # quant
     ############################################################################
-    def pact(x):
-        """clip feature value range"""
-        helper = LayerHelper("pact", **locals())
-        dtype = 'float32'
-        init_thres = 16
-        u_param_attr = paddle.ParamAttr(
-            name=x.name + '_pact',
-            initializer=paddle.nn.initializer.Constant(value=init_thres),
-            regularizer=paddle.regularizer.L2Decay(0.0001),
-            learning_rate=1)
-        u_param = helper.create_parameter(
-            attr=u_param_attr, shape=[1], dtype=dtype)
-
-        part_a = paddle.nn.functional.relu(x - u_param)
-        part_b = paddle.nn.functional.relu(-u_param - x)
-        x = x - part_a + part_b
-        return x
-
-    def get_optimizer():
-        """optimizer for pact params"""
-        return paddle.optimizer.Momentum(0.0001, 0.9)
-
     use_pact = train_config["use_pact"]
     if use_pact:
         act_preprocess_func = pact
-        optimizer_func = get_optimizer
+        optimizer_func = get_pact_optimizer
         pact_executor = executor
     else:
         act_preprocess_func = None
@@ -488,20 +449,25 @@ def export_quant_infermodel(
     #    The dtype of float_program's weights is float32, but in int8 range.
     ############################################################################################################
     float_program, int8_program = convert(test_program, place, quant_config, \
-                                                        scope=scope, \
-                                                        save_int8=True)
+                                          scope=scope, \
+                                          save_int8=True)
     ############################################################################################################
     # 4. Save inference model
     ############################################################################################################
-    model_path = export_infermodel_path
-    if not os.path.isdir(model_path):
-        os.makedirs(model_path)
+    export_model_dir = os.path.abspath(
+        os.path.join(export_inference_model_path_prefix, os.path.pardir))
+    if not os.path.exists(export_model_dir):
+        os.makedirs(export_model_dir)
 
-    paddle.fluid.io.save_inference_model(
-        dirname=model_path,
-        feeded_var_names=test_feed_names,
-        target_vars=test_fetch_list,
+    feed_vars = []
+    for name in test_feed_names:
+        var = scope.find_var(name)
+        assert var is not None, "can not find {0} var in quant program".format(
+            name)
+        feed_vars.append(var)
+    paddle.static.save_inference_model(
+        path_prefix=export_inference_model_path_prefix,
+        feed_vars=feed_vars,
+        fetch_vars=test_fetch_list,
         executor=executor,
-        main_program=float_program,
-        model_filename=model_path + '/model',
-        params_filename=model_path + '/params')
+        program=float_program)
