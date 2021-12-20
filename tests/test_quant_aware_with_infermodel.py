@@ -51,6 +51,7 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
         main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
 
+        #place = paddle.CPUPlace()
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
@@ -123,7 +124,7 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
         paddle.static.save_inference_model(
             path_prefix=float_infer_model_path_prefix,
             feed_vars=[image, label],
-            target_vars=[avg_cost, acc_top1, acc_top5],
+            fetch_vars=[avg_cost, acc_top1, acc_top5],
             executor=exe,
             program=val_prog)
 
@@ -195,8 +196,9 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
                 quant_config=quant_config,
                 train_config=train_config,
                 checkpoint_path=checkpoint_path,
-                export_infermodel_path=quant_infermodel_save_path)
+                export_inference_model_path_prefix=quant_infermodel_save_path)
 
+        #place = paddle.CPUPlace()
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
