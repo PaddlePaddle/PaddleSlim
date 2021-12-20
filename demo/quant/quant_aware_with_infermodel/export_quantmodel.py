@@ -35,23 +35,19 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('use_gpu',                   bool,   True,      "Whether to use GPU or not.")
-add_arg('batch_size',                int,    4,         "train batch size.")
-add_arg('num_epoch',                 int,    1,         "train epoch num.")
-add_arg('save_iter_step',            int,    1,         "save train checkpoint every save_iter_step iter num.")
-add_arg('learning_rate',             float,  0.0001,    "learning rate.")
-add_arg('weight_decay',              float,  0.00004,   "weight decay.")
-add_arg('use_pact',                  bool,   True,      "whether use pact quantization.")
-add_arg('checkpoint_path',           str,    None,      "model dir to save quanted model checkpoints")
-add_arg('model_path',                str,    None,      "model dir")
-add_arg('model_filename',            str,    None,      "model file name")
-add_arg('params_filename',           str,    None,      "params file name")
-add_arg('teacher_model_path',        str,    None,      "model dir")
-add_arg('teacher_model_filename',    str,    None,      "model file name")
-add_arg('teacher_params_filename',   str,    None,      "params file name")
-add_arg('distill_node_name_list',    str,    None,      "distill node name list", nargs="+")
-add_arg('checkpoint_filename',       str,    None,      "checkpoint filename to export infer model")
-add_arg('infermodel_save_path',      str,    None,      "infer model export path")
+add_arg('use_gpu',                     bool,   True,      "Whether to use GPU or not.")
+add_arg('batch_size',                  int,    4,         "train batch size.")
+add_arg('num_epoch',                   int,    1,         "train epoch num.")
+add_arg('save_iter_step',              int,    1,         "save train checkpoint every save_iter_step iter num.")
+add_arg('learning_rate',               float,  0.0001,    "learning rate.")
+add_arg('weight_decay',                float,  0.00004,   "weight decay.")
+add_arg('use_pact',                    bool,   True,      "whether use pact quantization.")
+add_arg('checkpoint_path',             str,    None,      "model dir to save quanted model checkpoints")
+add_arg('model_path_prefix',           str,    None,      "storage directory of model + model name (excluding suffix)")
+add_arg('teacher_model_path_prefix',   str,    None,      "storage directory of teacher model + teacher model name (excluding suffix)")
+add_arg('distill_node_name_list',      str,    None,      "distill node name list", nargs="+")
+add_arg('checkpoint_filename',         str,    None,      "checkpoint filename to export inference model")
+add_arg('export_inference_model_path_prefix',   str,    None,      "inference model export path prefix")
 
 def export(args):
     place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
@@ -71,12 +67,8 @@ def export(args):
         "weight_decay": args.weight_decay,
         "use_pact": args.use_pact,
         "quant_model_ckpt_path":args.checkpoint_path,
-        "teacher_model_path": args.teacher_model_path,
-        "teacher_model_filename": args.teacher_model_filename,
-        "teacher_params_filename": args.teacher_params_filename,
-        "model_path": args.model_path,
-        "model_filename": args.model_filename,
-        "params_filename": args.params_filename,
+        "teacher_model_path_prefix": args.teacher_model_path_prefix,
+        "model_path_prefix": args.model_path_prefix,
         "distill_node_pair": args.distill_node_name_list
     }
 
@@ -85,7 +77,7 @@ def export(args):
         quant_config=quant_config,
         train_config=train_config,
         checkpoint_path=os.path.join(args.checkpoint_path, args.checkpoint_filename),
-        export_infermodel_path=args.infermodel_save_path)
+        export_inference_model_path_prefix=args.export_inference_model_path_prefix)
 
 def main():
     args = parser.parse_args()

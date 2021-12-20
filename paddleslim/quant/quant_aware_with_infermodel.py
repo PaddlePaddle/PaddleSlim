@@ -322,7 +322,7 @@ def quant_aware_with_infermodel(executor,
         test_program,
         place,
         quant_config,
-        scope=None,
+        scope=scope,
         act_preprocess_func=act_preprocess_func,
         optimizer_func=optimizer_func,
         executor=pact_executor,
@@ -331,7 +331,7 @@ def quant_aware_with_infermodel(executor,
         train_program,
         place,
         quant_config,
-        scope=None,
+        scope=scope,
         act_preprocess_func=act_preprocess_func,
         optimizer_func=optimizer_func,
         executor=pact_executor,
@@ -433,7 +433,7 @@ def export_quant_infermodel(
         test_program,
         place,
         quant_config,
-        scope=None,
+        scope=scope,
         act_preprocess_func=act_preprocess_func,
         optimizer_func=optimizer_func,
         executor=pact_executor,
@@ -461,10 +461,11 @@ def export_quant_infermodel(
 
     feed_vars = []
     for name in test_feed_names:
-        var = scope.find_var(name)
-        assert var is not None, "can not find {0} var in quant program".format(
-            name)
-        feed_vars.append(var)
+        for var in float_program.list_vars():
+            if var.name == name:
+                feed_vars.append(var)
+                break
+    assert len(feed_vars) > 0, "can not find feed vars in quant program"
     paddle.static.save_inference_model(
         path_prefix=export_inference_model_path_prefix,
         feed_vars=feed_vars,
