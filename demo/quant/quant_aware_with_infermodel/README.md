@@ -103,7 +103,7 @@ python export_quantmodel.py \
 
 ###5. 测试精度
 
-使用[eval.py](../quant_post/eval.py)脚本对量化后的模型进行测试
+使用[eval.py](../quant_post/eval.py)脚本对量化后的模型进行精度测试：
 ```
 python ../quant_post/eval.py --model_path ./quant_infermodel_mobilenetv2/ --model_name model --params_name params
 ```
