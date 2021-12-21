@@ -207,6 +207,7 @@ class Distill(nn.Layer):
                          models,
                          is_student,
                          outputs_tensor,
+                         index=None,
                          in_forward=False):
         """
         Add hook to get the output tensor of target layer.
@@ -216,10 +217,14 @@ class Distill(nn.Layer):
         else:
             prefix = 'teacher'
         for idx, m in enumerate(models):
-            tmp_hook_layers = hook_layers['{}_{}'.format(prefix, idx)]
-            tmp_outs = collections.OrderedDict()
-            outputs_tensor['{}_{}'.format(prefix, idx)] = self._prepare_hook(
-                m, tmp_hook_layers, tmp_outs, in_forward=in_forward)
+            if index is not None:
+                idx = index
+            hook_name = '{}_{}'.format(prefix, idx)
+            if hook_name in hook_layers:
+                tmp_hook_layers = hook_layers[hook_name]
+                tmp_outs = collections.OrderedDict()
+                outputs_tensor[hook_name] = self._prepare_hook(
+                    m, tmp_hook_layers, tmp_outs, in_forward=in_forward)
         return outputs_tensor
 
     def _prepare_hook(self, model, hook_layers, outs_dict, in_forward):
@@ -249,7 +254,12 @@ class Distill(nn.Layer):
             student_model.forward(*inputs, **kwargs)
 
     def _useless_teacher_forward(self, *inputs, **kwargs):
-        for idx, teacher_model in enumerate(self._teacher_models):
+        if 'teacher_idx' in kwargs.keys():
+            teacher_models = [self._teacher_models[kwargs['teacher_idx']]]
+            kwargs.pop('teacher_idx')
+        else:
+            teacher_models = self._teacher_models
+        for idx, teacher_model in enumerate(teacher_models):
             ### initialize global index before each forward
             init_index()
             teacher_model.forward(*inputs, **kwargs)
