@@ -6,7 +6,9 @@ import argparse
 import functools
 import math
 import time
+import random
 import numpy as np
+import paddle
 
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
@@ -29,12 +31,13 @@ add_arg('params_filename',      str, None,                 "params file name")
 add_arg('algo',         str, 'hist',               "calibration algorithm")
 add_arg('hist_percent',         float, 0.9999,             "The percentile of algo:hist")
 add_arg('bias_correction',         bool, False,             "Whether to use bias correction")
+add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
 
 # yapf: enable
 
 
 def quantize(args):
-    val_reader = reader.train()
+    val_reader = reader.val()
 
     place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
 
@@ -59,6 +62,12 @@ def quantize(args):
 def main():
     args = parser.parse_args()
     print_arguments(args)
+    if args.ce_test:
+        # set seed
+        seed = 111
+        np.random.seed(seed)
+        paddle.seed(seed)
+        random.seed(seed)
     quantize(args)
 
 
