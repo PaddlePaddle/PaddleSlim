@@ -49,19 +49,16 @@ top1_acc/top5_acc= [0.71918 0.90568]
 蒸馏量化训练示例脚本为[quant_aware_with_infermodel.py](./quant_aware_with_infermodel.py)，使用接口``paddleslim.quant.quant_aware_with_infermodel``对模型进行量化训练。运行命令为：
 ```
 python quant_aware_with_infermodel.py \
+    --use_gpu=False \
     --batch_size=2 \
     --num_epoch=30 \
-    --save_iter_step=100 \
+    --save_iter_step=20 \
     --learning_rate=0.0001 \
     --weight_decay=0.00004 \
-    --use_pact=True \
+    --use_pact=False \
     --checkpoint_path="./inference_model/MobileNet_quantaware_ckpt/" \
-    --model_path="./infermodel_mobilenetv2/" \
-    --model_filename="inference.pdmodel" \
-    --params_filename="inference.pdiparams" \
-    --teacher_model_path="./infermodel_mobilenetv2/" \
-    --teacher_model_filename="inference.pdmodel" \
-    --teacher_params_filename="inference.pdiparams" \
+    --model_path_prefix="./inference_model/infermodel_mobilenetv2/inference" \
+    --teacher_model_path_prefix="./inference_model/infermodel_mobilenetv2/inference" \
     --distill_node_name_list "teacher_conv2d_54.tmp_0" "conv2d_54.tmp_0" "teacher_conv2d_55.tmp_0" "conv2d_55.tmp_0" \
         "teacher_conv2d_57.tmp_0" "conv2d_57.tmp_0" "teacher_elementwise_add_0" "elementwise_add_0" \
         "teacher_conv2d_61.tmp_0" "conv2d_61.tmp_0" "teacher_elementwise_add_1" "elementwise_add_1" \
@@ -80,12 +77,8 @@ python quant_aware_with_infermodel.py \
 - ``weight_decay``: 推荐使用float模型训练weight decay设置。
 - ``use_pact``: 是否使用pact量化算法, 推荐使用。
 - ``checkpoint_path``: 量化训练模型checkpoint保存路径。
-- ``model_path``: 需要量化的预测模型所在路径。
-- ``model_filename``: 如果需要量化的模型的参数文件保存在一个文件中，则设置为该模型的模型文件名称，如果参数文件保存在多个文件中，则不需要设置。
-- ``params_filename``: 如果需要量化的模型的参数文件保存在一个文件中，则设置为该模型的参数文件名称，如果参数文件保存在多个文件中，则不需要设置。
-- ``teacher_model_path``: teacher模型所在路径, 可以和量化模型是同一个，即自蒸馏。
-- ``teacher_model_filename``: teacher模型model文件名字。
-- ``teacher_params_filename``: teacher模型参数文件名字。
+- ``model_path_prefix``: 需要量化模型的目录 + 模型名称（不包含后缀）
+- ``teacher_model_path_prefix``: teacher模型的目录 + 模型名称（不包含后缀）, 可以和量化模型是同一个，即自蒸馏。
 - ``distill_node_name_list``: 蒸馏节点名字列表，每两个节点组成一对，分别属于teacher模型和量化模型。
 
 运行以上命令后，可在``${checkpoint_path}``下看到量化后模型的checkpoint。
@@ -96,12 +89,33 @@ python quant_aware_with_infermodel.py \
 
 ```
 python export_quantmodel.py \
-    --use_gpu=True \
-    --checkpoint_path="./MobileNetV2_checkpoints/epoch_0_iter_2000" \
-    --infermodel_save_path="./quant_infermodel_mobilenetv2/" \
+    --use_gpu=False \
+    --batch_size=2 \
+    --num_epoch=30 \
+    --save_iter_step=20 \
+    --learning_rate=0.0001 \
+    --weight_decay=0.00004 \
+    --use_pact=False \
+    --checkpoint_path="./inference_model/MobileNet_quantaware_ckpt/" \
+    --model_path_prefix="./inference_model/infermodel_mobilenetv2/inference" \
+    --teacher_model_path_prefix="./inference_model/infermodel_mobilenetv2/inference" \
+    --distill_node_name_list "teacher_conv2d_54.tmp_0" "conv2d_54.tmp_0" "teacher_conv2d_55.tmp_0" "conv2d_55.tmp_0" \
+        "teacher_conv2d_57.tmp_0" "conv2d_57.tmp_0" "teacher_elementwise_add_0" "elementwise_add_0" \
+        "teacher_conv2d_61.tmp_0" "conv2d_61.tmp_0" "teacher_elementwise_add_1" "elementwise_add_1" \
+        "teacher_elementwise_add_2" "elementwise_add_2" "teacher_conv2d_67.tmp_0" "conv2d_67.tmp_0" \
+        "teacher_elementwise_add_3" "elementwise_add_3" "teacher_elementwise_add_4" "elementwise_add_4" \
+        "teacher_elementwise_add_5" "elementwise_add_5" "teacher_conv2d_75.tmp_0" "conv2d_75.tmp_0" \
+        "teacher_elementwise_add_6" "elementwise_add_6" "teacher_elementwise_add_7" "elementwise_add_7" \
+        "teacher_conv2d_81.tmp_0" "conv2d_81.tmp_0" "teacher_elementwise_add_8" "elementwise_add_8" \
+        "teacher_elementwise_add_9" "elementwise_add_9" "teacher_conv2d_87.tmp_0" "conv2d_87.tmp_0" \
+        "teacher_linear_1.tmp_0" "linear_1.tmp_0" \
+    --checkpoint_filename="epoch_0_iter_20" \
+    --export_inference_model_path_prefix="./inference_model/MobileNet_quantaware_ckpt/epoch_0_iter_20_infer"
 ```
+- ``checkpoint_filename``: checkpoint文件名。
+- ``export_inference_model_path_prefix``: 量化模型导出的目录 + 模型名称（不包含后缀）。
 
-###5. 测试精度
+### 5. 测试精度
 
 使用[eval.py](../quant_post/eval.py)脚本对量化后的模型进行精度测试：
 ```
