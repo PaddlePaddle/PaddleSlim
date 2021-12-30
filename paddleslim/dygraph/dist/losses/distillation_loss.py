@@ -12,12 +12,13 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
+import numpy as np
 import paddle
 import paddle.nn as nn
 
 from .basic_loss import BASIC_LOSS
 
-__all__ = ["DistillationLoss"]
+__all__ = ["DistillationLoss", "ShapeAlign"]
 
 
 class DistillationLoss(nn.Layer):
@@ -44,8 +45,12 @@ class DistillationLoss(nn.Layer):
         self.align_params = params.pop(
             'align_params') if 'align_params' in params else None
         if self.align_params is not None:
-            for attr, value in self.align_params.items():
-                setattr(self, attr, value)
+            if 'transpose_model' in self.align_params:
+                self.transpose_model = self.align_params['transpose_model']
+                self.align_params.pop('transpose_model')
+            else:
+                self.transpose_model = 'student'
+            self.align_func = ShapeAlign(**self.align_params)
 
         self.loss_func = BASIC_LOSS.get(loss_function)(**params)
 
@@ -59,6 +64,11 @@ class DistillationLoss(nn.Layer):
                            ) == 2, "length of layers_name must be equal to 2."
                 out1 = out1[self.layers_name[0]]
                 out2 = out2[self.layers_name[1]]
+            if self.align_params is not None:
+                if self.transpose_model == 'student':
+                    out1 = self.align_func(out1)
+                else:
+                    out2 = self.align_func(out2)
             if self.temperature != 1.0:
                 out1 = out1 / self.temperature
                 out2 = out2 / self.temperature
@@ -66,3 +76,100 @@ class DistillationLoss(nn.Layer):
                 1], self.layers_name[0] if self.layers_name != None else "0", \
                 self.layers_name[1] if self.layers_name != None else "0")] = self.loss_func(out1, out2)
         return loss_dict
+
+
+class ShapeAlign(nn.Layer):
+    """
+    Align the feature map between student and teacher.
+    Args:
+        align_type(str): reshape tensor by which op, choice in ['1x1conv','3x3conv','1x1conv+bn','3x3conv+bn','linear']
+        in_channel(int): input channel number
+        out_channel(int): output channel number
+    """
+
+    def __init__(self, align_type, in_channel, out_channel, weight_init=None):
+        super(ShapeAlign, self).__init__()
+        self._in_channel = in_channel
+        self._out_channel = out_channel
+        assert align_type.lower() in [
+            '1x1conv', '3x3conv', '1x1conv+bn', '3x3conv+bn', 'linear'
+        ], "only support 1x1conv, 3x3conv, 1x1conv+bn, 3x3conv+bn, linear for now"
+
+        bias_attr = None
+        if weight_init is not None:
+            assert 'initializer' in weight_init
+            init_mode = weight_init.pop('initializer')
+            ### load transpose weight from pretrained model.
+            if init_mode == 'Assign':
+                bias = None
+                assert 'params_path' in weight_init
+                assert 'params_name' in weight_init
+                params_path = weight_init['params_path']
+                params_name = weight_init['params_name']
+                if isinstance(weight_init['params_name'], (list, tuple)):
+                    assert len(weight_init['params_name']) <= 2
+                    weight = paddle.load(params_path)[params_name[0]]
+                    bias = paddle.load(params_path)[params_name[1]]
+                else:
+                    weight = paddle.load(params_path)[params_name]
+                weight_attr = paddle.framework.ParamAttr(
+                    initializer=paddle.nn.initializer.Assign(weight))
+                if bias is not None:
+                    bias_attr = paddle.framework.ParamAttr(
+                        initializer=paddle.nn.initializer.Assign(bias))
+            else:
+                weight_attr = paddle.framework.ParamAttr(initializer=eval(
+                    'paddle.nn.initializer.{}'.format(init_mode))(
+                        **weight_init))
+        else:
+            weight_attr = None
+        if align_type.lower() == '1x1conv':
+            self.align_op = paddle.nn.Conv2D(
+                in_channel,
+                out_channel,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                weight_attr=weight_attr,
+                bias_attr=bias_attr)
+        elif align_type.lower() == '3x3conv':
+            self.align_op = paddle.nn.Conv2D(
+                in_channel,
+                out_channel,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                weight_attr=weight_attr,
+                bias_attr=bias_attr)
+        elif align_type.lower() == '1x1conv+bn':
+            self.align_op = paddle.nn.Sequential(
+                paddle.nn.Conv2D(
+                    in_channel,
+                    out_channel,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                    weight_attr=weight_attr,
+                    bias_attr=bias_attr),
+                paddle.nn.BatchNorm2D(out_channel))
+        elif align_type.lower() == '3x3conv+bn':
+            self.align_op = paddle.nn.Sequential(
+                paddle.nn.Conv2D(
+                    in_channel,
+                    out_channel,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    weight_attr=weight_attr,
+                    bias_attr=bias_attr),
+                paddle.nn.BatchNorm2D(out_channel))
+        elif align_type.lower() == 'linear':
+            self.align_op = paddle.nn.Linear(
+                in_channel,
+                out_channel,
+                weight_attr=weight_attr,
+                bias_attr=bias_attr)
+
+    def forward(self, feat):
+        out = self.align_op(feat)
+        return out

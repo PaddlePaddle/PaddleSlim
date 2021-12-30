@@ -17,4 +17,6 @@ python3.7 task_distill.py \
     --logging_steps 10 \
     --save_steps 10 \
     --output_dir ./tmp/$TASK_NAME/ \
+    --distill_config ./distill_stage1.yaml \
     --device gpu
+

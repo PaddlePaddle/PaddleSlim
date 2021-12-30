@@ -5,3 +5,4 @@ matplotlib
 opencv-python
 pillow 
 pyyaml
+smac
