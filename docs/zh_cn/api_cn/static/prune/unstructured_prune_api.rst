@@ -75,7 +75,7 @@ UnstrucuturedPruner
   pruner = UnstructuredPruner(paddle.static.default_main_program(), 'ratio', ratio=0.55, place=place)
 ..
 
-  .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.step()
+  .. py:method:: paddleslim.prune.UnstructuredPruner.step()
 
   更新稀疏化的阈值，如果是'threshold'模式，则维持设定的阈值，如果是'ratio'模式，则根据优化后的模型参数和设定的比例，重新计算阈值。该函数调用在训练过程中每个batch的optimizer.step()之后。
 
@@ -110,7 +110,7 @@ UnstrucuturedPruner
     print(pruner.threshold) # 可以看出，这里的threshold和上面打印的不同，这是因为step函数根据设定的ratio更新了threshold数值，便于剪裁操作。
   ..
 
-  .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.update_params()
+  .. py:method:: paddleslim.prune.UnstructuredPruner.update_params()
 
   每一步优化后，重制模型中本来是0的权重。这一步通常用于模型evaluation和save之前，确保模型的稀疏率。但是，在训练过程中，由于前向过程中插入了稀疏化权重的op，故不需要开发者在训练过程中额外调用了。
 
@@ -149,9 +149,9 @@ UnstrucuturedPruner
 
   ..
 
-  .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.set_static_masks()
+  .. py:method:: paddleslim.prune.UnstructuredPruner.set_static_masks()
 
-  这个API比较特殊，一般情况下不会用到。只有在【基于FP32稀疏化模型】进行量化训练时需要调用，因为需要固定住原本被置0的权重，保持0不变。具体来说，对于输入的 parameters=[0, 3, 0, 4, 5.5, 0]，会生成对应的mask为：[0, 1, 0, 1, 1, 0]。而且在训练过程中，该 mask 数值不会随 parameters 更新（训练）而改变。在评估/保存模型之前，可以通过调用 pruner.update_params() 将mask应用到  parameters 上，从而达到『在训练过程中 parameters 中数值为0的参数不参与训练』的效果。
+  这个API比较特殊，一般情况下不会用到。只有在基于FP32稀疏化模型进行量化训练时需要调用，因为需要固定住原本被置0的权重，保持0不变。具体来说，对于输入的 parameters=[0, 3, 0, 4, 5.5, 0]，会生成对应的mask为：[0, 1, 0, 1, 1, 0]。而且在训练过程中，该 mask 数值不会随 parameters 更新（训练）而改变。在评估/保存模型之前，可以通过调用 pruner.update_params() 将mask应用到  parameters 上，从而达到『在训练过程中 parameters 中数值为0的参数不参与训练』的效果。
 
   **示例代码：**
 
@@ -184,12 +184,15 @@ UnstrucuturedPruner
     QAT configs and APIs
     restore the sparse FP32 weights
     '''
+
     pruner.set_static_masks()
-    pruner.update_params() # 这一行代码需要在模型eval和保存前调用。
+    # quantization-aware training a batch
+    pruner.update_params()# 这一行代码需要在模型eval和保存前调用。
+    # eval or save pruned model
 
   ..
 
-  .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.total_sparse(program)
+  .. py:method:: paddleslim.prune.UnstructuredPruner.total_sparse(program)
 
   UnstructuredPruner中的静态方法，用于计算给定的模型（program）的稀疏度并返回。该方法为静态方法，是考虑到在单单做模型评价的时候，我们就不需要初始化一个UnstructuredPruner示例了。
 
@@ -231,7 +234,7 @@ UnstrucuturedPruner
 
   ..
 
-  .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.total_sparse_conv1x1(program)
+  .. py:method:: paddleslim.prune.UnstructuredPruner.total_sparse_conv1x1(program)
 
   UnstructuredPruner中的静态方法，用于计算给定的模型（program）的1x1卷积稀疏度并返回。该方法为静态方法，是考虑到在单单做模型评价的时候，我们就不需要初始化一个UnstructuredPruner示例了。
 
@@ -274,7 +277,7 @@ UnstrucuturedPruner
 
   ..
 
-  .. py:method:: paddleslim.prune.unstructured_pruner.UnstructuredPruner.summarize_weights(program, ratio=0.1)
+  .. py:method:: paddleslim.prune.UnstructuredPruner.summarize_weights(program, ratio=0.1)
 
   该函数用于估计预训练模型中参数的分布情况，尤其是在不清楚如何设置threshold的数值时，尤为有用。例如，当输入为ratio=0.1时，函数会返回一个数值v，而绝对值小于v的权重的个数占所有权重个数的(100*ratio%)。
 
@@ -391,7 +394,7 @@ GMPUnstrucuturedPruner
     print(pruner.ratio) # 可以看到ratio从0.15非线性的增加到0.55。
 ..
 
-  .. py:method:: paddleslim.prune.unstructured_pruner.GMPUnstructuredPruner.step()
+  .. py:method:: paddleslim.prune.GMPUnstructuredPruner.step()
 
   根据优化后的模型参数和设定的比例，重新计算阈值，并且更新mask。该函数调用在训练过程中每个batch的optimizer.step()之后。
 

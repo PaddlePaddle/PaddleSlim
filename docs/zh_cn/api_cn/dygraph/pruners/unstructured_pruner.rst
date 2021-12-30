@@ -136,7 +136,9 @@ UnstructuredPruner
     '''
 
     pruner.set_static_masks()
+    # quantization-aware training a batch
     pruner.update_params()# 这一行代码需要在模型eval和保存前调用。
+    # eval or save pruned model
 
   ..
 
