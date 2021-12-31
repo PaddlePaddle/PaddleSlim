@@ -126,6 +126,14 @@ class UnstructuredPruner():
                     bool_tmp = (paddle.abs(param) >= self.threshold)
                 paddle.assign(bool_tmp, output=mask)
 
+    def set_static_masks(self):
+        for name, sub_layer in self.model.named_sublayers():
+            if not self._should_prune_layer(sub_layer): continue
+            for param in sub_layer.parameters(include_sublayers=False):
+                mask = self.masks.get(param.name)
+                bool_tmp = (paddle.abs(param) != 0.0)
+                paddle.assign(bool_tmp, output=mask)
+
     def summarize_weights(self, model, ratio=0.1):
         """
         The function is used to get the weights corresponding to a given ratio
