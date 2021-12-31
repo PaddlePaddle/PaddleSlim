@@ -36,6 +36,8 @@ from paddle.fluid import core
 from paddle.fluid.framework import Variable
 import numbers
 
+from paddlenlp.experimental import to_tensor
+
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['OFA', 'RunConfig', 'DistillConfig']
@@ -531,6 +533,8 @@ class OFA(OFABase):
                     dtype = dtypes[0]
                 else:
                     dtype = dtypes
+                if dtype == core.VarDesc.VarType.STRINGS:
+                    return to_tensor([""])
                 return paddle.cast(paddle.rand(list(input_size)), dtype)
             if isinstance(input_size, dict):
                 inputs = {}
