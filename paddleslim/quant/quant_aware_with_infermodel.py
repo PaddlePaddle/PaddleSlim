@@ -355,6 +355,8 @@ def quant_aware_with_infermodel(executor,
             if iter_num > 0 and iter_num % save_iter_step == 0:
                 checkpoint_name = "epoch_" + str(epoch) + "_iter_" + str(
                     iter_num)
+                if not os.path.exists(train_config["quant_model_ckpt_path"]):
+                    os.makedirs(train_config["quant_model_ckpt_path"])
                 paddle.static.save(
                     program=test_program,
                     model_path=os.path.join(
@@ -419,7 +421,7 @@ def export_quant_infermodel(
     ############################################################################
     # quant
     ############################################################################
-    use_pact = train_config["use_pact"]
+    use_pact = False  # export model should set use_pact is False
     if use_pact:
         act_preprocess_func = pact
         optimizer_func = get_pact_optimizer
