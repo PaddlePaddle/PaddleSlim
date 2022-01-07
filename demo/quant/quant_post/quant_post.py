@@ -37,9 +37,28 @@ add_arg('ce_test',                 bool,   False,                               
 
 
 def quantize(args):
-    val_reader = reader.val()
+    shuffle = True
+    if args.ce_test:
+        # set seed
+        seed = 111
+        np.random.seed(seed)
+        paddle.seed(seed)
+        random.seed(seed)
+        shuffle = False
 
     place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
+    val_dataset = reader.ImageNetDataset(mode='test')
+    image_shape = [3, 224, 224]
+    image = paddle.static.data(
+        name='image', shape=[None] + image_shape, dtype='float32')
+    data_loader = paddle.io.DataLoader(
+        val_dataset,
+        places=place,
+        feed_list=[image],
+        drop_last=False,
+        return_list=False,
+        batch_size=args.batch_size,
+        shuffle=False)
 
     assert os.path.exists(args.model_path), "args.model_path doesn't exist"
     assert os.path.isdir(args.model_path), "args.model_path must be a dir"
@@ -49,7 +68,7 @@ def quantize(args):
         executor=exe,
         model_dir=args.model_path,
         quantize_model_path=args.save_path,
-        sample_generator=val_reader,
+        data_loader=data_loader,
         model_filename=args.model_filename,
         params_filename=args.params_filename,
         batch_size=args.batch_size,
@@ -62,12 +81,6 @@ def quantize(args):
 def main():
     args = parser.parse_args()
     print_arguments(args)
-    if args.ce_test:
-        # set seed
-        seed = 111
-        np.random.seed(seed)
-        paddle.seed(seed)
-        random.seed(seed)
     quantize(args)
 
 

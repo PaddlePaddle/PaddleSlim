@@ -31,6 +31,7 @@ add_arg('use_gpu',          bool, True,                 "Whether to use GPU or n
 add_arg('model_path', str,  "./pruning/checkpoints/resnet50/2/eval_model/",                 "Whether to use pretrained model.")
 add_arg('model_name', str,  None, "model filename for inference model")
 add_arg('params_name', str, None, "params filename for inference model")
+add_arg('batch_size',       int,  64,                 "Minibatch size.")
 # yapf: enable
 
 
@@ -45,23 +46,29 @@ def eval(args):
         exe,
         model_filename=args.model_name,
         params_filename=args.params_name)
-    val_reader = paddle.batch(reader.val(), batch_size=1)
+    val_dataset = reader.ImageNetDataset(mode='val')
 
     image = paddle.static.data(
         name='image', shape=[None, 3, 224, 224], dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
 
-    valid_loader = paddle.io.DataLoader.from_generator(
-        feed_list=[image], capacity=512, use_double_buffer=True, iterable=True)
-    valid_loader.set_sample_list_generator(val_reader, place)
+    val_loader = paddle.io.DataLoader(
+        val_dataset,
+        places=place,
+        feed_list=[image, label],
+        drop_last=False,
+        return_list=True,
+        batch_size=args.batch_size,
+        use_shared_memory=True,
+        shuffle=False)
 
     results = []
-    for batch_id, data in enumerate(val_reader()):
+    for batch_id, data in enumerate(val_loader()):
         # top1_acc, top5_acc
         if len(feed_target_names) == 1:
             # eval "infer model", which input is image, output is classification probability
-            image = data[0][0].reshape((1, 3, 224, 224))
-            label = [[d[1]] for d in data]
+            image = data[0]
+            label = data[1]
             pred = exe.run(val_program,
                            feed={feed_target_names[0]: image},
                            fetch_list=fetch_targets)
@@ -79,8 +86,8 @@ def eval(args):
             results.append([top_1, top_5])
         else:
             # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
-            image = data[0][0].reshape((1, 3, 224, 224))
-            label = [[d[1]] for d in data]
+            image = data[0]
+            label = data[1]
             result = exe.run(val_program,
                              feed={
                                  feed_target_names[0]: image,
@@ -89,6 +96,8 @@ def eval(args):
                              fetch_list=fetch_targets)
             result = [np.mean(r) for r in result]
             results.append(result)
+        if batch_id % 100 == 0:
+            print('Eval iter: ', batch_id)
     result = np.mean(np.array(results), axis=0)
     print("top1_acc/top5_acc= {}".format(result))
     sys.stdout.flush()
