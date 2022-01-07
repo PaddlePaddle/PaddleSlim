@@ -306,6 +306,7 @@ def quant_post_static(
         quantize_model_path,
         batch_generator=None,
         sample_generator=None,
+        data_loader=None,
         model_filename=None,
         params_filename=None,
         save_model_filename='__model__',
@@ -345,6 +346,9 @@ def quant_post_static(
                 can be set. Beisdes, batch_generator supports lod tensor.
         sample_generator(Python Generator): The sample generator provides 
             calibrate data for DataLoader, and it only returns a sample every time.
+        data_loader(Python Generator, Paddle.io.DataLoader, optional): The
+            Generator or Dataloader provides calibrate data, and it could
+            return a batch every time.
         model_filename(str, optional): The name of model file. If parameters 
             are saved in separate files, set it as 'None'. Default: 'None'.
         params_filename(str, optional): The name of params file.
@@ -398,6 +402,7 @@ def quant_post_static(
         executor=executor,
         sample_generator=sample_generator,
         batch_generator=batch_generator,
+        data_loader=data_loader,
         model_dir=model_dir,
         model_filename=model_filename,
         params_filename=params_filename,
