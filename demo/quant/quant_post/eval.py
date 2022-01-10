@@ -36,8 +36,6 @@ add_arg('batch_size',       int,  64,                 "Minibatch size.")
 
 
 def eval(args):
-    # parameters from arguments
-
     place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
