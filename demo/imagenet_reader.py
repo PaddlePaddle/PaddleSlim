@@ -211,13 +211,21 @@ class ImageNetDataset(Dataset):
                 mode='train',
                 color_jitter=False,
                 rotate=False)
-        if self.mode == 'val':
+            return data, np.array([label]).astype('int64')
+        elif self.mode == 'val':
             data, label = process_image(
                 [data_path, sample[1]],
                 mode='val',
                 color_jitter=False,
                 rotate=False)
-        return data, np.array([label]).astype('int64')
+            return data, np.array([label]).astype('int64')
+        elif self.mode == 'test':
+            data = process_image(
+                [data_path, sample[1]],
+                mode='test',
+                color_jitter=False,
+                rotate=False)
+            return data
 
     def __len__(self):
         return len(self.data)
