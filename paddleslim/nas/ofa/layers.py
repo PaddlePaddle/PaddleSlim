@@ -214,6 +214,10 @@ class SuperConv2D(nn.Conv2D):
                 setattr(self, name, param)
 
     def get_active_filter(self, in_nc, out_nc, kernel_size):
+        ### Unsupport for asymmetric kernels
+        if self._kernel_size[0] != self._kernel_size[1]:
+            return self.weight[:out_nc, :in_nc, :, :]
+
         start, end = compute_start_end(self._kernel_size[0], kernel_size)
         ### if NOT transform kernel, intercept a center filter with kernel_size from largest filter
         filters = self.weight[:out_nc, :in_nc, start:end, start:end]
@@ -288,6 +292,7 @@ class SuperConv2D(nn.Conv2D):
             out_nc = int(channel)
         else:
             out_nc = self._out_channels
+
         ks = int(self._kernel_size[0]) if kernel_size == None else int(
             kernel_size)
 
@@ -518,6 +523,9 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
                 setattr(self, name, param)
 
     def get_active_filter(self, in_nc, out_nc, kernel_size):
+        ### Unsupport for asymmetric kernels
+        if self._kernel_size[0] != self._kernel_size[1]:
+            return self.weight[:out_nc, :in_nc, :, :]
         start, end = compute_start_end(self._kernel_size[0], kernel_size)
         filters = self.weight[:in_nc, :out_nc, start:end, start:end]
         if self.transform_kernel != False and kernel_size < self._kernel_size[
