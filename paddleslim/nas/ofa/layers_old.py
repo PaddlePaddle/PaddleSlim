@@ -213,6 +213,9 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                 setattr(self, name, param)
 
     def get_active_filter(self, in_nc, out_nc, kernel_size):
+        ### Unsupport for asymmetric kernels
+        if self._filter_size[0] != self._filter_size[1]:
+            return self.weight[:out_nc, :in_nc, :, :]
         start, end = compute_start_end(self._filter_size[0], kernel_size)
         ### if NOT transform kernel, intercept a center filter with kernel_size from largest filter
         filters = self.weight[:out_nc, :in_nc, start:end, start:end]
@@ -284,6 +287,10 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             out_nc = self._num_filters
         ks = int(self._filter_size[0]) if kernel_size == None else int(
             kernel_size)
+
+        if kernel_size is not None and self._filter_size[
+                0] != self._filter_size[1]:
+            _logger.error("Searching for asymmetric kernels is NOT supported")
 
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
@@ -513,6 +520,9 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                 setattr(self, name, param)
 
     def get_active_filter(self, in_nc, out_nc, kernel_size):
+        ### Unsupport for asymmetric kernels
+        if self._filter_size[0] != self._filter_size[1]:
+            return self.weight[:out_nc, :in_nc, :, :]
         start, end = compute_start_end(self._filter_size[0], kernel_size)
         filters = self.weight[:in_nc, :out_nc, start:end, start:end]
         if self.transform_kernel != False and kernel_size < self._filter_size[
@@ -583,6 +593,10 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
 
         ks = int(self._filter_size[0]) if kernel_size == None else int(
             kernel_size)
+
+        if kernel_size is not None and self._filter_size[
+                0] != self._filter_size[1]:
+            _logger.error("Searching for asymmetric kernels is NOT supported")
 
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
