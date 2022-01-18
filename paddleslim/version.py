@@ -14,4 +14,4 @@
 # limitations under the License.
 """ PaddleSlim version string """
 __all__ = ["slim_version"]
-slim_version = "2.2.1"
+slim_version = "2.2.2"
