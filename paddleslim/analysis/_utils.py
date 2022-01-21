@@ -21,8 +21,38 @@ import subprocess
 import sklearn
 __all__ = [
     "save_cls_model", "save_det_model", "save_seg_model", "nearest_interpolate",
-    "load_predictor", "dowload_tools"
+    "opt_model", "load_predictor"
 ]
+
+
+def opt_model(opt="paddle_lite_opt",
+              model_file='',
+              param_file='',
+              optimize_out_type='protobuf',
+              valid_targets='arm'):
+    assert os.path.exists(model_file) and os.path.exists(
+        param_file), f'{model_file} or {param_file} is not existed.'
+    save_dir = f'./opt_models_tmp/{os.getpid()}'
+    os.makedirs(save_dir)
+
+    assert optimize_out_type in ['protobuf', 'naive_buffer']
+    if optimize_out_type == 'protobuf':
+        model_out = os.path.join(save_dir, 'pbmodel')
+    else:
+        model_out = os.path.join(save_dir, 'model')
+
+    cmd = f'{opt} --model_file={model_file} --param_file={param_file}  --optimize_out_type={optimize_out_type} --optimize_out={model_out} --valid_targets={valid_targets}'
+    print(f'commands:{cmd}')
+    m = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    out = m.communicate()
+    print(out, 'opt done!')
+
+    if optimize_out_type == 'protobuf':
+        model_out = os.path.join(model_out, 'model')
+    else:
+        model_out = model_out + '.nb'
+    return model_out
 
 
 def sample_generator(input_shape, batch_num):
@@ -224,22 +254,3 @@ def load_predictor(op_type, op_dir, data_type='fp32'):
         model = pickle.load(f)
 
     return model
-
-
-def dowload_tools(platform='mac_intel', lite_version='v2_9'):
-    """Dowload tools for LatencyPredictor 
-        
-        Args:
-            platform(str): Operation platform, mac_intel or mac_M1 or ubuntu
-            lite_version(str): The version of PaddleLite, v2_9
-        Returns:
-            opt_path: The path of opt tool to convert a paddle model to an optimized pbmodel that fuses operators.
-        """
-    opt_name = '_'.join(['opt', platform, lite_version])
-    opt_path = os.path.join('./tools', opt_name)
-    if not os.path.exists(opt_path):
-        subprocess.call(
-            f'wget -P ./tools https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{opt_name}',
-            shell=True)
-        subprocess.call(f'chmod +x {opt_path}', shell=True)
-    return opt_path
