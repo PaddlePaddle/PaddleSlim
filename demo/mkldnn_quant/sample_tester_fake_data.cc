@@ -40,6 +40,7 @@ DEFINE_bool(use_analysis,
             false,
             "If use_analysis is set to true, the model will be optimized");
 DEFINE_int32(warmup_iter, 2, "number of warmup batches");            
+DEFINE_bool(enable_mkldnn_bfloat16, false, "If enable_mkldnn_bfloat16 is set to true, will start bf16 inference");
 
 struct Timer {
   std::chrono::high_resolution_clock::time_point start;
@@ -56,12 +57,6 @@ struct Timer {
   }
 };
 
-static void SetIrOptimConfig(paddle::AnalysisConfig *cfg) {
-  cfg->DisableGpu();
-  cfg->SwitchIrOptim();
-  cfg->EnableMKLDNN();
-}
-
 int main(int argc, char *argv[]) {
   // InitFLAGS(argc, argv);
   google::InitGoogleLogging(*argv);
@@ -71,7 +66,12 @@ int main(int argc, char *argv[]) {
   cfg.SetModel(FLAGS_infer_model);
   cfg.SetCpuMathLibraryNumThreads(FLAGS_num_threads);
   if (FLAGS_use_analysis) {
-    SetIrOptimConfig(&cfg);
+    cfg.DisableGpu();
+    cfg.SwitchIrOptim();
+    cfg.EnableMKLDNN();
+    if (FLAGS_enable_mkldnn_bfloat16){
+    	cfg.EnableMkldnnBfloat16();
+    }
   }
   cfg.SwitchUseFeedFetchOps(false);
 
@@ -90,7 +90,14 @@ int main(int argc, char *argv[]) {
   auto input_t = predictor->GetInputTensor(input_names[0]);
   input_t->Reshape(input_shape);
   input_t->copy_from_cpu<float>(input);
-  
+  if (FLAGS_with_accuracy_layer){
+    int64_t* label = new int64_t[batch_size];
+    for (auto i=0;i<batch_size;i++) label[i]=batch_size%10+1;
+    auto input_l = predictor->GetInputTensor(input_names[1]);
+    input_l->Reshape({batch_size,1});
+    input_l->copy_from_cpu<int64_t>(label);
+  } 
+
   for (auto iter = 0; iter<2; iter++){
     predictor->ZeroCopyRun();
     LOG(INFO) <<"Warmup " << iter << " batches";
