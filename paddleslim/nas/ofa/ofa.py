@@ -79,6 +79,21 @@ DistillConfig = namedtuple(
 DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
 
+def to_tensor(string_values, name="text"):
+    """
+    Create the tensor that the value holds the list of string.
+    NOTICE: The value will be holded in the cpu place.
+
+    Parameters:
+        string_values(list[string]): The value will be setted to the tensor.
+        name(string): The name of the tensor.
+    """
+    tensor = paddle.Tensor(core.VarDesc.VarType.STRING, [], name,
+                           core.VarDesc.VarType.STRINGS, False)
+    tensor.value().set_string_list(string_values)
+    return tensor
+
+
 class OFABase(Layer):
     def __init__(self, model):
         super(OFABase, self).__init__()
@@ -531,6 +546,8 @@ class OFA(OFABase):
                     dtype = dtypes[0]
                 else:
                     dtype = dtypes
+                if dtype == core.VarDesc.VarType.STRINGS:
+                    return to_tensor([""])
                 return paddle.cast(paddle.rand(list(input_size)), dtype)
             if isinstance(input_size, dict):
                 inputs = {}

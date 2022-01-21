@@ -126,6 +126,14 @@ class UnstructuredPruner():
                     bool_tmp = (paddle.abs(param) >= self.threshold)
                 paddle.assign(bool_tmp, output=mask)
 
+    def set_static_masks(self):
+        for name, sub_layer in self.model.named_sublayers():
+            if not self._should_prune_layer(sub_layer): continue
+            for param in sub_layer.parameters(include_sublayers=False):
+                mask = self.masks.get(param.name)
+                bool_tmp = (paddle.abs(param) != 0.0)
+                paddle.assign(bool_tmp, output=mask)
+
     def summarize_weights(self, model, ratio=0.1):
         """
         The function is used to get the weights corresponding to a given ratio
@@ -304,6 +312,7 @@ class GMPUnstructuredPruner(UnstructuredPruner):
         self.cur_iteration = configs.get('resume_iteration')
 
         assert self.pruning_iterations / self.pruning_steps > 10, "To guarantee the performance of GMP pruner, pruning iterations must be larger than pruning steps by a margin."
+        self._need_prune_once = False
         self._prepare_training_hyper_parameters()
 
     def _prepare_training_hyper_parameters(self):
@@ -330,6 +339,7 @@ class GMPUnstructuredPruner(UnstructuredPruner):
 
         # pop out used ratios to resume training
         for i in range(self.cur_iteration):
+            self._need_prune_once = True
             if len(self.
                    ratios_stack) > 0 and i % self.ratio_increment_period == 0:
                 self.ratio = self.ratios_stack.pop()
@@ -344,7 +354,8 @@ class GMPUnstructuredPruner(UnstructuredPruner):
 
         # Update the threshold and masks only when a new ratio has been set.
         # This condition check would save training time dramatically since we only update the threshold by the triger of self.ratio_increment_period.
-        if ori_ratio != self.ratio:
+        if ori_ratio != self.ratio or self._need_prune_once:
             self.update_threshold()
             self._update_masks()
+            self._need_prune_once = False
         self.cur_iteration += 1

@@ -10,6 +10,7 @@ import paddle
 import six
 import reader
 from net import skip_gram_word2vec
+import paddle
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("paddle")
@@ -77,6 +78,12 @@ def parse_args():
         required=False,
         default=False,
         help='print speed or not , (default: False)')
+    parser.add_argument(
+        '--ce_test',
+        required=False,
+        default=False,
+        help='Whether to CE test, (default: False)')
+
     return parser.parse_args()
 
 
@@ -185,6 +192,12 @@ def GetFileList(data_path):
 
 
 def train(args):
+    if args.ce_test:
+        # set seed
+        seed = 111
+        paddle.seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
 
     if not os.path.isdir(args.model_output_dir):
         os.mkdir(args.model_output_dir)

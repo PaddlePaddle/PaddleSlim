@@ -2,6 +2,7 @@ import paddle
 import os
 import sys
 import argparse
+import random
 import numpy as np
 from paddleslim import UnstructuredPruner, GMPUnstructuredPruner
 sys.path.append(
@@ -51,6 +52,7 @@ add_arg('initial_ratio',    float, 0.15,         "The initial pruning ratio used
 add_arg('pruning_strategy', str, 'base',         "Which training strategy to use in pruning, we only support base and gmp for now. Default: base")
 add_arg('prune_params_type', str, None,           "Which kind of params should be pruned, we only support None (all but norms) and conv1x1_only for now. Default: None")
 add_arg('local_sparsity', bool, False,            "Whether to prune all the parameter matrix at the same ratio or not. Default: False")
+add_arg('ce_test',          bool, False, "Whether to CE test. Default: False")
 # yapf: enable
 
 
@@ -109,6 +111,16 @@ def create_unstructured_pruner(model, args, configs=None):
 
 
 def compress(args):
+    shuffle = True
+    if args.ce_test:
+        # set seed
+        seed = 111
+        paddle.seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        args.num_workers = 0
+        shuffle = False
+
     if args.use_gpu:
         place = paddle.set_device('gpu')
     else:
@@ -139,7 +151,10 @@ def compress(args):
         raise ValueError("{} is not supported.".format(args.data))
 
     batch_sampler = paddle.io.DistributedBatchSampler(
-        train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        drop_last=True)
 
     train_loader = paddle.io.DataLoader(
         train_dataset,
