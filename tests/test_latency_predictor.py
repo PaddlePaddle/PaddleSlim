@@ -19,7 +19,7 @@ import paddleslim
 from paddleslim.analysis import LatencyPredictor, TableLatencyPredictor
 from paddle.vision.models import mobilenet_v1, mobilenet_v2
 from paddle.nn import Conv2D, BatchNorm2D, ReLU, LayerNorm
-import subprocess
+from paddleslim.analysis._utils import opt_model, save_cls_model, save_seg_model, save_det_model
 
 
 def channel_shuffle(x, groups):
@@ -189,25 +189,22 @@ class TestCase1(unittest.TestCase):
     def test_case1(self):
         paddle.disable_static()
         model = mobilenet_v1()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        latency = predictor.predict_latency(
+        predictor = TableLatencyPredictor(table_file='SD710')
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='cls')
-        assert latency > 0
-        latency = predictor.predict_latency(
+            save_dir="./inference_model",
+            data_type='fp32')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
+
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='int8',
-            task_type='cls')
+            save_dir="./inference_model",
+            data_type='int8')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
 
 
@@ -215,25 +212,14 @@ class TestCase2(unittest.TestCase):
     def test_case2(self):
         paddle.disable_static()
         model = mobilenet_v2()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        latency = predictor.predict_latency(
+        predictor = TableLatencyPredictor(table_file='SD710')
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='cls')
-        assert latency > 0
-        latency = predictor.predict_latency(
-            model,
-            input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='int8',
-            task_type='cls')
+            save_dir="./inference_model",
+            data_type='fp32')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
 
 
@@ -241,26 +227,23 @@ class TestCase3(unittest.TestCase):
     def test_case3(self):
         paddle.disable_static()
         model = mobilenet_v2()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        pred = LatencyPredictor()
-        pbmodel_file = predictor.opt_model(
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='cls')
+            save_dir="./inference_model",
+            data_type='fp32')
+        pbmodel_file = opt_model(
+            model_file=model_file,
+            param_file=param_file,
+            optimize_out_type='protobuf')
+
+        pred = LatencyPredictor()
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
             fluid_program = paddle.fluid.framework.Program.parse_from_string(
                 f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
-            graph_keys = pred._get_key_info_from_graph(
-                graph=graph, data_type='fp32')
+            graph_keys = pred._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
 
@@ -268,18 +251,14 @@ class TestCase4(unittest.TestCase):
     def test_case4(self):
         paddle.disable_static()
         model = ModelCase1()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        latency = predictor.predict_latency(
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 116, 28, 28],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='cls')
+            save_dir="./inference_model",
+            data_type='fp32')
+        predictor = TableLatencyPredictor(table_file='SD710')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
 
 
@@ -287,18 +266,14 @@ class TestCase5(unittest.TestCase):
     def test_case5(self):
         paddle.disable_static()
         model = mobilenet_v1()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        latency = predictor.predict_latency(
+        predictor = TableLatencyPredictor(table_file='SD710')
+        model_file, param_file = save_seg_model(
             model,
-            input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='seg')
+            input_shape=[1, 116, 28, 28],
+            save_dir="./inference_model",
+            data_type='fp32')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
 
 
@@ -306,25 +281,14 @@ class TestCase6(unittest.TestCase):
     def test_case6(self):
         paddle.disable_static()
         model = ModelCase2()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        pbmodel_file = predictor.opt_model(
+        predictor = TableLatencyPredictor(table_file='SD710')
+        model_file, param_file = save_det_model(
             model,
-            input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='int8',
-            task_type='det')
-        assert os.path.exists(pbmodel_file)
-        latency = predictor.predict_latency(
-            model,
-            input_shape=[1, 3, 224, 224],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='det')
+            input_shape=[1, 116, 28, 28],
+            save_dir="./inference_model",
+            data_type='fp32')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
 
 
@@ -332,19 +296,15 @@ class TestCase7(unittest.TestCase):
     def test_case7(self):
         paddle.disable_static()
         model = ModelCase3()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        predictor.set_det_multi_input(det_multi_input=True)
-        latency = predictor.predict_latency(
+        predictor = TableLatencyPredictor(table_file='SD710')
+        model_file, param_file = save_det_model(
             model,
             input_shape=[1, 3, 224, 224],
-            save_dir='./model',
+            save_dir="./inference_model",
             data_type='fp32',
-            task_type='det')
+            det_multi_input=True)
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
 
 
@@ -352,25 +312,23 @@ class TestCase8(unittest.TestCase):
     def test_case8(self):
         paddle.disable_static()
         model = ModelCase4()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        pbmodel_file = predictor.opt_model(
+        predictor = LatencyPredictor()
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 16, 16],
-            save_dir='./model',
-            data_type='int8',
-            task_type='cls')
+            save_dir="./inference_model",
+            data_type='int8')
+        pbmodel_file = opt_model(
+            model_file=model_file,
+            param_file=param_file,
+            optimize_out_type='protobuf')
+
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
             fluid_program = paddle.fluid.framework.Program.parse_from_string(
                 f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
-            graph_keys = predictor._get_key_info_from_graph(
-                graph=graph, data_type='int8')
+            graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
 
@@ -378,25 +336,23 @@ class TestCase9(unittest.TestCase):
     def test_case9(self):
         paddle.disable_static()
         model = ModelCase5()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        pbmodel_file = predictor.opt_model(
+        predictor = LatencyPredictor()
+        model_file, param_file = save_det_model(
             model,
             input_shape=[1, 255, 13, 13],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='det')
+            save_dir="./inference_model",
+            data_type='fp32')
+        pbmodel_file = opt_model(
+            model_file=model_file,
+            param_file=param_file,
+            optimize_out_type='protobuf')
+
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
             fluid_program = paddle.fluid.framework.Program.parse_from_string(
                 f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
-            graph_keys = predictor._get_key_info_from_graph(
-                graph=graph, data_type='fp32')
+            graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
 
@@ -404,25 +360,23 @@ class TestCase10(unittest.TestCase):
     def test_case10(self):
         paddle.disable_static()
         model = ModelCase1()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        pbmodel_file = predictor.opt_model(
+        predictor = LatencyPredictor()
+        model_file, param_file = save_seg_model(
             model,
             input_shape=[1, 116, 28, 28],
-            save_dir='./model',
-            data_type='int8',
-            task_type='seg')
+            save_dir="./inference_model",
+            data_type='int8')
+        pbmodel_file = opt_model(
+            model_file=model_file,
+            param_file=param_file,
+            optimize_out_type='protobuf')
+
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
             fluid_program = paddle.fluid.framework.Program.parse_from_string(
                 f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
-            graph_keys = predictor._get_key_info_from_graph(
-                graph=graph, data_type='int8')
+            graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
 
@@ -432,39 +386,42 @@ class TestCase11(unittest.TestCase):
         model = mobilenet_v2()
         model2 = ModelCase6()
         model3 = ModelCase7()
-        predictor = TableLatencyPredictor(
-            hardware='710',
-            threads=4,
-            power_mode=0,
-            batchsize=1,
-            platform='ubuntu')
-        latency = predictor.predict_latency(
+        predictor = TableLatencyPredictor(table_file='SD710')
+        predictor.turn_on_predictor(True)
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 250, 250],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='cls')
+            save_dir="./inference_model",
+            data_type='fp32')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
-        latency = predictor.predict_latency(
+
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 250, 250],
-            save_dir='./model',
-            data_type='int8',
-            task_type='cls')
+            save_dir="./inference_model",
+            data_type='int8')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
-        latency = predictor.predict_latency(
+
+        model_file, param_file = save_cls_model(
             model2,
             input_shape=[1, 3, 16, 16],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='cls')
+            save_dir="./inference_model",
+            data_type='fp32')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
-        latency = predictor.predict_latency(
+
+        model_file, param_file = save_det_model(
             model3,
             input_shape=[1, 255, 14, 14],
-            save_dir='./model',
-            data_type='fp32',
-            task_type='det')
+            save_dir="./inference_model",
+            data_type='fp32')
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file)
         assert latency > 0
 
 

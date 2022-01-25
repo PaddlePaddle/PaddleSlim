@@ -7,3 +7,4 @@ pillow
 pyyaml
 scikit-learn
 smac
+paddleslim-opt-tools
