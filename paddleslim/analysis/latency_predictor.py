@@ -135,7 +135,7 @@ class TableLatencyPredictor(LatencyPredictor):
         graph = paddleslim.core.GraphWrapper(fluid_program)
         latency = 0.0
         for op in graph.ops():
-            param_key = get_key_from_op(op, data_type)
+            param_key = get_key_from_op(op)
             if param_key == '':
                 continue
             if param_key in self.table_dict:

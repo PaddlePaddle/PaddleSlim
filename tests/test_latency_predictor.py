@@ -269,7 +269,7 @@ class TestCase5(unittest.TestCase):
         predictor = TableLatencyPredictor(table_file='SD710')
         model_file, param_file = save_seg_model(
             model,
-            input_shape=[1, 116, 28, 28],
+            input_shape=[1, 3, 224, 224],
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(
@@ -284,7 +284,7 @@ class TestCase6(unittest.TestCase):
         predictor = TableLatencyPredictor(table_file='SD710')
         model_file, param_file = save_det_model(
             model,
-            input_shape=[1, 116, 28, 28],
+            input_shape=[1, 3, 224, 224],
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(

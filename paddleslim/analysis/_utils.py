@@ -33,7 +33,8 @@ def opt_model(opt="paddle_lite_opt",
     assert os.path.exists(model_file) and os.path.exists(
         param_file), f'{model_file} or {param_file} is not existed.'
     save_dir = f'./opt_models_tmp/{os.getpid()}'
-    os.makedirs(save_dir)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
     assert optimize_out_type in ['protobuf', 'naive_buffer']
     if optimize_out_type == 'protobuf':
