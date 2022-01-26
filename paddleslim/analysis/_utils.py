@@ -218,8 +218,10 @@ def nearest_interpolate(features, data):
     idx = 0
     dist = distance(features, data_features[0])
     for i in range(1, len(data_features)):
-        if distance(features, data_features[i]) < dist:
+        cur_dist = distance(features, data_features[i])
+        if cur_dist < dist:
             idx = i
+            dist = cur_dist
     return latency[idx]
 
 

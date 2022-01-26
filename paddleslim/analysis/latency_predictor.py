@@ -71,9 +71,10 @@ class TableLatencyPredictor(LatencyPredictor):
             self.hardware = self.table_file
             self.threads = 4
             self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
-            subprocess.call(
-                f'wget https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}',
-                shell=True)
+            if not os.path.exists(self.table_file):
+                subprocess.call(
+                    f'wget https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}',
+                    shell=True)
 
         assert os.path.exists(
             self.table_file
@@ -95,15 +96,15 @@ class TableLatencyPredictor(LatencyPredictor):
 
         print('Successfully load {}'.format(self.table_file))
 
-    def turn_on_predictor(self, state=True):
-        """Turn on the op predictor. Default: False.
+    def set_predictor_state(self, state=False):
+        """Adjust the op predictor‘s state. Default: False.
         """
         self.predictor_state = state
 
     def predict(self,
-                model_file="",
-                param_file="",
-                data_type="fp32",
+                model_file,
+                param_file,
+                data_type,
                 threads=4,
                 input_shape=[1, 3, 224, 224]):
         """predict the latency of the model

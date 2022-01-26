@@ -190,14 +190,14 @@ class TestCase1(unittest.TestCase):
         paddle.disable_static()
         model = mobilenet_v1()
         predictor = TableLatencyPredictor(table_file='SD710')
-        predictor.turn_on_predictor(True)
+        predictor.set_predictor_state(True)
         model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
 
         model_file, param_file = save_cls_model(
             model,
@@ -205,7 +205,7 @@ class TestCase1(unittest.TestCase):
             save_dir="./inference_model",
             data_type='int8')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='int8')
         assert latency > 0
 
 
@@ -214,14 +214,14 @@ class TestCase2(unittest.TestCase):
         paddle.disable_static()
         model = mobilenet_v2()
         predictor = TableLatencyPredictor(table_file='SD710')
-        predictor.turn_on_predictor(True)
+        predictor.set_predictor_state(True)
         model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
 
@@ -260,7 +260,7 @@ class TestCase4(unittest.TestCase):
             data_type='fp32')
         predictor = TableLatencyPredictor(table_file='SD710')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
 
@@ -269,14 +269,14 @@ class TestCase5(unittest.TestCase):
         paddle.disable_static()
         model = mobilenet_v1()
         predictor = TableLatencyPredictor(table_file='SD710')
-        predictor.turn_on_predictor(True)
+        predictor.set_predictor_state(True)
         model_file, param_file = save_seg_model(
             model,
             input_shape=[1, 3, 224, 224],
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
 
@@ -291,7 +291,7 @@ class TestCase6(unittest.TestCase):
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
 
@@ -307,7 +307,7 @@ class TestCase7(unittest.TestCase):
             data_type='fp32',
             det_multi_input=True)
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
 
@@ -390,14 +390,14 @@ class TestCase11(unittest.TestCase):
         model2 = ModelCase6()
         model3 = ModelCase7()
         predictor = TableLatencyPredictor(table_file='SD710')
-        predictor.turn_on_predictor(True)
+        predictor.set_predictor_state(True)
         model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 250, 250],
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
         model_file, param_file = save_cls_model(
@@ -406,7 +406,7 @@ class TestCase11(unittest.TestCase):
             save_dir="./inference_model",
             data_type='int8')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='int8')
         assert latency > 0
 
         model_file, param_file = save_cls_model(
@@ -415,7 +415,7 @@ class TestCase11(unittest.TestCase):
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
         model_file, param_file = save_det_model(
@@ -424,7 +424,7 @@ class TestCase11(unittest.TestCase):
             save_dir="./inference_model",
             data_type='fp32')
         latency = predictor.predict(
-            model_file=model_file, param_file=param_file)
+            model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
 

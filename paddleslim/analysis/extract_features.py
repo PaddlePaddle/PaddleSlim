@@ -139,13 +139,17 @@ def get_features_from_paramkey(param_key, op_type, data_type):
         out_w = int(outputs[3])
         kernel = int(
             re.search(r'kernel=\d*x*\d*', param_key).group().split('x')[-1])
-        flag_global = bool(
+        flag_global = int(
             re.search(r'flag_global=\d', param_key).group().split('=')[-1])
         if flag_global:
             kernel = in_h
         stride = int(re.search(r'stride=\d', param_key).group().split('=')[-1])
+        pad = int(re.search(r'pad=\d', param_key).group().split('=')[-1])
+        flag_type = 1 if 'type=avg' in param_key else 0
 
-        features = [cin, kernel, stride, in_h * in_w, out_h * out_w]
+        features = [
+            cin, kernel, stride, pad, in_h * in_w, out_h * out_w, flag_type
+        ]
 
     elif ('reshape' in op_type or 'scale' in op_type):
         inputs = re.search(r'in=(\((-?\d+,* *)+\))',
@@ -219,8 +223,8 @@ def get_features_from_paramkey(param_key, op_type, data_type):
         channels = []
         for ins in inputs:
             channels.append(int(ins.split(', ')[1]))
-        #hw, c1,c2...
-        features = [0, 0, 0, 0, 0, 0, 0]
+        #hw, c1,c2,c3,c4,c5,c6,c7,c8,c9
+        features = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         input1 = inputs[0].split(', ')
         if len(input1) == 3:
             features[0] = int(input1[2])
