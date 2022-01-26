@@ -190,6 +190,7 @@ class TestCase1(unittest.TestCase):
         paddle.disable_static()
         model = mobilenet_v1()
         predictor = TableLatencyPredictor(table_file='SD710')
+        predictor.turn_on_predictor(True)
         model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
@@ -213,6 +214,7 @@ class TestCase2(unittest.TestCase):
         paddle.disable_static()
         model = mobilenet_v2()
         predictor = TableLatencyPredictor(table_file='SD710')
+        predictor.turn_on_predictor(True)
         model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
@@ -267,6 +269,7 @@ class TestCase5(unittest.TestCase):
         paddle.disable_static()
         model = mobilenet_v1()
         predictor = TableLatencyPredictor(table_file='SD710')
+        predictor.turn_on_predictor(True)
         model_file, param_file = save_seg_model(
             model,
             input_shape=[1, 3, 224, 224],
