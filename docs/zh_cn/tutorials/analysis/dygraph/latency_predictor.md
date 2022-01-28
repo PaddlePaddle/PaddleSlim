@@ -1,18 +1,19 @@
 # LatencyPredictor使用教程
 
-LatencyPredictor主要功能是根据提供的op-latency映射表和已训练的op预测器，预估神经网络在特定硬件设备上的实际耗时。它基于Paddle-Lite开发，适用于使用Paddle-Lite部署的模型。
+延时预估器用于预估模型在特定硬件设备上的推理延时。在无需部署模型到实际设备的情况下，可以快速预估出多种部署环境和设置下的推理延时。当前，
+* 支持所有可以使用Paddle-Lite部署的模型；
+* 支持预估ARM CPU上的模型耗时。
 
 ## 1. 准备环境
 
-安装 PaddleSlim>=2.3.0。由于LatencyPredictor基于Paddle-Lite开发，python需至少为3.7版本。
-
-* 可以通过 pip install 的方式进行安装。
+依赖 PaddleSlim>=2.3.0，python>=3.7。以下为PaddleSlim的安装方式：
+* 通过 pip install 的方式进行安装:
 
 ```bash
 pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-* 如果获取 PaddleSlim 的最新特性，可以从源码安装。
+* 或者从源码安装最新版PaddleSlim:
 
 ```bash
 git clone https://github.com/PaddlePaddle/PaddleSlim.git
@@ -22,48 +23,53 @@ python3.7 -m pip install -r requirements.txt # 从requirements.txt安装依赖�
 ```
 
 ## 2. 快速开始
-### 2.1 准备预测模型
-延时预估器通过读取预测模型文件（*.pdmodel, *.pdiparams）进行预估。以mobilenetv1为例，请从[这里](https://bj.bcebos.com/v1/paddlemodels/PaddleSlim/analysis/mobilenetv1.tar)下载其预测模型文件。使用自定义模型结构时，可参考[api文档](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save)，保存预测模型。
+### 2.1 准备推理模型
+延时预估器通过读取推理模型文件（*.pdmodel, *.pdiparams）进行预估。以mobilenetv1为例，请从[这里](https://bj.bcebos.com/v1/paddlemodels/PaddleSlim/analysis/mobilenetv1.tar)下载其推理模型文件。使用自定义模型结构时，可参考[api文档](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save)保存推理模型。
 ```bash
 wget https://bj.bcebos.com/v1/paddlemodels/PaddleSlim/analysis/mobilenetv1.tar
 tar -xf mobilenetv1.tar
 ```
-### 2.2 预测
-设置硬件信息初始化TableLatencyPredictor，然后调用predict函数进行预测。目前可选硬件类别有骁龙625、710、865 ('SD625, SD710, SD845')。
+### 2.2 预估推理延时
+构造TableLatencyPredictor类实例，并调用predict函数预估指定推理模型的延时。
 ```
 import paddleslim
 
 predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
-latency = predictor.predict(model_file='mobilenetv1_fp32.pdmodel', param_file='mobilenetv1_fp32.pdiparams, data_type=fp32)
+latency = predictor.predict(model_file='mobilenetv1_fp32.pdmodel', param_file='mobilenetv1_fp32.pdiparams, data_type='fp32')
 print('predicted latency = {}ms'.format(latency))
 ```
-> 注1：预估的耗时是基于**保存预测模型时设定的输入形状**预估而得；
+通过设置table_file来指定硬件信息，当前支持“SD625”、“SD710”、“SD845”三款骁龙芯片。
+> 注1：预估的耗时是基于**保存推理模型时设定的输入形状**预估而得；
 >
 > 注2：暂时不支持可变长输入，后续将会添加该功能。
 ## 3. 更多特性
-### 3.1 op预测器
-我们基于这些op的耗时数据，训练了op级别的耗时预测器，用于预测延时映射表中未包含的op耗时数据，实现对任意模型的延时预测。目前，实现了在SD625和SD710上的op预测器，可通过set_predictor_state函数开启op预测器功能，如下所示。
+### 3.1 预估模式选择
+
+预估模型延时有两种方式：
+* 查表：根据已有的延时表，查找推理模型中每个算子（op）的延时，从而预估模型整体延时。优点是面对表中已覆盖的模型能实现快速准确查找，缺点是面对新模型束手无策；
+* 预测器：构建了op级别的预测器，作为延时表的补充，能对任意模型进行延时预估。
+通过调用set_predictor_state函数可开启预测器，选择“查表+预测器”结合的预测方法，如下所示：
 ```
 import paddleslim
 
 predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
 predictor.set_predictor_state(True)
 ```
-> 该功能默认关闭，此时仅依赖延时表预测耗时。op预测器只预测batchsize=1的延时，后续将在更多设备上扩充不同batchsize的op预测器。
+> op预测器只预测batchsize=1的延时，支持SD625和SD710设备，默认关闭。后续将在更多设备上扩充不同batchsize的op预测器。
 
 ### 3.2 支持预测int8模型
-我们的延时预估器还支持对int8量化模型进行延时预估，仅需提供int8量化保存的预测模型文件，并将设置predict函数data_type=int8即可，如下所示。
+延时预估器支持对int8量化模型进行延时预估，仅需提供int8量化保存的推理模型文件，并将在调用predict函数时，设置data_type='int8'，如下所示：
 ```
 import paddleslim
 
 predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
-predictor.predict(model_file='mobilenetv1_int8.pdmodel', param_file='mobilenetv1_int8.pdiparams, data_type=int8)
+predictor.predict(model_file='mobilenetv1_int8.pdmodel', param_file='mobilenetv1_int8.pdiparams, data_type='int8')
 ```
 
 ## 4. 预测效果
-目前，我们在骁龙625、710等设备上的测速设置都是线程数threads为4，测速模式power_mode为0，涵盖了PaddleClas、PaddleDetection中的移动端模型，后续将扩展其他线程数（threads=1，2）的延时表。下表展示了在骁龙710上预测效果，在典型分类、检测模型上都达到了预测误差小于10%。
+延时预估器在骁龙625、710等设备上的测速设置都是线程数threads为4，测速模式power_mode为0，涵盖了PaddleClas、PaddleDetection中的移动端模型，后续将支持其他线程数。下表展示了对典型分类、检测模型在骁龙710的预测效果，预测延时误差均小于10%。
 
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<strong>表1: 骁龙710上预测结果</strong>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<strong>表1: 骁龙710预测结果</strong>
 | Model  | Predict(ms)                       | Real(ms)        | Error(%) |
 |:-----:|:----------------------------:|:---------------------:|:--------------------------:|
 | MobileNetV1_x0_25|  3.856 | 4.082  |  5.552  |
