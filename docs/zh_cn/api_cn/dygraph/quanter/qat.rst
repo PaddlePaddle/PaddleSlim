@@ -63,10 +63,10 @@ QAT
         # activation预处理方法，默认为None，代表不进行预处理`
         'activation_preprocess_type': None,
 
-        # weight量化方法, 默认为'channel_wise_abs_max', 此外还支持'channel_wise_abs_max'
+        # weight量化方法, 默认为'channel_wise_abs_max', 此外还支持'abs_max'
         'weight_quantize_type': 'channel_wise_abs_max',
 
-        # activation量化方法, 默认为'moving_average_abs_max', 此外还支持'abs_max'
+        # activation量化方法, 默认为'moving_average_abs_max'
         'activation_quantize_type': 'moving_average_abs_max',
 
         # weight量化比特数, 默认为 8
