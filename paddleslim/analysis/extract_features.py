@@ -82,7 +82,6 @@ def get_features_from_paramkey(param_key, op_type, data_type):
             in_c = int(inputs[1])
             in_h = int(inputs[2])
             in_w = int(inputs[3])
-            # flops, params = get_flops_params('conv', in_h, in_c, cout, kernel, stride)
 
             features = [
                 in_c, cout, kernel, group, stride, pad, in_h * in_w,
