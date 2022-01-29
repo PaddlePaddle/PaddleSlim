@@ -12,7 +12,7 @@ TableLatencyPredictor
 
 **参数：**
 
-- **table_file(str)** -  指定硬件设备，可选“SD625”、“SD710”、“SD845”；或是转入已有的延时表路径。
+- **table_file(str)** -  指定硬件设备，可选“SD625”、“SD710”、“SD845”；或是传入已有的延时表路径。
 
 **返回：** 一个TableLatencyPredictor类的实例。
 
@@ -39,11 +39,11 @@ TableLatencyPredictor
 
   .. code-block:: python
 
-  import paddle 
-  from paddleslim import TableLatencyPredictor 
+    import paddle 
+    from paddleslim import TableLatencyPredictor 
 
-  predictor = TableLatencyPredictor(table_file='SD710')
-  predictor.set_predictor_state(state=True)
+    predictor = TableLatencyPredictor(table_file='SD710')
+    predictor.set_predictor_state(state=True)
   ..
 
   .. py:method:: paddleslim.TableLatencyPredictor.predict(model_file, param_file, data_type, threads, input_shape)
@@ -62,21 +62,21 @@ TableLatencyPredictor
 
   .. code-block:: python
 
-  import paddle
-  from paddleslim import TableLatencyPredictor
-  from paddle.vision.models import mobilenet_v1 
-  from paddle.static import InputSpec
+    import paddle
+    from paddleslim import TableLatencyPredictor
+    from paddle.vision.models import mobilenet_v1 
+    from paddle.static import InputSpec
 
-  predictor = TableLatencyPredictor(table_file='SD710')
+    predictor = TableLatencyPredictor(table_file='SD710')
 
-  model = mobilenet_v1() 
-  x_spec = InputSpec(shape=[1, 3, 224, 224], dtype='float32', name='inputs') 
-  static_model = paddle.jit.to_static(model, input_spec=[x_spec]) 
-  paddle.jit.save(static_model, 'mobilenet_v1') 
-  
-  latency = predictor.predict(model_file='mobilenet_v1.pdmodel', 
-                              param_file='mobilenet_v1.pdiparams',
-                              data_type='fp32')
-  print("predicted latency:", latency)
+    model = mobilenet_v1() 
+    x_spec = InputSpec(shape=[1, 3, 224, 224], dtype='float32', name='inputs') 
+    static_model = paddle.jit.to_static(model, input_spec=[x_spec]) 
+    paddle.jit.save(static_model, 'mobilenet_v1') 
+    
+    latency = predictor.predict(model_file='mobilenet_v1.pdmodel', 
+                                param_file='mobilenet_v1.pdiparams',
+                                data_type='fp32')
+    print("predicted latency:", latency)
 
   ..
