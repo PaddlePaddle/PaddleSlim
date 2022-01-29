@@ -21,8 +21,8 @@ pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```bash
 git clone https://github.com/PaddlePaddle/PaddleSlim.git
 cd Paddleslim
-python3.7 setup.py install
 python3.7 -m pip install -r requirements.txt # 从requirements.txt安装依赖库
+python3.7 setup.py install
 ```
 
 ## 2. 快速开始
@@ -44,7 +44,7 @@ latency = predictor.predict(model_file='mobilenetv1_fp32.pdmodel', param_file='m
 print('predicted latency = {}ms'.format(latency))
 ```
 通过设置 table_file 来指定硬件信息，当前支持“SD625”、“SD710”、“SD845”三款骁龙芯片。
-> 注1：耗时是基于**保存推理模型时设定的输入形状**预估而得；
+> 注1：保存推理模型时设置确切的输入形状；
 >
 > 注2：暂时不支持可变长输入，后续将会添加该功能。
 ## 3. 更多特性
@@ -60,7 +60,7 @@ import paddleslim
 predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
 predictor.set_predictor_state(True)
 ```
-> op 预测器只预测 batchsize=1 的延时，支持 SD625 和 SD710 设备，默认关闭。后续将在更多设备上扩充不同 batchsize 的 op 预测器。
+> op 预测器只预测 batchsize=1 的延时，支持 SD625 和 SD710 设备。该功能默认关闭。后续将在更多设备上扩充不同 batchsize 的 op 预测器。
 
 ### 3.2 支持预测 INT8 模型
 延时预估器支持对 INT8 量化模型进行延时预估，仅需提供 INT8 量化保存的推理模型文件，并将在调用 predict 函数时，设置 data_type='int8'，如下所示：
