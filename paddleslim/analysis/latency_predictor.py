@@ -61,12 +61,14 @@ class TableLatencyPredictor(LatencyPredictor):
         self.table_dict = {}
         self.hardware = None
         self.threads = None
-        self._initial_table()
         self.predictor_state = False
+        self._initial_table()
 
     def _initial_table(self):
         if self.table_file in ['SD625', 'SD710', 'SD845', 'SD865']:
             self.hardware = self.table_file
+            if self.hardware in ['SD625', 'SD710']:
+                self.predictor_state = True
             self.threads = 4
             self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
             if not os.path.exists(self.table_file):
@@ -83,6 +85,7 @@ class TableLatencyPredictor(LatencyPredictor):
         print('Successfully load {}'.format(self.table_file))
 
     def _change_table(self, threads=4):
+        assert threads == 4, 'Only 4 threads are available now.'
         self.table_file = f'{self.hardware}_threads_{threads}_power_mode_0.pkl'
         if not os.path.exists(self.table_file):
             subprocess.call(
@@ -103,17 +106,12 @@ class TableLatencyPredictor(LatencyPredictor):
                 break
         return in_shape
 
-    def set_predictor_state(self, state=False):
-        """Adjust the op predictor‘s state. Default: False.
-        """
-        self.predictor_state = state
-
     def predict(self,
                 model_file,
                 param_file,
                 data_type,
                 threads=4,
-                input_shape=[1, 3, 224, 224]):
+                input_shape=None):
         """predict the latency of the model
         
         Args:
@@ -142,7 +140,7 @@ class TableLatencyPredictor(LatencyPredictor):
 
         graph = paddleslim.core.GraphWrapper(fluid_program)
 
-        if input_shape != [1, 3, 224, 224]:
+        if input_shape != None:
             ori_shape = self._get_input_shape(graph)
             assert ori_shape == input_shape, "The parameter \'input_shape\' dosn't work now. The input shape is confirmed when saving the inference model"
 

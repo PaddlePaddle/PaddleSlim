@@ -48,21 +48,14 @@ print('predicted latency = {}ms'.format(latency))
 >
 > 注2：暂时不支持可变长输入，后续将会添加该功能。
 ## 3. 更多特性
-### 3.1 预估模式选择
+### 3.1 丰富的预估模式
 
 预估模型延时有两种方式：
 * 查表：根据已有的延时表，查找推理模型中每个算子（op）的延时，从而预估模型整体延时。优点是面对表中已覆盖的模型能实现快速准确查找，缺点是面对新模型束手无策；
-* 预测器：构建了 op 级别的预测器，作为延时表的补充，能对任意模型进行延时预估。
-通过调用 set_predictor_state 函数可开启预测器，选择“查表+预测器”结合的预测方法，如下所示：
-```
-import paddleslim
+* 预测器：构建了 op 级别的预测器，作为延时表的补充，用于预估延时表中未覆盖的op，从而实现对任意模型进行延时预估。
+> op 预测器只预估 batchsize=1 的延时，支持 SD625 和 SD710 设备，后续将在更多设备上扩充不同 batchsize 的 op 预测器。
 
-predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
-predictor.set_predictor_state(True)
-```
-> op 预测器只预测 batchsize=1 的延时，支持 SD625 和 SD710 设备。该功能默认关闭。后续将在更多设备上扩充不同 batchsize 的 op 预测器。
-
-### 3.2 支持预测 INT8 模型
+### 3.2 支持预估 INT8 模型
 延时预估器支持对 INT8 量化模型进行延时预估，仅需提供 INT8 量化保存的推理模型文件，并将在调用 predict 函数时，设置 data_type='int8'，如下所示：
 ```
 import paddleslim

@@ -26,25 +26,6 @@ TableLatencyPredictor
   predictor = TableLatencyPredictor(table_file='SD710')
 
 ..
-  
-  .. py:method:: paddleslim.TableLatencyPredictor.set_predictor_state(state)
-
-  预估延时前调用该函数，设置是否开启预测器。预测器功能仅支持‘SD625’、‘SD710’，后续将支持更多设备。
-
-  **参数：**
-
-  -  **state(bool)** - 该值为True，则开启预测器；该值为False，则关闭预测器。
-
-  **示例代码：**
-
-  .. code-block:: python
-
-    import paddle 
-    from paddleslim import TableLatencyPredictor 
-
-    predictor = TableLatencyPredictor(table_file='SD710')
-    predictor.set_predictor_state(state=True)
-  ..
 
   .. py:method:: paddleslim.TableLatencyPredictor.predict(model_file, param_file, data_type, threads, input_shape)
 
@@ -57,6 +38,10 @@ TableLatencyPredictor
   -  **data_type(str)** - 推理模型的数据类型：‘fp32’或‘int8’。
   -  **threads(int)** - 设置预估多少线程数下的延时。目前只支持4线程，后续将支持更多线程数。
   -  **input_shape(list)** - 当模型为可变长输入时，该参数设置其输入形状。目前，暂不支持使用该参数控制模型输入，需在保存推理模型时设置确切的输入形状。
+
+  **返回：** 
+
+  -  **latency(float)** - 推理模型在指定设备上的延时。
 
   **示例代码：**
 
