@@ -26,11 +26,13 @@ from ..common import get_logger
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program
 from .strategy_config import ProgramInfo, merge_config
 
-
 _logger = get_logger(__name__, level=logging.INFO)
 
+
 class AutoCompression:
-    def __init__(self, model_dir, model_filename, params_filename, save_dir, strategy_config, train_config, train_dataloader, eval_callback):
+    def __init__(self, model_dir, model_filename, params_filename, save_dir,
+                 strategy_config, train_config, train_dataloader,
+                 eval_callback):
         ### model_dir(str): 模型路径
         ### model_filename(str): 模型文件名称
         ### params_filename(str): 参数文件名称
@@ -59,7 +61,7 @@ class AutoCompression:
         print("self._places: ", self._places)
 
     def _prepare_envs(self):
-        devices = "gpu" #paddle.get_device()
+        devices = "gpu"  #paddle.get_device()
         print(devices)
         places = paddle.device._convert_to_place(devices)
         exe = paddle.static.Executor(places)
@@ -67,11 +69,15 @@ class AutoCompression:
 
     def _prepare_strategy(self):
         quant_config = self.strategy_config.get("QuantizationConfig", None)
-        hpo_config = self.strategy_config.get("HyperParameterOptimizationConfig", None)
+        hpo_config = self.strategy_config.get(
+            "HyperParameterOptimizationConfig", None)
         prune_config = self.strategy_config.get("PruneConfig", None)
-        unstructure_prune_config = self.strategy_config.get("UnstructurePruneConfig", None)
-        single_teacher_distill_config = self.strategy_config.get("DistillationConfig", None)
-        multi_teacher_distill_config = self.strategy_config.get("MultiTeacherDistillationConfig", None)
+        unstructure_prune_config = self.strategy_config.get(
+            "UnstructurePruneConfig", None)
+        single_teacher_distill_config = self.strategy_config.get(
+            "DistillationConfig", None)
+        multi_teacher_distill_config = self.strategy_config.get(
+            "MultiTeacherDistillationConfig", None)
 
         assert (single_teacher_distill_config is None) or (multi_teacher_distill_config is None), \
             "DistillationConfig and MultiTeacherDistillationConfig cannot be set at the same time."
@@ -97,7 +103,8 @@ class AutoCompression:
         ### case4: unstructure_config & distill config
         elif unstructure_prune_config is not None and self._distill_config is not None:
             strategy = 'unstructure_prune_dis'
-            config = merge_config(unstructure_prune_config, self._distill_config)
+            config = merge_config(unstructure_prune_config,
+                                  self._distill_config)
 
         ### case4: distill_config
         elif self._distill_config is not None:
@@ -110,48 +117,64 @@ class AutoCompression:
 
         ### case N: todo
         else:
-            raise NotImplementedError("Not Implemented and be set at the same time now")
+            raise NotImplementedError(
+                "Not Implemented and be set at the same time now")
 
         return strategy, config
 
     def _prepare_program(self, program, feed_target_names, fetch_targets):
         train_program = recover_inference_program(program)
         startup_program = paddle.static.Program()
-        train_program_info = ProgramInfo(startup_program, train_program, feed_target_names, fetch_targets)
+        train_program_info = ProgramInfo(startup_program, train_program,
+                                         feed_target_names, fetch_targets)
 
         config_dict = dict(self._config._asdict())
         ### add prune program
         self._pruner = None
         if 'prune' in self._strategy:
-            self._pruner, train_program_info = build_prune_program(self._exe, self._places, config_dict, train_program_info, self._strategy)
+            self._pruner, train_program_info = build_prune_program(
+                self._exe, self._places, config_dict, train_program_info,
+                self._strategy)
 
         ### add distill program
         if 'dis' in self._strategy:
-            train_program_info, test_program_info = build_distill_program(self._exe, self._places, config_dict, self.train_config._asdict(), train_program_info, pruner=self._pruner)
+            train_program_info, test_program_info = build_distill_program(
+                self._exe,
+                self._places,
+                config_dict,
+                self.train_config._asdict(),
+                train_program_info,
+                pruner=self._pruner)
 
         self._quant_config = None
         ### add quant_aware program, quant alway last step
         if 'qat' in self._strategy:
-            train_program_info, test_program_info, self._quant_config = build_quant_program(self._exe, self._places, config_dict, train_program_info, test_program_info)
+            train_program_info, test_program_info, self._quant_config = build_quant_program(
+                self._exe, self._places, config_dict, train_program_info,
+                test_program_info)
 
         self._exe.run(train_program_info.startup_program)
 
         if 'prune_algo' in config_dict and config_dict['prune_algo'] == 'asp':
             ### prune weight in scope
-            self._pruner.prune_model(self._place, train_program_info.program) 
+            self._pruner.prune_model(self._place, train_program_info.program)
 
-        train_program_info = self._compiled_program(train_program_info, self._strategy)
-        test_program_info = self._compiled_program(test_program_info, self._strategy)
+        train_program_info = self._compiled_program(train_program_info,
+                                                    self._strategy)
+        test_program_info = self._compiled_program(test_program_info,
+                                                   self._strategy)
         return train_program_info, test_program_info
 
-
     def _prepare_eval(self, eval_callback):
-        if isinstance(eval_callback, Iterable) or inspect.isgeneratorfunction(eval_callback):
+        if isinstance(eval_callback,
+                      Iterable) or inspect.isgeneratorfunction(eval_callback):
             return 'eval_dataloader'
         elif inspect.isfunction(eval_callback):
             return 'eval_callback'
         else:
-            raise NotImplementedError("eval_callback must be a callback or a Iterable object, but this is {}".format(type(eval_callback)))
+            raise NotImplementedError(
+                "eval_callback must be a callback or a Iterable object, but this is {}".
+                format(type(eval_callback)))
 
     def _compiled_program(self, program_info, strategy):
         compiled_prog = paddle.static.CompiledProgram(program_info.program)
@@ -173,24 +196,31 @@ class AutoCompression:
     def compression(self):
         ### start compression, including train/eval model
         if self._strategy == 'ptq_hpo':
-           quant_post_hpo(self._exe, self._places, model_dir=self.model_dir, quantize_model_path=self.save_dir,
-                          train_dataloader=self.train_dataloader, 
-                          eval_dataloader=self.eval_dataloader, eval_function=self.eval_function,
-                          model_filename=self.model_filename, params_filename=self.params_filename,
-                          save_model_filename=self.model_filename, save_params_filename=self.params_filename,
-                          quantizable_op_type=self._config.quantize_op_types,
-                          weight_bits=self._config.weight_bits,
-                          activation_bits=self._config.activation_bits,
-                          weight_quantize_type=self._config.weight_quantize_type,
-                          is_full_quantize=self._config.is_full_quantize,
-                          algo=self._config.ptq_algo,
-                          bias_correct=self._config.bias_correct,
-                          hist_percent=self._config.hist_percent,
-                          batch_size=self._config.batch_size,
-                          batch_num=self._config.batch_num,
-                          runcount_limit=self._config.max_quant_count)
+            quant_post_hpo(
+                self._exe,
+                self._places,
+                model_dir=self.model_dir,
+                quantize_model_path=self.save_dir,
+                train_dataloader=self.train_dataloader,
+                eval_dataloader=self.eval_dataloader,
+                eval_function=self.eval_function,
+                model_filename=self.model_filename,
+                params_filename=self.params_filename,
+                save_model_filename=self.model_filename,
+                save_params_filename=self.params_filename,
+                quantizable_op_type=self._config.quantize_op_types,
+                weight_bits=self._config.weight_bits,
+                activation_bits=self._config.activation_bits,
+                weight_quantize_type=self._config.weight_quantize_type,
+                is_full_quantize=self._config.is_full_quantize,
+                algo=self._config.ptq_algo,
+                bias_correct=self._config.bias_correct,
+                hist_percent=self._config.hist_percent,
+                batch_size=self._config.batch_size,
+                batch_num=self._config.batch_num,
+                runcount_limit=self._config.max_quant_count)
 
-        else: 
+        else:
             assert 'dis' in self._strategy, "Only support optimizer compressed model by distillation loss."
 
             ### convert a inference program to train program
@@ -201,20 +231,24 @@ class AutoCompression:
 
             ### used to check whether the dataloader is right
             if self.eval_function is not None:
-                metric = self.eval_function(self._exe, self._places, inference_program, feed_target_names,
-                          fetch_targets)
+                metric = self.eval_function(self._exe, self._places,
+                                            inference_program,
+                                            feed_target_names, fetch_targets)
                 _logger.info("metric of compressed model is: {}".format(metric))
                 buf = 0.05
                 if metric < (float(self.train_config.origin_metric) - buf) or \
                         metric > (float(self.train_config.origin_metric) + buf):
                     raise RuntimeError("target metric of pretrained model is {}, \
                           but now is {}, Please check the format of evaluation dataset \
-                          or check the origin_metric in train_config".format(\
+                          or check the origin_metric in train_config"
+                                                                     .format(\
                           self.train_config.origin_metric, metric))
 
-            train_program_info, test_program_info = self._prepare_program(inference_program, feed_target_names, fetch_targets)
+            train_program_info, test_program_info = self._prepare_program(
+                inference_program, feed_target_names, fetch_targets)
 
-            test_program_info = self._start_train(train_program_info, test_program_info)
+            test_program_info = self._start_train(train_program_info,
+                                                  test_program_info)
             self._save_model(test_program_info)
 
     def _start_train(self, train_program_info, test_program_info):
@@ -233,7 +267,8 @@ class AutoCompression:
                 else:
                     logging_iter = self.train_config.logging_iter
                 if batch_id % int(logging_iter) == 0:
-                    _logger.info("epoch: {}, batch: {}, loss: {}".format(epoch_id, batch_id, np_probs_float))
+                    _logger.info("epoch: {}, batch: {}, loss: {}".format(
+                        epoch_id, batch_id, np_probs_float))
 
                 if batch_id % int(self.train_config.eval_iter) == 0:
                     if self.eval_function is not None:
@@ -242,28 +277,34 @@ class AutoCompression:
                         if 'unstructure' in self._strategy:
                             self._pruner.update_params()
 
-                        metric = self.eval_function(self._exe, self._places, test_program_info.program, test_program_info.feed_target_names,
-                                  test_program_info.fetch_targets)
+                        metric = self.eval_function(
+                            self._exe, self._places, test_program_info.program,
+                            test_program_info.feed_target_names,
+                            test_program_info.fetch_targets)
 
-                        _logger.info("epoch: {}, batch: {} metric of compressed model is: {}".format(epoch_id, batch_id, metric))
+                        _logger.info(
+                            "epoch: {}, batch: {} metric of compressed model is: {}".
+                            format(epoch_id, batch_id, metric))
                         if metric > best_metric:
                             paddle.static.save(
                                 program=test_program_info.program._program,
-                                model_path=os.path.join(
-                                    self.save_dir, 'best_model'))
+                                model_path=os.path.join(self.save_dir,
+                                                        'best_model'))
                         if self.train_config.target_metric is not None:
                             if metric > float(self.train_config.target_metric):
                                 return
 
                     else:
-                        raise NotImplementedError("Please support eval function")
+                        raise NotImplementedError(
+                            "Please support eval function")
 
         if 'qat' in self._strategy:
             ### load best model to save
             float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \
                                           scope=paddle.static.global_scope(), \
                                           save_int8=True)
-            test_program_info = test_program_info._replace(program = float_program)
+            test_program_info = test_program_info._replace(
+                program=float_program)
         return test_program_info
 
     def _save_model(self, test_program_info):

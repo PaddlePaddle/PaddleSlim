@@ -21,7 +21,10 @@ from ..common import get_logger
 from .strategy_config import ProgramInfo
 
 _logger = get_logger(__name__, level=logging.INFO)
-__all__ = ['build_distill_program', 'build_quant_program', 'build_prune_program']
+__all__ = [
+    'build_distill_program', 'build_quant_program', 'build_prune_program'
+]
+
 
 def _create_optimizer(train_config):
     """create optimizer"""
@@ -30,6 +33,7 @@ def _create_optimizer(train_config):
         learning_rate=train_config["learning_rate"],
         weight_decay=paddle.regularizer.L2Decay(train_config["weight_decay"]))
     return optimizer
+
 
 def _parse_distill_loss(distill_node_pair):
     """parse distill loss config"""
@@ -43,6 +47,7 @@ def _parse_distill_loss(distill_node_pair):
                                 distill_node_pair[i * 2 + 1])
     return distill_loss
 
+
 def _load_program_and_merge(train_program, config, teacher_idx=None):
     [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
         path_prefix=teacher_model_dir, \
@@ -53,9 +58,6 @@ def _load_program_and_merge(train_program, config, teacher_idx=None):
 
     test_program = train_program.clone(for_test=True)
 
-    ############################################################################
-    # distill
-    ############################################################################
     data_name_map = {}
     assert len(feed_target_names) == len(teacher_feed_target_names), \
         "the number of feed nodes in the teacher model is not equal to the student model"
@@ -67,10 +69,22 @@ def _load_program_and_merge(train_program, config, teacher_idx=None):
     else:
         teacher_name_prefix = 'teacher{}_'.format(str(teacher_idx))
 
-    merge(teacher_program, train_program, data_name_map, place, name_prefix=teacher_name_prefix, merge_feed=config['merge_feed'])
+    merge(
+        teacher_program,
+        train_program,
+        data_name_map,
+        place,
+        name_prefix=teacher_name_prefix,
+        merge_feed=config['merge_feed'])
     return train_program
 
-def build_distill_program(executor, place, config, train_config, train_program_info=None, pruner=None):
+
+def build_distill_program(executor,
+                          place,
+                          config,
+                          train_config,
+                          train_program_info=None,
+                          pruner=None):
     """build distill program with infermodel"""
     if train_program_info is None:
         [train_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
@@ -85,12 +99,16 @@ def build_distill_program(executor, place, config, train_config, train_program_i
         feed_target_names = train_program_info.feed_target_names
         fetch_targets = train_program_info.fetch_targets
 
-    teacher_model_dir = config["teacher_model_dir"] if "teacher_model_dir" in config else config["teacher_model_path_prefix"]
+    teacher_model_dir = config[
+        "teacher_model_dir"] if "teacher_model_dir" in config else config[
+            "teacher_model_path_prefix"]
     if isinstance(teacher_model_dir, list):
         for tea_idx in range(len(teacher_model_dir)):
-            train_program = _load_program_and_merge(train_program, config, teacher_idx=(tea_idx+1))
+            train_program = _load_program_and_merge(
+                train_program, config, teacher_idx=(tea_idx + 1))
     else:
-        train_program = _load_program_and_merge(train_program, config, teacher_idx=None)
+        train_program = _load_program_and_merge(
+            train_program, config, teacher_idx=None)
     # all feed node should set stop_gradient is False, for using pact quant algo.
     for var in train_program.list_vars():
         if var.name in data_name_map.values() or var.name in data_name_map.keys(
@@ -110,19 +128,23 @@ def build_distill_program(executor, place, config, train_config, train_program_i
                 if config['prune_algo'] == 'asp':
                     optimizer = pruner.decorate(optimizer)
                 optimizer.minimize(loss)
-            elif 'prune_strategy' in config: ###unstructure prune
+            elif 'prune_strategy' in config:  ###unstructure prune
                 optimizer.minimize(loss, no_grad_set=pruner.no_grad_set)
             else:
                 optimizer.minimize(loss)
 
             train_fetch_list.append(loss)
 
-    train_program_info = ProgramInfo(startup_program, train_program, feed_target_names, train_fetch_list, optimizer)
-    test_program_info = ProgramInfo(startup_program, test_program, feed_target_names, fetch_targets)
+    train_program_info = ProgramInfo(startup_program, train_program,
+                                     feed_target_names, train_fetch_list,
+                                     optimizer)
+    test_program_info = ProgramInfo(startup_program, test_program,
+                                    feed_target_names, fetch_targets)
     return train_program_info, test_program_info
 
 
-def build_quant_program(executor, place, config, train_program_info, test_program_info):
+def build_quant_program(executor, place, config, train_program_info,
+                        test_program_info):
     scope = paddle.static.global_scope()
 
     assert isinstance(config, dict), "quant config must be dict"
@@ -141,7 +163,7 @@ def build_quant_program(executor, place, config, train_program_info, test_progra
         pact_executor = None
 
     test_program = quant_aware(
-        test_program_info.program, 
+        test_program_info.program,
         place,
         config,
         scope=scope,
@@ -161,58 +183,65 @@ def build_quant_program(executor, place, config, train_program_info, test_progra
         for_test=False,
         return_program=True)
 
-    train_program_info = train_program_info._replace(program = train_program)
-    test_program_info = test_program_info._replace(program = test_program)    
+    train_program_info = train_program_info._replace(program=train_program)
+    test_program_info = test_program_info._replace(program=test_program)
     return train_program_info, test_program_info, config
+
 
 def build_prune_program(executor, place, config, train_program_info, strategy):
     if 'unstructure' in strategy:
         from ..prune.unstructured_pruner import UnstructuredPruner, GMPUnstructuredPruner
         if config["prune_strategy"] is None:
-            pruner = UnstructuredPruner(train_program_info.program, 
-                           mode=config['prune_mode'],
-                           ratio=config['prune_ratio'],
-                           threshold=config['threshold'],
-                           prune_params_type=config['prune_params_type'],
-                           place=place,
-                           local_sparsity=config['local_sparsity'],
-                           )
+            pruner = UnstructuredPruner(
+                train_program_info.program,
+                mode=config['prune_mode'],
+                ratio=config['prune_ratio'],
+                threshold=config['threshold'],
+                prune_params_type=config['prune_params_type'],
+                place=place,
+                local_sparsity=config['local_sparsity'], )
         elif config["prune_strategy"] == "gmp":
-            pruner = GMPUnstructuredPruner(train_program_info.program,
-                           ratio=config['prune_ratio'],
-                           threshold=config['threshold'],
-                           prune_params_type=config['prune_params_type'],
-                           place=place,
-                           local_sparsity=config['local_sparsity'],
-                           config=config['gmp_config']
-                           )
+            pruner = GMPUnstructuredPruner(
+                train_program_info.program,
+                ratio=config['prune_ratio'],
+                threshold=config['threshold'],
+                prune_params_type=config['prune_params_type'],
+                place=place,
+                local_sparsity=config['local_sparsity'],
+                config=config['gmp_config'])
     else:
         if config['prune_algo'] == 'prune':
             from ..prune import Pruner
             pruner = Pruner(config["criterion"])
             params = []
             ### TODO: fix
-            for param in train_program_info.program.global_block().all_parameters():
+            for param in train_program_info.program.global_block(
+            ).all_parameters():
                 if param.name in config['prune_params_name']:
                     params.append(param.name)
 
-            pruned_program, _, _= pruner.prune(
+            pruned_program, _, _ = pruner.prune(
                 val_program,
                 paddle.static.global_scope(),
                 params=params,
                 ratios=config['pruned_ratio'] * len(params),
                 place=place)
-            train_program_info = train_program_info._replace(program=pruned_program)
+            train_program_info = train_program_info._replace(
+                program=pruned_program)
 
         elif config['prune_algo'] == 'asp':
             from paddle.static import sparsity
             excluded_params_name = []
-            for param in train_program_info.program.global_block().all_parameters(): 
+            for param in train_program_info.program.global_block(
+            ).all_parameters():
                 if param.name not in config['prune_params_name']:
                     excluded_params_name.append(param.name)
-            sparsity.set_excluded_layers(train_program_info.program, excluded_params_name)
+            sparsity.set_excluded_layers(train_program_info.program,
+                                         excluded_params_name)
             pruner = sparsity
         else:
-            raise NotImplementedError("prune_algo must be choice in [\"prune\", \"asp\"], {} is not support".format(config['prune_algo']))
+            raise NotImplementedError(
+                "prune_algo must be choice in [\"prune\", \"asp\"], {} is not support".
+                format(config['prune_algo']))
 
     return pruner, train_program_info
