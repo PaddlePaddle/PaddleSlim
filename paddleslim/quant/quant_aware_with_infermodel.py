@@ -24,13 +24,11 @@ import shutil
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid import unique_name
-from paddle.fluid import core
-from paddle.fluid.framework import Parameter
-from paddleslim.dist import merge, l2_loss, soft_label_loss, fsp_loss
-from paddleslim.core import GraphWrapper
-from paddleslim.quant import quant_aware, convert
+from ..common.recover_program import recover_inference_program
 from .quanter import _quant_config_default, _parse_configs, pact, get_pact_optimizer
+from .quanter import quant_aware, convert
+from ..dist import merge, l2_loss, soft_label_loss, fsp_loss
+from ..source_free.create_compressed_program import build_distill_program
 import logging
 logging.getLogger().setLevel(logging.INFO)
 from ..common import get_logger
@@ -101,140 +99,6 @@ def _parse_train_configs(train_config):
         "'distill_node_pair' distillation nodes need to be configured in pairs"
     return train_config
 
-
-def _create_optimizer(train_config):
-    """create optimizer"""
-    optimizer = paddle.optimizer.SGD(
-        learning_rate=train_config["learning_rate"],
-        weight_decay=paddle.regularizer.L2Decay(train_config["weight_decay"]))
-    return optimizer
-
-
-def _remove_fetch_node(program):
-    """remove fetch node in program"""
-    for block in program.blocks:
-        removed = 0
-        ops = list(block.ops)
-        for op in ops:
-            if op.type == "fetch":
-                idx = ops.index(op)
-                block._remove_op(idx - removed)
-                removed += 1
-
-
-def _recover_reserve_space_with_bn(program):
-    """Add the outputs which is only used for training and not saved in
-       inference program."""
-    for block_idx in six.moves.range(program.num_blocks):
-        block = program.block(block_idx)
-        for op in block.ops:
-            if op.type == "batch_norm":
-                if "ReserveSpace" not in op.output_names or len(
-                        op.output("ReserveSpace")) == 0:
-                    reserve_space = block.create_var(
-                        name=unique_name.generate_with_ignorable_key(".".join(
-                            ["reserve_space", 'tmp'])),
-                        dtype=block.var(op.input("X")[0]).dtype,
-                        type=core.VarDesc.VarType.LOD_TENSOR,
-                        persistable=False,
-                        stop_gradient=True)
-                    op.desc.set_output("ReserveSpace", [reserve_space.name])
-    return program
-
-
-def _recover_param_attr(program):
-    """recover parameters attribute. 
-       Params in infermodel are stored in the form of variable, which can not be trained."""
-    all_weights = [param for param in program.list_vars() \
-        if param.persistable is True and param.name != 'feed' and param.name != 'fetch']
-    for w in all_weights:
-        new_w = Parameter(
-            block=program.block(0),
-            shape=w.shape,
-            dtype=w.dtype,
-            type=w.type,
-            name=w.name)
-        new_w.set_value(w.get_value())
-        program.block(0).vars[w.name] = new_w
-    return program
-
-
-def _parse_distill_loss(train_config):
-    """parse distill loss config"""
-    assert len(train_config["distill_node_pair"]) % 2 == 0, \
-        "distill_node_pair config wrong, the length needs to be an even number"
-    print("train config.distill_node_pair: ", train_config["distill_node_pair"])
-    distill_loss = 0
-    for i in range(len(train_config["distill_node_pair"]) // 2):
-        print(train_config["distill_node_pair"][i * 2],
-              train_config["distill_node_pair"][i * 2 + 1])
-        distill_loss += l2_loss(train_config["distill_node_pair"][i * 2],
-                                train_config["distill_node_pair"][i * 2 + 1])
-    return distill_loss
-
-DistillProgramInfo = namedtuple("DistillProgramInfo", \
-    "startup_program train_program train_feed_names train_fetch_list \
-     optimizer test_program test_feed_names test_fetch_list"
-                                                            )
-
-
-def build_distill_prog_with_infermodel(executor, place, train_config):
-    """build distill program with infermodel"""
-    [train_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
-        path_prefix=train_config["model_path_prefix"], \
-        executor=executor)
-    _remove_fetch_node(train_program)
-    [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
-        path_prefix=train_config["teacher_model_path_prefix"], \
-        executor=executor)
-    _remove_fetch_node(teacher_program)
-    test_program = train_program.clone(for_test=True)
-
-    train_program = _recover_param_attr(train_program)
-    train_program = _recover_reserve_space_with_bn(train_program)
-    for var in train_program.list_vars():
-        var.stop_gradient = False
-    train_graph = GraphWrapper(train_program)
-    for op in train_graph.ops():
-        op._op._set_attr("is_test", False)
-
-    ############################################################################
-    # distill
-    ############################################################################
-    data_name_map = {}
-    assert len(feed_target_names) == len(teacher_feed_target_names), \
-        "the number of feed nodes in the teacher model is not equal to the student model"
-    for i, name in enumerate(feed_target_names):
-        data_name_map[teacher_feed_target_names[i]] = name
-    merge(teacher_program, train_program, data_name_map, place)
-
-    # all feed node should set stop_gradient is False, for using pact quant algo.
-    for var in train_program.list_vars():
-        if var.name in data_name_map.values() or var.name in data_name_map.keys(
-        ):
-            var.stop_gradient = False
-
-    train_fetch_list = []
-    train_fetch_name_list = []
-    startup_program = paddle.static.Program()
-    with paddle.static.program_guard(train_program, startup_program):
-        with fluid.unique_name.guard('merge'):
-            optimizer = _create_optimizer(train_config)
-
-            distill_loss = _parse_distill_loss(train_config)
-            loss = paddle.mean(distill_loss)
-            loss.stop_gradient = False
-            p_g_list = paddle.static.append_backward(loss=loss)
-            opts = optimizer.apply_gradients(p_g_list)
-
-            train_fetch_list.append(loss)
-            train_fetch_name_list.append(loss.name)
-
-    return DistillProgramInfo(startup_program, train_program, \
-        feed_target_names, train_fetch_list, optimizer, \
-        test_program, feed_target_names, fetch_targets)
-
-
 def _compile_program(program, fetch_var_name):
     """compiling program"""
     compiled_prog = paddle.static.CompiledProgram(program)
@@ -249,7 +113,6 @@ def _compile_program(program, fetch_var_name):
         build_strategy=build_strategy,
         exec_strategy=exec_strategy)
     return compiled_prog
-
 
 def quant_aware_with_infermodel(executor,
                                 place,
@@ -294,16 +157,16 @@ def quant_aware_with_infermodel(executor,
     _logger.info("quant_aware config {}".format(quant_config))
 
     train_config = _parse_train_configs(train_config)
-    distill_program_info = build_distill_prog_with_infermodel(executor, place,
+    distill_program_info, test_program_info = build_distill_program(executor, place,
                                                               train_config)
     startup_program = distill_program_info.startup_program
-    train_program = distill_program_info.train_program
-    train_feed_names = distill_program_info.train_feed_names
-    train_fetch_list = distill_program_info.train_fetch_list
+    train_program = distill_program_info.program
+    train_feed_names = distill_program_info.feed_target_names
+    train_fetch_list = distill_program_info.fetch_targets
     optimizer = distill_program_info.optimizer
-    test_program = distill_program_info.test_program
-    test_feed_names = distill_program_info.test_feed_names
-    test_fetch_list = distill_program_info.test_fetch_list
+    test_program = test_program_info.program
+    test_feed_names = test_program_info.feed_target_names
+    test_fetch_list = test_program_info.fetch_targets
 
     ############################################################################
     # quant
@@ -412,11 +275,10 @@ def export_quant_infermodel(
     _logger.info("quant_aware config {}".format(quant_config))
 
     train_config = _parse_train_configs(train_config)
-    distill_program_info = build_distill_prog_with_infermodel(executor, place,
-                                                              train_config)
-    test_program = distill_program_info.test_program
-    test_feed_names = distill_program_info.test_feed_names
-    test_fetch_list = distill_program_info.test_fetch_list
+    _, test_program_info = build_distill_program(executor, place, train_config)
+    test_program = test_program_info.program
+    test_feed_names = test_program_info.feed_target_names
+    test_fetch_list = test_program_info.fetch_targets
 
     ############################################################################
     # quant
