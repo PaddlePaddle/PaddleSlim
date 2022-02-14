@@ -53,7 +53,7 @@ class TableLatencyPredictor(LatencyPredictor):
     """The preditor used to get pbmodel's latency on some devices and infer engines.
 
     Args:
-        table_file(str): The path of file that records the devices latency of operators.
+        table_file(str): The path of file that records the device latency of operators.
     """
 
     def __init__(self, table_file='SD710'):
@@ -78,7 +78,7 @@ class TableLatencyPredictor(LatencyPredictor):
 
         assert os.path.exists(
             self.table_file
-        ), f'{self.table_file} is not existed. If you want to use our table files, please set \'table_file\' in [SD625, SD710, SD845, SD865]'
+        ), f'{self.table_file} does not exist. If you want to use our table files, please set \'table_file\' in [SD625, SD710, SD845, SD865]'
         with open(self.table_file, 'rb') as f:
             self.table_dict = pickle.load(f)
 
@@ -95,7 +95,7 @@ class TableLatencyPredictor(LatencyPredictor):
         with open(self.table_file, 'rb') as f:
             self.table_dict = pickle.load(f)
 
-        print('Successfully load {}'.format(self.table_file))
+        print('Successfully loaded {}'.format(self.table_file))
 
     def _get_input_shape(self, graph):
         in_shape = []
@@ -118,7 +118,7 @@ class TableLatencyPredictor(LatencyPredictor):
             model_file(str), param_file(str): The inference model(*.pdmodel, *.pdiparams).
             data_type(str): Data type, fp32 or int8. Default : fp32
             threads(int): threads num
-            input_shape(list): Generally, the input shape is confirmed when saving the inference model and the parameter is only effective for variable length input shape.
+            input_shape(list): Generally, the input shape is confirmed when saving the inference model and the parameter is only effective for input shape that has variable length.
         Returns:
             latency(float): The latency of the model.
         """
@@ -142,7 +142,7 @@ class TableLatencyPredictor(LatencyPredictor):
 
         if input_shape != None:
             ori_shape = self._get_input_shape(graph)
-            assert ori_shape == input_shape, "The parameter \'input_shape\' dosn't work now. The input shape is confirmed when saving the inference model"
+            assert ori_shape == input_shape, "The parameter \'input_shape\' dosn't work for now. The input shape is fixed when saving the inference model"
 
         latency = 0.0
         for op in graph.ops():
