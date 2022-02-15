@@ -69,6 +69,7 @@ class Optimizer(object):
         self.step = int(
             math.ceil(float(self.total_images) / self.batch_size) / devices_num)
 
+        
     def cosine_decay(self):
         """cosine decay with Momentum optimizer
 
