@@ -7,6 +7,7 @@ import functools
 import math
 import time
 import numpy as np
+import random
 from collections import defaultdict
 
 sys.path.append(os.path.dirname("__file__"))
@@ -64,6 +65,7 @@ add_arg('use_pact',          bool, True,
         "Whether to use PACT or not.")
 add_arg('analysis',          bool, False,
         "Whether analysis variables distribution.")
+add_arg('ce_test',                 bool,   False,       "Whether to CE test.")
 
 # yapf: enable
 
@@ -108,6 +110,16 @@ def create_optimizer(args):
 
 
 def compress(args):
+    num_workers = 4
+    shuffle = True
+    if args.ce_test:
+        # set seed
+        seed = 111
+        paddle.seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        num_workers = 0
+        shuffle = False
 
     if args.data == "mnist":
         train_dataset = paddle.vision.datasets.MNIST(mode='train')
@@ -160,8 +172,8 @@ def compress(args):
         return_list=False,
         batch_size=args.batch_size,
         use_shared_memory=True,
-        shuffle=True,
-        num_workers=4)
+        shuffle=shuffle,
+        num_workers=num_workers)
 
     valid_loader = paddle.io.DataLoader(
         val_dataset,

@@ -195,6 +195,17 @@ class UnstructuredPruner():
             v_mask = (v_param != 0).astype(v_param.dtype)
             t_mask.set(v_mask, self.place)
 
+    def set_static_masks(self):
+        for param in self.masks:
+            if not self._should_prune_param(param):
+                continue
+            mask_name = self.masks[param]
+            t_param = self.scope.find_var(param).get_tensor()
+            t_mask = self.scope.find_var(mask_name).get_tensor()
+            v_param = np.array(t_param)
+            v_mask = (v_param != 0).astype(v_param.dtype)
+            t_mask.set(v_mask, self.place)
+
     def step(self):
         """
         Update the threshold and masks.
@@ -254,7 +265,6 @@ class UnstructuredPruner():
             if 'norm' in op.type() and 'grad' not in op.type():
                 for input in op.all_inputs():
                     skip_params.add(input.name())
-        print(skip_params)
         return skip_params
 
     def _get_skip_params_conv1x1(self, program):
@@ -350,6 +360,7 @@ class GMPUnstructuredPruner(UnstructuredPruner):
         self.cur_iteration = configs.get('resume_iteration')
 
         assert self.pruning_iterations / self.pruning_steps > 10, "To guarantee the performance of GMP pruner, pruning iterations must be larger than pruning steps by a margin."
+        self._need_prune_once = False
         self._prepare_training_hyper_parameters()
 
     def _prepare_training_hyper_parameters(self):
@@ -376,6 +387,7 @@ class GMPUnstructuredPruner(UnstructuredPruner):
 
         # pop out used ratios to resume training
         for i in range(self.cur_iteration):
+            self._need_prune_once = True
             if len(self.
                    ratios_stack) > 0 and i % self.ratio_increment_period == 0:
                 self.ratio = self.ratios_stack.pop()
@@ -393,7 +405,8 @@ class GMPUnstructuredPruner(UnstructuredPruner):
 
         # Update the threshold and masks only when a new ratio has been set.
         # This condition check would save training time dramatically since we only update the threshold by the triger of self.ratio_increment_period.
-        if ori_ratio != self.ratio:
+        if ori_ratio != self.ratio or self._need_prune_once:
             self.update_threshold()
             self._update_masks()
+            self._need_prune_once = False
         self.cur_iteration += 1

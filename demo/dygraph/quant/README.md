@@ -41,9 +41,9 @@ quant_config = {
 
 - `'activation_preprocess_type'`：代表对量化模型激活值预处理的方法，目前支持PACT方法，如需使用可以改为'PACT'；默认为None，代表不对激活值进行任何预处理。
 
-- `weight_quantize_type`：代表模型权重的量化方式，可选的有['abs_max', 'moving_average_abs_max', 'channel_wise_abs_max']，默认为channel_wise_abs_max
+- `weight_quantize_type`：代表模型权重的量化方式，可选的有['abs_max', 'channel_wise_abs_max']，默认为channel_wise_abs_max
 
-- `activation_quantize_type`：代表模型激活值的量化方式，可选的有['abs_max', 'moving_average_abs_max']，默认为moving_average_abs_max
+- `activation_quantize_type`：代表模型激活值的量化方式，可选的有['moving_average_abs_max']，默认为moving_average_abs_max
 
 - `quantizable_layer_type`：代表量化OP的类型，目前支持Conv2D和Linear
 

@@ -14,6 +14,7 @@
 
 import numpy as np
 import paddle
+from paddleslim.core import GraphWrapper
 
 
 def merge(teacher_program,
@@ -93,6 +94,16 @@ def merge(teacher_program,
                     attrs[attr_name] = op.attr(attr_name)
                 student_program.global_block().append_op(
                     type=op.type, inputs=inputs, outputs=outputs, attrs=attrs)
+
+    student_graph = GraphWrapper(student_program)
+    for op in student_graph.ops():
+        belongsto_teacher = False
+        for inp in op.all_inputs():
+            if 'teacher' in inp.name():
+                belongsto_teacher = True
+                break
+        if belongsto_teacher:
+            op._op._set_attr("skip_quant", True)
 
 
 def fsp_loss(teacher_var1_name,
