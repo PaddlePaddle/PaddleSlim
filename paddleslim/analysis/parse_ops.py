@@ -234,6 +234,24 @@ def get_key_from_op(op):
 
         param_key = f'{op_type} in={in_shape} out={out_shape} paddings={paddings}'
 
+    elif op_type == 'arg_max':
+        in_shape = op.all_inputs()[-1].shape()
+        out_shape = op.all_outputs()[0].shape()
+        axis = op.attr('axis')
+
+        param_key = f'{op_type} in={in_shape} axis={axis}  out={out_shape}'
+
+    elif op_type == 'fill_constant_batch_size_like':
+        in_shape = op.all_inputs()[-1].shape()
+        out_shape = op.all_outputs()[0].shape()
+        shape = op.attr('shape')
+        param_key = f'{op_type} in={in_shape} shape={shape}  out={out_shape}'
+
+    elif op_type == 'rnn':
+        out_shape = op.all_outputs()[1].shape()
+        in_shape = op.all_inputs()[0].shape()
+        param_key = f'{op_type} in={in_shape} out={out_shape}'
+
     elif op_type in ['feed', 'fetch']:
         pass
 
