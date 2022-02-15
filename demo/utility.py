@@ -261,6 +261,7 @@ def _decompress(fname):
     shutil.rmtree(fpath_tmp)
     os.remove(fname)
 
+    
 def _move_and_merge_tree(src, dst):
     """
     Move src directory to dst, if dst is already exists,
