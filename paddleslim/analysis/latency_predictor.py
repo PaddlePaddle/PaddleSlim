@@ -169,18 +169,13 @@ class TableLatencyPredictor(LatencyPredictor):
                 latency += self.table_dict[param_key]
             elif self.predictor_state:
                 latency += self.op_predictor(op.type(), param_key, data_type)
-            else:
-                # raise AssertionError(f'{param_key} is not in the table.')
-                if op.type() in new_op:
-                    new_op[op.type()] += 1
-                else:
-                    new_op.update({op.type(): 1})
-        warnings.warn(
-            "These ops are not currently supported. Please raise an issue in PaddleSlim if you find the CalledTimes is large enough to affect the accuracy."
-        )
-        warnings.warn("OperatorType\tCalledTimes")
-        for key in new_op:
-            warnings.warn(f"{key.ljust(15)}\t{new_op[key]}")
+        if len(new_op) != 0:
+            warnings.warn(
+                "These ops are not currently supported. Please raise an issue in PaddleSlim if you find the CalledTimes is large enough to affect the accuracy."
+            )
+            warnings.warn("OperatorType\tCalledTimes")
+            for key in new_op:
+                warnings.warn(f"{key.ljust(15)}\t{new_op[key]}")
 
         return latency
 
