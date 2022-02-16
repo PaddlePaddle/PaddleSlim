@@ -140,6 +140,8 @@ class ModelCase6(paddle.nn.Layer):
         self.relu1 = ReLU()
         self.fc1 = paddle.nn.Linear(3 * 16 * 16, 3 * 16 * 16)
         self.dp = paddle.nn.Dropout(p=0.5)
+        self.lstm = paddle.nn.LSTM(
+            1536, 10, direction='bidirectional', num_layers=2)
 
     def forward(self, inputs):
         x = self.bn1(inputs)
@@ -149,17 +151,24 @@ class ModelCase6(paddle.nn.Layer):
         x = self.relu1(x)
         y = paddle.fluid.layers.fill_constant(
             x.shape, dtype=paddle.float32, value=1)
-        x = paddle.stack([x, y], axis=3)
+        # x = paddle.stack([x, y], axis=3)
         x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
         x = paddle.exp(x)
-        y += paddle.fluid.layers.uniform_random(y.shape)
+        # y += paddle.fluid.layers.uniform_random(y.shape)
         y = paddle.expand(y, shape=[1, 768, 768, 2])
         x = paddle.expand(x, shape=[1, 768, 768, 2])
         out = paddle.concat([x, y])
         out = self.dp(out)
         out = channel_shuffle(out, 2)
         out1, out2 = paddle.split(out, num_or_sections=2, axis=1)
-        return out1, out2
+        outshape = out1.shape
+        max_idx = paddle.argmax(
+            out1.reshape((outshape[0], outshape[1], outshape[2] * outshape[3])),
+            axis=-1)
+        out2 = out2.reshape(
+            (outshape[0], outshape[1], outshape[2] * outshape[3]))
+        res, _ = self.lstm(out2)
+        return res, max_idx
 
 
 class ModelCase7(paddle.nn.Layer):

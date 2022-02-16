@@ -37,9 +37,9 @@ tar -xf mobilenetv1.tar
 ### 2.2 预估推理延时
 构造 TableLatencyPredictor 类实例，并调用 predict 函数预估推理模型的延时。
 ```
-import paddleslim
+from paddleslim.analysis import TableLatencyPredictor
 
-predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
+predictor = TableLatencyPredictor(table_file='SD710')
 latency = predictor.predict(model_file='mobilenetv1_fp32.pdmodel', param_file='mobilenetv1_fp32.pdiparams, data_type='fp32')
 print('predicted latency = {}ms'.format(latency))
 ```
@@ -58,9 +58,9 @@ print('predicted latency = {}ms'.format(latency))
 ### 3.2 支持预估 INT8 模型
 延时预估器支持对 INT8 量化模型进行延时预估，仅需提供 INT8 量化保存的推理模型文件，并将在调用 predict 函数时，设置 data_type='int8'，如下所示：
 ```
-import paddleslim
+from paddleslim.analysis import TableLatencyPredictor
 
-predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
+predictor = TableLatencyPredictor(table_file='SD710')
 predictor.predict(model_file='mobilenetv1_int8.pdmodel', param_file='mobilenetv1_int8.pdiparams, data_type='int8')
 ```
 
