@@ -256,8 +256,6 @@ def get_key_from_op(op):
         pass
 
     else:
-        print(op)
-        print(op._op)
-        raise KeyError(f'The "{op_type}" has never seen.')
+        param_key = None
 
     return param_key

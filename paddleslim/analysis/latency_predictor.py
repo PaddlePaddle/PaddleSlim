@@ -23,7 +23,16 @@ from .extract_features import get_data_from_tables, get_features_from_paramkey
 from ._utils import opt_model, load_predictor, nearest_interpolate
 import paddle
 import paddleslim
+import warnings
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
+
+
+def format_Warning(message, category, filename, lineno, line=''):
+    return str(filename) + ':' + str(
+        lineno) + ': ' + category.__name__ + ': ' + str(message) + '\n'
+
+
+warnings.formatwarning = format_Warning
 
 
 class LatencyPredictor(object):
@@ -145,16 +154,33 @@ class TableLatencyPredictor(LatencyPredictor):
             assert ori_shape == input_shape, "The parameter \'input_shape\' dosn't work for now. The input shape is fixed when saving the inference model"
 
         latency = 0.0
+        new_op = {}
         for op in graph.ops():
             param_key = get_key_from_op(op)
             if param_key == '':
+                continue
+            if param_key == None:
+                if op.type() in new_op:
+                    new_op[op.type()] += 1
+                else:
+                    new_op.update({op.type(): 1})
                 continue
             if param_key in self.table_dict:
                 latency += self.table_dict[param_key]
             elif self.predictor_state:
                 latency += self.op_predictor(op.type(), param_key, data_type)
             else:
-                raise AssertionError(f'{param_key} is not in the table.')
+                # raise AssertionError(f'{param_key} is not in the table.')
+                if op.type() in new_op:
+                    new_op[op.type()] += 1
+                else:
+                    new_op.update({op.type(): 1})
+        warnings.warn(
+            "These ops are not currently supported. Please raise an issue in PaddleSlim if you find the CalledTimes is large enough to affect the accuracy."
+        )
+        warnings.warn("OperatorType\tCalledTimes")
+        for key in new_op:
+            warnings.warn(f"{key.ljust(15)}\t{new_op[key]}")
 
         return latency
 

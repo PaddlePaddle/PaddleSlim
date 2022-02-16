@@ -49,7 +49,7 @@ def get_data_from_tables(table_dict, op_type, data_type='fp32'):
 def get_features_from_paramkey(param_key, op_type, data_type):
     """Get op's parameters according to the key of latency table
     """
-    features = []
+    features = None
 
     if 'conv2d' in op_type:
         flag_quant = 'quant=None' if data_type == 'fp32' else 'quant=True'
