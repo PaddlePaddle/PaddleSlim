@@ -214,7 +214,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
         for i in range(len(X)):
             if X[i] == '':
                 continue
-            features[i - 1] = int(X[i])
+            features[i] = int(X[i])
         for i in range(0, len(Y)):
             if len(Y) == 4 and i == 0:
                 continue

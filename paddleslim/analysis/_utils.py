@@ -248,7 +248,7 @@ def download_predictor(op_dir, op):
 def load_predictor(op_type, op_dir, data_type='fp32'):
     op = op_type
     if 'conv2d' in op_type:
-        op = 'conv2d_' + data_type
+        op = f'{op_type}_{data_type}'
     elif 'matmul' in op_type:
         op = 'matmul'
 

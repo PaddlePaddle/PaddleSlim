@@ -7,9 +7,10 @@
 ## 1. 准备环境
 ### 1.1 版本要求
 ```bash
-python>=3.7
+python==3.7\3.9
 PaddleSlim>=2.3.0
 ```
+> 注：在 macOS 环境下要求 python==3.9; linux 环境下要求 python==3.7\3.9
 ### 1.2 安装 PaddleSlim
 * 通过 pip install 的方式进行安装:
 ```bash
@@ -40,7 +41,7 @@ tar -xf mobilenetv1.tar
 from paddleslim.analysis import TableLatencyPredictor
 
 predictor = TableLatencyPredictor(table_file='SD710')
-latency = predictor.predict(model_file='mobilenetv1_fp32.pdmodel', param_file='mobilenetv1_fp32.pdiparams, data_type='fp32')
+latency = predictor.predict(model_file='mobilenetv1_fp32.pdmodel', param_file='mobilenetv1_fp32.pdiparams', data_type='fp32')
 print('predicted latency = {}ms'.format(latency))
 ```
 通过设置 table_file 来指定硬件信息，当前支持“SD625”、“SD710”、“SD845”三款骁龙芯片。
@@ -61,7 +62,7 @@ print('predicted latency = {}ms'.format(latency))
 from paddleslim.analysis import TableLatencyPredictor
 
 predictor = TableLatencyPredictor(table_file='SD710')
-predictor.predict(model_file='mobilenetv1_int8.pdmodel', param_file='mobilenetv1_int8.pdiparams, data_type='int8')
+predictor.predict(model_file='mobilenetv1_int8.pdmodel', param_file='mobilenetv1_int8.pdiparams', data_type='int8')
 ```
 
 ## 4. 预估效果
