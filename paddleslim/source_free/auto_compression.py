@@ -30,9 +30,16 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 
 class AutoCompression:
-    def __init__(self, model_dir, model_filename, params_filename, save_dir,
-                 strategy_config, train_config, train_dataloader,
-                 eval_callback):
+    def __init__(self,
+                 model_dir,
+                 model_filename,
+                 params_filename,
+                 save_dir,
+                 strategy_config,
+                 train_config,
+                 train_dataloader,
+                 eval_callback,
+                 devices='gpu'):
         ### model_dir(str): 模型路径
         ### model_filename(str): 模型文件名称
         ### params_filename(str): 参数文件名称
@@ -57,12 +64,10 @@ class AutoCompression:
             self.eval_dataloader = None
 
         self._strategy, self._config = self._prepare_strategy()
-        self._exe, self._places = self._prepare_envs()
+        self._exe, self._places = self._prepare_envs(devices)
         print("self._places: ", self._places)
 
-    def _prepare_envs(self):
-        devices = "gpu"  #paddle.get_device()
-        print(devices)
+    def _prepare_envs(self, devices):
         places = paddle.device._convert_to_place(devices)
         exe = paddle.static.Executor(places)
         return exe, places

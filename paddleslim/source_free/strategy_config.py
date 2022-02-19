@@ -16,8 +16,8 @@ from collections import namedtuple
 
 __all__ = [
     "QuantizationConfig", "DistillationConfig", "MultiTeacherDistillationConfig", \
-    "HyperParameterOptimizationConfig", "PruneConfig", "TrainConfig",
-    "merge_config", "ProgramInfo"
+    "HyperParameterOptimizationConfig", "PruneConfig", "UnstructurePruneConfig",  \
+    "merge_config", "ProgramInfo", "TrainConfig",
 ]
 
 ### QuantizationConfig:
@@ -28,12 +28,12 @@ QuantizationConfig = namedtuple(
         "weight_bits",
         "activation_bits",
         "not_quant_pattern",  ### ptq没有暴露相应接口，需要确定是否支持
-        "is_full_quantize",
-        "use_pact"  ### 仅QAT支持
+        "use_pact",  ### 仅QAT支持
+        "is_full_quantize"
     ])
 
-QuantizationConfig.__new__.__defaults__ = (
-    None, ) * len(QuantizationConfig._fields)
+QuantizationConfig.__new__.__defaults__ = (None, ) * (
+    len(QuantizationConfig._fields) - 1) + (False, )
 
 ### DistillationConfig:
 DistillationConfig = namedtuple(
@@ -48,8 +48,8 @@ DistillationConfig = namedtuple(
         "merge_feed",
     ])
 
-DistillationConfig.__new__.__defaults__ = (
-    None, ) * len(DistillationConfig._fields)
+DistillationConfig.__new__.__defaults__ = (None, ) * (
+    len(DistillationConfig._fields) - 1) + (True, )
 
 ### 多teacher蒸馏配置
 ### Multi-Teacher DistillationConfig：
@@ -59,24 +59,25 @@ MultiTeacherDistillationConfig = namedtuple(
         "distill_loss",  ### list[str]，每个teacher对应一个loss
         "distill_node_pair",  ### list[list]，每个teacher对应一个蒸馏。仅支持logits蒸馏，不支持中间层蒸馏
         "distill_lambda",  ### list[float]，每个teacher对应一个lambda。
+        "teacher_model_dir",
         "teacher_model_filename",  ### list[str], 每个teacher对应一个模型文件
-        "teacher_param_filename",  ### list[str], 每个teacher对应一个参数文件
+        "teacher_params_filename",  ### list[str], 每个teacher对应一个参数文件
         "merge_feed",
     ])
 
-MultiTeacherDistillationConfig.__new__.__defaults__ = (
-    None, ) * len(MultiTeacherDistillationConfig._fields)
+MultiTeacherDistillationConfig.__new__.__defaults__ = (None, ) * (
+    len(MultiTeacherDistillationConfig._fields) - 1) + (True, )
 
 ### 不设置就按照默认的搜索空间进行超参搜索，设置的话按照设置的搜索空间搜索，这样可以支持单PTQ策略
-###HyperParameterOptimizationConfig:
+###HyperParameterOptimizationConfig
 HyperParameterOptimizationConfig = namedtuple(
     "HyperParameterOptimizationConfig", [
         "ptq_algo", "bias_correct", "weight_quantize_type", "hist_percent",
         "batch_size", "batch_num", "max_quant_count"
     ])
 
-HyperParameterOptimizationConfig.__new__.__defaults__ = (
-    None, ) * len(HyperParameterOptimizationConfig._fields)
+HyperParameterOptimizationConfig.__new__.__defaults__ = (None, ) * (
+    len(HyperParameterOptimizationConfig._fields) - 1) + (20, )
 
 ### PruneConfig
 PruneConfig = namedtuple(

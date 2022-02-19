@@ -50,17 +50,33 @@ def _create_optimizer(train_config):
     return op
 
 
-def _parse_distill_loss(distill_node_pair):
+def _parse_distill_loss(distill_node_pair,
+                        distill_loss='l2_loss',
+                        distill_lambda=1.0):
     """parse distill loss config"""
-    assert len(distill_node_pair) % 2 == 0, \
-        "distill_node_pair config wrong, the length needs to be an even number"
-    _logger.info("train config.distill_node_pair: {}".format(distill_node_pair))
-    distill_loss = 0
-    for i in range(len(distill_node_pair) // 2):
-        ### TODO: support more loss
-        distill_loss += l2_loss(distill_node_pair[i * 2],
-                                distill_node_pair[i * 2 + 1])
-    return distill_loss
+    distill_loss = 0.0
+    losses = []
+    if isinstance([distill_node_pair[0]], str):
+        assert isinstance(distill_loss, str)
+        assert isinstance(distill_lambda, float)
+        distill_node_pair = [distill_node_pair]
+        distill_loss = [distill_loss]
+        distill_lambda = [distill_lambda]
+
+    assert len(distill_node_pair) == len(distill_loss)
+    assert len(distill_node_pair) == len(distill_lambda)
+    for node, loss, lam in zip(distill_node_pair, distill_loss, distill_lambda):
+        tmp_loss = 0.0
+        _logger.info("train config.distill_node_pair: {}".format(node, loss,
+                                                                 lam))
+        assert len(node) % 2 == 0, \
+            "distill_node_pair config wrong, the length needs to be an even number"
+        for i in range(len(node) // 2):
+            tmp_loss += eval(loss)(node[i * 2], node[i * 2 + 1])
+        distill_loss += lam * tmp_loss
+        losses.append(tmp_loss)
+
+    return distill_loss, losses
 
 
 def _load_program_and_merge(executor,
