@@ -8,15 +8,9 @@ import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
 import imagenet_reader as reader
 from paddleslim.source_free.auto_compression import AutoCompression
-from paddleslim.source_free.strategy_config import QuantizationConfig, DistillationConfig, MultiTeacherDistillationConfig, HyperParameterOptimizationConfig, TrainConfig
+from paddleslim.source_free.strategy_config import *
 
-default_qat_config = {
-    "quantize_op_types": ["conv2d", "depthwise_conv2d"],
-    "weight_bits": 8,
-    "activation_bits": 8,
-    "is_full_quantize": False,
-    "not_quant_pattern": ["skip_quant"],
-}
+default_prune_config = {"prune_algo": "asp", }
 
 default_distill_config = {
     "distill_loss": 'L2',
@@ -110,9 +104,9 @@ ac = AutoCompression(
     model_dir='./MobileNetV2_ssld_infer',
     model_filename='inference',
     params_filename='inference',
-    save_dir='./mbv2_qat_distill_output',
+    save_dir='./mbv2_asp_distill_output',
     strategy_config={
-        "QuantizationConfig": QuantizationConfig(**default_qat_config),
+        "PruneConfig": PruneConfig(**default_prune_config),
         "DistillationConfig": DistillationConfig(**default_distill_config)
     },
     train_config=TrainConfig(**default_train_config),

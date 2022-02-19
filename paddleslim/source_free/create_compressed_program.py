@@ -14,6 +14,7 @@
 
 import logging
 import paddle
+import paddle.optimizer as optimizer
 from ..quant.quanter import quant_aware, _quant_config_default, _parse_configs, pact, get_pact_optimizer
 from ..dist import *
 from ..common.recover_program import _remove_fetch_node
@@ -28,11 +29,25 @@ __all__ = [
 
 def _create_optimizer(train_config):
     """create optimizer"""
-    ### TODO: support more optimizer
-    optimizer = paddle.optimizer.SGD(
-        learning_rate=train_config["learning_rate"],
-        weight_decay=paddle.regularizer.L2Decay(train_config["weight_decay"]))
-    return optimizer
+    opt = getattr(optimizer, train_config['optimizer'])
+    if train_config['optim_args'] is not None and 'grad_clip' in train_config[
+            'optim_args'] and train_config['optim_args'][
+                'grad_clip'] is not None:
+        grad_clip = getattr(paddle.nn, train_config['optim_args']['grad_clip'])(
+            **train_config['optim_args']['grad_clip_args'])
+        train_config['optim_args'].pop('grad_clip')
+        train_config['optim_args'].pop('grad_clip_args')
+    else:
+        grad_clip = None
+        if 'grad_clip' in train_config['optim_args'] and train_config[
+                'optim_args']['grad_clip'] is None:
+            train_config['optim_args'].pop('grad_clip')
+            train_config['optim_args'].pop('grad_clip_args')
+
+    op = opt(learning_rate=train_config["learning_rate"],
+             grad_clip=grad_clip,
+             **train_config['optim_args'])
+    return op
 
 
 def _parse_distill_loss(distill_node_pair):
@@ -48,21 +63,32 @@ def _parse_distill_loss(distill_node_pair):
     return distill_loss
 
 
-def _load_program_and_merge(train_program, config, teacher_idx=None):
+def _load_program_and_merge(executor,
+                            place,
+                            train_program,
+                            config,
+                            model_dir,
+                            model_filename,
+                            params_filename,
+                            teacher_idx=None,
+                            feed_target_names=None):
     [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
-        path_prefix=teacher_model_dir, \
-        model_filename=config["teacher_model_filename"] if "teacher_model_filename" in config else None, \
-        params_filename=config["teacher_params_filename"] if "teacher_params_filename" in config else None, \
+        path_prefix=model_dir, \
+        model_filename=model_filename, \
+        params_filename=params_filename, \
         executor=executor)
     _remove_fetch_node(teacher_program)
 
-    test_program = train_program.clone(for_test=True)
+    if teacher_idx == None or teacher_idx == 1:
+        test_program = train_program.clone(for_test=True)
 
     data_name_map = {}
-    assert len(feed_target_names) == len(teacher_feed_target_names), \
-        "the number of feed nodes in the teacher model is not equal to the student model"
-    for i, name in enumerate(feed_target_names):
-        data_name_map[teacher_feed_target_names[i]] = name
+
+    if config['merge_feed'] == True:
+        assert len(feed_target_names) == len(teacher_feed_target_names), \
+            "the number of feed nodes in the teacher model is not equal to the student model"
+        for i, name in enumerate(feed_target_names):
+            data_name_map[teacher_feed_target_names[i]] = name
 
     if teacher_idx is None:
         teacher_name_prefix = 'teacher_'
@@ -76,7 +102,10 @@ def _load_program_and_merge(train_program, config, teacher_idx=None):
         place,
         name_prefix=teacher_name_prefix,
         merge_feed=config['merge_feed'])
-    return train_program
+    if teacher_idx == None or teacher_idx == 1:
+        return train_program, test_program, data_name_map
+    else:
+        return train_program, None, data_name_map
 
 
 def build_distill_program(executor,
@@ -104,11 +133,48 @@ def build_distill_program(executor,
             "teacher_model_path_prefix"]
     if isinstance(teacher_model_dir, list):
         for tea_idx in range(len(teacher_model_dir)):
-            train_program = _load_program_and_merge(
-                train_program, config, teacher_idx=(tea_idx + 1))
+            model_filename = config["teacher_model_filename"][
+                tea_idx] if "teacher_model_filename" in config else None
+            params_filename = config["teacher_params_filename"][
+                tea_idx] if "teacher_params_filename" in config else None
+            if tea_idx == 0:
+                train_program, test_program, data_name_map = _load_program_and_merge(
+                    executor,
+                    place,
+                    train_program,
+                    config,
+                    teacher_model_dir[tea_idx],
+                    model_filename,
+                    params_filename,
+                    teacher_idx=(tea_idx + 1),
+                    feed_target_names=feed_target_names)
+            else:
+                train_program, _, data_name_map = _load_program_and_merge(
+                    executor,
+                    place,
+                    train_program,
+                    config,
+                    teacher_model_dir[tea_idx],
+                    model_filename,
+                    params_filename,
+                    teacher_idx=(tea_idx + 1),
+                    feed_target_names=feed_target_names)
+
     else:
-        train_program = _load_program_and_merge(
-            train_program, config, teacher_idx=None)
+        model_filename = config[
+            "teacher_model_filename"] if "teacher_model_filename" in config else None
+        params_filename = config[
+            "teacher_params_filename"] if "teacher_params_filename" in config else None
+        train_program, test_program, data_name_map = _load_program_and_merge(
+            executor,
+            place,
+            train_program,
+            config,
+            teacher_model_dir,
+            model_filename,
+            params_filename,
+            teacher_idx=None,
+            feed_target_names=feed_target_names)
     # all feed node should set stop_gradient is False, for using pact quant algo.
     for var in train_program.list_vars():
         if var.name in data_name_map.values() or var.name in data_name_map.keys(
@@ -183,8 +249,10 @@ def build_quant_program(executor, place, config, train_program_info,
         for_test=False,
         return_program=True)
 
-    train_program_info = train_program_info._replace(program=train_program)
-    test_program_info = test_program_info._replace(program=test_program)
+    ###train_program_info = train_program_info._replace(program=train_program)
+    ###test_program_info = test_program_info._replace(program=test_program)
+    train_program_info.program = train_program
+    test_program_info.program = test_program
     return train_program_info, test_program_info, config
 
 
@@ -195,7 +263,7 @@ def build_prune_program(executor, place, config, train_program_info, strategy):
             pruner = UnstructuredPruner(
                 train_program_info.program,
                 mode=config['prune_mode'],
-                ratio=config['prune_ratio'],
+                ratio=config['pruned_ratio'],
                 threshold=config['threshold'],
                 prune_params_type=config['prune_params_type'],
                 place=place,
@@ -203,7 +271,7 @@ def build_prune_program(executor, place, config, train_program_info, strategy):
         elif config["prune_strategy"] == "gmp":
             pruner = GMPUnstructuredPruner(
                 train_program_info.program,
-                ratio=config['prune_ratio'],
+                ratio=config['pruned_ratio'],
                 threshold=config['threshold'],
                 prune_params_type=config['prune_params_type'],
                 place=place,
@@ -214,31 +282,35 @@ def build_prune_program(executor, place, config, train_program_info, strategy):
             from ..prune import Pruner
             pruner = Pruner(config["criterion"])
             params = []
-            ### TODO: fix
             for param in train_program_info.program.global_block(
             ).all_parameters():
-                if param.name in config['prune_params_name']:
+                if config[
+                        'prune_params_name'] is not None and param.name in config[
+                            'prune_params_name']:
                     params.append(param.name)
 
             pruned_program, _, _ = pruner.prune(
-                val_program,
+                train_program_info.program,
                 paddle.static.global_scope(),
                 params=params,
-                ratios=config['pruned_ratio'] * len(params),
+                ratios=[config['pruned_ratio']] * len(params),
                 place=place)
-            train_program_info = train_program_info._replace(
-                program=pruned_program)
+            ###train_program_info = train_program_info._replace(
+            ###    program=pruned_program)
+            train_program_info.program = pruned_program
 
         elif config['prune_algo'] == 'asp':
             from paddle.static import sparsity
+            pruner = sparsity
             excluded_params_name = []
             for param in train_program_info.program.global_block(
             ).all_parameters():
-                if param.name not in config['prune_params_name']:
+                if config[
+                        'prune_params_name'] is not None and param.name not in config[
+                            'prune_params_name']:
                     excluded_params_name.append(param.name)
-            sparsity.set_excluded_layers(train_program_info.program,
-                                         excluded_params_name)
-            pruner = sparsity
+            pruner.set_excluded_layers(train_program_info.program,
+                                       excluded_params_name)
         else:
             raise NotImplementedError(
                 "prune_algo must be choice in [\"prune\", \"asp\"], {} is not support".

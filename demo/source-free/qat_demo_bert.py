@@ -18,35 +18,36 @@ from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import Mcc, PearsonAndSpearman
 
 default_qat_config = {
-   "quantize_op_types": ["conv2d", "depthwise_conv2d"],
-   "weight_bits": 8,
-   "activation_bits": 8,
-   "is_full_quantize": False,
-   "not_quant_pattern": ["skip_quant"],
+    "quantize_op_types": ["conv2d", "depthwise_conv2d", "mul", "matmul"],
+    "weight_bits": 8,
+    "activation_bits": 8,
+    "is_full_quantize": False,
+    "not_quant_pattern": ["skip_quant"],
 }
 
 default_distill_config = {
-"distill_loss": 'L2',
-"distill_node_pair": ["teacher_tmp_9", "tmp_9", "teacher_tmp_12", "tmp_12",\
+    "distill_loss": 'L2',
+    "distill_node_pair": ["teacher_tmp_9", "tmp_9", "teacher_tmp_12", "tmp_12",\
         "teacher_tmp_15", "tmp_15", "teacher_tmp_18", "tmp_18", \
         "teacher_tmp_21", "tmp_21", "teacher_tmp_24", "tmp_24", \
         "teacher_tmp_27", "tmp_27", "teacher_tmp_30", "tmp_30", \
         "teacher_tmp_33", "tmp_33", "teacher_tmp_36", "tmp_36", \
         "teacher_tmp_39", "tmp_39", "teacher_tmp_42", "tmp_42", \
         "teacher_linear_147.tmp_1", "linear_147.tmp_1"],
-"distill_lambda": 1.0,
-"teacher_model_dir": "./static_bert_models",
-"teacher_model_filename": 'bert',
-"teacher_params_filename": 'bert',
+    "distill_lambda": 1.0,
+    "teacher_model_dir": "./static_bert_models",
+    "teacher_model_filename": 'bert',
+    "teacher_params_filename": 'bert',
+    "merge_feed": True,
 }
 
 default_train_config = {
-"epochs": 1,
-"optimizer": "SGD",
-"learning_rate": 0.0001,
-"weight_decay": 0.00004,
-"eval_iter": 1000,
-"origin_metric": 0.93,
+    "epochs": 3,
+    "optimizer": "SGD",
+    "learning_rate": 1e-4,
+    "weight_decay": 0.00004,
+    "eval_iter": 1000,
+    "origin_metric": 0.93,
 }
 
 METRIC_CLASSES = {
@@ -60,6 +61,7 @@ METRIC_CLASSES = {
 
 paddle.enable_static()
 paddle.set_device("gpu")
+
 
 def convert_example(example,
                     tokenizer,
@@ -105,6 +107,7 @@ def create_data_holder(task_name):
         label = paddle.static.data(name="label", shape=[-1, 1], dtype="int64")
 
     return [input_ids, token_type_ids, label]
+
 
 def reader():
     # Create the tokenizer and dataset
@@ -167,12 +170,17 @@ train_dataloader, eval_dataloader = reader()
 metric_class = METRIC_CLASSES['sst-2']
 metric = metric_class()
 
-def eval_function(exe, place, compiled_test_program, test_feed_names, test_fetch_list):
+
+def eval_function(exe, place, compiled_test_program, test_feed_names,
+                  test_fetch_list):
     metric.reset()
     for data in eval_dataloader():
         logits = exe.run(compiled_test_program,
-                       feed={test_feed_names[0]: data[0]['input_ids'], test_feed_names[1]: data[0]['token_type_ids']},
-                       fetch_list=test_fetch_list)
+                         feed={
+                             test_feed_names[0]: data[0]['input_ids'],
+                             test_feed_names[1]: data[0]['token_type_ids']
+                         },
+                         fetch_list=test_fetch_list)
         paddle.disable_static()
         labels_pd = paddle.to_tensor(np.array(data[0]['label']))
         logits_pd = paddle.to_tensor(logits[0])
@@ -183,13 +191,17 @@ def eval_function(exe, place, compiled_test_program, test_feed_names, test_fetch
     return res
 
 
-ac = AutoCompression(model_dir='./static_bert_models', 
-                     model_filename='bert', 
-                     params_filename='bert', 
-                     save_dir='./bert_qat_distill_output', 
-                     strategy_config={"QuantizationConfig": QuantizationConfig(**default_qat_config), 
-                     "DistillationConfig": DistillationConfig(**default_distill_config)}, 
-                     train_config=TrainConfig(**default_train_config),
-                     train_dataloader=train_dataloader, eval_callback=eval_function)
+ac = AutoCompression(
+    model_dir='./static_bert_models',
+    model_filename='bert',
+    params_filename='bert',
+    save_dir='./bert_qat_distill_output',
+    strategy_config={
+        "QuantizationConfig": QuantizationConfig(**default_qat_config),
+        "DistillationConfig": DistillationConfig(**default_distill_config)
+    },
+    train_config=TrainConfig(**default_train_config),
+    train_dataloader=train_dataloader,
+    eval_callback=eval_function)
 
 ac.compression()

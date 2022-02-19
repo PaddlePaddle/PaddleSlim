@@ -83,10 +83,11 @@ PruneConfig = namedtuple(
     "PruneConfig",
     [
         "prune_algo",  ### prune, asp
-        "prune_ratio",
+        "pruned_ratio",
         "prune_params_name",
         "criterion",
     ])
+PruneConfig.__new__.__defaults__ = (None, ) * len(PruneConfig._fields)
 
 ### UnstructurePruneConfig
 UnstructurePruneConfig = namedtuple("UnstructurePruneConfig", [
@@ -100,16 +101,16 @@ UnstructurePruneConfig = namedtuple("UnstructurePruneConfig", [
     "prune_params_type",
     "local_sparsity",
 ])
-
-PruneConfig.__new__.__defaults__ = (None, ) * len(PruneConfig._fields)
+UnstructurePruneConfig.__new__.__defaults__ = (
+    None, ) * len(UnstructurePruneConfig._fields)
 
 ### TrainConfig
 TrainConfig = namedtuple("TrainConfig", [
     "epochs",
     "optimizer",
+    "optim_args",
     "learning_rate",
     "lr_decay",
-    "weight_decay",
     "eval_iter",
     "logging_iter",
     "origin_metric",
@@ -129,8 +130,20 @@ def merge_config(*args):
     return MergeConfig(**cfg)
 
 
-ProgramInfo = namedtuple("ProgramInfo", [
-    "startup_program", "program", "feed_target_names", "fetch_targets",
-    "optimizer"
-])
-ProgramInfo.__new__.__defaults__ = (None, ) * len(ProgramInfo._fields)
+#ProgramInfo = namedtuple("ProgramInfo", [
+#    "startup_program", "program", "feed_target_names", "fetch_targets",
+#    "optimizer"
+#])
+#ProgramInfo.__new__.__defaults__ = (None, ) * len(ProgramInfo._fields)
+class ProgramInfo:
+    def __init__(self,
+                 startup_program,
+                 program,
+                 feed_target_names,
+                 fetch_targets,
+                 optimizer=None):
+        self.startup_program = startup_program
+        self.program = program
+        self.feed_target_names = feed_target_names
+        self.fetch_targets = fetch_targets
+        self.optimizer = optimizer

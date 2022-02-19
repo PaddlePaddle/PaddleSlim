@@ -157,7 +157,7 @@ class AutoCompression:
 
         if 'prune_algo' in config_dict and config_dict['prune_algo'] == 'asp':
             ### prune weight in scope
-            self._pruner.prune_model(self._place, train_program_info.program)
+            self._pruner.prune_model(train_program_info.program)
 
         train_program_info = self._compiled_program(train_program_info,
                                                     self._strategy)
@@ -190,7 +190,8 @@ class AutoCompression:
             loss_name=program_info.fetch_targets[0].name,
             build_strategy=build_strategy,
             exec_strategy=exec_strategy)
-        program_info = program_info._replace(program=compiled_prog)
+        program_info.program = compiled_prog
+        #program_info = program_info._replace(program=compiled_prog)
         return program_info
 
     def compression(self):
@@ -303,14 +304,18 @@ class AutoCompression:
             float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \
                                           scope=paddle.static.global_scope(), \
                                           save_int8=True)
-            test_program_info = test_program_info._replace(
-                program=float_program)
+            ###test_program_info = test_program_info._replace(
+            ###    program=float_program)
+            test_program_info.program = float_program
         return test_program_info
 
     def _save_model(self, test_program_info):
+        test_program = test_program_info.program._program if isinstance(
+            test_program_info.program,
+            paddle.static.CompiledProgram) else test_program_info.program
         feed_vars = []
         for name in test_program_info.feed_target_names:
-            for var in test_program_info.program.list_vars():
+            for var in test_program.list_vars():
                 if var.name == name:
                     feed_vars.append(var)
                     break
@@ -320,4 +325,4 @@ class AutoCompression:
             feed_vars=feed_vars,
             fetch_vars=test_program_info.fetch_targets,
             executor=self._exe,
-            program=test_program_info.program)
+            program=test_program)
