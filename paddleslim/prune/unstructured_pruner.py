@@ -32,18 +32,22 @@ class UnstructuredPruner():
                  place=None,
                  prune_params_type=None,
                  skip_params_func=None,
-                 local_sparsity=False):
+                 local_sparsity=False,
+                 sparse_block=[1,1]):
         self.mode = mode
         self.ratio = ratio
         self.threshold = threshold
         self.local_sparsity = local_sparsity
         self.thresholds = {}
+        self.sparse_block = sparse_block
         assert self.mode in [
             'ratio', 'threshold'
         ], "mode must be selected from 'ratio' and 'threshold'"
         assert prune_params_type is None or prune_params_type == 'conv1x1_only', "prune_params_type only supports None or conv1x1_only for now."
         if self.local_sparsity:
             assert self.mode == 'ratio', "We don't support local_sparsity==True and mode=='threshold' at the same time, please change the inputs accordingly."
+        assert len(sparse_block)==2 and sparse_block[0] > 0 and sparse_block[1] > 0 and isinstance(sparse_block[0], int) and isinstance(sparse_block[1], int), "Please make sure you provide a valid sparse block, in which there are two positive integers."
+
         self.scope = paddle.static.global_scope() if scope == None else scope
         self.place = paddle.static.cpu_places()[0] if place is None else place
 
@@ -108,6 +112,15 @@ class UnstructuredPruner():
             d_masks[_param.name] = _mask.name
         return d_masks
 
+    def _cal_mxn_avg_matrix(self, mat, m=1, n=1):
+        avg_mat = np.zeros_like(mat)
+        rows = len(mat) // m + 1
+        cols = len(mat[0]) // n + 1
+        for row in range(rows):
+            for col in range(cols):
+                avg_mat[m*row: m*row+m, n*col: n*col+n] = np.mean(mat[m*row: m*row+m, n*col: n*col+n])
+        return avg_mat
+
     def summarize_weights(self, program, ratio=0.1):
         """
         The function is used to get the weights corresponding to a given ratio
@@ -161,6 +174,9 @@ class UnstructuredPruner():
                 continue
             t_param = self.scope.find_var(param).get_tensor()
             v_param = np.array(t_param)
+            if (self.sparse_block[0]*self.sparse_block[1]/v_param.size >= 0.05):
+                print("Your sparse block size {} might be too large for the param {} with shape {}, the sparsity of this param might not be precise. Please decrease your sparse block size if possible.".format(self.sparse_block, param.name, param.shape))
+            v_param = self._cal_mxn_avg_matrix(v_param, m=self.sparse_block[0], n=self.sparse_block[1])
             if self.local_sparsity:
                 cur_threshold = self._partition_sort(v_param.flatten())
                 self.thresholds[param] = cur_threshold
@@ -188,10 +204,11 @@ class UnstructuredPruner():
             t_param = self.scope.find_var(param).get_tensor()
             t_mask = self.scope.find_var(mask_name).get_tensor()
             v_param = np.array(t_param)
+            v_param_avg = self._cal_mxn_avg_matrix(v_param, m=self.sparse_block[0], n=self.sparse_block[1])
             if self.local_sparsity:
-                v_param[np.abs(v_param) < self.thresholds[param]] = 0
+                v_param[np.abs(v_param_avg) < self.thresholds[param]] = 0
             else:
-                v_param[np.abs(v_param) < self.threshold] = 0
+                v_param[np.abs(v_param_avg) < self.threshold] = 0
             v_mask = (v_param != 0).astype(v_param.dtype)
             t_mask.set(v_mask, self.place)
 
@@ -281,7 +298,7 @@ class UnstructuredPruner():
         return skip_params
 
     @staticmethod
-    def total_sparse_conv1x1(program):
+    def total_sparse_conv1x1(program, m=1, n=1):
         """
         The function is used to get the model's spasity for all the 1x1 convolutional weights.
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
@@ -291,6 +308,16 @@ class UnstructuredPruner():
         Returns:
           - sparsity(float): the model's sparsity.
         """
+        def _check_mxn_sparsity(mat, m=1, n=1):
+            rows = len(mat) // m + 1
+            cols = len(mat[0]) // n + 1
+            zeros_count = 0
+            for row in range(rows):
+                for col in range(cols):
+                    sub_array = mat[m*row: m*row+m, n*col: n*col+n]
+                    if np.all((sub_array == 0)) and sub_array.size > 0:
+                        zeros_count += m * n
+            return zeros_count / np.prod(mat.shape)
         total = 0
         values = 0
         for param in program.all_parameters():
@@ -301,6 +328,10 @@ class UnstructuredPruner():
             values += np.count_nonzero(
                 np.array(paddle.static.global_scope().find_var(param.name)
                          .get_tensor()))
+            t_param = paddle.static.global_scope().find_var(param.name).get_tensor()
+            v_param = np.array(t_param)
+            spa = _check_mxn_sparsity(v_param, m, n)
+            print(param.shape, param.name, spa)
         sparsity = 1 - float(values) / total
         return sparsity
 
@@ -344,12 +375,13 @@ class GMPUnstructuredPruner(UnstructuredPruner):
                  prune_params_type=None,
                  skip_params_func=None,
                  local_sparsity=False,
+                 sparse_block=[1,1],
                  configs=None):
         assert configs is not None, "Please pass in a valid config dictionary."
 
         super(GMPUnstructuredPruner, self).__init__(
             program, 'ratio', ratio, 0.0, scope, place, prune_params_type,
-            skip_params_func, local_sparsity)
+            skip_params_func, local_sparsity, sparse_block)
         self.stable_iterations = configs.get('stable_iterations')
         self.pruning_iterations = configs.get('pruning_iterations')
         self.tunning_iterations = configs.get('tunning_iterations')
