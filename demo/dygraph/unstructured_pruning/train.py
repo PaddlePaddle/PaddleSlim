@@ -35,6 +35,7 @@ add_arg('pruning_mode',            str,  'ratio',               "the pruning mod
 add_arg('threshold',            float,  0.01,               "The threshold to set zeros. Default: 0.01")
 add_arg('num_epochs',       int,  120,               "The number of total epochs. Default: 120")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
+parser.add_argument('--sparse_block', nargs='+', type=int, default=[1, 1], help="The values inside the block are either all zeros or the original. [1, 1] means unstructured pruning")
 add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'. Default: imagenet")
 add_arg('log_period',       int, 100,                 "Log period in batches. Default: 100")
 add_arg('test_period',      int, 5,                 "Test period in epoches. Default: 5")
@@ -100,13 +101,15 @@ def create_unstructured_pruner(model, args, configs=None):
             ratio=args.ratio,
             threshold=args.threshold,
             prune_params_type=args.prune_params_type,
-            local_sparsity=args.local_sparsity)
+            local_sparsity=args.local_sparsity,
+            sparse_block=args.sparse_block)
     else:
         return GMPUnstructuredPruner(
             model,
             ratio=args.ratio,
             prune_params_type=args.prune_params_type,
             local_sparsity=args.local_sparsity,
+            sparse_block=args.sparse_block,
             configs=configs)
 
 
