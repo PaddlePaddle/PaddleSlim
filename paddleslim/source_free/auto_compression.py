@@ -19,6 +19,7 @@ import numpy as np
 import inspect
 from collections import namedtuple, Iterable
 import paddle
+import paddle.distributed.fleet as fleet
 from ..quant.quant_post_hpo import quant_post_hpo
 from ..quant.quanter import convert
 from ..common.recover_program import recover_inference_program
@@ -56,6 +57,8 @@ class AutoCompression:
         self.train_config = train_config
         self.train_dataloader = train_dataloader
         paddle.enable_static()
+        if self.train_config.use_fleet:
+            fleet.init(is_collective=True)
         if self._prepare_eval(eval_callback) == 'eval_dataloader':
             self.eval_function = None
             self.eval_dataloader = eval_callback
@@ -127,6 +130,23 @@ class AutoCompression:
 
         return strategy, config
 
+    def _prepare_fleet_strategy(train_config):
+        build_strategy = paddle.static.BuildStrategy()
+        exec_strategy = paddle.static.ExecutionStrategy()
+
+        strategy = fleet.DistributedStrategy()
+        strategy.build_strategy = build_strategy
+        if train_config.recompute_config is not None:
+            strategy.recompute = True
+            strategy.recompute_configs = { ** train_config.recompute_config}
+        if train_config.sharding_config is not None:
+            strategy.sharding = True
+            strategy.sharding_configs = { ** train_config.sharding_config}
+        if train_config.amp_config is not None:
+            strategy.amp = True
+            strategy.amp_configs = { ** train_config.amp_config}
+        return strategy
+
     def _prepare_program(self, program, feed_target_names, fetch_targets):
         train_program = recover_inference_program(program)
         startup_program = paddle.static.Program()
@@ -141,6 +161,11 @@ class AutoCompression:
                 self._exe, self._places, config_dict, train_program_info,
                 self._strategy)
 
+        if self.train_config.use_fleet:
+            dist_strategy = _prepare_fleet_strategy(self.train_config)
+        else:
+            dist_strategy = None
+
         ### add distill program
         if 'dis' in self._strategy:
             train_program_info, test_program_info = build_distill_program(
@@ -149,10 +174,11 @@ class AutoCompression:
                 config_dict,
                 self.train_config._asdict(),
                 train_program_info,
-                pruner=self._pruner)
+                pruner=self._pruner,
+                dist_strategy=dist_strategy)
 
         self._quant_config = None
-        ### add quant_aware program, quant alway last step
+        ### add quant_aware program, quant always is last step
         if 'qat' in self._strategy:
             train_program_info, test_program_info, self._quant_config = build_quant_program(
                 self._exe, self._places, config_dict, train_program_info,
@@ -160,26 +186,30 @@ class AutoCompression:
 
         self._exe.run(train_program_info.startup_program)
 
+        if (not self.train_config.use_fleet
+            ) and self.train_config.amp_config is not None:
+            if hasattr(self.train_config.amp_config, 'use_pure_fp16'
+                       ) and self.train_config.amp_config.use_pure_fp16:
+                train_program_info.optimizer.amp_init(
+                    self._places, scope=paddle.static.global_scope())
+
         if 'prune_algo' in config_dict and config_dict['prune_algo'] == 'asp':
             ### prune weight in scope
             self._pruner.prune_model(train_program_info.program)
 
-        train_program_info = self._compiled_program(train_program_info,
-                                                    self._strategy)
-        test_program_info = self._compiled_program(test_program_info,
-                                                   self._strategy)
+        if not self.train_config.use_fleet:
+            train_program_info = self._compiled_program(train_program_info,
+                                                        self._strategy)
+            test_program_info = self._compiled_program(test_program_info,
+                                                       self._strategy)
         return train_program_info, test_program_info
 
     def _prepare_eval(self, eval_callback):
         if isinstance(eval_callback,
                       Iterable) or inspect.isgeneratorfunction(eval_callback):
             return 'eval_dataloader'
-        elif inspect.isfunction(eval_callback):
-            return 'eval_callback'
         else:
-            raise NotImplementedError(
-                "eval_callback must be a callback or a Iterable object, but this is {}".
-                format(type(eval_callback)))
+            return 'eval_callback'
 
     def _compiled_program(self, program_info, strategy):
         compiled_prog = paddle.static.CompiledProgram(program_info.program)
@@ -230,13 +260,17 @@ class AutoCompression:
             assert 'dis' in self._strategy, "Only support optimizer compressed model by distillation loss."
 
             ### convert a inference program to train program
-            [inference_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
-                path_prefix=self.model_dir, \
+            ###[inference_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
+            ###    path_prefix=self.model_dir, \
+            ###    model_filename=self.model_filename, params_filename=self.params_filename,
+            ###    executor=self._exe)
+            [inference_program, feed_target_names, fetch_targets]= paddle.fluid.io.load_inference_model( \
+                dirname=self.model_dir, \
                 model_filename=self.model_filename, params_filename=self.params_filename,
                 executor=self._exe)
 
             ### used to check whether the dataloader is right
-            if self.eval_function is not None:
+            if self.eval_function is not None and self.train_config.origin_metric is not None:
                 metric = self.eval_function(self._exe, self._places,
                                             inference_program,
                                             feed_target_names, fetch_targets)

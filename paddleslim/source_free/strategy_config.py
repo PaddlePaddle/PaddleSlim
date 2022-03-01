@@ -108,14 +108,17 @@ UnstructurePruneConfig.__new__.__defaults__ = (
 ### TrainConfig
 TrainConfig = namedtuple("TrainConfig", [
     "epochs",
+    "learning_rate",
     "optimizer",
     "optim_args",
-    "learning_rate",
-    "lr_decay",
     "eval_iter",
     "logging_iter",
     "origin_metric",
     "target_metric",
+    "use_fleet",
+    "amp_config",
+    "recompute_config",
+    "sharding_config",
 ])
 
 TrainConfig.__new__.__defaults__ = (None, ) * len(TrainConfig._fields)

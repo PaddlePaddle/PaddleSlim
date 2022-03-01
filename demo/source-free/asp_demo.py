@@ -26,8 +26,8 @@ default_distill_config = {
         "teacher_linear_1.tmp_0", "linear_1.tmp_0"],
     "distill_lambda": 1.0,
     "teacher_model_dir": "./MobileNetV2_ssld_infer",
-    "teacher_model_filename": 'inference',
-    "teacher_params_filename": 'inference',
+    "teacher_model_filename": 'inference.pdmodel',
+    "teacher_params_filename": 'inference.pdiparams',
     "merge_feed": True,
 }
 
@@ -35,7 +35,9 @@ default_train_config = {
     "epochs": 1,
     "optimizer": "SGD",
     "learning_rate": 0.0001,
-    "weight_decay": 0.00004,
+    "optim_args": {
+        "weight_decay": 0.00004
+    },
     "eval_iter": 1000,
     "origin_metric": 0.765,
 }
@@ -101,10 +103,10 @@ def eval_function(exe, place, compiled_test_program, test_feed_names,
 
 paddle.set_device("gpu")
 ac = AutoCompression(
-    model_dir='./MobileNetV2_ssld_infer',
-    model_filename='inference',
-    params_filename='inference',
-    save_dir='./mbv2_asp_distill_output',
+    model_dir='./MobileNetV2_ssld_infer/',
+    model_filename='inference.pdmodel',
+    params_filename='inference.pdiparams',
+    save_dir='./mbv2_asp_distill_output_v2',
     strategy_config={
         "PruneConfig": PruneConfig(**default_prune_config),
         "DistillationConfig": DistillationConfig(**default_distill_config)

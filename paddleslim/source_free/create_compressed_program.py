@@ -14,6 +14,7 @@
 
 import logging
 import paddle
+import paddle.distributed.fleet as fleet
 import paddle.optimizer as optimizer
 from ..quant.quanter import quant_aware, _quant_config_default, _parse_configs, pact, get_pact_optimizer
 from ..dist import *
@@ -54,9 +55,9 @@ def _parse_distill_loss(distill_node_pair,
                         distill_loss='l2_loss',
                         distill_lambda=1.0):
     """parse distill loss config"""
-    distill_loss = 0.0
+    loss_dist = 0.0
     losses = []
-    if isinstance([distill_node_pair[0]], str):
+    if isinstance(distill_node_pair[0], str):
         assert isinstance(distill_loss, str)
         assert isinstance(distill_lambda, float)
         distill_node_pair = [distill_node_pair]
@@ -73,10 +74,10 @@ def _parse_distill_loss(distill_node_pair,
             "distill_node_pair config wrong, the length needs to be an even number"
         for i in range(len(node) // 2):
             tmp_loss += eval(loss)(node[i * 2], node[i * 2 + 1])
-        distill_loss += lam * tmp_loss
+        loss_dist += lam * tmp_loss
         losses.append(tmp_loss)
 
-    return distill_loss, losses
+    return loss_dist, losses
 
 
 def _load_program_and_merge(executor,
@@ -88,8 +89,9 @@ def _load_program_and_merge(executor,
                             params_filename,
                             teacher_idx=None,
                             feed_target_names=None):
-    [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
-        path_prefix=model_dir, \
+    ###[teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
+    [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
+        dirname=model_dir, \
         model_filename=model_filename, \
         params_filename=params_filename, \
         executor=executor)
@@ -129,7 +131,8 @@ def build_distill_program(executor,
                           config,
                           train_config,
                           train_program_info=None,
-                          pruner=None):
+                          pruner=None,
+                          dist_strategy=None):
     """build distill program with infermodel"""
     if train_program_info is None:
         [train_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
@@ -202,7 +205,44 @@ def build_distill_program(executor,
         with paddle.utils.unique_name.guard('merge'):
             optimizer = _create_optimizer(train_config)
 
-            distill_loss = _parse_distill_loss(config['distill_node_pair'])
+            if train_config['use_fleet']:
+                optimizer = fleet.distributed_optimizer(optimizer,
+                                                        dist_strategy)
+            else:
+                if train_config['amp_config'] is not None:
+                    if 'custom_white_list' in train_config['amp_config']:
+                        custom_white_list = train_config['amp_config'][
+                            'custom_white_list']
+                        train_config['amp_config'].pop('custom_white_list')
+                    else:
+                        custom_white_list = None
+                    if 'custom_black_list' in train_config['amp_config']:
+                        custom_black_list = train_config['amp_config'][
+                            'custom_black_list']
+                        train_config['amp_config'].pop('custom_black_list')
+                    else:
+                        custom_black_list = None
+                    if 'custom_black_varnames' in train_config['amp_config']:
+                        custom_black_varnames = train_config['amp_config'][
+                            'custom_black_varnames']
+                        train_config['amp_config'].pop('custom_black_varnames')
+                    else:
+                        custom_black_varnames = None
+
+                    amp_list = paddle.static.amp.CustomOpLists(
+                        custom_white_list=custom_white_list,
+                        custom_black_list=custom_black_list,
+                        custom_black_varnames=custom_black_varnames)
+                    optimizer = paddle.static.amp.decorate(
+                        optimizer=optimizer,
+                        amp_lists=amp_list,
+                        init_loss_scaling=128.0,
+                        use_dynamic_loss_scaling=True,
+                        **train_config['amp_config'])
+
+            distill_loss, losses = _parse_distill_loss(
+                config['distill_node_pair'], config['distill_loss'],
+                config['distill_lambda'])
             loss = paddle.mean(distill_loss)
             loss.stop_gradient = False
 
@@ -232,6 +272,7 @@ def build_quant_program(executor, place, config, train_program_info,
     assert isinstance(config, dict), "quant config must be dict"
     default_config = _quant_config_default
     default_config.update(config)
+    print(default_config)
     config = _parse_configs(default_config)
 
     use_pact = config["use_pact"]

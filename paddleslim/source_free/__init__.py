@@ -15,3 +15,9 @@
 from __future__ import absolute_import
 from .auto_compression import *
 from .strategy_config import *
+
+__all__ = [
+    "AutoCompression", "QuantizationConfig", "DistillationConfig",
+    "MultiTeacherDistillationConfig", "HyperParameterOptimizationConfig",
+    "PruneConfig", "UnstructurePruneConfig", "ProgramInfo", "TrainConfig"
+]
