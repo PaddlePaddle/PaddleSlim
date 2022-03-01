@@ -1,6 +1,9 @@
 import os
 import sys
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
+import argparse
+import functools
+from functools import partial
 
 import numpy as np
 import paddle
@@ -8,45 +11,32 @@ import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
 import imagenet_reader as reader
 from paddleslim.source_free.auto_compression import AutoCompression
-from paddleslim.source_free.strategy_config import QuantizationConfig, DistillationConfig, MultiTeacherDistillationConfig, HyperParameterOptimizationConfig, TrainConfig
+from paddleslim.source_free.strategy_config import QuantizationConfig, DistillationConfig, TrainConfig
+from utility import add_arguments, print_arguments
 
-default_qat_config = {
-    "quantize_op_types": ["conv2d", "depthwise_conv2d"],
-    "weight_bits": 8,
-    "activation_bits": 8,
-    "is_full_quantize": False,
-    "not_quant_pattern": ["skip_quant"],
-}
+parser = argparse.ArgumentParser(description=__doc__)
+add_arg = functools.partial(add_arguments, argparser=parser)
 
-default_distill_config = {
-    "distill_loss": 'L2',
-    "distill_node_pair": ["teacher_conv2d_54.tmp_0", "conv2d_54.tmp_0", "teacher_conv2d_55.tmp_0", "conv2d_55.tmp_0",\
-        "teacher_conv2d_57.tmp_0", "conv2d_57.tmp_0", "teacher_elementwise_add_0", "elementwise_add_0", \
-        "teacher_conv2d_61.tmp_0", "conv2d_61.tmp_0", "teacher_elementwise_add_1", "elementwise_add_1", \
-        "teacher_elementwise_add_2", "elementwise_add_2", "teacher_conv2d_67.tmp_0", "conv2d_67.tmp_0", \
-        "teacher_elementwise_add_3", "elementwise_add_3", "teacher_elementwise_add_4", "elementwise_add_4", \
-        "teacher_elementwise_add_5", "elementwise_add_5", "teacher_conv2d_75.tmp_0", "conv2d_75.tmp_0", \
-        "teacher_elementwise_add_6", "elementwise_add_6", "teacher_elementwise_add_7", "elementwise_add_7", \
-        "teacher_conv2d_81.tmp_0", "conv2d_81.tmp_0", "teacher_elementwise_add_8", "elementwise_add_8", \
-        "teacher_elementwise_add_9", "elementwise_add_9", "teacher_conv2d_87.tmp_0", "conv2d_87.tmp_0", \
-        "teacher_linear_1.tmp_0", "linear_1.tmp_0"],
-    "distill_lambda": 1.0,
-    "teacher_model_dir": "./MobileNetV2_ssld_infer",
-    "teacher_model_filename": 'inference',
-    "teacher_params_filename": 'inference',
-    "merge_feed": True,
-}
-
-default_train_config = {
-    "epochs": 1,
-    "optimizer": "SGD",
-    "learning_rate": 0.0001,
-    "weight_decay": 0.00004,
-    "eval_iter": 1000,
-    "origin_metric": 0.765,
-}
-
-train_reader = paddle.batch(reader.train(), batch_size=64)
+# yapf: disable
+add_arg('model_dir',                   str,    None,         "inference model directory.")
+add_arg('model_filename',              str,    None,         "inference model filename.")
+add_arg('params_filename',             str,    None,         "inference params filename.")
+add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
+add_arg('devices',                     str,    'gpu',        "which device used to compress.")
+add_arg('batch_size',                  int,    1,            "train batch size.")
+add_arg('distill_loss',                str,    'l2_loss',    "which loss to used in distillation.")
+add_arg('distill_node_pair',           str,    None,         "distill node pair name list.", nargs="+")
+add_arg('distill_lambda',              float,  1.0,          "weight of distill loss.")
+add_arg('teacher_model_dir',           str,    None,         "teacher model directory.")
+add_arg('teacher_model_filename',      str,    None,         "teacher model filename.")
+add_arg('teacher_params_filename',     str,    None,         "teacher params filename.")
+add_arg('epochs',                      int,    3,            "train epochs.")
+add_arg('optimizer',                   str,    'SGD',        "optimizer to used.")
+add_arg('learning_rate',               float,  0.0001,       "learning rate in optimizer.")
+add_arg('weight_decay',                float,  0.0001,       "weight decay in optimizer.")
+add_arg('eval_iter',                   int,    1000,         "how many iteration to eval.")
+add_arg('origin_metric',               float,  None,         "metric of inference model to compressed.")
+# yapf: enable
 
 
 def reader_wrapper(reader):
@@ -56,9 +46,6 @@ def reader_wrapper(reader):
             yield {"inputs": imgs}
 
     return gen
-
-
-train_dataloader = reader_wrapper(train_reader)
 
 
 def eval_function(exe, place, compiled_test_program, test_feed_names,
@@ -105,18 +92,54 @@ def eval_function(exe, place, compiled_test_program, test_feed_names,
     return result[0]
 
 
-paddle.set_device("gpu")
-ac = AutoCompression(
-    model_dir='./MobileNetV2_ssld_infer',
-    model_filename='inference',
-    params_filename='inference',
-    save_dir='./mbv2_qat_distill_output',
-    strategy_config={
-        "QuantizationConfig": QuantizationConfig(**default_qat_config),
-        "DistillationConfig": DistillationConfig(**default_distill_config)
-    },
-    train_config=TrainConfig(**default_train_config),
-    train_dataloader=train_dataloader,
-    eval_callback=eval_function)
+if __name__ == '__main__':
+    args = parser.parse_args()
+    print_arguments(args)
+    paddle.enable_static()
 
-ac.compression()
+    default_qat_config = {
+        "quantize_op_types": ["conv2d", "depthwise_conv2d", "mul"],
+        "weight_bits": 8,
+        "activation_bits": 8,
+        "is_full_quantize": False,
+        "not_quant_pattern": ["skip_quant"],
+    }
+
+    default_distill_config = {
+        "distill_loss": args.distill_loss,
+        "distill_node_pair": args.distill_node_pair,
+        "distill_lambda": args.distill_lambda,
+        "teacher_model_dir": args.teacher_model_dir,
+        "teacher_model_filename": args.teacher_model_filename,
+        "teacher_params_filename": args.teacher_params_filename,
+    }
+
+    default_train_config = {
+        "epochs": args.epochs,
+        "optimizer": args.optimizer,
+        "learning_rate": args.learning_rate,
+        "optim_args": {
+            "weight_decay": args.weight_decay
+        },
+        "eval_iter": args.eval_iter,
+        "origin_metric": args.origin_metric
+    }
+
+    train_reader = paddle.batch(reader.train(), batch_size=64)
+    train_dataloader = reader_wrapper(train_reader)
+
+    ac = AutoCompression(
+        model_dir=args.model_dir,
+        model_filename=args.model_filename,
+        params_filename=args.params_filename,
+        save_dir=args.save_dir,
+        strategy_config={
+            "QuantizationConfig": QuantizationConfig(**default_qat_config),
+            "DistillationConfig": DistillationConfig(**default_distill_config)
+        },
+        train_config=TrainConfig(**default_train_config),
+        train_dataloader=train_dataloader,
+        eval_callback=eval_function,
+        devices=args.devices)
+
+    ac.compression()

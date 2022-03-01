@@ -57,7 +57,7 @@ class AutoCompression:
         self.train_config = train_config
         self.train_dataloader = train_dataloader
         paddle.enable_static()
-        if self.train_config.use_fleet:
+        if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
         if self._prepare_eval(eval_callback) == 'eval_dataloader':
             self.eval_function = None
@@ -68,7 +68,6 @@ class AutoCompression:
 
         self._strategy, self._config = self._prepare_strategy()
         self._exe, self._places = self._prepare_envs(devices)
-        print("self._places: ", self._places)
 
     def _prepare_envs(self, devices):
         places = paddle.device._convert_to_place(devices)
@@ -226,7 +225,6 @@ class AutoCompression:
             build_strategy=build_strategy,
             exec_strategy=exec_strategy)
         program_info.program = compiled_prog
-        #program_info = program_info._replace(program=compiled_prog)
         return program_info
 
     def compression(self):
@@ -339,12 +337,10 @@ class AutoCompression:
                             "Please support eval function")
 
         if 'qat' in self._strategy:
-            ### load best model to save
+            ### TODO: load best model to save
             float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \
                                           scope=paddle.static.global_scope(), \
                                           save_int8=True)
-            ###test_program_info = test_program_info._replace(
-            ###    program=float_program)
             test_program_info.program = float_program
         return test_program_info
 

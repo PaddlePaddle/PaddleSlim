@@ -27,7 +27,7 @@ QuantizationConfig = namedtuple(
         "quantize_op_types",
         "weight_bits",
         "activation_bits",
-        "not_quant_pattern",  ### ptq没有暴露相应接口，需要确定是否支持
+        "not_quant_pattern",  ### ptq没有暴露相应接口
         "use_pact",  ### 仅QAT支持
         "is_full_quantize"
     ])
@@ -80,14 +80,12 @@ HyperParameterOptimizationConfig.__new__.__defaults__ = (None, ) * (
     len(HyperParameterOptimizationConfig._fields) - 1) + (20, )
 
 ### PruneConfig
-PruneConfig = namedtuple(
-    "PruneConfig",
-    [
-        "prune_algo",  ### prune, asp
-        "pruned_ratio",
-        "prune_params_name",
-        "criterion",
-    ])
+PruneConfig = namedtuple("PruneConfig", [
+    "prune_algo",
+    "pruned_ratio",
+    "prune_params_name",
+    "criterion",
+])
 PruneConfig.__new__.__defaults__ = (None, ) * len(PruneConfig._fields)
 
 ### UnstructurePruneConfig
@@ -95,9 +93,7 @@ UnstructurePruneConfig = namedtuple("UnstructurePruneConfig", [
     "prune_strategy",
     "prune_mode",
     "threshold",
-    "prune_steps",
     "prune_ratio",
-    "initial_ratio",
     "gmp_config",
     "prune_params_type",
     "local_sparsity",
@@ -134,11 +130,6 @@ def merge_config(*args):
     return MergeConfig(**cfg)
 
 
-#ProgramInfo = namedtuple("ProgramInfo", [
-#    "startup_program", "program", "feed_target_names", "fetch_targets",
-#    "optimizer"
-#])
-#ProgramInfo.__new__.__defaults__ = (None, ) * len(ProgramInfo._fields)
 class ProgramInfo:
     def __init__(self,
                  startup_program,

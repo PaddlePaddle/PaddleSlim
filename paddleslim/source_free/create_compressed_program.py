@@ -210,24 +210,20 @@ def build_distill_program(executor,
                                                         dist_strategy)
             else:
                 if train_config['amp_config'] is not None:
-                    if 'custom_white_list' in train_config['amp_config']:
-                        custom_white_list = train_config['amp_config'][
-                            'custom_white_list']
+                    custom_white_list = train_config['amp_config'].get(
+                        'custom_white_list', None)
+                    if custom_white_list is not None:
                         train_config['amp_config'].pop('custom_white_list')
-                    else:
-                        custom_white_list = None
-                    if 'custom_black_list' in train_config['amp_config']:
-                        custom_black_list = train_config['amp_config'][
-                            'custom_black_list']
+
+                    custom_black_list = train_config['amp_config'].get(
+                        'custom_black_list', None)
+                    if custom_black_list is not None:
                         train_config['amp_config'].pop('custom_black_list')
-                    else:
-                        custom_black_list = None
-                    if 'custom_black_varnames' in train_config['amp_config']:
-                        custom_black_varnames = train_config['amp_config'][
-                            'custom_black_varnames']
+
+                    custom_black_varnames = train_config['amp_config'].get(
+                        'custom_black_varnames', None)
+                    if custom_black_varnames is not None:
                         train_config['amp_config'].pop('custom_black_varnames')
-                    else:
-                        custom_black_varnames = None
 
                     amp_list = paddle.static.amp.CustomOpLists(
                         custom_white_list=custom_white_list,
@@ -306,8 +302,6 @@ def build_quant_program(executor, place, config, train_program_info,
         for_test=False,
         return_program=True)
 
-    ###train_program_info = train_program_info._replace(program=train_program)
-    ###test_program_info = test_program_info._replace(program=test_program)
     train_program_info.program = train_program
     test_program_info.program = test_program
     return train_program_info, test_program_info, config
@@ -352,8 +346,6 @@ def build_prune_program(executor, place, config, train_program_info, strategy):
                 params=params,
                 ratios=[config['pruned_ratio']] * len(params),
                 place=place)
-            ###train_program_info = train_program_info._replace(
-            ###    program=pruned_program)
             train_program_info.program = pruned_program
 
         elif config['prune_algo'] == 'asp':

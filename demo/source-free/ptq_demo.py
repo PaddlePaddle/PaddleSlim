@@ -1,6 +1,9 @@
 import os
 import sys
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
+import argparse
+import functools
+from functools import partial
 
 import numpy as np
 from collections import namedtuple, Iterable
@@ -9,43 +12,75 @@ import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
 import imagenet_reader as reader
 from paddleslim.source_free.auto_compression import AutoCompression
-from paddleslim.source_free.strategy_config import QuantizationConfig, DistillationConfig, MultiTeacherDistillationConfig, HyperParameterOptimizationConfig, TrainConfig
+from paddleslim.source_free.strategy_config import QuantizationConfig, HyperParameterOptimizationConfig, TrainConfig
+from utility import add_arguments, print_arguments
 
-default_ptq_config = {
-   "quantize_op_types": ["conv2d", "depthwise_conv2d", "mul"],
-   "weight_bits": 8,
-   "activation_bits": 8,
-}
+parser = argparse.ArgumentParser(description=__doc__)
+add_arg = functools.partial(add_arguments, argparser=parser)
 
-default_hpo_config = {
-"ptq_algo": ["KL", "hist"],
-"bias_correct": [True],
-"weight_quantize_type": ["channel_wise_abs_max"], 
-"hist_percent": [0.999, 0.99999],
-"batch_size": [4, 8, 16],
-"batch_num": [4, 8, 16],
-"max_quant_count": 20
-}
+# yapf: disable
+add_arg('model_dir',                   str,    None,         "inference model directory.")
+add_arg('model_filename',              str,    None,         "inference model filename.")
+add_arg('params_filename',             str,    None,         "inference params filename.")
+add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
+add_arg('devices',                     str,    'gpu',        "which device used to compress.")
+add_arg('batch_size',                  int,    None,         "batch size in dataloader.")
+add_arg('ptq_algo',                    str,    None,         "algorithm of post training quantization.", nargs="+")
+add_arg('bias_correct',                bool,   None,         "whether to use bias correct.", nargs="+")
+add_arg('weight_quantize_type',        str,    None,         "weight quantization type.", nargs="+")
+add_arg('hist_percent',                float,  None,         "mininum histogram percent and max histogram percent.", nargs="+")
+add_arg('batch_num',                   int,    None,         "mininum batch number and max batch number.", nargs="+")
+add_arg('max_quant_count',             int,    None,         "max quantization count.")
+# yapf: enable
 
-train_reader = paddle.batch(reader.train(), batch_size=64)
-eval_reader = paddle.batch(reader.val(), batch_size=64)
+
 def reader_wrapper(reader):
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.float32([item[0] for item in data])
-            yield {"inputs":imgs}
+            yield {"inputs": imgs}
+
     return gen
 
-train_dataloader = reader_wrapper(train_reader)
-eval_dataloader = reader_wrapper(eval_reader)
 
-ac = AutoCompression(model_dir='MobileNetV3_small_x1_0_ssld_infer', 
-                     model_filename='inference.pdmodel', 
-                     params_filename='inference.pdiparams', 
-                     save_dir='./mbv3_small_ptq_hpo_output', 
-                     strategy_config={"QuantizationConfig": QuantizationConfig(**default_ptq_config), 
-                     "HyperParameterOptimizationConfig": HyperParameterOptimizationConfig(**default_hpo_config)}, 
-                     train_config=None,
-                     train_dataloader=train_dataloader, eval_callback=eval_dataloader)
+if __name__ == '__main__':
+    args = parser.parse_args()
+    print_arguments(args)
+    paddle.enable_static()
 
-ac.compression()
+    default_ptq_config = {
+        "quantize_op_types": ["conv2d", "depthwise_conv2d", "mul"],
+        "weight_bits": 8,
+        "activation_bits": 8,
+    }
+
+    default_hpo_config = {
+        "ptq_algo": args.ptq_algo,
+        "bias_correct": args.bias_correct,
+        "weight_quantize_type": args.weight_quantize_type,
+        "hist_percent": args.hist_percent,
+        "batch_num": args.batch_num,
+        "batch_size": [args.batch_size],
+        "max_quant_count": args.max_quant_count
+    }
+    train_reader = paddle.batch(reader.train(), batch_size=args.batch_size)
+    eval_reader = paddle.batch(reader.val(), batch_size=args.batch_size)
+    train_dataloader = reader_wrapper(train_reader)
+    eval_dataloader = reader_wrapper(eval_reader)
+
+    ac = AutoCompression(
+        model_dir=args.model_dir,
+        model_filename=args.model_filename,
+        params_filename=args.params_filename,
+        save_dir=args.save_dir,
+        strategy_config={
+            "QuantizationConfig": QuantizationConfig(**default_ptq_config),
+            "HyperParameterOptimizationConfig":
+            HyperParameterOptimizationConfig(**default_hpo_config)
+        },
+        train_config=None,
+        train_dataloader=train_dataloader,
+        eval_callback=eval_dataloader,
+        devices=args.devices)
+
+    ac.compression()
