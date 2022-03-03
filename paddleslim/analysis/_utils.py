@@ -31,7 +31,7 @@ def opt_model(opt="paddle_lite_opt",
               optimize_out_type='protobuf',
               valid_targets='arm'):
     assert os.path.exists(model_file) and os.path.exists(
-        param_file), f'{model_file} or {param_file} is not existed.'
+        param_file), f'{model_file} or {param_file} does not exist.'
     save_dir = f'./opt_models_tmp/{os.getpid()}'
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -225,11 +225,11 @@ def nearest_interpolate(features, data):
     return latency[idx]
 
 
-def dowload_predictor(op_dir, op):
-    """Dowload op predictors' model file
+def download_predictor(op_dir, op):
+    """Download op predictors' model file
         
         Args:
-            op_dir(str): the dowload path of op predictor. Actually, it's the hardware information. 
+            op_dir(str): the path to op predictor. Actually, it's the hardware information. 
             op(str): the op type.
         Returns:
             op_path: The path of the file.
@@ -248,11 +248,11 @@ def dowload_predictor(op_dir, op):
 def load_predictor(op_type, op_dir, data_type='fp32'):
     op = op_type
     if 'conv2d' in op_type:
-        op = 'conv2d_' + data_type
+        op = f'{op_type}_{data_type}'
     elif 'matmul' in op_type:
         op = 'matmul'
 
-    op_path = dowload_predictor(op_dir, op)
+    op_path = download_predictor(op_dir, op)
     with open(op_path, 'rb') as f:
         model = pickle.load(f)
 

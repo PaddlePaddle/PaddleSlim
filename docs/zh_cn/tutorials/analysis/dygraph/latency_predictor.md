@@ -7,9 +7,10 @@
 ## 1. 准备环境
 ### 1.1 版本要求
 ```bash
-python>=3.7
+python==3.7\3.9
 PaddleSlim>=2.3.0
 ```
+> 注：在 macOS 环境下要求 python==3.9; linux 环境下要求 python==3.7\3.9
 ### 1.2 安装 PaddleSlim
 * 通过 pip install 的方式进行安装:
 ```bash
@@ -37,10 +38,10 @@ tar -xf mobilenetv1.tar
 ### 2.2 预估推理延时
 构造 TableLatencyPredictor 类实例，并调用 predict 函数预估推理模型的延时。
 ```
-import paddleslim
+from paddleslim.analysis import TableLatencyPredictor
 
-predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
-latency = predictor.predict(model_file='mobilenetv1_fp32.pdmodel', param_file='mobilenetv1_fp32.pdiparams, data_type='fp32')
+predictor = TableLatencyPredictor(table_file='SD710')
+latency = predictor.predict(model_file='mobilenetv1_fp32.pdmodel', param_file='mobilenetv1_fp32.pdiparams', data_type='fp32')
 print('predicted latency = {}ms'.format(latency))
 ```
 通过设置 table_file 来指定硬件信息，当前支持“SD625”、“SD710”、“SD845”三款骁龙芯片。
@@ -58,10 +59,10 @@ print('predicted latency = {}ms'.format(latency))
 ### 3.2 支持预估 INT8 模型
 延时预估器支持对 INT8 量化模型进行延时预估，仅需提供 INT8 量化保存的推理模型文件，并将在调用 predict 函数时，设置 data_type='int8'，如下所示：
 ```
-import paddleslim
+from paddleslim.analysis import TableLatencyPredictor
 
-predictor = paddleslim.TableLatencyPredictor(table_file='SD710')
-predictor.predict(model_file='mobilenetv1_int8.pdmodel', param_file='mobilenetv1_int8.pdiparams, data_type='int8')
+predictor = TableLatencyPredictor(table_file='SD710')
+predictor.predict(model_file='mobilenetv1_int8.pdmodel', param_file='mobilenetv1_int8.pdiparams', data_type='int8')
 ```
 
 ## 4. 预估效果
