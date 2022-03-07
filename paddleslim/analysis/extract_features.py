@@ -52,8 +52,13 @@ def get_features_from_paramkey(param_key, op_type, data_type):
     features = None
 
     if 'conv2d' in op_type:
-        flag_quant = 'quant=None' if data_type == 'fp32' else 'quant=True'
-        if flag_quant not in param_key:
+        if data_type == 'fp16':
+            quant_bits = 'bit_length=16'
+        elif data_type == 'int8':
+            quant_bits = 'bit_length=8'
+        else:
+            quant_bits = 'bit_length=None'
+        if quant_bits not in param_key:
             return None
 
         weight = re.search(r'weight=(\(\d*, \d*, \d*, \d*\))',
@@ -178,7 +183,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
           'leaky_relu' in op_type or 'tanh' in op_type or 'swish' in op_type or
           'softmax' in op_type or 'hard_sigmoid' in op_type or
           'sigmoid' in op_type or 'gelu' in op_type or 'clip' in op_type or
-          'shape' in op_type or 'interp_v2' in op_type):
+          'shape' in op_type or 'interp_v2' in op_type or 'sqrt' in op_type):
 
         inputs = re.search(r'in=(\((-?\d+,* *)+\))',
                            param_key).group().split('=')[-1].strip(

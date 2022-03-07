@@ -125,22 +125,24 @@ class TableLatencyPredictor(LatencyPredictor):
         
         Args:
             model_file(str), param_file(str): The inference model(*.pdmodel, *.pdiparams).
-            data_type(str): Data type, fp32 or int8. Default : fp32
+            data_type(str): Data type, fp32, fp16 or int8. Default : fp32
             threads(int): threads num
             input_shape(list): Generally, the input shape is confirmed when saving the inference model and the parameter is only effective for input shape that has variable length.
         Returns:
             latency(float): The latency of the model.
         """
-        assert data_type in ['fp32', 'int8'
-                             ], f'data_type must be one of [fp32, int8]'
+        assert data_type in ['fp32', 'int8', 'fp16'
+                             ], f'data_type must be one of [fp32, int8, fp16]'
 
         if self.hardware and self.threads != threads:
             self._change_table(threads)
 
+        enable_fp16 = True if data_type=='fp16' else False
         pbmodel_file = opt_model(
             model_file=model_file,
             param_file=param_file,
-            optimize_out_type='protobuf', )
+            optimize_out_type='protobuf', 
+            enable_fp16=enable_fp16)
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
