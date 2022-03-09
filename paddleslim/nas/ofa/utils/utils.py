@@ -14,6 +14,9 @@
 
 import logging
 import paddle
+import numbers
+import numpy as np
+from paddle.fluid import core
 from ....common import get_logger
 
 
@@ -41,7 +44,6 @@ __all__ = ['set_state_dict']
 def set_state_dict(model, state_dict):
     """
     Set state dict from origin model to supernet model.
-
     Args:
         model(paddle.nn.Layer): model after convert to supernet.
         state_dict(dict): dict with the type of {name: param} in origin model.
@@ -59,12 +61,50 @@ def set_state_dict(model, state_dict):
             _logger.info('{} is not in state_dict'.format(tmp_n))
 
 
+def to_tensor(string_values, name="text"):
+    """
+    Create the tensor that the value holds the list of string.
+    NOTICE: The value will be holded in the cpu place.
+    Parameters:
+        string_values(list[string]): The value will be setted to the tensor.
+        name(string): The name of the tensor.
+    """
+    tensor = paddle.Tensor(core.VarDesc.VarType.STRING, [], name,
+                           core.VarDesc.VarType.STRINGS, False)
+    tensor.value().set_string_list(string_values)
+    return tensor
+
+
+def build_input(input_size, dtypes):
+    if isinstance(input_size, list) and all(
+            isinstance(i, numbers.Number) for i in input_size):
+        if isinstance(dtypes, list):
+            dtype = dtypes[0]
+        else:
+            dtype = dtypes
+        if dtype == core.VarDesc.VarType.STRINGS:
+            return to_tensor([""])
+        return paddle.cast(paddle.rand(list(input_size)), dtype)
+    if isinstance(input_size, dict):
+        inputs = {}
+        if isinstance(dtypes, list):
+            dtype = dtypes[0]
+        else:
+            dtype = dtypes
+        for key, value in input_size.items():
+            inputs[key] = paddle.cast(paddle.rand(list(value)), dtype)
+        return inputs
+    if isinstance(input_size, list):
+        return [build_input(i, dtype) for i, dtype in zip(input_size, dtypes)]
+
+
 def remove_model_fn(model, state_dict):
     new_dict = {}
     keys = []
     for name, param in model.state_dict().items():
         keys.append(name)
     for name, param in state_dict.items():
+        tmp_n = None
         if len(name.split('.')) <= 2:
             new_dict[name] = param
             continue
