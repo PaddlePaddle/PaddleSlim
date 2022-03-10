@@ -15,8 +15,8 @@ from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import Mcc, PearsonAndSpearman
-from paddleslim.source_free.auto_compression import AutoCompression
-from paddleslim.source_free.strategy_config import *
+from paddleslim.auto_compression.config_helpers import load_config
+from paddleslim.auto_compression.compressor import AutoCompression
 from utility import add_arguments, print_arguments
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -29,18 +29,8 @@ add_arg('params_filename',             str,    None,         "inference params f
 add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
 add_arg('devices',                     str,    'gpu',        "which device used to compress.")
 add_arg('batch_size',                  int,    1,            "train batch size.")
-add_arg('prune_algo',                  str,    'asp',        "prune algorithm.")
-add_arg('distill_loss',                str,    'l2_loss',    "which loss to used in distillation.")
-add_arg('distill_node_pair',           str,    None,         "distill node pair name list.", nargs="+")
-add_arg('distill_lambda',              float,  1.0,          "weight of distill loss.")
-add_arg('teacher_model_dir',           str,    None,         "teacher model directory.")
-add_arg('teacher_model_filename',      str,    None,         "teacher model filename.")
-add_arg('teacher_params_filename',     str,    None,         "teacher params filename.")
-add_arg('epochs',                      int,    3,            "train epochs.")
-add_arg('optimizer',                   str,    'SGD',        "optimizer to used.")
-add_arg('learning_rate',               float,  0.0001,       "learning rate in optimizer.")
-add_arg('eval_iter',                   int,    1000,         "how many iteration to eval.")
-add_arg('origin_metric',               float,  None,         "metric of inference model to compressed.")
+add_arg('task',                        str,    'sst-2',      "task name in glue.")
+add_arg('config_path',                 str,    None,         "path of compression strategy config.")
 # yapf: enable
 
 METRIC_CLASSES = {
@@ -95,7 +85,7 @@ def create_data_holder(task_name):
 def reader():
     # Create the tokenizer and dataset
     tokenizer = BertTokenizer.from_pretrained(args.model_dir)
-    train_ds = load_dataset('glue', 'sst-2', splits="train")
+    train_ds = load_dataset('glue', args.task, splits="train")
 
     trans_func = partial(
         convert_example,
@@ -114,7 +104,7 @@ def reader():
     train_batch_sampler = paddle.io.BatchSampler(
         train_ds, batch_size=32, shuffle=True)
 
-    [input_ids, token_type_ids, labels] = create_data_holder('sst-2')
+    [input_ids, token_type_ids, labels] = create_data_holder(args.task)
     feed_list_name = []
     train_data_loader = DataLoader(
         dataset=train_ds,
@@ -134,7 +124,7 @@ def reader():
         Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # token_type 
         Stack(dtype="int64" if train_ds.label_list else "float32")  # label
     ): fn(samples)
-    dev_ds = load_dataset('glue', 'sst-2', splits='dev')
+    dev_ds = load_dataset('glue', args.task, splits='dev')
     dev_ds = dev_ds.map(dev_trans_func, lazy=True)
     dev_batch_sampler = paddle.io.BatchSampler(
         dev_ds, batch_size=32, shuffle=False)
@@ -149,8 +139,7 @@ def reader():
     return train_data_loader, dev_data_loader
 
 
-def eval_function(exe, place, compiled_test_program, test_feed_names,
-                  test_fetch_list):
+def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric.reset()
     for data in eval_dataloader():
         logits = exe.run(compiled_test_program,
@@ -169,42 +158,27 @@ def eval_function(exe, place, compiled_test_program, test_feed_names,
     return res
 
 
+def apply_decay_param_fun(name):
+    if name.find("bias") > -1:
+        return True
+    elif name.find("norm") > -1:
+        return True
+    else:
+        return False
+
+
 if __name__ == '__main__':
     args = parser.parse_args()
     print_arguments(args)
     paddle.enable_static()
 
-    default_prune_config = {"prune_algo": args.prune_algo}
-    default_distill_config = {
-        "distill_loss": args.distill_loss,
-        "distill_node_pair": args.distill_node_pair,
-        "distill_lambda": args.distill_lambda,
-        "teacher_model_dir": args.teacher_model_dir,
-        "teacher_model_filename": args.teacher_model_filename,
-        "teacher_params_filename": args.teacher_params_filename,
-    }
-
-    def apply_decay_param_fun(name):
-        if name.find("bias") > -1:
-            return True
-        elif name.find("norm") > -1:
-            return True
-        else:
-            return False
-
-    default_train_config = {
-        "epochs": args.epochs,
-        "optimizer": args.optimizer,
-        "learning_rate": args.learning_rate,
-        "optim_args": {
-            "apply_decay_param_fun": apply_decay_param_fun
-        },
-        "eval_iter": args.eval_iter,
-        "origin_metric": args.origin_metric
-    }
+    compress_config, train_config = load_config(args.config_path)
+    if train_config is not None and 'optim_args' in train_config:
+        train_config['optim_args'][
+            'apply_decay_param_fun'] = apply_decay_param_fun
 
     train_dataloader, eval_dataloader = reader()
-    metric_class = METRIC_CLASSES['sst-2']
+    metric_class = METRIC_CLASSES[args.task]
     metric = metric_class()
 
     ac = AutoCompression(
@@ -212,13 +186,10 @@ if __name__ == '__main__':
         model_filename=args.model_filename,
         params_filename=args.params_filename,
         save_dir=args.save_dir,
-        strategy_config={
-            "PruneConfig": PruneConfig(**default_prune_config),
-            "DistillationConfig": DistillationConfig(**default_distill_config)
-        },
-        train_config=TrainConfig(**default_train_config),
+        strategy_config=compress_config,
+        train_config=train_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function,
         devices=args.devices)
 
-    ac.compression()
+    ac.compress()

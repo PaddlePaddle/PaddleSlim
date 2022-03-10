@@ -13,11 +13,13 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-from .auto_compression import *
+from .compressor import *
 from .strategy_config import *
+from .config_helpers import *
 
 __all__ = [
-    "AutoCompression", "QuantizationConfig", "DistillationConfig",
-    "MultiTeacherDistillationConfig", "HyperParameterOptimizationConfig",
-    "PruneConfig", "UnstructurePruneConfig", "ProgramInfo", "TrainConfig"
+    "AutoCompression", "Quantization", "Distillation",
+    "MultiTeacherDistillation", "HyperParameterOptimization", "Prune",
+    "UnstructurePrune", "ProgramInfo", "TrainConfig", "save_config",
+    "load_config"
 ]

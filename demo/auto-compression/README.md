@@ -50,9 +50,9 @@ python tools/export_model.py \
     -o Global.save_inference_dir=infermodel_mobilenetv2
 ```
 #### 2.4 测试模型精度
-拷贝``infermodel_mobilenetv2``文件夹到``PaddleSlim/demo/source-free/``文件夹。
+拷贝``infermodel_mobilenetv2``文件夹到``PaddleSlim/demo/auto-compression/``文件夹。
 ```
-cd PaddleSlim/demo/source-free/
+cd PaddleSlim/demo/auto-compression/
 ```
 使用[eval.py](../quant_post/eval.py)脚本得到模型的分类精度：
 ```
@@ -68,90 +68,56 @@ top1_acc/top5_acc= [0.71918 0.90568]
 每一个小章节代表一种多策略融合压缩，不代表需要串行执行。
 
 ### 3.1 进行量化蒸馏压缩
-蒸馏量化训练示例脚本为[qat_demo.py](./qat_demo.py)，使用接口``paddleslim.source_free.AutoCompression``对模型进行量化训练。运行命令为：
+蒸馏量化训练示例脚本为[demo_imagenet.py](./demo_imagenet.py)，使用接口``paddleslim.auto_compression.AutoCompression``对模型进行量化训练。运行命令为：
 ```
-python qat_demo.py \
+python demo_imagenet.py \
     --model_dir='infermodel_mobilenetv2' \
     --model_filename='inference.pdmodel' \
     --params_filename='./inference.pdiparams' \
     --save_dir='./save_qat_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
-    --distill_loss='l2_loss' \
-    --distill_node_pair "teacher_conv2d_54.tmp_0" "conv2d_54.tmp_0" "teacher_conv2d_55.tmp_0" "conv2d_55.tmp_0" \
-            "teacher_conv2d_57.tmp_0" "conv2d_57.tmp_0" "teacher_elementwise_add_0" "elementwise_add_0" \
-            "teacher_conv2d_61.tmp_0" "conv2d_61.tmp_0" "teacher_elementwise_add_1" "elementwise_add_1" \
-            "teacher_elementwise_add_2" "elementwise_add_2" "teacher_conv2d_67.tmp_0" "conv2d_67.tmp_0" \
-            "teacher_elementwise_add_3" "elementwise_add_3" "teacher_elementwise_add_4" "elementwise_add_4" \
-            "teacher_elementwise_add_5" "elementwise_add_5" "teacher_conv2d_75.tmp_0" "conv2d_75.tmp_0" \
-            "teacher_elementwise_add_6" "elementwise_add_6" "teacher_elementwise_add_7" "elementwise_add_7" \
-            "teacher_conv2d_81.tmp_0" "conv2d_81.tmp_0" "teacher_elementwise_add_8" "elementwise_add_8" \
-            "teacher_elementwise_add_9" "elementwise_add_9" "teacher_conv2d_87.tmp_0" "conv2d_87.tmp_0" \
-            "teacher_linear_1.tmp_0" "linear_1.tmp_0" \
-    --distill_lambda=1.0 \
-    --teacher_model_dir='./infermodel_mobilenetv2' \
-    --teacher_model_filename='inference.pdmodel' \
-    --teacher_params_filename='inference.pdiparams' \
-    --epochs=1 \
-    --optimizer='SGD' \
-    --learning_rate=0.0001 \
-    --weight_decay=0.00004 \
-    --eval_iter=1000 \
-    --origin_metric=0.71918
+    --config_path='./configs/CV/mbv2_qat_dis.yaml'
 ```
 
 ### 3.2 进行离线量化超参搜索压缩
-离线量化超参搜索压缩示例脚本为[ptq_demo.py](./ptq_demo.py)，使用接口``paddleslim.source_free.AutoCompression``对模型进行压缩。运行命令为：
+离线量化超参搜索压缩示例脚本为[demo_imagenet.py](./demo_imagenet.py)，使用接口``paddleslim.auto_compression.AutoCompression``对模型进行压缩。运行命令为：
 ```
-python ptq_demo.py \
+python demo_imagenet.py \
     --model_dir='infermodel_mobilenetv2' \
     --model_filename='inference.pdmodel' \
     --params_filename='./inference.pdiparams' \
     --save_dir='./save_qat_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
-    --ptq_algo "KL" "hist" \
-    --bias_correct True False \
-    --weight_quantize_type "channel_wise_abs_max" "abs_max" \
-    --hist_percent 0.9999 0.99999 \
-    --batch_num 4 16 \
-    --max_quant_count 20
+    --config_path='./configs/CV/mbv2_ptq_hpo.yaml'
 ```
 
 ### 3.3 进行剪枝蒸馏策略融合压缩
-注意：ASP 暂时只支持对 FC 进行剪枝, 所以示例为对BERT模型进行ASP稀疏。
+注意：本示例为对BERT模型进行ASP稀疏。
 首先参考[脚本](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/language_model/bert#%E9%A2%84%E6%B5%8B)得到可部署的模型。
-剪枝蒸馏压缩示例脚本为[asp_demo.py](./asp_demo.py)，使用接口``paddleslim.source_free.AutoCompression``对模型进行压缩。运行命令为：
+剪枝蒸馏压缩示例脚本为[demo_glue.py](./demo_glue.py)，使用接口``paddleslim.auto_compression.AutoCompression``对模型进行压缩。运行命令为：
 ```
-python asp_demo.py \
+python demo_glue.py \
     --model_dir='./static_bert_models/' \
     --model_filename='bert.pdmodel' \
     --params_filename='bert.pdiparams' \
     --save_dir='./save_asp_bert/' \
     --devices='gpu' \
     --batch_size=32 \
-    --prune_algo='asp' \
-    --distill_loss='l2_loss' \
-    --distill_node_pair "teacher_tmp_9" "tmp_9" "teacher_tmp_12" "tmp_12"\
-            "teacher_tmp_15" "tmp_15" "teacher_tmp_18" "tmp_18" \
-            "teacher_tmp_21" "tmp_21" "teacher_tmp_24" "tmp_24" \
-            "teacher_tmp_27" "tmp_27" "teacher_tmp_30" "tmp_30" \
-            "teacher_tmp_33" "tmp_33" "teacher_tmp_36" "tmp_36" \
-            "teacher_tmp_39" "tmp_39" "teacher_tmp_42" "tmp_42" \
-            "teacher_linear_147.tmp_1" "linear_147.tmp_1" \
-    --distill_lambda=1.0 \
-    --teacher_model_dir='./static_bert_models/' \
-    --teacher_model_filename='bert.pdmodel' \
-    --teacher_params_filename='bert.pdiparams' \
-    --epochs=3 \
-    --optimizer='AdamW' \
-    --learning_rate=2e-5 \
-    --eval_iter=1000 \
-    --origin_metric=0.93 \
+    --task='sst-2' \
+    --config_path='./configs/NLP/bert_asp_dis.yaml'
 ```
 
 ### 3.4 进行非结构化稀疏蒸馏策略融合压缩
-非结构化稀疏蒸馏压缩示例脚本为[unstructure_prune_demo.py](./unstructure_prune_demo.py)，使用接口``paddleslim.source_free.AutoCompression``对模型进行压缩。运行命令为：
+非结构化稀疏蒸馏压缩示例脚本为[demo_imagenet.py](./demo_imagenet.py)，使用接口``paddleslim.auto_compression.AutoCompression``对模型进行压缩。运行命令为：
 ```
-python unstructure_prune_demo.py
+python demo_imagenet.py \
+    --model_dir='infermodel_mobilenetv2' \
+    --model_filename='inference.pdmodel' \
+    --params_filename='./inference.pdiparams' \
+    --save_dir='./save_qat_mbv2/' \
+    --devices='gpu' \
+    --batch_size=64 \
+    --config_path='./configs/CV/xxx.yaml'
 ```

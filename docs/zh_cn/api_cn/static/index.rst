@@ -14,4 +14,4 @@
    prune/prune_index.rst
    dist/distill_index.rst
    nas/nas_index.rst
-   source-free/source-free.rst
+   auto-compression/auto_compression_index.rst

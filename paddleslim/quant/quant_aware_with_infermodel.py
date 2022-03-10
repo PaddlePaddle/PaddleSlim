@@ -28,7 +28,7 @@ from ..common.recover_program import recover_inference_program
 from .quanter import _quant_config_default, _parse_configs, pact, get_pact_optimizer
 from .quanter import quant_aware, convert
 from ..dist import merge, l2_loss, soft_label_loss, fsp_loss
-from ..source_free.create_compressed_program import build_distill_program
+from ..auto_compression.create_compressed_program import build_distill_program
 import logging
 logging.getLogger().setLevel(logging.INFO)
 from ..common import get_logger
@@ -99,6 +99,7 @@ def _parse_train_configs(train_config):
         "'distill_node_pair' distillation nodes need to be configured in pairs"
     return train_config
 
+
 def _compile_program(program, fetch_var_name):
     """compiling program"""
     compiled_prog = paddle.static.CompiledProgram(program)
@@ -113,6 +114,7 @@ def _compile_program(program, fetch_var_name):
         build_strategy=build_strategy,
         exec_strategy=exec_strategy)
     return compiled_prog
+
 
 def quant_aware_with_infermodel(executor,
                                 place,
@@ -157,8 +159,8 @@ def quant_aware_with_infermodel(executor,
     _logger.info("quant_aware config {}".format(quant_config))
 
     train_config = _parse_train_configs(train_config)
-    distill_program_info, test_program_info = build_distill_program(executor, place,
-                                                              train_config)
+    distill_program_info, test_program_info = build_distill_program(
+        executor, place, train_config, train_config)
     startup_program = distill_program_info.startup_program
     train_program = distill_program_info.program
     train_feed_names = distill_program_info.feed_target_names
@@ -275,7 +277,8 @@ def export_quant_infermodel(
     _logger.info("quant_aware config {}".format(quant_config))
 
     train_config = _parse_train_configs(train_config)
-    _, test_program_info = build_distill_program(executor, place, train_config)
+    _, test_program_info = build_distill_program(executor, place, train_config,
+                                                 train_config)
     test_program = test_program_info.program
     test_feed_names = test_program_info.feed_target_names
     test_fetch_list = test_program_info.fetch_targets

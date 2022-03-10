@@ -6,3 +6,4 @@
    :maxdepth: 1
 
    auto_compress_api.rst
+   custom_function.rst

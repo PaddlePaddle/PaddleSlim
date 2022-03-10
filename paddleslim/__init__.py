@@ -20,8 +20,11 @@ from paddleslim import analysis
 from paddleslim import dist
 from paddleslim import quant
 from paddleslim import dygraph
-from paddleslim import source_free
-__all__ = ['models', 'prune', 'nas', 'analysis', 'dist', 'quant', 'dygraph', 'source_free']
+from paddleslim import auto_compression
+__all__ = [
+    'models', 'prune', 'nas', 'analysis', 'dist', 'quant', 'dygraph',
+    'auto_compression'
+]
 
 from paddleslim.dygraph import *
 __all__ += dygraph.__all__

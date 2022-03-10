@@ -1,47 +1,70 @@
-source-free压缩功能
+AutoCompression自动压缩功能
 ==========
 
 AutoCompression
 ---------------
-.. py:class:: paddleslim.source_free.AutoCompression(model_dir, model_filename, params_filename, save_dir, strategy_config, train_config, train_dataloader, eval_callback, devices='gpu')
+.. py:class:: paddleslim.auto_compression.AutoCompression(model_dir, model_filename, params_filename, save_dir, strategy_config, train_config, train_dataloader, eval_callback, devices='gpu')
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/source_free/auto_compression.py#L32>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/auto_compression.py#L32>`_
 
-基于 ``inference mode`` 推理模型使用传入的压缩配置进行模型压缩。
+根据指定的配置对使用 ``paddle.jit.save`` 接口或者 ``paddle.static.save_inference_model`` 接口保存的推理模型进行压缩。
 
 **参数: **
 
 - **model_dir(str)** - 需要压缩的推理模型所在的目录。
 - **model_filename(str)** - 需要压缩的推理模型文件名称。
 - **params_filename(str)** - 需要压缩的推理模型参数文件名称。
-- **save_dir(str)** - 需要压缩后模型的保存目录。
-- **strategy_config(dict)** - 使用的压缩策略。字典的关键字必须在: ``QuantizationConfig`` (量化配置), ``DistillationConfig`` (蒸馏配置), 
-                     ``MultiTeacherDistillationConfig`` (多teacher蒸馏配置), ``HyperParameterOptimizationConfig`` (超参搜索配置), 
-                     ``PruneConfig`` (剪枝配置), ``UnstructurePruneConfig`` (非结构化稀疏配置) 之间选择，目前只支持以下几种配置:
-                         1) 量化配置和超参搜索配置 组成 离线量化超参搜索的策略融合;
-                         2) 量化配置和蒸馏配置 组成 量化训练和蒸馏的策略融合;
-                         3) 剪枝配置和馏配置 组成 结构化剪枝和蒸馏的策略融合;
-                         4) 非结构化稀疏配置和馏配置 组成 非结构化稀疏和蒸馏的策略融合;
-                         5) 蒸馏配置，单独单蒸馏压缩;
-                         6) 多teacher蒸馏配置, 单独多teacher蒸馏配置。
+- **save_dir(str)** - 压缩后模型的所保存的目录。
+- **strategy_config(dict)** - 使用的压缩策略。字典的关键字必须在: ``Quantization`` (量化配置, 可配置的参数参考 `<>`_ ), ``Distillation`` (蒸馏配置, 可配置的参数参考 `<>`_), 
+                     ``MultiTeacherDistillation`` (多teacher蒸馏配置, 可配置的参数参考 `<>`_), ``HyperParameterOptimization`` (超参搜索配置, 可配置的参数参考 `<>`_), 
+                     ``Prune`` (剪枝配置, 可配置的参数参考 `<>`_), ``UnstructurePrune`` (非结构化稀疏配置, 可配置的参数参考 `<>`_) 之间选择。目前关键字只支持以下几种配置:
+                         1) ``Quantization`` & ``HyperParameterOptimization``: 离线量化超参搜索策略;
+                         2) ``Quantization`` & ``Distillation``: 量化训练和蒸馏的策略;
+                         3) ``Prune`` & ``Distillation``: 结构化剪枝和蒸馏的策略;
+                         4) ``UnstructurePrune`` & ``Distillation``: 非结构化稀疏和蒸馏的策略;
+                         5) ``Distillation``: 单独单蒸馏策略;
+                         6) ``MultiTeacherDistillation``: 多teacher蒸馏策略。
                      每种配置的具体参数信息可以参考：。
-- **train_config(dict)** - 训练配置，dict类型。可以配置的参数请参考:  。注意：如果选择离线量化超参搜索的策略融合的话， ``train_config`` 直接设置为 ``None`` 即可。
-- **train_dataloader(paddle.io.DataLoader)** - 训练数据迭代器。
-- **eval_callback(paddle.io.DataLoader|function)** - eval回调函数，和测试数据之间必须传入一个，如果传入回调函数，则使用回调函数判断模型训练情况。callback传入predict结果（paddle的tensor）。
-- **devices(str)** - 确定特定的运行设备，可以是 ``cpu`` , ``gpu``, ``npu``, ``gpu:x``, ``xpu:x``, 或者是 ``npu:x`` 。其中， ``x`` 是GPU, XPU 或者是NPU的编号。当 ``devices`` 是 ``cpu`` 的时候， 程序在CPU上运行， 当 ``devices`` 是 ``gpu:x`` 的时候，程序在GPU上运行， 当device是 ``npu:x`` 的时候，程序在NPU上运行。默认: ``gpu`` 。
+- **train_config(dict)** - 训练配置。可以配置的参数请参考: `<>`_ 。注意：如果选择离线量化超参搜索策略的话， ``train_config`` 直接设置为 ``None`` 即可。
+- **train_dataloader(paddle.io.DataLoader)** - 训练数据迭代器。注意：如果选择离线量化超参搜索策略的话, ``train_dataloader`` 和 ``eval_callback`` 设置相同的数据读取即可。
+- **eval_callback(paddle.io.DataLoader|function)** - eval回调函数和测试数据迭代器之间必须传入一个，如果传入回调函数，则使用回调函数判断模型训练情况, 回调函数的写法参考： `<>`_ 。如果传入测试数据迭代器，则使用 ``EMD`` 距离判断压缩前后模型之间的差别，目前仅支持离线量化超参搜索使用这种方式判断压缩前后模型的压缩。
+- **devices(str)** - 确定特定的运行设备，可以是 ``cpu`` , ``gpu``, ``npu``, ``gpu:x``, ``xpu:x``, ``npu:x`` 。其中， ``x`` 是GPU, XPU 或者是NPU的编号。默认: ``gpu`` 。
 
 **返回：** 一个AutoCompression类的实例。
 
 **示例代码：**
 
-.. code-block:: python
+```shell
 
-   from paddleslim.source_free import AutoCompression
-   ac = AutoCompression()
-..
+   import paddle
+   from paddleslim.auto_compression import AutoCompression
+   default_qat_config = {
+       "quantize_op_types": ["conv2d", "depthwise_conv2d", "mul"],
+       "weight_bits": 8,
+       "activation_bits": 8,
+       "is_full_quantize": False,
+       "not_quant_pattern": ["skip_quant"],
+   }
+
+   default_distill_config = {
+       "distill_loss": args.distill_loss,
+       "distill_node_pair": args.distill_node_pair,
+       "distill_lambda": args.distill_lambda,
+       "teacher_model_dir": args.teacher_model_dir,
+       "teacher_model_filename": args.teacher_model_filename,
+       "teacher_params_filename": args.teacher_params_filename,
+   }
+   train_dataloader = Cifar10(mode='train')
+   eval_dataloader = Cifar10(mode='eval')
+   ac = AutoCompression(model_path, model_filename, params_filename, save_dir, \
+                        strategy_config="Quantization": Quantization(**default_ptq_config), 
+                        "HyperParameterOptimization": HyperParameterOptimization(**default_hpo_config)}, \
+                        train_config=None, train_dataloader=train_dataloader, eval_callback=eval_dataloader,devices='gpu')
+
+```
  
 
-.. py:method:: paddleslim.source_free.AutoCompression.compression()
+.. py:method:: paddleslim.auto_compression.AutoCompression.compress()
 
 开始进行压缩。
 
@@ -49,7 +72,7 @@ AutoCompression
 TrainConfig
 ----------
 
-训练配置。
+训练超参配置。
 
 **参数：**
 
@@ -76,7 +99,7 @@ TrainConfig
 - **sharding_config(dict, optional)** - 使用fleet api的前提下可以使用sharding 策略。参数按照fleet 接口中所描述的进行配置： `sharding_configs <https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#sharding_configs>`_ 。
 
 
-QuantizationConfig
+Quantization
 ----------
 
 量化配置。
@@ -89,7 +112,7 @@ QuantizationConfig
 - **is_full_quantize(bool)** - 是否量化所有可支持op类型。
 - **not_quant_pattern(str|list[str])** - 所有 ``name_scope`` 包含 ``'not_quant_pattern'`` 字符串的 op 都不量化, 设置方式请参考 `fluid.name_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/api_cn/fluid_cn/name_scope_cn.html#name-scope>`_ 。
 
-DistillationConfig
+Distillation
 ----------
 
 蒸馏配置。
@@ -106,7 +129,7 @@ DistillationConfig
 - **merge_feed(bool)** - 蒸馏过程是否需要共享同一个输入数据。默认： ``True`` 。
 
 
-MultiTeacherDistillationConfig
+MultiTeacherDistillation
 ----------
 
 多teacher蒸馏配置。
@@ -123,7 +146,7 @@ MultiTeacherDistillationConfig
 - **merge_feed(bool)** - 蒸馏过程是否需要共享同一个输入数据。默认： ``True`` 。
 
 
-HyperParameterOptimizationConfig
+HyperParameterOptimization
 ----------
 
 超参搜索搜索空间配置。
@@ -138,7 +161,6 @@ HyperParameterOptimizationConfig
 - **bias_correct(bool|list[bool])** - 是否使用 bias correction 算法。
 - **weight_quantize_type(str|list[str])** - weight的量化方式，可选 ``abs_max`` 或者 ``channel_wise_abs_max`` 。
 - **hist_percent(float|list[float])** - ``hist`` 方法的百分位数，设置类型为列表的话，列表中的最大最小值会作为上下界，在上下界范围内进行均匀采样。
-- **batch_size(int|list[int])** - 每个batch的图片数量, 设置类型为列表的话，列表中的最大最小值会作为上下界，在上下界范围内进行均匀采样。
 - **batch_num(int|list[int])** - 迭代次数, 设置类型为列表的话，列表中的最大最小值会作为上下界，在上下界范围内进行均匀采样。
 - **max_quant_count(int)** - 超参搜索运行的最大轮数, 默认：20。
 
@@ -154,7 +176,7 @@ PruneConfig
 - **prune_params_name(list[str])** - 参与裁剪的参数的名字。
 - **criterion(str)** - 裁剪算法设置为 ``prune`` 时，评估一个卷积层内通道重要性所参考的指标。目前支持 ``l1_norm``, ``bn_scale``, ``geometry_median`` 。
 
-UnstructurePruneConfig
+UnstructurePrune
 ----------
 
 非结构化稀疏配置。

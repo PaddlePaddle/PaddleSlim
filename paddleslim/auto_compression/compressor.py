@@ -75,19 +75,19 @@ class AutoCompression:
         return exe, places
 
     def _prepare_strategy(self):
-        quant_config = self.strategy_config.get("QuantizationConfig", None)
-        hpo_config = self.strategy_config.get(
-            "HyperParameterOptimizationConfig", None)
-        prune_config = self.strategy_config.get("PruneConfig", None)
-        unstructure_prune_config = self.strategy_config.get(
-            "UnstructurePruneConfig", None)
-        single_teacher_distill_config = self.strategy_config.get(
-            "DistillationConfig", None)
+        quant_config = self.strategy_config.get("Quantization", None)
+        hpo_config = self.strategy_config.get("HyperParameterOptimization",
+                                              None)
+        prune_config = self.strategy_config.get("Prune", None)
+        unstructure_prune_config = self.strategy_config.get("UnstructurePrune",
+                                                            None)
+        single_teacher_distill_config = self.strategy_config.get("Distillation",
+                                                                 None)
         multi_teacher_distill_config = self.strategy_config.get(
-            "MultiTeacherDistillationConfig", None)
+            "MultiTeacherDistillation", None)
 
         assert (single_teacher_distill_config is None) or (multi_teacher_distill_config is None), \
-            "DistillationConfig and MultiTeacherDistillationConfig cannot be set at the same time."
+            "Distillation and MultiTeacherDistillation cannot be set at the same time."
         self._distill_config = single_teacher_distill_config if \
                single_teacher_distill_config is not None else \
                multi_teacher_distill_config
@@ -125,7 +125,8 @@ class AutoCompression:
         ### case N: todo
         else:
             raise NotImplementedError(
-                "Not Implemented and be set at the same time now")
+                "Not Implemented {} be set at the same time now".format(
+                    self.strategy_config.keys()))
 
         return strategy, config
 
@@ -227,8 +228,8 @@ class AutoCompression:
         program_info.program = compiled_prog
         return program_info
 
-    def compression(self):
-        ### start compression, including train/eval model
+    def compress(self):
+        ### start compress, including train/eval model
         if self._strategy == 'ptq_hpo':
             quant_post_hpo(
                 self._exe,
@@ -250,7 +251,7 @@ class AutoCompression:
                 algo=self._config.ptq_algo,
                 bias_correct=self._config.bias_correct,
                 hist_percent=self._config.hist_percent,
-                batch_size=self._config.batch_size,
+                batch_size=[1],
                 batch_num=self._config.batch_num,
                 runcount_limit=self._config.max_quant_count)
 
@@ -269,8 +270,7 @@ class AutoCompression:
 
             ### used to check whether the dataloader is right
             if self.eval_function is not None and self.train_config.origin_metric is not None:
-                metric = self.eval_function(self._exe, self._places,
-                                            inference_program,
+                metric = self.eval_function(self._exe, inference_program,
                                             feed_target_names, fetch_targets)
                 _logger.info("metric of compressed model is: {}".format(metric))
                 buf = 0.05
@@ -316,7 +316,7 @@ class AutoCompression:
                             self._pruner.update_params()
 
                         metric = self.eval_function(
-                            self._exe, self._places, test_program_info.program,
+                            self._exe, test_program_info.program,
                             test_program_info.feed_target_names,
                             test_program_info.fetch_targets)
 

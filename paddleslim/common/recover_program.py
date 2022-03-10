@@ -20,6 +20,7 @@ from ..core import GraphWrapper
 
 __all__ = ['recover_inference_program']
 
+
 def _remove_fetch_node(program):
     """remove fetch node in program"""
     for block in program.blocks:
@@ -30,6 +31,7 @@ def _remove_fetch_node(program):
                 idx = ops.index(op)
                 block._remove_op(idx - removed)
                 removed += 1
+
 
 def _recover_reserve_space_with_bn(program):
     """Add the outputs which is only used for training and not saved in
@@ -50,6 +52,7 @@ def _recover_reserve_space_with_bn(program):
                     op.desc.set_output("ReserveSpace", [reserve_space.name])
     return program
 
+
 def _recover_param_attr(program):
     """recover parameters attribute.
        Params in infermodel are stored in the form of variable, which can not be trained."""
@@ -66,6 +69,7 @@ def _recover_param_attr(program):
         program.block(0).vars[w.name] = new_w
     return program
 
+
 def recover_inference_program(inference_program):
     """  recover inference program to train program which can be trained. """
     _remove_fetch_node(inference_program)
@@ -74,10 +78,7 @@ def recover_inference_program(inference_program):
     for var in inference_program.list_vars():
         var.stop_gradient = False
 
-    infer_graph = GraphWrapper(inference_program)
-    for op in infer_graph.ops():
-        op._op._set_attr("is_test", False)
+    for op in inference_program.global_block().ops:
+        op._set_attr("is_test", False)
 
-    train_program = infer_graph.program
-
-    return train_program
+    return inference_program

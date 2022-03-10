@@ -15,14 +15,14 @@
 from collections import namedtuple
 
 __all__ = [
-    "QuantizationConfig", "DistillationConfig", "MultiTeacherDistillationConfig", \
-    "HyperParameterOptimizationConfig", "PruneConfig", "UnstructurePruneConfig",  \
+    "Quantization", "Distillation", "MultiTeacherDistillation", \
+    "HyperParameterOptimization", "Prune", "UnstructurePrune",  \
     "merge_config", "ProgramInfo", "TrainConfig",
 ]
 
-### QuantizationConfig:
-QuantizationConfig = namedtuple(
-    "QuantizationConfig",
+### Quantization:
+Quantization = namedtuple(
+    "Quantization",
     [
         "quantize_op_types",
         "weight_bits",
@@ -32,12 +32,12 @@ QuantizationConfig = namedtuple(
         "is_full_quantize"
     ])
 
-QuantizationConfig.__new__.__defaults__ = (None, ) * (
-    len(QuantizationConfig._fields) - 1) + (False, )
+Quantization.__new__.__defaults__ = (None, ) * (len(Quantization._fields) - 1
+                                                ) + (False, )
 
-### DistillationConfig:
-DistillationConfig = namedtuple(
-    "DistillationConfig",
+### Distillation:
+Distillation = namedtuple(
+    "Distillation",
     [
         "distill_loss",  ### list[list]，支持不同节点之间使用不同的loss。
         "distill_node_pair",  ### list[list]，支持不同节点之间使用不同的loss。
@@ -48,13 +48,13 @@ DistillationConfig = namedtuple(
         "merge_feed",
     ])
 
-DistillationConfig.__new__.__defaults__ = (None, ) * (
-    len(DistillationConfig._fields) - 1) + (True, )
+Distillation.__new__.__defaults__ = (None, ) * (len(Distillation._fields) - 1
+                                                ) + (True, )
 
 ### 多teacher蒸馏配置
-### Multi-Teacher DistillationConfig：
-MultiTeacherDistillationConfig = namedtuple(
-    "MultiTeacherDistillationConfig",
+### Multi-Teacher Distillation：
+MultiTeacherDistillation = namedtuple(
+    "MultiTeacherDistillation",
     [
         "distill_loss",  ### list[str]，每个teacher对应一个loss
         "distill_node_pair",  ### list[list]，每个teacher对应一个蒸馏。仅支持logits蒸馏，不支持中间层蒸馏
@@ -65,31 +65,30 @@ MultiTeacherDistillationConfig = namedtuple(
         "merge_feed",
     ])
 
-MultiTeacherDistillationConfig.__new__.__defaults__ = (None, ) * (
-    len(MultiTeacherDistillationConfig._fields) - 1) + (True, )
+MultiTeacherDistillation.__new__.__defaults__ = (None, ) * (
+    len(MultiTeacherDistillation._fields) - 1) + (True, )
 
 ### 不设置就按照默认的搜索空间进行超参搜索，设置的话按照设置的搜索空间搜索，这样可以支持单PTQ策略
-###HyperParameterOptimizationConfig
-HyperParameterOptimizationConfig = namedtuple(
-    "HyperParameterOptimizationConfig", [
-        "ptq_algo", "bias_correct", "weight_quantize_type", "hist_percent",
-        "batch_size", "batch_num", "max_quant_count"
-    ])
+###HyperParameterOptimization
+HyperParameterOptimization = namedtuple("HyperParameterOptimization", [
+    "ptq_algo", "bias_correct", "weight_quantize_type", "hist_percent",
+    "batch_num", "max_quant_count"
+])
 
-HyperParameterOptimizationConfig.__new__.__defaults__ = (None, ) * (
-    len(HyperParameterOptimizationConfig._fields) - 1) + (20, )
+HyperParameterOptimization.__new__.__defaults__ = (None, ) * (
+    len(HyperParameterOptimization._fields) - 1) + (20, )
 
-### PruneConfig
-PruneConfig = namedtuple("PruneConfig", [
+### Prune
+Prune = namedtuple("Prune", [
     "prune_algo",
     "pruned_ratio",
     "prune_params_name",
     "criterion",
 ])
-PruneConfig.__new__.__defaults__ = (None, ) * len(PruneConfig._fields)
+Prune.__new__.__defaults__ = (None, ) * len(Prune._fields)
 
-### UnstructurePruneConfig
-UnstructurePruneConfig = namedtuple("UnstructurePruneConfig", [
+### UnstructurePrune
+UnstructurePrune = namedtuple("UnstructurePrune", [
     "prune_strategy",
     "prune_mode",
     "threshold",
@@ -98,11 +97,10 @@ UnstructurePruneConfig = namedtuple("UnstructurePruneConfig", [
     "prune_params_type",
     "local_sparsity",
 ])
-UnstructurePruneConfig.__new__.__defaults__ = (
-    None, ) * len(UnstructurePruneConfig._fields)
+UnstructurePrune.__new__.__defaults__ = (None, ) * len(UnstructurePrune._fields)
 
-### TrainConfig
-TrainConfig = namedtuple("TrainConfig", [
+### Train
+TrainConfig = namedtuple("Train", [
     "epochs",
     "learning_rate",
     "optimizer",
