@@ -71,15 +71,18 @@ class TableLatencyPredictor(LatencyPredictor):
         self.hardware = None
         self.threads = None
         self.predictor_state = False
+        self.predictor = {}
         self._initial_table()
 
     def _initial_table(self):
         if self.table_file in ['SD625', 'SD710', 'SD845', 'SD865']:
             self.hardware = self.table_file
-            if self.hardware in ['SD625', 'SD710']:
-                self.predictor_state = True
             self.threads = 4
             self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
+            if self.hardware in ['SD625', 'SD710']:
+                self.predictor_state = True
+                self._preload_predictor(data_type='fp32')
+                self._preload_predictor(data_type='int8')
             if not os.path.exists(self.table_file):
                 subprocess.call(
                     f'wget https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}',
@@ -115,6 +118,19 @@ class TableLatencyPredictor(LatencyPredictor):
                 break
         return in_shape
 
+    def _preload_predictor(self, data_type='fp32'):
+        op_types = [
+            'depthwise_conv2d', 'conv2d', 'pool2d', 'matmul', 'elementwise_add',
+            'elementwise_mul', 'concat', 'calib', 'swish'
+        ]
+        op_dir = self.table_file.split('.')[0] + '_batchsize_1'
+        for op_type in op_types:
+            model = load_predictor(op_type, op_dir, data_type)
+            key = op_type
+            if 'conv2d' in op_type:
+                key = f'{op_type}_{data_type}'
+            self.predictor[key] = model
+
     def predict(self,
                 model_file,
                 param_file,
@@ -137,11 +153,11 @@ class TableLatencyPredictor(LatencyPredictor):
         if self.hardware and self.threads != threads:
             self._change_table(threads)
 
-        enable_fp16 = True if data_type=='fp16' else False
+        enable_fp16 = True if data_type == 'fp16' else False
         pbmodel_file = opt_model(
             model_file=model_file,
             param_file=param_file,
-            optimize_out_type='protobuf', 
+            optimize_out_type='protobuf',
             enable_fp16=enable_fp16)
 
         paddle.enable_static()
@@ -187,18 +203,20 @@ class TableLatencyPredictor(LatencyPredictor):
         Args:
             op_type: The operator's type
             param_key: The operator's parameter information.
-            data_type: Data type, fp32 or int8. Default : int8
+            data_type: Data type, fp32 or int8.
         Returns:
             latency(float): The latency of the operator.
         """
 
         latency = 0.0
-        op_dir = self.table_file.split('.')[0] + '_batchsize_1'
         if op_type in [
                 'depthwise_conv2d', 'conv2d', 'pool2d', 'matmul',
                 'elementwise_add', 'elementwise_mul', 'concat', 'calib', 'swish'
         ]:
-            predictor = load_predictor(op_type, op_dir, data_type)
+            key = op_type
+            if 'conv2d' in op_type:
+                key = f'{op_type}_{data_type}'
+            predictor = self.predictor[key]
             features = get_features_from_paramkey(param_key, op_type, data_type)
             latency = predictor.predict([features])
         else:
