@@ -35,7 +35,7 @@ git checkout release/v2.8
 
 ```
 注意：编译Paddle-Lite获得预测库时，需要打开`--with_cv=ON --with_extra=ON`两个选项，`--arch`表示`arm`版本，这里指定为armv8，
-更多编译命令介绍请参考[链接](https://paddle-lite.readthedocs.io/zh/latest/source_compile/compile_andriod.html)。
+更多编译命令介绍请参考[链接](https://paddle-lite.readthedocs.io/zh/latest/source_compile/compile_options.html)。
 预测库的文件目录如下：
 ```
 inference_lite_lib.android.armv8/
