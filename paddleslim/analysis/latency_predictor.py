@@ -81,8 +81,6 @@ class TableLatencyPredictor(LatencyPredictor):
             self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
             if self.hardware in ['SD625', 'SD710']:
                 self.predictor_state = True
-                self._preload_predictor(data_type='fp32')
-                self._preload_predictor(data_type='int8')
             if not os.path.exists(self.table_file):
                 subprocess.call(
                     f'wget https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}',
@@ -141,7 +139,7 @@ class TableLatencyPredictor(LatencyPredictor):
         
         Args:
             model_file(str), param_file(str): The inference model(*.pdmodel, *.pdiparams).
-            data_type(str): Data type, fp32, fp16 or int8. Default : fp32
+            data_type(str): Data type, fp32, fp16 or int8.
             threads(int): threads num
             input_shape(list): Generally, the input shape is confirmed when saving the inference model and the parameter is only effective for input shape that has variable length.
         Returns:
@@ -152,6 +150,9 @@ class TableLatencyPredictor(LatencyPredictor):
 
         if self.hardware and self.threads != threads:
             self._change_table(threads)
+
+        if self.predictor_state and self.predictor == {}:
+            self._preload_predictor(data_type)
 
         enable_fp16 = True if data_type == 'fp16' else False
         pbmodel_file = opt_model(
