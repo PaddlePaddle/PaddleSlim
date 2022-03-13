@@ -151,7 +151,7 @@ class TableLatencyPredictor(LatencyPredictor):
         if self.hardware and self.threads != threads:
             self._change_table(threads)
 
-        if self.predictor_state and self.predictor == {}:
+        if self.predictor_state and f'conv2d_{data_type}' not in self.predictor:
             self._preload_predictor(data_type)
 
         enable_fp16 = True if data_type == 'fp16' else False
