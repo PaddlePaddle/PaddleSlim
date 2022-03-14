@@ -25,6 +25,7 @@ class UnstructuredPruner():
       - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
       - local_sparsity(bool): Whether to enable local sparsity. Local sparsity means all the weight matrices have the same sparsity. And the global sparsity only ensures the whole model's sparsity is equal to the passed-in 'ratio'. Default: False
+      - sparse_block(Array<Integer>): There must be two integers inside this array. The array defines a block, the values within which are either sparsified to all zeros or kept original. [1, 1] means unstructured pruning. Default: [1,1]
     """
 
     def __init__(self,
@@ -265,7 +266,7 @@ class UnstructuredPruner():
     def _get_skip_params(self, model):
         """
         This function is used to check whether the given model's layers are valid to be pruned. 
-        Usually, the convolutions are to be pruned while we skip the normalization-related parameters.
+        Usually, the convolutions are to be pruned while we skip the normalization-related parameters and bias.
         Deverlopers could replace this function by passing their own when initializing the UnstructuredPuner instance.
 
         Args:
@@ -311,6 +312,7 @@ class GMPUnstructuredPruner(UnstructuredPruner):
       - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
       - local_sparsity(bool): Whether to enable local sparsity. Local sparsity means all the weight matrices have the same sparsity. And the global sparsity only ensures the whole model's sparsity is equal to the passed-in 'ratio'. Default: False
+      - sparse_block(Array<Integer>): There must be two integers inside this array. The array defines a block, the values within which are either sparsified to all zeros or kept original. [1, 1] means unstructured pruning. Default: [1,1]
       - configs(Dict): The dictionary contains all the configs for GMP pruner. Default: None
 
         .. code-block:: python
