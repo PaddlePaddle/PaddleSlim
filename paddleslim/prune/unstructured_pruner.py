@@ -33,7 +33,7 @@ class UnstructuredPruner():
                  prune_params_type=None,
                  skip_params_func=None,
                  local_sparsity=False,
-                 sparse_block=[1,1]):
+                 sparse_block=[1, 1]):
         self.mode = mode
         self.ratio = ratio
         self.threshold = threshold
@@ -46,7 +46,13 @@ class UnstructuredPruner():
         assert prune_params_type is None or prune_params_type == 'conv1x1_only', "prune_params_type only supports None or conv1x1_only for now."
         if self.local_sparsity:
             assert self.mode == 'ratio', "We don't support local_sparsity==True and mode=='threshold' at the same time, please change the inputs accordingly."
-        assert len(sparse_block)==2 and sparse_block[0] > 0 and sparse_block[1] > 0 and isinstance(sparse_block[0], int) and isinstance(sparse_block[1], int), "Please make sure you provide a valid sparse block, in which there are two positive integers."
+        assert len(
+            sparse_block
+        ) == 2 and sparse_block[0] > 0 and sparse_block[1] > 0 and isinstance(
+            sparse_block[0], int
+        ) and isinstance(
+            sparse_block[1], int
+        ), "Please make sure you provide a valid sparse block, in which there are two positive integers."
 
         self.scope = paddle.static.global_scope() if scope == None else scope
         self.place = paddle.static.cpu_places()[0] if place is None else place
@@ -118,7 +124,8 @@ class UnstructuredPruner():
         cols = len(mat[0]) // n + 1
         for row in range(rows):
             for col in range(cols):
-                avg_mat[m*row: m*row+m, n*col: n*col+n] = np.mean(mat[m*row: m*row+m, n*col: n*col+n])
+                avg_mat[m * row:m * row + m, n * col:n * col + n] = np.mean(mat[
+                    m * row:m * row + m, n * col:n * col + n])
         return avg_mat
 
     def summarize_weights(self, program, ratio=0.1):
@@ -174,9 +181,14 @@ class UnstructuredPruner():
                 continue
             t_param = self.scope.find_var(param).get_tensor()
             v_param = np.array(t_param)
-            if (self.sparse_block[0]*self.sparse_block[1]/v_param.size >= 0.05):
-                print("Your sparse block size {} might be too large for the param {} with shape {}, the sparsity of this param might not be precise. Please decrease your sparse block size if possible.".format(self.sparse_block, param.name, param.shape))
-            v_param = self._cal_mxn_avg_matrix(v_param, m=self.sparse_block[0], n=self.sparse_block[1])
+            if (self.sparse_block[0] * self.sparse_block[1] / v_param.size >=
+                    0.05):
+                print(
+                    "Your sparse block size {} might be too large for the param {} with shape {}, the sparsity of this param might not be precise. Please decrease your sparse block size if possible.".
+                    format(self.sparse_block, param, v_param.shape))
+            print(param)
+            v_param = self._cal_mxn_avg_matrix(
+                v_param, m=self.sparse_block[0], n=self.sparse_block[1])
             if self.local_sparsity:
                 cur_threshold = self._partition_sort(v_param.flatten())
                 self.thresholds[param] = cur_threshold
@@ -204,7 +216,8 @@ class UnstructuredPruner():
             t_param = self.scope.find_var(param).get_tensor()
             t_mask = self.scope.find_var(mask_name).get_tensor()
             v_param = np.array(t_param)
-            v_param_avg = self._cal_mxn_avg_matrix(v_param, m=self.sparse_block[0], n=self.sparse_block[1])
+            v_param_avg = self._cal_mxn_avg_matrix(
+                v_param, m=self.sparse_block[0], n=self.sparse_block[1])
             if self.local_sparsity:
                 v_param[np.abs(v_param_avg) < self.thresholds[param]] = 0
             else:
@@ -282,6 +295,10 @@ class UnstructuredPruner():
             if 'norm' in op.type() and 'grad' not in op.type():
                 for input in op.all_inputs():
                     skip_params.add(input.name())
+        # exclude bias whose shape is like (n,)
+        for param in program.all_parameters():
+            if len(param.shape) == 1:
+                skip_params.add(param.name)
         return skip_params
 
     def _get_skip_params_conv1x1(self, program):
@@ -292,6 +309,9 @@ class UnstructuredPruner():
                 for input in op.all_inputs():
                     skip_params.add(input.name())
         for param in program.all_parameters():
+            # exclude bias whose shape is like (n,)
+            if len(param.shape) == 1:
+                skip_params.add(param.name)
             if not (len(param.shape) == 4 and param.shape[2] == 1 and
                     param.shape[3] == 1):
                 skip_params.add(param.name)
@@ -361,7 +381,7 @@ class GMPUnstructuredPruner(UnstructuredPruner):
                  prune_params_type=None,
                  skip_params_func=None,
                  local_sparsity=False,
-                 sparse_block=[1,1],
+                 sparse_block=[1, 1],
                  configs=None):
         assert configs is not None, "Please pass in a valid config dictionary."
 
