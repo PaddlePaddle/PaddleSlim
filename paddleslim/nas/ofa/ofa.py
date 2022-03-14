@@ -17,7 +17,7 @@ import numpy as np
 from collections import namedtuple
 import paddle
 import paddle.fluid as fluid
-from .utils.utils import get_paddle_version, remove_model_fn
+from .utils.utils import get_paddle_version, remove_model_fn, build_input
 pd_ver = get_paddle_version()
 if pd_ver == 185:
     from .layers_old import SuperConv2D, SuperLinear
@@ -56,7 +56,11 @@ RunConfig = namedtuple(
         # list, the number of sub-network to train per mini-batch data, used to get current epoch, default: None
         'dynamic_batch_size',
         # the shape of weights in the skip_layers will not change in the training, default: None
-        'skip_layers'
+        'skip_layers',
+        # same search space designed by hand for some complicated models
+        'same_search_space',
+        # ofa_layers designed by hand if different ratio or channel is needed for different layers
+        'ofa_layers',
     ])
 RunConfig.__new__.__defaults__ = (None, ) * len(RunConfig._fields)
 
@@ -79,21 +83,6 @@ DistillConfig = namedtuple(
 DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
 
-def to_tensor(string_values, name="text"):
-    """
-    Create the tensor that the value holds the list of string.
-    NOTICE: The value will be holded in the cpu place.
-
-    Parameters:
-        string_values(list[string]): The value will be setted to the tensor.
-        name(string): The name of the tensor.
-    """
-    tensor = paddle.Tensor(core.VarDesc.VarType.STRING, [], name,
-                           core.VarDesc.VarType.STRINGS, False)
-    tensor.value().set_string_list(string_values)
-    return tensor
-
-
 class OFABase(Layer):
     def __init__(self, model):
         super(OFABase, self).__init__()
@@ -114,6 +103,11 @@ class OFABase(Layer):
             if isinstance(sublayer, BaseBlock):
                 sublayer.set_supernet(self)
                 if not sublayer.fixed:
+                    config = sublayer.candidate_config
+                    for k, v in config.items():
+                        if isinstance(v, list) or isinstance(
+                                v, set) or isinstance(v, tuple):
+                            sublayer.candidate_config[k] = sorted(list(v))
                     ofa_layers[name] = sublayer.candidate_config
                     layers[sublayer.key] = sublayer.candidate_config
                     key2name[sublayer.key] = name
@@ -158,20 +152,17 @@ class OFABase(Layer):
 class OFA(OFABase):
     """
     Convert the training progress to the Once-For-All training progress, a detailed description in the paper: `Once-for-All: Train One Network and Specialize it for Efficient Deployment<https://arxiv.org/abs/1908.09791>`_ . This paper propose a training propgress named progressive shrinking (PS), which means we start with training the largest neural network with the maximum kernel size (i.e., 7), depth (i.e., 4), and width (i.e., 6). Next, we progressively fine-tune the network to support smaller sub-networks by gradually adding them into the sampling space (larger sub-networks may also be sampled). Specifically, after training the largest network, we first support elastic kernel size which can choose from {3, 5, 7} at each layer, while the depth and width remain the maximum values. Then, we support elastic depth and elastic width sequentially. 
-
     Parameters:
         model(paddle.nn.Layer): instance of model.
         run_config(paddleslim.ofa.RunConfig, optional): config in ofa training, can reference `<>`_ . Default: None.
         distill_config(paddleslim.ofa.DistillConfig, optional): config of distilltion in ofa training, can reference `<>`_. Default: None.
         elastic_order(list, optional): define the training order, if it set to None, use the default order in the paper. Default: None.
         train_full(bool, optional): whether to train the largest sub-network only. Default: False.
-
     Examples:
         .. code-block:: python
           from paddle.vision.models import mobilenet_v1
           from paddleslim.nas.ofa import OFA
           from paddleslim.nas.ofa.convert_super import Convert, supernet
-
           model = mobilenet_v1()
           sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
           sp_model = Convert(sp_net_config).convert(model)
@@ -201,6 +192,8 @@ class OFA(OFABase):
         self._broadcast = False
         self._skip_layers = None
         self._cannot_changed_layer = []
+        self.token_map = {}
+        self.search_cands = []
 
         ### if elastic_order is none, use default order
         if self.elastic_order is not None:
@@ -235,6 +228,12 @@ class OFA(OFABase):
             if 'channel' in self._elastic_task and 'width' not in self.elastic_order:
                 self.elastic_order.append('width')
 
+        if getattr(self.run_config, 'ofa_layers', None) != None:
+            for key in self.run_config.ofa_layers:
+                assert key in self._ofa_layers, "layer {} is not in current _ofa_layers".format(
+                    key)
+                self._ofa_layers[key] = self.run_config.ofa_layers[key]
+
         if getattr(self.run_config, 'n_epochs', None) != None:
             assert len(self.run_config.n_epochs) == len(self.elastic_order)
             for idx in range(len(run_config.n_epochs)):
@@ -258,6 +257,11 @@ class OFA(OFABase):
                                                None) != None:
             self._skip_layers = self.run_config.skip_layers
 
+        if self.run_config != None and getattr(
+                self.run_config, 'same_search_space', None) != None:
+            self._same_ss_by_hand = self.run_config.same_search_space
+        else:
+            self._same_ss_by_hand = None
         ### =================  add distill prepare ======================
         if self.distill_config != None:
             self._add_teacher = True
@@ -393,6 +397,47 @@ class OFA(OFABase):
             self._ofa_layers, sample_type=sample_type, task=task, phase=phase)
         return config
 
+    def tokenize(self):
+        '''
+        Tokenize current search space. Task should be set before tokenize.
+        Example: token_map = {
+                    'expand_ratio': {
+                        'conv1': {0: 0.25, 1: 0.5, 2: 0.75}
+                        'conv2': {0: 0.25, 1: 0.5, 2: 0.75}
+                    }
+                }
+        
+        '''
+        all_tokens = []
+        for name, cands in self._ofa_layers.items():
+            if self.task in cands:
+                all_tokens += list(cands[self.task])
+
+        all_tokens = sorted(list(set(all_tokens)))
+        self.token_map[self.task] = {}
+        for name, cands in self._ofa_layers.items():
+            if not cands:
+                continue
+            if self.task in cands:
+                self.token_map[self.task][name] = {}
+                for cand in cands[self.task]:
+                    key = all_tokens.index(cand)
+                    self.token_map[self.task][name][key] = cand
+            else:
+                raise NotImplementedError("Task {} not in ofa layers".format(
+                    self.task))
+
+        self.search_cands = []
+        for layer, t_map in self.token_map[self.task].items():
+            self.search_cands.append(list(t_map.keys()))
+
+    def decode_token(self, token):
+        config = {}
+        for i, name in enumerate(self.token_map[self.task].keys()):
+            config[name] = self.token_map[self.task][name][token[i]]
+        self.net_config = config
+        return config
+
     def set_task(self, task, phase=None):
         """
         set task in the ofa training progress.
@@ -480,7 +525,7 @@ class OFA(OFABase):
         pass
 
     def _get_model_pruned_weight(self):
-
+        prune_groups = {}
         pruned_param = {}
         for l_name, sublayer in self.model.named_sublayers():
 
@@ -490,6 +535,9 @@ class OFA(OFABase):
             assert 'prune_dim' in sublayer.cur_config, 'The laycer {} do not have prune_dim in cur_config.'.format(
                 l_name)
             prune_shape = sublayer.cur_config['prune_dim']
+            if 'prune_group' in sublayer.cur_config:
+                prune_group = sublayer.cur_config['prune_group']
+                prune_groups[l_name] = prune_group
 
             for p_name, param in sublayer.named_parameters(
                     include_sublayers=False):
@@ -513,7 +561,7 @@ class OFA(OFABase):
                 else:
                     pruned_param[name] = param[:prune_shape]
 
-        return pruned_param
+        return pruned_param, prune_groups
 
     def export(self,
                config,
@@ -539,31 +587,6 @@ class OFA(OFABase):
         self.set_net_config(config)
         self.model.eval()
 
-        def build_input(input_size, dtypes):
-            if isinstance(input_size, list) and all(
-                    isinstance(i, numbers.Number) for i in input_size):
-                if isinstance(dtypes, list):
-                    dtype = dtypes[0]
-                else:
-                    dtype = dtypes
-                if dtype == core.VarDesc.VarType.STRINGS:
-                    return to_tensor([""])
-                return paddle.cast(paddle.rand(list(input_size)), dtype)
-            if isinstance(input_size, dict):
-                inputs = {}
-                if isinstance(dtypes, list):
-                    dtype = dtypes[0]
-                else:
-                    dtype = dtypes
-                for key, value in input_size.items():
-                    inputs[key] = paddle.cast(paddle.rand(list(value)), dtype)
-                return inputs
-            if isinstance(input_size, list):
-                return [
-                    build_input(i, dtype)
-                    for i, dtype in zip(input_size, dtypes)
-                ]
-
         data = build_input(input_shapes, input_dtypes)
 
         if isinstance(data, list):
@@ -582,10 +605,12 @@ class OFA(OFABase):
             origin_model, DataParallel) else origin_model
 
         _logger.info("Start to get pruned params, please wait...")
-        pruned_param = self._get_model_pruned_weight()
+        pruned_param, pruned_groups = self._get_model_pruned_weight()
         pruned_state_dict = remove_model_fn(origin_model, pruned_param)
         _logger.info("Start to get pruned model, please wait...")
         for l_name, sublayer in origin_model.named_sublayers():
+            if l_name in pruned_groups:
+                sublayer._groups = pruned_groups[l_name]
             for p_name, param in sublayer.named_parameters(
                     include_sublayers=False):
                 name = l_name + '.' + p_name
@@ -643,40 +668,67 @@ class OFA(OFABase):
         if len(self._ofa_layers[key]) == 0:
             self._ofa_layers.pop(key)
 
-    def _clear_search_space(self, *inputs, **kwargs):
+    def _clear_search_space(self, *inputs, input_spec=None, **kwargs):
         """ find shortcut in model, and clear up the search space """
-        input_shapes = []
-        input_dtypes = []
-        for n in inputs:
-            if isinstance(n, Variable):
-                input_shapes.append(n)
-                input_dtypes.append(n.numpy().dtype)
+        if input_spec is None:
+            input_shapes = []
+            input_dtypes = []
+            for n in inputs:
+                if isinstance(n, Variable):
+                    input_shapes.append(n)
+                    input_dtypes.append(n.numpy().dtype)
 
-        for key, val in kwargs.items():
-            if isinstance(val, Variable):
-                input_shapes.append(val)
-                input_dtypes.append(val.numpy().dtype)
-            elif isinstance(val, dict):
-                input_shape = {}
-                input_dtype = {}
-                for k, v in val.items():
-                    input_shape[k] = v
-                    input_dtype[k] = v.numpy().dtype
-                input_shapes.append(input_shape)
-                input_dtypes.append(input_dtype)
-            else:
-                _logger.error(
-                    "Cannot figure out the type of inputs! Right now, the type of inputs can be only Variable or dict."
-                )
+            for key, val in kwargs.items():
+                if isinstance(val, Variable):
+                    input_shapes.append(val)
+                    input_dtypes.append(val.numpy().dtype)
+                elif isinstance(val, dict):
+                    input_shape = {}
+                    input_dtype = {}
+                    for k, v in val.items():
+                        input_shape[k] = v
+                        input_dtype[k] = v.numpy().dtype
+                    input_shapes.append(input_shape)
+                    input_dtypes.append(input_dtype)
+                else:
+                    _logger.error(
+                        "Cannot figure out the type of inputs! Right now, the type of inputs can be only Variable or dict."
+                    )
 
-        ### find shortcut block using static model
-        model_to_traverse = self.model._layers if isinstance(
-            self.model, DataParallel) else self.model
-        _st_prog = dygraph2program(
-            model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
-        self._same_ss, depthwise_conv, fixed_by_input, output_conv = check_search_space(
-            GraphWrapper(_st_prog))
-        self._cannot_changed_layer = output_conv
+            ### find shortcut block using static model
+            model_to_traverse = self.model._layers if isinstance(
+                self.model, DataParallel) else self.model
+            _st_prog = dygraph2program(
+                model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
+
+        else:
+            model_to_traverse = self.model._layers if isinstance(
+                self.model, DataParallel) else self.model
+
+            model_to_traverse.eval()
+            _st_prog = dygraph2program(model_to_traverse, inputs=input_spec)
+            model_to_traverse.train()
+
+        if self._same_ss_by_hand is None:
+            self._same_ss, depthwise_conv, fixed_by_input, output_conv = check_search_space(
+                GraphWrapper(_st_prog))
+            self._cannot_changed_layer = output_conv
+        else:
+            output_conv = []
+            fixed_by_input = []
+            depthwise_conv = []
+            self._cannot_changed_layer = output_conv
+            self._same_ss = []
+            self._key2param = {}
+            for name, sublayer in model_to_traverse.named_sublayers():
+                if isinstance(sublayer, BaseBlock):
+                    for param in sublayer.parameters():
+                        self._key2param[name] = param.name
+            for ss in self._same_ss_by_hand:
+                param_ss = []
+                for key in ss:
+                    param_ss.append(self._key2param[key])
+                self._same_ss.append(param_ss)
 
         if self._same_ss != None:
             self._param2key = {}
@@ -793,5 +845,6 @@ class OFA(OFABase):
 
         if self._add_teacher:
             self._remove_hook_after_forward()
+            return student_output, teacher_output
 
-        return student_output, teacher_output
+        return student_output  #, teacher_output
