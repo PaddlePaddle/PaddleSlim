@@ -227,7 +227,7 @@ class UnstructuredPruner():
         return ratio
 
     @staticmethod
-    def total_sparse_conv1x1(model, m=1, n=1):
+    def total_sparse_conv1x1(model):
         """
         This static function is used to get the partial model's sparsity in terms of conv1x1 layers.
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
@@ -237,17 +237,6 @@ class UnstructuredPruner():
         Returns:
           - ratio(float): The model's sparsity.
         """
-        def _check_mxn_sparsity(mat, m=1, n=1):
-            rows = len(mat) // m + 1
-            cols = len(mat[0]) // n + 1
-            zeros_count = 0
-            for row in range(rows):
-                for col in range(cols):
-                    sub_array = mat[m*row: m*row+m, n*col: n*col+n]
-                    if np.all((sub_array == 0)) and sub_array.size > 0:
-                        zeros_count += m * n
-            return zeros_count / np.prod(mat.shape)
-
         total = 0
         values = 0
         for name, sub_layer in model.named_sublayers():
@@ -259,10 +248,6 @@ class UnstructuredPruner():
                 if not cond: continue
                 total += np.product(param.shape)
                 values += len(paddle.nonzero(param))
-                t_param = np.array(param.value().get_tensor())
-                v_param = np.array(t_param)
-                spa = _check_mxn_sparsity(v_param, m, n)
-                print(param.shape, param.name, spa)
         ratio = 1 - float(values) / total
         return ratio
 
