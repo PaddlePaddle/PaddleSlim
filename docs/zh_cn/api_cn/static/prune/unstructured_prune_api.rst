@@ -47,8 +47,7 @@ UnstrucuturedPruner
 ..
 
 - **local_sparsity(bool)** - 剪裁比例（ratio）应用的范围：local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。
-- **sparse_block(Array<Integer>)** - 一个含有两个正整数的数组，定义了稀疏化时候block的大小。即 sparse_block[0]xsparse_block[1]中
-的参数作为一个整体，要么被稀疏置0，要么保持不变。默认为 [1,1]，代表非结构化稀疏。
+- **sparse_block(Array<Integer>)** - 一个含有两个正整数的数组，定义了稀疏化时候block的大小。即 sparse_block[0] x sparse_block[1]中的参数作为一个整体，要么被稀疏置0，要么保持不变。默认为 [1,1]，代表非结构化稀疏。
 
 **返回：** 一个UnstructuredPruner类的实例
 
@@ -344,8 +343,7 @@ GMPUnstrucuturedPruner
 - **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 - **local_sparsity(bool)** - 剪裁比例（ratio）应用的范围：local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。
-- **sparse_block(Array<Integer>)** - 一个含有两个正整数的数组，定义了稀疏化时候block的大小。即 sparse_block[0]xsparse_block[1]中
-的参数作为一个整体，要么被稀疏置0，要么保持不变。默认为 [1,1]，代表非结构化稀疏。
+- **sparse_block(Array<Integer>)** - 一个含有两个正整数的数组，定义了稀疏化时候block的大小。即 sparse_block[0] x sparse_block[1]中的参数作为一个整体，要么被稀疏置0，要么保持不变。默认为 [1,1]，代表非结构化稀疏。
 
 - **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。具体描述如下：
 
