@@ -35,7 +35,7 @@ add_arg('pruning_mode',            str,  'ratio',               "the pruning mod
 add_arg('threshold',            float,  0.01,               "The threshold to set zeros. Default: 0.01")
 add_arg('num_epochs',       int,  120,               "The number of total epochs. Default: 120")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
-parser.add_argument('--sparse_block', nargs='+', type=int, default=[1, 1], help="The values inside the block are either all zeros or the original. [1, 1] means unstructured pruning")
+parser.add_argument('--sparse_block', nargs='+', type=int, default=[1, 1], help="There must be two integers inside this array. The array defines the shape of the block, the values within which are either sparsified to all zeros or kept original. [1, 1] means unstructured pruning. Default: [1, 1]")
 add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'. Default: imagenet")
 add_arg('log_period',       int, 100,                 "Log period in batches. Default: 100")
 add_arg('test_period',      int, 5,                 "Test period in epoches. Default: 5")

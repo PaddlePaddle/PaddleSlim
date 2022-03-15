@@ -2,6 +2,7 @@ import numpy as np
 import paddle
 import logging
 from paddleslim.common import get_logger
+from paddleslim.prune.unstructured_pruner_utils import *
 import copy
 
 __all__ = ["UnstructuredPruner", "GMPUnstructuredPruner"]
@@ -26,7 +27,7 @@ class UnstructuredPruner():
       - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
       - local_sparsity(bool): Whether to enable local sparsity. Local sparsity means all the weight matrices have the same sparsity. And the global sparsity only ensures the whole model's sparsity is equal to the passed-in 'ratio'. Default: False
-      - sparse_block(Array<Integer>): There must be two integers inside this array. The array defines a block, the values within which are either sparsified to all zeros or kept original. [1, 1] means unstructured pruning. Default: [1,1]
+      - sparse_block(Array<Integer>): There must be two integers inside this array. The array defines the shape of the block, the values within which are either sparsified to all zeros or kept original. [1, 1] means unstructured pruning. Default: [1,1]
     """
 
     def __init__(self,
@@ -95,17 +96,6 @@ class UnstructuredPruner():
         for name, sub_layer in self.model.named_sublayers():
             sub_layer.register_forward_pre_hook(self._forward_pre_hook)
 
-    def _cal_mxn_avg_matrix(self, mat, m=1, n=1):
-        if m == 1 and n == 1: return copy.deepcopy(mat)
-        avg_mat = np.zeros_like(mat)
-        rows = len(mat) // m + 1
-        cols = len(mat[0]) // n + 1
-        for row in range(rows):
-            for col in range(cols):
-                avg_mat[m * row:m * row + m, n * col:n * col + n] = np.mean(mat[
-                    m * row:m * row + m, n * col:n * col + n])
-        return avg_mat
-
     def update_threshold(self):
         '''
         Update the threshold after each optimization step.
@@ -122,11 +112,13 @@ class UnstructuredPruner():
                 v_param = np.array(t_param)
 
                 if (self.sparse_block[0] * self.sparse_block[1] / v_param.size
-                        >= 0.05):
+                        >= BLOCK_SPARSE_ACCURATE_THRESHOLD):
                     print(
-                        "Your sparse block size {} might be too large for the param {} with shape {}, the sparsity of this param might not be precise. Please decrease your sparse block size if possible.".
-                        format(self.sparse_block, param.name, param.shape))
-                v_param = self._cal_mxn_avg_matrix(
+                        "Your sparse block size {} might be too large for the param {} with shape {}, the sparsity of this param might not be precise. Please decrease your sparse block size if possible. Currently, sparse_block[0] ({}) X sparse_block[1] ({}) / weight_count ({}) >= {}".
+                        format(self.sparse_block, param, v_param.shape,
+                               self.sparse_block[0], sparse_block[1],
+                               v_param.size, BLOCK_SPARSE_ACCURATE_THRESHOLD))
+                v_param = cal_mxn_avg_matrix(
                     v_param, m=self.sparse_block[0], n=self.sparse_block[1])
 
                 if self.local_sparsity:
@@ -152,7 +144,7 @@ class UnstructuredPruner():
                     continue
                 mask = self.masks.get(param.name)
                 v_param = np.array(param.value().get_tensor())
-                v_param_avg = self._cal_mxn_avg_matrix(
+                v_param_avg = cal_mxn_avg_matrix(
                     v_param, m=self.sparse_block[0], n=self.sparse_block[1])
                 if self.local_sparsity:
                     bool_tmp = (abs(v_param_avg) >= self.thresholds[param.name])

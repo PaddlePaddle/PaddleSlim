@@ -59,7 +59,7 @@ class TestUnstructuredPruner(StaticCase):
             'ratio',
             scope=self.scope,
             place=place,
-            sparse_block=[2, 1],
+            sparse_block=[5, 5],
             prune_params_type='conv1x1_only',
             local_sparsity=True)
 
