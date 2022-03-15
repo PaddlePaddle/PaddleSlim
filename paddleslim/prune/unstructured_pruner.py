@@ -120,6 +120,7 @@ class UnstructuredPruner():
         return d_masks
 
     def _cal_mxn_avg_matrix(self, mat, m=1, n=1):
+        if m == 1 and n == 1: return copy.deepcopy(mat)
         avg_mat = np.zeros_like(mat)
         rows = len(mat) // m + 1
         cols = len(mat[0]) // n + 1
@@ -187,7 +188,6 @@ class UnstructuredPruner():
                 print(
                     "Your sparse block size {} might be too large for the param {} with shape {}, the sparsity of this param might not be precise. Please decrease your sparse block size if possible.".
                     format(self.sparse_block, param, v_param.shape))
-            print(param)
             v_param = self._cal_mxn_avg_matrix(
                 v_param, m=self.sparse_block[0], n=self.sparse_block[1])
             if self.local_sparsity:

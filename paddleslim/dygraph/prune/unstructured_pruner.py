@@ -2,6 +2,7 @@ import numpy as np
 import paddle
 import logging
 from paddleslim.common import get_logger
+import copy
 
 __all__ = ["UnstructuredPruner", "GMPUnstructuredPruner"]
 
@@ -95,6 +96,7 @@ class UnstructuredPruner():
             sub_layer.register_forward_pre_hook(self._forward_pre_hook)
 
     def _cal_mxn_avg_matrix(self, mat, m=1, n=1):
+        if m == 1 and n == 1: return copy.deepcopy(mat)
         avg_mat = np.zeros_like(mat)
         rows = len(mat) // m + 1
         cols = len(mat[0]) // n + 1
