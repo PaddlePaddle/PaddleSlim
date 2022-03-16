@@ -2,6 +2,8 @@ import numpy as np
 import paddle
 import logging
 from paddleslim.common import get_logger
+from paddleslim.prune.unstructured_pruner_utils import *
+import copy
 
 __all__ = ["UnstructuredPruner", "GMPUnstructuredPruner"]
 
@@ -25,6 +27,7 @@ class UnstructuredPruner():
       - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
       - local_sparsity(bool): Whether to enable local sparsity. Local sparsity means all the weight matrices have the same sparsity. And the global sparsity only ensures the whole model's sparsity is equal to the passed-in 'ratio'. Default: False
+      - sparse_block(Array<Integer>): There must be two integers inside this array. The array defines the shape of the block, the values within which are either sparsified to all zeros or kept original. [1, 1] means unstructured pruning. Default: [1,1]
     """
 
     def __init__(self,
@@ -34,18 +37,28 @@ class UnstructuredPruner():
                  ratio=0.55,
                  prune_params_type=None,
                  skip_params_func=None,
-                 local_sparsity=False):
+                 local_sparsity=False,
+                 sparse_block=[1, 1]):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
         assert prune_params_type is None or prune_params_type == 'conv1x1_only', "prune_params_type only supports None or conv1x1_only for now."
         if local_sparsity:
             assert mode == 'ratio', "We don't support local_sparsity==True and mode=='threshold' at the same time, please change the inputs accordingly."
+        assert len(
+            sparse_block
+        ) == 2 and sparse_block[0] > 0 and sparse_block[1] > 0 and isinstance(
+            sparse_block[0], int
+        ) and isinstance(
+            sparse_block[1], int
+        ), "Please make sure you provide a valid sparse block, in which there are two positive integers."
+
         self.model = model
         self.mode = mode
         self.threshold = threshold
         self.ratio = ratio
         self.local_sparsity = local_sparsity
         self.thresholds = {}
+        self.sparse_block = sparse_block
 
         # Prority: passed-in skip_params_func > prune_params_type (conv1x1_only) > built-in _get_skip_params
         if skip_params_func is not None:
@@ -97,6 +110,17 @@ class UnstructuredPruner():
                     continue
                 t_param = param.value().get_tensor()
                 v_param = np.array(t_param)
+
+                if (self.sparse_block[0] * self.sparse_block[1] / v_param.size
+                        >= BLOCK_SPARSE_ACCURATE_THRESHOLD):
+                    print(
+                        "Your sparse block size {} might be too large for the param {} with shape {}, the sparsity of this param might not be precise. Please decrease your sparse block size if possible. Currently, sparse_block[0] ({}) X sparse_block[1] ({}) / weight_count ({}) >= {}".
+                        format(self.sparse_block, param, v_param.shape,
+                               self.sparse_block[0], self.sparse_block[1],
+                               v_param.size, BLOCK_SPARSE_ACCURATE_THRESHOLD))
+                v_param = cal_mxn_avg_matrix(
+                    v_param, m=self.sparse_block[0], n=self.sparse_block[1])
+
                 if self.local_sparsity:
                     flatten_v_param = v_param.flatten()
                     cur_length = flatten_v_param.size
@@ -119,11 +143,13 @@ class UnstructuredPruner():
                 if param.name in self.skip_params:
                     continue
                 mask = self.masks.get(param.name)
+                v_param = np.array(param.value().get_tensor())
+                v_param_avg = cal_mxn_avg_matrix(
+                    v_param, m=self.sparse_block[0], n=self.sparse_block[1])
                 if self.local_sparsity:
-                    bool_tmp = (
-                        paddle.abs(param) >= self.thresholds[param.name])
+                    bool_tmp = (abs(v_param_avg) >= self.thresholds[param.name])
                 else:
-                    bool_tmp = (paddle.abs(param) >= self.threshold)
+                    bool_tmp = (abs(v_param_avg) >= self.threshold)
                 paddle.assign(bool_tmp, output=mask)
 
     def set_static_masks(self):
@@ -234,7 +260,7 @@ class UnstructuredPruner():
     def _get_skip_params(self, model):
         """
         This function is used to check whether the given model's layers are valid to be pruned. 
-        Usually, the convolutions are to be pruned while we skip the normalization-related parameters.
+        Usually, the convolutions are to be pruned while we skip the normalization-related parameters and bias.
         Deverlopers could replace this function by passing their own when initializing the UnstructuredPuner instance.
 
         Args:
@@ -246,6 +272,9 @@ class UnstructuredPruner():
         for _, sub_layer in model.named_sublayers():
             if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
                 skip_params.add(sub_layer.full_name())
+            # exclude bias whose shape is like (n,)
+            for param in sub_layer.parameters(include_sublayers=False):
+                if len(param.shape) == 1: skip_params.add(param.name)
         return skip_params
 
     def _get_skip_params_conv1x1(self, model):
@@ -254,6 +283,8 @@ class UnstructuredPruner():
             if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
                 skip_params.add(sub_layer.full_name())
             for param in sub_layer.parameters(include_sublayers=False):
+                # exclude bias whose shape is like (n,)
+                if len(param.shape) == 1: skip_params.add(param.name)
                 cond = len(param.shape) == 4 and param.shape[
                     2] == 1 and param.shape[3] == 1
                 if not cond: skip_params.add(param.name)
@@ -275,6 +306,7 @@ class GMPUnstructuredPruner(UnstructuredPruner):
       - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. 
       - local_sparsity(bool): Whether to enable local sparsity. Local sparsity means all the weight matrices have the same sparsity. And the global sparsity only ensures the whole model's sparsity is equal to the passed-in 'ratio'. Default: False
+      - sparse_block(Array<Integer>): There must be two integers inside this array. The array defines a block, the values within which are either sparsified to all zeros or kept original. [1, 1] means unstructured pruning. Default: [1,1]
       - configs(Dict): The dictionary contains all the configs for GMP pruner. Default: None
 
         .. code-block:: python
@@ -296,12 +328,13 @@ class GMPUnstructuredPruner(UnstructuredPruner):
                  prune_params_type=None,
                  skip_params_func=None,
                  local_sparsity=False,
+                 sparse_block=[1, 1],
                  configs=None):
 
         assert configs is not None, "Configs must be passed in for GMP pruner."
         super(GMPUnstructuredPruner, self).__init__(
             model, 'ratio', 0.0, ratio, prune_params_type, skip_params_func,
-            local_sparsity)
+            local_sparsity, sparse_block)
         self.stable_iterations = configs.get('stable_iterations')
         self.pruning_iterations = configs.get('pruning_iterations')
         self.tunning_iterations = configs.get('tunning_iterations')

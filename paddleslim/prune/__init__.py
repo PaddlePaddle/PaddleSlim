@@ -29,6 +29,8 @@ from .collections import *
 from ..prune import collections
 from .unstructured_pruner import *
 from ..prune import unstructured_pruner
+from .unstructured_pruner_utils import *
+from ..prune import unstructured_pruner_utils
 from .idx_selector import *
 from ..prune import idx_selector
 __all__ = []
@@ -40,5 +42,6 @@ __all__ += prune_worker.__all__
 __all__ += prune_io.__all__
 __all__ += criterion.__all__
 __all__ += unstructured_pruner.__all__
+__all__ += unstructured_pruner_utils.__all__
 __all__ += idx_selector.__all__
 __all__ += collections.__all__
