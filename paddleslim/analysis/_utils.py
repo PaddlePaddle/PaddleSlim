@@ -18,7 +18,7 @@ import pickle
 import paddle
 import paddleslim
 import subprocess
-import sklearn
+import time
 __all__ = [
     "save_cls_model", "save_det_model", "save_seg_model", "nearest_interpolate",
     "opt_model", "load_predictor"
@@ -33,7 +33,7 @@ def opt_model(opt="paddle_lite_opt",
               enable_fp16=False):
     assert os.path.exists(model_file) and os.path.exists(
         param_file), f'{model_file} or {param_file} does not exist.'
-    save_dir = f'./opt_models_tmp/{os.getpid()}'
+    save_dir = f'./opt_models_tmp/{os.getpid()}_{time.time()}'
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 

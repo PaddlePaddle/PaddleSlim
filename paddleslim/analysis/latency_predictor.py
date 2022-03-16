@@ -16,7 +16,7 @@
 
 import os
 import pickle
-import time
+import shutil
 import subprocess
 from .parse_ops import get_key_from_op
 from .extract_features import get_data_from_tables, get_features_from_paramkey
@@ -195,7 +195,7 @@ class TableLatencyPredictor(LatencyPredictor):
             warnings.warn("OperatorType\tCalledTimes")
             for key in new_op:
                 warnings.warn(f"{key.ljust(15)}\t{new_op[key]}")
-
+        shutil.rmtree(os.path.dirname(pbmodel_file))
         return latency
 
     def op_predictor(self, op_type, param_key, data_type):
