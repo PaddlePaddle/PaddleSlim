@@ -116,7 +116,7 @@ class UnstructuredPruner():
                     print(
                         "Your sparse block size {} might be too large for the param {} with shape {}, the sparsity of this param might not be precise. Please decrease your sparse block size if possible. Currently, sparse_block[0] ({}) X sparse_block[1] ({}) / weight_count ({}) >= {}".
                         format(self.sparse_block, param, v_param.shape,
-                               self.sparse_block[0], sparse_block[1],
+                               self.sparse_block[0], self.sparse_block[1],
                                v_param.size, BLOCK_SPARSE_ACCURATE_THRESHOLD))
                 v_param = cal_mxn_avg_matrix(
                     v_param, m=self.sparse_block[0], n=self.sparse_block[1])
