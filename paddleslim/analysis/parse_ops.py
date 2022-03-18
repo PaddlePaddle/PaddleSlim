@@ -24,25 +24,30 @@ def get_key_from_op(op):
     if 'conv2d' in op_type:
         out_shape = op.all_outputs()[0].shape()
         in_shape = op.all_inputs()[-1].shape()
+        in_name = op.all_inputs()[1].name()
         weight_shape = op.all_inputs()[-2].shape()
-        kernel = weight_shape[2]
+        weight_shape = (out_shape[1], weight_shape[1], weight_shape[2], weight_shape[3])
+        
         stride = op.attr('strides')[1]
         padding = op.attr('paddings')[1]
         groups = op.attr('groups')
         dilation = op.attr('dilations')[1]
-        int8 = op.attr('enable_int8')
+        quant = op.attr('enable_int8')
         bit_length = op.attr('bit_length')
+        if op.attr(in_name+'_fp16') == 'fp16':
+            quant = True
+            bit_length = 16   
 
-        param_key = f'{op_type} in={in_shape} weight={weight_shape} out={out_shape} pad={padding} stride={stride} group={groups} dilation={dilation} quant={int8} bit_length={bit_length}'
+        param_key = f'{op_type} in={in_shape} weight={weight_shape} out={out_shape} pad={padding} stride={stride} group={groups} dilation={dilation} quant={quant} bit_length={bit_length}'
 
     elif op_type == 'matmul' or op_type == 'matmul_v2':
         X = op.all_inputs()[0].shape()
         Y = op.all_inputs()[1].shape()
         out_shape = op.all_outputs()[0].shape()
-        int8 = op.attr('enable_int8')
+        quant = op.attr('enable_int8')
         bit_length = op.attr('bit_length')
 
-        param_key = f'{op_type} X={X} Y={Y} out={out_shape} quant={int8} bit_length={bit_length}'
+        param_key = f'{op_type} X={X} Y={Y} out={out_shape} quant={quant} bit_length={bit_length}'
 
     elif 'batch_norm' in op_type or 'layer_norm' in op_type:
         out_shape = op.all_outputs()[-1].shape()
@@ -67,14 +72,12 @@ def get_key_from_op(op):
 
     elif op_type in [
             'hard_swish', 'relu', 'leaky_relu', 'tanh', 'swish', 'softmax',
-            'hard_sigmoid', 'sigmoid', 'gelu', 'clip', 'shape'
+            'hard_sigmoid', 'sigmoid', 'gelu', 'clip', 'shape', 'sqrt'
     ] or 'transpose' in op_type or 'interp_v2' in op_type:
         in_shape = op.all_inputs()[-1].shape()
+        out_shape = op.all_outputs()[0].shape()
 
-        param_key = f'{op_type} in={in_shape}'
-        in_shape = op.all_inputs()[-1].shape()
-
-        param_key = f'{op_type} in={in_shape}'
+        param_key = f'{op_type} in={in_shape} out={out_shape}'
 
     elif op_type in ['fill_constant', 'range', 'cast'] or 'expand' in op_type:
 
