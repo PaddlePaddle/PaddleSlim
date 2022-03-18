@@ -42,7 +42,7 @@ tar -xf MobileNetV1_pretrained.tar
 默认根据参数的绝对值大小进行稀疏化，且不稀疏归一化层参数。如果开发者想更改相应的逻辑，可按照下述操作：
 
 - 可以通过重写`paddleslim.prune.unstructured_pruner.py`中的`UnstructuredPruner.update_threshold()`来定义自己的非结构化稀疏策略（目前为剪裁掉绝对值小的parameters）。
-- 可以在初始化`UnstructuredPruner`时，传入自定义的`skip_params_func`，来定义哪些参数不参与剪裁。`skip_params_func`示例代码如下(路径：`paddleslim.prune.unstructured_pruner._get_skip_params()`)。默认为所有的归一化层的参数不参与剪裁。
+- 可以在初始化`UnstructuredPruner`时，传入自定义的`skip_params_func`，来定义哪些参数不参与剪裁。`skip_params_func`示例代码如下(路径：`paddleslim.prune.unstructured_pruner._get_skip_params()`)。默认为所有的归一化层的参数和 `bias` 不参与剪裁。
 
 ```python
 def _get_skip_params(program):
@@ -61,6 +61,9 @@ def _get_skip_params(program):
         if 'norm' in op.type() and 'grad' not in op.type():
             for input in op.all_inputs():
                 skip_params.add(input.name())
+    for param in program.all_parameters():
+        if len(param.shape) == 1:
+            skip_params.add(param.name)  
     return skip_params
 ```
 
