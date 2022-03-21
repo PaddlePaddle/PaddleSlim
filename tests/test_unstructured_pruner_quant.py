@@ -59,7 +59,7 @@ class TestStaticMasks(StaticCase):
         sparsity_2 = UnstructuredPruner.total_sparse(main_program)
         print(sparsity_0, sparsity_1, sparsity_2)
         self.assertEqual(sparsity_0, 1.0)
-        self.assertEqual(sparsity_2, 1.0)
+        self.assertLess(abs(sparsity_2 - 1), 0.001)
         self.assertLess(sparsity_1, 1.0)
 
 

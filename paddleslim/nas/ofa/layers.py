@@ -40,9 +40,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 class SuperConv2D(nn.Conv2D):
     """This interface is used to construct a callable object of the ``SuperConv2D``  class.
-
     Note: the channel in config need to less than first defined.
-
     The super convolution2D layer calculates the output based on the input, filter
     and strides, paddings, dilations, groups parameters. Input and
     Output are in NCHW format, where N is batch size, C is the number of
@@ -59,9 +57,7 @@ class SuperConv2D(nn.Conv2D):
     applied to the final result.
     For each input :math:`X`, the equation is:
     .. math::
-
         Out = sigma (W \\ast X + b)
-
     Where:
     * :math:`X`: Input value, a ``Tensor`` with NCHW format.
     * :math:`W`: Filter value, a ``Tensor`` with shape [MCHW] .
@@ -69,7 +65,6 @@ class SuperConv2D(nn.Conv2D):
     * :math:`b`: Bias value, a 2-D ``Tensor`` with shape [M, 1].
     * :math:`\\sigma`: Activation function.
     * :math:`Out`: Output value, the shape of :math:`Out` and :math:`X` may be different.
-
     Example:
         - Input:
           Input shape: :math:`(N, C_{in}, H_{in}, W_{in})`
@@ -78,11 +73,8 @@ class SuperConv2D(nn.Conv2D):
           Output shape: :math:`(N, C_{out}, H_{out}, W_{out})`
         Where
         .. math::
-
             H_{out}&= \\frac{(H_{in} + 2 * paddings[0] - (dilations[0] * (H_f - 1) + 1))}{strides[0]} + 1   
-
             W_{out}&= \\frac{(W_{in} + 2 * paddings[1] - (dilations[1] * (W_f - 1) + 1))}{strides[1]} + 1
-
     Parameters:
         num_channels(int): The number of channels in the input image.
         num_filters(int): The number of filter. It is as same as the output
@@ -144,7 +136,6 @@ class SuperConv2D(nn.Conv2D):
           config = {'channel': 5}
           data = paddle.to_tensor(data)
           conv = super_conv2d(data, config)
-
     """
 
     ### NOTE: filter_size, num_channels and num_filters must be the max of candidate to define a largest network.
@@ -214,10 +205,6 @@ class SuperConv2D(nn.Conv2D):
                 setattr(self, name, param)
 
     def get_active_filter(self, in_nc, out_nc, kernel_size):
-        ### Unsupport for asymmetric kernels
-        if self._kernel_size[0] != self._kernel_size[1]:
-            return self.weight[:out_nc, :in_nc, :, :]
-
         start, end = compute_start_end(self._kernel_size[0], kernel_size)
         ### if NOT transform kernel, intercept a center filter with kernel_size from largest filter
         filters = self.weight[:out_nc, :in_nc, start:end, start:end]
@@ -292,13 +279,8 @@ class SuperConv2D(nn.Conv2D):
             out_nc = int(channel)
         else:
             out_nc = self._out_channels
-
         ks = int(self._kernel_size[0]) if kernel_size == None else int(
             kernel_size)
-
-        if kernel_size is not None and self._kernel_size[
-                0] != self._kernel_size[1]:
-            _logger.error("Searching for asymmetric kernels is NOT supported")
 
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
@@ -324,6 +306,7 @@ class SuperConv2D(nn.Conv2D):
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
+        self.cur_config['prune_group'] = groups
         out = F.conv2d(
             input,
             weight,
@@ -361,9 +344,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
     """
     This interface is used to construct a callable object of the ``SuperConv2DTranspose`` 
     class.
-
     Note: the channel in config need to less than first defined.
-
     The super convolution2D transpose layer calculates the output based on the input,
     filter, and dilations, strides, paddings. Input and output
     are in NCHW format. Where N is batch size, C is the number of feature map,
@@ -527,9 +508,6 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
                 setattr(self, name, param)
 
     def get_active_filter(self, in_nc, out_nc, kernel_size):
-        ### Unsupport for asymmetric kernels
-        if self._kernel_size[0] != self._kernel_size[1]:
-            return self.weight[:out_nc, :in_nc, :, :]
         start, end = compute_start_end(self._kernel_size[0], kernel_size)
         filters = self.weight[:in_nc, :out_nc, start:end, start:end]
         if self.transform_kernel != False and kernel_size < self._kernel_size[
@@ -612,10 +590,6 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
         ks = int(self._kernel_size[0]) if kernel_size == None else int(
             kernel_size)
 
-        if kernel_size is not None and self._kernel_size[
-                0] != self._kernel_size[1]:
-            _logger.error("Searching for asymmetric kernels is NOT supported")
-
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
 
@@ -638,6 +612,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
+        self.cur_config['prune_group'] = groups
         out = F.conv2d_transpose(
             input,
             weight,
@@ -682,12 +657,10 @@ class SuperSeparableConv2D(nn.Layer):
     {'channel', num_of_channel} represents the channels of the first conv's outputs and
     the second conv's inputs, used to change the first dimension of weight and bias, 
     only train the first channels of the weight and bias.
-
     The architecture of super separable convolution2D op is [Conv2D, norm layer(may be BatchNorm2D
     or InstanceNorm2D), Conv2D]. The first conv is depthwise conv, the filter number is input channel
     multiply scale_factor, the group is equal to the number of input channel. The second conv
     is standard conv, which filter size and stride size are 1. 
-
     Parameters:
         num_channels(int): The number of channels in the input image.
         num_filters(int): The number of the second conv's filter. It is as same as the output
@@ -923,7 +896,6 @@ class SuperLinear(nn.Linear):
 class SuperBatchNorm2D(nn.BatchNorm2D):
     """
     This interface is used to construct a callable object of the ``SuperBatchNorm2D`` class. 
-
     Parameters:
         num_features(int): Indicate the number of channels of the input ``Tensor``.
         epsilon(float, optional): The small value added to the variance to prevent division by zero. Default: 1e-5.
@@ -938,7 +910,6 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
             If the Initializer of the bias_attr is not set, the bias is initialized zero. Default: None.
         data_format(str, optional): Specify the input data format, the data format can be "NCHW" or "NHWC". Default: NCHW.
         name(str, optional): Name for the BatchNorm, default is None. For more information, please refer to :ref:`api_guide_Name`..
-
     Examples:
        .. code-block:: python
          import paddle
@@ -1062,7 +1033,6 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
 class SuperInstanceNorm2D(nn.InstanceNorm2D):
     """
     This interface is used to construct a callable object of the ``SuperInstanceNorm2D`` class. 
-
     Parameters:
         num_features(int): Indicate the number of channels of the input ``Tensor``.
         epsilon(float, optional): The small value added to the variance to prevent division by zero. Default: 1e-5.
@@ -1077,7 +1047,6 @@ class SuperInstanceNorm2D(nn.InstanceNorm2D):
             If the Initializer of the bias_attr is not set, the bias is initialized zero. Default: None.
         data_format(str, optional): Specify the input data format, the data format can be "NCHW" or "NHWC". Default: NCHW.
         name(str, optional): Name for the BatchNorm, default is None. For more information, please refer to :ref:`api_guide_Name`..
-
     Examples:
        .. code-block:: python
          import paddle
@@ -1121,11 +1090,9 @@ class SuperInstanceNorm2D(nn.InstanceNorm2D):
 class SuperLayerNorm(nn.LayerNorm):
     """
     This interface is used to construct a callable object of the ``SuperLayerNorm`` class.
-
     The difference between ```SuperLayerNorm``` and ```LayerNorm``` is: 
     the trained weight and bias in ```SuperLayerNorm``` can be changed according to the shape of input,
     only train the first channels of the weight and bias.
-
     Parameters:
         normalized_shape(int|list|tuple): Input shape from an expected input of
             size :math:`[*, normalized_shape[0], normalized_shape[1], ..., normalized_shape[-1]]`.
@@ -1193,7 +1160,6 @@ class SuperLayerNorm(nn.LayerNorm):
 class SuperEmbedding(nn.Embedding):
     """
     This interface is used to construct a callable object of the ``SuperEmbedding`` class.
-
     Parameters:
         num_embeddings (int): Just one element which indicate the size
             of the dictionary of embeddings.

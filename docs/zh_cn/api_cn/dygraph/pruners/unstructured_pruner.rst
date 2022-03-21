@@ -4,7 +4,7 @@
 UnstructuredPruner
 ----------
 
-.. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, prune_params_type=None, skip_params_func=None, local_sparsity=False)
+.. py:class:: paddleslim.UnstructuredPruner(model, mode, threshold=0.01, ratio=0.55, prune_params_type=None, skip_params_func=None, local_sparsity=False, sparse_block=[1,1])
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dygraph/prune/unstructured_pruner.py>`_
 
@@ -17,7 +17,7 @@ UnstructuredPruner
 - **ratio(float)** - 稀疏化比例期望，只有在 mode=='ratio' 时才会生效。
 - **threshold(float)** - 稀疏化阈值期望，只有在 mode=='threshold' 时才会生效。
 - **prune_params_type(String)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化层的参数。
-- **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。示例代码如下：
+- **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数和 bias 不参与剪裁。示例代码如下：
 
 .. code-block:: python
 
@@ -28,7 +28,7 @@ UnstructuredPruner
   def _get_skip_params(model):
       """
       This function is used to check whether the given model's layers are valid to be pruned.
-      Usually, the convolutions are to be pruned while we skip the normalization-related parameters.
+      Usually, the convolutions are to be pruned while we skip the normalization-related parameters and bias.
       Deverlopers could replace this function by passing their own when initializing the UnstructuredPuner instance.
 
       Args:
@@ -40,11 +40,14 @@ UnstructuredPruner
       for _, sub_layer in model.named_sublayers():
           if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
               skip_params.add(sub_layer.full_name())
+          for param in sub_layer.parameters(include_sublayers=False):
+              if len(param.shape) == 1: skip_params.add(param.name)
       return skip_params
 
 ..
 
 - **local_sparsity(bool)** - 剪裁比例（ratio）应用的范围：local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。
+- **sparse_block(Array<Integer>)** - 一个含有两个正整数的数组，定义了稀疏化时候block的大小。即 sparse_block[0] x sparse_block[1]中的参数作为一个整体，要么被置0，要么保持不变。默认为 [1,1]，代表非结构化稀疏。
 
 **返回：** 一个UnstructuredPruner类的实例。
 
@@ -245,6 +248,7 @@ GMPUnstructuredPruner
 - **prune_params_type(str)** - 用以指定哪些类型的参数参与稀疏。目前只支持None和"conv1x1_only"两个选项，后者表示只稀疏化1x1卷积。而前者表示稀疏化除了归一化层的参数。
 - **skip_params_func(function)** - 一个指向function的指针，该function定义了哪些参数不应该被剪裁，默认（None）时代表所有归一化层参数不参与剪裁。
 - **local_sparsity(bool)** - 剪裁比例（ratio）应用的范围：local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。
+- **sparse_block(Array<Integer>)** - 一个含有两个正整数的数组，定义了稀疏化时候block的大小。即 sparse_block[0] x sparse_block[1]中的参数作为一个整体，要么被置0，要么保持不变。默认为 [1,1]，代表非结构化稀疏。
 - **configs(Dict)** - 传入额外的训练超参用以指导GMP训练过程。各参数介绍如下：
 
 .. code-block:: python
