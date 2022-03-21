@@ -502,8 +502,9 @@ class OFA(OFABase):
 
     def export(self,
                config,
-               input_shapes,
-               input_dtypes,
+               inputs=None,
+               input_shapes=None,
+               input_dtypes=None,
                origin_model=None,
                load_weights_from_supernet=True):
         """
@@ -547,7 +548,12 @@ class OFA(OFABase):
                     for i, dtype in zip(input_size, dtypes)
                 ]
 
-        data = build_input(input_shapes, input_dtypes)
+        if input_shapes != None and input_dtypes != None:
+            data = build_input(input_shapes, input_dtypes)
+        elif inputs != None:
+            data = inputs
+        else:
+            raise NotImplementedError("must support inputs or input_shapes and input_dtypes")
 
         if isinstance(data, list):
             self.forward(*data)
