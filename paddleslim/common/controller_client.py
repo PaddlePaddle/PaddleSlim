@@ -17,7 +17,7 @@ import time
 import logging
 import socket
 from .log_helper import get_logger
-
+import sys
 __all__ = ['ControllerClient']
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -110,7 +110,10 @@ class ControllerClient(object):
 
         socket_client.send("next_tokens".encode())
         tokens = socket_client.recv(1024).decode()
-        tokens = [int(token) for token in tokens.strip("\n").split(",")]
+        try:
+            tokens = [int(token) for token in tokens.strip("\n").split(",")]
+        except ValueError:
+            sys.exit()
         return tokens
 
     def request_current_info(self):
