@@ -18,7 +18,7 @@ import paddle.distributed.fleet as fleet
 import paddle.optimizer as optimizer
 from ..quant.quanter import quant_aware, _quant_config_default, _parse_configs, pact, get_pact_optimizer
 from ..dist import *
-from ..common.recover_program import _remove_fetch_node
+from ..common.recover_program import recover_inference_program, _remove_fetch_node
 from ..common import get_logger
 from .strategy_config import ProgramInfo
 
@@ -30,20 +30,27 @@ __all__ = [
 
 def _create_optimizer(train_config):
     """create optimizer"""
-    opt = getattr(optimizer, train_config['optimizer'])
-    if train_config['optim_args'] is not None and 'grad_clip' in train_config[
-            'optim_args'] and train_config['optim_args'][
-                'grad_clip'] is not None:
-        grad_clip = getattr(paddle.nn, train_config['optim_args']['grad_clip'])(
-            **train_config['optim_args']['grad_clip_args'])
-        train_config['optim_args'].pop('grad_clip')
-        train_config['optim_args'].pop('grad_clip_args')
-    else:
-        grad_clip = None
-        if 'grad_clip' in train_config['optim_args'] and train_config[
-                'optim_args']['grad_clip'] is None:
+    opt = getattr(optimizer, train_config.get('optimizer') or
+                  'SGD')  ### default optimizer is SGD
+    if 'optim_args' in train_config:
+        if train_config[
+                'optim_args'] is not None and 'grad_clip' in train_config[
+                    'optim_args'] and train_config['optim_args'][
+                        'grad_clip'] is not None:
+            grad_clip = getattr(
+                paddle.nn, train_config['optim_args']['grad_clip'])(
+                    **train_config['optim_args']['grad_clip_args'])
             train_config['optim_args'].pop('grad_clip')
             train_config['optim_args'].pop('grad_clip_args')
+        else:
+            grad_clip = None
+            if 'grad_clip' in train_config['optim_args'] and train_config[
+                    'optim_args']['grad_clip'] is None:
+                train_config['optim_args'].pop('grad_clip')
+                train_config['optim_args'].pop('grad_clip_args')
+    else:
+        train_config['optim_args'] = {}
+        grad_clip = None
 
     op = opt(learning_rate=train_config["learning_rate"],
              grad_clip=grad_clip,
@@ -89,12 +96,17 @@ def _load_program_and_merge(executor,
                             params_filename,
                             teacher_idx=None,
                             feed_target_names=None):
-    ###[teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
-    [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
-        dirname=model_dir, \
-        model_filename=model_filename, \
-        params_filename=params_filename, \
-        executor=executor)
+    try:
+        [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
+            dirname=model_dir, \
+            model_filename=model_filename, \
+            params_filename=params_filename, \
+            executor=executor)
+    except:
+        [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
+            path_prefix=model_dir, \
+            executor=executor)
+
     _remove_fetch_node(teacher_program)
 
     if teacher_idx == None or teacher_idx == 1:
@@ -102,7 +114,7 @@ def _load_program_and_merge(executor,
 
     data_name_map = {}
 
-    if config['merge_feed'] == True:
+    if 'merge_feed' not in config or config['merge_feed'] == True:
         assert len(feed_target_names) == len(teacher_feed_target_names), \
             "the number of feed nodes in the teacher model is not equal to the student model"
         for i, name in enumerate(feed_target_names):
@@ -119,7 +131,7 @@ def _load_program_and_merge(executor,
         data_name_map,
         place,
         name_prefix=teacher_name_prefix,
-        merge_feed=config['merge_feed'])
+        merge_feed=config.get('merge_feed') or True)
     if teacher_idx == None or teacher_idx == 1:
         return train_program, test_program, data_name_map
     else:
@@ -134,15 +146,13 @@ def build_distill_program(executor,
                           pruner=None,
                           dist_strategy=None):
     """build distill program with infermodel"""
+    startup_program = paddle.static.Program()
     if train_program_info is None:
         [train_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
             path_prefix=config["model_dir"] if "model_dir" in config else config["model_path_prefix"], \
-            model_filename=config["model_filename"] if "model_filename" in config else None, \
-            params_filename=config["params_filename"] if "params_filename" in config else None, \
             executor=executor)
         train_program = recover_inference_program(train_program)
     else:
-        startup_program = paddle.static.Program()
         train_program = train_program_info.program
         feed_target_names = train_program_info.feed_target_names
         fetch_targets = train_program_info.fetch_targets
@@ -205,11 +215,11 @@ def build_distill_program(executor,
         with paddle.utils.unique_name.guard('merge'):
             optimizer = _create_optimizer(train_config)
 
-            if train_config['use_fleet']:
+            if train_config.get('use_fleet'):
                 optimizer = fleet.distributed_optimizer(optimizer,
                                                         dist_strategy)
             else:
-                if train_config['amp_config'] is not None:
+                if train_config.get('amp_config') is not None:
                     custom_white_list = train_config['amp_config'].get(
                         'custom_white_list', None)
                     if custom_white_list is not None:
@@ -237,8 +247,10 @@ def build_distill_program(executor,
                         **train_config['amp_config'])
 
             distill_loss, losses = _parse_distill_loss(
-                config['distill_node_pair'], config['distill_loss'],
-                config['distill_lambda'])
+                config['distill_node_pair'],
+                config.get('distill_loss') or
+                'l2_loss',  ### default loss is l2_loss
+                config.get('distill_lambda') or 1.0)  ### default lambda is 1.0
             loss = paddle.mean(distill_loss)
             loss.stop_gradient = False
 

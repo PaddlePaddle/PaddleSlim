@@ -294,6 +294,15 @@ def quant_aware(program,
             VARS_MAPPING_TABLE))
         save_dict(main_graph.out_node_mapping_table)
 
+    main_graph.draw('./', 'graph.pdf')
+    #remove_ctr_vars = set()
+    #from paddle.fluid.framework import IrVarNode
+    #all_var_nodes = {IrVarNode(node) for node in main_graph.nodes() if node.is_var()}
+    #for node in all_var_nodes:
+    #    print("node: ", node)
+    #    if node.is_ctrl_var():
+    #        remove_ctr_vars.add(node)
+    #self.safe_remove_nodes(remove_ctr_vars)
     if for_test or return_program:
         quant_program = main_graph.to_program()
     else:
