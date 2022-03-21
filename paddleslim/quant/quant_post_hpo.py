@@ -46,8 +46,16 @@ class QuantConfig:
                  place,
                  float_infer_model_path,
                  quantize_model_path,
+                 algo,
+                 hist_percent,
+                 bias_correct,
+                 batch_size,
+                 batch_num,
                  train_sample_generator=None,
                  eval_sample_generator=None,
+                 train_dataloader=None,
+                 eval_dataloader=None,
+                 eval_function=None,
                  model_filename=None,
                  params_filename=None,
                  save_model_filename='__model__',
@@ -66,8 +74,16 @@ class QuantConfig:
         self.place = place
         self.float_infer_model_path = float_infer_model_path
         self.quantize_model_path = quantize_model_path
+        self.algo = algo,
+        self.hist_percent = hist_percent,
+        self.bias_correct = bias_correct,
+        self.batch_size = batch_size,
+        self.batch_num = batch_num,
         self.train_sample_generator = train_sample_generator
         self.eval_sample_generator = eval_sample_generator
+        self.train_dataloader = train_dataloader
+        self.eval_dataloader = eval_dataloader
+        self.eval_function = eval_function
         self.model_filename = model_filename
         self.params_filename = params_filename
         self.save_model_filename = save_model_filename
@@ -172,13 +188,19 @@ def eval_quant_model():
     out_len_sum = 0
     valid_data_num = 0
     max_eval_data_num = 200
-    for i, data in enumerate(g_quant_config.eval_sample_generator()):
+    if g_quant_config.eval_sample_generator is not None:
+        feed_dict=False
+        eval_dataloader = g_quant_config.eval_sample_generator
+    else:
+        feed_dict=True
+        eval_dataloader = g_quant_config.eval_dataloader
+    for i, data in enumerate(eval_dataloader()):
         with paddle.static.scope_guard(float_scope):
             out_float = g_quant_config.executor.run(infer_prog_float, \
-                fetch_list=fetch_targets_float, feed=make_feed_dict(feed_target_names_float, data))
+                fetch_list=fetch_targets_float, feed=data if feed_dict else make_feed_dict(feed_target_names_float, data))
         with paddle.static.scope_guard(quant_scope):
             out_quant = g_quant_config.executor.run(infer_prog_quant, \
-                fetch_list=fetch_targets_quant, feed=make_feed_dict(feed_target_names_quant, data))
+                fetch_list=fetch_targets_quant, feed=data if feed_dict else make_feed_dict(feed_target_names_quant, data))
 
         out_float = convert_model_out_2_nparr(out_float)
         out_quant = convert_model_out_2_nparr(out_quant)
@@ -213,11 +235,13 @@ def eval_quant_model():
 
 def quantize(cfg):
     """model quantize job"""
-    algo = cfg["algo"]
-    hist_percent = cfg["hist_percent"]
-    bias_correct = cfg["bias_correct"]
-    batch_size = cfg["batch_size"]
-    batch_num = cfg["batch_num"]
+    algo = cfg["algo"] if 'algo' in cfg else g_quant_config.algo[0][0]
+    hist_percent = cfg["hist_percent"] if "hist_percent" in cfg else g_quant_config.hist_percent[0][0]
+    bias_correct = cfg["bias_correct"] if "bias_correct" in cfg else g_quant_config.bias_correct[0][0]
+    batch_size = cfg["batch_size"] if "batch_size" in cfg else g_quant_config.batch_size[0][0]
+    batch_num = cfg["batch_num"] if "batch_num" in cfg else g_quant_config.batch_num[0][0]
+    weight_quantize_type = cfg["weight_quantize_type"] if "weight_quantize_type" in cfg else g_quant_config.weight_quantize_type[0]
+    print(hist_percent, bias_correct, batch_size, batch_num, weight_quantize_type)
 
     quant_post( \
         executor=g_quant_config.executor, \
@@ -225,13 +249,14 @@ def quantize(cfg):
         model_dir=g_quant_config.float_infer_model_path, \
         quantize_model_path=g_quant_model_cache_path, \
         sample_generator=g_quant_config.train_sample_generator, \
+        data_loader=g_quant_config.train_dataloader,
         model_filename=g_quant_config.model_filename, \
         params_filename=g_quant_config.params_filename, \
         save_model_filename=g_quant_config.save_model_filename, \
         save_params_filename=g_quant_config.save_params_filename, \
         quantizable_op_type=g_quant_config.quantizable_op_type, \
         activation_quantize_type="moving_average_abs_max", \
-        weight_quantize_type=g_quant_config.weight_quantize_type, \
+        weight_quantize_type=weight_quantize_type, \
         algo=algo, \
         hist_percent=hist_percent, \
         bias_correction=bias_correct, \
@@ -239,7 +264,12 @@ def quantize(cfg):
         batch_nums=batch_num)
 
     global g_min_emd_loss
-    emd_loss = eval_quant_model()
+    ### if eval_function is not None, use eval function provided by user.
+    if g_quant_config.eval_function is not None:
+        emd_loss = g_quant_config.eval_function()
+    else:
+        emd_loss = eval_quant_model()
+    print("emd loss: ", emd_loss)
     if emd_loss < g_min_emd_loss:
         g_min_emd_loss = emd_loss
         if os.path.exists(g_quant_config.quantize_model_path):
@@ -255,6 +285,9 @@ def quant_post_hpo(executor,
                    quantize_model_path,
                    train_sample_generator=None,
                    eval_sample_generator=None,
+                   train_dataloader=None,
+                   eval_dataloader=None,
+                   eval_function=None,
                    model_filename=None,
                    params_filename=None,
                    save_model_filename='__model__',
@@ -264,7 +297,12 @@ def quant_post_hpo(executor,
                    is_full_quantize=False,
                    weight_bits=8,
                    activation_bits=8,
-                   weight_quantize_type='channel_wise_abs_max',
+                   weight_quantize_type=['channel_wise_abs_max'],
+                   algo=["KL", "hist", "avg", "mse"],
+                   bias_correct=[True, False],
+                   hist_percent=[0.98, 0.999], ### uniform sample in list.
+                   batch_size=[10, 30], ### uniform sample in list.
+                   batch_num=[10, 30], ### uniform sample in list.
                    optimize_model=False,
                    is_use_cache_file=False,
                    cache_dir="./temp_post_training",
@@ -322,28 +360,79 @@ def quant_post_hpo(executor,
 
     global g_quant_config
     g_quant_config = QuantConfig(
-        executor, place, model_dir, quantize_model_path, train_sample_generator,
-        eval_sample_generator, model_filename, params_filename,
+        executor, place, model_dir, quantize_model_path, algo, hist_percent, 
+        bias_correct, batch_size, batch_num, train_sample_generator,
+        eval_sample_generator, train_dataloader, eval_dataloader, eval_function,
+        model_filename, params_filename,
         save_model_filename, save_params_filename, scope, quantizable_op_type,
         is_full_quantize, weight_bits, activation_bits, weight_quantize_type,
         optimize_model, is_use_cache_file, cache_dir)
     cs = ConfigurationSpace()
 
-    algo = CategoricalHyperparameter(
-        "algo", ["KL", "hist", "avg", "mse"], default_value="KL")
-    bias_correct = CategoricalHyperparameter(
-        "bias_correct", [True, False], default_value=False)
-    weight_quantize_method = CategoricalHyperparameter("weight_quantize_method", \
-        [weight_quantize_type], default_value=weight_quantize_type)
-    hist_percent = UniformFloatHyperparameter(
-        "hist_percent", 0.98, 0.999, default_value=0.99)
-    batch_size = UniformIntegerHyperparameter(
-        "batch_size", 10, 30, default_value=10)
-    batch_num = UniformIntegerHyperparameter(
-        "batch_num", 10, 30, default_value=10)
+    hyper_params = []
 
-    cs.add_hyperparameters([algo, bias_correct, weight_quantize_method, \
-                            hist_percent, batch_size, batch_num])
+    if 'hist' in algo:
+        hist_percent = UniformFloatHyperparameter(
+            "hist_percent", hist_percent[0], hist_percent[1], default_value=hist_percent[0])
+        hyper_params.append(hist_percent)
+
+    if len(algo) > 1:
+        algo = CategoricalHyperparameter(
+            "algo", algo, default_value=algo[0])
+        hyper_params.append(algo)
+    else:
+        algo = algo[0]
+
+    if len(bias_correct) > 1:
+        bias_correct = CategoricalHyperparameter(
+            "bias_correct", bias_correct, default_value=bias_correct[0])
+        hyper_params.append(bias_correct)
+    else:
+        bias_correct = bias_correct[0]
+    if len(weight_quantize_type) > 1:
+        weight_quantize_type = CategoricalHyperparameter("weight_quantize_type", \
+            weight_quantize_type, default_value=weight_quantize_type[0])
+        hyper_params.append(weight_quantize_type)
+    else:
+        weight_quantize_type = weight_quantize_type[0]
+    if len(batch_size) > 1:
+        batch_size = UniformIntegerHyperparameter(
+            "batch_size", batch_size[0], batch_size[1], default_value=batch_size[0])
+        hyper_params.append(batch_size)
+    else:
+        batch_size = batch_size[0]
+
+    if len(batch_num) > 1:
+        batch_num = UniformIntegerHyperparameter(
+            "batch_num", batch_num[0], batch_num[1], default_value=batch_num[0])
+        hyper_params.append(batch_num)
+    else:
+       batch_num = batch_num[0]
+
+    if len(hyper_params) == 0:
+        quant_post( \
+            executor=g_quant_config.executor, \
+            scope=g_quant_config.scope, \
+            model_dir=g_quant_config.float_infer_model_path, \
+            quantize_model_path=g_quant_model_cache_path, \
+            sample_generator=g_quant_config.train_sample_generator, \
+            data_loader=g_quant_config.train_dataloader,
+            model_filename=g_quant_config.model_filename, \
+            params_filename=g_quant_config.params_filename, \
+            save_model_filename=g_quant_config.save_model_filename, \
+            save_params_filename=g_quant_config.save_params_filename, \
+            quantizable_op_type=g_quant_config.quantizable_op_type, \
+            activation_quantize_type="moving_average_abs_max", \
+            weight_quantize_type=weight_quantize_type, \
+            algo=algo, \
+            hist_percent=hist_percent, \
+            bias_correction=bias_correct, \
+            batch_size=batch_size, \
+            batch_nums=batch_num)
+
+        return
+
+    cs.add_hyperparameters(hyper_params)
 
     scenario = Scenario({
         "run_obj": "quality",  # we optimize quality (alternative runtime)
