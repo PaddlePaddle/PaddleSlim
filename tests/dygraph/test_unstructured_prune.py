@@ -16,6 +16,7 @@ class TestUnstructuredPruner(unittest.TestCase):
     def _gen_model(self):
         self.net = mobilenet_v1(num_classes=10, pretrained=False)
         self.net_conv1x1 = mobilenet_v1(num_classes=10, pretrained=False)
+        self.net_mxn = mobilenet_v1(num_classes=10, pretrained=False)
         self.pruner = UnstructuredPruner(
             self.net, mode='ratio', ratio=0.55, local_sparsity=True)
         self.pruner_conv1x1 = UnstructuredPruner(
@@ -24,6 +25,12 @@ class TestUnstructuredPruner(unittest.TestCase):
             ratio=0.55,
             prune_params_type='conv1x1_only',
             local_sparsity=False)
+        self.pruner_mxn = UnstructuredPruner(
+            self.net_mxn,
+            mode='ratio',
+            ratio=0.55,
+            local_sparsity=True,
+            sparse_block=[2, 1])
 
     def test_prune(self):
         ori_sparsity = UnstructuredPruner.total_sparse(self.net)
@@ -67,6 +74,12 @@ class TestUnstructuredPruner(unittest.TestCase):
         self.pruner_conv1x1.step()
         self.pruner_conv1x1.update_params()
         cur_sparsity = UnstructuredPruner.total_sparse_conv1x1(self.net_conv1x1)
+        self.assertTrue(abs(cur_sparsity - 0.55) < 0.01)
+
+    def test_block_prune_mxn(self):
+        self.pruner_mxn.step()
+        self.pruner_mxn.update_params()
+        cur_sparsity = UnstructuredPruner.total_sparse(self.net_mxn)
         self.assertTrue(abs(cur_sparsity - 0.55) < 0.01)
 
 
