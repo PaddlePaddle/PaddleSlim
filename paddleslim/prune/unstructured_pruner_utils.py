@@ -11,30 +11,25 @@ def cal_mxn_avg_matrix(mat, m=1, n=1):
     assert m == n, "The block size m and n should be same, but got m={}, n={}".format(
         m, n)
     ori_row, ori_col = mat.shape[0], mat.shape[1]
-    print(mat.shape)
     if len(mat.shape) == 4:
         assert mat.shape[2:] == (1, 1), "Only support for (n, n, 1, 1) for now."
-        new_mat = mat.reshape(ori_row, ori_col)
-    else:
-        new_mat = np.array(mat)
+        mat = mat.reshape(ori_row, ori_col)
+
     res_col = m - len(mat[0]) % m
     res_row = m - len(mat) % m
 
-    new_mat = np.pad(new_mat, ((0, res_col), (0, res_col)), 'reflect')
-    final_mat = np.zeros_like(new_mat)
+    mat = np.pad(mat, ((0, res_col), (0, res_col)), 'reflect')
+    avg_mat = np.zeros_like(mat)
 
-    new_shape = [len(new_mat) // m, len(new_mat[0]) // m, m, m]
-    strides = new_mat.itemsize * np.array(
-        [len(new_mat) * m, m, len(new_mat), 1])
-    new_mat = np.lib.stride_tricks.as_strided(
-        new_mat, shape=new_shape, strides=strides)
-    new_mat = new_mat.mean((2, 3), keepdims=True)
-    new_mat = np.tile(new_mat, (1, 1, m, m))
-    for i in range(len(new_mat)):
-        sub_array = new_mat[i]
-        tmp = np.concatenate(list(sub_array), axis=1)
-        final_mat[i * m:i * m + m] = tmp
-    final_mat = final_mat[:ori_row, :ori_col]
+    new_shape = [len(mat) // m, len(mat[0]) // m, m, m]
+    strides = mat.itemsize * np.array([len(mat) * m, m, len(mat), 1])
+    mat = np.lib.stride_tricks.as_strided(mat, shape=new_shape, strides=strides)
+    mat = mat.mean((2, 3), keepdims=True)
+    mat = np.tile(mat, (1, 1, m, m))
+    for i in range(len(mat)):
+        sub_array = mat[i]
+        avg_mat[i * m:i * m + m] = np.concatenate(list(sub_array), axis=1)
+    avg_mat = avg_mat[:ori_row, :ori_col]
     if len(mat.shape) == 4:
-        final_mat = final_mat.reshape(ori_row, ori_col, 1, 1)
-    return final_mat
+        avg_mat = avg_mat.reshape(ori_row, ori_col, 1, 1)
+    return avg_mat
