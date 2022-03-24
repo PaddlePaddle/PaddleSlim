@@ -55,7 +55,7 @@ def quantize(args):
         save_model_filename='__model__',
         save_params_filename='__params__',
         quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
-        weight_quantize_type='channel_wise_abs_max',
+        weight_quantize_type=['channel_wise_abs_max'],
         runcount_limit=args.max_model_quant_count)
 
 def main():
