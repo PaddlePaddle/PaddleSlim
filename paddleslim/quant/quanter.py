@@ -325,6 +325,7 @@ def quant_post_static(
         batch_nums=None,
         scope=None,
         algo='hist',
+        round_type='round',
         hist_percent=0.9999,
         bias_correction=False,
         quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
@@ -380,6 +381,9 @@ def quant_post_static(
                         makes the mse loss minimal. Use one batch of data for mse is enough. If 
                         algo='avg', use the average of abs_max values  to get the scale factor. If 
                         algo='abs_max', use abs_max method to get the scale factor. Default: 'hist'.
+        round_type(str, optional): The method of converting the quantized weights value
+                        from float to int. Currently supports ['round', 'adaround'] methods.
+                        Default is `round`, which is rounding nearest to the nearest whole number.
         hist_percent(float, optional): The percentile of histogram for algo hist.Default:0.9999.
         bias_correction(bool, optional): Bias correction method of https://arxiv.org/abs/1810.05723.
                         Default: False.
@@ -420,6 +424,7 @@ def quant_post_static(
         batch_nums=batch_nums,
         scope=scope,
         algo=algo,
+        round_type=round_type,
         hist_percent=hist_percent,
         bias_correction=bias_correction,
         quantizable_op_type=quantizable_op_type,
