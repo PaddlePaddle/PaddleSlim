@@ -21,6 +21,7 @@ import subprocess
 from .parse_ops import get_key_from_op
 from .extract_features import get_data_from_tables, get_features_from_paramkey
 from ._utils import opt_model, load_predictor, nearest_interpolate
+from .prune_model import get_prune_model, get_sparse_model
 import paddle
 import paddleslim
 import warnings
@@ -134,13 +135,17 @@ class TableLatencyPredictor(LatencyPredictor):
                 param_file,
                 data_type,
                 threads=4,
+                sparse_ratio=0,
+                prune_ratio=0,
                 input_shape=None):
         """predict the latency of the model
         
         Args:
             model_file(str), param_file(str): The inference model(*.pdmodel, *.pdiparams).
             data_type(str): Data type, fp32, fp16 or int8.
-            threads(int): threads num
+            threads(int): Threads num.
+            sparse_ratio(float): The ratio of unstructured pruning.
+            prune_ratio(float): The ration of structured pruning.
             input_shape(list): Generally, the input shape is confirmed when saving the inference model and the parameter is only effective for input shape that has variable length.
         Returns:
             latency(float): The latency of the model.
@@ -150,6 +155,14 @@ class TableLatencyPredictor(LatencyPredictor):
 
         if self.hardware and self.threads != threads:
             self._change_table(threads)
+
+        if sparse_ratio > 0:
+            self.predictor_state = False
+            model_file, param_file = get_sparse_model(model_file, param_file,
+                                                      sparse_ratio)
+        if prune_ratio > 0:
+            model_file, param_file = get_prune_model(model_file, param_file,
+                                                     prune_ratio)
 
         if self.predictor_state and f'conv2d_{data_type}' not in self.predictor:
             self._preload_predictor(data_type)
@@ -196,6 +209,8 @@ class TableLatencyPredictor(LatencyPredictor):
             for key in new_op:
                 warnings.warn(f"{key.ljust(15)}\t{new_op[key]}")
         shutil.rmtree(os.path.dirname(pbmodel_file))
+        if sparse_ratio > 0 or prune_ratio > 0:
+            shutil.rmtree(os.path.dirname(model_file))
         return latency
 
     def op_predictor(self, op_type, param_key, data_type):
