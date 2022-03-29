@@ -29,6 +29,7 @@ add_arg('save_path',       str,  "./quant_model/MobileNet/",  "model dir to save
 add_arg('model_filename',       str, None,                 "model file name")
 add_arg('params_filename',      str, None,                 "params file name")
 add_arg('algo',         str, 'hist',               "calibration algorithm")
+add_arg('round_type',         str, 'round',               "The method of converting the quantized weights.")
 add_arg('hist_percent',         float, 0.9999,             "The percentile of algo:hist")
 add_arg('bias_correction',         bool, False,             "Whether to use bias correction")
 add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
@@ -74,6 +75,7 @@ def quantize(args):
         batch_size=args.batch_size,
         batch_nums=args.batch_num,
         algo=args.algo,
+        round_type=args.round_type,
         hist_percent=args.hist_percent,
         bias_correction=args.bias_correction)
 
