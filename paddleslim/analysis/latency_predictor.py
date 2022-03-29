@@ -156,13 +156,14 @@ class TableLatencyPredictor(LatencyPredictor):
         if self.hardware and self.threads != threads:
             self._change_table(threads)
 
+        if prune_ratio > 0:
+            model_file, param_file = get_prune_model(model_file, param_file,
+                                                     prune_ratio)
+
         if sparse_ratio > 0:
             self.predictor_state = False
             model_file, param_file = get_sparse_model(model_file, param_file,
                                                       sparse_ratio)
-        if prune_ratio > 0:
-            model_file, param_file = get_prune_model(model_file, param_file,
-                                                     prune_ratio)
 
         if self.predictor_state and f'conv2d_{data_type}' not in self.predictor:
             self._preload_predictor(data_type)

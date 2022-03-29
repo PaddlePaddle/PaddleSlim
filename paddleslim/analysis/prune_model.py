@@ -45,7 +45,6 @@ def get_sparse_model(model_file, param_file, ratio):
                                  .get_tensor())
                 flatten = np.abs(array.flatten())
                 index = min(len(flatten) - 1, int(ratio * len(flatten)))
-                thresholds[name] = np.sort(flatten)[index]
                 ind = np.unravel_index(
                     np.argsort(
                         flatten, axis=None), flatten.shape)
@@ -67,8 +66,8 @@ def get_sparse_model(model_file, param_file, ratio):
                              .get_tensor())
             if thresholds.get(name) is not None:
                 np.put(array, thresholds.get(name), 0)
-            print(inp.name(), inp._var.shape,
-                  1 - np.count_nonzero(array) / array.size)
+            assert (abs(1 - np.count_nonzero(array) / array.size - ratio) < 1e-2
+                    ), 'The model sparsity is abnormal.'
             paddle.static.global_scope().find_var(name).get_tensor().set(
                 array, paddle.CPUPlace())
 
