@@ -16,13 +16,23 @@
 
 import os
 import pickle
-import time
+import shutil
 import subprocess
-
-from ._utils import get_key_from_op, save_cls_model, save_det_model, save_seg_model
+from .parse_ops import get_key_from_op
+from .extract_features import get_data_from_tables, get_features_from_paramkey
+from ._utils import opt_model, load_predictor, nearest_interpolate
 import paddle
 import paddleslim
+import warnings
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
+
+
+def format_Warning(message, category, filename, lineno, line=''):
+    return str(filename) + ':' + str(
+        lineno) + ': ' + category.__name__ + ': ' + str(message) + '\n'
+
+
+warnings.formatwarning = format_Warning
 
 
 class LatencyPredictor(object):
@@ -52,140 +62,171 @@ class TableLatencyPredictor(LatencyPredictor):
     """The preditor used to get pbmodel's latency on some devices and infer engines.
 
     Args:
-      table_file(str): The path of file that records the devices latency of operators.
-      opt_path(str): The path of opt tool to convert a paddle model to an optimized pbmodel that fuses operators.
+        table_file(str): The path of file that records the device latency of operators.
     """
 
-    def __init__(self,
-                 opt_path,
-                 hardware='845',
-                 threads=4,
-                 power_mode=3,
-                 batchsize=1):
-        self.table_file = f'{hardware}_threads_{threads}_power_mode_{power_mode}_batchsize_{batchsize}.pkl'
-        self.opt_path = opt_path
+    def __init__(self, table_file='SD710'):
+        self.table_file = table_file
         self.table_dict = {}
-        self._read_table()
-        self.det_multi_input = False
+        self.hardware = None
+        self.threads = None
+        self.predictor_state = False
+        self.predictor = {}
+        self._initial_table()
 
-    def _read_table(self):
-        if not os.path.exists(self.table_file):
-            subprocess.call(
-                f'wget https://paddle-slim-models.bj.bcebos.com/LatencyPredictor/{self.table_file}',
-                shell=True)
+    def _initial_table(self):
+        if self.table_file in ['SD625', 'SD710', 'SD845', 'SD865']:
+            self.hardware = self.table_file
+            self.threads = 4
+            self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
+            if self.hardware in ['SD625', 'SD710']:
+                self.predictor_state = True
+            if not os.path.exists(self.table_file):
+                subprocess.call(
+                    f'wget https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}',
+                    shell=True)
 
         assert os.path.exists(
-            self.table_file), f'{self.table_file} is not existed.'
+            self.table_file
+        ), f'{self.table_file} does not exist. If you want to use our table files, please set \'table_file\' in [SD625, SD710, SD845, SD865]'
         with open(self.table_file, 'rb') as f:
             self.table_dict = pickle.load(f)
+
         print('Successfully load {}'.format(self.table_file))
 
-    def set_det_multi_input(self, det_multi_input):
-        """If a detection model has multiple input, the self.det_multi_input should be True. Default: False.
-        """
-        self.det_multi_input = det_multi_input
+    def _change_table(self, threads=4):
+        assert threads == 4, 'Only 4 threads are available now.'
+        self.table_file = f'{self.hardware}_threads_{threads}_power_mode_0.pkl'
+        if not os.path.exists(self.table_file):
+            subprocess.call(
+                f'wget https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}',
+                shell=True)
 
-    def opt_model(self, model, input_shape, save_dir, data_type, task_type):
-        """Convert the model graph to an optimized pbmodel by using opt tool.
-        
-        Args:
-            model: The input model graph.
-            input_shape(list): The input shape of model.
-            save_dir: Where to save the pbmodel.
-            data_type: Data type, fp32 or int8.
-            task_type: Task type, cls, det or seg, different task models need to use different quantization strategies.
-        Returns:
-            pbmodel_file: The path of optimized pbmodel.
-        """
+        with open(self.table_file, 'rb') as f:
+            self.table_dict = pickle.load(f)
 
-        if task_type == 'cls':
-            model_file, param_file = save_cls_model(
-                model=model,
-                input_shape=input_shape,
-                save_dir=save_dir,
-                data_type=data_type)
+        print('Successfully loaded {}'.format(self.table_file))
 
-        elif task_type == 'det':
-            model_file, param_file = save_det_model(
-                model=model,
-                input_shape=input_shape,
-                save_dir=save_dir,
-                data_type=data_type,
-                det_multi_input=self.det_multi_input)
-
-        elif task_type == 'seg':
-            model_file, param_file = save_seg_model(
-                model=model,
-                input_shape=input_shape,
-                save_dir=save_dir,
-                data_type=data_type)
-
-        else:
-            assert task_type in ['cls', 'det', 'seg'
-                                 ], f'task_type must be one of [cls, det, seg]'
-
-        pb_model = os.path.join(save_dir, f'{data_type}pbmodel')
-        if not os.path.exists(pb_model):
-            os.makedirs(pb_model)
-
-        cmd = f'{self.opt_path} --model_file={model_file} --param_file={param_file}  --optimize_out_type=protobuf --optimize_out={pb_model} --valid_targets=arm'
-        print(f'commands:{cmd}')
-        m = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out = m.communicate()
-        print(out, 'opt done!')
-
-        pbmodel_file = os.path.join(pb_model, 'model')
-
-        return pbmodel_file
-
-    def predict_latency(self,
-                        model,
-                        input_shape=[1, 3, 224, 224],
-                        save_dir='',
-                        data_type='int8',
-                        task_type='cls'):
-        """predict the latency of the model
-        
-        Args:
-            model: The input model graph.
-            input_shape(list): The input shape of model. Default: [1,3,224,224].
-            save_dir: Where to save the pbmodel.
-            data_type: Data type, fp32 or int8. Default : int8
-            task_type: Task type, cls, det or seg, different task models need to use different quantization strategies. Default: cls.
-        Returns:
-            latency(float): The latency of the pbmodel.
-        """
-
-        assert data_type in ['fp32', 'int8'
-                             ], f'data_type must be one of [fp32, int8]'
-        assert task_type in ['cls', 'det', 'seg'
-                             ], f'task_type must be one of [cls, det, seg]'
-
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-
-        pbmodel_file = self.opt_model(
-            model=model,
-            input_shape=input_shape,
-            save_dir=save_dir,
-            data_type=data_type,
-            task_type=task_type)
-
-        paddle.enable_static()
-        with open(pbmodel_file, "rb") as f:
-            program_desc_str = f.read()
-            program = paddle.fluid.proto.framework_pb2.ProgramDesc.FromString(
-                program_desc_str)
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                program_desc_str)
-
-        graph = paddleslim.core.GraphWrapper(fluid_program)
-        latency = 0.0
+    def _get_input_shape(self, graph):
+        in_shape = []
         for op in graph.ops():
             param_key = get_key_from_op(op)
             if param_key != '':
-                assert param_key in self.table_dict, f'{param_key} is not in the tabel.'
+                in_shape = op.all_inputs()[-1].shape()
+                break
+        return in_shape
+
+    def _preload_predictor(self, data_type='fp32'):
+        op_types = [
+            'depthwise_conv2d', 'conv2d', 'pool2d', 'matmul', 'elementwise_add',
+            'elementwise_mul', 'concat', 'calib', 'swish'
+        ]
+        op_dir = self.table_file.split('.')[0] + '_batchsize_1'
+        for op_type in op_types:
+            model = load_predictor(op_type, op_dir, data_type)
+            key = op_type
+            if 'conv2d' in op_type:
+                key = f'{op_type}_{data_type}'
+            self.predictor[key] = model
+
+    def predict(self,
+                model_file,
+                param_file,
+                data_type,
+                threads=4,
+                input_shape=None):
+        """predict the latency of the model
+        
+        Args:
+            model_file(str), param_file(str): The inference model(*.pdmodel, *.pdiparams).
+            data_type(str): Data type, fp32, fp16 or int8.
+            threads(int): threads num
+            input_shape(list): Generally, the input shape is confirmed when saving the inference model and the parameter is only effective for input shape that has variable length.
+        Returns:
+            latency(float): The latency of the model.
+        """
+        assert data_type in ['fp32', 'int8', 'fp16'
+                             ], f'data_type must be one of [fp32, int8, fp16]'
+
+        if self.hardware and self.threads != threads:
+            self._change_table(threads)
+
+        if self.predictor_state and f'conv2d_{data_type}' not in self.predictor:
+            self._preload_predictor(data_type)
+
+        enable_fp16 = True if data_type == 'fp16' else False
+        pbmodel_file = opt_model(
+            model_file=model_file,
+            param_file=param_file,
+            optimize_out_type='protobuf',
+            enable_fp16=enable_fp16)
+
+        paddle.enable_static()
+        with open(pbmodel_file, "rb") as f:
+            fluid_program = paddle.fluid.framework.Program.parse_from_string(
+                f.read())
+
+        graph = paddleslim.core.GraphWrapper(fluid_program)
+
+        if input_shape != None:
+            ori_shape = self._get_input_shape(graph)
+            assert ori_shape == input_shape, "The parameter \'input_shape\' dosn't work for now. The input shape is fixed when saving the inference model"
+
+        latency = 0.0
+        new_op = {}
+        for op in graph.ops():
+            param_key = get_key_from_op(op)
+            if param_key == '':
+                continue
+            if param_key == None:
+                if op.type() in new_op:
+                    new_op[op.type()] += 1
+                else:
+                    new_op.update({op.type(): 1})
+                continue
+            if param_key in self.table_dict:
                 latency += self.table_dict[param_key]
+            elif self.predictor_state:
+                latency += self.op_predictor(op.type(), param_key, data_type)
+        if len(new_op) != 0:
+            warnings.warn(
+                "These ops are not currently supported. Please raise an issue in PaddleSlim if you find the CalledTimes is large enough to affect the accuracy."
+            )
+            warnings.warn("OperatorType\tCalledTimes")
+            for key in new_op:
+                warnings.warn(f"{key.ljust(15)}\t{new_op[key]}")
+        shutil.rmtree(os.path.dirname(pbmodel_file))
+        return latency
+
+    def op_predictor(self, op_type, param_key, data_type):
+        """predict the latency of the operator which is not in the table
+        
+        Args:
+            op_type: The operator's type
+            param_key: The operator's parameter information.
+            data_type: Data type, fp32 or int8.
+        Returns:
+            latency(float): The latency of the operator.
+        """
+
+        latency = 0.0
+        if op_type in [
+                'depthwise_conv2d', 'conv2d', 'pool2d', 'matmul',
+                'elementwise_add', 'elementwise_mul', 'concat', 'calib', 'swish'
+        ]:
+            key = op_type
+            if 'conv2d' in op_type:
+                key = f'{op_type}_{data_type}'
+            predictor = self.predictor[key]
+            features = get_features_from_paramkey(param_key, op_type, data_type)
+            latency = predictor.predict([features])
+        else:
+            data = get_data_from_tables(
+                table_dict=self.table_dict,
+                op_type=op_type,
+                data_type=data_type)
+            features = get_features_from_paramkey(param_key, op_type, data_type)
+            latency = nearest_interpolate(features, data)
+            assert latency != None, f'{param_key} is not in the table.'
 
         return latency

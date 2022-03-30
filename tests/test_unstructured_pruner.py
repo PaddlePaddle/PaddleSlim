@@ -54,6 +54,14 @@ class TestUnstructuredPruner(StaticCase):
             place=place,
             prune_params_type='conv1x1_only',
             local_sparsity=False)
+        self.pruner_mxn = UnstructuredPruner(
+            self.main_program,
+            'ratio',
+            scope=self.scope,
+            place=place,
+            sparse_block=[5, 5],
+            prune_params_type='conv1x1_only',
+            local_sparsity=True)
 
     def test_unstructured_prune(self):
         for param in self.main_program.global_block().all_parameters():
@@ -101,6 +109,18 @@ class TestUnstructuredPruner(StaticCase):
         print(self.pruner_conv1x1.skip_params)
         self.assertTrue(
             self.pruner.skip_params < self.pruner_conv1x1.skip_params)
+
+    def test_block_pruner_mxn(self):
+        ori_sparsity = UnstructuredPruner.total_sparse_conv1x1(
+            self.main_program)
+        self.pruner_mxn.ratio = 0.50
+        self.pruner_mxn.step()
+        self.pruner_mxn.update_params()
+        cur_sparsity = UnstructuredPruner.total_sparse_conv1x1(
+            self.main_program)
+        print('original sparsity: {}.'.format(ori_sparsity))
+        print('current sparsity: {}.'.format(cur_sparsity))
+        self.assertGreater(cur_sparsity, ori_sparsity)
 
     def test_sparsity_conv1x1(self):
         ori_sparsity = UnstructuredPruner.total_sparse_conv1x1(
