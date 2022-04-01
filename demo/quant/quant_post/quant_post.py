@@ -32,6 +32,7 @@ add_arg('algo',         str, 'hist',               "calibration algorithm")
 add_arg('hist_percent',         float, 0.9999,             "The percentile of algo:hist")
 add_arg('bias_correction',         bool, False,             "Whether to use bias correction")
 add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
+add_arg('onnx_format',             bool,   False,                  "Whether to export the quantized model with format of ONNX.")
 
 # yapf: enable
 
@@ -75,7 +76,8 @@ def quantize(args):
         batch_nums=args.batch_num,
         algo=args.algo,
         hist_percent=args.hist_percent,
-        bias_correction=args.bias_correction)
+        bias_correction=args.bias_correction,
+        onnx_format=args.onnx_format)
 
 
 def main():
