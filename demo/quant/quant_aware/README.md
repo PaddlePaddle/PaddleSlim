@@ -4,13 +4,13 @@
 
 ## 接口介绍
 
-请参考 <a href='../../../paddleslim/quant/quantization_api_doc.md'>量化API文档</a>。
+请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-aware'>量化API文档</a>。
 
 ## 分类模型的量化训练流程
 
 ### 准备数据
 
-在``demo``文件夹下创建``data``文件夹，将``ImageNet``数据集解压在``data``文件夹下，解压后``data``文件夹下应包含以下文件：
+在``demo``文件夹下创建``data``文件夹，将``ImageNet``数据集解压在``data``文件夹下，解压后``data/ILSVRC2012``文件夹下应包含以下文件：
 - ``'train'``文件夹，训练图片
 - ``'train_list.txt'``文件
 - ``'val'``文件夹，验证图片
@@ -55,10 +55,10 @@ compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, f
 ### 关掉指定build策略
 
 ```
-build_strategy = fluid.BuildStrategy()
+build_strategy = paddle.static.BuildStrategy()
 build_strategy.fuse_all_reduce_ops = False
 build_strategy.sync_batch_norm = False
-exec_strategy = fluid.ExecutionStrategy()
+exec_strategy = paddle.static.ExecutionStrategy()
 compiled_train_prog = compiled_train_prog.with_data_parallel(
         loss_name=avg_cost.name,
         build_strategy=build_strategy,

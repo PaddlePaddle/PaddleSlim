@@ -1,0 +1,9 @@
+- DistillConfig:
+  - loss_function: CELoss
+    model_name_pairs:
+    - - student_0
+      - teacher_0
+    weight: 1.0
+    layers:
+    - layers_name: ['classifier', 'classifier']
+      temperature: 1.0

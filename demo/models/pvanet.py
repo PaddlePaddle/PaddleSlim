@@ -59,10 +59,8 @@ class PVANet():
             block_configs=[
                 BlockConfig(2, '64 48-96 24-48-48 96 128', True,
                             BLOCK_TYPE_INCEP),
-                BlockConfig(1, '64 64-96 24-48-48 128', True,
-                            BLOCK_TYPE_INCEP),
-                BlockConfig(1, '64 64-96 24-48-48 128', True,
-                            BLOCK_TYPE_INCEP),
+                BlockConfig(1, '64 64-96 24-48-48 128', True, BLOCK_TYPE_INCEP),
+                BlockConfig(1, '64 64-96 24-48-48 128', True, BLOCK_TYPE_INCEP),
                 BlockConfig(1, '64 64-96 24-48-48 128', True, BLOCK_TYPE_INCEP)
             ],
             name='conv4',
@@ -76,9 +74,8 @@ class PVANet():
                 BlockConfig(1, '64 96-128 32-64-64 196', True,
                             BLOCK_TYPE_INCEP),
                 BlockConfig(1, '64 96-128 32-64-64 196', True,
-                            BLOCK_TYPE_INCEP), BlockConfig(
-                                1, '64 96-128 32-64-64 196', True,
-                                BLOCK_TYPE_INCEP)
+                            BLOCK_TYPE_INCEP),
+                BlockConfig(1, '64 96-128 32-64-64 196', True, BLOCK_TYPE_INCEP)
             ],
             name='conv5',
             end_points=end_points)
@@ -89,7 +86,6 @@ class PVANet():
 
         output = fluid.layers.fc(input=input,
                                  size=class_dim,
-                                 act='softmax',
                                  param_attr=ParamAttr(
                                      initializer=MSRA(), name="fc_weights"),
                                  bias_attr=ParamAttr(name="fc_offset"))
@@ -182,9 +178,8 @@ class PVANet():
                     conv_stride = stride
                 else:
                     conv_stride = 1
-                path_net = self._conv_bn_relu(path_net, num_output,
-                                              kernel_size, name + scope,
-                                              conv_stride)
+                path_net = self._conv_bn_relu(path_net, num_output, kernel_size,
+                                              name + scope, conv_stride)
             paths.append(path_net)
 
         if stride > 1:
@@ -359,8 +354,8 @@ class PVANet():
                       name,
                       stride=1,
                       groups=1):
-        return self._conv_bn_relu(input, num_filters, filter_size, name,
-                                  stride, groups)
+        return self._conv_bn_relu(input, num_filters, filter_size, name, stride,
+                                  groups)
 
 
 def Fpn_Fusion(blocks, net):
@@ -433,8 +428,7 @@ def east(input, class_num=31):
                 out[i], k, 1, name='fusion_' + str(len(blocks)))
         elif j <= 4:
             conv = net.deconv_bn_layer(
-                out[i], k, 2 * j, j, j // 2,
-                name='fusion_' + str(len(blocks)))
+                out[i], k, 2 * j, j, j // 2, name='fusion_' + str(len(blocks)))
         else:
             conv = net.deconv_bn_layer(
                 out[i], 32, 8, 4, 2, name='fusion_' + str(len(blocks)) + '_1')

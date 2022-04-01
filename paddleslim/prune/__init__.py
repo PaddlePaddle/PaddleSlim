@@ -16,21 +16,32 @@ from __future__ import absolute_import
 from .pruner import *
 from ..prune import pruner
 from .auto_pruner import *
-import auto_pruner
-from .sensitive_pruner import *
-from ..prune import sensitive_pruner
+from ..prune import auto_pruner
 from .sensitive import *
 from ..prune import sensitive
-from .prune_walker import *
-from ..prune import prune_walker
-from io import *
-from ..prune import io
-
+from .prune_worker import *
+from ..prune import prune_worker
+from .prune_io import *
+from ..prune import prune_io
+from .criterion import *
+from ..prune import criterion
+from .collections import *
+from ..prune import collections
+from .unstructured_pruner import *
+from ..prune import unstructured_pruner
+from .unstructured_pruner_utils import *
+from ..prune import unstructured_pruner_utils
+from .idx_selector import *
+from ..prune import idx_selector
 __all__ = []
 
 __all__ += pruner.__all__
 __all__ += auto_pruner.__all__
-__all__ += sensitive_pruner.__all__
 __all__ += sensitive.__all__
-__all__ += prune_walker.__all__
-__all__ += io.__all__
+__all__ += prune_worker.__all__
+__all__ += prune_io.__all__
+__all__ += criterion.__all__
+__all__ += unstructured_pruner.__all__
+__all__ += unstructured_pruner_utils.__all__
+__all__ += idx_selector.__all__
+__all__ += collections.__all__

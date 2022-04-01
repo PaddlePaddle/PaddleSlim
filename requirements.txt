@@ -1,1 +1,10 @@
 #paddlepaddle == 1.6.0rc0
+tqdm
+pyzmq
+matplotlib
+opencv-python
+pillow 
+pyyaml
+scikit-learn
+smac
+paddleslim-opt-tools

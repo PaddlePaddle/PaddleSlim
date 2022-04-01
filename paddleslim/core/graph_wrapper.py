@@ -17,7 +17,7 @@ import copy
 import pickle
 import numpy as np
 from collections import OrderedDict
-from collections import Iterable
+from collections.abc import Iterable
 from paddle.fluid.framework import Program, program_guard, Parameter, Variable
 
 __all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper']
@@ -46,7 +46,7 @@ class VarWrapper(object):
         """
         Overwrite this function for ...in... syntax in python.
         """
-        return self._var.name == v._var.name
+        return (v is not None) and self._var.name == v._var.name
 
     def name(self):
         """
@@ -56,6 +56,15 @@ class VarWrapper(object):
 
     def __repr__(self):
         return self._var.name
+
+    def __lt__(self, other):
+        return self._var.name < other._var.name
+
+    def __gt__(self, other):
+        return self._var.name > other._var.name
+
+    def __eq__(self, other):
+        return self._var.name == other._var.name
 
     def shape(self):
         """
@@ -72,6 +81,7 @@ class VarWrapper(object):
     def inputs(self):
         """
         Get all the operators that use this variable as output.
+
         Returns:
             list<OpWrapper>: A list of operators.
         """
@@ -84,6 +94,7 @@ class VarWrapper(object):
     def outputs(self):
         """
         Get all the operators that use this variable as input.
+
         Returns:
             list<OpWrapper>: A list of operators.
         """
@@ -142,6 +153,15 @@ class OpWrapper(object):
                                                          self.type(),
                                                          self.all_inputs())
 
+    def __lt__(self, other):
+        return self._op.idx < other._op.idx
+
+    def __gt__(self, other):
+        return self._op.idx > other._op.idx
+
+    def __eq__(self, other):
+        return self._op.idx == other._op.idx
+
     def is_bwd_op(self):
         """
         Whether this operator is backward op.
@@ -158,15 +178,21 @@ class OpWrapper(object):
         """
         Get all the varibales by the input name.
         """
-        return [self._graph.var(var_name) for var_name in self._op.input(name)]
+        if name in self._op.input_names:
+            return [
+                self._graph.var(var_name) for var_name in self._op.input(name)
+            ]
+        return []
 
     def outputs(self, name):
         """
         Get all the varibales by the output name.
         """
-        return [
-            self._graph.var(var_name) for var_name in self._op.output(name)
-        ]
+        if name in self._op.output_names:
+            return [
+                self._graph.var(var_name) for var_name in self._op.output(name)
+            ]
+        return []
 
     def set_attr(self, key, value):
         """
@@ -189,25 +215,29 @@ class OpWrapper(object):
             bool|int|str|float|list: The attribute value. The return value
             can be any valid attribute type.
         """
-        return self._op.attr(name)
+        if self._op.has_attr(name):
+            return self._op.attr(name)
+        else:
+            return None
 
 
 class GraphWrapper(object):
     """
     It is a wrapper of paddle.fluid.framework.IrGraph with some special functions
     for paddle slim framework.
+
+    Args:
+        program(framework.Program): A program with 
+        in_nodes(dict): A dict to indicate the input nodes of the graph.
+                        The key is user-defined and human-readable name.
+                        The value is the name of Variable.
+        out_nodes(dict): A dict to indicate the input nodes of the graph.
+                        The key is user-defined and human-readable name.
+                        The value is the name of Variable.
     """
 
     def __init__(self, program=None, in_nodes=[], out_nodes=[]):
         """
-        Args:
-            program(framework.Program): A program with 
-            in_nodes(dict): A dict to indicate the input nodes of the graph.
-                            The key is user-defined and human-readable name.
-                            The value is the name of Variable.
-            out_nodes(dict): A dict to indicate the input nodes of the graph.
-                            The key is user-defined and human-readable name.
-                            The value is the name of Variable.
         """
         super(GraphWrapper, self).__init__()
         self.program = Program() if program is None else program
@@ -226,6 +256,7 @@ class GraphWrapper(object):
     def all_parameters(self):
         """
         Get all the parameters in this graph.
+
         Returns:
             list<VarWrapper>: A list of VarWrapper instances.
         """
@@ -238,6 +269,7 @@ class GraphWrapper(object):
     def is_parameter(self, var):
         """
         Whether the given variable is parameter.
+
         Args:
             var(VarWrapper): The given varibale.
         """
@@ -246,6 +278,7 @@ class GraphWrapper(object):
     def is_persistable(self, var):
         """
         Whether the given variable is persistable.
+
         Args:
             var(VarWrapper): The given varibale.
         """
@@ -279,6 +312,7 @@ class GraphWrapper(object):
     def clone(self, for_test=False):
         """
         Clone a new graph from current graph.
+
         Returns:
             (GraphWrapper): The wrapper of a new graph.
         """
@@ -295,8 +329,10 @@ class GraphWrapper(object):
     def pre_ops(self, op):
         """
         Get all the previous operators of target operator.
+
         Args:
-            op(OpWrapper): Target operator..
+            op(OpWrapper): Target operator.
+
         Returns:
             list<OpWrapper>: A list of operators.
         """
@@ -310,8 +346,10 @@ class GraphWrapper(object):
     def next_ops(self, op):
         """
         Get all the next operators of target operator.
+
         Args:
-            op(OpWrapper): Target operator..
+            op(OpWrapper): Target operator.
+
         Returns:
             list<OpWrapper>: A list of operators.
         """
@@ -343,27 +381,11 @@ class GraphWrapper(object):
             ret += np.product(param.shape())
         return ret
 
-    def update_param_shape(self, scope):
-        """
-        Update the shape of parameters in the graph according to tensors in scope.
-        It is used after loading pruned parameters from file.
-        """
-        for param in self.all_parameters():
-            tensor_shape = np.array(
-                scope.find_var(param.name()).get_tensor()).shape
-            param.set_shape(tensor_shape)
-
     def infer_shape(self):
         """
         Update the groups of convolution layer according to current filters.
         It is used after loading pruned parameters from file.
         """
         for op in self.ops():
-            if op.type() != 'conditional_block':
+            if op.type() != 'conditional_block' and op.type() != 'feed':
                 op._op.desc.infer_shape(op._op.block.desc)
-
-    def update_groups_of_conv(self):
-        for op in self.ops():
-            if op.type() == 'depthwise_conv2d' or op.type(
-            ) == 'depthwise_conv2d_grad':
-                op.set_attr('groups', op.inputs('Filter')[0].shape()[0])

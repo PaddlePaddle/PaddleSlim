@@ -1,0 +1,22 @@
+HyperParameterOptimization:
+  batch_num:
+  - 4
+  - 16
+  bias_correct:
+  - true
+  hist_percent:
+  - 0.999
+  - 0.99999
+  max_quant_count: 20
+  ptq_algo:
+  - KL
+  - hist
+  weight_quantize_type:
+  - channel_wise_abs_max
+Quantization:
+  activation_bits: 8
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+  - mul
+  weight_bits: 8

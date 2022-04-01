@@ -11,8 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .flops import flops
+from .flops import flops, dygraph_flops
 from .model_size import model_size
 from .latency import LatencyEvaluator, TableLatencyEvaluator
+from .latency_predictor import LatencyPredictor, TableLatencyPredictor
+from .parse_ops import get_key_from_op
+from ._utils import save_cls_model, save_det_model, save_seg_model
 
-__all__ = ['flops', 'model_size', 'LatencyEvaluator', 'TableLatencyEvaluator']
+__all__ = [
+    'flops',
+    'dygraph_flops',
+    'model_size',
+    'LatencyEvaluator',
+    'TableLatencyEvaluator',
+    "LatencyPredictor",
+    "TableLatencyPredictor",
+    "get_key_from_op",
+    "save_cls_model",
+    "save_det_model",
+    "save_seg_model",
+]

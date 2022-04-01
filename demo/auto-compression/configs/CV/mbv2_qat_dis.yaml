@@ -1,0 +1,63 @@
+Distillation:
+  distill_lambda: 1.0
+  distill_loss: l2_loss
+  distill_node_pair:
+  - teacher_conv2d_54.tmp_0
+  - conv2d_54.tmp_0
+  - teacher_conv2d_55.tmp_0
+  - conv2d_55.tmp_0
+  - teacher_conv2d_57.tmp_0
+  - conv2d_57.tmp_0
+  - teacher_elementwise_add_0
+  - elementwise_add_0
+  - teacher_conv2d_61.tmp_0
+  - conv2d_61.tmp_0
+  - teacher_elementwise_add_1
+  - elementwise_add_1
+  - teacher_elementwise_add_2
+  - elementwise_add_2
+  - teacher_conv2d_67.tmp_0
+  - conv2d_67.tmp_0
+  - teacher_elementwise_add_3
+  - elementwise_add_3
+  - teacher_elementwise_add_4
+  - elementwise_add_4
+  - teacher_elementwise_add_5
+  - elementwise_add_5
+  - teacher_conv2d_75.tmp_0
+  - conv2d_75.tmp_0
+  - teacher_elementwise_add_6
+  - elementwise_add_6
+  - teacher_elementwise_add_7
+  - elementwise_add_7
+  - teacher_conv2d_81.tmp_0
+  - conv2d_81.tmp_0
+  - teacher_elementwise_add_8
+  - elementwise_add_8
+  - teacher_elementwise_add_9
+  - elementwise_add_9
+  - teacher_conv2d_87.tmp_0
+  - conv2d_87.tmp_0
+  - teacher_linear_1.tmp_0
+  - linear_1.tmp_0
+  merge_feed: true
+  teacher_model_dir: ./MobileNetV2_ssld_infer
+  teacher_model_filename: inference.pdmodel
+  teacher_params_filename: inference.pdiparams
+Quantization:
+  activation_bits: 8
+  is_full_quantize: false
+  not_quant_pattern:
+  - skip_quant
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+  weight_bits: 8
+TrainConfig:
+  epochs: 1
+  eval_iter: 1000
+  learning_rate: 0.0001
+  optimizer: SGD
+  optim_args:
+    weight_decay: 4.0e-05
+  origin_metric: 0.765

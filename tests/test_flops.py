@@ -15,11 +15,12 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle.fluid as fluid
-from paddleslim.analysis import flops
+from paddleslim import flops
 from layers import conv_bn_layer
+from static_case import StaticCase
 
 
-class TestPrune(unittest.TestCase):
+class TestPrune(StaticCase):
     def test_prune(self):
         main_program = fluid.Program()
         startup_program = fluid.Program()
@@ -33,7 +34,7 @@ class TestPrune(unittest.TestCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
-        self.assertTrue(1597440 == flops(main_program))
+        self.assertTrue(792576 == flops(main_program))
 
 
 if __name__ == '__main__':
