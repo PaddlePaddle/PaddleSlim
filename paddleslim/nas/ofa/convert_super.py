@@ -35,7 +35,7 @@ else:
     from . import layers
     Layer = paddle.nn.Layer
 from .layers_base import Block
-
+from . import layers_old
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['supernet', 'Convert']
@@ -58,11 +58,16 @@ class Convert:
     def __init__(self, context):
         self.context = context
 
-    def _change_name(self, layer, pd_ver, has_bias=True, conv=False):
+    def _change_name(self,
+                     layer,
+                     pd_ver,
+                     has_bias=True,
+                     conv=False,
+                     use_bn_old=False):
         if conv:
             w_attr = layer._param_attr
         else:
-            w_attr = layer._param_attr if pd_ver == 185 else layer._weight_attr
+            w_attr = layer._param_attr if pd_ver == 185 or use_bn_old else layer._weight_attr
 
         if isinstance(w_attr, ParamAttr):
             if w_attr != None and not isinstance(w_attr,
@@ -241,18 +246,22 @@ class Convert:
                     layer = Block(SuperGroupConv2D(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            elif isinstance(layer,
-                            getattr(nn, 'BatchNorm2D', nn.BatchNorm)) and (
-                                getattr(self.context, 'expand', None) != None or
-                                getattr(self.context, 'channel', None) != None):
+            elif (isinstance(layer, nn.BatchNorm2D) or
+                  isinstance(layer, nn.BatchNorm)) and (
+                      getattr(self.context, 'expand', None) != None or
+                      getattr(self.context, 'channel', None) != None):
                 # num_features in BatchNorm don't change after last weight operators
                 if idx > last_weight_layer_idx:
                     continue
 
+                use_bn_old = False
+                if isinstance(layer, nn.BatchNorm):
+                    use_bn_old = True
+
                 attr_dict = layer.__dict__
                 new_attr_name = ['momentum', 'epsilon', 'bias_attr']
 
-                if pd_ver == 185:
+                if pd_ver == 185 or use_bn_old:
                     new_attr_name += [
                         'param_attr', 'act', 'dtype', 'in_place', 'data_layout',
                         'is_test', 'use_global_stats', 'trainable_statistics'
@@ -260,9 +269,9 @@ class Convert:
                 else:
                     new_attr_name += ['weight_attr', 'data_format', 'name']
 
-                self._change_name(layer, pd_ver)
+                self._change_name(layer, pd_ver, use_bn_old=use_bn_old)
                 new_attr_dict = dict.fromkeys(new_attr_name, None)
-                if pd_ver == 185:
+                if pd_ver == 185 or use_bn_old:
                     new_attr_dict['num_channels'] = None
                 else:
                     new_attr_dict['num_features'] = None
@@ -284,9 +293,10 @@ class Convert:
 
                 del layer, attr_dict
 
-                layer = layers.SuperBatchNorm(
+                layer = layers_old.SuperBatchNorm(
                     **new_attr_dict
-                ) if pd_ver == 185 else layers.SuperBatchNorm2D(**new_attr_dict)
+                ) if pd_ver == 185 or use_bn_old else layers.SuperBatchNorm2D(
+                    **new_attr_dict)
                 model[idx] = layer
 
             elif isinstance(layer, SyncBatchNorm) and (

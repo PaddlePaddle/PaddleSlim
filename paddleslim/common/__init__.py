@@ -22,7 +22,8 @@ from .server import Server
 from .client import Client
 from .meter import AvgrageMeter
 from .analyze_helper import VarCollector
-from paddleslim.common import wrapper_function
+from . import wrapper_function
+from . import recover_program
 
 __all__ = [
     'EvolutionaryController', 'SAController', 'get_logger', 'ControllerServer',
@@ -31,3 +32,4 @@ __all__ = [
 ]
 
 __all__ += wrapper_function.__all__
+__all__ += recover_program.__all__

@@ -1,0 +1,44 @@
+Distillation:
+  distill_lambda: 1.0
+  distill_loss: l2_loss
+  distill_node_pair:
+  - teacher_tmp_9
+  - tmp_9
+  - teacher_tmp_12
+  - tmp_12
+  - teacher_tmp_15
+  - tmp_15
+  - teacher_tmp_18
+  - tmp_18
+  - teacher_tmp_21
+  - tmp_21
+  - teacher_tmp_24
+  - tmp_24
+  - teacher_tmp_27
+  - tmp_27
+  - teacher_tmp_30
+  - tmp_30
+  - teacher_tmp_33
+  - tmp_33
+  - teacher_tmp_36
+  - tmp_36
+  - teacher_tmp_39
+  - tmp_39
+  - teacher_tmp_42
+  - tmp_42
+  - teacher_linear_147.tmp_1
+  - linear_147.tmp_1
+  merge_feed: true
+  teacher_model_dir: ../auto-compression_origin/static_bert_models
+  teacher_model_filename: bert.pdmodel
+  teacher_params_filename: bert.pdiparams
+Prune:
+  prune_algo: asp
+TrainConfig:
+  epochs: 3
+  eval_iter: 1000
+  learning_rate: 2.0e-05
+  optim_args:
+    weight_decay: 0.0
+  optimizer: AdamW
+  origin_metric: 0.93

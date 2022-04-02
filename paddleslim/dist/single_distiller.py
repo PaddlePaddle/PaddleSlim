@@ -22,7 +22,8 @@ def merge(teacher_program,
           data_name_map,
           place,
           scope=None,
-          name_prefix='teacher_'):
+          name_prefix='teacher_',
+          merge_feed=True):
     """Merge teacher program into student program and add a uniform prefix to the
     names of all vars in teacher program
 
@@ -40,6 +41,7 @@ def merge(teacher_program,
                       will be used. Default: None
         name_prefix(str): Name prefix added for all vars of the teacher program.
                           Default: 'teacher_'
+        merge_feed(bool): Wheather to merge feed op when merge program. Default: True.
 
     Returns:
         None
@@ -49,7 +51,7 @@ def merge(teacher_program,
     teacher_program = teacher_program.clone(for_test=True)
     for teacher_var in teacher_program.list_vars():
         skip_rename = False
-        if teacher_var.name != 'fetch' and teacher_var.name != 'feed':
+        if teacher_var.name != 'fetch' and (not merge_feed or teacher_var.name != 'feed'):
             if teacher_var.name in data_name_map.keys():
                 new_name = data_name_map[teacher_var.name]
                 if new_name == teacher_var.name:
@@ -67,7 +69,7 @@ def merge(teacher_program,
                     teacher_var.name, new_name)
 
     for teacher_var in teacher_program.list_vars():
-        if teacher_var.name != 'fetch' and teacher_var.name != 'feed':
+        if teacher_var.name != 'fetch' and (not merge_feed or teacher_var.name != 'feed'):
             # student program add var
             new_var = student_program.global_block()._clone_variable(
                 teacher_var, force_persistable=False)
@@ -75,7 +77,7 @@ def merge(teacher_program,
 
     for block in teacher_program.blocks:
         for op in block.ops:
-            if op.type != 'feed' and op.type != 'fetch':
+            if (not merge_feed or op.type != 'feed') and op.type != 'fetch':
                 inputs = {}
                 outputs = {}
                 attrs = {}
