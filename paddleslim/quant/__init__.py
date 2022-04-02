@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import platform
 import logging
 
 import paddle
@@ -32,7 +33,11 @@ try:
     from .quanter import quant_aware, convert, quant_post_static, quant_post_dynamic
     from .quanter import quant_post, quant_post_only_weight
     from .quant_aware_with_infermodel import quant_aware_with_infermodel, export_quant_infermodel
-    from .quant_post_hpo import quant_post_hpo
+    if platform.system().lower() == 'linux':
+        from .quant_post_hpo import quant_post_hpo
+    else:
+        _logger.warning(
+            "post-quant-hpo is not support in system other than linux")
 except Exception as e:
     _logger.warning(e)
     _logger.warning(
