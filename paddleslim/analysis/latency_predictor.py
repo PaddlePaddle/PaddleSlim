@@ -72,15 +72,15 @@ class TableLatencyPredictor(LatencyPredictor):
         self.threads = None
         self.predictor_state = False
         self.predictor = {}
+        self.hardware_list = ['SD625', 'SD710']
         self._initial_table()
 
     def _initial_table(self):
-        if self.table_file in ['SD625', 'SD710', 'SD845', 'SD865']:
+        if self.table_file in self.hardware_list:
             self.hardware = self.table_file
             self.threads = 4
             self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
-            if self.hardware in ['SD625', 'SD710']:
-                self.predictor_state = True
+            self.predictor_state = True
             if not os.path.exists(self.table_file):
                 subprocess.call(
                     f'wget https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}',
@@ -88,7 +88,7 @@ class TableLatencyPredictor(LatencyPredictor):
 
         assert os.path.exists(
             self.table_file
-        ), f'{self.table_file} does not exist. If you want to use our table files, please set \'table_file\' in [SD625, SD710, SD845, SD865]'
+        ), f'{self.table_file} does not exist. If you want to use our table files, please set \'table_file\' in {self.hardware_list}'
         with open(self.table_file, 'rb') as f:
             self.table_dict = pickle.load(f)
 
