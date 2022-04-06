@@ -38,6 +38,7 @@ try:
     else:
         _logger.warning(
             "post-quant-hpo is not support in system other than linux")
+
 except Exception as e:
     _logger.warning(e)
     _logger.warning(
