@@ -387,5 +387,7 @@ class GraphWrapper(object):
         It is used after loading pruned parameters from file.
         """
         for op in self.ops():
-            if op.type() != 'conditional_block' and op.type() != 'feed':
+            if op.type() in ['feed', 'fetch']:
+                continue
+            if op.type() != 'conditional_block':
                 op._op.desc.infer_shape(op._op.block.desc)
