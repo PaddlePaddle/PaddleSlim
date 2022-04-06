@@ -50,6 +50,7 @@ python quant_post.py --model_path ./inference_model/ResNet50_infer/ --save_path 
 ```
 
 - 参数列表：
+
 | 参数名     | 解释 |
 | :-------- | :--------: |
 | model_path | 需要量化的模型所在路径 |
@@ -91,6 +92,6 @@ python eval.py --model_path ./quant_model/ResNet50/
 ### benchmark
 
 | 模型     | FP32 acc-top1 | INT8 acc-top1  | INT8 acc(adaround) |
-| :-------- | :--------: | :--------: |
+| :-------- | :--------: | :--------: | :--------: |
 | MobileNetV1 | 0.7092  | 0.7036  | 0.7063  |
 | ResNet50 |  0.7633 | 0.7615 | 0.7625  |
