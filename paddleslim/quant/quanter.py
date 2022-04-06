@@ -27,10 +27,12 @@ from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
-from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
-from paddle.fluid.contrib.slim.quantization import QuantWeightPass
-from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
-from paddle.fluid.contrib.slim.quantization import utils
+try:
+    from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
+    from paddle.fluid.contrib.slim.quantization import QuantWeightPass
+    from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
+except:
+    pass
 from paddle.fluid import core
 from paddle.fluid.contrib.slim.quantization import WeightQuantization
 from paddle.fluid.layer_helper import LayerHelper
@@ -52,8 +54,13 @@ ACTIVATION_QUANTIZATION_TYPES_TENSORRT = [
 ]
 
 VALID_DTYPES = ['int8']
-TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
-QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
+try:
+    from paddle.fluid.contrib.slim.quantization import utils
+    TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
+    QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
+except:
+    TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
+    QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
 
 TENSORRT_OP_TYPES = [
     'mul', 'conv2d', 'pool2d', 'depthwise_conv2d', 'elementwise_add',

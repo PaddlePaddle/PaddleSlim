@@ -1,8 +1,15 @@
 import paddle
 from paddle.fluid.framework import IrGraph
 from paddle.fluid import core
-from paddle.fluid.contrib.slim.quantization import utils
 from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass, AddQuantDequantPass, QuantizationFreezePass
+
+try:
+    from paddle.fluid.contrib.slim.quantization import utils
+    TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
+    QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
+except:
+    TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
+    QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
 
 
 def post_quant_fake(executor,
@@ -30,8 +37,8 @@ def post_quant_fake(executor,
     activation_quantize_type = 'range_abs_max'
     weight_quantize_type = 'channel_wise_abs_max'
     _dynamic_quantize_op_type = ['lstm']
-    _weight_supported_quantizable_op_type = utils._weight_supported_quantizable_op_type
-    _act_supported_quantizable_op_type = utils._act_supported_quantizable_op_type
+    _weight_supported_quantizable_op_type = TRANSFORM_PASS_OP_TYPES
+    _act_supported_quantizable_op_type = QUANT_DEQUANT_PASS_OP_TYPES
     _support_quantize_op_type = list(
         set(_weight_supported_quantizable_op_type +
             _act_supported_quantizable_op_type + _dynamic_quantize_op_type))
