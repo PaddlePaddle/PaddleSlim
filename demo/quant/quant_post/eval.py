@@ -29,8 +29,8 @@ parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('use_gpu',          bool, True,                 "Whether to use GPU or not.")
 add_arg('model_path', str,  "./pruning/checkpoints/resnet50/2/eval_model/",                 "Whether to use pretrained model.")
-add_arg('model_name', str,  None, "model filename for inference model")
-add_arg('params_name', str, None, "params filename for inference model")
+add_arg('model_name', str,  '__model__', "model filename for inference model")
+add_arg('params_name', str, '__params__', "params filename for inference model")
 add_arg('batch_size',       int,  64,                 "Minibatch size.")
 # yapf: enable
 

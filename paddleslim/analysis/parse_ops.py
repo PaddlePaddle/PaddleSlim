@@ -21,22 +21,38 @@ def get_key_from_op(op):
     param_key = ''
     op_type = op.type()
 
-    if 'conv2d' in op_type:
+    if op_type == 'sparse_conv2d':
         out_shape = op.all_outputs()[0].shape()
-        in_shape = op.all_inputs()[-1].shape()
-        in_name = op.all_inputs()[1].name()
-        weight_shape = op.all_inputs()[-2].shape()
-        weight_shape = (out_shape[1], weight_shape[1], weight_shape[2], weight_shape[3])
-        
+        in_shape = op.inputs('Input')[0].shape()
+        weight_shape = (out_shape[1], in_shape[1], 1, 1)
+        NonZeroWeights = op.inputs('NonZeroWeights')[0].shape()[0]
+
         stride = op.attr('strides')[1]
         padding = op.attr('paddings')[1]
         groups = op.attr('groups')
         dilation = op.attr('dilations')[1]
         quant = op.attr('enable_int8')
         bit_length = op.attr('bit_length')
-        if op.attr(in_name+'_fp16') == 'fp16':
+
+        param_key = f'{op_type} in={in_shape} weight={weight_shape} out={out_shape} pad={padding} stride={stride} group={groups} dilation={dilation} quant={quant} bit_length={bit_length} NonZeroWeights={NonZeroWeights}'
+
+    elif 'conv2d' in op_type:
+        out_shape = op.all_outputs()[0].shape()
+        in_shape = op.all_inputs()[-1].shape()
+        in_name = op.all_inputs()[1].name()
+        weight_shape = op.all_inputs()[-2].shape()
+        weight_shape = (out_shape[1], weight_shape[1], weight_shape[2],
+                        weight_shape[3])
+
+        stride = op.attr('strides')[1]
+        padding = op.attr('paddings')[1]
+        groups = op.attr('groups')
+        dilation = op.attr('dilations')[1]
+        quant = op.attr('enable_int8')
+        bit_length = op.attr('bit_length')
+        if op.attr(in_name + '_fp16') == 'fp16':
             quant = True
-            bit_length = 16   
+            bit_length = 16
 
         param_key = f'{op_type} in={in_shape} weight={weight_shape} out={out_shape} pad={padding} stride={stride} group={groups} dilation={dilation} quant={quant} bit_length={bit_length}'
 

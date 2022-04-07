@@ -18,9 +18,11 @@ import sys
 import numpy as np
 import inspect
 from collections import namedtuple, Iterable
+import platform
 import paddle
 import paddle.distributed.fleet as fleet
-from ..quant.quant_post_hpo import quant_post_hpo
+if platform.system().lower() == 'linux':
+    from ..quant.quant_post_hpo import quant_post_hpo
 from ..quant.quanter import convert
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
@@ -231,6 +233,10 @@ class AutoCompression:
     def compress(self):
         ### start compress, including train/eval model
         if self._strategy == 'ptq_hpo':
+            if platform.system().lower() != 'linux':
+                raise NotImplementedError(
+                    "post-quant-hpo is not support in system other than linux")
+
             quant_post_hpo(
                 self._exe,
                 self._places,
