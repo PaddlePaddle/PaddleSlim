@@ -62,6 +62,7 @@ python quant_post.py --model_path ./inference_model/ResNet50_infer/ --save_path 
 | batch_num | 模型校准时的总batch数量 |
 |  round_type  | 模型量化时四舍五入的方法，可选择`round`和`adaround`，默认是`round`   |
 |  onnx_format | 保存量化模型时的格式是否是ONNX通配格式，默认False  |
+| is_full_quantize | 是否对模型进行全量化 |
 |  input_name |  量化时模型输入的name，如果使用PaddleClas模型库中下载好的模型，保持默认为inputs，如果是自己导出模型，应设置：`--input_name='x'`，可用VisualDL或Netron查看模型输入正确name  |
 
 

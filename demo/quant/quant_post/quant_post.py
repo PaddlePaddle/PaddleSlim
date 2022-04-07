@@ -31,6 +31,7 @@ add_arg('params_filename',      str, 'inference.pdiparams',                 "par
 add_arg('algo',         str, 'hist',               "calibration algorithm")
 add_arg('round_type',         str, 'round',               "The method of converting the quantized weights.")
 add_arg('hist_percent',         float, 0.9999,             "The percentile of algo:hist")
+add_arg('is_full_quantize',         bool, False,             "Whether is full quantization or not.")
 add_arg('bias_correction',         bool, False,             "Whether to use bias correction")
 add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
 add_arg('onnx_format',             bool,   False,                  "Whether to export the quantized model with format of ONNX.")
@@ -79,6 +80,7 @@ def quantize(args):
         algo=args.algo,
         round_type=args.round_type,
         hist_percent=args.hist_percent,
+        is_full_quantize=args.is_full_quantize,
         bias_correction=args.bias_correction,
         onnx_format=args.onnx_format)
 

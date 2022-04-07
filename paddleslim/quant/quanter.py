@@ -263,7 +263,7 @@ def quant_aware(program,
         elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
             quant_dequant_ops.append(op_type)
     if len(transform_pass_ops) > 0:
-        trannsform_func = QuantizationTransformPassV2 if onnx_format else QuantizationTransformPass
+        trannsform_func = 'QuantizationTransformPassV2' if onnx_format else 'QuantizationTransformPass'
         transform_pass = eval(trannsform_func)(
             scope=scope,
             place=place,
@@ -285,7 +285,7 @@ def quant_aware(program,
         transform_pass.apply(main_graph)
 
     if len(quant_dequant_ops) > 0:
-        qdq_func = AddQuantDequantPassV2 if onnx_format else AddQuantDequantPass
+        qdq_func = 'AddQuantDequantPassV2' if onnx_format else 'AddQuantDequantPass'
         quant_dequant_pass = eval(qdq_func)(
             scope=scope,
             place=place,
