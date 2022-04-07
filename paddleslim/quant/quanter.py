@@ -27,6 +27,12 @@ from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
+try:
+    from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
+    from paddle.fluid.contrib.slim.quantization import QuantWeightPass
+    from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
+except:
+    pass
 from paddle.fluid import core
 from paddle.fluid.contrib.slim.quantization import WeightQuantization
 from paddle.fluid.layer_helper import LayerHelper
@@ -48,8 +54,13 @@ ACTIVATION_QUANTIZATION_TYPES_TENSORRT = [
 ]
 
 VALID_DTYPES = ['int8']
-TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
-QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
+try:
+    from paddle.fluid.contrib.slim.quantization import utils
+    TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
+    QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
+except:
+    TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
+    QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
 
 TENSORRT_OP_TYPES = [
     'mul', 'conv2d', 'pool2d', 'depthwise_conv2d', 'elementwise_add',
@@ -186,6 +197,7 @@ def quant_aware(program,
                 act_preprocess_func=None,
                 optimizer_func=None,
                 executor=None,
+                onnx_format=False,
                 return_program=False):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
@@ -251,7 +263,8 @@ def quant_aware(program,
         elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
             quant_dequant_ops.append(op_type)
     if len(transform_pass_ops) > 0:
-        transform_pass = QuantizationTransformPass(
+        trannsform_func = 'QuantizationTransformPassV2' if onnx_format else 'QuantizationTransformPass'
+        transform_pass = eval(trannsform_func)(
             scope=scope,
             place=place,
             weight_bits=config['weight_bits'],
@@ -272,7 +285,8 @@ def quant_aware(program,
         transform_pass.apply(main_graph)
 
     if len(quant_dequant_ops) > 0:
-        quant_dequant_pass = AddQuantDequantPass(
+        qdq_func = 'AddQuantDequantPassV2' if onnx_format else 'AddQuantDequantPass'
+        quant_dequant_pass = eval(qdq_func)(
             scope=scope,
             place=place,
             moving_rate=config['moving_rate'],
@@ -335,6 +349,7 @@ def quant_post_static(
         activation_quantize_type='range_abs_max',
         weight_quantize_type='channel_wise_abs_max',
         optimize_model=False,
+        onnx_format=False,
         is_use_cache_file=False,
         cache_dir="./temp_post_training"):
     """
@@ -433,6 +448,7 @@ def quant_post_static(
         activation_bits=activation_bits,
         activation_quantize_type=activation_quantize_type,
         weight_quantize_type=weight_quantize_type,
+        onnx_format=onnx_format,
         optimize_model=optimize_model)
     post_training_quantization.quantize()
     post_training_quantization.save_quantized_model(
@@ -447,7 +463,12 @@ def quant_post_static(
 quant_post = quant_post_static
 
 
-def convert(program, place, config=None, scope=None, save_int8=False):
+def convert(program,
+            place,
+            config=None,
+            scope=None,
+            save_int8=False,
+            onnx_format=False):
     """
     convert quantized and well-trained ``program`` to final  quantized
     ``program``that can be used to  save ``inference model``.
@@ -486,22 +507,24 @@ def convert(program, place, config=None, scope=None, save_int8=False):
     _logger.info("convert config {}".format(config))
     test_graph = IrGraph(core.Graph(program.desc), for_test=True)
 
-    out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
-    out_scale_infer_pass.apply(test_graph)
+    if onnx_format:
+        quant_weight_pass = QuantWeightPass(scope, place)
+        quant_weight_pass.apply(test_graph)
+    else:
+        out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
+        out_scale_infer_pass.apply(test_graph)
+        # Freeze the graph after training by adjusting the quantize
+        # operators' order for the inference.
+        freeze_pass = QuantizationFreezePass(
+            scope=scope,
+            place=place,
+            weight_bits=config['weight_bits'],
+            activation_bits=config['activation_bits'],
+            weight_quantize_type=config['weight_quantize_type'])
+        if os.path.exists(VARS_MAPPING_TABLE):
+            test_graph.out_node_mapping_table = load_dict()
+        freeze_pass.apply(test_graph)
 
-    # Freeze the graph after training by adjusting the quantize
-    # operators' order for the inference.
-    freeze_pass = QuantizationFreezePass(
-        scope=scope,
-        place=place,
-        weight_bits=config['weight_bits'],
-        activation_bits=config['activation_bits'],
-        weight_quantize_type=config['weight_quantize_type'])
-
-    if os.path.exists(VARS_MAPPING_TABLE):
-        test_graph.out_node_mapping_table = load_dict()
-
-    freeze_pass.apply(test_graph)
     freezed_program = test_graph.to_program()
 
     if save_int8:
