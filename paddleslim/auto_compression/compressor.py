@@ -315,7 +315,8 @@ class AutoCompression:
                     _logger.info("epoch: {}, batch: {}, loss: {}".format(
                         epoch_id, batch_id, np_probs_float))
 
-                if batch_id % int(self.train_config.eval_iter) == 0:
+                if batch_id % int(
+                        self.train_config.eval_iter) == 0 and batch_id != 0:
                     if self.eval_function is not None:
 
                         # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation. 

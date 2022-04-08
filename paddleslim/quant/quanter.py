@@ -198,7 +198,8 @@ def quant_aware(program,
                 optimizer_func=None,
                 executor=None,
                 onnx_format=False,
-                return_program=False):
+                return_program=False,
+                draw_graph=False):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
@@ -241,6 +242,8 @@ def quant_aware(program,
                 initialization. Default is None.
         return_program(bool): If user want return value is a Program rather than Compiled Program, This argument should be set True.
                 Default is False.
+        draw_graph(bool): whether to draw graph when quantization is initialized. In order to prevent cycle,
+                the ERNIE model needs to be set to True. Default is False.
     Returns:
         paddle.static.CompiledProgram | paddle.static.Program: Program with quantization and dequantization ``operators``
     """
@@ -308,15 +311,10 @@ def quant_aware(program,
             VARS_MAPPING_TABLE))
         save_dict(main_graph.out_node_mapping_table)
 
-    main_graph.draw('./', 'graph.pdf')
-    #remove_ctr_vars = set()
-    #from paddle.fluid.framework import IrVarNode
-    #all_var_nodes = {IrVarNode(node) for node in main_graph.nodes() if node.is_var()}
-    #for node in all_var_nodes:
-    #    print("node: ", node)
-    #    if node.is_ctrl_var():
-    #        remove_ctr_vars.add(node)
-    #self.safe_remove_nodes(remove_ctr_vars)
+    # TDOD: remove it.
+    if draw_graph:
+        main_graph.draw('./', 'graph.pdf')
+
     if for_test or return_program:
         quant_program = main_graph.to_program()
     else:
