@@ -41,7 +41,7 @@ Distillation:
   - teacher_linear_1.tmp_0
   - linear_1.tmp_0
   merge_feed: true
-  teacher_model_dir: ./MobileNetV2_ssld_infer
+  teacher_model_dir: ./infermodel_mobilenetv2
   teacher_model_filename: inference.pdmodel
   teacher_params_filename: inference.pdiparams
 Quantization:

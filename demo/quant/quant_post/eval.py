@@ -21,6 +21,8 @@ import functools
 import paddle
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
+sys.path[1] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir)
 import imagenet_reader as reader
 from utility import add_arguments, print_arguments
 

@@ -276,6 +276,7 @@ class AutoCompression:
 
             ### used to check whether the dataloader is right
             if self.eval_function is not None and self.train_config.origin_metric is not None:
+                _logger.info("start to test metric before compress")
                 metric = self.eval_function(self._exe, inference_program,
                                             feed_target_names, fetch_targets)
                 _logger.info("metric of compressed model is: {}".format(metric))
