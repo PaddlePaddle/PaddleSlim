@@ -54,9 +54,9 @@ python tools/export_model.py \
 ```
 cd PaddleSlim/demo/auto-compression/
 ```
-使用[eval.py](../quant_post/eval.py)脚本得到模型的分类精度：
+使用[eval.py](../quant/quant_post/eval.py)脚本得到模型的分类精度：
 ```
-python ../quant_post/eval.py --model_path infermodel_mobilenetv2 --model_name inference.pdmodel --params_name inference.pdiparams
+python ../quant/quant_post/eval.py --model_path infermodel_mobilenetv2 --model_name inference.pdmodel --params_name inference.pdiparams
 ```
 精度输出为:
 ```
