@@ -59,7 +59,8 @@ class Pruner():
               lazy=False,
               only_graph=False,
               param_backup=False,
-              param_shape_backup=False):
+              param_shape_backup=False,
+              skip_leaves=True):
         """Pruning the given parameters.
 
         Args:
@@ -75,6 +76,7 @@ class Pruner():
                               False means modifying graph and variables in scope. Default: False.
             param_backup(bool): Whether to return a dict to backup the values of parameters. Default: False.
             param_shape_backup(bool): Whether to return a dict to backup the shapes of parameters. Default: False.
+            skip_leaves(bool): Whether to skip operators that affect the shape of leaves' outputs.
 
         Returns:
             tuple: ``(pruned_program, param_backup, param_shape_backup)``. ``pruned_program`` is the pruned program. ``param_backup`` is a dict to backup the values of parameters. ``param_shape_backup`` is a dict to backup the shapes of parameters.
@@ -85,7 +87,8 @@ class Pruner():
         param_shape_backup = {} if param_shape_backup else None
 
         pruned_params = []
-        collections = StaticPruningCollections(params, graph)
+        collections = StaticPruningCollections(
+            params, graph, skip_leaves=skip_leaves)
         ratios = dict(zip(params, ratios))
         values = {}
         for _collection in collections:
