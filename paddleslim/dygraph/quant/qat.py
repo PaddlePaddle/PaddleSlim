@@ -232,7 +232,11 @@ class QAT(object):
 
         return quant_model
 
-    def save_quantized_model(self, model, path, input_spec=None):
+    def save_quantized_model(self,
+                             model,
+                             path,
+                             input_spec=None,
+                             onnx_format=False):
         """
         Save the quantized inference model.
 
@@ -258,7 +262,10 @@ class QAT(object):
                 model.eval()
 
         self.imperative_qat.save_quantized_model(
-            layer=model, path=path, input_spec=input_spec)
+            layer=model,
+            path=path,
+            input_spec=input_spec,
+            onnx_format=onnx_format)
 
     def _remove_preprocess(self, model):
         state_dict = model.state_dict()

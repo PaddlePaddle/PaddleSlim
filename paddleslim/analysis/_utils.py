@@ -30,7 +30,8 @@ def opt_model(opt="paddle_lite_opt",
               param_file='',
               optimize_out_type='protobuf',
               valid_targets='arm',
-              enable_fp16=False):
+              enable_fp16=False,
+              sparse_ratio=0):
     assert os.path.exists(model_file) and os.path.exists(
         param_file), f'{model_file} or {param_file} does not exist.'
     save_dir = f'./opt_models_tmp/{os.getpid()}_{time.time()}'
@@ -42,8 +43,12 @@ def opt_model(opt="paddle_lite_opt",
         model_out = os.path.join(save_dir, 'pbmodel')
     else:
         model_out = os.path.join(save_dir, 'model')
+
     enable_fp16 = str(enable_fp16).lower()
-    cmd = f'{opt} --model_file={model_file} --param_file={param_file}  --optimize_out_type={optimize_out_type} --optimize_out={model_out} --valid_targets={valid_targets} --enable_fp16={enable_fp16}'
+    sparse_model = True if sparse_ratio > 0 else False
+    sparse_threshold = max(sparse_ratio - 0.1, 0.1)
+
+    cmd = f'{opt} --model_file={model_file} --param_file={param_file}  --optimize_out_type={optimize_out_type} --optimize_out={model_out} --valid_targets={valid_targets} --enable_fp16={enable_fp16} --sparse_model={sparse_model} --sparse_threshold={sparse_threshold}'
     print(f'commands:{cmd}')
     m = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)

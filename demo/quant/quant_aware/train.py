@@ -41,6 +41,7 @@ add_arg('data',             str, "imagenet",             "Which data to use. 'mn
 add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('checkpoint_dir',         str, "output",           "checkpoint save dir")
 add_arg('ce_test',                 bool,   False,       "Whether to CE test.")
+add_arg('onnx_format',      bool,   False,          "Whether to export the quantized model with format of ONNX.")
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -291,7 +292,8 @@ def compress(args):
     ############################################################################################################
     float_program, int8_program = convert(val_program, place, quant_config, \
                                                         scope=None, \
-                                                        save_int8=True)
+                                                        save_int8=True,
+                                                        onnx_format=args.onnx_format)
     print("eval best_model after convert")
     final_acc1 = test(best_epoch, float_program)
     ############################################################################################################
