@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
   Timer run_timer;
   double elapsed_time=0;
   run_timer.tic();
-  FLAGS_iterations= (FLAGS_iterations==0) ? (5000/FLAGS_batch_size) : FLAGS_iterations;
+  FLAGS_iterations= (FLAGS_iterations==0) ? (10/FLAGS_batch_size) : FLAGS_iterations;
   for (auto iter = 0; iter<FLAGS_iterations; iter++){
     predictor->ZeroCopyRun();
   }
