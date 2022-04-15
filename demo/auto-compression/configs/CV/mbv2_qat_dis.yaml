@@ -41,7 +41,7 @@ Distillation:
   - teacher_linear_1.tmp_0
   - linear_1.tmp_0
   merge_feed: true
-  teacher_model_dir: ./MobileNetV2_ssld_infer
+  teacher_model_dir: ./infermodel_mobilenetv2
   teacher_model_filename: inference.pdmodel
   teacher_params_filename: inference.pdiparams
 Quantization:
@@ -58,5 +58,6 @@ TrainConfig:
   eval_iter: 1000
   learning_rate: 0.0001
   optimizer: SGD
+  optim_args:
+    weight_decay: 4.0e-05
   origin_metric: 0.765
-  weight_decay: 4.0e-05

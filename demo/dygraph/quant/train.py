@@ -55,6 +55,7 @@ add_arg('l2_decay',                 float,  3e-5,                               
 add_arg('ls_epsilon',               float,  0.0,                                         "Label smooth epsilon.")
 add_arg('use_pact',                 bool,   False,                                       "Whether to use PACT method.")
 add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
+add_arg('onnx_format',                 bool,   False,                                    "Whether to export the quantized model with format of ONNX.")
 add_arg('momentum_rate',            float,  0.9,                                         "The value of momentum_rate.")
 add_arg('num_epochs',               int,    1,                                           "The number of total epochs.")
 add_arg('total_images',             int,    1281167,                                     "The number of total training images.")
@@ -359,7 +360,8 @@ def compress(args):
             input_spec=[
                 paddle.static.InputSpec(
                     shape=[None, 3, 224, 224], dtype='float32')
-            ])
+            ],
+            onnx_format=args.onnx_format)
 
 
 def main():

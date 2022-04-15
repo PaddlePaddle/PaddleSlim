@@ -24,14 +24,18 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,  32,                 "Minibatch size.")
 add_arg('batch_num',       int,  1,               "Batch number")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
-add_arg('model_path',       str,  "./inference_model/MobileNet/",  "model dir")
+add_arg('model_path',       str,  "./inference_model/MobileNetV1_infer/",  "model dir")
 add_arg('save_path',       str,  "./quant_model/MobileNet/",  "model dir to save quanted model")
-add_arg('model_filename',       str, None,                 "model file name")
-add_arg('params_filename',      str, None,                 "params file name")
+add_arg('model_filename',       str, 'inference.pdmodel',                 "model file name")
+add_arg('params_filename',      str, 'inference.pdiparams',                 "params file name")
 add_arg('algo',         str, 'hist',               "calibration algorithm")
+add_arg('round_type',         str, 'round',               "The method of converting the quantized weights.")
 add_arg('hist_percent',         float, 0.9999,             "The percentile of algo:hist")
+add_arg('is_full_quantize',         bool, False,             "Whether is full quantization or not.")
 add_arg('bias_correction',         bool, False,             "Whether to use bias correction")
 add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
+add_arg('onnx_format',             bool,   False,                  "Whether to export the quantized model with format of ONNX.")
+add_arg('input_name',         str, 'inputs',               "The name of model input.")
 
 # yapf: enable
 
@@ -50,7 +54,7 @@ def quantize(args):
     val_dataset = reader.ImageNetDataset(mode='test')
     image_shape = [3, 224, 224]
     image = paddle.static.data(
-        name='image', shape=[None] + image_shape, dtype='float32')
+        name=args.input_name, shape=[None] + image_shape, dtype='float32')
     data_loader = paddle.io.DataLoader(
         val_dataset,
         places=place,
@@ -74,8 +78,11 @@ def quantize(args):
         batch_size=args.batch_size,
         batch_nums=args.batch_num,
         algo=args.algo,
+        round_type=args.round_type,
         hist_percent=args.hist_percent,
-        bias_correction=args.bias_correction)
+        is_full_quantize=args.is_full_quantize,
+        bias_correction=args.bias_correction,
+        onnx_format=args.onnx_format)
 
 
 def main():

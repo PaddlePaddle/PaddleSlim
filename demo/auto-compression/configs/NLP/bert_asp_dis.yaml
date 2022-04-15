@@ -29,7 +29,7 @@ Distillation:
   - teacher_linear_147.tmp_1
   - linear_147.tmp_1
   merge_feed: true
-  teacher_model_dir: ../auto-compression_origin/static_bert_models
+  teacher_model_dir: static_bert_models
   teacher_model_filename: bert.pdmodel
   teacher_params_filename: bert.pdiparams
 Prune:
