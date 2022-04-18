@@ -96,14 +96,19 @@ def _load_program_and_merge(executor,
                             params_filename,
                             teacher_idx=None,
                             feed_target_names=None):
+
+    scope = paddle.static.global_scope()
+    new_scope = paddle.static.Scope()
     try:
-        [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
+        with paddle.static.scope_guard(new_scope):
+            [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
             dirname=model_dir, \
             model_filename=model_filename, \
             params_filename=params_filename, \
             executor=executor)
     except:
-        [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
+        with paddle.static.scope_guard(new_scope):
+            [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
             path_prefix=model_dir, \
             executor=executor)
 
@@ -130,6 +135,7 @@ def _load_program_and_merge(executor,
         train_program,
         data_name_map,
         place,
+        teacher_scope=new_scope,
         name_prefix=teacher_name_prefix,
         merge_feed=config.get('merge_feed') or True)
     if teacher_idx == None or teacher_idx == 1:
@@ -280,7 +286,6 @@ def build_quant_program(executor, place, config, train_program_info,
     assert isinstance(config, dict), "quant config must be dict"
     default_config = _quant_config_default
     default_config.update(config)
-    print(default_config)
     config = _parse_configs(default_config)
 
     use_pact = config["use_pact"]

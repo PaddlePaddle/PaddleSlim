@@ -47,6 +47,7 @@ def default_idx_selector(group, scores, ratios):
     # sort channels by the master convolution's score
     name = group.master["name"]
     axis = group.master["axis"]
+    print(name, axis)
     score = scores[name][axis]
 
     # get max convolution groups attribution
