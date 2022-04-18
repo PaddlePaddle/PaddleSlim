@@ -39,7 +39,7 @@ class LatencyPredictor(object):
     """Base class of latency predictor.
     """
 
-    def predict_latency(self, model):
+    def predict(self, model):
         """Get latency of model. It is an abstract method.
 
         Args:
@@ -64,6 +64,7 @@ class TableLatencyPredictor(LatencyPredictor):
     Args:
         table_file(str): The path of file that records the device latency of operators.
     """
+    hardware_list = ['SD625', 'SD710']
 
     def __init__(self, table_file='SD710'):
         self.table_file = table_file
@@ -72,11 +73,14 @@ class TableLatencyPredictor(LatencyPredictor):
         self.threads = None
         self.predictor_state = False
         self.predictor = {}
-        self.hardware_list = ['SD625', 'SD710']
         self._initial_table()
 
+    @classmethod
+    def add_hardware(cls, hardware):
+        cls.hardware_list.append(hardware)
+
     def _initial_table(self):
-        if self.table_file in self.hardware_list:
+        if self.table_file in TableLatencyPredictor.hardware_list:
             self.hardware = self.table_file
             self.threads = 4
             self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
@@ -88,7 +92,7 @@ class TableLatencyPredictor(LatencyPredictor):
 
         assert os.path.exists(
             self.table_file
-        ), f'{self.table_file} does not exist. If you want to use our table files, please set \'table_file\' in {self.hardware_list}'
+        ), f'{self.table_file} does not exist. If you want to use our table files, please set \'table_file\' in {TableLatencyPredictor.hardware_list}'
         with open(self.table_file, 'rb') as f:
             self.table_dict = pickle.load(f)
 
@@ -123,6 +127,8 @@ class TableLatencyPredictor(LatencyPredictor):
         ]
         op_dir = self.table_file.split('.')[0] + '_batchsize_1'
         for op_type in op_types:
+            if data_type == 'fp32' and op_type == 'calib':
+                continue
             model = load_predictor(op_type, op_dir, data_type)
             key = op_type
             if 'conv2d' in op_type:
@@ -141,8 +147,6 @@ class TableLatencyPredictor(LatencyPredictor):
             model_file(str), param_file(str): The inference model(*.pdmodel, *.pdiparams).
             data_type(str): Data type, fp32, fp16 or int8.
             threads(int): Threads num.
-            sparse_ratio(float): The ratio of unstructured pruning.
-            prune_ratio(float): The ration of structured pruning.
             input_shape(list): Generally, the input shape is confirmed when saving the inference model and the parameter is only effective for input shape that has variable length.
         Returns:
             latency(float): The latency of the model.
