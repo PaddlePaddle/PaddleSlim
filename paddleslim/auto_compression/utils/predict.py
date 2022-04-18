@@ -3,6 +3,7 @@ import paddle
 from paddleslim.analysis import TableLatencyPredictor
 from .prune_model import get_sparse_model, get_prune_model
 from .fake_ptq import post_quant_fake
+import shutil
 
 
 def predict_compressed_model(model_file, param_file, hardware='SD710'):
@@ -113,4 +114,8 @@ def predict_compressed_model(model_file, param_file, hardware='SD710'):
             data_type='int8')
         latency_dict.update({f'sparse_{prune_ratio}_int8': latency})
 
+    # Delete temporary model files
+    shutil.rmtree('./quant_model')
+    shutil.rmtree('./prune_model')
+    shutil.rmtree('./sparse_model')
     return latency_dict
