@@ -27,21 +27,23 @@ add_arg('batch_size',                  int,    1,            "train batch size."
 add_arg('config_path',                 str,    None,         "path of compression strategy config.")
 add_arg('data_dir',                    str,    None,         "path of dataset")
 
+
 # yapf: enable
 def reader_wrapper(reader):
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.float32([item[0] for item in data])
-            yield {"x": imgs}
+            yield {"inputs": imgs}
 
     return gen
 
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
-    place = paddle.CUDAPlace(0) if args.devices=='gpu' else paddle.CPUPlace()
+
+    place = paddle.CUDAPlace(0) if args.devices == 'gpu' else paddle.CPUPlace()
     val_dataset = reader.ImageNetDataset(mode='val', data_dir=args.data_dir)
     image = paddle.static.data(
-        name='x', shape=[None, 3, 224, 224], dtype='float32')
+        name='inputs', shape=[None, 3, 224, 224], dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
 
     val_reader = paddle.io.DataLoader(
@@ -54,7 +56,6 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         use_shared_memory=True,
         shuffle=False)
 
-    
     results = []
     for batch_id, data in enumerate(val_reader()):
         # top1_acc, top5_acc
@@ -99,7 +100,9 @@ if __name__ == '__main__':
     paddle.enable_static()
     compress_config, train_config = load_config(args.config_path)
     data_dir = args.data_dir
-    train_reader = paddle.batch(reader.val(data_dir=data_dir), batch_size=args.batch_size)
+
+    train_reader = paddle.batch(
+        reader.train(data_dir=data_dir), batch_size=args.batch_size)
     train_dataloader = reader_wrapper(train_reader)
 
     ac = AutoCompression(
