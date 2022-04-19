@@ -33,35 +33,24 @@ def reader_wrapper(reader):
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.float32([item[0] for item in data])
-            yield {"inputs": imgs}
+            yield {"x": imgs}
 
     return gen
 
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
-    place = paddle.CUDAPlace(0) if args.devices == 'gpu' else paddle.CPUPlace()
-    val_dataset = reader.ImageNetDataset(mode='val', data_dir=args.data_dir)
+    val_reader = paddle.batch(reader.val(data_dir=data_dir), batch_size=1)
     image = paddle.static.data(
-        name='inputs', shape=[None, 3, 224, 224], dtype='float32')
+        name='x', shape=[None, 3, 224, 224], dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-
-    val_reader = paddle.io.DataLoader(
-        val_dataset,
-        places=place,
-        feed_list=[image, label],
-        drop_last=False,
-        return_list=True,
-        batch_size=args.batch_size,
-        use_shared_memory=True,
-        shuffle=False)
 
     results = []
     for batch_id, data in enumerate(val_reader()):
         # top1_acc, top5_acc
         if len(test_feed_names) == 1:
-            image = data[0]
-            label = data[1]
+            image = data[0][0].reshape((1, 3, 224, 224))
+            label = [[d[1]] for d in data]
             pred = exe.run(compiled_test_program,
                            feed={test_feed_names[0]: image},
                            fetch_list=test_fetch_list)
@@ -88,7 +77,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                 fetch_list=test_fetch_list)
             result = [np.mean(r) for r in result]
             results.append(result)
-        if batch_id % 100 == 0:
+        if batch_id % 5000 == 0:
             print('Eval iter: ', batch_id)
     result = np.mean(np.array(results), axis=0)
     return result[0]
