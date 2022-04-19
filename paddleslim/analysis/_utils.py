@@ -20,8 +20,8 @@ import paddleslim
 import subprocess
 import time
 __all__ = [
-    "save_cls_model", "save_det_model", "save_seg_model", "nearest_interpolate",
-    "opt_model", "load_predictor"
+    "save_cls_model", "save_det_model", "nearest_interpolate", "opt_model",
+    "load_predictor"
 ]
 
 
@@ -30,8 +30,7 @@ def opt_model(opt="paddle_lite_opt",
               param_file='',
               optimize_out_type='protobuf',
               valid_targets='arm',
-              enable_fp16=False,
-              sparse_ratio=0):
+              enable_fp16=False):
     assert os.path.exists(model_file) and os.path.exists(
         param_file), f'{model_file} or {param_file} does not exist.'
     save_dir = f'./opt_models_tmp/{os.getpid()}_{time.time()}'
@@ -40,15 +39,13 @@ def opt_model(opt="paddle_lite_opt",
 
     assert optimize_out_type in ['protobuf', 'naive_buffer']
     if optimize_out_type == 'protobuf':
-        model_out = os.path.join(save_dir, 'pbmodel')
+        model_out = save_dir
     else:
         model_out = os.path.join(save_dir, 'model')
 
     enable_fp16 = str(enable_fp16).lower()
-    sparse_model = True if sparse_ratio > 0 else False
-    sparse_threshold = max(sparse_ratio - 0.1, 0.1)
 
-    cmd = f'{opt} --model_file={model_file} --param_file={param_file}  --optimize_out_type={optimize_out_type} --optimize_out={model_out} --valid_targets={valid_targets} --enable_fp16={enable_fp16} --sparse_model={sparse_model} --sparse_threshold={sparse_threshold}'
+    cmd = f'{opt} --model_file={model_file} --param_file={param_file}  --optimize_out_type={optimize_out_type} --optimize_out={model_out} --valid_targets={valid_targets} --enable_fp16={enable_fp16} --sparse_model=true --sparse_threshold=0.4'
     print(f'commands:{cmd}')
     m = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -165,48 +162,6 @@ def save_det_model(model,
 
         model_file = os.path.join(quantize_model_path, 'int8model.pdmodel')
         param_file = os.path.join(quantize_model_path, 'int8model.pdiparams')
-
-    return model_file, param_file
-
-
-def save_seg_model(model, input_shape, save_dir, data_type):
-    if data_type == 'fp32':
-        paddle.jit.save(
-            model,
-            path=os.path.join(save_dir, 'fp32model'),
-            input_spec=[
-                paddle.static.InputSpec(
-                    shape=input_shape, dtype='float32', name='x'),
-            ])
-        model_file = os.path.join(save_dir, 'fp32model.pdmodel')
-        param_file = os.path.join(save_dir, 'fp32model.pdiparams')
-
-    else:
-        save_dir = os.path.join(save_dir, 'int8model')
-        quant_config = {
-            'weight_preprocess_type': None,
-            'activation_preprocess_type': None,
-            'weight_quantize_type': 'channel_wise_abs_max',
-            'activation_quantize_type': 'moving_average_abs_max',
-            'weight_bits': 8,
-            'activation_bits': 8,
-            'dtype': 'int8',
-            'window_size': 10000,
-            'moving_rate': 0.9,
-            'quantizable_layer_type': ['Conv2D', 'Linear'],
-        }
-        quantizer = paddleslim.QAT(config=quant_config)
-        quantizer.quantize(model)
-        quantizer.save_quantized_model(
-            model,
-            save_dir,
-            input_spec=[
-                paddle.static.InputSpec(
-                    shape=input_shape, dtype='float32')
-            ])
-
-        model_file = f'{save_dir}.pdmodel'
-        param_file = f'{save_dir}.pdiparams'
 
     return model_file, param_file
 

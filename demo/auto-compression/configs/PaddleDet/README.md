@@ -41,9 +41,9 @@ tar -xf yolov3_mobilenet_v1_270e_coco.tar
 ```
 cd PaddleSlim/demo/auto-compression/
 ```
-使用[demo_coco.py](../demo_coco.py)脚本得到模型的分类精度：
+使用[demo_coco.py](../../demo_coco.py)脚本得到模型的mAP：
 ```
-python3.7 ../demo_coco.py --model_dir=../yolov3_mobilenet_v1_270e_coco/ --model_filename=model.pdmodel --params_filename=model.pdiparams --eval=True
+python3.7 ../../demo_coco.py --model_dir=../../yolov3_mobilenet_v1_270e_coco/ --model_filename=model.pdmodel --params_filename=model.pdiparams --eval=True
 ```
 
 ### 3. 进行多策略融合压缩
@@ -51,9 +51,9 @@ python3.7 ../demo_coco.py --model_dir=../yolov3_mobilenet_v1_270e_coco/ --model_
 每一个小章节代表一种多策略融合压缩，不代表需要串行执行。
 
 ### 3.1 进行量化蒸馏压缩
-蒸馏量化训练示例脚本为[demo_coco.py](../demo_coco.py)，使用接口``paddleslim.auto_compression.AutoCompression``对模型进行量化训练。运行命令为：
+蒸馏量化训练示例脚本为[demo_coco.py](../../demo_coco.py)，使用接口``paddleslim.auto_compression.AutoCompression``对模型进行量化训练。运行命令为：
 ```
-python ../demo_coco.py \
+python ../../demo_coco.py \
     --model_dir='infermodel_mobilenetv2' \
     --model_filename='model.pdmodel' \
     --params_filename='./model.pdiparams' \
