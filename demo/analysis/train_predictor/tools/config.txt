@@ -1,0 +1,15 @@
+model_file ./model.nb 
+label_path ./coco_label_list.txt 
+num_threads 4 
+power_mode 0 
+precision int8 
+enable_benchmark 1 
+arch None 
+image_shape 3,320,320 
+Resize 320,320 
+keep_ratio False 
+mean 0.485,0.456,0.406 
+std 0.229,0.224,0.225 
+PadStride 0 
+warm_up 100 
+repeats 100 
