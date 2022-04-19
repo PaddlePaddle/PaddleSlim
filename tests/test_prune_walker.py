@@ -61,14 +61,14 @@ class TestPrune(StaticCase):
 
                 def cond_block1():
                     cond_conv = conv_bn_layer(conv5, 8, 3, "conv_cond1_1")
-                    fluid.layers.assign(input=cond_conv, output=cond_output)
+                    return cond_conv
 
                 def cond_block2():
                     cond_conv1 = conv_bn_layer(conv5, 8, 3, "conv_cond2_1")
                     cond_conv2 = conv_bn_layer(cond_conv1, 8, 3, "conv_cond2_2")
-                    fluid.layers.assign(input=cond_conv2, output=cond_output)
+                    return cond_conv2
 
-                fluid.layers.cond(cond, cond_block1, cond_block2)
+                cond_output = fluid.layers.cond(cond, cond_block1, cond_block2)
                 sum3 = fluid.layers.sum([sum2, cond_output])
 
                 conv6 = conv_bn_layer(sum3, 8, 3, "conv6")
