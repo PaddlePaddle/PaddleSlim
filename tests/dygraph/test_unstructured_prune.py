@@ -30,7 +30,8 @@ class TestUnstructuredPruner(unittest.TestCase):
             mode='ratio',
             ratio=0.55,
             local_sparsity=True,
-            sparse_block=[2, 1])
+            sparse_block=[2, 1],
+            prune_params_type='conv1x1_only')
 
     def test_prune(self):
         ori_sparsity = UnstructuredPruner.total_sparse(self.net)
