@@ -30,7 +30,8 @@ class TestUnstructuredPruner(unittest.TestCase):
             mode='ratio',
             ratio=0.55,
             local_sparsity=True,
-            sparse_block=[2, 1])
+            sparse_block=[2, 1],
+            prune_params_type='conv1x1_only')
 
     def test_prune(self):
         ori_sparsity = UnstructuredPruner.total_sparse(self.net)
@@ -79,7 +80,7 @@ class TestUnstructuredPruner(unittest.TestCase):
     def test_block_prune_mxn(self):
         self.pruner_mxn.step()
         self.pruner_mxn.update_params()
-        cur_sparsity = UnstructuredPruner.total_sparse(self.net_mxn)
+        cur_sparsity = UnstructuredPruner.total_sparse_conv1x1(self.net_mxn)
         self.assertTrue(abs(cur_sparsity - 0.55) < 0.01)
 
 

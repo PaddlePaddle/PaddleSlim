@@ -11,7 +11,6 @@ def cal_mxn_avg_matrix(mat, m=1, n=1):
 
     ori_row, ori_col = mat.shape[0], mat.shape[1]
     if len(mat.shape) == 4:
-        assert mat.shape[2:] == (1, 1), "Only support for (n, n, 1, 1) for now."
         mat = mat.reshape(ori_row, ori_col)
 
     res_col = n - len(mat[0]) % n
