@@ -97,7 +97,7 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function,
+        eval_callback=eval_function if 'HyperParameterOptimization' not in compress_config else None,
         devices=args.devices)
 
     ac.compress()

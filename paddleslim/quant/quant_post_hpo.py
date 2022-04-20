@@ -273,6 +273,7 @@ def quantize(cfg):
 
     global g_min_emd_loss
     ### if eval_function is not None, use eval function provided by user.
+    ### TODO(ceci3): fix eval_function 
     if g_quant_config.eval_function is not None:
         emd_loss = g_quant_config.eval_function()
     else:
