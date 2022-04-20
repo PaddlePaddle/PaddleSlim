@@ -163,6 +163,8 @@ class AutoCompression:
                 self._exe, self._places, config_dict, train_program_info,
                 self._strategy)
 
+
+
         if self.train_config.use_fleet:
             dist_strategy = _prepare_fleet_strategy(self.train_config)
         else:
@@ -187,6 +189,8 @@ class AutoCompression:
                 test_program_info)
 
         self._exe.run(train_program_info.startup_program)
+
+
 
         if (not self.train_config.use_fleet
             ) and self.train_config.amp_config is not None:

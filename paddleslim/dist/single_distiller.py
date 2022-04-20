@@ -22,6 +22,7 @@ def merge(teacher_program,
           data_name_map,
           place,
           scope=None,
+          teacher_scope=None,
           name_prefix='teacher_',
           merge_feed=True):
     """Merge teacher program into student program and add a uniform prefix to the
@@ -48,6 +49,8 @@ def merge(teacher_program,
     """
     if scope == None:
         scope = paddle.static.global_scope()
+    if teacher_scope == None:
+        teacher_scope = scope
     teacher_program = teacher_program.clone(for_test=True)
     for teacher_var in teacher_program.list_vars():
         skip_rename = False
@@ -60,7 +63,7 @@ def merge(teacher_program,
                 new_name = name_prefix + teacher_var.name
             if not skip_rename:
                 # scope var rename
-                old_var = scope.var(teacher_var.name).get_tensor()
+                old_var = teacher_scope.var(teacher_var.name).get_tensor()
                 renamed_var = scope.var(new_name).get_tensor()
                 renamed_var.set(np.array(old_var), place)
 

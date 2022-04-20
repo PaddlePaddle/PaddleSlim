@@ -25,9 +25,10 @@ add_arg('save_dir',                    str,    None,         "directory to save 
 add_arg('devices',                     str,    'gpu',        "which device used to compress.")
 add_arg('batch_size',                  int,    1,            "train batch size.")
 add_arg('config_path',                 str,    None,         "path of compression strategy config.")
+add_arg('data_dir',                    str,    None,         "path of dataset")
+
+
 # yapf: enable
-
-
 def reader_wrapper(reader):
     def gen():
         for i, data in enumerate(reader()):
@@ -38,7 +39,8 @@ def reader_wrapper(reader):
 
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
-    val_reader = paddle.batch(reader.val(), batch_size=1)
+
+    val_reader = paddle.batch(reader.val(data_dir=data_dir), batch_size=1)
     image = paddle.static.data(
         name='x', shape=[None, 3, 224, 224], dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
@@ -47,7 +49,6 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     for batch_id, data in enumerate(val_reader()):
         # top1_acc, top5_acc
         if len(test_feed_names) == 1:
-            # eval "infer model", which input is image, output is classification probability
             image = data[0][0].reshape((1, 3, 224, 224))
             label = [[d[1]] for d in data]
             pred = exe.run(compiled_test_program,
@@ -76,6 +77,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                 fetch_list=test_fetch_list)
             result = [np.mean(r) for r in result]
             results.append(result)
+        if batch_id % 5000 == 0:
+            print('Eval iter: ', batch_id)
     result = np.mean(np.array(results), axis=0)
     return result[0]
 
@@ -85,8 +88,10 @@ if __name__ == '__main__':
     print_arguments(args)
     paddle.enable_static()
     compress_config, train_config = load_config(args.config_path)
+    data_dir = args.data_dir
 
-    train_reader = paddle.batch(reader.train(), batch_size=64)
+    train_reader = paddle.batch(
+        reader.train(data_dir=data_dir), batch_size=args.batch_size)
     train_dataloader = reader_wrapper(train_reader)
 
     ac = AutoCompression(
