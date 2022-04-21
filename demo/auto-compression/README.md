@@ -77,6 +77,7 @@ python demo_imagenet.py \
     --save_dir='./save_qat_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
+    --data_dir='../data/ILSVRC2012/' \
     --config_path='./configs/CV/mbv2_qat_dis.yaml'
 ```
 
@@ -90,6 +91,7 @@ python demo_imagenet.py \
     --save_dir='./save_qat_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
+    --data_dir='../data/ILSVRC2012/' \
     --config_path='./configs/CV/mbv2_ptq_hpo.yaml'
 ```
 
@@ -119,5 +121,6 @@ python demo_imagenet.py \
     --save_dir='./save_qat_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
+    --data_dir='../data/ILSVRC2012/' \
     --config_path='./configs/CV/xxx.yaml'
 ```
