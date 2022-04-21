@@ -5,5 +5,5 @@ python3.7 demo_imagenet.py \
     --save_dir='./save_qat_mbv2/' \
     --devices='cpu' \
     --batch_size=2 \
-    --data_dir='data/ILSVRC2012/' \
+    --data_dir='../data/ILSVRC2012/' \
     --config_path='./configs/CV/mbv2_ptq_hpo.yaml'
