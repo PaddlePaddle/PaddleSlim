@@ -33,7 +33,7 @@ def reader_wrapper(reader):
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.float32([item[0] for item in data])
-            yield {"inputs": imgs}
+            yield {"x": imgs}
 
     return gen
 
