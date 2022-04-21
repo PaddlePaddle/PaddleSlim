@@ -284,8 +284,8 @@ def quant_aware(program,
             act_preprocess_func=act_preprocess_func,
             optimizer_func=optimizer_func,
             executor=executor)
-
-        transform_pass.apply(main_graph)
+        for sub_graph in main_graph.all_sub_graphs():
+            transform_pass.apply(sub_graph)
 
     if len(quant_dequant_ops) > 0:
         qdq_func = 'AddQuantDequantPassV2' if onnx_format else 'AddQuantDequantPass'
@@ -296,11 +296,13 @@ def quant_aware(program,
             quant_bits=config['activation_bits'],
             skip_pattern=config['not_quant_pattern'],
             quantizable_op_type=quant_dequant_ops)
-        quant_dequant_pass.apply(main_graph)
+        for sub_graph in main_graph.all_sub_graphs():
+            quant_dequant_pass.apply(sub_graph)
 
     out_scale_training_pass = OutScaleForTrainingPass(
         scope=scope, place=place, moving_rate=config['moving_rate'])
-    out_scale_training_pass.apply(main_graph)
+    for sub_graph in main_graph.all_sub_graphs():
+        out_scale_training_pass.apply(sub_graph)
 
     if (weight_preprocess_func is not None or
             act_preprocess_func is not None) and not for_test:
@@ -507,10 +509,12 @@ def convert(program,
 
     if onnx_format:
         quant_weight_pass = QuantWeightPass(scope, place)
-        quant_weight_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            quant_weight_pass.apply(sub_graph)
     else:
         out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
-        out_scale_infer_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            out_scale_infer_pass.apply(sub_graph)
         # Freeze the graph after training by adjusting the quantize
         # operators' order for the inference.
         freeze_pass = QuantizationFreezePass(
@@ -521,13 +525,15 @@ def convert(program,
             weight_quantize_type=config['weight_quantize_type'])
         if os.path.exists(VARS_MAPPING_TABLE):
             test_graph.out_node_mapping_table = load_dict()
-        freeze_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            freeze_pass.apply(sub_graph)
 
     freezed_program = test_graph.to_program()
 
     if save_int8:
         convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
-        convert_int8_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            convert_int8_pass.apply(sub_graph)
         freezed_program_int8 = test_graph.to_program()
         return freezed_program, freezed_program_int8
     else:
