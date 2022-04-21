@@ -530,6 +530,22 @@ def convert(program,
 
     freezed_program = test_graph.to_program()
 
+    # Move sub blocks persistable var to global block
+    global_block = freezed_program.global_block()
+    for _op in global_block.ops:
+        if _op.type == "while":
+            _block_id = _op.attr("sub_block").id
+            _block = freezed_program.block(_block_id)
+            persistables = []
+            for _name, _var in _block.vars.items():
+                if _var.persistable:
+                    global_block._clone_variable(_var)
+                    persistables.append(_name)
+            for _name in persistables:
+                _block._remove_var(_name)
+            persistables.extend(_op.input('X'))
+            _op.desc.set_input("X", persistables)
+
     if save_int8:
         convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
         for sub_graph in test_graph.all_sub_graphs():
