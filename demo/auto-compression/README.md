@@ -88,7 +88,7 @@ python demo_imagenet.py \
     --model_dir='infermodel_mobilenetv2' \
     --model_filename='inference.pdmodel' \
     --params_filename='./inference.pdiparams' \
-    --save_dir='./save_qat_mbv2/' \
+    --save_dir='./save_ptq_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
     --data_dir='../data/ILSVRC2012/' \
@@ -118,7 +118,7 @@ python demo_imagenet.py \
     --model_dir='infermodel_mobilenetv2' \
     --model_filename='inference.pdmodel' \
     --params_filename='./inference.pdiparams' \
-    --save_dir='./save_qat_mbv2/' \
+    --save_dir='./save_asp_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
     --data_dir='../data/ILSVRC2012/' \
