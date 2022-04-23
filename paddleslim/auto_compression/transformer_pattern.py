@@ -171,11 +171,9 @@ def get_patterns(program, model_type):
                     pattern_ops, pattern_ops_type = bfs(shortcut_start_op,
                                                         graph, op.idx())
 
-                    if model_type == 'transformer' and 'stack' in pattern_ops_type:
-                        for op in pattern_ops:
-                            if op.type() == 'stack':
-                                if 'stack' not in patterns:
-                                    patterns['stack'] = op._op
+                    if model_type == 'transformer' and 'fetch' in pattern_ops_type:
+                        if 'input_mask' not in patterns:
+                            patterns['input_mask'] = pattern_ops[0]._op
 
                     if 'fetch' in pattern_ops_type:
                         continue
@@ -197,7 +195,7 @@ def preprocess_transformer_patterns(patterns, graph):
     mha_weight = {}
     ffn_weight = {}
     for pattern_name, pattern_ops in patterns.items():
-        if pattern_name == 'stack':
+        if pattern_name == 'input_mask':
             continue
         block_num = int(pattern_name.split('$')[-1])
         if 'MHA' in pattern_name:

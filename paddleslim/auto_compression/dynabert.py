@@ -15,7 +15,7 @@
 import numpy as np
 
 
-def update_stack_inputs(program, op, new_inputs_len):
+def update_input_mask_inputs(program, op, new_inputs_len):
     input_var_name = op.input_arg_names
     block = program.blocks[0]
     var = block.var(input_var_name[0])
