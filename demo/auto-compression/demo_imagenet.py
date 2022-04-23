@@ -37,10 +37,12 @@ def reader_wrapper(reader):
 
     return gen
 
+def eval_reader(data_dir, batch_size):
+    val_reader = paddle.batch(reader.val(data_dir=data_dir), batch_size=batch_size)
+    return val_reader
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
-
-    val_reader = paddle.batch(reader.val(data_dir=data_dir), batch_size=1)
+    val_reader = eval_reader(data_dir, batch_size=1)
     image = paddle.static.data(
         name='x', shape=[None, 3, 224, 224], dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
@@ -102,7 +104,7 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function if 'HyperParameterOptimization' not in compress_config else None,
+        eval_callback=eval_function if 'HyperParameterOptimization' not in compress_config else reader_wrapper(eval_reader(data_dir, 64)),
         devices=args.devices)
 
     ac.compress()
