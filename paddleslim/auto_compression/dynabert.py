@@ -47,3 +47,64 @@ def prune_transformer(scope, place, graph, pruned_dict):
         prune_weight(graph, scope, place, name, value)
     graph.infer_shape()
     return graph.program
+
+
+def reorder_head(scope, place, weight, head_num, idx):
+    qkv = weight['P1']
+    attn_out = weight['P2']
+    attn_out_t = scope.find_var(qkv[0]).get_tensor()
+    num_per_head = int(attn_out_t.shape()[0] / head_num)
+
+    index = np.reshape(
+        np.take(
+            np.reshape(
+                np.arange(
+                    0, head_num * num_per_head, dtype='int64'),
+                (head_num, num_per_head)),
+            idx,
+            axis=0), (-1))
+
+    def reorder_head_matrix(w_name, index, dim):
+        pd_w = scope.find_var(w_name).get_tensor()
+        np_w = np.array(pd_w)
+
+        new_w = np.take(np_w, index, axis=dim)
+        pd_w.set(new_w, place)
+
+    for w_idx, weight_name in enumerate(qkv):
+        if w_idx % 2 == 0:
+            ### reorder qkv weight 
+            reorder_head_matrix(weight_name, index, dim=1)
+        else:
+            ### reorder qkv bias 
+            reorder_head_matrix(weight_name, index, dim=0)
+
+    ### reorder attention output weight 
+    reorder_head_matrix(attn_out[0], index, dim=0)
+
+
+def reorder_neuron(scope, place, weight, idx):
+    ffn_i = weight['P1']
+    ffn_o = weight['P2']
+
+    def reorder_neurons_matrix(w_name, index, dim):
+        pd_w = scope.find_var(w_name).get_tensor()
+        np_w = np.array(pd_w)
+
+        new_w = np.take(np_w, index, axis=dim)
+        pd_w.set(new_w, place)
+
+    reorder_neurons_matrix(ffn_i[0], idx, dim=1)
+    reorder_neurons_matrix(ffn_i[1], idx, dim=0)
+    reorder_neurons_matrix(ffn_o[0], idx, dim=0)
+
+
+def reorder_neuron_head(scope, place, mha_weight, ffn_weight, head_importance,
+                        neuron_importance, head_num):
+    for layer, current_importance in enumerate(neuron_importance):
+        # reorder heads
+        idx = np.argsort(head_importance[layer])[::-1]
+        reorder_head(scope, place, mha_weight[layer], head_num, idx)
+        #### reorder neurons
+        idx = np.argsort(current_importance)[::-1]
+        reorder_neuron(scope, place, ffn_weight[layer], idx)
