@@ -187,6 +187,7 @@ def test(data_dir=DATA_DIR):
 class ImageNetDataset(Dataset):
     def __init__(self, data_dir=DATA_DIR, mode='train'):
         super(ImageNetDataset, self).__init__()
+        self.data_dir = data_dir
         train_file_list = os.path.join(data_dir, 'train_list.txt')
         val_file_list = os.path.join(data_dir, 'val_list.txt')
         test_file_list = os.path.join(data_dir, 'test_list.txt')
@@ -204,7 +205,7 @@ class ImageNetDataset(Dataset):
 
     def __getitem__(self, index):
         sample = self.data[index]
-        data_path = os.path.join(DATA_DIR, sample[0])
+        data_path = os.path.join(self.data_dir, sample[0])
         if self.mode == 'train':
             data, label = process_image(
                 [data_path, sample[1]],
