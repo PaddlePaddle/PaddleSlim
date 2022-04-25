@@ -70,7 +70,11 @@ def compute_neuron_head_importance(task_name,
         data_loader = (data_loader, )
     for data in data_loader:
         for batch in data:
-            input_ids, segment_ids, labels = batch
+            if isinstance(batch, dict):
+                input_ids, segment_ids, labels = batch['input_ids'], batch[
+                    'token_type_ids'], batch['labels']
+            else:
+                input_ids, segment_ids, labels = batch
             logits = model(
                 input_ids, segment_ids, attention_mask=[None, head_mask])
             loss = loss_fct(logits, labels)
