@@ -96,21 +96,20 @@ def _load_program_and_merge(executor,
                             params_filename,
                             teacher_idx=None,
                             feed_target_names=None):
-
     scope = paddle.static.global_scope()
     new_scope = paddle.static.Scope()
     try:
         with paddle.static.scope_guard(new_scope):
             [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
-            dirname=model_dir, \
-            model_filename=model_filename, \
-            params_filename=params_filename, \
-            executor=executor)
+                dirname=model_dir, \
+                model_filename=model_filename, \
+                params_filename=params_filename, \
+                executor=executor)
     except:
         with paddle.static.scope_guard(new_scope):
             [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
-            path_prefix=model_dir, \
-            executor=executor)
+                path_prefix=model_dir, \
+                executor=executor)
 
     _remove_fetch_node(teacher_program)
 
@@ -150,7 +149,8 @@ def build_distill_program(executor,
                           train_config,
                           train_program_info=None,
                           pruner=None,
-                          dist_strategy=None):
+                          dist_strategy=None,
+                          default_distill_node_pair=None):
     """build distill program with infermodel"""
     startup_program = paddle.static.Program()
     if train_program_info is None:
@@ -253,7 +253,7 @@ def build_distill_program(executor,
                         **train_config['amp_config'])
 
             distill_loss, losses = _parse_distill_loss(
-                config['distill_node_pair'],
+                config.get('distill_node_pair') or default_distill_node_pair,
                 config.get('distill_loss') or
                 'l2_loss',  ### default loss is l2_loss
                 config.get('distill_lambda') or 1.0)  ### default lambda is 1.0
@@ -324,14 +324,32 @@ def build_quant_program(executor, place, config, train_program_info,
     return train_program_info, test_program_info, config
 
 
-def build_prune_program(executor, place, config, train_program_info, strategy):
+def _get_label_name(dataloader, feed_target_names):
+    label_name = None
+    for data in dataloader():
+        for key, value in data[0].items():
+            if key in feed_target_names:
+                continue
+            label_name = key
+            break
+        break
+    return label_name
+
+
+def build_prune_program(executor,
+                        place,
+                        config,
+                        train_program_info,
+                        strategy,
+                        patterns,
+                        eval_dataloader=None):
     if 'unstructure' in strategy:
         from ..prune.unstructured_pruner import UnstructuredPruner, GMPUnstructuredPruner
         if config["prune_strategy"] is None:
             pruner = UnstructuredPruner(
                 train_program_info.program,
                 mode=config['prune_mode'],
-                ratio=config['pruned_ratio'],
+                ratio=config['prune_ratio'],
                 threshold=config['threshold'],
                 prune_params_type=config['prune_params_type'],
                 place=place,
@@ -339,12 +357,11 @@ def build_prune_program(executor, place, config, train_program_info, strategy):
         elif config["prune_strategy"] == "gmp":
             pruner = GMPUnstructuredPruner(
                 train_program_info.program,
-                ratio=config['pruned_ratio'],
-                threshold=config['threshold'],
+                ratio=config['prune_ratio'],
                 prune_params_type=config['prune_params_type'],
                 place=place,
                 local_sparsity=config['local_sparsity'],
-                config=config['gmp_config'])
+                configs=config['gmp_config'])
     else:
         if config['prune_algo'] == 'prune':
             from ..prune import Pruner
@@ -361,7 +378,7 @@ def build_prune_program(executor, place, config, train_program_info, strategy):
                 train_program_info.program,
                 paddle.static.global_scope(),
                 params=params,
-                ratios=[config['pruned_ratio']] * len(params),
+                ratios=[config['prune_ratio']] * len(params),
                 place=place)
             train_program_info.program = pruned_program
 
@@ -377,6 +394,24 @@ def build_prune_program(executor, place, config, train_program_info, strategy):
                     excluded_params_name.append(param.name)
             pruner.set_excluded_layers(train_program_info.program,
                                        excluded_params_name)
+        elif config['prune_algo'] == 'transformer_pruner':
+            from .transformer_pruner import pruner_transformer
+            assert eval_dataloader is not None, "transformer_pruner must set eval_dataloader"
+            label_name = _get_label_name(eval_dataloader,
+                                         train_program_info.feed_target_names)
+            assert label_name is not None, \
+                "maybe something wrong in get label name from eval_dataloader, please check your eval_dataloader"
+            pruner = None
+            pruned_program = pruner_transformer(
+                executor,
+                place,
+                train_program_info.program,
+                patterns,
+                label_name,
+                width_mult=config['prune_ratio'],
+                dataloader=eval_dataloader,
+                fetch_targets=train_program_info.fetch_targets)
+            train_program_info.program = pruned_program
         else:
             raise NotImplementedError(
                 "prune_algo must be choice in [\"prune\", \"asp\"], {} is not support".

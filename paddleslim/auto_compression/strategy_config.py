@@ -81,7 +81,7 @@ HyperParameterOptimization.__new__.__defaults__ = (None, ) * (
 ### Prune
 Prune = namedtuple("Prune", [
     "prune_algo",
-    "pruned_ratio",
+    "prune_ratio",
     "prune_params_name",
     "criterion",
 ])

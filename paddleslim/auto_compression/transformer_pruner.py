@@ -15,7 +15,8 @@
 import numpy as np
 import paddle
 from paddleslim.common.recover_program import recover_inference_program
-from transformer_pattern import *
+from paddleslim.core import GraphWrapper
+from .transformer_pattern import *
 
 global_idx = 0
 
@@ -29,16 +30,6 @@ def _feed_op_num(program):
             if op.type == "feed":
                 num += 1
     return num
-
-
-def _fetch_op_input(program):
-    fetch_list = []
-    for block in program.blocks:
-        ops = list(block.ops)
-        for op in ops:
-            if op.type == "fetch":
-                fetch_list.extend(op.input_arg_names)
-    return fetch_list
 
 
 def find_next_ops(block, var_name):
@@ -216,8 +207,11 @@ def mean_op(block, inputs, axis=None, keepdim=False):
     return out
 
 
-def program_add_mask(program, patterns, layer_num, head_num, label_name):
-    fetch_list = _fetch_op_input(program)
+def program_add_mask(program, patterns, layer_num, head_num, label_name,
+                     fetch_targets):
+    fetch_list = []
+    for ft in fetch_targets:
+        fetch_list.append(ft.name)
     program = recover_inference_program(program)
     block = program.global_block()
     head_mask = block.create_var(
@@ -263,9 +257,9 @@ def program_add_mask(program, patterns, layer_num, head_num, label_name):
 
 
 def compute_importance(exe, program, patterns, ffn_weight, layer_num, head_num,
-                       label_name, dataloader):
+                       label_name, fetch_targets, dataloader):
     program = program_add_mask(program, patterns, layer_num, head_num,
-                               label_name)
+                               label_name, fetch_targets)
 
     ### define importance matrix
     head_importance = np.zeros(shape=[layer_num, head_num], dtype='float32')
@@ -402,6 +396,7 @@ def prune_weight(graph, scope, place, pruned_name, pruned_ratio):
     )) == 1 else pruned_ratio
     pruned_shape = np.multiply(param_t.shape(), pruned_ratio)
     pruned_shape = list(map(int, pruned_shape))
+    ###print(pruned_name, pruned_shape)
     param.set_shape(pruned_shape)
     if len(pruned_shape) == 2:
         pruned_param = np.array(param_t)[:pruned_shape[0], :pruned_shape[1]]
@@ -418,8 +413,9 @@ def prune_transformer(scope, place, graph, pruned_dict):
     return graph.program
 
 
-def pruner_transformer(exe, places, inference_program, patterns, graph,
-                       label_name, width_mult, dataloader):
+def pruner_transformer(exe, places, inference_program, patterns, label_name,
+                       width_mult, fetch_targets, dataloader):
+    graph = GraphWrapper(inference_program)
     input_mask_op = patterns['input_mask']
     layer_num = int((len(patterns) - 1) / 2)
     head_num = len(input_mask_op.input_arg_names)
@@ -430,7 +426,7 @@ def pruner_transformer(exe, places, inference_program, patterns, graph,
     ###########################  COMPUTE IMPORTANCE  ################################
     compute_program, head_importance, neuron_importance = compute_importance(
         exe, compute_program, patterns, ffn_weight, layer_num, head_num,
-        label_name, dataloader)
+        label_name, fetch_targets, dataloader)
 
     ###############################     REORDER    ##################################
     reorder_neuron_head(scope, places, mha_weight, ffn_weight, head_importance,

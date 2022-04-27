@@ -161,6 +161,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 def apply_decay_param_fun(name):
     if name.find("bias") > -1:
         return True
+    elif name.find("b_0") > -1:
+        return True
     elif name.find("norm") > -1:
         return True
     else:
@@ -189,7 +191,11 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function if 'HyperParameterOptimization' not in compress_config else eval_dataloader,
-        devices=args.devices)
+        eval_callback=eval_function
+        if 'HyperParameterOptimization' not in compress_config else
+        eval_dataloader,
+        eval_dataloader=eval_dataloader,
+        devices=args.devices,
+        model_type='transformer')
 
     ac.compress()

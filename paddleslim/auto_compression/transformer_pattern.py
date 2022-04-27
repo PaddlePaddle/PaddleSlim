@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from paddleslim.core import GraphWrapper
-from patterns_common import *
+from .patterns_common import *
 
 
 def _append_transformer_prune_params(op, graph, block_num, params_dict):

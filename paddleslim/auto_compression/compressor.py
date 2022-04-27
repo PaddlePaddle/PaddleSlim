@@ -26,8 +26,11 @@ if platform.system().lower() == 'linux':
 from ..quant.quanter import convert
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
+from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program
 from .strategy_config import ProgramInfo, merge_config
+from .utils.predict import predict_compressed_model
+from .patterns import get_patterns
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -41,8 +44,11 @@ class AutoCompression:
                  strategy_config,
                  train_config,
                  train_dataloader,
-                 eval_callback,
-                 devices='gpu'):
+                 eval_callback=None,
+                 eval_dataloader=None,
+                 devices='gpu',
+                 model_type=None,
+                 deploy_hardware='gpu'):
         ### model_dir(str): 模型路径
         ### model_filename(str): 模型文件名称
         ### params_filename(str): 参数文件名称
@@ -58,17 +64,24 @@ class AutoCompression:
         self.strategy_config = strategy_config
         self.train_config = train_config
         self.train_dataloader = train_dataloader
+        self.eval_function = eval_callback
+        self.eval_dataloader = eval_dataloader
+        self.model_type = model_type
+
+        if deploy_hardware in ['SD625', 'SD710'
+                               ]:  #TableLatencyPredictor.hardware_list:
+            self.deploy_hardware = deploy_hardware
+        else:
+            self.deploy_hardware = None
+
         paddle.enable_static()
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
-        if self._prepare_eval(eval_callback) == 'eval_dataloader':
-            self.eval_function = None
-            self.eval_dataloader = eval_callback
-        else:
-            self.eval_function = eval_callback
-            self.eval_dataloader = None
 
-        self._strategy, self._config = self._prepare_strategy()
+        if self.strategy_config is not None:
+            self._strategy, self._config = self._prepare_strategy()
+        else:
+            self._strategy, self._config = self._auto_prepare_strategy()
         self._exe, self._places = self._prepare_envs(devices)
 
     def _prepare_envs(self, devices):
@@ -132,6 +145,15 @@ class AutoCompression:
 
         return strategy, config
 
+    def _auto_prepare_strategy(self):
+        model_file = os.path.join(self.model_dir, self.model_filename)
+        param_file = os.path.join(self.model_dir, self.params_filename)
+
+        if self.deploy_hardware is not None:
+            compressed_time_dict = predict_compressed_model(
+                model_file, param_file, hardware=self.deploy_hardware)
+        pass
+
     def _prepare_fleet_strategy(train_config):
         build_strategy = paddle.static.BuildStrategy()
         exec_strategy = paddle.static.ExecutionStrategy()
@@ -149,7 +171,8 @@ class AutoCompression:
             strategy.amp_configs = { ** train_config.amp_config}
         return strategy
 
-    def _prepare_program(self, program, feed_target_names, fetch_targets):
+    def _prepare_program(self, program, feed_target_names, fetch_targets,
+                         patterns, default_distill_node_pair):
         train_program = recover_inference_program(program)
         startup_program = paddle.static.Program()
         train_program_info = ProgramInfo(startup_program, train_program,
@@ -161,9 +184,7 @@ class AutoCompression:
         if 'prune' in self._strategy:
             self._pruner, train_program_info = build_prune_program(
                 self._exe, self._places, config_dict, train_program_info,
-                self._strategy)
-
-
+                self._strategy, patterns, self.eval_dataloader)
 
         if self.train_config.use_fleet:
             dist_strategy = _prepare_fleet_strategy(self.train_config)
@@ -179,7 +200,8 @@ class AutoCompression:
                 self.train_config._asdict(),
                 train_program_info,
                 pruner=self._pruner,
-                dist_strategy=dist_strategy)
+                dist_strategy=dist_strategy,
+                default_distill_node_pair=default_distill_node_pair)
 
         self._quant_config = None
         ### add quant_aware program, quant always is last step
@@ -189,8 +211,6 @@ class AutoCompression:
                 test_program_info)
 
         self._exe.run(train_program_info.startup_program)
-
-
 
         if (not self.train_config.use_fleet
             ) and self.train_config.amp_config is not None:
@@ -209,13 +229,6 @@ class AutoCompression:
             test_program_info = self._compiled_program(test_program_info,
                                                        self._strategy)
         return train_program_info, test_program_info
-
-    def _prepare_eval(self, eval_callback):
-        if isinstance(eval_callback,
-                      Iterable) or inspect.isgeneratorfunction(eval_callback):
-            return 'eval_dataloader'
-        else:
-            return 'eval_callback'
 
     def _compiled_program(self, program_info, strategy):
         compiled_prog = paddle.static.CompiledProgram(program_info.program)
@@ -293,8 +306,17 @@ class AutoCompression:
                                                                      .format(\
                           self.train_config.origin_metric, metric))
 
+            only_final_node = False
+            if self.model_type != 'transformer':
+                only_final_node = True
+            patterns, default_distill_node_pair = get_patterns(
+                inference_program,
+                self.model_type,
+                only_final_node=only_final_node)
+
             train_program_info, test_program_info = self._prepare_program(
-                inference_program, feed_target_names, fetch_targets)
+                inference_program, feed_target_names, fetch_targets, patterns,
+                default_distill_node_pair)
 
             test_program_info = self._start_train(train_program_info,
                                                   test_program_info)
