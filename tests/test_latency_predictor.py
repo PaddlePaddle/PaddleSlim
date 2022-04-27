@@ -19,7 +19,7 @@ import paddleslim
 from paddleslim.analysis import LatencyPredictor, TableLatencyPredictor
 from paddle.vision.models import mobilenet_v1, mobilenet_v2
 from paddle.nn import Conv2D, BatchNorm2D, ReLU, LayerNorm
-from paddleslim.analysis._utils import opt_model, save_cls_model, save_seg_model, save_det_model
+from paddleslim.analysis._utils import opt_model, save_cls_model, save_det_model
 
 
 def channel_shuffle(x, groups):
@@ -276,7 +276,7 @@ class TestCase5(unittest.TestCase):
         paddle.disable_static()
         model = mobilenet_v1()
         predictor = TableLatencyPredictor(table_file='SD710')
-        model_file, param_file = save_seg_model(
+        model_file, param_file = save_cls_model(
             model,
             input_shape=[1, 3, 224, 224],
             save_dir="./inference_model",
@@ -367,30 +367,6 @@ class TestCase9(unittest.TestCase):
 
 class TestCase10(unittest.TestCase):
     def test_case10(self):
-        paddle.disable_static()
-        model = ModelCase1()
-        predictor = LatencyPredictor()
-        model_file, param_file = save_seg_model(
-            model,
-            input_shape=[1, 116, 28, 28],
-            save_dir="./inference_model",
-            data_type='int8')
-        pbmodel_file = opt_model(
-            model_file=model_file,
-            param_file=param_file,
-            optimize_out_type='protobuf')
-
-        paddle.enable_static()
-        with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
-            graph = paddleslim.core.GraphWrapper(fluid_program)
-            graph_keys = predictor._get_key_info_from_graph(graph=graph)
-            assert len(graph_keys) > 0
-
-
-class TestCase11(unittest.TestCase):
-    def test_case11(self):
         paddle.disable_static()
         model = mobilenet_v2()
         model2 = ModelCase6()

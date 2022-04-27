@@ -54,9 +54,9 @@ python tools/export_model.py \
 ```
 cd PaddleSlim/demo/auto-compression/
 ```
-使用[eval.py](../quant_post/eval.py)脚本得到模型的分类精度：
+使用[eval.py](../quant/quant_post/eval.py)脚本得到模型的分类精度，压缩后的模型也可以使用同一个脚本测试精度：
 ```
-python ../quant_post/eval.py --model_path infermodel_mobilenetv2 --model_name inference.pdmodel --params_name inference.pdiparams
+python ../quant/quant_post/eval.py --model_path infermodel_mobilenetv2 --model_name inference.pdmodel --params_name inference.pdiparams
 ```
 精度输出为:
 ```
@@ -77,6 +77,7 @@ python demo_imagenet.py \
     --save_dir='./save_qat_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
+    --data_dir='../data/ILSVRC2012/' \
     --config_path='./configs/CV/mbv2_qat_dis.yaml'
 ```
 
@@ -87,15 +88,16 @@ python demo_imagenet.py \
     --model_dir='infermodel_mobilenetv2' \
     --model_filename='inference.pdmodel' \
     --params_filename='./inference.pdiparams' \
-    --save_dir='./save_qat_mbv2/' \
+    --save_dir='./save_ptq_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
+    --data_dir='../data/ILSVRC2012/' \
     --config_path='./configs/CV/mbv2_ptq_hpo.yaml'
 ```
 
 ### 3.3 进行剪枝蒸馏策略融合压缩
 注意：本示例为对BERT模型进行ASP稀疏。
-首先参考[脚本](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/language_model/bert#%E9%A2%84%E6%B5%8B)得到可部署的模型。
+首先参考[脚本](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/language_model/bert#%E9%A2%84%E6%B5%8B)得到可部署的模型，或者下载SST-2数据集上的示例模型[SST-2-BERT](https://paddle-qa.bj.bcebos.com/PaddleSlim_datasets/static_bert_models.tar.gz)。
 剪枝蒸馏压缩示例脚本为[demo_glue.py](./demo_glue.py)，使用接口``paddleslim.auto_compression.AutoCompression``对模型进行压缩。运行命令为：
 ```
 python demo_glue.py \
@@ -116,8 +118,9 @@ python demo_imagenet.py \
     --model_dir='infermodel_mobilenetv2' \
     --model_filename='inference.pdmodel' \
     --params_filename='./inference.pdiparams' \
-    --save_dir='./save_qat_mbv2/' \
+    --save_dir='./save_asp_mbv2/' \
     --devices='gpu' \
     --batch_size=64 \
+    --data_dir='../data/ILSVRC2012/' \
     --config_path='./configs/CV/xxx.yaml'
 ```

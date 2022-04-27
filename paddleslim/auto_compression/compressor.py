@@ -18,9 +18,11 @@ import sys
 import numpy as np
 import inspect
 from collections import namedtuple, Iterable
+import platform
 import paddle
 import paddle.distributed.fleet as fleet
-from ..quant.quant_post_hpo import quant_post_hpo
+if platform.system().lower() == 'linux':
+    from ..quant.quant_post_hpo import quant_post_hpo
 from ..quant.quanter import convert
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
@@ -161,6 +163,8 @@ class AutoCompression:
                 self._exe, self._places, config_dict, train_program_info,
                 self._strategy)
 
+
+
         if self.train_config.use_fleet:
             dist_strategy = _prepare_fleet_strategy(self.train_config)
         else:
@@ -185,6 +189,8 @@ class AutoCompression:
                 test_program_info)
 
         self._exe.run(train_program_info.startup_program)
+
+
 
         if (not self.train_config.use_fleet
             ) and self.train_config.amp_config is not None:
@@ -231,6 +237,10 @@ class AutoCompression:
     def compress(self):
         ### start compress, including train/eval model
         if self._strategy == 'ptq_hpo':
+            if platform.system().lower() != 'linux':
+                raise NotImplementedError(
+                    "post-quant-hpo is not support in system other than linux")
+
             quant_post_hpo(
                 self._exe,
                 self._places,
@@ -270,6 +280,7 @@ class AutoCompression:
 
             ### used to check whether the dataloader is right
             if self.eval_function is not None and self.train_config.origin_metric is not None:
+                _logger.info("start to test metric before compress")
                 metric = self.eval_function(self._exe, inference_program,
                                             feed_target_names, fetch_targets)
                 _logger.info("metric of compressed model is: {}".format(metric))
@@ -308,7 +319,8 @@ class AutoCompression:
                     _logger.info("epoch: {}, batch: {}, loss: {}".format(
                         epoch_id, batch_id, np_probs_float))
 
-                if batch_id % int(self.train_config.eval_iter) == 0:
+                if batch_id % int(
+                        self.train_config.eval_iter) == 0 and batch_id != 0:
                     if self.eval_function is not None:
 
                         # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation. 
