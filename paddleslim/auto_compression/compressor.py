@@ -18,7 +18,7 @@ import sys
 import numpy as np
 import inspect
 from collections import namedtuple
-from collections.abs import Iterable
+from collections.abc import Iterable
 import platform
 import paddle
 import paddle.distributed.fleet as fleet
