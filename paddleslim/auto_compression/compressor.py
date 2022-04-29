@@ -26,7 +26,7 @@ if platform.system().lower() == 'linux':
 from ..quant.quanter import convert
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
-from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program
+from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -163,8 +163,6 @@ class AutoCompression:
                 self._exe, self._places, config_dict, train_program_info,
                 self._strategy)
 
-
-
         if self.train_config.use_fleet:
             dist_strategy = _prepare_fleet_strategy(self.train_config)
         else:
@@ -189,8 +187,6 @@ class AutoCompression:
                 test_program_info)
 
         self._exe.run(train_program_info.startup_program)
-
-
 
         if (not self.train_config.use_fleet
             ) and self.train_config.amp_config is not None:
@@ -295,7 +291,9 @@ class AutoCompression:
 
             train_program_info, test_program_info = self._prepare_program(
                 inference_program, feed_target_names, fetch_targets)
-
+            if 'unstructure' in self._strategy:
+                test_program_info.program._program = remove_unused_var_nodes(
+                    test_program_info.program._program)
             test_program_info = self._start_train(train_program_info,
                                                   test_program_info)
             self._save_model(test_program_info)
