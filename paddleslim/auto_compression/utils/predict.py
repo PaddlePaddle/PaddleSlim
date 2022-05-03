@@ -44,7 +44,7 @@ def predict_compressed_model(model_file, param_file, hardware='SD710'):
         model_file=quant_model_file,
         param_file=quant_param_file,
         data_type='int8')
-    latency_dict.update({f'origin_int8': latency})
+    latency_dict.update({'origin_int8': latency})
 
     for prune_ratio in [0.3, 0.4, 0.5, 0.6]:
         get_prune_model(
@@ -112,7 +112,7 @@ def predict_compressed_model(model_file, param_file, hardware='SD710'):
             model_file=quant_model_file,
             param_file=quant_param_file,
             data_type='int8')
-        latency_dict.update({f'sparse_{prune_ratio}_int8': latency})
+        latency_dict.update({f'sparse_{sparse_ratio}_int8': latency})
 
     # Delete temporary model files
     shutil.rmtree('./quant_model')

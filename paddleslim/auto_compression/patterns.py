@@ -43,41 +43,42 @@ def find_final_nodes(program):
 
 def get_patterns(program, model_type, only_final_node=False):
     distill_node = []
-    if not only_final_node:
-        graph = GraphWrapper(program)
-        patterns = {}
-        block_num = 0
-        for op in graph.ops():
-            if op.type() == 'elementwise_add':
-                inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
-                if (not inp1._var.persistable) and (not inp2._var.persistable):
-                    sc_path = []
-                    shortcut_start_op = []
-                    is_sc = is_shortcut(op, graph, sc_path, shortcut_start_op)
-                    if is_sc:
-                        shortcut_start_op = shortcut_start_op[0]
-                        pattern_ops, pattern_ops_type = bfs(shortcut_start_op,
-                                                            graph, op.idx())
+    patterns = {}
+    graph = GraphWrapper(program)
+    block_num = 0
+    for op in graph.ops():
+        if op.type() == 'elementwise_add':
+            inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
+            if (not inp1._var.persistable) and (not inp2._var.persistable):
+                sc_path = []
+                shortcut_start_op = []
+                is_sc = is_shortcut(op, graph, sc_path, shortcut_start_op)
+                if is_sc:
+                    shortcut_start_op = shortcut_start_op[0]
+                    pattern_ops, pattern_ops_type = bfs(shortcut_start_op,
+                                                        graph, op.idx())
 
-                        if model_type == 'transformer' and 'fetch' in pattern_ops_type:
-                            if 'input_mask' not in patterns:
-                                patterns['input_mask'] = pattern_ops[0]._op
+                    if model_type == 'transformer' and 'fetch' in pattern_ops_type:
+                        if 'input_mask' not in patterns:
+                            patterns['input_mask'] = pattern_ops[0]._op
 
-                        if 'fetch' in pattern_ops_type:
-                            continue
+                    if 'fetch' in pattern_ops_type:
+                        continue
 
-                        out_var_name = op.all_outputs()[0]._var.name
-                        if model_type == 'transformer':
-                            if 'softmax' in pattern_ops_type:
-                                patterns['MHA$' + str(block_num)] = pattern_ops
-                            else:  ##### is FFN
-                                patterns['FFN$' + str(block_num)] = pattern_ops
-                                block_num += 1
+                    out_var_name = op.all_outputs()[0]._var.name
+                    if model_type == 'transformer':
+                        if 'softmax' in pattern_ops_type:
+                            patterns['MHA$' + str(block_num)] = pattern_ops
+                        else:  ##### is FFN
+                            patterns['FFN$' + str(block_num)] = pattern_ops
+                            block_num += 1
+                            if not only_final_node:
                                 distill_node.append('teacher_' + out_var_name)
                                 distill_node.append(out_var_name)
-                        else:
-                            patterns[shortcut_start_op.type() + '$' + str(
-                                op.idx())] = pattern_ops
+                    else:
+                        patterns[shortcut_start_op.type() + '$' + str(op.idx(
+                        ))] = pattern_ops
+                        if not only_final_node:
                             distill_node.append('teacher_' + out_var_name)
                             distill_node.append(out_var_name)
 

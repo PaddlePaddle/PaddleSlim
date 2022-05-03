@@ -25,10 +25,11 @@ Quantization = namedtuple(
     "Quantization",
     [
         "quantize_op_types",
+        "weight_quantize_type",
         "weight_bits",
         "activation_bits",
         "not_quant_pattern",  ### ptq没有暴露相应接口
-        "use_pact",  ### 仅QAT支持
+        "use_pact",  ### 仅qat支持
         "is_full_quantize"
     ])
 
@@ -119,10 +120,10 @@ TrainConfig.__new__.__defaults__ = (None, ) * len(TrainConfig._fields)
 
 
 def merge_config(*args):
-    fields = tuple()
+    fields = set()
     cfg = dict()
     for arg in args:
-        fields += arg._fields
+        fields = fields.union(arg._fields)
         cfg.update(dict(arg._asdict()))
     MergeConfig = namedtuple("MergeConfig", fields)
     return MergeConfig(**cfg)

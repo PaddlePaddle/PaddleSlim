@@ -98,6 +98,7 @@ def _load_program_and_merge(executor,
                             feed_target_names=None):
     scope = paddle.static.global_scope()
     new_scope = paddle.static.Scope()
+    print(model_dir, model_filename, params_filename)
     try:
         with paddle.static.scope_guard(new_scope):
             [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
@@ -367,6 +368,7 @@ def build_prune_program(executor,
             from ..prune import Pruner
             pruner = Pruner(config["criterion"])
             params = []
+            ### TODO(ceci3): set default prune weight
             for param in train_program_info.program.global_block(
             ).all_parameters():
                 if config[
@@ -386,6 +388,7 @@ def build_prune_program(executor,
             from paddle.static import sparsity
             pruner = sparsity
             excluded_params_name = []
+            ### TODO(ceci3): set default prune weight
             for param in train_program_info.program.global_block(
             ).all_parameters():
                 if config[
@@ -408,7 +411,7 @@ def build_prune_program(executor,
                 train_program_info.program,
                 patterns,
                 label_name,
-                width_mult=config['prune_ratio'],
+                width_mult=(1.0 - config['prune_ratio']),
                 dataloader=eval_dataloader,
                 fetch_targets=train_program_info.fetch_targets)
             train_program_info.program = pruned_program

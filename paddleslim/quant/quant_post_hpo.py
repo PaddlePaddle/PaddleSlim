@@ -100,8 +100,15 @@ class QuantConfig:
 
 
 g_quant_config = None
-g_min_emd_loss = float('inf')
 g_quant_model_cache_path = "quant_model_tmp"
+
+
+def emd_loss_init():
+    global g_min_emd_loss
+    g_min_emd_loss = float('inf')
+
+
+emd_loss_init()
 
 
 def make_feed_dict(feed_target_names, data):
@@ -236,6 +243,8 @@ def eval_quant_model():
 def quantize(cfg):
     """model quantize job"""
     algo = cfg["algo"] if 'algo' in cfg else g_quant_config.algo[0][0]
+    if g_quant_config.hist_percent[0] is None:
+        g_quant_config.hist_percent = [g_quant_config.hist_percent]
     hist_percent = cfg[
         "hist_percent"] if "hist_percent" in cfg else g_quant_config.hist_percent[
             0][0]
@@ -272,13 +281,18 @@ def quantize(cfg):
         batch_nums=batch_num)
 
     global g_min_emd_loss
-    ### if eval_function is not None, use eval function provided by user.
-    ### TODO(ceci3): fix eval_function 
-    if g_quant_config.eval_function is not None:
-        emd_loss = g_quant_config.eval_function()
-    else:
+    try:
         emd_loss = eval_quant_model()
-    print("emd loss: ", emd_loss)
+    except:
+        ### if eval_function is not None, use eval function provided by user.
+        ### TODO(ceci3): fix eval_function 
+        ###[inference_program, feed_target_names, fetch_targets]= paddle.fluid.io.load_inference_model( \
+        ###        dirname=model_dir, \
+        ###        model_filename=self.model_filename, params_filename=self.params_filename,
+        ###        executor=self._exe)
+        ###emd_loss = g_quant_config.eval_function(g_quant_config.executor, inference_program, feed_target_names, fetch_targets)
+        emd_loss = g_quant_config.eval_function()
+    print("emd loss: ", emd_loss, g_min_emd_loss)
     if emd_loss < g_min_emd_loss:
         g_min_emd_loss = emd_loss
         if os.path.exists(g_quant_config.quantize_model_path):
