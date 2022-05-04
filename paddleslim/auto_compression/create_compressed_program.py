@@ -398,14 +398,13 @@ def build_prune_program(executor,
             pruner.set_excluded_layers(train_program_info.program,
                                        excluded_params_name)
         elif config['prune_algo'] == 'transformer_pruner':
-            from .transformer_pruner import pruner_transformer
+            from .transformer_pruner import TransformerPruner
             assert eval_dataloader is not None, "transformer_pruner must set eval_dataloader"
             label_name = _get_label_name(eval_dataloader,
                                          train_program_info.feed_target_names)
             assert label_name is not None, \
                 "maybe something wrong in get label name from eval_dataloader, please check your eval_dataloader"
-            pruner = None
-            pruned_program = pruner_transformer(
+            pruner = TransformerPruner(
                 executor,
                 place,
                 train_program_info.program,
@@ -414,6 +413,7 @@ def build_prune_program(executor,
                 width_mult=(1.0 - config['prune_ratio']),
                 dataloader=eval_dataloader,
                 fetch_targets=train_program_info.fetch_targets)
+            pruned_program = pruner.prune()
             train_program_info.program = pruned_program
         else:
             raise NotImplementedError(

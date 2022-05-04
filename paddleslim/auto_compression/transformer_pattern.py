@@ -15,6 +15,8 @@
 from paddleslim.core import GraphWrapper
 from .patterns_common import *
 
+__all__ = ['preprocess_transformer_patterns']
+
 
 def _append_transformer_prune_params(op, graph, block_num, params_dict):
     for next_op in graph.next_ops(op):

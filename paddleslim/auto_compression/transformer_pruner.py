@@ -16,7 +16,7 @@ import numpy as np
 import paddle
 from paddleslim.common.recover_program import recover_inference_program
 from paddleslim.core import GraphWrapper
-from .transformer_pattern import *
+from .transformer_pattern import preprocess_transformer_patterns
 
 global_idx = 0
 
@@ -207,259 +207,281 @@ def mean_op(block, inputs, axis=None, keepdim=False):
     return out
 
 
-def program_add_mask(program, patterns, layer_num, head_num, label_name,
-                     fetch_targets):
-    fetch_list = []
-    for ft in fetch_targets:
-        fetch_list.append(ft.name)
-    program = recover_inference_program(program)
-    block = program.global_block()
-    head_mask = block.create_var(
-        name='head_mask',
-        shape=[layer_num, head_num],
-        dtype='float32',
-        persistable=True)
-    feed_num = _feed_op_num(program)
-    fill_constant_op(
-        block,
-        feed_num, [layer_num, head_num],
-        1.0,
-        out=head_mask,
-        stop_gradient=False)
-    head_mask = unsqueeze_op(
-        block, -1,
-        unsqueeze_op(block, -1,
-                     unsqueeze_op(block, 1, head_mask, feed_num + 1),
-                     feed_num + 2), feed_num + 3)
+class TransformerPruner:
+    def __init__(self, exe, places, inference_program, patterns, label_name,
+                 width_mult, fetch_targets, dataloader):
+        self.exe = exe
+        self.places = places
+        self.inference_program = inference_program
+        self.graph = GraphWrapper(inference_program)
+        self.patterns = patterns
+        self.label_name = label_name
+        self.width_mult = width_mult
+        self.fetch_targets = fetch_targets
+        self.dataloader = dataloader
 
-    for pattern_name, pattern in patterns.items():
-        if 'MHA' in pattern_name:
-            block_num = int(pattern_name.split('$')[-1])
-            for op in pattern:
-                if op.type() == 'softmax':
-                    var_name = op._op.output_arg_names[0]
-                    next_op = find_next_ops(block, var_name)
-                    if next_op[0].type == 'dropout':
-                        op = next_op[0]
-                    insert_eltmul_op(block, op, head_mask, block_num)
-    logits = block.var(fetch_list[0])
-    labels = block.create_var(
-        name=label_name, shape=[-1, 1], dtype='int64', persistable=False)
-    labels = feed_op(block, feed_num, labels)
-    ce_loss, probs = softmax_with_cross_entropy_op(
-        block, logits=logits, labels=labels)
-    loss = mean_op(block, ce_loss)
+        self.scope = paddle.static.global_scope()
+        input_mask_op, layer_num, head_num, mha_weight, ffn_weight = self._preprocess_patterns(
+            patterns, self.graph)
+        self.input_mask_op = input_mask_op
+        self.mha_weight = mha_weight
+        self.ffn_weight = ffn_weight
 
-    program._sync_with_cpp()
-    paddle.static.append_backward(loss)
-    program._sync_with_cpp()
-    return program
+        self.scope = self.reorder(inference_program, self.scope, patterns,
+                                  layer_num, head_num, mha_weight, ffn_weight)
 
+    def _preprocess_patterns(self, patterns, graph):
+        input_mask_op = patterns['input_mask']
+        layer_num = int((len(patterns) - 1) / 2)
+        head_num = len(input_mask_op.input_arg_names)
 
-def compute_importance(exe, program, patterns, ffn_weight, layer_num, head_num,
-                       label_name, fetch_targets, dataloader):
-    program = program_add_mask(program, patterns, layer_num, head_num,
-                               label_name, fetch_targets)
+        mha_weight, ffn_weight = preprocess_transformer_patterns(patterns,
+                                                                 graph)
+        return input_mask_op, layer_num, head_num, mha_weight, ffn_weight
 
-    ### define importance matrix
-    head_importance = np.zeros(shape=[layer_num, head_num], dtype='float32')
-    neuron_importance = []
+    def _program_add_mask(self, program, patterns, layer_num, head_num,
+                          label_name, fetch_targets):
+        fetch_list = []
+        for ft in fetch_targets:
+            fetch_list.append(ft.name)
+        program = recover_inference_program(program)
+        block = program.global_block()
+        head_mask = block.create_var(
+            name='head_mask',
+            shape=[layer_num, head_num],
+            dtype='float32',
+            persistable=True)
+        feed_num = _feed_op_num(program)
+        fill_constant_op(
+            block,
+            feed_num, [layer_num, head_num],
+            1.0,
+            out=head_mask,
+            stop_gradient=False)
+        head_mask = unsqueeze_op(
+            block, -1,
+            unsqueeze_op(block, -1,
+                         unsqueeze_op(block, 1, head_mask, feed_num + 1),
+                         feed_num + 2), feed_num + 3)
 
-    intermediate_weight = []
-    intermediate_bias = []
-    output_weight = []
+        for pattern_name, pattern in patterns.items():
+            if 'MHA' in pattern_name:
+                block_num = int(pattern_name.split('$')[-1])
+                for op in pattern:
+                    if op.type() == 'softmax':
+                        var_name = op._op.output_arg_names[0]
+                        next_op = find_next_ops(block, var_name)
+                        if next_op[0].type == 'dropout':
+                            op = next_op[0]
+                        insert_eltmul_op(block, op, head_mask, block_num)
+        logits = block.var(fetch_list[0])
+        labels = block.create_var(
+            name=label_name, shape=[-1, 1], dtype='int64', persistable=False)
+        labels = feed_op(block, feed_num, labels)
+        ce_loss, probs = softmax_with_cross_entropy_op(
+            block, logits=logits, labels=labels)
+        loss = mean_op(block, ce_loss)
 
-    fetch_list = ['head_mask@GRAD']
-    ### append weight name to fetch list
-    for l, wp in ffn_weight.items():
-        intermediate_weight.append(wp['P1'][0])
-        intermediate_bias.append(wp['P1'][1])
-        output_weight.append(wp['P2'][0])
-    fetch_list.extend(intermediate_weight)
-    fetch_list.extend(intermediate_bias)
-    fetch_list.extend(output_weight)
+        program._sync_with_cpp()
+        paddle.static.append_backward(loss)
+        program._sync_with_cpp()
+        return program
 
-    for out_ws in [intermediate_weight, intermediate_bias, output_weight]:
-        for out_w in out_ws:
-            fetch_list.append(out_w + '@GRAD')
+    def compute_importance(self, exe, program, patterns, ffn_weight, layer_num,
+                           head_num, label_name, fetch_targets, dataloader):
+        program = self._program_add_mask(program, patterns, layer_num, head_num,
+                                         label_name, fetch_targets)
 
-    for w_name in intermediate_weight:
-        neuron_importance.append(
-            np.zeros(
-                shape=[program.global_block().var(w_name).shape[1]],
-                dtype='float32'))
+        ### define importance matrix
+        head_importance = np.zeros(shape=[layer_num, head_num], dtype='float32')
+        neuron_importance = []
 
-    exe.run(paddle.static.default_startup_program())
+        intermediate_weight = []
+        intermediate_bias = []
+        output_weight = []
 
-    ### need to send a dataloader with label
-    for batch_id, data in enumerate(dataloader()):
-        outs = exe.run(program, feed=data, fetch_list=fetch_list)
+        fetch_list = ['head_mask@GRAD']
+        ### append weight name to fetch list
+        for l, wp in ffn_weight.items():
+            intermediate_weight.append(wp['P1'][0])
+            intermediate_bias.append(wp['P1'][1])
+            output_weight.append(wp['P2'][0])
+        fetch_list.extend(intermediate_weight)
+        fetch_list.extend(intermediate_bias)
+        fetch_list.extend(output_weight)
 
-        hm_grad_value = outs.pop(0)
-        head_importance += np.abs(hm_grad_value)
-        part_len = int(len(outs) / 6)
-        t_intermediate_weight = outs[:part_len]
-        t_intermediate_bias = outs[part_len:2 * part_len]
-        t_output_weight = outs[2 * part_len:3 * part_len]
-        t_intermediate_weight_grad = outs[3 * part_len:4 * part_len]
-        t_intermediate_bias_grad = outs[4 * part_len:5 * part_len]
-        t_output_weight_grad = outs[5 * part_len:]
+        for out_ws in [intermediate_weight, intermediate_bias, output_weight]:
+            for out_w in out_ws:
+                fetch_list.append(out_w + '@GRAD')
 
-        for w1, w1_g, b1, b1_g, w2, w2_g, current_importance in zip(
-                t_intermediate_weight, t_intermediate_weight_grad,
-                t_intermediate_bias, t_intermediate_bias_grad, t_output_weight,
-                t_output_weight_grad, neuron_importance):
-            current_importance += np.abs(
-                (np.sum(w1 * w1_g, axis=0) + b1 * b1_g))
-            current_importance += np.abs(np.sum(w2 * w2_g, axis=1))
+        for w_name in intermediate_weight:
+            neuron_importance.append(
+                np.zeros(
+                    shape=[program.global_block().var(w_name).shape[1]],
+                    dtype='float32'))
 
-    return program, head_importance, neuron_importance
+        exe.run(paddle.static.default_startup_program())
 
+        ### need to send a dataloader with label
+        for batch_id, data in enumerate(dataloader()):
+            outs = exe.run(program, feed=data, fetch_list=fetch_list)
 
-### REORDER
-def reorder_head(scope, place, weight, head_num, idx):
-    qkv = weight['P1']
-    attn_out = weight['P2']
-    attn_out_t = scope.find_var(qkv[0]).get_tensor()
-    num_per_head = int(attn_out_t.shape()[0] / head_num)
+            hm_grad_value = outs.pop(0)
+            head_importance += np.abs(hm_grad_value)
+            part_len = int(len(outs) / 6)
+            t_intermediate_weight = outs[:part_len]
+            t_intermediate_bias = outs[part_len:2 * part_len]
+            t_output_weight = outs[2 * part_len:3 * part_len]
+            t_intermediate_weight_grad = outs[3 * part_len:4 * part_len]
+            t_intermediate_bias_grad = outs[4 * part_len:5 * part_len]
+            t_output_weight_grad = outs[5 * part_len:]
 
-    index = np.reshape(
-        np.take(
-            np.reshape(
-                np.arange(
-                    0, head_num * num_per_head, dtype='int64'),
-                (head_num, num_per_head)),
-            idx,
-            axis=0), (-1))
+            for w1, w1_g, b1, b1_g, w2, w2_g, current_importance in zip(
+                    t_intermediate_weight, t_intermediate_weight_grad,
+                    t_intermediate_bias, t_intermediate_bias_grad,
+                    t_output_weight, t_output_weight_grad, neuron_importance):
+                current_importance += np.abs(
+                    (np.sum(w1 * w1_g, axis=0) + b1 * b1_g))
+                current_importance += np.abs(np.sum(w2 * w2_g, axis=1))
 
-    def reorder_head_matrix(w_name, index, dim):
-        pd_w = scope.find_var(w_name).get_tensor()
-        np_w = np.array(pd_w)
+        return program, head_importance, neuron_importance
 
-        new_w = np.take(np_w, index, axis=dim)
-        pd_w.set(new_w, place)
+    ### REORDER
+    def _reorder_head(self, scope, place, weight, head_num, idx):
+        qkv = weight['P1']
+        attn_out = weight['P2']
+        attn_out_t = scope.find_var(qkv[0]).get_tensor()
+        num_per_head = int(attn_out_t.shape()[0] / head_num)
 
-    for w_idx, weight_name in enumerate(qkv):
-        if w_idx % 2 == 0:
-            ### reorder qkv weight 
-            reorder_head_matrix(weight_name, index, dim=1)
+        index = np.reshape(
+            np.take(
+                np.reshape(
+                    np.arange(
+                        0, head_num * num_per_head, dtype='int64'),
+                    (head_num, num_per_head)),
+                idx,
+                axis=0), (-1))
+
+        def reorder_head_matrix(w_name, index, dim):
+            pd_w = scope.find_var(w_name).get_tensor()
+            np_w = np.array(pd_w)
+
+            new_w = np.take(np_w, index, axis=dim)
+            pd_w.set(new_w, place)
+
+        for w_idx, weight_name in enumerate(qkv):
+            if w_idx % 2 == 0:
+                ### reorder qkv weight 
+                reorder_head_matrix(weight_name, index, dim=1)
+            else:
+                ### reorder qkv bias 
+                reorder_head_matrix(weight_name, index, dim=0)
+
+        ### reorder attention output weight 
+        reorder_head_matrix(attn_out[0], index, dim=0)
+
+    def _reorder_neuron(self, scope, place, weight, idx):
+        ffn_i = weight['P1']
+        ffn_o = weight['P2']
+
+        def reorder_neurons_matrix(w_name, index, dim):
+            pd_w = scope.find_var(w_name).get_tensor()
+            np_w = np.array(pd_w)
+
+            new_w = np.take(np_w, index, axis=dim)
+            pd_w.set(new_w, place)
+
+        reorder_neurons_matrix(ffn_i[0], idx, dim=1)
+        reorder_neurons_matrix(ffn_i[1], idx, dim=0)
+        reorder_neurons_matrix(ffn_o[0], idx, dim=0)
+
+    def reorder_neuron_head(self, scope, place, mha_weight, ffn_weight,
+                            head_importance, neuron_importance, head_num):
+        for layer, current_importance in enumerate(neuron_importance):
+            ### reorder heads
+            idx = np.argsort(head_importance[layer])[::-1]
+            self._reorder_head(scope, place, mha_weight[layer], head_num, idx)
+            ### reorder neurons
+            idx = np.argsort(current_importance)[::-1]
+            self._reorder_neuron(scope, place, ffn_weight[layer], idx)
+
+    def reorder(self, inference_program, scope, patterns, layer_num, head_num,
+                mha_weight, ffn_weight):
+        compute_program = inference_program.clone()
+
+        ###########################  COMPUTE IMPORTANCE  ################################
+        compute_program, head_importance, neuron_importance = self.compute_importance(
+            self.exe, compute_program, patterns, ffn_weight, layer_num,
+            head_num, self.label_name, self.fetch_targets, self.dataloader)
+
+        ###############################     REORDER    ##################################
+        self.reorder_neuron_head(scope, self.places, mha_weight, ffn_weight,
+                                 head_importance, neuron_importance, head_num)
+
+        return scope
+
+    ### PRUNE
+    def _update_input_mask_inputs(self, program, op, new_inputs_len):
+        input_var_name = op.input_arg_names
+        block = program.blocks[0]
+        var = block.var(input_var_name[0])
+        op.desc.set_input('X', input_var_name[:int(len(input_var_name) * 0.5)])
+
+    def _prune_weight(self, graph, scope, place, pruned_name, pruned_ratio):
+        param = graph.var(pruned_name)
+        _var = scope.find_var(param.name())
+        if _var is None:
+            return
+        param_t = _var.get_tensor()
+        pruned_ratio = [pruned_ratio[1]] if len(param_t.shape(
+        )) == 1 else pruned_ratio
+        pruned_shape = np.multiply(param_t.shape(), pruned_ratio)
+        pruned_shape = list(map(int, pruned_shape))
+        param.set_shape(pruned_shape)
+        if len(pruned_shape) == 2:
+            pruned_param = np.array(param_t)[:pruned_shape[0], :pruned_shape[1]]
         else:
-            ### reorder qkv bias 
-            reorder_head_matrix(weight_name, index, dim=0)
+            pruned_param = np.array(param_t)[:pruned_shape[0]]
+        param_t.set(pruned_param, place)
 
-    ### reorder attention output weight 
-    reorder_head_matrix(attn_out[0], index, dim=0)
+    def _prune_transformer(self, scope, place, graph, pruned_dict):
+        for name, value in pruned_dict.items():
+            ### prune weight
+            self._prune_weight(graph, scope, place, name, value)
+        graph.infer_shape()
+        return graph.program
 
+    def prune(self):
+        ### get input_mask op and start to prune input_mask op
+        if self.input_mask_op.type == 'stack':
+            self._update_input_mask_inputs(self.inference_program,
+                                           self.input_mask_op, self.width_mult)
 
-def reorder_neuron(scope, place, weight, idx):
-    ffn_i = weight['P1']
-    ffn_o = weight['P2']
+        pruned_params = []
+        pruned_ratio = []
+        for partern_weight in [self.mha_weight, self.ffn_weight]:
+            for block, part in partern_weight.items():
+                pruned_params.extend(part['P1'])
+                pruned_ratio.extend(len(part['P1']) * [[1.0, self.width_mult]])
+                pruned_params.extend(part['P2'])
+                pruned_ratio.extend(len(part['P2']) * [[self.width_mult, 1.0]])
+                if 'reshape_op' in part:
+                    for op in part['reshape_op']:
+                        origin_shape = op.attr('shape')
+                        pruned_shape = origin_shape
+                        if len(origin_shape) == 3:
+                            pruned_shape[-1] = int(origin_shape[-1] *
+                                                   self.width_mult)
+                            op.set_attr('shape', pruned_shape)
+                        elif len(origin_shape) == 4:
+                            pruned_shape[-2] = int(origin_shape[-2] *
+                                                   self.width_mult)
+                            op.set_attr('shape', pruned_shape)
+                        else:
+                            raise IndexError
+        pruned_dict = dict(zip(pruned_params, pruned_ratio))
 
-    def reorder_neurons_matrix(w_name, index, dim):
-        pd_w = scope.find_var(w_name).get_tensor()
-        np_w = np.array(pd_w)
-
-        new_w = np.take(np_w, index, axis=dim)
-        pd_w.set(new_w, place)
-
-    reorder_neurons_matrix(ffn_i[0], idx, dim=1)
-    reorder_neurons_matrix(ffn_i[1], idx, dim=0)
-    reorder_neurons_matrix(ffn_o[0], idx, dim=0)
-
-
-def reorder_neuron_head(scope, place, mha_weight, ffn_weight, head_importance,
-                        neuron_importance, head_num):
-    for layer, current_importance in enumerate(neuron_importance):
-        ### reorder heads
-        idx = np.argsort(head_importance[layer])[::-1]
-        reorder_head(scope, place, mha_weight[layer], head_num, idx)
-        ### reorder neurons
-        idx = np.argsort(current_importance)[::-1]
-        reorder_neuron(scope, place, ffn_weight[layer], idx)
-
-
-### PRUNE
-def update_input_mask_inputs(program, op, new_inputs_len):
-    input_var_name = op.input_arg_names
-    block = program.blocks[0]
-    var = block.var(input_var_name[0])
-    op.desc.set_input('X', input_var_name[:int(len(input_var_name) * 0.5)])
-
-
-def prune_weight(graph, scope, place, pruned_name, pruned_ratio):
-    param = graph.var(pruned_name)
-    _var = scope.find_var(param.name())
-    if _var is None:
-        return
-    param_t = _var.get_tensor()
-    pruned_ratio = [pruned_ratio[1]] if len(param_t.shape(
-    )) == 1 else pruned_ratio
-    pruned_shape = np.multiply(param_t.shape(), pruned_ratio)
-    pruned_shape = list(map(int, pruned_shape))
-    ###print(pruned_name, pruned_shape)
-    param.set_shape(pruned_shape)
-    if len(pruned_shape) == 2:
-        pruned_param = np.array(param_t)[:pruned_shape[0], :pruned_shape[1]]
-    else:
-        pruned_param = np.array(param_t)[:pruned_shape[0]]
-    param_t.set(pruned_param, place)
-
-
-def prune_transformer(scope, place, graph, pruned_dict):
-    for name, value in pruned_dict.items():
-        ### prune weight
-        prune_weight(graph, scope, place, name, value)
-    graph.infer_shape()
-    return graph.program
-
-
-def pruner_transformer(exe, places, inference_program, patterns, label_name,
-                       width_mult, fetch_targets, dataloader):
-    graph = GraphWrapper(inference_program)
-    input_mask_op = patterns['input_mask']
-    layer_num = int((len(patterns) - 1) / 2)
-    head_num = len(input_mask_op.input_arg_names)
-
-    mha_weight, ffn_weight = preprocess_transformer_patterns(patterns, graph)
-    scope = paddle.static.global_scope()
-    compute_program = inference_program.clone()
-    ###########################  COMPUTE IMPORTANCE  ################################
-    compute_program, head_importance, neuron_importance = compute_importance(
-        exe, compute_program, patterns, ffn_weight, layer_num, head_num,
-        label_name, fetch_targets, dataloader)
-
-    ###############################     REORDER    ##################################
-    reorder_neuron_head(scope, places, mha_weight, ffn_weight, head_importance,
-                        neuron_importance, head_num)
-
-    ############################### START TO PRUNE ##################################
-    ### get input_mask op and start to prune input_mask op
-    if input_mask_op.type == 'stack':
-        update_input_mask_inputs(inference_program, input_mask_op, width_mult)
-
-    ### need to send width
-    pruned_params = []
-    pruned_ratio = []
-    for partern in [mha_weight, ffn_weight]:
-        for block, part in partern.items():
-            pruned_params.extend(part['P1'])
-            pruned_ratio.extend(len(part['P1']) * [[1.0, width_mult]])
-            pruned_params.extend(part['P2'])
-            pruned_ratio.extend(len(part['P2']) * [[width_mult, 1.0]])
-            if 'reshape_op' in part:
-                for op in part['reshape_op']:
-                    origin_shape = op.attr('shape')
-                    pruned_shape = origin_shape
-                    if len(origin_shape) == 3:
-                        pruned_shape[-1] = int(origin_shape[-1] * width_mult)
-                        op.set_attr('shape', pruned_shape)
-                    elif len(origin_shape) == 4:
-                        pruned_shape[-2] = int(origin_shape[-2] * width_mult)
-                        op.set_attr('shape', pruned_shape)
-                    else:
-                        raise IndexError
-    pruned_dict = dict(zip(pruned_params, pruned_ratio))
-
-    ### start to prune weight
-    pruned_program = prune_transformer(scope, places, graph, pruned_dict)
-    return pruned_program
+        ### start to prune weight
+        pruned_program = self._prune_transformer(self.scope, self.places,
+                                                 self.graph, pruned_dict)
+        return pruned_program

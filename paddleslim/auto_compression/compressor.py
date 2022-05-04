@@ -366,7 +366,7 @@ class AutoCompression:
                     self._pruner.step()
 
                 if self.train_config.logging_iter is None:
-                    logging_iter = 1
+                    logging_iter = 10
                 else:
                     logging_iter = self.train_config.logging_iter
                 if batch_id % int(logging_iter) == 0:
@@ -394,6 +394,7 @@ class AutoCompression:
                                 program=test_program_info.program._program,
                                 model_path=os.path.join(self.save_dir,
                                                         'best_model'))
+                            best_metric = metric
                         if self.train_config.target_metric is not None:
                             if metric > float(self.train_config.target_metric):
                                 return
