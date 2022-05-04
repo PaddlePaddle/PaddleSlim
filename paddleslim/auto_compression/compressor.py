@@ -27,10 +27,10 @@ if platform.system().lower() == 'linux':
 from ..quant.quanter import convert
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
+from ..common.patterns import get_patterns
 from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program
 from .strategy_config import ProgramInfo, merge_config
-from .patterns import get_patterns
 from .auto_strategy import auto_prepare_strategy, get_final_quant_config
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -61,7 +61,10 @@ class AutoCompression:
         self.model_dir = model_dir
         self.model_filename = model_filename
         self.params_filename = params_filename
-        self.save_dir = save_dir + '_temp'
+        base_path = os.path.basename(os.path.normpath(save_dir))
+        parent_path = os.path.abspath(os.path.join(save_dir, os.pardir))
+        base_path = base_path + '_temp'
+        self.save_dir = os.path.join(parent_path, base_path)
         self.final_dir = save_dir
         self.strategy_config = strategy_config
         self.train_config = train_config
@@ -300,7 +303,7 @@ class AutoCompression:
                 self._places,
                 model_dir=self.model_dir,
                 quantize_model_path=os.path.join(
-                    self.save_dir, 'strategy_{}'.format(str(strategy_idx))),
+                    self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
                 eval_dataloader=self.eval_dataloader,
                 eval_function=self.eval_function,
@@ -327,7 +330,7 @@ class AutoCompression:
                 model_dir = self.model_dir
             else:
                 model_dir = os.path.join(
-                    model_dir, 'strategy_{}'.format(str(strategy_idx)))
+                    self.save_dir, 'strategy_{}'.format(str(strategy_idx)))
 
             [inference_program, feed_target_names, fetch_targets]= paddle.fluid.io.load_inference_model( \
                 dirname=model_dir, \

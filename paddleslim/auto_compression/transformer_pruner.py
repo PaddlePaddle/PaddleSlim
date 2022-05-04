@@ -15,10 +15,10 @@
 import logging
 import numpy as np
 import paddle
-from ..common.recover_program import recover_inference_program
 from ..core import GraphWrapper
 from ..common import get_logger
-from .transformer_pattern import preprocess_transformer_patterns
+from ..common.recover_program import recover_inference_program
+from ..common.transformer_pattern import preprocess_transformer_patterns
 
 _logger = get_logger(__name__, level=logging.INFO)
 

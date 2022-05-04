@@ -22,6 +22,8 @@ import paddle
 from ..core import GraphWrapper
 from .patterns_common import *
 
+__all__ = ['find_final_nodes', 'get_patterns']
+
 
 def find_final_nodes(program):
     final_nodes = []
@@ -35,12 +37,12 @@ def find_final_nodes(program):
                 if op.type() == 'batch_norm':
                     out_var = op.outputs('Y')
                 else:
-                    out_var = op.all_outpus()
+                    out_var = op.all_outputs()
                 final_nodes.extend(out_var)
     return final_nodes
 
 
-def is_mha(pattern_ops, pattern_ops_type):
+def _is_mha(pattern_ops, pattern_ops_type):
     if pattern_ops_type.count('softmax') != 1 or pattern_ops_type.count(
             'fetch') > 0:
         return False
@@ -55,7 +57,7 @@ def is_mha(pattern_ops, pattern_ops_type):
     return False
 
 
-def is_ffn(pattern_ops, pattern_ops_type):
+def _is_ffn(pattern_ops, pattern_ops_type):
     if pattern_ops_type.count('layer_norm') != 1:
         return False
 
@@ -78,6 +80,7 @@ def get_patterns(program, only_final_node=True):
     patterns = {}
     graph = GraphWrapper(program)
     block_num = 0
+    model_type = None
     for op in graph.ops():
         if op.type() == 'elementwise_add':
             inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
@@ -95,12 +98,12 @@ def get_patterns(program, only_final_node=True):
                     pattern_name = shortcut_start_op.type() + '$' + str(op.idx(
                     ))
 
-                    if is_mha(pattern_ops, pattern_ops_type):
+                    if _is_mha(pattern_ops, pattern_ops_type):
                         model_type = 'transformer'
                         pattern_name = 'MHA$' + str(block_num)
 
-                    if model_type == 'transformer' and is_ffn(pattern_ops,
-                                                              pattern_ops_type):
+                    if model_type == 'transformer' and _is_ffn(
+                            pattern_ops, pattern_ops_type):
                         pattern_name = 'FFN$' + str(block_num)
                         block_num += 1
 
