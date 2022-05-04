@@ -265,11 +265,7 @@ class AutoCompression:
 
         if strategy == 'ptq_hpo' and config.max_quant_count == 1 and platform.system(
         ).lower() == 'linux':
-            if self.eval_dataloader is not None:
-                ptq_loss = quant_post_hpo.g_min_emd_loss
-            else:
-                ### TODO: support use metric of eval_function to get ptq loss
-                ptq_loss = 0.1  ### placeholder
+            ptq_loss = quant_post_hpo.g_min_emd_loss
 
             final_quant_config = get_final_quant_config(ptq_loss)
             quant_strategy, quant_config = self._prepare_strategy(

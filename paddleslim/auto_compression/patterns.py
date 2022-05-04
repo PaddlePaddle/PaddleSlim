@@ -20,7 +20,6 @@ import warnings
 
 import paddle
 from ..core import GraphWrapper
-#from paddleslim.core import GraphWrapper
 from .patterns_common import *
 
 
@@ -41,7 +40,7 @@ def find_final_nodes(program):
     return final_nodes
 
 
-def get_patterns(program, model_type, only_final_node=False):
+def get_patterns(program, model_type, only_final_node=True):
     distill_node = []
     patterns = {}
     graph = GraphWrapper(program)

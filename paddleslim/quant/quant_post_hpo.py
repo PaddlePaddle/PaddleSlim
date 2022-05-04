@@ -285,14 +285,29 @@ def quantize(cfg):
         emd_loss = eval_quant_model()
     except:
         ### if eval_function is not None, use eval function provided by user.
-        ### TODO(ceci3): fix eval_function 
-        ###[inference_program, feed_target_names, fetch_targets]= paddle.fluid.io.load_inference_model( \
-        ###        dirname=model_dir, \
-        ###        model_filename=self.model_filename, params_filename=self.params_filename,
-        ###        executor=self._exe)
-        ###emd_loss = g_quant_config.eval_function(g_quant_config.executor, inference_program, feed_target_names, fetch_targets)
-        emd_loss = g_quant_config.eval_function()
-    print("emd loss: ", emd_loss, g_min_emd_loss)
+        float_scope = paddle.static.Scope()
+        quant_scope = paddle.static.Scope()
+        with paddle.static.scope_guard(float_scope):
+            [float_inference_program, feed_target_names, fetch_targets]= fluid.io.load_inference_model( \
+                    dirname=g_quant_config.model_filename, \
+                    model_filename=g_quant_config.model_filename, params_filename=g_quant_config.params_filename,
+                    executor=g_quant_config.executor)
+            float_metric = g_quant_config.eval_function(
+                g_quant_config.executor, float_inference_program,
+                feed_target_names, fetch_targets)
+
+        with paddle.static.scope_guard(quant_scope):
+            [quant_inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model( \
+                    dirname=g_quant_model_cache_path, \
+                    model_filename=g_quant_config.model_filename, params_filename=g_quant_config.params_filename,
+                    executor=g_quant_config.executor)
+            quant_metric = g_quant_config.eval_function(
+                g_quant_config.executor, inference_program, feed_target_names,
+                fetch_targets)
+
+        emd_loss = float(abs(float_metric - quant_metric)) / float_metric
+
+    print("emd loss: ", emd_loss)
     if emd_loss < g_min_emd_loss:
         g_min_emd_loss = emd_loss
         if os.path.exists(g_quant_config.quantize_model_path):
