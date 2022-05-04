@@ -49,7 +49,6 @@ class AutoCompression:
                  eval_callback=None,
                  eval_dataloader=None,
                  devices='gpu',
-                 model_type=None,
                  deploy_hardware='gpu'):
         ### model_dir(str): 模型路径
         ### model_filename(str): 模型文件名称
@@ -62,21 +61,26 @@ class AutoCompression:
         self.model_dir = model_dir
         self.model_filename = model_filename
         self.params_filename = params_filename
-        self.save_dir = save_dir
+        self.save_dir = save_dir + '_temp'
+        self.final_dir = save_dir
         self.strategy_config = strategy_config
         self.train_config = train_config
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
         self.eval_dataloader = eval_dataloader
-        self.model_type = model_type
+
+        paddle.enable_static()
 
         if deploy_hardware in TableLatencyPredictor.hardware_list:
             self.deploy_hardware = deploy_hardware
         else:
             self.deploy_hardware = None
 
-        paddle.enable_static()
+        self._exe, self._places = self._prepare_envs(devices)
+        self.model_type = self._get_model_type(self._exe, model_dir,
+                                               model_filename, params_filename)
+
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
 
@@ -91,12 +95,18 @@ class AutoCompression:
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
 
-        self._exe, self._places = self._prepare_envs(devices)
-
     def _prepare_envs(self, devices):
         places = paddle.device._convert_to_place(devices)
         exe = paddle.static.Executor(places)
         return exe, places
+
+    def _get_model_type(self, exe, model_dir, model_filename, params_filename):
+        [inference_program, _, _]= paddle.fluid.io.load_inference_model( \
+            dirname=model_dir, \
+            model_filename=model_filename, params_filename=params_filename,
+            executor=exe)
+        _, _, model_type = get_patterns(inference_program)
+        return model_type
 
     def _prepare_strategy(self, strategy_config):
         if not isinstance(strategy_config, list):
@@ -274,7 +284,7 @@ class AutoCompression:
                                           strategy_idx)
         old_model_path = os.path.join(
             self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
-        final_model_path = os.path.join(self.save_dir)
+        final_model_path = os.path.join(self.final_dir)
         shutil.move(old_model_path, final_model_path)
         os._exit(0)
 
@@ -325,6 +335,7 @@ class AutoCompression:
                 executor=self._exe)
 
             ### used to check whether the dataloader is right
+            self.metric_before_compressed = None
             if self.eval_function is not None and self.train_config.origin_metric is not None:
                 _logger.info("start to test metric before compress")
                 metric = self.eval_function(self._exe, inference_program,
@@ -338,9 +349,10 @@ class AutoCompression:
                           or check the origin_metric in train_config"
                                                                      .format(\
                           self.train_config.origin_metric, metric))
+                self.metric_before_compressed = metric
 
-            patterns, default_distill_node_pair = get_patterns(
-                inference_program, self.model_type)
+            patterns, default_distill_node_pair, _ = get_patterns(
+                inference_program)
 
             train_program_info, test_program_info = self._prepare_program(
                 inference_program, feed_target_names, fetch_targets, patterns,
@@ -383,25 +395,27 @@ class AutoCompression:
                             test_program_info.fetch_targets)
 
                         _logger.info(
-                            "epoch: {}, batch: {} metric of compressed model is: {}".
-                            format(epoch_id, batch_id, metric))
+                            "epoch: {}, batch: {} metric of compressed model is: {}, best metric of compressed model is {}".
+                            format(epoch_id, batch_id, metric, best_metric))
                         if metric > best_metric:
                             paddle.static.save(
                                 program=test_program_info.program._program,
                                 model_path=os.path.join(self.save_dir,
                                                         'best_model'))
                             best_metric = metric
+                            if self.metric_before_compressed is not None and float(
+                                    abs(best_metric -
+                                        self.metric_before_compressed)
+                            ) / self.metric_before_compressed <= 0.005:
+                                break
                         if self.train_config.target_metric is not None:
                             if metric > float(self.train_config.target_metric):
-                                return
+                                break
 
                     else:
                         raise NotImplementedError(
                             "Please support eval function")
 
-                paddle.static.save(
-                    program=test_program_info.program._program,
-                    model_path=os.path.join(self.save_dir, 'best_model'))
         return test_program_info
 
     def _save_model(self, test_program_info, strategy, strategy_idx):

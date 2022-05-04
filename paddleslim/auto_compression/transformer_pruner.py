@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import numpy as np
 import paddle
-from paddleslim.common.recover_program import recover_inference_program
-from paddleslim.core import GraphWrapper
+from ..common.recover_program import recover_inference_program
+from ..core import GraphWrapper
+from ..common import get_logger
 from .transformer_pattern import preprocess_transformer_patterns
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 global_idx = 0
 
@@ -208,14 +212,14 @@ def mean_op(block, inputs, axis=None, keepdim=False):
 
 
 class TransformerPruner:
-    def __init__(self, exe, places, inference_program, patterns, label_name,
+    def __init__(self, exe, places, inference_program, patterns, label_info,
                  width_mult, fetch_targets, dataloader):
         self.exe = exe
         self.places = places
         self.inference_program = inference_program
         self.graph = GraphWrapper(inference_program)
         self.patterns = patterns
-        self.label_name = label_name
+        self.label_info = label_info
         self.width_mult = width_mult
         self.fetch_targets = fetch_targets
         self.dataloader = dataloader
@@ -227,6 +231,7 @@ class TransformerPruner:
         self.mha_weight = mha_weight
         self.ffn_weight = ffn_weight
 
+        _logger.info("start to reorder weight in program")
         self.scope = self.reorder(inference_program, self.scope, patterns,
                                   layer_num, head_num, mha_weight, ffn_weight)
 
@@ -240,7 +245,7 @@ class TransformerPruner:
         return input_mask_op, layer_num, head_num, mha_weight, ffn_weight
 
     def _program_add_mask(self, program, patterns, layer_num, head_num,
-                          label_name, fetch_targets):
+                          label_info, fetch_targets):
         fetch_list = []
         for ft in fetch_targets:
             fetch_list.append(ft.name)
@@ -276,7 +281,10 @@ class TransformerPruner:
                         insert_eltmul_op(block, op, head_mask, block_num)
         logits = block.var(fetch_list[0])
         labels = block.create_var(
-            name=label_name, shape=[-1, 1], dtype='int64', persistable=False)
+            name=label_info['name'],
+            shape=label_info['shape'],
+            dtype=label_info['dtype'],
+            persistable=False)
         labels = feed_op(block, feed_num, labels)
         ce_loss, probs = softmax_with_cross_entropy_op(
             block, logits=logits, labels=labels)
@@ -288,9 +296,9 @@ class TransformerPruner:
         return program
 
     def compute_importance(self, exe, program, patterns, ffn_weight, layer_num,
-                           head_num, label_name, fetch_targets, dataloader):
+                           head_num, label_info, fetch_targets, dataloader):
         program = self._program_add_mask(program, patterns, layer_num, head_num,
-                                         label_name, fetch_targets)
+                                         label_info, fetch_targets)
 
         ### define importance matrix
         head_importance = np.zeros(shape=[layer_num, head_num], dtype='float32')
@@ -412,7 +420,7 @@ class TransformerPruner:
         ###########################  COMPUTE IMPORTANCE  ################################
         compute_program, head_importance, neuron_importance = self.compute_importance(
             self.exe, compute_program, patterns, ffn_weight, layer_num,
-            head_num, self.label_name, self.fetch_targets, self.dataloader)
+            head_num, self.label_info, self.fetch_targets, self.dataloader)
 
         ###############################     REORDER    ##################################
         self.reorder_neuron_head(scope, self.places, mha_weight, ffn_weight,

@@ -40,7 +40,40 @@ def find_final_nodes(program):
     return final_nodes
 
 
-def get_patterns(program, model_type, only_final_node=True):
+def is_mha(pattern_ops, pattern_ops_type):
+    if pattern_ops_type.count('softmax') != 1 or pattern_ops_type.count(
+            'fetch') > 0:
+        return False
+
+    matmul_num = 0
+    for op in pattern_ops:
+        if op.type() in ['matmul', 'matmul_v2']:
+            if not is_dynamic_weight_op(op):
+                matmul_num += 1
+    if matmul_num == 2:
+        return True
+    return False
+
+
+def is_ffn(pattern_ops, pattern_ops_type):
+    if pattern_ops_type.count('layer_norm') != 1:
+        return False
+
+    linear_num = 0
+    act_num = 0
+    for op in pattern_ops:
+        if op.type() in ['mul', 'matmul', 'matmul_v2']:
+            if is_dynamic_weight_op(op):
+                linear_num += 1
+        if op.type() in ['relu', 'gelu']:
+            act_num += 1
+    if linear_num == 2 and act_num == 1:
+        return True
+
+    return False
+
+
+def get_patterns(program, only_final_node=True):
     distill_node = []
     patterns = {}
     graph = GraphWrapper(program)
@@ -53,9 +86,27 @@ def get_patterns(program, model_type, only_final_node=True):
                 shortcut_start_op = []
                 is_sc = is_shortcut(op, graph, sc_path, shortcut_start_op)
                 if is_sc:
+                    out_var_name = op.all_outputs()[0]._var.name
+
                     shortcut_start_op = shortcut_start_op[0]
                     pattern_ops, pattern_ops_type = bfs(shortcut_start_op,
                                                         graph, op.idx())
+
+                    pattern_name = shortcut_start_op.type() + '$' + str(op.idx(
+                    ))
+
+                    if is_mha(pattern_ops, pattern_ops_type):
+                        model_type = 'transformer'
+                        pattern_name = 'MHA$' + str(block_num)
+
+                    if model_type == 'transformer' and is_ffn(pattern_ops,
+                                                              pattern_ops_type):
+                        pattern_name = 'FFN$' + str(block_num)
+                        block_num += 1
+
+                        if not only_final_node:
+                            distill_node.append('teacher_' + out_var_name)
+                            distill_node.append(out_var_name)
 
                     if model_type == 'transformer' and 'fetch' in pattern_ops_type:
                         if 'input_mask' not in patterns:
@@ -64,22 +115,11 @@ def get_patterns(program, model_type, only_final_node=True):
                     if 'fetch' in pattern_ops_type:
                         continue
 
-                    out_var_name = op.all_outputs()[0]._var.name
-                    if model_type == 'transformer':
-                        if 'softmax' in pattern_ops_type:
-                            patterns['MHA$' + str(block_num)] = pattern_ops
-                        else:  ##### is FFN
-                            patterns['FFN$' + str(block_num)] = pattern_ops
-                            block_num += 1
-                            if not only_final_node:
-                                distill_node.append('teacher_' + out_var_name)
-                                distill_node.append(out_var_name)
-                    else:
-                        patterns[shortcut_start_op.type() + '$' + str(op.idx(
-                        ))] = pattern_ops
-                        if not only_final_node:
-                            distill_node.append('teacher_' + out_var_name)
-                            distill_node.append(out_var_name)
+                    patterns[pattern_name] = pattern_ops
+
+                    if model_type != 'transformer' and (not only_final_node):
+                        distill_node.append('teacher_' + out_var_name)
+                        distill_node.append(out_var_name)
 
     ### add the output of final weight node to distill node
     final_weight_node = find_final_nodes(program)
@@ -87,4 +127,4 @@ def get_patterns(program, model_type, only_final_node=True):
         distill_node.append('teacher_' + out_var.name())
         distill_node.append(out_var.name())
 
-    return patterns, distill_node
+    return patterns, distill_node, model_type

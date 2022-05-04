@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from paddleslim.core import GraphWrapper
+from ..core import GraphWrapper
 from .patterns_common import *
 
 __all__ = ['preprocess_transformer_patterns']

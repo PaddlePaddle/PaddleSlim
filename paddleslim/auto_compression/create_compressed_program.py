@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import numpy as np
 import paddle
 import paddle.distributed.fleet as fleet
 import paddle.optimizer as optimizer
@@ -325,16 +326,19 @@ def build_quant_program(executor, place, config, train_program_info,
     return train_program_info, test_program_info, config
 
 
-def _get_label_name(dataloader, feed_target_names):
-    label_name = None
+def _get_label_info(dataloader, feed_target_names):
+    label_info = {}
     for data in dataloader():
         for key, value in data[0].items():
             if key in feed_target_names:
                 continue
-            label_name = key
+            label_info['name'] = key
+            label_info['dtype'] = np.array(value).dtype
+            label_info['shape'] = list(np.array(value).shape)
+            label_info['shape'][0] = -1
             break
         break
-    return label_name
+    return label_info
 
 
 def build_prune_program(executor,
@@ -400,16 +404,16 @@ def build_prune_program(executor,
         elif config['prune_algo'] == 'transformer_pruner':
             from .transformer_pruner import TransformerPruner
             assert eval_dataloader is not None, "transformer_pruner must set eval_dataloader"
-            label_name = _get_label_name(eval_dataloader,
+            label_info = _get_label_info(eval_dataloader,
                                          train_program_info.feed_target_names)
-            assert label_name is not None, \
+            assert len(label_info) != 0, \
                 "maybe something wrong in get label name from eval_dataloader, please check your eval_dataloader"
             pruner = TransformerPruner(
                 executor,
                 place,
                 train_program_info.program,
                 patterns,
-                label_name,
+                label_info,
                 width_mult=(1.0 - config['prune_ratio']),
                 dataloader=eval_dataloader,
                 fetch_targets=train_program_info.fetch_targets)
