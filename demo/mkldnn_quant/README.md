@@ -117,9 +117,9 @@ val/ILSVRC2012_val_00000002.jpg 0
 #### 准备预测推理库
 
 用户可以从源码编译Paddle推理库，也可以直接下载推理库。
-- 用户可以从Paddle源码编译Paddle推理库，参考[从源码编译](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html#id12)，使用release/2.0以上版本。
+- 用户可以从Paddle源码编译Paddle推理库，参考[从源码编译](https://paddleinference.paddlepaddle.org.cn/user_guides/source_compile.html)，使用release/2.0以上版本。
 
-- 用户也可以从Paddle官网下载发布的[预测库](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html)。请选择`ubuntu14.04_cpu_avx_mkl` 最新发布版或者develop版。
+- 用户也可以从Paddle官网下载发布的[预测库](https://paddleinference.paddlepaddle.org.cn/user_guides/download_lib.html)。请选择最新发布版或者develop版。
 
 
 #### 编译应用

@@ -1,6 +1,6 @@
 # 目标检测模型量化教程
 
-教程内容请参考：https://github.com/PaddlePaddle/PaddleDetection/blob/release/0.2/slim/quantization/README.md
+教程内容请参考：https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.4/static/slim/quantization/README.md
 
 
 ## 示例结果
