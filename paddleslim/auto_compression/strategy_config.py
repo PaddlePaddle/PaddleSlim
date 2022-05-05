@@ -82,7 +82,7 @@ HyperParameterOptimization.__new__.__defaults__ = (None, ) * (
 ### Prune
 Prune = namedtuple("Prune", [
     "prune_algo",
-    "prune_ratio",
+    "pruned_ratio",
     "prune_params_name",
     "criterion",
 ])
@@ -93,7 +93,7 @@ UnstructurePrune = namedtuple("UnstructurePrune", [
     "prune_strategy",
     "prune_mode",
     "threshold",
-    "prune_ratio",
+    "pruned_ratio",
     "gmp_config",
     "prune_params_type",
     "local_sparsity",

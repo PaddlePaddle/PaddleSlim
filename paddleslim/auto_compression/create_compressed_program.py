@@ -354,7 +354,7 @@ def build_prune_program(executor,
             pruner = UnstructuredPruner(
                 train_program_info.program,
                 mode=config['prune_mode'],
-                ratio=config['prune_ratio'],
+                ratio=config['pruned_ratio'],
                 threshold=config['threshold'],
                 prune_params_type=config['prune_params_type'],
                 place=place,
@@ -362,7 +362,7 @@ def build_prune_program(executor,
         elif config["prune_strategy"] == "gmp":
             pruner = GMPUnstructuredPruner(
                 train_program_info.program,
-                ratio=config['prune_ratio'],
+                ratio=config['pruned_ratio'],
                 prune_params_type=config['prune_params_type'],
                 place=place,
                 local_sparsity=config['local_sparsity'],
@@ -384,7 +384,7 @@ def build_prune_program(executor,
                 train_program_info.program,
                 paddle.static.global_scope(),
                 params=params,
-                ratios=[config['prune_ratio']] * len(params),
+                ratios=[config['pruned_ratio']] * len(params),
                 place=place)
             train_program_info.program = pruned_program
 
@@ -414,7 +414,7 @@ def build_prune_program(executor,
                 train_program_info.program,
                 patterns,
                 label_info,
-                width_mult=(1.0 - config['prune_ratio']),
+                width_mult=(1.0 - config['pruned_ratio']),
                 dataloader=eval_dataloader,
                 fetch_targets=train_program_info.fetch_targets)
             pruned_program = pruner.prune()
