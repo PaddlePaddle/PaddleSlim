@@ -21,6 +21,7 @@ __all__ = [
     "auto_prepare_strategy", "create_strategy_config", "get_final_quant_config"
 ]
 
+### config tester to test the loss of quant_post
 hpo_config_tester = {
     "ptq_algo": ["avg"],
     "weight_quantize_type": ['channel_wise_abs_max', 'abs_max'],
@@ -29,6 +30,7 @@ hpo_config_tester = {
     "max_quant_count": 1,
 }
 
+### default hpo config
 default_hpo_config = {
     "ptq_algo": ["KL", "hist", "avg", "mse"],
     "weight_quantize_type": ['channel_wise_abs_max', 'abs_max'],
@@ -38,6 +40,7 @@ default_hpo_config = {
     "max_quant_count": 20,
 }
 
+### default quant config, can be used by ptq&hpo and qat&distillation
 default_quant_config = {
     'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul', 'matmul'],
     'weight_bits': 8,
@@ -46,14 +49,15 @@ default_quant_config = {
 
 
 def create_strategy_config(strategy_str, model_type):
+    """ create config according to string"""
     tmp_s = strategy_str.split('_')
     configs = []
-    ### only quant
+
     dis_config = Distillation()
     if len(tmp_s) == 3:
         tmp_s[0] = tmp_s[0].replace('prune', 'Prune')
         tmp_s[0] = tmp_s[0].replace('sparse', 'UnstructurePrune')
-        ### TODO(ceci3): auto chooice prune algo
+        ### TODO(ceci3): auto choose prune algo
         default_prune_config = {
             'prune_ratio': float(tmp_s[1]),
             'prune_algo': 'prune',
@@ -64,8 +68,10 @@ def create_strategy_config(strategy_str, model_type):
         prune_config = eval(tmp_s[0])(**default_prune_config)
         configs.append({tmp_s[0]: prune_config, 'Distillation': dis_config})
 
+    ### TODO(ceci3): support skip some layer and full quant
     if tmp_s[-1] == 'int8':
-        ### TODO(ceci3): support skip some layer and full quant
+        ### only platform is linux can use smac to do hyperparameter optimization
+        ### choose quant_aware to do quantization in other platform
         if platform.system().lower() == 'linux':
             quant_config = Quantization(**default_quant_config)
             hpo_config = HyperParameterOptimization(**hpo_config_tester)
@@ -76,10 +82,10 @@ def create_strategy_config(strategy_str, model_type):
         else:
             quant_config = Quantization(**default_quant_config)
             dis_config = Distillation()
-            configs = [{
+            configs.append({
                 'Quantization': quant_config,
                 'Distillation': dis_config
-            }]
+            })
 
     return configs
 
@@ -90,11 +96,13 @@ def auto_prepare_strategy(model_dir,
                           target_speedup=None,
                           deploy_hardware=None,
                           model_type=None):
+    """ prepare compression config automatically """
     final_strategy = None
 
     model_file = os.path.join(model_dir, model_filename)
     param_file = os.path.join(model_dir, params_filename)
 
+    ### use hardware latency tabel if support
     if deploy_hardware is not None:
         compressed_time_dict = predict_compressed_model(
             model_file, param_file, hardware=deploy_hardware)
@@ -104,8 +112,7 @@ def auto_prepare_strategy(model_dir,
         for strategy, latency in compressed_time_dict.items():
             speedup_ratio[strategy] = 1.0 - float(latency) / baseline
 
-        sorted_speedup_ratio = sorted(
-            speedup_ratio.items(), key=lambda x: x[1])  #, reverse=True)
+        sorted_speedup_ratio = sorted(speedup_ratio.items(), key=lambda x: x[1])
 
         ### if target speedup is None, choose strategy by experience.
         if target_speedup is None:
@@ -124,6 +131,7 @@ def auto_prepare_strategy(model_dir,
                 if abs(ratio - target_speedup) <= 0.1:
                     candidate_s.append(strategy)
                 ### if there is no strategy satisfy target speedup
+                ### choose the most recent speedup 
                 if ratio > target_speedup and len(candidate_s) == 0:
                     candidate_s.append(pre_s)
                     candidate_s.append(strategy)
@@ -143,7 +151,7 @@ def auto_prepare_strategy(model_dir,
                     final_strategy = candidate_ratio[0]
 
     else:
-        ### default quant speedup ratio is 70% compare to fp32
+        ### default speedup ratio of quantization is 70% compare to fp32
         ### TODO(ceci3): full quant or skip some layer later
         if target_speedup is None:
             if model_type == 'transformer':
@@ -166,6 +174,7 @@ def auto_prepare_strategy(model_dir,
 
 
 def get_final_quant_config(ptq_loss):
+    """ transform quantization tester config to real quantization config """
     ### TODO: 0.03 threshold maybe not suitable, need to check
     if ptq_loss <= 0.03:
         quant_config = Quantization(**default_quant_config)

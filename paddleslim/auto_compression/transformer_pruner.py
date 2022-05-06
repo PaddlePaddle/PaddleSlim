@@ -27,6 +27,7 @@ global_idx = 0
 
 ### start to create trainable program with head mask
 def _feed_op_num(program):
+    """ Get the numeber of feed op """
     num = 0
     for block in program.blocks:
         ops = list(block.ops)
@@ -48,6 +49,7 @@ def find_next_ops(block, var_name):
 
 
 def insert_eltmul_op(block, op, head_mask, block_num):
+    """ Insert elementwise mul op to matmul input_mask and head_mask to program"""
     op_idx = block.ops.index(op)
     var_name = op.output_arg_names
     for var_name in op.output_arg_names:
@@ -83,6 +85,7 @@ def fill_constant_op(block,
                      force_cpu=False,
                      out=None,
                      stop_gradient=True):
+    """ Insert fill_constant op to program"""
     block._insert_op(
         op_idx,
         type='fill_constant',
@@ -98,6 +101,7 @@ def fill_constant_op(block,
 
 
 def unsqueeze_op(block, axis, inputs, op_idx):
+    """ Insert unsqueeze op to program"""
     out_name = inputs.name
     out_shape = list(inputs.shape)
     out_shape.insert(axis, 1)
@@ -117,6 +121,7 @@ def unsqueeze_op(block, axis, inputs, op_idx):
 
 
 def feed_op(block, op_idx, out):
+    """ Insert feed op to program"""
     feed_var = block.var('feed')
 
     block._prepend_op(
@@ -129,6 +134,7 @@ def feed_op(block, op_idx, out):
 
 
 def slice_op(block, axis, inputs, op_idx):
+    """ Insert slice op to program"""
     out_name = inputs.name
     out_shape = list(inputs.shape)
     out_shape.pop(0)
@@ -154,6 +160,7 @@ def slice_op(block, axis, inputs, op_idx):
 
 
 def softmax_with_cross_entropy_op(block, logits, labels):
+    """ Insert softmax_with_cross_entropy op to program"""
     global global_idx
     softmax = block.create_var(
         name='{}.sce.softmax_tmp_{}'.format(logits.name, global_idx),
@@ -181,6 +188,7 @@ def softmax_with_cross_entropy_op(block, logits, labels):
 
 
 def mean_op(block, inputs, axis=None, keepdim=False):
+    """ Insert mean op to program"""
     global global_idx
 
     if isinstance(axis, int):
@@ -236,6 +244,7 @@ class TransformerPruner:
                                   layer_num, head_num, mha_weight, ffn_weight)
 
     def _preprocess_patterns(self, patterns, graph):
+        """ Preprocess pattern of the program, get some info need by reorder"""
         input_mask_op = patterns['input_mask']
         layer_num = int((len(patterns) - 1) / 2)
         head_num = len(input_mask_op.input_arg_names)
@@ -246,6 +255,7 @@ class TransformerPruner:
 
     def _program_add_mask(self, program, patterns, layer_num, head_num,
                           label_info, fetch_targets):
+        """ Add head mask for program to compute the importance of weight and head """
         fetch_list = []
         for ft in fetch_targets:
             fetch_list.append(ft.name)
@@ -297,6 +307,8 @@ class TransformerPruner:
 
     def compute_importance(self, exe, program, patterns, ffn_weight, layer_num,
                            head_num, label_info, fetch_targets, dataloader):
+        """ Compute weight importance according weights and gradients of weight
+            Compute head importance according gradients of head_mask"""
         program = self._program_add_mask(program, patterns, layer_num, head_num,
                                          label_info, fetch_targets)
 
@@ -356,6 +368,7 @@ class TransformerPruner:
 
     ### REORDER
     def _reorder_head(self, scope, place, weight, head_num, idx):
+        """ Start to reorder head according to importance"""
         qkv = weight['P1']
         attn_out = weight['P2']
         attn_out_t = scope.find_var(qkv[0]).get_tensor()
@@ -389,6 +402,7 @@ class TransformerPruner:
         reorder_head_matrix(attn_out[0], index, dim=0)
 
     def _reorder_neuron(self, scope, place, weight, idx):
+        """ Start to weight according to importance"""
         ffn_i = weight['P1']
         ffn_o = weight['P2']
 
@@ -405,6 +419,7 @@ class TransformerPruner:
 
     def reorder_neuron_head(self, scope, place, mha_weight, ffn_weight,
                             head_importance, neuron_importance, head_num):
+        """ Start to weight and head according to importance"""
         for layer, current_importance in enumerate(neuron_importance):
             ### reorder heads
             idx = np.argsort(head_importance[layer])[::-1]
@@ -430,12 +445,15 @@ class TransformerPruner:
 
     ### PRUNE
     def _update_input_mask_inputs(self, program, op, new_inputs_len):
+        """ Prune input mask op """
         input_var_name = op.input_arg_names
         block = program.blocks[0]
         var = block.var(input_var_name[0])
-        op.desc.set_input('X', input_var_name[:int(len(input_var_name) * 0.5)])
+        op.desc.set_input(
+            'X', input_var_name[:int(len(input_var_name) * new_inputs_len)])
 
     def _prune_weight(self, graph, scope, place, pruned_name, pruned_ratio):
+        """ Prune every weight in program """
         param = graph.var(pruned_name)
         _var = scope.find_var(param.name())
         if _var is None:
@@ -453,6 +471,7 @@ class TransformerPruner:
         param_t.set(pruned_param, place)
 
     def _prune_transformer(self, scope, place, graph, pruned_dict):
+        """ Prune transformer program """
         for name, value in pruned_dict.items():
             ### prune weight
             self._prune_weight(graph, scope, place, name, value)

@@ -42,22 +42,60 @@ class AutoCompression:
                  model_filename,
                  params_filename,
                  save_dir,
-                 train_config,
                  train_dataloader,
+                 train_config=None,
                  strategy_config=None,
                  target_speedup=None,
                  eval_callback=None,
                  eval_dataloader=None,
-                 devices='gpu',
                  deploy_hardware='gpu'):
-        ### model_dir(str): 模型路径
-        ### model_filename(str): 模型文件名称
-        ### params_filename(str): 参数文件名称
-        ### save_dir(str): 压缩后模型保存的路径
-        ### strategy_config(dict[dict]): 压缩策略配置, 包括量化配置、蒸馏配置
-        ### train_config(dict): 训练配置
-        ### train_dataloader(paddle.nn.Dataloader): 训练数据dataloader
-        ### eval_callback(function，paddle.nn.Dataloader): eval回调函数，和测试数据之间必须传入一个，如果传入回调函数，则使用回调函数判断模型训练情况。callback传入predict结果（paddle的tensor），默认：None。
+        """
+        Compress inference model automatically.
+
+        Args:
+            model_dir(str): The path of inference model that will be compressed, and
+                the model and params that saved by ``paddle.static.io.save_inference_model``
+                are under the path.
+            model_filename(str, optional):  The name of model file. If parameters
+                are saved in separate files, set it as 'None'. Default: 'None'.
+            params_filename(str, optional): The name of params file.
+                When all parameters are saved in a single file, set it
+                as filename. If parameters are saved in separate files,
+                set it as 'None'. Default : 'None'.
+            save_dir(str): The path to save compressed model.
+            train_data_loader(Python Generator, Paddle.io.DataLoader): The
+                Generator or Dataloader provides train data, and it could
+                return a batch every time.
+            train_config(dict, optional): The train config in the compression process, the key can 
+                reference `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L103>`_ . 
+                Only one strategy(quant_post with hyperparameter optimization) can set train_config 
+                to None. Default: None. 
+            strategy_config(dict, list(dict), optional): The strategy config. You can set single config to get multi-strategy config, such as
+                1. set ``Quantization`` and ``Distillation`` to get quant_aware and distillation compress config.
+                    The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                2. set ``Quantization`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
+                    The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
+                    The HyperParameterOptimization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L73`_ .
+                3. set ``Prune`` and ``Distillation`` to get prune and distillation compress config.
+                    The Prune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                4. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
+                    The UnstructurePrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L91`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                5. set ``Distillation`` to use one teacher modol to distillation student model.
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                6. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
+                    The MultiTeacherDistillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L56`_ .
+
+                If set to None, will choose a strategy automatically. Default: None.
+            target_speedup(float, optional): target speedup ratio by the way of auto compress. Default: None.
+            eval_callback(function, optional): eval function, define by yourself to return the metric of the inference program, can be used to judge the metric of compressed model. The documents of how to write eval function is `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/auto-compression/custom_function.rst`_ . ``eval_callback`` and ``eval_dataloader`` cannot be None at the same time. Dafault: None.
+            eval_dataloader(paddle.io.Dataloader, optional):  The
+                 Generator or Dataloader provides eval data, and it could
+                 return a batch every time. ``eval_callback`` and ``eval_dataloader`` cannot be None at the same time. Dafault: None.
+            deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
+        """
         self.model_dir = model_dir
         self.model_filename = model_filename
         self.params_filename = params_filename
@@ -80,7 +118,7 @@ class AutoCompression:
         else:
             self.deploy_hardware = None
 
-        self._exe, self._places = self._prepare_envs(devices)
+        self._exe, self._places = self._prepare_envs()
         self.model_type = self._get_model_type(self._exe, model_dir,
                                                model_filename, params_filename)
 
@@ -98,7 +136,8 @@ class AutoCompression:
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
 
-    def _prepare_envs(self, devices):
+    def _prepare_envs(self):
+        devices = paddle.device.get_device().split(':')[0]
         places = paddle.device._convert_to_place(devices)
         exe = paddle.static.Executor(places)
         return exe, places
