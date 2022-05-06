@@ -1,0 +1,61 @@
+Distillation:
+  distill_lambda: 1.0
+  distill_loss: l2_loss
+  distill_node_pair: 
+  - teacher_reshape2_1.tmp_0 
+  - reshape2_1.tmp_0
+  - teacher_reshape2_3.tmp_0 
+  - reshape2_3.tmp_0
+  - teacher_reshape2_5.tmp_0 
+  - reshape2_5.tmp_0
+  - teacher_reshape2_7.tmp_0 #block1
+  - reshape2_7.tmp_0
+  - teacher_reshape2_9.tmp_0 
+  - reshape2_9.tmp_0
+  - teacher_reshape2_11.tmp_0 
+  - reshape2_11.tmp_0
+  - teacher_reshape2_13.tmp_0 
+  - reshape2_13.tmp_0
+  - teacher_reshape2_15.tmp_0 
+  - reshape2_15.tmp_0
+  - teacher_reshape2_17.tmp_0 
+  - reshape2_17.tmp_0
+  - teacher_reshape2_19.tmp_0 
+  - reshape2_19.tmp_0
+  - teacher_reshape2_21.tmp_0 
+  - reshape2_21.tmp_0
+  - teacher_depthwise_conv2d_14.tmp_0 # block2
+  - depthwise_conv2d_14.tmp_0
+  - teacher_depthwise_conv2d_15.tmp_0
+  - depthwise_conv2d_15.tmp_0
+  - teacher_reshape2_23.tmp_0 #block1
+  - reshape2_23.tmp_0
+  - teacher_relu_30.tmp_0 # final_conv
+  - relu_30.tmp_0 
+  - teacher_bilinear_interp_v2_1.tmp_0
+  - bilinear_interp_v2_1.tmp_0
+  merge_feed: true
+  teacher_model_dir: ./
+  teacher_model_filename: inference.pdmodel
+  teacher_params_filename: inference.pdiparams
+UnstructurePrune:
+  prune_strategy: gmp
+  prune_mode: ratio
+  pruned_ratio: 0.75
+  gmp_config: 
+    stable_iterations: 0
+    pruning_iterations: 4500
+    tunning_iterations: 4500
+    resume_iteration: -1
+    pruning_steps: 100
+    initial_ratio: 0.15
+  prune_params_type: conv1x1_only
+  local_sparsity: True
+TrainConfig:
+  epochs: 14
+  eval_iter: 400
+  learning_rate: 5.0e-03
+  optim_args:
+    weight_decay: 0.0005
+  optimizer: SGD
+  
