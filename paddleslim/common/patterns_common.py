@@ -7,7 +7,8 @@ ALL_WEIGHT_OP = [
 ]
 
 
-def bfs(op, graph, target_op_idx):
+def traversal_ops(op, graph, target_op_idx):
+    """ Get all operators in the multi-path from op to target op. """
     pattern_ops = []
     pattern_ops_type = []
     visited = []
@@ -31,8 +32,7 @@ def bfs(op, graph, target_op_idx):
 
 
 def find_weight_op(op, graph):
-    """ Find operators with weight.
-    """
+    """ Find operators with weight."""
     next_ops = sorted(graph.next_ops(op))
     for next_op in next_ops:
         if is_dynamic_weight_op(next_op):
@@ -42,6 +42,7 @@ def find_weight_op(op, graph):
 
 
 def get_weight(op, return_name=True):
+    """ get the weight of operators with weight."""
     for inp in op.all_inputs():
         if inp._var.persistable == True:
             if return_name:
@@ -63,6 +64,7 @@ def is_dynamic_weight_op(op):
 
 
 def is_output_weight_ops(op, graph):
+    """ Judge whether is the final op with weights in the graph """
     next_ops = sorted(graph.next_ops(op))
     for next_op in next_ops:
         if is_dynamic_weight_op(next_op):
@@ -72,6 +74,7 @@ def is_output_weight_ops(op, graph):
 
 
 def has_bias(op, graph):
+    """ Get the bias of the op if exists  """
     n_op = graph.next_ops(op)[0]
     if op.type() in ALL_WEIGHT_OP:
         if n_op.type() == 'elementwise_add':
@@ -82,6 +85,7 @@ def has_bias(op, graph):
 
 
 def _find_next_target_op(op, graph, target_op_idx, sc_path):
+    """ Find the target op from other branch in the shortcut """
     if op.idx() == target_op_idx:
         return True
     n_ops = graph.next_ops(op)

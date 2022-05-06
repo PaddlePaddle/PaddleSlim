@@ -151,7 +151,6 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function,
-        devices=args.devices)
+        eval_callback=eval_function)
 
     ac.compress()

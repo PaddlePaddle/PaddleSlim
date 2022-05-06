@@ -39,6 +39,7 @@ def _append_transformer_prune_params(op, graph, block_num, params_dict):
 
 
 def preprocess_transformer_patterns(patterns, graph):
+    """ """
     mha_weight = {}
     ffn_weight = {}
     for pattern_name, pattern_ops in patterns.items():

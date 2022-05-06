@@ -27,7 +27,6 @@ add_arg('model_dir',                   str,    None,         "inference model di
 add_arg('model_filename',              str,    None,         "inference model filename.")
 add_arg('params_filename',             str,    None,         "inference params filename.")
 add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
-add_arg('devices',                     str,    'gpu',        "which device used to compress.")
 add_arg('batch_size',                  int,    1,            "train batch size.")
 add_arg('task',                        str,    'sst-2',      "task name in glue.")
 add_arg('config_path',                 str,    None,         "path of compression strategy config.")
@@ -194,8 +193,6 @@ if __name__ == '__main__':
         eval_callback=eval_function
         if 'HyperParameterOptimization' not in compress_config else
         eval_dataloader,
-        eval_dataloader=eval_dataloader,
-        devices=args.devices,
-        model_type='transformer')
+        eval_dataloader=eval_dataloader)
 
     ac.compress()

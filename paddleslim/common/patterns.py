@@ -26,6 +26,7 @@ __all__ = ['find_final_nodes', 'get_patterns']
 
 
 def find_final_nodes(program):
+    """ Find the output of the final op with weights in the program """
     final_nodes = []
     graph = GraphWrapper(program)
     for op in sorted(graph.ops()):
@@ -43,6 +44,7 @@ def find_final_nodes(program):
 
 
 def _is_mha(pattern_ops, pattern_ops_type):
+    """ judge whether this pattern is multihead attention """
     if pattern_ops_type.count('softmax') != 1 or pattern_ops_type.count(
             'fetch') > 0:
         return False
@@ -58,6 +60,7 @@ def _is_mha(pattern_ops, pattern_ops_type):
 
 
 def _is_ffn(pattern_ops, pattern_ops_type):
+    """ judge whether this pattern is feed forward network """
     if pattern_ops_type.count('layer_norm') != 1:
         return False
 
@@ -76,6 +79,7 @@ def _is_ffn(pattern_ops, pattern_ops_type):
 
 
 def get_patterns(program, only_final_node=True):
+    """ distinguish the pattern in the program and get distillation node """
     distill_node = []
     patterns = {}
     graph = GraphWrapper(program)
@@ -92,8 +96,8 @@ def get_patterns(program, only_final_node=True):
                     out_var_name = op.all_outputs()[0]._var.name
 
                     shortcut_start_op = shortcut_start_op[0]
-                    pattern_ops, pattern_ops_type = bfs(shortcut_start_op,
-                                                        graph, op.idx())
+                    pattern_ops, pattern_ops_type = traversal_ops(
+                        shortcut_start_op, graph, op.idx())
 
                     pattern_name = shortcut_start_op.type() + '$' + str(op.idx(
                     ))

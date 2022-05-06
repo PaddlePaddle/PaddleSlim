@@ -13,17 +13,21 @@
 # limitations under the License.
 
 import os
+import logging
 import platform
+from ..common import get_logger
 from .utils.predict import predict_compressed_model
 from .strategy_config import *
 
+_logger = get_logger(__name__, level=logging.INFO)
+
 __all__ = [
-    "auto_prepare_strategy", "create_strategy_config", "get_final_quant_config"
+    "prepare_strategy", "create_strategy_config", "get_final_quant_config"
 ]
 
 ### config tester to test the loss of quant_post
 hpo_config_tester = {
-    "ptq_algo": ["avg"],
+    "ptq_algo": ["avg", "mse", "KL"],
     "weight_quantize_type": ['channel_wise_abs_max', 'abs_max'],
     "bias_correct": [False],
     "batch_num": [2, 3],
@@ -47,6 +51,18 @@ default_quant_config = {
     'activation_bits': 8
 }
 
+EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
+    'sparse_0.75_fp32', 'prune_0.3_fp32', 'origin_int8', 'sparse_0.75_int8',
+    'prune_0.3_int8'
+]
+MAGIC_SPARSE_RATIO = 0.75
+### TODO: 0.03 threshold maybe not suitable, need to check
+MAGIC_EMD_DISTANCE = 0.03
+
+DEFAULT_TRANSFORMER_STRATEGY = 'prune_0.25_int8'
+DEFAULT_STRATEGY = 'origin_int8'
+DEFAULT_QUANT_SPEEDUP = 0.7
+
 
 def create_strategy_config(strategy_str, model_type):
     """ create config according to string"""
@@ -59,7 +75,7 @@ def create_strategy_config(strategy_str, model_type):
         tmp_s[0] = tmp_s[0].replace('sparse', 'UnstructurePrune')
         ### TODO(ceci3): auto choose prune algo
         default_prune_config = {
-            'prune_ratio': float(tmp_s[1]),
+            'pruned_ratio': float(tmp_s[1]),
             'prune_algo': 'prune',
             'criterion': 'l1_norm'
         }
@@ -90,22 +106,22 @@ def create_strategy_config(strategy_str, model_type):
     return configs
 
 
-def auto_prepare_strategy(model_dir,
-                          model_filename,
-                          params_filename,
-                          target_speedup=None,
-                          deploy_hardware=None,
-                          model_type=None):
+def prepare_strategy(model_dir,
+                     model_filename,
+                     params_filename,
+                     target_speedup=None,
+                     deploy_hardware=None,
+                     model_type=None):
     """ prepare compression config automatically """
     final_strategy = None
-
-    model_file = os.path.join(model_dir, model_filename)
-    param_file = os.path.join(model_dir, params_filename)
 
     ### use hardware latency tabel if support
     if deploy_hardware is not None:
         compressed_time_dict = predict_compressed_model(
-            model_file, param_file, hardware=deploy_hardware)
+            model_dir,
+            model_filename,
+            params_filename,
+            hardware=deploy_hardware)
 
         baseline = compressed_time_dict['origin_fp32']
         speedup_ratio = {}
@@ -116,13 +132,14 @@ def auto_prepare_strategy(model_dir,
 
         ### if target speedup is None, choose strategy by experience.
         if target_speedup is None:
-            max_speedup_strategy = -1.0
-            for s in [
-                    'sparse_0.75_fp32', 'prune_0.3_fp32', 'origin_int8',
-                    'sparse_0.75_int8', 'prune_0.3_int8'
-            ]:
-                if speedup_ratio[s] > max_speedup_strategy:
-                    max_speedup_strategy = speedup_ratio[s]
+            max_speedup = -1.0
+            for s in EXPERIENCE_STRATEGY_WITHOUT_LOSS:
+                if s not in speedup_ratio:
+                    _logger.info(f"cannot get the speed up of strategy {s}")
+                    continue
+
+                if speedup_ratio[s] > max_speedup:
+                    max_speedup = speedup_ratio[s]
                     final_strategy = s
         else:
             candidate_s = []
@@ -133,34 +150,35 @@ def auto_prepare_strategy(model_dir,
                 ### if there is no strategy satisfy target speedup
                 ### choose the most recent speedup 
                 if ratio > target_speedup and len(candidate_s) == 0:
-                    candidate_s.append(pre_s)
+                    if pre_s is not None:
+                        candidate_s.append(pre_s)
                     candidate_s.append(strategy)
                 pre_s = strategy
 
             if 'origin_int8' in candidate_s:
                 final_strategy = candidate_s
             else:
-                candidate_ratio = sorted(
-                    candidate_s, key=lambda x: x.split('_')[1])
-                for c in candidate_ratio:
+                candidate_s = sorted(candidate_s, key=lambda x: x.split('_')[1])
+                for c in candidate_s:
                     if c.startswith('sparse') and float(c.split('_')[
-                            1]) <= 0.75:
+                            1]) <= MAGIC_SPARSE_RATIO:
                         final_strategy = c
 
                 if final_strategy is None:
-                    final_strategy = candidate_ratio[0]
+                    final_strategy = candidate_s[0]
 
+    ### if deploy_hardware is not None
     else:
         ### default speedup ratio of quantization is 70% compare to fp32
         ### TODO(ceci3): full quant or skip some layer later
         if target_speedup is None:
             if model_type == 'transformer':
-                final_strategy = 'prune_0.25_int8'
+                final_strategy = DEFAULT_TRANSFORMER_STRATEGY
             else:
-                final_strategy = 'origin_int8'
+                final_strategy = DEFAULT_STRATEGY
 
-        elif target_speedup > 0.7:
-            prune_ratio = target_speedup - 0.7
+        elif target_speedup > DEFAULT_QUANT_SPEEDUP:
+            prune_ratio = target_speedup - DEFAULT_QUANT_SPEEDUP
             if prune_ratio > 1.0:
                 raise NotImplementedError(
                     "target_speedup {} is improper".format(target_speedup))
@@ -175,8 +193,7 @@ def auto_prepare_strategy(model_dir,
 
 def get_final_quant_config(ptq_loss):
     """ transform quantization tester config to real quantization config """
-    ### TODO: 0.03 threshold maybe not suitable, need to check
-    if ptq_loss <= 0.03:
+    if ptq_loss <= MAGIC_EMD_DISTANCE:
         quant_config = Quantization(**default_quant_config)
         hpo_config = HyperParameterOptimization(**default_hpo_config)
         configs = [{

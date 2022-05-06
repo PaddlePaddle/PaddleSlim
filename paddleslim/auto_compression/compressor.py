@@ -31,7 +31,7 @@ from ..common.patterns import get_patterns
 from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program
 from .strategy_config import ProgramInfo, merge_config
-from .auto_strategy import auto_prepare_strategy, get_final_quant_config
+from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -126,12 +126,15 @@ class AutoCompression:
             fleet.init(is_collective=True)
 
         if self.strategy_config is None:
-            strategy_config = auto_prepare_strategy(
+            strategy_config = prepare_strategy(
                 self.model_dir, self.model_filename, self.params_filename,
                 self.target_speedup, self.deploy_hardware, self.model_type)
             self.strategy_config = strategy_config
         elif isinstance(self.strategy_config, dict):
             self.strategy_config = [self.strategy_config]
+        elif isinstance(self.strategy_config, str):
+            strategy_config = create_strategy_config(self.strategy_config,
+                                                     self.model_type)
 
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
