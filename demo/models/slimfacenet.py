@@ -334,7 +334,7 @@ class SlimFaceNet():
         else:
             pass
 
-        one_hot = fluid.one_hot(input=label, depth=out_dim)
+        one_hot = fluid.layers.one_hot(input=label, depth=out_dim)
         output = fluid.layers.elementwise_mul(
             one_hot, phi) + fluid.layers.elementwise_mul(
                 (1.0 - one_hot), cosine)
@@ -367,7 +367,8 @@ def SlimFaceNet_C_x0_75(class_dim=None, scale=0.6, arch=None):
 
 
 if __name__ == "__main__":
+    paddle.enable_static()
     x = fluid.data(name='x', shape=[-1, 3, 112, 112], dtype='float32')
     print(x.shape)
-    model = SlimFaceNet(10000, [1, 3, 3, 1, 1, 0, 0, 1, 0, 1, 1, 0, 5, 5, 3])
+    model = SlimFaceNet(10000, arch=[1, 3, 3, 1, 1, 0, 0, 1, 0, 1, 1, 0, 5, 5, 3])
     y = model.net(x)
