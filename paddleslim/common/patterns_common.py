@@ -25,6 +25,8 @@ def traversal_ops(op, graph, target_op_idx):
                 pattern_ops_type.append(cur.type())
                 visited.append(cur.idx())
             for n_op in graph.next_ops(cur):
+                if n_op.is_opt_op() or n_op.is_bwd_op():
+                    break
                 if n_op.idx() == target_op_idx or n_op.idx() in visited:
                     continue
                 pq.append(n_op)

@@ -86,6 +86,14 @@ def get_patterns(program, only_final_node=True):
     block_num = 0
     model_type = None
     for op in graph.ops():
+        belonged_teacher = False
+        for inp in op.all_inputs():
+            if 'teacher' in inp._var.name:
+                belonged_teacher = True
+                break
+        if belonged_teacher:
+            continue
+
         if op.type() == 'elementwise_add':
             inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
             if (not inp1._var.persistable) and (not inp2._var.persistable):
@@ -115,11 +123,14 @@ def get_patterns(program, only_final_node=True):
                             distill_node.append('teacher_' + out_var_name)
                             distill_node.append(out_var_name)
 
-                    if model_type == 'transformer' and 'fetch' in pattern_ops_type:
+                    if model_type == 'transformer' and (
+                            'fetch' in pattern_ops_type or
+                            pattern_ops_type[-1] == 'scale'):
                         if 'input_mask' not in patterns:
                             patterns['input_mask'] = pattern_ops[0]._op
 
-                    if 'fetch' in pattern_ops_type:
+                    if 'fetch' in pattern_ops_type or pattern_ops_type[
+                            -1] == 'scale':
                         continue
 
                     patterns[pattern_name] = pattern_ops
