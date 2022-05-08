@@ -1,12 +1,23 @@
-_BASE_: [
-  './coco_dataset.yml',
-]
+metric: COCO
+num_classes: 80
+
+# Datset configuration
+TrainDataset:
+  !COCODataSet
+    image_dir: train2017
+    anno_path: annotations/instances_train2017.json
+    dataset_dir: dataset/coco/
+
+EvalDataset:
+  !COCODataSet
+    image_dir: val2017
+    anno_path: annotations/instances_val2017.json
+    dataset_dir: dataset/coco/
 
 worker_num: 8
 
-TestReader:
-  inputs_def:
-    image_shape: [3, 640, 640]
+# preprocess reader in test
+EvalReader:
   sample_transforms:
     - Decode: {}
     - Resize: {target_size: [640, 640], keep_ratio: False, interp: 2}
