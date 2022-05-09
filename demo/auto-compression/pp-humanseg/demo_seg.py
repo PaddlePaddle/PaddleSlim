@@ -39,11 +39,6 @@ def parse_args():
         default=None,
         help="directory to save compressed model.")
     parser.add_argument(
-        '--devive',
-        type=str,
-        default=None,
-        help="which device used to compress.")
-    parser.add_argument(
         '--config_path',
         type=str,
         default=None,
@@ -190,7 +185,6 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function,
-        devices=args.devices)
+        eval_callback=eval_function)
 
     ac.compress()
