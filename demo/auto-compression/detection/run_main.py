@@ -20,9 +20,6 @@ parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
-add_arg('model_dir',                   str,    None,         "inference model directory.")
-add_arg('model_filename',              str,    None,         "inference model filename.")
-add_arg('params_filename',             str,    None,         "inference params filename.")
 add_arg('save_dir',                    str,    'output',         "directory to save compressed model.")
 add_arg('devices',                     str,    'gpu',        "which device used to compress.")
 add_arg('batch_size',                  int,    1,            "train batch size.")
@@ -31,45 +28,40 @@ add_arg('eval',                  bool,    False,            "whether to run eval
 # yapf: enable
 
 
-def reader_wrapper(reader):
+def reader_wrapper(reader, input_list):
     def gen():
         for data in reader:
-            yield {
-                "image": data['image'],
-                'im_shape': data['im_shape'],
-                'scale_factor': data['scale_factor']
-            }
+            in_dict = {}
+            for input_name in input_list:
+                in_dict[input_name] = data[input_name]
+            yield in_dict
 
     return gen
 
 
-def eval():
-    dataset = reader_cfg['EvalDataset']
-    val_loader = create('TestReader')(dataset,
-                                      reader_cfg['worker_num'],
-                                      return_list=True)
+def eval(args, compress_config):
 
     place = paddle.CUDAPlace(0) if args.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
     val_program, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
-        args.model_dir,
+        compress_config["model_dir"],
         exe,
-        model_filename=args.model_filename,
-        params_filename=args.params_filename)
+        model_filename=compress_config["model_filename"],
+        params_filename=compress_config["params_filename"], )
     clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
 
     anno_file = dataset.get_anno()
     metric = COCOMetric(
         anno_file=anno_file, clsid2catid=clsid2catid, bias=0, IouType='bbox')
     for batch_id, data in enumerate(val_loader):
-        data_new = {k: np.array(v) for k, v in data.items()}
+        data_all = {k: np.array(v) for k, v in data.items()}
+        data_input = {}
+        for k, v in data.items():
+            if k in compress_config['input_list']:
+                data_input[k] = np.array(v)
         outs = exe.run(val_program,
-                       feed={
-                           'image': data['image'],
-                           'im_shape': data['im_shape'],
-                           'scale_factor': data['scale_factor']
-                       },
+                       feed=data_input,
                        fetch_list=fetch_targets,
                        return_numpy=False)
         res = {}
@@ -80,7 +72,7 @@ def eval():
             else:
                 res['bbox_num'] = v
 
-        metric.update(data_new, res)
+        metric.update(data_all, res)
         if batch_id % 100 == 0:
             print('Eval iter:', batch_id)
     metric.accumulate()
@@ -95,13 +87,13 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric = COCOMetric(
         anno_file=anno_file, clsid2catid=clsid2catid, bias=1, IouType='bbox')
     for batch_id, data in enumerate(val_loader):
-        data_new = {k: np.array(v) for k, v in data.items()}
+        data_all = {k: np.array(v) for k, v in data.items()}
+        data_input = {}
+        for k, v in data.items():
+            if k in test_feed_names:
+                data_input[k] = np.array(v)
         outs = exe.run(compiled_test_program,
-                       feed={
-                           'image': data['image'],
-                           'im_shape': data['im_shape'],
-                           'scale_factor': data['scale_factor']
-                       },
+                       feed=data_input,
                        fetch_list=test_fetch_list,
                        return_numpy=False)
         res = {}
@@ -112,7 +104,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             else:
                 res['bbox_num'] = v
 
-        metric.update(data_new, res)
+        metric.update(data_all, res)
         if batch_id % 100 == 0:
             print('Eval iter:', batch_id)
     metric.accumulate()
@@ -122,35 +114,46 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     return map_res['bbox'][0]
 
 
+def main(args):
+    compress_config, train_config = load_slim_config(args.config_path)
+    reader_cfg = load_config(compress_config['reader_config'])
+
+    train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
+                                        reader_cfg['worker_num'],
+                                        return_list=True)
+    train_loader = reader_wrapper(train_loader, compress_config['input_list'])
+
+    global dataset
+    dataset = reader_cfg['EvalDataset']
+    global val_loader
+    val_loader = create('EvalReader')(reader_cfg['EvalDataset'],
+                                      reader_cfg['worker_num'],
+                                      return_list=True)
+
+    if args.eval:
+        eval(args, compress_config)
+        sys.exit(0)
+
+    if 'Evaluation' in compress_config.keys() and compress_config['Evaluation']:
+        eval_func = eval_function
+    else:
+        eval_func = None
+
+    ac = AutoCompression(
+        model_dir=compress_config["model_dir"],
+        model_filename=compress_config["model_filename"],
+        params_filename=compress_config["params_filename"],
+        save_dir=args.save_dir,
+        strategy_config=compress_config,
+        train_config=train_config,
+        train_dataloader=train_loader,
+        eval_callback=eval_func)
+
+    ac.compress()
+
+
 if __name__ == '__main__':
     args = parser.parse_args()
     print_arguments(args)
     paddle.enable_static()
-    reader_cfg = load_config('./configs/PaddleDet/yolo_reader.yml')
-    if args.eval:
-        eval()
-        sys.exit(0)
-
-    compress_config, train_config = load_slim_config(args.config_path)
-
-    train_loader = create('TestReader')(reader_cfg['TrainDataset'],
-                                        reader_cfg['worker_num'],
-                                        return_list=True)
-    dataset = reader_cfg['EvalDataset']
-    val_loader = create('TestReader')(reader_cfg['EvalDataset'],
-                                      reader_cfg['worker_num'],
-                                      return_list=True)
-
-    train_dataloader = reader_wrapper(train_loader)
-
-    ac = AutoCompression(
-        model_dir=args.model_dir,
-        model_filename=args.model_filename,
-        params_filename=args.params_filename,
-        save_dir=args.save_dir,
-        strategy_config=compress_config,
-        train_config=train_config,
-        train_dataloader=train_dataloader,
-        eval_callback=eval_function)
-
-    ac.compress()
+    main(args)

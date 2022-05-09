@@ -458,8 +458,9 @@ class AutoCompression:
                                 break
 
                     else:
-                        raise NotImplementedError(
-                            "Please support eval function")
+                        _logger.warning(
+                            "Not set eval function, so unable to test accuracy performance."
+                        )
 
         return test_program_info
 
