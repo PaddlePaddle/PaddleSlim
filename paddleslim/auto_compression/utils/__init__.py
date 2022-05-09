@@ -13,14 +13,6 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-from .compressor import *
-from .strategy_config import *
-from .config_helpers import *
-from .utils import *
+from .predict import predict_compressed_model
 
-__all__ = [
-    "AutoCompression", "Quantization", "Distillation",
-    "MultiTeacherDistillation", "HyperParameterOptimization", "Prune",
-    "UnstructurePrune", "ProgramInfo", "TrainConfig", "save_config",
-    "load_config", "predict_compressed_model"
-]
+__all__ = ["predict_compressed_model"]
