@@ -53,11 +53,5 @@ python3.7 run_main.py --config_path='./configs/yolov3_mbv1_qat_dis.yaml --eval=T
 ### 3.1 进行量化蒸馏压缩
 蒸馏量化训练示例脚本为[run_main.py](run_main.py)，使用接口``paddleslim.auto_compression.AutoCompression``对模型进行量化训练。运行命令为：
 ```
-python ../../demo_coco.py \
-    --model_dir='infermodel_mobilenetv2' \
-    --model_filename='model.pdmodel' \
-    --params_filename='./model.pdiparams' \
-    --save_dir='./output/' \
-    --devices='gpu' \
-    --config_path='./configs/yolov3_mbv1_qat_dis.yaml'
+python run_main.py --config_path='./configs/yolov3_mbv1_qat_dis.yaml --save_dir='./output/' --devices='gpu'
 ```
