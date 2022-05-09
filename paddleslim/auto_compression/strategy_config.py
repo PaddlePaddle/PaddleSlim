@@ -27,9 +27,11 @@ Quantization = namedtuple(
         "quantize_op_types",
         "weight_bits",
         "activation_bits",
-        "not_quant_pattern",  ### ptq没有暴露相应接口
-        "use_pact",  ### 仅QAT支持
-        "is_full_quantize"
+        "not_quant_pattern",  # Only support in QAT
+        "use_pact",  # Only support in QAT
+        "is_full_quantize",
+        "activation_quantize_type",
+        "weight_quantize_type"
     ])
 
 Quantization.__new__.__defaults__ = (None, ) * (len(Quantization._fields) - 1
