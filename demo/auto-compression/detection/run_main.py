@@ -147,8 +147,7 @@ def main(args):
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_loader,
-        eval_callback=eval_func,
-        devices=args.devices)
+        eval_callback=eval_func)
 
     ac.compress()
 

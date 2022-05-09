@@ -6,19 +6,30 @@ from .fake_ptq import post_quant_fake
 import shutil
 
 
-def predict_compressed_model(model_file, param_file, hardware='SD710'):
+def predict_compressed_model(model_dir,
+                             model_filename,
+                             params_filename,
+                             hardware='SD710'):
     """
     Evaluating the latency of the model under various compression strategies.
     Args:
-        model_file(str), param_file(str): The inference model to be compressed.
+        model_dir(str): The path of inference model that will be compressed, and
+            the model and params that saved by ``paddle.static.io.save_inference_model``
+            are under the path.
+        model_filename(str, optional):  The name of model file. If parameters
+            are saved in separate files, set it as 'None'. Default: 'None'.
+        params_filename(str, optional): The name of params file.
+            When all parameters are saved in a single file, set it
+            as filename. If parameters are saved in separate files,
+            set it as 'None'. Default : 'None'.
         hardware(str): Target device.
     Returns:
         latency_dict(dict): The latency latency of the model under various compression strategies.
     """
     latency_dict = {}
 
-    model_filename = model_file.split('/')[-1]
-    param_filename = param_file.split('/')[-1]
+    model_file = os.path.join(model_dir, model_filename)
+    param_file = os.path.join(model_dir, params_filename)
 
     predictor = TableLatencyPredictor(hardware)
     latency = predictor.predict(
@@ -29,22 +40,22 @@ def predict_compressed_model(model_file, param_file, hardware='SD710'):
     exe = paddle.static.Executor(place)
     post_quant_fake(
         exe,
-        model_dir=os.path.dirname(model_file),
+        model_dir=model_dir,
         model_filename=model_filename,
-        params_filename=param_filename,
+        params_filename=params_filename,
         save_model_path='quant_model',
         quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
         is_full_quantize=False,
         activation_bits=8,
         weight_bits=8)
     quant_model_file = os.path.join('quant_model', model_filename)
-    quant_param_file = os.path.join('quant_model', param_filename)
+    quant_param_file = os.path.join('quant_model', params_filename)
 
     latency = predictor.predict(
         model_file=quant_model_file,
         param_file=quant_param_file,
         data_type='int8')
-    latency_dict.update({f'origin_int8': latency})
+    latency_dict.update({'origin_int8': latency})
 
     for prune_ratio in [0.3, 0.4, 0.5, 0.6]:
         get_prune_model(
@@ -53,7 +64,7 @@ def predict_compressed_model(model_file, param_file, hardware='SD710'):
             ratio=prune_ratio,
             save_path='prune_model')
         prune_model_file = os.path.join('prune_model', model_filename)
-        prune_param_file = os.path.join('prune_model', param_filename)
+        prune_param_file = os.path.join('prune_model', params_filename)
 
         latency = predictor.predict(
             model_file=prune_model_file,
@@ -65,14 +76,14 @@ def predict_compressed_model(model_file, param_file, hardware='SD710'):
             exe,
             model_dir='prune_model',
             model_filename=model_filename,
-            params_filename=param_filename,
+            params_filename=params_filename,
             save_model_path='quant_model',
             quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
             is_full_quantize=False,
             activation_bits=8,
             weight_bits=8)
         quant_model_file = os.path.join('quant_model', model_filename)
-        quant_param_file = os.path.join('quant_model', param_filename)
+        quant_param_file = os.path.join('quant_model', params_filename)
 
         latency = predictor.predict(
             model_file=quant_model_file,
@@ -87,7 +98,7 @@ def predict_compressed_model(model_file, param_file, hardware='SD710'):
             ratio=sparse_ratio,
             save_path='sparse_model')
         sparse_model_file = os.path.join('sparse_model', model_filename)
-        sparse_param_file = os.path.join('sparse_model', param_filename)
+        sparse_param_file = os.path.join('sparse_model', params_filename)
 
         latency = predictor.predict(
             model_file=sparse_model_file,
@@ -99,20 +110,20 @@ def predict_compressed_model(model_file, param_file, hardware='SD710'):
             exe,
             model_dir='sparse_model',
             model_filename=model_filename,
-            params_filename=param_filename,
+            params_filename=params_filename,
             save_model_path='quant_model',
             quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
             is_full_quantize=False,
             activation_bits=8,
             weight_bits=8)
         quant_model_file = os.path.join('quant_model', model_filename)
-        quant_param_file = os.path.join('quant_model', param_filename)
+        quant_param_file = os.path.join('quant_model', params_filename)
 
         latency = predictor.predict(
             model_file=quant_model_file,
             param_file=quant_param_file,
             data_type='int8')
-        latency_dict.update({f'sparse_{prune_ratio}_int8': latency})
+        latency_dict.update({f'sparse_{sparse_ratio}_int8': latency})
 
     # Delete temporary model files
     shutil.rmtree('./quant_model')

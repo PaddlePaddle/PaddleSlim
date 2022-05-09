@@ -15,20 +15,26 @@ AutoCompression
 - **model_filename(str)** - 需要压缩的推理模型文件名称。
 - **params_filename(str)** - 需要压缩的推理模型参数文件名称。
 - **save_dir(str)** - 压缩后模型的所保存的目录。
-- **strategy_config(dict)** - 使用的压缩策略。字典的关键字必须在: ``Quantization`` (量化配置, 可配置的参数参考 `<>`_ ), ``Distillation`` (蒸馏配置, 可配置的参数参考 `<>`_), 
-                     ``MultiTeacherDistillation`` (多teacher蒸馏配置, 可配置的参数参考 `<>`_), ``HyperParameterOptimization`` (超参搜索配置, 可配置的参数参考 `<>`_), 
-                     ``Prune`` (剪枝配置, 可配置的参数参考 `<>`_), ``UnstructurePrune`` (非结构化稀疏配置, 可配置的参数参考 `<>`_) 之间选择。目前关键字只支持以下几种配置:
+- **train_dataloader(paddle.io.DataLoader)** - 训练数据迭代器。注意：如果选择离线量化超参搜索策略的话, ``train_dataloader`` 和 ``eval_callback`` 设置相同的数据读取即可。
+- **train_config(dict)** - 训练配置。可以配置的参数请参考: `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L103>`_ 。注意：如果选择离线量化超参搜索策略的话， ``train_config`` 直接设置为 ``None`` 即可。
+- **strategy_config(dict, list(dict), 可选)** - 使用的压缩策略，可以通过设置多个单种策略来并行使用这些压缩方式。字典的关键字必须在: 
+             ``Quantization`` (量化配置, 可配置的参数参考 `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24>`_ ), 
+             ``Distillation`` (蒸馏配置, 可配置的参数参考 `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39>`_), 
+             ``MultiTeacherDistillation`` (多teacher蒸馏配置, 可配置的参数参考 `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L56>`_), 
+             ``HyperParameterOptimization`` (超参搜索配置, 可配置的参数参考 `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L73>`_), 
+            ``Prune`` (剪枝配置, 可配置的参数参考 `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82>`_), 
+            ``UnstructurePrune`` (非结构化稀疏配置, 可配置的参数参考 `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L91>`_) 之间选择。
+            目前关键字只支持以下几种组合策略或者单策略配置:
                          1) ``Quantization`` & ``HyperParameterOptimization``: 离线量化超参搜索策略;
                          2) ``Quantization`` & ``Distillation``: 量化训练和蒸馏的策略;
                          3) ``Prune`` & ``Distillation``: 结构化剪枝和蒸馏的策略;
                          4) ``UnstructurePrune`` & ``Distillation``: 非结构化稀疏和蒸馏的策略;
                          5) ``Distillation``: 单独单蒸馏策略;
                          6) ``MultiTeacherDistillation``: 多teacher蒸馏策略。
-                     每种配置的具体参数信息可以参考：。
-- **train_config(dict)** - 训练配置。可以配置的参数请参考: `<>`_ 。注意：如果选择离线量化超参搜索策略的话， ``train_config`` 直接设置为 ``None`` 即可。
-- **train_dataloader(paddle.io.DataLoader)** - 训练数据迭代器。注意：如果选择离线量化超参搜索策略的话, ``train_dataloader`` 和 ``eval_callback`` 设置相同的数据读取即可。
-- **eval_callback(paddle.io.DataLoader|function)** - eval回调函数和测试数据迭代器之间必须传入一个，如果传入回调函数，则使用回调函数判断模型训练情况, 回调函数的写法参考： `<>`_ 。如果传入测试数据迭代器，则使用 ``EMD`` 距离判断压缩前后模型之间的差别，目前仅支持离线量化超参搜索使用这种方式判断压缩前后模型的压缩。
-- **devices(str)** - 确定特定的运行设备，可以是 ``cpu`` , ``gpu``, ``npu``, ``gpu:x``, ``xpu:x``, ``npu:x`` 。其中， ``x`` 是GPU, XPU 或者是NPU的编号。默认: ``gpu`` 。
+            设置为None的话会自动的选择策略去做压缩。默认：None。
+- **eval_callback(function, 可选)** - eval回调函数，使用回调函数判断模型训练情况, 回调函数的写法参考： `<//github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/auto-compression/custom_function.rst>`_ 。 ``eval_callback`` 和 ``eval_dataloader`` 不能都设置为None。默认：None。
+- **eval_dataloader(paddle.io.Dataloader, 可选)** - 如果传入测试数据迭代器，则使用 ``EMD`` 距离判断压缩前后模型之间的差别，目前仅支持离线量化超参搜索使用这种方式判断压缩前后模型的压缩。
+- **deploy_hardware(str, 可选)** - 压缩后模型的部署硬件。默认： ``gpu`` 。
 
 **返回：** 一个AutoCompression类的实例。
 
@@ -37,28 +43,49 @@ AutoCompression
 ```shell
 
    import paddle
+
    from paddleslim.auto_compression import AutoCompression
+
    default_qat_config = {
+
        "quantize_op_types": ["conv2d", "depthwise_conv2d", "mul"],
+
        "weight_bits": 8,
+
        "activation_bits": 8,
+
        "is_full_quantize": False,
+
        "not_quant_pattern": ["skip_quant"],
+
    }
 
    default_distill_config = {
+
        "distill_loss": args.distill_loss,
+
        "distill_node_pair": args.distill_node_pair,
+
        "distill_lambda": args.distill_lambda,
+
        "teacher_model_dir": args.teacher_model_dir,
+
        "teacher_model_filename": args.teacher_model_filename,
+
        "teacher_params_filename": args.teacher_params_filename,
+
    }
+
    train_dataloader = Cifar10(mode='train')
+
    eval_dataloader = Cifar10(mode='eval')
+
    ac = AutoCompression(model_path, model_filename, params_filename, save_dir, \
+
                         strategy_config="Quantization": Quantization(**default_ptq_config), 
+
                         "HyperParameterOptimization": HyperParameterOptimization(**default_hpo_config)}, \
+
                         train_config=None, train_dataloader=train_dataloader, eval_callback=eval_dataloader,devices='gpu')
 
 ```
@@ -107,6 +134,7 @@ Quantization
 **参数：**
 
 - **quantize_op_types(list[str])** - 需要进行量化的 op 类型。 
+- **weight_quantize_type(str)** - 参数量化方式，可选: ['channel_wise_abs_max', 'abs_max']。
 - **weight_bits(int)** - 参数量化bit数。
 - **activation_bits(int)** - 激活量化bit数。
 - **is_full_quantize(bool)** - 是否量化所有可支持op类型。

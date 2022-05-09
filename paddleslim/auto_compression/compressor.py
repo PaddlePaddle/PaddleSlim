@@ -17,17 +17,21 @@ import os
 import sys
 import numpy as np
 import inspect
+import shutil
 from collections import namedtuple, Iterable
 import platform
 import paddle
 import paddle.distributed.fleet as fleet
 if platform.system().lower() == 'linux':
-    from ..quant.quant_post_hpo import quant_post_hpo
+    from ..quant import quant_post_hpo
 from ..quant.quanter import convert
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
+from ..common.patterns import get_patterns
+from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program
 from .strategy_config import ProgramInfo, merge_config
+from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -38,100 +42,180 @@ class AutoCompression:
                  model_filename,
                  params_filename,
                  save_dir,
-                 strategy_config,
-                 train_config,
                  train_dataloader,
+                 train_config=None,
+                 strategy_config=None,
+                 target_speedup=None,
                  eval_callback=None,
-                 devices='gpu'):
-        ### model_dir(str): 模型路径
-        ### model_filename(str): 模型文件名称
-        ### params_filename(str): 参数文件名称
-        ### save_dir(str): 压缩后模型保存的路径
-        ### strategy_config(dict[dict]): 压缩策略配置, 包括量化配置、蒸馏配置
-        ### train_config(dict): 训练配置
-        ### train_dataloader(paddle.nn.Dataloader): 训练数据dataloader
-        ### eval_callback(function，paddle.nn.Dataloader): eval回调函数，和测试数据之间必须传入一个，如果传入回调函数，则使用回调函数判断模型训练情况。callback传入predict结果（paddle的tensor），默认：None。
+                 eval_dataloader=None,
+                 deploy_hardware='gpu'):
+        """
+        Compress inference model automatically.
+
+        Args:
+            model_dir(str): The path of inference model that will be compressed, and
+                the model and params that saved by ``paddle.static.io.save_inference_model``
+                are under the path.
+            model_filename(str, optional):  The name of model file. If parameters
+                are saved in separate files, set it as 'None'. Default: 'None'.
+            params_filename(str, optional): The name of params file.
+                When all parameters are saved in a single file, set it
+                as filename. If parameters are saved in separate files,
+                set it as 'None'. Default : 'None'.
+            save_dir(str): The path to save compressed model.
+            train_data_loader(Python Generator, Paddle.io.DataLoader): The
+                Generator or Dataloader provides train data, and it could
+                return a batch every time.
+            train_config(dict, optional): The train config in the compression process, the key can 
+                reference `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L103>`_ . 
+                Only one strategy(quant_post with hyperparameter optimization) can set train_config 
+                to None. Default: None. 
+            strategy_config(dict, list(dict), optional): The strategy config. You can set single config to get multi-strategy config, such as
+                1. set ``Quantization`` and ``Distillation`` to get quant_aware and distillation compress config.
+                    The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                2. set ``Quantization`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
+                    The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
+                    The HyperParameterOptimization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L73`_ .
+                3. set ``Prune`` and ``Distillation`` to get prune and distillation compress config.
+                    The Prune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                4. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
+                    The UnstructurePrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L91`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                5. set ``Distillation`` to use one teacher modol to distillation student model.
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                6. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
+                    The MultiTeacherDistillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L56`_ .
+
+                If set to None, will choose a strategy automatically. Default: None.
+            target_speedup(float, optional): target speedup ratio by the way of auto compress. Default: None.
+            eval_callback(function, optional): eval function, define by yourself to return the metric of the inference program, can be used to judge the metric of compressed model. The documents of how to write eval function is `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/auto-compression/custom_function.rst`_ . ``eval_callback`` and ``eval_dataloader`` cannot be None at the same time. Dafault: None.
+            eval_dataloader(paddle.io.Dataloader, optional):  The
+                 Generator or Dataloader provides eval data, and it could
+                 return a batch every time. ``eval_callback`` and ``eval_dataloader`` cannot be None at the same time. Dafault: None.
+            deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
+        """
         self.model_dir = model_dir
         self.model_filename = model_filename
         self.params_filename = params_filename
-        self.save_dir = save_dir
+        base_path = os.path.basename(os.path.normpath(save_dir))
+        parent_path = os.path.abspath(os.path.join(save_dir, os.pardir))
+        base_path = base_path + '_temp'
+        self.save_dir = os.path.join(parent_path, base_path)
+        self.final_dir = save_dir
         self.strategy_config = strategy_config
         self.train_config = train_config
         self.train_dataloader = train_dataloader
+        self.target_speedup = target_speedup
+        self.eval_function = eval_callback
+        self.eval_dataloader = eval_dataloader
+
         paddle.enable_static()
+
+        if deploy_hardware in TableLatencyPredictor.hardware_list:
+            self.deploy_hardware = deploy_hardware
+        else:
+            self.deploy_hardware = None
+
+        self._exe, self._places = self._prepare_envs()
+        self.model_type = self._get_model_type(self._exe, model_dir,
+                                               model_filename, params_filename)
+
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
-        if not eval_callback:
-            self.eval_function = None
-            self.eval_dataloader = None
-        if self._prepare_eval(eval_callback) == 'eval_dataloader':
-            self.eval_function = None
-            self.eval_dataloader = eval_callback
-        else:
-            self.eval_function = eval_callback
-            self.eval_dataloader = None
 
-        self._strategy, self._config = self._prepare_strategy()
-        self._exe, self._places = self._prepare_envs(devices)
+        if self.strategy_config is None:
+            strategy_config = prepare_strategy(
+                self.model_dir, self.model_filename, self.params_filename,
+                self.target_speedup, self.deploy_hardware, self.model_type)
+            self.strategy_config = strategy_config
+        elif isinstance(self.strategy_config, dict):
+            self.strategy_config = [self.strategy_config]
+        elif isinstance(self.strategy_config, str):
+            strategy_config = create_strategy_config(self.strategy_config,
+                                                     self.model_type)
 
-    def _prepare_envs(self, devices):
+        self._strategy, self._config = self._prepare_strategy(
+            self.strategy_config)
+
+    def _prepare_envs(self):
+        devices = paddle.device.get_device().split(':')[0]
         places = paddle.device._convert_to_place(devices)
         exe = paddle.static.Executor(places)
         return exe, places
 
-    def _prepare_strategy(self):
-        quant_config = self.strategy_config.get("Quantization", None)
-        hpo_config = self.strategy_config.get("HyperParameterOptimization",
-                                              None)
-        prune_config = self.strategy_config.get("Prune", None)
-        unstructure_prune_config = self.strategy_config.get("UnstructurePrune",
-                                                            None)
-        single_teacher_distill_config = self.strategy_config.get("Distillation",
-                                                                 None)
-        multi_teacher_distill_config = self.strategy_config.get(
-            "MultiTeacherDistillation", None)
+    def _get_model_type(self, exe, model_dir, model_filename, params_filename):
+        [inference_program, _, _]= paddle.fluid.io.load_inference_model( \
+            dirname=model_dir, \
+            model_filename=model_filename, params_filename=params_filename,
+            executor=exe)
+        _, _, model_type = get_patterns(inference_program)
+        return model_type
 
-        assert (single_teacher_distill_config is None) or (multi_teacher_distill_config is None), \
-            "Distillation and MultiTeacherDistillation cannot be set at the same time."
-        self._distill_config = single_teacher_distill_config if \
-               single_teacher_distill_config is not None else \
-               multi_teacher_distill_config
+    def _prepare_strategy(self, strategy_config):
+        if not isinstance(strategy_config, list):
+            strategy_config = list(list(strategy_config))
 
-        ### case1: quant_config & hpo_config ==> PTQ & HPO
-        if quant_config is not None and hpo_config is not None:
-            strategy = 'ptq_hpo'
-            config = merge_config(quant_config, hpo_config)
+        strategy = []
+        config = []
+        for strategy_c in strategy_config:
+            quant_config = strategy_c.get("Quantization", None)
+            hpo_config = strategy_c.get("HyperParameterOptimization", None)
+            prune_config = strategy_c.get("Prune", None)
+            unstructure_prune_config = strategy_c.get("UnstructurePrune", None)
+            single_teacher_distill_config = strategy_c.get("Distillation", None)
+            if single_teacher_distill_config is not None and single_teacher_distill_config.teacher_model_dir is None:
+                single_teacher_distill_config = single_teacher_distill_config._replace(
+                    teacher_model_dir=self.model_dir,
+                    teacher_model_filename=self.model_filename,
+                    teacher_params_filename=self.params_filename)
 
-        ### case2: quant_config & distill config ==> QAT & Distill
-        elif quant_config is not None and self._distill_config is not None:
-            strategy = 'qat_dis'
-            config = merge_config(quant_config, self._distill_config)
+            multi_teacher_distill_config = strategy_c.get(
+                "MultiTeacherDistillation", None)
 
-        ### case3: prune_config & distill config
-        elif prune_config is not None and self._distill_config is not None:
-            strategy = 'prune_dis'
-            config = merge_config(prune_config, self._distill_config)
+            assert (single_teacher_distill_config is None) or (multi_teacher_distill_config is None), \
+                "Distillation and MultiTeacherDistillation cannot be set at the same time."
+            self._distill_config = single_teacher_distill_config if \
+                   single_teacher_distill_config is not None else \
+                   multi_teacher_distill_config
 
-        ### case4: unstructure_config & distill config
-        elif unstructure_prune_config is not None and self._distill_config is not None:
-            strategy = 'unstructure_prune_dis'
-            config = merge_config(unstructure_prune_config,
-                                  self._distill_config)
+            ### case1: quant_config & hpo_config ==> PTQ & HPO
+            if quant_config is not None and hpo_config is not None:
+                strategy.append('ptq_hpo')
+                config.append(merge_config(quant_config, hpo_config))
 
-        ### case4: distill_config
-        elif self._distill_config is not None:
-            if single_teacher_distill_config is not None:
-                strategy = 'single_teacher_dis'
-                config = single_teacher_distill_config
+            ### case2: quant_config & distill config ==> QAT & Distill
+            elif quant_config is not None and self._distill_config is not None:
+                strategy.append('qat_dis')
+                config.append(merge_config(quant_config, self._distill_config))
+
+            ### case3: prune_config & distill config
+            elif prune_config is not None and self._distill_config is not None:
+                strategy.append('prune_dis')
+                config.append(merge_config(prune_config, self._distill_config))
+
+            ### case4: unstructure_config & distill config
+            elif unstructure_prune_config is not None and self._distill_config is not None:
+                strategy.append('unstructure_prune_dis')
+                config.append(
+                    merge_config(unstructure_prune_config,
+                                 self._distill_config))
+
+            ### case4: distill_config
+            elif self._distill_config is not None:
+                if single_teacher_distill_config is not None:
+                    strategy.append('single_teacher_dis')
+                    config.append(single_teacher_distill_config)
+                else:
+                    strategy.append('multi_teacher_dis')
+                    config.append(multi_teacher_distill_config)
+
+            ### case N: todo
             else:
-                strategy = 'multi_teacher_dis'
-                config = multi_teacher_distill_config
-
-        ### case N: todo
-        else:
-            raise NotImplementedError(
-                "Not Implemented {} be set at the same time now".format(
-                    self.strategy_config.keys()))
+                raise NotImplementedError(
+                    "Not Implemented {} be set at the same time now".format(
+                        strategy_c.keys()))
 
         return strategy, config
 
@@ -152,19 +236,20 @@ class AutoCompression:
             strategy.amp_configs = { ** train_config.amp_config}
         return strategy
 
-    def _prepare_program(self, program, feed_target_names, fetch_targets):
+    def _prepare_program(self, program, feed_target_names, fetch_targets,
+                         patterns, default_distill_node_pair, strategy, config):
         train_program = recover_inference_program(program)
         startup_program = paddle.static.Program()
         train_program_info = ProgramInfo(startup_program, train_program,
                                          feed_target_names, fetch_targets)
 
-        config_dict = dict(self._config._asdict())
+        config_dict = dict(config._asdict())
         ### add prune program
         self._pruner = None
-        if 'prune' in self._strategy:
+        if 'prune' in strategy:
             self._pruner, train_program_info = build_prune_program(
                 self._exe, self._places, config_dict, train_program_info,
-                self._strategy)
+                strategy, patterns, self.eval_dataloader)
 
         if self.train_config.use_fleet:
             dist_strategy = _prepare_fleet_strategy(self.train_config)
@@ -172,7 +257,7 @@ class AutoCompression:
             dist_strategy = None
 
         ### add distill program
-        if 'dis' in self._strategy:
+        if 'dis' in strategy:
             train_program_info, test_program_info = build_distill_program(
                 self._exe,
                 self._places,
@@ -180,11 +265,12 @@ class AutoCompression:
                 self.train_config._asdict(),
                 train_program_info,
                 pruner=self._pruner,
-                dist_strategy=dist_strategy)
+                dist_strategy=dist_strategy,
+                default_distill_node_pair=default_distill_node_pair)
 
         self._quant_config = None
         ### add quant_aware program, quant always is last step
-        if 'qat' in self._strategy:
+        if 'qat' in strategy:
             train_program_info, test_program_info, self._quant_config = build_quant_program(
                 self._exe, self._places, config_dict, train_program_info,
                 test_program_info)
@@ -204,17 +290,10 @@ class AutoCompression:
 
         if not self.train_config.use_fleet:
             train_program_info = self._compiled_program(train_program_info,
-                                                        self._strategy)
+                                                        strategy)
             test_program_info = self._compiled_program(test_program_info,
                                                        self._strategy)
         return train_program_info, test_program_info
-
-    def _prepare_eval(self, eval_callback):
-        if isinstance(eval_callback,
-                      Iterable) or inspect.isgeneratorfunction(eval_callback):
-            return 'eval_dataloader'
-        else:
-            return 'eval_callback'
 
     def _compiled_program(self, program_info, strategy):
         compiled_prog = paddle.static.CompiledProgram(program_info.program)
@@ -234,17 +313,39 @@ class AutoCompression:
         return program_info
 
     def compress(self):
+        for strategy_idx, (
+                strategy,
+                config) in enumerate(zip(self._strategy, self._config)):
+            self.single_strategy_compress(strategy, config, strategy_idx)
+
+        if strategy == 'ptq_hpo' and config.max_quant_count == 1 and platform.system(
+        ).lower() == 'linux':
+            ptq_loss = quant_post_hpo.g_min_emd_loss
+
+            final_quant_config = get_final_quant_config(ptq_loss)
+            quant_strategy, quant_config = self._prepare_strategy(
+                final_quant_config)
+            self.single_strategy_compress(quant_strategy[0], quant_config[0],
+                                          strategy_idx)
+        old_model_path = os.path.join(
+            self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
+        final_model_path = os.path.join(self.final_dir)
+        shutil.move(old_model_path, final_model_path)
+        os._exit(0)
+
+    def single_strategy_compress(self, strategy, config, strategy_idx):
         ### start compress, including train/eval model
-        if self._strategy == 'ptq_hpo':
+        if strategy == 'ptq_hpo':
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
 
-            quant_post_hpo(
+            quant_post_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
                 model_dir=self.model_dir,
-                quantize_model_path=self.save_dir,
+                quantize_model_path=os.path.join(
+                    self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
                 eval_dataloader=self.eval_dataloader,
                 eval_function=self.eval_function,
@@ -252,32 +353,34 @@ class AutoCompression:
                 params_filename=self.params_filename,
                 save_model_filename=self.model_filename,
                 save_params_filename=self.params_filename,
-                quantizable_op_type=self._config.quantize_op_types,
-                weight_bits=self._config.weight_bits,
-                activation_bits=self._config.activation_bits,
-                weight_quantize_type=self._config.weight_quantize_type,
-                is_full_quantize=self._config.is_full_quantize,
-                algo=self._config.ptq_algo,
-                bias_correct=self._config.bias_correct,
-                hist_percent=self._config.hist_percent,
+                quantizable_op_type=config.quantize_op_types,
+                weight_bits=config.weight_bits,
+                activation_bits=config.activation_bits,
+                weight_quantize_type=config.weight_quantize_type,
+                is_full_quantize=config.is_full_quantize,
+                algo=config.ptq_algo,
+                bias_correct=config.bias_correct,
+                hist_percent=config.hist_percent,
                 batch_size=[1],
-                batch_num=self._config.batch_num,
-                runcount_limit=self._config.max_quant_count)
+                batch_num=config.batch_num,
+                runcount_limit=config.max_quant_count)
 
         else:
-            assert 'dis' in self._strategy, "Only support optimizer compressed model by distillation loss."
+            assert 'dis' in strategy, "Only support optimizer compressed model by distillation loss."
 
-            ### convert a inference program to train program
-            ###[inference_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
-            ###    path_prefix=self.model_dir, \
-            ###    model_filename=self.model_filename, params_filename=self.params_filename,
-            ###    executor=self._exe)
+            if strategy_idx == 0:
+                model_dir = self.model_dir
+            else:
+                model_dir = os.path.join(
+                    self.save_dir, 'strategy_{}'.format(str(strategy_idx)))
+
             [inference_program, feed_target_names, fetch_targets]= paddle.fluid.io.load_inference_model( \
-                dirname=self.model_dir, \
+                dirname=model_dir, \
                 model_filename=self.model_filename, params_filename=self.params_filename,
                 executor=self._exe)
 
             ### used to check whether the dataloader is right
+            self.metric_before_compressed = None
             if self.eval_function is not None and self.train_config.origin_metric is not None:
                 _logger.info("start to test metric before compress")
                 metric = self.eval_function(self._exe, inference_program,
@@ -291,15 +394,20 @@ class AutoCompression:
                           or check the origin_metric in train_config"
                                                                      .format(\
                           self.train_config.origin_metric, metric))
+                self.metric_before_compressed = metric
+
+            patterns, default_distill_node_pair, _ = get_patterns(
+                inference_program)
 
             train_program_info, test_program_info = self._prepare_program(
-                inference_program, feed_target_names, fetch_targets)
+                inference_program, feed_target_names, fetch_targets, patterns,
+                default_distill_node_pair, strategy, config)
 
             test_program_info = self._start_train(train_program_info,
-                                                  test_program_info)
-            self._save_model(test_program_info)
+                                                  test_program_info, strategy)
+            self._save_model(test_program_info, strategy, strategy_idx)
 
-    def _start_train(self, train_program_info, test_program_info):
+    def _start_train(self, train_program_info, test_program_info, strategy):
         best_metric = -1.0
         for epoch_id in range(self.train_config.epochs):
             for batch_id, data in enumerate(self.train_dataloader()):
@@ -307,7 +415,7 @@ class AutoCompression:
                     feed=data, \
                     fetch_list=train_program_info.fetch_targets)
 
-                if 'unstructure' in self._strategy:
+                if 'unstructure' in strategy:
                     self._pruner.step()
 
                 if self.train_config.logging_iter is None:
@@ -323,7 +431,7 @@ class AutoCompression:
                     if self.eval_function is not None:
 
                         # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation. 
-                        if 'unstructure' in self._strategy:
+                        if 'unstructure' in strategy:
                             self._pruner.update_params()
 
                         metric = self.eval_function(
@@ -332,44 +440,54 @@ class AutoCompression:
                             test_program_info.fetch_targets)
 
                         _logger.info(
-                            "epoch: {}, batch: {} metric of compressed model is: {}".
-                            format(epoch_id, batch_id, metric))
+                            "epoch: {}, batch: {} metric of compressed model is: {}, best metric of compressed model is {}".
+                            format(epoch_id, batch_id, metric, best_metric))
                         if metric > best_metric:
                             paddle.static.save(
                                 program=test_program_info.program._program,
                                 model_path=os.path.join(self.save_dir,
                                                         'best_model'))
+                            best_metric = metric
+                            if self.metric_before_compressed is not None and float(
+                                    abs(best_metric -
+                                        self.metric_before_compressed)
+                            ) / self.metric_before_compressed <= 0.005:
+                                break
                         if self.train_config.target_metric is not None:
                             if metric > float(self.train_config.target_metric):
-                                return
+                                break
 
                     else:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
 
-        if 'qat' in self._strategy:
-            ### TODO: load best model to save
+        return test_program_info
+
+    def _save_model(self, test_program_info, strategy, strategy_idx):
+        test_program = test_program_info.program._program if isinstance(
+            test_program_info.program,
+            paddle.static.CompiledProgram) else test_program_info.program
+
+        paddle.static.load(test_program,
+                           os.path.join(self.save_dir, 'best_model'))
+        os.remove(os.path.join(self.save_dir, 'best_model.pdmodel'))
+        os.remove(os.path.join(self.save_dir, 'best_model.pdopt'))
+        os.remove(os.path.join(self.save_dir, 'best_model.pdparams'))
+
+        if 'qat' in strategy:
             float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \
                                           scope=paddle.static.global_scope(), \
                                           save_int8=True)
             test_program_info.program = float_program
-        return test_program_info
 
-    def _save_model(self, test_program_info):
-        test_program = test_program_info.program._program if isinstance(
-            test_program_info.program,
-            paddle.static.CompiledProgram) else test_program_info.program
-        feed_vars = []
-        for name in test_program_info.feed_target_names:
-            for var in test_program.list_vars():
-                if var.name == name:
-                    feed_vars.append(var)
-                    break
-        assert len(feed_vars) > 0, "can not find feed vars in quant program"
-        paddle.static.save_inference_model(
-            path_prefix=os.path.join(self.save_dir, 'final_model'),
-            feed_vars=feed_vars,
-            fetch_vars=test_program_info.fetch_targets,
+        model_dir = os.path.join(self.save_dir,
+                                 'strategy_{}'.format(str(strategy_idx + 1)))
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+        paddle.fluid.io.save_inference_model(
+            dirname=str(model_dir),
+            feeded_var_names=test_program_info.feed_target_names,
+            target_vars=test_program_info.fetch_targets,
             executor=self._exe,
-            program=test_program)
+            main_program=test_program)
