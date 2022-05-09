@@ -1,6 +1,6 @@
 # 人脸检测模型小模型结构搜索教程
 
-教程内容请参考：https://github.com/PaddlePaddle/PaddleDetection/blob/release/0.2/slim/nas/README.md
+教程内容请参考：https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.4/static/slim/nas/README.md
 
 ## 概述
 
