@@ -340,8 +340,9 @@ class GraphWrapper(object):
         for p in self.ops():
             for in_var in op.all_inputs():
                 if in_var in p.all_outputs():
-                    ops.append(p)
-        return ops
+                    if p.idx() != op.idx():
+                        ops.append(p)
+        return sorted(ops)
 
     def next_ops(self, op):
         """
@@ -357,8 +358,9 @@ class GraphWrapper(object):
         for p in self.ops():
             for out_var in op.all_outputs():
                 if out_var in p.all_inputs():
-                    ops.append(p)
-        return ops
+                    if p.idx() != op.idx():
+                        ops.append(p)
+        return sorted(ops)
 
     def get_param_by_op(self, op):
         """

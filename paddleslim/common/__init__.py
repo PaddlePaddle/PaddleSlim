@@ -24,6 +24,7 @@ from .meter import AvgrageMeter
 from .analyze_helper import VarCollector
 from . import wrapper_function
 from . import recover_program
+from . import patterns
 
 __all__ = [
     'EvolutionaryController', 'SAController', 'get_logger', 'ControllerServer',
@@ -33,3 +34,4 @@ __all__ = [
 
 __all__ += wrapper_function.__all__
 __all__ += recover_program.__all__
+__all__ += patterns.__all__
