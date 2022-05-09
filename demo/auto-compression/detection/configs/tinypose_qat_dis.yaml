@@ -1,5 +1,5 @@
 Global:
-  reader_config: configs/PaddleDet/tinypose_reader.yml
+  reader_config: configs/tinypose_reader.yml
   input_list: ['image']
   Evaluation: False
   model_dir: ./tinypose_128x96/

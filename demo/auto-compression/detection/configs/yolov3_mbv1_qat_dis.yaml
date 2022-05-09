@@ -1,5 +1,5 @@
 Global:
-  reader_config: configs/PaddleDet/yolo_reader.yml
+  reader_config: configs/yolo_reader.yml
   input_list: ['image', 'im_shape', 'scale_factor']
   Evaluation: True
   model_dir: ./yolov3_mobilenet_v1_270e_coco/
