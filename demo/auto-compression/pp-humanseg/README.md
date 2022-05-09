@@ -127,12 +127,12 @@ def reader_wrapper(reader):
 
 将训练数据集 dataloader 和测试函数传入接口 ``paddleslim.auto_compression.AutoCompression``，对模型进行非结构化稀疏训练。运行指令如下：
 ```shell
-python demo_seg.py \
+python run.py \
     --model_dir='inference_model' \
     --model_filename='inference.pdmodel' \
     --params_filename='./inference.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/seg/humanseg_sparse_dis.yaml'
+    --config_path='configs/humanseg_sparse_dis.yaml'
 ```
 
 ### 3.2 进行蒸馏量化压缩
@@ -155,10 +155,10 @@ Quantization:
 #### 3.2.2 开启训练
 将数据集 dataloader 和测试函数（``eval_function``）传入接口``paddleslim.auto_compression.AutoCompression``，对模型进行量化训练。运行指令如下：
 ```
-python demo_seg.py \
+python run.py \
     --model_dir='inference_model' \
     --model_filename='inference.pdmodel' \
     --params_filename='./inference.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/seg/humanseg_quant_dis.yaml'
+    --config_path='configs/humanseg_quant_dis.yaml'
 ```
