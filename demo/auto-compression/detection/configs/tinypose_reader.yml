@@ -1,0 +1,48 @@
+num_joints: &num_joints 17
+pixel_std: &pixel_std 200
+metric: KeyPointTopDownCOCOEval
+num_classes: 1
+train_height: &train_height 128
+train_width: &train_width 96
+trainsize: &trainsize [*train_width, *train_height]
+hmsize: &hmsize [24, 32]
+flip_perm: &flip_perm [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12], [13, 14], [15, 16]]
+
+TrainDataset:
+  !KeypointTopDownCocoDataset
+    image_dir: val2017
+    anno_path: annotations/person_keypoints_val2017.json
+    dataset_dir: dataset/coco
+    num_joints: *num_joints
+    trainsize: *trainsize
+    pixel_std: *pixel_std
+    use_gt_bbox: True
+    image_thre: 0.5
+
+EvalDataset:
+  !KeypointTopDownCocoDataset
+    image_dir: val2017
+    anno_path: annotations/person_keypoints_val2017.json
+    dataset_dir: dataset/coco
+    num_joints: *num_joints
+    trainsize: *trainsize
+    pixel_std: *pixel_std
+    use_gt_bbox: True
+    image_thre: 0.5
+
+worker_num: 2
+global_mean: &global_mean [0.485, 0.456, 0.406]
+global_std: &global_std [0.229, 0.224, 0.225]
+
+EvalReader:
+  sample_transforms:
+    - TopDownAffine:
+        trainsize: *trainsize
+        use_udp: true
+  batch_transforms:
+    - NormalizeImage:
+        mean: *global_mean
+        std: *global_std
+        is_scale: true
+    - Permute: {}
+  batch_size: 4

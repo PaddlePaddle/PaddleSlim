@@ -41,7 +41,7 @@ class AutoCompression:
                  strategy_config,
                  train_config,
                  train_dataloader,
-                 eval_callback,
+                 eval_callback=None,
                  devices='gpu'):
         ### model_dir(str): 模型路径
         ### model_filename(str): 模型文件名称
@@ -61,6 +61,9 @@ class AutoCompression:
         paddle.enable_static()
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
+        if not eval_callback:
+            self.eval_function = None
+            self.eval_dataloader = None
         if self._prepare_eval(eval_callback) == 'eval_dataloader':
             self.eval_function = None
             self.eval_dataloader = eval_callback
@@ -355,8 +358,10 @@ class AutoCompression:
                                 return
 
                     else:
-                        raise NotImplementedError(
-                            "Please support eval function")
+                        _logger.warning(
+                            "Not set eval function, so unable to test accuracy performance."
+                        )
+                        
         if 'unstructure' in self._strategy or self.train_config.sparse_config:
             self._pruner.update_params()
         if 'qat' in self._strategy:
