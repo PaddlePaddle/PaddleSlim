@@ -39,6 +39,9 @@ def load_config(config_path):
     else:
         train_config = None
 
+    if len(compress_config) == 0:
+        compress_config = None
+
     return compress_config, train_config
 
 
