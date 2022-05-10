@@ -1,12 +1,26 @@
 # 目标检测模型自动压缩
 
-本示例将介绍如何使用PaddleDetection中Inference预测模型进行自动压缩。
+本示例将介绍如何使用PaddleDetection中Inference部署模型进行自动压缩。
+
+## Benchmark
+
+- PP-YOLOE模型：
+
+| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP32</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
+| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
+| PP-YOLOE-l |  Base模型 | 640*640  |  50.9   |   11.2  |   7.7ms   |  -  |  [config](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/configs/ppyoloe/ppyoloe_crn_l_300e_coco.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco.tar) |
+| PP-YOLOE-l |  量化+蒸馏 | 640*640  |  49.5   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dist.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco_quant.tar) |
+
+- mAP的指标均在COCO val2017数据集中评测得到。
+- PP-YOLOE模型在Tesla V100的GPU环境下测试，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)
 
 ## 环境准备
 
-### 1. 准备COCO格式数据
+### 1. 准备数据
 
-参考[COCO数据准备文档](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.4/docs/tutorials/PrepareDataSet.md#coco%E6%95%B0%E6%8D%AE)
+本案例默认以COCO数据进行自动压缩实验，如果自定义COCO数据，或者其他格式数据，请参考[PaddleDetection数据准备文档](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.4/docs/tutorials/PrepareDataSet.md) 来准备数据。
+
+如果数据集为非COCO格式数据，请修改[configs](./configs)中reader配置文件中的Dataset字段。
 
 ### 2. 准备需要量化的环境
 
@@ -17,7 +31,12 @@
 pip install paddledet
 ```
 
-### 3 准备待量化Inference模型
+注：安装PaddleDet的目的是为了直接使用PaddleDetection中的Dataloader组件。
+
+### 3. 准备待量化的部署模型
+
+如果已经准备好部署的`model.pdmodel`和`model.pdiparams`部署模型，跳过此步。
+
 根据[PaddleDetection文档](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/docs/tutorials/GETTING_STARTED_cn.md#8-%E6%A8%A1%E5%9E%8B%E5%AF%BC%E5%87%BA) 导出Inference模型，具体可参考下方PP-YOLOE模型的导出示例：
 - 下载代码
 ```
@@ -40,12 +59,14 @@ wget https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_co
 tar -xf ppyoloe_crn_l_300e_coco.tar
 ```
 
-### 2.4 测试模型精度
+### 4. 测试模型精度
 
 使用[run_main.py](run_main.py)脚本得到模型的mAP：
 ```
 python3.7 run_main.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=True
 ```
+
+**注意**：TinyPose模型暂不支持精度测试。
 
 ## 开始自动压缩
 
@@ -54,18 +75,6 @@ python3.7 run_main.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=Tru
 ```
 python run_main.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --save_dir='./output/' --devices='gpu'
 ```
-
-## Benchmark
-
-- PP-YOLOE模型：
-
-| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP32</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
-| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| PP-YOLOE-l |  Base模型 | 640*640  |  50.9   |   11.2  |   7.7ms   |  -  |  [config](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/configs/ppyoloe/ppyoloe_crn_l_300e_coco.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco.tar) |
-| PP-YOLOE-l |  量化+蒸馏 | 640*640  |  49.5   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dist.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco_quant.tar) |
-
-- mAP的指标均在COCO val2017数据集中评测得到。
-- PP-YOLOE模型在Tesla V100的GPU环境下测试，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)
 
 
 ## 部署
