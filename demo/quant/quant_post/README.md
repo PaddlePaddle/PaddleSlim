@@ -92,7 +92,17 @@ python eval.py --model_path ./quant_model/ResNet50/
 
 ### benchmark
 
+- MobileNetV1的各类离线量化方法在imagenet 1K数据集上的Top1指标：（Base acc-top1：70.92）
+
+| 策略     | abs_max | avg | mse | emd | hist | KL |
+| :-------- | :--------: | :--------: | :--------: | :--------: | :--------: | :--------: |
+| Base    |  69.42      |  70.14   | 70.32   | 70.29  | 70.29  | 70.33  |
+| bias_correction  | 69.39  |  70.26   | 70.44   | 70.31  | 70.31  | 70.36  |
+| Adaround    |   69.67     |  70.51   | 70.61   | 70.63  | 70.57  | 70.45  |
+| Adaround & bias_correction  |  69.67      |  70.46   | 70.55   | 70.64  | 70.58  |  70.45 |
+
+- ResNet50离线量化指标：
+
 | 模型     | FP32 acc-top1 | INT8 acc-top1  | INT8 acc(adaround) |
 | :-------- | :--------: | :--------: | :--------: |
-| MobileNetV1 | 0.7092  | 0.7036  | 0.7063  |
-| ResNet50 |  0.7633 | 0.7615 | 0.7625  |
+| ResNet50 |  76.33 | 76.15 | 76.25  |
