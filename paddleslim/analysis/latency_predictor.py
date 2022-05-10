@@ -64,7 +64,7 @@ class TableLatencyPredictor(LatencyPredictor):
     Args:
         table_file(str): The path of file that records the device latency of operators.
     """
-    hardware_list = ['SD625', 'SD710']
+    hardware_list = ['SD625', 'SD710', 'RK3288']
 
     def __init__(self, table_file='SD710'):
         self.table_file = table_file
