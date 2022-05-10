@@ -182,7 +182,7 @@ python evaluate.py --h
 | PicoDet-m-1.0 | COCO   | ratio, 1x1conv, GMP | 75% | 29.40% | -1.50% |
 | PP-HumanSeg-Lite | 人像分割数据集 | Baseline | - | 92.87% | - |
 | PP-HumanSeg-Lite | 人像分割数据集 | ratio, 1x1conv, GMP | 75% | 92.57% | -0.30% |
-| PP-HumanSeg-Lite | 人像分割数据集 | ratio, 1x1conv, GMP, 半结构化稀疏 | 75% | 91.76% (优化中) | -1.11% |
+| PP-HumanSeg-Lite | 人像分割数据集 | ratio, 1x1conv, GMP, 半结构化稀疏 | 75% | 92.20% (优化中) | -0.67% |
 
 **术语说明**
 
