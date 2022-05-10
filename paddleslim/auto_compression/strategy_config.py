@@ -94,7 +94,7 @@ UnstructurePrune = namedtuple("UnstructurePrune", [
     "prune_strategy",
     "prune_mode",
     "threshold",
-    "prune_ratio",
+    "pruned_ratio",
     "gmp_config",
     "prune_params_type",
     "local_sparsity",
@@ -121,10 +121,10 @@ TrainConfig.__new__.__defaults__ = (None, ) * len(TrainConfig._fields)
 
 
 def merge_config(*args):
-    fields = tuple()
+    fields = set()
     cfg = dict()
     for arg in args:
-        fields += arg._fields
+        fields = fields.union(arg._fields)
         cfg.update(dict(arg._asdict()))
     MergeConfig = namedtuple("MergeConfig", fields)
     return MergeConfig(**cfg)
