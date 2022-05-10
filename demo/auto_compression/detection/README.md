@@ -62,7 +62,7 @@ python run_main.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --save_dir='.
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP32</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | PP-YOLOE-l |  Base模型 | 640*640  |  50.9   |   11.2  |   7.7ms   |  -  |  [config](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/configs/ppyoloe/ppyoloe_crn_l_300e_coco.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco.tar) |
-| PP-YOLOE-l |  量化+蒸馏 | 640*640  |  49.5   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto-compression/detection/configs/ppyoloe_l_qat_dist.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco_quant.tar) |
+| PP-YOLOE-l |  量化+蒸馏 | 640*640  |  49.5   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dist.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco_quant.tar) |
 
 - mAP的指标均在COCO val2017数据集中评测得到。
 - PP-YOLOE模型在Tesla V100的GPU环境下测试，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)
