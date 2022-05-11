@@ -215,7 +215,7 @@ class UnstructuredPruner():
                 paddle.assign(param_tmp, output=param)
 
     @staticmethod
-    def total_sparse(model):
+    def total_sparse(model, debug_mode=False):
         """
         This static function is used to get the whole model's sparsity.
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
@@ -231,6 +231,9 @@ class UnstructuredPruner():
             for param in sub_layer.parameters(include_sublayers=False):
                 total += np.product(param.shape)
                 values += len(paddle.nonzero(param))
+                if not debug_mode: continue
+                den = float(paddle.nonzero(param)) / np.product(param.shape)
+                print(param.name, param.shape, 1 - den)
         ratio = 1 - float(values) / total
         return ratio
 
