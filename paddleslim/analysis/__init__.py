@@ -16,18 +16,10 @@ from .model_size import model_size
 from .latency import LatencyEvaluator, TableLatencyEvaluator
 from .latency_predictor import LatencyPredictor, TableLatencyPredictor
 from .parse_ops import get_key_from_op
-from ._utils import save_cls_model, save_det_model, save_seg_model
+from ._utils import save_cls_model, save_det_model
 
 __all__ = [
-    'flops',
-    'dygraph_flops',
-    'model_size',
-    'LatencyEvaluator',
-    'TableLatencyEvaluator',
-    "LatencyPredictor",
-    "TableLatencyPredictor",
-    "get_key_from_op",
-    "save_cls_model",
-    "save_det_model",
-    "save_seg_model",
+    'flops', 'dygraph_flops', 'model_size', 'LatencyEvaluator',
+    'TableLatencyEvaluator', "LatencyPredictor", "TableLatencyPredictor",
+    "get_key_from_op", "save_cls_model", "save_det_model"
 ]

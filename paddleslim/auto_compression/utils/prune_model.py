@@ -27,7 +27,6 @@ def get_sparse_model(model_file, param_file, ratio, save_path):
 
     folder = os.path.dirname(model_file)
     model_name = model_file.split('/')[-1]
-    model_name = model_file.split('/')[-1]
     if param_file is None:
         param_name = None
     else:

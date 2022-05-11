@@ -27,12 +27,20 @@ def load_config(config_path):
 
     compress_config = {}
     for key, value in cfg.items():
-        default_key = eval(key)(**value)
-        compress_config[key] = default_key
+        if key == "Global":
+            for g_key, g_value in cfg["Global"].items():
+                compress_config[g_key] = g_value
+        else:
+            default_key = eval(key)(**value)
+            compress_config[key] = default_key
+
     if compress_config.get('TrainConfig') != None:
         train_config = compress_config.pop('TrainConfig')
     else:
         train_config = None
+
+    if len(compress_config) == 0:
+        compress_config = None
 
     return compress_config, train_config
 
