@@ -1,10 +1,21 @@
+# Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import sys
-sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
-import argparse
-import functools
-from functools import partial
 import numpy as np
+import argparse
 import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
@@ -12,20 +23,36 @@ from ppdet.metrics import COCOMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 
-paddle.enable_static()
 
-from utility import add_arguments, print_arguments
+def argsparser():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--config_path',
+        type=str,
+        default=None,
+        help="path of compression strategy config.",
+        required=True)
+    parser.add_argument(
+        '--save_dir',
+        type=str,
+        default='output',
+        help="directory to save compressed model.")
+    parser.add_argument(
+        '--devices',
+        type=str,
+        default='gpu',
+        help="which device used to compress.")
+    parser.add_argument(
+        '--eval', type=bool, default=False, help="whether to run evaluation.")
 
-parser = argparse.ArgumentParser(description=__doc__)
-add_arg = functools.partial(add_arguments, argparser=parser)
+    return parser
 
-# yapf: disable
-add_arg('save_dir',                    str,    'output',         "directory to save compressed model.")
-add_arg('devices',                     str,    'gpu',        "which device used to compress.")
-add_arg('batch_size',                  int,    1,            "train batch size.")
-add_arg('config_path',                 str,    None,         "path of compression strategy config.")
-add_arg('eval',                  bool,    False,            "whether to run evaluation.")
-# yapf: enable
+
+def print_arguments(args):
+    print('-----------  Running Arguments -----------')
+    for arg, value in sorted(vars(args).items()):
+        print('%s: %s' % (arg, value))
+    print('------------------------------------------')
 
 
 def reader_wrapper(reader, input_list):
@@ -39,9 +66,9 @@ def reader_wrapper(reader, input_list):
     return gen
 
 
-def eval(args, compress_config):
+def eval(compress_config):
 
-    place = paddle.CUDAPlace(0) if args.devices == 'gpu' else paddle.CPUPlace()
+    place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
     val_program, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
@@ -114,8 +141,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     return map_res['bbox'][0]
 
 
-def main(args):
-    compress_config, train_config = load_slim_config(args.config_path)
+def main():
+    compress_config, train_config = load_slim_config(FLAGS.config_path)
     reader_cfg = load_config(compress_config['reader_config'])
 
     train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
@@ -130,8 +157,8 @@ def main(args):
                                       reader_cfg['worker_num'],
                                       return_list=True)
 
-    if args.eval:
-        eval(args, compress_config)
+    if FLAGS.eval:
+        eval(compress_config)
         sys.exit(0)
 
     if 'Evaluation' in compress_config.keys() and compress_config['Evaluation']:
@@ -143,7 +170,7 @@ def main(args):
         model_dir=compress_config["model_dir"],
         model_filename=compress_config["model_filename"],
         params_filename=compress_config["params_filename"],
-        save_dir=args.save_dir,
+        save_dir=FLAGS.save_dir,
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_loader,
@@ -153,7 +180,12 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = parser.parse_args()
-    print_arguments(args)
     paddle.enable_static()
-    main(args)
+    parser = argsparser()
+    FLAGS = parser.parse_args()
+    print_arguments(FLAGS)
+
+    assert FLAGS.devices in ['cpu', 'gpu', 'xpu', 'npu']
+    paddle.set_device(FLAGS.devices)
+
+    main()

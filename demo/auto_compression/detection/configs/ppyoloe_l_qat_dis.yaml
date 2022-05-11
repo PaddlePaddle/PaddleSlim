@@ -1,8 +1,9 @@
+
 Global:
   reader_config: configs/yolo_reader.yml
-  input_list: ['image', 'im_shape', 'scale_factor']
+  input_list: ['image', 'scale_factor']
   Evaluation: True
-  model_dir: ./yolov3_mobilenet_v1_270e_coco/
+  model_dir: ./ppyoloe_crn_l_300e_coco/
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
@@ -10,19 +11,19 @@ Distillation:
   distill_lambda: 1.0
   distill_loss: l2_loss
   distill_node_pair:
-  - teacher_conv2d_84.tmp_0
-  - conv2d_84.tmp_0
-  - teacher_conv2d_85.tmp_0
-  - conv2d_85.tmp_0
-  - teacher_conv2d_86.tmp_0
-  - conv2d_86.tmp_0
+  - teacher_concat_15.tmp_0
+  - concat_15.tmp_0
+  - teacher_concat_14.tmp_0
+  - concat_14.tmp_0
   merge_feed: true
-  teacher_model_dir: ./yolov3_mobilenet_v1_270e_coco/
+  teacher_model_dir: ./ppyoloe_crn_l_300e_coco/
   teacher_model_filename: model.pdmodel
   teacher_params_filename: model.pdiparams
 
 Quantization:
+  use_pact: true
   activation_bits: 8
+  weight_bits: 8
   activation_quantize_type: 'range_abs_max'
   weight_quantize_type: 'channel_wise_abs_max'
   is_full_quantize: false
@@ -31,14 +32,12 @@ Quantization:
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
-  weight_bits: 8
 
 TrainConfig:
   epochs: 1
   eval_iter: 1000
-  learning_rate: 0.0001
+  learning_rate: 0.00001
   optimizer: SGD
   optim_args:
     weight_decay: 4.0e-05
-  #origin_metric: 0.289
 
