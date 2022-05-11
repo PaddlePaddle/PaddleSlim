@@ -22,7 +22,6 @@ add_arg('model_dir',                   str,    None,         "inference model di
 add_arg('model_filename',              str,    None,         "inference model filename.")
 add_arg('params_filename',             str,    None,         "inference params filename.")
 add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
-add_arg('devices',                     str,    'gpu',        "which device used to compress.")
 add_arg('batch_size',                  int,    1,            "train batch size.")
 add_arg('config_path',                 str,    None,         "path of compression strategy config.")
 add_arg('data_dir',                    str,    None,         "path of dataset")
@@ -37,9 +36,12 @@ def reader_wrapper(reader):
 
     return gen
 
+
 def eval_reader(data_dir, batch_size):
-    val_reader = paddle.batch(reader.val(data_dir=data_dir), batch_size=batch_size)
+    val_reader = paddle.batch(
+        reader.val(data_dir=data_dir), batch_size=batch_size)
     return val_reader
+
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     val_reader = eval_reader(data_dir, batch_size=1)
@@ -104,7 +106,7 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function if 'HyperParameterOptimization' not in compress_config else reader_wrapper(eval_reader(data_dir, 64)),
-        devices=args.devices)
+        eval_callback=eval_function,
+        eval_dataloader=eader_wrapper(eval_reader(data_dir, 64)))
 
     ac.compress()
