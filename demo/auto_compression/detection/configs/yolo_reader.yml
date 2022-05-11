@@ -14,7 +14,7 @@ EvalDataset:
     anno_path: annotations/instances_val2017.json
     dataset_dir: dataset/coco/
 
-worker_num: 8
+worker_num: 4
 
 # preprocess reader in test
 EvalReader:
