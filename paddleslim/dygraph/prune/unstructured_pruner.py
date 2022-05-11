@@ -41,7 +41,7 @@ class UnstructuredPruner():
                  sparse_block=[1, 1]):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
-        assert prune_params_type is None or prune_params_type == 'conv1x1_only', "prune_params_type only supports None or conv1x1_only for now."
+        assert prune_params_type is None or prune_params_type == 'conv1x1_only' or prune_params_type == 'fc', "prune_params_type only supports None or conv1x1_only or fc for now."
         if local_sparsity:
             assert mode == 'ratio', "We don't support local_sparsity==True and mode=='threshold' at the same time, please change the inputs accordingly."
         assert len(
