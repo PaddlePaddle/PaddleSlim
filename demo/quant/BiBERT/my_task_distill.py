@@ -147,11 +147,6 @@ def parse_args():
         type=int,
         help="Batch size per GPU/CPU for training.", )
     parser.add_argument(
-        "--T",
-        default=1,
-        type=int,
-        help="Temperature for softmax", )
-    parser.add_argument(
         "--use_aug",
         action="store_true",
         help="Whether to use augmentation data to train.", )
