@@ -504,4 +504,6 @@ class AutoCompression:
             feeded_var_names=test_program_info.feed_target_names,
             target_vars=test_program_info.fetch_targets,
             executor=self._exe,
-            main_program=test_program)
+            main_program=test_program,
+            model_filename='model.pdmodel',
+            params_filename='model.pdiparams')

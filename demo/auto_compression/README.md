@@ -50,9 +50,9 @@ python tools/export_model.py \
     -o Global.save_inference_dir=infermodel_mobilenetv2
 ```
 #### 2.4 测试模型精度
-拷贝``infermodel_mobilenetv2``文件夹到``PaddleSlim/demo/auto-compression/``文件夹。
+拷贝``infermodel_mobilenetv2``文件夹到``PaddleSlim/demo/auto_compression/``文件夹。
 ```
-cd PaddleSlim/demo/auto-compression/
+cd PaddleSlim/demo/auto_compression/
 ```
 使用[eval.py](../quant/quant_post/eval.py)脚本得到模型的分类精度，压缩后的模型也可以使用同一个脚本测试精度：
 ```
