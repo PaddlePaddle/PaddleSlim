@@ -49,8 +49,7 @@ Quantization:
   weight_bits: 8
 TrainConfig:
   epochs: 1
-  eval_iter: 1400
-  logging_iter: 1
+  eval_iter: 400
   learning_rate: 0.0005
   optimizer: SGD
   optim_args:
