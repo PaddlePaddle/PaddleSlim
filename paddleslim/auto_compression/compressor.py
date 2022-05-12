@@ -244,6 +244,18 @@ class AutoCompression:
                                          feed_target_names, fetch_targets)
 
         config_dict = dict(config._asdict())
+        if config_dict["prune_strategy"] == "gmp" and config_dict[
+                'gmp_config'] is None:
+            iters_per_epoch = sum(1 for _ in self.train_dataloader())
+            total_iters = self.train_config.epochs * iters_per_epoch
+            config_dict['gmp_config'] = {
+                'stable_iterations': 0,
+                'pruning_iterations': 0.45 * total_iters,
+                'tunning_iterations': 0.45 * total_iters,
+                'resume_iteration': -1,
+                'pruning_steps': 100,
+                'initial_ratio': 0.15,
+            }
         ### add prune program
         self._pruner = None
         if 'prune' in strategy:
