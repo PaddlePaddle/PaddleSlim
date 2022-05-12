@@ -102,23 +102,11 @@ UnstructurePrune = namedtuple("UnstructurePrune", [
 UnstructurePrune.__new__.__defaults__ = (None, ) * len(UnstructurePrune._fields)
 
 ### Train
-TrainConfig = namedtuple(
-    "Train",
-    [
-        "epochs",
-        "learning_rate",
-        "optimizer",
-        "optim_args",
-        "eval_iter",
-        "logging_iter",
-        "origin_metric",
-        "target_metric",
-        "use_fleet",
-        "amp_config",
-        "recompute_config",
-        "sharding_config",
-        "sparse_config"  #prune_mode, pruned_ratio, threshold, prune_params_type, local_sparsity
-    ])
+TrainConfig = namedtuple("Train", [
+    "epochs", "learning_rate", "optimizer", "optim_args", "eval_iter",
+    "logging_iter", "origin_metric", "target_metric", "use_fleet", "amp_config",
+    "recompute_config", "sharding_config", "sparse_model"
+])
 
 TrainConfig.__new__.__defaults__ = (None, ) * len(TrainConfig._fields)
 

@@ -274,17 +274,14 @@ class AutoCompression:
             train_program_info, test_program_info, self._quant_config = build_quant_program(
                 self._exe, self._places, config_dict, train_program_info,
                 test_program_info)
-        if self.train_config.sparse_config:
-            sparse_config = self.train_config.sparse_config
+        if self.train_config.sparse_model:
             from ..prune.unstructured_pruner import UnstructuredPruner
             self._pruner = UnstructuredPruner(
                 train_program_info.program,
-                mode=sparse_config['prune_mode'],
-                ratio=sparse_config.get('pruned_ratio', None),
-                threshold=sparse_config.get('threshold', None),
-                prune_params_type=sparse_config['prune_params_type'],
-                place=self._places,
-                local_sparsity=sparse_config['local_sparsity'])
+                mode='ratio',
+                ratio=0.75,
+                prune_params_type='conv1x1_only',
+                place=self._places)
             self._pruner.set_static_masks()
 
         self._exe.run(train_program_info.startup_program)
@@ -475,8 +472,8 @@ class AutoCompression:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
-   
-        if 'unstructure' in self._strategy or self.train_config.sparse_config:
+
+        if 'unstructure' in self._strategy or self.train_config.sparse_model:
             self._pruner.update_params()
 
         return test_program_info
