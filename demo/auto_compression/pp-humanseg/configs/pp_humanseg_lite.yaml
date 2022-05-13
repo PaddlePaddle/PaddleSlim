@@ -1,8 +1,3 @@
-model:
-  type: PPHumanSegLite
-  align_corners: False
-  num_classes: 2
-
 batch_size: 128
 
 train_dataset:
@@ -39,9 +34,3 @@ val_dataset:
     target_size: [398, 224]
   - type: Normalize
   mode: val
-
-export:
-  transforms:
-    - type: Resize
-      target_size: [398, 224]
-    - type: Normalize
