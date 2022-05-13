@@ -28,7 +28,7 @@
 
 注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集和Tokenizer。
 
-### 3.准备待量化的部署模型
+### 3.准备待压缩的部署模型
 如果已经准备好部署的model.pdmodel和model.pdiparams部署模型，跳过此步。
 根据[PaddleNLP文档](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples)导出Inference模型，本示例可参考[PaddleNLP PP-MiniLM 中文小模型](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm)微调后保存下每个数据集下有最高准确率的模型。
 
