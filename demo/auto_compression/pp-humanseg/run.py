@@ -38,11 +38,6 @@ def parse_args():
         type=str,
         default=None,
         help="path of compression strategy config.")
-    parser.add_argument(
-        '--dataset_config',
-        type=str,
-        default=None,
-        help="path of dataset config file.")
     return parser.parse_args()
 
 
@@ -148,7 +143,8 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    cfg = Config(args.dataset_config)
+    compress_config, train_config = load_config(args.config_path)
+    cfg = Config(compress_config['reader_config'])
 
     train_dataset = cfg.train_dataset
     eval_dataset = cfg.val_dataset
@@ -163,8 +159,6 @@ if __name__ == '__main__':
     train_dataloader = reader_wrapper(train_loader)
 
     # set auto_compression
-    compress_config, train_config = load_config(args.config_path)
-
     ac = AutoCompression(
         model_dir=args.model_dir,
         model_filename=args.model_filename,
