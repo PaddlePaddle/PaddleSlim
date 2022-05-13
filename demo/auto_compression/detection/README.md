@@ -63,7 +63,7 @@ tar -xf ppyoloe_crn_l_300e_coco.tar
 
 使用[run.py](run.py)脚本得到模型的mAP：
 ```
-python3.7 run.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=True
+python run.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=True
 ```
 
 **注意**：TinyPose模型暂不支持精度测试。
