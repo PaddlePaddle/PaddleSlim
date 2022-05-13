@@ -25,6 +25,7 @@
 ### 2.准备需要量化的环境
 - PaddlePaddle >= 2.3
 - PaddleNLP >= 2.3
+
 注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集和Tokenizer。
 
 ### 3.准备待量化的部署模型
