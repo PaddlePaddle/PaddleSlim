@@ -246,7 +246,7 @@ class AutoCompression:
         config_dict = dict(config._asdict())
         if config_dict["prune_strategy"] == "gmp" and config_dict[
                 'gmp_config'] is None:
-            iters_per_epoch = sum(1 for _ in self.train_dataloader())
+            iters_per_epoch = len(list(self.train_dataloader()))
             total_iters = self.train_config.epochs * iters_per_epoch
             config_dict['gmp_config'] = {
                 'stable_iterations': 0,
