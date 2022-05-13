@@ -43,20 +43,20 @@ ac.compress()
 
 ## 应用示例
 
-##### [图像分类](./image_classification)
+#### [图像分类](./image_classification)
 
-##### [目标检测](./detection)
+#### [目标检测](./detection)
 
-##### [语义分割](./semantic_segmentation)
+#### [语义分割](./semantic_segmentation)
 
-##### [NLP](./nlp)
+#### [NLP](./nlp)
 
-##### 即将发布
+#### 即将发布
 - [ ] 更多自动压缩应用示例
 - [ ] X2Paddle模型自动压缩示例
 
 ## 其他
 
-- ACT可以自动处理常见的预测模型，如果有更特殊的改造需求，或者想要深入了解更多ACT的默认超参设置，可以单独配置压缩策略，可以参考[ACT超参配置教程](./hyperparameter_tutorial.md)来进行配置。
+- ACT可以自动处理常见的预测模型，如果有更特殊的改造需求，可以参考[ACT超参配置教程](./hyperparameter_tutorial.md)来进行单独配置压缩策略。
 
 - 如果你发现任何关于ACT自动压缩工具的问题或者是建议, 欢迎通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSlim/issues)给我们提issues。同时欢迎贡献更多优秀模型，共建开源生态。
