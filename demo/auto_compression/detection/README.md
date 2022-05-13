@@ -61,9 +61,9 @@ tar -xf ppyoloe_crn_l_300e_coco.tar
 
 ### 4. 测试模型精度
 
-使用[run_main.py](run_main.py)脚本得到模型的mAP：
+使用[run.py](run.py)脚本得到模型的mAP：
 ```
-python3.7 run_main.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=True
+python3.7 run.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=True
 ```
 
 **注意**：TinyPose模型暂不支持精度测试。
@@ -71,9 +71,9 @@ python3.7 run_main.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=Tru
 ## 开始自动压缩
 
 ### 进行量化蒸馏自动压缩
-蒸馏量化自动压缩示例通过[run_main.py](run_main.py)脚本启动，会使用接口``paddleslim.auto_compression.AutoCompression``对模型进行量化训练。具体运行命令为：
+蒸馏量化自动压缩示例通过[run.py](run.py)脚本启动，会使用接口``paddleslim.auto_compression.AutoCompression``对模型进行量化训练。具体运行命令为：
 ```
-python run_main.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --save_dir='./output/' --devices='gpu'
+python run.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --save_dir='./output/' --devices='gpu'
 ```
 
 
