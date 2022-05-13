@@ -22,7 +22,7 @@ class BinaryQuantizer(PyLayer):
         grad_input = grad_output
         grad_input[input >= 1] = 0
         grad_input[input <= -1] = 0
-        return grad_input.clone().detach()
+        return grad_input.clone()
 
 class ZMeanBinaryQuantizer(PyLayer):
     @staticmethod
@@ -37,7 +37,7 @@ class ZMeanBinaryQuantizer(PyLayer):
         grad_input = grad_output
         grad_input[input >= 1] = 0
         grad_input[input <= -1] = 0
-        return grad_input
+        return grad_input.clone()
 
 class BiLinear(Linear):
     def __init__(self, in_features, out_features, weight_attr=None, bias_attr=None, name=None):
@@ -216,7 +216,7 @@ def _MultiHeadAttention_forward(self, query, key=None, value=None, attn_mask=Non
     self.value_scores = value_scores
     return out if len(outs) == 1 else tuple(outs)
 
-def _BiMultiHeadAttention_forward(self, query, key=None, value=None, attn_mask=None, cache=None):
+def _Bi_MultiHeadAttention_forward(self, query, key=None, value=None, attn_mask=None, cache=None):
     key = query if key is None else key
     value = query if value is None else value
     # compute q ,k ,v
@@ -317,12 +317,10 @@ def _get_attr(model, attr):
 def _to_distill_function(model):
     from types import MethodType
     for layer in model.children():
-        if isinstance(layer, MultiHeadAttention):
-            layer.forward = MethodType(_MultiHeadAttention_forward, layer)
-        elif isinstance(layer, BiMultiHeadAttention):
+        if isinstance(layer, BiMultiHeadAttention):
             layer.forward = MethodType(_Bi_MultiHeadAttention_forward, layer)
+        elif isinstance(layer, MultiHeadAttention):
+            layer.forward = MethodType(_MultiHeadAttention_forward, layer)
         elif isinstance(layer, paddle.nn.layer.transformer.TransformerEncoderLayer):
             layer.forward = MethodType(_TransformerEncoderLayer_forward, layer)
-#    paddle.nn.layer.transformer.MultiHeadAttention.forward = _MultiHeadAttention_forward
-#    BiMultiHeadAttention.forward = _BiMultiHeadAttention_forward
-#    paddle.nn.layer.transformer.TransformerEncoderLayer.forward = _TransformerEncoderLayer_forward
+

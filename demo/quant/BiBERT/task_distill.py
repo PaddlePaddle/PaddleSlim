@@ -1,4 +1,5 @@
 # Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
+
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,22 +27,17 @@ import paddle
 from paddle.io import DataLoader
 import paddle.nn as nn
 import paddle.nn.functional as F
-from paddle.metric import Metric, Accuracy, Precision, Recall
+from paddle.metric import Accuracy
 
 from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad, Dict
 from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
-from paddlenlp.transformers import LinearDecayWithWarmup
-from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
-from paddlenlp.transformers import TinyBertForSequenceClassification, TinyBertTokenizer
-from paddlenlp.transformers.distill_utils import to_distill
+import paddlenlp.transformers as T
 
-import sys
-log_format = '%(asctime)s %(message)s'
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format=log_format, datefmt='%m/%d %I:%M:%S %p')
-logger = logging.getLogger()
-cnt_epoch = -1
+FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
+logging.basicConfig(level=logging.INFO, format=FORMAT)
+logger = logging.getLogger(__name__)
 
 METRIC_CLASSES = {
     "cola": Mcc,
@@ -55,8 +51,8 @@ METRIC_CLASSES = {
 }
 
 MODEL_CLASSES = {
-    "bert": (BertForSequenceClassification, BertTokenizer),
-    "tinybert": (TinyBertForSequenceClassification, TinyBertTokenizer),
+    "bert": (T.BertForSequenceClassification, T.BertTokenizer),
+    "tinybert": (T.TinyBertForSequenceClassification, T.TinyBertTokenizer),
 }
 
 
@@ -96,6 +92,11 @@ def parse_args():
                 list(classes[-1].pretrained_init_configuration.keys())
                 for classes in MODEL_CLASSES.values()
             ], [])), )
+    parser.add_argument(
+        "--distill_config",
+        default=None,
+        type=str,
+        help="distill config file path")
     parser.add_argument(
         "--teacher_path",
         default=None,
@@ -147,6 +148,11 @@ def parse_args():
         type=int,
         help="Batch size per GPU/CPU for training.", )
     parser.add_argument(
+        "--T",
+        default=1,
+        type=int,
+        help="Temperature for softmax", )
+    parser.add_argument(
         "--use_aug",
         action="store_true",
         help="Whether to use augmentation data to train.", )
@@ -184,13 +190,6 @@ def parse_args():
         default="gpu",
         type=str,
         help="The device to select to train the model, is must be cpu/gpu/xpu.")
-    
-    parser.add_argument("--intermediate_distill", action="store_true", help="Whether distilling intermediate layers. If False, it means prediction layer distillation.")
-    parser.add_argument("--pred_distill", action="store_true", help="pred_distill")
-    parser.add_argument("--query_distill", action="store_true", help="query_distill")
-    parser.add_argument("--key_distill", action="store_true", help="key_distill")
-    parser.add_argument("--value_distill", action="store_true", help="value_distill")
-    parser.add_argument("--bi", action='store_true', help='bibert/bert?')
     args = parser.parse_args()
     return args
 
@@ -232,7 +231,7 @@ def evaluate(model, metric, data_loader):
             (res[0], res[1], res[2]),
             end='')
     else:
-        logger.info("acc: %s, " % (res))
+        print("acc: %s, " % (res), end='')
     model.train()
     return res[0] if isinstance(metric, (AccuracyAndF1, Mcc,
                                          PearsonAndSpearman)) else res
@@ -341,7 +340,6 @@ def do_train(args):
     num_classes = 1 if train_ds.label_list == None else len(train_ds.label_list)
     student = model_class.from_pretrained(
         args.student_model_name_or_path, num_classes=num_classes)
-    # print(student)
     teacher_model_class, _ = MODEL_CLASSES[args.teacher_model_type]
     teacher = teacher_model_class.from_pretrained(
         args.teacher_path, num_classes=num_classes)
@@ -360,13 +358,23 @@ def do_train(args):
 
     warmup = args.warmup_steps if args.warmup_steps > 0 else args.warmup_proportion
 
-    lr_scheduler = LinearDecayWithWarmup(args.learning_rate, num_training_steps,
-                                         warmup)
+    lr_scheduler = T.LinearDecayWithWarmup(args.learning_rate,
+                                           num_training_steps, warmup)
 
+    ### step1: load distill config
+    assert os.path.exists(
+        args.distill_config), "distill file {} not exist.".format(
+            args.distill_config)
+    ### step2: wrap the student model and teacher model by paddleslim.dygraph.dist.Distill
+    ### the distill config need to be passed into it.
+    distill_model = Distill(
+        args.distill_config, students=[student], teachers=[teacher])
+
+    ### step3: add parameter created by align op to optimizer
     # Generate parameter names needed to perform weight decay.
     # All bias and LayerNorm parameters are excluded.
     decay_params = [
-        p.name for n, p in student.named_parameters()
+        p.name for n, p in distill_model.named_parameters()
         if not any(nd in n for nd in ["bias", "norm"])
     ]
     optimizer = paddle.optimizer.AdamW(
@@ -374,160 +382,30 @@ def do_train(args):
         beta1=0.9,
         beta2=0.999,
         epsilon=args.adam_epsilon,
-        parameters=student.parameters(),
+        parameters=distill_model.parameters(),
         weight_decay=args.weight_decay,
         apply_decay_param_fun=lambda x: x in decay_params)
 
-    ce_loss_fct = paddle.nn.CrossEntropyLoss(soft_label=True)
-    mse_loss_fct = paddle.nn.MSELoss()
-
     metric = metric_class()
 
-    teacher = to_distill(
-        teacher,
-        return_attentions=True,
-        return_qkv=False,
-        return_layer_outputs=True)
-    student = to_distill(
-        student,
-        return_attentions=True,
-        return_qkv=False,
-        return_layer_outputs=True)
-    import basic #from basic import funciton
-    if args.bi: student.apply(basic._to_bi_function)
-    student.apply(basic._to_distill_function)
-    teacher.apply(basic._to_distill_function)
-    print(student)
     pad_token_id = 0
     global_step = 0
     tic_train = time.time()
     best_res = 0.0
 
-    def cal_intermediate_distill_loss(student, teacher):
-        loss_hidden, loss_attn = 0, 0
-        # Calculate emb loss(hidden_states[0]) and hidden states loss.
-        for i in range(len(student.outputs.hidden_states)):
-            # While using tinybert-4l-312d, tinybert-6l-768d, tinybert-4l-312d-zh, tinybert-6l-768d-zh
-            # student_hidden = student.tinybert.fit_dense(student.outputs.hidden_states[i])
-            # While using tinybert-4l-312d-v2, tinybert-6l-768d-v2
-            if isinstance(student, paddle.DataParallel):
-                student_hidden = student._layers.tinybert.fit_denses[i](
-                    student.outputs.hidden_states[i])
-            else:
-                student_hidden = student.tinybert.fit_denses[i](
-                    student.outputs.hidden_states[i])
-            loss_hidden += mse_loss_fct(student_hidden,
-                                        teacher.outputs.hidden_states[2 * i])
-        for i in range(len(student.outputs.attentions)):
-            attn_student = student.outputs.attentions[i]
-            attn_teacher = teacher.outputs.attentions[2 * i + 1]
-            loss_attn += mse_loss_fct(attn_student, attn_teacher)
-        loss = loss_hidden + loss_attn
-        return loss
-
-    distill_part = "intermediate" if args.intermediate_distill else "pred"
-
     for epoch in range(num_train_epochs):
         for step, batch in enumerate(train_data_loader):
             global_step += 1
             input_ids, segment_ids, labels = batch
-            student_logits = student(input_ids, segment_ids)
-            with paddle.no_grad():
-                teacher_logits = teacher(input_ids, segment_ids)
+            ### step4: call distill_model instead of call student model and teacher model independently.
+            loss, _, _ = distill_model(input_ids, segment_ids)
 
-            loss = 0.
-
-            
-            import basic
-            teacher_querys = basic._get_attr(teacher, "query_scores")
-            teacher_keys = basic._get_attr(teacher, "key_scores")
-            teacher_values = basic._get_attr(teacher, "value_scores")
-            teacher_reps = basic._get_attr(teacher, "rep")
-            student_querys = basic._get_attr(student, "query_scores")
-            student_keys = basic._get_attr(student, "key_scores")
-            student_values = basic._get_attr(student, "value_scores")
-            student_reps = basic._get_attr(student, "rep")
-            
-            # print(type(teacher))
-            # print(type(student))
-            # print(len(teacher_querys), len(teacher_keys), len(teacher_values), len(teacher_reps))
-            # print(teacher_querys[0].shape)
-            # print(len(student_querys), len(student_keys), len(student_values), len(student_reps))
-
-            def soft_cross_entropy(predicts, targets):
-                student_likelihood = paddle.nn.functional.log_softmax(predicts, axis=-1)
-                targets_prob = paddle.nn.functional.softmax(targets, axis=-1)
-                return (-targets_prob * student_likelihood).mean()
-
-            if args.pred_distill:
-                output_mode = "classification"
-                if output_mode == "classification":
-                    cls_loss = soft_cross_entropy(student_logits, teacher_logits)
-                    gt_beta = 0.5
-                    logsoftmax_student_logits = paddle.nn.functional.log_softmax(student_logits, axis=-1)
-                    ce_loss = paddle.nn.NLLLoss()
-                    tmp_loss = ce_loss(logsoftmax_student_logits, labels)
-                    cls_loss += gt_beta * tmp_loss
-                elif output_mode == "regression":
-                    pass
-                loss = cls_loss
-
-#            if args.intermediate_distill:
-#                loss = cal_intermediate_distill_loss(student, teacher)
-#            else:
-#                loss = ce_loss_fct(logits / args.T,
-#                                   F.softmax(teacher_logits / args.T))
-          
-            teacher_layer_num = len(teacher_values)
-            student_layer_num = len(student_values)
-            assert teacher_layer_num % student_layer_num == 0
-            layers_per_block = int(teacher_layer_num / student_layer_num)
-
-            def att_loss_r2b(Q_s, Q_t):
-                Q_s_norm = Q_s / paddle.norm(Q_s, p=2)
-                Q_t_norm = Q_t / paddle.norm(Q_t, p=2)
-                tmp = Q_s_norm - Q_t_norm
-                loss = paddle.norm(tmp, p=2)
-                return loss
-
-            def direction_matching_distillation(student_scores, teacher_scores):
-                tmp_loss = 0.
-                # print(layers_per_block, student_layer_num, teacher_layer_num)
-                new_teacher_scores = [teacher_scores[i * layers_per_block + layers_per_block - 1] for i in range(student_layer_num)] 
-                for student_score, teacher_score in zip(student_scores, new_teacher_scores):
-                    student_score = paddle.where(student_score <= -1e2, paddle.zeros_like(student_score), student_score)
-                    teacher_score = paddle.where(teacher_score <= -1e2, paddle.zeros_like(teacher_score), teacher_score)
-                    tmp_loss += att_loss_r2b(student_score, teacher_score)
-                return tmp_loss
-
-
-            if args.query_distill:
-                query_loss = direction_matching_distillation(student_querys, teacher_querys)
-                loss += query_loss
-                # tr_query_loss += query_loss.item()
-            if args.key_distill:
-                key_loss = direction_matching_distillation(student_keys, teacher_keys)
-                loss += key_loss
-                # tr_key_loss += key_loss.item()
-            if args.value_distill:
-                value_loss = direction_matching_distillation(student_values, teacher_values)
-                loss += value_loss
-                # tr_value_loss += value_loss.item()
-            if args.intermediate_distill:
-                rep_loss = 0.0
-                new_teacher_reps = [teacher_reps[i * layers_per_block] for i in range(student_layer_num)]
-                teacher_reps = new_teacher_reps
-                for student_rep, teacher_rep in zip(student_reps, teacher_reps):
-                    rep_loss += att_loss_r2b(student_rep, teacher_rep)
-                loss += rep_loss
-                # tr_rep_loss += rep_loss.item()
-            
             loss.backward()
             optimizer.step()
             lr_scheduler.step()
             optimizer.clear_grad()
             if global_step % args.logging_steps == 0:
-                logger.info(
+                print(
                     "global step %d/%d, epoch: %d, batch: %d, rank_id: %s, loss: %f, lr: %.10f, speed: %.4f step/s"
                     % (global_step, num_training_steps, epoch, step,
                        paddle.distributed.get_rank(), loss, optimizer.get_lr(),
@@ -538,22 +416,20 @@ def do_train(args):
                 if args.task_name == "mnli":
                     res = evaluate(student, metric, dev_data_loader_matched)
                     evaluate(student, metric, dev_data_loader_mismatched)
-                    logger.info("eval done total : %s s" % (time.time() - tic_eval))
+                    print("eval done total : %s s" % (time.time() - tic_eval))
                 else:
                     res = evaluate(student, metric, dev_data_loader)
-                    logger.info("eval done total : %s s" % (time.time() - tic_eval))
+                    print("eval done total : %s s" % (time.time() - tic_eval))
                 if (best_res < res and global_step < num_training_steps or
                         global_step == num_training_steps
                     ) and paddle.distributed.get_rank() == 0:
                     if global_step < num_training_steps:
-                        tmp = "bi_" if args.bi else ""
-                        output_dir = os.path.join(
-                            args.output_dir, tmp + "%s_distill_model_%d.pdparams" %
-                            (distill_part, global_step))
+                        output_dir = os.path.join(args.output_dir,
+                                                  "distill_model_%d.pdparams" %
+                                                  (global_step))
                     else:
                         output_dir = os.path.join(
-                            args.output_dir,
-                            tmp + "%s_distill_model_final.pdparams" % (distill_part))
+                            args.output_dir, "distill_model_final.pdparams")
                     if not os.path.exists(output_dir):
                         os.makedirs(output_dir)
                     # Need better way to get inner model of DataParallel
@@ -579,3 +455,4 @@ if __name__ == "__main__":
     args = parse_args()
     print_arguments(args)
     do_train(args)
+
