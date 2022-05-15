@@ -99,7 +99,8 @@ def _load_program_and_merge(executor,
                             feed_target_names=None):
     scope = paddle.static.global_scope()
     new_scope = paddle.static.Scope()
-    print(model_dir, model_filename, params_filename)
+    if params_filename == 'None':
+        params_filename = None
     try:
         with paddle.static.scope_guard(new_scope):
             [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \

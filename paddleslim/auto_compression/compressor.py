@@ -98,6 +98,8 @@ class AutoCompression:
         """
         self.model_dir = model_dir
         self.model_filename = model_filename
+        if params_filename == 'None':
+            params_filename = None
         self.params_filename = params_filename
         base_path = os.path.basename(os.path.normpath(save_dir))
         parent_path = os.path.abspath(os.path.join(save_dir, os.pardir))
