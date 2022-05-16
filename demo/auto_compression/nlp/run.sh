@@ -1,9 +1,7 @@
 export FLAGS_cudnn_deterministic=True
-export PYTHONPATH=/workspace/xuxu/auto_compress/add_demo/PaddleSlim/:$PYTHONPATH
-export PYTHONPATH=/workspace/xuxu/PaddleNLP/:$PYTHONPATH
-python3.7 run.py \
+python run.py \
     --model_type='ppminilm' \
-    --model_dir='./afqmc_base/' \
+    --model_dir='./afqmc/' \
     --model_filename='inference.pdmodel' \
     --params_filename='inference.pdiparams' \
     --dataset='clue' \
