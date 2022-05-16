@@ -71,15 +71,16 @@ def create_strategy_config(strategy_str, model_type):
 
     dis_config = Distillation()
     if len(tmp_s) == 3:
-        ### TODO(ceci3): auto choose prune algo
+        ### TODO(ceci3): choose prune algo automatically
         if 'prune' in tmp_s[0]:
+            ### default prune config
             default_prune_config = {
                 'pruned_ratio': float(tmp_s[1]),
                 'prune_algo': 'prune',
                 'criterion': 'l1_norm'
             }
-        ### stratety is sparse
         else:
+            ### default unstruture prune config
             default_prune_config = {
                 'prune_strategy':
                 'gmp',  ### default unstruture prune strategy is gmp
