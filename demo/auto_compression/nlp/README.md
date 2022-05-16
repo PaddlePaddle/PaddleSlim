@@ -5,13 +5,20 @@
 ## Benchmark
 - PP-MiniLM模型
 
-PP-MiniLM是一个6层的预训练中文小模型，使用PaddleNLP中``from_pretrained``导入PP-MiniLM之后，就可以在自己的数据集上进行fine-tuning，具体介绍可参考[PP-MiniLM文档](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm#PP-MiniLM%E4%B8%AD%E6%96%87%E5%B0%8F%E6%A8%A1%E5%9E%8B)。
+PP-MiniLM是一个6层的预训练中文小模型，使用PaddleNLP中```from_pretrained```导入PP-MiniLM之后，就可以在自己的数据集上进行fine-tuning，具体介绍可参考[PP-MiniLM文档](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm#PP-MiniLM%E4%B8%AD%E6%96%87%E5%B0%8F%E6%A8%A1%E5%9E%8B)。
 此自动压缩实验首先会对模型的attention head裁剪25%，同时进行蒸馏训练，然后进行离线量化(Post-training quantization)。
 
+模型精度对比如下：
 | 模型 | 策略 | AFQMC | TNEWS | IFLYTEK | CMNLI | OCNLI | CLUEWSC2020 | CSL | AVG |
 |:------:|:------:|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|:------:|
 | PP-MiniLM | Base模型| 74.03 | 56.66 | 60.21 | 80.98 | 76.20 | 84.21 | 77.36 | 72.81 |
 | PP-MiniLM |剪枝蒸馏+离线量化| 73.56 | 56.38 | 59.87 | 80.80 | 76.44 | 82.23 | 77.77 | 72.44 |
+
+模型在不同任务上平均精度以及加速对比如下：
+|  PP-MiniLM | Accuracy（avg） | 时延(ms) | 加速比 |
+|:-------:|:----------:|:------------:| :------:|
+| 压缩前 |  72.81 | 128.01 | - |
+| 压缩后 |  72.44 | 17.97 | 612% |
 
 性能测试的环境为
 - 硬件：NVIDIA Tesla T4 单卡
@@ -58,12 +65,29 @@ tar -zxvf afqmc.tar
 
 ## 开始自动压缩
 
-### 压缩配置介绍
-自动压缩需要准备config文件，并传入``config_path``字段，configs文件夹下可查看不同任务的配置文件，以下示例以afqmc数据集为例介绍。训练参数需要自行配置。蒸馏、剪枝和离线量化的相关配置，自动压缩策略可以自动获取得到，也可以自行配置。PaddleNLP模型的自动压缩实验默认使用剪枝、蒸馏和离线量化的策略。
+### 进行剪枝蒸馏和离线量化自动压缩
+
+自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行离线量化。将任务名称、模型类型、数据集名称、压缩参数传入，对模型进行剪枝、蒸馏训练和离线量化。数据集为CLUE，不同任务名称代表CLUE上不同的任务，可选择的任务名称有：afqmc, tnews, iflytek, ocnli, cmnli, cluewsc2020, csl。具体运行命令为：
+```shell
+python run.py \
+    --model_type='ppminilm' \
+    --model_dir='./afqmc/' \
+    --model_filename='inference.pdmodel' \
+    --params_filename='inference.pdiparams' \
+    --dataset='clue' \
+    --save_dir='./save_afqmc_pruned/' \
+    --batch_size=16 \
+    --max_seq_length=128 \
+    --task_name='afqmc' \
+    --config_path='./configs/afqmc.yaml' 
+```
+
+## 压缩配置介绍
+自动压缩需要准备config文件，并传入```config_path```字段，configs文件夹下可查看不同任务的配置文件，以下示例以afqmc数据集为例介绍。训练参数需要自行配置。蒸馏、剪枝和离线量化的相关配置，自动压缩策略可以自动获取得到，也可以自行配置。PaddleNLP模型的自动压缩实验默认使用剪枝、蒸馏和离线量化的策略。
 
 - 训练参数
 
-训练参数主要设置学习率、训练轮数（epochs）和优化器等。``origin_metric``是原模型精度，如设置该参数，压缩之前会先验证模型精度是否正常。
+训练参数主要设置学习率、训练轮数（epochs）和优化器等。```origin_metric```是原模型精度，如设置该参数，压缩之前会先验证模型精度是否正常。
 
 ```yaml
 TrainConfig:
@@ -134,22 +158,7 @@ Quantization:
   weight_bits: 8
 ```
 
-### 进行剪枝蒸馏和离线量化自动压缩
 
-蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口``paddleslim.auto_compression.AutoCompression``对模型进行离线量化。将任务名称、模型类型、数据集名称、压缩参数传入，对模型进行剪枝、蒸馏训练和离线量化。数据集为CLUE，不同任务名称代表CLUE上不同的任务，可选择的任务名称有：afqmc, tnews, iflytek, ocnli, cmnli, cluewsc2020, csl。具体运行命令为：
-```shell
-python run.py \
-    --model_type='ppminilm' \
-    --model_dir='./afqmc/' \
-    --model_filename='inference.pdmodel' \
-    --params_filename='inference.pdiparams' \
-    --dataset='clue' \
-    --save_dir='./save_afqmc_pruned/' \
-    --batch_size=16 \
-    --max_seq_length=128 \
-    --task_name='afqmc' \
-    --config_path='./configs/afqmc.yaml' 
-```
 
 
 
