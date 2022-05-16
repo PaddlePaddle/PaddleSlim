@@ -28,6 +28,7 @@ PP-MiniLM是一个6层的预训练中文小模型，使用PaddleNLP中``from_pre
 - paddlepaddle >= 2.3
 - PaddleNLP >= 2.3
 
+安装paddlepadlle：
 ```shell
 # CPU
 pip install paddlepaddle
@@ -35,9 +36,15 @@ pip install paddlepaddle
 pip install paddlepaddle-gpu
 ```
 
+安装paddlenlp：
 ```shell
 pip install paddlenlp
 ``` 
+
+安装paddleslim：
+```shell
+pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
 
 注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集和Tokenizer。
 
