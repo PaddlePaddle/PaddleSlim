@@ -26,6 +26,8 @@ __all__ = [
     "load_predictor"
 ]
 
+PREDICTOR_URL = 'https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/'
+
 
 def opt_model(opt="paddle_lite_opt",
               model_file='',
@@ -202,9 +204,9 @@ def download_predictor(op_dir, op):
 
     op_path = os.path.join(op_dir, op + '_predictor.pkl')
     if not os.path.exists(op_path):
-        # To solve the 'SSL: certificate verify failed' error.
+        # NOTE: To solve the 'SSL: certificate verify failed' error.
         ssl._create_default_https_context = ssl._create_unverified_context
-        url = f'https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{op_path}'
+        url = PREDICTOR_URL + op_path
         request.urlretrieve(url, op_path)
         print('Successfully download {}!'.format(op_path))
     return op_path

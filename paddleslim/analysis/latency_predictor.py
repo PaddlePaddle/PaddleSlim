@@ -28,6 +28,8 @@ import urllib.request as request
 import ssl
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
 
+TABLE_URL = 'https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/'
+
 
 def format_Warning(message, category, filename, lineno, line=''):
     return str(filename) + ':' + str(
@@ -88,9 +90,9 @@ class TableLatencyPredictor(LatencyPredictor):
             self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
             self.predictor_state = True
             if not os.path.exists(self.table_file):
-                # To solve the 'SSL: certificate verify failed' error.
+                # NOTE: To solve the 'SSL: certificate verify failed' error.
                 ssl._create_default_https_context = ssl._create_unverified_context
-                url = f'https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/{self.table_file}'
+                url = TABLE_URL + self.table_file
                 request.urlretrieve(url, self.table_file)
                 print('Successfully download {}!'.format(self.table_file))
         assert os.path.exists(
