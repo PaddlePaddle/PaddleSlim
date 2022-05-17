@@ -1,10 +1,10 @@
-# 语义分割自动压缩
+# 语义分割模型自动压缩示例
 
 目录：
 - [1.简介](#1简介)
 - [2.Benchmark](#2Benchmark)
-- [3.开始自动压缩](#开始自动压缩)
-  - [3.1 环境准备](#31-环境准备)
+- [3.开始自动压缩](#自动压缩流程)
+  - [3.1 环境准备](#31-准备环境)
   - [3.2 准备数据集](#32-准备数据集)
   - [3.3 准备预测模型](#33-准备预测模型)
   - [3.4 自动压缩并产出模型](#34-自动压缩并产出模型)
@@ -13,7 +13,7 @@
 
 ## 1.简介
 
-语义分割是计算机视觉领域重要的一个研究方向，在很多场景中均有应用落地，语义分割模型的部署落地的性能也倍受关注，自动压缩工具（ACT）致力于更便捷的自动压缩优化模型，达到压缩模型体积、加速模型预测的效果。
+本示例将以语义分割模型PP-HumanSeg-Lite为例，介绍如何使用PaddleSeg中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为非结构化稀疏、蒸馏和量化、蒸馏。
 
 ## 2.Benchmark
 
@@ -30,16 +30,30 @@
 
 下面将以开源数据集为例介绍如何进行自动压缩。
 
-## 3.开始自动压缩
+## 3. 自动压缩流程
 
-#### 3.1 环境准备
+#### 3.1 准备环境
 
-- PaddlePaddle >= 2.2 （从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddlePaddle >= 2.2 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim >= 2.3 或者适当develop版本
 - PaddleSeg >= 2.5
 
+安装paddlepaddle：
+```shell
+# CPU
+pip install paddlepaddle
+# GPU
+pip install paddlepaddle-gpu
+```
+
+安装paddleslim：
 ```shell
 pip install paddleslim
+```
+
+安装paddleseg
+
+```shell
 pip install paddleseg
 ```
 
@@ -68,7 +82,7 @@ tar -xzf ppseg_lite_portrait_398x224_with_softmax.tar.gz
 
 #### 3.4 自动压缩并产出模型
 
-首先要配置config文件中模型路径、数据集路径、蒸馏、量化、稀疏化和训练等部分的参数，配置完成后便可开始自动压缩。
+自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、数据集路径、蒸馏、量化、稀疏化和训练等部分的参数，配置完成后便可对模型进行非结构化稀疏、蒸馏和量化、蒸馏。
 
 ```shell
 python run.py \
