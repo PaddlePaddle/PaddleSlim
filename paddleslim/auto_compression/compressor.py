@@ -250,6 +250,9 @@ class AutoCompression:
         config_dict = dict(config._asdict())
         if config_dict["prune_strategy"] == "gmp" and config_dict[
                 'gmp_config'] is None:
+            _logger.info(
+                "Calculating the iterations per epoch……(It will take some time)")
+            # NOTE:XXX: This way of calculating the iters needs to be improved.
             iters_per_epoch = len(list(self.train_dataloader()))
             total_iters = self.train_config.epochs * iters_per_epoch
             config_dict['gmp_config'] = {
