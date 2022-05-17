@@ -131,7 +131,7 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 ### 离线量化效果对比
 
 <p align="center">
-<img width="750" alt="image" src="https://user-images.githubusercontent.com/7534971/168772388-cbb089a2-0ab8-4448-bc36-79204d9ce6ee.png"/> <br />
+<img width="750" alt="image" src="https://user-images.githubusercontent.com/7534971/168809561-e2e0045e-c73a-4684-bd1a-79562c30e44d.png"/> <br />
 <strong>表2: 多种离线量化方法效果对比</strong>
 </p>
 
