@@ -84,7 +84,7 @@ tar -zxvf afqmc.tar
 
 #### 3.4 自动压缩并产出模型
 
-自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行离线量化。配置config文件中训练部分的参数。将任务名称、模型类型、数据集名称、压缩参数传入，对模型进行剪枝、蒸馏训练和离线量化。
+自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中训练部分的参数，将任务名称、模型类型、数据集名称、压缩参数传入，配置完成后便可对模型进行剪枝、蒸馏训练和离线量化。
 数据集为CLUE，不同任务名称代表CLUE上不同的任务，可选择的任务名称有：afqmc, tnews, iflytek, ocnli, cmnli, cluewsc2020, csl。具体运行命令为
 ：
 ```shell
