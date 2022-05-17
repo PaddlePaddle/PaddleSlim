@@ -36,22 +36,43 @@ Distillation:
 
 #### 配置定制非结构化稀疏策略
 
-非结构化稀疏参数设置如下所示，其中参数含义详见[非结构化稀疏API文档](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/dygraph/pruners/unstructured_pruner.rst)：
+非结构化稀疏参数设置如下所示：
 ```yaml
 UnstructurePrune:
+    # prune_strategy: 稀疏策略，可设置 None 或 'gmp'
     prune_strategy: gmp
+    # prune_mode: 稀疏化的模式，可设置 'ratio' 或 'threshold'
     prune_mode: ratio
+    # pruned_ratio: 设置稀疏化比例，只有在 prune_mode=='ratio' 时才会生效
     pruned_ratio: 0.75
+    # threshold: 设置稀疏化阈值，只有在 prune_mod=='threshold' 时才会生效
+    threshold: 0.001
+    # gmp_config: 传入额外的训练超参用以指导GMP训练过程
     gmp_config:
-    stable_iterations: 0
-    pruning_iterations: 4500
-    tunning_iterations: 4500
-    resume_iteration: -1
-    pruning_steps: 100
-    initial_ratio: 0.15
+    - stable_iterations: 0
+    - pruning_iterations: 4500 # total_iters * 0.4~0.45
+    - tunning_iterations: 4500 # total_iters * 0.4~0.45
+    - resume_iteration: -1
+    - pruning_steps: 100
+    - initial_ratio: 0.15
+    # prune_params_type: 用以指定哪些类型的参数参与稀疏。
     prune_params_type: conv1x1_only
+    # local_sparsity: 剪裁比例（ratio）应用的范围
     local_sparsity: True
 ```
+- prune_strategy: GMP 训练策略能取得更优的模型精度。
+- gmp_config参数介绍如下：
+```
+{'stable_iterations': int} # the duration of stable phase in terms of global iterations
+{'pruning_iterations': int} # the duration of pruning phase in terms of global iterations
+{'tunning_iterations': int} # the duration of tunning phase in terms of global iterations
+{'resume_iteration': int} # the start timestamp you want to train from, in terms if global iteration
+{'pruning_steps': int} # the total times you want to increase the ratio
+{'initial_ratio': float} # the initial ratio value
+```
+- prune_params_type 目前只支持None和"conv1x1_only"两个选项，前者表示稀疏化除了归一化层的参数，后者表示只稀疏化1x1卷积。
+- local_sparsity 表示剪裁比例（ratio）应用的范围，仅在 'ratio' 模式生效。local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。各个矩阵稀疏度保持一致时，稀疏加速更显著。
+- 更多非结构化稀疏的参数含义详见[非结构化稀疏API文档](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/dygraph/pruners/unstructured_pruner.rst)
 
 #### 配置训练超参
 
