@@ -29,7 +29,7 @@ from ..common.recover_program import recover_inference_program
 from ..common import get_logger
 from ..common.patterns import get_patterns
 from ..analysis import TableLatencyPredictor
-from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program
+from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config
 
@@ -286,6 +286,15 @@ class AutoCompression:
             train_program_info, test_program_info, self._quant_config = build_quant_program(
                 self._exe, self._places, config_dict, train_program_info,
                 test_program_info)
+        if self.train_config.sparse_model:
+            from ..prune.unstructured_pruner import UnstructuredPruner
+            self._pruner = UnstructuredPruner(
+                train_program_info.program,
+                mode='ratio',
+                ratio=0.75,
+                prune_params_type='conv1x1_only',
+                place=self._places)
+            self._pruner.set_static_masks()
 
         self._exe.run(train_program_info.startup_program)
 
@@ -414,7 +423,9 @@ class AutoCompression:
             train_program_info, test_program_info = self._prepare_program(
                 inference_program, feed_target_names, fetch_targets, patterns,
                 default_distill_node_pair, strategy, config)
-
+            if 'unstructure' in self._strategy:
+                test_program_info.program._program = remove_unused_var_nodes(
+                    test_program_info.program._program)
             test_program_info = self._start_train(train_program_info,
                                                   test_program_info, strategy)
             self._save_model(test_program_info, strategy, strategy_idx)
@@ -473,6 +484,9 @@ class AutoCompression:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
+
+        if 'unstructure' in self._strategy or self.train_config.sparse_model:
+            self._pruner.update_params()
 
         return test_program_info
 

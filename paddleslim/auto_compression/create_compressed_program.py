@@ -25,7 +25,8 @@ from .strategy_config import ProgramInfo
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
-    'build_distill_program', 'build_quant_program', 'build_prune_program'
+    'build_distill_program', 'build_quant_program', 'build_prune_program',
+    'remove_unused_var_nodes'
 ]
 
 
@@ -425,3 +426,25 @@ def build_prune_program(executor,
                 format(config['prune_algo']))
 
     return pruner, train_program_info
+
+
+def remove_unused_var_nodes(program):
+    '''
+    This function is called before saving the sparse model to remove redundant nodes.
+    Args:
+        program(paddle.static.Program): The sparse model to be saved.
+    Returns:
+        program(paddle.static.Program): The sparse model.
+    '''
+    from paddle.fluid import core
+    from paddle.fluid.framework import IrGraph
+    graph = IrGraph(core.Graph(program.desc), for_test=True)
+    removed_nodes = set()
+    ops = graph.all_op_nodes()
+    for op_node in ops:
+        for input_node in op_node.inputs:
+            if '_mask' in input_node.name():
+                removed_nodes.add(op_node)
+    graph.safe_remove_nodes(removed_nodes)
+    program = graph.to_program()
+    return program
