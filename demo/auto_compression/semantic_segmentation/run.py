@@ -38,6 +38,11 @@ def parse_args():
         type=str,
         default=None,
         help="path of compression strategy config.")
+    parser.add_argument(
+        '--deploy_hardware',
+        type=str,
+        default=None,
+        help="The hardware you want to deploy.")
     return parser.parse_args()
 
 
@@ -167,6 +172,7 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function)
+        eval_callback=eval_function,
+        deploy_hardware=args.deploy_hardware)
 
     ac.compress()

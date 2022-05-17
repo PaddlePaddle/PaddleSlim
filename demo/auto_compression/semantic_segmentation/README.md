@@ -68,15 +68,37 @@ tar -xzf ppseg_lite_portrait_398x224_with_softmax.tar.gz
 
 #### 3.4 自动压缩并产出模型
 
-首先要配置config文件中模型路径、数据集路径、蒸馏、量化、稀疏化和训练等部分的参数，配置完成后便可开始自动压缩。
+首先要配置config文件中模型路径、蒸馏、量化、稀疏化和训练等部分的参数，配置完成后便可开始自动压缩。
+
+当只设置训练参数，并传入``deploy_hardware``字段时，将自动搜索压缩策略进行压缩。以骁龙710（SD710）为部署硬件，进行自动压缩的运行命令如下：
 
 ```shell
 python run.py \
-    --model_dir='inference_model' \
-    --model_filename='inference.pdmodel' \
-    --params_filename='./inference.pdiparams' \
+    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
+    --model_filename='model.pdmodel' \
+    --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/humanseg_sparse_dis.yaml'
+    --config_path='configs/pp_humanseg_auto.yaml'
+    --deploy_hardware='SD710'
+```
+- 自行配置稀疏参数进行非结构化稀疏和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
+```shell
+python run.py \
+    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
+    --model_filename='model.pdmodel' \
+    --params_filename='model.pdiparams' \
+    --save_dir='./save_model' \
+    --config_path='configs/pp_humanseg_sparse_dis.yaml'
+```
+
+- 自行配置量化参数进行量化和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
+```shell
+python run.py \
+    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
+    --model_filename='model.pdmodel' \
+    --params_filename='model.pdiparams' \
+    --save_dir='./save_model' \
+    --config_path='configs/pp_humanseg_quant_dis.yaml'
 ```
 
 压缩完成后会在`save_dir`中产出压缩好的预测模型，可直接预测部署。
