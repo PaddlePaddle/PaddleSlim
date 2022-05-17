@@ -45,6 +45,7 @@ Distillation:
 
 - 蒸馏loss目前支持的有：fsp_loss，l2_loss，soft_label_loss，也可自定义loss。具体定义和使用可参考[知识蒸馏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/dist/single_distiller_api.html)。
 
+
 #### 配置定制结构化稀疏策略
 
 结构化稀疏参数设置如下所示：
