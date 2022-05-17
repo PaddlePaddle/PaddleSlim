@@ -28,9 +28,9 @@
 - mAP的指标均在COCO val2017数据集中评测得到。
 - PP-YOLOE模型在Tesla V100的GPU环境下测试，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)
 
-## 3.开始自动压缩
+## 3. 自动压缩流程
 
-#### 3.1 环境准备
+#### 3.1 准备环境
 - PaddlePaddle >= 2.2 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim >= 2.3 或者适当develop版本
 - PaddleDet >= 2.4
