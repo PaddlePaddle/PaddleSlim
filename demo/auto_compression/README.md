@@ -14,20 +14,46 @@ PaddleSlim推出全新自动压缩工具（ACT），旨在通过Source-Free的�
 
 ## 快速上手
 
+- 1.准备模型及数据集
+
+```shell
+# 下载MobileNet预测模型
+wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar
+tar -xf MobileNetV1_infer.tar
+# 下载ImageNet小型数据集
+wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz
+tar xf ILSVRC2012_data_demo.tar.gz
+```
+
+- 2.运行
+
 ```python
 # 导入依赖包
+import paddle
 from paddleslim.auto_compression.config_helpers import load_config
 from paddleslim.auto_compression import AutoCompression
-from paddleslim.common.imagenet_reader import reader
-# 加载配置文件
-compress_config, train_config = load_slim_config("./image_classification/mobilenetv1_qat_dis.yaml")
+from paddleslim.common.imagenet_dataset import ImageNetDataset
+paddle.enable_static()
 # 定义DataLoader
-train_loader = reader(mode='test') # DataLoader
+train_dataset = ImageNetDataset(
+    data_dir="./ILSVRC2012_data_demo/ILSVRC2012/", image_shape=[3, 224, 224], mode='train')
+image = paddle.static.data(
+    name='inputs', shape=[None] + [3, 224, 224], dtype='float32')
+train_loader = paddle.io.DataLoader(
+    train_dataset,
+    feed_list=[image],
+    drop_last=False,
+    return_list=False,
+    batch_size=32,
+    shuffle=False)
+# 加载配置文件
+compress_config, train_config = load_config(
+    "./image_classification/configs/mobilenetv1_qat_dis.yaml")
 # 开始自动压缩
 ac = AutoCompression(
-    model_dir="./mobilenetv1_infer",
-    model_filename="model.pdmodel",
-    params_filename="model.pdiparams",
+    model_dir="./MobileNetV1_infer/",
+    model_filename="inference.pdmodel",
+    params_filename="inference.pdiparams",
     save_dir="output",
     strategy_config=compress_config,
     train_config=train_config,

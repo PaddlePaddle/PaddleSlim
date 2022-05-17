@@ -483,11 +483,12 @@ class AutoCompression:
             test_program_info.program,
             paddle.static.CompiledProgram) else test_program_info.program
 
-        paddle.static.load(test_program,
-                           os.path.join(self.save_dir, 'best_model'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdmodel'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdopt'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdparams'))
+        if os.path.exists(os.path.join(self.save_dir, 'best_model.pdparams')):
+            paddle.static.load(test_program,
+                               os.path.join(self.save_dir, 'best_model'))
+            os.remove(os.path.join(self.save_dir, 'best_model.pdmodel'))
+            os.remove(os.path.join(self.save_dir, 'best_model.pdopt'))
+            os.remove(os.path.join(self.save_dir, 'best_model.pdparams'))
 
         if 'qat' in strategy:
             float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \
