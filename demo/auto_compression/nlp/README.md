@@ -69,30 +69,6 @@ pip install paddlenlp
 #### 3.2 准备数据集
 本案例默认以CLUE数据进行自动压缩实验，如数据集为非CLUE格式数据，请修改启动文本run.sh中dataset字段，PaddleNLP会自动下载对应数据集。
 
-### 2.准备需要压缩的环境
-- python >= 3.6
-- paddlepaddle >= 2.3
-- PaddleNLP >= 2.3
-
-安装paddlepaddle：
-```shell
-# CPU
-pip install paddlepaddle
-# GPU
-pip install paddlepaddle-gpu
-```
-
-安装paddlenlp：
-```shell
-pip install paddlenlp
-``` 
-
-安装paddleslim：
-```shell
-pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-
-注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集和Tokenizer。
 
 #### 3.3 准备预测模型
 预测模型的格式为：`model.pdmodel` 和 `model.pdiparams`两个，带`pdmodel`的是模型文件，带`pdiparams`后缀的是权重文件。
