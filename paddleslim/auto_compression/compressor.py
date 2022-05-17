@@ -97,7 +97,11 @@ class AutoCompression:
             deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
         """
         self.model_dir = model_dir
+        if model_filename == 'None':
+            model_filename = None
         self.model_filename = model_filename
+        if params_filename == 'None':
+            params_filename = None
         self.params_filename = params_filename
         base_path = os.path.basename(os.path.normpath(save_dir))
         parent_path = os.path.abspath(os.path.join(save_dir, os.pardir))
