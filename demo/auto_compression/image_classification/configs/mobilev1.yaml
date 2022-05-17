@@ -1,0 +1,29 @@
+Distillation:
+  distill_lambda: 1.0
+  distill_loss: l2_loss
+  distill_node_pair:
+  - teacher_softmax_0.tmp_0
+  - softmax_0.tmp_0
+  merge_feed: true
+  teacher_model_dir: MobileNetV1_infer
+  teacher_model_filename: inference.pdmodel
+  teacher_params_filename: inference.pdiparams
+Quantization:
+  activation_bits: 8
+  is_full_quantize: false
+  activation_quantize_type: range_abs_max
+  weight_quantize_type: abs_max
+  not_quant_pattern:
+  - skip_quant
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+  weight_bits: 8
+TrainConfig:
+  epochs: 1
+  eval_iter: 500
+  learning_rate: 0.004
+  optimizer: Momentum
+  optim_args:
+    weight_decay: 0.00003
+  origin_metric: 0.70898
