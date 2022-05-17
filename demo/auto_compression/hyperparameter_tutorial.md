@@ -20,19 +20,46 @@ Quantization:
 
 #### 配置定制蒸馏策略
 
-蒸馏参数主要设置蒸馏节点（`distill_node_pair`）和教师预测模型路径。蒸馏节点需包含教师网络节点和对应的学生网络节点，其中教师网络节点名称将在程序中自动添加 “teacher_” 前缀，如下所示：
+蒸馏参数主要设置蒸馏节点（`distill_node_pair`）和教师预测模型路径，如下所示：
 ```yaml
 Distillation:
+    # distill_lambda: distill loss所占权重；可输入多个数值，支持不同节点之间使用不同的lambda值
     distill_lambda: 1.0
+    # distill_loss: 蒸馏loss算法；可输入多个loss，支持不同节点之间使用不同的loss算法
     distill_loss: l2_loss
+    # distill_node_pair: 蒸馏节点，即某层输出的变量名称，需包含教师网络节点和对应的学生网络节点，其中教师网络节点名称将在程序中自动添加 “teacher_” 前缀；可输入多个node_pair，支持多节点蒸馏
     distill_node_pair:
     - teacher_relu_30.tmp_0
     - relu_30.tmp_0
+    # merge_feed: 若teacher和student的输入相同则为true，若teacher和student的输入不同则为false
     merge_feed: true
+    # teacher_model_dir: 保存预测模型文件和预测模型参数文件的文件夹名称
     teacher_model_dir: ./inference_model
+    # teacher_model_filename: 预测模型文件，格式为 *.pdmodel 或 __model__
     teacher_model_filename: model.pdmodel
+    # teacher_params_filename: 预测模型参数文件，格式为 *.pdiparams 或 __params__
     teacher_params_filename: model.pdiparams
 ```
+
+- 蒸馏loss目前支持的有：fsp_loss，l2_loss，soft_label_loss，也可自定义loss。具体定义和使用可参考[知识蒸馏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/dist/single_distiller_api.html)。
+
+#### 配置定制结构化稀疏策略
+
+结构化稀疏参数设置如下所示：
+```yaml
+Prune:
+  # prune_algo: 裁剪算法
+  prune_algo: prune
+  # pruned_ratio: 裁剪比例
+  pruned_ratio: 0.25
+  # prune_params_name: 需要裁剪的参数名字
+  prune_params_name: 
+  - conv1_weights
+  # criterion: 评估一个卷积层内通道重要性所参考的指标
+  criterion: l1_norm
+```
+- prune_algo目前支持的有：prune、asp和transformer_pruner
+- criterion目前支持的有：l1_norm , bn_scale , geometry_median。具体定义和使用可参考[结构化稀疏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html)。
 
 #### 配置定制非结构化稀疏策略
 
