@@ -27,7 +27,9 @@ Distillation:
     distill_lambda: 1.0
     # distill_loss: 蒸馏loss算法；可输入多个loss，支持不同节点之间使用不同的loss算法
     distill_loss: l2_loss
-    # distill_node_pair: 蒸馏节点，即某层输出的变量名称，需包含教师网络节点和对应的学生网络节点，其中教师网络节点名称将在程序中自动添加 “teacher_” 前缀；可输入多个node_pair，支持多节点蒸馏
+    # distill_node_pair: 蒸馏节点，即某层输出的变量名称，需包含教师网络节点和对应的学生网络节点，
+    #                    其中教师网络节点名称将在程序中自动添加 “teacher_” 前缀；
+    #                    可输入多个node_pair，支持多节点蒸馏
     distill_node_pair:
     - teacher_relu_30.tmp_0
     - relu_30.tmp_0
@@ -58,7 +60,7 @@ Prune:
   # criterion: 评估一个卷积层内通道重要性所参考的指标
   criterion: l1_norm
 ```
-- prune_algo目前支持的有：prune、asp和transformer_pruner
+- prune_algo目前支持的有：prune、asp和transformer_pruner。
 - criterion目前支持的有：l1_norm , bn_scale , geometry_median。具体定义和使用可参考[结构化稀疏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html)。
 
 #### 配置定制非结构化稀疏策略
