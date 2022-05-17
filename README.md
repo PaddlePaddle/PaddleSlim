@@ -121,21 +121,19 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 - PP-OCR: 体积由8.9M减少到2.9M, 在SD855上加速1.27倍。
 - BERT: 模型参数由110M减少到80M，精度提升的情况下，Tesla T4 GPU FP16计算加速1.47倍。
 
+### 自动压缩效果展示
+
+<p align="center">
+<img width="800" alt="image" src="https://user-images.githubusercontent.com/7534971/168805367-f9d1299d-93e3-44d0-84da-870217edeb54.png"/> <br />
+<strong>表3: 自动压缩效果</strong>
+</p>
+
 ### 离线量化效果对比
 
 <p align="center">
 <img width="750" alt="image" src="https://user-images.githubusercontent.com/7534971/168772388-cbb089a2-0ab8-4448-bc36-79204d9ce6ee.png"/> <br />
 <strong>表2: 多种离线量化方法效果对比</strong>
 </p>
-
-### 自动压缩效果展示
-
-<p align="center">
-<img width="800" alt="image" src="https://user-images.githubusercontent.com/7534971/168772918-ce4ad5e3-27a5-4536-b304-fe250f1e9860.png"/> <br />
-<strong>表3: 自动压缩效果</strong>
-</p>
-
-
 
 ## 文档教程
 
