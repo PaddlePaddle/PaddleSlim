@@ -30,13 +30,32 @@ tar xf ILSVRC2012_data_demo.tar.gz
 ```python
 # 导入依赖包
 import paddle
-from paddleslim.auto_compression.config_helpers import load_config
+from PIL import Image
+from paddle.vision.datasets import DatasetFolder
+from paddle.vision.transforms import transforms
 from paddleslim.auto_compression import AutoCompression
-from paddleslim.common.imagenet_dataset import ImageNetDataset
 paddle.enable_static()
+# 定义DataSet
+class ImageNetDataset(DatasetFolder):
+    def __init__(self, path, image_size=224):
+        super(ImageNetDataset, self).__init__(path)
+        normalize = transforms.Normalize(
+            mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
+        self.transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(image_size), transforms.Transpose(),
+            normalize
+        ])
+
+    def __getitem__(self, idx):
+        img_path, _ = self.samples[idx]
+        return self.transform(Image.open(img_path).convert('RGB'))
+
+    def __len__(self):
+        return len(self.samples)
+
 # 定义DataLoader
-train_dataset = ImageNetDataset(
-    data_dir="./ILSVRC2012_data_demo/ILSVRC2012/", image_shape=[3, 224, 224], mode='infer_train')
+train_dataset = ImageNetDataset("./ILSVRC2012_data_demo/ILSVRC2012/train/")
 image = paddle.static.data(
     name='inputs', shape=[None] + [3, 224, 224], dtype='float32')
 train_loader = paddle.io.DataLoader(
@@ -55,8 +74,7 @@ ac = AutoCompression(
     strategy_config=None,
     train_config=None,
     train_dataloader=train_loader,
-    eval_dataloader=train_loader,
-    eval_callback=None)  # eval_function to verify accuracy
+    eval_dataloader=train_loader)  # eval_function to verify accuracy
 ac.compress()
 ```
 
