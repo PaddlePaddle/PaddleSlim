@@ -34,8 +34,9 @@ Quantization = namedtuple(
         "weight_quantize_type"
     ])
 
-Quantization.__new__.__defaults__ = (None, ) * (len(Quantization._fields) - 1
-                                                ) + (False, )
+Quantization.__new__.__defaults__ = (None, ) * (
+    len(Quantization._fields) - 3) + (False, 'moving_average_abs_max',
+                                      'channel_wise_abs_max')
 
 ### Distillation:
 Distillation = namedtuple(

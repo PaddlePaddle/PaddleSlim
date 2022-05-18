@@ -3,17 +3,12 @@ import argparse
 import random
 import paddle
 import numpy as np
-import paddleseg.transforms as T
-from paddleseg.datasets import Dataset
+from paddleseg.cvlibs import Config
 from paddleseg.utils import worker_init_fn
 from paddleslim.auto_compression.config_helpers import load_config
 from paddleslim.auto_compression import AutoCompression
-
 from paddleseg.core.infer import reverse_transform
 from paddleseg.utils import metrics
-import paddle.nn.functional as F
-import cv2
-import paddle.fluid as fluid
 
 
 def parse_args():
@@ -43,6 +38,11 @@ def parse_args():
         type=str,
         default=None,
         help="path of compression strategy config.")
+    parser.add_argument(
+        '--deploy_hardware',
+        type=str,
+        default=None,
+        help="The hardware you want to deploy.")
     return parser.parse_args()
 
 
@@ -65,7 +65,6 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
     print("Start evaluating (total_samples: {}, total_iters: {})...".format(
         len(eval_dataset), total_iters))
-    print("nranks:", nranks)
 
     for iter, (image, label) in enumerate(loader):
         paddle.enable_static()
@@ -149,34 +148,22 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    transforms = [T.RandomPaddingCrop(crop_size=(512, 512)), T.Normalize()]
-    train_dataset = Dataset(
-        transforms=transforms,
-        dataset_root='dataset_root',  # Need to fill in
-        num_classes=2,
-        train_path='train_path',  # Need to fill in
-        mode='train')
-    eval_dataset = Dataset(
-        transforms=transforms,
-        dataset_root='dataset_root',  # Need to fill in
-        num_classes=2,
-        train_path='val_path',  # Need to fill in
-        mode='val')
+    compress_config, train_config = load_config(args.config_path)
+    cfg = Config(compress_config['reader_config'])
 
+    train_dataset = cfg.train_dataset
+    eval_dataset = cfg.val_dataset
     batch_sampler = paddle.io.DistributedBatchSampler(
-        train_dataset, batch_size=128, shuffle=True, drop_last=True)
-
+        train_dataset, batch_size=cfg.batch_size, shuffle=True, drop_last=True)
     train_loader = paddle.io.DataLoader(
         train_dataset,
         batch_sampler=batch_sampler,
         num_workers=2,
         return_list=True,
-        worker_init_fn=worker_init_fn, )
+        worker_init_fn=worker_init_fn)
     train_dataloader = reader_wrapper(train_loader)
 
     # set auto_compression
-    compress_config, train_config = load_config(args.config_path)
-
     ac = AutoCompression(
         model_dir=args.model_dir,
         model_filename=args.model_filename,
@@ -185,6 +172,7 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function)
+        eval_callback=eval_function,
+        deploy_hardware=args.deploy_hardware)
 
     ac.compress()

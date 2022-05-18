@@ -86,14 +86,26 @@ def create_strategy_config(strategy_str, model_type):
 
     dis_config = Distillation()
     if len(tmp_s) == 3:
+        ### TODO(ceci3): choose prune algo automatically
+        if 'prune' in tmp_s[0]:
+            ### default prune config
+            default_prune_config = {
+                'pruned_ratio': float(tmp_s[1]),
+                'prune_algo': 'prune',
+                'criterion': 'l1_norm'
+            }
+        else:
+            ### default unstruture prune config
+            default_prune_config = {
+                'prune_strategy':
+                'gmp',  ### default unstruture prune strategy is gmp
+                'prune_mode': 'ratio',
+                'pruned_ratio': float(tmp_s[1]),
+                'local_sparsity': True,
+                'prune_params_type': 'conv1x1_only'
+            }
         tmp_s[0] = tmp_s[0].replace('prune', 'Prune')
         tmp_s[0] = tmp_s[0].replace('sparse', 'UnstructurePrune')
-        ### TODO(ceci3): auto choose prune algo
-        default_prune_config = {
-            'pruned_ratio': float(tmp_s[1]),
-            'prune_algo': 'prune',
-            'criterion': 'l1_norm'
-        }
         if model_type == 'transformer' and tmp_s[0] == 'Prune':
             default_prune_config['prune_algo'] = 'transformer_pruner'
         prune_config = eval(tmp_s[0])(**default_prune_config)
