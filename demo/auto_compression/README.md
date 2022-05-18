@@ -36,7 +36,7 @@ from paddleslim.common.imagenet_dataset import ImageNetDataset
 paddle.enable_static()
 # 定义DataLoader
 train_dataset = ImageNetDataset(
-    data_dir="./ILSVRC2012_data_demo/ILSVRC2012/", image_shape=[3, 224, 224], mode='train')
+    data_dir="./ILSVRC2012_data_demo/ILSVRC2012/", image_shape=[3, 224, 224], mode='infer_train')
 image = paddle.static.data(
     name='inputs', shape=[None] + [3, 224, 224], dtype='float32')
 train_loader = paddle.io.DataLoader(

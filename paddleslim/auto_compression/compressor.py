@@ -336,10 +336,18 @@ class AutoCompression:
                 final_quant_config)
             self.single_strategy_compress(quant_strategy[0], quant_config[0],
                                           strategy_idx)
-        old_model_path = os.path.join(
+        tmp_model_path = os.path.join(
             self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
         final_model_path = os.path.join(self.final_dir)
-        shutil.move(old_model_path, final_model_path)
+        tmp_model_file = os.path.join(tmp_model_path, 'model.pdmodel')
+        tmp_params_file = os.path.join(tmp_model_path, 'model.pdiparams')
+        final_model_file = os.path.join(final_model_path, 'model.pdmodel')
+        final_params_file = os.path.join(final_model_path, 'model.pdiparams')
+        shutil.move(tmp_model_file, final_model_file)
+        shutil.move(tmp_params_file, final_params_file)
+        _logger.info(
+            "==> Finished the ACT process and the final model is saved in:{}".
+            format(final_model_path))
         os._exit(0)
 
     def single_strategy_compress(self, strategy, config, strategy_idx):
