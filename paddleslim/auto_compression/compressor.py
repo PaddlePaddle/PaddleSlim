@@ -253,8 +253,9 @@ class AutoCompression:
                                          feed_target_names, fetch_targets)
 
         config_dict = dict(config._asdict())
-        if config_dict["prune_strategy"] == "gmp" and config_dict[
-                'gmp_config'] is None:
+        if "prune_strategy" in config_dict and config_dict[
+                "prune_strategy"] == "gmp" and config_dict[
+                    'gmp_config'] is None:
             _logger.info(
                 "Calculating the iterations per epoch……(It will take some time)")
             # NOTE:XXX: This way of calculating the iters needs to be improved.
