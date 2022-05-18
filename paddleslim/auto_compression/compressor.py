@@ -24,14 +24,14 @@ import paddle
 import paddle.distributed.fleet as fleet
 if platform.system().lower() == 'linux':
     from ..quant import quant_post_hpo
-from ..quant.quanter import convert
+from ..quant.quanter import convert, quant_post
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
 from ..common.patterns import get_patterns
 from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
-from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config
+from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -143,6 +143,11 @@ class AutoCompression:
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
 
+        # If train_config is None, set default train_config
+        if self.train_config is None:
+            self.train_config = create_train_config(self.strategy_config,
+                                                    self.model_type)
+
     def _prepare_envs(self):
         devices = paddle.device.get_device().split(':')[0]
         places = paddle.device._convert_to_place(devices)
@@ -248,8 +253,9 @@ class AutoCompression:
                                          feed_target_names, fetch_targets)
 
         config_dict = dict(config._asdict())
-        if config_dict["prune_strategy"] == "gmp" and config_dict[
-                'gmp_config'] is None:
+        if "prune_strategy" in config_dict and config_dict[
+                "prune_strategy"] == "gmp" and config_dict[
+                    'gmp_config'] is None:
             _logger.info(
                 "Calculating the iterations per epoch……(It will take some time)")
             # NOTE:XXX: This way of calculating the iters needs to be improved.
@@ -351,20 +357,57 @@ class AutoCompression:
         ).lower() == 'linux':
             ptq_loss = quant_post_hpo.g_min_emd_loss
 
-            final_quant_config = get_final_quant_config(ptq_loss)
+            final_quant_config = get_final_quant_config(
+                ptq_loss, mode='DistilQuant')
             quant_strategy, quant_config = self._prepare_strategy(
                 final_quant_config)
             self.single_strategy_compress(quant_strategy[0], quant_config[0],
                                           strategy_idx)
-        old_model_path = os.path.join(
+        tmp_model_path = os.path.join(
             self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
         final_model_path = os.path.join(self.final_dir)
-        shutil.move(old_model_path, final_model_path)
+        if not os.path.exists(final_model_path):
+            os.makedirs(final_model_path)
+        tmp_model_file = os.path.join(tmp_model_path, 'model.pdmodel')
+        tmp_params_file = os.path.join(tmp_model_path, 'model.pdiparams')
+        final_model_file = os.path.join(final_model_path, 'model.pdmodel')
+        final_params_file = os.path.join(final_model_path, 'model.pdiparams')
+        shutil.move(tmp_model_file, final_model_file)
+        shutil.move(tmp_params_file, final_params_file)
+        _logger.info(
+            "==> Finished the ACT process and the final model is saved in:{}".
+            format(final_model_path))
         os._exit(0)
 
     def single_strategy_compress(self, strategy, config, strategy_idx):
-        ### start compress, including train/eval model
-        if strategy == 'ptq_hpo':
+        # start compress, including train/eval model
+        # TODO: add the emd loss of evaluation model.
+        if strategy == 'quant_post':
+            quant_post(
+                self._exe,
+                model_dir=self.model_dir,
+                quantize_model_path=os.path.join(
+                    self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
+                data_loader=self.train_dataloader,
+                model_filename=self.model_filename,
+                params_filename=self.params_filename,
+                save_model_filename=self.model_filename,
+                save_params_filename=self.params_filename,
+                batch_size=1,
+                batch_nums=config.batch_num,
+                algo=config.ptq_algo,
+                round_type='round',
+                bias_correct=config.bias_correct,
+                hist_percent=config.hist_percent,
+                quantizable_op_type=config.quantize_op_types,
+                is_full_quantize=config.is_full_quantize,
+                weight_bits=config.weight_bits,
+                activation_bits=config.activation_bits,
+                activation_quantize_type='range_abs_max',
+                weight_quantize_type=config.weight_quantize_type,
+                onnx_format=False)
+
+        elif strategy == 'ptq_hpo':
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
@@ -503,11 +546,12 @@ class AutoCompression:
             test_program_info.program,
             paddle.static.CompiledProgram) else test_program_info.program
 
-        paddle.static.load(test_program,
-                           os.path.join(self.save_dir, 'best_model'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdmodel'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdopt'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdparams'))
+        if os.path.exists(os.path.join(self.save_dir, 'best_model.pdparams')):
+            paddle.static.load(test_program,
+                               os.path.join(self.save_dir, 'best_model'))
+            os.remove(os.path.join(self.save_dir, 'best_model.pdmodel'))
+            os.remove(os.path.join(self.save_dir, 'best_model.pdopt'))
+            os.remove(os.path.join(self.save_dir, 'best_model.pdparams'))
 
         if 'qat' in strategy:
             float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \

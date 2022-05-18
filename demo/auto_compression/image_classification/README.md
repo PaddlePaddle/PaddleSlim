@@ -18,9 +18,9 @@
 ## 2. Benchmark
 - MobileNetV1模型
 
-| 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=4 | 
+| 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=4 |
 |:------:|:------:|:------:|:------:|
-| MobileNetV1 | Base模型 | 70.90 | 39.041 | 
+| MobileNetV1 | Base模型 | 70.90 | 39.041 |
 | MobileNetV1 | 量化+蒸馏 | 70.49 | 29.238|
 
 - 测试环境：`SDM710 2*A75(2.2GHz) 6*A55(1.7GHz)`
@@ -59,7 +59,7 @@ pip install paddleslim
 
 ```shell
 wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar
-tar -zxvf MobileNetV1_infer.tar
+tar -xf MobileNetV1_infer.tar
 ```
 也可根据[PaddleClas文档](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/docs/zh_CN/inference_deployment/export_model.md)导出Inference模型。
 
@@ -73,20 +73,20 @@ python run.py \
     --model_dir='MobileNetV1_infer' \
     --model_filename='inference.pdmodel' \
     --params_filename='inference.pdiparams' \
-    --save_dir='./save_quant_mobilev1/' \
+    --save_dir='./output' \
     --batch_size=128 \
-    --config_path='./configs/mobilev1.yaml'\
+    --config_path='./configs/mobilenetv1_qat_dis.yaml'\
     --data_dir='ILSVRC2012'
-    
+
 # 多卡启动
 python -m paddle.distributed.launch run.py \
     --model_dir='MobileNetV1_infer' \
     --model_filename='inference.pdmodel' \
     --params_filename='inference.pdiparams' \
-    --save_dir='./save_quant_mobilev1/' \
+    --save_dir='./output' \
     --batch_size=128 \
-    --config_path='./configs/mobilev1.yaml'\
-    --data_dir='ILSVRC2012' 
+    --config_path='./configs/mobilenetv1_qat_dis.yaml'\
+    --data_dir='ILSVRC2012'
 ```
 
 

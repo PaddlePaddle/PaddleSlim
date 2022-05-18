@@ -25,16 +25,16 @@ __all__ = [
     "prepare_strategy", "create_strategy_config", "get_final_quant_config"
 ]
 
-### config tester to test the loss of quant_post
+# config tester to test the loss of quant_post
 hpo_config_tester = {
-    "ptq_algo": ["avg", "mse", "KL"],
+    "ptq_algo": ["avg"],
     "weight_quantize_type": ['channel_wise_abs_max', 'abs_max'],
     "bias_correct": [False],
-    "batch_num": [2, 3],
+    "batch_num": [5],
     "max_quant_count": 1,
 }
 
-### default hpo config
+# default hpo config
 default_hpo_config = {
     "ptq_algo": ["KL", "hist", "avg", "mse"],
     "weight_quantize_type": ['channel_wise_abs_max', 'abs_max'],
@@ -44,11 +44,26 @@ default_hpo_config = {
     "max_quant_count": 20,
 }
 
-### default quant config, can be used by ptq&hpo and qat&distillation
+# default quant config, can be used by ptq&hpo and qat&distillation
 default_quant_config = {
     'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul', 'matmul'],
     'weight_bits': 8,
-    'activation_bits': 8
+    'activation_bits': 8,
+    "is_full_quantize": False,
+    "activation_quantize_type": 'range_abs_max',
+    "weight_quantize_type": 'abs_max',
+    "not_quant_pattern": ["skip_quant"],
+}
+
+# default train config
+DefaultTrainConfig = {
+    "epochs": 1,
+    "eval_iter": 500,
+    "learning_rate": 0.0001,
+    "optimizer": "Momentum",
+    "optim_args": {
+        "weight_decay": 4.0e-05
+    },
 }
 
 EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
@@ -116,6 +131,12 @@ def create_strategy_config(strategy_str, model_type):
             })
 
     return configs
+
+
+def create_train_config(strategy_str, model_type):
+    # TDOD: support more strategy and model_type
+    train_config = TrainConfig(**DefaultTrainConfig)
+    return train_config
 
 
 def prepare_strategy(model_dir,
@@ -203,9 +224,9 @@ def prepare_strategy(model_dir,
     return strategy_config
 
 
-def get_final_quant_config(ptq_loss):
+def get_final_quant_config(ptq_loss, mode='DistilQuant'):
     """ transform quantization tester config to real quantization config """
-    if ptq_loss <= MAGIC_EMD_DISTANCE:
+    if mode == 'HPO':
         quant_config = Quantization(**default_quant_config)
         hpo_config = HyperParameterOptimization(**default_hpo_config)
         configs = [{
@@ -213,10 +234,11 @@ def get_final_quant_config(ptq_loss):
             'HyperParameterOptimization': hpo_config
         }]
 
-    else:
+    if mode == 'DistilQuant':
         quant_config = Quantization(**default_quant_config)
         dis_config = Distillation()
         configs = [{'Quantization': quant_config, 'Distillation': dis_config}]
+        _logger.info("Start Quantization and Distillation Training.")
 
     return configs
 

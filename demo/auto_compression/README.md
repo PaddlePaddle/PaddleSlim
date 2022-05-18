@@ -1,7 +1,7 @@
-# 自动压缩工具ACT（Auto Compression Tookit）
+# 自动化压缩工具ACT（Auto Compression Tookit）
 
 ## 简介
-PaddleSlim推出全新自动压缩工具（ACT），旨在通过Source-Free的方式，自动对预测模型进行压缩，压缩后模型可直接部署应用。ACT自动压缩工具主要特性如下：
+PaddleSlim推出全新自动化压缩工具（ACT），旨在通过Source-Free的方式，自动对预测模型进行压缩，压缩后模型可直接部署应用。ACT自动化压缩工具主要特性如下：
 - **『更便捷』**：开发者无需了解或修改模型源码，直接使用导出的预测模型进行压缩；
 - **『更智能』**：开发者简单配置即可启动压缩，ACT工具会自动优化得到最好预测模型；
 - **『更丰富』**：ACT中提供了量化训练、蒸馏、结构化剪枝、非结构化剪枝、多种离线量化方法及超参搜索等等，可任意搭配使用。
@@ -14,32 +14,68 @@ PaddleSlim推出全新自动压缩工具（ACT），旨在通过Source-Free的�
 
 ## 快速上手
 
+- 1.准备模型及数据集
+
+```shell
+# 下载MobileNet预测模型
+wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar
+tar -xf MobileNetV1_infer.tar
+# 下载ImageNet小型数据集
+wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz
+tar xf ILSVRC2012_data_demo.tar.gz
+```
+
+- 2.运行
+
 ```python
 # 导入依赖包
-from paddleslim.auto_compression.config_helpers import load_config
+import paddle
+from PIL import Image
+from paddle.vision.datasets import DatasetFolder
+from paddle.vision.transforms import transforms
 from paddleslim.auto_compression import AutoCompression
-from paddleslim.common.imagenet_reader import reader
-# 加载配置文件
-compress_config, train_config = load_slim_config("./image_classification/mobilenetv1_qat_dis.yaml")
+paddle.enable_static()
+# 定义DataSet
+class ImageNetDataset(DatasetFolder):
+    def __init__(self, path, image_size=224):
+        super(ImageNetDataset, self).__init__(path)
+        normalize = transforms.Normalize(
+            mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
+        self.transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(image_size), transforms.Transpose(),
+            normalize
+        ])
+
+    def __getitem__(self, idx):
+        img_path, _ = self.samples[idx]
+        return self.transform(Image.open(img_path).convert('RGB'))
+
+    def __len__(self):
+        return len(self.samples)
+
 # 定义DataLoader
-train_loader = reader(mode='test') # DataLoader
+train_dataset = ImageNetDataset("./ILSVRC2012_data_demo/ILSVRC2012/train/")
+image = paddle.static.data(
+    name='inputs', shape=[None] + [3, 224, 224], dtype='float32')
+train_loader = paddle.io.DataLoader(train_dataset, feed_list=[image], batch_size=32)
 # 开始自动压缩
 ac = AutoCompression(
-    model_dir="./mobilenetv1_infer",
-    model_filename="model.pdmodel",
-    params_filename="model.pdiparams",
+    model_dir="./MobileNetV1_infer/",
+    model_filename="inference.pdmodel",
+    params_filename="inference.pdiparams",
     save_dir="output",
-    strategy_config=compress_config,
-    train_config=train_config,
+    strategy_config=None,
+    train_config=None,
     train_dataloader=train_loader,
-    eval_callback=None)  # eval_function to verify accuracy
+    eval_dataloader=train_loader)  # eval_function to verify accuracy
 ac.compress()
 ```
 
 **提示：**
 - DataLoader传入的数据集是待压缩模型所用的数据集，DataLoader继承自`paddle.io.DataLoader`。
-- 如无需验证自动压缩过程中模型的精度，`eval_callback`可不传入function，程序会自动根据损失来选择最优模型。
-- 自动压缩Config中定义量化、蒸馏、剪枝等压缩算法会合并执行，压缩策略有：量化+蒸馏，剪枝+蒸馏等等。
+- 如无需验证自动化压缩过程中模型的精度，`eval_callback`可不传入function，程序会自动根据损失来选择最优模型。
+- 自动化压缩Config中定义量化、蒸馏、剪枝等压缩算法会合并执行，压缩策略有：量化+蒸馏，剪枝+蒸馏等等。
 
 ## 应用示例
 
@@ -52,11 +88,11 @@ ac.compress()
 #### [NLP](./nlp)
 
 #### 即将发布
-- [ ] 更多自动压缩应用示例
-- [ ] X2Paddle模型自动压缩示例
+- [ ] 更多自动化压缩应用示例
+- [ ] X2Paddle模型自动化压缩示例
 
 ## 其他
 
 - ACT可以自动处理常见的预测模型，如果有更特殊的改造需求，可以参考[ACT超参配置教程](./hyperparameter_tutorial.md)来进行单独配置压缩策略。
 
-- 如果你发现任何关于ACT自动压缩工具的问题或者是建议, 欢迎通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSlim/issues)给我们提issues。同时欢迎贡献更多优秀模型，共建开源生态。
+- 如果你发现任何关于ACT自动化压缩工具的问题或者是建议, 欢迎通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSlim/issues)给我们提issues。同时欢迎贡献更多优秀模型，共建开源生态。
