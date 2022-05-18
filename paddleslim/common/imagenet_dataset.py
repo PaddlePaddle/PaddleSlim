@@ -29,7 +29,7 @@ def resize_short(img, target_size):
     percent = float(target_size) / min(img.size[0], img.size[1])
     resized_width = int(round(img.size[0] * percent))
     resized_height = int(round(img.size[1] * percent))
-    img = img.resize((resized_width, resized_height), Image.LANCZOS)
+    img = img.resize((resized_width, resized_height), Image.Resampling.LANCZOS)
     return img
 
 

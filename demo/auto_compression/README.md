@@ -46,18 +46,16 @@ train_loader = paddle.io.DataLoader(
     return_list=False,
     batch_size=32,
     shuffle=False)
-# 加载配置文件
-compress_config, train_config = load_config(
-    "./image_classification/configs/mobilenetv1_qat_dis.yaml")
 # 开始自动压缩
 ac = AutoCompression(
     model_dir="./MobileNetV1_infer/",
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="output",
-    strategy_config=compress_config,
-    train_config=train_config,
+    strategy_config=None,
+    train_config=None,
     train_dataloader=train_loader,
+    eval_dataloader=train_loader,
     eval_callback=None)  # eval_function to verify accuracy
 ac.compress()
 ```
