@@ -295,13 +295,14 @@ class AutoCompression:
                 test_program_info)
         if self.train_config.sparse_model:
             from ..prune.unstructured_pruner import UnstructuredPruner
+            # NOTE: The initialization parameter of this pruner doesn't work, it is only used to call the 'set_static_masks' function
             self._pruner = UnstructuredPruner(
                 train_program_info.program,
                 mode='ratio',
                 ratio=0.75,
                 prune_params_type='conv1x1_only',
                 place=self._places)
-            self._pruner.set_static_masks()
+            self._pruner.set_static_masks()  # Fixed model sparsity
 
         self._exe.run(train_program_info.startup_program)
 
