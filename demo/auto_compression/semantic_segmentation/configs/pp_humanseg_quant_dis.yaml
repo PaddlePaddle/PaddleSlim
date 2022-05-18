@@ -1,43 +1,16 @@
+Global:
+  reader_config: configs/pp_humanseg_lite.yml
+
 Distillation:
   distill_lambda: 1.0
   distill_loss: l2_loss
   distill_node_pair:
-  - teacher_reshape2_1.tmp_0
-  - reshape2_1.tmp_0
-  - teacher_reshape2_3.tmp_0
-  - reshape2_3.tmp_0
-  - teacher_reshape2_5.tmp_0
-  - reshape2_5.tmp_0
-  - teacher_reshape2_7.tmp_0 #block1
-  - reshape2_7.tmp_0
-  - teacher_reshape2_9.tmp_0
-  - reshape2_9.tmp_0
-  - teacher_reshape2_11.tmp_0
-  - reshape2_11.tmp_0
-  - teacher_reshape2_13.tmp_0
-  - reshape2_13.tmp_0
-  - teacher_reshape2_15.tmp_0
-  - reshape2_15.tmp_0
-  - teacher_reshape2_17.tmp_0
-  - reshape2_17.tmp_0
-  - teacher_reshape2_19.tmp_0
-  - reshape2_19.tmp_0
-  - teacher_reshape2_21.tmp_0
-  - reshape2_21.tmp_0
-  - teacher_depthwise_conv2d_14.tmp_0 # block2
-  - depthwise_conv2d_14.tmp_0
-  - teacher_depthwise_conv2d_15.tmp_0
-  - depthwise_conv2d_15.tmp_0
-  - teacher_reshape2_23.tmp_0 #block3
-  - reshape2_23.tmp_0
-  - teacher_relu_30.tmp_0 # final_conv
-  - relu_30.tmp_0 
-  - teacher_bilinear_interp_v2_1.tmp_0
-  - bilinear_interp_v2_1.tmp_0
+  - teacher_batch_norm_47.tmp_2
+  - batch_norm_47.tmp_2
   merge_feed: true
-  teacher_model_dir: ./inference_model
-  teacher_model_filename: inference.pdmodel
-  teacher_params_filename: inference.pdiparams
+  teacher_model_dir: ./ppseg_lite_portrait_398x224_with_softmax
+  teacher_model_filename: model.pdmodel
+  teacher_params_filename: model.pdiparams
 Quantization:
   activation_bits: 8
   is_full_quantize: false
