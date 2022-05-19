@@ -58,7 +58,7 @@ class ImageNetDataset(DatasetFolder):
 train_dataset = ImageNetDataset("./ILSVRC2012_data_demo/ILSVRC2012/train/")
 image = paddle.static.data(
     name='inputs', shape=[None] + [3, 224, 224], dtype='float32')
-train_loader = paddle.io.DataLoader(train_dataset, feed_list=[image], batch_size=32)
+train_loader = paddle.io.DataLoader(train_dataset, feed_list=[image], batch_size=32, return_list=False)
 # 开始自动压缩
 ac = AutoCompression(
     model_dir="./MobileNetV1_infer/",
