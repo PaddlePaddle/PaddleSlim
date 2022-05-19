@@ -74,7 +74,7 @@ pip install paddleseg
 - 如果想快速体验，可直接下载PP-HumanSeg-Lite 的预测模型：
 
 ```shell
-wegt https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz
+wget https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz
 tar -xzf ppseg_lite_portrait_398x224_with_softmax.tar.gz
 ```
 
@@ -87,16 +87,18 @@ tar -xzf ppseg_lite_portrait_398x224_with_softmax.tar.gz
 当只设置训练参数，并传入``deploy_hardware``字段时，将自动搜索压缩策略进行压缩。以骁龙710（SD710）为部署硬件，进行自动压缩的运行命令如下：
 
 ```shell
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_auto.yaml'
+    --config_path='configs/pp_humanseg_auto.yaml' \
     --deploy_hardware='SD710'
 ```
 - 自行配置稀疏参数进行非结构化稀疏和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
 ```shell
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
     --model_filename='model.pdmodel' \
@@ -107,6 +109,7 @@ python run.py \
 
 - 自行配置量化参数进行量化和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
 ```shell
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
     --model_filename='model.pdmodel' \

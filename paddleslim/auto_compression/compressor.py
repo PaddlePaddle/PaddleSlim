@@ -357,26 +357,27 @@ class AutoCompression:
         ).lower() == 'linux':
             ptq_loss = quant_post_hpo.g_min_emd_loss
 
-            final_quant_config = get_final_quant_config(
-                ptq_loss, mode='DistilQuant')
-            quant_strategy, quant_config = self._prepare_strategy(
-                final_quant_config)
-            self.single_strategy_compress(quant_strategy[0], quant_config[0],
-                                          strategy_idx)
+            final_quant_config = get_final_quant_config(ptq_loss)
+            if final_quant_config is not None:
+                quant_strategy, quant_config = self._prepare_strategy(
+                    final_quant_config)
+                self.single_strategy_compress(quant_strategy[0],
+                                              quant_config[0], strategy_idx)
         tmp_model_path = os.path.join(
             self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
         final_model_path = os.path.join(self.final_dir)
         if not os.path.exists(final_model_path):
             os.makedirs(final_model_path)
-        tmp_model_file = os.path.join(tmp_model_path, 'model.pdmodel')
-        tmp_params_file = os.path.join(tmp_model_path, 'model.pdiparams')
-        final_model_file = os.path.join(final_model_path, 'model.pdmodel')
-        final_params_file = os.path.join(final_model_path, 'model.pdiparams')
-        shutil.move(tmp_model_file, final_model_file)
-        shutil.move(tmp_params_file, final_params_file)
-        _logger.info(
-            "==> Finished the ACT process and the final model is saved in:{}".
-            format(final_model_path))
+        tmp_model_file = os.path.join(tmp_model_path, self.model_filename)
+        tmp_params_file = os.path.join(tmp_model_path, self.params_filename)
+        final_model_file = os.path.join(final_model_path, self.model_filename)
+        final_params_file = os.path.join(final_model_path, self.params_filename)
+        if paddle.distributed.get_rank() == 0:
+            shutil.move(tmp_model_file, final_model_file)
+            shutil.move(tmp_params_file, final_params_file)
+            _logger.info(
+                "==> Finished the ACT process and the final model is saved in:{}".
+                format(final_model_path))
         os._exit(0)
 
     def single_strategy_compress(self, strategy, config, strategy_idx):
@@ -569,5 +570,5 @@ class AutoCompression:
             target_vars=test_program_info.fetch_targets,
             executor=self._exe,
             main_program=test_program,
-            model_filename='model.pdmodel',
-            params_filename='model.pdiparams')
+            model_filename=self.model_filename,
+            params_filename=self.params_filename)

@@ -69,6 +69,7 @@ tar -xf MobileNetV1_infer.tar
 
 ```shell
 # 单卡启动
+export CUDA_VISIBLE_DEVEICES=0
 python run.py \
     --model_dir='MobileNetV1_infer' \
     --model_filename='inference.pdmodel' \
@@ -97,3 +98,4 @@ python -m paddle.distributed.launch run.py \
 - [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/lite/lite.md)
 
 ## 5.FAQ
+[1.] 如果遇到报错 ```ValueError: var inputs not in this block``` ，则说明模型中的输入变量的名字不是 ```inputs``` ，可以先用netron可视化查看输入变量的名称，然后修改 ```run.py``` 中的第35行中 ``` yield {"inputs": imgs}``` 为 ```yield {${input_tensor_name}: imgs}```。一般PaddleClas产出部署模型的输入名字如果不是 ```inputs```，则是 ```x```。

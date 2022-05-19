@@ -15,11 +15,11 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
 - 🔥 **2022.05.23: 发布[v2.3.0版本](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.0)**
 
-  - 发布[自动压缩功能](demo/auto_compression)
+  - 发布[自动化压缩功能](demo/auto_compression)
 
     - 支持代码无感知压缩：用户只需提供推理模型文件和数据，既可进行离线量化（PTQ）、量化训练（QAT）、稀疏训练等压缩任务
     - 支持自动策略选择，根据任务特点和部署环境特性：自动搜索合适的离线量化方法,自动搜索最佳的压缩策略组合方式
-    - 提供了[自然语言处理](demo/auto_compression/nlp)、[图像语义分割](demo/auto_compression/semantic_segmentation)、[图像目标检测](demo/auto_compression/detection)三个方向的自动压缩示例
+    - 提供了[自然语言处理](demo/auto_compression/nlp)、[图像语义分割](demo/auto_compression/semantic_segmentation)、[图像目标检测](demo/auto_compression/detection)三个方向的自动化压缩示例
 
   - 升级量化功能
 
@@ -131,7 +131,7 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 ### 离线量化效果对比
 
 <p align="center">
-<img width="750" alt="image" src="https://user-images.githubusercontent.com/7534971/168809561-e2e0045e-c73a-4684-bd1a-79562c30e44d.png"/> <br />
+<img width="750" alt="image" src="https://user-images.githubusercontent.com/7534971/169042883-9ca281ce-19be-4525-a3d2-c54cea4a2cbd.png"/> <br />
 <strong>表2: 多种离线量化方法效果对比</strong>
 </p>
 
