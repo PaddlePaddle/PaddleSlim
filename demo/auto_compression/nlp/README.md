@@ -62,7 +62,7 @@ pip install paddleslim
 安装paddlenlp：
 ```shell
 pip install paddlenlp
-``` 
+```
 
 注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集和Tokenizer。
 
@@ -88,6 +88,7 @@ tar -zxvf afqmc.tar
 数据集为CLUE，不同任务名称代表CLUE上不同的任务，可选择的任务名称有：afqmc, tnews, iflytek, ocnli, cmnli, cluewsc2020, csl。具体运行命令为
 ：
 ```shell
+export CUDA_VISIBLE_DEVEICES=0
 python run.py \
     --model_type='ppminilm' \
     --model_dir='./afqmc/' \
@@ -98,7 +99,7 @@ python run.py \
     --batch_size=16 \
     --max_seq_length=128 \
     --task_name='afqmc' \
-    --config_path='./configs/afqmc.yaml' 
+    --config_path='./configs/afqmc.yaml'
 ```
 
 ## 4. 压缩配置介绍
@@ -184,4 +185,3 @@ Quantization:
 - [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/lite/lite.md)
 
 ## 6. FAQ
-

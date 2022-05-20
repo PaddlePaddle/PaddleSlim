@@ -1,5 +1,5 @@
 Global:
-  reader_config: configs/pp_humanseg_lite.yml
+  reader_config: configs/pp_humanseg_lite.yaml
 
 Distillation:
   distill_lambda: 1.0
