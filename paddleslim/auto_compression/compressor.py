@@ -488,7 +488,7 @@ class AutoCompression:
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
                     fetch_list=train_program_info.fetch_targets)
-
+                train_program_info.learning_rate.step()
                 if 'unstructure' in strategy:
                     self._pruner.step()
 
