@@ -276,7 +276,7 @@ python setup.py install
 ### [FAQ](docs/zh_cn/FAQ/quantization_FAQ.md)
 
 #### 1. 量化训练或者离线量化后的模型体积为什么没有变小？
-答：这是因为量化后保存的参数是虽然是int8范围，但是类型是float。这是由于paddle没有int8 kernel, 为了方便量化后验证量化精度，必须能让paddle能够加载。
+答：这是因为量化后保存的参数是虽然是int8范围，但是类型是float。这是因为Paddle训练前向默认的Kernel不支持INT8 Kernel实现，只有Paddle Inference TensorRT的推理才支持量化推理加速。为了方便量化后验证量化精度，使用Paddle训练前向能加载此模型，默认保存的Float32类型权重，体积没有发生变换。
 
 ## 许可证书
 

@@ -18,12 +18,11 @@ import sys
 import numpy as np
 import inspect
 import shutil
-from collections import namedtuple, Iterable
+from collections import namedtuple
+from collections.abc import Iterable
 import platform
 import paddle
 import paddle.distributed.fleet as fleet
-if platform.system().lower() == 'linux':
-    from ..quant import quant_post_hpo
 from ..quant.quanter import convert, quant_post
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
@@ -34,6 +33,12 @@ from .strategy_config import ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
 
 _logger = get_logger(__name__, level=logging.INFO)
+
+try:
+    if platform.system().lower() == 'linux':
+        from ..quant.quant_post_hpo import quant_post_hpo
+except Exception as e:
+    _logger.warning(e)
 
 
 class AutoCompression:
