@@ -269,6 +269,9 @@ pip install paddleslim==2.3.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 ### [FAQ](docs/zh_cn/FAQ/quantization_FAQ.md)
 
+#### 1. 量化训练或者离线量化后的模型体积为什么没有变小？
+答：这是因为量化后保存的参数是虽然是int8范围，但是类型是float。这是由于fluid没有int8 kernel, 为了方便量化后验证量化精度，必须能让fluid能够加载。
+
 ## 许可证书
 
 本项目的发布受[Apache 2.0 license](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/LICENSE)许可认证。

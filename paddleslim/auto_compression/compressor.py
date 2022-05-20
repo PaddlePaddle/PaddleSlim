@@ -113,7 +113,7 @@ class AutoCompression:
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
-        self.eval_dataloader = eval_dataloader
+        self.eval_dataloader = eval_dataloader if eval_dataloader is not None else train_dataloader
 
         paddle.enable_static()
 
