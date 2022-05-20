@@ -16,11 +16,11 @@
 
 答：这是因为量化后保存的参数是虽然是Int8范围，但是类型是Float32。Paddle训练前向默认的Kernel并不具备加速量化模型的能力。量化模型必须配合使用支持Int8计算的的预测库才能加速。
 
-- 如果量化模型在ARM上线，则需要使用[PaddleLite](https://paddle-lite.readthedocs.io/zh/latest/index.html).
+- 如果量化模型在ARM上线，则需要使用[Paddle Lite](https://paddle-lite.readthedocs.io/zh/latest/index.html).
 
-    -  PaddleLite会对量化模型进行模型转化和优化，转化方法见[链接](https://paddle-lite.readthedocs.io/zh/latest/index.html#sec-user-guides)。
+    -  Paddle Lite会对量化模型进行模型转化和优化，转化方法见[链接](https://paddle-lite.readthedocs.io/zh/latest/index.html#sec-user-guides)。
 
-    - 转化之后可以像非量化模型一样使用[PaddleLite API](https://paddle-lite.readthedocs.io/zh/latest/index.html)进行加载预测。
+    - 转化之后可以像非量化模型一样使用[Paddle Lite API](https://paddle-lite.readthedocs.io/zh/latest/index.html)进行加载预测。
 
 - 如果量化模型在GPU上线，则需要使用[Paddle-TensorRT 预测接口](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/performance_improving/inference_improving/paddle_tensorrt_infer.html).
 
@@ -48,7 +48,7 @@ config->EnableTensorRtEngine(1 << 20      /* workspace_size*/,
 
    | 平台             | 支持weight量化方式             | 支持activation量化方式                | 支持量化的OP                                                 |
    | ---------------- | ------------------------------ | ------------------------------------- | ------------------------------------------------------------ |
-   | ARM(PaddleLite) | channel_wise_abs_max， abs_max | moving_average_abs_max，range_abs_max | conv2d, depthwise_conv2d, mul                                |
+   | ARM(Paddle Lite) | channel_wise_abs_max， abs_max | moving_average_abs_max，range_abs_max | conv2d, depthwise_conv2d, mul                                |
    | x86(MKL-DNN)     | abs_max                        | moving_average_abs_max，range_abs_max | conv2d, depthwise_conv2d, mul, matmul                        |
    | GPU(TensorRT)    | channel_wise_abs_max           | moving_average_abs_max，range_abs_max | mul, conv2d, pool2d, depthwise_conv2d, elementwise_add, leaky_relu |
 
