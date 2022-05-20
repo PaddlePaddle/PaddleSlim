@@ -35,12 +35,12 @@ $$
 
 ### 权重量化和激活量化
 
-- 权重量化：即仅仅需要对网络中的权重执行量化操作。由于网络的权重一般都保存下来了，因而我们可以提前根据权重获得相应的量化参数scale。由于仅仅对权重执行了量化，这种量化方法的压缩力度不是很大。
-- 激活量化：即不仅对网络中的权重进行量化，还对激活值进行量化。由于激活层的范围通常不容易提前获得，因而需要在网络实际推理的过程中进行计算scale值，或者根据模型进行大致的预测。
+- 权重量化：即仅需要对网络中的权重执行量化操作。因为模型的权重在推理时数值无变化，所以我们可以提前根据权重获得相应的量化参数scale。由于仅对权重执行了量化，这种量化方法不会加速推理流程。
+- 激活量化：即不仅对网络中的权重进行量化，还对激活值进行量化。因为激活层的范围通常不容易提前获得，所以需要在网络实际推理的过程中进行计算scale值，此过程需要部分无标签数据。
 
 几点说明：
-1. 对于权重，可以选择逐层（layer-wise）或者逐通道（channel-wise）的量化粒度，也就是说每层或者每个通道选取一个量化scale。在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)的权重量化方式通过`weight_quantize_type`参数来配置，可选择`abs_max`或者`channel_wise_abs_max`，前者是layer-wise，后者是channel-wise，按照经验，`channel_wise_abs_max`的量化方式更精确，但具体要看部署硬件的支持情况。
-2. 对于激活，一般只能采用逐层（layer-wise）的量化粒度，每层选取一个量化参数，从而在部署时实现计算的加速。在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)的权重量化方式通过`activation_quantize_type`参数来配置，可选择`range_abs_max`或者`moving_average_abs_max`，一般保持默认`range_abs_max`即可。
+1. 对于权重，可以选择逐层（layer-wise）或者逐通道（channel-wise）的量化粒度，也就是说每层或者每个通道选取一个量化scale。在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)中，通过`weight_quantize_type`的参数来配置权重量化，可选择`abs_max`或者`channel_wise_abs_max`，前者是layer-wise，后者是channel-wise，按照经验，`channel_wise_abs_max`的量化方式更精确，但部分部署硬件有可能不支持channel-wise量化推理。
+2. 对于激活，一般只能采用逐层（layer-wise）的量化粒度，每层选取一个量化参数，从而在部署时实现计算的加速。在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)中，通过`activation_quantize_type`参数来配置激活量化，可选择`range_abs_max`或者`moving_average_abs_max`，一般保持默认`range_abs_max`即可。
 
 ## 方法介绍
 
@@ -48,33 +48,44 @@ $$
 
 对于激活的离线量化，需要用少量数据进行校准，经过模型的前向过程，统计得到激活的量化scale参数。具体来说，我们支持了如下几种确定激活的量化截断值α的方法：
 
-- abs_max：选取所有激活值的绝对值的最大值作为截断值α。此方法的计算最为简单，但是容易受到某些绝对值较大的极端值的影响，适用于几乎不存在极端值的情况。
-
-- KL：使用参数在量化前后的KL散度作为量化损失的衡量指标。此方法是TensorRT所使用的方法，我们根据[8-bit Inference with TensorRT](https://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf) 进行了实现。在大多数情况下，使用KL方法校准的表现要优于abs_max方法。
-
-- avg：选取所有样本的激活值的绝对值最大值的平均数作为截断值α。此方法计算较为简单，可以在一定程度上消除不同数据样本的激活值的差异，抵消一些极端值影响，总体上优于abs_max方法。
-
-- hist：首先采用与KL散度类似的方式将所有参数映射为直方图，然后根据给定的百分比，选取直方图的百分位点作为截断值α。此方法可以去除掉一些极端值，并且可以灵活调节直方图百分比(hist_percent)来调整截断值大小，以适应不同模型。
-
-- mse：使用均方误差作为模型量化前后输出的损失的衡量指标。选取使得激活值在量化前后的均方误差最小的量化参数。此方法较为耗时，但是效果常常优于其他方法。
-
-- emd: 使用推土距离(EMD)作为模型量化前后输出的损失的衡量指标。使用EMD距离做度量，量化前后EMD距离越小，量化精度越高。选取使得激活值在量化前后的均方误差最小的量化参数。
+| 激活量化方法    |   详解     |
+| :-------- | :--------: |
+| abs_max | 选取所有激活值的绝对值的最大值作为截断值α。此方法的计算最为简单，但是容易受到某些绝对值较大的极端值的影响，适用于几乎不存在极端值的情况。 |
+| KL |使用参数在量化前后的KL散度作为量化损失的衡量指标。此方法是TensorRT所使用的方法，我们根据[8-bit Inference with TensorRT](https://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf) 进行了实现。在大多数情况下，使用KL方法校准的表现要优于abs_max方法。 |
+| avg | 选取所有样本的激活值的绝对值最大值的平均数作为截断值α。此方法计算较为简单，可以在一定程度上消除不同数据样本的激活值的差异，抵消一些极端值影响，总体上优于abs_max方法。 |
+| hist| 首先采用与KL散度类似的方式将所有参数映射为直方图，然后根据给定的百分比，选取直方图的百分位点作为截断值α。此方法可以去除掉一些极端值，并且可以灵活调节直方图百分比(hist_percent)来调整截断值大小，以适应不同模型。 |
+| mse | 使用均方误差作为模型量化前后输出的损失的衡量指标。选取使得激活值在量化前后的均方误差最小的量化参数。此方法较为耗时，但是效果常常优于其他方法。 |
+| emd | 使用推土距离(EMD)作为模型量化前后输出的损失的衡量指标。使用EMD距离做度量，量化前后EMD距离越小，量化精度越高。选取使得激活值在量化前后的均方误差最小的量化参数。 |
 
 说明：
 - 当模型量化效果不好时，可多尝试几种激活方法，具体的，可以在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`algo`参数，目前支持：`abs_max`、`KL`、`avg`、`hist`、`mse`、`emd`。
 
 ### 对于权重量化
 
-在对权重scale参数进行量化时，一般直接采用选取绝对值最大值的方式。其他方面比如矫正偏差，round方法等仍有很多优化空间，比如PaddleSlim中目前支持以下几种方法：
+在对权重scale参数进行量化时，一般直接采用选取绝对值最大值的方式。对于权重量化，还可通过其他方法提升量化的精度，比如矫正weight偏差，round方法等，比如PaddleSlim中目前支持以下几种方法：
 
-- bias_correction: 通过简单的校正常数来补偿权重weight量化前后的均值和方差的固有偏差，参考自[论文](https://arxiv.org/abs/1810.05723)。
-
-- Adaround：对每层weight值进行量化时，不再采样固定四舍五入方法，而是自适应的决定weight量化时将浮点值近似到最近右定点值还是左定点值。具体的算法原理参考自[论文](https://arxiv.org/abs/2004.10568)。
+| 权重量化方法    |   详解     |
+| :-------- | :--------: |
+| bias_correction | 通过简单的校正常数来补偿权重weight量化前后的均值和方差的固有偏差，参考自[论文](https://arxiv.org/abs/1810.05723)。 |
+|  Adaround | 对每层weight值进行量化时，不再采样固定四舍五入方法，而是自适应的决定weight量化时将浮点值近似到最近右定点值还是左定点值。具体的算法原理参考自[论文](https://arxiv.org/abs/2004.10568)。 |
 
 说明：
 - 如果想使用bias_correction，可以在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`bias_correction`参数为True即可，默认为False。
 - 如果想使用Adaround方法，可以在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`round_type`参数为`adaround`即可，默认为`round`。
 
+### 效果对比
+
+以上离线量化方法在MobileNet模型上的效果对比如下：
+
+<p align="center">
+<img width="750" alt="image" src="https://user-images.githubusercontent.com/7534971/169042883-9ca281ce-19be-4525-a3d2-c54cea4a2cbd.png"/> <br />
+<strong>表1：多种离线量化方法效果对比</strong>
+</p>
+
+更详细的使用可查看[PaddleSlim离线量化API文档](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)
+
+
 ## 快速体验
 
-参考使用PaddleSlim的[离线量化Demo](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post)。
+- 离线量化：参考PaddleSlim的[离线量化Demo](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post)。
+- 自动化压缩ACT：可试用PaddleSlim新功能[自动化压缩Demo](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression)
