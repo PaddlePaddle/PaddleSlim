@@ -27,7 +27,10 @@ UnstructurePrune:
 TrainConfig:
   epochs: 14
   eval_iter: 400
-  learning_rate: 5.0e-03
+  learning_rate: 
+    type: PiecewiseDecay
+    boundaries: [4500]
+    values: [0.005, 0.0005]
   optim_args:
     weight_decay: 0.0005
   optimizer: SGD

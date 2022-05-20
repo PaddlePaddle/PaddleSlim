@@ -56,7 +56,7 @@ Prune:
   # pruned_ratio: 裁剪比例
   pruned_ratio: 0.25
   # prune_params_name: 需要裁剪的参数名字
-  prune_params_name: 
+  prune_params_name:
   - conv1_weights
   # criterion: 评估一个卷积层内通道重要性所参考的指标
   criterion: l1_norm
@@ -79,12 +79,12 @@ UnstructurePrune:
     threshold: 0.001
     # gmp_config: 传入额外的训练超参用以指导GMP训练过程
     gmp_config:
-    - stable_iterations: 0
-    - pruning_iterations: 4500 # total_iters * 0.4~0.45
-    - tunning_iterations: 4500 # total_iters * 0.4~0.45
-    - resume_iteration: -1
-    - pruning_steps: 100
-    - initial_ratio: 0.15
+      stable_iterations: 0
+      pruning_iterations: 4500 # total_iters * 0.4~0.45
+      tunning_iterations: 4500 # total_iters * 0.4~0.45
+      resume_iteration: -1
+      pruning_steps: 100
+      initial_ratio: 0.15
     # prune_params_type: 用以指定哪些类型的参数参与稀疏。
     prune_params_type: conv1x1_only
     # local_sparsity: 剪裁比例（ratio）应用的范围
