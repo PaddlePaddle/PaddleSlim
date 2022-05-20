@@ -35,7 +35,7 @@
 #### 3.1 准备环境
 
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.3 或者适当develop版本
+- PaddleSlim develop版本
 - PaddleSeg >= 2.5
 
 安装paddlepaddle：
