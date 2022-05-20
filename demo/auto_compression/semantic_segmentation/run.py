@@ -148,8 +148,8 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    compress_config, train_config = load_config(args.config_path)
-    cfg = Config(compress_config['reader_config'])
+    compress_config, train_config, global_config = load_config(args.config_path)
+    cfg = Config(global_config['reader_config'])
 
     train_dataset = cfg.train_dataset
     eval_dataset = cfg.val_dataset
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     ac = AutoCompression(
         model_dir=args.model_dir,
         model_filename=args.model_filename,
-        params_filename=args.param_filename,
+        params_filename=args.params_filename,
         save_dir=args.save_dir,
         strategy_config=compress_config,
         train_config=train_config,

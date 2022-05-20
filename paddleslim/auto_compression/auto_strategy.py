@@ -27,7 +27,7 @@ __all__ = [
 
 # config tester to test the loss of quant_post
 hpo_config_tester = {
-    "ptq_algo": ["avg"],
+    "ptq_algo": ["avg", "mse", "KL"],
     "weight_quantize_type": ['channel_wise_abs_max', 'abs_max'],
     "bias_correct": [False],
     "batch_num": [5],
@@ -72,7 +72,8 @@ EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
 ]
 MAGIC_SPARSE_RATIO = 0.75
 ### TODO: 0.03 threshold maybe not suitable, need to check
-MAGIC_EMD_DISTANCE = 0.03
+MAGIC_MAX_EMD_DISTANCE = 0.03
+MAGIC_MIN_EMD_DISTANCE = 0.01
 
 DEFAULT_TRANSFORMER_STRATEGY = 'prune_0.25_int8'
 DEFAULT_STRATEGY = 'origin_int8'
@@ -224,9 +225,13 @@ def prepare_strategy(model_dir,
     return strategy_config
 
 
-def get_final_quant_config(ptq_loss, mode='DistilQuant'):
+def get_final_quant_config(ptq_loss):
     """ transform quantization tester config to real quantization config """
-    if mode == 'HPO':
+    ### if emd loss less than MAGIC_MIN_EMD_DISTANCE, final compress.
+    if ptq_loss < MAGIC_MIN_EMD_DISTANCE:
+        return None
+    ### if emd loss less than MAGIC_MAX_EMD_DISTANCE, select quant_post & hpo.
+    elif ptq_loss < MAGIC_MAX_EMD_DISTANCE:
         quant_config = Quantization(**default_quant_config)
         hpo_config = HyperParameterOptimization(**default_hpo_config)
         configs = [{
@@ -234,7 +239,8 @@ def get_final_quant_config(ptq_loss, mode='DistilQuant'):
             'HyperParameterOptimization': hpo_config
         }]
 
-    if mode == 'DistilQuant':
+    ### if emd loss greater than MAGIC_MAX_EMD_DISTANCE, select qat & dist.
+    else:
         quant_config = Quantization(**default_quant_config)
         dis_config = Distillation()
         configs = [{'Quantization': quant_config, 'Distillation': dis_config}]
