@@ -166,7 +166,6 @@ pip install paddleslim==2.3.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 安装develop版本：
 ```bash
 git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
-python -m pip install -r requirements.txt
 python setup.py install
 ```
 
