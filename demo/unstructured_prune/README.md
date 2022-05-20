@@ -168,14 +168,30 @@ python evaluate.py --h
 
 ## 实验结果
 
-| 模型 | 数据集 | 压缩方法 | 压缩率| Top-1/Top-5 Acc | lr | threshold | epoch |
-|:--:|:---:|:--:|:--:|:--:|:--:|:--:|:--:|
-| MobileNetV1 | ImageNet | Baseline | - | 70.99%/89.68% | - | - | - |
-| MobileNetV1 | ImageNet |   ratio  | 55.19% | 70.87%/89.80% (-0.12%/+0.12%) | 0.05 | - | 68 |
-| MobileNetV1 | ImageNet |   threshold  | 49.49% | 71.22%/89.78% (+0.23%/+0.10%) | 0.05 | 0.01 | 93 |
-| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 75% | 70.49%/89.48% (-0.5%/-0.20%) | 0.005 | - | 108 |
-| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 80% | 70.02%/89.26% (-0.97%/-0.42%) | 0.005 | - | 108 |
-| YOLO v3     |  VOC     | - | - |76.24% | - | - | - |
-| YOLO v3     |  VOC     |threshold | 56.50% | 77.21%(+0.97%) | 0.001 | 0.01 |150k iterations|
+| 模型 | 数据集 | 压缩方法 | 稀疏度 | 稀疏模型精度 | 精度变化 |
+|:--:|:---:|:--:|:--:|:--:|:--:|
+| MobileNetV1 | ImageNet | Baseline | - | 70.99% | - |
+| MobileNetV1 | ImageNet |   ratio  | 55.19% | 70.87% | -0.12% |
+| MobileNetV1 | ImageNet |   threshold  | 49.49% | 71.22% | +0.23% |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 75% | 70.49% | -0.50% |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP, 半结构化稀疏 | 75% | 68.80% | -2.19% |
+| MobileNetV1 | Imagenet | ratio, 1x1conv, GMP | 80% | 70.02% | -0.97% |
+| YOLO v3     |  VOC     | Baseline | - |76.24% | - |
+| YOLO v3     |  VOC     |threshold | 56.50% | 77.21% | +0.97% |
+| PicoDet-m-1.0 | COCO   | Baseline | - | 30.90% | - |
+| PicoDet-m-1.0 | COCO   | ratio, 1x1conv, GMP | 75% | 29.40% | -1.50% |
+| PP-HumanSeg-Lite | 人像分割数据集 | Baseline | - | 92.87% | - |
+| PP-HumanSeg-Lite | 人像分割数据集 | ratio, 1x1conv, GMP | 75% | 92.57% | -0.30% |
+| PP-HumanSeg-Lite | 人像分割数据集 | ratio, 1x1conv, GMP, 半结构化稀疏 | 75% | 92.20%  | -0.67% |
 
-**注意**，上述`ratio, 1x1conv, GMP`代表根据比例剪裁，只稀疏化1x1conv层参数，并且使用GMP训练方式。
+**术语说明**
+
+Baseline: 未经压缩的稠密模型
+
+ratio/threshold： [按照比例或者阈值稀疏](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/prune/unstructured_prune_api.rst#unstrucuturedpruner)
+
+1x1conv： [只稀疏网络中的 1x1 卷积参数](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/prune/unstructured_prune_api.rst#unstrucuturedpruner)
+
+GMP：[渐进稀疏算法](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/demo/unstructured_prune/README_GMP.md)
+
+半结构化稀疏：按照 [m=2, n=1](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/prune/unstructured_prune_api.rst#unstrucuturedpruner) 的方式稀疏
