@@ -25,7 +25,7 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
     - 统一量化模型格式
     - 离线量化支持while op
-    - 新增7种离线量化方法, 包括HIST, AVG, EMD, Bias Correction, AdaRound等
+    - 新增7种[离线量化方法](docs/zh_cn/tutorials/quant/post_training_quantization.md), 包括HIST, AVG, EMD, Bias Correction, AdaRound等
     - 修复BERT大模型量化训练过慢的问题
 
   - 支持半结构化稀疏训练
@@ -190,7 +190,7 @@ pip install paddleslim==2.3.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 - 低比特量化
   - [三种量化方法介绍与应用](docs/zh_cn/tutorials/quant/overview.md)
     - [量化训练](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
-    - [离线量化](docs/zh_cn/tutorials/quant/static/quant_post_tutorial.md)
+    - [离线量化](docs/zh_cn/tutorials/quant/static/quant_post_tutorial.md) | [离线量化方法解析](docs/zh_cn/tutorials/quant/post_training_quantization.md)
     - [embedding量化](docs/zh_cn/tutorials/quant/static/embedding_quant_tutorial.md)
 
 - NAS
