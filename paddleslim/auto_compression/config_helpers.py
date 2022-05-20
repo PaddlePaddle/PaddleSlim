@@ -25,14 +25,16 @@ def load_config(config_path):
     cfg = yaml.load(f, Loader=yaml.FullLoader)
     f.close()
 
+    global_config = {}
+    if 'Global' in cfg:
+        for g_key, g_value in cfg["Global"].items():
+            global_config[g_key] = g_value
+        cfg.pop('Global')
+
     compress_config = {}
     for key, value in cfg.items():
-        if key == "Global":
-            for g_key, g_value in cfg["Global"].items():
-                compress_config[g_key] = g_value
-        else:
-            default_key = eval(key)(**value)
-            compress_config[key] = default_key
+        default_key = eval(key)(**value)
+        compress_config[key] = default_key
 
     if compress_config.get('TrainConfig') != None:
         train_config = compress_config.pop('TrainConfig')
@@ -42,7 +44,7 @@ def load_config(config_path):
     if len(compress_config) == 0:
         compress_config = None
 
-    return compress_config, train_config
+    return compress_config, train_config, global_config
 
 
 def save_config(config, config_path):

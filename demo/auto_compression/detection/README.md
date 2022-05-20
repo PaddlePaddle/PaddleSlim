@@ -23,7 +23,7 @@
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP32</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | PP-YOLOE-l |  Base模型 | 640*640  |  50.9   |   11.2  |   7.7ms   |  -  |  [config](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/configs/ppyoloe/ppyoloe_crn_l_300e_coco.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco.tar) |
-| PP-YOLOE-l |  量化+蒸馏 | 640*640  |  50.6   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dist.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
+| PP-YOLOE-l |  量化+蒸馏 | 640*640  |  50.6   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
 
 - mAP的指标均在COCO val2017数据集中评测得到。
 - PP-YOLOE模型在Tesla V100的GPU环境下测试，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)
@@ -95,7 +95,8 @@ tar -xf ppyoloe_crn_l_300e_coco.tar
 
 使用run.py脚本得到模型的mAP：
 ```
-python run.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=True
+export CUDA_VISIBLE_DEVEICES=0
+python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --eval=True
 ```
 
 **注意**：TinyPose模型暂不支持精度测试。
@@ -104,7 +105,8 @@ python run.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --eval=True
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
 ```
-python run.py --config_path=./configs/ppyoloe_l_qat_dist.yaml --save_dir='./output/' 
+export CUDA_VISIBLE_DEVEICES=0
+python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./output/'
 ```
 
 

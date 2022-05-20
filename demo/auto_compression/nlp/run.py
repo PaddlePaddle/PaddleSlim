@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import argparse
 import functools
 from functools import partial
@@ -58,7 +59,9 @@ def convert_example(example,
                     label_list,
                     max_seq_length=512,
                     is_test=False):
-    assert args.dataset in ['glue', 'clue'], "This demo only supports for dataset glue or clue"
+    assert args.dataset in [
+        'glue', 'clue'
+    ], "This demo only supports for dataset glue or clue"
     """Convert a glue example into necessary features."""
     if args.dataset == 'glue':
         if not is_test:
@@ -74,13 +77,14 @@ def convert_example(example,
             return example['input_ids'], example['token_type_ids'], label
         else:
             return example['input_ids'], example['token_type_ids']
-        
-    else: #if args.dataset == 'clue':
+
+    else:  #if args.dataset == 'clue':
         if not is_test:
             # `label_list == None` is for regression task
             label_dtype = "int64" if label_list else "float32"
             # Get the label
-            example['label'] = np.array(example["label"], dtype="int64").reshape((-1, 1))
+            example['label'] = np.array(
+                example["label"], dtype="int64").reshape((-1, 1))
             label = example['label']
         # Convert raw text to feature
         if 'keyword' in example:  # CSL
@@ -91,12 +95,13 @@ def convert_example(example,
                 'label': example['label']
             }
         elif 'target' in example:  # wsc
-            text, query, pronoun, query_idx, pronoun_idx = example['text'], example[
-                'target']['span1_text'], example['target']['span2_text'], example[
-                    'target']['span1_index'], example['target']['span2_index']
+            text, query, pronoun, query_idx, pronoun_idx = example[
+                'text'], example['target']['span1_text'], example['target'][
+                    'span2_text'], example['target']['span1_index'], example[
+                        'target']['span2_index']
             text_list = list(text)
-            assert text[pronoun_idx:(pronoun_idx + len(pronoun)
-                                     )] == pronoun, "pronoun: {}".format(pronoun)
+            assert text[pronoun_idx:(pronoun_idx + len(
+                pronoun))] == pronoun, "pronoun: {}".format(pronoun)
             assert text[query_idx:(query_idx + len(query)
                                    )] == query, "query: {}".format(query)
             if pronoun_idx > query_idx:
@@ -125,8 +130,6 @@ def convert_example(example,
         else:
             return example['input_ids'], example['token_type_ids']
 
-        
-
 
 def create_data_holder(task_name):
     """
@@ -148,7 +151,7 @@ def reader():
     # Create the tokenizer and dataset
     if args.model_type == 'bert':
         tokenizer = BertTokenizer.from_pretrained(args.model_dir)
-    else: # ppminilm
+    else:  # ppminilm
         tokenizer = PPMiniLMTokenizer.from_pretrained(args.model_dir)
     train_ds, dev_ds = load_dataset(
         args.dataset, args.task_name, splits=('train', 'dev'))
@@ -239,7 +242,7 @@ if __name__ == '__main__':
     print_arguments(args)
     paddle.enable_static()
 
-    compress_config, train_config = load_config(args.config_path)
+    compress_config, train_config, _ = load_config(args.config_path)
     if train_config is not None and 'optim_args' in train_config:
         train_config['optim_args'][
             'apply_decay_param_fun'] = apply_decay_param_fun
@@ -256,8 +259,8 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function
-        if compress_config is None or 'HyperParameterOptimization' not in compress_config else
+        eval_callback=eval_function if compress_config is None or
+        'HyperParameterOptimization' not in compress_config else
         eval_dataloader,
         eval_dataloader=eval_dataloader)
 
