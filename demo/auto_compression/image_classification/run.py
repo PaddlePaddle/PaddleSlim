@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import argparse
 import functools
 from functools import partial
@@ -32,7 +33,7 @@ def reader_wrapper(reader):
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.float32([item[0] for item in data])
-            yield {"x": imgs}
+            yield {"inputs": imgs}
 
     return gen
 

@@ -93,7 +93,7 @@ python run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_auto.yaml'
+    --config_path='configs/pp_humanseg_auto.yaml' \
     --deploy_hardware='SD710'
 
 # 多卡启动
