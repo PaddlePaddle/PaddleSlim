@@ -74,7 +74,7 @@ pip install paddleseg
 - 如果想快速体验，可直接下载PP-HumanSeg-Lite 的预测模型：
 
 ```shell
-wget https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz
+wget https://bj.bcebos.com/v1/paddlemodels/PaddleSlim/analysis/ppseg_lite_portrait_398x224_with_softmax.tar.gz
 tar -xzf ppseg_lite_portrait_398x224_with_softmax.tar.gz
 ```
 
@@ -88,6 +88,7 @@ tar -xzf ppseg_lite_portrait_398x224_with_softmax.tar.gz
 
 ```shell
 # 单卡启动
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
     --model_filename='model.pdmodel' \
@@ -109,6 +110,7 @@ python -m paddle.distributed.launch run.py \
 - 自行配置稀疏参数进行非结构化稀疏和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
 ```shell
 # 单卡启动
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
     --model_filename='model.pdmodel' \
@@ -129,6 +131,7 @@ python -m paddle.distributed.launch run.py \
 - 自行配置量化参数进行量化和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
 ```shell
 # 单卡启动
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
     --model_filename='model.pdmodel' \
