@@ -2,8 +2,6 @@
 tqdm
 pyzmq
 matplotlib
-opencv-python==4.5.5.64
-opencv-python-headless==4.5.5.62
 pillow 
 pyyaml
 scikit-learn
