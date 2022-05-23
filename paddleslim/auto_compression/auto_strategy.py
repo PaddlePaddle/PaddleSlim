@@ -71,8 +71,8 @@ EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
     'prune_0.3_int8'
 ]
 MAGIC_SPARSE_RATIO = 0.75
-### TODO: 0.03 threshold maybe not suitable, need to check
-MAGIC_MAX_EMD_DISTANCE = 0.03
+### TODO: 0.02 threshold maybe not suitable, need to check
+MAGIC_MAX_EMD_DISTANCE = 0.02
 MAGIC_MIN_EMD_DISTANCE = 0.01
 
 DEFAULT_TRANSFORMER_STRATEGY = 'prune_0.25_int8'

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import os
-import cv2
 import math
 import random
 import numpy as np

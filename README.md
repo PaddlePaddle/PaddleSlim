@@ -25,7 +25,7 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
     - 统一量化模型格式
     - 离线量化支持while op
-    - 新增7种离线量化方法, 包括HIST, AVG, EMD, Bias Correction, AdaRound等
+    - 新增7种[离线量化方法](docs/zh_cn/tutorials/quant/post_training_quantization.md), 包括HIST, AVG, EMD, Bias Correction, AdaRound等
     - 修复BERT大模型量化训练过慢的问题
 
   - 支持半结构化稀疏训练
@@ -163,6 +163,12 @@ pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
 pip install paddleslim==2.3.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
+安装develop版本：
+```bash
+git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+python setup.py install
+```
+
 
 ### 快速开始
 
@@ -190,7 +196,7 @@ pip install paddleslim==2.3.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 - 低比特量化
   - [三种量化方法介绍与应用](docs/zh_cn/tutorials/quant/overview.md)
     - [量化训练](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
-    - [离线量化](docs/zh_cn/tutorials/quant/static/quant_post_tutorial.md)
+    - [离线量化](docs/zh_cn/tutorials/quant/static/quant_post_tutorial.md) | [离线量化方法解析](docs/zh_cn/tutorials/quant/post_training_quantization.md)
     - [embedding量化](docs/zh_cn/tutorials/quant/static/embedding_quant_tutorial.md)
 
 - NAS
@@ -268,6 +274,9 @@ pip install paddleslim==2.3.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 - [静态图](docs/zh_cn/api_cn/static)
 
 ### [FAQ](docs/zh_cn/FAQ/quantization_FAQ.md)
+
+#### 1. 量化训练或者离线量化后的模型体积为什么没有变小？
+答：这是因为量化后保存的参数是虽然是int8范围，但是类型是float。这是因为Paddle训练前向默认的Kernel不支持INT8 Kernel实现，只有Paddle Inference TensorRT的推理才支持量化推理加速。为了方便量化后验证量化精度，使用Paddle训练前向能加载此模型，默认保存的Float32类型权重，体积没有发生变换。
 
 ## 许可证书
 
