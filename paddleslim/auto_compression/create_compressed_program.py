@@ -265,7 +265,8 @@ def build_distill_program(executor,
             loss.stop_gradient = False
 
             if 'prune_algo' in config:  ### prune & asp
-                if config['prune_algo'] == 'asp':
+                if config['prune_algo'] == 'asp' and not train_config.get(
+                        'use_fleet'):
                     optimizer = pruner.decorate(optimizer)
                 optimizer.minimize(loss)
             elif 'prune_strategy' in config:  ###unstructure prune
@@ -400,6 +401,8 @@ def build_prune_program(executor,
                 if config[
                         'prune_params_name'] is not None and param.name not in config[
                             'prune_params_name']:
+                    excluded_params_name.append(param.name)
+                if "teacher_" in param.name:
                     excluded_params_name.append(param.name)
             pruner.set_excluded_layers(train_program_info.program,
                                        excluded_params_name)

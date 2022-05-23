@@ -248,6 +248,8 @@ class AutoCompression:
         if train_config.amp_config is not None:
             strategy.amp = True
             strategy.amp_configs = { ** train_config.amp_config}
+        if train_config.asp_config is not None:
+            strategy.asp = True
         return strategy
 
     def _prepare_program(self, program, feed_target_names, fetch_targets,
