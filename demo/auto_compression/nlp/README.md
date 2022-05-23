@@ -88,7 +88,7 @@ tar -zxvf afqmc.tar
 数据集为CLUE，不同任务名称代表CLUE上不同的任务，可选择的任务名称有：afqmc, tnews, iflytek, ocnli, cmnli, cluewsc2020, csl。具体运行命令为
 ：
 ```shell
-export CUDA_VISIBLE_DEVEICES=0
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_type='ppminilm' \
     --model_dir='./afqmc/' \

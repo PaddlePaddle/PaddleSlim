@@ -36,7 +36,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 try:
     if platform.system().lower() == 'linux':
-        from ..quant.quant_post_hpo import quant_post_hpo
+        from ..quant import quant_post_hpo
 except Exception as e:
     _logger.warning(e)
 

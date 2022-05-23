@@ -69,7 +69,7 @@ tar -xf MobileNetV1_infer.tar
 
 ```shell
 # 单卡启动
-export CUDA_VISIBLE_DEVEICES=0
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_dir='MobileNetV1_infer' \
     --model_filename='inference.pdmodel' \
