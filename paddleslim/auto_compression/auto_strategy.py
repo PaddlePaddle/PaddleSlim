@@ -25,16 +25,16 @@ __all__ = [
     "prepare_strategy", "create_strategy_config", "get_final_quant_config"
 ]
 
-### config tester to test the loss of quant_post
+# config tester to test the loss of quant_post
 hpo_config_tester = {
     "ptq_algo": ["avg", "mse", "KL"],
     "weight_quantize_type": ['channel_wise_abs_max', 'abs_max'],
     "bias_correct": [False],
-    "batch_num": [2, 3],
+    "batch_num": [5],
     "max_quant_count": 1,
 }
 
-### default hpo config
+# default hpo config
 default_hpo_config = {
     "ptq_algo": ["KL", "hist", "avg", "mse"],
     "weight_quantize_type": ['channel_wise_abs_max', 'abs_max'],
@@ -44,11 +44,26 @@ default_hpo_config = {
     "max_quant_count": 20,
 }
 
-### default quant config, can be used by ptq&hpo and qat&distillation
+# default quant config, can be used by ptq&hpo and qat&distillation
 default_quant_config = {
     'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul', 'matmul'],
     'weight_bits': 8,
-    'activation_bits': 8
+    'activation_bits': 8,
+    "is_full_quantize": False,
+    "activation_quantize_type": 'range_abs_max',
+    "weight_quantize_type": 'abs_max',
+    "not_quant_pattern": ["skip_quant"],
+}
+
+# default train config
+DefaultTrainConfig = {
+    "epochs": 1,
+    "eval_iter": 500,
+    "learning_rate": 0.0001,
+    "optimizer": "Momentum",
+    "optim_args": {
+        "weight_decay": 4.0e-05
+    },
 }
 
 EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
@@ -56,8 +71,9 @@ EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
     'prune_0.3_int8'
 ]
 MAGIC_SPARSE_RATIO = 0.75
-### TODO: 0.03 threshold maybe not suitable, need to check
-MAGIC_EMD_DISTANCE = 0.03
+### TODO: 0.02 threshold maybe not suitable, need to check
+MAGIC_MAX_EMD_DISTANCE = 0.02
+MAGIC_MIN_EMD_DISTANCE = 0.01
 
 DEFAULT_TRANSFORMER_STRATEGY = 'prune_0.25_int8'
 DEFAULT_STRATEGY = 'origin_int8'
@@ -71,14 +87,26 @@ def create_strategy_config(strategy_str, model_type):
 
     dis_config = Distillation()
     if len(tmp_s) == 3:
+        ### TODO(ceci3): choose prune algo automatically
+        if 'prune' in tmp_s[0]:
+            ### default prune config
+            default_prune_config = {
+                'pruned_ratio': float(tmp_s[1]),
+                'prune_algo': 'prune',
+                'criterion': 'l1_norm'
+            }
+        else:
+            ### default unstruture prune config
+            default_prune_config = {
+                'prune_strategy':
+                'gmp',  ### default unstruture prune strategy is gmp
+                'prune_mode': 'ratio',
+                'pruned_ratio': float(tmp_s[1]),
+                'local_sparsity': True,
+                'prune_params_type': 'conv1x1_only'
+            }
         tmp_s[0] = tmp_s[0].replace('prune', 'Prune')
         tmp_s[0] = tmp_s[0].replace('sparse', 'UnstructurePrune')
-        ### TODO(ceci3): auto choose prune algo
-        default_prune_config = {
-            'pruned_ratio': float(tmp_s[1]),
-            'prune_algo': 'prune',
-            'criterion': 'l1_norm'
-        }
         if model_type == 'transformer' and tmp_s[0] == 'Prune':
             default_prune_config['prune_algo'] = 'transformer_pruner'
         prune_config = eval(tmp_s[0])(**default_prune_config)
@@ -104,6 +132,12 @@ def create_strategy_config(strategy_str, model_type):
             })
 
     return configs
+
+
+def create_train_config(strategy_str, model_type):
+    # TDOD: support more strategy and model_type
+    train_config = TrainConfig(**DefaultTrainConfig)
+    return train_config
 
 
 def prepare_strategy(model_dir,
@@ -193,7 +227,11 @@ def prepare_strategy(model_dir,
 
 def get_final_quant_config(ptq_loss):
     """ transform quantization tester config to real quantization config """
-    if ptq_loss <= MAGIC_EMD_DISTANCE:
+    ### if emd loss less than MAGIC_MIN_EMD_DISTANCE, final compress.
+    if ptq_loss < MAGIC_MIN_EMD_DISTANCE:
+        return None
+    ### if emd loss less than MAGIC_MAX_EMD_DISTANCE, select quant_post & hpo.
+    elif ptq_loss < MAGIC_MAX_EMD_DISTANCE:
         quant_config = Quantization(**default_quant_config)
         hpo_config = HyperParameterOptimization(**default_hpo_config)
         configs = [{
@@ -201,10 +239,12 @@ def get_final_quant_config(ptq_loss):
             'HyperParameterOptimization': hpo_config
         }]
 
+    ### if emd loss greater than MAGIC_MAX_EMD_DISTANCE, select qat & dist.
     else:
         quant_config = Quantization(**default_quant_config)
         dis_config = Distillation()
         configs = [{'Quantization': quant_config, 'Distillation': dis_config}]
+        _logger.info("Start Quantization and Distillation Training.")
 
     return configs
 

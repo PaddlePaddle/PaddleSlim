@@ -4,7 +4,7 @@
 
 ## 接口介绍
 
-请参考 <a href='https://paddlepaddle.github.io/PaddleSlim/api_cn/quantization_api.html#quant-post-static'>量化API文档</a>。
+请参考 <a href='https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static'>量化API文档</a>。
 
 ## 分类模型的离线量化流程
 

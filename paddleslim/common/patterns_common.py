@@ -99,8 +99,8 @@ def _find_next_target_op(op, graph, target_op_idx, sc_path):
 
 def is_shortcut(op, graph, sc_path, shortcut_start_op):
     """
-       op /```````````````````\ add
-          \____op1___op2__..._/
+       op /```````````````````\\ add
+          \\____op1___op2__..._/
     """
     inps = op.all_inputs()
     pre_ops = graph.pre_ops(op)

@@ -66,16 +66,16 @@ def reader_wrapper(reader, input_list):
     return gen
 
 
-def eval(compress_config):
+def eval(config):
 
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
     val_program, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
-        compress_config["model_dir"],
+        config["model_dir"],
         exe,
-        model_filename=compress_config["model_filename"],
-        params_filename=compress_config["params_filename"], )
+        model_filename=config["model_filename"],
+        params_filename=config["params_filename"], )
     clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
 
     anno_file = dataset.get_anno()
@@ -85,7 +85,7 @@ def eval(compress_config):
         data_all = {k: np.array(v) for k, v in data.items()}
         data_input = {}
         for k, v in data.items():
-            if k in compress_config['input_list']:
+            if k in config['input_list']:
                 data_input[k] = np.array(v)
         outs = exe.run(val_program,
                        feed=data_input,
@@ -142,13 +142,14 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
 
 def main():
-    compress_config, train_config = load_slim_config(FLAGS.config_path)
-    reader_cfg = load_config(compress_config['reader_config'])
+    compress_config, train_config, global_config = load_slim_config(
+        FLAGS.config_path)
+    reader_cfg = load_config(global_config['reader_config'])
 
     train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
                                         reader_cfg['worker_num'],
                                         return_list=True)
-    train_loader = reader_wrapper(train_loader, compress_config['input_list'])
+    train_loader = reader_wrapper(train_loader, global_config['input_list'])
 
     global dataset
     dataset = reader_cfg['EvalDataset']
@@ -158,18 +159,18 @@ def main():
                                       return_list=True)
 
     if FLAGS.eval:
-        eval(compress_config)
+        eval(global_config)
         sys.exit(0)
 
-    if 'Evaluation' in compress_config.keys() and compress_config['Evaluation']:
+    if 'Evaluation' in global_config.keys() and global_config['Evaluation']:
         eval_func = eval_function
     else:
         eval_func = None
 
     ac = AutoCompression(
-        model_dir=compress_config["model_dir"],
-        model_filename=compress_config["model_filename"],
-        params_filename=compress_config["params_filename"],
+        model_dir=global_config["model_dir"],
+        model_filename=global_config["model_filename"],
+        params_filename=global_config["params_filename"],
         save_dir=FLAGS.save_dir,
         strategy_config=compress_config,
         train_config=train_config,

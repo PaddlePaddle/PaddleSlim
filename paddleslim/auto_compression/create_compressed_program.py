@@ -25,7 +25,8 @@ from .strategy_config import ProgramInfo
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
-    'build_distill_program', 'build_quant_program', 'build_prune_program'
+    'build_distill_program', 'build_quant_program', 'build_prune_program',
+    'remove_unused_var_nodes'
 ]
 
 
@@ -99,7 +100,8 @@ def _load_program_and_merge(executor,
                             feed_target_names=None):
     scope = paddle.static.global_scope()
     new_scope = paddle.static.Scope()
-    print(model_dir, model_filename, params_filename)
+    if params_filename == 'None':
+        params_filename = None
     try:
         with paddle.static.scope_guard(new_scope):
             [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
@@ -425,3 +427,25 @@ def build_prune_program(executor,
                 format(config['prune_algo']))
 
     return pruner, train_program_info
+
+
+def remove_unused_var_nodes(program):
+    '''
+    This function is called before saving the sparse model to remove redundant nodes.
+    Args:
+        program(paddle.static.Program): The sparse model to be saved.
+    Returns:
+        program(paddle.static.Program): The sparse model.
+    '''
+    from paddle.fluid import core
+    from paddle.fluid.framework import IrGraph
+    graph = IrGraph(core.Graph(program.desc), for_test=True)
+    removed_nodes = set()
+    ops = graph.all_op_nodes()
+    for op_node in ops:
+        for input_node in op_node.inputs:
+            if '_mask' in input_node.name():
+                removed_nodes.add(op_node)
+    graph.safe_remove_nodes(removed_nodes)
+    program = graph.to_program()
+    return program

@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import argparse
 import functools
 from functools import partial
@@ -10,6 +11,7 @@ import paddle
 import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
 from paddle.metric import Metric, Accuracy, Precision, Recall
+from paddlenlp.transformers import PPMiniLMForSequenceClassification, PPMiniLMTokenizer
 from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
 from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
@@ -23,12 +25,15 @@ parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 
 # yapf: disable
+add_arg('model_type',                  str,    None,         "model type can be bert or ppminilm.")
 add_arg('model_dir',                   str,    None,         "inference model directory.")
 add_arg('model_filename',              str,    None,         "inference model filename.")
 add_arg('params_filename',             str,    None,         "inference params filename.")
+add_arg('dataset',                     str,    None,         "datset name.")
 add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
+add_arg('max_seq_length',              int,    128,          "max sequence length after tokenization.")
 add_arg('batch_size',                  int,    1,            "train batch size.")
-add_arg('task',                        str,    'sst-2',      "task name in glue.")
+add_arg('task_name',                        str,    'sst-2',      "task name in glue.")
 add_arg('config_path',                 str,    None,         "path of compression strategy config.")
 # yapf: enable
 
@@ -39,6 +44,13 @@ METRIC_CLASSES = {
     "mnli": Accuracy,
     "qnli": Accuracy,
     "rte": Accuracy,
+    "afqmc": Accuracy,
+    "tnews": Accuracy,
+    "iflytek": Accuracy,
+    "ocnli": Accuracy,
+    "cmnli": Accuracy,
+    "cluewsc2020": Accuracy,
+    "csl": Accuracy,
 }
 
 
@@ -47,22 +59,76 @@ def convert_example(example,
                     label_list,
                     max_seq_length=512,
                     is_test=False):
-    """
-    Convert a glue example into necessary features.
-    """
-    if not is_test:
-        # `label_list == None` is for regression task
-        label_dtype = "int64" if label_list else "float32"
-        # Get the label
-        label = example['labels']
-        label = np.array([label], dtype=label_dtype)
-    # Convert raw text to feature
-    example = tokenizer(example['sentence'], max_seq_len=max_seq_length)
+    assert args.dataset in [
+        'glue', 'clue'
+    ], "This demo only supports for dataset glue or clue"
+    """Convert a glue example into necessary features."""
+    if args.dataset == 'glue':
+        if not is_test:
+            # `label_list == None` is for regression task
+            label_dtype = "int64" if label_list else "float32"
+            # Get the label
+            label = example['labels']
+            label = np.array([label], dtype=label_dtype)
+        # Convert raw text to feature
+        example = tokenizer(example['sentence'], max_seq_len=max_seq_length)
 
-    if not is_test:
-        return example['input_ids'], example['token_type_ids'], label
-    else:
-        return example['input_ids'], example['token_type_ids']
+        if not is_test:
+            return example['input_ids'], example['token_type_ids'], label
+        else:
+            return example['input_ids'], example['token_type_ids']
+
+    else:  #if args.dataset == 'clue':
+        if not is_test:
+            # `label_list == None` is for regression task
+            label_dtype = "int64" if label_list else "float32"
+            # Get the label
+            example['label'] = np.array(
+                example["label"], dtype="int64").reshape((-1, 1))
+            label = example['label']
+        # Convert raw text to feature
+        if 'keyword' in example:  # CSL
+            sentence1 = " ".join(example['keyword'])
+            example = {
+                'sentence1': sentence1,
+                'sentence2': example['abst'],
+                'label': example['label']
+            }
+        elif 'target' in example:  # wsc
+            text, query, pronoun, query_idx, pronoun_idx = example[
+                'text'], example['target']['span1_text'], example['target'][
+                    'span2_text'], example['target']['span1_index'], example[
+                        'target']['span2_index']
+            text_list = list(text)
+            assert text[pronoun_idx:(pronoun_idx + len(
+                pronoun))] == pronoun, "pronoun: {}".format(pronoun)
+            assert text[query_idx:(query_idx + len(query)
+                                   )] == query, "query: {}".format(query)
+            if pronoun_idx > query_idx:
+                text_list.insert(query_idx, "_")
+                text_list.insert(query_idx + len(query) + 1, "_")
+                text_list.insert(pronoun_idx + 2, "[")
+                text_list.insert(pronoun_idx + len(pronoun) + 2 + 1, "]")
+            else:
+                text_list.insert(pronoun_idx, "[")
+                text_list.insert(pronoun_idx + len(pronoun) + 1, "]")
+                text_list.insert(query_idx + 2, "_")
+                text_list.insert(query_idx + len(query) + 2 + 1, "_")
+            text = "".join(text_list)
+            example['sentence'] = text
+        if tokenizer is None:
+            return example
+        if 'sentence' in example:
+            example = tokenizer(example['sentence'], max_seq_len=max_seq_length)
+        elif 'sentence1' in example:
+            example = tokenizer(
+                example['sentence1'],
+                text_pair=example['sentence2'],
+                max_seq_len=max_seq_length)
+        if not is_test:
+            return example['input_ids'], example['token_type_ids'], label
+        else:
+            return example['input_ids'], example['token_type_ids']
 
 
 def create_data_holder(task_name):
@@ -83,14 +149,18 @@ def create_data_holder(task_name):
 
 def reader():
     # Create the tokenizer and dataset
-    tokenizer = BertTokenizer.from_pretrained(args.model_dir)
-    train_ds = load_dataset('glue', args.task, splits="train")
+    if args.model_type == 'bert':
+        tokenizer = BertTokenizer.from_pretrained(args.model_dir)
+    else:  # ppminilm
+        tokenizer = PPMiniLMTokenizer.from_pretrained(args.model_dir)
+    train_ds, dev_ds = load_dataset(
+        args.dataset, args.task_name, splits=('train', 'dev'))
 
     trans_func = partial(
         convert_example,
         tokenizer=tokenizer,
         label_list=train_ds.label_list,
-        max_seq_length=128,
+        max_seq_length=args.max_seq_length,
         is_test=True)
 
     train_ds = train_ds.map(trans_func, lazy=True)
@@ -101,9 +171,9 @@ def reader():
     ): fn(samples)
 
     train_batch_sampler = paddle.io.BatchSampler(
-        train_ds, batch_size=32, shuffle=True)
+        train_ds, batch_size=args.batch_size, shuffle=True)
 
-    [input_ids, token_type_ids, labels] = create_data_holder(args.task)
+    [input_ids, token_type_ids, labels] = create_data_holder(args.task_name)
     feed_list_name = []
     train_data_loader = DataLoader(
         dataset=train_ds,
@@ -117,16 +187,15 @@ def reader():
         convert_example,
         tokenizer=tokenizer,
         label_list=train_ds.label_list,
-        max_seq_length=128)
+        max_seq_length=args.max_seq_length)
     dev_batchify_fn = lambda samples, fn=Tuple(
         Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input
         Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # token_type 
         Stack(dtype="int64" if train_ds.label_list else "float32")  # label
     ): fn(samples)
-    dev_ds = load_dataset('glue', args.task, splits='dev')
     dev_ds = dev_ds.map(dev_trans_func, lazy=True)
     dev_batch_sampler = paddle.io.BatchSampler(
-        dev_ds, batch_size=32, shuffle=False)
+        dev_ds, batch_size=args.batch_size, shuffle=False)
     dev_data_loader = DataLoader(
         dataset=dev_ds,
         batch_sampler=dev_batch_sampler,
@@ -148,7 +217,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                          },
                          fetch_list=test_fetch_list)
         paddle.disable_static()
-        labels_pd = paddle.to_tensor(np.array(data[0]['label']))
+        labels_pd = paddle.to_tensor(np.array(data[0]['label']).flatten())
         logits_pd = paddle.to_tensor(logits[0])
         correct = metric.compute(logits_pd, labels_pd)
         metric.update(correct)
@@ -173,13 +242,13 @@ if __name__ == '__main__':
     print_arguments(args)
     paddle.enable_static()
 
-    compress_config, train_config = load_config(args.config_path)
+    compress_config, train_config, _ = load_config(args.config_path)
     if train_config is not None and 'optim_args' in train_config:
         train_config['optim_args'][
             'apply_decay_param_fun'] = apply_decay_param_fun
 
     train_dataloader, eval_dataloader = reader()
-    metric_class = METRIC_CLASSES[args.task]
+    metric_class = METRIC_CLASSES[args.task_name]
     metric = metric_class()
 
     ac = AutoCompression(
@@ -190,8 +259,8 @@ if __name__ == '__main__':
         strategy_config=compress_config,
         train_config=train_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function
-        if 'HyperParameterOptimization' not in compress_config else
+        eval_callback=eval_function if compress_config is None or
+        'HyperParameterOptimization' not in compress_config else
         eval_dataloader,
         eval_dataloader=eval_dataloader)
 

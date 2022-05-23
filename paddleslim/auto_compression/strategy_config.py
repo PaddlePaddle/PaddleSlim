@@ -34,8 +34,9 @@ Quantization = namedtuple(
         "weight_quantize_type"
     ])
 
-Quantization.__new__.__defaults__ = (None, ) * (len(Quantization._fields) - 1
-                                                ) + (False, )
+Quantization.__new__.__defaults__ = (None, ) * (
+    len(Quantization._fields) - 3) + (False, 'moving_average_abs_max',
+                                      'channel_wise_abs_max')
 
 ### Distillation:
 Distillation = namedtuple(
@@ -103,18 +104,9 @@ UnstructurePrune.__new__.__defaults__ = (None, ) * len(UnstructurePrune._fields)
 
 ### Train
 TrainConfig = namedtuple("Train", [
-    "epochs",
-    "learning_rate",
-    "optimizer",
-    "optim_args",
-    "eval_iter",
-    "logging_iter",
-    "origin_metric",
-    "target_metric",
-    "use_fleet",
-    "amp_config",
-    "recompute_config",
-    "sharding_config",
+    "epochs", "learning_rate", "optimizer", "optim_args", "eval_iter",
+    "logging_iter", "origin_metric", "target_metric", "use_fleet", "amp_config",
+    "recompute_config", "sharding_config", "sparse_model"
 ])
 
 TrainConfig.__new__.__defaults__ = (None, ) * len(TrainConfig._fields)

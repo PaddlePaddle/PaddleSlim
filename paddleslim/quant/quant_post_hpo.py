@@ -14,7 +14,6 @@
 """quant post with hyper params search"""
 
 import os
-import cv2
 import sys
 import math
 import time
