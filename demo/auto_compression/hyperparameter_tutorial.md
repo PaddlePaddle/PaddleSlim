@@ -116,7 +116,13 @@ TrainConfig:
   optim_args:
     weight_decay: 0.0005
 ```
-
+- 学习率设置衰减策略，如下所示：
+```yaml
+  learning_rate:
+    type: PiecewiseDecay # 学习率衰减策略类名
+    boundaries: [4500] # 设置策略参数
+    values: [0.005, 0.0005] # 设置策略参数
+```
 ## 其他参数配置
 
 #### 1.自动蒸馏效果不理想，怎么自主选择蒸馏节点？
