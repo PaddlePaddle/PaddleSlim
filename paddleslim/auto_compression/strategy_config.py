@@ -128,9 +128,11 @@ class ProgramInfo:
                  program,
                  feed_target_names,
                  fetch_targets,
-                 optimizer=None):
+                 optimizer=None,
+                 learning_rate=None):
         self.startup_program = startup_program
         self.program = program
         self.feed_target_names = feed_target_names
         self.fetch_targets = fetch_targets
         self.optimizer = optimizer
+        self.learning_rate = learning_rate

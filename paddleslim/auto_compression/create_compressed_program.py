@@ -30,6 +30,18 @@ __all__ = [
 ]
 
 
+def _create_lr_scheduler(train_config):
+    if 'learning_rate' not in train_config:
+        raise RuntimeError(
+            'No `learning_rate` specified in the configuration file.')
+    if isinstance(train_config.get('learning_rate'), float):
+        return train_config.get('learning_rate')
+
+    params = train_config.get('learning_rate')
+    lr_type = params.pop('type')
+    return getattr(optimizer.lr, lr_type)(**params)
+
+
 def _create_optimizer(train_config):
     """create optimizer"""
     opt = getattr(optimizer, train_config.get('optimizer') or
@@ -54,10 +66,11 @@ def _create_optimizer(train_config):
         train_config['optim_args'] = {}
         grad_clip = None
 
-    op = opt(learning_rate=train_config["learning_rate"],
+    lr = _create_lr_scheduler(train_config)
+    op = opt(learning_rate=lr,
              grad_clip=grad_clip,
              **train_config['optim_args'])
-    return op
+    return op, lr
 
 
 def _parse_distill_loss(distill_node_pair,
@@ -223,7 +236,7 @@ def build_distill_program(executor,
     train_fetch_list = []
     with paddle.static.program_guard(train_program, startup_program):
         with paddle.utils.unique_name.guard('merge'):
-            optimizer = _create_optimizer(train_config)
+            optimizer, learning_rate = _create_optimizer(train_config)
 
             if train_config.get('use_fleet'):
                 optimizer = fleet.distributed_optimizer(optimizer,
@@ -277,7 +290,7 @@ def build_distill_program(executor,
 
     train_program_info = ProgramInfo(startup_program, train_program,
                                      feed_target_names, train_fetch_list,
-                                     optimizer)
+                                     optimizer, learning_rate)
     test_program_info = ProgramInfo(startup_program, test_program,
                                     feed_target_names, fetch_targets)
     return train_program_info, test_program_info
