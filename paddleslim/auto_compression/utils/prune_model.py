@@ -122,7 +122,7 @@ def get_prune_model(model_file, param_file, ratio, save_path):
     main_prog = static.Program()
     startup_prog = static.Program()
     place = paddle.CPUPlace()
-    exe = paddle.static.Executor()
+    exe = paddle.static.Executor(place)
     scope = static.global_scope()
     exe.run(startup_prog)
 
