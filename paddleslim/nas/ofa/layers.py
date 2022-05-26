@@ -20,6 +20,8 @@ import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
 import paddle.fluid.core as core
+from paddle import _C_ops
+from paddle.fluid.framework import in_dygraph_mode
 
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
@@ -1180,9 +1182,13 @@ class SuperLayerNorm(nn.LayerNorm):
             bias = None
         self.cur_config = {'prune_dim': feature_dim}
 
-        out, _, _ = core.ops.layer_norm(input, weight, bias, 'epsilon',
-                                        self._epsilon, 'begin_norm_axis',
-                                        begin_norm_axis)
+        if in_dygraph_mode():
+            out, _, _, = _C_ops.final_state_layer_norm(
+                input, weight, bias, self._epsilon, begin_norm_axis, False)
+        else:
+            out, _, _ = core.ops.layer_norm(input, weight, bias, 'epsilon',
+                                            self._epsilon, 'begin_norm_axis',
+                                            begin_norm_axis)
         return out
 
 
