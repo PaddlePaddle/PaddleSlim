@@ -48,7 +48,8 @@ pip install paddlepaddle-gpu
 
 安装paddleslim：
 ```shell
-pip install paddleslim
+https://github.com/PaddlePaddle/PaddleSlim.git
+python setup.py install
 ```
 
 安装paddleseg
