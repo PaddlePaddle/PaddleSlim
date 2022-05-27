@@ -80,6 +80,9 @@ QAT
 
         # 需要量化的算子类型
         'quantizable_layer_type': ['Conv2D', 'Linear'],
+
+        # 是否需要融合Conv + BN
+        'fuse_conv_bn': False,
     }
 ..
 
