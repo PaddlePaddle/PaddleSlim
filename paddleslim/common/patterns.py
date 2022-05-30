@@ -86,6 +86,9 @@ def get_patterns(program, only_final_node=True):
     block_num = 0
     model_type = None
     for op in graph.ops():
+        if len(op.all_inputs()) == 0 or op.all_inputs()[0] is None:
+            continue
+
         belonged_teacher = False
         for inp in op.all_inputs():
             if 'teacher' in inp._var.name:

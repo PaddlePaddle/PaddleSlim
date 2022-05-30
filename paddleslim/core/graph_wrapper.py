@@ -357,7 +357,8 @@ class GraphWrapper(object):
         ops = []
         for p in self.ops():
             for out_var in op.all_outputs():
-                if out_var in p.all_inputs():
+                if len(p.all_inputs()) > 0 and p.all_inputs()[
+                        0] is not None and out_var in p.all_inputs():
                     if p.idx() != op.idx():
                         ops.append(p)
         return sorted(ops)
