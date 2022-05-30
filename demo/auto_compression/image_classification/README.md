@@ -43,7 +43,8 @@ pip install paddlepaddle-gpu
 
 安装paddleslim：
 ```shell
-pip install paddleslim
+https://github.com/PaddlePaddle/PaddleSlim.git
+python setup.py install
 ```
 
 #### 3.2 准备数据集
@@ -69,7 +70,7 @@ tar -xf MobileNetV1_infer.tar
 
 ```shell
 # 单卡启动
-export CUDA_VISIBLE_DEVEICES=0
+export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_dir='MobileNetV1_infer' \
     --model_filename='inference.pdmodel' \

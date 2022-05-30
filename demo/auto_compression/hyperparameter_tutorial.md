@@ -116,7 +116,13 @@ TrainConfig:
   optim_args:
     weight_decay: 0.0005
 ```
-
+- 学习率衰减策略：主要设置策略类名和策略参数，如下所示。目前在paddle中已经实现了多种衰减策略，请参考[lr文档](https://www.paddlepaddle.org.cn/documentation/docs/zh/2.2/api/paddle/optimizer/lr/LRScheduler_cn.html)，策略参数即类初始化参数。
+```yaml
+  learning_rate:
+    type: PiecewiseDecay # 学习率衰减策略类名
+    boundaries: [4500] # 设置策略参数
+    values: [0.005, 0.0005] # 设置策略参数
+```
 ## 其他参数配置
 
 #### 1.自动蒸馏效果不理想，怎么自主选择蒸馏节点？

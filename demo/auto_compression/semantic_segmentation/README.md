@@ -26,7 +26,7 @@
 | PP-HumanSeg-Lite | 量化+蒸馏 |  0.9284 | 49.656 | [config](./configs/pp_human_sparse_dis.yaml) | - |
 
 - 测试环境：`SDM710 2*A75(2.2GHz) 6*A55(1.7GHz)`；
-- 测试数据集：AISegment + PP-HumanSeg14K + 内部自建数据集。
+- 数据集：AISegment + PP-HumanSeg14K + 内部自建数据集。其中 AISegment 是开源数据集，可从[链接](https://github.com/aisegmentcn/matting_human_datasets)处获取；PP-HumanSeg14K 是 PaddleSeg 自建数据集，可从[官方渠道](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset)获取；内部数据集不对外公开。
 
 下面将以开源数据集为例介绍如何进行自动压缩。
 
@@ -48,7 +48,8 @@ pip install paddlepaddle-gpu
 
 安装paddleslim：
 ```shell
-pip install paddleslim
+https://github.com/PaddlePaddle/PaddleSlim.git
+python setup.py install
 ```
 
 安装paddleseg
@@ -61,9 +62,7 @@ pip install paddleseg
 
 #### 3.2 准备数据集
 
-开发者可下载开源数据集 ([AIsegment](https://github.com/aisegmentcn/matting_human_datasets)) 或自定义语义分割数据集，例如PP-HumanSeg-Lite模型中使用的语义分割数据集[PP-HumanSeg14K](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset)可从官方渠道下载。
-
-如果是自定义数据，请参考[PaddleSeg数据准备文档](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/data/marker/marker_cn.md)来检查对齐数据格式即可。
+开发者可下载开源数据集 (如[AISegment](https://github.com/aisegmentcn/matting_human_datasets)) 或自定义语义分割数据集。请参考[PaddleSeg数据准备文档](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/data/marker/marker_cn.md)来检查、对齐数据格式即可。
 
 #### 3.3 准备预测模型
 
@@ -104,7 +103,7 @@ python -m paddle.distributed.launch run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_auto.yaml'
+    --config_path='configs/pp_humanseg_auto.yaml' \
     --deploy_hardware='SD710'
 ```
 - 自行配置稀疏参数进行非结构化稀疏和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：

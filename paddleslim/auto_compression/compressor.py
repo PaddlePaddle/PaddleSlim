@@ -20,6 +20,7 @@ import inspect
 import shutil
 from collections import namedtuple
 from collections.abc import Iterable
+from time import gmtime, strftime
 import platform
 import paddle
 import paddle.distributed.fleet as fleet
@@ -36,7 +37,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 try:
     if platform.system().lower() == 'linux':
-        from ..quant.quant_post_hpo import quant_post_hpo
+        from ..quant import quant_post_hpo
 except Exception as e:
     _logger.warning(e)
 
@@ -67,7 +68,8 @@ class AutoCompression:
                 When all parameters are saved in a single file, set it
                 as filename. If parameters are saved in separate files,
                 set it as 'None'. Default : 'None'.
-            save_dir(str): The path to save compressed model.
+            save_dir(str): The path to save compressed model. The models in this directory will be overwrited
+                after calling 'compress()' function.
             train_data_loader(Python Generator, Paddle.io.DataLoader): The
                 Generator or Dataloader provides train data, and it could
                 return a batch every time.
@@ -108,11 +110,9 @@ class AutoCompression:
         if params_filename == 'None':
             params_filename = None
         self.params_filename = params_filename
-        base_path = os.path.basename(os.path.normpath(save_dir))
-        parent_path = os.path.abspath(os.path.join(save_dir, os.pardir))
-        base_path = base_path + '_temp'
-        self.save_dir = os.path.join(parent_path, base_path)
         self.final_dir = save_dir
+        if not os.path.exists(self.final_dir):
+            os.makedirs(self.final_dir)
         self.strategy_config = strategy_config
         self.train_config = train_config
         self.train_dataloader = train_dataloader
@@ -248,6 +248,8 @@ class AutoCompression:
         if train_config.amp_config is not None:
             strategy.amp = True
             strategy.amp_configs = { ** train_config.amp_config}
+        if train_config.asp_config is not None:
+            strategy.asp = True
         return strategy
 
     def _prepare_program(self, program, feed_target_names, fetch_targets,
@@ -353,6 +355,13 @@ class AutoCompression:
         return program_info
 
     def compress(self):
+        # create a new temp directory in final dir
+        s_datetime = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
+        tmp_base_name = "_".join(["tmp", str(os.getpid()), s_datetime])
+        self.tmp_dir = os.path.join(self.final_dir, tmp_base_name)
+        if not os.path.exists(self.tmp_dir):
+            os.makedirs(self.tmp_dir)
+
         for strategy_idx, (
                 strategy,
                 config) in enumerate(zip(self._strategy, self._config)):
@@ -369,7 +378,7 @@ class AutoCompression:
                 self.single_strategy_compress(quant_strategy[0],
                                               quant_config[0], strategy_idx)
         tmp_model_path = os.path.join(
-            self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
+            self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
         final_model_path = os.path.join(self.final_dir)
         if not os.path.exists(final_model_path):
             os.makedirs(final_model_path)
@@ -380,6 +389,7 @@ class AutoCompression:
         if paddle.distributed.get_rank() == 0:
             shutil.move(tmp_model_file, final_model_file)
             shutil.move(tmp_params_file, final_params_file)
+            shutil.rmtree(self.tmp_dir)
             _logger.info(
                 "==> Finished the ACT process and the final model is saved in:{}".
                 format(final_model_path))
@@ -393,7 +403,7 @@ class AutoCompression:
                 self._exe,
                 model_dir=self.model_dir,
                 quantize_model_path=os.path.join(
-                    self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
+                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 data_loader=self.train_dataloader,
                 model_filename=self.model_filename,
                 params_filename=self.params_filename,
@@ -423,7 +433,7 @@ class AutoCompression:
                 self._places,
                 model_dir=self.model_dir,
                 quantize_model_path=os.path.join(
-                    self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
+                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
                 eval_dataloader=self.eval_dataloader,
                 eval_function=self.eval_function,
@@ -450,7 +460,7 @@ class AutoCompression:
                 model_dir = self.model_dir
             else:
                 model_dir = os.path.join(
-                    self.save_dir, 'strategy_{}'.format(str(strategy_idx)))
+                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx)))
 
             [inference_program, feed_target_names, fetch_targets]= paddle.fluid.io.load_inference_model( \
                 dirname=model_dir, \
@@ -494,7 +504,8 @@ class AutoCompression:
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
                     fetch_list=train_program_info.fetch_targets)
-
+                if not isinstance(train_program_info.learning_rate, float):
+                    train_program_info.learning_rate.step()
                 if 'unstructure' in strategy:
                     self._pruner.step()
 
@@ -525,7 +536,7 @@ class AutoCompression:
                         if metric > best_metric:
                             paddle.static.save(
                                 program=test_program_info.program._program,
-                                model_path=os.path.join(self.save_dir,
+                                model_path=os.path.join(self.tmp_dir,
                                                         'best_model'))
                             best_metric = metric
                             if self.metric_before_compressed is not None and float(
@@ -552,19 +563,19 @@ class AutoCompression:
             test_program_info.program,
             paddle.static.CompiledProgram) else test_program_info.program
 
-        if os.path.exists(os.path.join(self.save_dir, 'best_model.pdparams')):
+        if os.path.exists(os.path.join(self.tmp_dir, 'best_model.pdparams')):
             paddle.static.load(test_program,
-                               os.path.join(self.save_dir, 'best_model'))
-            os.remove(os.path.join(self.save_dir, 'best_model.pdmodel'))
-            os.remove(os.path.join(self.save_dir, 'best_model.pdopt'))
-            os.remove(os.path.join(self.save_dir, 'best_model.pdparams'))
+                               os.path.join(self.tmp_dir, 'best_model'))
+            os.remove(os.path.join(self.tmp_dir, 'best_model.pdmodel'))
+            os.remove(os.path.join(self.tmp_dir, 'best_model.pdopt'))
+            os.remove(os.path.join(self.tmp_dir, 'best_model.pdparams'))
 
         if 'qat' in strategy:
             test_program, int8_program = convert(test_program, self._places, self._quant_config, \
                                           scope=paddle.static.global_scope(), \
                                           save_int8=True)
 
-        model_dir = os.path.join(self.save_dir,
+        model_dir = os.path.join(self.tmp_dir,
                                  'strategy_{}'.format(str(strategy_idx + 1)))
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)

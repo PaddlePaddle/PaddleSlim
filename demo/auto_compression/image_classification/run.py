@@ -92,7 +92,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print_arguments(args)
     paddle.enable_static()
-    compress_config, train_config = load_config(args.config_path)
+    compress_config, train_config, _ = load_config(args.config_path)
     data_dir = args.data_dir
 
     train_reader = paddle.batch(

@@ -65,7 +65,8 @@ pip install paddlepaddle-gpu
 
 安装paddleslim：
 ```shell
-pip install paddleslim
+https://github.com/PaddlePaddle/PaddleSlim.git
+python setup.py install
 ```
 
 安装paddledet：
@@ -115,7 +116,7 @@ tar -xf ppyoloe_crn_l_300e_coco.tar
 
 使用run.py脚本得到模型的mAP：
 ```
-export CUDA_VISIBLE_DEVEICES=0
+export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --eval=True
 ```
 
@@ -125,7 +126,7 @@ python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --eval=True
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
 ```
-export CUDA_VISIBLE_DEVEICES=0
+export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./output/'
 ```
 
