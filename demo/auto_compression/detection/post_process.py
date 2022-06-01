@@ -91,7 +91,7 @@ class YOLOv5PostProcess(object):
         self.keep_top_k = keep_top_k
 
     def _xywh2xyxy(self, x):
-        # Convert nx4 boxes from [x, y, w, h] to [x1, y1, x2, y2] where xy1=top-left, xy2=bottom-right
+        # Convert from [x, y, w, h] to [x1, y1, x2, y2]
         y = np.copy(x)
         y[:, 0] = x[:, 0] - x[:, 2] / 2  # top left x
         y[:, 1] = x[:, 1] - x[:, 3] / 2  # top left y
@@ -101,15 +101,14 @@ class YOLOv5PostProcess(object):
 
     def _non_max_suppression(self, prediction):
         max_wh = 4096  # (pixels) minimum and maximum box width and height
-        nms_top_k = 30000  # 
+        nms_top_k = 30000
 
         cand_boxes = prediction[..., 4] > self.score_threshold  # candidates
         output = [np.zeros((0, 6))] * prediction.shape[0]
 
-        for batch_id, boxes in enumerate(
-                prediction):  # image index, image inference
+        for batch_id, boxes in enumerate(prediction):
             # Apply constraints
-            boxes = boxes[cand_boxes[batch_id]]  # confidence
+            boxes = boxes[cand_boxes[batch_id]]
             if not boxes.shape[0]:
                 continue
             # Compute conf (conf = obj_conf * cls_conf)
