@@ -61,7 +61,7 @@ def get_features_from_paramkey(param_key, op_type, data_type):
         if quant_bits not in param_key:
             return None
 
-        weight = re.search(r'weight=(\(\d*, \d*, \d*, \d*\))',
+        weight = re.search(r'weight=(\(\d*, -?\d*, \d*, \d*\))',
                            param_key).group().split('=')[-1].strip(
                                '('
                                ')').split(', ')

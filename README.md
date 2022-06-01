@@ -1,46 +1,58 @@
-# PaddleSlim
 
-[![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)](https://paddleslim.readthedocs.io/en/latest/)
-[![Documentation Status](https://img.shields.io/badge/中文文档-最新-brightgreen.svg)](https://paddleslim.readthedocs.io/zh_CN/latest/)
-[![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
+<p align="center">
+<h1 align="center">PaddleSlim</h1>
+</p>
 
-## 简介
+<p align="center">
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202-blue.svg"></a>
+    <a href="https://paddleslim.readthedocs.io/en/latest/"><img src="https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat"></a>
+    <a href="https://paddleslim.readthedocs.io/zh_CN/latest/"><img src="https://img.shields.io/badge/中文文档-最新-brightgreen.svg"></a>
+</p>
 
-PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**剪裁、量化、蒸馏、和模型结构搜索**等模型压缩策略，帮助用户快速实现模型的小型化。
+PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低比特量化、知识蒸馏、稀疏化和模型结构搜索**等模型压缩策略，帮助用户快速实现模型的小型化。
 
-## 版本对齐
+## 产品动态
 
-|  PaddleSlim   | PaddlePaddle   | PaddleLite    |
-| :-----------: | :------------: | :------------:|
-| 1.0.1         | <=1.7          |       2.7     |
-| 1.1.1         | 1.8            |       2.7     |
-| 1.2.0         | 2.0Beta/RC     |       2.8     |
-| 2.0.0         | 2.0            |       2.8     |
-| 2.1.0         | 2.1.0          |       2.8     |
-| 2.1.1         | 2.1.1          |       >=2.8     |
+- 🔥 **2022.05.23: 发布[v2.3.0版本](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.0)**
+
+  - 发布[自动化压缩功能](demo/auto_compression)
+
+    - 支持代码无感知压缩：用户只需提供推理模型文件和数据，既可进行离线量化（PTQ）、量化训练（QAT）、稀疏训练等压缩任务
+    - 支持自动策略选择，根据任务特点和部署环境特性：自动搜索合适的离线量化方法,自动搜索最佳的压缩策略组合方式
+    - 提供了[自然语言处理](demo/auto_compression/nlp)、[图像语义分割](demo/auto_compression/semantic_segmentation)、[图像目标检测](demo/auto_compression/detection)三个方向的自动化压缩示例
+
+  - 升级量化功能
+
+    - 统一量化模型格式
+    - 离线量化支持while op
+    - 新增7种[离线量化方法](docs/zh_cn/tutorials/quant/post_training_quantization.md), 包括HIST, AVG, EMD, Bias Correction, AdaRound等
+    - 修复BERT大模型量化训练过慢的问题
+
+  - 支持半结构化稀疏训练
+
+  - 新增延时预估工具
+
+    - 支持预估指定模型在特定部署环境下 (ARM CPU + Paddle Lite) 的推理性能
+    - 提供部署环境自动扩展工具，可以自动增加在更多 ARM CPU 设备上的预估工具
+    - 支持对稀疏化模型、低比特量化模型的性能预估
+    - 提供 SD625、SD710、RK3288 芯片 + Paddle Lite 的预估接口
 
 
-## 安装
+- **2021.11.15: 发布v2.2.0版本**
 
-安装最新版本：
-```bash
-pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
+  - 支持动态图离线量化功能.
 
-安装指定版本：
-```bash
-pip install paddleslim==2.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
+- **2021.5.20: 发布V2.1.0版本**
 
-## 最近更新
-
-2021.5.20： 发布V2.1.0版本，扩展离线量化方法，新增非结构化稀疏，增强剪枝功能，修复OFA功能若干bug。
-2021.2.5： 发布V2.0.0版本，新增支持动态图，新增OFA压缩功能，优化剪枝功能。
-2020.9.16:  发布V1.2.0版本，新增PACT量化训练功能，新增DML(互蒸馏功能)，修复部分剪裁bug，加强对depthwise_conv2d的剪裁能力，优化剪裁和量化API的易用性和灵活性。
+  - 扩展离线量化方法
+  - 新增非结构化稀疏
+  - 增强剪枝功能
+  - 修复OFA功能若干bug
 
 更多信息请参考：[release note](https://github.com/PaddlePaddle/PaddleSlim/releases)
 
-## 功能概览
+
+## 基础压缩功能概览
 
 PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
 <table>
@@ -95,13 +107,13 @@ PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
 - *表示仅支持静态图，**表示仅支持动态图
 - 敏感度裁剪指的是通过各个层的敏感度分析来确定各个卷积层的剪裁率，需要和其他裁剪方法配合使用。
 
-### 效果展示
+### 多场景效果展示
 
 PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并且测试了Nvidia GPU、ARM等设备上的加速情况，这里展示部分模型的压缩效果，详细方案可以参考下面CV和NLP模型压缩方案:
 
 <p align="center">
 <img src="docs/images/benchmark.png" height=185 width=849 hspace='10'/> <br />
-<strong>表1: 部分模型压缩加速情况</strong>
+<strong>表1: 部分场景模型压缩加速情况</strong>
 </p>
 
 注:
@@ -109,19 +121,67 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 - PP-OCR: 体积由8.9M减少到2.9M, 在SD855上加速1.27倍。
 - BERT: 模型参数由110M减少到80M，精度提升的情况下，Tesla T4 GPU FP16计算加速1.47倍。
 
+### 自动压缩效果展示
+
+<p align="center">
+<img width="800" alt="image" src="https://user-images.githubusercontent.com/7534971/168805367-f9d1299d-93e3-44d0-84da-870217edeb54.png"/> <br />
+<strong>表3: 自动压缩效果</strong>
+</p>
+
+### 离线量化效果对比
+
+<p align="center">
+<img width="750" alt="image" src="https://user-images.githubusercontent.com/7534971/169042883-9ca281ce-19be-4525-a3d2-c54cea4a2cbd.png"/> <br />
+<strong>表2: 多种离线量化方法效果对比</strong>
+</p>
+
 ## 文档教程
+
+## 版本对齐
+
+|  PaddleSlim   | PaddlePaddle   | PaddleLite    |
+| :-----------: | :------------: | :------------:|
+| 1.0.1         | <=1.7          |       2.7     |
+| 1.1.1         | 1.8            |       2.7     |
+| 1.2.0         | 2.0Beta/RC     |       2.8     |
+| 2.0.0         | 2.0            |       2.8     |
+| 2.1.0         | 2.1.0          |       2.8     |
+| 2.1.1         | 2.1.1          |       >=2.8   |
+| 2.3.0         | 2.3.0          |       >=2.11  |
+
+
+
+## 安装
+
+安装最新版本：
+```bash
+pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+安装指定版本：
+```bash
+pip install paddleslim==2.3.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+安装develop版本：
+```bash
+git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+python setup.py install
+```
+
 
 ### 快速开始
 
 快速开始教程是能基于CIFAR10数据集快速运行起来的简单示例，若您是Paddle官方模型套件用户，请直接使用下方的CV模型压缩或者NLP模型压缩中教程。
 
-- 量化训练 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_quant_aware_training_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
-- 离线量化 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_quant_post_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/quant_post_static_tutorial.md)
-- 剪裁 - [动态图](docs/zh_cn/quick_start/dygraph/dygraph_pruning_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/pruning_tutorial.md)
-- 蒸馏 - [静态图](docs/zh_cn/quick_start/static/distillation_tutorial.md)
-- NAS - [静态图](docs/zh_cn/quick_start/static/nas_tutorial.md)
+- 🔥 [自动压缩](demo/auto_compression)
+- [量化训练](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
+- [离线量化](docs/zh_cn/quick_start/static/quant_post_static_tutorial.md)
+- [结构化剪枝](docs/zh_cn/quick_start/static/pruning_tutorial.md)
+- [蒸馏](docs/zh_cn/quick_start/static/distillation_tutorial.md)
+- [NAS](docs/zh_cn/quick_start/static/nas_tutorial.md)
 
-### 进阶教程
+### 更多教程
 
 进阶教程详细介绍了每一步的流程，帮助您把相应方法迁移到您自己的模型上。
 
@@ -135,9 +195,9 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 
 - 低比特量化
   - [三种量化方法介绍与应用](docs/zh_cn/tutorials/quant/overview.md)
-    - 量化训练：[动态图](docs/zh_cn/tutorials/quant/dygraph/quant_aware_training_tutorial.md) | [静态图](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
-    - 离线量化：[动态图](docs/zh_cn/tutorials/quant/dygraph/dygraph_quant_post_tutorial.md) | [静态图](docs/zh_cn/tutorials/quant/static/quant_post_tutorial.md)
-    - embedding量化：[静态图](docs/zh_cn/tutorials/quant/static/embedding_quant_tutorial.md)
+    - [量化训练](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
+    - [离线量化](docs/zh_cn/tutorials/quant/static/quant_post_tutorial.md) | [离线量化方法解析](docs/zh_cn/tutorials/quant/post_training_quantization.md)
+    - [embedding量化](docs/zh_cn/tutorials/quant/static/embedding_quant_tutorial.md)
 
 - NAS
   - [四种NAS策略介绍和应用](docs/zh_cn/tutorials/nas/overview.md)
@@ -214,6 +274,9 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 - [静态图](docs/zh_cn/api_cn/static)
 
 ### [FAQ](docs/zh_cn/FAQ/quantization_FAQ.md)
+
+#### 1. 量化训练或者离线量化后的模型体积为什么没有变小？
+答：这是因为量化后保存的参数是虽然是int8范围，但是类型是float。这是因为Paddle训练前向默认的Kernel不支持INT8 Kernel实现，只有Paddle Inference TensorRT的推理才支持量化推理加速。为了方便量化后验证量化精度，使用Paddle训练前向能加载此模型，默认保存的Float32类型权重，体积没有发生变换。
 
 ## 许可证书
 

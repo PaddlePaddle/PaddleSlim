@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
+sys.path[0] = os.path.join(
+    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import argparse
 import functools
 from functools import partial
@@ -32,7 +33,7 @@ def reader_wrapper(reader):
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.float32([item[0] for item in data])
-            yield {"x": imgs}
+            yield {"inputs": imgs}
 
     return gen
 
@@ -91,7 +92,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print_arguments(args)
     paddle.enable_static()
-    compress_config, train_config = load_config(args.config_path)
+    compress_config, train_config, _ = load_config(args.config_path)
     data_dir = args.data_dir
 
     train_reader = paddle.batch(
@@ -107,6 +108,6 @@ if __name__ == '__main__':
         train_config=train_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function,
-        eval_dataloader=eader_wrapper(eval_reader(data_dir, 64)))
+        eval_dataloader=reader_wrapper(eval_reader(data_dir, 64)))
 
     ac.compress()

@@ -18,22 +18,28 @@ import sys
 import numpy as np
 import inspect
 import shutil
-from collections import namedtuple, Iterable
+from collections import namedtuple
+from collections.abc import Iterable
+from time import gmtime, strftime
 import platform
 import paddle
 import paddle.distributed.fleet as fleet
-if platform.system().lower() == 'linux':
-    from ..quant import quant_post_hpo
-from ..quant.quanter import convert
+from ..quant.quanter import convert, quant_post
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
 from ..common.patterns import get_patterns
 from ..analysis import TableLatencyPredictor
-from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program
+from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
-from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config
+from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
 
 _logger = get_logger(__name__, level=logging.INFO)
+
+try:
+    if platform.system().lower() == 'linux':
+        from ..quant import quant_post_hpo
+except Exception as e:
+    _logger.warning(e)
 
 
 class AutoCompression:
@@ -62,7 +68,8 @@ class AutoCompression:
                 When all parameters are saved in a single file, set it
                 as filename. If parameters are saved in separate files,
                 set it as 'None'. Default : 'None'.
-            save_dir(str): The path to save compressed model.
+            save_dir(str): The path to save compressed model. The models in this directory will be overwrited
+                after calling 'compress()' function.
             train_data_loader(Python Generator, Paddle.io.DataLoader): The
                 Generator or Dataloader provides train data, and it could
                 return a batch every time.
@@ -97,19 +104,21 @@ class AutoCompression:
             deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
         """
         self.model_dir = model_dir
+        if model_filename == 'None':
+            model_filename = None
         self.model_filename = model_filename
+        if params_filename == 'None':
+            params_filename = None
         self.params_filename = params_filename
-        base_path = os.path.basename(os.path.normpath(save_dir))
-        parent_path = os.path.abspath(os.path.join(save_dir, os.pardir))
-        base_path = base_path + '_temp'
-        self.save_dir = os.path.join(parent_path, base_path)
         self.final_dir = save_dir
+        if not os.path.exists(self.final_dir):
+            os.makedirs(self.final_dir)
         self.strategy_config = strategy_config
         self.train_config = train_config
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
-        self.eval_dataloader = eval_dataloader
+        self.eval_dataloader = eval_dataloader if eval_dataloader is not None else train_dataloader
 
         paddle.enable_static()
 
@@ -138,6 +147,11 @@ class AutoCompression:
 
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
+
+        # If train_config is None, set default train_config
+        if self.train_config is None:
+            self.train_config = create_train_config(self.strategy_config,
+                                                    self.model_type)
 
     def _prepare_envs(self):
         devices = paddle.device.get_device().split(':')[0]
@@ -234,6 +248,8 @@ class AutoCompression:
         if train_config.amp_config is not None:
             strategy.amp = True
             strategy.amp_configs = { ** train_config.amp_config}
+        if train_config.asp_config is not None:
+            strategy.asp = True
         return strategy
 
     def _prepare_program(self, program, feed_target_names, fetch_targets,
@@ -244,6 +260,22 @@ class AutoCompression:
                                          feed_target_names, fetch_targets)
 
         config_dict = dict(config._asdict())
+        if "prune_strategy" in config_dict and config_dict[
+                "prune_strategy"] == "gmp" and config_dict[
+                    'gmp_config'] is None:
+            _logger.info(
+                "Calculating the iterations per epoch……(It will take some time)")
+            # NOTE:XXX: This way of calculating the iters needs to be improved.
+            iters_per_epoch = len(list(self.train_dataloader()))
+            total_iters = self.train_config.epochs * iters_per_epoch
+            config_dict['gmp_config'] = {
+                'stable_iterations': 0,
+                'pruning_iterations': 0.45 * total_iters,
+                'tunning_iterations': 0.45 * total_iters,
+                'resume_iteration': -1,
+                'pruning_steps': 100,
+                'initial_ratio': 0.15,
+            }
         ### add prune program
         self._pruner = None
         if 'prune' in strategy:
@@ -274,6 +306,16 @@ class AutoCompression:
             train_program_info, test_program_info, self._quant_config = build_quant_program(
                 self._exe, self._places, config_dict, train_program_info,
                 test_program_info)
+        if self.train_config.sparse_model:
+            from ..prune.unstructured_pruner import UnstructuredPruner
+            # NOTE: The initialization parameter of this pruner doesn't work, it is only used to call the 'set_static_masks' function
+            self._pruner = UnstructuredPruner(
+                train_program_info.program,
+                mode='ratio',
+                ratio=0.75,
+                prune_params_type='conv1x1_only',
+                place=self._places)
+            self._pruner.set_static_masks()  # Fixed model sparsity
 
         self._exe.run(train_program_info.startup_program)
 
@@ -313,6 +355,13 @@ class AutoCompression:
         return program_info
 
     def compress(self):
+        # create a new temp directory in final dir
+        s_datetime = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
+        tmp_base_name = "_".join(["tmp", str(os.getpid()), s_datetime])
+        self.tmp_dir = os.path.join(self.final_dir, tmp_base_name)
+        if not os.path.exists(self.tmp_dir):
+            os.makedirs(self.tmp_dir)
+
         for strategy_idx, (
                 strategy,
                 config) in enumerate(zip(self._strategy, self._config)):
@@ -323,19 +372,58 @@ class AutoCompression:
             ptq_loss = quant_post_hpo.g_min_emd_loss
 
             final_quant_config = get_final_quant_config(ptq_loss)
-            quant_strategy, quant_config = self._prepare_strategy(
-                final_quant_config)
-            self.single_strategy_compress(quant_strategy[0], quant_config[0],
-                                          strategy_idx)
-        old_model_path = os.path.join(
-            self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
+            if final_quant_config is not None:
+                quant_strategy, quant_config = self._prepare_strategy(
+                    final_quant_config)
+                self.single_strategy_compress(quant_strategy[0],
+                                              quant_config[0], strategy_idx)
+        tmp_model_path = os.path.join(
+            self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
         final_model_path = os.path.join(self.final_dir)
-        shutil.move(old_model_path, final_model_path)
+        if not os.path.exists(final_model_path):
+            os.makedirs(final_model_path)
+        tmp_model_file = os.path.join(tmp_model_path, self.model_filename)
+        tmp_params_file = os.path.join(tmp_model_path, self.params_filename)
+        final_model_file = os.path.join(final_model_path, self.model_filename)
+        final_params_file = os.path.join(final_model_path, self.params_filename)
+        if paddle.distributed.get_rank() == 0:
+            shutil.move(tmp_model_file, final_model_file)
+            shutil.move(tmp_params_file, final_params_file)
+            shutil.rmtree(self.tmp_dir)
+            _logger.info(
+                "==> Finished the ACT process and the final model is saved in:{}".
+                format(final_model_path))
         os._exit(0)
 
     def single_strategy_compress(self, strategy, config, strategy_idx):
-        ### start compress, including train/eval model
-        if strategy == 'ptq_hpo':
+        # start compress, including train/eval model
+        # TODO: add the emd loss of evaluation model.
+        if strategy == 'quant_post':
+            quant_post(
+                self._exe,
+                model_dir=self.model_dir,
+                quantize_model_path=os.path.join(
+                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
+                data_loader=self.train_dataloader,
+                model_filename=self.model_filename,
+                params_filename=self.params_filename,
+                save_model_filename=self.model_filename,
+                save_params_filename=self.params_filename,
+                batch_size=1,
+                batch_nums=config.batch_num,
+                algo=config.ptq_algo,
+                round_type='round',
+                bias_correct=config.bias_correct,
+                hist_percent=config.hist_percent,
+                quantizable_op_type=config.quantize_op_types,
+                is_full_quantize=config.is_full_quantize,
+                weight_bits=config.weight_bits,
+                activation_bits=config.activation_bits,
+                activation_quantize_type='range_abs_max',
+                weight_quantize_type=config.weight_quantize_type,
+                onnx_format=False)
+
+        elif strategy == 'ptq_hpo':
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
@@ -345,7 +433,7 @@ class AutoCompression:
                 self._places,
                 model_dir=self.model_dir,
                 quantize_model_path=os.path.join(
-                    self.save_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
+                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
                 eval_dataloader=self.eval_dataloader,
                 eval_function=self.eval_function,
@@ -372,7 +460,7 @@ class AutoCompression:
                 model_dir = self.model_dir
             else:
                 model_dir = os.path.join(
-                    self.save_dir, 'strategy_{}'.format(str(strategy_idx)))
+                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx)))
 
             [inference_program, feed_target_names, fetch_targets]= paddle.fluid.io.load_inference_model( \
                 dirname=model_dir, \
@@ -402,7 +490,9 @@ class AutoCompression:
             train_program_info, test_program_info = self._prepare_program(
                 inference_program, feed_target_names, fetch_targets, patterns,
                 default_distill_node_pair, strategy, config)
-
+            if 'unstructure' in self._strategy:
+                test_program_info.program._program = remove_unused_var_nodes(
+                    test_program_info.program._program)
             test_program_info = self._start_train(train_program_info,
                                                   test_program_info, strategy)
             self._save_model(test_program_info, strategy, strategy_idx)
@@ -414,7 +504,8 @@ class AutoCompression:
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
                     fetch_list=train_program_info.fetch_targets)
-
+                if not isinstance(train_program_info.learning_rate, float):
+                    train_program_info.learning_rate.step()
                 if 'unstructure' in strategy:
                     self._pruner.step()
 
@@ -445,7 +536,7 @@ class AutoCompression:
                         if metric > best_metric:
                             paddle.static.save(
                                 program=test_program_info.program._program,
-                                model_path=os.path.join(self.save_dir,
+                                model_path=os.path.join(self.tmp_dir,
                                                         'best_model'))
                             best_metric = metric
                             if self.metric_before_compressed is not None and float(
@@ -462,6 +553,9 @@ class AutoCompression:
                             "Not set eval function, so unable to test accuracy performance."
                         )
 
+        if 'unstructure' in self._strategy or self.train_config.sparse_model:
+            self._pruner.update_params()
+
         return test_program_info
 
     def _save_model(self, test_program_info, strategy, strategy_idx):
@@ -469,11 +563,12 @@ class AutoCompression:
             test_program_info.program,
             paddle.static.CompiledProgram) else test_program_info.program
 
-        paddle.static.load(test_program,
-                           os.path.join(self.save_dir, 'best_model'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdmodel'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdopt'))
-        os.remove(os.path.join(self.save_dir, 'best_model.pdparams'))
+        if os.path.exists(os.path.join(self.tmp_dir, 'best_model.pdparams')):
+            paddle.static.load(test_program,
+                               os.path.join(self.tmp_dir, 'best_model'))
+            os.remove(os.path.join(self.tmp_dir, 'best_model.pdmodel'))
+            os.remove(os.path.join(self.tmp_dir, 'best_model.pdopt'))
+            os.remove(os.path.join(self.tmp_dir, 'best_model.pdparams'))
 
         if 'qat' in strategy:
             float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \
@@ -481,7 +576,7 @@ class AutoCompression:
                                           save_int8=True)
             test_program_info.program = float_program
 
-        model_dir = os.path.join(self.save_dir,
+        model_dir = os.path.join(self.tmp_dir,
                                  'strategy_{}'.format(str(strategy_idx + 1)))
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
@@ -491,5 +586,5 @@ class AutoCompression:
             target_vars=test_program_info.fetch_targets,
             executor=self._exe,
             main_program=test_program,
-            model_filename='model.pdmodel',
-            params_filename='model.pdiparams')
+            model_filename=self.model_filename,
+            params_filename=self.params_filename)

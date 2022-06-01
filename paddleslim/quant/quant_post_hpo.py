@@ -14,7 +14,6 @@
 """quant post with hyper params search"""
 
 import os
-import cv2
 import sys
 import math
 import time
@@ -25,6 +24,8 @@ import paddle.fluid as fluid
 import logging
 import argparse
 import functools
+import shutil
+import glob
 from scipy.stats import wasserstein_distance
 
 # smac
@@ -36,6 +37,20 @@ from smac.scenario.scenario import Scenario
 
 from paddleslim.common import get_logger
 from paddleslim.quant import quant_post
+
+SMAC_TMP_FILE_PATTERN = "smac3-output*"
+
+
+def remove(path):
+    """Remove files or directories matched by regex.
+    Args:
+        path(str): regular expressions to match the files and directories.
+    """
+    for p in glob.glob(path):
+        if os.path.isdir(p):
+            shutil.rmtree(p)
+        else:
+            os.remove(p)
 
 
 class QuantConfig:
@@ -473,7 +488,7 @@ def quant_post_hpo(
             bias_correction=bias_correct, \
             batch_size=batch_size, \
             batch_nums=batch_num)
-
+        shutil.rmtree(g_quant_model_cache_path)
         return
 
     cs.add_hyperparameters(hyper_params)
@@ -487,7 +502,6 @@ def quant_post_hpo(
         "limit_resources": "False",
         "memory_limit": 4096  # adapt this to reasonable value for your hardware
     })
-
     # To optimize, we pass the function to the SMAC-object
     smac = SMAC4HPO(
         scenario=scenario, rng=np.random.RandomState(42), tae_runner=quantize)
@@ -505,4 +519,6 @@ def quant_post_hpo(
 
     inc_value = smac.get_tae_runner().run(incumbent, 1)[1]
     print("Optimized Value: %.8f" % inc_value)
+    shutil.rmtree(g_quant_model_cache_path)
+    remove(SMAC_TMP_FILE_PATTERN)
     print("quantize completed")

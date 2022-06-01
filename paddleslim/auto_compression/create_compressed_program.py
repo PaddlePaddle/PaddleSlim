@@ -25,8 +25,21 @@ from .strategy_config import ProgramInfo
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
-    'build_distill_program', 'build_quant_program', 'build_prune_program'
+    'build_distill_program', 'build_quant_program', 'build_prune_program',
+    'remove_unused_var_nodes'
 ]
+
+
+def _create_lr_scheduler(train_config):
+    if 'learning_rate' not in train_config:
+        raise RuntimeError(
+            'No `learning_rate` specified in the configuration file.')
+    if isinstance(train_config.get('learning_rate'), float):
+        return train_config.get('learning_rate')
+
+    params = train_config.get('learning_rate')
+    lr_type = params.pop('type')
+    return getattr(optimizer.lr, lr_type)(**params)
 
 
 def _create_optimizer(train_config):
@@ -53,10 +66,11 @@ def _create_optimizer(train_config):
         train_config['optim_args'] = {}
         grad_clip = None
 
-    op = opt(learning_rate=train_config["learning_rate"],
+    lr = _create_lr_scheduler(train_config)
+    op = opt(learning_rate=lr,
              grad_clip=grad_clip,
              **train_config['optim_args'])
-    return op
+    return op, lr
 
 
 def _parse_distill_loss(distill_node_pair,
@@ -99,7 +113,8 @@ def _load_program_and_merge(executor,
                             feed_target_names=None):
     scope = paddle.static.global_scope()
     new_scope = paddle.static.Scope()
-    print(model_dir, model_filename, params_filename)
+    if params_filename == 'None':
+        params_filename = None
     try:
         with paddle.static.scope_guard(new_scope):
             [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
@@ -221,7 +236,7 @@ def build_distill_program(executor,
     train_fetch_list = []
     with paddle.static.program_guard(train_program, startup_program):
         with paddle.utils.unique_name.guard('merge'):
-            optimizer = _create_optimizer(train_config)
+            optimizer, learning_rate = _create_optimizer(train_config)
 
             if train_config.get('use_fleet'):
                 optimizer = fleet.distributed_optimizer(optimizer,
@@ -263,7 +278,8 @@ def build_distill_program(executor,
             loss.stop_gradient = False
 
             if 'prune_algo' in config:  ### prune & asp
-                if config['prune_algo'] == 'asp':
+                if config['prune_algo'] == 'asp' and not train_config.get(
+                        'use_fleet'):
                     optimizer = pruner.decorate(optimizer)
                 optimizer.minimize(loss)
             elif 'prune_strategy' in config:  ###unstructure prune
@@ -275,7 +291,7 @@ def build_distill_program(executor,
 
     train_program_info = ProgramInfo(startup_program, train_program,
                                      feed_target_names, train_fetch_list,
-                                     optimizer)
+                                     optimizer, learning_rate)
     test_program_info = ProgramInfo(startup_program, test_program,
                                     feed_target_names, fetch_targets)
     return train_program_info, test_program_info
@@ -399,6 +415,8 @@ def build_prune_program(executor,
                         'prune_params_name'] is not None and param.name not in config[
                             'prune_params_name']:
                     excluded_params_name.append(param.name)
+                if "teacher_" in param.name:
+                    excluded_params_name.append(param.name)
             pruner.set_excluded_layers(train_program_info.program,
                                        excluded_params_name)
         elif config['prune_algo'] == 'transformer_pruner':
@@ -425,3 +443,25 @@ def build_prune_program(executor,
                 format(config['prune_algo']))
 
     return pruner, train_program_info
+
+
+def remove_unused_var_nodes(program):
+    '''
+    This function is called before saving the sparse model to remove redundant nodes.
+    Args:
+        program(paddle.static.Program): The sparse model to be saved.
+    Returns:
+        program(paddle.static.Program): The sparse model.
+    '''
+    from paddle.fluid import core
+    from paddle.fluid.framework import IrGraph
+    graph = IrGraph(core.Graph(program.desc), for_test=True)
+    removed_nodes = set()
+    ops = graph.all_op_nodes()
+    for op_node in ops:
+        for input_node in op_node.inputs:
+            if '_mask' in input_node.name():
+                removed_nodes.add(op_node)
+    graph.safe_remove_nodes(removed_nodes)
+    program = graph.to_program()
+    return program

@@ -20,7 +20,8 @@ import platform
 
 from setuptools import find_packages
 from setuptools import setup
-from paddleslim.version import slim_version
+
+slim_version = "2.3.0"
 
 
 def python_version():

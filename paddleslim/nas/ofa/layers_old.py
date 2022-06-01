@@ -116,7 +116,7 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             of conv2d. If it is set to None or one attribute of ParamAttr, conv2d
             will create ParamAttr as param_attr. If the Initializer of the param_attr
             is not set, the parameter is initialized with :math:`Normal(0.0, std)`,
-            and the :math:`std` is :math:`(\\frac{2.0 }{filter\_elem\_num})^{0.5}`. Default: None.
+            and the :math:`std` is :math:`(\\frac{2.0 }{filter\\_elem\\_num})^{0.5}`. Default: None.
         bias_attr (ParamAttr or bool, optional): The attribute for the bias of conv2d.
             If it is set to False, no bias will be added to the output units.
             If it is set to None or one attribute of ParamAttr, conv2d
@@ -374,7 +374,7 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
     `conv2dtranspose <http://www.matthewzeiler.com/wp-content/uploads/2017/07/cvpr2010.pdf>`_ .
     For each input :math:`X`, the equation is:
     .. math::
-        Out = \sigma (W \\ast X + b)
+        Out = \\sigma (W \\ast X + b)
     Where:
     * :math:`X`: Input value, a ``Tensor`` with NCHW format.
     * :math:`W`: Filter value, a ``Tensor`` with shape [MCHW] .
@@ -390,10 +390,10 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
           Output shape: :math:`(N, C_{out}, H_{out}, W_{out})`
         Where
         .. math::
-           H^\prime_{out} &= (H_{in} - 1) * strides[0] - 2 * paddings[0] + dilations[0] * (H_f - 1) + 1 \\\\
-           W^\prime_{out} &= (W_{in} - 1) * strides[1] - 2 * paddings[1] + dilations[1] * (W_f - 1) + 1 \\\\
-           H_{out} &\in [ H^\prime_{out}, H^\prime_{out} + strides[0] ) \\\\
-           W_{out} &\in [ W^\prime_{out}, W^\prime_{out} + strides[1] )
+           H^\\prime_{out} &= (H_{in} - 1) * strides[0] - 2 * paddings[0] + dilations[0] * (H_f - 1) + 1 \\\\
+           W^\\prime_{out} &= (W_{in} - 1) * strides[1] - 2 * paddings[1] + dilations[1] * (W_f - 1) + 1 \\\\
+           H_{out} &\\in [ H^\\prime_{out}, H^\\prime_{out} + strides[0] ) \\\\
+           W_{out} &\\in [ W^\\prime_{out}, W^\\prime_{out} + strides[1] )
     Parameters:
         num_channels(int): The number of channels in the input image.
         num_filters(int): The number of the filter. It is as same as the output
