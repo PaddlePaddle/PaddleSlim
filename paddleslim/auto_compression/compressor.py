@@ -571,10 +571,9 @@ class AutoCompression:
             os.remove(os.path.join(self.tmp_dir, 'best_model.pdparams'))
 
         if 'qat' in strategy:
-            float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \
+            test_program, int8_program = convert(test_program, self._places, self._quant_config, \
                                           scope=paddle.static.global_scope(), \
                                           save_int8=True)
-            test_program_info.program = float_program
 
         model_dir = os.path.join(self.tmp_dir,
                                  'strategy_{}'.format(str(strategy_idx + 1)))
