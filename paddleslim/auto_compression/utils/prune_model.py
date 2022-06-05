@@ -1,11 +1,11 @@
 import os
 import time
+import numpy as np
 import paddle
 import paddle.fluid as fluid
 import paddle.static as static
-from paddleslim.prune import Pruner
-from paddleslim.core import GraphWrapper
-import numpy as np
+from ...prune import Pruner
+from ...core import GraphWrapper
 __all__ = ["get_sparse_model", "get_prune_model"]
 
 

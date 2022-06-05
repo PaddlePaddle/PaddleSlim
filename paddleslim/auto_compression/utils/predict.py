@@ -1,9 +1,9 @@
 import os
+import shutil
 import paddle
-from paddleslim.analysis import TableLatencyPredictor
+from ...analysis import TableLatencyPredictor
 from .prune_model import get_sparse_model, get_prune_model
 from .fake_ptq import post_quant_fake
-import shutil
 
 
 def predict_compressed_model(executor,
