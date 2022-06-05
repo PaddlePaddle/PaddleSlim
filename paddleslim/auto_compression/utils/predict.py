@@ -29,9 +29,9 @@ def predict_compressed_model(executor,
         latency_dict(dict): The latency latency of the model under various compression strategies.
     """
     local_rank = paddle.distributed.get_rank()
-    quant_model_path = f'quant_model/rank_{local_rank}'
-    prune_model_path = f'prune_model/rank_{local_rank}'
-    sparse_model_path = f'sparse_model/rank_{local_rank}'
+    quant_model_path = f'quant_model_rank_{local_rank}_tmp'
+    prune_model_path = f'prune_model_rank_{local_rank}_tmp'
+    sparse_model_path = f'sparse_model_rank_{local_rank}_tmp'
 
     latency_dict = {}
 
@@ -135,10 +135,10 @@ def predict_compressed_model(executor,
         latency_dict.update({f'sparse_{sparse_ratio}_int8': latency})
 
     # NOTE: Delete temporary model files
-    if os.path.exists('quant_model'):
-        shutil.rmtree('quant_model', ignore_errors=True)
-    if os.path.exists('prune_model'):
-        shutil.rmtree('prune_model', ignore_errors=True)
-    if os.path.exists('sparse_model'):
-        shutil.rmtree('sparse_model', ignore_errors=True)
+    if os.path.exists(quant_model_path):
+        shutil.rmtree(quant_model_path, ignore_errors=True)
+    if os.path.exists(prune_model_path):
+        shutil.rmtree(prune_model_path, ignore_errors=True)
+    if os.path.exists(sparse_model_path):
+        shutil.rmtree(sparse_model_path, ignore_errors=True)
     return latency_dict

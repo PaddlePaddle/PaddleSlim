@@ -21,7 +21,6 @@ import subprocess
 import time
 import ssl
 import requests
-from tqdm import tqdm
 import shutil
 __all__ = [
     "save_cls_model", "save_det_model", "nearest_interpolate", "opt_model",
@@ -49,17 +48,10 @@ def _get_download(url, fullname):
     # tmp_fullname firstly, move tmp_fullname to fullname
     # after download finished
     tmp_fullname = fullname + "_tmp"
-    total_size = req.headers.get('content-length')
     with open(tmp_fullname, 'wb') as f:
-        if total_size:
-            with tqdm(total=(int(total_size) + 1023) // 1024) as pbar:
-                for chunk in req.iter_content(chunk_size=1024):
-                    f.write(chunk)
-                    pbar.update(1)
-        else:
-            for chunk in req.iter_content(chunk_size=1024):
-                if chunk:
-                    f.write(chunk)
+        for chunk in req.iter_content(chunk_size=1024):
+            f.write(chunk)
+
     try:
         shutil.move(tmp_fullname, fullname)
     except:
@@ -242,16 +234,13 @@ def download_predictor(op_dir, op):
         os.makedirs(op_dir)
 
     op_path = os.path.join(op_dir, op + '_predictor.pkl')
-    if not os.path.exists(op_path):
-        # NOTE: To solve the 'SSL: certificate verify failed' error.
-        ssl._create_default_https_context = ssl._create_unverified_context
-        url = PREDICTOR_URL + op_path
-        while not (os.path.exists(op_path)):
-            if not _get_download(url, op_path):
-                time.sleep(1)
-                continue
+    url = PREDICTOR_URL + op_path
+    while not (os.path.exists(op_path)):
+        if not _get_download(url, op_path):
+            time.sleep(1)
+            continue
 
-        print('Successfully download {}!'.format(op_path))
+    print('Successfully download {}!'.format(op_path))
     return op_path
 
 
