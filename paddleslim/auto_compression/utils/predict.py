@@ -6,7 +6,9 @@ from .fake_ptq import post_quant_fake
 import shutil
 
 
-def predict_compressed_model(model_dir,
+def predict_compressed_model(executor,
+                             places,
+                             model_dir,
                              model_filename,
                              params_filename,
                              hardware='SD710'):
@@ -41,10 +43,8 @@ def predict_compressed_model(model_dir,
         model_file=model_file, param_file=param_file, data_type='fp32')
     latency_dict.update({'origin_fp32': latency})
     paddle.enable_static()
-    place = paddle.CPUPlace()
-    exe = paddle.static.Executor(place)
     post_quant_fake(
-        exe,
+        executor,
         model_dir=model_dir,
         model_filename=model_filename,
         params_filename=params_filename,
@@ -64,6 +64,8 @@ def predict_compressed_model(model_dir,
 
     for prune_ratio in [0.3, 0.4, 0.5, 0.6]:
         get_prune_model(
+            executor,
+            places,
             model_file=model_file,
             param_file=param_file,
             ratio=prune_ratio,
@@ -78,7 +80,7 @@ def predict_compressed_model(model_dir,
         latency_dict.update({f'prune_{prune_ratio}_fp32': latency})
 
         post_quant_fake(
-            exe,
+            executor,
             model_dir=prune_model_path,
             model_filename=model_filename,
             params_filename=params_filename,
@@ -98,6 +100,8 @@ def predict_compressed_model(model_dir,
 
     for sparse_ratio in [0.70, 0.75, 0.80, 0.85, 0.90, 0.95]:
         get_sparse_model(
+            executor,
+            places,
             model_file=model_file,
             param_file=param_file,
             ratio=sparse_ratio,
@@ -112,11 +116,11 @@ def predict_compressed_model(model_dir,
         latency_dict.update({f'sparse_{sparse_ratio}_fp32': latency})
 
         post_quant_fake(
-            exe,
+            executor,
             model_dir=sparse_model_path,
             model_filename=model_filename,
             params_filename=params_filename,
-            save_model_path='quant_model',
+            save_model_path=quant_model_path,
             quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
             is_full_quantize=False,
             activation_bits=8,
