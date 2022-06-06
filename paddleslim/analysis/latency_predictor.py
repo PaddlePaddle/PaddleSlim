@@ -18,14 +18,14 @@ import os
 import pickle
 import shutil
 import subprocess
-from .parse_ops import get_key_from_op
-from .extract_features import get_data_from_tables, get_features_from_paramkey
-from ._utils import opt_model, load_predictor, nearest_interpolate
-import paddle
-import paddleslim
 import warnings
 import urllib.request as request
 import ssl
+import paddle
+from .parse_ops import get_key_from_op
+from .extract_features import get_data_from_tables, get_features_from_paramkey
+from ._utils import opt_model, load_predictor, nearest_interpolate, _get_download
+from ..core import GraphWrapper
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
 
 TABLE_URL = 'https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/'
@@ -89,12 +89,13 @@ class TableLatencyPredictor(LatencyPredictor):
             self.threads = 4
             self.table_file = f'{self.hardware}_threads_4_power_mode_0.pkl'
             self.predictor_state = True
-            if not os.path.exists(self.table_file):
-                # NOTE: To solve the 'SSL: certificate verify failed' error.
-                ssl._create_default_https_context = ssl._create_unverified_context
-                url = TABLE_URL + self.table_file
-                request.urlretrieve(url, self.table_file)
-                print('Successfully download {}!'.format(self.table_file))
+            url = TABLE_URL + self.table_file
+            while not (os.path.exists(self.table_file)):
+                if not _get_download(url, self.table_file):
+                    time.sleep(1)
+                    continue
+
+            print('Successfully download {}!'.format(self.table_file))
         assert os.path.exists(
             self.table_file
         ), f'{self.table_file} does not exist. If you want to use our table files, please set \'table_file\' in {TableLatencyPredictor.hardware_list}'
@@ -177,7 +178,7 @@ class TableLatencyPredictor(LatencyPredictor):
             fluid_program = paddle.fluid.framework.Program.parse_from_string(
                 f.read())
 
-        graph = paddleslim.core.GraphWrapper(fluid_program)
+        graph = GraphWrapper(fluid_program)
 
         if input_shape != None:
             ori_shape = self._get_input_shape(graph)

@@ -140,7 +140,9 @@ def create_train_config(strategy_str, model_type):
     return train_config
 
 
-def prepare_strategy(model_dir,
+def prepare_strategy(executor,
+                     places,
+                     model_dir,
                      model_filename,
                      params_filename,
                      target_speedup=None,
@@ -152,6 +154,8 @@ def prepare_strategy(model_dir,
     ### use hardware latency tabel if support
     if deploy_hardware is not None:
         compressed_time_dict = predict_compressed_model(
+            executor,
+            places,
             model_dir,
             model_filename,
             params_filename,

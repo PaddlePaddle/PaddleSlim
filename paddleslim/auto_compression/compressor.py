@@ -136,8 +136,9 @@ class AutoCompression:
 
         if self.strategy_config is None:
             strategy_config = prepare_strategy(
-                self.model_dir, self.model_filename, self.params_filename,
-                self.target_speedup, self.deploy_hardware, self.model_type)
+                self._exe, self._places, self.model_dir, self.model_filename,
+                self.params_filename, self.target_speedup, self.deploy_hardware,
+                self.model_type)
             self.strategy_config = strategy_config
         elif isinstance(self.strategy_config, dict):
             self.strategy_config = [self.strategy_config]
