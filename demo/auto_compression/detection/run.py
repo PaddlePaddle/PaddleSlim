@@ -23,6 +23,8 @@ from ppdet.metrics import COCOMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 
+from post_process import YOLOv5PostProcess
+
 
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -59,8 +61,12 @@ def reader_wrapper(reader, input_list):
     def gen():
         for data in reader:
             in_dict = {}
-            for input_name in input_list:
-                in_dict[input_name] = data[input_name]
+            if isinstance(input_list, list):
+                for input_name in input_list:
+                    in_dict[input_name] = data[input_name]
+            elif isinstance(input_list, dict):
+                for input_name in input_list.keys():
+                    in_dict[input_list[input_name]] = data[input_name]
             yield in_dict
 
     return gen
@@ -80,24 +86,34 @@ def eval(config):
 
     anno_file = dataset.get_anno()
     metric = COCOMetric(
-        anno_file=anno_file, clsid2catid=clsid2catid, bias=0, IouType='bbox')
+        anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
     for batch_id, data in enumerate(val_loader):
         data_all = {k: np.array(v) for k, v in data.items()}
         data_input = {}
         for k, v in data.items():
-            if k in config['input_list']:
-                data_input[k] = np.array(v)
+            if isinstance(config['input_list'], list):
+                if k in config['input_list']:
+                    data_input[k] = np.array(v)
+            elif isinstance(config['input_list'], dict):
+                if k in config['input_list'].keys():
+                    data_input[config['input_list'][k]] = np.array(v)
+
         outs = exe.run(val_program,
                        feed=data_input,
                        fetch_list=fetch_targets,
                        return_numpy=False)
         res = {}
-        for out in outs:
-            v = np.array(out)
-            if len(v.shape) > 1:
-                res['bbox'] = v
-            else:
-                res['bbox_num'] = v
+        if 'arch' in config and config['arch'] == 'YOLOv5':
+            postprocess = YOLOv5PostProcess(
+                score_threshold=0.001, nms_threshold=0.6, multi_label=True)
+            res = postprocess(np.array(outs[0]), data_all['scale_factor'])
+        else:
+            for out in outs:
+                v = np.array(out)
+                if len(v.shape) > 1:
+                    res['bbox'] = v
+                else:
+                    res['bbox_num'] = v
 
         metric.update(data_all, res)
         if batch_id % 100 == 0:
@@ -112,24 +128,33 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
     anno_file = dataset.get_anno()
     metric = COCOMetric(
-        anno_file=anno_file, clsid2catid=clsid2catid, bias=1, IouType='bbox')
+        anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
     for batch_id, data in enumerate(val_loader):
         data_all = {k: np.array(v) for k, v in data.items()}
         data_input = {}
         for k, v in data.items():
-            if k in test_feed_names:
-                data_input[k] = np.array(v)
+            if isinstance(global_config['input_list'], list):
+                if k in test_feed_names:
+                    data_input[k] = np.array(v)
+            elif isinstance(global_config['input_list'], dict):
+                if k in global_config['input_list'].keys():
+                    data_input[global_config['input_list'][k]] = np.array(v)
         outs = exe.run(compiled_test_program,
                        feed=data_input,
                        fetch_list=test_fetch_list,
                        return_numpy=False)
         res = {}
-        for out in outs:
-            v = np.array(out)
-            if len(v.shape) > 1:
-                res['bbox'] = v
-            else:
-                res['bbox_num'] = v
+        if 'arch' in global_config and global_config['arch'] == 'YOLOv5':
+            postprocess = YOLOv5PostProcess(
+                score_threshold=0.001, nms_threshold=0.6, multi_label=True)
+            res = postprocess(np.array(outs[0]), data_all['scale_factor'])
+        else:
+            for out in outs:
+                v = np.array(out)
+                if len(v.shape) > 1:
+                    res['bbox'] = v
+                else:
+                    res['bbox_num'] = v
 
         metric.update(data_all, res)
         if batch_id % 100 == 0:
@@ -142,6 +167,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
 
 def main():
+    global global_config
     compress_config, train_config, global_config = load_slim_config(
         FLAGS.config_path)
     reader_cfg = load_config(global_config['reader_config'])

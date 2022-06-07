@@ -1,4 +1,4 @@
-# 自动化压缩工具ACT（Auto Compression Tookit）
+# 自动化压缩工具ACT（Auto Compression Toolkit）
 
 ## 简介
 PaddleSlim推出全新自动化压缩工具（ACT），旨在通过Source-Free的方式，自动对预测模型进行压缩，压缩后模型可直接部署应用。ACT自动化压缩工具主要特性如下：
