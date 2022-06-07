@@ -141,6 +141,7 @@ def standardization(data):
     """standardization numpy array"""
     mu = np.mean(data, axis=0)
     sigma = np.std(data, axis=0)
+    sigma = 1e-13 if sigma == 0. else sigma
     return (data - mu) / sigma
 
 
