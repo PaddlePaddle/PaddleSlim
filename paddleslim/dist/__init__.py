@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .single_distiller import merge, fsp_loss, l2_loss, soft_label_loss, loss
+from .single_distiller import merge, fsp, l2, soft_label, loss
 from .dml import DML

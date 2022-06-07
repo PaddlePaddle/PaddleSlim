@@ -74,7 +74,7 @@ def _create_optimizer(train_config):
 
 
 def _parse_distill_loss(distill_node_pair,
-                        distill_loss='l2_loss',
+                        distill_loss='l2',
                         distill_lambda=1.0):
     """parse distill loss config"""
     loss_dist = 0.0
@@ -135,9 +135,9 @@ def _load_program_and_merge(executor,
 
     data_name_map = {}
 
-    if 'merge_feed' not in config or config['merge_feed'] == True:
-        assert len(feed_target_names) == len(teacher_feed_target_names), \
-            "the number of feed nodes in the teacher model is not equal to the student model"
+    merge_feed = (
+        sorted(feed_target_names) == sorted(teacher_feed_target_names))
+    if merge_feed == True:
         for i, name in enumerate(feed_target_names):
             data_name_map[teacher_feed_target_names[i]] = name
 
@@ -153,7 +153,7 @@ def _load_program_and_merge(executor,
         place,
         teacher_scope=new_scope,
         name_prefix=teacher_name_prefix,
-        merge_feed=config.get('merge_feed') or True)
+        merge_feed=merge_feed)
     if teacher_idx == None or teacher_idx == 1:
         return train_program, test_program, data_name_map
     else:
@@ -270,10 +270,9 @@ def build_distill_program(executor,
                         **train_config['amp_config'])
 
             distill_loss, losses = _parse_distill_loss(
-                config.get('distill_node_pair') or default_distill_node_pair,
-                config.get('distill_loss') or
-                'l2_loss',  ### default loss is l2_loss
-                config.get('distill_lambda') or 1.0)  ### default lambda is 1.0
+                config.get('node') or default_distill_node_pair,
+                config.get('loss') or 'l2',  ### default loss is l2_loss
+                config.get('alpha') or 1.0)  ### default lambda is 1.0
             loss = paddle.mean(distill_loss)
             loss.stop_gradient = False
 
@@ -370,7 +369,7 @@ def build_prune_program(executor,
             pruner = UnstructuredPruner(
                 train_program_info.program,
                 mode=config['prune_mode'],
-                ratio=config['pruned_ratio'],
+                ratio=config['ratio'],
                 threshold=config['threshold'],
                 prune_params_type=config['prune_params_type'],
                 place=place,
@@ -378,7 +377,7 @@ def build_prune_program(executor,
         elif config["prune_strategy"] == "gmp":
             pruner = GMPUnstructuredPruner(
                 train_program_info.program,
-                ratio=config['pruned_ratio'],
+                ratio=config['ratio'],
                 prune_params_type=config['prune_params_type'],
                 place=place,
                 local_sparsity=config['local_sparsity'],
