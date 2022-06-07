@@ -1,15 +1,16 @@
 import os
 import time
+import numpy as np
 import paddle
 import paddle.fluid as fluid
 import paddle.static as static
-from paddleslim.prune import Pruner
-from paddleslim.core import GraphWrapper
-import numpy as np
+from ...prune import Pruner
+from ...core import GraphWrapper
 __all__ = ["get_sparse_model", "get_prune_model"]
 
 
-def get_sparse_model(model_file, param_file, ratio, save_path):
+def get_sparse_model(executor, places, model_file, param_file, ratio,
+                     save_path):
     """
     Using the unstructured sparse algorithm to compress the network. 
     This interface is only used to evaluate the latency of the compressed network, and does not consider the loss of accuracy.
@@ -34,12 +35,14 @@ def get_sparse_model(model_file, param_file, ratio, save_path):
 
     main_prog = static.Program()
     startup_prog = static.Program()
-    exe = paddle.static.Executor(paddle.CPUPlace())
-    exe.run(startup_prog)
+    executor.run(startup_prog)
 
     [inference_program, feed_target_names, fetch_targets] = (
         fluid.io.load_inference_model(
-            folder, exe, model_filename=model_name, params_filename=param_name))
+            folder,
+            executor,
+            model_filename=model_name,
+            params_filename=param_name))
     thresholds = {}
 
     graph = GraphWrapper(inference_program)
@@ -88,14 +91,14 @@ def get_sparse_model(model_file, param_file, ratio, save_path):
         save_path,
         feeded_var_names=feed_target_names,
         target_vars=fetch_targets,
-        executor=exe,
+        executor=executor,
         main_program=inference_program,
         model_filename=model_name,
         params_filename=param_name)
     print("The pruned model is saved in: ", save_path)
 
 
-def get_prune_model(model_file, param_file, ratio, save_path):
+def get_prune_model(executor, places, model_file, param_file, ratio, save_path):
     """
     Using the structured pruning algorithm to compress the network. 
     This interface is only used to evaluate the latency of the compressed network, and does not consider the loss of accuracy.
@@ -121,14 +124,15 @@ def get_prune_model(model_file, param_file, ratio, save_path):
 
     main_prog = static.Program()
     startup_prog = static.Program()
-    place = paddle.CPUPlace()
-    exe = paddle.static.Executor(place)
     scope = static.global_scope()
-    exe.run(startup_prog)
+    executor.run(startup_prog)
 
     [inference_program, feed_target_names, fetch_targets] = (
         fluid.io.load_inference_model(
-            folder, exe, model_filename=model_name, params_filename=param_name))
+            folder,
+            executor,
+            model_filename=model_name,
+            params_filename=param_name))
 
     prune_params = []
     graph = GraphWrapper(inference_program)
@@ -152,7 +156,7 @@ def get_prune_model(model_file, param_file, ratio, save_path):
         scope,
         params=prune_params,
         ratios=ratios,
-        place=place,
+        place=places,
         lazy=False,
         only_graph=False,
         param_backup=None,
@@ -162,7 +166,7 @@ def get_prune_model(model_file, param_file, ratio, save_path):
         save_path,
         feeded_var_names=feed_target_names,
         target_vars=fetch_targets,
-        executor=exe,
+        executor=executor,
         main_program=main_program,
         model_filename=model_name,
         params_filename=param_name)
