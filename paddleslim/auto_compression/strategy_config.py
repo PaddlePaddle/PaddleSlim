@@ -17,7 +17,7 @@ from collections import namedtuple
 __all__ = [
     "Quantization", "Distillation", "MultiTeacherDistillation", \
     "HyperParameterOptimization", "Prune", "UnstructurePrune",  \
-    "merge_config", "ProgramInfo", "TrainConfig",
+    "TransformerPrune", "ASP", "merge_config", "ProgramInfo", "TrainConfig",
 ]
 
 
@@ -108,11 +108,11 @@ class MultiTeacherDistillation:
 
 class HyperParameterOptimization:
     def __init__(self,
-                 ptq_algo,
-                 bias_correct,
-                 weight_quantize_type,
-                 hist_percent,
-                 batch_num,
+                 ptq_algo=["KL", "hist", "avg", "mse"],
+                 bias_correct=[True, False],
+                 weight_quantize_type=['channel_wise_abs_max'],
+                 hist_percent=[0.98, 0.999],
+                 batch_num=[10, 30],
                  max_quant_count=20):
         """
         HyperParameterOptimization Config.
@@ -156,10 +156,10 @@ class ASP:
         self.prune_params_name = prune_params_name
 
 
-class TransformerPruner:
+class TransformerPrune:
     def __init__(self, pruned_ratio):
         """
-        TransformerPruner Config.
+        TransformerPrune Config.
         Args:
             pruned_ratio(float): The ratios to be pruned.
         """
@@ -205,7 +205,7 @@ class UnstructurePrune:
         self.local_sparsity = local_sparsity
 
 
-class Train:
+class TrainConfig:
     def __init__(self,
                  epochs=3,
                  learning_rate=0.02,
@@ -254,7 +254,7 @@ class Train:
         """
         self.epochs = epochs
         self.learning_rate = learning_rate
-        self.optimizer = optimizer
+        self.optimizer_builder = optimizer_builder
         self.eval_iter = eval_iter
         self.logging_iter = logging_iter
         self.origin_metric = origin_metric
@@ -276,7 +276,7 @@ def merge_config(*args):
     fields = set()
     cfg = dict()
     for arg in args:
-        cfg.__dict__.update(arg.__dict__)
+        cfg.update(arg.__dict__)
     return MergeConfig(**cfg)
 
 

@@ -27,7 +27,7 @@ import paddle.fluid as fluid
 from ..common.recover_program import recover_inference_program
 from .quanter import _quant_config_default, _parse_configs, pact, get_pact_optimizer
 from .quanter import quant_aware, convert
-from ..dist import merge, l2_loss, soft_label_loss, fsp_loss
+from ..dist import merge, l2, soft_label, fsp
 from ..auto_compression.create_compressed_program import build_distill_program
 import logging
 logging.getLogger().setLevel(logging.INFO)

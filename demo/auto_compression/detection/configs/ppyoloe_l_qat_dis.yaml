@@ -8,14 +8,11 @@ Global:
   params_filename: model.pdiparams
 
 Distillation:
-  distill_lambda: 1.0
-  distill_loss: l2_loss
-  distill_node_pair:
-  - teacher_concat_15.tmp_0
+  alpha: 1.0
+  loss: l2
+  node:
   - concat_15.tmp_0
-  - teacher_concat_14.tmp_0
   - concat_14.tmp_0
-  merge_feed: true
   teacher_model_dir: ./ppyoloe_crn_l_300e_coco/
   teacher_model_filename: model.pdmodel
   teacher_params_filename: model.pdiparams
@@ -37,7 +34,8 @@ TrainConfig:
   epochs: 1
   eval_iter: 1000
   learning_rate: 0.00001
-  optimizer: SGD
-  optim_args:
+  optimizer_builder:
+    optimizer: 
+      type: SGD
     weight_decay: 4.0e-05
 

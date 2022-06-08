@@ -2,19 +2,17 @@ Global:
   reader_config: configs/pp_humanseg_lite.yaml
 
 Distillation:
-  distill_lambda: 1.0
-  distill_loss: l2_loss
-  distill_node_pair: 
-  - teacher_batch_norm_47.tmp_2
+  alpha: 1.0
+  loss: l2
+  node: 
   - batch_norm_47.tmp_2
-  merge_feed: true
   teacher_model_dir: ./ppseg_lite_portrait_398x224_with_softmax
   teacher_model_filename: model.pdmodel
   teacher_params_filename: model.pdiparams
 UnstructurePrune:
   prune_strategy: gmp
   prune_mode: ratio
-  pruned_ratio: 0.75
+  ratio: 0.75
   gmp_config: 
     stable_iterations: 0
     pruning_iterations: 4500
@@ -31,7 +29,7 @@ TrainConfig:
     type: PiecewiseDecay
     boundaries: [4500]
     values: [0.005, 0.0005]
-  optim_args:
+  optimizer_builder:
+    optimizer: 
+      type: SGD
     weight_decay: 0.0005
-  optimizer: SGD
-  

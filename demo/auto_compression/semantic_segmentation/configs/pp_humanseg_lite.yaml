@@ -1,9 +1,9 @@
-batch_size: 128
+batch_size: 2
 
 train_dataset:
   type: Dataset
-  dataset_root: data/humanseg
-  train_path: data/humanseg/train.txt
+  dataset_root: ./temp #data/humanseg
+  train_path: ./temp/train.txt # data/humanseg/train.txt
   num_classes: 2
   transforms:
   - type: PaddingByAspectRatio
@@ -24,8 +24,8 @@ train_dataset:
 
 val_dataset:
   type: Dataset
-  dataset_root: data/humanseg
-  val_path: data/humanseg/val.txt
+  dataset_root: ./temp #data/humanseg
+  val_path: ./temp/val.txt #data/humanseg/val.txt
   num_classes: 2
   transforms:
   - type: PaddingByAspectRatio

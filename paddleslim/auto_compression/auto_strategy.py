@@ -92,7 +92,6 @@ def create_strategy_config(strategy_str, model_type):
             ### default prune config
             default_prune_config = {
                 'pruned_ratio': float(tmp_s[1]),
-                'prune_algo': 'prune',
                 'criterion': 'l1_norm'
             }
         else:
@@ -105,10 +104,12 @@ def create_strategy_config(strategy_str, model_type):
                 'local_sparsity': True,
                 'prune_params_type': 'conv1x1_only'
             }
-        tmp_s[0] = tmp_s[0].replace('prune', 'Prune')
+        if model_type == 'transformer':
+            tmp_s[0] = tmp_s[0].replace('prune', 'TransformerPrune')
+            default_prune_config = {'pruned_ratio': float(tmp_s[1])}
+        else:
+            tmp_s[0] = tmp_s[0].replace('prune', 'Prune')
         tmp_s[0] = tmp_s[0].replace('sparse', 'UnstructurePrune')
-        if model_type == 'transformer' and tmp_s[0] == 'Prune':
-            default_prune_config['prune_algo'] = 'transformer_pruner'
         prune_config = eval(tmp_s[0])(**default_prune_config)
         configs.append({tmp_s[0]: prune_config, 'Distillation': dis_config})
 

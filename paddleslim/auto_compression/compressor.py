@@ -177,13 +177,14 @@ class AutoCompression:
             quant_config = strategy_c.get("Quantization", None)
             hpo_config = strategy_c.get("HyperParameterOptimization", None)
             prune_config = strategy_c.get("Prune", None)
+            asp_config = strategy_c.get("ASP", None)
+            transformer_prune_config = strategy_c.get("TransformerPrune", None)
             unstructure_prune_config = strategy_c.get("UnstructurePrune", None)
             single_teacher_distill_config = strategy_c.get("Distillation", None)
             if single_teacher_distill_config is not None and single_teacher_distill_config.teacher_model_dir is None:
-                single_teacher_distill_config = single_teacher_distill_config._replace(
-                    teacher_model_dir=self.model_dir,
-                    teacher_model_filename=self.model_filename,
-                    teacher_params_filename=self.params_filename)
+                single_teacher_distill_config.teacher_model_dir = self.model_dir
+                single_teacher_distill_config.teacher_model_filename = self.model_filename
+                single_teacher_distill_config.teacher_params_filename = self.params_filename
 
             multi_teacher_distill_config = strategy_c.get(
                 "MultiTeacherDistillation", None)
@@ -209,14 +210,26 @@ class AutoCompression:
                 strategy.append('prune_dis')
                 config.append(merge_config(prune_config, self._distill_config))
 
-            ### case4: unstructure_config & distill config
+            ### case4: asp_config & distill config
+            elif asp_config is not None and self._distill_config is not None:
+                strategy.append('asp_dis')
+                config.append(merge_config(asp_config, self._distill_config))
+
+            ### case5: transformer_prune_config & distill config
+            elif transformer_prune_config is not None and self._distill_config is not None:
+                strategy.append('transformer_prune_dis')
+                config.append(
+                    merge_config(transformer_prune_config,
+                                 self._distill_config))
+
+            ### case6: unstructure_config & distill config
             elif unstructure_prune_config is not None and self._distill_config is not None:
                 strategy.append('unstructure_prune_dis')
                 config.append(
                     merge_config(unstructure_prune_config,
                                  self._distill_config))
 
-            ### case4: distill_config
+            ### case7: distill_config
             elif self._distill_config is not None:
                 if single_teacher_distill_config is not None:
                     strategy.append('single_teacher_dis')
@@ -259,7 +272,7 @@ class AutoCompression:
         train_program_info = ProgramInfo(startup_program, train_program,
                                          feed_target_names, fetch_targets)
 
-        config_dict = dict(config._asdict())
+        config_dict = config.__dict__
         if "prune_strategy" in config_dict and config_dict[
                 "prune_strategy"] == "gmp" and config_dict[
                     'gmp_config'] is None:
@@ -294,7 +307,7 @@ class AutoCompression:
                 self._exe,
                 self._places,
                 config_dict,
-                self.train_config._asdict(),
+                self.train_config.__dict__,
                 train_program_info,
                 pruner=self._pruner,
                 dist_strategy=dist_strategy,
@@ -469,20 +482,20 @@ class AutoCompression:
 
             ### used to check whether the dataloader is right
             self.metric_before_compressed = None
-            if self.eval_function is not None and self.train_config.origin_metric is not None:
-                _logger.info("start to test metric before compress")
-                metric = self.eval_function(self._exe, inference_program,
-                                            feed_target_names, fetch_targets)
-                _logger.info("metric of compressed model is: {}".format(metric))
-                buf = 0.05
-                if metric < (float(self.train_config.origin_metric) - buf) or \
-                        metric > (float(self.train_config.origin_metric) + buf):
-                    raise RuntimeError("target metric of pretrained model is {}, \
-                          but now is {}, Please check the format of evaluation dataset \
-                          or check the origin_metric in train_config"
-                                                                     .format(\
-                          self.train_config.origin_metric, metric))
-                self.metric_before_compressed = metric
+            ###if self.eval_function is not None and self.train_config.origin_metric is not None:
+            ###    _logger.info("start to test metric before compress")
+            ###    metric = self.eval_function(self._exe, inference_program,
+            ###                                feed_target_names, fetch_targets)
+            ###    _logger.info("metric of compressed model is: {}".format(metric))
+            ###    buf = 0.05
+            ###    if metric < (float(self.train_config.origin_metric) - buf) or \
+            ###            metric > (float(self.train_config.origin_metric) + buf):
+            ###        raise RuntimeError("target metric of pretrained model is {}, \
+            ###              but now is {}, Please check the format of evaluation dataset \
+            ###              or check the origin_metric in train_config"
+            ###                                                         .format(\
+            ###              self.train_config.origin_metric, metric))
+            ###    self.metric_before_compressed = metric
 
             patterns, default_distill_node_pair, _ = get_patterns(
                 inference_program)

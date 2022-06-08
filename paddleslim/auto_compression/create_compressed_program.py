@@ -17,6 +17,7 @@ import numpy as np
 import paddle
 import paddle.distributed.fleet as fleet
 import paddle.optimizer as optimizer
+import paddle.regularizer as regularizer
 from ..quant.quanter import quant_aware, _quant_config_default, _parse_configs, pact, get_pact_optimizer
 from ..dist import *
 from ..common.recover_program import recover_inference_program, _remove_fetch_node
@@ -44,33 +45,67 @@ def _create_lr_scheduler(train_config):
 
 def _create_optimizer(train_config):
     """create optimizer"""
-    opt = getattr(optimizer, train_config.get('optimizer') or
-                  'SGD')  ### default optimizer is SGD
-    if 'optim_args' in train_config:
-        if train_config[
-                'optim_args'] is not None and 'grad_clip' in train_config[
-                    'optim_args'] and train_config['optim_args'][
-                        'grad_clip'] is not None:
-            grad_clip = getattr(
-                paddle.nn, train_config['optim_args']['grad_clip'])(
-                    **train_config['optim_args']['grad_clip_args'])
-            train_config['optim_args'].pop('grad_clip')
-            train_config['optim_args'].pop('grad_clip_args')
-        else:
-            grad_clip = None
-            if 'grad_clip' in train_config['optim_args'] and train_config[
-                    'optim_args']['grad_clip'] is None:
-                train_config['optim_args'].pop('grad_clip')
-                train_config['optim_args'].pop('grad_clip_args')
+
+    optimizer_builder = train_config['optimizer_builder']
+
+    if 'grad_clip' in optimizer_builder:
+        g_clip_params = optimizer_builder.pop('grad_clip')
+        g_clip_type = g_clip_params.pop('type')
+        grad_clip = getattr(paddle.nn, g_clip_type)(**g_clip_params)
     else:
-        train_config['optim_args'] = {}
         grad_clip = None
 
+    ### build regularization
+    if 'regularizer' in optimizer_builder:
+        reg_params = optimizer_builder.pop('regularizer')
+        reg_type = reg_params.pop('type')
+        reg = getattr(regularizer, reg_type)(**reg_params)
+    elif 'weight_decay' in optimizer_builder:
+        reg = optimizer_builder.pop('weight_decay')
+    else:
+        reg = None
+
+    ### build learning rate
     lr = _create_lr_scheduler(train_config)
-    op = opt(learning_rate=lr,
-             grad_clip=grad_clip,
-             **train_config['optim_args'])
-    return op, lr
+
+    ### build optimizer
+    optim_params = optimizer_builder.pop('optimizer')
+    optim_type = optim_params.pop('type')
+    opt = getattr(optimizer, optim_type)(learning_rate=lr,
+                                         grad_clip=grad_clip,
+                                         weight_decay=reg,
+                                         **optim_params)
+    return opt, lr
+
+
+def _get_distill_node(student_program, config):
+    node = config.get('node')
+    if len(node) == 0:
+        return None
+
+    ### the type of node is list or list(list)
+    print(node)
+    print(node[0])
+    if isinstance(node[0], list):
+        test_node = node[0][0]
+    else:
+        test_node = node[0]
+    if student_program.global_block().var(test_node) is not None:
+        distill_node_pair = []
+        if isinstance(node[0], list):
+            for n_list in node:
+                tmp_node_pair = []
+                for n in n_list:
+                    tmp_node_pair.append('teacher_' + n)
+                    tmp_node_pair.append(n)
+                distill_node_pair.append(tmp_node_pair)
+        else:
+            for n in node:
+                distill_node_pair.append('teacher_' + n)
+                distill_node_pair.append(n)
+        return distill_node_pair
+    else:
+        return node
 
 
 def _parse_distill_loss(distill_node_pair,
@@ -180,6 +215,9 @@ def build_distill_program(executor,
         feed_target_names = train_program_info.feed_target_names
         fetch_targets = train_program_info.fetch_targets
 
+    distill_node_pair = _get_distill_node(train_program,
+                                          config) or default_distill_node_pair
+
     teacher_model_dir = config[
         "teacher_model_dir"] if "teacher_model_dir" in config else config[
             "teacher_model_path_prefix"]
@@ -270,15 +308,15 @@ def build_distill_program(executor,
                         **train_config['amp_config'])
 
             distill_loss, losses = _parse_distill_loss(
-                config.get('node') or default_distill_node_pair,
-                config.get('loss') or 'l2',  ### default loss is l2_loss
-                config.get('alpha') or 1.0)  ### default lambda is 1.0
+                distill_node_pair,
+                config.get('loss') or 'l2',  ### default loss is l2
+                config.get('alpha') or 1.0)  ### default alpha is 1.0
             loss = paddle.mean(distill_loss)
             loss.stop_gradient = False
 
-            if 'prune_algo' in config:  ### prune & asp
-                if config['prune_algo'] == 'asp' and not train_config.get(
-                        'use_fleet'):
+            if 'prune_params_name' in config:  ### prune
+                if 'pruned_ratio' not in config and not train_config.get(
+                        'use_fleet'):  ### asp
                     optimizer = pruner.decorate(optimizer)
                 optimizer.minimize(loss)
             elif 'prune_strategy' in config:  ###unstructure prune
@@ -363,7 +401,7 @@ def build_prune_program(executor,
                         strategy,
                         patterns,
                         eval_dataloader=None):
-    if 'unstructure' in strategy:
+    if strategy.startswith('unstructure'):
         from ..prune.unstructured_pruner import UnstructuredPruner, GMPUnstructuredPruner
         if config["prune_strategy"] is None:
             pruner = UnstructuredPruner(
@@ -382,64 +420,60 @@ def build_prune_program(executor,
                 place=place,
                 local_sparsity=config['local_sparsity'],
                 configs=config['gmp_config'])
+    elif strategy.startswith('prune'):
+        from ..prune import Pruner
+        pruner = Pruner(config["criterion"])
+        params = []
+        ### TODO(ceci3): set default prune weight
+        for param in train_program_info.program.global_block().all_parameters():
+            if config['prune_params_name'] is not None and param.name in config[
+                    'prune_params_name']:
+                params.append(param.name)
+
+        pruned_program, _, _ = pruner.prune(
+            train_program_info.program,
+            paddle.static.global_scope(),
+            params=params,
+            ratios=[config['pruned_ratio']] * len(params),
+            place=place)
+        train_program_info.program = pruned_program
+
+    elif strategy.startswith('asp'):
+        from paddle.static import sparsity
+        pruner = sparsity
+        excluded_params_name = []
+        ### TODO(ceci3): set default prune weight
+        for param in train_program_info.program.global_block().all_parameters():
+            if config[
+                    'prune_params_name'] is not None and param.name not in config[
+                        'prune_params_name']:
+                excluded_params_name.append(param.name)
+            if "teacher_" in param.name:
+                excluded_params_name.append(param.name)
+        pruner.set_excluded_layers(train_program_info.program,
+                                   excluded_params_name)
+    elif strategy.startswith('transformer_prune'):
+        from .transformer_pruner import TransformerPruner
+        assert eval_dataloader is not None, "transformer_pruner must set eval_dataloader"
+        label_info = _get_label_info(eval_dataloader,
+                                     train_program_info.feed_target_names)
+        assert len(label_info) != 0, \
+            "maybe something wrong in get label name from eval_dataloader, please check your eval_dataloader"
+        pruner = TransformerPruner(
+            executor,
+            place,
+            train_program_info.program,
+            patterns,
+            label_info,
+            width_mult=(1.0 - config['pruned_ratio']),
+            dataloader=eval_dataloader,
+            fetch_targets=train_program_info.fetch_targets)
+        pruned_program = pruner.prune()
+        train_program_info.program = pruned_program
     else:
-        if config['prune_algo'] == 'prune':
-            from ..prune import Pruner
-            pruner = Pruner(config["criterion"])
-            params = []
-            ### TODO(ceci3): set default prune weight
-            for param in train_program_info.program.global_block(
-            ).all_parameters():
-                if config[
-                        'prune_params_name'] is not None and param.name in config[
-                            'prune_params_name']:
-                    params.append(param.name)
-
-            pruned_program, _, _ = pruner.prune(
-                train_program_info.program,
-                paddle.static.global_scope(),
-                params=params,
-                ratios=[config['pruned_ratio']] * len(params),
-                place=place)
-            train_program_info.program = pruned_program
-
-        elif config['prune_algo'] == 'asp':
-            from paddle.static import sparsity
-            pruner = sparsity
-            excluded_params_name = []
-            ### TODO(ceci3): set default prune weight
-            for param in train_program_info.program.global_block(
-            ).all_parameters():
-                if config[
-                        'prune_params_name'] is not None and param.name not in config[
-                            'prune_params_name']:
-                    excluded_params_name.append(param.name)
-                if "teacher_" in param.name:
-                    excluded_params_name.append(param.name)
-            pruner.set_excluded_layers(train_program_info.program,
-                                       excluded_params_name)
-        elif config['prune_algo'] == 'transformer_pruner':
-            from .transformer_pruner import TransformerPruner
-            assert eval_dataloader is not None, "transformer_pruner must set eval_dataloader"
-            label_info = _get_label_info(eval_dataloader,
-                                         train_program_info.feed_target_names)
-            assert len(label_info) != 0, \
-                "maybe something wrong in get label name from eval_dataloader, please check your eval_dataloader"
-            pruner = TransformerPruner(
-                executor,
-                place,
-                train_program_info.program,
-                patterns,
-                label_info,
-                width_mult=(1.0 - config['pruned_ratio']),
-                dataloader=eval_dataloader,
-                fetch_targets=train_program_info.fetch_targets)
-            pruned_program = pruner.prune()
-            train_program_info.program = pruned_program
-        else:
-            raise NotImplementedError(
-                "prune_algo must be choice in [\"prune\", \"asp\"], {} is not support".
-                format(config['prune_algo']))
+        raise NotImplementedError(
+            "prune_algo must be choice in [\"prune\", \"asp\"], {} is not support".
+            format(config['prune_algo']))
 
     return pruner, train_program_info
 
