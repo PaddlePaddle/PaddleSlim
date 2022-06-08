@@ -19,7 +19,7 @@ Distillation:
   - teacher_conv2d_119.tmp_1
   - conv2d_119.tmp_1
   merge_feed: true
-  teacher_model_dir: ./yolov5_inference_model/
+  teacher_model_dir: ./yolov5s_infer/
   teacher_model_filename: model.pdmodel
   teacher_params_filename: model.pdiparams
 
@@ -37,7 +37,7 @@ Quantization:
   - depthwise_conv2d
 
 TrainConfig:
-  epochs: 1
+  train_iter: 3000
   eval_iter: 1000
   learning_rate: 0.00001
   optimizer: SGD

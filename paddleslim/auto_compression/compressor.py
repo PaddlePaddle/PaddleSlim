@@ -265,8 +265,14 @@ class AutoCompression:
             _logger.info(
                 "Calculating the iterations per epoch……(It will take some time)")
             # NOTE:XXX: This way of calculating the iters needs to be improved.
-            iters_per_epoch = len(list(self.train_dataloader()))
-            total_iters = self.train_config.epochs * iters_per_epoch
+            if self.train_config.epochs:
+                iters_per_epoch = len(list(self.train_dataloader()))
+                total_iters = self.train_config.epochs * iters_per_epoch
+            elif self.train_config.train_iter:
+                total_iters = self.train_config.train_iter
+            else:
+                raise RuntimeError(
+                    'train_config must has `epochs` or `train_iter` field.')
             config_dict['gmp_config'] = {
                 'stable_iterations': 0,
                 'pruning_iterations': 0.45 * total_iters,
@@ -498,7 +504,8 @@ class AutoCompression:
 
     def _start_train(self, train_program_info, test_program_info, strategy):
         best_metric = -1.0
-        for epoch_id in range(self.train_config.epochs):
+        total_epochs = self.train_config.epochs if self.train_config.epochs else 1
+        for epoch_id in range(total_epochs):
             for batch_id, data in enumerate(self.train_dataloader()):
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
@@ -551,6 +558,8 @@ class AutoCompression:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
+                if self.train_config.train_iter and batch_id >= self.train_config.train_iter:
+                    break
 
         if 'unstructure' in self._strategy or self.train_config.sparse_model:
             self._pruner.update_params()
