@@ -38,6 +38,8 @@ from smac.scenario.scenario import Scenario
 from paddleslim.common import get_logger
 from paddleslim.quant import quant_post
 
+_logger = get_logger(__name__, level=logging.INFO)
+
 SMAC_TMP_FILE_PATTERN = "smac3-output*"
 
 
@@ -53,7 +55,7 @@ def remove(path):
             os.remove(p)
 
 
-class QuantConfig:
+class QuantConfig(object):
     """quant config"""
 
     def __init__(self,
@@ -252,7 +254,7 @@ def eval_quant_model():
 
     emd_sum = cal_emd_lose(out_float_list, out_quant_list,
                            out_len_sum / float(valid_data_num))
-    print("output diff:", emd_sum)
+    _logger.info("output diff: {}".format(emd_sum))
     return float(emd_sum)
 
 
@@ -323,7 +325,7 @@ def quantize(cfg):
 
         emd_loss = float(abs(float_metric - quant_metric)) / float_metric
 
-    print("emd loss: ", emd_loss)
+    _logger.info("emd loss: {}".format(emd_loss))
     if emd_loss < g_min_emd_loss:
         g_min_emd_loss = emd_loss
         if os.path.exists(g_quant_config.quantize_model_path):
@@ -510,7 +512,7 @@ def quant_post_hpo(
     # Example call of the function with default values
     # It returns: Status, Cost, Runtime, Additional Infos
     def_value = smac.get_tae_runner().run(cs.get_default_configuration(), 1)[1]
-    print("Value for default configuration: %.8f" % def_value)
+    _logger.info("Value for default configuration: %.8f" % def_value)
 
     # Start optimization
     try:
@@ -519,7 +521,7 @@ def quant_post_hpo(
         incumbent = smac.solver.incumbent
 
     inc_value = smac.get_tae_runner().run(incumbent, 1)[1]
-    print("Optimized Value: %.8f" % inc_value)
+    _logger.info("Optimized Value: %.8f" % inc_value)
     shutil.rmtree(g_quant_model_cache_path)
     remove(SMAC_TMP_FILE_PATTERN)
-    print("quantize completed")
+    _logger.info("Quantization completed.")
