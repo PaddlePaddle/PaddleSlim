@@ -18,8 +18,6 @@ import sys
 import numpy as np
 import inspect
 import shutil
-from collections import namedtuple
-from collections.abc import Iterable
 from time import gmtime, strftime
 import platform
 import paddle
@@ -392,7 +390,7 @@ class AutoCompression:
             shutil.move(tmp_params_file, final_params_file)
             shutil.rmtree(self.tmp_dir)
             _logger.info(
-                "==> Finished the ACT process and the final model is saved in:{}".
+                "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))
         os._exit(0)
 
