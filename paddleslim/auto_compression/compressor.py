@@ -119,14 +119,9 @@ class AutoCompression:
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
         self.eval_dataloader = eval_dataloader if eval_dataloader is not None else train_dataloader
+        self.deploy_hardware = deploy_hardware
 
         paddle.enable_static()
-
-        if deploy_hardware in TableLatencyPredictor.hardware_list:
-            self.deploy_hardware = deploy_hardware
-        else:
-            self.deploy_hardware = None
-
         self._exe, self._places = self._prepare_envs()
         self.model_type = self._get_model_type(self._exe, model_dir,
                                                model_filename, params_filename)
@@ -149,10 +144,25 @@ class AutoCompression:
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
 
+        for strategy, config in zip(self._strategy, self._config):
+            _logger.info(f"strategy: {strategy}; config: {config}")
         # If train_config is None, set default train_config
         if self.train_config is None:
             self.train_config = create_train_config(self.strategy_config,
                                                     self.model_type)
+
+    @property
+    def deploy_hardware(self):
+        return self._deploy_hardware
+
+    @deploy_hardware.setter
+    def deploy_hardware(self, value):
+        if value is not None:
+            # Fail-fast when deploy hardware is set explicitly
+            assert (
+                value in TableLatencyPredictor.hardware_list
+            ), f"Hardware should be in supported list {TableLatencyPredictor.hardware_list} but got {value}. Or you can set deploy_hardware None."
+        self._deploy_hardware = value
 
     def _prepare_envs(self):
         devices = paddle.device.get_device().split(':')[0]
@@ -368,16 +378,16 @@ class AutoCompression:
                 config) in enumerate(zip(self._strategy, self._config)):
             self.single_strategy_compress(strategy, config, strategy_idx)
 
-        if strategy == 'ptq_hpo' and config.max_quant_count == 1 and platform.system(
-        ).lower() == 'linux':
-            ptq_loss = quant_post_hpo.g_min_emd_loss
+        # if strategy == 'ptq_hpo' and config.max_quant_count == 1 and platform.system(
+        # ).lower() == 'linux':
+        #     ptq_loss = quant_post_hpo.g_min_emd_loss
 
-            final_quant_config = get_final_quant_config(ptq_loss)
-            if final_quant_config is not None:
-                quant_strategy, quant_config = self._prepare_strategy(
-                    final_quant_config)
-                self.single_strategy_compress(quant_strategy[0],
-                                              quant_config[0], strategy_idx)
+        #     final_quant_config = get_final_quant_config(ptq_loss)
+        #     if final_quant_config is not None:
+        #         quant_strategy, quant_config = self._prepare_strategy(
+        #             final_quant_config)
+        #         self.single_strategy_compress(quant_strategy[0],
+        #                                       quant_config[0], strategy_idx)
         tmp_model_path = os.path.join(
             self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
         final_model_path = os.path.join(self.final_dir)
@@ -399,6 +409,7 @@ class AutoCompression:
     def single_strategy_compress(self, strategy, config, strategy_idx):
         # start compress, including train/eval model
         # TODO: add the emd loss of evaluation model.
+        print(f"strategy: {strategy}; config: {config}")
         if strategy == 'quant_post':
             quant_post(
                 self._exe,
