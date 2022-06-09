@@ -16,8 +16,8 @@ from collections import namedtuple
 
 __all__ = [
     "Quantization", "Distillation", "MultiTeacherDistillation", \
-    "HyperParameterOptimization", "Prune", "UnstructurePrune",  \
-    "TransformerPrune", "ASP", "merge_config", "ProgramInfo", "TrainConfig",
+    "HyperParameterOptimization", "ChannelPrune", "UnstructurePrune",  \
+    "TransformerPrune", "ASPPrune", "merge_config", "ProgramInfo", "TrainConfig",
 ]
 
 
@@ -30,9 +30,13 @@ class Quantization:
                  activation_bits=8,
                  not_quant_pattern=['skip_quant'],
                  use_pact=False,
-                 is_full_quantize=False,
                  activation_quantize_type='moving_average_abs_max',
-                 weight_quantize_type='channel_wise_abs_max'):
+                 weight_quantize_type='channel_wise_abs_max',
+                 dtype='int8',
+                 window_size=10000,
+                 moving_rate=0.9,
+                 for_tensorrt=False,
+                 is_full_quantize=False):
         """
         Quantization Config.
         Args:
@@ -43,6 +47,11 @@ class Quantization:
             use_pact(bool): Whether to use pact in quantization training. Default: False.
             activation_quantize_type(str): Activation quantize type. Default is 'moving_average_abs_max'.
             weight_quantize_type(str): Weight quantize type. Default 'channel_wise_abs_max'.
+            dtype(str): Data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'.
+            window_size(int): Window size for 'range_abs_max' quantization. Default: 10000.
+            moving_rate(float): The decay coefficient of moving average. Default: 0.9.
+            for_tensorrt(bool): If True, 'quantize_op_types' will be TENSORRT_OP_TYPES. Default: False.
+            is_full_quantize(bool): If True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES. Default: False.
         """
         self.quantize_op_types = quantize_op_types
         self.weight_bits = weight_bits
@@ -52,6 +61,11 @@ class Quantization:
         self.is_full_quantize = is_full_quantize
         self.activation_quantize_type = activation_quantize_type
         self.weight_quantize_type = weight_quantize_type
+        self.dtype = dtype
+        self.window_size = window_size
+        self.moving_rate = moving_rate
+        self.for_tensorrt = for_tensorrt
+        self.is_full_quantize = is_full_quantize
 
 
 class Distillation:
@@ -132,10 +146,10 @@ class HyperParameterOptimization:
         self.max_quant_count = max_quant_count
 
 
-class Prune:
+class ChannelPrune:
     def __init__(self, pruned_ratio, prune_params_name, criterion='l1_norm'):
         """
-        Prune Config.
+        ChannelPrune Config.
         Args:
             pruned_ratio(float): The ratios to be pruned.
             prune_params_name(list(str)): A list of parameter names to be pruned.
@@ -146,10 +160,10 @@ class Prune:
         self.criterion = criterion
 
 
-class ASP:
+class ASPPrune:
     def __init__(self, prune_params_name):
         """
-        ASP Config.
+        ASPPrune Config.
         Args:
             prune_params_name(list(str)): A list of parameter names to be pruned.
         """
@@ -161,7 +175,7 @@ class TransformerPrune:
         """
         TransformerPrune Config.
         Args:
-            pruned_ratio(float): The ratios to be pruned.
+            pruned_ratio(float): The ratios to be pruned each fully-connected layer.
         """
         self.pruned_ratio = pruned_ratio
 

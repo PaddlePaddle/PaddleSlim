@@ -6,18 +6,12 @@ Distillation:
   loss: l2
   node:
   - batch_norm_47.tmp_2
-  teacher_model_dir: ./ppseg_lite_portrait_398x224_with_softmax
-  teacher_model_filename: model.pdmodel
-  teacher_params_filename: model.pdiparams
+
 Quantization:
-  activation_bits: 8
-  is_full_quantize: false
-  not_quant_pattern:
-  - skip_quant
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
-  weight_bits: 8
+
 TrainConfig:
   epochs: 1
   eval_iter: 400

@@ -13,9 +13,13 @@ Quantization:
     weight_bits: 8                                # 权重量化比特数
     activation_quantize_type: 'range_abs_max'     # 激活量化方式
     weight_quantize_type: 'channel_wise_abs_max'  # 权重量化方式
-    is_full_quantize: false                       # 是否全量化
     not_quant_pattern: [skip_quant]               # 跳过量化层的name_scpoe命名(保持默认即可)
     quantize_op_types: [conv2d, depthwise_conv2d] # 量化OP列表
+    dtype: 'int8'                                 # 量化后的参数类型，默认 int8 , 目前仅支持 int8
+    window_size: 10000                            # 'range_abs_max' 量化方式的 window size ，默认10000。
+    moving_rate: 0.9                              # 'moving_average_abs_max' 量化方式的衰减系数，默认 0.9。
+    for_tensorrt: false                           # 量化后的模型是否使用 TensorRT 进行预测。如果是的话，量化op类型为： TENSORRT_OP_TYPES 。默认值为False.
+    is_full_quantize: false                       # 是否全量化
 ```
 
 #### 配置定制蒸馏策略
@@ -27,9 +31,9 @@ Distillation:
     lambda: 1.0
     # loss: 蒸馏loss算法；可输入多个loss，支持不同节点之间使用不同的loss算法
     loss: l2
-    # node: 蒸馏节点，即某层输出的变量名称，可以选择：1. 要蒸馏的学生网络节点;
-    #                    2. 包含教师网络节点和对应的学生网络节点，
-    #                    其中教师网络节点名称将在程序中自动添加 “teacher_” 前缀；
+    # node: 蒸馏节点，即某层输出的变量名称，可以选择：
+    #                    1. 使用自蒸馏的话，蒸馏结点仅包含学生网络节点即可, 支持多节点蒸馏;
+    #                    2. 使用其他蒸馏的话，蒸馏节点需要包含教师网络节点和对应的学生网络节点,
     #                    可输入多个node_pair，支持多节点蒸馏。
     node:
     - relu_30.tmp_0
@@ -48,7 +52,7 @@ Distillation:
 
 结构化稀疏参数设置如下所示：
 ```yaml
-Prune:
+ChannelPrune:
   # pruned_ratio: 裁剪比例
   pruned_ratio: 0.25
   # prune_params_name: 需要裁剪的参数名字
@@ -63,7 +67,7 @@ Prune:
 
 半结构化稀疏参数设置如下所示：
 ```yaml
-ASP:
+ASPPrune:
   # prune_params_name: 需要裁剪的参数名字
   prune_params_name:
   - conv1_weights
@@ -74,7 +78,7 @@ ASP:
 针对Transformer结构的结构化剪枝参数设置如下所示：
 ```yaml
 TransformerPrune:
-  # pruned_ratio: 裁剪比例
+  # pruned_ratio: 每个全链接层的裁剪比例
   pruned_ratio: 0.25
 ```
 

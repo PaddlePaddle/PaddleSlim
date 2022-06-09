@@ -84,15 +84,21 @@ class AutoCompression:
                 2. set ``Quantization`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
                     The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
                     The HyperParameterOptimization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L73`_ .
-                3. set ``Prune`` and ``Distillation`` to get prune and distillation compress config.
-                    The Prune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                3. set ``ChannelPrune`` and ``Distillation`` to get channel prune and distillation compress config.
+                    The ChannelPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                4. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
+                4. set ``ASPPrune`` and ``Distillation`` to get asp prune and distillation compress config.
+                    The ASPPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                5. set ``TransformerPrune`` and ``Distillation`` to get transformer prune and distillation compress config.
+                    The TransformerPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                6. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
                     The UnstructurePrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L91`_ .
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                5. set ``Distillation`` to use one teacher modol to distillation student model.
+                7. set ``Distillation`` to use one teacher modol to distillation student model.
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                6. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
+                8. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
                     The MultiTeacherDistillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L56`_ .
 
                 If set to None, will choose a strategy automatically. Default: None.
@@ -147,6 +153,8 @@ class AutoCompression:
 
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
+        #print(self._strategy, self._config[0].__dict__)
+        #sys.exit()
 
         # If train_config is None, set default train_config
         if self.train_config is None:
@@ -176,8 +184,8 @@ class AutoCompression:
         for strategy_c in strategy_config:
             quant_config = strategy_c.get("Quantization", None)
             hpo_config = strategy_c.get("HyperParameterOptimization", None)
-            prune_config = strategy_c.get("Prune", None)
-            asp_config = strategy_c.get("ASP", None)
+            prune_config = strategy_c.get("ChannelPrune", None)
+            asp_config = strategy_c.get("ASPPrune", None)
             transformer_prune_config = strategy_c.get("TransformerPrune", None)
             unstructure_prune_config = strategy_c.get("UnstructurePrune", None)
             single_teacher_distill_config = strategy_c.get("Distillation", None)
@@ -207,12 +215,12 @@ class AutoCompression:
 
             ### case3: prune_config & distill config
             elif prune_config is not None and self._distill_config is not None:
-                strategy.append('prune_dis')
+                strategy.append('channel_prune_dis')
                 config.append(merge_config(prune_config, self._distill_config))
 
             ### case4: asp_config & distill config
             elif asp_config is not None and self._distill_config is not None:
-                strategy.append('asp_dis')
+                strategy.append('asp_prune_dis')
                 config.append(merge_config(asp_config, self._distill_config))
 
             ### case5: transformer_prune_config & distill config
@@ -339,7 +347,7 @@ class AutoCompression:
                 train_program_info.optimizer.amp_init(
                     self._places, scope=paddle.static.global_scope())
 
-        if 'prune_algo' in config_dict and config_dict['prune_algo'] == 'asp':
+        if 'asp' in strategy:
             ### prune weight in scope
             self._pruner.prune_model(train_program_info.program)
 
@@ -482,20 +490,20 @@ class AutoCompression:
 
             ### used to check whether the dataloader is right
             self.metric_before_compressed = None
-            ###if self.eval_function is not None and self.train_config.origin_metric is not None:
-            ###    _logger.info("start to test metric before compress")
-            ###    metric = self.eval_function(self._exe, inference_program,
-            ###                                feed_target_names, fetch_targets)
-            ###    _logger.info("metric of compressed model is: {}".format(metric))
-            ###    buf = 0.05
-            ###    if metric < (float(self.train_config.origin_metric) - buf) or \
-            ###            metric > (float(self.train_config.origin_metric) + buf):
-            ###        raise RuntimeError("target metric of pretrained model is {}, \
-            ###              but now is {}, Please check the format of evaluation dataset \
-            ###              or check the origin_metric in train_config"
-            ###                                                         .format(\
-            ###              self.train_config.origin_metric, metric))
-            ###    self.metric_before_compressed = metric
+            if self.eval_function is not None and self.train_config.origin_metric is not None:
+                _logger.info("start to test metric before compress")
+                metric = self.eval_function(self._exe, inference_program,
+                                            feed_target_names, fetch_targets)
+                _logger.info("metric of compressed model is: {}".format(metric))
+                buf = 0.05
+                if metric < (float(self.train_config.origin_metric) - buf) or \
+                        metric > (float(self.train_config.origin_metric) + buf):
+                    raise RuntimeError("target metric of pretrained model is {}, \
+                          but now is {}, Please check the format of evaluation dataset \
+                          or check the origin_metric in train_config"
+                                                                     .format(\
+                          self.train_config.origin_metric, metric))
+                self.metric_before_compressed = metric
 
             patterns, default_distill_node_pair, _ = get_patterns(
                 inference_program)

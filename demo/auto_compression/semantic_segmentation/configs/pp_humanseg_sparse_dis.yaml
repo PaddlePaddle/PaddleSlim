@@ -6,9 +6,7 @@ Distillation:
   loss: l2
   node: 
   - batch_norm_47.tmp_2
-  teacher_model_dir: ./ppseg_lite_portrait_398x224_with_softmax
-  teacher_model_filename: model.pdmodel
-  teacher_params_filename: model.pdiparams
+
 UnstructurePrune:
   prune_strategy: gmp
   prune_mode: ratio
@@ -22,6 +20,7 @@ UnstructurePrune:
     initial_ratio: 0.15
   prune_params_type: conv1x1_only
   local_sparsity: True
+
 TrainConfig:
   epochs: 14
   eval_iter: 400

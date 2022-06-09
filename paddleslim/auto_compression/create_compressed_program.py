@@ -339,11 +339,8 @@ def build_quant_program(executor, place, config, train_program_info,
     scope = paddle.static.global_scope()
 
     assert isinstance(config, dict), "quant config must be dict"
-    default_config = _quant_config_default
-    default_config.update(config)
-    config = _parse_configs(default_config)
 
-    use_pact = config["use_pact"]
+    use_pact = config.pop("use_pact")
     if use_pact:
         act_preprocess_func = pact
         optimizer_func = get_pact_optimizer
@@ -420,7 +417,7 @@ def build_prune_program(executor,
                 place=place,
                 local_sparsity=config['local_sparsity'],
                 configs=config['gmp_config'])
-    elif strategy.startswith('prune'):
+    elif strategy.startswith('channel_prune'):
         from ..prune import Pruner
         pruner = Pruner(config["criterion"])
         params = []

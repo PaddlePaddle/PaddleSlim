@@ -15,19 +15,10 @@ Distillation:
   - conv2d_106.tmp_1
   - conv2d_113.tmp_1
   - conv2d_119.tmp_1
-  teacher_model_dir: ./yolov5_inference_model/
-  teacher_model_filename: model.pdmodel
-  teacher_params_filename: model.pdiparams
 
 Quantization:
   use_pact: true
-  activation_bits: 8
-  weight_bits: 8
   activation_quantize_type: 'range_abs_max'
-  weight_quantize_type: 'channel_wise_abs_max'
-  is_full_quantize: false
-  not_quant_pattern:
-  - skip_quant
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
