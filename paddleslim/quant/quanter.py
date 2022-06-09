@@ -373,6 +373,7 @@ def quant_post_static(
         weight_quantize_type='channel_wise_abs_max',
         optimize_model=False,
         onnx_format=False,
+        skip_tensor_list=None,
         is_use_cache_file=False,
         cache_dir="./temp_post_training"):
     """
@@ -444,6 +445,8 @@ def quant_post_static(
         optimize_model(bool, optional): If set optimize_model as True, it applies some 
                 passes to optimize the model before quantization. So far, the place of
                 executor must be cpu it supports fusing batch_norm into convs.
+        onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is False.
+        skip_tensor_list(list): List of skip quant tensor name.
         is_use_cache_file(bool): This param is deprecated.
         cache_dir(str): This param is deprecated.
     
@@ -472,6 +475,7 @@ def quant_post_static(
         activation_quantize_type=activation_quantize_type,
         weight_quantize_type=weight_quantize_type,
         onnx_format=onnx_format,
+        skip_tensor_list=skip_tensor_list,
         optimize_model=optimize_model)
     post_training_quantization.quantize()
     post_training_quantization.save_quantized_model(

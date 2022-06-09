@@ -16,7 +16,7 @@ import os
 import logging
 import platform
 from ..common import get_logger
-from .utils.predict import predict_compressed_model
+from .utils.predict import predict_compressed_model, with_variable_shape
 from .strategy_config import *
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -151,6 +151,16 @@ def prepare_strategy(executor,
     """ prepare compression config automatically """
     final_strategy = None
 
+    if with_variable_shape(
+            model_dir,
+            model_filename=model_filename,
+            params_filename=params_filename):
+        deploy_hardware = None
+        _logger.warning(
+            "The model's inputs have variable shape. "
+            "And the latency predictor doesn't support variable shape. "
+            "So auto tuning will be skipped and a default strategy will be chosen."
+        )
     ### use hardware latency tabel if support
     if deploy_hardware is not None:
         compressed_time_dict = predict_compressed_model(
