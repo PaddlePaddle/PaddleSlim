@@ -18,8 +18,6 @@ import sys
 import numpy as np
 import inspect
 import shutil
-from collections import namedtuple
-from collections.abc import Iterable
 from time import gmtime, strftime
 import platform
 import paddle
@@ -142,8 +140,9 @@ class AutoCompression:
 
         if self.strategy_config is None:
             strategy_config = prepare_strategy(
-                self.model_dir, self.model_filename, self.params_filename,
-                self.target_speedup, self.deploy_hardware, self.model_type)
+                self._exe, self._places, self.model_dir, self.model_filename,
+                self.params_filename, self.target_speedup, self.deploy_hardware,
+                self.model_type)
             self.strategy_config = strategy_config
         elif isinstance(self.strategy_config, dict):
             self.strategy_config = [self.strategy_config]
@@ -287,8 +286,14 @@ class AutoCompression:
             _logger.info(
                 "Calculating the iterations per epoch……(It will take some time)")
             # NOTE:XXX: This way of calculating the iters needs to be improved.
-            iters_per_epoch = len(list(self.train_dataloader()))
-            total_iters = self.train_config.epochs * iters_per_epoch
+            if self.train_config.epochs:
+                iters_per_epoch = len(list(self.train_dataloader()))
+                total_iters = self.train_config.epochs * iters_per_epoch
+            elif self.train_config.train_iter:
+                total_iters = self.train_config.train_iter
+            else:
+                raise RuntimeError(
+                    'train_config must has `epochs` or `train_iter` field.')
             config_dict['gmp_config'] = {
                 'stable_iterations': 0,
                 'pruning_iterations': 0.45 * total_iters,
@@ -412,7 +417,7 @@ class AutoCompression:
             shutil.move(tmp_params_file, final_params_file)
             shutil.rmtree(self.tmp_dir)
             _logger.info(
-                "==> Finished the ACT process and the final model is saved in:{}".
+                "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))
         os._exit(0)
 
@@ -520,7 +525,8 @@ class AutoCompression:
 
     def _start_train(self, train_program_info, test_program_info, strategy):
         best_metric = -1.0
-        for epoch_id in range(self.train_config.epochs):
+        total_epochs = self.train_config.epochs if self.train_config.epochs else 1
+        for epoch_id in range(total_epochs):
             for batch_id, data in enumerate(self.train_dataloader()):
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
@@ -573,6 +579,8 @@ class AutoCompression:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
+                if self.train_config.train_iter and batch_id >= self.train_config.train_iter:
+                    break
 
         if 'unstructure' in self._strategy or self.train_config.sparse_model:
             self._pruner.update_params()

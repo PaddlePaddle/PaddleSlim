@@ -21,7 +21,7 @@ Quantization:
   - depthwise_conv2d
 
 TrainConfig:
-  epochs: 1
+  train_iter: 3000
   eval_iter: 1000
   learning_rate: 0.0001
   optimizer_builder:

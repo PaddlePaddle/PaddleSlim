@@ -222,6 +222,7 @@ class UnstructurePrune:
 class TrainConfig:
     def __init__(self,
                  epochs=3,
+                 train_iter=4000,
                  learning_rate=0.02,
                  optimizer_builder={'optimizer': 'SGD'},
                  eval_iter=1000,
@@ -237,8 +238,26 @@ class TrainConfig:
         Train Config.
         Args:
             epochs(int): The number of total epochs. Default: 3.
-            learning_rate(float|dict):
-            optimizer_builder(str|dict):
+            train_iter(int):  Training total iteration, `epochs` or `train_iter` only need to set one. Default: 4000.
+            learning_rate(float|dict): learning rate in the training. If set dict, the detailed description of learning_rate is as blow: 
+              .. code-block:: python
+                     
+                  'type'(str) # the class name of learning rate decay, can reference in paddle.optimizer.lr.
+              ..
+              other keys in the learning_rate depend on the parameters in the class of learning rate decay. 
+              Such as, if you want to use ``PiecewiseDecay``, need to set learning_rate like: 
+              {'type': PiecewiseDecay, 'boundaries': [4500], 'values': [0.005, 0.0005]}.
+            optimizer_builder(str|dict): optimizer in th training. If set dict, the detailed description of optimizer_builder is as blow:
+              .. code-block:: python
+                     
+                  'optimizer'(dict) # the 'type' in the optimizer need to be the class name in the paddle.optimizer,  
+                                      other key of optimzer depend on the parameters in the class.
+                  'weight_decay(float, optional)' # weight decay in the training.
+                  'regularizer(dict)': # the 'type' in the regularizer need to be the class name in the paddle.regularizer, 
+                                         other key of optimzer depend on the parameters in the class.
+                  'grad_clip(dict)': # the 'type' in the grad_clip need to be the class name in the paddle.nn, such as: 'ClipGradByGlobalNorm',
+                                     other key of grad_clip depend on the parameters in the class.
+              ..
             eval_iter(int): Test period in batches. Default: 1000.
             logging_iter(int): Log period in batches. Default: 10.
             origin_metric(float, optional): The Metric of model before compress, used to check whether the dataloader is correct if is not None. Default: None.
@@ -267,6 +286,7 @@ class TrainConfig:
             sparse_model(bool, optional): Set sparse_model to ``True`` to remove mask tensor when the compress strategy is unstructure prune. Default: False.
         """
         self.epochs = epochs
+        self.train_iter = train_iter
         self.learning_rate = learning_rate
         self.optimizer_builder = optimizer_builder
         self.eval_iter = eval_iter
