@@ -116,7 +116,10 @@ class AutoCompression:
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
-        self.eval_dataloader = eval_dataloader if eval_dataloader is not None else train_dataloader
+
+        if eval_dataloader is None:
+            eval_dataloader = self._get_eval_dataloader(train_dataloader)
+        self.eval_dataloader = eval_dataloader
 
         paddle.enable_static()
 
@@ -151,6 +154,17 @@ class AutoCompression:
         if self.train_config is None:
             self.train_config = create_train_config(self.strategy_config,
                                                     self.model_type)
+
+    def _get_eval_dataloader(self, train_dataloader):
+        def _gen():
+            len_loader = len(list(train_dataloader()))
+            ### max eval_dataloader is 5000 if use train_dataloader as eval_dataloader
+            slice_len = min(5000, len_loader)
+            ret = list(itertools.islice(train_dataloader(), slice_len))
+            for i in ret:
+                yield i
+
+        return _gen
 
     def _prepare_envs(self):
         devices = paddle.device.get_device().split(':')[0]
