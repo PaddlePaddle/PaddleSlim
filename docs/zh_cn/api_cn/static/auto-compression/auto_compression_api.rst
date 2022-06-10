@@ -27,10 +27,12 @@ AutoCompression
             目前关键字只支持以下几种组合策略或者单策略配置:
                          1) ``Quantization`` & ``HyperParameterOptimization``: 离线量化超参搜索策略;
                          2) ``Quantization`` & ``Distillation``: 量化训练和蒸馏的策略;
-                         3) ``Prune`` & ``Distillation``: 结构化剪枝和蒸馏的策略;
-                         4) ``UnstructurePrune`` & ``Distillation``: 非结构化稀疏和蒸馏的策略;
-                         5) ``Distillation``: 单独单蒸馏策略;
-                         6) ``MultiTeacherDistillation``: 多teacher蒸馏策略。
+                         3) ``ChannelPrune`` & ``Distillation``: 结构化剪枝和蒸馏的策略;
+                         4) ``ASPPrune`` & ``Distillation``: ASP结构化剪枝和蒸馏的策略;
+                         5) ``TransformerPrune`` & ``Distillation``: Transformer结构化剪枝和蒸馏的策略;
+                         6) ``UnstructurePrune`` & ``Distillation``: 非结构化稀疏和蒸馏的策略;
+                         7) ``Distillation``: 单独单蒸馏策略;
+                         8) ``MultiTeacherDistillation``: 多teacher蒸馏策略。
             设置为None的话会自动的选择策略去做压缩。默认：None。
 - **eval_callback(function, 可选)** - eval回调函数，使用回调函数判断模型训练情况, 回调函数的写法参考： `<//github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/auto-compression/custom_function.rst>`_ 。 ``eval_callback`` 和 ``eval_dataloader`` 不能都设置为None。默认：None。
 - **eval_dataloader(paddle.io.Dataloader, 可选)** - 如果传入测试数据迭代器，则使用 ``EMD`` 距离判断压缩前后模型之间的差别，目前仅支持离线量化超参搜索使用这种方式判断压缩前后模型的压缩。
@@ -62,11 +64,11 @@ AutoCompression
 
    default_distill_config = {
 
-       "distill_loss": args.distill_loss,
+       "loss": args.loss,
 
-       "distill_node_pair": args.distill_node_pair,
+       "node": args.node,
 
-       "distill_lambda": args.distill_lambda,
+       "alpha": args.alpha,
 
        "teacher_model_dir": args.teacher_model_dir,
 
@@ -84,7 +86,7 @@ AutoCompression
 
                         strategy_config="Quantization": Quantization(**default_ptq_config), 
 
-                        "HyperParameterOptimization": HyperParameterOptimization(**default_hpo_config)}, \
+                        "Distillation": HyperParameterOptimization(**default_distill_config)}, \
 
                         train_config=None, train_dataloader=train_dataloader, eval_callback=eval_dataloader,devices='gpu')
 
@@ -104,12 +106,14 @@ TrainConfig
 **参数：**
 
 - **epochs(int)** - 训练的轮数，表明当前数据集需要训练几次。
-- **learning_rate(float|LRScheduler)** - 模型优化过程中的学习率。
-- **optimizer(str)** - 使用的优化器，需要是 ``paddle.optimizer`` 中优化器的名字, 例如: ``SGD`` 。
-- **optim_args(dict)** - 优化器参数。可以指定以下参数：
-                        ``grid_clip`` ，指名使用的梯度裁剪的方法，需要是 ``paddle.nn`` 中梯度裁剪的类的名字，例如:  ``ClipGradByValue`` 等。 
-                        ``grad_clip_args`` ，梯度裁剪方法中的参数，例如：梯度裁剪选择的方式为 ``ClipGradByValue`` ，那么 ``grad_clip_args`` 可以设置的参数为 ``max`` 和 ``min`` ，参考: `ClipGradByValue <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api/paddle/nn/ClipGradByValue_cn.html#clipgradbyvalue>`_ 。
-                        其他优化器中可能需要的参数，例如: ``beta1``, ``beta2``, ``apply_decay_param_fun`` 等，参考: `AdamW <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api/paddle/optimizer/AdamW_cn.html#adamw>`_ 。
+- **train_iter(int, optional)** 训练的迭代次数，表明需要迭代多少批次的数据，和 ``epoch`` 之间仅需要设置一个。
+- **learning_rate(float|dict)** - 模型优化过程中的学习率, 如果是dict类型，则dict的关键字如下： ``type``: 学习率策略的类名，可参考 ``paddle.optimizer.lr`` 中的类设置,
+                                  其它关键字根据实际调用的学习率的策略中的参数设置。
+- **optimizer_builder(dict)** - 使用的优化器和相关配置。dict中对应的关键字如下：
+                        ``optimizer(dict)``: 指定关键字 ``type`` 需要是 ``paddle.optimizer`` 中优化器的类名, 例如: ``SGD`` ，其他关键字根据具体使用的优化器中的参数设置。
+                        ``weight_decay(float, optional)``: 压缩训练过程中的参数衰退。
+                        ``regularizer(dict)``: 指定关键字 ``type`` 需要是 ``paddle.regularizer`` 中的权重衰减正则类名，其他关键字根据具体使用的类中的参数设置。
+                        ``grid_clip`` ，指名使用的梯度裁剪的方法，需要是 ``paddle.nn`` 中梯度裁剪的类的名字，例如:  ``ClipGradByValue`` 等，其他关键字根据具体使用的类中的参数设置。 
 
 - **eval_iter(int)** - 训练多少batch的数据进行一次测试。
 - **logging_iter(int)** - 训练多少batch的数据进行一次打印。
@@ -124,7 +128,7 @@ TrainConfig
                                      参考接口： `amp_config <https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#amp_configs>`_ 来进行相对应的参数配置。
 - **recompute_config(dict, optional)** - 使用fleet api的前提下可以使用recompute显存优化逻辑。参数按照fleet 接口中所描述的进行配置： `recompute_configs <https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#recompute_configs>`_ 。
 - **sharding_config(dict, optional)** - 使用fleet api的前提下可以使用sharding 策略。参数按照fleet 接口中所描述的进行配置： `sharding_configs <https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#sharding_configs>`_ 。
-
+- **sparse_model(bool, optional)** - 设置 ``sparse_model`` 为 True, 可以移出非结构化稀疏产出的模型中多余的mask tensor的变量，默认: False.
 
 Quantization
 ----------
@@ -147,14 +151,13 @@ Distillation
 
 **参数：**
 
-- **distill_loss(str|list[str])** - 蒸馏损失名字，可以设置的损失类型为paddleslim中支持的蒸馏损失，可选的损失函数有: ``fsp_loss``, ``l2_loss``, ``soft_label_loss`` 。如果您需要其他损失函数，可以暂时通过向 `蒸馏损失文件<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py>`_ z中添加相应的损失函数计算，或者通过提issue的方式我们来协助解决。
+- **loss(str|list[str])** - 蒸馏损失名字，可以设置的损失类型为paddleslim中支持的蒸馏损失，可选的损失函数有: ``fsp``, ``l2``, ``soft_label`` 。如果您需要其他损失函数，可以暂时通过向 `蒸馏损失文件<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py>`_ z中添加相应的损失函数计算，或者通过提issue的方式我们来协助解决。
 。
-- **distill_node_pair(list[str])** - 蒸馏节点名字列表，每两个节点组成一对，分别属于教师模型和学生模型。
-- **distill_lambda(float|list[float])** - 每一个蒸馏损失的权重，长度需要和 ``distill_loss`` 的长度保持一致。
+- **node(list[str])** - 蒸馏节点名字列表，可以选择：1. 使用自蒸馏的话，蒸馏结点仅包含学生网络节点即可, 支持多节点蒸馏; 2. 使用其他蒸馏的话，蒸馏节点需要包含教师网络节点和对应的学生网络节点, 每两个节点组成一对，分别属于教师模型和学生模型。
+- **alpha(float|list[float])** - 每一个蒸馏损失的权重，长度需要和 ``loss`` 的长度保持一致。
 - **teacher_model_dir(str)** - 教师模型的目录。
 - **teacher_model_filename(str)** - 教师模型的模型文件名字。
 - **teacher_params_filename(str)** - 教师模型的参数文件名字。
-- **merge_feed(bool)** - 蒸馏过程是否需要共享同一个输入数据。默认： ``True`` 。
 
 
 MultiTeacherDistillation
@@ -164,14 +167,13 @@ MultiTeacherDistillation
 
 **参数：**
 
-- **distill_loss(list[str])** - 蒸馏损失名字，可以设置的损失类型为paddleslim中支持的蒸馏损失，可选的损失函数有: ``fsp_loss``, ``l2_loss``, ``soft_label_loss`` 。如果您需要其他损失函数，可以暂时通过向 `蒸馏损失文件<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py>`_ z中添加相应的损失函数计算，或者通过提issue的方式我们来协助解决。
+- **loss(list[str])** - 蒸馏损失名字，可以设置的损失类型为paddleslim中支持的蒸馏损失，可选的损失函数有: ``fsp``, ``l2``, ``soft_label`` 。如果您需要其他损失函数，可以暂时通过向 `蒸馏损失文件<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py>`_ z中添加相应的损失函数计算，或者通过提issue的方式我们来协助解决。
 。
-- **distill_node_pair(list[list[str]])** - 蒸馏节点名字嵌套列表，教师模型的个数和外部列表的长度需要保持一致。每一个列表代表一个教师模型和学生模型直接的蒸馏节点，其中每两个节点组成一对，分别属于教师模型和学生模型。
-- **distill_lambda(list[float])** - 每一个蒸馏损失的权重，长度需要和 ``distill_loss`` 的长度保持一致。
+- **node(list[list[str]])** - 蒸馏节点名字嵌套列表，教师模型的个数和外部列表的长度需要保持一致。每一个列表代表一个教师模型和学生模型直接的蒸馏节点，其中每两个节点组成一对，分别属于教师模型和学生模型。
+- **alpha(list[float])** - 每一个蒸馏损失的权重，长度需要和 ``distill_loss`` 的长度保持一致。
 - **teacher_model_dir(list[str])** - 教师模型的目录列表。
 - **teacher_model_filename(list[str])** - 教师模型的模型文件名字列表。
 - **teacher_params_filename(list[str])** - 教师模型的参数文件名字列表。
-- **merge_feed(bool)** - 蒸馏过程是否需要共享同一个输入数据。默认： ``True`` 。
 
 
 HyperParameterOptimization

@@ -16,7 +16,7 @@ sys.path.append("../")
 import unittest
 import paddle
 from static_case import StaticCase
-from paddleslim.dist import merge, l2_loss
+from paddleslim.dist import merge, l2
 from layers import conv_bn_layer
 
 
@@ -48,8 +48,8 @@ class TestL2Loss(StaticCase):
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
                 merged_ops.append(op.type)
-        distill_loss = l2_loss('teacher_conv6_bn_output.tmp_2',
-                               'conv2_bn_output.tmp_2')
+        distill_loss = l2('teacher_conv6_bn_output.tmp_2',
+                          'conv2_bn_output.tmp_2')
         loss_ops = []
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:

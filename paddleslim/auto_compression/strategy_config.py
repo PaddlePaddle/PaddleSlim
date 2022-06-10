@@ -221,8 +221,8 @@ class UnstructurePrune:
 
 class TrainConfig:
     def __init__(self,
-                 epochs=3,
-                 train_iter=4000,
+                 epochs=None,
+                 train_iter=None,
                  learning_rate=0.02,
                  optimizer_builder={'optimizer': 'SGD'},
                  eval_iter=1000,
@@ -237,8 +237,8 @@ class TrainConfig:
         """
         Train Config.
         Args:
-            epochs(int): The number of total epochs. Default: 3.
-            train_iter(int):  Training total iteration, `epochs` or `train_iter` only need to set one. Default: 4000.
+            epochs(int): The number of total epochs. Default: None.
+            train_iter(int):  Training total iteration, `epochs` or `train_iter` only need to set one. Default: None.
             learning_rate(float|dict): learning rate in the training. If set dict, the detailed description of learning_rate is as blow: 
               .. code-block:: python
                      

@@ -34,7 +34,7 @@ Distillation:
     # node: 蒸馏节点，即某层输出的变量名称，可以选择：
     #                    1. 使用自蒸馏的话，蒸馏结点仅包含学生网络节点即可, 支持多节点蒸馏;
     #                    2. 使用其他蒸馏的话，蒸馏节点需要包含教师网络节点和对应的学生网络节点,
-    #                    可输入多个node_pair，支持多节点蒸馏。
+    #                    每两个节点组成一对，分别属于教师模型和学生模型，支持多节点蒸馏。
     node:
     - relu_30.tmp_0
     # teacher_model_dir: 保存预测模型文件和预测模型参数文件的文件夹名称
@@ -131,7 +131,8 @@ TrainConfig:
   eval_iter: 400
   learning_rate: 5.0e-03
   optimizer_builder:
-    optimizer: SGD
+    optimizer:
+      type: SGD
     weight_decay: 0.0005
 
 ```

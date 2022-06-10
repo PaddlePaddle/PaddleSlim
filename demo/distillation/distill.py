@@ -13,7 +13,7 @@ import numpy as np
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments, _download, _decompress
-from paddleslim.dist import merge, l2_loss, soft_label_loss, fsp_loss
+from paddleslim.dist import merge, l2, soft_label, fsp
 
 logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
 _logger = logging.getLogger(__name__)
@@ -173,8 +173,8 @@ def compress(args):
     merge(teacher_program, student_program, data_name_map, place)
 
     with paddle.static.program_guard(student_program, s_startup):
-        distill_loss = soft_label_loss("teacher_fc_0.tmp_0", "fc_0.tmp_0",
-                                       student_program)
+        distill_loss = soft_label("teacher_fc_0.tmp_0", "fc_0.tmp_0",
+                                  student_program)
         loss = avg_cost + distill_loss
         lr, opt = create_optimizer(args)
         opt.minimize(loss)

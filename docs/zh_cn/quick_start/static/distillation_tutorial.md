@@ -92,7 +92,7 @@ merge操作将student_program和teacher_program中的所有Tensor和Op都将被�
 data_name_map = {'image': 'image'}
 main = slim.dist.merge(teacher_program, student_program, data_name_map, paddle.CPUPlace())
 with paddle.static.program_guard(student_program, student_startup):
-    l2_loss = slim.dist.l2_loss('teacher_bn5c_branch2b.output.1.tmp_3', 'depthwise_conv2d_11.tmp_0', student_program)
+    l2_loss = slim.dist.l2('teacher_bn5c_branch2b.output.1.tmp_3', 'depthwise_conv2d_11.tmp_0', student_program)
     loss = l2_loss + avg_cost
     opt = paddle.optimizer.Momentum(0.01, 0.9)
     opt.minimize(loss)
