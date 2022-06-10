@@ -115,9 +115,10 @@ TrainConfig:
   epochs: 6
   eval_iter: 1070
   learning_rate: 2.0e-5
-  optim_args:
+  optimizer_builder:
+    optimizer:
+      type: AdamW
     weight_decay: 0.01
-  optimizer: AdamW
   origin_metric: 0.7403
 ```
 
