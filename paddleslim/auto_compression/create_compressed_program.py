@@ -46,10 +46,13 @@ def _create_lr_scheduler(train_config):
 def _create_optimizer(train_config):
     """create optimizer"""
 
+    if 'optimizer_builder' not in train_config:
+        train_config['optimizer_builder'] = {'optimizer': {'type': 'SGD'}}
+
     optimizer_builder = train_config['optimizer_builder']
 
     if 'grad_clip' in optimizer_builder:
-        g_clip_params = optimizer_builder.pop('grad_clip')
+        g_clip_params = optimizer_builder['grad_clip']
         g_clip_type = g_clip_params.pop('type')
         grad_clip = getattr(paddle.nn, g_clip_type)(**g_clip_params)
     else:
@@ -57,7 +60,7 @@ def _create_optimizer(train_config):
 
     ### build regularization
     if 'regularizer' in optimizer_builder:
-        reg_params = optimizer_builder.pop('regularizer')
+        reg_params = optimizer_builder['regularizer']
         reg_type = reg_params.pop('type')
         reg = getattr(regularizer, reg_type)(**reg_params)
     elif 'weight_decay' in optimizer_builder:
@@ -69,7 +72,7 @@ def _create_optimizer(train_config):
     lr = _create_lr_scheduler(train_config)
 
     ### build optimizer
-    optim_params = optimizer_builder.pop('optimizer')
+    optim_params = optimizer_builder['optimizer']
     optim_type = optim_params.pop('type')
     opt = getattr(optimizer, optim_type)(learning_rate=lr,
                                          grad_clip=grad_clip,
@@ -84,13 +87,12 @@ def _get_distill_node(student_program, config):
         return None
 
     ### the type of node is list or list(list)
-    print(node)
-    print(node[0])
     if isinstance(node[0], list):
         test_node = node[0][0]
     else:
         test_node = node[0]
-    if student_program.global_block().var(test_node) is not None:
+    try:
+        test_var = student_program.global_block().var(test_node)
         distill_node_pair = []
         if isinstance(node[0], list):
             for n_list in node:
@@ -104,7 +106,7 @@ def _get_distill_node(student_program, config):
                 distill_node_pair.append('teacher_' + n)
                 distill_node_pair.append(n)
         return distill_node_pair
-    else:
+    except:
         return node
 
 

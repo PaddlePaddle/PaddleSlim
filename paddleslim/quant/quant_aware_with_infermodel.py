@@ -57,7 +57,7 @@ _train_config_default = {
         and the teacher node and student node are arranged in pairs.
         for example, ["teacher_fc_0.tmp_0", "fc_0.tmp_0", "teacher_batch_norm_24.tmp_4", "batch_norm_24.tmp_4"]
     """
-    "distill_node_pair": None
+    "node": None
 }
 
 
@@ -91,12 +91,10 @@ def _parse_train_configs(train_config):
         "'teacher_model_path_prefix' must both be string"
     assert isinstance(configs['model_path_prefix'], str), \
         "'model_path_prefix' must both be str"
-    assert isinstance(configs['distill_node_pair'], list), \
-        "'distill_node_pair' must both be list"
-    assert len(configs['distill_node_pair']) > 0, \
-        "'distill_node_pair' not configured with distillation nodes"
-    assert len(configs['distill_node_pair']) % 2 == 0, \
-        "'distill_node_pair' distillation nodes need to be configured in pairs"
+    assert isinstance(configs['node'], list), \
+        "'node' must both be list"
+    assert len(configs['node']) > 0, \
+        "'node' not configured with distillation nodes"
     return train_config
 
 
@@ -143,7 +141,7 @@ def quant_aware_with_infermodel(executor,
         train_config(dict):train aware configs, include num_epoch, save_iter_step, learning_rate,
                 weight_decay, use_pact, quant_model_ckpt_path,
                 model_path_prefix, teacher_model_path_prefix,
-                distill_node_pair(teacher_node_name1, node_name1, teacher_node_name2, teacher_node_name2, ...)
+                node(node_name1, node_name2, ...)
         test_callback(callback function): callback function include two params: compiled test quant program and checkpoint save filename.
                 user can implement test logic.
     Returns:
@@ -261,7 +259,7 @@ def export_quant_infermodel(
         train_config(dict):train aware configs, include num_epoch, save_iter_step, learning_rate,
                 weight_decay, use_pact, quant_model_ckpt_path,
                 model_path_prefix, teacher_model_path_prefix, 
-                distill_node_pair(teacher_node_name1, node_name1, teacher_node_name2, teacher_node_name2, ...)
+                node(node_name1, node_name2, ...)
         checkpoint_path(str): checkpoint path need to export quant infer model.
         export_inference_model_path_prefix(str): export infer model path prefix, storage directory of model + model name (excluding suffix).
     Returns:
