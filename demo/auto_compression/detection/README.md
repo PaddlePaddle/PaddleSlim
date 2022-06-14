@@ -20,23 +20,23 @@
 
 ### PP-YOLOE
 
-| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP32</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
+| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | PP-YOLOE-l |  Base模型 | 640*640  |  50.9   |   11.2  |   7.7ms   |  -  |  [config](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/configs/ppyoloe/ppyoloe_crn_l_300e_coco.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco.tar) |
 | PP-YOLOE-l |  量化+蒸馏 | 640*640  |  50.6   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
 
 - mAP的指标均在COCO val2017数据集中评测得到。
-- PP-YOLOE模型在Tesla V100的GPU环境下测试，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)
+- PP-YOLOE模型在Tesla V100的GPU环境下测试，并且开启TensorRT，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)
 
 ### YOLOv5
-| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP32</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
+| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | YOLOv5s |  Base模型 | 640*640  |  37.4   |   6.0  |   4.9ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov5s_infer.tar) |
 | YOLOv5s |  量化+蒸馏 | 640*640  |  36.5   |   - |   -   |  4.5ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/yolov5s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) |
 
 说明：
 - mAP的指标均在COCO val2017数据集中评测得到。
-- YOLOv5s模型在Tesla V100的GPU环境下测试，测试脚本是[benchmark demo](./infer.py)
+- YOLOv5s模型在Tesla V100的GPU环境下测试，并且开启TensorRT，测试脚本是[benchmark demo](./infer.py)
 - YOLOv5模型源自[ultralytics/yolov5](https://github.com/ultralytics/yolov5)，通过[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)工具转换YOLOv5预测模型步骤：
 
 (1) 安装X2Paddle的1.3.6以上版本；（pip install x2paddle）
