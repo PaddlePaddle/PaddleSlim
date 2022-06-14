@@ -111,6 +111,6 @@ if __name__ == '__main__':
         train_config=train_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function,
-        eval_dataloader=reader_wrapper(eval_reader(data_dir, args.batch_size)), args.input_name)
+        eval_dataloader=reader_wrapper(eval_reader(data_dir, args.batch_size), args.input_name))
 
     ac.compress()

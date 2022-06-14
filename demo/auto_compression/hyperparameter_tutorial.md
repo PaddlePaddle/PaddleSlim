@@ -27,8 +27,8 @@ Quantization:
 蒸馏参数主要设置蒸馏节点（`node`）和教师预测模型路径，如下所示：
 ```yaml
 Distillation:
-    # ahpha: 蒸馏loss所占权重；可输入多个数值，支持不同节点之间使用不同的ahpha值
-    lambda: 1.0
+    # alpha: 蒸馏loss所占权重；可输入多个数值，支持不同节点之间使用不同的ahpha值
+    alpha: 1.0
     # loss: 蒸馏loss算法；可输入多个loss，支持不同节点之间使用不同的loss算法
     loss: l2
     # node: 蒸馏节点，即某层输出的变量名称，可以选择：
