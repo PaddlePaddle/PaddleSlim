@@ -35,7 +35,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 try:
     if platform.system().lower() == 'linux':
-        from ..quant import quant_post_hpo
+        from ..quant import post_quant_hpo
 except Exception as e:
     _logger.warning(e)
 
@@ -409,7 +409,7 @@ class AutoCompression:
 
         if strategy == 'ptq_hpo' and config.max_quant_count == 1 and platform.system(
         ).lower() == 'linux':
-            ptq_loss = quant_post_hpo.g_min_emd_loss
+            ptq_loss = post_quant_hpo.g_min_emd_loss
 
             final_quant_config = get_final_quant_config(ptq_loss)
             if final_quant_config is not None:
@@ -468,7 +468,7 @@ class AutoCompression:
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
 
-            quant_post_hpo.quant_post_hpo(
+            post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
                 model_dir=self.model_dir,
