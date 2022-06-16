@@ -73,6 +73,15 @@ class AutoCompression:
             train_data_loader(Python Generator, Paddle.io.DataLoader): The
                 Generator or Dataloader provides train data, and it could
                 return a batch every time.
+            input_shapes(dict|int): It is used when the model has implicit dimensions except batch size. 
+                If it is a dict, the key is the name of input and the value is the shape. 
+                Given the input shape of input "X" is [-1, 3, -1, -1] which means the batch size, hight
+                and width is variable. And the "input_shapes" can be set {"X": [-1, 3, 512, 512]}.
+                If it is a integer, all the implicit dimensions except batch size will be replaced by
+                "input_shapes". Given the "input_shapes==128", the shape [-1, 3, -1, -1] will be
+                converted to [-1, 3, 128, 128]. And the ACT will search compression strategies
+                according to the given input shape. None means keeping the original shapes, then
+                the compression strategies searching may be skipped. Default: None.
             train_config(dict, optional): The train config in the compression process, the key can 
                 reference `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L103>`_ . 
                 Only one strategy(quant_post with hyperparameter optimization) can set train_config 
@@ -145,9 +154,9 @@ class AutoCompression:
 
             infer_shape_model = self.create_tmp_dir(
                 self.final_dir, prefix="infer_shape_model_")
-            self.infer_shape(model_dir, self.model_filename,
-                             self.params_filename, input_shapes,
-                             infer_shape_model)
+            self._infer_shape(model_dir, self.model_filename,
+                              self.params_filename, input_shapes,
+                              infer_shape_model)
             self.model_dir = infer_shape_model
             self.model_filename = "infered_shape.pdmodel"
             self.params_filename = "infered_shape.pdiparams"
@@ -166,16 +175,13 @@ class AutoCompression:
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
 
-        #print(f"self._strategy: {self._strategy}; self._config: {self._config}")
-        #sys.exit(0)
-
         # If train_config is None, set default train_config
         if self.train_config is None:
             self.train_config = create_train_config(self.strategy_config,
                                                     self.model_type)
 
-    def infer_shape(self, model_dir, model_filename, params_filename,
-                    input_shapes, save_path):
+    def _infer_shape(self, model_dir, model_filename, params_filename,
+                     input_shapes, save_path):
         paddle.enable_static()
         exe = paddle.static.Executor(paddle.CPUPlace())
         [inference_program, feed_target_names, fetch_targets] = (
@@ -503,7 +509,6 @@ class AutoCompression:
     def single_strategy_compress(self, strategy, config, strategy_idx):
         # start compress, including train/eval model
         # TODO: add the emd loss of evaluation model.
-        print(f"strategy: {strategy}; config: {config}")
         if strategy == 'quant_post':
             quant_post(
                 self._exe,

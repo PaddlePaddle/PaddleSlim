@@ -162,7 +162,6 @@ def prepare_strategy(executor,
             "And the latency predictor doesn't support variable shape. "
             "So auto tuning will be skipped and a default strategy will be chosen."
         )
-    print(f"deploy_hardware : {deploy_hardware}")
     ### use hardware latency tabel if support
     if deploy_hardware is not None:
         compressed_time_dict = predict_compressed_model(

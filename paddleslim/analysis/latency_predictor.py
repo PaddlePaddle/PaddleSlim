@@ -241,6 +241,5 @@ class TableLatencyPredictor(LatencyPredictor):
             latency = nearest_interpolate(features, data)
             if latency is None:
                 return 0.
-            # assert latency != None, f'{param_key} is not in the table.'
 
         return latency
