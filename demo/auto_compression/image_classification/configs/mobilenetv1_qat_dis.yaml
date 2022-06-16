@@ -1,10 +1,8 @@
 Distillation:
-  distill_lambda: 1.0
-  distill_loss: l2_loss
-  distill_node_pair:
-  - teacher_softmax_0.tmp_0
+  alpha: 1.0
+  loss: l2
+  node:
   - softmax_0.tmp_0
-  merge_feed: true
   teacher_model_dir: MobileNetV1_infer
   teacher_model_filename: inference.pdmodel
   teacher_params_filename: inference.pdiparams
@@ -23,7 +21,8 @@ TrainConfig:
   epochs: 1
   eval_iter: 500
   learning_rate: 0.004
-  optimizer: Momentum
-  optim_args:
+  optimizer_builder:
+    optimizer: 
+      type: Momentum
     weight_decay: 0.00003
   origin_metric: 0.70898

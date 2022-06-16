@@ -49,16 +49,16 @@ merge
                              data_name_map, place)
 
 
-fsp_loss
+fsp
 ---------
 
-.. py:function:: paddleslim.dist.fsp_loss(teacher_var1_name, teacher_var2_name, student_var1_name, student_var2_name, program=None)
+.. py:function:: paddleslim.dist.fsp(teacher_var1_name, teacher_var2_name, student_var1_name, student_var2_name, program=None)
 
 `[源代码] <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py#L90>`_
 
-为program内的teacher var和student var添加fsp_loss.
+为program内的teacher var和student var添加fsp loss.
 
-fsp_loss出自论文 `A Gift from Knowledge Distillation: Fast Optimization, Network Minimization and Transfer Learning <http://openaccess.thecvf.com/content_cvpr_2017/papers/Yim_A_Gift_From_CVPR_2017_paper.pdf>`_
+fsp loss出自论文 `A Gift from Knowledge Distillation: Fast Optimization, Network Minimization and Transfer Learning <http://openaccess.thecvf.com/content_cvpr_2017/papers/Yim_A_Gift_From_CVPR_2017_paper.pdf>`_
 
 **参数：**
 
@@ -70,7 +70,7 @@ fsp_loss出自论文 `A Gift from Knowledge Distillation: Fast Optimization, Net
 
 **返回：**
 
-- (Variable): 由teacher_var1, teacher_var2, student_var1, student_var2组合得到的fsp_loss
+- (Variable): 由teacher_var1, teacher_var2, student_var1, student_var2组合得到的fsp loss
 
 **使用示例：**
 
@@ -96,15 +96,15 @@ fsp_loss出自论文 `A Gift from Knowledge Distillation: Fast Optimization, Net
    place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
    dist.merge(teacher_program, student_program, data_name_map, place)
    with fluid.program_guard(student_program):
-       distillation_loss = dist.fsp_loss('teacher_t1.tmp_1', 'teacher_t2.tmp_1',
+       distillation_loss = dist.fsp('teacher_t1.tmp_1', 'teacher_t2.tmp_1',
                                          's1.tmp_1', 's2.tmp_1', student_program)
 
 
 
-l2_loss
+l2
 ------------
 
-.. py:function:: paddleslim.dist.l2_loss(teacher_var_name, student_var_name, program=None)
+.. py:function:: paddleslim.dist.l2(teacher_var_name, student_var_name, program=None)
 
 `[源代码] <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py#L118>`_
 
@@ -144,15 +144,15 @@ l2_loss
    place = fluid.CUDAPlace(0) if USE_GPU else fluid.CPUPlace()
    dist.merge(teacher_program, student_program, data_name_map, place)
    with fluid.program_guard(student_program):
-       distillation_loss = dist.l2_loss('teacher_t2.tmp_1', 's2.tmp_1',
+       distillation_loss = dist.l2('teacher_t2.tmp_1', 's2.tmp_1',
                                         student_program)
 
 
 
-soft_label_loss
+soft_label
 -------------------
 
-.. py:function:: paddleslim.dist.soft_label_loss(teacher_var_name, student_var_name, program=None, teacher_temperature=1., student_temperature=1.)
+.. py:function:: paddleslim.dist.soft_label(teacher_var_name, student_var_name, program=None, teacher_temperature=1., student_temperature=1.)
 
 `[源代码] <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/dist/single_distiller.py#L136>`_
 
@@ -170,7 +170,7 @@ soft_label_loss出自论文 `Distilling the Knowledge in a Neural Network <https
 
 **返回：**
 
-- (Variable): 由teacher_var, student_var组合得到的soft_label_loss
+- (Variable): 由teacher_var, student_var组合得到的soft label loss
 
 **使用示例：**
 

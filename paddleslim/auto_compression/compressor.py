@@ -36,7 +36,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 
 try:
     if platform.system().lower() == 'linux':
-        from ..quant import quant_post_hpo
+        from ..quant import post_quant_hpo
 except Exception as e:
     _logger.warning(e)
 
@@ -84,23 +84,29 @@ class AutoCompression:
                 2. set ``Quantization`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
                     The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
                     The HyperParameterOptimization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L73`_ .
-                3. set ``Prune`` and ``Distillation`` to get prune and distillation compress config.
-                    The Prune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                3. set ``ChannelPrune`` and ``Distillation`` to get channel prune and distillation compress config.
+                    The ChannelPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                4. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
+                4. set ``ASPPrune`` and ``Distillation`` to get asp prune and distillation compress config.
+                    The ASPPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                5. set ``TransformerPrune`` and ``Distillation`` to get transformer prune and distillation compress config.
+                    The TransformerPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                6. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
                     The UnstructurePrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L91`_ .
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                5. set ``Distillation`` to use one teacher modol to distillation student model.
+                7. set ``Distillation`` to use one teacher modol to distillation student model.
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                6. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
+                8. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
                     The MultiTeacherDistillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L56`_ .
 
                 If set to None, will choose a strategy automatically. Default: None.
             target_speedup(float, optional): target speedup ratio by the way of auto compress. Default: None.
             eval_callback(function, optional): eval function, define by yourself to return the metric of the inference program, can be used to judge the metric of compressed model. The documents of how to write eval function is `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/auto-compression/custom_function.rst`_ . ``eval_callback`` and ``eval_dataloader`` cannot be None at the same time. Dafault: None.
-            eval_dataloader(paddle.io.Dataloader, optional):  The
-                 Generator or Dataloader provides eval data, and it could
-                 return a batch every time. ``eval_callback`` and ``eval_dataloader`` cannot be None at the same time. Dafault: None.
+            eval_dataloader(paddle.io.Dataloader, optional):  The Generator or Dataloader provides eval data, and it could
+                 return a batch every time. If eval_dataloader is None, will take first 5000 sample from train_dataloader 
+                 as eval_dataloader, and the metric of eval_dataloader for reference only. Dafault: None.
             deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
         """
         self.model_dir = model_dir
@@ -118,8 +124,11 @@ class AutoCompression:
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
-        self.eval_dataloader = eval_dataloader if eval_dataloader is not None else train_dataloader
         self.deploy_hardware = deploy_hardware
+
+        if eval_dataloader is None:
+            eval_dataloader = self._get_eval_dataloader(train_dataloader)
+        self.eval_dataloader = eval_dataloader
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
@@ -156,10 +165,10 @@ class AutoCompression:
 
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
-        print(f"self._strategy: {self._strategy}; self._config: {self._config}")
-        sys.exit(0)
-        for strategy, config in zip(self._strategy, self._config):
-            _logger.info(f"strategy: {strategy}; config: {config}")
+
+        #print(f"self._strategy: {self._strategy}; self._config: {self._config}")
+        #sys.exit(0)
+
         # If train_config is None, set default train_config
         if self.train_config is None:
             self.train_config = create_train_config(self.strategy_config,
@@ -216,6 +225,17 @@ class AutoCompression:
             ), f"Hardware should be in supported list {TableLatencyPredictor.hardware_list} but got {value}. Or you can set deploy_hardware None."
         self._deploy_hardware = value
 
+    def _get_eval_dataloader(self, train_dataloader):
+        def _gen():
+            len_loader = len(list(train_dataloader()))
+            ### max eval_dataloader is 5000 if use train_dataloader as eval_dataloader
+            slice_len = min(5000, len_loader)
+            ret = list(itertools.islice(train_dataloader(), slice_len))
+            for i in ret:
+                yield i
+
+        return _gen
+
     def _prepare_envs(self):
         devices = paddle.device.get_device().split(':')[0]
         places = paddle.device._convert_to_place(devices)
@@ -239,14 +259,15 @@ class AutoCompression:
         for strategy_c in strategy_config:
             quant_config = strategy_c.get("Quantization", None)
             hpo_config = strategy_c.get("HyperParameterOptimization", None)
-            prune_config = strategy_c.get("Prune", None)
+            prune_config = strategy_c.get("ChannelPrune", None)
+            asp_config = strategy_c.get("ASPPrune", None)
+            transformer_prune_config = strategy_c.get("TransformerPrune", None)
             unstructure_prune_config = strategy_c.get("UnstructurePrune", None)
             single_teacher_distill_config = strategy_c.get("Distillation", None)
             if single_teacher_distill_config is not None and single_teacher_distill_config.teacher_model_dir is None:
-                single_teacher_distill_config = single_teacher_distill_config._replace(
-                    teacher_model_dir=self.model_dir,
-                    teacher_model_filename=self.model_filename,
-                    teacher_params_filename=self.params_filename)
+                single_teacher_distill_config.teacher_model_dir = self.model_dir
+                single_teacher_distill_config.teacher_model_filename = self.model_filename
+                single_teacher_distill_config.teacher_params_filename = self.params_filename
 
             multi_teacher_distill_config = strategy_c.get(
                 "MultiTeacherDistillation", None)
@@ -269,17 +290,29 @@ class AutoCompression:
 
             ### case3: prune_config & distill config
             elif prune_config is not None and self._distill_config is not None:
-                strategy.append('prune_dis')
+                strategy.append('channel_prune_dis')
                 config.append(merge_config(prune_config, self._distill_config))
 
-            ### case4: unstructure_config & distill config
+            ### case4: asp_config & distill config
+            elif asp_config is not None and self._distill_config is not None:
+                strategy.append('asp_prune_dis')
+                config.append(merge_config(asp_config, self._distill_config))
+
+            ### case5: transformer_prune_config & distill config
+            elif transformer_prune_config is not None and self._distill_config is not None:
+                strategy.append('transformer_prune_dis')
+                config.append(
+                    merge_config(transformer_prune_config,
+                                 self._distill_config))
+
+            ### case6: unstructure_config & distill config
             elif unstructure_prune_config is not None and self._distill_config is not None:
                 strategy.append('unstructure_prune_dis')
                 config.append(
                     merge_config(unstructure_prune_config,
                                  self._distill_config))
 
-            ### case4: distill_config
+            ### case7: distill_config
             elif self._distill_config is not None:
                 if single_teacher_distill_config is not None:
                     strategy.append('single_teacher_dis')
@@ -322,7 +355,7 @@ class AutoCompression:
         train_program_info = ProgramInfo(startup_program, train_program,
                                          feed_target_names, fetch_targets)
 
-        config_dict = dict(config._asdict())
+        config_dict = config.__dict__
         if "prune_strategy" in config_dict and config_dict[
                 "prune_strategy"] == "gmp" and config_dict[
                     'gmp_config'] is None:
@@ -363,7 +396,7 @@ class AutoCompression:
                 self._exe,
                 self._places,
                 config_dict,
-                self.train_config._asdict(),
+                self.train_config.__dict__,
                 train_program_info,
                 pruner=self._pruner,
                 dist_strategy=dist_strategy,
@@ -395,7 +428,7 @@ class AutoCompression:
                 train_program_info.optimizer.amp_init(
                     self._places, scope=paddle.static.global_scope())
 
-        if 'prune_algo' in config_dict and config_dict['prune_algo'] == 'asp':
+        if 'asp' in strategy:
             ### prune weight in scope
             self._pruner.prune_model(train_program_info.program)
 
@@ -433,24 +466,22 @@ class AutoCompression:
         return tmp_dir
 
     def compress(self):
-
         self.tmp_dir = create_tmp_dir(self.final_dir)
-
         for strategy_idx, (
                 strategy,
                 config) in enumerate(zip(self._strategy, self._config)):
             self.single_strategy_compress(strategy, config, strategy_idx)
 
-        # if strategy == 'ptq_hpo' and config.max_quant_count == 1 and platform.system(
-        # ).lower() == 'linux':
-        #     ptq_loss = quant_post_hpo.g_min_emd_loss
+        if strategy == 'ptq_hpo' and config.max_quant_count == 1 and platform.system(
+        ).lower() == 'linux':
+            ptq_loss = post_quant_hpo.g_min_emd_loss
 
-        #     final_quant_config = get_final_quant_config(ptq_loss)
-        #     if final_quant_config is not None:
-        #         quant_strategy, quant_config = self._prepare_strategy(
-        #             final_quant_config)
-        #         self.single_strategy_compress(quant_strategy[0],
-        #                                       quant_config[0], strategy_idx)
+            final_quant_config = get_final_quant_config(ptq_loss)
+            if final_quant_config is not None:
+                quant_strategy, quant_config = self._prepare_strategy(
+                    final_quant_config)
+                self.single_strategy_compress(quant_strategy[0],
+                                              quant_config[0], strategy_idx)
         tmp_model_path = os.path.join(
             self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
         final_model_path = os.path.join(self.final_dir)
@@ -503,7 +534,7 @@ class AutoCompression:
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
 
-            quant_post_hpo.quant_post_hpo(
+            post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
                 model_dir=self.model_dir,

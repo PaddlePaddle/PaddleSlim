@@ -34,7 +34,7 @@ try:
     from .quanter import quant_post, quant_post_only_weight
     from .quant_aware_with_infermodel import quant_aware_with_infermodel, export_quant_infermodel
     if platform.system().lower() == 'linux':
-        from .quant_post_hpo import quant_post_hpo
+        from .post_quant_hpo import quant_post_hpo
     else:
         _logger.warning(
             "post-quant-hpo is not support in system other than linux")

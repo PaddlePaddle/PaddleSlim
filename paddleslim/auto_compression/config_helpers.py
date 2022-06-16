@@ -33,7 +33,7 @@ def load_config(config_path):
 
     compress_config = {}
     for key, value in cfg.items():
-        default_key = eval(key)(**value)
+        default_key = eval(key)(**value) if value is not None else eval(key)()
         compress_config[key] = default_key
 
     if compress_config.get('TrainConfig') != None:

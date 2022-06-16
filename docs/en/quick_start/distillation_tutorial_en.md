@@ -89,7 +89,7 @@ In order to ensure that the data of the teacher network and the student network 
 data_name_map = {'image': 'image'}
 main = slim.dist.merge(teacher_program, student_program, data_name_map, fluid.CPUPlace())
 with fluid.program_guard(student_program, student_startup):
-    l2_loss = slim.dist.l2_loss('teacher_bn5c_branch2b.output.1.tmp_3', 'depthwise_conv2d_11.tmp_0', student_program)
+    l2_loss = slim.dist.l2('teacher_bn5c_branch2b.output.1.tmp_3', 'depthwise_conv2d_11.tmp_0', student_program)
     loss = l2_loss + avg_cost
     opt = fluid.optimizer.Momentum(0.01, 0.9)
     opt.minimize(loss)
