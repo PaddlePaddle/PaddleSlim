@@ -30,6 +30,7 @@ from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
+from .utils.predict import with_variable_shape
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -47,6 +48,7 @@ class AutoCompression:
                  params_filename,
                  save_dir,
                  train_dataloader,
+                 input_shapes=None,
                  train_config=None,
                  strategy_config=None,
                  target_speedup=None,
@@ -127,6 +129,19 @@ class AutoCompression:
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
 
+        if with_variable_shape(
+                self.model_dir,
+                model_filename=model_filename,
+                params_filename=params_filename) and input_shapes is not None:
+
+            infer_shape_model = self.create_tmp_dir(
+                self.final_dir, prefix="infer_shape_model_")
+            self.infer_shape(model_dir, self.model_filename,
+                             self.params_filename, input_shapes,
+                             infer_shape_model)
+            self.model_dir = infer_shape_model
+            self.model_filename = "infered_shape.pdmodel"
+            self.params_filename = "infered_shape.pdiparams"
         if self.strategy_config is None:
             strategy_config = prepare_strategy(
                 self._exe, self._places, self.model_dir, self.model_filename,
@@ -141,13 +156,52 @@ class AutoCompression:
 
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
-
+        print(f"self._strategy: {self._strategy}; self._config: {self._config}")
+        sys.exit(0)
         for strategy, config in zip(self._strategy, self._config):
             _logger.info(f"strategy: {strategy}; config: {config}")
         # If train_config is None, set default train_config
         if self.train_config is None:
             self.train_config = create_train_config(self.strategy_config,
                                                     self.model_type)
+
+    def infer_shape(self, model_dir, model_filename, params_filename,
+                    input_shapes, save_path):
+        paddle.enable_static()
+        exe = paddle.static.Executor(paddle.CPUPlace())
+        [inference_program, feed_target_names, fetch_targets] = (
+            paddle.static.load_inference_model(
+                model_dir,
+                exe,
+                model_filename=model_filename,
+                params_filename=params_filename))
+
+        feed_vars = []
+        for var_ in inference_program.list_vars():
+            if var_.name in feed_target_names:
+                feed_vars.append(var_)
+                if isinstance(input_shapes, dict):
+                    var_.desc.set_shape(input_shapes[var_.name])
+                elif isinstance(input_shapes, int):
+                    shape_ = var_.desc.shape()[:1] + [
+                        i if i > 0 else input_shapes
+                        for i in var_.desc.shape()[1:]
+                    ]
+                    var_.desc.set_shape(shape_)
+                else:
+                    raise TypeError(
+                        'input_shapes should be instance of dict or int.')
+
+        for block in inference_program.blocks:
+            for op in block.ops:
+                if op.type not in ["feed", "fetch"]:
+                    op.desc.infer_shape(block.desc)
+
+        save_path = os.path.join(save_path, "infered_shape")
+        os.makedirs(save_path)
+        paddle.static.save_inference_model(
+            save_path, feed_vars, fetch_targets, exe, program=inference_program)
+        _logger.info(f"Saved model infered shape to {save_path}")
 
     @property
     def deploy_hardware(self):
@@ -369,13 +423,18 @@ class AutoCompression:
         program_info.program = compiled_prog
         return program_info
 
-    def compress(self):
+    def create_tmp_dir(self, base_dir, prefix="tmp"):
         # create a new temp directory in final dir
         s_datetime = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
-        tmp_base_name = "_".join(["tmp", str(os.getpid()), s_datetime])
-        self.tmp_dir = os.path.join(self.final_dir, tmp_base_name)
-        if not os.path.exists(self.tmp_dir):
-            os.makedirs(self.tmp_dir)
+        tmp_base_name = "_".join([prefix, str(os.getpid()), s_datetime])
+        tmp_dir = os.path.join(base_dir, tmp_base_name)
+        if not os.path.exists(tmp_dir):
+            os.makedirs(tmp_dir)
+        return tmp_dir
+
+    def compress(self):
+
+        self.tmp_dir = create_tmp_dir(self.final_dir)
 
         for strategy_idx, (
                 strategy,
