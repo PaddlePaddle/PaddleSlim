@@ -51,7 +51,6 @@ def post_quant_fake(executor,
         for op_type in _quantizable_op_type:
             assert op_type in _support_quantize_op_type, \
                 op_type + " is not supported for quantization."
-
     _program, _feed_list, _fetch_list = paddle.fluid.io.load_inference_model(
         model_dir,
         executor,

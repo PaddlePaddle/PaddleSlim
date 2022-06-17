@@ -20,16 +20,9 @@ import paddle.version as fluid_version
 from ..common import get_logger
 
 _logger = get_logger(__name__, level=logging.INFO)
-
+min_paddle_version = '2.3.0'
 try:
-    paddle.utils.require_version('1.8.4')
-    version_installed = [
-        fluid_version.major, fluid_version.minor, fluid_version.patch,
-        fluid_version.rc
-    ]
-    assert version_installed != [
-        '2', '0', '0-alpha0', '0'
-    ], "training-aware and post-training quant is not supported in 2.0 alpha version paddle"
+    paddle.utils.require_version(min_paddle_version)
     from .quanter import quant_aware, convert, quant_post_static, quant_post_dynamic
     from .quanter import quant_post, quant_post_only_weight
     from .quant_aware_with_infermodel import quant_aware_with_infermodel, export_quant_infermodel
@@ -42,7 +35,7 @@ try:
 except Exception as e:
     _logger.warning(e)
     _logger.warning(
-        "If you want to use training-aware and post-training quantization, "
-        "please use Paddle >= 1.8.4 or develop version")
+        f"If you want to use training-aware and post-training quantization, "
+        "please use Paddle >= {min_paddle_version} or develop version")
 
 from .quant_embedding import quant_embedding

@@ -423,18 +423,31 @@ def build_prune_program(executor,
         from ..prune import Pruner
         pruner = Pruner(config["criterion"])
         params = []
+        original_shapes = {}
         ### TODO(ceci3): set default prune weight
         for param in train_program_info.program.global_block().all_parameters():
             if config['prune_params_name'] is not None and param.name in config[
                     'prune_params_name']:
                 params.append(param.name)
+                original_shapes[param.name] = param.shape
 
+#        assert len(params) > 0, "The list of parameters to be pruned is empty."
+#        if len(params) > 0:
         pruned_program, _, _ = pruner.prune(
             train_program_info.program,
             paddle.static.global_scope(),
             params=params,
             ratios=[config['pruned_ratio']] * len(params),
             place=place)
+        _logger.info(
+            "####################channel pruning##########################")
+        for param in pruned_program.global_block().all_parameters():
+            if param.name in original_shapes:
+                _logger.info(
+                    f"{param.name}, from {original_shapes[param.name]} to {param.shape}"
+                )
+        _logger.info(
+            "####################channel pruning end##########################")
         train_program_info.program = pruned_program
 
     elif strategy.startswith('asp'):
