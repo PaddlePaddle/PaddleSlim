@@ -73,14 +73,12 @@ class AutoCompression:
             train_data_loader(Python Generator, Paddle.io.DataLoader): The
                 Generator or Dataloader provides train data, and it could
                 return a batch every time.
-            input_shapes(dict|int): It is used when the model has implicit dimensions except batch size. 
+            input_shapes(dict|tuple|list): It is used when the model has implicit dimensions except batch size. 
                 If it is a dict, the key is the name of input and the value is the shape. 
                 Given the input shape of input "X" is [-1, 3, -1, -1] which means the batch size, hight
-                and width is variable. And the "input_shapes" can be set {"X": [-1, 3, 512, 512]}.
-                If it is a integer, all the implicit dimensions except batch size will be replaced by
-                "input_shapes". Given the "input_shapes==128", the shape [-1, 3, -1, -1] will be
-                converted to [-1, 3, 128, 128]. And the ACT will search compression strategies
-                according to the given input shape. None means keeping the original shapes, then
+                and width is variable. And the input_shapes can be set {"X": [-1, 3, 512, 512]}.
+                If it is a list or tuple, the number of model's inputs should be 1. And the shape of input
+                will be set input_shapes. None means keeping the original shapes, then
                 the compression strategies searching may be skipped. Default: None.
             train_config(dict, optional): The train config in the compression process, the key can 
                 reference `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L103>`_ . 
@@ -182,6 +180,9 @@ class AutoCompression:
 
     def _infer_shape(self, model_dir, model_filename, params_filename,
                      input_shapes, save_path):
+        assert type(input_shapes) in [
+            dict, list, tuple
+        ], f'Type of input_shapes should be in [dict, tuple or list] but got {type(input_shapes)}.'
         paddle.enable_static()
         exe = paddle.static.Executor(paddle.CPUPlace())
         [inference_program, feed_target_names, fetch_targets] = (
@@ -191,21 +192,17 @@ class AutoCompression:
                 model_filename=model_filename,
                 params_filename=params_filename))
 
+        if type(input_shapes) in [list, tuple]:
+            assert len(
+                feed_target_names
+            ) == 1, f"The number of model's inputs should be 1 but got {feed_target_names}."
+            input_shapes = {feed_target_names[0]: input_shapes}
+
         feed_vars = []
         for var_ in inference_program.list_vars():
             if var_.name in feed_target_names:
                 feed_vars.append(var_)
-                if isinstance(input_shapes, dict):
-                    var_.desc.set_shape(input_shapes[var_.name])
-                elif isinstance(input_shapes, int):
-                    shape_ = var_.desc.shape()[:1] + [
-                        i if i > 0 else input_shapes
-                        for i in var_.desc.shape()[1:]
-                    ]
-                    var_.desc.set_shape(shape_)
-                else:
-                    raise TypeError(
-                        'input_shapes should be instance of dict or int.')
+                var_.desc.set_shape(input_shapes[var_.name])
 
         for block in inference_program.blocks:
             for op in block.ops:
