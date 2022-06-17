@@ -1,0 +1,29 @@
+Global:
+  reader_config: configs/cityscapes_1024x512_scale1.0.yml
+
+Distillation:
+  distill_lambda: 1.0
+  distill_loss: l2_loss
+  distill_node_pair:
+  - teacher_conv2d_95.tmp_0
+  - conv2d_95.tmp_0
+  merge_feed: true
+  teacher_model_dir: ./pp_liteseg/RES-paddle2-PPLIteSegSTDC1
+  teacher_model_filename: model
+  teacher_params_filename: params
+Quantization:
+  activation_bits: 8
+  is_full_quantize: false
+  not_quant_pattern:
+  - skip_quant
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+  weight_bits: 8
+TrainConfig:
+  epochs: 1
+  eval_iter: 10
+  learning_rate: 0.0005
+  optimizer: SGD
+  optim_args:
+    weight_decay: 4.0e-05

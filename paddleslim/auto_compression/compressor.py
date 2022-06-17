@@ -30,6 +30,7 @@ from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
+from .config_helpers import load_config
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -47,8 +48,7 @@ class AutoCompression:
                  params_filename,
                  save_dir,
                  train_dataloader,
-                 train_config=None,
-                 strategy_config=None,
+                 config=None,
                  target_speedup=None,
                  eval_callback=None,
                  eval_dataloader=None,
@@ -117,8 +117,10 @@ class AutoCompression:
         self.final_dir = save_dir
         if not os.path.exists(self.final_dir):
             os.makedirs(self.final_dir)
-        self.strategy_config = strategy_config
-        self.train_config = train_config
+
+        # load config
+        self.strategy_config, self.train_config = load_config(config)
+
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback

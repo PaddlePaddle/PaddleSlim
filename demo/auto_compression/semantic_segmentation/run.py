@@ -3,9 +3,9 @@ import argparse
 import random
 import paddle
 import numpy as np
-from paddleseg.cvlibs import Config
+from paddleseg.cvlibs import Config as PaddleSegDataConfig
 from paddleseg.utils import worker_init_fn
-from paddleslim.auto_compression.config_helpers import load_config
+
 from paddleslim.auto_compression import AutoCompression
 from paddleseg.core.infer import reverse_transform
 from paddleseg.utils import metrics
@@ -34,7 +34,12 @@ def parse_args():
         default=None,
         help="directory to save compressed model.")
     parser.add_argument(
-        '--config_path',
+        '--strategy_config',
+        type=str,
+        default=None,
+        help="path of compression strategy config.")
+    parser.add_argument(
+        '--dataset_config',
         type=str,
         default=None,
         help="path of compression strategy config.")
@@ -148,13 +153,15 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    compress_config, train_config, global_config = load_config(args.config_path)
-    cfg = Config(global_config['reader_config'])
-
-    train_dataset = cfg.train_dataset
-    eval_dataset = cfg.val_dataset
+    # step1: load dataset config and create dataloader
+    data_cfg = PaddleSegDataConfig(args.dataset_config)
+    train_dataset = data_cfg.train_dataset
+    eval_dataset = data_cfg.val_dataset
     batch_sampler = paddle.io.DistributedBatchSampler(
-        train_dataset, batch_size=cfg.batch_size, shuffle=True, drop_last=True)
+        train_dataset,
+        batch_size=data_cfg.batch_size,
+        shuffle=True,
+        drop_last=True)
     train_loader = paddle.io.DataLoader(
         train_dataset,
         batch_sampler=batch_sampler,
@@ -163,16 +170,16 @@ if __name__ == '__main__':
         worker_init_fn=worker_init_fn)
     train_dataloader = reader_wrapper(train_loader)
 
-    # set auto_compression
+    # step2: create and instance of AutoCompression
     ac = AutoCompression(
         model_dir=args.model_dir,
         model_filename=args.model_filename,
         params_filename=args.params_filename,
         save_dir=args.save_dir,
-        strategy_config=compress_config,
-        train_config=train_config,
+        config=args.strategy_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function,
         deploy_hardware=args.deploy_hardware)
 
+    # step3: start the compression job
     ac.compress()

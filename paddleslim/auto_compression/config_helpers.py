@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import yaml
+import os
 from .strategy_config import *
 
 __all__ = ['save_config', 'load_config']
 
 
-def load_config(config_path):
+def load_config(config):
     """
-        convert yaml to dict config.
+    Load config from yaml file. Extract train config and compression config.
     """
-    f = open(config_path, 'r')
+    if config is None:
+        return None, None
+
+    if isinstance(config, str):
+        assert os.path.exists(config) and os.path.isfile(
+            config), f"{config} not found or it is not a file."
+    f = open(config, 'r')
     cfg = yaml.load(f, Loader=yaml.FullLoader)
     f.close()
-
-    global_config = {}
-    if 'Global' in cfg:
-        for g_key, g_value in cfg["Global"].items():
-            global_config[g_key] = g_value
-        cfg.pop('Global')
 
     compress_config = {}
     for key, value in cfg.items():
@@ -44,7 +45,7 @@ def load_config(config_path):
     if len(compress_config) == 0:
         compress_config = None
 
-    return compress_config, train_config, global_config
+    return compress_config, train_config
 
 
 def save_config(config, config_path):
