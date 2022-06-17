@@ -11,8 +11,8 @@ def with_variable_shape(model_dir, model_filename=None, params_filename=None):
     Whether the shape of model's input is variable.
     Args:
         path_prefix(str | None): Directory path to save model + model name without suffix.
-        model_filename(str): specify model_filename if you don't want to use default name. Default : 'None'.
-        params_filename(str): specify params_filename if you don't want to use default name. Default : 'None'.
+        model_filename(str): specify model_filename if you don't want to use default name. Default : None.
+        params_filename(str): specify params_filename if you don't want to use default name. Default : None.
     Returns:
         bool: Whether the shape of model's input is variable.
     """

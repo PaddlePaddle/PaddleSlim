@@ -30,6 +30,7 @@ from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
+from .utils.predict import with_variable_shape
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -47,6 +48,7 @@ class AutoCompression:
                  params_filename,
                  save_dir,
                  train_dataloader,
+                 input_shapes=None,
                  train_config=None,
                  strategy_config=None,
                  target_speedup=None,
@@ -71,6 +73,13 @@ class AutoCompression:
             train_data_loader(Python Generator, Paddle.io.DataLoader): The
                 Generator or Dataloader provides train data, and it could
                 return a batch every time.
+            input_shapes(dict|tuple|list): It is used when the model has implicit dimensions except batch size. 
+                If it is a dict, the key is the name of input and the value is the shape. 
+                Given the input shape of input "X" is [-1, 3, -1, -1] which means the batch size, hight
+                and width is variable. And the input_shapes can be set {"X": [-1, 3, 512, 512]}.
+                If it is a list or tuple, the number of model's inputs should be 1. And the shape of input
+                will be set input_shapes. None means keeping the original shapes, then
+                the compression strategies searching may be skipped. Default: None.
             train_config(dict, optional): The train config in the compression process, the key can 
                 reference `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L103>`_ . 
                 Only one strategy(quant_post with hyperparameter optimization) can set train_config 
@@ -122,18 +131,13 @@ class AutoCompression:
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
+        self.deploy_hardware = deploy_hardware
 
         if eval_dataloader is None:
             eval_dataloader = self._get_eval_dataloader(train_dataloader)
         self.eval_dataloader = eval_dataloader
 
         paddle.enable_static()
-
-        if deploy_hardware in TableLatencyPredictor.hardware_list:
-            self.deploy_hardware = deploy_hardware
-        else:
-            self.deploy_hardware = None
-
         self._exe, self._places = self._prepare_envs()
         self.model_type = self._get_model_type(self._exe, model_dir,
                                                model_filename, params_filename)
@@ -141,6 +145,19 @@ class AutoCompression:
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
 
+        if with_variable_shape(
+                self.model_dir,
+                model_filename=model_filename,
+                params_filename=params_filename) and input_shapes is not None:
+
+            infer_shape_model = self.create_tmp_dir(
+                self.final_dir, prefix="infer_shape_model_")
+            self._infer_shape(model_dir, self.model_filename,
+                              self.params_filename, input_shapes,
+                              infer_shape_model)
+            self.model_dir = infer_shape_model
+            self.model_filename = "infered_shape.pdmodel"
+            self.params_filename = "infered_shape.pdiparams"
         if self.strategy_config is None:
             strategy_config = prepare_strategy(
                 self._exe, self._places, self.model_dir, self.model_filename,
@@ -155,13 +172,61 @@ class AutoCompression:
 
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
-        #print(self._strategy, self._config[0].__dict__)
-        #sys.exit()
 
         # If train_config is None, set default train_config
         if self.train_config is None:
             self.train_config = create_train_config(self.strategy_config,
                                                     self.model_type)
+
+    def _infer_shape(self, model_dir, model_filename, params_filename,
+                     input_shapes, save_path):
+        assert type(input_shapes) in [
+            dict, list, tuple
+        ], f'Type of input_shapes should be in [dict, tuple or list] but got {type(input_shapes)}.'
+        paddle.enable_static()
+        exe = paddle.static.Executor(paddle.CPUPlace())
+        [inference_program, feed_target_names, fetch_targets] = (
+            paddle.static.load_inference_model(
+                model_dir,
+                exe,
+                model_filename=model_filename,
+                params_filename=params_filename))
+
+        if type(input_shapes) in [list, tuple]:
+            assert len(
+                feed_target_names
+            ) == 1, f"The number of model's inputs should be 1 but got {feed_target_names}."
+            input_shapes = {feed_target_names[0]: input_shapes}
+
+        feed_vars = []
+        for var_ in inference_program.list_vars():
+            if var_.name in feed_target_names:
+                feed_vars.append(var_)
+                var_.desc.set_shape(input_shapes[var_.name])
+
+        for block in inference_program.blocks:
+            for op in block.ops:
+                if op.type not in ["feed", "fetch"]:
+                    op.desc.infer_shape(block.desc)
+
+        save_path = os.path.join(save_path, "infered_shape")
+        os.makedirs(save_path)
+        paddle.static.save_inference_model(
+            save_path, feed_vars, fetch_targets, exe, program=inference_program)
+        _logger.info(f"Saved model infered shape to {save_path}")
+
+    @property
+    def deploy_hardware(self):
+        return self._deploy_hardware
+
+    @deploy_hardware.setter
+    def deploy_hardware(self, value):
+        if value is not None:
+            # Fail-fast when deploy hardware is set explicitly
+            assert (
+                value in TableLatencyPredictor.hardware_list
+            ), f"Hardware should be in supported list {TableLatencyPredictor.hardware_list} but got {value}. Or you can set deploy_hardware None."
+        self._deploy_hardware = value
 
     def _get_eval_dataloader(self, train_dataloader):
         def _gen():
@@ -394,14 +459,17 @@ class AutoCompression:
         program_info.program = compiled_prog
         return program_info
 
-    def compress(self):
+    def create_tmp_dir(self, base_dir, prefix="tmp"):
         # create a new temp directory in final dir
-        s_datetime = strftime("%Y-%m-%d-%H-%M-%S", gmtime())
-        tmp_base_name = "_".join(["tmp", str(os.getpid()), s_datetime])
-        self.tmp_dir = os.path.join(self.final_dir, tmp_base_name)
-        if not os.path.exists(self.tmp_dir):
-            os.makedirs(self.tmp_dir)
+        s_datetime = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
+        tmp_base_name = "_".join([prefix, str(os.getpid()), s_datetime])
+        tmp_dir = os.path.join(base_dir, tmp_base_name)
+        if not os.path.exists(tmp_dir):
+            os.makedirs(tmp_dir)
+        return tmp_dir
 
+    def compress(self):
+        self.tmp_dir = create_tmp_dir(self.final_dir)
         for strategy_idx, (
                 strategy,
                 config) in enumerate(zip(self._strategy, self._config)):
