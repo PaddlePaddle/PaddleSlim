@@ -239,6 +239,7 @@ class TableLatencyPredictor(LatencyPredictor):
                 data_type=data_type)
             features = get_features_from_paramkey(param_key, op_type, data_type)
             latency = nearest_interpolate(features, data)
-            assert latency != None, f'{param_key} is not in the table.'
+            if latency is None:
+                return 0.
 
         return latency

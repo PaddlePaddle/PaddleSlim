@@ -473,7 +473,7 @@ class AutoCompression:
         return tmp_dir
 
     def compress(self):
-        self.tmp_dir = create_tmp_dir(self.final_dir)
+        self.tmp_dir = self.create_tmp_dir(self.final_dir)
         for strategy_idx, (
                 strategy,
                 config) in enumerate(zip(self._strategy, self._config)):
