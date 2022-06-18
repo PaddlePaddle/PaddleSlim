@@ -152,18 +152,13 @@ def prepare_strategy(executor,
     """ prepare compression config automatically """
     final_strategy = None
 
-    if with_variable_shape(
+    ### use hardware latency tabel if support
+    if not with_variable_shape(
             model_dir,
             model_filename=model_filename,
-            params_filename=params_filename):
-        deploy_hardware = None
-        _logger.warning(
-            "The model's inputs have variable shape. "
-            "And the latency predictor doesn't support variable shape. "
-            "So auto tuning will be skipped and a default strategy will be chosen."
-        )
-    ### use hardware latency tabel if support
-    if deploy_hardware is not None:
+            params_filename=params_filename) and (
+                deploy_hardware in TableLatencyPredictor.hardware_list):
+
         compressed_time_dict = predict_compressed_model(
             executor,
             places,
@@ -216,7 +211,6 @@ def prepare_strategy(executor,
                 if final_strategy is None:
                     final_strategy = candidate_s[0]
 
-    ### if deploy_hardware is not None
     else:
         ### default speedup ratio of quantization is 70% compare to fp32
         ### TODO(ceci3): full quant or skip some layer later
