@@ -41,7 +41,7 @@ class UnstructuredPruner():
                  sparse_block=[1, 1]):
         assert mode in ('ratio', 'threshold'
                         ), "mode must be selected from 'ratio' and 'threshold'"
-        assert prune_params_type is None or prune_params_type == 'conv1x1_only', "prune_params_type only supports None or conv1x1_only for now."
+        assert prune_params_type is None or prune_params_type == 'conv1x1_only' or prune_params_type == 'fc', "prune_params_type only supports None or conv1x1_only or fc for now."
         if local_sparsity:
             assert mode == 'ratio', "We don't support local_sparsity==True and mode=='threshold' at the same time, please change the inputs accordingly."
         assert len(
@@ -65,6 +65,8 @@ class UnstructuredPruner():
             skip_params_func = skip_params_func
         elif prune_params_type == 'conv1x1_only':
             skip_params_func = self._get_skip_params_conv1x1
+        elif prune_params_type == 'fc':
+            skip_params_func = self._get_skip_params_fc
         elif skip_params_func is None:
             skip_params_func = self._get_skip_params
 
@@ -213,7 +215,7 @@ class UnstructuredPruner():
                 paddle.assign(param_tmp, output=param)
 
     @staticmethod
-    def total_sparse(model):
+    def total_sparse(model, debug_mode=False):
         """
         This static function is used to get the whole model's sparsity.
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
@@ -229,11 +231,14 @@ class UnstructuredPruner():
             for param in sub_layer.parameters(include_sublayers=False):
                 total += np.product(param.shape)
                 values += len(paddle.nonzero(param))
+                if not debug_mode: continue
+                den = float(paddle.nonzero(param)) / np.product(param.shape)
+                print(param.name, param.shape, 1 - den)
         ratio = 1 - float(values) / total
         return ratio
 
     @staticmethod
-    def total_sparse_conv1x1(model):
+    def total_sparse_conv1x1(model, debug_mode=False):
         """
         This static function is used to get the partial model's sparsity in terms of conv1x1 layers.
         It is static because during testing, we can calculate sparsity without initializing a pruner instance.
@@ -254,6 +259,9 @@ class UnstructuredPruner():
                 if not cond: continue
                 total += np.product(param.shape)
                 values += len(paddle.nonzero(param))
+                if not debug_mode: continue
+                den = float(paddle.nonzero(param)) / np.product(param.shape)
+                print(param.name, param.shape, 1 - den)
         ratio = 1 - float(values) / total
         return ratio
 
@@ -287,6 +295,18 @@ class UnstructuredPruner():
                 if len(param.shape) == 1: skip_params.add(param.name)
                 cond = len(param.shape) == 4 and param.shape[
                     2] == 1 and param.shape[3] == 1
+                if not cond: skip_params.add(param.name)
+        return skip_params
+
+    def _get_skip_params_fc(self, model):
+        skip_params = set()
+        for _, sub_layer in model.named_sublayers():
+            if type(sub_layer).__name__.split('.')[-1] in NORMS_ALL:
+                skip_params.add(sub_layer.full_name())
+            for param in sub_layer.parameters(include_sublayers=False):
+                # exclude bias whose shape is like (n,)
+                if len(param.shape) == 1: skip_params.add(param.name)
+                cond = len(param.shape) == 2
                 if not cond: skip_params.add(param.name)
         return skip_params
 
