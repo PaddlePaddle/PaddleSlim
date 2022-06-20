@@ -21,11 +21,11 @@ import copy
 import cv2
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
-from ppdet.metrics import COCOMetric
+from ppdet.metrics import KeyPointTopDownCOCOEval
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 from paddleslim.quant import quant_post_static
-from keypoint_utils import HRNetPostProcess, KeyPointTopDownCOCOEval, transform_preds
+from keypoint_utils import HRNetPostProcess, transform_preds
 
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
