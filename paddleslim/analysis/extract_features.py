@@ -50,7 +50,6 @@ def get_features_from_paramkey(param_key, op_type, data_type):
     """Get op's parameters according to the key of latency table
     """
     features = None
-
     if 'conv2d' in op_type:
         if data_type == 'fp16':
             quant_bits = 'bit_length=16'

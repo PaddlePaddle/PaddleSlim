@@ -15,7 +15,7 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle
-from paddleslim.dist import merge, fsp_loss
+from paddleslim.dist import merge, fsp
 from layers import conv_bn_layer
 from static_case import StaticCase
 
@@ -49,9 +49,8 @@ class TestFSPLoss(StaticCase):
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
                 merged_ops.append(op.type)
-        distill_loss = fsp_loss('teacher_conv1_out.tmp_1',
-                                'teacher_conv6_out.tmp_0', 'conv1_out.tmp_0',
-                                'conv2_out.tmp_0')
+        distill_loss = fsp('teacher_conv1_out.tmp_1', 'teacher_conv6_out.tmp_0',
+                           'conv1_out.tmp_0', 'conv2_out.tmp_0')
         loss_ops = []
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:

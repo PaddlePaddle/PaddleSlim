@@ -1,16 +1,20 @@
 
 Global:
-  reader_config: configs/yolo_reader.yml
-  input_list: ['image', 'scale_factor']
+  reader_config: configs/yolov5_reader.yml
+  input_list: {'image': 'x2paddle_images'}
   Evaluation: True
-  model_dir: ./ppyoloe_crn_l_300e_coco/
+  arch: 'YOLOv5'
+  model_dir: ./yolov5s_infer/
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
 Distillation:
+  alpha: 1.0
+  loss: l2
   node:
-  - concat_15.tmp_0
-  - concat_14.tmp_0
+  - conv2d_106.tmp_1
+  - conv2d_113.tmp_1
+  - conv2d_119.tmp_1
 
 Quantization:
   use_pact: true
@@ -27,4 +31,4 @@ TrainConfig:
     optimizer: 
       type: SGD
     weight_decay: 4.0e-05
-
+  target_metric: 0.365

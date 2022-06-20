@@ -23,13 +23,6 @@ from setuptools import setup
 
 slim_version = "2.3.0"
 
-
-def python_version():
-    return [int(v) for v in platform.python_version().split(".")]
-
-
-max_version, mid_version, min_version = python_version()
-
 with open('./requirements.txt') as f:
     setup_requires = f.read().splitlines()
 

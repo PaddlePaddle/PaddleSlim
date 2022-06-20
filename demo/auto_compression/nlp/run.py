@@ -243,8 +243,8 @@ if __name__ == '__main__':
     paddle.enable_static()
 
     compress_config, train_config, _ = load_config(args.config_path)
-    if train_config is not None and 'optim_args' in train_config:
-        train_config['optim_args'][
+    if train_config is not None:
+        train_config.optimizer_builder[
             'apply_decay_param_fun'] = apply_decay_param_fun
 
     train_dataloader, eval_dataloader = reader()

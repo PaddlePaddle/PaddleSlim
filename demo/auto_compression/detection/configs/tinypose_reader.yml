@@ -30,7 +30,7 @@ EvalDataset:
     use_gt_bbox: True
     image_thre: 0.5
 
-worker_num: 2
+worker_num: 0
 global_mean: &global_mean [0.485, 0.456, 0.406]
 global_std: &global_std [0.229, 0.224, 0.225]
 

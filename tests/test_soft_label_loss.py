@@ -15,7 +15,7 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle
-from paddleslim.dist import merge, soft_label_loss
+from paddleslim.dist import merge, soft_label
 from layers import conv_bn_layer
 from static_case import StaticCase
 
@@ -48,8 +48,8 @@ class TestSoftLabelLoss(StaticCase):
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
                 merged_ops.append(op.type)
-        distill_loss = soft_label_loss('teacher_conv6_bn_output.tmp_2',
-                                       'conv2_bn_output.tmp_2')
+        distill_loss = soft_label('teacher_conv6_bn_output.tmp_2',
+                                  'conv2_bn_output.tmp_2')
         loss_ops = []
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:

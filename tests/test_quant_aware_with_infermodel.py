@@ -17,6 +17,7 @@ sys.path.append("../")
 sys.path.append(".")
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import unittest
+import copy
 import paddle
 from paddleslim.quant import quant_aware, convert
 from paddleslim.quant import quant_aware_with_infermodel, export_quant_infermodel
@@ -145,13 +146,10 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
             "./quantaware_with_infermodel_checkpoints/",
             "teacher_model_path_prefix": float_infer_model_path_prefix,
             "model_path_prefix": float_infer_model_path_prefix,
-            "distill_node_pair": [
-                "teacher_fc_0.tmp_0", "fc_0.tmp_0",
-                "teacher_batch_norm_24.tmp_4", "batch_norm_24.tmp_4",
-                "teacher_batch_norm_22.tmp_4", "batch_norm_22.tmp_4",
-                "teacher_batch_norm_18.tmp_4", "batch_norm_18.tmp_4",
-                "teacher_batch_norm_13.tmp_4", "batch_norm_13.tmp_4",
-                "teacher_batch_norm_5.tmp_4", "batch_norm_5.tmp_4"
+            "node": [
+                "fc_0.tmp_0", "batch_norm_24.tmp_4", "batch_norm_22.tmp_4",
+                "batch_norm_18.tmp_4", "batch_norm_13.tmp_4",
+                "batch_norm_5.tmp_4"
             ]
         }
 
@@ -184,7 +182,7 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
                 scope=None,
                 train_reader=train_loader,
                 quant_config=quant_config,
-                train_config=train_config,
+                train_config=copy.deepcopy(train_config),
                 test_callback=test_callback)
 
         def test_export_quant_infermodel(exe, place, checkpoint_path,
@@ -194,7 +192,7 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
                 place,
                 scope=None,
                 quant_config=quant_config,
-                train_config=train_config,
+                train_config=copy.deepcopy(train_config),
                 checkpoint_path=checkpoint_path,
                 export_inference_model_path_prefix=quant_infermodel_save_path)
 

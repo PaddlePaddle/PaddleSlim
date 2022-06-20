@@ -18,8 +18,6 @@ import sys
 import numpy as np
 import inspect
 import shutil
-from collections import namedtuple
-from collections.abc import Iterable
 from time import gmtime, strftime
 import platform
 import paddle
@@ -32,12 +30,13 @@ from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
+from .utils.predict import with_variable_shape
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 try:
     if platform.system().lower() == 'linux':
-        from ..quant import quant_post_hpo
+        from ..quant import post_quant_hpo
 except Exception as e:
     _logger.warning(e)
 
@@ -49,6 +48,7 @@ class AutoCompression:
                  params_filename,
                  save_dir,
                  train_dataloader,
+                 input_shapes=None,
                  train_config=None,
                  strategy_config=None,
                  target_speedup=None,
@@ -73,6 +73,13 @@ class AutoCompression:
             train_data_loader(Python Generator, Paddle.io.DataLoader): The
                 Generator or Dataloader provides train data, and it could
                 return a batch every time.
+            input_shapes(dict|tuple|list): It is used when the model has implicit dimensions except batch size. 
+                If it is a dict, the key is the name of input and the value is the shape. 
+                Given the input shape of input "X" is [-1, 3, -1, -1] which means the batch size, hight
+                and width is variable. And the input_shapes can be set {"X": [-1, 3, 512, 512]}.
+                If it is a list or tuple, the number of model's inputs should be 1. And the shape of input
+                will be set input_shapes. None means keeping the original shapes, then
+                the compression strategies searching may be skipped. Default: None.
             train_config(dict, optional): The train config in the compression process, the key can 
                 reference `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L103>`_ . 
                 Only one strategy(quant_post with hyperparameter optimization) can set train_config 
@@ -84,23 +91,29 @@ class AutoCompression:
                 2. set ``Quantization`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
                     The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
                     The HyperParameterOptimization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L73`_ .
-                3. set ``Prune`` and ``Distillation`` to get prune and distillation compress config.
-                    The Prune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                3. set ``ChannelPrune`` and ``Distillation`` to get channel prune and distillation compress config.
+                    The ChannelPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                4. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
+                4. set ``ASPPrune`` and ``Distillation`` to get asp prune and distillation compress config.
+                    The ASPPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                5. set ``TransformerPrune`` and ``Distillation`` to get transformer prune and distillation compress config.
+                    The TransformerPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                6. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
                     The UnstructurePrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L91`_ .
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                5. set ``Distillation`` to use one teacher modol to distillation student model.
+                7. set ``Distillation`` to use one teacher modol to distillation student model.
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                6. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
+                8. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
                     The MultiTeacherDistillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L56`_ .
 
                 If set to None, will choose a strategy automatically. Default: None.
             target_speedup(float, optional): target speedup ratio by the way of auto compress. Default: None.
             eval_callback(function, optional): eval function, define by yourself to return the metric of the inference program, can be used to judge the metric of compressed model. The documents of how to write eval function is `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/auto-compression/custom_function.rst`_ . ``eval_callback`` and ``eval_dataloader`` cannot be None at the same time. Dafault: None.
-            eval_dataloader(paddle.io.Dataloader, optional):  The
-                 Generator or Dataloader provides eval data, and it could
-                 return a batch every time. ``eval_callback`` and ``eval_dataloader`` cannot be None at the same time. Dafault: None.
+            eval_dataloader(paddle.io.Dataloader, optional):  The Generator or Dataloader provides eval data, and it could
+                 return a batch every time. If eval_dataloader is None, will take first 5000 sample from train_dataloader 
+                 as eval_dataloader, and the metric of eval_dataloader for reference only. Dafault: None.
             deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
         """
         self.model_dir = model_dir
@@ -118,15 +131,13 @@ class AutoCompression:
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
-        self.eval_dataloader = eval_dataloader if eval_dataloader is not None else train_dataloader
+        self.deploy_hardware = deploy_hardware
+
+        if eval_dataloader is None:
+            eval_dataloader = self._get_eval_dataloader(train_dataloader)
+        self.eval_dataloader = eval_dataloader
 
         paddle.enable_static()
-
-        if deploy_hardware in TableLatencyPredictor.hardware_list:
-            self.deploy_hardware = deploy_hardware
-        else:
-            self.deploy_hardware = None
-
         self._exe, self._places = self._prepare_envs()
         self.model_type = self._get_model_type(self._exe, model_dir,
                                                model_filename, params_filename)
@@ -134,10 +145,24 @@ class AutoCompression:
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
 
+        if with_variable_shape(
+                self.model_dir,
+                model_filename=model_filename,
+                params_filename=params_filename) and input_shapes is not None:
+
+            infer_shape_model = self.create_tmp_dir(
+                self.final_dir, prefix="infer_shape_model_")
+            self._infer_shape(model_dir, self.model_filename,
+                              self.params_filename, input_shapes,
+                              infer_shape_model)
+            self.model_dir = infer_shape_model
+            self.model_filename = "infered_shape.pdmodel"
+            self.params_filename = "infered_shape.pdiparams"
         if self.strategy_config is None:
             strategy_config = prepare_strategy(
-                self.model_dir, self.model_filename, self.params_filename,
-                self.target_speedup, self.deploy_hardware, self.model_type)
+                self._exe, self._places, self.model_dir, self.model_filename,
+                self.params_filename, self.target_speedup, self.deploy_hardware,
+                self.model_type)
             self.strategy_config = strategy_config
         elif isinstance(self.strategy_config, dict):
             self.strategy_config = [self.strategy_config]
@@ -152,6 +177,71 @@ class AutoCompression:
         if self.train_config is None:
             self.train_config = create_train_config(self.strategy_config,
                                                     self.model_type)
+
+    def _infer_shape(self, model_dir, model_filename, params_filename,
+                     input_shapes, save_path):
+        assert type(input_shapes) in [
+            dict, list, tuple
+        ], f'Type of input_shapes should be in [dict, tuple or list] but got {type(input_shapes)}.'
+        paddle.enable_static()
+        exe = paddle.static.Executor(paddle.CPUPlace())
+        [inference_program, feed_target_names, fetch_targets] = (
+            paddle.static.load_inference_model(
+                model_dir,
+                exe,
+                model_filename=model_filename,
+                params_filename=params_filename))
+
+        if type(input_shapes) in [list, tuple]:
+            assert len(
+                feed_target_names
+            ) == 1, f"The number of model's inputs should be 1 but got {feed_target_names}."
+            input_shapes = {feed_target_names[0]: input_shapes}
+
+        feed_vars = []
+        for var_ in inference_program.list_vars():
+            if var_.name in feed_target_names:
+                feed_vars.append(var_)
+                var_.desc.set_shape(input_shapes[var_.name])
+
+        for block in inference_program.blocks:
+            for op in block.ops:
+                if op.type not in ["feed", "fetch"]:
+                    op.desc.infer_shape(block.desc)
+
+        save_path = os.path.join(save_path, "infered_shape")
+        os.makedirs(save_path)
+        paddle.static.save_inference_model(
+            save_path, feed_vars, fetch_targets, exe, program=inference_program)
+        _logger.info(f"Saved model infered shape to {save_path}")
+
+    @property
+    def deploy_hardware(self):
+        return self._deploy_hardware
+
+    @deploy_hardware.setter
+    def deploy_hardware(self, value):
+        supported_hardware = TableLatencyPredictor.hardware_list + [
+            'gpu',  # nvidia gpu
+            "cpu",  # intel cpu
+        ]
+        if value is not None:
+            # Fail-fast when deploy hardware is set explicitly
+            assert (
+                value in supported_hardware
+            ), f"Hardware should be in supported list {supported_hardware} but got {value}. Or you can set deploy_hardware None."
+        self._deploy_hardware = value
+
+    def _get_eval_dataloader(self, train_dataloader):
+        def _gen():
+            len_loader = len(list(train_dataloader()))
+            ### max eval_dataloader is 5000 if use train_dataloader as eval_dataloader
+            slice_len = min(5000, len_loader)
+            ret = list(itertools.islice(train_dataloader(), slice_len))
+            for i in ret:
+                yield i
+
+        return _gen
 
     def _prepare_envs(self):
         devices = paddle.device.get_device().split(':')[0]
@@ -176,14 +266,15 @@ class AutoCompression:
         for strategy_c in strategy_config:
             quant_config = strategy_c.get("Quantization", None)
             hpo_config = strategy_c.get("HyperParameterOptimization", None)
-            prune_config = strategy_c.get("Prune", None)
+            prune_config = strategy_c.get("ChannelPrune", None)
+            asp_config = strategy_c.get("ASPPrune", None)
+            transformer_prune_config = strategy_c.get("TransformerPrune", None)
             unstructure_prune_config = strategy_c.get("UnstructurePrune", None)
             single_teacher_distill_config = strategy_c.get("Distillation", None)
             if single_teacher_distill_config is not None and single_teacher_distill_config.teacher_model_dir is None:
-                single_teacher_distill_config = single_teacher_distill_config._replace(
-                    teacher_model_dir=self.model_dir,
-                    teacher_model_filename=self.model_filename,
-                    teacher_params_filename=self.params_filename)
+                single_teacher_distill_config.teacher_model_dir = self.model_dir
+                single_teacher_distill_config.teacher_model_filename = self.model_filename
+                single_teacher_distill_config.teacher_params_filename = self.params_filename
 
             multi_teacher_distill_config = strategy_c.get(
                 "MultiTeacherDistillation", None)
@@ -206,17 +297,29 @@ class AutoCompression:
 
             ### case3: prune_config & distill config
             elif prune_config is not None and self._distill_config is not None:
-                strategy.append('prune_dis')
+                strategy.append('channel_prune_dis')
                 config.append(merge_config(prune_config, self._distill_config))
 
-            ### case4: unstructure_config & distill config
+            ### case4: asp_config & distill config
+            elif asp_config is not None and self._distill_config is not None:
+                strategy.append('asp_prune_dis')
+                config.append(merge_config(asp_config, self._distill_config))
+
+            ### case5: transformer_prune_config & distill config
+            elif transformer_prune_config is not None and self._distill_config is not None:
+                strategy.append('transformer_prune_dis')
+                config.append(
+                    merge_config(transformer_prune_config,
+                                 self._distill_config))
+
+            ### case6: unstructure_config & distill config
             elif unstructure_prune_config is not None and self._distill_config is not None:
                 strategy.append('unstructure_prune_dis')
                 config.append(
                     merge_config(unstructure_prune_config,
                                  self._distill_config))
 
-            ### case4: distill_config
+            ### case7: distill_config
             elif self._distill_config is not None:
                 if single_teacher_distill_config is not None:
                     strategy.append('single_teacher_dis')
@@ -259,15 +362,21 @@ class AutoCompression:
         train_program_info = ProgramInfo(startup_program, train_program,
                                          feed_target_names, fetch_targets)
 
-        config_dict = dict(config._asdict())
+        config_dict = config.__dict__
         if "prune_strategy" in config_dict and config_dict[
                 "prune_strategy"] == "gmp" and config_dict[
                     'gmp_config'] is None:
             _logger.info(
                 "Calculating the iterations per epoch……(It will take some time)")
             # NOTE:XXX: This way of calculating the iters needs to be improved.
-            iters_per_epoch = len(list(self.train_dataloader()))
-            total_iters = self.train_config.epochs * iters_per_epoch
+            if self.train_config.epochs:
+                iters_per_epoch = len(list(self.train_dataloader()))
+                total_iters = self.train_config.epochs * iters_per_epoch
+            elif self.train_config.train_iter:
+                total_iters = self.train_config.train_iter
+            else:
+                raise RuntimeError(
+                    'train_config must has `epochs` or `train_iter` field.')
             config_dict['gmp_config'] = {
                 'stable_iterations': 0,
                 'pruning_iterations': 0.45 * total_iters,
@@ -294,7 +403,7 @@ class AutoCompression:
                 self._exe,
                 self._places,
                 config_dict,
-                self.train_config._asdict(),
+                self.train_config.__dict__,
                 train_program_info,
                 pruner=self._pruner,
                 dist_strategy=dist_strategy,
@@ -326,7 +435,7 @@ class AutoCompression:
                 train_program_info.optimizer.amp_init(
                     self._places, scope=paddle.static.global_scope())
 
-        if 'prune_algo' in config_dict and config_dict['prune_algo'] == 'asp':
+        if 'asp' in strategy:
             ### prune weight in scope
             self._pruner.prune_model(train_program_info.program)
 
@@ -354,14 +463,17 @@ class AutoCompression:
         program_info.program = compiled_prog
         return program_info
 
-    def compress(self):
+    def create_tmp_dir(self, base_dir, prefix="tmp"):
         # create a new temp directory in final dir
         s_datetime = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
-        tmp_base_name = "_".join(["tmp", str(os.getpid()), s_datetime])
-        self.tmp_dir = os.path.join(self.final_dir, tmp_base_name)
-        if not os.path.exists(self.tmp_dir):
-            os.makedirs(self.tmp_dir)
+        tmp_base_name = "_".join([prefix, str(os.getpid()), s_datetime])
+        tmp_dir = os.path.join(base_dir, tmp_base_name)
+        if not os.path.exists(tmp_dir):
+            os.makedirs(tmp_dir)
+        return tmp_dir
 
+    def compress(self):
+        self.tmp_dir = self.create_tmp_dir(self.final_dir)
         for strategy_idx, (
                 strategy,
                 config) in enumerate(zip(self._strategy, self._config)):
@@ -369,7 +481,7 @@ class AutoCompression:
 
         if strategy == 'ptq_hpo' and config.max_quant_count == 1 and platform.system(
         ).lower() == 'linux':
-            ptq_loss = quant_post_hpo.g_min_emd_loss
+            ptq_loss = post_quant_hpo.g_min_emd_loss
 
             final_quant_config = get_final_quant_config(ptq_loss)
             if final_quant_config is not None:
@@ -391,7 +503,7 @@ class AutoCompression:
             shutil.move(tmp_params_file, final_params_file)
             shutil.rmtree(self.tmp_dir)
             _logger.info(
-                "==> Finished the ACT process and the final model is saved in:{}".
+                "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))
         os._exit(0)
 
@@ -428,7 +540,7 @@ class AutoCompression:
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
 
-            quant_post_hpo.quant_post_hpo(
+            post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
                 model_dir=self.model_dir,
@@ -499,7 +611,8 @@ class AutoCompression:
 
     def _start_train(self, train_program_info, test_program_info, strategy):
         best_metric = -1.0
-        for epoch_id in range(self.train_config.epochs):
+        total_epochs = self.train_config.epochs if self.train_config.epochs else 1
+        for epoch_id in range(total_epochs):
             for batch_id, data in enumerate(self.train_dataloader()):
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
@@ -552,6 +665,8 @@ class AutoCompression:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
+                if self.train_config.train_iter and batch_id >= self.train_config.train_iter:
+                    break
 
         if 'unstructure' in self._strategy or self.train_config.sparse_model:
             self._pruner.update_params()
@@ -571,10 +686,9 @@ class AutoCompression:
             os.remove(os.path.join(self.tmp_dir, 'best_model.pdparams'))
 
         if 'qat' in strategy:
-            float_program, int8_program = convert(test_program_info.program._program, self._places, self._quant_config, \
+            test_program, int8_program = convert(test_program, self._places, self._quant_config, \
                                           scope=paddle.static.global_scope(), \
                                           save_int8=True)
-            test_program_info.program = float_program
 
         model_dir = os.path.join(self.tmp_dir,
                                  'strategy_{}'.format(str(strategy_idx + 1)))

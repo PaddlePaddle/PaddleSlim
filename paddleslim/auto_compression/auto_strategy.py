@@ -16,7 +16,7 @@ import os
 import logging
 import platform
 from ..common import get_logger
-from .utils.predict import predict_compressed_model
+from .utils.predict import predict_compressed_model, with_variable_shape
 from .strategy_config import *
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -92,7 +92,6 @@ def create_strategy_config(strategy_str, model_type):
             ### default prune config
             default_prune_config = {
                 'pruned_ratio': float(tmp_s[1]),
-                'prune_algo': 'prune',
                 'criterion': 'l1_norm'
             }
         else:
@@ -105,10 +104,12 @@ def create_strategy_config(strategy_str, model_type):
                 'local_sparsity': True,
                 'prune_params_type': 'conv1x1_only'
             }
-        tmp_s[0] = tmp_s[0].replace('prune', 'Prune')
+        if model_type == 'transformer':
+            tmp_s[0] = tmp_s[0].replace('prune', 'TransformerPrune')
+            default_prune_config = {'pruned_ratio': float(tmp_s[1])}
+        else:
+            tmp_s[0] = tmp_s[0].replace('prune', 'Prune')
         tmp_s[0] = tmp_s[0].replace('sparse', 'UnstructurePrune')
-        if model_type == 'transformer' and tmp_s[0] == 'Prune':
-            default_prune_config['prune_algo'] = 'transformer_pruner'
         prune_config = eval(tmp_s[0])(**default_prune_config)
         configs.append({tmp_s[0]: prune_config, 'Distillation': dis_config})
 
@@ -140,7 +141,9 @@ def create_train_config(strategy_str, model_type):
     return train_config
 
 
-def prepare_strategy(model_dir,
+def prepare_strategy(executor,
+                     places,
+                     model_dir,
                      model_filename,
                      params_filename,
                      target_speedup=None,
@@ -150,8 +153,15 @@ def prepare_strategy(model_dir,
     final_strategy = None
 
     ### use hardware latency tabel if support
-    if deploy_hardware is not None:
+    if not with_variable_shape(
+            model_dir,
+            model_filename=model_filename,
+            params_filename=params_filename) and (
+                deploy_hardware in TableLatencyPredictor.hardware_list):
+
         compressed_time_dict = predict_compressed_model(
+            executor,
+            places,
             model_dir,
             model_filename,
             params_filename,
@@ -201,7 +211,6 @@ def prepare_strategy(model_dir,
                 if final_strategy is None:
                     final_strategy = candidate_s[0]
 
-    ### if deploy_hardware is not None
     else:
         ### default speedup ratio of quantization is 70% compare to fp32
         ### TODO(ceci3): full quant or skip some layer later

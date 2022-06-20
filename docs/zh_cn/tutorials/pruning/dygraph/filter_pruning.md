@@ -87,7 +87,7 @@ pruner = L1NormFilterPruner(net, [1, 3, 224, 224], opt=optimizer)
 如果本地文件系统已有一个存储敏感度信息（见4.1节）的文件，声明`L1NormFilterPruner`对象时，可以通过指定`sen_file`选项加载计算好的敏感度信息，如下：
 
 ```python
-#pruner = L1NormFilterPruner(net, [1, 3, 224, 224]), sen_file="./sen.pickle", opt=optimizer)
+#pruner = L1NormFilterPruner(net, [1, 3, 224, 224], sen_file="./sen.pickle", opt=optimizer)
 ```
 
 ### 4.1 卷积重要性分析

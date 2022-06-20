@@ -19,14 +19,45 @@ import paddle
 import paddleslim
 import subprocess
 import time
-import urllib.request as request
 import ssl
+import requests
+import shutil
 __all__ = [
     "save_cls_model", "save_det_model", "nearest_interpolate", "opt_model",
     "load_predictor"
 ]
 
 PREDICTOR_URL = 'https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/'
+
+
+def _get_download(url, fullname):
+    # using requests.get method
+    fname = os.path.basename(fullname)
+    try:
+        req = requests.get(url, stream=True)
+    except Exception as e:  # requests.exceptions.ConnectionError
+        logger.info("Downloading {} from {} failed with exception {}".format(
+            fname, url, str(e)))
+        return False
+
+    if req.status_code != 200:
+        raise RuntimeError("Downloading from {} failed with code "
+                           "{}!".format(url, req.status_code))
+
+    # For protecting download interupted, download to
+    # tmp_fullname firstly, move tmp_fullname to fullname
+    # after download finished
+    tmp_fullname = fullname + "_tmp"
+    with open(tmp_fullname, 'wb') as f:
+        for chunk in req.iter_content(chunk_size=1024):
+            f.write(chunk)
+
+    try:
+        shutil.move(tmp_fullname, fullname)
+    except:
+        shutil.rmtree(tmp_fullname, ignore_errors=True)
+
+    return fullname
 
 
 def opt_model(opt="paddle_lite_opt",
@@ -203,12 +234,13 @@ def download_predictor(op_dir, op):
         os.makedirs(op_dir)
 
     op_path = os.path.join(op_dir, op + '_predictor.pkl')
-    if not os.path.exists(op_path):
-        # NOTE: To solve the 'SSL: certificate verify failed' error.
-        ssl._create_default_https_context = ssl._create_unverified_context
-        url = PREDICTOR_URL + op_path
-        request.urlretrieve(url, op_path)
-        print('Successfully download {}!'.format(op_path))
+    url = PREDICTOR_URL + op_path
+    while not (os.path.exists(op_path)):
+        if not _get_download(url, op_path):
+            time.sleep(1)
+            continue
+
+    print('Successfully download {}!'.format(op_path))
     return op_path
 
 
@@ -222,5 +254,4 @@ def load_predictor(op_type, op_dir, data_type='fp32'):
     op_path = download_predictor(op_dir, op)
     with open(op_path, 'rb') as f:
         model = pickle.load(f)
-
     return model

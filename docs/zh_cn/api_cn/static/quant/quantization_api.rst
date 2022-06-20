@@ -118,7 +118,7 @@ quant_post_dynamic
 quant_post_static
 ---------------
 
-.. py:function:: paddleslim.quant.quant_post_static(executor,model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='__model__', save_params_filename='__params__', batch_size=16, batch_nums=None, scope=None, algo='KL', round_type='round', quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', optimize_model=False)
+.. py:function:: paddleslim.quant.quant_post_static(executor,model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='__model__', save_params_filename='__params__', batch_size=16, batch_nums=None, scope=None, algo='KL', round_type='round', quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', onnx_format=False, skip_tensor_list=None, optimize_model=False)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
 
@@ -170,6 +170,8 @@ quant_post_static
 - **activation_bits(int)** - 激活值的量化比特位数, 默认值为8。
 - **weight_quantize_type(str)** - weight的量化方式，可选 `abs_max` 或者 `channel_wise_abs_max` ,通常情况下选 `channel_wise_abs_max` 模型量化精度更高。
 - **activation_quantize_type(str)** - 激活值的量化方式, 可选 `range_abs_max` 和 `moving_average_abs_max` 。设置激活量化方式不会影响计算scale的算法，只是影响在保存模型时使用哪种operator。
+- **onnx_format(bool)** - ONNX量化模型格式，可选`True`和`False`。默认是False。
+- **skip_tensor_list(list)** - 跳过量化Tensor的列表，默认是None，需设置成Tensor的name，Tensor的name可以通过可视化工具查看。
 - **optimize_model(bool)** - 是否在量化之前对模型进行fuse优化。executor必须在cpu上执才可以设置该参数为True，然后会将`conv2d/depthwise_conv2d/conv2d_tranpose + batch_norm`进行fuse。
 **返回**
 

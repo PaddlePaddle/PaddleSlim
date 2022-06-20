@@ -54,7 +54,8 @@ def merge(teacher_program,
     teacher_program = teacher_program.clone(for_test=True)
     for teacher_var in teacher_program.list_vars():
         skip_rename = False
-        if teacher_var.name != 'fetch' and (not merge_feed or teacher_var.name != 'feed'):
+        if teacher_var.name != 'fetch' and (not merge_feed or
+                                            teacher_var.name != 'feed'):
             if teacher_var.name in data_name_map.keys():
                 new_name = data_name_map[teacher_var.name]
                 if new_name == teacher_var.name:
@@ -72,7 +73,8 @@ def merge(teacher_program,
                     teacher_var.name, new_name)
 
     for teacher_var in teacher_program.list_vars():
-        if teacher_var.name != 'fetch' and (not merge_feed or teacher_var.name != 'feed'):
+        if teacher_var.name != 'fetch' and (not merge_feed or
+                                            teacher_var.name != 'feed'):
             # student program add var
             new_var = student_program.global_block()._clone_variable(
                 teacher_var, force_persistable=False)
@@ -111,11 +113,11 @@ def merge(teacher_program,
             op._op._set_attr("skip_quant", True)
 
 
-def fsp_loss(teacher_var1_name,
-             teacher_var2_name,
-             student_var1_name,
-             student_var2_name,
-             program=None):
+def fsp(teacher_var1_name,
+        teacher_var2_name,
+        student_var1_name,
+        student_var2_name,
+        program=None):
     """Combine variables from student model and teacher model by fsp-loss.
 
     Args:
@@ -149,7 +151,7 @@ def fsp_loss(teacher_var1_name,
     return fsp_loss
 
 
-def l2_loss(teacher_var_name, student_var_name, program=None):
+def l2(teacher_var_name, student_var_name, program=None):
     """Combine variables from student model and teacher model by l2-loss.
 
     Args:
@@ -170,11 +172,11 @@ def l2_loss(teacher_var_name, student_var_name, program=None):
     return l2_loss
 
 
-def soft_label_loss(teacher_var_name,
-                    student_var_name,
-                    program=None,
-                    teacher_temperature=1.,
-                    student_temperature=1.):
+def soft_label(teacher_var_name,
+               student_var_name,
+               program=None,
+               teacher_temperature=1.,
+               student_temperature=1.):
     """Combine variables from student model and teacher model by soft-label-loss.
 
     Args:
