@@ -49,6 +49,17 @@ def find_next_ops(block, var_name):
     return res_ops
 
 
+def find_op_self(block, var_name):
+    """
+    Find ops itself from block by the output variable.
+    """
+    res_ops = []
+    for op in block.ops:
+        if var_name in op.output_arg_names:
+            res_ops.append(op)
+    return res_ops
+
+
 def insert_eltmul_op(block, op, head_mask, block_num):
     """ Insert elementwise mul op to matmul input_mask and head_mask to program"""
     op_idx = block.ops.index(op)
@@ -305,6 +316,8 @@ class TransformerPruner:
                         next_op = find_next_ops(block, var_name)
                         if next_op[0].type == 'dropout':
                             op = next_op[0]
+                        else:  ### find op itself
+                            op = find_op_self(block, var_name)[0]
                         insert_eltmul_op(block, op, head_mask, block_num)
         logits = block.var(fetch_list[0])
         labels = block.create_var(
