@@ -49,14 +49,19 @@ def find_next_ops(block, var_name):
     return res_ops
 
 
-def find_op_self(block, var_name):
+def find_op_itself(block, var_name, op_type):
     """
     Find ops itself from block by the output variable.
     """
     res_ops = []
     for op in block.ops:
         if var_name in op.output_arg_names:
-            res_ops.append(op)
+            if op.type == op_type:
+                res_ops.append(op)
+    if len(res_ops) > 1:
+        _logger.error(
+            'the function of find_op_itself has more than one op, maybe something wrong.'
+        )
     return res_ops
 
 
@@ -317,7 +322,7 @@ class TransformerPruner:
                         if next_op[0].type == 'dropout':
                             op = next_op[0]
                         else:  ### find op itself
-                            op = find_op_self(block, var_name)[0]
+                            op = find_op_itself(block, var_name, op.type())[0]
                         insert_eltmul_op(block, op, head_mask, block_num)
         logits = block.var(fetch_list[0])
         labels = block.create_var(
