@@ -25,6 +25,25 @@
 
 - 测试环境：`SDM710 2*A75(2.2GHz) 6*A55(1.7GHz)`
 
+- MobileNetV1模型
+
+| 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=4 | Inference模型 |
+|:------:|:------:|:------:|:------:|:------:|
+| MobileNetV1 | Base模型 | 71.0 | - | [Model]() |
+| MobileNetV1 | 量化+蒸馏 | 70.22 | -| [Model]() |
+
+- 测试环境：
+
+说明：
+- MobileNetV1模型源自[tensorflow/models](http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_224.tgz)，通过[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)工具转换MobileNetV1预测模型步骤：
+
+(1) 安装X2Paddle的1.3.6以上版本；（pip install x2paddle）
+
+(2) 转换模型：
+x2paddle --framework=tensorflow --model=tf_model.pb --save_dir=pd_model
+
+即可得到MobileNetV1模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中MobileNetV1的Base预测模型。
+
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
