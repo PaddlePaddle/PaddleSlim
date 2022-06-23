@@ -1,8 +1,6 @@
 Distillation:
   alpha: 1.0
   loss: l2
-  node:
-  - softmax_0.tmp_0
 Quantization:
   activation_bits: 8
   is_full_quantize: false
