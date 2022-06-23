@@ -183,30 +183,38 @@ class AutoCompression:
         if train_config is None:
             train_config = create_train_config(strategy_config, model_type)
 
-        ### if compress strategy more than one, the train config in the yaml set for prune
-        ### the train config for quantization is extrapolate from the yaml
         train_configs = [train_config]
-        if len(self._strategy) > 1:
-            quant_train_config = copy.deepcopy(train_config.__dict__)
-            ### the epoch, train_iter, learning rate of quant is 10% of the prune compress
-            quant_train_config['epochs'] = max(
-                int(train_config.epochs * 0.1), 1)
-            if train_config.train_iter is not None:
-                quant_train_config['train_iter'] = int(train_config.train_iter *
-                                                       0.1)
-            if isinstance(train_config.learning_rate, float):
-                quant_train_config[
-                    'learning_rate'] = train_config.learning_rate * 0.1
+        for idx in range(1, len(self._strategy)):
+            if 'qat' in self._strategy[idx]:
+                ### if compress strategy more than one, the train config in the yaml set for prune
+                ### the train config for quantization is extrapolate from the yaml
+                tmp_train_config = copy.deepcopy(train_config.__dict__)
+                ### the epoch, train_iter, learning rate of quant is 10% of the prune compress
+                tmp_train_config['epochs'] = max(
+                    int(train_config.epochs * 0.1), 1)
+                if train_config.train_iter is not None:
+                    tmp_train_config['train_iter'] = int(
+                        train_config.train_iter * 0.1)
+                if isinstance(train_config.learning_rate, float):
+                    tmp_train_config[
+                        'learning_rate'] = train_config.learning_rate * 0.1
+                else:
+                    if 'learning_rate' in train_config.learning_rate:
+                        tmp_train_config['learning_rate'][
+                            'learning_rate'] = train_config.learning_rate[
+                                'learning_rate'] * 0.1
+                    else:  ### learning rate decay is PiecewiseDecay
+                        tmp_train_config['learning_rate']['values'] = list(
+                            map(lambda x: x * 0.1, train_config.learning_rate[
+                                'values']))
+                train_cfg = TrainConfig(**tmp_train_config)
+            elif 'ptq' in self._strategy[idx]:
+                train_cfg = None
             else:
-                if 'learning_rate' in train_config.learning_rate:
-                    quant_train_config['learning_rate'][
-                        'learning_rate'] = train_config.learning_rate[
-                            'learning_rate'] * 0.1
-                else:  ### learning rate decay is PiecewiseDecay
-                    quant_train_config['learning_rate']['values'] = list(
-                        map(lambda x: x * 0.1, train_config.learning_rate[
-                            'values']))
-            train_configs.append(TrainConfig(**quant_train_config))
+                tmp_train_config = copy.deepcopy(train_config.__dict__)
+                train_cfg = TrainConfig(**tmp_train_config)
+
+            train_configs.append(train_cfg)
         return train_configs
 
     def _infer_shape(self, model_dir, model_filename, params_filename,
