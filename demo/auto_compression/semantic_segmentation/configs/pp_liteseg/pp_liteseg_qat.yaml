@@ -1,0 +1,23 @@
+Global:
+  reader_config: configs/dataset/cityscapes_1024x512_scale1.0.yml
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - conv2d_95.tmp_0
+
+Quantization:
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+
+TrainConfig:
+  epochs: 20
+  eval_iter: 180
+  learning_rate: 0.0005
+  optimizer_builder:
+    optimizer: 
+      type: SGD
+    weight_decay: 4.0e-05  
+

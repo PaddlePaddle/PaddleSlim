@@ -1,11 +1,11 @@
 Global:
-  reader_config: configs/pp_humanseg_lite.yaml
+  reader_config: configs/dataset/cityscapes_1024x512_scale1.0.yml
 
 Distillation:
   alpha: 1.0
   loss: l2
   node: 
-  - batch_norm_47.tmp_2
+  - conv2d_613.tmp_1
 
 UnstructurePrune:
   prune_strategy: gmp
@@ -23,11 +23,11 @@ UnstructurePrune:
 
 TrainConfig:
   epochs: 14
-  eval_iter: 400
+  eval_iter: 90
   learning_rate: 
     type: PiecewiseDecay
     boundaries: [4500]
-    values: [0.005, 0.0005]
+    values: [0.0005, 0.00025]
   optimizer_builder:
     optimizer: 
       type: SGD
