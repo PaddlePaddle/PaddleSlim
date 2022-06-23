@@ -1,0 +1,18 @@
+Quantization:
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+
+TrainConfig:
+  epochs: 1
+  eval_iter: 1070
+  learning_rate: 2.0e-5
+  optimizer_builder:
+    optimizer: 
+      type: AdamW
+    weight_decay: 0.01
+  origin_metric: 0.7403

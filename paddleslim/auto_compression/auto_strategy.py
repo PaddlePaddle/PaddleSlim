@@ -18,6 +18,7 @@ import platform
 from ..common import get_logger
 from .utils.predict import predict_compressed_model, with_variable_shape
 from .strategy_config import *
+from paddleslim.analysis import TableLatencyPredictor
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -60,9 +61,11 @@ DefaultTrainConfig = {
     "epochs": 1,
     "eval_iter": 500,
     "learning_rate": 0.0001,
-    "optimizer": "Momentum",
-    "optim_args": {
-        "weight_decay": 4.0e-05
+    "optimizer_builder": {
+        "optimizer": {
+            "type": "SGD"
+        },
+        "weight_decay": 0.0001
     },
 }
 

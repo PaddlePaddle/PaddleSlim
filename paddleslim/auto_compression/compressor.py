@@ -33,6 +33,7 @@ from .strategy_config import ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
 from .config_helpers import load_config
 from .utils.predict import with_variable_shape
+from .utils import get_feed_vars, wrap_dataloader
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -130,15 +131,18 @@ class AutoCompression:
 
         # load config
         self.strategy_config, self.train_config = load_config(config)
+        self.feed_vars = get_feed_vars(model_dir, model_filename,
+                                       params_filename)
+        self.train_dataloader = wrap_dataloader(train_dataloader,
+                                                self.feed_vars)
 
-        self.train_dataloader = train_dataloader
+        self.eval_dataloader = wrap_dataloader(eval_dataloader, self.feed_vars)
+        if eval_dataloader is None:
+            eval_dataloader = self._get_eval_dataloader(self.train_dataloader)
+
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
         self.deploy_hardware = deploy_hardware
-
-        if eval_dataloader is None:
-            eval_dataloader = self._get_eval_dataloader(train_dataloader)
-        self.eval_dataloader = eval_dataloader
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
@@ -161,6 +165,7 @@ class AutoCompression:
             self.model_dir = infer_shape_model
             self.model_filename = "infered_shape.pdmodel"
             self.params_filename = "infered_shape.pdiparams"
+
         if self.strategy_config is None:
             strategy_config = prepare_strategy(
                 self._exe, self._places, self.model_dir, self.model_filename,
