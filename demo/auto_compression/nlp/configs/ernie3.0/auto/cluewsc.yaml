@@ -1,0 +1,9 @@
+TrainConfig:
+  epochs: 100
+  eval_iter: 70
+  learning_rate: 1.0e-5
+  optimizer_builder:
+    optimizer: 
+      type: AdamW
+    weight_decay: 0.01
+  origin_metric: 0.7928

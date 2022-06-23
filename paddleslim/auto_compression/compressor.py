@@ -15,6 +15,7 @@
 import logging
 import os
 import sys
+import copy
 import numpy as np
 import inspect
 import shutil
@@ -246,6 +247,7 @@ class AutoCompression:
     def _prepare_envs(self):
         devices = paddle.device.get_device().split(':')[0]
         places = paddle.device._convert_to_place(devices)
+        _logger.info(f"devices: {devices}")
         exe = paddle.static.Executor(places)
         return exe, places
 
@@ -255,6 +257,7 @@ class AutoCompression:
             model_filename=model_filename, params_filename=params_filename,
             executor=exe)
         _, _, model_type = get_patterns(inference_program)
+        _logger.info(f"Detect model type: {model_type}")
         return model_type
 
     def _prepare_strategy(self, strategy_config):
@@ -403,7 +406,7 @@ class AutoCompression:
                 self._exe,
                 self._places,
                 config_dict,
-                self.train_config.__dict__,
+                copy.deepcopy(self.train_config.__dict__),
                 train_program_info,
                 pruner=self._pruner,
                 dist_strategy=dist_strategy,
@@ -499,9 +502,9 @@ class AutoCompression:
         final_model_file = os.path.join(final_model_path, self.model_filename)
         final_params_file = os.path.join(final_model_path, self.params_filename)
         if paddle.distributed.get_rank() == 0:
-            shutil.move(tmp_model_file, final_model_file)
-            shutil.move(tmp_params_file, final_params_file)
-            shutil.rmtree(self.tmp_dir)
+            # shutil.move(tmp_model_file, final_model_file)
+            # shutil.move(tmp_params_file, final_params_file)
+            # shutil.rmtree(self.tmp_dir)
             _logger.info(
                 "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))

@@ -46,12 +46,13 @@ default_hpo_config = {
 
 # default quant config, can be used by ptq&hpo and qat&distillation
 default_quant_config = {
-    'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul', 'matmul'],
+    'quantize_op_types':
+    ['conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'],
     'weight_bits': 8,
     'activation_bits': 8,
     "is_full_quantize": False,
-    "activation_quantize_type": 'range_abs_max',
-    "weight_quantize_type": 'abs_max',
+    "activation_quantize_type": 'moving_average_abs_max',
+    "weight_quantize_type": 'channel_wise_abs_max',
     "not_quant_pattern": ["skip_quant"],
 }
 
@@ -72,8 +73,8 @@ EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
 ]
 MAGIC_SPARSE_RATIO = 0.75
 ### TODO: 0.02 threshold maybe not suitable, need to check
-MAGIC_MAX_EMD_DISTANCE = 0.02
-MAGIC_MIN_EMD_DISTANCE = 0.01
+MAGIC_MAX_EMD_DISTANCE = 0.0002
+MAGIC_MIN_EMD_DISTANCE = 0.0001
 
 DEFAULT_TRANSFORMER_STRATEGY = 'prune_0.25_int8'
 DEFAULT_STRATEGY = 'origin_int8'
