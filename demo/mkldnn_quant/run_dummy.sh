@@ -21,4 +21,4 @@ GLOG_logtostderr=1 ./build/sample_tester_fake_data \
     --use_analysis=${with_analysis} \
     --enable_mkldnn_bfloat16=${with_mkldnn_bfloat16}
 
-# KMP_BLOCKTIME=1 KMP_SETTINGS=1 KMP_AFFINITY=granularity=fine,verbose,compact,1,0 numactl bash run_dummy.sh INT8 4 10 false false false
+# KMP_BLOCKTIME=1 KMP_SETTINGS=1 KMP_AFFINITY=granularity=fine,verbose,compact,1,0 numactl bash run_dummy.sh INT8 1 1 false false false
