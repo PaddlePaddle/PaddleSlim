@@ -39,7 +39,7 @@ DEFINE_bool(with_accuracy_layer,
 DEFINE_bool(use_analysis,
             false,
             "If use_analysis is set to true, the model will be optimized");
-DEFINE_int32(warmup_iter, 1, "number of warmup batches");            
+DEFINE_int32(warmup_iter, 2, "number of warmup batches");            
 
 struct Timer {
   std::chrono::high_resolution_clock::time_point start;

@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
     input_l->copy_from_cpu<int64_t>(label);
   } 
 
-  for (auto iter = 0; iter<2; iter++){
+  for (auto iter = 0; iter<FLAGS_warmup_iter; iter++){
     predictor->ZeroCopyRun();
     LOG(INFO) <<"Warmup " << iter << " batches";
   }
