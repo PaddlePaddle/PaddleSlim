@@ -65,7 +65,7 @@ DefaultTrainConfig = {
         "optimizer": {
             "type": "SGD"
         },
-        "weight_decay": 0.0001
+        "weight_decay": 4.0e-05
     },
 }
 

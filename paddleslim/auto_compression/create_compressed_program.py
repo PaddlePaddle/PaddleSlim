@@ -45,12 +45,14 @@ def _create_lr_scheduler(train_config):
 
 def _create_optimizer(train_config):
     """create optimizer"""
-
+    print(f"train_config: {train_config}")
     if 'optimizer_builder' not in train_config:
         train_config['optimizer_builder'] = {'optimizer': {'type': 'SGD'}}
 
     optimizer_builder = train_config['optimizer_builder']
-
+    assert isinstance(
+        optimizer_builder, dict
+    ), f"Value of 'optimizer_builder' in train_config should be dict but got {type(optimizer_builder)}"
     if 'grad_clip' in optimizer_builder:
         g_clip_params = optimizer_builder['grad_clip']
         g_clip_type = g_clip_params.pop('type')

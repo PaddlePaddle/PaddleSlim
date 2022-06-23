@@ -4,10 +4,12 @@ sys.path.append("../")
 import unittest
 import tempfile
 import paddle
+import unittest
 import numpy as np
 from static_case import StaticCase
 from paddle.io import Dataset
 from paddleslim.auto_compression import AutoCompression
+from paddleslim.auto_compression.config_helpers import load_config
 
 
 class RandomEvalDataset(Dataset):
@@ -24,7 +26,7 @@ class RandomEvalDataset(Dataset):
         return self.num_samples
 
 
-class ACTBase(StaticCase):
+class ACTBase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(ACTBase, self).__init__(*args, **kwargs)
         paddle.enable_static()
@@ -54,8 +56,8 @@ class ACTBase(StaticCase):
         # define a random dataset
         self.eval_dataset = RandomEvalDataset(32)
 
-    #def __del__(self):
-    #self.tmpdir.cleanup()
+    def __del__(self):
+        self.tmpdir.cleanup()
 
 
 class TestYamlQATDistTrain(ACTBase):
@@ -73,6 +75,47 @@ class TestYamlQATDistTrain(ACTBase):
             params_filename="infer.pdiparams",
             save_dir="output",
             config="./qat_dist_train.yaml",
+            train_dataloader=train_loader,
+            eval_dataloader=train_loader)  # eval_function to verify accuracy
+        ac.compress()
+
+
+class TestSetQATDist(ACTBase):
+    def __init__(self, *args, **kwargs):
+        super(TestSetQATDist, self).__init__(*args, **kwargs)
+
+    def test_compress(self):
+        image = paddle.static.data(
+            name='data', shape=[-1, 3, 32, 32], dtype='float32')
+        train_loader = paddle.io.DataLoader(
+            self.eval_dataset, feed_list=[image], batch_size=4)
+        ac = AutoCompression(
+            model_dir=self.tmpdir.name,
+            model_filename="infer.pdmodel",
+            params_filename="infer.pdiparams",
+            save_dir="output",
+            config={"QAT", "Distillation"},
+            train_dataloader=train_loader,
+            eval_dataloader=train_loader)  # eval_function to verify accuracy
+        ac.compress()
+
+
+class TestDictQATDist(ACTBase):
+    def __init__(self, *args, **kwargs):
+        super(TestDictQATDist, self).__init__(*args, **kwargs)
+
+    def test_compress(self):
+        config = load_config("./qat_dist_train.yaml")
+        image = paddle.static.data(
+            name='data', shape=[-1, 3, 32, 32], dtype='float32')
+        train_loader = paddle.io.DataLoader(
+            self.eval_dataset, feed_list=[image], batch_size=4)
+        ac = AutoCompression(
+            model_dir=self.tmpdir.name,
+            model_filename="infer.pdmodel",
+            params_filename="infer.pdiparams",
+            save_dir="output",
+            config=config,
             train_dataloader=train_loader,
             eval_dataloader=train_loader)  # eval_function to verify accuracy
         ac.compress()

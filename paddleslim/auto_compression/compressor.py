@@ -31,7 +31,7 @@ from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
-from .config_helpers import load_config
+from .config_helpers import load_config, extract_strategy_config, extract_train_config
 from .utils.predict import with_variable_shape
 from .utils import get_feed_vars, wrap_dataloader
 
@@ -130,12 +130,19 @@ class AutoCompression:
             os.makedirs(self.final_dir)
 
         # load config
-        self.strategy_config, self.train_config = load_config(config)
+        assert type(config) in [
+            dict, str, set, list, tuple
+        ], f"The type of config should be in [dict, str, set, list, tuple] but got {type(config)}"
+        if isinstance(config, str):
+            config = load_config(config)
+        self.strategy_config = extract_strategy_config(config)
+        self.train_config = extract_train_config(config)
+
+        # prepare dataloader
         self.feed_vars = get_feed_vars(model_dir, model_filename,
                                        params_filename)
         self.train_dataloader = wrap_dataloader(train_dataloader,
                                                 self.feed_vars)
-
         self.eval_dataloader = wrap_dataloader(eval_dataloader, self.feed_vars)
         if eval_dataloader is None:
             eval_dataloader = self._get_eval_dataloader(self.train_dataloader)

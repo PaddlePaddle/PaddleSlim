@@ -168,8 +168,10 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
 def main():
     global global_config
-    compress_config, train_config, global_config = load_slim_config(
-        FLAGS.config_path)
+
+    all_config = load_slim_config(FLAGS.config_path)
+    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
+    global_config = all_config["Global"]
     reader_cfg = load_config(global_config['reader_config'])
 
     train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
@@ -198,11 +200,11 @@ def main():
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"],
         save_dir=FLAGS.save_dir,
-        strategy_config=compress_config,
-        train_config=train_config,
+        #config=FLAGS.config_path,
+        config=all_config,
         train_dataloader=train_loader,
         eval_callback=eval_func)
-
+    return
     ac.compress()
 
 

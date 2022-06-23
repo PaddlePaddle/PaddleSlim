@@ -30,7 +30,26 @@ __all__ = [
     "ProgramInfo",
     "TrainConfig",
     "HPO_PTQ",
+    "SUPPORTED_CONFIG",
+    "TRAIN_CONFIG_NAME",
 ]
+
+SUPPORTED_CONFIG = [
+    "Quantization",
+    "PTQ",
+    "QAT",
+    "Distillation",
+    "MultiTeacherDistillation",
+    "HyperParameterOptimization",
+    "ChannelPrune",
+    "UnstructurePrune",
+    "TransformerPrune",
+    "ASPPrune",
+    "TrainConfig",
+    "HPO_PTQ",
+]
+
+TRAIN_CONFIG_NAME = "TrainConfig"
 
 
 class BaseStrategy:
@@ -289,7 +308,9 @@ class TrainConfig:
                  epochs=None,
                  train_iter=None,
                  learning_rate=0.02,
-                 optimizer_builder={'optimizer': 'SGD'},
+                 optimizer_builder={'optimizer': {
+                     'type': 'SGD'
+                 }},
                  eval_iter=1000,
                  logging_iter=10,
                  origin_metric=None,

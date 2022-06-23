@@ -95,7 +95,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print_arguments(args)
     paddle.enable_static()
-    compress_config, train_config, _ = load_config(args.config_path)
     data_dir = args.data_dir
 
     train_reader = paddle.batch(
@@ -107,10 +106,10 @@ if __name__ == '__main__':
         model_filename=args.model_filename,
         params_filename=args.params_filename,
         save_dir=args.save_dir,
-        strategy_config=compress_config,
-        train_config=train_config,
+        config=args.config_path,
         train_dataloader=train_dataloader,
         eval_callback=eval_function,
-        eval_dataloader=reader_wrapper(eval_reader(data_dir, args.batch_size), args.input_name))
+        eval_dataloader=reader_wrapper(
+            eval_reader(data_dir, args.batch_size), args.input_name))
 
     ac.compress()
