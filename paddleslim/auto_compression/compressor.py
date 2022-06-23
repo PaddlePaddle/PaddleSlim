@@ -224,11 +224,15 @@ class AutoCompression:
 
     @deploy_hardware.setter
     def deploy_hardware(self, value):
+        supported_hardware = TableLatencyPredictor.hardware_list + [
+            'gpu',  # nvidia gpu
+            "cpu",  # intel cpu
+        ]
         if value is not None:
             # Fail-fast when deploy hardware is set explicitly
             assert (
-                value in TableLatencyPredictor.hardware_list
-            ), f"Hardware should be in supported list {TableLatencyPredictor.hardware_list} but got {value}. Or you can set deploy_hardware None."
+                value in supported_hardware
+            ), f"Hardware should be in supported list {supported_hardware} but got {value}. Or you can set deploy_hardware None."
         self._deploy_hardware = value
 
     def _get_eval_dataloader(self, train_dataloader):
