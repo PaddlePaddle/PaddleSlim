@@ -128,7 +128,6 @@ class AutoCompression:
         if not os.path.exists(self.final_dir):
             os.makedirs(self.final_dir)
         self.strategy_config = strategy_config
-        print("self.strategy_config: ", self.strategy_config)
         self.train_dataloader = train_dataloader
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
