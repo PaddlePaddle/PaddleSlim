@@ -42,7 +42,7 @@ def parse_args():
         '--dataset_config',
         type=str,
         default=None,
-        help="path of compression strategy config.")
+        help="path of dataset config.")
     parser.add_argument(
         '--deploy_hardware',
         type=str,

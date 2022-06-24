@@ -17,8 +17,6 @@ from collections import namedtuple
 __all__ = [
     "BaseStrategy",
     "Quantization",
-    "PTQ",
-    "QAT",
     "Distillation",
     "MultiTeacherDistillation",
     "HyperParameterOptimization",
@@ -29,15 +27,12 @@ __all__ = [
     "merge_config",
     "ProgramInfo",
     "TrainConfig",
-    "HPO_PTQ",
     "SUPPORTED_CONFIG",
     "TRAIN_CONFIG_NAME",
 ]
 
 SUPPORTED_CONFIG = [
     "Quantization",
-    "PTQ",
-    "QAT",
     "Distillation",
     "MultiTeacherDistillation",
     "HyperParameterOptimization",
@@ -46,7 +41,6 @@ SUPPORTED_CONFIG = [
     "TransformerPrune",
     "ASPPrune",
     "TrainConfig",
-    "HPO_PTQ",
 ]
 
 TRAIN_CONFIG_NAME = "TrainConfig"
@@ -55,45 +49,6 @@ TRAIN_CONFIG_NAME = "TrainConfig"
 class BaseStrategy:
     def __init__(self, name):
         self.name = name
-
-
-class PTQ(BaseStrategy):
-    def __init__(self,
-                 quantize_op_types=[
-                     'conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'
-                 ],
-                 weight_bits=8,
-                 activation_bits=8,
-                 not_quant_pattern=['skip_quant'],
-                 activation_quantize_type='moving_average_abs_max',
-                 weight_quantize_type='channel_wise_abs_max',
-                 dtype='int8',
-                 for_tensorrt=False,
-                 is_full_quantize=False):
-        """
-        Configuration of Post Training Quantization.
-        Args:
-            quantize_op_types(list(str)): Ops of type in quantize_op_types, will be quantized. Default: ['conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'].
-            weight_bits(int): Weight quantize bit num. Default: 8.
-            activation_bits(int): Activation quantize bit num. Default 8.
-            not_quant_pattern(list(str)): Ops of name_scope in not_quant_pattern list, will not be quantized. Default: 'skip_quant'.
-            activation_quantize_type(str): Activation quantize type. Default is 'moving_average_abs_max'.
-            weight_quantize_type(str): Weight quantize type. Default 'channel_wise_abs_max'.
-            dtype(str): Data type after quantization, such as 'uint8', 'int8', etc. default is 'int8'.
-            for_tensorrt(bool): If True, 'quantize_op_types' will be TENSORRT_OP_TYPES. Default: False.
-            is_full_quantize(bool): If True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES. Default: False.
-        """
-        super(PTQ, self).__init__("PTQ")
-        self.quantize_op_types = quantize_op_types
-        self.weight_bits = weight_bits
-        self.activation_bits = activation_bits
-        self.not_quant_pattern = not_quant_pattern
-        self.is_full_quantize = is_full_quantize
-        self.activation_quantize_type = activation_quantize_type
-        self.weight_quantize_type = weight_quantize_type
-        self.dtype = dtype
-        self.for_tensorrt = for_tensorrt
-        self.is_full_quantize = is_full_quantize
 
 
 class Quantization(BaseStrategy):
@@ -142,9 +97,6 @@ class Quantization(BaseStrategy):
         self.moving_rate = moving_rate
         self.for_tensorrt = for_tensorrt
         self.is_full_quantize = is_full_quantize
-
-
-QAT = Quantization
 
 
 class Distillation(BaseStrategy):
@@ -225,9 +177,6 @@ class HyperParameterOptimization(BaseStrategy):
         self.hist_percent = hist_percent
         self.batch_num = batch_num
         self.max_quant_count = max_quant_count
-
-
-HPO_PTQ = HyperParameterOptimization
 
 
 class ChannelPrune:

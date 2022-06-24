@@ -169,11 +169,9 @@ def main():
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"],
         save_dir=FLAGS.save_dir,
-        #config=FLAGS.config_path,
         config=all_config,
         train_dataloader=train_loader,
         eval_callback=eval_func)
-    return
     ac.compress()
 
 

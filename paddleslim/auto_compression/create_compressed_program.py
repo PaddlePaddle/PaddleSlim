@@ -45,7 +45,6 @@ def _create_lr_scheduler(train_config):
 
 def _create_optimizer(train_config):
     """create optimizer"""
-    print(f"train_config: {train_config}")
     if 'optimizer_builder' not in train_config:
         train_config['optimizer_builder'] = {'optimizer': {'type': 'SGD'}}
 
@@ -433,8 +432,6 @@ def build_prune_program(executor,
                 params.append(param.name)
                 original_shapes[param.name] = param.shape
 
-#        assert len(params) > 0, "The list of parameters to be pruned is empty."
-#        if len(params) > 0:
         pruned_program, _, _ = pruner.prune(
             train_program_info.program,
             paddle.static.global_scope(),
