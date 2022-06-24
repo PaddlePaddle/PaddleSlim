@@ -460,7 +460,7 @@ class AutoCompression:
                 self._exe,
                 self._places,
                 config_dict,
-                copy.deepcopy(self.train_config.__dict__),
+                train_config.__dict__,
                 train_program_info,
                 pruner=self._pruner,
                 dist_strategy=dist_strategy,
