@@ -34,7 +34,7 @@ from .strategy_config import TrainConfig, ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
 from .config_helpers import load_config, extract_strategy_config, extract_train_config
 from .utils.predict import with_variable_shape
-from .utils import get_feed_vars, wrap_dataloader
+from .utils import get_feed_vars, wrap_dataloader, load_inference_model
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -63,14 +63,10 @@ class AutoCompression:
 
         Args:
             model_dir(str): The path of inference model that will be compressed, and
-                the model and params that saved by ``paddle.static.io.save_inference_model``
+                the model and params that saved by ``paddle.static.save_inference_model``
                 are under the path.
-            model_filename(str, optional):  The name of model file. If parameters
-                are saved in separate files, set it as 'None'. Default: 'None'.
-            params_filename(str, optional): The name of params file.
-                When all parameters are saved in a single file, set it
-                as filename. If parameters are saved in separate files,
-                set it as 'None'. Default : 'None'.
+            model_filename(str):  The name of model file. 
+            params_filename(str): The name of params file.
             save_dir(str): The path to save compressed model. The models in this directory will be overwrited
                 after calling 'compress()' function.
             train_data_loader(Python Generator, Paddle.io.DataLoader): The
@@ -120,12 +116,19 @@ class AutoCompression:
             deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
         """
         self.model_dir = model_dir
+
         if model_filename == 'None':
             model_filename = None
         self.model_filename = model_filename
         if params_filename == 'None':
             params_filename = None
         self.params_filename = params_filename
+
+        if params_filename is None and model_filename is not None:
+            raise NotImplementedError(
+                "NOT SUPPORT parameters saved in separate files. Please convert it to single binary file first."
+            )
+
         self.final_dir = save_dir
         if not os.path.exists(self.final_dir):
             os.makedirs(self.final_dir)
@@ -239,12 +242,9 @@ class AutoCompression:
         ], f'Type of input_shapes should be in [dict, tuple or list] but got {type(input_shapes)}.'
         paddle.enable_static()
         exe = paddle.static.Executor(paddle.CPUPlace())
-        [inference_program, feed_target_names, fetch_targets] = (
-            paddle.static.load_inference_model(
-                model_dir,
-                exe,
-                model_filename=model_filename,
-                params_filename=params_filename))
+        [inference_program, feed_target_names,
+         fetch_targets] = (load_inference_model(model_dir, exe, model_filename,
+                                                params_filename))
 
         if type(input_shapes) in [list, tuple]:
             assert len(
@@ -304,10 +304,10 @@ class AutoCompression:
         return exe, places
 
     def _get_model_type(self, exe, model_dir, model_filename, params_filename):
-        [inference_program, _, _]= paddle.fluid.io.load_inference_model( \
-            dirname=model_dir, \
+        [inference_program, _, _]= (load_inference_model( \
+            model_dir, \
             model_filename=model_filename, params_filename=params_filename,
-            executor=exe)
+            executor=exe))
         _, _, model_type = get_patterns(inference_program)
         return model_type
 
@@ -647,8 +647,8 @@ class AutoCompression:
                 model_dir = os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx)))
 
-            [inference_program, feed_target_names, fetch_targets]= paddle.fluid.io.load_inference_model( \
-                dirname=model_dir, \
+            [inference_program, feed_target_names, fetch_targets]= load_inference_model( \
+                model_dir, \
                 model_filename=self.model_filename, params_filename=self.params_filename,
                 executor=self._exe)
 
@@ -772,11 +772,16 @@ class AutoCompression:
                                  'strategy_{}'.format(str(strategy_idx + 1)))
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
-        paddle.fluid.io.save_inference_model(
-            dirname=str(model_dir),
-            feeded_var_names=test_program_info.feed_target_names,
-            target_vars=test_program_info.fetch_targets,
+        feed_vars = [
+            test_program.global_block().var(name)
+            for name in test_program_info.feed_target_names
+        ]
+
+        paddle.static.save_inference_model(
+            path_prefix=str(model_dir),
+            feed_vars=feed_vars,
+            fetch_vars=test_program_info.fetch_targets,
             executor=self._exe,
-            main_program=test_program,
+            program=test_program,
             model_filename=self.model_filename,
             params_filename=self.params_filename)
