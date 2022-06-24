@@ -101,8 +101,9 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
 def main():
     global global_config
-    compress_config, train_config, global_config = load_slim_config(
-        args.config_path)
+    all_config = load_slim_config(args.config_path)
+    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
+    global_config = all_config["Global"]
     global data_dir
     data_dir = global_config['data_dir']
 
@@ -115,8 +116,7 @@ def main():
         model_filename=global_config['model_filename'],
         params_filename=global_config['params_filename'],
         save_dir=args.save_dir,
-        strategy_config=compress_config,
-        train_config=train_config,
+        config=all_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function,
         eval_dataloader=reader_wrapper(eval_reader(data_dir, global_config['batch_size']), global_config['input_name']))
