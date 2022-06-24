@@ -18,7 +18,7 @@
 ## 2. Benchmark
 - PaddleClas模型
 
-| 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) ｜ 
+| 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) | 
 |:------:|:------:|:------:|:------:|:------:|
 | MobileNetV1 | Baseline | 70.90 | - | 33.15 |
 | MobileNetV1 | 量化+蒸馏 | 70.49 | - | 13.64 |
