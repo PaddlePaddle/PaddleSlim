@@ -46,12 +46,13 @@ default_hpo_config = {
 
 # default quant config, can be used by ptq&hpo and qat&distillation
 default_quant_config = {
-    'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul', 'matmul'],
+    'quantize_op_types':
+    ['conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'],
     'weight_bits': 8,
     'activation_bits': 8,
     "is_full_quantize": False,
-    "activation_quantize_type": 'range_abs_max',
-    "weight_quantize_type": 'abs_max',
+    "activation_quantize_type": 'moving_average_abs_max',
+    "weight_quantize_type": 'channel_wise_abs_max',
     "not_quant_pattern": ["skip_quant"],
 }
 
@@ -60,10 +61,12 @@ DefaultTrainConfig = {
     "epochs": 1,
     "eval_iter": 500,
     "learning_rate": 0.0001,
-    "optimizer": "Momentum",
-    "optim_args": {
+    "optimizer_builder": {
+        "optimizer": {
+            "type": "Momentum",
+        },
         "weight_decay": 4.0e-05
-    },
+    }
 }
 
 EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
