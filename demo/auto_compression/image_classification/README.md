@@ -23,22 +23,22 @@
 |:------:|:------:|:------:|:------:|:------:|
 | MobileNetV1 | Baseline | 70.90 | - | 33.15 |
 | MobileNetV1 | 量化+蒸馏 | 70.49 | - | 13.64 |
-| ResNet50_vd | Baseline | 79.12 | 3.1901 | - |
-| ResNet50_vd | 量化+蒸馏 | 78.55 | 0.9243 | - |
+| ResNet50_vd | Baseline | 79.12 | 3.19 | - |
+| ResNet50_vd | 量化+蒸馏 | 78.55 | 0.92 | - |
 | ShuffleNetV2_x1_0 | Baseline | 68.65 | - | 10.43 |
 | ShuffleNetV2_x1_0 | 量化+蒸馏 | 67.78 | - | 5.51 |
-| SqueezeNet1_0_infer | Baseline | 59.6 | - | 35.98 |
+| SqueezeNet1_0_infer | Baseline | 59.60 | - | 35.98 |
 | SqueezeNet1_0_infer | 量化+蒸馏 | 59.13 | - | 16.96 |
 | PPLCNetV2_base | Baseline | 76.86 | - | 36.50 |
 | PPLCNetV2_base | 量化+蒸馏 | 76.43 | - | 15.79 |
-| PPHGNet_tiny | Baseline | 79.59 | 2.822 | - |
+| PPHGNet_tiny | Baseline | 79.59 | 2.82 | - |
 | PPHGNet_tiny | 量化+蒸馏 | 79.19 | 0.98 | - |
-| EfficientNetB0 | Baseline | 77.02 | 1.9529 | - |
-| EfficientNetB0 | 量化+蒸馏 | 73.61 | 1.4362 | - |
-| GhostNet_x1_0 | Baseline | 74.02 | 2.9301 | - |
-| GhostNet_x1_0 | 量化+蒸馏 | 71.11 | 1.0348 | - |
-| InceptionV3 | Baseline | 79.14 | 4.7931 | - |
-| InceptionV3 | 量化+蒸馏 | 73.16 | 1.4703 | - |
+| EfficientNetB0 | Baseline | 77.02 | 1.95 | - |
+| EfficientNetB0 | 量化+蒸馏 | 73.61 | 1.44 | - |
+| GhostNet_x1_0 | Baseline | 74.02 | 2.93 | - |
+| GhostNet_x1_0 | 量化+蒸馏 | 71.11 | 1.03 | - |
+| InceptionV3 | Baseline | 79.14 | 4.79 | - |
+| InceptionV3 | 量化+蒸馏 | 73.16 | 1.47 | - |
 | MobileNetV3_large_x1_0 | Baseline | 75.32 | - | 16.62 |
 | MobileNetV3_large_x1_0 | 量化+蒸馏 | 68.84 | - | 9.85 |
 
