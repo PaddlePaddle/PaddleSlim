@@ -158,7 +158,7 @@ class AutoCompression:
         self.model_type = self._get_model_type(self._exe, model_dir,
                                                model_filename, params_filename)
 
-        if train_config is not None and train_config.use_fleet:
+        if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
 
         if with_variable_shape(
@@ -191,7 +191,8 @@ class AutoCompression:
             self.strategy_config)
 
         self.train_config = self._get_final_train_config(
-            train_config, self._strategy, self.model_type)
+            self.train_config, self._strategy, self.model_type)
+        _logger.info(f"Selected strategies: {self._strategy}")
 
     def _get_final_train_config(self, train_config, strategy_config,
                                 model_type):
@@ -546,7 +547,12 @@ class AutoCompression:
         return tmp_dir
 
     def compress(self):
+        assert len(self._strategy) > 0
         self.tmp_dir = self.create_tmp_dir(self.final_dir)
+        strategy = None
+        config = None
+        train_config = None
+        strategy_idx = None
         for strategy_idx, (
                 strategy, config, train_config
         ) in enumerate(zip(self._strategy, self._config, self.train_config)):
