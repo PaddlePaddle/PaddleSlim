@@ -11,7 +11,7 @@ except:
     TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
 
-from . import load_inference_model
+from .load_model import load_inference_model
 
 
 def post_quant_fake(executor,

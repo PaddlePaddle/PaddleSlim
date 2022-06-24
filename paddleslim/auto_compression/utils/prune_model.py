@@ -5,7 +5,7 @@ import paddle
 import paddle.static as static
 from ...prune import Pruner
 from ...core import GraphWrapper
-from . import load_inference_model
+from .load_model import load_inference_model
 __all__ = ["get_sparse_model", "get_prune_model"]
 
 

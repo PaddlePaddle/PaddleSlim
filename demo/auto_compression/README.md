@@ -61,7 +61,7 @@ image = paddle.static.data(
 train_loader = paddle.io.DataLoader(train_dataset, feed_list=[image], batch_size=32, return_list=False)
 # 开始自动压缩
 ac = AutoCompression(
-    model_dir="./MobileNetV1_infer/",
+    model_dir="./MobileNetV1_infer",
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="output",
