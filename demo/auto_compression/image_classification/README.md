@@ -31,7 +31,7 @@
 | PPLCNetV2_base | Baseline | 76.86 | - | 36.50 |
 | PPLCNetV2_base | 量化+蒸馏 | 76.43 | - | 15.79 |
 | PPHGNet_tiny | Baseline | 79.59 | 2.822 | - |
-| PPHGNet_tiny | 量化+蒸馏 | 79.19 |  | - |
+| PPHGNet_tiny | 量化+蒸馏 | 79.19 | 0.98 | - |
 | EfficientNetB0 | Baseline | 77.02 | 1.9529 | - |
 | EfficientNetB0 | 量化+蒸馏 | 73.61 | 1.4362 | - |
 | GhostNet_x1_0 | Baseline | 74.02 | 2.9301 | - |
