@@ -61,10 +61,12 @@ DefaultTrainConfig = {
     "epochs": 1,
     "eval_iter": 500,
     "learning_rate": 0.0001,
-    "optimizer": "Momentum",
-    "optim_args": {
+    "optimizer_builder": {
+        "optimizer": {
+            "type": "Momentum",
+        },
         "weight_decay": 4.0e-05
-    },
+    }
 }
 
 EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
@@ -73,8 +75,8 @@ EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
 ]
 MAGIC_SPARSE_RATIO = 0.75
 ### TODO: 0.02 threshold maybe not suitable, need to check
-MAGIC_MAX_EMD_DISTANCE = 0.0002
-MAGIC_MIN_EMD_DISTANCE = 0.0001
+MAGIC_MAX_EMD_DISTANCE = 0.02
+MAGIC_MIN_EMD_DISTANCE = 0.01
 
 DEFAULT_TRANSFORMER_STRATEGY = 'prune_0.25_int8'
 DEFAULT_STRATEGY = 'origin_int8'

@@ -1,5 +1,5 @@
 Global:
-  reader_config: configs/pp_humanseg_lite.yaml
+  reader_config: configs/dataset/pp_humanseg_dataset.yaml
 
 TrainConfig:
   epochs: 14
