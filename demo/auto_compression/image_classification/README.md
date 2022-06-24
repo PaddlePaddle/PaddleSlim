@@ -16,7 +16,7 @@
 本示例将以图像分类模型MobileNetV1为例，介绍如何使用PaddleClas中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为量化训练和蒸馏。
 
 ## 2. Benchmark
-- MobileNetV1模型
+- PaddlePaddle MobileNetV1模型
 
 | 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=4 |
 |:------:|:------:|:------:|:------:|
