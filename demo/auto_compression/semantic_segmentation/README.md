@@ -19,16 +19,37 @@
 
 - [PP-HumanSeg-Lite](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/contrib/PP-HumanSeg#portrait-segmentation)
 
-| 模型 | 策略  | Total IoU | 耗时(ms)<br>thread=1 | 配置文件 | Inference模型  |
-|:-----:|:-----:|:----------:|:---------:| :------:| :------:|
-| PP-HumanSeg-Lite | Baseline |  0.9287 | 56.363 | - | [model](https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz) |
-| PP-HumanSeg-Lite | 非结构化稀疏+蒸馏 |  0.9235 | 37.712 | [config](./configs/pp_human_sparse_dis.yaml)| - |
-| PP-HumanSeg-Lite | 量化+蒸馏 |  0.9284 | 49.656 | [config](./configs/pp_human_sparse_dis.yaml) | - |
+| 模型 | 策略  | Total IoU | ARM CPU耗时(ms)<br>thread=1 |Nvidia GPU耗时(ms)| 配置文件 | Inference模型  |
+|:-----:|:-----:|:----------:|:---------:| :------:|:------:|:------:|
+| PP-HumanSeg-Lite | Baseline |  92.87 | 56.363 |-| - | [model](https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz) |
+| PP-HumanSeg-Lite | 非结构化稀疏+蒸馏 |  92.35 | 37.712 |-| [config](./configs/pp_human/pp_human_sparse.yaml)| - |
+| PP-HumanSeg-Lite | 量化+蒸馏 |  92.84 | 49.656 |-| [config](./configs/pp_human/pp_human_qat.yaml) | - |
+| PP-Liteseg | Baseline |  77.04| - | 1.425| - |[model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-PPLIteSegSTDC1.zip)|
+| PP-Liteseg | 量化训练 |  76.93 | - | 1.158|[config](./configs/pp_liteseg/pp_liteseg_qat.yaml) | - |
+| HRNet | Baseline |  78.97 | - |8.188|-| [model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-HRNetW18-Seg.zip)|
+| HRNet | 量化训练 |  78.90 | - |5.812| [config](./configs/hrnet/hrnet_qat.yaml) | - |
+| UNet | Baseline | 65.00  | - |15.291|-| [model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-UNet.zip) |
+| UNet | 量化训练 |  64.93 | - |10.228| [config](./configs/unet/unet_qat.yaml) | - |
+| Deeplabv3-ResNet50 | Baseline |  79.90 | -|12.766| -| [model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-Deeplabv3-ResNet50.zip)|
+| Deeplabv3-ResNet50 | 量化训练 |  78.89 | - |8.839|[config](./configs/deeplabv3/deeplabv3_qat.yaml) | - |
 
-- 测试环境：`SDM710 2*A75(2.2GHz) 6*A55(1.7GHz)`；
-- 数据集：AISegment + PP-HumanSeg14K + 内部自建数据集。其中 AISegment 是开源数据集，可从[链接](https://github.com/aisegmentcn/matting_human_datasets)处获取；PP-HumanSeg14K 是 PaddleSeg 自建数据集，可从[官方渠道](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset)获取；内部数据集不对外公开。
+- ARM CPU测试环境：`SDM710 2*A75(2.2GHz) 6*A55(1.7GHz)`；
 
-下面将以开源数据集为例介绍如何进行自动压缩。
+- Nvidia GPU测试环境：
+
+  - 硬件：NVIDIA Tesla T4 单卡
+  - 软件：CUDA 11.0, cuDNN 8.0, TensorRT 8.0
+  - 测试配置：batch_size: 40, max_seq_len: 128
+
+- PP-HumanSeg-Lite数据集
+
+  - 数据集：AISegment + PP-HumanSeg14K + 内部自建数据集。其中 AISegment 是开源数据集，可从[链接](https://github.com/aisegmentcn/matting_human_datasets)处获取；PP-HumanSeg14K 是 PaddleSeg 自建数据集，可从[官方渠道](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset)获取；内部数据集不对外公开。
+
+- PP-Liteseg，HRNet，UNet，Deeplabv3-ResNet50数据集
+
+  - cityscapes: 请从[cityscapes官网](https://www.cityscapes-dataset.com/login/)下载完整数据
+
+下面将以开源数据集为例介绍如何对PP-HumanSeg-Lite进行自动压缩。
 
 ## 3. 自动压缩流程
 
@@ -93,7 +114,7 @@ python run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_auto.yaml' \
+    --config_path='configs/pp_humanseg/pp_humanseg_auto.yaml' \
     --deploy_hardware='SD710'
 
 # 多卡启动
@@ -103,7 +124,7 @@ python -m paddle.distributed.launch run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_auto.yaml' \
+    --config_path='configs/pp_humanseg/pp_humanseg_auto.yaml' \
     --deploy_hardware='SD710'
 ```
 - 自行配置稀疏参数进行非结构化稀疏和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
@@ -115,7 +136,7 @@ python run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_sparse_dis.yaml'
+    --config_path='configs/pp_humanseg/pp_humanseg_sparse.yaml'
 
 # 多卡启动
 export CUDA_VISIBLE_DEVICES=0,1
@@ -124,7 +145,7 @@ python -m paddle.distributed.launch run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_sparse_dis.yaml'
+    --config_path='configs/pp_humanseg/pp_humanseg_sparse.yaml'
 ```
 
 - 自行配置量化参数进行量化和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
@@ -136,7 +157,7 @@ python run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_quant_dis.yaml'
+    --config_path='configs/pp_humanseg/pp_humanseg_qat.yaml'
 
 # 多卡启动
 export CUDA_VISIBLE_DEVICES=0,1
@@ -145,7 +166,7 @@ python -m paddle.distributed.launch run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg_quant_dis.yaml'
+    --config_path='configs/pp_humanseg/pp_humanseg_qat.yaml'
 ```
 
 压缩完成后会在`save_dir`中产出压缩好的预测模型，可直接预测部署。

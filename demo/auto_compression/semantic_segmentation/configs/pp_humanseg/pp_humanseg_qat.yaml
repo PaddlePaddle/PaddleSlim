@@ -1,0 +1,22 @@
+Global:
+  reader_config: configs/dataset/pp_humanseg_lite.yaml
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - batch_norm_47.tmp_2
+
+Quantization:
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+
+TrainConfig:
+  epochs: 1
+  eval_iter: 400
+  learning_rate: 0.0005
+  optimizer_builder:
+    optimizer: 
+      type: SGD
+    weight_decay: 0.0005
