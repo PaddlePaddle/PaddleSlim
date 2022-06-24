@@ -20,7 +20,7 @@ from layers import conv_bn_layer
 from static_case import StaticCase
 
 
-class TestFSPLoss(StaticCase):
+class TestDKDLoss(StaticCase):
     def test_dkd_loss(self):
         input = paddle.static.data(name="image", shape=[None, 3, 224, 224])
         conv1 = conv_bn_layer(input, 8, 3, "conv1")
