@@ -230,3 +230,76 @@ def loss(loss_func, program=None, **kwargs):
             func_parameters.setdefault(item[0], item[1])
     loss = loss_func(**func_parameters)
     return loss
+
+
+def _top_mask(x):
+    top_value, top_index = paddle.topk(x, 1)
+    return paddle.cast(x == top_value, "int32")
+
+
+def _cal_tc_nc_pred(x, top_mask):
+    """Calculate the predictions of target class and non-target class.
+    The predictions of target class is a binary distribution.
+    And the predictions of non-target class is softmax of  after removing target class.
+    """
+    pred = paddle.nn.functional.softmax(x)
+    fp_mask = paddle.cast(top_mask, "float32")
+    top_value = paddle.sum(fp_mask * pred, axis=1, keepdim=True)
+    tc_pred = paddle.concat([top_value, 1 - top_value], axis=1)
+    tmp = paddle.assign(x)
+    tmp = tmp + (-100000 * top_mask)
+    nc_pred = paddle.nn.functional.softmax(tmp)
+    return tc_pred, nc_pred
+
+
+def _dkd_loss(student_logits,
+              teacher_logits,
+              temperature=1.0,
+              alpha=1.0,
+              beta=1.0):
+    mask = _top_mask(teacher_logits)
+    print(f"mask: {mask.shape}")
+    print(
+        f"student_logits: {student_logits.shape}; teacher_logits: {teacher_logits.shape}"
+    )
+    s_tc_pred, s_nc_pred = _cal_tc_nc_pred(student_logits / temperature, mask)
+    t_tc_pred, t_nc_pred = _cal_tc_nc_pred(teacher_logits / temperature, mask)
+    tc_loss = paddle.nn.functional.kl_div(
+        s_tc_pred, t_tc_pred, reduction='mean')
+    nc_loss = paddle.nn.functional.kl_div(
+        s_nc_pred, t_nc_pred, reduction='mean')
+    loss = alpha * tc_loss + beta * nc_loss
+    return loss * temperature**2
+
+
+def dkd(teacher_var_name,
+        student_var_name,
+        program=None,
+        temperature=1.0,
+        alpha=1.0,
+        beta=1.0):
+    """Combine variables from student model and teacher model by l2-loss.
+    Reference: https://github.com/megvii-research/mdistiller
+    Args:
+        teacher_var_name(str): The name of teacher_var.
+        student_var_name(str): The name of student_var.
+        program(Program): The input distiller program. If not specified,
+                          the default program will be used. Default: None
+        temperature(float): Temperature used to divide
+            teacher_feature_map before softmax. Default: 1.0
+        alpha(float): The weight of target class loss. Default: 1.0
+        beta(float): The weight of none-target class loss. Default: 1.0
+
+    Returns: 
+        Variable: dkd distiller loss.
+    """
+    if program == None:
+        program = paddle.static.default_main_program()
+    student_var = program.global_block().var(student_var_name)
+    teacher_var = program.global_block().var(teacher_var_name)
+    return _dkd_loss(
+        student_var,
+        teacher_var,
+        temperature=temperature,
+        alpha=alpha,
+        beta=beta)
