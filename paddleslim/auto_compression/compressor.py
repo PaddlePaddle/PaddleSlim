@@ -729,21 +729,24 @@ class AutoCompression:
                             test_program_info.feed_target_names,
                             test_program_info.fetch_targets)
 
-                        _logger.info(
-                            "epoch: {} metric of compressed model is: {:.6f}, best metric of compressed model is {:.6f}".
-                            format(epoch_id, metric, best_metric))
-
                         if metric > best_metric:
                             paddle.static.save(
                                 program=test_program_info.program._program,
                                 model_path=os.path.join(self.tmp_dir,
                                                         'best_model'))
                             best_metric = metric
+                            _logger.info(
+                                "epoch: {} metric of compressed model is: {:.6f}, best metric of compressed model is {:.6f}".
+                                format(epoch_id, metric, best_metric))
                             if self.metric_before_compressed is not None and float(
                                     abs(best_metric -
                                         self.metric_before_compressed)
                             ) / self.metric_before_compressed <= 0.005:
                                 break
+                        else:
+                            _logger.info(
+                                "epoch: {} metric of compressed model is: {:.6f}, best metric of compressed model is {:.6f}".
+                                format(epoch_id, metric, best_metric))
                         if train_config.target_metric is not None:
                             if metric > float(train_config.target_metric):
                                 break

@@ -10,34 +10,38 @@ import numpy as np
 import paddle
 import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
-import imagenet_reader as pd_imagenet_reader
-import tf_imagenet_reader
-from paddleslim.auto_compression.config_helpers import load_config
+import imagenet_reader as reader
+from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 from utility import add_arguments, print_arguments
 
-parser = argparse.ArgumentParser(description=__doc__)
-add_arg = functools.partial(add_arguments, argparser=parser)
+def argsparser():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--config_path',
+        type=str,
+        default=None,
+        help="path of compression strategy config.",
+        required=True)
+    parser.add_argument(
+        '--save_dir',
+        type=str,
+        default='output',
+        help="directory to save compressed model.")
+    return parser
 
-# yapf: disable
-add_arg('model_dir',                   str,    None,         "inference model directory.")
-add_arg('model_filename',              str,    None,         "inference model filename.")
-add_arg('params_filename',             str,    None,         "inference params filename.")
-add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
-add_arg('batch_size',                  int,    1,            "train batch size.")
-add_arg('config_path',                 str,    None,         "path of compression strategy config.")
-add_arg('data_dir',                    str,    None,         "path of dataset")
-add_arg('input_name',                  str,    "inputs",     "input name of the model")
-add_arg('input_shape',                 int,    [3,224,224],  "input shape of the model except batch_size", nargs='+')
-add_arg('image_reader_type',           str,    "paddle",     "the preprocess of data. choice in [\"paddle\", \"tensorflow\"]")
 
-
+def print_arguments(args):
+    print('-----------  Running Arguments -----------')
+    for arg, value in sorted(vars(args).items()):
+        print('%s: %s' % (arg, value))
+    print('------------------------------------------')
+    
 # yapf: enable
-def reader_wrapper(reader, input_name, input_shape):
+def reader_wrapper(reader, input_name):
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.float32([item[0] for item in data])
-            imgs = imgs.reshape([len(data)] + input_shape)
             yield {input_name: imgs}
 
     return gen
@@ -50,9 +54,9 @@ def eval_reader(data_dir, batch_size):
 
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
-    val_reader = eval_reader(data_dir, batch_size=args.batch_size)
+    val_reader = eval_reader(data_dir, batch_size=global_config['batch_size'])
     image = paddle.static.data(
-        name=args.input_name, shape=[None] + args.input_shape, dtype='float32')
+        name=global_config['input_name'], shape=[None, 3, 224, 224], dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
 
     results = []
@@ -60,7 +64,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         # top1_acc, top5_acc
         if len(test_feed_names) == 1:
             image = np.array([[d[0]] for d in data])
-            image = image.reshape([len(data)] + args.input_shape)
+            image = image.reshape((len(data), 3, 224, 224))
             label = [[d[1]] for d in data]
             pred = exe.run(compiled_test_program,
                            feed={test_feed_names[0]: image},
@@ -80,8 +84,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         else:
             # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
             image = np.array([[d[0]] for d in data])
-            image = image.reshape([len(data)] + args.input_shape)
-            label = [[d[1]] for d in data]
+            image = image.reshape((len(data), 3, 224, 224))
             label = [[d[1]] for d in data]
             result = exe.run(
                 compiled_test_program,
@@ -96,35 +99,33 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     return result[0]
 
 
-if __name__ == '__main__':
-    args = parser.parse_args()
-    print_arguments(args)
-    paddle.enable_static()
-    data_dir = args.data_dir
+def main():
+    global global_config
+    all_config = load_slim_config(args.config_path)
+    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
+    global_config = all_config["Global"]
+    global data_dir
+    data_dir = global_config['data_dir']
 
-    if args.image_reader_type == 'paddle':
-        reader = pd_imagenet_reader
-    elif args.image_reader_type == 'tensorflow':
-        reader = tf_imagenet_reader
-    else:
-        raise NotImplementedError(
-            "image_reader_type only can be set to paddle or tensorflow, but now is {}".
-            format(args.image_reader_type))
     train_reader = paddle.batch(
-        reader.train(data_dir=data_dir), batch_size=args.batch_size)
-    train_dataloader = reader_wrapper(train_reader, args.input_name,
-                                      args.input_shape)
+        reader.train(data_dir=data_dir), batch_size=global_config['batch_size'])
+    train_dataloader = reader_wrapper(train_reader, global_config['input_name'])
 
     ac = AutoCompression(
-        model_dir=args.model_dir,
-        model_filename=args.model_filename,
-        params_filename=args.params_filename,
+        model_dir=global_config['model_dir'],
+        model_filename=global_config['model_filename'],
+        params_filename=global_config['params_filename'],
         save_dir=args.save_dir,
-        config=args.config_path,
+        config=all_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function,
-        eval_dataloader=reader_wrapper(
-            eval_reader(data_dir, args.batch_size), args.input_name,
-            args.input_shape))
+        eval_dataloader=reader_wrapper(eval_reader(data_dir, global_config['batch_size']), global_config['input_name']))
 
     ac.compress()
+    
+if __name__ == '__main__':
+    paddle.enable_static()
+    parser = argsparser()
+    args = parser.parse_args()
+    print_arguments(args)
+    main()

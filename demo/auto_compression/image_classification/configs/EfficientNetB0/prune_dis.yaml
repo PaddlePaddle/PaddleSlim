@@ -1,0 +1,93 @@
+Global:
+  input_name: x
+  model_dir: EfficientNetB0_infer
+  model_filename: inference.pdmodel
+  params_filename: inference.pdiparams
+  batch_size: 32
+  data_dir: /ILSVRC2012
+  
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - softmax_1.tmp_0
+ChannelPrune:
+  pruned_ratio: 0.25
+  prune_params_name:
+  - _blocks.0._se_reduce_weights
+  - _blocks.0._se_expand_weights
+  - _blocks.0._project_conv_weights
+  - _blocks.1._expand_conv_weights
+  - _blocks.1._se_reduce_weights
+  - _blocks.1._se_expand_weights
+  - _blocks.1._project_conv_weights
+  - _blocks.2._expand_conv_weights
+  - _blocks.2._se_reduce_weights
+  - _blocks.2._se_expand_weights
+  - _blocks.2._project_conv_weights
+  - _blocks.3._expand_conv_weights
+  - _blocks.3._se_reduce_weights
+  - _blocks.3._se_expand_weights
+  - _blocks.3._project_conv_weights
+  - _blocks.4._expand_conv_weights
+  - _blocks.4._se_reduce_weights
+  - _blocks.4._se_expand_weights
+  - _blocks.4._project_conv_weights
+  - _blocks.5._expand_conv_weights
+  - _blocks.5._se_reduce_weights
+  - _blocks.5._se_expand_weights
+  - _blocks.5._project_conv_weights
+  - _blocks.6._expand_conv_weights
+  - _blocks.6._se_reduce_weights
+  - _blocks.6._se_expand_weights
+  - _blocks.6._project_conv_weights
+  - _blocks.7._expand_conv_weights
+  - _blocks.7._se_reduce_weights
+  - _blocks.7._se_expand_weights
+  - _blocks.7._project_conv_weights
+  - _blocks.8._expand_conv_weights
+  - _blocks.8._se_reduce_weights
+  - _blocks.8._se_expand_weights
+  - _blocks.8._project_conv_weights
+  - _blocks.9._expand_conv_weights
+  - _blocks.9._se_reduce_weights
+  - _blocks.9._se_expand_weights
+  - _blocks.9._project_conv_weights
+  - _blocks.10._expand_conv_weights
+  - _blocks.10._se_reduce_weights
+  - _blocks.10._se_expand_weights
+  - _blocks.10._project_conv_weights
+  - _blocks.11._expand_conv_weights
+  - _blocks.11._se_reduce_weights
+  - _blocks.11._se_expand_weights
+  - _blocks.11._project_conv_weights
+  - _blocks.12._expand_conv_weights
+  - _blocks.12._se_reduce_weights
+  - _blocks.12._se_expand_weights
+  - _blocks.12._project_conv_weights
+  - _blocks.13._expand_conv_weights
+  - _blocks.13._se_reduce_weights
+  - _blocks.13._se_expand_weights
+  - _blocks.13._project_conv_weights
+  - _blocks.14._expand_conv_weights
+  - _blocks.14._se_reduce_weights
+  - _blocks.14._se_expand_weights
+  - _blocks.14._project_conv_weights
+  - _blocks.15._expand_conv_weights
+  - _blocks.15._se_reduce_weights
+  - _blocks.15._se_expand_weights
+  - _blocks.15._project_conv_weights
+  - _conv_head_weights
+  criterion: l1_norm
+TrainConfig:
+  epochs: 1
+  eval_iter: 500
+  learning_rate: 
+    type: CosineAnnealingDecay 
+    learning_rate: 0.015
+    T_max: 500
+  optimizer_builder:
+    optimizer:
+      type: Momentum
+    weight_decay: 0.00002
+  origin_metric: 0.7738
