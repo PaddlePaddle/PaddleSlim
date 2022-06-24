@@ -21,7 +21,6 @@ from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
-from paddleslim.auto_compression import AutoCompression
 
 from post_process import YOLOv5PostProcess
 
@@ -35,17 +34,10 @@ def argsparser():
         help="path of compression strategy config.",
         required=True)
     parser.add_argument(
-        '--save_dir',
-        type=str,
-        default='output',
-        help="directory to save compressed model.")
-    parser.add_argument(
         '--devices',
         type=str,
         default='gpu',
         help="which device used to compress.")
-    parser.add_argument(
-        '--eval', type=bool, default=False, help="whether to run evaluation.")
 
     return parser
 
@@ -87,21 +79,33 @@ def convert_numpy_data(data, metric):
     return data_all
 
 
-def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
+def eval():
+
+    place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
+
+    val_program, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
+        global_config["model_dir"],
+        exe,
+        model_filename=global_config["model_filename"],
+        params_filename=global_config["params_filename"])
+    print('Loaded model from: {}'.format(global_config["model_dir"]))
+
     metric = global_config['metric']
     for batch_id, data in enumerate(val_loader):
         data_all = convert_numpy_data(data, metric)
         data_input = {}
         for k, v in data.items():
             if isinstance(global_config['input_list'], list):
-                if k in test_feed_names:
+                if k in global_config['input_list']:
                     data_input[k] = np.array(v)
             elif isinstance(global_config['input_list'], dict):
                 if k in global_config['input_list'].keys():
                     data_input[global_config['input_list'][k]] = np.array(v)
-        outs = exe.run(compiled_test_program,
+
+        outs = exe.run(val_program,
                        feed=data_input,
-                       fetch_list=test_fetch_list,
+                       fetch_list=fetch_targets,
                        return_numpy=False)
         res = {}
         if 'arch' in global_config and global_config['arch'] == 'YOLOv5':
@@ -115,29 +119,18 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                     res['bbox'] = v
                 else:
                     res['bbox_num'] = v
-
         metric.update(data_all, res)
         if batch_id % 100 == 0:
             print('Eval iter:', batch_id)
     metric.accumulate()
     metric.log()
-    map_res = metric.get_results()
     metric.reset()
-    return map_res['bbox'][0]
 
 
 def main():
     global global_config
-
-    all_config = load_slim_config(FLAGS.config_path)
-    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
-    global_config = all_config["Global"]
+    _, _, global_config = load_slim_config(FLAGS.config_path)
     reader_cfg = load_config(global_config['reader_config'])
-
-    train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
-                                        reader_cfg['worker_num'],
-                                        return_list=True)
-    train_loader = reader_wrapper(train_loader, global_config['input_list'])
 
     dataset = reader_cfg['EvalDataset']
     global val_loader
@@ -159,22 +152,7 @@ def main():
         raise ValueError("metric currently only supports COCO and VOC.")
     global_config['metric'] = metric
 
-    if 'Evaluation' in global_config.keys() and global_config['Evaluation']:
-        eval_func = eval_function
-    else:
-        eval_func = None
-
-    ac = AutoCompression(
-        model_dir=global_config["model_dir"],
-        model_filename=global_config["model_filename"],
-        params_filename=global_config["params_filename"],
-        save_dir=FLAGS.save_dir,
-        #config=FLAGS.config_path,
-        config=all_config,
-        train_dataloader=train_loader,
-        eval_callback=eval_func)
-    return
-    ac.compress()
+    eval()
 
 
 if __name__ == '__main__':

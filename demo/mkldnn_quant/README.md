@@ -104,6 +104,7 @@ val/ILSVRC2012_val_00000002.jpg 0
 ```
 
 注意：
+- 为了方便测试，你可以直接下载我们上传的二进制100张图片来验证精度：`wget http://paddle-inference-dist.bj.bcebos.com/int8/imagenet_val_100_tail.tar.gz`
 - 为什么将数据集转化为二进制文件？因为paddle中的数据预处理（resize, crop等）都使用pythong.Image模块进行，训练出的模型也是基于Python预处理的图片，但是我们发现Python测试性能开销很大，导致预测性能下降。为了获得良好性能，在量化模型预测阶段，我们决定使用C++测试，而C++只支持Open-CV等库，Paddle不建议使用外部库，因此我们使用Python将图片预处理然后放入二进制文件，再在C++测试中读出。用户根据自己的需要，可以更改C++测试以直接读数据并预处理，精度不会有太大下降。我们还提供了python测试`sample_tester.py`作为参考，与C++测试`sample_tester.cc`相比，用户可以看到Python测试更大的性能开销。
 
 ### 4.2 部署预测

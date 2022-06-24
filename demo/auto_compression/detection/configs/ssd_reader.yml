@@ -1,0 +1,30 @@
+metric: VOC
+map_type: 11point
+num_classes: 20
+
+# Datset configuration
+TrainDataset:
+  !VOCDataSet
+    dataset_dir: dataset/voc
+    anno_path: trainval.txt
+    label_list: label_list.txt
+    data_fields: ['image', 'gt_bbox', 'gt_class', 'difficult']
+
+EvalDataset:
+  !VOCDataSet
+    dataset_dir: dataset/voc
+    anno_path: test.txt
+    label_list: label_list.txt
+    data_fields: ['image', 'gt_bbox', 'gt_class', 'difficult']
+
+worker_num: 0
+
+# preprocess reader in test
+EvalReader:
+  sample_transforms:
+    - Decode: {}
+    - Resize: {target_size: [300, 300], keep_ratio: False, interp: 1}
+    - NormalizeImage: {mean: [127.5, 127.5, 127.5], std: [127.502231, 127.502231, 127.502231], is_scale: false}
+    - Permute: {}
+  batch_size: 16
+  collate_batch: false

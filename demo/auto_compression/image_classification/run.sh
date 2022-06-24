@@ -6,7 +6,9 @@ python run.py \
     --params_filename='inference.pdiparams' \
     --save_dir='./save_quant_mobilev1/' \
     --batch_size=128 \
-    --config_path='./configs/mobilev1.yaml'\
+    --config_path='./configs/mobilenetv1_qat_dis.yaml'\
+    --input_shape 3 224 224 \
+    --image_reader_type='paddle' \
     --data_dir='ILSVRC2012'
     
 # 多卡启动    
@@ -16,6 +18,6 @@ python run.py \
 #     --params_filename='inference.pdiparams' \
 #     --save_dir='./save_quant_mobilev1/' \
 #     --batch_size=128 \
-#     --config_path='./configs/mobilev1.yaml'\
-#     --data_dir='/workspace/dataset/ILSVRC2012/' 
+#     --config_path='./configs/mobilenetv1_qat_dis.yaml'\
+#     --data_dir='ILSVRC2012' 
     
