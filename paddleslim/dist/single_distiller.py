@@ -240,7 +240,8 @@ def _top_mask(x):
 def _cal_tc_nc_pred(x, top_mask):
     """Calculate the predictions of target class and non-target class.
     The predictions of target class is a binary distribution.
-    And the predictions of non-target class is softmax of  after removing target class.
+    And after removing the target class, the softmax on the remaining
+    parts produces the non-target predictions.
     """
     pred = paddle.nn.functional.softmax(x)
     fp_mask = paddle.cast(top_mask, "float32")
@@ -278,7 +279,8 @@ def dkd(teacher_var_name,
         temperature=1.0,
         alpha=1.0,
         beta=1.0):
-    """Combine variables from student model and teacher model by l2-loss.
+    """Combine variables from student model and teacher model
+    by Decoupled Knowledge Distillation loss (aka. dkd-loss).
     Reference: https://github.com/megvii-research/mdistiller
     Args:
         teacher_var_name(str): The name of teacher_var.
