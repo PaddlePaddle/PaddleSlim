@@ -19,7 +19,7 @@ def with_variable_shape(model_dir, model_filename=None, params_filename=None):
     paddle.enable_static()
     exe = paddle.static.Executor(paddle.CPUPlace())
     [inference_program, feed_target_names, fetch_targets] = (
-        paddle.static.load_inference_model(
+        paddle.fluid.io.load_inference_model(
             model_dir,
             exe,
             model_filename=model_filename,

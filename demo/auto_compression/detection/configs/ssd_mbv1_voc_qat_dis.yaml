@@ -1,0 +1,33 @@
+Global:
+  reader_config: configs/ssd_reader.yml
+  input_list: ['image', 'scale_factor', 'im_shape']
+  Evaluation: True
+  model_dir: ./ssd_mobilenet_v1_300_120e_voc/
+  model_filename: model.pdmodel
+  params_filename: model.pdiparams
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - concat_0.tmp_0
+  - concat_2.tmp_0
+
+Quantization:
+  activation_quantize_type: 'range_abs_max'
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+
+TrainConfig:
+  train_iter: 80000
+  eval_iter: 1000
+  learning_rate:  
+    type: CosineAnnealingDecay
+    learning_rate: 0.00001
+    T_max: 120000
+  optimizer_builder:
+    optimizer: 
+      type: SGD
+    weight_decay: 4.0e-05
+

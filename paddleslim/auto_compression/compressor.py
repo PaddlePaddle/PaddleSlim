@@ -669,7 +669,8 @@ class AutoCompression:
     def _start_train(self, train_program_info, test_program_info, strategy,
                      train_config):
         best_metric = -1.0
-        total_epochs = train_config.epochs if train_config.epochs else 1
+        total_epochs = self.train_config.epochs if self.train_config.epochs else 100
+        total_train_iter = 0
         for epoch_id in range(total_epochs):
             for batch_id, data in enumerate(self.train_dataloader()):
                 np_probs_float, = self._exe.run(train_program_info.program, \
@@ -685,11 +686,13 @@ class AutoCompression:
                 else:
                     logging_iter = train_config.logging_iter
                 if batch_id % int(logging_iter) == 0:
-                    _logger.info("epoch: {}, batch: {}, loss: {}".format(
-                        epoch_id, batch_id, np_probs_float))
-
-                if batch_id % int(
-                        train_config.eval_iter) == 0 and batch_id != 0:
+                    _logger.info(
+                        "Total iter: {}, epoch: {}, batch: {}, loss: {}".format(
+                            total_train_iter, epoch_id, batch_id,
+                            np_probs_float))
+                total_train_iter += 1
+                if total_train_iter % int(self.train_config.eval_iter
+                                          ) == 0 and total_train_iter != 0:
                     if self.eval_function is not None:
 
                         # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation. 
@@ -702,8 +705,9 @@ class AutoCompression:
                             test_program_info.fetch_targets)
 
                         _logger.info(
-                            "epoch: {}, batch: {} metric of compressed model is: {}, best metric of compressed model is {}".
-                            format(epoch_id, batch_id, metric, best_metric))
+                            "epoch: {} metric of compressed model is: {:.6f}, best metric of compressed model is {:.6f}".
+                            format(epoch_id, metric, best_metric))
+
                         if metric > best_metric:
                             paddle.static.save(
                                 program=test_program_info.program._program,
@@ -723,7 +727,7 @@ class AutoCompression:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
-                if train_config.train_iter and batch_id >= train_config.train_iter:
+                if self.train_config.train_iter and total_train_iter >= self.train_config.train_iter:
                     break
 
         if 'unstructure' in self._strategy or train_config.sparse_model:
