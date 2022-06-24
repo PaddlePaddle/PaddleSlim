@@ -694,7 +694,7 @@ class AutoCompression:
     def _start_train(self, train_program_info, test_program_info, strategy,
                      train_config):
         best_metric = -1.0
-        total_epochs = self.train_config.epochs if self.train_config.epochs else 100
+        total_epochs = train_config.epochs if train_config.epochs else 100
         total_train_iter = 0
         for epoch_id in range(total_epochs):
             for batch_id, data in enumerate(self.train_dataloader()):
@@ -716,7 +716,7 @@ class AutoCompression:
                             total_train_iter, epoch_id, batch_id,
                             np_probs_float))
                 total_train_iter += 1
-                if total_train_iter % int(self.train_config.eval_iter
+                if total_train_iter % int(train_config.eval_iter
                                           ) == 0 and total_train_iter != 0:
                     if self.eval_function is not None:
 
@@ -752,7 +752,7 @@ class AutoCompression:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
-                if self.train_config.train_iter and total_train_iter >= self.train_config.train_iter:
+                if train_config.train_iter and total_train_iter >= train_config.train_iter:
                     break
 
         if 'unstructure' in self._strategy or train_config.sparse_model:
