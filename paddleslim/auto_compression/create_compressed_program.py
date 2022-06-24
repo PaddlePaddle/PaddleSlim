@@ -45,12 +45,13 @@ def _create_lr_scheduler(train_config):
 
 def _create_optimizer(train_config):
     """create optimizer"""
-
     if 'optimizer_builder' not in train_config:
         train_config['optimizer_builder'] = {'optimizer': {'type': 'SGD'}}
 
     optimizer_builder = train_config['optimizer_builder']
-
+    assert isinstance(
+        optimizer_builder, dict
+    ), f"Value of 'optimizer_builder' in train_config should be dict but got {type(optimizer_builder)}"
     if 'grad_clip' in optimizer_builder:
         g_clip_params = optimizer_builder['grad_clip']
         g_clip_type = g_clip_params.pop('type')
@@ -423,11 +424,13 @@ def build_prune_program(executor,
         from ..prune import Pruner
         pruner = Pruner(config["criterion"])
         params = []
+        original_shapes = {}
         ### TODO(ceci3): set default prune weight
         for param in train_program_info.program.global_block().all_parameters():
             if config['prune_params_name'] is not None and param.name in config[
                     'prune_params_name']:
                 params.append(param.name)
+                original_shapes[param.name] = param.shape
 
         pruned_program, _, _ = pruner.prune(
             train_program_info.program,
@@ -435,6 +438,15 @@ def build_prune_program(executor,
             params=params,
             ratios=[config['pruned_ratio']] * len(params),
             place=place)
+        _logger.info(
+            "####################channel pruning##########################")
+        for param in pruned_program.global_block().all_parameters():
+            if param.name in original_shapes:
+                _logger.info(
+                    f"{param.name}, from {original_shapes[param.name]} to {param.shape}"
+                )
+        _logger.info(
+            "####################channel pruning end##########################")
         train_program_info.program = pruned_program
 
     elif strategy.startswith('asp'):

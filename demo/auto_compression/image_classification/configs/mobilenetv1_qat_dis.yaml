@@ -1,11 +1,6 @@
 Distillation:
   alpha: 1.0
   loss: l2
-  node:
-  - softmax_0.tmp_0
-  teacher_model_dir: MobileNetV1_infer
-  teacher_model_filename: inference.pdmodel
-  teacher_params_filename: inference.pdiparams
 Quantization:
   activation_bits: 8
   is_full_quantize: false
