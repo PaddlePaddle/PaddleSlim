@@ -129,7 +129,8 @@ def eval():
 
 def main():
     global global_config
-    _, _, global_config = load_slim_config(FLAGS.config_path)
+    all_config = load_slim_config(FLAGS.config_path)
+    global_config = all_config["Global"]
     reader_cfg = load_config(global_config['reader_config'])
 
     dataset = reader_cfg['EvalDataset']

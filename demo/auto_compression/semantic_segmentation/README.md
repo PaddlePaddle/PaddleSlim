@@ -114,7 +114,8 @@ python run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg/pp_humanseg_auto.yaml' \
+    --strategy_config='configs/pp_humanseg/pp_humanseg_auto.yaml' \
+    --dataset_config='configs/dataset/humanseg_dataset.yaml' \
     --deploy_hardware='SD710'
 
 # 多卡启动
@@ -124,7 +125,8 @@ python -m paddle.distributed.launch run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg/pp_humanseg_auto.yaml' \
+    --strategy_config='configs/pp_humanseg/pp_humanseg_auto.yaml' \
+    --dataset_config='configs/dataset/humanseg_dataset.yaml' \
     --deploy_hardware='SD710'
 ```
 - 自行配置稀疏参数进行非结构化稀疏和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
@@ -136,7 +138,8 @@ python run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg/pp_humanseg_sparse.yaml'
+    --strategy_config='configs/pp_humanseg/pp_humanseg_sparse.yaml' \
+    --dataset_config='configs/dataset/humanseg_dataset.yaml'
 
 # 多卡启动
 export CUDA_VISIBLE_DEVICES=0,1
@@ -145,7 +148,8 @@ python -m paddle.distributed.launch run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg/pp_humanseg_sparse.yaml'
+    --strategy_config='configs/pp_humanseg/pp_humanseg_sparse.yaml' \
+    --dataset_config='configs/dataset/humanseg_dataset.yaml'
 ```
 
 - 自行配置量化参数进行量化和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
@@ -157,7 +161,8 @@ python run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg/pp_humanseg_qat.yaml'
+    --strategy_config='configs/pp_humanseg/pp_humanseg_qat.yaml' \
+    --dataset_config='configs/dataset/humanseg_dataset.yaml'
 
 # 多卡启动
 export CUDA_VISIBLE_DEVICES=0,1
@@ -166,7 +171,8 @@ python -m paddle.distributed.launch run.py \
     --model_filename='model.pdmodel' \
     --params_filename='model.pdiparams' \
     --save_dir='./save_model' \
-    --config_path='configs/pp_humanseg/pp_humanseg_qat.yaml'
+    --strategy_config='configs/pp_humanseg/pp_humanseg_qat.yaml' \
+    --dataset_config='configs/dataset/humanseg_dataset.yaml'
 ```
 
 压缩完成后会在`save_dir`中产出压缩好的预测模型，可直接预测部署。

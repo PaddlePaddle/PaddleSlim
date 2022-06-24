@@ -15,13 +15,43 @@
 from collections import namedtuple
 
 __all__ = [
-    "Quantization", "Distillation", "MultiTeacherDistillation", \
-    "HyperParameterOptimization", "ChannelPrune", "UnstructurePrune",  \
-    "TransformerPrune", "ASPPrune", "merge_config", "ProgramInfo", "TrainConfig",
+    "BaseStrategy",
+    "Quantization",
+    "Distillation",
+    "MultiTeacherDistillation",
+    "HyperParameterOptimization",
+    "ChannelPrune",
+    "UnstructurePrune",
+    "TransformerPrune",
+    "ASPPrune",
+    "merge_config",
+    "ProgramInfo",
+    "TrainConfig",
+    "SUPPORTED_CONFIG",
+    "TRAIN_CONFIG_NAME",
 ]
 
+SUPPORTED_CONFIG = [
+    "Quantization",
+    "Distillation",
+    "MultiTeacherDistillation",
+    "HyperParameterOptimization",
+    "ChannelPrune",
+    "UnstructurePrune",
+    "TransformerPrune",
+    "ASPPrune",
+    "TrainConfig",
+]
 
-class Quantization:
+TRAIN_CONFIG_NAME = "TrainConfig"
+
+
+class BaseStrategy:
+    def __init__(self, name):
+        self.name = name
+
+
+class Quantization(BaseStrategy):
     def __init__(self,
                  quantize_op_types=[
                      'conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'
@@ -53,6 +83,7 @@ class Quantization:
             for_tensorrt(bool): If True, 'quantize_op_types' will be TENSORRT_OP_TYPES. Default: False.
             is_full_quantize(bool): If True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES. Default: False.
         """
+        super(Quantization, self).__init__("Quantization")
         self.quantize_op_types = quantize_op_types
         self.weight_bits = weight_bits
         self.activation_bits = activation_bits
@@ -68,7 +99,7 @@ class Quantization:
         self.is_full_quantize = is_full_quantize
 
 
-class Distillation:
+class Distillation(BaseStrategy):
     def __init__(self,
                  loss='l2',
                  node=[],
@@ -86,6 +117,7 @@ class Distillation:
             teacher_model_filename(str, optional): The name of teacher model file. If parameters are saved in separate files, set it as 'None'. Default: 'None'.
             teacher_params_filename(str, optional): The name of teacher params file. When all parameters are saved in a single file, set it as filename. If parameters are saved in separate files, set it as 'None'. Default : 'None'.
         """
+        super(Distillation, self).__init__("Distillation")
         self.loss = loss
         self.node = node
         self.alpha = alpha
@@ -120,7 +152,7 @@ class MultiTeacherDistillation:
         self.teacher_params_filename = teacher_params_filename
 
 
-class HyperParameterOptimization:
+class HyperParameterOptimization(BaseStrategy):
     def __init__(self,
                  ptq_algo=["KL", "hist", "avg", "mse"],
                  bias_correct=[True, False],
@@ -138,6 +170,7 @@ class HyperParameterOptimization:
             batch_num(list(int)): The upper and lower bounds of batch number, the real batch number is uniform sampling in this bounds.
             max_quant_count(int): Max number of model quantization. Default: 20.
         """
+        super(HyperParameterOptimization, self).__init__("HPO_PTQ")
         self.ptq_algo = ptq_algo
         self.bias_correct = bias_correct
         self.weight_quantize_type = weight_quantize_type
@@ -224,7 +257,9 @@ class TrainConfig:
                  epochs=None,
                  train_iter=None,
                  learning_rate=0.02,
-                 optimizer_builder={'optimizer': 'SGD'},
+                 optimizer_builder={'optimizer': {
+                     'type': 'SGD'
+                 }},
                  eval_iter=1000,
                  logging_iter=10,
                  origin_metric=None,

@@ -18,6 +18,7 @@ import platform
 from ..common import get_logger
 from .utils.predict import predict_compressed_model, with_variable_shape
 from .strategy_config import *
+from paddleslim.analysis import TableLatencyPredictor
 
 _logger = get_logger(__name__, level=logging.INFO)
 

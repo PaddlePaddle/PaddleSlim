@@ -1,6 +1,3 @@
-Global:
-  reader_config: configs/dataset/pp_humanseg_lite.yaml
-
 Distillation:
   alpha: 1.0
   loss: l2

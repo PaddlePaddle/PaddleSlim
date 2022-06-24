@@ -22,6 +22,7 @@ import shutil
 from time import gmtime, strftime
 import platform
 import paddle
+import itertools
 import paddle.distributed.fleet as fleet
 from ..quant.quanter import convert, quant_post
 from ..common.recover_program import recover_inference_program
@@ -31,7 +32,9 @@ from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import TrainConfig, ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
+from .config_helpers import load_config, extract_strategy_config, extract_train_config
 from .utils.predict import with_variable_shape
+from .utils import get_feed_vars, wrap_dataloader
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -49,9 +52,8 @@ class AutoCompression:
                  params_filename,
                  save_dir,
                  train_dataloader,
+                 config=None,
                  input_shapes=None,
-                 train_config=None,
-                 strategy_config=None,
                  target_speedup=None,
                  eval_callback=None,
                  eval_dataloader=None,
@@ -127,15 +129,28 @@ class AutoCompression:
         self.final_dir = save_dir
         if not os.path.exists(self.final_dir):
             os.makedirs(self.final_dir)
-        self.strategy_config = strategy_config
-        self.train_dataloader = train_dataloader
+
+        # load config
+        assert type(config) in [
+            dict, str, set, list, tuple
+        ], f"The type of config should be in [dict, str, set, list, tuple] but got {type(config)}"
+        if isinstance(config, str):
+            config = load_config(config)
+        self.strategy_config = extract_strategy_config(config)
+        self.train_config = extract_train_config(config)
+
+        # prepare dataloader
+        self.feed_vars = get_feed_vars(model_dir, model_filename,
+                                       params_filename)
+        self.train_dataloader = wrap_dataloader(train_dataloader,
+                                                self.feed_vars)
+        self.eval_dataloader = wrap_dataloader(eval_dataloader, self.feed_vars)
+        if eval_dataloader is None:
+            eval_dataloader = self._get_eval_dataloader(self.train_dataloader)
+
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
         self.deploy_hardware = deploy_hardware
-
-        if eval_dataloader is None:
-            eval_dataloader = self._get_eval_dataloader(train_dataloader)
-        self.eval_dataloader = eval_dataloader
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
@@ -158,6 +173,7 @@ class AutoCompression:
             self.model_dir = infer_shape_model
             self.model_filename = "infered_shape.pdmodel"
             self.params_filename = "infered_shape.pdiparams"
+
         if self.strategy_config is None:
             strategy_config = prepare_strategy(
                 self._exe, self._places, self.model_dir, self.model_filename,
