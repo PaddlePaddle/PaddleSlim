@@ -27,8 +27,6 @@ def wrap_dataloader(dataloader, names):
     """
     if dataloader is None:
         return dataloader
-    assert isinstance(dataloader, paddle.io.DataLoader)
-    assert len(dataloader) > 0
     data = next(dataloader())
     if isinstance(data, dict):
         return dataloader
