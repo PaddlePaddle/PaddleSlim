@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append("../")
+sys.path.append("../../")
 import unittest
 import tempfile
 import paddle
