@@ -128,7 +128,6 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
 def main():
     global global_config
-
     all_config = load_slim_config(FLAGS.config_path)
     assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
     global_config = all_config["Global"]
