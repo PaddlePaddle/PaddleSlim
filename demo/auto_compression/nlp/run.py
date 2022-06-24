@@ -241,10 +241,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print_arguments(args)
     paddle.enable_static()
+    all_config = load_config(args.config_path)
 
-    compress_config, train_config, _ = load_config(args.config_path)
-    if train_config is not None:
-        train_config.optimizer_builder[
+    if "TrainConfig" in all_config:
+        all_config["TrainConfig"]["optimizer_builder"][
             'apply_decay_param_fun'] = apply_decay_param_fun
 
     train_dataloader, eval_dataloader = reader()
@@ -256,12 +256,10 @@ if __name__ == '__main__':
         model_filename=args.model_filename,
         params_filename=args.params_filename,
         save_dir=args.save_dir,
-        strategy_config=compress_config,
-        train_config=train_config,
+        config=all_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function if compress_config is None or
-        'HyperParameterOptimization' not in compress_config else
-        eval_dataloader,
+        eval_callback=eval_function
+        if 'HyperParameterOptimization' not in all_config else eval_dataloader,
         eval_dataloader=eval_dataloader)
 
     ac.compress()

@@ -16,7 +16,7 @@
 本示例将以图像分类模型MobileNetV1为例，介绍如何使用PaddleClas中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为量化训练和蒸馏。
 
 ## 2. Benchmark
-- MobileNetV1模型
+- PaddlePaddle MobileNetV1模型
 
 | 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=4 |
 |:------:|:------:|:------:|:------:|
@@ -24,6 +24,25 @@
 | MobileNetV1 | 量化+蒸馏 | 70.49 | 29.238|
 
 - 测试环境：`SDM710 2*A75(2.2GHz) 6*A55(1.7GHz)`
+
+- TensorFlow MobileNetV1模型
+
+| 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=1 | Inference模型 |
+|:------:|:------:|:------:|:------:|:------:|
+| MobileNetV1 | Base模型 | 71.0 | 30.45 | [Model](https://paddle-slim-models.bj.bcebos.com/act/mobilenetv1_inference_model_tf2paddle.tar) |
+| MobileNetV1 | 量化+蒸馏 | 70.22 | 15.86 | [Model](https://paddle-slim-models.bj.bcebos.com/act/mobilenetv1_quant.tar) |
+
+- 测试环境：`骁龙865 4*A77 4*A55`
+
+说明：
+- MobileNetV1模型源自[tensorflow/models](http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_224.tgz)，通过[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)工具转换MobileNetV1预测模型步骤：
+
+(1) 安装X2Paddle的1.3.6以上版本；（pip install x2paddle）
+
+(2) 转换模型：
+x2paddle --framework=tensorflow --model=tf_model.pb --save_dir=pd_model
+
+即可得到MobileNetV1模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中MobileNetV1的Base预测模型。
 
 ## 3. 自动压缩流程
 

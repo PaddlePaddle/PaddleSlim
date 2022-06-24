@@ -10,6 +10,7 @@ if(NOT DEFINED PADDLE_LIB)
   message(FATAL_ERROR "please set PADDLE_LIB with -DPADDLE_LIB=/path/paddle/lib")
 endif()
 set(DEMO_NAME sample_tester)
+set(DEMO_NAME_FAKE_DATA sample_tester_fake_data)
 if(NOT DEFINED DEMO_NAME)
   message(FATAL_ERROR "please set DEMO_NAME with -DDEMO_NAME=demo_name")
 endif()
@@ -31,6 +32,7 @@ link_directories("${PADDLE_LIB}/third_party/install/cryptopp/lib")
 link_directories("${PADDLE_LIB}/third_party/install/utf8proc/lib")
 
 add_executable(${DEMO_NAME} ${DEMO_NAME}.cc)
+add_executable(${DEMO_NAME_FAKE_DATA} ${DEMO_NAME_FAKE_DATA}.cc)
 
 if(WITH_MKL)
   include_directories("${PADDLE_LIB}/third_party/install/mklml/include")
@@ -61,3 +63,4 @@ set(DEPS ${DEPS}
     ${EXTERNAL_LIB})
 
 target_link_libraries(${DEMO_NAME} ${DEPS})
+target_link_libraries(${DEMO_NAME_FAKE_DATA} ${DEPS})

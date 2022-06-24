@@ -14,5 +14,8 @@
 
 from __future__ import absolute_import
 from .predict import predict_compressed_model
+from .dataloader import *
+from . import dataloader
 
 __all__ = ["predict_compressed_model"]
+__all__ += dataloader.__all__
