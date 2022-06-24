@@ -1,0 +1,69 @@
+Global:
+  input_name: inputs
+  model_dir: GhostNet_x1_0_infer
+  model_filename: inference.pdmodel
+  params_filename: inference.pdiparams
+  batch_size: 32
+  data_dir: /ILSVRC2012
+  
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - softmax_0.tmp_0
+ChannelPrune:
+  pruned_ratio: 0.25
+  criterion: l1_norm
+  prune_params_name:
+  - conv1_weights
+  - _ghostbottleneck_0_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_0_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_1_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_1_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_1_shortcut_conv_weights
+  - _ghostbottleneck_2_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_2_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_3_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_3_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_3_shortcut_conv_weights
+  - _ghostbottleneck_4_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_4_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_5_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_5_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_5_shortcut_conv_weights
+  - _ghostbottleneck_6_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_6_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_7_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_7_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_8_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_8_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_9_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_9_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_9_shortcut_conv_weights
+  - _ghostbottleneck_10_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_10_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_11_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_11_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_11_shortcut_conv_weights
+  - _ghostbottleneck_12_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_12_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_13_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_13_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_14_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_14_ghost_module_2_primary_conv_weights
+  - _ghostbottleneck_15_ghost_module_1_primary_conv_weights
+  - _ghostbottleneck_15_ghost_module_2_primary_conv_weights
+  - conv_last_weights
+  - fc_0_weights
+TrainConfig:
+  epochs: 1
+  eval_iter: 500
+  learning_rate: 
+    type: CosineAnnealingDecay 
+    learning_rate: 0.015
+    T_max: 5000
+  optimizer_builder:
+    optimizer:
+      type: Momentum
+    weight_decay: 0.00002
+  origin_metric: 0.7402

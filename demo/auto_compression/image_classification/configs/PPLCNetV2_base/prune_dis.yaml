@@ -1,0 +1,38 @@
+Global:
+  input_name: x
+  model_dir: PPLCNetV2_base_infer
+  model_filename: inference.pdmodel
+  params_filename: inference.pdiparams
+  batch_size: 32
+  data_dir: /ILSVRC2012
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - softmax_1.tmp_0
+UnstructurePrune:
+  prune_strategy: gmp
+  prune_mode: ratio
+  ratio: 0.75
+  gmp_config: 
+    stable_iterations: 0
+    pruning_iterations: 4500
+    tunning_iterations: 4500
+    resume_iteration: -1
+    pruning_steps: 100
+    initial_ratio: 0.15
+  prune_params_type: conv1x1_only
+  local_sparsity: True
+TrainConfig:
+  epochs: 1
+  eval_iter: 500
+  learning_rate: 
+    type: CosineAnnealingDecay 
+    learning_rate: 0.015
+    T_max: 5000
+  optimizer_builder:
+    optimizer:
+      type: Momentum
+    weight_decay: 0.00002
+  origin_metric: 0.7704
