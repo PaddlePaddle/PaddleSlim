@@ -1,6 +1,3 @@
-Global:
-  reader_config: configs/dataset/pp_humanseg_dataset.yaml
-
 TrainConfig:
   epochs: 14
   eval_iter: 400
