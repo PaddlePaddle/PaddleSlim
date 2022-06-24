@@ -40,7 +40,6 @@ SUPPORTED_CONFIG = [
     "UnstructurePrune",
     "TransformerPrune",
     "ASPPrune",
-    "TrainConfig",
 ]
 
 TRAIN_CONFIG_NAME = "TrainConfig"
