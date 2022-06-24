@@ -15,6 +15,7 @@
 import logging
 import os
 import sys
+import copy
 import numpy as np
 import copy
 import inspect
@@ -300,6 +301,7 @@ class AutoCompression:
     def _prepare_envs(self):
         devices = paddle.device.get_device().split(':')[0]
         places = paddle.device._convert_to_place(devices)
+        _logger.info(f"devices: {devices}")
         exe = paddle.static.Executor(places)
         return exe, places
 
@@ -309,6 +311,7 @@ class AutoCompression:
             model_filename=model_filename, params_filename=params_filename,
             executor=exe))
         _, _, model_type = get_patterns(inference_program)
+        _logger.info(f"Detect model type: {model_type}")
         return model_type
 
     def _prepare_strategy(self, strategy_config):

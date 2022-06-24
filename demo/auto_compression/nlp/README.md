@@ -14,24 +14,29 @@
 
 
 ## 1. 简介
-本示例将以自然语言处理模型PP-MiniLM为例，介绍如何使用PaddleNLP中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为剪枝蒸馏和离线量化(Post-training quantization)。
+本示例将以自然语言处理模型PP-MiniLM和ERNIE 3.0-Medium为例，介绍如何使用PaddleNLP中Inference部署模型进行自动压缩.
 
 ## 2. Benchmark
-- PP-MiniLM模型
 
-PP-MiniLM是一个6层的预训练中文小模型，使用PaddleNLP中```from_pretrained```导入PP-MiniLM之后，就可以在自己的数据集上进行fine-tuning，具体介绍可参考[PP-MiniLM文档](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm#PP-MiniLM%E4%B8%AD%E6%96%87%E5%B0%8F%E6%A8%A1%E5%9E%8B)。
+- PP-MiniLM: 6层的预训练中文小模型，使用PaddleNLP中```from_pretrained```导入PP-MiniLM之后，就可以在自己的数据集上进行fine-tuning，具体介绍可参考[PP-MiniLM文档](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm#PP-MiniLM%E4%B8%AD%E6%96%87%E5%B0%8F%E6%A8%A1%E5%9E%8B)。
+- ERNIE 3.0-Medium:  中文预训练模型, 关键参数为(6-layer, 768-hidden, 12-heads), 详情请参考[PaddleNLP ERNIE 3.0](https://github.com/PaddlePaddle/PaddleNLP/tree/v2.3.3/model_zoo/ernie-3.0)
+
 
 模型精度对比如下：
 | 模型 | 策略 | AFQMC | TNEWS | IFLYTEK | CMNLI | OCNLI | CLUEWSC2020 | CSL | AVG |
 |:------:|:------:|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|:------:|
 | PP-MiniLM | Base模型| 74.03 | 56.66 | 60.21 | 80.98 | 76.20 | 84.21 | 77.36 | 72.81 |
 | PP-MiniLM |剪枝蒸馏+离线量化| 73.56 | 56.38 | 59.87 | 80.80 | 76.44 | 82.23 | 77.77 | 72.44 |
+| ERNIE 3.0-Medium | Base模型| 75.35 | 57.45 | 60.17 | 81.16 | 77.19 | 80.59 | 79.70 | 73.09 |
+| ERNIE 3.0-Medium | 剪枝+量化训练| 74.17 | 56.84 | 59.75 | 80.54 | 76.03 | 76.97 | 80.80 | 72.16 |
 
 模型在不同任务上平均精度以及加速对比如下：
-|  PP-MiniLM | Accuracy（avg） | 时延(ms) | 加速比 |
-|:-------:|:----------:|:------------:| :------:|
-| 压缩前 |  72.81 | 128.01 | - |
-| 压缩后 |  72.44 | 17.97 | 612% |
+|  模型 |策略| Accuracy（avg） | 时延(ms) | 加速比 |
+|:-------:|:--------:|:----------:|:------------:| :------:|
+|PP-MiniLM| Base模型|  72.81 | 128.01 | - |
+|PP-MiniLM| 剪枝+离线量化 |  72.44 | 17.97 | 7.12 |
+|ERNIE 3.0-Medium| Base模型| 73.09  | 29.25(fp16) | - |
+|ERNIE 3.0-Medium| 剪枝+量化训练 |  72.16 | 19.61 | 1.49 |
 
 性能测试的环境为
 - 硬件：NVIDIA Tesla T4 单卡
@@ -76,12 +81,24 @@ pip install paddlenlp
 
 注：其他像`__model__`和`__params__`分别对应`model.pdmodel` 和 `model.pdiparams`文件。
 
-本示例可参考[PaddleNLP PP-MiniLM 中文小模型](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm)微调后保存下每个数据集下有最高准确率的模型，也可直接下载以下已微调完成的Inference模型：[afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar), [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/tnews.tar), [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/iflytek.tar),[ ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/ocnli.tar), [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/cmnli.tar), [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/cluewsc.tar), [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/csl.tar)。其他模型可根据[PaddleNLP文档](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples)导出Inference模型。
+##### 直接下载已微调模型
+
+| 模型 | AFQMC | TNEWS | IFLYTEK | CMNLI | OCNLI | CLUEWSC2020 | CSL |
+|:------:|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|
+| PP-MiniLM | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/tnews.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/iflytek.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/cmnli.tar) | [ ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/ocnli.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/cluewsc.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/csl.tar) |
+| ERNIE 3.0-Medium | [afqmc]() | [tnews]() | [iflytek]() | [cmnli]() | [ocnli]() | [cluewsc2020]() | [csl]() |
+
+从上表获得模型超链接, 并用以下命令下载推理模型文件:
 
 ```shell
 wget https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar
 tar -zxvf afqmc.tar
 ```
+
+##### 重新微调模型
+
+可参考[PaddleNLP PP-MiniLM 中文小模型](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm)微调后保存下每个数据集下有最高准确率的模型。
+其他模型可根据[PaddleNLP文档](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples)导出Inference模型。
 
 #### 3.4 自动压缩并产出模型
 
@@ -100,7 +117,7 @@ python run.py \
     --batch_size=16 \
     --max_seq_length=128 \
     --task_name='afqmc' \
-    --config_path='./configs/afqmc.yaml'
+    --config_path='./configs/pp-minilm/auto/afqmc.yaml'
 ```
 
 ## 4. 压缩配置介绍
