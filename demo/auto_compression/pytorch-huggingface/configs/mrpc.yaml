@@ -1,0 +1,22 @@
+Global:
+  input_names: ['x0', 'x1', 'x2']
+  model_dir: ./x2paddle_mrpc
+  model_filename: model.pdmodel
+  params_filename: model.pdiparams
+  model_type: bert-base-cased
+  task_name: mrpc
+  dataset: glue
+  batch_size: 1
+  max_seq_length: 128
+  padding: max_length
+  return_attention_mask: True
+TrainConfig:
+  epochs: 3
+  eval_iter: 915
+  learning_rate: 1.0e-6
+  optimizer_builder:
+    optimizer: 
+      type: AdamW
+    weight_decay: 0.01
+  origin_metric: 0.8431 
+
