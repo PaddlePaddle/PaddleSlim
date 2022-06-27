@@ -1,0 +1,84 @@
+Global:
+  input_name: inputs
+  model_dir: ResNet50_vd_infer
+  model_filename: inference.pdmodel
+  params_filename: inference.pdiparams
+  batch_size: 32
+  data_dir: /ILSVRC2012
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - softmax_0.tmp_0
+ChannelPrune:
+  pruned_ratio: 0.25
+  criterion: l1_norm
+  prune_params_name:
+  - conv1_1_weights
+  - conv1_2_weights
+  - conv1_3_weights
+  - res2a_branch2a_weights
+  - res2a_branch2b_weights
+  - res2a_branch2c_weights
+  - res2a_branch1_weights
+  - res2b_branch2a_weights
+  - res2b_branch2b_weights
+  - res2b_branch2c_weights
+  - res2c_branch2a_weights
+  - res2c_branch2b_weights
+  - res2c_branch2c_weights
+  - res3a_branch2a_weights
+  - res3a_branch2b_weights
+  - res3a_branch2c_weights
+  - res3a_branch1_weights
+  - res3b_branch2a_weights
+  - res3b_branch2b_weights
+  - res3b_branch2c_weights
+  - res3c_branch2a_weights
+  - res3c_branch2b_weights
+  - res3c_branch2c_weights
+  - res3d_branch2a_weights
+  - res3d_branch2b_weights
+  - res3d_branch2c_weights
+  - res4a_branch2a_weights
+  - res4a_branch2b_weights
+  - res4a_branch2c_weights
+  - res4a_branch1_weights
+  - res4b_branch2a_weights
+  - res4b_branch2b_weights
+  - res4b_branch2c_weights
+  - res4c_branch2a_weights
+  - res4c_branch2b_weights
+  - res4c_branch2c_weights
+  - res4d_branch2a_weights
+  - res4d_branch2b_weights
+  - res4d_branch2c_weights
+  - res4e_branch2a_weights
+  - res4e_branch2b_weights
+  - res4e_branch2c_weights
+  - res4f_branch2a_weights
+  - res4f_branch2b_weights
+  - res4f_branch2c_weights
+  - res5a_branch2a_weights
+  - res5a_branch2b_weights
+  - res5a_branch2c_weights
+  - res5a_branch1_weights
+  - res5b_branch2a_weights
+  - res5b_branch2b_weights
+  - res5b_branch2c_weights
+  - res5c_branch2a_weights
+  - res5c_branch2b_weights
+  - res5c_branch2c_weights
+TrainConfig:
+  epochs: 1
+  eval_iter: 500
+  learning_rate: 
+    type: CosineAnnealingDecay 
+    learning_rate: 0.015
+    T_max: 500
+  optimizer_builder:
+    optimizer:
+      type: Momentum
+    weight_decay: 0.00002
+  origin_metric: 0.7912
