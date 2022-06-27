@@ -575,10 +575,23 @@ class AutoCompression:
         final_model_path = os.path.join(self.final_dir)
         if not os.path.exists(final_model_path):
             os.makedirs(final_model_path)
-        tmp_model_file = os.path.join(tmp_model_path, self.model_filename)
-        tmp_params_file = os.path.join(tmp_model_path, self.params_filename)
+
+        tmp_model_file = ".".join([tmp_model_path, "pdmodel"])
+        if not os.path.exists(tmp_model_file):
+            tmp_model_file = os.path.join(tmp_model_path, self.model_filename)
+
+        tmp_params_file = ".".join([tmp_model_path, "pdiparams"])
+        if not os.path.exists(tmp_params_file):
+            tmp_params_file = os.path.join(tmp_model_path, self.params_filename)
+
+        if self.model_filename is None:
+            self.model_filename = "infer.pdmodel"
+        if self.params_filename is None:
+            self.params_filename = "infer.pdiparams"
+
         final_model_file = os.path.join(final_model_path, self.model_filename)
         final_params_file = os.path.join(final_model_path, self.params_filename)
+
         if paddle.distributed.get_rank() == 0:
             shutil.move(tmp_model_file, final_model_file)
             shutil.move(tmp_params_file, final_params_file)
@@ -716,8 +729,8 @@ class AutoCompression:
                             total_train_iter, epoch_id, batch_id,
                             np_probs_float))
                 total_train_iter += 1
-                if total_train_iter % int(train_config.eval_iter
-                                          ) == 0 and total_train_iter != 0:
+                if total_train_iter % int(
+                        train_config.eval_iter) == 0 and total_train_iter != 0:
                     if self.eval_function is not None:
 
                         # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation. 

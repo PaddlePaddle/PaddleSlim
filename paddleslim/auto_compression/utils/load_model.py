@@ -17,8 +17,10 @@ import paddle
 __all__ = ['load_inference_model']
 
 
-def load_inference_model(path_prefix, executor, model_filename,
-                         params_filename):
+def load_inference_model(path_prefix,
+                         executor,
+                         model_filename=None,
+                         params_filename=None):
     if model_filename is not None and params_filename is not None:
         [inference_program, feed_target_names, fetch_targets] = (
             paddle.static.load_inference_model(
