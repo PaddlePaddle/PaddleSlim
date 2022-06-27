@@ -2,7 +2,7 @@ Global:
   reader_config: configs/tinypose_reader.yml
   input_list: ['image']
   Evaluation: False
-  model_dir: ./tinypose_128x96/
+  model_dir: ./tinypose_128x96
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 

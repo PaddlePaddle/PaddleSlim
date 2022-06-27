@@ -4,6 +4,7 @@ import paddle
 from ...analysis import TableLatencyPredictor
 from .prune_model import get_sparse_model, get_prune_model
 from .fake_ptq import post_quant_fake
+from .load_model import load_inference_model
 
 
 def with_variable_shape(model_dir, model_filename=None, params_filename=None):
@@ -18,12 +19,11 @@ def with_variable_shape(model_dir, model_filename=None, params_filename=None):
     """
     paddle.enable_static()
     exe = paddle.static.Executor(paddle.CPUPlace())
-    [inference_program, feed_target_names, fetch_targets] = (
-        paddle.fluid.io.load_inference_model(
-            model_dir,
-            exe,
-            model_filename=model_filename,
-            params_filename=params_filename))
+    inference_program, feed_target_names, fetch_targets = load_inference_model(
+        model_dir,
+        exe,
+        model_filename=model_filename,
+        params_filename=params_filename)
     for var_ in inference_program.list_vars():
         if var_.name in feed_target_names:
             if var_.shape.count(-1) > 1:

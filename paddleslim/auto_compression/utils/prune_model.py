@@ -2,10 +2,10 @@ import os
 import time
 import numpy as np
 import paddle
-import paddle.fluid as fluid
 import paddle.static as static
 from ...prune import Pruner
 from ...core import GraphWrapper
+from .load_model import load_inference_model
 __all__ = ["get_sparse_model", "get_prune_model"]
 
 
@@ -37,12 +37,8 @@ def get_sparse_model(executor, places, model_file, param_file, ratio,
     startup_prog = static.Program()
     executor.run(startup_prog)
 
-    [inference_program, feed_target_names, fetch_targets] = (
-        fluid.io.load_inference_model(
-            folder,
-            executor,
-            model_filename=model_name,
-            params_filename=param_name))
+    inference_program, feed_target_names, fetch_targets = load_inference_model(
+        folder, executor, model_filename=model_name, params_filename=param_name)
     thresholds = {}
 
     graph = GraphWrapper(inference_program)
@@ -87,12 +83,15 @@ def get_sparse_model(executor, places, model_file, param_file, ratio,
             paddle.static.global_scope().find_var(name).get_tensor().set(
                 array, paddle.CPUPlace())
 
-    fluid.io.save_inference_model(
+    feed_vars = [
+        inference_program.global_block().var(name) for name in feed_target_names
+    ]
+    static.save_inference_model(
         save_path,
-        feeded_var_names=feed_target_names,
-        target_vars=fetch_targets,
+        feed_vars=feed_vars,
+        fetch_vars=fetch_targets,
         executor=executor,
-        main_program=inference_program,
+        program=inference_program,
         model_filename=model_name,
         params_filename=param_name)
     print("The pruned model is saved in: ", save_path)
@@ -127,12 +126,8 @@ def get_prune_model(executor, places, model_file, param_file, ratio, save_path):
     scope = static.global_scope()
     executor.run(startup_prog)
 
-    [inference_program, feed_target_names, fetch_targets] = (
-        fluid.io.load_inference_model(
-            folder,
-            executor,
-            model_filename=model_name,
-            params_filename=param_name))
+    inference_program, feed_target_names, fetch_targets = load_inference_model(
+        folder, executor, model_filename=model_name, params_filename=param_name)
 
     prune_params = []
     graph = GraphWrapper(inference_program)
@@ -162,11 +157,14 @@ def get_prune_model(executor, places, model_file, param_file, ratio, save_path):
         param_backup=None,
         param_shape_backup=None)
 
-    fluid.io.save_inference_model(
+    feed_vars = [
+        main_program.global_block().var(name) for name in feed_target_names
+    ]
+    static.save_inference_model(
         save_path,
-        feeded_var_names=feed_target_names,
-        target_vars=fetch_targets,
+        feed_vars=feed_vars,
+        fetch_vars=fetch_targets,
         executor=executor,
-        main_program=main_program,
+        program=main_program,
         model_filename=model_name,
         params_filename=param_name)

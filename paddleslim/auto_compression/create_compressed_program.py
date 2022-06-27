@@ -23,6 +23,7 @@ from ..dist import *
 from ..common.recover_program import recover_inference_program, _remove_fetch_node
 from ..common import get_logger
 from .strategy_config import ProgramInfo
+from .utils import load_inference_model
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
@@ -151,20 +152,21 @@ def _load_program_and_merge(executor,
                             feed_target_names=None):
     scope = paddle.static.global_scope()
     new_scope = paddle.static.Scope()
+
     if params_filename == 'None':
         params_filename = None
-    try:
-        with paddle.static.scope_guard(new_scope):
-            [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.fluid.io.load_inference_model( \
-                dirname=model_dir, \
-                model_filename=model_filename, \
-                params_filename=params_filename, \
-                executor=executor)
-    except:
-        with paddle.static.scope_guard(new_scope):
-            [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= paddle.static.load_inference_model( \
-                path_prefix=model_dir, \
-                executor=executor)
+
+    if params_filename is None and model_filename is not None:
+        raise NotImplementedError(
+            "NOT SUPPORT parameters saved in separate files. Please convert it to single binary file first."
+        )
+
+    with paddle.static.scope_guard(new_scope):
+        [teacher_program, teacher_feed_target_names, teacher_fetch_targets]= (load_inference_model( \
+            model_dir, \
+            model_filename=model_filename, \
+            params_filename=params_filename, \
+            executor=executor))
 
     _remove_fetch_node(teacher_program)
 
@@ -209,9 +211,9 @@ def build_distill_program(executor,
     """build distill program with infermodel"""
     startup_program = paddle.static.Program()
     if train_program_info is None:
-        [train_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
+        [train_program, feed_target_names, fetch_targets]= (load_inference_model( \
             path_prefix=config["model_dir"] if "model_dir" in config else config["model_path_prefix"], \
-            executor=executor)
+            executor=executor))
         train_program = recover_inference_program(train_program)
     else:
         train_program = train_program_info.program
@@ -497,7 +499,7 @@ def remove_unused_var_nodes(program):
     Returns:
         program(paddle.static.Program): The sparse model.
     '''
-    from paddle.fluid import core
+    from paddle.framework import core
     from paddle.fluid.framework import IrGraph
     graph = IrGraph(core.Graph(program.desc), for_test=True)
     removed_nodes = set()

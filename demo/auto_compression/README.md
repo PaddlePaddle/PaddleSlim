@@ -61,7 +61,7 @@ image = paddle.static.data(
 train_loader = paddle.io.DataLoader(train_dataset, feed_list=[image], batch_size=32, return_list=False)
 # 开始自动压缩
 ac = AutoCompression(
-    model_dir="./MobileNetV1_infer/",
+    model_dir="./MobileNetV1_infer",
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="output",
@@ -76,6 +76,7 @@ ac.compress()
 - DataLoader传入的数据集是待压缩模型所用的数据集，DataLoader继承自`paddle.io.DataLoader`。
 - 如无需验证自动化压缩过程中模型的精度，`eval_callback`可不传入function，程序会自动根据损失来选择最优模型。
 - 自动化压缩Config中定义量化、蒸馏、剪枝等压缩算法会合并执行，压缩策略有：量化+蒸馏，剪枝+蒸馏等等。
+- 如果要压缩的模型参数是存储在各自分离的文件中，需要先通过[convert.py](./convert.py) 脚本将其保存成一个单独的二进制文件。
 
 ## 应用示例
 

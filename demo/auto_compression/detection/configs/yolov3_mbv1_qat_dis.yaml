@@ -2,7 +2,7 @@ Global:
   reader_config: configs/yolo_reader.yml
   input_list: ['image', 'im_shape', 'scale_factor']
   Evaluation: True
-  model_dir: ./yolov3_mobilenet_v1_270e_coco/  # Model Link: https://paddledet.bj.bcebos.com/models/slim/yolov3_mobilenet_v1_270e_coco.tar
+  model_dir: ./yolov3_mobilenet_v1_270e_coco  # Model Link: https://paddledet.bj.bcebos.com/models/slim/yolov3_mobilenet_v1_270e_coco.tar
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 

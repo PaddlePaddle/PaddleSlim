@@ -4,7 +4,7 @@ Global:
   input_list: {'image': 'x2paddle_images'}
   Evaluation: True
   arch: 'YOLOv5'
-  model_dir: ./yolov5s_infer/
+  model_dir: ./yolov5s_infer
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
