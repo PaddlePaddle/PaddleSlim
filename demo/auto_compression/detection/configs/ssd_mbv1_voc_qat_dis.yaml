@@ -2,7 +2,7 @@ Global:
   reader_config: configs/ssd_reader.yml
   input_list: ['image', 'scale_factor', 'im_shape']
   Evaluation: True
-  model_dir: ./ssd_mobilenet_v1_300_120e_voc/
+  model_dir: ./ssd_mobilenet_v1_300_120e_voc
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 

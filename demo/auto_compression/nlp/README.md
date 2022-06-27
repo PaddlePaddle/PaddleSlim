@@ -109,7 +109,7 @@ tar -zxvf afqmc.tar
 export CUDA_VISIBLE_DEVICES=0
 python run.py \
     --model_type='ppminilm' \
-    --model_dir='./afqmc/' \
+    --model_dir='./afqmc' \
     --model_filename='inference.pdmodel' \
     --params_filename='inference.pdiparams' \
     --dataset='clue' \
@@ -147,7 +147,7 @@ TrainConfig:
 
 ```yaml
 Distillation:
-  teacher_model_dir: ./afqmc/
+  teacher_model_dir: ./afqmc
   teacher_model_filename: inference.pdmodel
   teacher_params_filename: inference.pdiparams
 ```

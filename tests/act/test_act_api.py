@@ -1,12 +1,11 @@
 import sys
 import os
-sys.path.append("../")
+sys.path.append("../../")
 import unittest
 import tempfile
 import paddle
 import unittest
 import numpy as np
-from static_case import StaticCase
 from paddle.io import Dataset
 from paddleslim.auto_compression import AutoCompression
 from paddleslim.auto_compression.config_helpers import load_config

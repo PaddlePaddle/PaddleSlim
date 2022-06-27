@@ -16,16 +16,40 @@
 本示例将以图像分类模型MobileNetV1为例，介绍如何使用PaddleClas中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为量化训练和蒸馏。
 
 ## 2. Benchmark
-- PaddlePaddle MobileNetV1模型
 
-| 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=4 |
-|:------:|:------:|:------:|:------:|
-| MobileNetV1 | Base模型 | 70.90 | 39.041 |
-| MobileNetV1 | 量化+蒸馏 | 70.49 | 29.238|
+### PaddleClas模型
 
-- 测试环境：`SDM710 2*A75(2.2GHz) 6*A55(1.7GHz)`
+| 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) | 
+|:------:|:------:|:------:|:------:|:------:|
+| MobileNetV1 | Baseline | 70.90 | - | 33.15 |
+| MobileNetV1 | 量化+蒸馏 | 70.49 | - | 13.64 |
+| ResNet50_vd | Baseline | 79.12 | 3.19 | - |
+| ResNet50_vd | 量化+蒸馏 | 78.55 | 0.92 | - |
+| ShuffleNetV2_x1_0 | Baseline | 68.65 | - | 10.43 |
+| ShuffleNetV2_x1_0 | 量化+蒸馏 | 67.78 | - | 5.51 |
+| SqueezeNet1_0_infer | Baseline | 59.60 | - | 35.98 |
+| SqueezeNet1_0_infer | 量化+蒸馏 | 59.13 | - | 16.96 |
+| PPLCNetV2_base | Baseline | 76.86 | - | 36.50 |
+| PPLCNetV2_base | 量化+蒸馏 | 76.43 | - | 15.79 |
+| PPHGNet_tiny | Baseline | 79.59 | 2.82 | - |
+| PPHGNet_tiny | 量化+蒸馏 | 79.19 | 0.98 | - |
+| EfficientNetB0 | Baseline | 77.02 | 1.95 | - |
+| EfficientNetB0 | 量化+蒸馏 | 73.61 | 1.44 | - |
+| GhostNet_x1_0 | Baseline | 74.02 | 2.93 | - |
+| GhostNet_x1_0 | 量化+蒸馏 | 71.11 | 1.03 | - |
+| InceptionV3 | Baseline | 79.14 | 4.79 | - |
+| InceptionV3 | 量化+蒸馏 | 73.16 | 1.47 | - |
+| MobileNetV3_large_x1_0 | Baseline | 75.32 | - | 16.62 |
+| MobileNetV3_large_x1_0 | 量化+蒸馏 | 68.84 | - | 9.85 |
 
-- TensorFlow MobileNetV1模型
+- ARM CPU 测试环境：`SDM865(4xA77+4xA55)`
+- Nvidia GPU 测试环境：
+  - 硬件：NVIDIA Tesla T4 单卡
+  - 软件：CUDA 11.2, cuDNN 8.0, TensorRT 8.4
+  - 测试配置：batch_size: 1, image size: 224
+
+
+### TensorFlow MobileNetV1模型
 
 | 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=1 | Inference模型 |
 |:------:|:------:|:------:|:------:|:------:|
@@ -35,14 +59,8 @@
 - 测试环境：`骁龙865 4*A77 4*A55`
 
 说明：
-- MobileNetV1模型源自[tensorflow/models](http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_224.tgz)，通过[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)工具转换MobileNetV1预测模型步骤：
+- MobileNetV1模型源自[tensorflow/models](http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_224.tgz)
 
-(1) 安装X2Paddle的1.3.6以上版本；（pip install x2paddle）
-
-(2) 转换模型：
-x2paddle --framework=tensorflow --model=tf_model.pb --save_dir=pd_model
-
-即可得到MobileNetV1模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中MobileNetV1的Base预测模型。
 
 ## 3. 自动压缩流程
 
@@ -90,24 +108,11 @@ tar -xf MobileNetV1_infer.tar
 ```shell
 # 单卡启动
 export CUDA_VISIBLE_DEVICES=0
-python run.py \
-    --model_dir='MobileNetV1_infer' \
-    --model_filename='inference.pdmodel' \
-    --params_filename='inference.pdiparams' \
-    --save_dir='./output' \
-    --batch_size=128 \
-    --config_path='./configs/mobilenetv1_qat_dis.yaml'\
-    --data_dir='ILSVRC2012'
-
 # 多卡启动
-python -m paddle.distributed.launch run.py \
-    --model_dir='MobileNetV1_infer' \
-    --model_filename='inference.pdmodel' \
-    --params_filename='inference.pdiparams' \
-    --save_dir='./output' \
-    --batch_size=128 \
-    --config_path='./configs/mobilenetv1_qat_dis.yaml'\
-    --data_dir='ILSVRC2012'
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+
+python run.py --save_dir='./save_quant_mobilev1/' --config_path='./configs/MobileNetV1/qat_dis.yaml'
+
 ```
 
 
@@ -118,4 +123,3 @@ python -m paddle.distributed.launch run.py \
 - [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/lite/lite.md)
 
 ## 5.FAQ
-[1.] 如果遇到报错 ```ValueError: var inputs not in this block``` ，则说明模型中的输入变量的名字不是 ```inputs``` ，可以先用netron可视化查看输入变量的名称，然后修改 ```run.py``` 中的第35行中 ``` yield {"inputs": imgs}``` 为 ```yield {${input_tensor_name}: imgs}```。一般PaddleClas产出部署模型的输入名字如果不是 ```inputs```，则是 ```x```。
