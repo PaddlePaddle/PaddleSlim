@@ -1,6 +1,6 @@
 import paddle
 from paddle.fluid.framework import IrGraph
-from paddle.fluid import core
+from paddle.framework import core
 from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass, AddQuantDequantPass, QuantizationFreezePass
 
 try:
@@ -10,6 +10,8 @@ try:
 except:
     TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
+
+from .load_model import load_inference_model
 
 
 def post_quant_fake(executor,
@@ -51,7 +53,7 @@ def post_quant_fake(executor,
         for op_type in _quantizable_op_type:
             assert op_type in _support_quantize_op_type, \
                 op_type + " is not supported for quantization."
-    _program, _feed_list, _fetch_list = paddle.fluid.io.load_inference_model(
+    _program, _feed_list, _fetch_list = load_inference_model(
         model_dir,
         executor,
         model_filename=model_filename,
@@ -108,12 +110,13 @@ def post_quant_fake(executor,
 
     _program = graph.to_program()
 
-    paddle.fluid.io.save_inference_model(
-        dirname=save_model_path,
+    feed_vars = [_program.global_block().var(name) for name in _feed_list]
+    paddle.static.save_inference_model(
+        path_prefix=save_model_path,
         model_filename=model_filename,
         params_filename=params_filename,
-        feeded_var_names=_feed_list,
-        target_vars=_fetch_list,
+        feed_vars=feed_vars,
+        fetch_vars=_fetch_list,
         executor=executor,
-        main_program=_program)
+        program=_program)
     print("The quantized model is saved in: " + save_model_path)

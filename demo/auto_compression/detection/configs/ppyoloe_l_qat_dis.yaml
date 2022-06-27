@@ -3,7 +3,7 @@ Global:
   reader_config: configs/yolo_reader.yml
   input_list: ['image', 'scale_factor']
   Evaluation: True
-  model_dir: ./ppyoloe_crn_l_300e_coco/
+  model_dir: ./ppyoloe_crn_l_300e_coco
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
