@@ -204,6 +204,23 @@ def softmax_with_cross_entropy_op(block, logits, labels):
     return loss, softmax
 
 
+def kl_div_op(block, logits, labels):
+    """ Insert kl_div op to program"""
+    global global_idx
+    loss = block.create_var(
+        name='{}.kl_div_tmp_{}'.format(logits.name, global_idx),
+        shape=logits.shape,
+        dtype=logits.dtype)
+    global_idx += 1
+
+    attrs = {'reduction': "mean"}  ### maybe take a long time use this attrs
+    inputs = {'X': logits, 'Target': labels}
+    outputs = {'Loss': loss}
+    block.append_op(
+        type='kldiv_loss', inputs=inputs, outputs=outputs, attrs=attrs)
+    return loss
+
+
 def mean_op(block, inputs, axis=None, keepdim=False):
     """ Insert mean op to program"""
     global global_idx
@@ -331,9 +348,12 @@ class TransformerPruner:
             dtype=label_info['dtype'],
             persistable=False)
         labels = feed_op(block, feed_num, labels)
-        ce_loss, probs = softmax_with_cross_entropy_op(
-            block, logits=logits, labels=labels)
-        loss = mean_op(block, ce_loss)
+        if label_info['dtype'] == np.float32:
+            loss = kl_div_op(block, logits=logits, labels=labels)
+        else:
+            loss, probs = softmax_with_cross_entropy_op(
+                block, logits=logits, labels=labels)
+        loss = mean_op(block, loss)
 
         program._sync_with_cpp()
         paddle.static.append_backward(loss)
