@@ -23,14 +23,14 @@
 ## 2. Benchmark
 [BERT](https://arxiv.org/abs/1810.04805) （```Bidirectional Encoder Representations from Transformers```）以Transformer 编码器为网络基本组件，使用掩码语言模型（```Masked Language Model```）和邻接句子预测（```Next Sentence Prediction```）两个任务在大规模无标注文本语料上进行预训练（pre-train），得到融合了双向内容的通用语义表示模型。以预训练产生的通用语义表示模型为基础，结合任务适配的简单输出层，微调（fine-tune）后即可应用到下游的NLP任务，效果通常也较直接在下游的任务上训练的模型更优。此前BERT即在[GLUE](https://gluebenchmark.com/tasks)评测任务上取得了SOTA的结果。
 
-基于bert-base-uncased模型，压缩前后的精度如下：
+基于bert-base-cased模型，压缩前后的精度如下：
 | 模型 | 策略 | CoLA | MRPC | QNLI | QQP | RTE | SST2  | AVG |
 |:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|:------:|:------:|
-| bert-base-uncased | Base模型| 60.06 | 84.31 | 90.68 | 90.84 | 63.53 | 91.63  | 80.17  |
-| bert-base-uncased |剪枝蒸馏+离线量化| 60.52 | 84.80 | 90.59 | 90.42 | 64.26 | 91.63 | 80.37 |
+| bert-base-cased | Base模型| 60.06 | 84.31 | 90.68 | 90.84 | 63.53 | 91.63  | 80.17  |
+| bert-base-cased |剪枝蒸馏+离线量化| 60.52 | 84.80 | 90.59 | 90.42 | 64.26 | 91.63 | 80.37 |
 
 模型在多个任务上平均精度以及加速对比如下：
-|  bert-base-uncased | Accuracy（avg） | 时延(ms) | 加速比 |
+|  bert-base-cased | Accuracy（avg） | 时延(ms) | 加速比 |
 |:-------:|:----------:|:------------:| :------:|
 | 压缩前 |  80.17 | 8.18 | - |
 | 压缩后 |  80.37 | 6.35 | 28.82% |
