@@ -205,7 +205,7 @@ class AutoCompression:
 
         train_configs = [train_config]
         for idx in range(1, len(self._strategy)):
-            if 'qat' in self._strategy[idx]:
+            if 'qat' in self._strategy[idx] or 'ptq' in self._strategy[idx]:
                 ### if compress strategy more than one, the train config in the yaml set for prune
                 ### the train config for quantization is extrapolate from the yaml
                 tmp_train_config = copy.deepcopy(train_config.__dict__)
@@ -228,8 +228,6 @@ class AutoCompression:
                             map(lambda x: x * 0.1, train_config.learning_rate[
                                 'values']))
                 train_cfg = TrainConfig(**tmp_train_config)
-            elif 'ptq' in self._strategy[idx]:
-                train_cfg = None
             else:
                 tmp_train_config = copy.deepcopy(train_config.__dict__)
                 train_cfg = TrainConfig(**tmp_train_config)
