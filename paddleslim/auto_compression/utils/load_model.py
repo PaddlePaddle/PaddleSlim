@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import paddle
 
 __all__ = ['load_inference_model']
@@ -21,16 +22,19 @@ def load_inference_model(path_prefix,
                          executor,
                          model_filename=None,
                          params_filename=None):
-    if model_filename is not None and params_filename is not None:
+    try:
         [inference_program, feed_target_names, fetch_targets] = (
             paddle.static.load_inference_model(
                 path_prefix=path_prefix,
                 executor=executor,
                 model_filename=model_filename,
                 params_filename=params_filename))
-    else:
+    except:
+        model_name = model_filename.split('.')[
+            0] if model_filename is not None else 'model'
+        model_path_prefix = os.path.join(path_prefix, model_name)
         [inference_program, feed_target_names, fetch_targets] = (
             paddle.static.load_inference_model(
-                path_prefix=path_prefix, executor=executor))
+                path_prefix=model_path_prefix, executor=executor))
 
     return [inference_program, feed_target_names, fetch_targets]
