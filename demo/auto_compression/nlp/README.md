@@ -86,7 +86,7 @@ pip install paddlenlp
 | 模型 | AFQMC | TNEWS | IFLYTEK | CMNLI | OCNLI | CLUEWSC2020 | CSL |
 |:------:|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|
 | PP-MiniLM | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/tnews.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/iflytek.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/cmnli.tar) | [ ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/ocnli.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/cluewsc.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/csl.tar) |
-| ERNIE 3.0-Medium | [afqmc]() | [tnews]() | [iflytek]() | [cmnli]() | [ocnli]() | [cluewsc2020]() | [csl]() |
+| ERNIE 3.0-Medium | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/AFQMC.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/TNEWS.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/IFLYTEK.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CMNLI.tar) | [ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/OCNLI.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CLUEWSC2020.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CSL.tar) |
 
 从上表获得模型超链接, 并用以下命令下载推理模型文件:
 
