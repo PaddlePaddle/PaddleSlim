@@ -457,10 +457,11 @@ def build_prune_program(executor,
         excluded_params_name = []
         ### TODO(ceci3): set default prune weight
         for param in train_program_info.program.global_block().all_parameters():
-            if config[
-                    'prune_params_name'] is not None and param.name not in config[
-                        'prune_params_name']:
-                excluded_params_name.append(param.name)
+            if config['prune_params_name'] is not None:
+                if param.name not in config['prune_params_name']:
+                    excluded_params_name.append(param.name)
+                else:
+                    pruner.add_supported_layer(param.name)
             if "teacher_" in param.name:
                 excluded_params_name.append(param.name)
         pruner.set_excluded_layers(train_program_info.program,
