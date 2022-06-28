@@ -307,7 +307,7 @@ def quantize(cfg):
         quant_scope = paddle.static.Scope()
         with paddle.static.scope_guard(float_scope):
             [float_inference_program, feed_target_names, fetch_targets]= fluid.io.load_inference_model( \
-                    dirname=g_quant_config.model_filename, \
+                    dirname=g_quant_config.float_infer_model_path, \
                     model_filename=g_quant_config.model_filename, params_filename=g_quant_config.params_filename,
                     executor=g_quant_config.executor)
             float_metric = g_quant_config.eval_function(
@@ -320,8 +320,8 @@ def quantize(cfg):
                     model_filename=g_quant_config.model_filename, params_filename=g_quant_config.params_filename,
                     executor=g_quant_config.executor)
             quant_metric = g_quant_config.eval_function(
-                g_quant_config.executor, inference_program, feed_target_names,
-                fetch_targets)
+                g_quant_config.executor, quant_inference_program,
+                feed_target_names, fetch_targets)
 
         emd_loss = float(abs(float_metric - quant_metric)) / float_metric
 
