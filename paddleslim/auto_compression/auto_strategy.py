@@ -105,7 +105,7 @@ def create_strategy_config(strategy_str, model_type):
                 'prune_strategy':
                 'gmp',  ### default unstruture prune strategy is gmp
                 'prune_mode': 'ratio',
-                'pruned_ratio': float(tmp_s[1]),
+                'ratio': float(tmp_s[1]),
                 'local_sparsity': True,
                 'prune_params_type': 'conv1x1_only'
             }

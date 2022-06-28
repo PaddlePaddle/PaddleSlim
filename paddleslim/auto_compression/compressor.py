@@ -802,11 +802,12 @@ class AutoCompression:
             for name in test_program_info.feed_target_names
         ]
 
+        model_name = self.model_filename.split('.')[
+            0] if self.model_filename is not None else 'model'
+        path_prefix = os.path.join(model_dir, model_name)
         paddle.static.save_inference_model(
-            path_prefix=str(model_dir),
+            path_prefix=path_prefix,
             feed_vars=feed_vars,
             fetch_vars=test_program_info.fetch_targets,
             executor=self._exe,
-            program=test_program,
-            model_filename=self.model_filename,
-            params_filename=self.params_filename)
+            program=test_program)
