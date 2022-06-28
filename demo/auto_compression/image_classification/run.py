@@ -7,6 +7,7 @@ import functools
 from functools import partial
 
 import numpy as np
+import math
 import paddle
 import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
@@ -14,6 +15,7 @@ import imagenet_reader as reader
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 from utility import add_arguments, print_arguments
+
 
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -28,15 +30,14 @@ def argsparser():
         type=str,
         default='output',
         help="directory to save compressed model.")
+    parser.add_argument(
+        '--total_images',
+        type=int,
+        default=1281167,
+        help="the number of total training images.")
     return parser
 
 
-def print_arguments(args):
-    print('-----------  Running Arguments -----------')
-    for arg, value in sorted(vars(args).items()):
-        print('%s: %s' % (arg, value))
-    print('------------------------------------------')
-    
 # yapf: enable
 def reader_wrapper(reader, input_name):
     def gen():
@@ -56,10 +57,13 @@ def eval_reader(data_dir, batch_size):
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     val_reader = eval_reader(data_dir, batch_size=global_config['batch_size'])
     image = paddle.static.data(
-        name=global_config['input_name'], shape=[None, 3, 224, 224], dtype='float32')
+        name=global_config['input_name'],
+        shape=[None, 3, 224, 224],
+        dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
 
     results = []
+    print('Evaluating... It will take a while. Please wait...')
     for batch_id, data in enumerate(val_reader()):
         # top1_acc, top5_acc
         if len(test_feed_names) == 1:
@@ -93,8 +97,6 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                 fetch_list=test_fetch_list)
             result = [np.mean(r) for r in result]
             results.append(result)
-        if batch_id % 50 == 0:
-            print('Eval iter: ', batch_id)
     result = np.mean(np.array(results), axis=0)
     return result[0]
 
@@ -104,6 +106,15 @@ def main():
     all_config = load_slim_config(args.config_path)
     assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
     global_config = all_config["Global"]
+    gpu_num = paddle.distributed.get_world_size()
+    if all_config['TrainConfig']['learning_rate'][
+            'type'] == 'CosineAnnealingDecay':
+        step = int(
+            math.ceil(
+                float(args.total_images) / (global_config['batch_size'] *
+                                            gpu_num)))
+        all_config['TrainConfig']['learning_rate']['T_max'] = step
+        print('total training steps:', step)
     global data_dir
     data_dir = global_config['data_dir']
 
@@ -119,13 +130,15 @@ def main():
         config=all_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function,
-        eval_dataloader=reader_wrapper(eval_reader(data_dir, global_config['batch_size']), global_config['input_name']))
+        eval_dataloader=reader_wrapper(
+            eval_reader(data_dir, global_config['batch_size']),
+            global_config['input_name']))
 
     ac.compress()
-    
+
+
 if __name__ == '__main__':
     paddle.enable_static()
     parser = argsparser()
     args = parser.parse_args()
-    print_arguments(args)
     main()

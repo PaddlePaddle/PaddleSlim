@@ -42,13 +42,6 @@ def argsparser():
     return parser
 
 
-def print_arguments(args):
-    print('-----------  Running Arguments -----------')
-    for arg, value in sorted(vars(args).items()):
-        print('%s: %s' % (arg, value))
-    print('------------------------------------------')
-
-
 def reader_wrapper(reader, input_list):
     def gen():
         for data in reader:
@@ -160,8 +153,6 @@ if __name__ == '__main__':
     paddle.enable_static()
     parser = argsparser()
     FLAGS = parser.parse_args()
-    print_arguments(FLAGS)
-
     assert FLAGS.devices in ['cpu', 'gpu', 'xpu', 'npu']
     paddle.set_device(FLAGS.devices)
 

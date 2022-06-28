@@ -4,7 +4,7 @@ Global:
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
   batch_size: 32
-  data_dir: /workspace/dataset/ILSVRC2012
+  data_dir: /ILSVRC2012
   
 Distillation:
   alpha: 1.0
@@ -29,7 +29,7 @@ TrainConfig:
   learning_rate: 
     type: CosineAnnealingDecay 
     learning_rate: 0.015
-    T_max: 10000
+    T_max: 5000
   optimizer_builder:
     optimizer:
       type: Momentum
