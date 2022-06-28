@@ -86,7 +86,8 @@ def get_sparse_model(executor, places, model_file, param_file, ratio,
     feed_vars = [
         inference_program.global_block().var(name) for name in feed_target_names
     ]
-    model_name = model_name.split('.')[0] if model_name is not None else 'model'
+    model_name = '.'.join(model_name.split('.')
+                          [:-1]) if model_name is not None else 'model'
     save_path = os.path.join(save_path, model_name)
     static.save_inference_model(
         save_path,
@@ -160,7 +161,8 @@ def get_prune_model(executor, places, model_file, param_file, ratio, save_path):
     feed_vars = [
         main_program.global_block().var(name) for name in feed_target_names
     ]
-    model_name = model_name.split('.')[0] if model_name is not None else 'model'
+    model_name = '.'.join(model_name.split('.')
+                          [:-1]) if model_name is not None else 'model'
     save_path = os.path.join(save_path, model_name)
     static.save_inference_model(
         save_path,

@@ -206,12 +206,13 @@ class AutoCompression:
         train_configs = [train_config]
         for idx in range(1, len(self._strategy)):
             if 'qat' in self._strategy[idx] or 'ptq' in self._strategy[idx]:
-                ### if compress strategy more than one, the train config in the yaml set for prune
-                ### the train config for quantization is extrapolate from the yaml
+                ### If compress strategy more than one, the TrainConfig in the yaml only used in prune.
+                ### The TrainConfig for quantization is extrapolate from above.
                 tmp_train_config = copy.deepcopy(train_config.__dict__)
                 ### the epoch, train_iter, learning rate of quant is 10% of the prune compress
-                tmp_train_config['epochs'] = max(
-                    int(train_config.epochs * 0.1), 1)
+                if self.model_type != 'transformer':
+                    tmp_train_config['epochs'] = max(
+                        int(train_config.epochs * 0.1), 1)
                 if train_config.train_iter is not None:
                     tmp_train_config['train_iter'] = int(
                         train_config.train_iter * 0.1)
@@ -800,8 +801,8 @@ class AutoCompression:
             for name in test_program_info.feed_target_names
         ]
 
-        model_name = self.model_filename.split('.')[
-            0] if self.model_filename is not None else 'model'
+        model_name = '.'.join(self.model_filename.split(
+            '.')[:-1]) if self.model_filename is not None else 'model'
         path_prefix = os.path.join(model_dir, model_name)
         paddle.static.save_inference_model(
             path_prefix=path_prefix,

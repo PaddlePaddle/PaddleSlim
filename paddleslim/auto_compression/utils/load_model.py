@@ -30,16 +30,16 @@ def load_inference_model(path_prefix,
                 model_filename=model_filename,
                 params_filename=params_filename))
     else:
-        try:
-            [inference_program, feed_target_names, fetch_targets] = (
-                paddle.static.load_inference_model(
-                    path_prefix=path_prefix, executor=executor))
-        except:
-            model_name = model_filename.split('.')[
-                0] if model_filename is not None else 'model'
+        model_name = '.'.join(model_filename.split('.')
+                              [:-1]) if model_filename is not None else 'model'
+        if os.path.exists(os.path.join(path_prefix, model_name + '.pdmodel')):
             model_path_prefix = os.path.join(path_prefix, model_name)
             [inference_program, feed_target_names, fetch_targets] = (
                 paddle.static.load_inference_model(
                     path_prefix=model_path_prefix, executor=executor))
+        else:
+            [inference_program, feed_target_names, fetch_targets] = (
+                paddle.static.load_inference_model(
+                    path_prefix=path_prefix, executor=executor))
 
     return [inference_program, feed_target_names, fetch_targets]
