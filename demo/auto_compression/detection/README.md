@@ -113,8 +113,6 @@ wget https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_co
 tar -xf ppyoloe_crn_l_300e_coco.tar
 ```
 
-**注意**：TinyPose模型暂不支持精度测试。
-
 #### 3.4 自动压缩并产出模型
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
@@ -128,14 +126,14 @@ python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./outpu
 
 #### 3.5 测试模型精度
 
-使用run.py脚本得到模型的mAP：
+使用eval.py脚本得到模型的mAP：
 ```
 export CUDA_VISIBLE_DEVICES=0
 python eval.py --config_path=./configs/ppyoloe_l_qat_dis.yaml
 ```
 
-**注意**：要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
-
+**注意**：
+- 要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
 
 ## 4.预测部署
 

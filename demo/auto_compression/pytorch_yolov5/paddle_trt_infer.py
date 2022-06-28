@@ -303,8 +303,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--device',
         type=str,
-        default='CPU',
-        help="Choose the device you want to run, it can be: CPU/GPU/XPU, default is CPU"
+        default='GPU',
+        help="Choose the device you want to run, it can be: CPU/GPU/XPU, default is GPU"
     )
     parser.add_argument('--img_shape', type=int, default=640, help="input_size")
     args = parser.parse_args()

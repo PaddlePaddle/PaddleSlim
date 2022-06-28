@@ -23,8 +23,6 @@ from ppdet.metrics import COCOMetric, VOCMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 
-from post_process import YOLOv5PostProcess
-
 
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -97,17 +95,12 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                        fetch_list=test_fetch_list,
                        return_numpy=False)
         res = {}
-        if 'arch' in global_config and global_config['arch'] == 'YOLOv5':
-            postprocess = YOLOv5PostProcess(
-                score_threshold=0.001, nms_threshold=0.6, multi_label=True)
-            res = postprocess(np.array(outs[0]), data_all['scale_factor'])
-        else:
-            for out in outs:
-                v = np.array(out)
-                if len(v.shape) > 1:
-                    res['bbox'] = v
-                else:
-                    res['bbox_num'] = v
+        for out in outs:
+            v = np.array(out)
+            if len(v.shape) > 1:
+                res['bbox'] = v
+            else:
+                res['bbox_num'] = v
 
         metric.update(data_all, res)
         if batch_id % 100 == 0:
