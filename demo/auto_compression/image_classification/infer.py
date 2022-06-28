@@ -7,8 +7,8 @@ import argparse
 import base64
 import shutil
 import paddle
-from paddleslim.auto_compression.utils.postprocess import build_postprocess
-from paddleslim.auto_compression.utils.preprocess import create_operators
+from postprocess import build_postprocess
+from preprocess import create_operators
 from paddleslim.auto_compression.config_helpers import load_config
 
 

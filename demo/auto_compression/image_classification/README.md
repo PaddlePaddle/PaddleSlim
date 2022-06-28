@@ -107,13 +107,15 @@ tar -xf MobileNetV1_infer.tar
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行量化训练和蒸馏。配置config文件中模型路径、数据集路径、蒸馏、量化和训练等部分的参数，配置完成后便可开始自动压缩。
 
-** 单卡启动 **
+**单卡启动**
+
 ```shell
 export CUDA_VISIBLE_DEVICES=0
 python run.py --save_dir='./save_quant_mobilev1/' --config_path='./configs/MobileNetV1/qat_dis.yaml'
 ```
 
-** 分布式训练 **
+**分布式训练**
+
 图像分类训练任务中往往包含大量训练数据，以ImageNet为例，ImageNet22k数据集中包含1400W张图像，如果使用单卡训练，会非常耗时，使用分布式训练可以达到几乎线性的加速比。
 
 ```shell
