@@ -51,7 +51,7 @@ def eval():
     devices = paddle.device.get_device().split(':')[0]
     places = paddle.device._convert_to_place(devices)
     exe = paddle.static.Executor(places)
-    val_program, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
+    val_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
         global_config["model_dir"],
         exe,
         model_filename=global_config["model_filename"],

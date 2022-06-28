@@ -124,7 +124,7 @@ python -m paddle.distributed.launch run.py --save_dir='./save_quant_mobilev1/' -
 ```
 多卡训练（分布式训练）指的是将训练任务按照一定方法拆分到多个训练节点完成数据读取、前向计算、反向梯度计算等过程，并将计算出的梯度上传至服务节点。服务节点在收到所有训练节点传来的梯度后，会将梯度聚合并更新参数。最后将参数发送给训练节点，开始新一轮的训练。多卡训练一轮训练能训练```batch size * num gpus```的数据，比如单卡的```batch size```为32，单轮训练的数据量即32，而四卡训练的```batch size```为32，单轮训练的数据量为128。
 
-注意```learning rate```与```batch size```呈线性关系，这里单卡```batch size```为32，```learning rate```为0.015，多卡时```batch size```为32，```learning rate```需乘上卡数。若改变```batch size```也需要对应修改```learning rate```。
+注意```learning rate```与```batch size```呈线性关系，这里单卡```batch size```为32，对应的```learning rate```为0.015，那么如果```batch size```减小4倍改为8，```learning rate```也需除以4；多卡时```batch size```为32，```learning rate```需乘上卡数。所以改变```batch size```或改变训练卡数都需要对应修改```learning rate```。
 
 
 ## 4.预测部署
