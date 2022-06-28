@@ -15,7 +15,7 @@
 飞桨模型转换工具[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)支持将```Caffe/TensorFlow/ONNX/PyTorch```的模型一键转为飞桨（PaddlePaddle）的预测模型。借助X2Paddle的能力，PaddleSlim的自动压缩功能可方便地用于各种框架的推理模型。
 
 
-本示例将以[Pytorch](https://github.com/pytorch/pytorch)框架的自然语言处理模型为例，介绍如何自动压缩其他框架中的自然语言处理模型。本示例会利用[huggingface](https://github.com/huggingface/transformers)开源transformers库，将Pytorch框架模型转换为Paddle框架模型，再使用ACT自动压缩功能进行自动压缩。本示例使用的自动压缩策略为剪枝蒸馏和离线量化(```Post-training quantization```)。
+本示例将以[PyTorch](https://github.com/pytorch/pytorch)框架的自然语言处理模型为例，介绍如何自动压缩其他框架中的自然语言处理模型。本示例会利用[huggingface](https://github.com/huggingface/transformers)开源transformers库，将PyTorch框架模型转换为Paddle框架模型，再使用ACT自动压缩功能进行自动压缩。本示例使用的自动压缩策略为剪枝蒸馏和离线量化(```Post-training quantization```)。
 
 
 
@@ -87,7 +87,7 @@ pip install paddlenlp
 
 #### 3.3 X2Paddle转换模型流程
 
-**方式1: PyTorch2Paddle直接将Pytorch动态图模型转为Paddle静态图模型**
+**方式1: PyTorch2Paddle直接将PyTorch动态图模型转为Paddle静态图模型**
 
 ```shell
 import torch
@@ -116,7 +116,7 @@ PyTorch2Paddle支持trace和script两种方式的转换，均是PyTorch动态图
 - 使用PaddleNLP的tokenizer时需要在模型保存的文件夹中加入```model_config.json, special_tokens_map.json, tokenizer_config.json, vocab.txt```这些文件。
 
 
-更多Pytorch2Paddle示例可参考[PyTorch模型转换文档](https://github.com/PaddlePaddle/X2Paddle/blob/develop/docs/inference_model_convertor/pytorch2paddle.md)。其他框架转换可参考[X2Paddle模型转换工具](https://github.com/PaddlePaddle/X2Paddle)
+更多PyTorch2Paddle示例可参考[PyTorch模型转换文档](https://github.com/PaddlePaddle/X2Paddle/blob/develop/docs/inference_model_convertor/pytorch2paddle.md)。其他框架转换可参考[X2Paddle模型转换工具](https://github.com/PaddlePaddle/X2Paddle)
 
 如想快速尝试运行实验，也可以直接下载已经转换好的模型，链接如下：
 | [CoLA](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_cola.tar) | [MRPC](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_mrpc.tar) | [QNLI](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_qnli.tar) | [QQP](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_qqp.tar) | [RTE](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_rte.tar) | [SST2](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_sst2.tar) |
@@ -126,7 +126,7 @@ wget https://paddle-slim-models.bj.bcebos.com/act/x2paddle_cola.tar
 tar xf x2paddle_cola.tar
 ```
 
-**方式2: Onnx2Paddle将Pytorch动态图模型保存为Onnx格式后再转为Paddle静态图模型**
+**方式2: Onnx2Paddle将PyTorch动态图模型保存为Onnx格式后再转为Paddle静态图模型**
 
 
 PyTorch 导出 ONNX 动态图模型
