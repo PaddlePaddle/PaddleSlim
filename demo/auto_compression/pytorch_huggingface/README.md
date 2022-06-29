@@ -184,7 +184,6 @@ export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/cola.yaml --save_dir='./output/cola/'
 ```
 
-如仅需验证模型精度，在启动```run.py```脚本时，命令加上```--eval True```即可：
 
 ```shell
 export CUDA_VISIBLE_DEVICES=0
@@ -206,10 +205,10 @@ python -u ./infer.py \
 ```
 
 除需传入```task_name```任务名称，```model_name_or_path```模型名称，```model_path```保存inference模型的路径等基本参数外，还需根据预测环境传入预测参数：
-```device```：默认为gpu，可选为gpu, cpu, xpu
-```use_trt```：是否使用 TesorRT 预测引擎
-```int8```：是否启用```INT8```
-```fp16```：是否启用```FP16```
+- ```device```：默认为gpu，可选为gpu, cpu, xpu
+- ```use_trt```：是否使用 TesorRT 预测引擎
+- ```int8```：是否启用```INT8```
+- ```fp16```：是否启用```FP16```
 
 
 ## 5. FAQ
