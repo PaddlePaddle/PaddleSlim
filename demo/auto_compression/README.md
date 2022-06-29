@@ -65,8 +65,7 @@ ac = AutoCompression(
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="output",
-    strategy_config=None,
-    train_config=None,
+    config=None,
     train_dataloader=train_loader,
     eval_dataloader=train_loader)  # eval_function to verify accuracy
 ac.compress()
