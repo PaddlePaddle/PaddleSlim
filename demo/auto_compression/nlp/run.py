@@ -19,7 +19,7 @@ from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import Mcc, PearsonAndSpearman
 from paddleslim.auto_compression.config_helpers import load_config
 from paddleslim.auto_compression.compressor import AutoCompression
-from utility import add_arguments, print_arguments
+from utility import add_arguments
 
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
@@ -239,7 +239,6 @@ def apply_decay_param_fun(name):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    print_arguments(args)
     paddle.enable_static()
     all_config = load_config(args.config_path)
 

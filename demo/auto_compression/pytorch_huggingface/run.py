@@ -45,14 +45,6 @@ def argsparser():
         help="directory to save compressed model.")
     return parser
 
-
-def print_arguments(args):
-    print('-----------  Running Arguments -----------')
-    for arg, value in sorted(vars(args).items()):
-        print('%s: %s' % (arg, value))
-    print('------------------------------------------')
-
-
 METRIC_CLASSES = {
     "cola": Mcc,
     "sst-2": Accuracy,
@@ -320,5 +312,4 @@ if __name__ == '__main__':
     paddle.enable_static()
     parser = argsparser()
     args = parser.parse_args()
-    print_arguments(args)
     main()
