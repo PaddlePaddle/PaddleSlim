@@ -1,3 +1,4 @@
+export CUDA_VISIBLE_DEVICES=0
 export FLAGS_cudnn_deterministic=True
 python run.py \
     --model_type='ppminilm' \
