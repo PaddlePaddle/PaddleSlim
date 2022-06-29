@@ -192,7 +192,7 @@ python train.py
 
 多卡启动PACT量化训练：
 ```
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3.7 -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 train.py --batch_size=64
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 train.py --batch_size=64
 ```
 
 输出结果为

@@ -77,7 +77,7 @@ python train.py --model MobileNet --pretrained_model ./pretrain/MobileNetV1_pret
 
 - 多卡启动：
 ```
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3.7 -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 train.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 train.py \
             --model MobileNet \
             --pretrained_model ./pretrain/MobileNetV1_pretrained \
             --checkpoint_dir ./output/mobilenetv1 \
