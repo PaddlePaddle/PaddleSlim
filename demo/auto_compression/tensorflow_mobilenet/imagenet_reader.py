@@ -128,54 +128,51 @@ def process_image(sample, mode, color_jitter, rotate):
         return [img]
 
 
-def _reader_creator(file_list,
-                    mode,
-                    shuffle=False,
-                    color_jitter=False,
-                    rotate=False,
-                    data_dir=DATA_DIR,
-                    batch_size=1):
-    def reader():
-        try:
-            with open(file_list) as flist:
+class ImageNetDataset(Dataset):
+    def __init__(self, data_dir=DATA_DIR, mode='train'):
+        super(ImageNetDataset, self).__init__()
+        self.data_dir = data_dir
+        train_file_list = os.path.join(data_dir, 'train_list.txt')
+        val_file_list = os.path.join(data_dir, 'val_list.txt')
+        test_file_list = os.path.join(data_dir, 'test_list.txt')
+        self.mode = mode
+        if mode == 'train':
+            with open(train_file_list) as flist:
                 full_lines = [line.strip() for line in flist]
-                if shuffle:
-                    np.random.shuffle(full_lines)
+                np.random.shuffle(full_lines)
                 lines = full_lines
-                for line in lines:
-                    if mode == 'train' or mode == 'val':
-                        img_path, label = line.split()
-                        img_path = os.path.join(data_dir, img_path)
-                        yield img_path, int(label) + 1
-                    elif mode == 'test':
-                        img_path = os.path.join(data_dir, line)
-                        yield [img_path]
-        except Exception as e:
-            print("Reader failed!\n{}".format(str(e)))
-            os._exit(1)
+            self.data = [line.split() for line in lines]
+        else:
+            with open(val_file_list) as flist:
+                lines = [line.strip() for line in flist]
+                self.data = [line.split() for line in lines]
 
-    mapper = functools.partial(
-        process_image, mode=mode, color_jitter=color_jitter, rotate=rotate)
+    def __getitem__(self, index):
+        sample = self.data[index]
+        data_path = os.path.join(self.data_dir, sample[0])
+        if self.mode == 'train':
+            data, label = process_image(
+                [data_path, sample[1]],
+                mode='train',
+                color_jitter=False,
+                rotate=False)
+            return np.array(data).astype('float32'), (
+                np.array([label]).astype('int64') + 1)
+        elif self.mode == 'val':
+            data, label = process_image(
+                [data_path, sample[1]],
+                mode='val',
+                color_jitter=False,
+                rotate=False)
+            return np.array(data).astype('float32'), (
+                np.array([label]).astype('int64') + 1)
+        elif self.mode == 'test':
+            data = process_image(
+                [data_path, sample[1]],
+                mode='test',
+                color_jitter=False,
+                rotate=False)
+            return np.array(data).astype('float32')
 
-    return paddle.reader.xmap_readers(mapper, reader, THREAD, BUF_SIZE)
-
-
-def train(data_dir=DATA_DIR):
-    file_list = os.path.join(data_dir, 'train_list.txt')
-    return _reader_creator(
-        file_list,
-        'train',
-        shuffle=True,
-        color_jitter=False,
-        rotate=False,
-        data_dir=data_dir)
-
-
-def val(data_dir=DATA_DIR):
-    file_list = os.path.join(data_dir, 'val_list.txt')
-    return _reader_creator(file_list, 'val', shuffle=False, data_dir=data_dir)
-
-
-def test(data_dir=DATA_DIR):
-    file_list = os.path.join(data_dir, 'test_list.txt')
-    return _reader_creator(file_list, 'test', shuffle=False, data_dir=data_dir)
+    def __len__(self):
+        return len(self.data)

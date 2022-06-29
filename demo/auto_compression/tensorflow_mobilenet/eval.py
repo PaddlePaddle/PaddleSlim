@@ -14,8 +14,6 @@
 
 import os
 import sys
-sys.path[0] = os.path.join(
-    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import argparse
 import functools
 from functools import partial
@@ -23,8 +21,8 @@ from functools import partial
 import numpy as np
 import paddle
 import paddle.nn as nn
-from paddle.io import Dataset, BatchSampler, DataLoader
-import imagenet_reader as reader
+from paddle.io import DataLoader
+from imagenet_reader import ImageNetDataset
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 
 
@@ -36,12 +34,18 @@ def argsparser():
         default=None,
         help="path of compression strategy config.",
         required=True)
+    return parser
 
 
 def eval_reader(data_dir, batch_size):
-    val_reader = paddle.batch(
-        reader.val(data_dir=data_dir), batch_size=batch_size)
-    return val_reader
+    val_reader = ImageNetDataset(mode='val', data_dir=data_dir)
+    val_loader = DataLoader(
+        val_reader,
+        batch_size=global_config['batch_size'],
+        shuffle=False,
+        drop_last=False,
+        num_workers=0)
+    return val_loader
 
 
 def eval():
@@ -58,16 +62,15 @@ def eval():
     val_reader = eval_reader(data_dir, batch_size=global_config['batch_size'])
     image = paddle.static.data(
         name=global_config['input_name'],
-        shape=[None, 3, 224, 224],
+        shape=[None, 224, 224, 3],
         dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
     results = []
     print('Evaluating... It will take a while. Please wait...')
-    for batch_id, data in enumerate(val_reader()):
+    for batch_id, (image, label) in enumerate(val_reader):
         # top1_acc, top5_acc
-        image = np.array([[d[0]] for d in data])
-        image = image.reshape((len(data), 3, 224, 224))
-        label = [[d[1]] for d in data]
+        image = np.array(image)
+        label = np.array(label).astype('int64')
         pred = exe.run(val_program,
                        feed={feed_target_names[0]: image},
                        fetch_list=fetch_targets)
