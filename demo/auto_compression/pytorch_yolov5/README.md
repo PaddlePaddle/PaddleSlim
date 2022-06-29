@@ -23,11 +23,11 @@
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | YOLOv5s |  Base模型 | 640*640  |  37.4   |   7.8ms  |   4.3ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov5s_infer.tar) |
-| YOLOv5s |  量化+蒸馏 | 640*640  |  36.5   |   - |   -   |  3.4ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/yolov5s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) |
+| YOLOv5s |  量化+蒸馏 | 640*640  |  36.5   |   - |   -   |  3.4ms  |  [config](./configs/yolov5s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) |
 
 说明：
 - mAP的指标均在COCO val2017数据集中评测得到。
-- YOLOv5s模型在Tesla T4的GPU环境下测试，并且开启TensorRT，测试脚本是[benchmark demo](./paddle_trt_infer.py)
+- YOLOv5s模型在Tesla T4的GPU环境下测试，并且开启TensorRT，测试脚本是[benchmark demo](./paddle_trt_infer.py)。
 
 ## 3. 自动压缩流程
 
