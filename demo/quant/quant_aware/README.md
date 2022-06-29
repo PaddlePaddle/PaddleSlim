@@ -68,7 +68,20 @@ compiled_train_prog = compiled_train_prog.with_data_parallel(
 
 ### 训练命令
 
+- 单卡启动：
+
 ```
+export CUDA_VISIBLE_DEVICES=0
 python train.py --model MobileNet --pretrained_model ./pretrain/MobileNetV1_pretrained --checkpoint_dir ./output/mobilenetv1 --num_epochs 30
 ```
+
+- 多卡启动：
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3.7 -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 train.py \
+            --model MobileNet \
+            --pretrained_model ./pretrain/MobileNetV1_pretrained \
+            --checkpoint_dir ./output/mobilenetv1 \
+            --num_epochs 30
+```
+
 运行之后，可看到``best_model``的最后测试结果，和MobileNet量化前的精度top1=70.99%, top5=89.68%非常相近。

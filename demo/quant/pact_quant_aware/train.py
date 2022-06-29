@@ -109,6 +109,14 @@ def create_optimizer(args):
         return cosine_decay(args)
 
 
+def _prepare_envs():
+    devices = paddle.device.get_device().split(':')[0]
+    places = paddle.device._convert_to_place(devices)
+    _logger.info(f"devices: {devices}")
+    exe = paddle.static.Executor(places)
+    return exe, places
+
+
 def compress(args):
     num_workers = 4
     shuffle = True
@@ -158,10 +166,7 @@ def compress(args):
         learning_rate, opt = create_optimizer(args)
         opt.minimize(avg_cost)
 
-    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
-    places = paddle.static.cuda_places(
-    ) if args.use_gpu else paddle.static.cpu_places()
-    exe = paddle.static.Executor(place)
+    exe, places = _prepare_envs()
     exe.run(paddle.static.default_startup_program())
 
     train_loader = paddle.io.DataLoader(
@@ -177,7 +182,7 @@ def compress(args):
 
     valid_loader = paddle.io.DataLoader(
         val_dataset,
-        places=place,
+        places=places,
         feed_list=[image, label],
         drop_last=False,
         return_list=False,
@@ -290,7 +295,7 @@ def compress(args):
 
     val_program = quant_aware(
         val_program,
-        place,
+        places,
         quant_config,
         scope=None,
         act_preprocess_func=act_preprocess_func,
@@ -299,7 +304,7 @@ def compress(args):
         for_test=True)
     compiled_train_prog = quant_aware(
         train_prog,
-        place,
+        places,
         quant_config,
         scope=None,
         act_preprocess_func=act_preprocess_func,
@@ -420,7 +425,7 @@ def compress(args):
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
-    float_program, int8_program = convert(val_program, place, quant_config, \
+    float_program, int8_program = convert(val_program, places, quant_config, \
                                                         scope=None, \
                                                         save_int8=True)
     _logger.info("eval best_model after convert")

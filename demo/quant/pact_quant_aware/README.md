@@ -157,7 +157,7 @@ compiled_train_prog = compiled_train_prog.with_data_parallel(
 
 ### 训练命令
 
-普通量化：
+- 普通量化：
 ```
 python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/MobileNetV3_large_x1_0_ssld_pretrained --num_epochs 30 --lr 0.0001 --use_pact False
 
@@ -177,12 +177,22 @@ python train.py --model MobileNetV3_large_x1_0 --pretrained_model ./pretrain/Mob
 ```
 可以看到普通量化loss不稳定，而且在实验进行到2个epoch时，loss会变为nan。普通量化很不稳定
 
-使用PACT量化训练
+
+- 使用PACT量化训练
 ```
 # 先分析MobileNetV3模型激活值分布，来初始化PACT截断阈值
 python train.py --analysis=True
-# 启动PACT量化训练
+```
+
+单卡启动PACT量化训练：
+```
+export CUDA_VISIBLE_DEVICES=0
 python train.py
+```
+
+多卡启动PACT量化训练：
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3.7 -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 train.py --batch_size=64
 ```
 
 输出结果为
