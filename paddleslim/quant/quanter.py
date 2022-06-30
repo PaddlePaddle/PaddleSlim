@@ -502,6 +502,7 @@ def quant_post_static(
             weight_quantize_type=weight_quantize_type,
             onnx_format=onnx_format,
             optimize_model=optimize_model)
+
     post_training_quantization.quantize()
     post_training_quantization.save_quantized_model(
         quantize_model_path,
