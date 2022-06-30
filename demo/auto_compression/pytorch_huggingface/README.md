@@ -46,6 +46,7 @@
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim develop版本或PaddleSlim>=2.3.0
 - X2Paddle develop版本
+- transformers >= 4.18.0
 - PaddleNLP >= 2.3
 - tensorflow == 1.14 (如需压缩TensorFlow模型)
 - onnx >= 1.6.0 (如需压缩ONNX模型)
@@ -73,12 +74,18 @@ git checkout develop
 python setup.py install
 ```
 
+安装transformers：
+```shell
+pip install transformers
+```
+注：安装transformers的目的是为了使用transformers中的Tokenizer。
+
 安装paddlenlp：
 ```shell
 pip install paddlenlp
 ```
 
-注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集和Tokenizer。
+注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集。
 
 
 #### 3.2 准备数据集
