@@ -168,7 +168,7 @@ def reader_wrapper(reader):
 if __name__ == '__main__':
 
     args = parse_args()
-
+    paddle.enable_static()
     # step1: load dataset config and create dataloader
     data_cfg = PaddleSegDataConfig(args.dataset_config)
     train_dataset = data_cfg.train_dataset
