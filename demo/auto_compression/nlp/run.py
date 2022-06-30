@@ -33,8 +33,10 @@ add_arg('dataset',                     str,    None,         "datset name.")
 add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
 add_arg('max_seq_length',              int,    128,          "max sequence length after tokenization.")
 add_arg('batch_size',                  int,    1,            "train batch size.")
-add_arg('task_name',                        str,    'sst-2',      "task name in glue.")
+add_arg('task_name',                   str,    'sst-2',      "task name in glue.")
 add_arg('config_path',                 str,    None,         "path of compression strategy config.")
+add_arg('eval',                        bool,   False,        "whether validate the model only.")
+
 # yapf: enable
 
 METRIC_CLASSES = {
@@ -226,6 +228,35 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     return res
 
 
+def eval():
+    devices = paddle.device.get_device().split(':')[0]
+    places = paddle.device._convert_to_place(devices)
+    exe = paddle.static.Executor(places)
+    val_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+        args.model_dir,
+        exe,
+        model_filename=args.model_filename,
+        params_filename=args.params_filename)
+    print('Loaded model from: {}'.format(args.model_dir))
+    metric.reset()
+    print('Evaluating...')
+    for data in eval_dataloader():
+        logits = exe.run(val_program,
+                         feed={
+                             feed_target_names[0]: data[0]['input_ids'],
+                             feed_target_names[1]: data[0]['token_type_ids']
+                         },
+                         fetch_list=fetch_targets)
+        paddle.disable_static()
+        labels_pd = paddle.to_tensor(np.array(data[0]['label']).flatten())
+        logits_pd = paddle.to_tensor(logits[0])
+        correct = metric.compute(logits_pd, labels_pd)
+        metric.update(correct)
+        paddle.enable_static()
+    res = metric.accumulate()
+    return res
+
+
 def apply_decay_param_fun(name):
     if name.find("bias") > -1:
         return True
@@ -249,6 +280,11 @@ if __name__ == '__main__':
     train_dataloader, eval_dataloader = reader()
     metric_class = METRIC_CLASSES[args.task_name]
     metric = metric_class()
+
+    if args.eval:
+        result = eval()
+        print('Eval metric:', result)
+        sys.exit(0)
 
     ac = AutoCompression(
         model_dir=args.model_dir,
