@@ -135,9 +135,6 @@ class AutoCompression:
             os.makedirs(self.final_dir)
 
         # load config
-        assert type(config) in [
-            dict, str, set, list, tuple
-        ], f"The type of config should be in [dict, str, set, list, tuple] but got {type(config)}"
         if isinstance(config, str):
             config = load_config(config)
         self.strategy_config = extract_strategy_config(config)
@@ -562,7 +559,8 @@ class AutoCompression:
         ).lower() == 'linux':
             ptq_loss = post_quant_hpo.g_min_emd_loss
 
-            final_quant_config = get_final_quant_config(ptq_loss)
+            final_quant_config = get_final_quant_config(ptq_loss,
+                                                        self.model_type)
             if final_quant_config is not None:
                 quant_strategy, quant_config = self._prepare_strategy(
                     final_quant_config)
