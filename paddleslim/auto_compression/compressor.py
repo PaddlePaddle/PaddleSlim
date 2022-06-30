@@ -595,6 +595,7 @@ class AutoCompression:
             shutil.move(tmp_model_file, final_model_file)
             shutil.move(tmp_params_file, final_params_file)
             shutil.rmtree(self.tmp_dir)
+            os.rmdir(self.tmp_dir)
             _logger.info(
                 "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))
@@ -768,6 +769,7 @@ class AutoCompression:
                             "Not set eval function, so unable to test accuracy performance."
                         )
                 if train_config.train_iter and total_train_iter >= train_config.train_iter:
+                    epoch_id = total_epochs
                     break
 
         if 'unstructure' in self._strategy or train_config.sparse_model:
