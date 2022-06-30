@@ -96,12 +96,17 @@ tar -xf ppyoloe_crn_l_300e_coco.tar
 #### 3.4 自动压缩并产出模型
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
+
+- 单卡训练：
 ```
-# 单卡
 export CUDA_VISIBLE_DEVICES=0
-# 多卡
-# export CUDA_VISIBLE_DEVICES=0,1,2,3
 python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./output/'
+```
+
+- 多卡训练：
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
+          --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./output/'
 ```
 
 #### 3.5 测试模型精度

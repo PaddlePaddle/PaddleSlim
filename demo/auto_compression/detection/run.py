@@ -124,28 +124,31 @@ def main():
                                         return_list=True)
     train_loader = reader_wrapper(train_loader, global_config['input_list'])
 
-    dataset = reader_cfg['EvalDataset']
-    global val_loader
-    val_loader = create('EvalReader')(reader_cfg['EvalDataset'],
-                                      reader_cfg['worker_num'],
-                                      return_list=True)
-    metric = None
-    if reader_cfg['metric'] == 'COCO':
-        clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
-        anno_file = dataset.get_anno()
-        metric = COCOMetric(
-            anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
-    elif reader_cfg['metric'] == 'VOC':
-        metric = VOCMetric(
-            label_list=dataset.get_label_list(),
-            class_num=reader_cfg['num_classes'],
-            map_type=reader_cfg['map_type'])
-    else:
-        raise ValueError("metric currently only supports COCO and VOC.")
-    global_config['metric'] = metric
-
-    if 'Evaluation' in global_config.keys() and global_config['Evaluation']:
+    if 'Evaluation' in global_config.keys() and global_config[
+            'Evaluation'] and paddle.distributed.get_rank() == 0:
         eval_func = eval_function
+        dataset = reader_cfg['EvalDataset']
+        global val_loader
+        _eval_batch_sampler = paddle.io.BatchSampler(
+            dataset, batch_size=reader_cfg['EvalReader']['batch_size'])
+        val_loader = create('EvalReader')(dataset,
+                                          reader_cfg['worker_num'],
+                                          batch_sampler=_eval_batch_sampler,
+                                          return_list=True)
+        metric = None
+        if reader_cfg['metric'] == 'COCO':
+            clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
+            anno_file = dataset.get_anno()
+            metric = COCOMetric(
+                anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
+        elif reader_cfg['metric'] == 'VOC':
+            metric = VOCMetric(
+                label_list=dataset.get_label_list(),
+                class_num=reader_cfg['num_classes'],
+                map_type=reader_cfg['map_type'])
+        else:
+            raise ValueError("metric currently only supports COCO and VOC.")
+        global_config['metric'] = metric
     else:
         eval_func = None
 
