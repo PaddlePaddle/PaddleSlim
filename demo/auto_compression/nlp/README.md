@@ -119,8 +119,7 @@ python run.py \
     --task_name='afqmc' \
     --config_path='./configs/pp-minilm/auto/afqmc.yaml'
 ```
-如仅需验证模型精度，在启动```run.py```脚本时，命令加上```--eval=True```即可。
-
+如仅需验证模型精度，或验证压缩之后模型精度，在启动```run.py```脚本时，将命令行中模型文件夹 ```model_dir``` 改为压缩之后保存的文件夹路径 ```./save_afqmc_pruned/``` ，命令加上```--eval=True```即可。
 
 ## 4. 压缩配置介绍
 自动压缩需要准备config文件，并传入```config_path```字段，configs文件夹下可查看不同任务的配置文件，以下示例以afqmc数据集为例介绍。训练参数需要自行配置。蒸馏、剪枝和离线量化的相关配置，自动压缩策略可以自动获取得到，也可以自行配置。PaddleNLP模型的自动压缩实验默认使用剪枝、蒸馏和离线量化的策略。
