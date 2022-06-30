@@ -44,10 +44,12 @@
 - PP-HumanSeg-Lite数据集
 
   - 数据集：AISegment + PP-HumanSeg14K + 内部自建数据集。其中 AISegment 是开源数据集，可从[链接](https://github.com/aisegmentcn/matting_human_datasets)处获取；PP-HumanSeg14K 是 PaddleSeg 自建数据集，可从[官方渠道](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset)获取；内部数据集不对外公开。
+  - 示例数据集: 用于快速跑通人像分割的压缩和推理流程, 不能用该数据集复现 benckmark 表中的压缩效果。 [下载链接](https://paddleseg.bj.bcebos.com/humanseg/data/mini_supervisely.zip)
 
 - PP-Liteseg，HRNet，UNet，Deeplabv3-ResNet50数据集
 
   - cityscapes: 请从[cityscapes官网](https://www.cityscapes-dataset.com/login/)下载完整数据
+  - 示例数据集: cityscapes数据集的一个子集，用于快速跑通压缩和推理流程，不能用该数据集复现 benchmark 表中的压缩效果。[下载链接](https://bj.bcebos.com/v1/paddle-slim-models/data/mini_cityscapes/mini_cityscapes.tar)
 
 下面将以开源数据集为例介绍如何对PP-HumanSeg-Lite进行自动压缩。
 
@@ -84,6 +86,8 @@ pip install paddleseg
 #### 3.2 准备数据集
 
 开发者可下载开源数据集 (如[AISegment](https://github.com/aisegmentcn/matting_human_datasets)) 或自定义语义分割数据集。请参考[PaddleSeg数据准备文档](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/data/marker/marker_cn.md)来检查、对齐数据格式即可。
+
+
 
 #### 3.3 准备预测模型
 

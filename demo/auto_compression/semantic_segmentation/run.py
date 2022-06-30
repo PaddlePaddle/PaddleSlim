@@ -105,9 +105,11 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             ori_shape,
             eval_dataset.transforms.transforms,
             mode='bilinear')
-
-        pred = paddle.argmax(
-            paddle.to_tensor(logit), axis=1, keepdim=True, dtype='int32')
+        pred = paddle.to_tensor(logit)
+        if len(
+                pred.shape
+        ) == 4:  # for humanseg model whose prediction is distribution but not class id
+            pred = paddle.argmax(pred, axis=1, keepdim=True, dtype='int32')
 
         intersect_area, pred_area, label_area = metrics.calculate_area(
             pred,
