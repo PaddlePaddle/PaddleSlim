@@ -1,3 +1,11 @@
+Global:
+  model_dir: ./cmnli
+  model_filename: inference.pdmodel
+  params_filename: inference.pdiparams
+  task_name: cmnli
+  dataset: clue
+  batch_size: 16
+  max_seq_length: 128
 TrainConfig:
   epochs: 6
   eval_iter: 2000

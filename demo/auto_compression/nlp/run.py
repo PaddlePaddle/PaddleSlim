@@ -1,43 +1,45 @@
 import os
 import sys
-sys.path[0] = os.path.join(
-    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import argparse
 import functools
 from functools import partial
-
 import numpy as np
 import paddle
 import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
 from paddle.metric import Metric, Accuracy, Precision, Recall
-from paddlenlp.transformers import PPMiniLMForSequenceClassification, PPMiniLMTokenizer
-from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
+# from paddlenlp.transformers import PPMiniLMForSequenceClassification, PPMiniLMTokenizer
+# from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
+from paddlenlp.transformers import AutoModelForTokenClassification, AutoTokenizer
+
 from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import Mcc, PearsonAndSpearman
 from paddleslim.auto_compression.config_helpers import load_config
 from paddleslim.auto_compression.compressor import AutoCompression
-from utility import add_arguments
 
-parser = argparse.ArgumentParser(description=__doc__)
-add_arg = functools.partial(add_arguments, argparser=parser)
 
-# yapf: disable
-add_arg('model_type',                  str,    None,         "model type can be bert or ppminilm.")
-add_arg('model_dir',                   str,    None,         "inference model directory.")
-add_arg('model_filename',              str,    None,         "inference model filename.")
-add_arg('params_filename',             str,    None,         "inference params filename.")
-add_arg('dataset',                     str,    None,         "datset name.")
-add_arg('save_dir',                    str,    None,         "directory to save compressed model.")
-add_arg('max_seq_length',              int,    128,          "max sequence length after tokenization.")
-add_arg('batch_size',                  int,    1,            "train batch size.")
-add_arg('task_name',                   str,    'sst-2',      "task name in glue.")
-add_arg('config_path',                 str,    None,         "path of compression strategy config.")
-add_arg('eval',                        bool,   False,        "whether validate the model only.")
+def argsparser():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--config_path',
+        type=str,
+        default=None,
+        help="path of compression strategy config.",
+        required=True)
+    parser.add_argument(
+        '--save_dir',
+        type=str,
+        default='output',
+        help="directory to save compressed model.")
+    parser.add_argument(
+        '--eval',
+        type=bool,
+        default=False,
+        help="whether validate the model only.")
+    return parser
 
-# yapf: enable
 
 METRIC_CLASSES = {
     "cola": Mcc,
@@ -61,11 +63,11 @@ def convert_example(example,
                     label_list,
                     max_seq_length=512,
                     is_test=False):
-    assert args.dataset in [
+    assert global_config['dataset'] in [
         'glue', 'clue'
     ], "This demo only supports for dataset glue or clue"
     """Convert a glue example into necessary features."""
-    if args.dataset == 'glue':
+    if global_config['dataset'] == 'glue':
         if not is_test:
             # `label_list == None` is for regression task
             label_dtype = "int64" if label_list else "float32"
@@ -80,7 +82,7 @@ def convert_example(example,
         else:
             return example['input_ids'], example['token_type_ids']
 
-    else:  #if args.dataset == 'clue':
+    else:  #if global_config['dataset'] == 'clue':
         if not is_test:
             # `label_list == None` is for regression task
             label_dtype = "int64" if label_list else "float32"
@@ -151,18 +153,19 @@ def create_data_holder(task_name):
 
 def reader():
     # Create the tokenizer and dataset
-    if args.model_type == 'bert':
-        tokenizer = BertTokenizer.from_pretrained(args.model_dir)
-    else:  # ppminilm
-        tokenizer = PPMiniLMTokenizer.from_pretrained(args.model_dir)
+
+    tokenizer = AutoTokenizer.from_pretrained(global_config['model_dir'])
+
     train_ds, dev_ds = load_dataset(
-        args.dataset, args.task_name, splits=('train', 'dev'))
+        global_config['dataset'],
+        global_config['task_name'],
+        splits=('train', 'dev'))
 
     trans_func = partial(
         convert_example,
         tokenizer=tokenizer,
         label_list=train_ds.label_list,
-        max_seq_length=args.max_seq_length,
+        max_seq_length=global_config['max_seq_length'],
         is_test=True)
 
     train_ds = train_ds.map(trans_func, lazy=True)
@@ -173,9 +176,10 @@ def reader():
     ): fn(samples)
 
     train_batch_sampler = paddle.io.BatchSampler(
-        train_ds, batch_size=args.batch_size, shuffle=True)
+        train_ds, batch_size=global_config['batch_size'], shuffle=True)
 
-    [input_ids, token_type_ids, labels] = create_data_holder(args.task_name)
+    [input_ids, token_type_ids, labels] = create_data_holder(global_config[
+        'task_name'])
     feed_list_name = []
     train_data_loader = DataLoader(
         dataset=train_ds,
@@ -189,7 +193,7 @@ def reader():
         convert_example,
         tokenizer=tokenizer,
         label_list=train_ds.label_list,
-        max_seq_length=args.max_seq_length)
+        max_seq_length=global_config['max_seq_length'])
     dev_batchify_fn = lambda samples, fn=Tuple(
         Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input
         Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # token_type 
@@ -197,7 +201,7 @@ def reader():
     ): fn(samples)
     dev_ds = dev_ds.map(dev_trans_func, lazy=True)
     dev_batch_sampler = paddle.io.BatchSampler(
-        dev_ds, batch_size=args.batch_size, shuffle=False)
+        dev_ds, batch_size=global_config['batch_size'], shuffle=False)
     dev_data_loader = DataLoader(
         dataset=dev_ds,
         batch_sampler=dev_batch_sampler,
@@ -233,11 +237,11 @@ def eval():
     places = paddle.device._convert_to_place(devices)
     exe = paddle.static.Executor(places)
     val_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
-        args.model_dir,
+        global_config['model_dir'],
         exe,
-        model_filename=args.model_filename,
-        params_filename=args.params_filename)
-    print('Loaded model from: {}'.format(args.model_dir))
+        model_filename=global_config['model_filename'],
+        params_filename=global_config['params_filename'])
+    print('Loaded model from: {}'.format(global_config['model_dir']))
     metric.reset()
     print('Evaluating...')
     for data in eval_dataloader():
@@ -268,17 +272,23 @@ def apply_decay_param_fun(name):
         return False
 
 
-if __name__ == '__main__':
-    args = parser.parse_args()
-    paddle.enable_static()
+def main():
+
     all_config = load_config(args.config_path)
 
-    if "TrainConfig" in all_config:
-        all_config["TrainConfig"]["optimizer_builder"][
+    global global_config
+    assert "Global" in all_config, "Key Global not found in config file."
+    global_config = all_config["Global"]
+
+    if 'TrainConfig' in all_config:
+        all_config['TrainConfig']['optimizer_builder'][
             'apply_decay_param_fun'] = apply_decay_param_fun
 
+    global train_dataloader, eval_dataloader
     train_dataloader, eval_dataloader = reader()
-    metric_class = METRIC_CLASSES[args.task_name]
+
+    global metric
+    metric_class = METRIC_CLASSES[global_config['task_name']]
     metric = metric_class()
 
     if args.eval:
@@ -287,9 +297,9 @@ if __name__ == '__main__':
         sys.exit(0)
 
     ac = AutoCompression(
-        model_dir=args.model_dir,
-        model_filename=args.model_filename,
-        params_filename=args.params_filename,
+        model_dir=global_config['model_dir'],
+        model_filename=global_config['model_filename'],
+        params_filename=global_config['params_filename'],
         save_dir=args.save_dir,
         config=all_config,
         train_dataloader=train_dataloader,
@@ -298,3 +308,10 @@ if __name__ == '__main__':
         eval_dataloader=eval_dataloader)
 
     ac.compress()
+
+
+if __name__ == '__main__':
+    paddle.enable_static()
+    parser = argsparser()
+    args = parser.parse_args()
+    main()
