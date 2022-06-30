@@ -87,7 +87,13 @@ pip install paddleseg
 
 开发者可下载开源数据集 (如[AISegment](https://github.com/aisegmentcn/matting_human_datasets)) 或自定义语义分割数据集。请参考[PaddleSeg数据准备文档](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/data/marker/marker_cn.md)来检查、对齐数据格式即可。
 
+可以通过以下命令下载人像分割示例数据:
 
+```shell
+cd ./data
+python download_data.py mini_humanseg
+
+```
 
 #### 3.3 准备预测模型
 
