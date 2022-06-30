@@ -8,8 +8,6 @@ import paddle
 import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
 from paddle.metric import Metric, Accuracy, Precision, Recall
-# from paddlenlp.transformers import PPMiniLMForSequenceClassification, PPMiniLMTokenizer
-# from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
 from paddlenlp.transformers import AutoModelForTokenClassification, AutoTokenizer
 
 from paddlenlp.datasets import load_dataset
