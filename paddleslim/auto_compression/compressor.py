@@ -766,6 +766,7 @@ class AutoCompression:
                             "Not set eval function, so unable to test accuracy performance."
                         )
                 if train_config.train_iter and total_train_iter >= train_config.train_iter:
+                    epoch_id = total_epochs
                     break
 
         if 'unstructure' in self._strategy or train_config.sparse_model:
