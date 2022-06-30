@@ -22,7 +22,7 @@ import functools
 from functools import partial
 from paddle.io import Dataset, BatchSampler, DataLoader
 from paddle.metric import Metric, Accuracy
-from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
+from transformers import AutoTokenizer
 from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
@@ -136,7 +136,8 @@ def create_data_holder(task_name, input_names):
 
 def reader():
     # Create the tokenizer and dataset
-    tokenizer = BertTokenizer.from_pretrained(global_config['model_dir'])
+    tokenizer = AutoTokenizer.from_pretrained(
+        global_config['model_dir'], use_fast=False)
     train_ds = load_dataset(
         global_config['dataset'], global_config['task_name'], splits="train")
 
@@ -344,7 +345,7 @@ def main():
         model_filename=global_config['model_filename'],
         params_filename=global_config['params_filename'],
         save_dir=args.save_dir,
-        config=args.config_path,
+        config=all_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function if
         (len(list(all_config.keys())) == 2 and 'TrainConfig' in all_config) or
