@@ -8,13 +8,15 @@ Global:
   params_filename: model.pdiparams
 
 Distillation:
+  alpha: 1.0
+  loss: l2
   node:
   - concat_15.tmp_0
   - concat_14.tmp_0
 
 Quantization:
   use_pact: true
-  activation_quantize_type: 'range_abs_max'
+  activation_quantize_type: 'moving_average_abs_max'
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
@@ -22,7 +24,10 @@ Quantization:
 TrainConfig:
   train_iter: 3000
   eval_iter: 1000
-  learning_rate: 0.00001
+  learning_rate:  
+    type: CosineAnnealingDecay
+    learning_rate: 0.00003
+    T_max: 5000
   optimizer_builder:
     optimizer: 
       type: SGD

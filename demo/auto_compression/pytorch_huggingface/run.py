@@ -43,7 +43,13 @@ def argsparser():
         type=str,
         default='output',
         help="directory to save compressed model.")
+    parser.add_argument(
+        '--eval',
+        type=bool,
+        default=False,
+        help="whether validate the model only.")
     return parser
+
 
 METRIC_CLASSES = {
     "cola": Mcc,
@@ -263,6 +269,42 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     return res[0] if isinstance(res, list) or isinstance(res, tuple) else res
 
 
+def eval():
+    devices = paddle.device.get_device().split(':')[0]
+    places = paddle.device._convert_to_place(devices)
+    exe = paddle.static.Executor(places)
+    val_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+        global_config["model_dir"],
+        exe,
+        model_filename=global_config["model_filename"],
+        params_filename=global_config["params_filename"])
+    print('Loaded model from: {}'.format(global_config["model_dir"]))
+    metric.reset()
+    print('Evaluating...')
+    for data in eval_dataloader():
+        logits = exe.run(val_program,
+                         feed={
+                             feed_target_names[0]: data[0]['x0'],
+                             feed_target_names[1]: data[0]['x1'],
+                             feed_target_names[2]: data[0]['x2']
+                         },
+                         fetch_list=fetch_targets)
+        paddle.disable_static()
+        if isinstance(metric, PearsonAndSpearman):
+            labels_pd = paddle.to_tensor(np.array(data[0]['label'])).reshape(
+                (-1, 1))
+            logits_pd = paddle.to_tensor(logits[0]).reshape((-1, 1))
+            metric.update((logits_pd, labels_pd))
+        else:
+            labels_pd = paddle.to_tensor(np.array(data[0]['label']).flatten())
+            logits_pd = paddle.to_tensor(logits[0])
+            correct = metric.compute(logits_pd, labels_pd)
+            metric.update(correct)
+        paddle.enable_static()
+    res = metric.accumulate()
+    return res[0] if isinstance(res, list) or isinstance(res, tuple) else res
+
+
 def apply_decay_param_fun(name):
     if name.find("bias") > -1:
         return True
@@ -291,6 +333,11 @@ def main():
     global metric
     metric_class = METRIC_CLASSES[global_config['task_name']]
     metric = metric_class()
+
+    if args.eval:
+        result = eval()
+        print('Eval metric:', result)
+        sys.exit(0)
 
     ac = AutoCompression(
         model_dir=global_config['model_dir'],

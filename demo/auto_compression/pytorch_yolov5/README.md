@@ -23,7 +23,7 @@
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | YOLOv5s |  Base模型 | 640*640  |  37.4   |   7.8ms  |   4.3ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov5s_infer.tar) |
-| YOLOv5s |  量化+蒸馏 | 640*640  |  36.5   |   - |   -   |  3.4ms  |  [config](./configs/yolov5s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) |
+| YOLOv5s |  量化+蒸馏 | 640*640  |  36.8   |   - |   -   |  3.4ms  |  [config](./configs/yolov5s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) |
 
 说明：
 - mAP的指标均在COCO val2017数据集中评测得到。
@@ -92,12 +92,17 @@ cp -r pd_model/inference_model/ yolov5_inference_model
 #### 3.4 自动压缩并产出模型
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
+
+- 单卡训练：
 ```
-# 单卡
 export CUDA_VISIBLE_DEVICES=0
-# 多卡
-# export CUDA_VISIBLE_DEVICES=0,1,2,3
 python run.py --config_path=./configs/yolov5s_qat_dis.yaml --save_dir='./output/'
+```
+
+- 多卡训练：
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
+          --config_path=./configs/yolov5s_qat_dis.yaml --save_dir='./output/'
 ```
 
 #### 3.5 测试模型精度
