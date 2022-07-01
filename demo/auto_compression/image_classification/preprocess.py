@@ -26,8 +26,6 @@ import numpy as np
 import importlib
 from PIL import Image
 
-#from python.det_preprocess import DetNormalizeImage, DetPadStride, DetPermute, DetResize
-
 
 def create_operators(params):
     """
@@ -100,33 +98,6 @@ class OperatorParamError(ValueError):
     pass
 
 
-class DecodeImage(object):
-    """ decode image """
-
-    def __init__(self, to_rgb=True, to_np=False, channel_first=False):
-        self.to_rgb = to_rgb
-        self.to_np = to_np  # to numpy
-        self.channel_first = channel_first  # only enabled when to_np is True
-
-    def __call__(self, img):
-        if six.PY2:
-            assert type(img) is str and len(
-                img) > 0, "invalid input 'img' in DecodeImage"
-        else:
-            assert type(img) is bytes and len(
-                img) > 0, "invalid input 'img' in DecodeImage"
-        data = np.frombuffer(img, dtype='uint8')
-        img = cv2.imdecode(data, 1)
-        if self.to_rgb:
-            assert img.shape[2] == 3, 'invalid shape of image[%s]' % (img.shape)
-            img = img[:, :, ::-1]
-
-        if self.channel_first:
-            img = img.transpose((2, 0, 1))
-
-        return img
-
-
 class ResizeImage(object):
     """ resize image """
 
@@ -186,87 +157,6 @@ class CropImage(object):
         w_end = w_start + w
         h_end = h_start + h
         return img[h_start:h_end, w_start:w_end, :]
-
-
-class RandCropImage(object):
-    """ random crop image """
-
-    def __init__(self,
-                 size,
-                 scale=None,
-                 ratio=None,
-                 interpolation=None,
-                 backend="cv2"):
-        if type(size) is int:
-            self.size = (size, size)  # (h, w)
-        else:
-            self.size = size
-
-        self.scale = [0.08, 1.0] if scale is None else scale
-        self.ratio = [3. / 4., 4. / 3.] if ratio is None else ratio
-
-        self._resize_func = UnifiedResize(
-            interpolation=interpolation, backend=backend)
-
-    def __call__(self, img):
-        size = self.size
-        scale = self.scale
-        ratio = self.ratio
-
-        aspect_ratio = math.sqrt(random.uniform(*ratio))
-        w = 1. * aspect_ratio
-        h = 1. / aspect_ratio
-
-        img_h, img_w = img.shape[:2]
-
-        bound = min((float(img_w) / img_h) / (w**2),
-                    (float(img_h) / img_w) / (h**2))
-        scale_max = min(scale[1], bound)
-        scale_min = min(scale[0], bound)
-
-        target_area = img_w * img_h * random.uniform(scale_min, scale_max)
-        target_size = math.sqrt(target_area)
-        w = int(target_size * w)
-        h = int(target_size * h)
-
-        i = random.randint(0, img_w - w)
-        j = random.randint(0, img_h - h)
-
-        img = img[j:j + h, i:i + w, :]
-
-        return self._resize_func(img, size)
-
-
-class RandFlipImage(object):
-    """ random flip image
-        flip_code:
-            1: Flipped Horizontally
-            0: Flipped Vertically
-            -1: Flipped Horizontally & Vertically
-    """
-
-    def __init__(self, flip_code=1):
-        assert flip_code in [-1, 0, 1
-                             ], "flip_code should be a value in [-1, 0, 1]"
-        self.flip_code = flip_code
-
-    def __call__(self, img):
-        if random.randint(0, 1) == 1:
-            return cv2.flip(img, self.flip_code)
-        else:
-            return img
-
-
-class AutoAugment(object):
-    def __init__(self):
-        self.policy = ImageNetPolicy()
-
-    def __call__(self, img):
-        from PIL import Image
-        img = np.ascontiguousarray(img)
-        img = Image.fromarray(img)
-        img = self.policy(img)
-        img = np.asarray(img)
 
 
 class NormalizeImage(object):

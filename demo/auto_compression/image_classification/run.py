@@ -120,8 +120,9 @@ def main():
     assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
     global_config = all_config["Global"]
     gpu_num = paddle.distributed.get_world_size()
-    if all_config['TrainConfig']['learning_rate'][
-            'type'] == 'CosineAnnealingDecay':
+    if isinstance(all_config['TrainConfig']['learning_rate'],
+                  dict) and all_config['TrainConfig']['learning_rate'][
+                      'type'] == 'CosineAnnealingDecay':
         step = int(
             math.ceil(
                 float(args.total_images) / (global_config['batch_size'] *
