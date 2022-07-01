@@ -137,14 +137,13 @@ class AutoCompression:
         # load config
         if isinstance(config, str):
             config = load_config(config)
-            self.strategy_config = extract_strategy_config(config)
             self.train_config = extract_train_config(config)
         elif isinstance(config, dict):
             if 'TrainConfig' in config:
                 self.train_config = TrainConfig(**config.pop('TrainConfig'))
             else:
                 self.train_config = None
-            self.strategy_config = config
+        self.strategy_config = extract_strategy_config(config)
 
         # prepare dataloader
         self.feed_vars = get_feed_vars(self.model_dir, model_filename,
