@@ -24,16 +24,16 @@
 [BERT](https://arxiv.org/abs/1810.04805) （```Bidirectional Encoder Representations from Transformers```）以Transformer 编码器为网络基本组件，使用掩码语言模型（```Masked Language Model```）和邻接句子预测（```Next Sentence Prediction```）两个任务在大规模无标注文本语料上进行预训练（pre-train），得到融合了双向内容的通用语义表示模型。以预训练产生的通用语义表示模型为基础，结合任务适配的简单输出层，微调（fine-tune）后即可应用到下游的NLP任务，效果通常也较直接在下游的任务上训练的模型更优。此前BERT即在[GLUE](https://gluebenchmark.com/tasks)评测任务上取得了SOTA的结果。
 
 基于bert-base-cased模型，压缩前后的精度如下：
-| 模型 | 策略 | CoLA | MRPC | QNLI | QQP | RTE | SST2  | AVG |
-|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|:------:|:------:|
-| bert-base-cased | Base模型| 60.06 | 84.31 | 90.68 | 90.84 | 63.53 | 91.63  | 80.17  |
-| bert-base-cased |剪枝蒸馏+离线量化| 60.52 | 84.80 | 90.59 | 90.42 | 64.26 | 91.63 | 80.37 |
+| 模型 | 策略 | CoLA | MRPC | QNLI | QQP | RTE | SST2  | STSB  | AVG |
+|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|:------:|:------:|:------:|
+| bert-base-cased | Base模型| 60.06 | 84.31 | 90.68 | 90.84 | 63.53 | 91.63  | 88.46 |  81.35  |
+| bert-base-cased |剪枝蒸馏+离线量化| 60.52 | 84.80 | 90.59 | 90.42 | 64.26 | 91.63 | 88.51 |  81.53 |
 
 模型在多个任务上平均精度以及加速对比如下：
 |  bert-base-cased | Accuracy（avg） | 时延(ms) | 加速比 |
 |:-------:|:----------:|:------------:| :------:|
-| 压缩前 |  80.17 | 8.18 | - |
-| 压缩后 |  80.37 | 6.35 | 28.82% |
+| 压缩前 |  81.35 | 8.18 | - |
+| 压缩后 |  81.53 | 6.35 | 1.29 |
 
 - Nvidia GPU 测试环境：
   - 硬件：NVIDIA Tesla T4 单卡
@@ -46,6 +46,7 @@
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim develop版本或PaddleSlim>=2.3.0
 - X2Paddle develop版本
+- transformers >= 4.18.0
 - PaddleNLP >= 2.3
 - tensorflow == 1.14 (如需压缩TensorFlow模型)
 - onnx >= 1.6.0 (如需压缩ONNX模型)
@@ -73,12 +74,18 @@ git checkout develop
 python setup.py install
 ```
 
+安装transformers：
+```shell
+pip install transformers
+```
+注：安装transformers的目的是为了使用transformers中的Tokenizer。
+
 安装paddlenlp：
 ```shell
 pip install paddlenlp
 ```
 
-注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集和Tokenizer。
+注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集。
 
 
 #### 3.2 准备数据集
@@ -96,8 +103,8 @@ import numpy as np
 torch_model.eval()
 # 构建输入
 input_ids = torch.unsqueeze(torch.tensor([0] * max_length), 0)
-token_type_ids = torch.unsqueeze(torch.tensor([0] * max_length),0)
-attention_msk = torch.unsqueeze(torch.tensor([0] * max_length),0)
+token_type_ids = torch.unsqueeze(torch.tensor([0] * max_length), 0)
+attention_msk = torch.unsqueeze(torch.tensor([0] * max_length), 0)
 # 进行转换
 from x2paddle.convert import pytorch2paddle
 pytorch2paddle(torch_model,
@@ -119,7 +126,7 @@ PyTorch2Paddle支持trace和script两种方式的转换，均是PyTorch动态图
 更多Pytorch2Paddle示例可参考[PyTorch模型转换文档](https://github.com/PaddlePaddle/X2Paddle/blob/develop/docs/inference_model_convertor/pytorch2paddle.md)。其他框架转换可参考[X2Paddle模型转换工具](https://github.com/PaddlePaddle/X2Paddle)
 
 如想快速尝试运行实验，也可以直接下载已经转换好的模型，链接如下：
-| [CoLA](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_cola.tar) | [MRPC](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_mrpc.tar) | [QNLI](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_qnli.tar) | [QQP](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_qqp.tar) | [RTE](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_rte.tar) | [SST2](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_sst2.tar) |
+| [CoLA](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_cola.tar) | [MRPC](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_mrpc.tar) | [QNLI](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_qnli.tar) | [QQP](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_qqp.tar) | [RTE](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_rte.tar) | [SST2](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_sst2.tar) | [STSB](https://paddle-slim-models.bj.bcebos.com/act/x2paddle_stsb.tar) |
 
 ```shell
 wget https://paddle-slim-models.bj.bcebos.com/act/x2paddle_cola.tar
@@ -165,28 +172,52 @@ def main(x0, x1, x2):
     sepc_list = list()
     sepc_list.append(
             paddle.static.InputSpec(
-                shape=[-1, 128], name="x0", dtype="int64"),
+                shape=[-1, 128], name="x2paddle_input_ids", dtype="int64"),
             paddle.static.InputSpec(
-                shape=[-1, 128], name="x1", dtype="int64"),
+                shape=[-1, 128], name="x2paddle_attention_mask", dtype="int64"),
             paddle.static.InputSpec(
-                shape=[-1, 128], name="x2", dtype="int64"))
+                shape=[-1, 128], name="x2paddle_token_type_ids", dtype="int64"))
     static_model = paddle.jit.to_static(model, input_spec=sepc_list)
     paddle.jit.save(static_model, "./x2paddle_cola")
 ```
 
 
 #### 3.4 自动压缩并产出模型
-以“cola”任务为例，在配置文件“./config/cola.yaml”中配置推理模型路径、压缩策略参数等信息，并通过“--config_path”将配置文件传给示例脚本"run.py"。
-在“run.py”中，调用接口```paddleslim.auto_compression.AutoCompression```加载配置文件，并对推理模型进行自动压缩。
+以```cola```任务为例，在配置文件```./config/cola.yaml```中配置推理模型路径、压缩策略参数等信息，并通过```--config_path```将配置文件传给示例脚本```run.py```。
+在```run.py```中，调用接口```paddleslim.auto_compression.AutoCompression```加载配置文件，使用以下命令对推理模型进行自动压缩：
+
 ```shell
 export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/cola.yaml --save_dir='./output/cola/'
 ```
 
+如仅需验证模型精度，或验证压缩之后模型精度，在启动```run.py```脚本时，将配置文件中模型文件夹 ```model_dir``` 改为压缩之后保存的文件夹路径 ```./output/cola/``` ，命令加上```--eval True```即可：
+```shell
+export CUDA_VISIBLE_DEVICES=0
+python run.py --config_path=./configs/cola.yaml  --eval True
+```
+
 ## 4. 预测部署
 
-- [Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/inference/python_inference.md)
-- [Paddle Inference C++部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/inference/cpp_inference.md)
-- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/lite/lite.md)
+准备好inference模型后，可以使用```infer.py```进行预测，比如：
+```shell
+python -u ./infer.py \
+    --task_name cola \
+    --model_name_or_path bert-base-cased \
+    --model_path ./x2paddle_cola/model \
+    --batch_size 1 \
+    --max_seq_length 128 \
+    --device gpu \
+    --use_trt \  
+```
+
+除需传入```task_name```任务名称，```model_name_or_path```模型名称，```model_path```保存inference模型的路径等基本参数外，还需根据预测环境传入预测参数：
+- ```device```：默认为gpu，可选为gpu, cpu, xpu
+- ```use_trt```：是否使用 TesorRT 预测引擎
+- ```int8```：是否启用```INT8```
+- ```fp16```：是否启用```FP16```
+
+
+若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
 ## 5. FAQ

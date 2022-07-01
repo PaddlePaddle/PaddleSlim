@@ -22,7 +22,7 @@ import functools
 from functools import partial
 from paddle.io import Dataset, BatchSampler, DataLoader
 from paddle.metric import Metric, Accuracy
-from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
+from transformers import AutoTokenizer
 from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
@@ -43,14 +43,12 @@ def argsparser():
         type=str,
         default='output',
         help="directory to save compressed model.")
+    parser.add_argument(
+        '--eval',
+        type=bool,
+        default=False,
+        help="whether validate the model only.")
     return parser
-
-
-def print_arguments(args):
-    print('-----------  Running Arguments -----------')
-    for arg, value in sorted(vars(args).items()):
-        print('%s: %s' % (arg, value))
-    print('------------------------------------------')
 
 
 METRIC_CLASSES = {
@@ -138,7 +136,8 @@ def create_data_holder(task_name, input_names):
 
 def reader():
     # Create the tokenizer and dataset
-    tokenizer = BertTokenizer.from_pretrained(global_config['model_dir'])
+    tokenizer = AutoTokenizer.from_pretrained(
+        global_config['model_dir'], use_fast=False)
     train_ds = load_dataset(
         global_config['dataset'], global_config['task_name'], splits="train")
 
@@ -271,6 +270,42 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     return res[0] if isinstance(res, list) or isinstance(res, tuple) else res
 
 
+def eval():
+    devices = paddle.device.get_device().split(':')[0]
+    places = paddle.device._convert_to_place(devices)
+    exe = paddle.static.Executor(places)
+    val_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+        global_config["model_dir"],
+        exe,
+        model_filename=global_config["model_filename"],
+        params_filename=global_config["params_filename"])
+    print('Loaded model from: {}'.format(global_config["model_dir"]))
+    metric.reset()
+    print('Evaluating...')
+    for data in eval_dataloader():
+        logits = exe.run(val_program,
+                         feed={
+                             feed_target_names[0]: data[0]['x0'],
+                             feed_target_names[1]: data[0]['x1'],
+                             feed_target_names[2]: data[0]['x2']
+                         },
+                         fetch_list=fetch_targets)
+        paddle.disable_static()
+        if isinstance(metric, PearsonAndSpearman):
+            labels_pd = paddle.to_tensor(np.array(data[0]['label'])).reshape(
+                (-1, 1))
+            logits_pd = paddle.to_tensor(logits[0]).reshape((-1, 1))
+            metric.update((logits_pd, labels_pd))
+        else:
+            labels_pd = paddle.to_tensor(np.array(data[0]['label']).flatten())
+            logits_pd = paddle.to_tensor(logits[0])
+            correct = metric.compute(logits_pd, labels_pd)
+            metric.update(correct)
+        paddle.enable_static()
+    res = metric.accumulate()
+    return res[0] if isinstance(res, list) or isinstance(res, tuple) else res
+
+
 def apply_decay_param_fun(name):
     if name.find("bias") > -1:
         return True
@@ -300,12 +335,17 @@ def main():
     metric_class = METRIC_CLASSES[global_config['task_name']]
     metric = metric_class()
 
+    if args.eval:
+        result = eval()
+        print('Eval metric:', result)
+        sys.exit(0)
+
     ac = AutoCompression(
         model_dir=global_config['model_dir'],
         model_filename=global_config['model_filename'],
         params_filename=global_config['params_filename'],
         save_dir=args.save_dir,
-        config=args.config_path,
+        config=all_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function if
         (len(list(all_config.keys())) == 2 and 'TrainConfig' in all_config) or
@@ -320,5 +360,4 @@ if __name__ == '__main__':
     paddle.enable_static()
     parser = argsparser()
     args = parser.parse_args()
-    print_arguments(args)
     main()

@@ -22,8 +22,6 @@ from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 
-from post_process import YOLOv5PostProcess
-
 
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -40,13 +38,6 @@ def argsparser():
         help="which device used to compress.")
 
     return parser
-
-
-def print_arguments(args):
-    print('-----------  Running Arguments -----------')
-    for arg, value in sorted(vars(args).items()):
-        print('%s: %s' % (arg, value))
-    print('------------------------------------------')
 
 
 def reader_wrapper(reader, input_list):
@@ -108,17 +99,12 @@ def eval():
                        fetch_list=fetch_targets,
                        return_numpy=False)
         res = {}
-        if 'arch' in global_config and global_config['arch'] == 'YOLOv5':
-            postprocess = YOLOv5PostProcess(
-                score_threshold=0.001, nms_threshold=0.6, multi_label=True)
-            res = postprocess(np.array(outs[0]), data_all['scale_factor'])
-        else:
-            for out in outs:
-                v = np.array(out)
-                if len(v.shape) > 1:
-                    res['bbox'] = v
-                else:
-                    res['bbox_num'] = v
+        for out in outs:
+            v = np.array(out)
+            if len(v.shape) > 1:
+                res['bbox'] = v
+            else:
+                res['bbox_num'] = v
         metric.update(data_all, res)
         if batch_id % 100 == 0:
             print('Eval iter:', batch_id)
@@ -160,8 +146,6 @@ if __name__ == '__main__':
     paddle.enable_static()
     parser = argsparser()
     FLAGS = parser.parse_args()
-    print_arguments(FLAGS)
-
     assert FLAGS.devices in ['cpu', 'gpu', 'xpu', 'npu']
     paddle.set_device(FLAGS.devices)
 

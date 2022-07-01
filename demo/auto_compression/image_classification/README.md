@@ -9,6 +9,8 @@
   - [3.3 准备预测模型](#33-准备预测模型)
   - [3.4 自动压缩并产出模型](#34-自动压缩并产出模型)
 - [4. 预测部署](#4预测部署)
+  - [4.1 Python预测推理](#41-Python预测推理)
+  - [4.2 PaddleLite端侧部署](#42-PaddleLite端侧部署)
 - [5. FAQ](5FAQ)
 
 
@@ -19,7 +21,7 @@
 
 ### PaddleClas模型
 
-| 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) | 
+| 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) |
 |:------:|:------:|:------:|:------:|:------:|
 | MobileNetV1 | Baseline | 70.90 | - | 33.15 |
 | MobileNetV1 | 量化+蒸馏 | 70.49 | - | 13.64 |
@@ -47,20 +49,6 @@
   - 硬件：NVIDIA Tesla T4 单卡
   - 软件：CUDA 11.2, cuDNN 8.0, TensorRT 8.4
   - 测试配置：batch_size: 1, image size: 224
-
-
-### TensorFlow MobileNetV1模型
-
-| 模型 | 策略 | Top-1 Acc | 耗时(ms) threads=1 | Inference模型 |
-|:------:|:------:|:------:|:------:|:------:|
-| MobileNetV1 | Base模型 | 71.0 | 30.45 | [Model](https://paddle-slim-models.bj.bcebos.com/act/mobilenetv1_inference_model_tf2paddle.tar) |
-| MobileNetV1 | 量化+蒸馏 | 70.22 | 15.86 | [Model](https://paddle-slim-models.bj.bcebos.com/act/mobilenetv1_quant.tar) |
-
-- 测试环境：`骁龙865 4*A77 4*A55`
-
-说明：
-- MobileNetV1模型源自[tensorflow/models](http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_224.tgz)
-
 
 ## 3. 自动压缩流程
 
@@ -103,23 +91,56 @@ tar -xf MobileNetV1_infer.tar
 
 #### 3.4 自动压缩并产出模型
 
-蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行量化训练和蒸馏。配置config文件中模型路径、数据集路径、蒸馏、量化和训练等部分的参数，配置完成后便可开始自动压缩。
+蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口 ```paddleslim.auto_compression.AutoCompression``` 对模型进行量化训练和蒸馏。配置config文件中模型路径、数据集路径、蒸馏、量化和训练等部分的参数，配置完成后便可开始自动压缩。
+
+**单卡启动**
 
 ```shell
-# 单卡启动
 export CUDA_VISIBLE_DEVICES=0
-# 多卡启动
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-
 python run.py --save_dir='./save_quant_mobilev1/' --config_path='./configs/MobileNetV1/qat_dis.yaml'
-
 ```
+
+**分布式训练**
+
+图像分类训练任务中往往包含大量训练数据，以ImageNet为例，ImageNet22k数据集中包含1400W张图像，如果使用单卡训练，会非常耗时，使用分布式训练可以达到几乎线性的加速比。
+
+```shell
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+python -m paddle.distributed.launch run.py --save_dir='./save_quant_mobilev1/' --config_path='./configs/MobileNetV1/qat_dis.yaml'
+```
+多卡训练（分布式训练）指的是将训练任务按照一定方法拆分到多个训练节点完成数据读取、前向计算、反向梯度计算等过程，并将计算出的梯度上传至服务节点。服务节点在收到所有训练节点传来的梯度后，会将梯度聚合并更新参数。最后将参数发送给训练节点，开始新一轮的训练。多卡训练一轮训练能训练```batch size * num gpus```的数据，比如单卡的```batch size```为32，单轮训练的数据量即32，而四卡训练的```batch size```为32，单轮训练的数据量为128。
+
+注意 ```learning rate``` 与 ```batch size``` 呈线性关系，这里单卡 ```batch size``` 为32，对应的 ```learning rate``` 为0.015，那么如果 ```batch size``` 减小4倍改为8，```learning rate``` 也需除以4；多卡时 ```batch size``` 为32，```learning rate``` 需乘上卡数。所以改变 ```batch size``` 或改变训练卡数都需要对应修改 ```learning rate```。
 
 
 ## 4.预测部署
+#### 4.1 Python预测推理
 
-- [Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/inference/python_inference.md)
-- [Paddle Inference C++部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/inference/cpp_inference.md)
-- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/lite/lite.md)
+
+准备好inference模型后，使用以下命令进行预测：
+```shell
+python infer.py -c configs/infer.yaml
+```
+
+在配置文件```configs/infer.yaml```中有以下字段用于配置预测参数：
+- ```Global.infer_imgs```：待预测的图片文件路径
+- ```Global.inference_model_dir```：inference 模型文件所在目录，该目录下需要有文件 .pdmodel 和 .pdiparams 两个文件
+- ```Global.use_tensorrt```：是否使用 TesorRT 预测引擎
+- ```Global.use_gpu```：是否使用 GPU 预测
+- ```Global.enable_mkldnn```：是否启用```MKL-DNN```加速库，注意```enable_mkldnn```与```use_gpu```同时为```True```时，将忽略```enable_mkldnn```，而使用```GPU```预测
+- ```Global.use_fp16```：是否启用```FP16```
+- ```PreProcess```：用于数据预处理配置
+- ```PostProcess```：由于后处理配置
+- ```PostProcess.Topk.class_id_map_file```：数据集 label 的映射文件，默认为```./images/imagenet1k_label_list.txt```，该文件为 PaddleClas 所使用的 ImageNet 数据集 label 映射文件
+
+注意：
+- 请注意模型的输入数据尺寸，部分模型需要修改参数：```PreProcess.resize_short```, ```PreProcess.resize```
+- 如果希望提升评测模型速度，使用 ```GPU``` 评测时，建议开启 ```TensorRT``` 加速预测，使用 ```CPU``` 评测时，建议开启 ```MKL-DNN``` 加速预测
+- 若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
+
+
+#### 4.2 PaddleLite端侧部署
+PaddleLite端侧部署可参考：
+- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleClas/blob/develop/docs/zh_CN/inference_deployment/paddle_lite_deploy.md)
 
 ## 5.FAQ

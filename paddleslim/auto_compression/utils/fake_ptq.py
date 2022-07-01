@@ -1,3 +1,4 @@
+import os
 import paddle
 from paddle.fluid.framework import IrGraph
 from paddle.framework import core
@@ -111,10 +112,11 @@ def post_quant_fake(executor,
     _program = graph.to_program()
 
     feed_vars = [_program.global_block().var(name) for name in _feed_list]
+    model_name = model_filename.split('.')[
+        0] if model_filename is not None else 'model'
+    save_model_path = os.path.join(save_model_path, model_name)
     paddle.static.save_inference_model(
         path_prefix=save_model_path,
-        model_filename=model_filename,
-        params_filename=params_filename,
         feed_vars=feed_vars,
         fetch_vars=_fetch_list,
         executor=executor,

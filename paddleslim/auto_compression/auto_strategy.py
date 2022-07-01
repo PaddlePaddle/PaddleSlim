@@ -76,8 +76,9 @@ EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
 ]
 MAGIC_SPARSE_RATIO = 0.75
 ### TODO: 0.02 threshold maybe not suitable, need to check
-MAGIC_MAX_EMD_DISTANCE = 0.02
-MAGIC_MIN_EMD_DISTANCE = 0.01
+### NOTE: reduce magic data to choose quantization aware training.
+MAGIC_MAX_EMD_DISTANCE = 0.0002  #0.02
+MAGIC_MIN_EMD_DISTANCE = 0.0001  #0.01
 
 DEFAULT_TRANSFORMER_STRATEGY = 'prune_0.25_int8'
 DEFAULT_STRATEGY = 'origin_int8'
@@ -104,7 +105,7 @@ def create_strategy_config(strategy_str, model_type):
                 'prune_strategy':
                 'gmp',  ### default unstruture prune strategy is gmp
                 'prune_mode': 'ratio',
-                'pruned_ratio': float(tmp_s[1]),
+                'ratio': float(tmp_s[1]),
                 'local_sparsity': True,
                 'prune_params_type': 'conv1x1_only'
             }
@@ -238,8 +239,18 @@ def prepare_strategy(executor,
     return strategy_config
 
 
-def get_final_quant_config(ptq_loss):
+def get_final_quant_config(ptq_loss, model_type=None):
     """ transform quantization tester config to real quantization config """
+    ### use ptq & hpo when model_type is transformer
+    if model_type == 'transformer':
+        quant_config = Quantization(**default_quant_config)
+        hpo_config = HyperParameterOptimization(**default_hpo_config)
+        configs = [{
+            'Quantization': quant_config,
+            'HyperParameterOptimization': hpo_config
+        }]
+        return configs
+
     ### if emd loss less than MAGIC_MIN_EMD_DISTANCE, final compress.
     if ptq_loss < MAGIC_MIN_EMD_DISTANCE:
         return None

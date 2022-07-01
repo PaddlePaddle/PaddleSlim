@@ -1,3 +1,17 @@
+# Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import argparse
 import random
@@ -91,9 +105,11 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             ori_shape,
             eval_dataset.transforms.transforms,
             mode='bilinear')
-
-        pred = paddle.argmax(
-            paddle.to_tensor(logit), axis=1, keepdim=True, dtype='int32')
+        pred = paddle.to_tensor(logit)
+        if len(
+                pred.shape
+        ) == 4:  # for humanseg model whose prediction is distribution but not class id
+            pred = paddle.argmax(pred, axis=1, keepdim=True, dtype='int32')
 
         intersect_area, pred_area, label_area = metrics.calculate_area(
             pred,
@@ -152,7 +168,7 @@ def reader_wrapper(reader):
 if __name__ == '__main__':
 
     args = parse_args()
-
+    paddle.enable_static()
     # step1: load dataset config and create dataloader
     data_cfg = PaddleSegDataConfig(args.dataset_config)
     train_dataset = data_cfg.train_dataset

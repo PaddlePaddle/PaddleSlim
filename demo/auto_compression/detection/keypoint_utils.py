@@ -1,5 +1,4 @@
-
-# Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved. 
+# Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved. 
 #   
 # Licensed under the Apache License, Version 2.0 (the "License");   
 # you may not use this file except in compliance with the License.  
@@ -15,14 +14,15 @@
 import logging
 import os
 import json
-from collections import defaultdict, OrderedDict
 import numpy as np
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from scipy.io import loadmat, savemat
 import cv2
 from paddleslim.common import get_logger
+
 logger = get_logger(__name__, level=logging.INFO)
+
 
 def get_affine_mat_kernel(h, w, s, inv=False):
     if w < h:
@@ -231,6 +231,7 @@ def oks_iou(g, d, a_g, a_d, sigmas=None, in_vis_thre=None):
         ious[n_d] = np.sum(np.exp(-e)) / e.shape[0] if e.shape[0] != 0 else 0.0
     return ious
 
+
 def oks_nms(kpts_db, thresh, sigmas=None, in_vis_thre=None):
     """greedily select boxes with high confidence and overlap with current maximum <= thresh
     rule out overlap >= thresh
@@ -267,6 +268,7 @@ def oks_nms(kpts_db, thresh, sigmas=None, in_vis_thre=None):
         order = order[inds + 1]
 
     return keep
+
 
 def rescore(overlap, scores, thresh, type='gaussian'):
     assert overlap.shape[0] == scores.shape[0]
@@ -406,10 +408,10 @@ class HRNetPostProcess(object):
         return coord
 
     def dark_postprocess(self, hm, coords, kernelsize):
-        '''DARK postpocessing, Zhang et al. Distribution-Aware Coordinate
+        '''
+        DARK postpocessing, Zhang et al. Distribution-Aware Coordinate
         Representation for Human Pose Estimation (CVPR 2020).
         '''
-
         hm = self.gaussian_blur(hm, kernelsize)
         hm = np.maximum(hm, 1e-10)
         hm = np.log(hm)
@@ -419,7 +421,8 @@ class HRNetPostProcess(object):
         return coords
 
     def get_final_preds(self, heatmaps, center, scale, kernelsize=3):
-        """the highest heatvalue location with a quarter offset in the
+        """
+        The highest heatvalue location with a quarter offset in the
         direction from the highest response to the second highest response.
         Args:
             heatmaps (numpy.ndarray): The predicted heatmaps
@@ -465,4 +468,3 @@ class HRNetPostProcess(object):
                     maxvals, axis=1)
         ]]
         return outputs
-    

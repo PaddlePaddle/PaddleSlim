@@ -85,7 +85,6 @@ TrainConfig:
   learning_rate: 
     type: CosineAnnealingDecay 
     learning_rate: 0.015
-    T_max: 500
   optimizer_builder:
     optimizer:
       type: Momentum

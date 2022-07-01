@@ -86,7 +86,7 @@ pip install paddlenlp
 | 模型 | AFQMC | TNEWS | IFLYTEK | CMNLI | OCNLI | CLUEWSC2020 | CSL |
 |:------:|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|
 | PP-MiniLM | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/tnews.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/iflytek.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/cmnli.tar) | [ ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/ocnli.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/cluewsc.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/csl.tar) |
-| ERNIE 3.0-Medium | [afqmc]() | [tnews]() | [iflytek]() | [cmnli]() | [ocnli]() | [cluewsc2020]() | [csl]() |
+| ERNIE 3.0-Medium | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/AFQMC.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/TNEWS.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/IFLYTEK.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CMNLI.tar) | [ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/OCNLI.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CLUEWSC2020.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CSL.tar) |
 
 从上表获得模型超链接, 并用以下命令下载推理模型文件:
 
@@ -103,21 +103,17 @@ tar -zxvf afqmc.tar
 #### 3.4 自动压缩并产出模型
 
 自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中训练部分的参数，将任务名称、模型类型、数据集名称、压缩参数传入，配置完成后便可对模型进行剪枝、蒸馏训练和离线量化。
-数据集为CLUE，不同任务名称代表CLUE上不同的任务，可选择的任务名称有：afqmc, tnews, iflytek, ocnli, cmnli, cluewsc2020, csl。具体运行命令为
+数据集为CLUE，不同任务名称代表CLUE上不同的任务，可选择的任务名称有：```afqmc, tnews, iflytek, ocnli, cmnli, cluewsc2020, csl```。具体运行命令为：
 ：
 ```shell
 export CUDA_VISIBLE_DEVICES=0
-python run.py \
-    --model_type='ppminilm' \
-    --model_dir='./afqmc' \
-    --model_filename='inference.pdmodel' \
-    --params_filename='inference.pdiparams' \
-    --dataset='clue' \
-    --save_dir='./save_afqmc_pruned/' \
-    --batch_size=16 \
-    --max_seq_length=128 \
-    --task_name='afqmc' \
-    --config_path='./configs/pp-minilm/auto/afqmc.yaml'
+python run.py --config_path='./configs/pp-minilm/auto/afqmc.yaml' --save_dir='./save_afqmc_pruned/'
+```
+
+如仅需验证模型精度，或验证压缩之后模型精度，在启动```run.py```脚本时，将配置文件中模型文件夹 ```model_dir``` 改为压缩之后保存的文件夹路径 ```./output/cola/``` ，命令加上```--eval True```即可：
+```shell
+export CUDA_VISIBLE_DEVICES=0
+python run.py --config_path=./configs/cola.yaml  --eval True
 ```
 
 ## 4. 压缩配置介绍
@@ -199,8 +195,7 @@ Quantization:
 
 ## 5. 预测部署
 
-- [Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/inference/python_inference.md)
-- [Paddle Inference C++部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/inference/cpp_inference.md)
-- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/lite/lite.md)
+- [PP-MiniLM Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm)
+- [ERNIE-3.0 Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/model_zoo/ernie-3.0)
 
 ## 6. FAQ

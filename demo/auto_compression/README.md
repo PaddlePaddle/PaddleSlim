@@ -33,7 +33,7 @@ import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
 from paddle.vision.transforms import transforms
-from paddleslim.auto_compression import AutoCompression
+from paddleslim.auto_compression import AutoCompression, Quantization, HyperParameterOptimization
 paddle.enable_static()
 # 定义DataSet
 class ImageNetDataset(DatasetFolder):
@@ -65,8 +65,7 @@ ac = AutoCompression(
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="output",
-    strategy_config=None,
-    train_config=None,
+    config={'Quantization': Quantization(), "HyperParameterOptimization": HyperParameterOptimization(max_quant_count=5)},
     train_dataloader=train_loader,
     eval_dataloader=train_loader)  # eval_function to verify accuracy
 ac.compress()

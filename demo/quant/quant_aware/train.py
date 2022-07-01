@@ -25,10 +25,10 @@ _logger = get_logger(__name__, level=logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64 * 4,                 "Minibatch size.")
+add_arg('batch_size',       int,  64,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('model',            str,  "MobileNet",                "The target model.")
-add_arg('pretrained_model', str,  "../pretrained_model/MobileNetV1_pretrained",                "Whether to use pretrained model.")
+add_arg('pretrained_model', str,  "./pretrain/MobileNetV1_pretrained",                "Whether to use pretrained model.")
 add_arg('lr',               float,  0.0001,               "The learning rate used to fine-tune pruned model.")
 add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
@@ -82,6 +82,14 @@ def create_optimizer(args):
         return piecewise_decay(args)
     elif args.lr_strategy == "cosine_decay":
         return cosine_decay(args)
+
+
+def _prepare_envs():
+    devices = paddle.device.get_device().split(':')[0]
+    places = paddle.device._convert_to_place(devices)
+    _logger.info(f"devices: {devices}")
+    exe = paddle.static.Executor(places)
+    return exe, places
 
 
 def compress(args):
@@ -161,7 +169,7 @@ def compress(args):
     train_prog = paddle.static.default_main_program()
     val_program = paddle.static.default_main_program().clone(for_test=True)
 
-    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
+    exe, places = _prepare_envs()
     ############################################################################################################
     # 2. quantization transform programs (training aware)
     #    Make some quantization transforms in the graph before training and testing.
@@ -169,13 +177,12 @@ def compress(args):
     #    some fake quantize operators and fake dequantize operators.
     ############################################################################################################
     val_program = quant_aware(
-        val_program, place, quant_config, scope=None, for_test=True)
+        val_program, places, quant_config, scope=None, for_test=True)
     compiled_train_prog = quant_aware(
-        train_prog, place, quant_config, scope=None, for_test=False)
+        train_prog, places, quant_config, scope=None, for_test=False)
     opt = create_optimizer(args)
     opt.minimize(avg_cost)
 
-    exe = paddle.static.Executor(place)
     exe.run(paddle.static.default_startup_program())
 
     if pretrain:
@@ -184,9 +191,6 @@ def compress(args):
 
         if args.pretrained_model:
             paddle.static.load(train_prog, args.pretrained_model, exe)
-
-    places = paddle.static.cuda_places(
-    ) if args.use_gpu else paddle.static.cpu_places()
 
     train_loader = paddle.io.DataLoader(
         train_dataset,
@@ -200,7 +204,7 @@ def compress(args):
         num_workers=num_workers)
     valid_loader = paddle.io.DataLoader(
         val_dataset,
-        places=place,
+        places=places,
         feed_list=[image, label],
         drop_last=False,
         return_list=False,
@@ -290,7 +294,7 @@ def compress(args):
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
     ############################################################################################################
-    float_program, int8_program = convert(val_program, place, quant_config, \
+    float_program, int8_program = convert(val_program, places, quant_config, \
                                                         scope=None, \
                                                         save_int8=True,
                                                         onnx_format=args.onnx_format)

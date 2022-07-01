@@ -26,27 +26,7 @@
 | PP-YOLOE-l |  量化+蒸馏 | 640*640  |  50.6   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
 
 - mAP的指标均在COCO val2017数据集中评测得到。
-- PP-YOLOE模型在Tesla V100的GPU环境下测试，并且开启TensorRT，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)
-
-### YOLOv5
-| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
-| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| YOLOv5s |  Base模型 | 640*640  |  37.4   |   6.0  |   4.9ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov5s_infer.tar) |
-| YOLOv5s |  量化+蒸馏 | 640*640  |  36.5   |   - |   -   |  4.5ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/yolov5s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) |
-
-说明：
-- mAP的指标均在COCO val2017数据集中评测得到。
-- YOLOv5s模型在Tesla V100的GPU环境下测试，并且开启TensorRT，测试脚本是[benchmark demo](./infer.py)
-- YOLOv5模型源自[ultralytics/yolov5](https://github.com/ultralytics/yolov5)，通过[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)工具转换YOLOv5预测模型步骤：
-
-(1) 安装X2Paddle的1.3.6以上版本；（pip install x2paddle）
-
-(2) 转换模型：
-```
-x2paddle --framework=onnx --model=yolov5s.onnx --save_dir=pd_model
-cp -r pd_model/inference_model/ yolov5_inference_model
-```
-即可得到YOLOv5s模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中YOLOv5s的Base预测模型。
+- PP-YOLOE模型在Tesla V100的GPU环境下测试，并且开启TensorRT，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)。
 
 ## 3. 自动压缩流程
 
@@ -113,29 +93,32 @@ wget https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_co
 tar -xf ppyoloe_crn_l_300e_coco.tar
 ```
 
-**注意**：TinyPose模型暂不支持精度测试。
-
 #### 3.4 自动压缩并产出模型
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
+
+- 单卡训练：
 ```
-# 单卡
 export CUDA_VISIBLE_DEVICES=0
-# 多卡
-# export CUDA_VISIBLE_DEVICES=0,1,2,3
 python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./output/'
+```
+
+- 多卡训练：
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
+          --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./output/'
 ```
 
 #### 3.5 测试模型精度
 
-使用run.py脚本得到模型的mAP：
+使用eval.py脚本得到模型的mAP：
 ```
 export CUDA_VISIBLE_DEVICES=0
 python eval.py --config_path=./configs/ppyoloe_l_qat_dis.yaml
 ```
 
-**注意**：要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
-
+**注意**：
+- 要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
 
 ## 4.预测部署
 

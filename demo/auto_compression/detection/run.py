@@ -23,8 +23,6 @@ from ppdet.metrics import COCOMetric, VOCMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 
-from post_process import YOLOv5PostProcess
-
 
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -48,13 +46,6 @@ def argsparser():
         '--eval', type=bool, default=False, help="whether to run evaluation.")
 
     return parser
-
-
-def print_arguments(args):
-    print('-----------  Running Arguments -----------')
-    for arg, value in sorted(vars(args).items()):
-        print('%s: %s' % (arg, value))
-    print('------------------------------------------')
 
 
 def reader_wrapper(reader, input_list):
@@ -104,17 +95,12 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                        fetch_list=test_fetch_list,
                        return_numpy=False)
         res = {}
-        if 'arch' in global_config and global_config['arch'] == 'YOLOv5':
-            postprocess = YOLOv5PostProcess(
-                score_threshold=0.001, nms_threshold=0.6, multi_label=True)
-            res = postprocess(np.array(outs[0]), data_all['scale_factor'])
-        else:
-            for out in outs:
-                v = np.array(out)
-                if len(v.shape) > 1:
-                    res['bbox'] = v
-                else:
-                    res['bbox_num'] = v
+        for out in outs:
+            v = np.array(out)
+            if len(v.shape) > 1:
+                res['bbox'] = v
+            else:
+                res['bbox_num'] = v
 
         metric.update(data_all, res)
         if batch_id % 100 == 0:
@@ -138,28 +124,31 @@ def main():
                                         return_list=True)
     train_loader = reader_wrapper(train_loader, global_config['input_list'])
 
-    dataset = reader_cfg['EvalDataset']
-    global val_loader
-    val_loader = create('EvalReader')(reader_cfg['EvalDataset'],
-                                      reader_cfg['worker_num'],
-                                      return_list=True)
-    metric = None
-    if reader_cfg['metric'] == 'COCO':
-        clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
-        anno_file = dataset.get_anno()
-        metric = COCOMetric(
-            anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
-    elif reader_cfg['metric'] == 'VOC':
-        metric = VOCMetric(
-            label_list=dataset.get_label_list(),
-            class_num=reader_cfg['num_classes'],
-            map_type=reader_cfg['map_type'])
-    else:
-        raise ValueError("metric currently only supports COCO and VOC.")
-    global_config['metric'] = metric
-
-    if 'Evaluation' in global_config.keys() and global_config['Evaluation']:
+    if 'Evaluation' in global_config.keys() and global_config[
+            'Evaluation'] and paddle.distributed.get_rank() == 0:
         eval_func = eval_function
+        dataset = reader_cfg['EvalDataset']
+        global val_loader
+        _eval_batch_sampler = paddle.io.BatchSampler(
+            dataset, batch_size=reader_cfg['EvalReader']['batch_size'])
+        val_loader = create('EvalReader')(dataset,
+                                          reader_cfg['worker_num'],
+                                          batch_sampler=_eval_batch_sampler,
+                                          return_list=True)
+        metric = None
+        if reader_cfg['metric'] == 'COCO':
+            clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
+            anno_file = dataset.get_anno()
+            metric = COCOMetric(
+                anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
+        elif reader_cfg['metric'] == 'VOC':
+            metric = VOCMetric(
+                label_list=dataset.get_label_list(),
+                class_num=reader_cfg['num_classes'],
+                map_type=reader_cfg['map_type'])
+        else:
+            raise ValueError("metric currently only supports COCO and VOC.")
+        global_config['metric'] = metric
     else:
         eval_func = None
 
@@ -178,8 +167,6 @@ if __name__ == '__main__':
     paddle.enable_static()
     parser = argsparser()
     FLAGS = parser.parse_args()
-    print_arguments(FLAGS)
-
     assert FLAGS.devices in ['cpu', 'gpu', 'xpu', 'npu']
     paddle.set_device(FLAGS.devices)
 
