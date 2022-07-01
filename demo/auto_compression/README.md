@@ -87,9 +87,14 @@ ac.compress()
 
 #### [NLP](./nlp)
 
+#### X2Paddle
+
+- [PyTorch YOLOv5](./pytorch_yolov5)
+- [HuggingFace](./pytorch_huggingface)
+- [TensorFlow MobileNet](./tensorflow_mobilenet)
+
 #### 即将发布
 - [ ] 更多自动化压缩应用示例
-- [ ] X2Paddle模型自动化压缩示例
 
 ## 其他
 

@@ -61,7 +61,7 @@ pip install paddledet
 
 （4）安装X2Paddle的1.3.6以上版本：
 ```shell
-pip install x2paddle
+pip install x2paddle sympy onnx
 ```
 
 #### 3.2 准备数据集
@@ -73,7 +73,7 @@ pip install x2paddle
 
 （1）准备ONNX模型：
 
-可通过[ultralytics/yolov5](https://github.com/ultralytics/yolov5) 官方的[导出教程](https://github.com/ultralytics/yolov5/issues/251)来准备ONNX模型。
+可通过[ultralytics/yolov5](https://github.com/ultralytics/yolov5) 官方的[导出教程](https://github.com/ultralytics/yolov5/issues/251)来准备ONNX模型。也可以下载准备好的[yolov5s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx)。
 ```
 python export.py --weights yolov5s.pt --include onnx
 ```
@@ -81,9 +81,9 @@ python export.py --weights yolov5s.pt --include onnx
 (2) 转换模型：
 ```
 x2paddle --framework=onnx --model=yolov5s.onnx --save_dir=pd_model
-cp -r pd_model/inference_model/ yolov5_inference_model
+cp -r pd_model/inference_model/ yolov5s_infer
 ```
-即可得到YOLOv5s模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中YOLOv5s的[Base预测模型](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov5s_infer.tar)。
+即可得到YOLOv5s模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中YOLOv5s的[Paddle预测模型](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov5s_infer.tar)。
 
 
 预测模型的格式为：`model.pdmodel` 和 `model.pdiparams`两个，带`pdmodel`的是模型文件，带`pdiparams`后缀的是权重文件。
