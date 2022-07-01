@@ -141,7 +141,7 @@ class AutoCompression:
             self.train_config = extract_train_config(config)
         elif isinstance(config, dict):
             if 'TrainConfig' in config:
-                self.train_config = config.pop('TrainConfig')
+                self.train_config = TrainConfig(**config.pop('TrainConfig'))
             else:
                 self.train_config = None
             self.strategy_config = config
