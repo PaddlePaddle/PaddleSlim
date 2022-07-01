@@ -3,7 +3,7 @@ import paddle
 import collections
 import logging
 import numpy as np
-from paddle.fluid.framework import _dygraph_tracer, dygraph_only, _dygraph_guard, program_guard
+from paddle.fluid.framework import _dygraph_tracer, dygraph_only, _dygraph_guard, program_guard, in_dygraph_mode
 from paddle.fluid.dygraph.base import program_desc_tracing_guard, _switch_declarative_mode_guard_
 from paddle.fluid.dygraph.layers import Layer
 from paddle.fluid.framework import Block, ParamBase, Program, Variable
@@ -140,7 +140,7 @@ def dygraph2program(layer,
     extract_inputs_fn = extract_inputs_fn if extract_inputs_fn is not None else extract_vars
     extract_outputs_fn = extract_outputs_fn if extract_outputs_fn is not None else extract_vars
 
-    if os.environ.get("FLAGS_enable_eager_mode") == "1":
+    if in_dygraph_mode():
         return _dy2prog(layer, inputs, feed_prefix, fetch_prefix, tmp_prefix,
                         extract_inputs_fn, extract_outputs_fn, dtypes)
 
