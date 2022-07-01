@@ -46,6 +46,7 @@
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim develop版本或PaddleSlim>=2.3.0
 - X2Paddle develop版本
+- transformers >= 4.18.0
 - PaddleNLP >= 2.3
 - tensorflow == 1.14 (如需压缩TensorFlow模型)
 - onnx >= 1.6.0 (如需压缩ONNX模型)
@@ -73,12 +74,18 @@ git checkout develop
 python setup.py install
 ```
 
+安装transformers：
+```shell
+pip install transformers
+```
+注：安装transformers的目的是为了使用transformers中的Tokenizer。
+
 安装paddlenlp：
 ```shell
 pip install paddlenlp
 ```
 
-注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集和Tokenizer。
+注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集。
 
 
 #### 3.2 准备数据集
@@ -165,11 +172,11 @@ def main(x0, x1, x2):
     sepc_list = list()
     sepc_list.append(
             paddle.static.InputSpec(
-                shape=[-1, 128], name="x0", dtype="int64"),
+                shape=[-1, 128], name="x2paddle_input_ids", dtype="int64"),
             paddle.static.InputSpec(
-                shape=[-1, 128], name="x1", dtype="int64"),
+                shape=[-1, 128], name="x2paddle_attention_mask", dtype="int64"),
             paddle.static.InputSpec(
-                shape=[-1, 128], name="x2", dtype="int64"))
+                shape=[-1, 128], name="x2paddle_token_type_ids", dtype="int64"))
     static_model = paddle.jit.to_static(model, input_spec=sepc_list)
     paddle.jit.save(static_model, "./x2paddle_cola")
 ```
@@ -184,10 +191,10 @@ export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/cola.yaml --save_dir='./output/cola/'
 ```
 
-如仅需验证模型精度，在启动```run.py```脚本时，命令加上```--eval True```即可：
+如仅需验证模型精度，或验证压缩之后模型精度，在启动```run.py```脚本时，将配置文件中模型文件夹 ```model_dir``` 改为压缩之后保存的文件夹路径 ```./output/cola/``` ，命令加上```--eval True```即可：
 ```shell
 export CUDA_VISIBLE_DEVICES=0
-python run.py --config_path=./configs/cola.yaml --save_dir='./output/cola/' --eval True
+python run.py --config_path=./configs/cola.yaml  --eval True
 ```
 
 ## 4. 预测部署
@@ -210,5 +217,7 @@ python -u ./infer.py \
 - ```int8```：是否启用```INT8```
 - ```fp16```：是否启用```FP16```
 
+
+若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
 ## 5. FAQ

@@ -1,3 +1,11 @@
+Global:
+  model_dir: ./ocnli
+  model_filename: inference.pdmodel
+  params_filename: inference.pdiparams
+  task_name: ocnli
+  dataset: clue
+  batch_size: 16
+  max_seq_length: 128
 TrainConfig:
   epochs: 20
   eval_iter: 1050
