@@ -45,4 +45,4 @@ EvalReader:
         std: *global_std
         is_scale: true
     - Permute: {}
-  batch_size: 4
+  batch_size: 16
