@@ -19,9 +19,10 @@ import argparse
 import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
-from ppdet.metrics import COCOMetric, VOCMetric
+from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
+from keypoint_utils import keypoint_post_process
 
 
 def argsparser():
@@ -95,12 +96,17 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                        fetch_list=test_fetch_list,
                        return_numpy=False)
         res = {}
-        for out in outs:
-            v = np.array(out)
-            if len(v.shape) > 1:
-                res['bbox'] = v
-            else:
-                res['bbox_num'] = v
+        if 'arch' in global_config and global_config['arch'] == 'keypoint':
+            res = keypoint_post_process(data, data_input, exe,
+                                        compiled_test_program, test_fetch_list,
+                                        outs)
+        else:
+            for out in outs:
+                v = np.array(out)
+                if len(v.shape) > 1:
+                    res['bbox'] = v
+                else:
+                    res['bbox_num'] = v
 
         metric.update(data_all, res)
         if batch_id % 100 == 0:
@@ -109,7 +115,9 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric.log()
     map_res = metric.get_results()
     metric.reset()
-    return map_res['bbox'][0]
+    map_key = 'keypoint' if 'arch' in global_config and global_config[
+        'arch'] == 'keypoint' else 'bbox'
+    return map_res[map_key][0]
 
 
 def main():
@@ -146,6 +154,10 @@ def main():
                 label_list=dataset.get_label_list(),
                 class_num=reader_cfg['num_classes'],
                 map_type=reader_cfg['map_type'])
+        elif reader_cfg['metric'] == 'KeyPointTopDownCOCOEval':
+            anno_file = dataset.get_anno()
+            metric = KeyPointTopDownCOCOEval(anno_file,
+                                             len(dataset), 17, 'output_eval')
         else:
             raise ValueError("metric currently only supports COCO and VOC.")
         global_config['metric'] = metric
