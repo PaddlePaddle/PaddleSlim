@@ -43,7 +43,7 @@ def find_final_nodes(program):
     return final_nodes
 
 
-def _is_mha(pattern_ops, pattern_ops_type):
+def _is_mha(pattern_ops, pattern_ops_type, skip_quant_tensor_list=[]):
     """ judge whether this pattern is multihead attention """
     if pattern_ops_type.count('softmax') != 1 or pattern_ops_type.count(
             'fetch') > 0:
@@ -53,6 +53,7 @@ def _is_mha(pattern_ops, pattern_ops_type):
     for op in pattern_ops:
         if op.type() in ['matmul', 'matmul_v2']:
             if not is_dynamic_weight_op(op):
+                skip_quant_tensor_list.extend(op._op.input('X'))
                 matmul_num += 1
     if matmul_num == 2:
         return True
@@ -81,6 +82,7 @@ def _is_ffn(pattern_ops, pattern_ops_type):
 def get_patterns(program, only_final_node=True):
     """ distinguish the pattern in the program and get distillation node """
     distill_node = []
+    skip_quant_tensor_list = []
     patterns = {}
     graph = GraphWrapper(program)
     block_num = 0
@@ -110,7 +112,8 @@ def get_patterns(program, only_final_node=True):
                     pattern_name = shortcut_start_op.type() + '$' + str(op.idx(
                     ))
 
-                    if _is_mha(pattern_ops, pattern_ops_type):
+                    if _is_mha(pattern_ops, pattern_ops_type,
+                               skip_quant_tensor_list):
                         model_type = 'transformer'
                         pattern_name = 'MHA$' + str(block_num)
 
@@ -144,5 +147,13 @@ def get_patterns(program, only_final_node=True):
     for out_var in final_weight_node:
         distill_node.append('teacher_' + out_var.name())
         distill_node.append(out_var.name())
+
+    #### skip quant matmul in attention
+    if model_type == 'transformer':
+        for block_id in range(len(program.blocks)):
+            for op in program.blocks[block_id].ops:
+                for inp_name in op.input_arg_names:
+                    if inp_name in skip_quant_tensor_list:
+                        op._set_attr("op_namescope", "skip_quant")
 
     return patterns, distill_node, model_type

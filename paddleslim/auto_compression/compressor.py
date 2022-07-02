@@ -313,6 +313,17 @@ class AutoCompression:
             model_filename=model_filename, params_filename=params_filename,
             executor=exe))
         _, _, model_type = get_patterns(inference_program)
+        if self.model_filename is None:
+            new_model_filename = '__new_model__'
+        else:
+            new_model_filename = 'new_' + self.model_filename
+        program_bytes = inference_program._remove_training_info(
+            clip_extra=False).desc.serialize_to_string()
+        with open(os.path.join(self.model_dir, new_model_filename), "wb") as f:
+            f.write(program_bytes)
+        shutil.move(
+            os.path.join(self.model_dir, new_model_filename),
+            os.path.join(self.model_dir, self.model_filename))
         _logger.info(f"Detect model type: {model_type}")
         return model_type
 
