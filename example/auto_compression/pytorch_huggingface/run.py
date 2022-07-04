@@ -20,9 +20,10 @@ import paddle
 import paddle.nn as nn
 import functools
 from functools import partial
+import shutil
 from paddle.io import Dataset, BatchSampler, DataLoader
 from paddle.metric import Metric, Accuracy
-from transformers import AutoTokenizer
+from paddlenlp.transformers import AutoModelForTokenClassification, AutoTokenizer
 from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
@@ -164,7 +165,10 @@ def reader():
         ): fn(samples)
 
     train_batch_sampler = paddle.io.BatchSampler(
-        train_ds, batch_size=global_config['batch_size'], shuffle=True)
+        train_ds,
+        batch_size=global_config['batch_size'],
+        shuffle=True,
+        drop_last=True)
 
     feed_list = create_data_holder(global_config['task_name'],
                                    global_config['input_names'])
@@ -208,7 +212,8 @@ def reader():
         dev_batch_sampler_matched = paddle.io.BatchSampler(
             dev_ds_matched,
             batch_size=global_config['batch_size'],
-            shuffle=False)
+            shuffle=False,
+            drop_last=True)
         dev_data_loader_matched = DataLoader(
             dataset=dev_ds_matched,
             batch_sampler=dev_batch_sampler_matched,
@@ -219,21 +224,26 @@ def reader():
         dev_batch_sampler_mismatched = paddle.io.BatchSampler(
             dev_ds_mismatched,
             batch_size=global_config['batch_size'],
-            shuffle=False)
+            shuffle=False,
+            drop_last=True)
         dev_data_loader_mismatched = DataLoader(
             dataset=dev_ds_mismatched,
             batch_sampler=dev_batch_sampler_mismatched,
             collate_fn=batchify_fn,
             num_workers=0,
             feed_list=feed_list,
-            return_list=False)
+            return_list=False,
+            drop_last=True)
         return train_data_loader, dev_data_loader_matched, dev_data_loader_mismatched
     else:
         dev_ds = load_dataset(
             global_config['dataset'], global_config['task_name'], splits='dev')
         dev_ds = dev_ds.map(dev_trans_func, lazy=True)
         dev_batch_sampler = paddle.io.BatchSampler(
-            dev_ds, batch_size=global_config['batch_size'], shuffle=False)
+            dev_ds,
+            batch_size=global_config['batch_size'],
+            shuffle=False,
+            drop_last=True)
         dev_data_loader = DataLoader(
             dataset=dev_ds,
             batch_sampler=dev_batch_sampler,
@@ -354,6 +364,10 @@ def main():
         eval_dataloader=eval_dataloader)
 
     ac.compress()
+    shutil.copy(
+        os.path.join(global_config['model_dir'], '*.json'), args.save_dir)
+    shutil.copy(
+        os.path.join(global_config['model_dir'], 'vocab.txt'), args.save_dir)
 
 
 if __name__ == '__main__':
