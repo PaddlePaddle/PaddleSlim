@@ -32,13 +32,13 @@
 模型在多个任务上平均精度以及加速对比如下：
 |  bert-base-cased | Accuracy（avg） | 时延(ms) | 加速比 |
 |:-------:|:----------:|:------------:| :------:|
-| 压缩前 |  81.35 | 8.18 | - |
-| 压缩后 |  81.53 | 6.35 | 1.29 |
+| 压缩前 |  81.35 | 11.60 | - |
+| 压缩后 |  81.53 | 4.83 | 2.40 |
 
 - Nvidia GPU 测试环境：
   - 硬件：NVIDIA Tesla T4 单卡
   - 软件：CUDA 11.2, cuDNN 8.0, TensorRT 8.4
-  - 测试配置：batch_size: 1, seqence length: 128
+  - 测试配置：batch_size: 40, seqence length: 128
 
 ## 3. 自动压缩流程
 #### 3.1 准备环境
@@ -74,12 +74,6 @@ git checkout develop
 python setup.py install
 ```
 
-安装transformers：
-```shell
-pip install transformers
-```
-注：安装transformers的目的是为了使用transformers中的Tokenizer。
-
 安装paddlenlp：
 ```shell
 pip install paddlenlp
@@ -101,10 +95,10 @@ import torch
 import numpy as np
 # 将PyTorch模型设置为eval模式
 torch_model.eval()
-# 构建输入
-input_ids = torch.unsqueeze(torch.tensor([0] * max_length), 0)
-token_type_ids = torch.unsqueeze(torch.tensor([0] * max_length), 0)
-attention_msk = torch.unsqueeze(torch.tensor([0] * max_length), 0)
+# 构建输入，
+input_ids = torch.zeros([batch_size, max_length]).long()
+token_type_ids = torch.zeros([batch_size, max_length]).long()
+attention_msk = torch.zeros([batch_size, max_length]).long()
 # 进行转换
 from x2paddle.convert import pytorch2paddle
 pytorch2paddle(torch_model,
@@ -120,7 +114,7 @@ PyTorch2Paddle支持trace和script两种方式的转换，均是PyTorch动态图
 注意：
 - 由于自动压缩的是静态图模型，所以这里需要将```jit_type```设置为```trace```，并且注意PyTorch模型中需要设置```pad_to_max_length```，且设置的```max_length```需要和转换时构建的数据相同。
 - HuggingFace默认输入```attention_mask```，PaddleNLP默认不输入，这里需要保持一致。可以PaddleNLP中设置```return_attention_mask=True```。
-- 使用PaddleNLP的tokenizer时需要在模型保存的文件夹中加入```model_config.json, special_tokens_map.json, tokenizer_config.json, vocab.txt```这些文件。
+- 使用PaddleNLP的tokenizer时需要在模型保存的文件夹中加入tokenizer的配置文件，可使用PaddleNLP中训练后自动保存的 ```model_config.json，special_tokens_map.json, tokenizer_config.json, vocab.txt```，也可使用Huggingface训练后自动保存的 ```config.json，special_tokens_map.json, tokenizer_config.json, vocab.txt```。
 
 
 更多Pytorch2Paddle示例可参考[PyTorch模型转换文档](https://github.com/PaddlePaddle/X2Paddle/blob/develop/docs/inference_model_convertor/pytorch2paddle.md)。其他框架转换可参考[X2Paddle模型转换工具](https://github.com/PaddlePaddle/X2Paddle)
@@ -191,7 +185,7 @@ export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/cola.yaml --save_dir='./output/cola/'
 ```
 
-如仅需验证模型精度，或验证压缩之后模型精度，在启动```run.py```脚本时，将配置文件中模型文件夹 ```model_dir``` 改为压缩之后保存的文件夹路径 ```./output/cola/``` ，命令加上```--eval True```即可：
+如仅需验证模型精度，或验证压缩之后模型精度，在启动```run.py```脚本时，将配置文件中模型文件夹 ```model_dir``` 改为压缩之后保存的文件夹路径 ```./output/cola``` ，命令加上```--eval True```即可：
 ```shell
 export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/cola.yaml  --eval True
