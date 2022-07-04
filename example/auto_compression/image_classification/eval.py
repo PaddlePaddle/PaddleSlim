@@ -14,9 +14,6 @@
 
 import os
 import sys
-sys.path[0] = os.path.join(
-    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
-print(sys.path[0])
 import argparse
 import functools
 from functools import partial
