@@ -146,7 +146,8 @@ def reader_wrapper(reader):
 
 
 if __name__ == '__main__':
-
+    rank_id = paddle.distributed.get_rank()
+    place = paddle.CUDAPlace(rank_id)
     args = parse_args()
     paddle.enable_static()
     # step1: load dataset config and create dataloader
@@ -160,6 +161,7 @@ if __name__ == '__main__':
         drop_last=True)
     train_loader = paddle.io.DataLoader(
         train_dataset,
+        places=[place],
         batch_sampler=batch_sampler,
         num_workers=2,
         return_list=True,
