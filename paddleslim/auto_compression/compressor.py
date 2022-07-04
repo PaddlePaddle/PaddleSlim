@@ -816,8 +816,14 @@ class AutoCompression:
             for name in test_program_info.feed_target_names
         ]
 
-        model_name = '.'.join(self.model_filename.split(
-            '.')[:-1]) if self.model_filename is not None else 'model'
+        model_name = None
+        if self.model_filename is None:
+            model_name = "model"
+        elif self.model_filename.endswith(".pdmodel"):
+            model_name = self.model_filename.rsplit(".", 1)[0]
+        else:
+            model_name = self.model_filename
+
         path_prefix = os.path.join(model_dir, model_name)
         paddle.static.save_inference_model(
             path_prefix=path_prefix,
