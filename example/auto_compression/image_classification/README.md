@@ -24,25 +24,25 @@
 | 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) |
 |:------:|:------:|:------:|:------:|:------:|
 | MobileNetV1 | Baseline | 70.90 | - | 33.15 |
-| MobileNetV1 | 量化+蒸馏 | 70.49 | - | 13.64 |
+| MobileNetV1 | 量化+蒸馏 | 70.57 | - | 13.64 |
 | ResNet50_vd | Baseline | 79.12 | 3.19 | - |
-| ResNet50_vd | 量化+蒸馏 | 78.55 | 0.92 | - |
+| ResNet50_vd | 量化+蒸馏 | 78.74 | 0.92 | - |
 | ShuffleNetV2_x1_0 | Baseline | 68.65 | - | 10.43 |
-| ShuffleNetV2_x1_0 | 量化+蒸馏 | 67.78 | - | 5.51 |
+| ShuffleNetV2_x1_0 | 量化+蒸馏 | 68.32 | - | 5.51 |
 | SqueezeNet1_0_infer | Baseline | 59.60 | - | 35.98 |
-| SqueezeNet1_0_infer | 量化+蒸馏 | 59.13 | - | 16.96 |
+| SqueezeNet1_0_infer | 量化+蒸馏 | 59.45 | - | 16.96 |
 | PPLCNetV2_base | Baseline | 76.86 | - | 36.50 |
 | PPLCNetV2_base | 量化+蒸馏 | 76.43 | - | 15.79 |
 | PPHGNet_tiny | Baseline | 79.59 | 2.82 | - |
-| PPHGNet_tiny | 量化+蒸馏 | 79.19 | 0.98 | - |
-| EfficientNetB0 | Baseline | 77.02 | 1.95 | - |
-| EfficientNetB0 | 量化+蒸馏 | 73.61 | 1.44 | - |
-| GhostNet_x1_0 | Baseline | 74.02 | 2.93 | - |
-| GhostNet_x1_0 | 量化+蒸馏 | 71.11 | 1.03 | - |
+| PPHGNet_tiny | 量化+蒸馏 | 79.20 | 0.98 | - |
 | InceptionV3 | Baseline | 79.14 | 4.79 | - |
-| InceptionV3 | 量化+蒸馏 | 73.16 | 1.47 | - |
+| InceptionV3 | 量化+蒸馏 | 78.32 | 1.47 | - |
+| EfficientNetB0 | Baseline | 77.02 | 1.95 | - |
+| EfficientNetB0 | 量化+蒸馏 | 75.39 | 1.44 | - |
+| GhostNet_x1_0 | Baseline | 74.02 | 2.93 | - |
+| GhostNet_x1_0 | 量化+蒸馏 | 72.62 | 1.03 | - |
 | MobileNetV3_large_x1_0 | Baseline | 75.32 | - | 16.62 |
-| MobileNetV3_large_x1_0 | 量化+蒸馏 | 68.84 | - | 9.85 |
+| MobileNetV3_large_x1_0 | 量化+蒸馏 | 70.93 | - | 9.85 |
 
 - ARM CPU 测试环境：`SDM865(4xA77+4xA55)`
 - Nvidia GPU 测试环境：
@@ -119,7 +119,7 @@ python -m paddle.distributed.launch run.py --save_dir='./save_quant_mobilev1/' -
 
 准备好inference模型后，使用以下命令进行预测：
 ```shell
-python infer.py -c configs/infer.yaml
+python infer.py --config_path="configs/infer.yaml"
 ```
 
 在配置文件```configs/infer.yaml```中有以下字段用于配置预测参数：
@@ -134,7 +134,7 @@ python infer.py -c configs/infer.yaml
 - ```PostProcess.Topk.class_id_map_file```：数据集 label 的映射文件，默认为```./images/imagenet1k_label_list.txt```，该文件为 PaddleClas 所使用的 ImageNet 数据集 label 映射文件
 
 注意：
-- 请注意模型的输入数据尺寸，部分模型需要修改参数：```PreProcess.resize_short```, ```PreProcess.resize```
+- 请注意模型的输入数据尺寸，如InceptionV3输入尺寸为299，所以部分模型需要修改参数：```PreProcess.resize_short```, ```PreProcess.resize```
 - 如果希望提升评测模型速度，使用 ```GPU``` 评测时，建议开启 ```TensorRT``` 加速预测，使用 ```CPU``` 评测时，建议开启 ```MKL-DNN``` 加速预测
 - 若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 

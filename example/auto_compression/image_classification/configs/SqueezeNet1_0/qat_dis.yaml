@@ -11,13 +11,10 @@ Distillation:
   loss: l2
   node:
   - softmax_0.tmp_0
-  teacher_model_dir: SqueezeNet1_0_infer
-  teacher_model_filename: inference.pdmodel
-  teacher_params_filename: inference.pdiparams
 Quantization:
   activation_bits: 8
   is_full_quantize: false
-  activation_quantize_type: range_abs_max
+  activation_quantize_type: moving_average_abs_max
   weight_quantize_type: channel_wise_abs_max
   not_quant_pattern:
   - skip_quant
