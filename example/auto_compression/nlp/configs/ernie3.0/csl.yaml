@@ -1,7 +1,7 @@
 Global:
   model_dir: ./CSL
-  model_filename: inference.pdmodel
-  params_filename: inference.pdiparams
+  model_filename: infer.pdmodel
+  params_filename: infer.pdiparams
   task_name: csl
   dataset: clue
   batch_size: 16
