@@ -241,16 +241,6 @@ def prepare_strategy(executor,
 
 def get_final_quant_config(ptq_loss, model_type=None):
     """ transform quantization tester config to real quantization config """
-    ### use ptq & hpo when model_type is transformer
-    if model_type == 'transformer':
-        quant_config = Quantization(**default_quant_config)
-        hpo_config = HyperParameterOptimization(**default_hpo_config)
-        configs = [{
-            'Quantization': quant_config,
-            'HyperParameterOptimization': hpo_config
-        }]
-        return configs
-
     ### if emd loss less than MAGIC_MIN_EMD_DISTANCE, final compress.
     if ptq_loss < MAGIC_MIN_EMD_DISTANCE:
         return None
