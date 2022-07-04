@@ -364,10 +364,12 @@ def main():
         eval_dataloader=eval_dataloader)
 
     ac.compress()
-    shutil.copy(
-        os.path.join(global_config['model_dir'], '*.json'), args.save_dir)
-    shutil.copy(
-        os.path.join(global_config['model_dir'], 'vocab.txt'), args.save_dir)
+
+    for file_name in os.listdir(global_config['model_dir']):
+        if 'json' in file_name or 'txt' in file_name:
+            shutil.copy(
+                os.path.join(global_config['model_dir'], file_name),
+                args.save_dir)
 
 
 if __name__ == '__main__':
