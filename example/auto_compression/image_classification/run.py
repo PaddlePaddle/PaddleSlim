@@ -14,8 +14,6 @@
 
 import os
 import sys
-sys.path[0] = os.path.join(
-    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 import argparse
 import functools
 from functools import partial
@@ -60,7 +58,7 @@ def reader_wrapper(reader, input_name):
     return gen
 
 
-def eval_reader(data_dir, batch_size, crop_size, resize_size):
+def eval_reader(data_dir, batch_size, crop_size, resize_size, place=None):
     val_reader = ImageNetDataset(
         mode='val',
         data_dir=data_dir,
@@ -68,6 +66,7 @@ def eval_reader(data_dir, batch_size, crop_size, resize_size):
         resize_size=resize_size)
     val_loader = DataLoader(
         val_reader,
+        places=[place] if place is not None else None,
         batch_size=global_config['batch_size'],
         shuffle=False,
         drop_last=False,
@@ -171,13 +170,14 @@ def main():
         save_dir=args.save_dir,
         config=all_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function,
+        eval_callback=eval_function if rank_id == 0 else None,
         eval_dataloader=reader_wrapper(
             eval_reader(
                 data_dir,
                 global_config['batch_size'],
                 crop_size=img_size,
-                resize_size=resize_size),
+                resize_size=resize_size,
+                place=place),
             global_config['input_name']))
 
     ac.compress()
