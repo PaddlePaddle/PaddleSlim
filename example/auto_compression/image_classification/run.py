@@ -17,13 +17,13 @@ import sys
 import argparse
 import functools
 from functools import partial
+import math
 
 import numpy as np
-import math
 import paddle
 import paddle.nn as nn
-from paddle.io import Dataset, BatchSampler, DataLoader
-import imagenet_reader as reader
+from paddle.io import DataLoader
+from imagenet_reader import ImageNetDataset
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 
@@ -52,35 +52,42 @@ def argsparser():
 # yapf: enable
 def reader_wrapper(reader, input_name):
     def gen():
-        for i, data in enumerate(reader()):
-            imgs = np.float32([item[0] for item in data])
+        for i, (imgs, label) in enumerate(reader()):
             yield {input_name: imgs}
 
     return gen
 
 
-def eval_reader(data_dir, batch_size):
-    val_reader = paddle.batch(
-        reader.val(data_dir=data_dir), batch_size=batch_size)
-    return val_reader
+def eval_reader(data_dir, batch_size, crop_size, resize_size, place=None):
+    val_reader = ImageNetDataset(
+        mode='val',
+        data_dir=data_dir,
+        crop_size=crop_size,
+        resize_size=resize_size)
+    val_loader = DataLoader(
+        val_reader,
+        places=[place] if place is not None else None,
+        batch_size=global_config['batch_size'],
+        shuffle=False,
+        drop_last=False,
+        num_workers=0)
+    return val_loader
 
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
-    val_reader = eval_reader(data_dir, batch_size=global_config['batch_size'])
-    image = paddle.static.data(
-        name=global_config['input_name'],
-        shape=[None, 3, 224, 224],
-        dtype='float32')
-    label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
+    val_loader = eval_reader(
+        data_dir,
+        batch_size=global_config['batch_size'],
+        crop_size=img_size,
+        resize_size=resize_size)
 
     results = []
-    print('Evaluating... It will take a while. Please wait...')
-    for batch_id, data in enumerate(val_reader()):
+    print('Evaluating...')
+    for batch_id, (image, label) in enumerate(val_loader):
         # top1_acc, top5_acc
         if len(test_feed_names) == 1:
-            image = np.array([[d[0]] for d in data])
-            image = image.reshape((len(data), 3, 224, 224))
-            label = [[d[1]] for d in data]
+            image = np.array(image)
+            label = np.array(label).astype('int64')
             pred = exe.run(compiled_test_program,
                            feed={test_feed_names[0]: image},
                            fetch_list=test_fetch_list)
@@ -98,9 +105,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             results.append([top_1, top_5])
         else:
             # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
-            image = np.array([[d[0]] for d in data])
-            image = image.reshape((len(data), 3, 224, 224))
-            label = [[d[1]] for d in data]
+            image = np.array(image)
+            label = np.array(label).astype('int64')
             result = exe.run(
                 compiled_test_program,
                 feed={test_feed_names[0]: image,
@@ -108,15 +114,21 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                 fetch_list=test_fetch_list)
             result = [np.mean(r) for r in result]
             results.append(result)
+        if batch_id % 100 == 0:
+            print('Eval iter: ', batch_id)
     result = np.mean(np.array(results), axis=0)
     return result[0]
 
 
 def main():
+    rank_id = paddle.distributed.get_rank()
+    place = paddle.CUDAPlace(rank_id)
     global global_config
     all_config = load_slim_config(args.config_path)
+
     assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
     global_config = all_config["Global"]
+
     gpu_num = paddle.distributed.get_world_size()
     if isinstance(all_config['TrainConfig']['learning_rate'],
                   dict) and all_config['TrainConfig']['learning_rate'][
@@ -127,12 +139,29 @@ def main():
                                             gpu_num)))
         all_config['TrainConfig']['learning_rate']['T_max'] = step
         print('total training steps:', step)
+
     global data_dir
     data_dir = global_config['data_dir']
 
-    train_reader = paddle.batch(
-        reader.train(data_dir=data_dir), batch_size=global_config['batch_size'])
-    train_dataloader = reader_wrapper(train_reader, global_config['input_name'])
+    global img_size, resize_size
+    img_size = global_config['img_size'] if 'img_size' in global_config else 224
+    resize_size = global_config[
+        'resize_size'] if 'resize_size' in global_config else 256
+
+    train_dataset = ImageNetDataset(
+        mode='train',
+        data_dir=data_dir,
+        crop_size=img_size,
+        resize_size=resize_size)
+
+    train_loader = DataLoader(
+        train_dataset,
+        places=[place],
+        batch_size=global_config['batch_size'],
+        shuffle=True,
+        drop_last=True,
+        num_workers=0)
+    train_dataloader = reader_wrapper(train_loader, global_config['input_name'])
 
     ac = AutoCompression(
         model_dir=global_config['model_dir'],
@@ -141,9 +170,14 @@ def main():
         save_dir=args.save_dir,
         config=all_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function,
+        eval_callback=eval_function if rank_id == 0 else None,
         eval_dataloader=reader_wrapper(
-            eval_reader(data_dir, global_config['batch_size']),
+            eval_reader(
+                data_dir,
+                global_config['batch_size'],
+                crop_size=img_size,
+                resize_size=resize_size,
+                place=place),
             global_config['input_name']))
 
     ac.compress()

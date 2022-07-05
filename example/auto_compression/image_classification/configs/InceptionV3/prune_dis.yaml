@@ -4,6 +4,8 @@ Global:
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
   batch_size: 32
+  resize_size: 320
+  crop_size: 299
   data_dir: /ILSVRC2012
   
 Distillation:

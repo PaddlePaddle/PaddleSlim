@@ -66,10 +66,6 @@ def parse_args():
 
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
-
-    nranks = paddle.distributed.ParallelEnv().local_rank
-    if nranks > 1 and paddle.distributed.get_rank() != 0:
-        return
     batch_sampler = paddle.io.BatchSampler(
         eval_dataset, batch_size=1, shuffle=False, drop_last=False)
     loader = paddle.io.DataLoader(
@@ -146,7 +142,8 @@ def reader_wrapper(reader):
 
 
 if __name__ == '__main__':
-
+    rank_id = paddle.distributed.get_rank()
+    place = paddle.CUDAPlace(rank_id)
     args = parse_args()
     paddle.enable_static()
     # step1: load dataset config and create dataloader
@@ -160,11 +157,17 @@ if __name__ == '__main__':
         drop_last=True)
     train_loader = paddle.io.DataLoader(
         train_dataset,
+        places=[place],
         batch_sampler=batch_sampler,
         num_workers=2,
         return_list=True,
         worker_init_fn=worker_init_fn)
     train_dataloader = reader_wrapper(train_loader)
+
+    nranks = paddle.distributed.get_world_size()
+    rank_id = paddle.distributed.get_rank()
+    if nranks > 1 and rank_id != 0:
+        eval_function = None
 
     # step2: create and instance of AutoCompression
     ac = AutoCompression(
