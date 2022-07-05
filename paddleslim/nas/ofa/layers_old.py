@@ -20,7 +20,11 @@ import paddle.fluid as fluid
 import paddle.fluid.core as core
 import paddle.fluid.dygraph_utils as dygraph_utils
 from paddle.fluid.data_feeder import check_variable_and_dtype
-from paddle.fluid.framework import _varbase_creator
+from paddle.fluid.framework import _varbase_creator, in_dygraph_mode, _in_legacy_dygraph
+from paddle import _C_ops
+from paddle.fluid.data_feeder import check_variable_and_dtype
+from paddle.fluid.layer_helper import LayerHelper
+from paddle.fluid.dygraph.layer_object_helper import LayerObjectHelper
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, BatchNorm
 
 from ...common import get_logger
@@ -235,11 +239,21 @@ class SuperConv2D(fluid.dygraph.Conv2D):
                     shape=[(_input_filter.shape[0] * _input_filter.shape[1]),
                            -1])
                 _tmp_filter = _varbase_creator(dtype=_input_filter.dtype)
-                core.ops.matmul(_input_filter,
-                                self.__getattr__('%dto%d_matrix' %
-                                                 (src_ks, target_ks)),
-                                _tmp_filter, 'transpose_X', False,
-                                'transpose_Y', False, "alpha", 1)
+                if in_dygraph_mode():
+                    _C_ops.matmul(_input_filter,
+                                  self.__getattr__('%dto%d_matrix' %
+                                                   (src_ks, target_ks)),
+                                  _tmp_filter, 'transpose_X', False,
+                                  'transpose_Y', False, "alpha", 1)
+
+                elif _in_legacy_dygraph():
+
+                    core.ops.matmul(_input_filter,
+                                    self.__getattr__('%dto%d_matrix' %
+                                                     (src_ks, target_ks)),
+                                    _tmp_filter, 'transpose_X', False,
+                                    'transpose_Y', False, "alpha", 1)
+
                 _tmp_filter = fluid.layers.reshape(
                     _tmp_filter,
                     shape=[
@@ -306,7 +320,12 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             attrs = ('strides', self._stride, 'paddings', padding, 'dilations',
                      self._dilation, 'groups', groups
                      if groups else 1, 'use_cudnn', self._use_cudnn)
-            out = core.ops.conv2d(input, weight, *attrs)
+            if in_dygraph_mode():
+                out = _C_ops.final_state_conv2d(
+                    input, weight, self._stride, padding, "EXPLICIT", groups
+                    if groups else 1, self._dilation, "NCHW", False, -1, False)
+            elif _in_legacy_dygraph():
+                out = core.ops.conv2d(input, weight, *attrs)
         elif self._l_type == 'depthwise_conv2d':
             attrs = ('strides', self._stride, 'paddings', padding, 'dilations',
                      self._dilation, 'groups', groups
@@ -540,11 +559,18 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
                     shape=[(_input_filter.shape[0] * _input_filter.shape[1]),
                            -1])
                 _tmp_filter = _varbase_creator(dtype=_input_filter.dtype)
-                core.ops.matmul(_input_filter,
-                                self.__getattr__('%dto%d_matrix' %
-                                                 (src_ks, target_ks)),
-                                _tmp_filter, 'transpose_X', False,
-                                'transpose_Y', False, "alpha", 1)
+                if in_dygraph_mode():
+                    _C_ops.matmul(_input_filter,
+                                  self.__getattr__('%dto%d_matrix' %
+                                                   (src_ks, target_ks)),
+                                  _tmp_filter, 'transpose_X', False,
+                                  'transpose_Y', False, "alpha", 1)
+                elif _in_legacy_dygraph():
+                    core.ops.matmul(_input_filter,
+                                    self.__getattr__('%dto%d_matrix' %
+                                                     (src_ks, target_ks)),
+                                    _tmp_filter, 'transpose_X', False,
+                                    'transpose_Y', False, "alpha", 1)
                 _tmp_filter = fluid.layers.reshape(
                     _tmp_filter,
                     shape=[
@@ -607,10 +633,18 @@ class SuperConv2DTranspose(fluid.dygraph.Conv2DTranspose):
         else:
             padding = self._padding
 
-        op = getattr(core.ops, self._op_type)
-        out = op(input, weight, 'output_size', self._output_size, 'strides',
-                 self._stride, 'paddings', padding, 'dilations', self._dilation,
-                 'groups', groups, 'use_cudnn', self._use_cudnn)
+        if in_dygraph_mode():
+            op = getattr(_C_ops, self._op_type)
+            out = op(input, weight, 'output_size', self._output_size, 'strides',
+                     self._stride, 'paddings', padding, 'dilations',
+                     self._dilation, 'groups', groups, 'use_cudnn',
+                     self._use_cudnn)
+        if _in_legacy_dygraph():
+            op = getattr(core.ops, self._op_type)
+            out = op(input, weight, 'output_size', self._output_size, 'strides',
+                     self._stride, 'paddings', padding, 'dilations',
+                     self._dilation, 'groups', groups, 'use_cudnn',
+                     self._use_cudnn)
         pre_bias = out
         out_nc = int(pre_bias.shape[1])
         if self.bias is not None:
@@ -749,15 +783,33 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         weight = self.conv[0].weight[:in_nc]
         ###  conv1
         if self.conv[0]._l_type == 'conv2d':
-            attrs = ('strides', self.conv[0]._stride, 'paddings',
-                     self.conv[0]._padding, 'dilations', self.conv[0]._dilation,
-                     'groups', in_nc, 'use_cudnn', self.conv[0]._use_cudnn)
-            out = core.ops.conv2d(input, weight, *attrs)
+            if in_dygraph_mode():
+                out = _C_ops.final_state_conv2d(
+                    input, weight, self.conv[0]._stride, self.conv[0]._padding,
+                    "EXPLICIT", in_nc, self.conv[0]._dilation, "NCHW", False,
+                    -1, False)
+
+            elif _in_legacy_dygraph():
+                attrs = ('strides', self.conv[0]._stride, 'paddings',
+                         self.conv[0]._padding, 'dilations',
+                         self.conv[0]._dilation, 'groups', in_nc, 'use_cudnn',
+                         self.conv[0]._use_cudnn)
+                out = core.ops.conv2d(input, weight, *attrs)
+
         elif self.conv[0]._l_type == 'depthwise_conv2d':
-            attrs = ('strides', self.conv[0]._stride, 'paddings',
-                     self.conv[0]._padding, 'dilations', self.conv[0]._dilation,
-                     'groups', in_nc, 'use_cudnn', self.conv[0]._use_cudnn)
-            out = core.ops.depthwise_conv2d(input, weight, *attrs)
+            if in_dygraph_mode():
+                out = _C_ops.final_state_depthwise_conv2d(
+                    input, weight, self.conv[0]._stride, self.conv[0]._padding,
+                    "EXPLICIT", in_nc, self.conv[0]._dilation, "NCHW", False,
+                    -1, False, False, self.conv[0]._use_cudnn)
+
+            elif _in_legacy_dygraph():
+                attrs = ('strides', self.conv[0]._stride, 'paddings',
+                         self.conv[0]._padding, 'dilations',
+                         self.conv[0]._dilation, 'groups', in_nc, 'use_cudnn',
+                         self.conv[0]._use_cudnn)
+
+                out = core.ops.depthwise_conv2d(input, weight, *attrs)
         else:
             raise ValueError("conv type error")
 
@@ -776,11 +828,19 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
         weight = self.conv[2].weight[:out_nc, :in_nc, :, :]
 
         if self.conv[2]._l_type == 'conv2d':
-            attrs = ('strides', self.conv[2]._stride, 'paddings',
-                     self.conv[2]._padding, 'dilations', self.conv[2]._dilation,
-                     'groups', self.conv[2]._groups if self.conv[2]._groups else
-                     1, 'use_cudnn', self.conv[2]._use_cudnn)
-            out = core.ops.conv2d(norm_out, weight, *attrs)
+            if in_dygraph_mode():
+                out = _C_ops.final_state_conv2d(
+                    input, weight, self.conv[2]._stride, self.conv[2]._padding,
+                    "EXPLICIT", self.conv[2]._groups if self.conv[2]._groups
+                    else 1, self.conv[2]._dilation, "NCHW", False, -1, False)
+
+            elif _in_legacy_dygraph():
+                attrs = ('strides', self.conv[2]._stride, 'paddings',
+                         self.conv[2]._padding, 'dilations',
+                         self.conv[2]._dilation, 'groups', self.conv[2]._groups
+                         if self.conv[2]._groups else 1, 'use_cudnn',
+                         self.conv[2]._use_cudnn)
+                out = core.ops.conv2d(norm_out, weight, *attrs)
         elif self.conv[2]._l_type == 'depthwise_conv2d':
             attrs = ('strides', self.conv[2]._stride, 'paddings',
                      self.conv[2]._padding, 'dilations', self.conv[2]._dilation,
@@ -847,8 +907,12 @@ class SuperLinear(fluid.dygraph.Linear):
             use_bias = True
 
         pre_bias = _varbase_creator(dtype=input.dtype)
-        core.ops.matmul(input, weight, pre_bias, 'transpose_X', False,
-                        'transpose_Y', False, "alpha", 1)
+        if in_dygraph_mode():
+            _C_ops.matmul(input, weight, pre_bias, 'transpose_X', False,
+                          'transpose_Y', False, "alpha", 1)
+        elif _in_legacy_dygraph():
+            core.ops.matmul(input, weight, pre_bias, 'transpose_X', False,
+                            'transpose_Y', False, "alpha", 1)
         if self._bias_attr != False:
             pre_act = dygraph_utils._append_bias_in_dygraph(
                 pre_bias, bias, axis=len(input.shape) - 1)
@@ -903,51 +967,91 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
                  "use_mkldnn", False, "fuse_with_relu", self._fuse_with_relu,
                  "use_global_stats", self._use_global_stats,
                  'trainable_statistics', self._trainable_statistics)
-        try:
-            from paddle import _C_ops
-            from paddle.fluid.framework import in_dygraph_mode, _in_legacy_dygraph
-            if in_dygraph_mode():
-                if feature_dim != self._mean.shape[0]:
-                    batch_norm_out = _C_ops.final_state_batch_norm(
-                        input, weight, bias, mean, variance, mean_out_tmp,
-                        variance_out_tmp, *attrs)
-                    self._mean[:feature_dim] = mean
-                    self._variance[:feature_dim] = variance
-                    mean_out[:feature_dim] = mean_out_tmp
-                    variance_out[:feature_dim] = variance_out_tmp
-                else:
-                    batch_norm_out = core.ops.batch_norm(
-                        input, weight, bias, self._mean, self._variance,
-                        mean_out, variance_out, *attrs)
-            elif _in_legacy_dygraph():
-                if feature_dim != self._mean.shape[0]:
-                    batch_norm_out = core.ops.batch_norm(
-                        input, weight, bias, mean, variance, None, mean_out_tmp,
-                        variance_out_tmp, *attrs)
-                    self._mean[:feature_dim].set_value(mean)
-                    self._variance[:feature_dim].set_value(variance)
-                    mean_out[:feature_dim].set_value(mean_out_tmp)
-                    variance_out[:feature_dim].set_value(variance_out_tmp)
-                else:
-                    batch_norm_out = core.ops.batch_norm(
-                        input, weight, bias, self._mean, self._variance, None,
-                        mean_out, variance_out, *attrs)
-        except:
+
+        if in_dygraph_mode():
             if feature_dim != self._mean.shape[0]:
-                batch_norm_out = core.ops.batch_norm(input, weight, bias, mean,
-                                                     variance, mean_out_tmp,
-                                                     variance_out_tmp, *attrs)
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.final_state_batch_norm(
+                    input, weight, bias, mean, variance, self._momentum,
+                    self._epsilon, self._data_layout, not self.training,
+                    self._use_global_stats, self._trainable_statistics, False)
+                self._mean[:feature_dim] = mean
+                self._variance[:feature_dim] = variance
+                mean_out[:feature_dim] = mean_out_tmp
+                variance_out[:feature_dim] = variance_out_tmp
+            else:
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.final_state_batch_norm(
+                    input, weight, bias, mean, variance, self._momentum,
+                    self._epsilon, self._data_layout, not self.training,
+                    self._use_global_stats, self._trainable_statistics, False)
+            return batch_norm_out
+
+        elif _in_legacy_dygraph():
+            if feature_dim != self._mean.shape[0]:
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
+                    input, weight, bias, mean, variance, None, mean_out_tmp,
+                    variance_out_tmp, *attrs)
                 self._mean[:feature_dim].set_value(mean)
                 self._variance[:feature_dim].set_value(variance)
                 mean_out[:feature_dim].set_value(mean_out_tmp)
                 variance_out[:feature_dim].set_value(variance_out_tmp)
             else:
-                batch_norm_out = core.ops.batch_norm(
-                    input, weight, bias, self._mean, self._variance, mean_out,
-                    variance_out, *attrs)
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
+                    input, weight, bias, self._mean, self._variance, None,
+                    mean_out, variance_out, *attrs)
+            return batch_norm_out
 
-        return dygraph_utils._append_activation_in_dygraph(
-            batch_norm_out[0], act=self._act)
+        else:
+            check_variable_and_dtype(
+                input, 'input', ['float16', 'float32', 'float64'], 'BatchNorm')
+
+            # for static need dict
+            attrs = {
+                "momentum": self._momentum,
+                "epsilon": self._epsilon,
+                "is_test": not self.training,
+                "data_layout": self._data_layout,
+                "use_mkldnn": False,
+                "fuse_with_relu": False,
+                "use_global_stats": self._use_global_stats,
+                "trainable_statistics": self._trainable_statistics,
+            }
+
+            inputs = {
+                "X": [input],
+                "Scale": [weight],
+                "Bias": [bias],
+                "Mean": [mean],
+                "Variance": [variance]
+            }
+
+            helper = LayerObjectHelper('batch_norm')
+
+            param_dtype = input.dtype if input.dtype != 'float16' else 'float32'
+            saved_mean = helper.create_variable_for_type_inference(
+                dtype=param_dtype, stop_gradient=True)
+            saved_variance = helper.create_variable_for_type_inference(
+                dtype=param_dtype, stop_gradient=True)
+            batch_norm_out = helper.create_variable_for_type_inference(
+                input.dtype)
+
+            outputs = {
+                "Y": [batch_norm_out],
+                "MeanOut": [mean],
+                "VarianceOut": [variance],
+                "SavedMean": [saved_mean],
+                "SavedVariance": [saved_variance]
+            }
+
+            if self.training or self._trainable_statistics:
+                # reserve_space is only used for training.
+                reserve_space = helper.create_variable_for_type_inference(
+                    dtype=input.dtype, stop_gradient=True)
+                outputs["ReserveSpace"] = [reserve_space]
+
+            helper.append_op(
+                type="batch_norm", inputs=inputs, outputs=outputs, attrs=attrs)
+
+            return batch_norm_out
 
 
 class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
@@ -973,9 +1077,14 @@ class SuperInstanceNorm(fluid.dygraph.InstanceNorm):
             scale = self.scale[:feature_dim]
             bias = self.bias[:feature_dim]
 
-        out, _, _ = core.ops.instance_norm(input, scale, bias, 'epsilon',
-                                           self._epsilon)
-        return out
+        if in_dygraph_mode():
+            out = _C_ops.final_state_instance_norm(input, scale, bias,
+                                                   self._epsilon)
+            return out
+        if _in_legacy_dygraph():
+            out, _, _ = core.ops.instance_norm(input, scale, bias, 'epsilon',
+                                               self._epsilon)
+            return out
 
 
 class SuperLayerNorm(fluid.dygraph.LayerNorm):
@@ -1002,11 +1111,15 @@ class SuperLayerNorm(fluid.dygraph.LayerNorm):
         feature_dim = int(input.shape[-1])
         weight = self.weight[:feature_dim]
         bias = self.bias[:feature_dim]
-        pre_act, _, _ = core.ops.layer_norm(input, weight, bias, 'epsilon',
-                                            self._epsilon, 'begin_norm_axis',
-                                            self._begin_norm_axis)
-        return dygraph_utils._append_activation_in_dygraph(
-            pre_act, act=self._act)
+        if in_dygraph_mode():
+            pre_act, _, _, = _C_ops.final_state_layer_norm(
+                input, weight, bias, self._epsilon, self._begin_norm_axis,
+                False)
+        elif _in_legacy_dygraph():
+            pre_act, _, _ = core.ops.layer_norm(
+                input, weight, bias, 'epsilon', self._epsilon,
+                'begin_norm_axis', self._begin_norm_axis)
+        return pre_act
 
 
 class SuperEmbedding(fluid.dygraph.Embedding):
@@ -1039,7 +1152,11 @@ class SuperEmbedding(fluid.dygraph.Embedding):
             out_nc = self._size[-1]
 
         weight = self.weight[:, :out_nc]
-        return core.ops.lookup_table_v2(
-            weight, input, 'is_sparse', self._is_sparse, 'is_distributed',
-            self._is_distributed, 'remote_prefetch', self._remote_prefetch,
-            'padding_idx', self._padding_idx)
+        if in_dygraph_mode():
+            return _C_ops.final_state_embedding(
+                input, weight, self._padding_idx, self._is_sparse)
+        elif _in_legacy_dygraph():
+            return core.ops.lookup_table_v2(
+                weight, input, 'is_sparse', self._is_sparse, 'is_distributed',
+                self._is_distributed, 'remote_prefetch', self._remote_prefetch,
+                'padding_idx', self._padding_idx)
