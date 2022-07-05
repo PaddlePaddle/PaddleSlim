@@ -76,11 +76,11 @@ def extract_vars(inputs):
         inputs(Variable | list<Object> | dict): 
     """
     vars = []
-    if isinstance(inputs, Variable):
+    if isinstance(inputs, (Variable, paddle.Tensor, core.eager.Tensor)):
         vars = [inputs]
     elif isinstance(inputs, dict):
         for _key, _value in inputs.items():
-            if isinstance(_value, Variable):
+            if isinstance(_value, (Variable, paddle.Tensor, core.eager.Tensor)):
                 vars.append(_value)
             else:
                 _logger.warn(
@@ -110,7 +110,8 @@ def to_variables(inputs, is_static=False):
     Find and rename variables. Find np.ndarray and convert it to variable.
     """
     if isinstance(inputs,
-                  (Variable, paddle.Tensor)) or isinstance(inputs, np.ndarray):
+                  (Variable, paddle.Tensor, core.eager.Tensor)) or isinstance(
+                      inputs, np.ndarray):
         if is_static:
             return _to_var(inputs)
         else:
@@ -159,7 +160,7 @@ def dygraph2program(layer,
         else:
             inputs = to_variables(inputs)
             input_var_list = extract_inputs_fn(inputs)
-
+        # print("====##@== input: ", inputs)
         original_outputs = layer(*inputs)
         # 'original_outputs' may be dict, so we should convert it to list of varibles.
         # And should not create new varibles in 'extract_vars'.
@@ -188,7 +189,7 @@ def _dy2prog(layer,
     Tracing program in Eager Mode.
     """
     paddle.enable_static()
-
+    # print("==###== input:", inputs)
     program = Program()
     # convert ParamBase into Parameter automatically by _switch_declarative_mode_guard_
     with program_guard(program), _switch_declarative_mode_guard_(True):
@@ -199,7 +200,8 @@ def _dy2prog(layer,
             inputs = _create_tensors(inputs, dtypes=dtypes, is_static=True)
         else:
             inputs = to_variables(inputs, is_static=True)
-            inputs = extract_inputs_fn(inputs)
+            # inputs = extract_inputs_fn(inputs)
+        # print("==###===### inputs:", inputs)
         outputs = layer(*inputs)
 
     paddle.disable_static()

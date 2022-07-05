@@ -133,6 +133,7 @@ def check_search_space(graph):
     for op in graph.ops():
         # if there is no weight ops after this op, 
         # this op can be seen as an output
+        # print("##### op: ", op)
         if _is_output_weight_ops(op, graph) and _is_dynamic_weight_op(op):
             for inp in op.all_inputs():
                 if inp._var.persistable:
