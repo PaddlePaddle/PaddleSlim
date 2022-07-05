@@ -77,8 +77,8 @@ EXPERIENCE_STRATEGY_WITHOUT_LOSS = [
 MAGIC_SPARSE_RATIO = 0.75
 ### TODO: 0.02 threshold maybe not suitable, need to check
 ### NOTE: reduce magic data to choose quantization aware training.
-MAGIC_MAX_EMD_DISTANCE = 0.0002  #0.02
-MAGIC_MIN_EMD_DISTANCE = 0.0001  #0.01
+MAGIC_MAX_EMD_DISTANCE = 0.00002  #0.02
+MAGIC_MIN_EMD_DISTANCE = 0.00001  #0.01
 
 DEFAULT_TRANSFORMER_STRATEGY = 'prune_0.25_int8'
 DEFAULT_STRATEGY = 'origin_int8'
