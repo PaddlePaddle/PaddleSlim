@@ -13,5 +13,4 @@ ir_optim: True
 use_tensorrt: True
 gpu_mem: 8000
 enable_profile: False
-benchmark: True
 
