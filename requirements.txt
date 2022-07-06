@@ -1,5 +1,4 @@
 #paddlepaddle == 1.6.0rc0
-#paddleslim-opt-tools
 tqdm
 pyzmq
 matplotlib

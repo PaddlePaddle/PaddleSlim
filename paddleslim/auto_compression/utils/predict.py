@@ -62,7 +62,12 @@ def predict_compressed_model(executor,
     model_file = os.path.join(model_dir, model_filename)
     param_file = os.path.join(model_dir, params_filename)
 
-    predictor = TableLatencyPredictor(hardware)
+    try:
+        predictor = TableLatencyPredictor(hardware)
+    except NotImplementedError:
+        raise NotImplementedError(
+            "Latency predictor cannot used on the platform: {}. That means you can not use latency predictor to select compress strategy automatically, you can set deploy_hardware to None or set compress strategy in the yaml".
+            format(platform.system()))
     latency = predictor.predict(
         model_file=model_file, param_file=param_file, data_type='fp32')
     latency_dict.update({'origin_fp32': latency})

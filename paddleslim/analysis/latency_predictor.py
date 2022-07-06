@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os
+import pip
 import platform
 import logging
 import pickle
@@ -92,21 +93,17 @@ class TableLatencyPredictor(LatencyPredictor):
     def _check_opt_model(self):
         if platform.system().lower() == 'windows':
             raise NotImplementedError(
-                'latency predictor NOT Support on Windows.')
+                'latency predictor does NOT support running on Windows.')
         elif platform.system().lower() == 'darwin':
             py_verion = platform.python_version().split('.')
             if int(py_version[0]) != 3 or int(py_version[1]) != 9:
                 raise NotImplementedError(
-                    'latency predictor NOT Support on MacOS when python version is not 3.9.'
+                    'latency predictor does NOT support running on macOS when python version is not 3.9.'
                 )
 
         _logger.info("pip install paddleslim-opt-tools")
-        cmd = 'paddle_lite_opt'
-        m = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        o = m.communicate()
-        if b'opt version' not in o[1]:
-            import pip
+        out = shutil.which('paddle_lite_opt')
+        if out is None:
             pip.main(['install', '--user', 'paddleslim-opt-tools'])
 
     def _initial_table(self):
