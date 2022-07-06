@@ -344,6 +344,12 @@ def quant_aware(program,
         quant_program = main_graph.to_program()
     else:
         quant_program = paddle.static.CompiledProgram(main_graph.graph)
+
+    # in training process, the executor needs the attribute lr_sheduler for updating learning rate
+    if not for_test and \
+         hasattr(program, "lr_sheduler") and \
+         not hasattr(quant_program, "lr_sheduler"):
+        setattr(quant_program, program.lr_sheduler)
     return quant_program
 
 
