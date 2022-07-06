@@ -22,7 +22,7 @@ wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileN
 tar -xf MobileNetV1_infer.tar
 # 下载ImageNet小型数据集
 wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz
-tar xf ILSVRC2012_data_demo.tar.gz
+tar -xf ILSVRC2012_data_demo.tar.gz
 ```
 
 - 2.运行
@@ -33,7 +33,7 @@ import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
 from paddle.vision.transforms import transforms
-from paddleslim.auto_compression import AutoCompression, Quantization, HyperParameterOptimization
+from paddleslim.auto_compression import AutoCompression
 paddle.enable_static()
 # 定义DataSet
 class ImageNetDataset(DatasetFolder):
@@ -64,12 +64,38 @@ ac = AutoCompression(
     model_dir="./MobileNetV1_infer",
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
-    save_dir="output",
-    config={'Quantization': Quantization(), "HyperParameterOptimization": HyperParameterOptimization(max_quant_count=5)},
+    save_dir="MobileNetV1_quant",
+    config={'Quantization': {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
     train_dataloader=train_loader,
     eval_dataloader=train_loader)  # eval_function to verify accuracy
 ac.compress()
 ```
+
+- 3.测试精度
+```
+export CUDA_VISIBLE_DEVICES=0
+python ./image_classification/eval.py
+```
+
+- 4.推理速度测试
+量化模型速度的测试依赖推理库的支持，所以确保安装的是带有TensorRT的PaddlePaddle。
+
+使用以下指令查看本地cuda版本，并且在[下载链接](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)中下载对应cuda版本和对应python版本的paddlepaddle安装包。
+```shell
+cat /usr/local/cuda/version.txt
+```
+
+安装下载的whl包：
+```
+pip install paddlepaddle*** --force-reinstall
+```
+
+测试FP32模型的精度
+```
+python ./image_classification/infer.py
+### Eval Top1: 0.7171724759615384
+```
+
 
 **提示：**
 - DataLoader传入的数据集是待压缩模型所用的数据集，DataLoader继承自`paddle.io.DataLoader`。

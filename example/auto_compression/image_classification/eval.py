@@ -14,9 +14,6 @@
 
 import os
 import sys
-sys.path[0] = os.path.join(
-    os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
-print(sys.path[0])
 import argparse
 import functools
 from functools import partial
@@ -34,9 +31,13 @@ def argsparser():
     parser.add_argument(
         '--config_path',
         type=str,
-        default=None,
-        help="path of compression strategy config.",
-        required=True)
+        default='./image_classification/configs/eval.yaml',
+        help="path of compression strategy config.")
+    parser.add_argument(
+        '--model_dir',
+        type=str,
+        default='./MobileNetV1_infer',
+        help='model directory')
     return parser
 
 
@@ -95,19 +96,21 @@ def eval():
     return result[0]
 
 
-def main():
+def main(args):
     global global_config
     all_config = load_slim_config(args.config_path)
-    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
-    global_config = all_config["Global"]
+    global_config = all_config
 
     global data_dir
     data_dir = global_config['data_dir']
+    if args.model_dir != global_config['model_dir']:
+        config['model_dir'] = args.model_dir
 
     global img_size, resize_size
-    img_size = global_config['img_size'] if 'img_size' in global_config else 224
-    resize_size = global_config[
-        'resize_size'] if 'resize_size' in global_config else 256
+    img_size = int(global_config[
+        'img_size']) if 'img_size' in global_config else 224
+    resize_size = int(global_config[
+        'resize_size']) if 'resize_size' in global_config else 256
 
     result = eval()
     print('Eval Top1:', result)
@@ -117,4 +120,4 @@ if __name__ == '__main__':
     paddle.enable_static()
     parser = argsparser()
     args = parser.parse_args()
-    main()
+    main(args)
