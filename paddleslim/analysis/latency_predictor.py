@@ -15,6 +15,8 @@
 # limitations under the License.
 
 import os
+import platform
+import logging
 import pickle
 import shutil
 import subprocess
@@ -25,8 +27,11 @@ import paddle
 from .parse_ops import get_key_from_op
 from .extract_features import get_data_from_tables, get_features_from_paramkey
 from ._utils import opt_model, load_predictor, nearest_interpolate, _get_download
+from ..common import get_logger
 from ..core import GraphWrapper
 __all__ = ["LatencyPredictor", "TableLatencyPredictor"]
+
+_logger = get_logger(__name__, level=logging.INFO)
 
 TABLE_URL = 'https://paddlemodels.bj.bcebos.com/PaddleSlim/analysis/'
 
@@ -71,6 +76,7 @@ class TableLatencyPredictor(LatencyPredictor):
     hardware_list = ['SD625', 'SD710', 'RK3288']
 
     def __init__(self, table_file='SD710'):
+        self._check_opt_model()
         self.table_file = table_file
         self.table_dict = {}
         self.hardware = None
@@ -82,6 +88,26 @@ class TableLatencyPredictor(LatencyPredictor):
     @classmethod
     def add_hardware(cls, hardware):
         cls.hardware_list.append(hardware)
+
+    def _check_opt_model(self):
+        if platform.system().lower() == 'windows':
+            raise NotImplementedError(
+                'latency predictor NOT Support on Windows.')
+        elif platform.system().lower() == 'darwin':
+            py_verion = platform.python_version().split('.')
+            if int(py_version[0]) != 3 or int(py_version[1]) != 9:
+                raise NotImplementedError(
+                    'latency predictor NOT Support on MacOS when python version is not 3.9.'
+                )
+
+        _logger.info("pip install paddleslim-opt-tools")
+        cmd = 'paddle_lite_opt'
+        m = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        o = m.communicate()
+        if b'opt version' not in o[1]:
+            import pip
+            pip.main(['install', '--user', 'paddleslim-opt-tools'])
 
     def _initial_table(self):
         if self.table_file in TableLatencyPredictor.hardware_list:
