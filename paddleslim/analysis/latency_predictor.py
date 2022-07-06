@@ -104,7 +104,7 @@ class TableLatencyPredictor(LatencyPredictor):
         _logger.info("pip install paddleslim-opt-tools")
         out = shutil.which('paddle_lite_opt')
         if out is None:
-            pip.main(['install', '--user', 'paddleslim-opt-tools'])
+            pip.main(['install', 'paddleslim-opt-tools'])
 
     def _initial_table(self):
         if self.table_file in TableLatencyPredictor.hardware_list:
