@@ -32,7 +32,7 @@
 
 #### 3.1 准备环境
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim develop版本
+- PaddleSlim >= 2.3
 - [X2Paddle](https://github.com/PaddlePaddle/X2Paddle) >= 1.3.6
 - opencv-python
 
@@ -46,8 +46,7 @@ pip install paddlepaddle-gpu
 
 （2）安装paddleslim：
 ```shell
-https://github.com/PaddlePaddle/PaddleSlim.git
-python setup.py install
+pip install paddleslim
 ```
 
 （3）安装TensorFlow:
