@@ -120,7 +120,7 @@ def to_variables(inputs, is_static=False):
         ret = {}
         for _key in inputs:
             ret[_key] = to_variables(inputs[_key], is_static)
-        return inputs
+        return ret
     elif isinstance(inputs, list):
         ret = []
         for _value in inputs:
@@ -161,6 +161,7 @@ def dygraph2program(layer,
             inputs = to_variables(inputs)
             input_var_list = extract_inputs_fn(inputs)
         # print("====##@== input: ", inputs)
+        # import pdb;pdb.set_trace()
         original_outputs = layer(*inputs)
         # 'original_outputs' may be dict, so we should convert it to list of varibles.
         # And should not create new varibles in 'extract_vars'.
@@ -201,8 +202,12 @@ def _dy2prog(layer,
         else:
             inputs = to_variables(inputs, is_static=True)
             # inputs = extract_inputs_fn(inputs)
-        # print("==###===### inputs:", inputs)
-        outputs = layer(*inputs)
+        # import pdb; pdb.set_trace()
+        # print("in _dy2prog:", inputs)
+        if isinstance(inputs, list):
+            outputs = layer(*inputs)
+        else:
+            outputs = layer(inputs)
 
     paddle.disable_static()
 

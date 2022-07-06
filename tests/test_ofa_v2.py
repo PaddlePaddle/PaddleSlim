@@ -164,9 +164,6 @@ class ModelInputDict(nn.Layer):
     def forward(self, x, data):
         x = self.conv1(self.conv0(x))
         y = self.conv2(x)
-        # print("===== data type: ", type)
-        # print("==== y:", y)
-        # print("==== data['data']:", data['data'])
         y = y + data['data']
         return self.conv3(y)
 

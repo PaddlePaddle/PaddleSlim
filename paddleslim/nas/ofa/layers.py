@@ -212,9 +212,14 @@ class SuperConv2D(nn.Conv2D):
     def get_active_filter(self, in_nc, out_nc, kernel_size):
         start, end = compute_start_end(self._kernel_size[0], kernel_size)
         ### if NOT transform kernel, intercept a center filter with kernel_size from largest filter
-        filters = self.weight[:out_nc, :in_nc, start:end, start:end]
+        # print("========== 1 ==========")
+        if self.weight.shape[0] == out_nc and self.weight.shape[1] == in_nc:
+            filters = self.weight
+        else:
+            filters = self.weight[:out_nc, :in_nc, start:end, start:end]
         if self.transform_kernel != False and kernel_size < self._kernel_size[
                 0]:
+            # print("========== 2 ==========")
             ### if transform kernel, then use matrix to transform
             start_filter = self.weight[:out_nc, :in_nc, :, :]
             for i in range(len(self.ks_set) - 1, 0, -1):
@@ -289,8 +294,11 @@ class SuperConv2D(nn.Conv2D):
 
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
-
-        weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
+        if weight_out_nc == self.weight.shape[
+                0] and weight_in_nc == self.weight.shape[1]:
+            weight = self.weight
+        else:
+            weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
 
         if kernel_size != None or 'kernel_size' in self.candidate_config.keys():
             padding = convert_to_list(get_same_padding(ks), 2)
@@ -307,7 +315,13 @@ class SuperConv2D(nn.Conv2D):
             ### if in_nc = groups, slice the shape of bias by weight_out_nc.
             if groups != in_nc:
                 weight_out_nc = weight_out_nc * groups
-            bias = self.bias[:weight_out_nc]
+            # print("==== bias.shape:", self.bias.shape)
+            # print("==== weight_out_nc:", weight_out_nc)
+            if weight_out_nc == self.bias.shape[0]:
+                bias = self.bias
+            else:
+                # print("==============================####=====")
+                bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
@@ -887,10 +901,15 @@ class SuperLinear(nn.Linear):
             out_nc = int(channel)
         else:
             out_nc = self._out_features
-
-        weight = self.weight[:in_nc, :out_nc]
+        if self.weight.shape[0] == in_nc and self.weight.shape[1] == out_nc:
+            weight = self.weight
+        else:
+            weight = self.weight[:in_nc, :out_nc]
         if self._bias_attr != False:
-            bias = self.bias[:out_nc]
+            if self.bias.shape[0] == out_nc:
+                bias = self.bias
+            else:
+                bias = self.bias[:out_nc]
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
@@ -947,10 +966,22 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         self._check_input_dim(input)
         feature_dim = int(input.shape[1])
 
-        weight = self.weight[:feature_dim]
-        bias = self.bias[:feature_dim]
-        mean = self._mean[:feature_dim]
-        variance = self._variance[:feature_dim]
+        if self.weight.shape[0] == feature_dim:
+            weight = self.weight
+        else:
+            weight = self.weight[:feature_dim]
+        if self.bias.shape[0] == feature_dim:
+            bias = self.bias
+        else:
+            bias = self.bias[:feature_dim]
+        if self._mean.shape[0] == feature_dim:
+            mean = self._mean
+        else:
+            mean = self._mean[:feature_dim]
+        if self._variance.shape[0] == feature_dim:
+            variance = self._variance
+        else:
+            variance = self._variance[:feature_dim]
 
         mean_out = self._mean
         variance_out = self._variance
@@ -1262,11 +1293,17 @@ class SuperLayerNorm(nn.LayerNorm):
         begin_norm_axis = input_ndim - normalized_ndim
         feature_dim = int(input.shape[-1])
         if self._weight_attr != False:
-            weight = self.weight[:feature_dim]
+            if self.weight.shape[0] == feature_dim:
+                weight = self.weight
+            else:
+                weight = self.weight[:feature_dim]
         else:
             weight = None
         if self._bias_attr != False:
-            bias = self.bias[:feature_dim]
+            if self.bias.shape[0] == feature_dim:
+                bias = self.bias
+            else:
+                bias = self.bias[:feature_dim]
         else:
             bias = None
         self.cur_config = {'prune_dim': feature_dim}
@@ -1402,8 +1439,13 @@ class SuperEmbedding(nn.Embedding):
             out_nc = int(channel)
         else:
             out_nc = self._embedding_dim
-
-        weight = self.weight[:, :out_nc]
+        # print("=========== self.weight[:, :out_nc]")
+        # weight = self.weight
+        # self.weight[0:, :]
+        if self.weight.shape[1] == out_nc:
+            weight = self.weight
+        else:
+            weight = self.weight[:, :out_nc]
         self.cur_config = {'prune_dim': list(weight.shape)}
         return F.embedding(
             input,
