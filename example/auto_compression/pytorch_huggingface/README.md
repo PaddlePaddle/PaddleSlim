@@ -44,7 +44,7 @@
 #### 3.1 准备环境
 - python >= 3.6
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim develop版本或PaddleSlim>=2.3.0
+- PaddleSlim >= 2.3
 - X2Paddle develop版本
 - transformers >= 4.18.0
 - PaddleNLP >= 2.3
@@ -62,8 +62,7 @@ pip install paddlepaddle-gpu
 
 安装paddleslim：
 ```shell
-git clone https://github.com/PaddlePaddle/PaddleSlim.git
-python setup.py install
+pip install paddleslim
 ```
 
 安装X2Paddle:

@@ -9,8 +9,21 @@ PaddleSlim推出全新自动化压缩工具（ACT），旨在通过Source-Free�
 
 ## 环境准备
 
-- 安装PaddlePaddle >= 2.3版本 （从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- 安装PaddleSlim develop版本
+- 安装PaddlePaddle >= 2.3 （从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- 安装PaddleSlim >=2.3
+
+（1）安装paddlepaddle：
+```shell
+# CPU
+pip install paddlepaddle
+# GPU
+pip install paddlepaddle-gpu
+```
+
+（2）安装paddleslim：
+```shell
+pip install paddleslim
+```
 
 ## 快速上手
 

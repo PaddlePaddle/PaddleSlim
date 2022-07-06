@@ -56,7 +56,7 @@
 
 - python >= 3.6
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim develop版本
+- PaddleSlim >= 2.3
 
 安装paddlepaddle：
 ```shell
@@ -68,8 +68,7 @@ pip install paddlepaddle-gpu
 
 安装paddleslim：
 ```shell
-https://github.com/PaddlePaddle/PaddleSlim.git
-python setup.py install
+pip install paddleslim
 ```
 
 #### 3.2 准备数据集
