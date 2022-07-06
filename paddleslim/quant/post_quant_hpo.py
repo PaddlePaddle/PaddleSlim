@@ -17,6 +17,7 @@ import os
 import sys
 import math
 import time
+from time import gmtime, strftime
 import numpy as np
 import shutil
 import paddle
@@ -40,7 +41,7 @@ from paddleslim.quant import quant_post
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-SMAC_TMP_FILE_PATTERN = "smac3-output*"
+SMAC_TMP_FILE_PATTERN = "smac3-output_"
 
 
 def remove(path):
@@ -496,6 +497,9 @@ def quant_post_hpo(
 
     cs.add_hyperparameters(hyper_params)
 
+    s_datetime = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
+    smac_output_dir = SMAC_TMP_FILE_PATTERN + s_datetime
+
     scenario = Scenario({
         "run_obj": "quality",  # we optimize quality (alternative runtime)
         "runcount-limit":
@@ -503,7 +507,9 @@ def quant_post_hpo(
         "cs": cs,  # configuration space
         "deterministic": "True",
         "limit_resources": "False",
-        "memory_limit": 4096  # adapt this to reasonable value for your hardware
+        "memory_limit":
+        4096,  # adapt this to reasonable value for your hardware
+        "output_dir": smac_output_dir  # output_dir
     })
     # To optimize, we pass the function to the SMAC-object
     smac = SMAC4HPO(
@@ -523,5 +529,5 @@ def quant_post_hpo(
     inc_value = smac.get_tae_runner().run(incumbent, 1)[1]
     _logger.info("Optimized Value: %.8f" % inc_value)
     shutil.rmtree(g_quant_model_cache_path)
-    remove(SMAC_TMP_FILE_PATTERN)
+    remove(smac_output_dir)
     _logger.info("Quantization completed.")
