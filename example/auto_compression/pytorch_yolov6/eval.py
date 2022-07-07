@@ -42,13 +42,6 @@ def argsparser():
     return parser
 
 
-def print_arguments(args):
-    print('-----------  Running Arguments -----------')
-    for arg, value in sorted(vars(args).items()):
-        print('%s: %s' % (arg, value))
-    print('------------------------------------------')
-
-
 def reader_wrapper(reader, input_list):
     def gen():
         for data in reader:
@@ -84,7 +77,7 @@ def eval():
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
-    val_program, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
+    val_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
         global_config["model_dir"],
         exe,
         model_filename=global_config["model_filename"],
@@ -159,7 +152,6 @@ if __name__ == '__main__':
     paddle.enable_static()
     parser = argsparser()
     FLAGS = parser.parse_args()
-    print_arguments(FLAGS)
 
     assert FLAGS.devices in ['cpu', 'gpu', 'xpu', 'npu']
     paddle.set_device(FLAGS.devices)

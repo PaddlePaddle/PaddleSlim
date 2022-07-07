@@ -24,7 +24,7 @@
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | YOLOv6s |  Base模型 | 640*640  |  42.4   |   9.06ms  |   2.90ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov6s_infer.tar) |
 | YOLOv6s |  KL离线量化 | 640*640  |  30.3   |   - |   -   |  1.83ms  |  - | - |
-| YOLOv6s |  量化蒸馏训练 | 640*640  |  **41.2**   |   - |   -   |  **1.83ms**  |  [config](./configs/yolov6s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.tar) |
+| YOLOv6s |  量化蒸馏训练 | 640*640  |  **41.3**   |   - |   -   |  **1.83ms**  |  [config](./configs/yolov6s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.tar) |
 
 说明：
 - mAP的指标均在COCO val2017数据集中评测得到。
@@ -34,7 +34,7 @@
 
 #### 3.1 准备环境
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim 2.3.0版本
+- PaddleSlim > 2.3版本
 - PaddleDet >= 2.4
 - [X2Paddle](https://github.com/PaddlePaddle/X2Paddle) >= 1.3.6
 - opencv-python
@@ -49,7 +49,7 @@ pip install paddlepaddle-gpu
 
 （2）安装paddleslim：
 ```shell
-pip install paddleslim==2.3.0
+pip install paddleslim
 ```
 
 （3）安装paddledet：
@@ -118,7 +118,7 @@ python eval.py --config_path=./configs/yolov6s_qat_dis.yaml
 
 #### Paddle-TensorRT C++部署
 
-进入[cpp_infer](./cpp_infer)文件夹内，进行编译测试：
+进入[cpp_infer](./cpp_infer)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer/README.md)进行准备环境及编译，然后开始测试：
 ```shell
 # 编译
 bash complie.sh

@@ -13,7 +13,6 @@ Distillation:
   loss: soft_label
 
 Quantization:
-  use_pact: true
   activation_quantize_type: 'moving_average_abs_max'
   quantize_op_types:
   - conv2d
