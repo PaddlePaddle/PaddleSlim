@@ -1,3 +1,10 @@
+Global:
+  reader_config: configs/dataset/humanseg_dataset.yaml
+  model_dir: ./ppseg_lite_portrait_398x224_with_softmax
+  model_filename: model.pdmodel
+  params_filename: model.pdiparams
+  deploy_hardware: SD710
+
 TrainConfig:
   epochs: 14
   eval_iter: 400

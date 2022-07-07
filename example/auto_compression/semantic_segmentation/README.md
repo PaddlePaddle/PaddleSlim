@@ -41,16 +41,6 @@
   - 软件：CUDA 11.0, cuDNN 8.0, TensorRT 8.0
   - 测试配置：batch_size: 40, max_seq_len: 128
 
-- PP-HumanSeg-Lite数据集
-
-  - 数据集：AISegment + PP-HumanSeg14K + 内部自建数据集。其中 AISegment 是开源数据集，可从[链接](https://github.com/aisegmentcn/matting_human_datasets)处获取；PP-HumanSeg14K 是 PaddleSeg 自建数据集，可从[官方渠道](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset)获取；内部数据集不对外公开。
-  - 示例数据集: 用于快速跑通人像分割的压缩和推理流程, 不能用该数据集复现 benckmark 表中的压缩效果。 [下载链接](https://paddleseg.bj.bcebos.com/humanseg/data/mini_supervisely.zip)
-
-- PP-Liteseg，HRNet，UNet，Deeplabv3-ResNet50数据集
-
-  - cityscapes: 请从[cityscapes官网](https://www.cityscapes-dataset.com/login/)下载完整数据
-  - 示例数据集: cityscapes数据集的一个子集，用于快速跑通压缩和推理流程，不能用该数据集复现 benchmark 表中的压缩效果。[下载链接](https://bj.bcebos.com/v1/paddle-slim-models/data/mini_cityscapes/mini_cityscapes.tar)
-
 下面将以开源数据集为例介绍如何对PP-HumanSeg-Lite进行自动压缩。
 
 ## 3. 自动压缩流程
@@ -86,13 +76,24 @@ pip install paddleseg
 
 开发者可下载开源数据集 (如[AISegment](https://github.com/aisegmentcn/matting_human_datasets)) 或自定义语义分割数据集。请参考[PaddleSeg数据准备文档](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/data/marker/marker_cn.md)来检查、对齐数据格式即可。
 
+本示例使用示例开源数据集 AISegment 数据集为例介绍如何对PP-HumanSeg-Lite进行自动压缩。示例中的数据集仅用于快速跑通自动压缩流程，并不能复现出 benckmark 表中的压缩效果。
+
 可以通过以下命令下载人像分割示例数据:
-
 ```shell
-cd ./data
-python download_data.py mini_humanseg
-
+python ./data/download_data.py mini_humanseg
+### 下载后的数据位置为 ./data/humanseg/
 ```
+
+** 提示: **
+- PP-HumanSeg-Lite压缩过程使用的数据集
+
+  - 数据集：AISegment + PP-HumanSeg14K + 内部自建数据集。其中 AISegment 是开源数据集，可从[链接](https://github.com/aisegmentcn/matting_human_datasets)处获取；PP-HumanSeg14K 是 PaddleSeg 自建数据集，可从[官方渠道](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset)获取；内部数据集不对外公开。
+  - 示例数据集: 用于快速跑通人像分割的压缩和推理流程, 不能用该数据集复现 benckmark 表中的压缩效果。 [下载链接](https://paddleseg.bj.bcebos.com/humanseg/data/mini_supervisely.zip)
+
+- PP-Liteseg，HRNet，UNet，Deeplabv3-ResNet50数据集
+
+  - cityscapes: 请从[cityscapes官网](https://www.cityscapes-dataset.com/login/)下载完整数据
+  - 示例数据集: cityscapes数据集的一个子集，用于快速跑通压缩和推理流程，不能用该数据集复现 benchmark 表中的压缩效果。[下载链接](https://bj.bcebos.com/v1/paddle-slim-models/data/mini_cityscapes/mini_cityscapes.tar)
 
 #### 3.3 准备预测模型
 
@@ -111,77 +112,40 @@ tar -xzf ppseg_lite_portrait_398x224_with_softmax.tar.gz
 
 #### 3.4 自动压缩并产出模型
 
-自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。首先要配置config文件中模型路径、数据集路径、蒸馏、量化、稀疏化和训练等部分的参数，配置完成后便可对模型进行非结构化稀疏、蒸馏和量化、蒸馏。
+自动压缩示例通过run.py脚本启动，会使用接口 ```paddleslim.auto_compression.AutoCompression``` 对模型进行自动压缩。首先要配置config文件中模型路径、数据集路径、蒸馏、量化、稀疏化和训练等部分的参数，配置完成后便可对模型进行非结构化稀疏、蒸馏和量化、蒸馏。
 
-当只设置训练参数，并传入``deploy_hardware``字段时，将自动搜索压缩策略进行压缩。以骁龙710（SD710）为部署硬件，进行自动压缩的运行命令如下：
+当只设置训练参数，并在config文件中 ```Global``` 配置中传入 ```deploy_hardware``` 字段时，将自动搜索压缩策略进行压缩。以骁龙710（SD710）为部署硬件，进行自动压缩的运行命令如下：
 
 ```shell
 # 单卡启动
 export CUDA_VISIBLE_DEVICES=0
-python run.py \
-    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
-    --model_filename='model.pdmodel' \
-    --params_filename='model.pdiparams' \
-    --save_dir='./save_model' \
-    --strategy_config='configs/pp_humanseg/pp_humanseg_auto.yaml' \
-    --dataset_config='configs/dataset/humanseg_dataset.yaml' \
-    --deploy_hardware='SD710'
+python run.py --config_path='./configs/pp_humanseg/pp_humanseg_auto.yaml' --save_dir='./save_compressed_model'
 
 # 多卡启动
 export CUDA_VISIBLE_DEVICES=0,1
-python -m paddle.distributed.launch run.py \
-    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
-    --model_filename='model.pdmodel' \
-    --params_filename='model.pdiparams' \
-    --save_dir='./save_model' \
-    --strategy_config='configs/pp_humanseg/pp_humanseg_auto.yaml' \
-    --dataset_config='configs/dataset/humanseg_dataset.yaml' \
-    --deploy_hardware='SD710'
+python -m paddle.distributed.launch run.py --config_path='./configs/pp_humanseg/pp_humanseg_auto.yaml' --save_dir='./save_compressed_model'
 ```
+
 - 自行配置稀疏参数进行非结构化稀疏和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
 ```shell
 # 单卡启动
 export CUDA_VISIBLE_DEVICES=0
-python run.py \
-    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
-    --model_filename='model.pdmodel' \
-    --params_filename='model.pdiparams' \
-    --save_dir='./save_model' \
-    --strategy_config='configs/pp_humanseg/pp_humanseg_sparse.yaml' \
-    --dataset_config='configs/dataset/humanseg_dataset.yaml'
+python run.py --config_path='./configs/pp_humanseg/pp_humanseg_sparse.yaml' --save_dir='./save_sparse_model'
 
 # 多卡启动
 export CUDA_VISIBLE_DEVICES=0,1
-python -m paddle.distributed.launch run.py \
-    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
-    --model_filename='model.pdmodel' \
-    --params_filename='model.pdiparams' \
-    --save_dir='./save_model' \
-    --strategy_config='configs/pp_humanseg/pp_humanseg_sparse.yaml' \
-    --dataset_config='configs/dataset/humanseg_dataset.yaml'
+python -m paddle.distributed.launch run.py --config_path='./configs/pp_humanseg/pp_humanseg_sparse.yaml' --save_dir='./save_sparse_model'
 ```
 
 - 自行配置量化参数进行量化和蒸馏训练，配置参数含义详见[自动压缩超参文档](https://github.com/PaddlePaddle/PaddleSlim/blob/27dafe1c722476f1b16879f7045e9215b6f37559/demo/auto_compression/hyperparameter_tutorial.md)。具体命令如下所示：
 ```shell
 # 单卡启动
 export CUDA_VISIBLE_DEVICES=0
-python run.py \
-    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
-    --model_filename='model.pdmodel' \
-    --params_filename='model.pdiparams' \
-    --save_dir='./save_model' \
-    --strategy_config='configs/pp_humanseg/pp_humanseg_qat.yaml' \
-    --dataset_config='configs/dataset/humanseg_dataset.yaml'
+python run.py --config_path='./configs/pp_humanseg/pp_humanseg_qat.yaml' --save_dir='./save_quant_model'
 
 # 多卡启动
 export CUDA_VISIBLE_DEVICES=0,1
-python -m paddle.distributed.launch run.py \
-    --model_dir='./ppseg_lite_portrait_398x224_with_softmax' \
-    --model_filename='model.pdmodel' \
-    --params_filename='model.pdiparams' \
-    --save_dir='./save_model' \
-    --strategy_config='configs/pp_humanseg/pp_humanseg_qat.yaml' \
-    --dataset_config='configs/dataset/humanseg_dataset.yaml'
+python -m paddle.distributed.launch run.py --config_path='./configs/pp_humanseg/pp_humanseg_qat.yaml' --save_dir='./save_quant_model'
 ```
 
 压缩完成后会在`save_dir`中产出压缩好的预测模型，可直接预测部署。

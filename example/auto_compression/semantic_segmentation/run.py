@@ -21,48 +21,24 @@ from paddleseg.cvlibs import Config as PaddleSegDataConfig
 from paddleseg.utils import worker_init_fn
 
 from paddleslim.auto_compression import AutoCompression
+from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleseg.core.infer import reverse_transform
 from paddleseg.utils import metrics
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Model training')
+def argsparser():
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '--model_dir',
+        '--config_path',
         type=str,
         default=None,
-        help="inference model directory.")
-    parser.add_argument(
-        '--model_filename',
-        type=str,
-        default=None,
-        help="inference model filename.")
-    parser.add_argument(
-        '--params_filename',
-        type=str,
-        default=None,
-        help="inference params filename.")
+        help="path of compression strategy config.")
     parser.add_argument(
         '--save_dir',
         type=str,
         default=None,
         help="directory to save compressed model.")
-    parser.add_argument(
-        '--strategy_config',
-        type=str,
-        default=None,
-        help="path of compression strategy config.")
-    parser.add_argument(
-        '--dataset_config',
-        type=str,
-        default=None,
-        help="path of dataset config.")
-    parser.add_argument(
-        '--deploy_hardware',
-        type=str,
-        default=None,
-        help="The hardware you want to deploy.")
-    return parser.parse_args()
+    return parser
 
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
@@ -141,13 +117,15 @@ def reader_wrapper(reader):
     return gen
 
 
-if __name__ == '__main__':
+def main(args):
+    all_config = load_slim_config(args.config_path)
+    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
+    config = all_config["Global"]
+
     rank_id = paddle.distributed.get_rank()
     place = paddle.CUDAPlace(rank_id)
-    args = parse_args()
-    paddle.enable_static()
     # step1: load dataset config and create dataloader
-    data_cfg = PaddleSegDataConfig(args.dataset_config)
+    data_cfg = PaddleSegDataConfig(config['reader_config'])
     train_dataset = data_cfg.train_dataset
     eval_dataset = data_cfg.val_dataset
     batch_sampler = paddle.io.DistributedBatchSampler(
@@ -166,19 +144,24 @@ if __name__ == '__main__':
 
     nranks = paddle.distributed.get_world_size()
     rank_id = paddle.distributed.get_rank()
-    if nranks > 1 and rank_id != 0:
-        eval_function = None
 
     # step2: create and instance of AutoCompression
     ac = AutoCompression(
-        model_dir=args.model_dir,
-        model_filename=args.model_filename,
-        params_filename=args.params_filename,
+        model_dir=config['model_dir'],
+        model_filename=config['model_filename'],
+        params_filename=config['params_filename'],
         save_dir=args.save_dir,
-        config=args.strategy_config,
+        config=all_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function,
-        deploy_hardware=args.deploy_hardware)
+        eval_callback=eval_function if nranks > 1 and rank_id != 0 else None,
+        deploy_hardware=config.get('deploy_hardware') or None)
 
     # step3: start the compression job
     ac.compress()
+
+
+if __name__ == '__main__':
+    paddle.enable_static()
+    parser = argsparser()
+    args = parser.parse_args()
+    main(args)
