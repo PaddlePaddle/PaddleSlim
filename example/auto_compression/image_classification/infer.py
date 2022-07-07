@@ -62,7 +62,7 @@ class Predictor(object):
             output_names[0])
 
     def create_paddle_predictor(self):
-        inference_model_dir = self.config['inference_model_dir']
+        inference_model_dir = self.config['model_dir']
         model_file = os.path.join(inference_model_dir,
                                   self.config['model_filename'])
         params_file = os.path.join(inference_model_dir,
@@ -131,8 +131,8 @@ if __name__ == "__main__":
     parser = argsparser()
     args = parser.parse_args()
     config = load_config(args.config_path)
-    if args.model_dir != config['inference_model_dir']:
-        config['inference_model_dir'] = args.model_dir
+    if args.model_dir != config['model_dir']:
+        config['model_dir'] = args.model_dir
     if args.use_fp16 != config['use_fp16']:
         config['use_fp16'] = args.use_fp16
     if args.use_int8 != config['use_int8']:

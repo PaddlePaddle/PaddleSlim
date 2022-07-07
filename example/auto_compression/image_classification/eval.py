@@ -98,13 +98,12 @@ def eval():
 
 def main(args):
     global global_config
-    all_config = load_slim_config(args.config_path)
-    global_config = all_config
+    global_config = load_slim_config(args.config_path)
 
     global data_dir
     data_dir = global_config['data_dir']
     if args.model_dir != global_config['model_dir']:
-        config['model_dir'] = args.model_dir
+        global_config['model_dir'] = args.model_dir
 
     global img_size, resize_size
     img_size = int(global_config[
