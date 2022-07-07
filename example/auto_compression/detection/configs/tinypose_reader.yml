@@ -31,8 +31,8 @@ EvalDataset:
     image_thre: 0.5
 
 worker_num: 0
-global_mean: &global_mean [0.485, 0.456, 0.406]
-global_std: &global_std [0.229, 0.224, 0.225]
+global_mean: &global_mean [1, 1, 1] # If normalize not in network is: [0.485, 0.456, 0.406]
+global_std: &global_std [1, 1, 1]   # If normalize not in network is: [0.229, 0.224, 0.225]
 
 EvalReader:
   sample_transforms:
@@ -43,6 +43,6 @@ EvalReader:
     - NormalizeImage:
         mean: *global_mean
         std: *global_std
-        is_scale: true
+        is_scale: False   # If normalize not in network is: true
     - Permute: {}
   batch_size: 16
