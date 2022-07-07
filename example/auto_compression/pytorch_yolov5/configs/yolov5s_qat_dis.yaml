@@ -4,13 +4,13 @@ Global:
   input_list: {'image': 'x2paddle_images'}
   Evaluation: True
   arch: 'YOLOv5'
-  model_dir: ./yolov5s_infer
+  model_dir: yolov5s_quant #ptq_out #./yolov5s_infer
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
 Distillation:
   alpha: 1.0
-  loss: l2
+  loss: soft_label
 
 Quantization:
   use_pact: true
