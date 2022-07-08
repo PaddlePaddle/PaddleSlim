@@ -291,11 +291,8 @@ class SuperConv2D(nn.Conv2D):
 
         groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
                                                                         out_nc)
-        if weight_out_nc >= self.weight.shape[
-                0] and weight_in_nc >= self.weight.shape[1]:
-            weight = self.weight
-        else:
-            weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
+
+        weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
 
         if kernel_size != None or 'kernel_size' in self.candidate_config.keys():
             padding = convert_to_list(get_same_padding(ks), 2)
