@@ -72,7 +72,7 @@ pip install paddleslim
 ```
 
 #### 3.2 准备数据集
-本案例默认以ImageNet1k数据进行自动压缩实验，如数据集为非ImageNet1k格式数据， 请参考[PaddleClas数据准备文档](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/docs/zh_CN/data_preparation/classification_dataset.md)。
+本案例默认以ImageNet1k数据进行自动压缩实验，如数据集为非ImageNet1k格式数据， 请参考[PaddleClas数据准备文档](https://github.com/PaddlePaddle/PaddleClas/blob/release/2.3/docs/zh_CN/data_preparation/classification_dataset.md)。将下载好的数据集放在当前目录下`./ILSVRC2012`。
 
 
 #### 3.3 准备预测模型
@@ -99,7 +99,7 @@ export CUDA_VISIBLE_DEVICES=0
 python run.py --save_dir='./save_quant_mobilev1/' --config_path='./configs/MobileNetV1/qat_dis.yaml'
 ```
 
-**分布式训练**
+**多卡启动**
 
 图像分类训练任务中往往包含大量训练数据，以ImageNet为例，ImageNet22k数据集中包含1400W张图像，如果使用单卡训练，会非常耗时，使用分布式训练可以达到几乎线性的加速比。
 
@@ -107,21 +107,26 @@ python run.py --save_dir='./save_quant_mobilev1/' --config_path='./configs/Mobil
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 python -m paddle.distributed.launch run.py --save_dir='./save_quant_mobilev1/' --config_path='./configs/MobileNetV1/qat_dis.yaml'
 ```
-多卡训练（分布式训练）指的是将训练任务按照一定方法拆分到多个训练节点完成数据读取、前向计算、反向梯度计算等过程，并将计算出的梯度上传至服务节点。服务节点在收到所有训练节点传来的梯度后，会将梯度聚合并更新参数。最后将参数发送给训练节点，开始新一轮的训练。多卡训练一轮训练能训练```batch size * num gpus```的数据，比如单卡的```batch size```为32，单轮训练的数据量即32，而四卡训练的```batch size```为32，单轮训练的数据量为128。
+多卡训练指的是将训练任务按照一定方法拆分到多个训练节点完成数据读取、前向计算、反向梯度计算等过程，并将计算出的梯度上传至服务节点。服务节点在收到所有训练节点传来的梯度后，会将梯度聚合并更新参数。最后将参数发送给训练节点，开始新一轮的训练。多卡训练一轮训练能训练```batch size * num gpus```的数据，比如单卡的```batch size```为32，单轮训练的数据量即32，而四卡训练的```batch size```为32，单轮训练的数据量为128。
 
 注意 ```learning rate``` 与 ```batch size``` 呈线性关系，这里单卡 ```batch size``` 为32，对应的 ```learning rate``` 为0.015，那么如果 ```batch size``` 减小4倍改为8，```learning rate``` 也需除以4；多卡时 ```batch size``` 为32，```learning rate``` 需乘上卡数。所以改变 ```batch size``` 或改变训练卡数都需要对应修改 ```learning rate```。
+
+**验证精度**
+
+根据训练log可以看到模型验证的精度，若需再次验证精度，修改配置文件```./configs/MobileNetV1/qat_dis.yaml```中所需验证模型的文件夹路径及模型和参数名称```model_dir, model_filename, params_filename```，然后使用以下命令进行验证：
+
+```shell
+export CUDA_VISIBLE_DEVICES=0
+python eval.py --config_path='./configs/MobileNetV1/qat_dis.yaml'
+```
 
 
 ## 4.预测部署
 #### 4.1 Python预测推理
 
+环境配置：若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
-准备好inference模型后，使用以下命令进行预测：
-```shell
-python infer.py --config_path="configs/infer.yaml"
-```
-
-在配置文件```configs/infer.yaml```中有以下字段用于配置预测参数：
+配置文件：```configs/infer.yaml```中有以下字段用于配置预测参数：
 - ```inference_model_dir```：inference 模型文件所在目录，该目录下需要有文件 .pdmodel 和 .pdiparams 两个文件
 - ```model_filename```：inference_model_dir文件夹下的模型文件名称
 - ```params_filename```：inference_model_dir文件夹下的参数文件名称
@@ -136,8 +141,12 @@ python infer.py --config_path="configs/infer.yaml"
 注意：
 - 请注意模型的输入数据尺寸，如InceptionV3输入尺寸为299，部分模型需要修改参数：```image_size```
 - 如果希望提升评测模型速度，使用 ```GPU``` 评测时，建议开启 ```TensorRT``` 加速预测，使用 ```CPU``` 评测时，建议开启 ```MKL-DNN``` 加速预测
-- 若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
+
+准备好inference模型后，使用以下命令进行预测：
+```shell
+python infer.py --config_path="configs/infer.yaml"
+```
 
 #### 4.2 PaddleLite端侧部署
 PaddleLite端侧部署可参考：
