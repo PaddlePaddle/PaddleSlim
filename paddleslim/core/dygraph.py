@@ -76,11 +76,11 @@ def extract_vars(inputs):
         inputs(Variable | list<Object> | dict): 
     """
     vars = []
-    if isinstance(inputs, (Variable, paddle.Tensor, core.eager.Tensor)):
+    if isinstance(inputs, Variable):
         vars = [inputs]
     elif isinstance(inputs, dict):
         for _key, _value in inputs.items():
-            if isinstance(_value, (Variable, paddle.Tensor, core.eager.Tensor)):
+            if isinstance(_value, Variable):
                 vars.append(_value)
             else:
                 _logger.warn(
@@ -109,9 +109,8 @@ def to_variables(inputs, is_static=False):
     """
     Find and rename variables. Find np.ndarray and convert it to variable.
     """
-    if isinstance(inputs, (Variable, paddle.Tensor, core.VarBase,
-                           core.eager.Tensor)) or isinstance(inputs,
-                                                             np.ndarray):
+    if isinstance(inputs, (Variable, paddle.Tensor)) or isinstance(inputs,
+                                                                   np.ndarray):
         if is_static:
             return _to_var(inputs)
         else:
