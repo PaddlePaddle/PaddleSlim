@@ -23,7 +23,6 @@ import paddle.fluid.core as core
 from paddle import _C_ops
 from paddle.fluid.framework import in_dygraph_mode, _in_legacy_dygraph, _non_static_mode
 from paddle.fluid.data_feeder import check_variable_and_dtype
-from paddle.fluid.layer_helper import LayerHelper
 from paddle.fluid.dygraph.layer_object_helper import LayerObjectHelper
 
 from ...common import get_logger
@@ -1325,8 +1324,6 @@ class SuperLayerNorm(nn.LayerNorm):
                 "begin_norm_axis": begin_norm_axis
             }
 
-            # create output
-            # helper = LayerHelper('layer_norm', **locals())
             helper = LayerObjectHelper('layer_norm')
 
             dtype = input.dtype

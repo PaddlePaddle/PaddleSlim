@@ -23,7 +23,6 @@ from paddle.fluid.data_feeder import check_variable_and_dtype
 from paddle.fluid.framework import _varbase_creator, in_dygraph_mode, _in_legacy_dygraph
 from paddle import _C_ops
 from paddle.fluid.data_feeder import check_variable_and_dtype
-from paddle.fluid.layer_helper import LayerHelper
 from paddle.fluid.dygraph.layer_object_helper import LayerObjectHelper
 from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, BatchNorm
 
