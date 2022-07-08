@@ -8,7 +8,8 @@
   - [3.2 准备数据集](#32-准备数据集)
   - [3.3 准备预测模型](#33-准备预测模型)
   - [3.4 自动压缩并产出模型](#34-自动压缩并产出模型)
-- [4.预测部署](#4预测部署)
+- [4.评估精度](#4评估精度)
+- [5.预测部署](#5预测部署)
 - [5.FAQ](5FAQ)
 
 ## 1.简介
@@ -23,13 +24,13 @@
 |:-----:|:-----:|:----------:|:---------:| :------:|:------:|:------:|
 | PP-HumanSeg-Lite | Baseline |  92.87 | 56.363 |-| - | [model](https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz) |
 | PP-HumanSeg-Lite | 非结构化稀疏+蒸馏 |  92.35 | 37.712 |-| [config](./configs/pp_human/pp_human_sparse.yaml)| - |
-| PP-HumanSeg-Lite | 量化+蒸馏 |  92.84 | 49.656 |-| [config](./configs/pp_human/pp_human_qat.yaml) | - |
+| PP-HumanSeg-Lite | 量化+蒸馏 |  92.84 | 49.656 |-| [config](./configs/pp_human/pp_human_qat.yaml) | [model](https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/pp_humanseg_qat.zip) (非最佳) |
 | PP-Liteseg | Baseline |  77.04| - | 1.425| - |[model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-PPLIteSegSTDC1.zip)|
-| PP-Liteseg | 量化训练 |  76.93 | - | 1.158|[config](./configs/pp_liteseg/pp_liteseg_qat.yaml) | - |
+| PP-Liteseg | 量化训练 |  76.93 | - | 1.158|[config](./configs/pp_liteseg/pp_liteseg_qat.yaml) | [model](https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/pp-liteseg.zip) |
 | HRNet | Baseline |  78.97 | - |8.188|-| [model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-HRNetW18-Seg.zip)|
-| HRNet | 量化训练 |  78.90 | - |5.812| [config](./configs/hrnet/hrnet_qat.yaml) | - |
+| HRNet | 量化训练 |  78.90 | - |5.812| [config](./configs/hrnet/hrnet_qat.yaml) | [model](https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/hrnet.zip) |
 | UNet | Baseline | 65.00  | - |15.291|-| [model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-UNet.zip) |
-| UNet | 量化训练 |  64.93 | - |10.228| [config](./configs/unet/unet_qat.yaml) | - |
+| UNet | 量化训练 |  64.93 | - |10.228| [config](./configs/unet/unet_qat.yaml) | [model](https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/unet.zip) |
 | Deeplabv3-ResNet50 | Baseline |  79.90 | -|12.766| -| [model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-Deeplabv3-ResNet50.zip)|
 | Deeplabv3-ResNet50 | 量化训练 |  78.89 | - |8.839|[config](./configs/deeplabv3/deeplabv3_qat.yaml) | - |
 
@@ -187,10 +188,136 @@ python -m paddle.distributed.launch run.py \
 压缩完成后会在`save_dir`中产出压缩好的预测模型，可直接预测部署。
 
 
-## 4.预测部署
+## 4.评估精度
+
+本小节以人像分割模型和小数据集为例, 介绍如何在测试集上评估压缩后的模型.
+
+下载经过量化训练压缩后的推理模型：
+```
+wget https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/pp_humanseg_qat.zip
+unzip pp_humanseg_qat.zip
+```
+
+通过以下命令下载人像分割示例数据:
+
+```shell
+cd ./data
+python download_data.py mini_humanseg
+cd -
+
+```
+
+执行以下命令评估模型在测试集上的精度：
+
+```
+python eval.py \
+--model_dir ./pp_humanseg_qat \
+--model_filename model.pdmodel \
+--params_filename model.pdiparams \
+--dataset_config configs/dataset/humanseg_dataset.yaml
+
+```
+
+## 5.预测部署
+
+本小节以人像分割为例, 介绍如何使用Paddle Inference推理库执行压缩后的模型.
+
+### 5.1 安装推理库
+
+请参考该链接安装Python版本的PaddleInference推理库: [推理库安装教程](https://www.paddlepaddle.org.cn/inference/user_guides/download_lib.html#python)
+
+### 5.2 准备模型和数据
+
+从 [2.Benchmark](#2Benchmark) 的表格中获得压缩前后的推理模型的下载链接，执行以下命令下载并解压推理模型：
+
+下载Float32数值类型的模型：
+```
+wget https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz
+tar -xzf ppseg_lite_portrait_398x224_with_softmax.tar.gz
+mv ppseg_lite_portrait_398x224_with_softmax pp_humanseg_fp32
+```
+
+下载经过量化训练压缩后的推理模型：
+```
+wget https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/pp_humanseg_qat.zip
+unzip pp_humanseg_qat.zip
+```
+
+准备好需要处理的图片，这里直接使用人像示例图片 `./data/human_demo.jpg`。
+
+### 5.3 执行推理
+
+执行以下命令，直接使用飞桨框架的原生推理（仅支持Float32, 无需依赖TensorRT）:
+
+```
+export CUDA_VISIBLE_DEVICES=0
+python infer.py \
+--image_file "./data/human_demo.jpg" \
+--model_path "./pp_humanseg_fp32/model.pdmodel" \
+--params_path "./pp_humanseg_fp32/model.pdiparams" \
+--save_file "./humanseg_result_fp32.png" \
+--dataset "human" \
+--benchmark True \
+--precision "fp32"
+```
+
+执行以下命令，使用Int8推理:
+
+```
+export CUDA_VISIBLE_DEVICES=0
+python infer.py \
+--image_file "./data/human_demo.jpg" \
+--model_path "./pp_humanseg_qat/model.pdmodel" \
+--params_path "./pp_humanseg_qat/model.pdiparams" \
+--save_file "./humanseg_result_qat.png" \
+--dataset "human" \
+--benchmark True \
+--use_trt True \
+--precision "int8"
+```
+
+<table><tbody>
+
+<tr>
+<td>
+原始图片
+</td>
+<td>
+<img src="https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/images/humanseg_demo.jpeg" width="340" height="200">
+</td>
+</tr>
+
+<tr>
+<td>
+FP32推理结果
+</td>
+<td>
+<img src="https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/images/humanseg_result_fp32_demo.png" width="340" height="200">
+</td>
+</tr>
+
+<tr>
+<td>
+Int8推理结果
+</td>
+<td>
+<img src="https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/images/humanseg_result_qat_demo.png" width="340" height="200">
+</td>
+</tr>
+
+</tbody></table>
+
+执行以下命令查看更多关于 `infer.py` 使用说明：
+
+```
+python infer.py --help
+```
+
+
+### 5.4 更多部署教程
 
 - [Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/inference/python_inference.md)
 - [Paddle Inference C++部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/inference/cpp_inference.md)
 - [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/deployment/lite/lite.md)
 
-## 5.FAQ
+## 6.FAQ
