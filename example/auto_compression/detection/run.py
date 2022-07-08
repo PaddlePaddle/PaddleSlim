@@ -43,8 +43,6 @@ def argsparser():
         type=str,
         default='gpu',
         help="which device used to compress.")
-    parser.add_argument(
-        '--eval', type=bool, default=False, help="whether to run evaluation.")
 
     return parser
 

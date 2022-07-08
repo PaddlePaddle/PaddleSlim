@@ -9,10 +9,7 @@ Global:
 
 Distillation:
   alpha: 1.0
-  loss: l2
-  node:
-  - concat_15.tmp_0
-  - concat_14.tmp_0
+  loss: soft_label
 
 Quantization:
   use_pact: true
@@ -22,12 +19,12 @@ Quantization:
   - depthwise_conv2d
 
 TrainConfig:
-  train_iter: 3000
+  train_iter: 5000
   eval_iter: 1000
   learning_rate:  
     type: CosineAnnealingDecay
     learning_rate: 0.00003
-    T_max: 5000
+    T_max: 6000
   optimizer_builder:
     optimizer: 
       type: SGD
