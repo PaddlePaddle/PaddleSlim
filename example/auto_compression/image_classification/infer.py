@@ -30,8 +30,17 @@ def argsparser():
     parser.add_argument(
         '--config_path',
         type=str,
-        default='configs/infer.yaml',
+        default='./image_classification/configs/infer.yaml',
         help='config file path')
+    parser.add_argument(
+        '--model_dir',
+        type=str,
+        default='./MobileNetV1_infer',
+        help='model directory')
+    parser.add_argument(
+        '--use_fp16', type=bool, default=False, help='Whether to use fp16')
+    parser.add_argument(
+        '--use_int8', type=bool, default=False, help='Whether to use int8')
     return parser
 
 
@@ -53,7 +62,7 @@ class Predictor(object):
             output_names[0])
 
     def create_paddle_predictor(self):
-        inference_model_dir = self.config['inference_model_dir']
+        inference_model_dir = self.config['model_dir']
         model_file = os.path.join(inference_model_dir,
                                   self.config['model_filename'])
         params_file = os.path.join(inference_model_dir,
@@ -110,6 +119,7 @@ class Predictor(object):
             time.sleep(0.01)  # sleep for T4 GPU
 
         fp_message = "FP16" if config['use_fp16'] else "FP32"
+        fp_message = "INT8" if config['use_int8'] else fp_message
         trt_msg = "using tensorrt" if config[
             'use_tensorrt'] else "not using tensorrt"
         print("{0}\t{1}\tbatch size: {2}\ttime(ms): {3}".format(
@@ -121,5 +131,11 @@ if __name__ == "__main__":
     parser = argsparser()
     args = parser.parse_args()
     config = load_config(args.config_path)
+    if args.model_dir != config['model_dir']:
+        config['model_dir'] = args.model_dir
+    if args.use_fp16 != config['use_fp16']:
+        config['use_fp16'] = args.use_fp16
+    if args.use_int8 != config['use_int8']:
+        config['use_int8'] = args.use_int8
     predictor = Predictor(config)
     predictor.predict()

@@ -280,7 +280,7 @@ python setup.py install
 答：这是因为量化后保存的参数是虽然是int8范围，但是类型是float。这是因为Paddle训练前向默认的Kernel不支持INT8 Kernel实现，只有Paddle Inference TensorRT的推理才支持量化推理加速。为了方便量化后验证量化精度，使用Paddle训练前向能加载此模型，默认保存的Float32类型权重，体积没有发生变换。
 
 
-#### 2. macOS + Python3.9环境下, 安装出错, "command 'swig' failed"
+#### 2. macOS + Python3.9环境或者Windows环境下, 安装出错, "command 'swig' failed"
 
 答: 请参考https://github.com/PaddlePaddle/PaddleSlim/issues/1258
 
