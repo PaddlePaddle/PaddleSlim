@@ -151,8 +151,9 @@ class AutoCompression:
         self.train_dataloader = wrap_dataloader(train_dataloader,
                                                 self.feed_vars)
         self.eval_dataloader = wrap_dataloader(eval_dataloader, self.feed_vars)
-        if eval_dataloader is None:
-            eval_dataloader = self._get_eval_dataloader(self.train_dataloader)
+        if self.eval_dataloader is None:
+            self.eval_dataloader = self._get_eval_dataloader(
+                self.train_dataloader)
 
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
@@ -465,10 +466,10 @@ class AutoCompression:
                     'train_config must has `epochs` or `train_iter` field.')
             config_dict['gmp_config'] = {
                 'stable_iterations': 0,
-                'pruning_iterations': 0.45 * total_iters,
-                'tunning_iterations': 0.45 * total_iters,
+                'pruning_iterations': max(0.45 * total_iters, 30),
+                'tunning_iterations': max(0.45 * total_iters, 30),
                 'resume_iteration': -1,
-                'pruning_steps': 100,
+                'pruning_steps': 100 if (0.45 * total_iters) > 1000 else 1,
                 'initial_ratio': 0.15,
             }
         ### add prune program

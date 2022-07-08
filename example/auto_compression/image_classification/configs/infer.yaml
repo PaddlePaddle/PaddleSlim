@@ -1,4 +1,4 @@
-inference_model_dir: "./MobileNetV1_infer"
+model_dir: "./MobileNetV1_infer"
 model_filename: "inference.pdmodel"
 params_filename: "inference.pdiparams"
 batch_size: 1
