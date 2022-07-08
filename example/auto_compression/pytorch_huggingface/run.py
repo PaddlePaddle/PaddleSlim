@@ -363,13 +363,16 @@ def main():
         'HyperParameterOptimization' not in all_config else eval_dataloader,
         eval_dataloader=eval_dataloader)
 
-    ac.compress()
+    if not os.path.exists(args.save_dir):
+        os.makedirs(args.save_dir)
 
     for file_name in os.listdir(global_config['model_dir']):
         if 'json' in file_name or 'txt' in file_name:
             shutil.copy(
                 os.path.join(global_config['model_dir'], file_name),
                 args.save_dir)
+
+    ac.compress()
 
 
 if __name__ == '__main__':

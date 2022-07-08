@@ -466,10 +466,10 @@ class AutoCompression:
                     'train_config must has `epochs` or `train_iter` field.')
             config_dict['gmp_config'] = {
                 'stable_iterations': 0,
-                'pruning_iterations': 0.45 * total_iters,
-                'tunning_iterations': 0.45 * total_iters,
+                'pruning_iterations': max(0.45 * total_iters, 30),
+                'tunning_iterations': max(0.45 * total_iters, 30),
                 'resume_iteration': -1,
-                'pruning_steps': 100,
+                'pruning_steps': 100 if (0.45 * total_iters) > 1000 else 1,
                 'initial_ratio': 0.15,
             }
         ### add prune program

@@ -22,7 +22,7 @@ from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 
-from post_process import YOLOv5PostProcess
+from post_process import YOLOv6PostProcess
 
 
 def argsparser():
@@ -95,15 +95,14 @@ def eval():
             elif isinstance(global_config['input_list'], dict):
                 if k in global_config['input_list'].keys():
                     data_input[global_config['input_list'][k]] = np.array(v)
-
         outs = exe.run(val_program,
                        feed=data_input,
                        fetch_list=fetch_targets,
                        return_numpy=False)
         res = {}
-        if 'arch' in global_config and global_config['arch'] == 'YOLOv5':
-            postprocess = YOLOv5PostProcess(
-                score_threshold=0.001, nms_threshold=0.6, multi_label=True)
+        if 'arch' in global_config and global_config['arch'] == 'YOLOv6':
+            postprocess = YOLOv6PostProcess(
+                score_threshold=0.001, nms_threshold=0.65, multi_label=True)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
         else:
             for out in outs:

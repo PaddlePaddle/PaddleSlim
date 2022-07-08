@@ -1,10 +1,10 @@
 
 Global:
-  reader_config: configs/yolov5_reader.yml
-  input_list: {'image': 'x2paddle_images'}
+  reader_config: configs/yolov6_reader.yml
+  input_list: {'image': 'x2paddle_image_arrays'}
   Evaluation: True
-  arch: 'YOLOv5'
-  model_dir: ./yolov5s_infer
+  arch: 'YOLOv6'
+  model_dir: ./yolov6s_infer
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
@@ -13,18 +13,19 @@ Distillation:
   loss: soft_label
 
 Quantization:
-  use_pact: true
   activation_quantize_type: 'moving_average_abs_max'
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
 
 TrainConfig:
-  train_iter: 3000
+  train_iter: 8000
   eval_iter: 1000
-  learning_rate: 0.00001
+  learning_rate: 
+    type: CosineAnnealingDecay 
+    learning_rate: 0.00003
+    T_max: 8000
   optimizer_builder:
-    optimizer: 
+    optimizer:
       type: SGD
-    weight_decay: 4.0e-05
-  target_metric: 0.365
+    weight_decay: 0.00004
