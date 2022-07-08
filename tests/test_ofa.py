@@ -451,7 +451,6 @@ class TestShortCut(unittest.TestCase):
             self.config,
             input_shapes=[[2, 3, 224, 224]],
             input_dtypes=['float32'])
-        # print("===== ofa_layers: ", self.ofa_model.ofa_layers)
         assert len(self.ofa_model.ofa_layers) == 37
 
 
