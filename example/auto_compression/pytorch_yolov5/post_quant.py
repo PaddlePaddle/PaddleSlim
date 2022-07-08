@@ -23,8 +23,6 @@ from ppdet.metrics import COCOMetric, VOCMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.quant import quant_post_static
 
-from post_process import YOLOv6PostProcess
-
 
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
