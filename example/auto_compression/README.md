@@ -35,7 +35,7 @@ wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileN
 tar -xf MobileNetV1_infer.tar
 # 下载ImageNet小型数据集
 wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz
-tar xf ILSVRC2012_data_demo.tar.gz
+tar -xf ILSVRC2012_data_demo.tar.gz
 ```
 
 - 2.运行
@@ -77,17 +77,66 @@ ac = AutoCompression(
     model_dir="./MobileNetV1_infer",
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
-    save_dir="output",
-    config={'Quantization': {}, "HyperParameterOptimization": {'max_quant_count': 5}},
+    save_dir="MobileNetV1_quant",
+    config={'Quantization': {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
     train_dataloader=train_loader,
-    eval_dataloader=train_loader)  # eval_function to verify accuracy
+    eval_dataloader=train_loader)
 ac.compress()
 ```
 
+- 3.测试精度
+
+测试压缩前模型的精度:
+```shell
+CUDA_VISIBLE_DEVICES=0 python ./image_classification/eval.py
+### Eval Top1: 0.7171724759615384
+```
+
+测试量化模型的精度:
+```shell
+CUDA_VISIBLE_DEVICES=0 python ./image_classification/eval.py --model_dir='MobileNetV1_quant'
+### Eval Top1: 0.7166466346153846
+```
+
+量化后模型的精度相比量化前的模型几乎精度无损，由于是使用的超参搜索的方法来选择的量化参数，所以每次运行得到的量化模型精度会有些许波动。
+
+- 4.推理速度测试
+量化模型速度的测试依赖推理库的支持，所以确保安装的是带有TensorRT的PaddlePaddle。以下示例和展示的测试结果是基于Tesla V100、CUDA 10.2、python3.7得到的。
+
+使用以下指令查看本地cuda版本，并且在[下载链接](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)中下载对应cuda版本和对应python版本的paddlepaddle安装包。
+```shell
+cat /usr/local/cuda/version.txt ### CUDA Version 10.2.89
+### 10.2.89 为cuda版本号，可以根据这个版本号选择需要安装的带有TensorRT的PaddlePaddle安装包。
+```
+
+安装下载的whl包：
+```
+### 这里通过wget下载到的是python3.7、cuda10.2的PaddlePaddle安装包，若您的环境和示例环境不同，请依赖您自己机器的环境下载对应的安装包，否则运行示例代码会报错。
+wget https://paddle-inference-lib.bj.bcebos.com/2.3.0/python/Linux/GPU/x86-64_gcc8.2_avx_mkl_cuda10.2_cudnn8.1.1_trt7.2.3.4/paddlepaddle_gpu-2.3.0-cp37-cp37m-linux_x86_64.whl
+pip install paddlepaddle_gpu-2.3.0-cp37-cp37m-linux_x86_64.whl --force-reinstall
+```
+
+测试FP32模型的速度
+```
+python ./image_classification/infer.py
+### using tensorrt FP32	batch size: 1 time(ms): 0.6140608787536621
+```
+
+测试FP16模型的速度
+```
+python ./image_classification/infer.py --use_fp16=True
+### using tensorrt FP16	batch size: 1 time(ms): 0.5795984268188477
+```
+
+测试INT8模型的速度
+```
+python ./image_classification/infer.py --model_dir=./MobileNetV1_quant/ --use_int8=True
+### using tensorrt INT8 batch size: 1 time(ms): 0.5213963985443115
+```
+
 **提示：**
-- DataLoader传入的数据集是待压缩模型所用的数据集，DataLoader继承自`paddle.io.DataLoader`。
-- 如无需验证自动化压缩过程中模型的精度，`eval_callback`可不传入function，程序会自动根据损失来选择最优模型。
-- 自动化压缩Config中定义量化、蒸馏、剪枝等压缩算法会合并执行，压缩策略有：量化+蒸馏，剪枝+蒸馏等等。
+- DataLoader传入的数据集是待压缩模型所用的数据集，DataLoader继承自`paddle.io.DataLoader`。可以直接使用模型套件中的DataLoader，或者根据[paddle.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/io/DataLoader_cn.html#dataloader)自定义所需要的DataLoader。
+- 自动化压缩Config中定义量化、蒸馏、剪枝等压缩算法会合并执行，压缩策略有：量化+蒸馏，剪枝+蒸馏等等。示例中选择的配置为离线量化超参搜索。
 - 如果要压缩的模型参数是存储在各自分离的文件中，需要先通过[convert.py](./convert.py) 脚本将其保存成一个单独的二进制文件。
 
 ## 应用示例

@@ -151,8 +151,9 @@ class AutoCompression:
         self.train_dataloader = wrap_dataloader(train_dataloader,
                                                 self.feed_vars)
         self.eval_dataloader = wrap_dataloader(eval_dataloader, self.feed_vars)
-        if eval_dataloader is None:
-            eval_dataloader = self._get_eval_dataloader(self.train_dataloader)
+        if self.eval_dataloader is None:
+            self.eval_dataloader = self._get_eval_dataloader(
+                self.train_dataloader)
 
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
