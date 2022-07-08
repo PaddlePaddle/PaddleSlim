@@ -896,12 +896,12 @@ class SuperLinear(nn.Linear):
             out_nc = int(channel)
         else:
             out_nc = self._out_features
-        if self.weight.shape[0] == in_nc and self.weight.shape[1] == out_nc:
+        if self.weight.shape[0] <= in_nc and self.weight.shape[1] <= out_nc:
             weight = self.weight
         else:
             weight = self.weight[:in_nc, :out_nc]
         if self._bias_attr != False:
-            if self.bias.shape[0] == out_nc:
+            if self.bias.shape[0] <= out_nc:
                 bias = self.bias
             else:
                 bias = self.bias[:out_nc]

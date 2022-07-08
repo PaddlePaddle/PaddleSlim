@@ -160,8 +160,7 @@ def dygraph2program(layer,
         else:
             inputs = to_variables(inputs)
             input_var_list = extract_inputs_fn(inputs)
-        # print("====##@== input: ", inputs)
-        # import pdb;pdb.set_trace()
+
         original_outputs = layer(*inputs)
         # 'original_outputs' may be dict, so we should convert it to list of varibles.
         # And should not create new varibles in 'extract_vars'.
