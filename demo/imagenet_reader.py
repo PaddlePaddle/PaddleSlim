@@ -99,7 +99,12 @@ def distort_color(img):
     return img
 
 
-def process_image(sample, mode, color_jitter, rotate, crop_size, resize_size):
+def process_image(sample,
+                  mode,
+                  color_jitter,
+                  rotate,
+                  crop_size=DATA_DIM,
+                  resize_size=RESIZE_DIM):
     img_path = sample[0]
 
     try:
