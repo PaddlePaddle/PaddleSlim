@@ -14,11 +14,9 @@
 
 ## 1.简介
 
-本示例将以语义分割模型PP-HumanSeg-Lite为例，介绍如何使用PaddleSeg中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为非结构化稀疏、蒸馏和量化、蒸馏。
+本示例将以语义分割模型[PP-HumanSeg-Lite](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/contrib/PP-HumanSeg#portrait-segmentation)为例，介绍如何使用PaddleSeg中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为非结构化稀疏、蒸馏和量化、蒸馏。
 
 ## 2.Benchmark
-
-- [PP-HumanSeg-Lite](https://github.com/PaddlePaddle/PaddleSeg/tree/develop/contrib/PP-HumanSeg#portrait-segmentation)
 
 | 模型 | 策略  | Total IoU | ARM CPU耗时(ms)<br>thread=1 |Nvidia GPU耗时(ms)| 配置文件 | Inference模型  |
 |:-----:|:-----:|:----------:|:---------:| :------:|:------:|:------:|
@@ -34,7 +32,7 @@
 | Deeplabv3-ResNet50 | Baseline |  79.90 | -|12.766| -| [model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-Deeplabv3-ResNet50.zip)|
 | Deeplabv3-ResNet50 | 量化训练 |  78.89 | - |8.839|[config](./configs/deeplabv3/deeplabv3_qat.yaml) | - |
 
-- ARM CPU测试环境：`SDM710 2*A75(2.2GHz) 6*A55(1.7GHz)`；
+- ARM CPU测试环境：`高通骁龙710处理器(SDM710 2*A75(2.2GHz) 6*A55(1.7GHz))`；
 
 - Nvidia GPU测试环境：
 
@@ -65,6 +63,11 @@ pip install paddlepaddle-gpu
 pip install paddleslim
 ```
 
+准备paddleslim示例代码：
+```shell
+git clone https://github.com/PaddlePaddle/PaddleSlim.git
+```
+
 安装paddleseg
 
 ```shell
@@ -77,15 +80,16 @@ pip install paddleseg
 
 开发者可下载开源数据集 (如[AISegment](https://github.com/aisegmentcn/matting_human_datasets)) 或自定义语义分割数据集。请参考[PaddleSeg数据准备文档](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/data/marker/marker_cn.md)来检查、对齐数据格式即可。
 
-本示例使用示例开源数据集 AISegment 数据集为例介绍如何对PP-HumanSeg-Lite进行自动压缩。示例中的数据集仅用于快速跑通自动压缩流程，并不能复现出 benckmark 表中的压缩效果。
+本示例使用示例开源数据集 AISegment 数据集为例介绍如何对PP-HumanSeg-Lite进行自动压缩。示例数据集仅用于快速跑通自动压缩流程，并不能复现出 benckmark 表中的压缩效果。
 
 可以通过以下命令下载人像分割示例数据:
 ```shell
+cd PaddleSlim/example/auto_compression/semantic_segmentation
 python ./data/download_data.py mini_humanseg
 ### 下载后的数据位置为 ./data/humanseg/
 ```
 
-** 提示: **
+**提示:**
 - PP-HumanSeg-Lite压缩过程使用的数据集
 
   - 数据集：AISegment + PP-HumanSeg14K + 内部自建数据集。其中 AISegment 是开源数据集，可从[链接](https://github.com/aisegmentcn/matting_human_datasets)处获取；PP-HumanSeg14K 是 PaddleSeg 自建数据集，可从[官方渠道](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset)获取；内部数据集不对外公开。
