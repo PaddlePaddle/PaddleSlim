@@ -1,3 +1,9 @@
+Global:
+  reader_config: configs/dataset/humanseg_dataset.yaml
+  model_dir: ./ppseg_lite_portrait_398x224_with_softmax
+  model_filename: model.pdmodel
+  params_filename: model.pdiparams
+
 Distillation:
   alpha: 1.0
   loss: l2

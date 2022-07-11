@@ -99,7 +99,12 @@ def distort_color(img):
     return img
 
 
-def process_image(sample, mode, color_jitter, rotate, crop_size, resize_size):
+def process_image(sample,
+                  mode,
+                  color_jitter,
+                  rotate,
+                  crop_size=DATA_DIM,
+                  resize_size=RESIZE_DIM):
     img_path = sample[0]
 
     try:
@@ -138,6 +143,8 @@ def _reader_creator(file_list,
                     color_jitter=False,
                     rotate=False,
                     data_dir=DATA_DIR,
+                    crop_size=DATA_DIM,
+                    resize_size=RESIZE_DIM,
                     batch_size=1):
     def reader():
         try:
@@ -159,7 +166,12 @@ def _reader_creator(file_list,
             os._exit(1)
 
     mapper = functools.partial(
-        process_image, mode=mode, color_jitter=color_jitter, rotate=rotate)
+        process_image,
+        mode=mode,
+        color_jitter=color_jitter,
+        rotate=rotate,
+        crop_size=crop_size,
+        resize_size=resize_size)
 
     return paddle.reader.xmap_readers(mapper, reader, THREAD, BUF_SIZE)
 

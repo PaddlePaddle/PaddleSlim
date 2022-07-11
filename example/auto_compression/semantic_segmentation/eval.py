@@ -17,31 +17,50 @@ import argparse
 import random
 import paddle
 import numpy as np
+from tqdm import tqdm
 from paddleseg.cvlibs import Config as PaddleSegDataConfig
 from paddleseg.utils import worker_init_fn
 
-from paddleslim.auto_compression import AutoCompression
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleseg.core.infer import reverse_transform
 from paddleseg.utils import metrics
 
 
-def argsparser():
-    parser = argparse.ArgumentParser(description=__doc__)
+def parse_args():
+    parser = argparse.ArgumentParser(description='Model evaluation')
     parser.add_argument(
-        '--config_path',
+        '--model_dir',
         type=str,
         default=None,
-        help="path of compression strategy config.")
+        help="inference model directory.")
     parser.add_argument(
-        '--save_dir',
+        '--model_filename',
         type=str,
         default=None,
-        help="directory to save compressed model.")
-    return parser
+        help="inference model filename.")
+    parser.add_argument(
+        '--params_filename',
+        type=str,
+        default=None,
+        help="inference params filename.")
+    parser.add_argument(
+        '--dataset_config',
+        type=str,
+        default=None,
+        help="path of dataset config.")
+    return parser.parse_args()
 
 
-def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
+def eval(args):
+    exe = paddle.static.Executor(paddle.CUDAPlace(0))
+    inference_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+        args.model_dir,
+        exe,
+        model_filename=args.model_filename,
+        params_filename=args.params_filename)
+
+    data_cfg = PaddleSegDataConfig(args.dataset_config)
+    eval_dataset = data_cfg.val_dataset
+
     batch_sampler = paddle.io.BatchSampler(
         eval_dataset, batch_size=1, shuffle=False, drop_last=False)
     loader = paddle.io.DataLoader(
@@ -58,16 +77,13 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     print("Start evaluating (total_samples: {}, total_iters: {})...".format(
         len(eval_dataset), total_iters))
 
-    for iter, (image, label) in enumerate(loader):
-        paddle.enable_static()
-
+    for (image, label) in tqdm(loader):
         label = np.array(label).astype('int64')
         ori_shape = np.array(label).shape[-2:]
-
         image = np.array(image)
-        logits = exe.run(compiled_test_program,
-                         feed={test_feed_names[0]: image},
-                         fetch_list=test_fetch_list,
+        logits = exe.run(inference_program,
+                         feed={feed_target_names[0]: image},
+                         fetch_list=fetch_targets,
                          return_numpy=True)
 
         paddle.disable_static()
@@ -104,64 +120,10 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         len(eval_dataset), miou, acc, kappa, mdice)
     print(infor)
 
-    paddle.enable_static()
-    return miou
-
-
-def reader_wrapper(reader):
-    def gen():
-        for i, data in enumerate(reader()):
-            imgs = np.array(data[0])
-            yield {"x": imgs}
-
-    return gen
-
-
-def main(args):
-    all_config = load_slim_config(args.config_path)
-    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
-    config = all_config["Global"]
-
-    rank_id = paddle.distributed.get_rank()
-    place = paddle.CUDAPlace(rank_id)
-    # step1: load dataset config and create dataloader
-    data_cfg = PaddleSegDataConfig(config['reader_config'])
-    train_dataset = data_cfg.train_dataset
-    eval_dataset = data_cfg.val_dataset
-    batch_sampler = paddle.io.DistributedBatchSampler(
-        train_dataset,
-        batch_size=data_cfg.batch_size,
-        shuffle=True,
-        drop_last=True)
-    train_loader = paddle.io.DataLoader(
-        train_dataset,
-        places=[place],
-        batch_sampler=batch_sampler,
-        num_workers=2,
-        return_list=True,
-        worker_init_fn=worker_init_fn)
-    train_dataloader = reader_wrapper(train_loader)
-
-    nranks = paddle.distributed.get_world_size()
-    rank_id = paddle.distributed.get_rank()
-
-    # step2: create and instance of AutoCompression
-    ac = AutoCompression(
-        model_dir=config['model_dir'],
-        model_filename=config['model_filename'],
-        params_filename=config['params_filename'],
-        save_dir=args.save_dir,
-        config=all_config,
-        train_dataloader=train_dataloader,
-        eval_callback=eval_function if nranks > 1 and rank_id != 0 else None,
-        deploy_hardware=config.get('deploy_hardware') or None)
-
-    # step3: start the compression job
-    ac.compress()
-
 
 if __name__ == '__main__':
+    rank_id = paddle.distributed.get_rank()
+    place = paddle.CUDAPlace(rank_id)
+    args = parse_args()
     paddle.enable_static()
-    parser = argsparser()
-    args = parser.parse_args()
-    main(args)
+    eval(args)

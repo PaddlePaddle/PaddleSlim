@@ -136,3 +136,8 @@ python paddle_trt_infer.py --model_path=output --image_file=images/000000570688.
 ```
 
 ## 5.FAQ
+
+- 如果想测试离线量化模型精度，可执行：
+```shell
+python post_quant.py --config_path=./configs/yolov6s_qat_dis.yaml
+```

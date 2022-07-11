@@ -130,6 +130,7 @@ python eval.py --config_path='./configs/MobileNetV1/qat_dis.yaml'
 - ```inference_model_dir```：inference 模型文件所在目录，该目录下需要有文件 .pdmodel 和 .pdiparams 两个文件
 - ```model_filename```：inference_model_dir文件夹下的模型文件名称
 - ```params_filename```：inference_model_dir文件夹下的参数文件名称
+
 - ```batch_size```：预测一个batch的大小
 - ```image_size```：输入图像的大小
 - ```use_tensorrt```：是否使用 TesorRT 预测引擎
