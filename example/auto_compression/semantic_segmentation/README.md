@@ -63,7 +63,7 @@ pip install paddlepaddle-gpu
 pip install paddleslim
 ```
 
-准备paddleslim全量化代码：
+准备paddleslim示例代码：
 ```shell
 git clone https://github.com/PaddlePaddle/PaddleSlim.git
 ```
