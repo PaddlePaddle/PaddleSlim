@@ -3,7 +3,8 @@ import paddle
 import collections
 import logging
 import numpy as np
-from paddle.fluid.framework import _dygraph_tracer, dygraph_only, _dygraph_guard, program_guard
+from paddle.fluid import core
+from paddle.fluid.framework import _dygraph_tracer, dygraph_only, _dygraph_guard, program_guard, in_dygraph_mode
 from paddle.fluid.dygraph.base import program_desc_tracing_guard, _switch_declarative_mode_guard_
 from paddle.fluid.dygraph.layers import Layer
 from paddle.fluid.framework import Block, ParamBase, Program, Variable
@@ -108,8 +109,8 @@ def to_variables(inputs, is_static=False):
     """
     Find and rename variables. Find np.ndarray and convert it to variable.
     """
-    if isinstance(inputs,
-                  (Variable, paddle.Tensor)) or isinstance(inputs, np.ndarray):
+    if isinstance(inputs, (Variable, paddle.Tensor)) or isinstance(inputs,
+                                                                   np.ndarray):
         if is_static:
             return _to_var(inputs)
         else:
@@ -118,7 +119,7 @@ def to_variables(inputs, is_static=False):
         ret = {}
         for _key in inputs:
             ret[_key] = to_variables(inputs[_key], is_static)
-        return inputs
+        return ret
     elif isinstance(inputs, list):
         ret = []
         for _value in inputs:
@@ -140,7 +141,7 @@ def dygraph2program(layer,
     extract_inputs_fn = extract_inputs_fn if extract_inputs_fn is not None else extract_vars
     extract_outputs_fn = extract_outputs_fn if extract_outputs_fn is not None else extract_vars
 
-    if os.environ.get("FLAGS_enable_eager_mode") == "1":
+    if in_dygraph_mode():
         return _dy2prog(layer, inputs, feed_prefix, fetch_prefix, tmp_prefix,
                         extract_inputs_fn, extract_outputs_fn, dtypes)
 
@@ -187,7 +188,6 @@ def _dy2prog(layer,
     Tracing program in Eager Mode.
     """
     paddle.enable_static()
-
     program = Program()
     # convert ParamBase into Parameter automatically by _switch_declarative_mode_guard_
     with program_guard(program), _switch_declarative_mode_guard_(True):
@@ -198,8 +198,10 @@ def _dy2prog(layer,
             inputs = _create_tensors(inputs, dtypes=dtypes, is_static=True)
         else:
             inputs = to_variables(inputs, is_static=True)
-            inputs = extract_inputs_fn(inputs)
-        outputs = layer(*inputs)
+        if isinstance(inputs, list):
+            outputs = layer(*inputs)
+        else:
+            outputs = layer(inputs)
 
     paddle.disable_static()
 

@@ -1,6 +1,7 @@
 import os
 import sys
 sys.path.append("../")
+os.environ['FLAGS_enable_eager_mode'] = "1"
 import paddle
 import unittest
 from paddleslim.core import dygraph2program
@@ -25,7 +26,6 @@ class Model(paddle.nn.Layer):
 
 class TestEagerDygraph2Program(unittest.TestCase):
     def setUp(self):
-        os.environ['FLAGS_enable_eager_mode'] = "1"
         self.prepare_inputs()
         self.prepare_layer()
 

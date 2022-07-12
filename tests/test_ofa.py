@@ -323,6 +323,8 @@ class TestOFA(unittest.TestCase):
                     for model_no in range(self.run_config.dynamic_batch_size[
                             idx]):
                         output = ofa_model(self.data)
+                        if (isinstance(output, tuple)):
+                            output = output[0]
                         loss = paddle.mean(output)
                         if self.distill_config.mapping_layers != None:
                             dis_loss = ofa_model.calc_distill_loss()

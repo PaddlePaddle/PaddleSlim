@@ -21,7 +21,9 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 import paddle.fluid.core as core
 from paddle import _C_ops
-from paddle.fluid.framework import in_dygraph_mode
+from paddle.fluid.framework import in_dygraph_mode, _in_legacy_dygraph, _non_static_mode
+from paddle.fluid.data_feeder import check_variable_and_dtype
+from paddle.fluid.dygraph.layer_object_helper import LayerObjectHelper
 
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
@@ -209,7 +211,10 @@ class SuperConv2D(nn.Conv2D):
     def get_active_filter(self, in_nc, out_nc, kernel_size):
         start, end = compute_start_end(self._kernel_size[0], kernel_size)
         ### if NOT transform kernel, intercept a center filter with kernel_size from largest filter
-        filters = self.weight[:out_nc, :in_nc, start:end, start:end]
+        if self.weight.shape[0] <= out_nc and self.weight.shape[1] <= in_nc:
+            filters = self.weight
+        else:
+            filters = self.weight[:out_nc, :in_nc, start:end, start:end]
         if self.transform_kernel != False and kernel_size < self._kernel_size[
                 0]:
             ### if transform kernel, then use matrix to transform
@@ -304,7 +309,10 @@ class SuperConv2D(nn.Conv2D):
             ### if in_nc = groups, slice the shape of bias by weight_out_nc.
             if groups != in_nc:
                 weight_out_nc = weight_out_nc * groups
-            bias = self.bias[:weight_out_nc]
+            if weight_out_nc >= self.bias.shape[0]:
+                bias = self.bias
+            else:
+                bias = self.bias[:weight_out_nc]
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
@@ -884,10 +892,15 @@ class SuperLinear(nn.Linear):
             out_nc = int(channel)
         else:
             out_nc = self._out_features
-
-        weight = self.weight[:in_nc, :out_nc]
+        if self.weight.shape[0] <= in_nc and self.weight.shape[1] <= out_nc:
+            weight = self.weight
+        else:
+            weight = self.weight[:in_nc, :out_nc]
         if self._bias_attr != False:
-            bias = self.bias[:out_nc]
+            if self.bias.shape[0] <= out_nc:
+                bias = self.bias
+            else:
+                bias = self.bias[:out_nc]
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
@@ -944,10 +957,22 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         self._check_input_dim(input)
         feature_dim = int(input.shape[1])
 
-        weight = self.weight[:feature_dim]
-        bias = self.bias[:feature_dim]
-        mean = self._mean[:feature_dim]
-        variance = self._variance[:feature_dim]
+        if self.weight.shape[0] <= feature_dim:
+            weight = self.weight
+        else:
+            weight = self.weight[:feature_dim]
+        if self.bias.shape[0] <= feature_dim:
+            bias = self.bias
+        else:
+            bias = self.bias[:feature_dim]
+        if self._mean.shape[0] <= feature_dim:
+            mean = self._mean
+        else:
+            mean = self._mean[:feature_dim]
+        if self._variance.shape[0] <= feature_dim:
+            variance = self._variance
+        else:
+            variance = self._variance[:feature_dim]
 
         mean_out = self._mean
         variance_out = self._variance
@@ -965,51 +990,91 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                  "use_mkldnn", False, "fuse_with_relu", False,
                  "use_global_stats", self._use_global_stats,
                  "trainable_statistics", trainable_statistics)
-        try:
-            from paddle import _C_ops
-            from paddle.fluid.framework import in_dygraph_mode, _in_legacy_dygraph
-            if in_dygraph_mode():
-                if feature_dim != self._mean.shape[0]:
-                    batch_norm_out = _C_ops.final_state_batch_norm(
-                        input, weight, bias, mean, variance, mean_out_tmp,
-                        variance_out_tmp, *attrs)
-                    self._mean[:feature_dim].set_value(mean)
-                    self._variance[:feature_dim].set_value(variance)
-                    mean_out[:feature_dim].set_value(mean_out_tmp)
-                    variance_out[:feature_dim].set_value(variance_out_tmp)
-                else:
-                    batch_norm_out = _C_ops.final_state_batch_norm(
-                        input, weight, bias, self._mean, self._variance,
-                        mean_out, variance_out, *attrs)
-            elif _in_legacy_dygraph():
-                if feature_dim != self._mean.shape[0]:
-                    batch_norm_out = core.ops.batch_norm(
-                        input, weight, bias, mean, variance, None, mean_out_tmp,
-                        variance_out_tmp, *attrs)
-                    self._mean[:feature_dim].set_value(mean)
-                    self._variance[:feature_dim].set_value(variance)
-                    mean_out[:feature_dim].set_value(mean_out_tmp)
-                    variance_out[:feature_dim].set_value(variance_out_tmp)
-                else:
-                    batch_norm_out = core.ops.batch_norm(
-                        input, weight, bias, self._mean, self._variance, None,
-                        mean_out, variance_out, *attrs)
-        except:
+
+        if in_dygraph_mode():
             if feature_dim != self._mean.shape[0]:
-                batch_norm_out = core.ops.batch_norm(input, weight, bias, mean,
-                                                     variance, mean_out_tmp,
-                                                     variance_out_tmp, *attrs)
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.final_state_batch_norm(
+                    input, weight, bias, mean, variance, self._momentum,
+                    self._epsilon, self._data_format, not self.training,
+                    self._use_global_stats, trainable_statistics, False, False)
                 self._mean[:feature_dim].set_value(mean)
                 self._variance[:feature_dim].set_value(variance)
                 mean_out[:feature_dim].set_value(mean_out_tmp)
                 variance_out[:feature_dim].set_value(variance_out_tmp)
+                return batch_norm_out
             else:
-                batch_norm_out = core.ops.batch_norm(
-                    input, weight, bias, self._mean, self._variance, mean_out,
-                    variance_out, *attrs)
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.final_state_batch_norm(
+                    input, weight, bias, mean, variance, self._momentum,
+                    self._epsilon, self._data_format, not self.training,
+                    self._use_global_stats, trainable_statistics, False)
+                return batch_norm_out
 
+        elif _in_legacy_dygraph():
+            if feature_dim != self._mean.shape[0]:
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
+                    input, weight, bias, mean, variance, None, mean_out_tmp,
+                    variance_out_tmp, *attrs)
+                self._mean[:feature_dim].set_value(mean)
+                self._variance[:feature_dim].set_value(variance)
+                mean_out[:feature_dim].set_value(mean_out_tmp)
+                variance_out[:feature_dim].set_value(variance_out_tmp)
+                return batch_norm_out
+            else:
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
+                    input, weight, bias, self._mean, self._variance, None,
+                    mean_out, variance_out, *attrs)
+                return batch_norm_out
+
+        check_variable_and_dtype(input, 'input',
+                                 ['float16', 'float32', 'float64'], 'BatchNorm')
+
+        # for static need dict
+        attrs = {
+            "momentum": self._momentum,
+            "epsilon": self._epsilon,
+            "is_test": not self.training,
+            "data_layout": self._data_format,
+            "use_mkldnn": False,
+            "fuse_with_relu": False,
+            "use_global_stats": self._use_global_stats,
+            "trainable_statistics": trainable_statistics,
+        }
+
+        inputs = {
+            "X": [input],
+            "Scale": [weight],
+            "Bias": [bias],
+            "Mean": [mean],
+            "Variance": [variance]
+        }
+
+        helper = LayerObjectHelper('batch_norm')
+
+        param_dtype = input.dtype if input.dtype != 'float16' else 'float32'
+        saved_mean = helper.create_variable_for_type_inference(
+            dtype=param_dtype, stop_gradient=True)
+        saved_variance = helper.create_variable_for_type_inference(
+            dtype=param_dtype, stop_gradient=True)
+        batch_norm_out = helper.create_variable_for_type_inference(input.dtype)
+
+        outputs = {
+            "Y": [batch_norm_out],
+            "MeanOut": [mean],
+            "VarianceOut": [variance],
+            "SavedMean": [saved_mean],
+            "SavedVariance": [saved_variance]
+        }
+
+        if self.training or trainable_statistics:
+            # reserve_space is only used for training.
+            reserve_space = helper.create_variable_for_type_inference(
+                dtype=input.dtype, stop_gradient=True)
+            outputs["ReserveSpace"] = [reserve_space]
+
+        helper.append_op(
+            type="batch_norm", inputs=inputs, outputs=outputs, attrs=attrs)
         self.cur_config = {'prune_dim': feature_dim}
-        return batch_norm_out[0]
+        return batch_norm_out
 
 
 class SuperSyncBatchNorm(nn.SyncBatchNorm):
@@ -1045,19 +1110,65 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
                  "is_test", not self.training, "data_layout", self._data_format,
                  "use_mkldnn", False, "fuse_with_relu", False,
                  "use_global_stats", False, 'trainable_statistics', False)
-        if feature_dim != self._mean.shape[0]:
-            sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
-                input, weight, bias, mean, variance, mean_out_tmp,
-                variance_out_tmp, *attrs)
-            self._mean[:feature_dim].set_value(mean)
-            self._variance[:feature_dim].set_value(variance)
-            mean_out[:feature_dim].set_value(mean_out_tmp)
-            variance_out[:feature_dim].set_value(variance_out_tmp)
-        else:
-            sync_batch_norm_out, _, _, _, _, _ = core.ops.sync_batch_norm(
-                input, weight, bias, self._mean, self._variance, mean_out,
-                variance_out, *attrs)
 
+        if _non_static_mode():
+            if feature_dim != self._mean.shape[0]:
+                sync_batch_norm_out, _, _, _, _, _ = _C_ops.sync_batch_norm(
+                    input, weight, bias, self._mean, self._variance, mean_out,
+                    variance_out, *attrs)
+
+                self._mean[:feature_dim].set_value(mean)
+                self._variance[:feature_dim].set_value(variance)
+                mean_out[:feature_dim].set_value(mean_out_tmp)
+                variance_out[:feature_dim].set_value(variance_out_tmp)
+            else:
+                sync_batch_norm_out, _, _, _, _, _ = _C_ops.sync_batch_norm(
+                    input, weight, bias, self._mean, self._variance, mean_out,
+                    variance_out, *attrs)
+
+            return sync_batch_norm_out
+
+        check_variable_and_dtype(
+            input, 'input', ['float16', 'float32', 'float64'], 'SyncBatchNorm')
+
+        attrs = {
+            "momentum": self._momentum,
+            "epsilon": self._epsilon,
+            "is_test": not self.training,
+            "data_layout": self._data_format,
+            "use_mkldnn": False,
+            "fuse_with_relu": False,
+            "use_global_stats": False,
+            "trainable_statistics": False,
+        }
+
+        inputs = {
+            "X": [input],
+            "Scale": [weight],
+            "Bias": [bias],
+            "Mean": [self._mean],
+            "Variance": [self._variance]
+        }
+
+        helper = LayerObjectHelper('sync_batch_norm')
+
+        saved_mean = helper.create_variable_for_type_inference(
+            dtype=self._dtype, stop_gradient=True)
+        saved_variance = helper.create_variable_for_type_inference(
+            dtype=self._dtype, stop_gradient=True)
+        sync_batch_norm_out = helper.create_variable_for_type_inference(
+            self._dtype)
+
+        outputs = {
+            "Y": [sync_batch_norm_out],
+            "MeanOut": [mean_out],
+            "VarianceOut": [variance_out],
+            "SavedMean": [saved_mean],
+            "SavedVariance": [saved_variance]
+        }
+
+        helper.append_op(
+            type="sync_batch_norm", inputs=inputs, outputs=outputs, attrs=attrs)
         return sync_batch_norm_out
 
 
@@ -1173,22 +1284,66 @@ class SuperLayerNorm(nn.LayerNorm):
         begin_norm_axis = input_ndim - normalized_ndim
         feature_dim = int(input.shape[-1])
         if self._weight_attr != False:
-            weight = self.weight[:feature_dim]
+            if self.weight.shape[0] <= feature_dim:
+                weight = self.weight
+            else:
+                weight = self.weight[:feature_dim]
         else:
             weight = None
         if self._bias_attr != False:
-            bias = self.bias[:feature_dim]
+            if self.bias.shape[0] <= feature_dim:
+                bias = self.bias
+            else:
+                bias = self.bias[:feature_dim]
         else:
             bias = None
         self.cur_config = {'prune_dim': feature_dim}
 
         if in_dygraph_mode():
-            out, _, _, = _C_ops.final_state_layer_norm(
+            out, _, _ = _C_ops.final_state_layer_norm(
                 input, weight, bias, self._epsilon, begin_norm_axis, False)
+        elif _in_legacy_dygraph():
+            out, _, _ = _C_ops.layer_norm(input, weight, bias, 'epsilon',
+                                          self._epsilon, 'begin_norm_axis',
+                                          begin_norm_axis)
         else:
-            out, _, _ = core.ops.layer_norm(input, weight, bias, 'epsilon',
-                                            self._epsilon, 'begin_norm_axis',
-                                            begin_norm_axis)
+            check_variable_and_dtype(input, 'input', ['float32', 'float64'],
+                                     'LayerNorm')
+
+            inputs = dict()
+            inputs['X'] = [input]
+            if weight:
+                inputs['Scale'] = [weight]
+            if bias:
+                inputs['Bias'] = [bias]
+            attrs = {
+                "epsilon": self._epsilon,
+                "begin_norm_axis": begin_norm_axis
+            }
+
+            helper = LayerObjectHelper('layer_norm')
+
+            dtype = input.dtype
+            mean_out = helper.create_variable_for_type_inference(
+                dtype=dtype, stop_gradient=True)
+            variance_out = helper.create_variable_for_type_inference(
+                dtype=dtype, stop_gradient=True)
+            layer_norm_out = helper.create_variable_for_type_inference(dtype)
+
+            helper.append_op(
+                type="layer_norm",
+                inputs=inputs,
+                outputs={
+                    "Y": layer_norm_out,
+                    "Mean": mean_out,
+                    "Variance": variance_out,
+                },
+                attrs={
+                    "epsilon": self._epsilon,
+                    "begin_norm_axis": begin_norm_axis
+                })
+            return layer_norm_out
+
         return out
 
 
@@ -1274,7 +1429,10 @@ class SuperEmbedding(nn.Embedding):
         else:
             out_nc = self._embedding_dim
 
-        weight = self.weight[:, :out_nc]
+        if self.weight.shape[1] <= out_nc:
+            weight = self.weight
+        else:
+            weight = self.weight[:, :out_nc]
         self.cur_config = {'prune_dim': list(weight.shape)}
         return F.embedding(
             input,
