@@ -76,8 +76,8 @@ def eval():
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
-    val_program, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
-        global_config["model_dir"],
+    val_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+        global_config["model_dir"].rstrip('/'),
         exe,
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"])
