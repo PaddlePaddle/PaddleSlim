@@ -6,6 +6,11 @@ Global:
   dataset: clue
   batch_size: 16
   max_seq_length: 128
+TransformerPrune:
+  pruned_ratio: 0.25
+HyperParameterOptimization:
+Distillation:
+Quantization:
 TrainConfig:
   epochs: 20
   eval_iter: 1050
