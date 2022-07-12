@@ -192,7 +192,7 @@ python run.py --config_path=./configs/cola.yaml  --eval True
 
 ## 4. 预测部署
 
-环境配置：若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
+环境配置：若使用 Paddle TensorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
 启动配置：
 
