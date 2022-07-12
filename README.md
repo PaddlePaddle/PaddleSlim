@@ -13,13 +13,14 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
 ## 产品动态
 
-- 🔥 **2022.05.23: 发布[v2.3.0版本](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.0)**
+- 🔥 **2022.07.01: 发布[v2.3.0版本](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.0)**
 
-  - 发布[自动化压缩功能](demo/auto_compression)
+  - 发布[自动化压缩功能](example/auto_compression)
 
-    - 支持代码无感知压缩：用户只需提供推理模型文件和数据，既可进行离线量化（PTQ）、量化训练（QAT）、稀疏训练等压缩任务
-    - 支持自动策略选择，根据任务特点和部署环境特性：自动搜索合适的离线量化方法,自动搜索最佳的压缩策略组合方式
-    - 提供了[自然语言处理](demo/auto_compression/nlp)、[图像语义分割](demo/auto_compression/semantic_segmentation)、[图像目标检测](demo/auto_compression/detection)三个方向的自动化压缩示例
+    - 支持代码无感知压缩：用户只需提供推理模型文件和数据，既可进行离线量化（PTQ）、量化训练（QAT）、稀疏训练等压缩任务。
+    - 支持自动策略选择，根据任务特点和部署环境特性：自动搜索合适的离线量化方法,自动搜索最佳的压缩策略组合方式。
+    - 发布[自然语言处理](example/auto_compression/nlp)、[图像语义分割](example/auto_compression/semantic_segmentation)、[图像目标检测](example/auto_compression/detection)三个方向的自动化压缩示例。
+    - 发布`X2Paddle`模型自动化压缩方案:[YOLOv5](example/auto_compression/pytorch_yolov5)、[YOLOv6](example/auto_compression/pytorch_yolov6)、[HuggingFace](example/auto_compression/pytorch_huggingface)、[MobileNet](example/auto_compression/tensorflow_mobilenet)。
 
   - 升级量化功能
 
@@ -277,6 +278,11 @@ python setup.py install
 
 #### 1. 量化训练或者离线量化后的模型体积为什么没有变小？
 答：这是因为量化后保存的参数是虽然是int8范围，但是类型是float。这是因为Paddle训练前向默认的Kernel不支持INT8 Kernel实现，只有Paddle Inference TensorRT的推理才支持量化推理加速。为了方便量化后验证量化精度，使用Paddle训练前向能加载此模型，默认保存的Float32类型权重，体积没有发生变换。
+
+
+#### 2. macOS + Python3.9环境或者Windows环境下, 安装出错, "command 'swig' failed"
+
+答: 请参考https://github.com/PaddlePaddle/PaddleSlim/issues/1258
 
 ## 许可证书
 

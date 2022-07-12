@@ -1,0 +1,49 @@
+Global:
+  reader_config: configs/dataset/cityscapes_1024x512_scale1.0.yml
+  model_dir: ./RES-paddle2-UNet
+  model_filename: model
+  params_filename: params
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - conv2d_37.tmp_1
+
+ChannelPrune:
+  # pruned_ratio: 裁剪比例
+  pruned_ratio: 0.25
+  # prune_params_name: 需要裁剪的参数名字
+  prune_params_name:
+  - conv2d_17.w_0
+  - conv2d_16.w_0
+  - conv2d_15.w_0
+  - conv2d_14.w_0
+  - conv2d_13.w_0
+  - conv2d_12.w_0
+  - conv2d_11.w_0
+  - conv2d_10.w_0
+  - conv2d_9.w_0
+  - conv2d_8.w_0
+  - conv2d_7.w_0
+  - conv2d_6.w_0
+  - conv2d_5.w_0
+  - conv2d_4.w_0
+  - conv2d_3.w_0
+  - conv2d_2.w_0
+  - conv2d_1.w_0
+  - conv2d_0.w_0
+  # criterion: 评估一个卷积层内通道重要性所参考的指标
+  criterion: l1_norm
+TrainConfig:
+  epochs: 861
+  eval_iter: 180
+  learning_rate: 
+    type: PiecewiseDecay
+    boundaries: [1000, 2000, 3000, 40000, 80000, 120000]
+    values: [0.00001, 0.0001, 0.001, 0.01, 0.001, 0.0001, 0.00001]
+  optimizer_builder:
+    optimizer: 
+      type: Momentum
+      momentum: 0.9
+    weight_decay: 4.0e-05

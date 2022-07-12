@@ -11,6 +11,7 @@ random.seed(0)
 np.random.seed(0)
 
 DATA_DIM = 224
+RESIZE_DIM = 256
 
 THREAD = 16
 BUF_SIZE = 10240
@@ -34,8 +35,8 @@ def crop_image(img, target_size, center):
     width, height = img.size
     size = target_size
     if center == True:
-        w_start = (width - size) / 2
-        h_start = (height - size) / 2
+        w_start = (width - size) // 2
+        h_start = (height - size) // 2
     else:
         w_start = np.random.randint(0, width - size + 1)
         h_start = np.random.randint(0, height - size + 1)
@@ -98,7 +99,12 @@ def distort_color(img):
     return img
 
 
-def process_image(sample, mode, color_jitter, rotate):
+def process_image(sample,
+                  mode,
+                  color_jitter,
+                  rotate,
+                  crop_size=DATA_DIM,
+                  resize_size=RESIZE_DIM):
     img_path = sample[0]
 
     try:
@@ -108,10 +114,10 @@ def process_image(sample, mode, color_jitter, rotate):
         return None
     if mode == 'train':
         if rotate: img = rotate_image(img)
-        img = random_crop(img, DATA_DIM)
+        img = random_crop(img, crop_size)
     else:
-        img = resize_short(img, target_size=256)
-        img = crop_image(img, target_size=DATA_DIM, center=True)
+        img = resize_short(img, target_size=resize_size)
+        img = crop_image(img, target_size=crop_size, center=True)
     if mode == 'train':
         if color_jitter:
             img = distort_color(img)
@@ -137,6 +143,8 @@ def _reader_creator(file_list,
                     color_jitter=False,
                     rotate=False,
                     data_dir=DATA_DIR,
+                    crop_size=DATA_DIM,
+                    resize_size=RESIZE_DIM,
                     batch_size=1):
     def reader():
         try:
@@ -158,7 +166,12 @@ def _reader_creator(file_list,
             os._exit(1)
 
     mapper = functools.partial(
-        process_image, mode=mode, color_jitter=color_jitter, rotate=rotate)
+        process_image,
+        mode=mode,
+        color_jitter=color_jitter,
+        rotate=rotate,
+        crop_size=crop_size,
+        resize_size=resize_size)
 
     return paddle.reader.xmap_readers(mapper, reader, THREAD, BUF_SIZE)
 
@@ -185,9 +198,15 @@ def test(data_dir=DATA_DIR):
 
 
 class ImageNetDataset(Dataset):
-    def __init__(self, data_dir=DATA_DIR, mode='train'):
+    def __init__(self,
+                 data_dir=DATA_DIR,
+                 mode='train',
+                 crop_size=DATA_DIM,
+                 resize_size=RESIZE_DIM):
         super(ImageNetDataset, self).__init__()
         self.data_dir = data_dir
+        self.crop_size = crop_size
+        self.resize_size = resize_size
         train_file_list = os.path.join(data_dir, 'train_list.txt')
         val_file_list = os.path.join(data_dir, 'val_list.txt')
         test_file_list = os.path.join(data_dir, 'test_list.txt')
@@ -211,21 +230,27 @@ class ImageNetDataset(Dataset):
                 [data_path, sample[1]],
                 mode='train',
                 color_jitter=False,
-                rotate=False)
+                rotate=False,
+                crop_size=self.crop_size,
+                resize_size=self.resize_size)
             return data, np.array([label]).astype('int64')
         elif self.mode == 'val':
             data, label = process_image(
                 [data_path, sample[1]],
                 mode='val',
                 color_jitter=False,
-                rotate=False)
+                rotate=False,
+                crop_size=self.crop_size,
+                resize_size=self.resize_size)
             return data, np.array([label]).astype('int64')
         elif self.mode == 'test':
             data = process_image(
                 [data_path, sample[1]],
                 mode='test',
                 color_jitter=False,
-                rotate=False)
+                rotate=False,
+                crop_size=self.crop_size,
+                resize_size=self.resize_size)
             return data
 
     def __len__(self):

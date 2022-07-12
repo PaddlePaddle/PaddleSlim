@@ -1,0 +1,24 @@
+Global:
+  reader_config: configs/dataset/cityscapes_1024x512_scale1.0.yml
+  model_dir: ./RES-paddle2-UNet
+  model_filename: model
+  params_filename: params
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  - conv2d_37.tmp_1
+
+Quantization:
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+
+TrainConfig:
+  epochs: 20
+  eval_iter: 360
+  learning_rate: 0.0001
+  optimizer: SGD
+  optim_args:
+    weight_decay: 4.0e-05

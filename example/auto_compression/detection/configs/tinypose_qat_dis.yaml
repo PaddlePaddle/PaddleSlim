@@ -1,0 +1,34 @@
+Global:
+  arch: 'keypoint'
+  reader_config: configs/tinypose_reader.yml
+  input_list: ['image']
+  Evaluation: True
+  model_dir: ./tinypose_128x96
+  model_filename: model.pdmodel
+  params_filename: model.pdiparams
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node:
+  -  conv2d_441.tmp_0
+
+Quantization:
+  use_pact: true
+  activation_quantize_type: 'moving_average_abs_max'
+  weight_quantize_type: 'channel_wise_abs_max'  # 'abs_max' is layer wise quant
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+
+TrainConfig:
+  train_iter: 30000
+  eval_iter: 1000
+  learning_rate: 
+    type: CosineAnnealingDecay 
+    learning_rate: 0.015
+    T_max: 30000
+  optimizer_builder:
+    optimizer:
+      type: Momentum
+    weight_decay: 0.00002

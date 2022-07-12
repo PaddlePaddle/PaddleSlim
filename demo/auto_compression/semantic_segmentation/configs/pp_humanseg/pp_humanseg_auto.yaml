@@ -1,9 +1,0 @@
-TrainConfig:
-  epochs: 14
-  eval_iter: 400
-  learning_rate: 5.0e-03
-  optimizer_builder:
-    optimizer: 
-      type: SGD
-    weight_decay: 0.0005
-  

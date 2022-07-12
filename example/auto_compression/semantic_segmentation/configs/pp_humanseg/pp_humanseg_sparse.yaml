@@ -1,0 +1,37 @@
+Global:
+  reader_config: configs/dataset/humanseg_dataset.yaml
+  model_dir: ./ppseg_lite_portrait_398x224_with_softmax
+  model_filename: model.pdmodel
+  params_filename: model.pdiparams
+
+Distillation:
+  alpha: 1.0
+  loss: l2
+  node: 
+  - batch_norm_47.tmp_2
+
+UnstructurePrune:
+  prune_strategy: gmp
+  prune_mode: ratio
+  ratio: 0.75
+  gmp_config: 
+    stable_iterations: 0
+    pruning_iterations: 4500
+    tunning_iterations: 4500
+    resume_iteration: -1
+    pruning_steps: 100
+    initial_ratio: 0.15
+  prune_params_type: conv1x1_only
+  local_sparsity: True
+
+TrainConfig:
+  epochs: 14
+  eval_iter: 400
+  learning_rate: 
+    type: PiecewiseDecay
+    boundaries: [4500]
+    values: [0.005, 0.0005]
+  optimizer_builder:
+    optimizer: 
+      type: SGD
+    weight_decay: 0.0005

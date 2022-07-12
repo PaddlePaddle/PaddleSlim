@@ -1,0 +1,17 @@
+Global:
+  model_dir: ./TNEWS
+  model_filename: infer.pdmodel
+  params_filename: infer.pdiparams
+  task_name: tnews
+  dataset: clue
+  batch_size: 16
+  max_seq_length: 128
+TrainConfig:
+  epochs: 6
+  eval_iter: 1110
+  learning_rate: 2.0e-5
+  optimizer_builder:
+    optimizer: 
+      type: AdamW
+    weight_decay: 0.01
+  origin_metric: 0.5700

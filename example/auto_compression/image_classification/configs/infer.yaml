@@ -1,0 +1,15 @@
+model_dir: "./MobileNetV1_infer"
+model_filename: "inference.pdmodel"
+params_filename: "inference.pdiparams"
+batch_size: 1
+image_size: 224
+use_gpu: True
+enable_mkldnn: True
+cpu_num_threads: 10
+enable_benchmark: True
+use_fp16: False
+use_int8: False
+ir_optim: True
+use_tensorrt: True
+gpu_mem: 8000
+enable_profile: False

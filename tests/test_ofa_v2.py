@@ -297,34 +297,5 @@ class TestInputDict(unittest.TestCase):
             input_dtypes=['float32', 'float32'])
 
 
-class TestInputDict(unittest.TestCase):
-    def setUp(self):
-        model = ModelInputDict()
-
-        sp_net_config = supernet(expand_ratio=[0.5, 1.0])
-        self.model = Convert(sp_net_config).convert(model)
-        self.images = paddle.randn(shape=[2, 3, 32, 32], dtype='float32')
-        self.images2 = {
-            'data': paddle.randn(
-                shape=[2, 12, 32, 32], dtype='float32')
-        }
-        default_run_config = {'skip_layers': ['conv1.0', 'conv2.0']}
-        self.run_config = RunConfig(**default_run_config)
-
-        self.ofa_model = OFA(self.model, run_config=self.run_config)
-        self.ofa_model._clear_search_space(self.images, data=self.images2)
-
-    def test_export(self):
-
-        config = self.ofa_model._sample_config(
-            task="expand_ratio", sample_type="smallest")
-        self.ofa_model.export(
-            config,
-            input_shapes=[[1, 3, 32, 32], {
-                'data': [1, 12, 32, 32]
-            }],
-            input_dtypes=['float32', 'float32'])
-
-
 if __name__ == '__main__':
     unittest.main()
