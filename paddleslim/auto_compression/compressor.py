@@ -595,7 +595,6 @@ class AutoCompression:
             _logger.info(
                 "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))
-        os._exit(0)
 
     def single_strategy_compress(self, strategy, config, strategy_idx,
                                  train_config):
