@@ -143,6 +143,8 @@ class AutoCompression:
                 self.train_config = TrainConfig(**config.pop('TrainConfig'))
             else:
                 self.train_config = None
+        else:
+            self.train_config = None
         self.strategy_config = extract_strategy_config(config)
 
         # prepare dataloader
@@ -596,7 +598,6 @@ class AutoCompression:
             _logger.info(
                 "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))
-        os._exit(0)
 
     def single_strategy_compress(self, strategy, config, strategy_idx,
                                  train_config):
