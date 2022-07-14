@@ -143,6 +143,8 @@ class AutoCompression:
                 self.train_config = TrainConfig(**config.pop('TrainConfig'))
             else:
                 self.train_config = None
+        else:
+            self.train_config = None
         self.strategy_config = extract_strategy_config(config)
 
         # prepare dataloader

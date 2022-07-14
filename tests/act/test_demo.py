@@ -1,5 +1,7 @@
 import os
+import sys
 import unittest
+sys.path.append("../../")
 import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
