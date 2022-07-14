@@ -47,7 +47,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     loader = paddle.io.DataLoader(
         eval_dataset,
         batch_sampler=batch_sampler,
-        num_workers=1,
+        num_workers=0,
         return_list=True, )
 
     total_iters = len(loader)
@@ -137,7 +137,7 @@ def main(args):
         train_dataset,
         places=[place],
         batch_sampler=batch_sampler,
-        num_workers=2,
+        num_workers=0,
         return_list=True,
         worker_init_fn=worker_init_fn)
     train_dataloader = reader_wrapper(train_loader)
