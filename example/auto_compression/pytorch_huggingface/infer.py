@@ -100,41 +100,19 @@ def parse_args():
         type=int,
         help="Padding type", )
     parser.add_argument(
-        "--perf_warmup_steps",
-        default=20,
-        type=int,
-        help="Warmup steps for performance test.", )
-    parser.add_argument(
         "--use_trt",
         action='store_true',
         help="Whether to use inference engin TensorRT.", )
     parser.add_argument(
-        "--perf",
-        action='store_false',
-        help="Whether to test performance.", )
-    parser.add_argument(
         "--int8",
         action='store_true',
         help="Whether to use int8 inference.", )
-
     parser.add_argument(
         "--fp16",
         action='store_true',
         help="Whether to use int8 inference.", )
     args = parser.parse_args()
     return args
-
-
-@paddle.no_grad()
-def evaluate(outputs, metric, data_loader):
-    metric.reset()
-    for i, batch in enumerate(data_loader):
-        input_ids, segment_ids, labels = batch
-        logits = paddle.to_tensor(outputs[i][0])
-        correct = metric.compute(logits, labels)
-        metric.update(correct)
-    res = metric.accumulate()
-    print("acc: %s, " % res, end='')
 
 
 def convert_example(example,
@@ -240,95 +218,67 @@ class Predictor(object):
 
         return cls(predictor, input_handles, output_handles)
 
-    def predict_batch(self, data):
-        for input_field, input_handle in zip(data, self.input_handles):
-            input_handle.copy_from_cpu(input_field)
-        self.predictor.run()
-        output = [
-            output_handle.copy_to_cpu() for output_handle in self.output_handles
-        ]
-        return output
+    def predict(self, dataset, collate_fn, batch_size):
+        batch_sampler = paddle.io.BatchSampler(
+            dataset, batch_size=batch_size, shuffle=False)
+        data_loader = paddle.io.DataLoader(
+            dataset=dataset,
+            batch_sampler=batch_sampler,
+            collate_fn=collate_fn,
+            num_workers=0,
+            return_list=True)
+        outputs = []
+        end_time = 0
+        for data in data_loader:
+            for input_field, input_handle in zip(data, self.input_handles):
+                input_handle.copy_from_cpu(input_field.numpy() if isinstance(
+                    input_field, paddle.Tensor) else input_field)
+            for i in range(50):
+                self.predictor.run()
 
-    def convert_predict_batch(self, args, data, tokenizer, batchify_fn,
-                              label_list):
-        examples = []
-        for example in data:
-            example = convert_example(
-                example,
-                tokenizer,
-                label_list,
-                task_name=args.task_name,
-                max_seq_length=args.max_seq_length,
-                padding='max_length',
-                return_attention_mask=True)
-            examples.append(example)
-
-        return examples
-
-    def predict(self, dataset, tokenizer, batchify_fn, args):
-        batches = [
-            dataset[idx:idx + args.batch_size]
-            for idx in range(0, len(dataset), args.batch_size)
-        ]
-        if args.perf:
-            for i, batch in enumerate(batches):
-                examples = self.convert_predict_batch(
-                    args, batch, tokenizer, batchify_fn, dataset.label_list)
-                input_ids, atten_mask, segment_ids, label = batchify_fn(
-                    examples)
-                output = self.predict_batch(
-                    [input_ids, atten_mask, segment_ids])
-                if i > args.perf_warmup_steps:
-                    break
             time1 = time.time()
-            for batch in batches:
-                examples = self.convert_predict_batch(
-                    args, batch, tokenizer, batchify_fn, dataset.label_list)
-                input_ids, atten_mask, segment_ids, _ = batchify_fn(examples)
-                output = self.predict_batch(
-                    [input_ids, atten_mask, segment_ids])
-
-            print("task name: %s, time: %s, " %
-                  (args.task_name, time.time() - time1))
-
-        else:
-            metric = METRIC_CLASSES[args.task_name]()
-            metric.reset()
-            for i, batch in enumerate(batches):
-                examples = self.convert_predict_batch(
-                    args, batch, tokenizer, batchify_fn, dataset.label_list)
-                input_ids, atten_mask, segment_ids, label = batchify_fn(
-                    examples)
-                output = self.predict_batch(
-                    [input_ids, atten_mask, segment_ids])
-                correct = metric.compute(
-                    paddle.to_tensor(output), paddle.to_tensor(label))
-                metric.update(correct)
-
-            res = metric.accumulate()
-            print("task name: %s, acc: %s, " % (args.task_name, res), end='')
+            repeats = 1000
+            for i in range(repeats):
+                self.predictor.run()
+                output = [
+                    output_handle.copy_to_cpu()
+                    for output_handle in self.output_handles
+                ]
+            time2 = time.time()
+            end_time = (time2 - time1) / repeats * 1000
+            break
+        print("task name: %s, inference time: %s ms." %
+              (args.task_name, end_time))
 
 
 def main():
     paddle.seed(42)
     args = parse_args()
 
+    predictor = Predictor.create_predictor(args)
+
     args.task_name = args.task_name.lower()
     args.model_type = args.model_type.lower()
 
-    predictor = Predictor.create_predictor(args)
-
     dev_ds = load_dataset('glue', args.task_name, splits='dev')
-
     tokenizer = BertTokenizer.from_pretrained(args.model_name_or_path)
 
+    trans_func = partial(
+        convert_example,
+        tokenizer=tokenizer,
+        label_list=dev_ds.label_list,
+        max_seq_length=args.max_seq_length,
+        padding=args.padding,
+        return_attention_mask=True)
+
+    dev_ds = dev_ds.map(trans_func)
     batchify_fn = lambda samples, fn=Tuple(
         Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input
         Pad(axis=0, pad_val=0),
         Pad(axis=0, pad_val=tokenizer.pad_token_id),  # segment
         Stack(dtype="int64" if dev_ds.label_list else "float32")  # label
     ): fn(samples)
-    outputs = predictor.predict(dev_ds, tokenizer, batchify_fn, args)
+    predictor.predict(dev_ds, batchify_fn, args.batch_size)
 
 
 if __name__ == "__main__":
