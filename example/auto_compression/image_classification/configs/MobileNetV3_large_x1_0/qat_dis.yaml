@@ -9,8 +9,6 @@ Global:
 Distillation:
   alpha: 1.0
   loss: soft_label
-  node:
-  - linear_1.tmp_1
 Quantization:
   use_pact: true
   activation_bits: 8
