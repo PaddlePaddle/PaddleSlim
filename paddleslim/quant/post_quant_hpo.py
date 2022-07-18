@@ -144,12 +144,7 @@ def standardization(data):
     """standardization numpy array"""
     mu = np.mean(data, axis=0)
     sigma = np.std(data, axis=0)
-    if isinstance(sigma, list) or isinstance(sigma, np.ndarray):
-        for idx, sig in enumerate(sigma):
-            if sig == 0.:
-                sigma[idx] = 1e-13
-    else:
-        sigma = 1e-13 if sigma == 0. else sigma
+    sigma = 1e-13 if sigma == 0. else sigma
     return (data - mu) / sigma
 
 
@@ -246,15 +241,19 @@ def eval_quant_model():
         if have_invalid_num(out_float) or have_invalid_num(out_quant):
             continue
 
-        out_float_list.append(list(out_float))
-        out_quant_list.append(list(out_quant))
+        try:
+            if len(out_float) > 3:
+                out_float = standardization(out_float)
+                out_quant = standardization(out_quant)
+        except:
+            continue
+        out_float_list.append(out_float)
+        out_quant_list.append(out_quant)
         valid_data_num += 1
 
         if valid_data_num >= max_eval_data_num:
             break
 
-    out_float_list = standardization(out_float_list)
-    out_quant_list = standardization(out_quant_list)
     emd_sum = cal_emd_lose(out_float_list, out_quant_list,
                            out_len_sum / float(valid_data_num))
     _logger.info("output diff: {}".format(emd_sum))
