@@ -302,8 +302,7 @@ def main():
         save_dir=args.save_dir,
         config=all_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function
-        if 'HyperParameterOptimization' not in all_config else eval_dataloader,
+        eval_callback=eval_function,
         eval_dataloader=eval_dataloader)
 
     if not os.path.exists(args.save_dir):
