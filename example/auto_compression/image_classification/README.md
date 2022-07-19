@@ -41,6 +41,8 @@
 | EfficientNetB0 | 量化+蒸馏 | 75.39 | 1.44 | - | [Config](./config/EfficientNetB0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/EfficientNetB0_QAT.tar) |
 | GhostNet_x1_0 | Baseline | 74.02 | 2.93 | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/GhostNet_x1_0_infer.tar) |
 | GhostNet_x1_0 | 量化+蒸馏 | 72.62 | 1.03 | - | [Config](./config/GhostNet_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/GhostNet_x1_0_QAT.tar) |
+| MobileNetV3_large_x1_0 | Baseline | 75.32 | - | 16.62 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV3_large_x1_0_infer.tar) |
+| MobileNetV3_large_x1_0 | 量化+蒸馏 | 74.41 | - | 9.85 | [Config](./config/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_QAT.tar) |
 | MobileNetV3_large_x1_0_ssld | Baseline | 78.96 | - | 16.62 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV3_large_x1_0_ssld_infer.tar) |
 | MobileNetV3_large_x1_0_ssld | 量化+蒸馏 | 77.17 | - | 9.85 | [Config](./config/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_ssld_QAT.tar) |
 
