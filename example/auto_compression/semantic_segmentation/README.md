@@ -71,10 +71,10 @@ git clone https://github.com/PaddlePaddle/PaddleSlim.git
 安装paddleseg
 
 ```shell
-pip install paddleseg
+pip install paddleseg==2.5.0
 ```
 
-注：安装[PaddleSeg](https://github.com/PaddlePaddle/PaddleSeg)的目的只是为了直接使用PaddleSeg中的Dataloader组件，不涉及模型组网等。
+注：安装[PaddleSeg](https://github.com/PaddlePaddle/PaddleSeg)的目的只是为了直接使用PaddleSeg中的Dataloader组件，不涉及模型组网等。推荐安装PaddleSeg 2.5.0, 不同版本的PaddleSeg的Dataloader返回数据的格式略有不同.
 
 #### 3.2 准备数据集
 
