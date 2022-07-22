@@ -554,7 +554,7 @@ class AutoCompression:
 
     def create_tmp_dir(self, base_dir, prefix="tmp"):
         # create a new temp directory in final dir
-        s_datetime = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
+        s_datetime = strftime("%Y-%m-%d-%H_%M_%S", gmtime())
         tmp_base_name = "_".join([prefix, str(os.getpid()), s_datetime])
         tmp_dir = os.path.join(base_dir, tmp_base_name)
         if not os.path.exists(tmp_dir):
