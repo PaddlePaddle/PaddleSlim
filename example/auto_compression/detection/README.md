@@ -123,26 +123,25 @@ python eval.py --config_path=./configs/ppyoloe_l_qat_dis.yaml
 
 ## 4.预测部署
 
-#### Paddle-TensorRT C++部署
-
-进入[cpp_infer](./cpp_infer_ppyoloe)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer_ppyoloe/README.md)进行准备环境及编译，然后开始测试：
-```shell
-# 编译
-bash complie.sh
-# 执行
-./build/trt_run --model_file ppyoloe_s_quant/model.pdmodel --params_file ppyoloe_s_quant/model.pdiparams --run_mode=trt_int8
-```
-
-#### Paddle-TensorRT Python部署:
-
-首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。
-
-然后使用[paddle_trt_infer.py](./paddle_trt_infer.py)进行部署：
-```shell
-python paddle_trt_infer.py --model_path=output --image_file=images/000000570688.jpg --benchmark=True --run_mode=trt_int8
-```
-
 - 如果模型包含NMS，可以参考[PaddleDetection部署教程](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy)，GPU上量化模型开启TensorRT并设置trt_int8模式进行部署。
+
+- 模型为PPYOLOE，同时不包含NMS，使用以下预测demo进行部署：
+  - Paddle-TensorRT C++部署
+
+  进入[cpp_infer](./cpp_infer_ppyoloe)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer_ppyoloe/README.md)进行准备环境及编译，然后开始测试：
+  ```shell
+  # 编译
+  bash complie.sh
+  # 执行
+  ./build/trt_run --model_file ppyoloe_s_quant/model.pdmodel --params_file ppyoloe_s_quant/model.pdiparams --run_mode=trt_int8
+  ```
+
+  - Paddle-TensorRT Python部署:
+
+  首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。然后使用[paddle_trt_infer.py](./paddle_trt_infer.py)进行部署：
+  ```shell
+  python paddle_trt_infer.py --model_path=output --image_file=images/000000570688.jpg --benchmark=True --run_mode=trt_int8
+  ```
 
 ## 5.FAQ
 
