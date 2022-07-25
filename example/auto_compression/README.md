@@ -85,7 +85,7 @@ ACT相比传统的模型压缩方法，
 | [目标检测](./pytorch_yolov5)             | YOLOv5s<br/>(PyTorch)        | 37.40                  | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4   |
 | [目标检测](./pytorch_yolov6)             | YOLOv6s<br/>(PyTorch)        | 42.4                  | 41.3                   | 9.06             | 1.83             | **4.95**   | NVIDIA Tesla T4   |
 | [目标检测](./pytorch_yolov7)             | YOLOv7<br/>(PyTorch)        | 51.1                  | 50.8                   | 26.84             | 4.55             | **5.89**   | NVIDIA Tesla T4   |
-| [目标检测](./detection)             | PP-YOLOE-l                   | 50.9                   | 50.6                   | 11.2             | 6.7              | **1.67**   | NVIDIA Tesla V100 |
+| [目标检测](./detection)             | PP-YOLOE-s                   | 43.1                   | 42.6                   |  6.51  |   2.12   |  **3.07**  | NVIDIA Tesla T4 |
 | [图像分类](./image_classification)  | MobileNetV1<br/>(TensorFlow) | 71.0                   | 70.22                  | 30.45            | 15.86            |  **1.92**  | SDMM865（骁龙865）     |  
 
 - 备注：目标检测精度指标为mAP（0.5:0.95）精度测量结果。图像分割精度指标为IoU精度测量结果。
