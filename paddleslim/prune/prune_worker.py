@@ -551,7 +551,6 @@ class depthwise_conv2d(PruneWorker):
             assert pruned_axis == channel_axis, "The Input of conv2d can only be pruned at channel axis, but got {}".format(
                 pruned_axis)
             self.append_pruned_vars(_filter, 0, transforms)
-            self.append_pruned_vars(_filter, 1, transforms)
             self._visit_and_search(_filter, 0, transforms)
             # It will not pruning number of kernels in depthwise conv2d,
             # so it is not neccesary to search succeed operators. 
