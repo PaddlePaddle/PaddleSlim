@@ -13,21 +13,21 @@
 - [5.FAQ](5FAQ)
 
 ## 1. 简介
-本示例将以目标检测模型PP-YOLOE-l为例，介绍如何使用PaddleDetection中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为量化蒸馏。
+本示例将以目标检测模型PP-YOLOE为例，介绍如何使用PaddleDetection中Inference部署模型进行自动压缩。本示例使用的自动压缩策略为量化蒸馏。
 
 
 ## 2.Benchmark
 
 ### PP-YOLOE
 
-| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
-| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| PP-YOLOE-l |  Base模型 | 640*640  |  50.9   |   11.2  |   7.7ms   |  -  |  [config](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/configs/ppyoloe/ppyoloe_crn_l_300e_coco.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco.tar) |
-| PP-YOLOE-l |  量化蒸馏训练 | 640*640  |  50.6   |   - |   -   |  6.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
+| 模型  | Base mAP | 离线量化mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 |  配置文件 | 量化模型  |
+| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
+| PP-YOLOE-l | 50.9  |  - | 50.6  |   11.2ms  |   7.7ms   |  **6.7ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
+| PP-YOLOE-s |  43.1  |   26.2 |   42.6   |   6.51ms  |   2.77ms   |  **2.12ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_quant.tar) |
 
-- mAP的指标均在COCO val2017数据集中评测得到。
-- PP-YOLOE模型在Tesla V100的GPU环境下测试，并且开启TensorRT，batch_size=1，包含NMS，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)。
-
+- mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
+- PP-YOLOE-l模型在Tesla V100的GPU环境下测试，并且开启TensorRT，batch_size=1，包含NMS，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)。
+- PP-YOLOE-s模型在Tesla T4，TensorRT 8.4.1，CUDA 11.2，batch_size=1，不包含NMS，测试脚本是[cpp_infer_ppyoloe](./cpp_infer_ppyoloe)。
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
@@ -56,7 +56,6 @@ pip install paddledet
 
 注：安装PaddleDet的目的是为了直接使用PaddleDetection中的Dataloader组件。
 
-
 #### 3.2 准备数据集
 
 本案例默认以COCO数据进行自动压缩实验，如果自定义COCO数据，或者其他格式数据，请参考[PaddleDetection数据准备文档](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.4/docs/tutorials/PrepareDataSet.md) 来准备数据。
@@ -79,6 +78,7 @@ git clone https://github.com/PaddlePaddle/PaddleDetection.git
 ```
 - 导出预测模型
 
+PPYOLOE-l模型，包含NMS：如快速体验，可直接下载[PP-YOLOE-l导出模型](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco.tar)
 ```shell
 python tools/export_model.py \
         -c configs/ppyoloe/ppyoloe_crn_l_300e_coco.yml \
@@ -86,7 +86,13 @@ python tools/export_model.py \
         trt=True \
 ```
 
-**注意**：PP-YOLOE导出时设置`trt=True`旨在优化在TensorRT上的性能，如果没有使用TensorRT，或者其他模型都不需要设置`trt=True`。如果想快速体验，可以直接下载[PP-YOLOE-l导出模型](https://bj.bcebos.com/v1/paddle-slim-models/detection/ppyoloe_crn_l_300e_coco.tar)。
+PPYOLOE-s模型，不包含NMS：如快速体验，可直接下载[PP-YOLOE-s导出模型](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_s_300e_coco.tar)
+```shell
+python tools/export_model.py \
+        -c configs/ppyoloe/ppyoloe_crn_s_300e_coco.yml \
+        -o weights=https://paddledet.bj.bcebos.com/models/ppyoloe_crn_s_300e_coco.pdparams \
+        trt=True exclude_nms=True \
+```
 
 #### 3.4 自动压缩并产出模型
 
@@ -117,7 +123,29 @@ python eval.py --config_path=./configs/ppyoloe_l_qat_dis.yaml
 
 ## 4.预测部署
 
-可以参考[PaddleDetection部署教程](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy)：
-- GPU上量化模型开启TensorRT并设置trt_int8模式进行部署。
+- 如果模型包含NMS，可以参考[PaddleDetection部署教程](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy)，GPU上量化模型开启TensorRT并设置trt_int8模式进行部署。
+
+- 模型为PPYOLOE，同时不包含NMS，使用以下预测demo进行部署：
+  - Paddle-TensorRT C++部署
+
+  进入[cpp_infer](./cpp_infer_ppyoloe)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer_ppyoloe/README.md)进行准备环境及编译，然后开始测试：
+  ```shell
+  # 编译
+  bash complie.sh
+  # 执行
+  ./build/trt_run --model_file ppyoloe_s_quant/model.pdmodel --params_file ppyoloe_s_quant/model.pdiparams --run_mode=trt_int8
+  ```
+
+  - Paddle-TensorRT Python部署:
+
+  首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。然后使用[paddle_trt_infer.py](./paddle_trt_infer.py)进行部署：
+  ```shell
+  python paddle_trt_infer.py --model_path=output --image_file=images/000000570688.jpg --benchmark=True --run_mode=trt_int8
+  ```
 
 ## 5.FAQ
+
+- 如果想测试离线量化模型精度，可执行：
+```shell
+python post_quant.py --config_path=./configs/ppyoloe_s_qat_dis.yaml
+```
