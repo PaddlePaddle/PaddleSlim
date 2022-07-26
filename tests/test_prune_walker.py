@@ -473,9 +473,9 @@ class TestDepthwiseConv2d(TestPruneWorker):
 
     def set_cases(self):
         weight_var = self.graph.var('conv1.w_0')
-        self.cases.append((self.in_var, 1, {'conv1.w_0': [0, 1]}))
-        self.cases.append((self.out_var, 1, {'conv1.w_0': [0, 1]}))
-        self.cases.append((weight_var, 0, {'conv1.w_0': [1]}))
+        self.cases.append((self.in_var, 1, {'conv1.w_0': [0]}))
+        self.cases.append((self.out_var, 1, {'conv1.w_0': [0]}))
+        self.cases.append((weight_var, 0, {'conv1.w_0': [0]}))
 
     def test_prune(self):
         self.check_in_out()
