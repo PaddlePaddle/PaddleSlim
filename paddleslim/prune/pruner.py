@@ -117,7 +117,7 @@ class Pruner():
                 _groups = 1
                 if not lazy:
                     # update groups of conv2d
-                    if pruned_axis == 1:
+                    if pruned_axis == 1 or pruned_axis == 0:
                         for op in param.outputs():
                             if op.type() in [
                                     "conv2d", "conv2d_grad", "depthwise_conv2d",
@@ -132,7 +132,7 @@ class Pruner():
                                     f"change groups of {op.type()}({param.name()}) from {op.attr('groups')} to {new_groups};"
                                 )
                                 op.set_attr("groups", new_groups)
-                    if _groups == 1:
+
                         origin_shape = copy.deepcopy(param.shape())
                         if param_shape_backup is not None:
                             param_shape_backup[param.name()] = origin_shape
