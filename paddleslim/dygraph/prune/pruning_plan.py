@@ -220,7 +220,7 @@ class PruningPlan():
                         t_value = param.value().get_tensor()
                         value = np.array(t_value).astype("float32")
                         groups = _mask._op.attr('groups')
-                        if dims == 1 and groups is not None and groups > 1 and len(
+                        if groups is not None and groups > 1 and len(
                                 value.shape) == 4:
                             filter_size = value.shape[1]
                             except_num = np.sum(bool_mask)
@@ -230,7 +230,7 @@ class PruningPlan():
                             sub_layer._groups = new_groups
                             _logger.info("change groups from {} to {} for {}.".
                                          format(groups, new_groups, param.name))
-                            continue
+                            # continue
 
                         # The name of buffer can not contains "."
                         backup_name = param.name.replace(".", "_") + "_backup"
