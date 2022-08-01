@@ -230,9 +230,8 @@ class PruningPlan():
                             sub_layer._groups = new_groups
                             _logger.info("change groups from {} to {} for {}.".
                                          format(groups, new_groups, param.name))
-                            # continue
 
-                        # The name of buffer can not contains "."
+# The name of buffer can not contains "."
                         backup_name = param.name.replace(".", "_") + "_backup"
                         if backup_name not in sub_layer._buffers:
                             sub_layer.register_buffer(backup_name,
