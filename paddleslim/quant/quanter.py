@@ -233,7 +233,8 @@ def quant_aware(program,
                 onnx_format=False,
                 return_program=False,
                 calib_config={},
-                draw_graph=False):
+                draw_graph=False,
+                scale_dict=None):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
@@ -323,12 +324,12 @@ def quant_aware(program,
                     return True
         return False
 
-    if for_test:
+    skip_tensor_list = []
+    same_scale_tensor_list = []
+    if config['is_full_quantize']:
         pattern_ops, _, model_type = get_patterns(program)
-        skip_tensor_list = []
-        same_scale_tensor_list = []
         add_quant_tensor_list = []
-        if model_type == 'transformer' and config['is_full_quantize']:
+        if model_type == 'transformer':
             for part_name, ops in pattern_ops.items():
                 if 'MHA' in part_name:
                     qkv_weight_tensor = []
@@ -363,7 +364,7 @@ def quant_aware(program,
 
                     same_scale_tensor_list.append(qkv_output_tensor)
 
-    if config['quant_post_first'] and for_test:
+    if config['quant_post_first']:
         if 'quantizable_op_type' not in calib_config:
             calib_config['quantizable_op_type'] = config['quantize_op_types']
         exe = paddle.static.Executor() if executor is None else executor
@@ -375,8 +376,16 @@ def quant_aware(program,
             same_scale_tensor_list=same_scale_tensor_list,
             scale_trainable=config['scale_trainable'],
             batch_nums=10,
+            scale_dict=scale_dict,
             **calib_config)
-        main_graph = post_training_quantization.quantize()
+        if scale_dict is None:
+            main_graph = post_training_quantization.quantize()
+            scale_dict = post_training_quantization._scale_dict
+        else:
+            post_training_quantization._update_program()
+            main_graph = IrGraph(
+                core.Graph(post_training_quantization._program.desc),
+                for_test=for_test)
     else:
         main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
         transform_pass_ops = []
@@ -420,12 +429,13 @@ def quant_aware(program,
                 is_test=not config['scale_trainable'])
             quant_dequant_pass.apply(main_graph)
 
-        out_scale_training_pass = OutScaleForTrainingPass(
-            scope=scope,
-            place=place,
-            moving_rate=config['moving_rate'],
-            is_test=not config['scale_trainable'])
-        out_scale_training_pass.apply(main_graph)
+    out_scale_training_pass = OutScaleForTrainingPass(
+        scope=scope,
+        place=place,
+        moving_rate=config['moving_rate'],
+        is_test=not config['scale_trainable'],
+        scale_dict=scale_dict)
+    out_scale_training_pass.apply(main_graph)
 
     if (weight_preprocess_func is not None or
             act_preprocess_func is not None) and not for_test:
@@ -444,7 +454,7 @@ def quant_aware(program,
         quant_program = main_graph.to_program()
     else:
         quant_program = paddle.static.CompiledProgram(main_graph.graph)
-    return quant_program
+    return quant_program, scale_dict
 
 
 def quant_post_static(
