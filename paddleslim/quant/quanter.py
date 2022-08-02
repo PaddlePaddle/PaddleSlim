@@ -31,6 +31,7 @@ try:
     from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
     from paddle.fluid.contrib.slim.quantization import QuantWeightPass
     from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
+    from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePassV2
 except:
     pass
 from paddle.fluid import core
@@ -91,33 +92,10 @@ _quant_config_default = {
     # if True, 'quantize_op_types' will be TENSORRT_OP_TYPES
     'for_tensorrt': False,
     # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
-    'is_full_quantize': False
+    'is_full_quantize': False,
+    # if True, use onnx format to quant.
+    'onnx_format': False,
 }
-
-
-# TODO: Hard-code, remove it when Paddle 2.3.1
-class OutScaleForTrainingPassV2(OutScaleForTrainingPass):
-    def __init__(self, scope=None, place=None, moving_rate=0.9):
-        OutScaleForTrainingPass.__init__(
-            self, scope=scope, place=place, moving_rate=moving_rate)
-
-    def _scale_name(self, var_name):
-        """
-        Return the scale name for the var named `var_name`.
-        """
-        return "%s@scale" % (var_name)
-
-
-# TODO: Hard-code, remove it when Paddle 2.3.1
-class OutScaleForInferencePassV2(OutScaleForInferencePass):
-    def __init__(self, scope=None):
-        OutScaleForInferencePass.__init__(self, scope=scope)
-
-    def _scale_name(self, var_name):
-        """
-        Return the scale name for the var named `var_name`.
-        """
-        return "%s@scale" % (var_name)
 
 
 def load_dict():
@@ -222,7 +200,6 @@ def quant_aware(program,
                 act_preprocess_func=None,
                 optimizer_func=None,
                 executor=None,
-                onnx_format=False,
                 return_program=False,
                 draw_graph=False):
     """Add quantization  and dequantization operators to "program" 
@@ -291,7 +268,8 @@ def quant_aware(program,
         elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
             quant_dequant_ops.append(op_type)
     if len(transform_pass_ops) > 0:
-        trannsform_func = 'QuantizationTransformPassV2' if onnx_format else 'QuantizationTransformPass'
+        trannsform_func = 'QuantizationTransformPassV2' if config[
+            'onnx_format'] else 'QuantizationTransformPass'
         transform_pass = eval(trannsform_func)(
             scope=scope,
             place=place,
@@ -313,7 +291,8 @@ def quant_aware(program,
         transform_pass.apply(main_graph)
 
     if len(quant_dequant_ops) > 0:
-        qdq_func = 'AddQuantDequantPassV2' if onnx_format else 'AddQuantDequantPass'
+        qdq_func = 'AddQuantDequantPassV2' if config[
+            'onnx_format'] else 'AddQuantDequantPass'
         quant_dequant_pass = eval(qdq_func)(
             scope=scope,
             place=place,
@@ -323,7 +302,7 @@ def quant_aware(program,
             quantizable_op_type=quant_dequant_ops)
         quant_dequant_pass.apply(main_graph)
 
-    out_scale_training_pass = OutScaleForTrainingPassV2(
+    out_scale_training_pass = OutScaleForTrainingPass(
         scope=scope, place=place, moving_rate=config['moving_rate'])
     out_scale_training_pass.apply(main_graph)
 
@@ -356,8 +335,8 @@ def quant_post_static(
         data_loader=None,
         model_filename=None,
         params_filename=None,
-        save_model_filename='__model__',
-        save_params_filename='__params__',
+        save_model_filename='model.pdmodel',
+        save_params_filename='model.pdiparams',
         batch_size=1,
         batch_nums=None,
         scope=None,
@@ -520,8 +499,8 @@ def convert(program,
             place,
             config=None,
             scope=None,
-            save_int8=False,
-            onnx_format=False):
+            save_scale_path='./',
+            save_int8=False):
     """
     convert quantized and well-trained ``program`` to final  quantized
     ``program``that can be used to  save ``inference model``.
@@ -560,11 +539,18 @@ def convert(program,
     _logger.info("convert config {}".format(config))
     test_graph = IrGraph(core.Graph(program.desc), for_test=True)
 
-    if onnx_format:
+    if config['onnx_format']:
         quant_weight_pass = QuantWeightPass(scope, place)
         quant_weight_pass.apply(test_graph)
-    else:
         out_scale_infer_pass = OutScaleForInferencePassV2(scope=scope)
+        _, json_scale = out_scale_infer_pass.apply(test_graph)
+        save_json_path = os.path.join(save_scale_path, 'out_scale.json')
+        with open(save_json_path, 'w', newline='\n') as json_file:
+            json_file.write(json_scale)
+        _logger.info("Out scale of per-layer is save in: {}".format(
+            save_json_path))
+    else:
+        out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
         out_scale_infer_pass.apply(test_graph)
         # Freeze the graph after training by adjusting the quantize
         # operators' order for the inference.
