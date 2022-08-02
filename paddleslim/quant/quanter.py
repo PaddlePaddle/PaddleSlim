@@ -24,7 +24,6 @@ from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
 from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
 from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
 from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
-from paddle.fluid.contrib.slim.quantization import PostTrainingQuantizationProgram
 from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
@@ -32,6 +31,7 @@ try:
     from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
     from paddle.fluid.contrib.slim.quantization import QuantWeightPass
     from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
+    from paddle.fluid.contrib.slim.quantization import PostTrainingQuantizationProgram
 except:
     pass
 from paddle.fluid import core
@@ -97,9 +97,9 @@ _quant_config_default = {
     # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
     'is_full_quantize': False,
     # quant post to get initial scale for quant_aware
-    'quant_post_first': True,
+    'quant_post_first': False,
     # whether scale can be train
-    'scale_trainable': True,
+    'scale_trainable': True
 }
 
 
@@ -364,7 +364,7 @@ def quant_aware(program,
 
                     same_scale_tensor_list.append(qkv_output_tensor)
 
-    if config['quant_post_first']:
+    if config['quant_post_first'] and for_test:
         if 'quantizable_op_type' not in calib_config:
             calib_config['quantizable_op_type'] = config['quantize_op_types']
         exe = paddle.static.Executor() if executor is None else executor
@@ -377,15 +377,10 @@ def quant_aware(program,
             scale_trainable=config['scale_trainable'],
             batch_nums=10,
             scale_dict=scale_dict,
+            return_graph=True,
             **calib_config)
-        if scale_dict is None:
-            main_graph = post_training_quantization.quantize()
-            scale_dict = post_training_quantization._scale_dict
-        else:
-            post_training_quantization._update_program()
-            main_graph = IrGraph(
-                core.Graph(post_training_quantization._program.desc),
-                for_test=for_test)
+        main_graph = post_training_quantization.quantize()
+        scale_dict = post_training_quantization._scale_dict
     else:
         main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
         transform_pass_ops = []
