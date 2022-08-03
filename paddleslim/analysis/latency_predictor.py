@@ -98,7 +98,7 @@ class TableLatencyPredictor(LatencyPredictor):
             py_version = platform.python_version().split('.')
             if int(py_version[0]) != 3 or int(py_version[1]) != 9:
                 raise NotImplementedError(
-                    'latency predictor does NOT support running on macOS when python version is not 3.9.'
+                    'Latency predictor does NOT support running on macOS when python version is not 3.9.'
                 )
 
         _logger.info("pip install paddleslim-opt-tools")
