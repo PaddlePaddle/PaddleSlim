@@ -797,8 +797,7 @@ class AutoCompression:
                 test_program,
                 self._places,
                 self._quant_config,
-                scope=paddle.static.global_scope(),
-                save_scale_path=model_dir)
+                scope=paddle.static.global_scope())
 
         feed_vars = [
             test_program.global_block().var(name)

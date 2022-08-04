@@ -31,7 +31,6 @@ try:
     from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
     from paddle.fluid.contrib.slim.quantization import QuantWeightPass
     from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
-    from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePassV2
 except:
     pass
 from paddle.fluid import core
@@ -96,6 +95,31 @@ _quant_config_default = {
     # if True, use onnx format to quant.
     'onnx_format': False,
 }
+
+
+# TODO: Hard-code, remove it when Paddle 2.3.1
+class OutScaleForTrainingPassV2(OutScaleForTrainingPass):
+    def __init__(self, scope=None, place=None, moving_rate=0.9):
+        OutScaleForTrainingPass.__init__(
+            self, scope=scope, place=place, moving_rate=moving_rate)
+
+    def _scale_name(self, var_name):
+        """
+        Return the scale name for the var named `var_name`.
+        """
+        return "%s@scale" % (var_name)
+
+
+# TODO: Hard-code, remove it when Paddle 2.3.1
+class OutScaleForInferencePassV2(OutScaleForInferencePass):
+    def __init__(self, scope=None):
+        OutScaleForInferencePass.__init__(self, scope=scope)
+
+    def _scale_name(self, var_name):
+        """
+        Return the scale name for the var named `var_name`.
+        """
+        return "%s@scale" % (var_name)
 
 
 def load_dict():
@@ -213,7 +237,9 @@ def quant_aware(program,
             Default: None.
         scope(paddle.static.Scope): Scope records the mapping between variable names and variables, 
             similar to brackets in programming languages. Usually users can use 
-            `paddle.static.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.              When ``None`` will use `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . Default: ``None``.
+            `paddle.static.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.
+            When ``None`` will use `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ .
+            Default: ``None``.
         for_test(bool): If the 'program' parameter is a test program, this parameter should be set to ``True``. 
             Otherwise, set to ``False``.Default: False
        weight_quantize_func(function): Function that defines how to quantize weight. Using this
@@ -302,7 +328,7 @@ def quant_aware(program,
             quantizable_op_type=quant_dequant_ops)
         quant_dequant_pass.apply(main_graph)
 
-    out_scale_training_pass = OutScaleForTrainingPass(
+    out_scale_training_pass = OutScaleForTrainingPassV2(
         scope=scope, place=place, moving_rate=config['moving_rate'])
     out_scale_training_pass.apply(main_graph)
 
@@ -335,8 +361,8 @@ def quant_post_static(
         data_loader=None,
         model_filename=None,
         params_filename=None,
-        save_model_filename='model.pdmodel',
-        save_params_filename='model.pdiparams',
+        save_model_filename='__model__',
+        save_params_filename='__params__',
         batch_size=1,
         batch_nums=None,
         scope=None,
@@ -542,15 +568,8 @@ def convert(program,
     if config['onnx_format']:
         quant_weight_pass = QuantWeightPass(scope, place)
         quant_weight_pass.apply(test_graph)
-        out_scale_infer_pass = OutScaleForInferencePassV2(scope=scope)
-        _, json_scale = out_scale_infer_pass.apply(test_graph)
-        save_json_path = os.path.join(save_scale_path, 'out_scale.json')
-        with open(save_json_path, 'w', newline='\n') as json_file:
-            json_file.write(json_scale)
-        _logger.info("Out scale of per-layer is save in: {}".format(
-            save_json_path))
     else:
-        out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
+        out_scale_infer_pass = OutScaleForInferencePassV2(scope=scope)
         out_scale_infer_pass.apply(test_graph)
         # Freeze the graph after training by adjusting the quantize
         # operators' order for the inference.
