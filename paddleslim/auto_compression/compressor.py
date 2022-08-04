@@ -787,15 +787,18 @@ class AutoCompression:
             os.remove(os.path.join(self.tmp_dir, 'best_model.pdopt'))
             os.remove(os.path.join(self.tmp_dir, 'best_model.pdparams'))
 
-        if 'qat' in strategy:
-            test_program, int8_program = convert(test_program, self._places, self._quant_config, \
-                                          scope=paddle.static.global_scope(), \
-                                          save_int8=True)
-
         model_dir = os.path.join(self.tmp_dir,
                                  'strategy_{}'.format(str(strategy_idx + 1)))
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
+
+        if 'qat' in strategy:
+            test_program = convert(
+                test_program,
+                self._places,
+                self._quant_config,
+                scope=paddle.static.global_scope())
+
         feed_vars = [
             test_program.global_block().var(name)
             for name in test_program_info.feed_target_names
