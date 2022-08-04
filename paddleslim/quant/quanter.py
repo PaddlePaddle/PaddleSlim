@@ -521,12 +521,7 @@ def quant_post_static(
 quant_post = quant_post_static
 
 
-def convert(program,
-            place,
-            config=None,
-            scope=None,
-            save_scale_path='./',
-            save_int8=False):
+def convert(program, place, config=None, scope=None, save_int8=False):
     """
     convert quantized and well-trained ``program`` to final  quantized
     ``program``that can be used to  save ``inference model``.
