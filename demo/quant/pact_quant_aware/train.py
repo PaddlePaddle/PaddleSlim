@@ -65,6 +65,8 @@ add_arg('use_pact',          bool, True,
         "Whether to use PACT or not.")
 add_arg('analysis',          bool, False,
         "Whether analysis variables distribution.")
+add_arg('onnx_format',          bool, False,
+        "Whether use onnx format or not.")
 add_arg('ce_test',                 bool,   False,       "Whether to CE test.")
 
 # yapf: enable
@@ -257,6 +259,8 @@ def compress(args):
         'window_size': 10000,
         # The decay coefficient of moving average, default is 0.9
         'moving_rate': 0.9,
+        # Whether use onnx format or not
+        'onnx_format': args.onnx_format,
     }
 
     # 2. quantization transform programs (training aware)
@@ -298,9 +302,9 @@ def compress(args):
         places,
         quant_config,
         scope=None,
-        act_preprocess_func=act_preprocess_func,
-        optimizer_func=optimizer_func,
-        executor=executor,
+        act_preprocess_func=None,
+        optimizer_func=None,
+        executor=None,
         for_test=True)
     compiled_train_prog = quant_aware(
         train_prog,
@@ -425,29 +429,23 @@ def compress(args):
     # 3. Freeze the graph after training by adjusting the quantize
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
-    float_program, int8_program = convert(val_program, places, quant_config, \
-                                                        scope=None, \
-                                                        save_int8=True)
+    model_path = os.path.join(quantization_model_save_dir, args.model)
+    if not os.path.isdir(model_path):
+        os.makedirs(model_path)
+    float_program = convert(val_program, places, quant_config)
     _logger.info("eval best_model after convert")
     final_acc1 = test(best_epoch, float_program)
     _logger.info("final acc:{}".format(final_acc1))
 
     # 4. Save inference model
-    model_path = os.path.join(quantization_model_save_dir, args.model,
-                              'act_' + quant_config['activation_quantize_type']
-                              + '_w_' + quant_config['weight_quantize_type'])
-    float_path = os.path.join(model_path, 'float')
-    if not os.path.isdir(model_path):
-        os.makedirs(model_path)
-
     paddle.fluid.io.save_inference_model(
-        dirname=float_path,
+        dirname=model_path,
         feeded_var_names=[image.name],
         target_vars=[out],
         executor=exe,
         main_program=float_program,
-        model_filename=float_path + '/model',
-        params_filename=float_path + '/params')
+        model_filename=model_path + '/model.pdmodel',
+        params_filename=model_path + '/model.pdiparams')
 
 
 def main():
