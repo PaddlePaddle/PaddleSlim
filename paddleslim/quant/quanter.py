@@ -91,7 +91,9 @@ _quant_config_default = {
     # if True, 'quantize_op_types' will be TENSORRT_OP_TYPES
     'for_tensorrt': False,
     # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
-    'is_full_quantize': False
+    'is_full_quantize': False,
+    # if True, use onnx format to quant.
+    'onnx_format': False,
 }
 
 
@@ -222,7 +224,6 @@ def quant_aware(program,
                 act_preprocess_func=None,
                 optimizer_func=None,
                 executor=None,
-                onnx_format=False,
                 return_program=False,
                 draw_graph=False):
     """Add quantization  and dequantization operators to "program" 
@@ -236,7 +237,9 @@ def quant_aware(program,
             Default: None.
         scope(paddle.static.Scope): Scope records the mapping between variable names and variables, 
             similar to brackets in programming languages. Usually users can use 
-            `paddle.static.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.              When ``None`` will use `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . Default: ``None``.
+            `paddle.static.global_scope <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_.
+            When ``None`` will use `paddle.static.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ .
+            Default: ``None``.
         for_test(bool): If the 'program' parameter is a test program, this parameter should be set to ``True``. 
             Otherwise, set to ``False``.Default: False
        weight_quantize_func(function): Function that defines how to quantize weight. Using this
@@ -291,7 +294,8 @@ def quant_aware(program,
         elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
             quant_dequant_ops.append(op_type)
     if len(transform_pass_ops) > 0:
-        trannsform_func = 'QuantizationTransformPassV2' if onnx_format else 'QuantizationTransformPass'
+        trannsform_func = 'QuantizationTransformPassV2' if config[
+            'onnx_format'] else 'QuantizationTransformPass'
         transform_pass = eval(trannsform_func)(
             scope=scope,
             place=place,
@@ -313,7 +317,8 @@ def quant_aware(program,
         transform_pass.apply(main_graph)
 
     if len(quant_dequant_ops) > 0:
-        qdq_func = 'AddQuantDequantPassV2' if onnx_format else 'AddQuantDequantPass'
+        qdq_func = 'AddQuantDequantPassV2' if config[
+            'onnx_format'] else 'AddQuantDequantPass'
         quant_dequant_pass = eval(qdq_func)(
             scope=scope,
             place=place,
@@ -516,12 +521,7 @@ def quant_post_static(
 quant_post = quant_post_static
 
 
-def convert(program,
-            place,
-            config=None,
-            scope=None,
-            save_int8=False,
-            onnx_format=False):
+def convert(program, place, config=None, scope=None, save_int8=False):
     """
     convert quantized and well-trained ``program`` to final  quantized
     ``program``that can be used to  save ``inference model``.
@@ -560,7 +560,7 @@ def convert(program,
     _logger.info("convert config {}".format(config))
     test_graph = IrGraph(core.Graph(program.desc), for_test=True)
 
-    if onnx_format:
+    if config['onnx_format']:
         quant_weight_pass = QuantWeightPass(scope, place)
         quant_weight_pass.apply(test_graph)
     else:

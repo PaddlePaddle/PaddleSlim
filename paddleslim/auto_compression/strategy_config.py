@@ -65,6 +65,7 @@ class Quantization(BaseStrategy):
                  window_size=10000,
                  moving_rate=0.9,
                  for_tensorrt=False,
+                 onnx_format=False,
                  is_full_quantize=False):
         """
         Quantization Config.
@@ -80,6 +81,7 @@ class Quantization(BaseStrategy):
             window_size(int): Window size for 'range_abs_max' quantization. Default: 10000.
             moving_rate(float): The decay coefficient of moving average. Default: 0.9.
             for_tensorrt(bool): If True, 'quantize_op_types' will be TENSORRT_OP_TYPES. Default: False.
+            onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is False.
             is_full_quantize(bool): If True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES. Default: False.
         """
         super(Quantization, self).__init__("Quantization")
@@ -95,6 +97,7 @@ class Quantization(BaseStrategy):
         self.window_size = window_size
         self.moving_rate = moving_rate
         self.for_tensorrt = for_tensorrt
+        self.onnx_format = onnx_format
         self.is_full_quantize = is_full_quantize
 
 
