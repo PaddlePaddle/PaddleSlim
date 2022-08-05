@@ -30,7 +30,7 @@ Quantization:
 - weight_bits: 参数量化bit数，可选1~8。默认为8。
 - activation_quantize_type: 激活量化方式，可选 'abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。如果使用 TensorRT 加载量化后的模型来预测，请使用 'range_abs_max' 或 'moving_average_abs_max' 。默认为 'moving_average_abs_max'。
 - weight_quantize_type: 参数量化方式。可选 'abs_max' , 'channel_wise_abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。如果使用 TensorRT 加载量化后的模型来预测，请使用 'channel_wise_abs_max' 。 默认 'channel_wise_abs_max' 。
-- not_quant_pattern: 所有 `name_scope` 包含 'not_quant_pattern' 字符串的 op ，都不量化。 `name_scope` d设置方式请参考 [paddle.static.name_scope](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/name_scope_cn.html#name-scope)。
+- not_quant_pattern: 所有 `name_scope` 包含 'not_quant_pattern' 字符串的 op ，都不量化。 `name_scope` 设置方式请参考 [paddle.static.name_scope](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/name_scope_cn.html#name-scope)。
 - quantize_op_types：需要进行量化的OP类型。通过以下代码输出所有支持量化的OP类型：
 ```
 from paddleslim.quant.quanter import TRANSFORM_PASS_OP_TYPES,QUANT_DEQUANT_PASS_OP_TYPES
@@ -66,7 +66,7 @@ Distillation:
 ```
 以上配置项说明如下：
 
-- alpha: 蒸馏loss所占权重；可输入多个数值，支持不同节点之间使用不同的ahpha值。
+- alpha: 蒸馏loss所占权重；可输入多个数值，支持不同节点之间使用不同的alpha值。
 - loss: 蒸馏loss算法；可输入多个loss，支持不同节点之间使用不同的loss算法。 可选"soft_label"、“l2”或“fsp”。也可自定义loss。具体定义和使用可参考[知识蒸馏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/dist/single_distiller_api.html)。
 - node: 蒸馏节点，即某层输出的变量名称。该选项设置方式分两种情况：
 
@@ -264,7 +264,7 @@ print(f"_supported_quantizable_op_type:\n{_weight_supported_quantizable_op_type}
 print(f"_supported_quantizable_op_type:\n{_act_supported_quantizable_op_type}")
 ```
 
-### 4. 如何设置推理模型中OP的‘name_scaope’属性
+### 4. 如何设置推理模型中OP的‘name_scope’属性
 
 以下代码，将输出变量为`conv2d_52.tmp_0`的OP的`name_scope`设置为'skip_quant':
 ```
