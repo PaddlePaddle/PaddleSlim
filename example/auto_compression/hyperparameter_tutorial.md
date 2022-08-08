@@ -20,6 +20,7 @@ Quantization:
     moving_rate: 0.9                              # 'moving_average_abs_max' 量化方式的衰减系数，默认 0.9。
     for_tensorrt: false                           # 量化后的模型是否使用 TensorRT 进行预测。如果是的话，量化op类型为： TENSORRT_OP_TYPES 。默认值为False.
     is_full_quantize: false                       # 是否全量化
+    onnx_format: false                            # 是否采用ONNX量化标准格式
 ```
 
 #### 配置定制蒸馏策略
