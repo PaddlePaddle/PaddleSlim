@@ -22,7 +22,7 @@
 
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| YOLOv7 |  Base模型 | 640*640  |  51.1   |   26.84ms  |   7.44ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_infer.tar) |
+| YOLOv7 |  Base模型 | 640*640  |  51.1   |   26.84ms  |   7.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx) |
 | YOLOv7 |  KL离线量化 | 640*640  |  50.2   |   - |   -   |  4.55ms  |  - | - |
 | YOLOv7 |  量化蒸馏训练 | 640*640  |  **50.8**   |   - |   -   |  **4.55ms**  |  [config](./configs/yolov7_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.tar) |
 
@@ -36,7 +36,6 @@
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim > 2.3版本
 - PaddleDet >= 2.4
-- [X2Paddle](https://github.com/PaddlePaddle/X2Paddle) >= 1.3.6
 - opencv-python
 
 （1）安装paddlepaddle：
@@ -59,10 +58,6 @@ pip install paddledet
 
 注：安装PaddleDet的目的只是为了直接使用PaddleDetection中的Dataloader组件。
 
-（4）安装X2Paddle的1.3.6以上版本：
-```shell
-pip install x2paddle sympy onnx
-```
 
 #### 3.2 准备数据集
 
@@ -85,18 +80,6 @@ python export.py --weights yolov7.pt --include onnx
 ```
 
 也可以直接下载我们已经准备好的[yolov7.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx)。
-
-
-(2) 转换模型：
-```
-x2paddle --framework=onnx --model=yolov7.onnx --save_dir=pd_model
-cp -r pd_model/inference_model/ yolov7_infer
-```
-即可得到YOLOv7模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中YOLOv7的[Paddle预测模型](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_infer.tar)。
-
-
-预测模型的格式为：`model.pdmodel` 和 `model.pdiparams`两个，带`pdmodel`的是模型文件，带`pdiparams`后缀的是权重文件。
-
 
 #### 3.4 自动压缩并产出模型
 

@@ -25,11 +25,12 @@ from .analyze_helper import VarCollector
 from . import wrapper_function
 from . import recover_program
 from . import patterns
+from .convert_model import load_onnx_model
 
 __all__ = [
     'EvolutionaryController', 'SAController', 'get_logger', 'ControllerServer',
     'ControllerClient', 'lock', 'unlock', 'cached_reader', 'AvgrageMeter',
-    'Server', 'Client', 'RLBaseController', 'VarCollector'
+    'Server', 'Client', 'RLBaseController', 'VarCollector', 'load_onnx_model'
 ]
 
 __all__ += wrapper_function.__all__

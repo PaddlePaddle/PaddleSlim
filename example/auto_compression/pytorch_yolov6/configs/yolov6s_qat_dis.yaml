@@ -4,9 +4,7 @@ Global:
   input_list: {'image': 'x2paddle_image_arrays'}
   Evaluation: True
   arch: 'YOLOv6'
-  model_dir: ./yolov6s_infer
-  model_filename: model.pdmodel
-  params_filename: model.pdiparams
+  model_dir: ./yolov6s.onnx
 
 Distillation:
   alpha: 1.0
