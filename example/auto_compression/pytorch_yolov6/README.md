@@ -116,7 +116,31 @@ python eval.py --config_path=./configs/yolov6s_qat_dis.yaml
 
 ## 4.预测部署
 
-#### Paddle-TensorRT C++部署
+#### 导出至ONNX使用TensorRT部署
+
+- 首先安装Paddle2onnx：
+```shell
+pip install paddle2onnx==1.0.0rc3
+```
+
+- 然后将量化模型导出至ONNX：
+```shell
+paddle2onnx --model_dir output/ \
+            --model_filename model.pdmodel \
+            --params_filename model.pdiparams \
+            --opset_version 13 \
+            --enable_onnx_checker True \
+            --save_file yolov6s_quant.onnx \
+            --deploy_backend tensorrt
+```
+
+- 进行测试：
+```shell
+python yolov6_onnx_trt.py --model_path=yolov6s_quant.onnx --image_file=images/000000570688.jpg --precision=int8
+```
+
+#### Paddle-TensorRT
+- C++部署:
 
 进入[cpp_infer](./cpp_infer)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer/README.md)进行准备环境及编译，然后开始测试：
 ```shell
@@ -126,7 +150,7 @@ bash complie.sh
 ./build/trt_run --model_file yolov6s_quant/model.pdmodel --params_file yolov6s_quant/model.pdiparams --run_mode=trt_int8
 ```
 
-#### Paddle-TensorRT Python部署:
+- Python部署:
 
 首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。
 
@@ -134,6 +158,7 @@ bash complie.sh
 ```shell
 python paddle_trt_infer.py --model_path=output --image_file=images/000000570688.jpg --benchmark=True --run_mode=trt_int8
 ```
+
 
 ## 5.FAQ
 
