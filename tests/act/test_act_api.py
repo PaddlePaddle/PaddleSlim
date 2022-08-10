@@ -9,6 +9,7 @@ import numpy as np
 from paddle.io import Dataset
 from paddleslim.auto_compression import AutoCompression
 from paddleslim.auto_compression.config_helpers import load_config
+from paddleslim.auto_compression.utils.load_model import load_inference_model
 
 
 class RandomEvalDataset(Dataset):
@@ -118,6 +119,29 @@ class TestDictQATDist(ACTBase):
             train_dataloader=train_loader,
             eval_dataloader=train_loader)  # eval_function to verify accuracy
         ac.compress()
+
+
+class TestLoadONNXModel(ACTBase):
+    def __init__(self, *args, **kwargs):
+        super(TestLoadONNXModel, self).__init__(*args, **kwargs)
+        os.system(
+            'wget https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx')
+        self.model_dir = 'yolov5s.onnx'
+
+    def test_compress(self):
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
+        _, _, _ = load_inference_model(
+            self.model_dir,
+            executor=exe,
+            model_filename='model.pdmodel',
+            params_filename='model.paiparams')
+        # reload model
+        _, _, _ = load_inference_model(
+            self.model_dir,
+            executor=exe,
+            model_filename='model.pdmodel',
+            params_filename='model.paiparams')
 
 
 if __name__ == '__main__':
