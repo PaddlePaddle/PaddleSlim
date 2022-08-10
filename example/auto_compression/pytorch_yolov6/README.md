@@ -24,7 +24,7 @@
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | YOLOv6s |  Base模型 | 640*640  |  42.4   |   9.06ms  |   2.90ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_infer.tar) |
 | YOLOv6s |  KL离线量化 | 640*640  |  30.3   |   - |   -   |  1.83ms  |  - | - |
-| YOLOv6s |  量化蒸馏训练 | 640*640  |  **41.3**   |   - |   -   |  **1.83ms**  |  [config](./configs/yolov6s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.tar) |
+| YOLOv6s |  量化蒸馏训练 | 640*640  |  **41.3**   |   - |   -   |  **1.83ms**  |  [config](./configs/yolov6s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.onnx) |
 
 说明：
 - mAP的指标均在COCO val2017数据集中评测得到。
