@@ -41,6 +41,7 @@ from paddle.fluid.layer_helper import LayerHelper
 from ..common import get_logger
 from ..common.patterns import get_patterns
 from ..common.patterns_common import is_dynamic_weight_op, get_weight
+from ..core.graph_wrapper import GraphWrapper
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -234,7 +235,9 @@ def quant_aware(program,
                 return_program=False,
                 calib_config={},
                 draw_graph=False,
-                scale_dict=None):
+                scale_dict=None,
+                model_type=None,
+                pattern_ops=None):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
@@ -326,43 +329,44 @@ def quant_aware(program,
 
     skip_tensor_list = []
     same_scale_tensor_list = []
-    if config['is_full_quantize']:
+    if model_type is None or pattern_ops is None:
         pattern_ops, _, model_type = get_patterns(program)
-        add_quant_tensor_list = []
-        if model_type == 'transformer':
-            for part_name, ops in pattern_ops.items():
-                if 'MHA' in part_name:
-                    qkv_weight_tensor = []
-                    qkv_output_tensor = []
-                    ### get qkv
-                    output_names = ops[0]._op.output_arg_names
-                    for output_name in output_names:
-                        for next_op in find_next_ops(program, output_name):
-                            if next_op.type in ['mul', 'matmul_v2']:
-                                qkv_weight_tensor.append(next_op.input('Y')[0])
+    if model_type == 'transformer':
+        for part_name, ops in pattern_ops.items():
+            if 'MHA' in part_name:
+                qkv_weight_tensor = []
+                qkv_output_tensor = []
+                ### get qkv
+                output_names = ops[0]._op.output_arg_names
+                for output_name in output_names:
+                    for next_op in find_next_ops(program, output_name):
+                        if next_op.type in ['mul', 'matmul_v2']:
+                            qkv_weight_tensor.append(next_op.input('Y')[0])
 
-                    same_scale_tensor_list.append(qkv_weight_tensor)
+                same_scale_tensor_list.append(qkv_weight_tensor)
 
-                    for op in ops:
-                        if op._op.type in ['matmul', 'matmul_v2'] and (
-                                not is_dynamic_weight_op(op)):
-                            input_names = op._op.input_arg_names
-                            for input_name in input_names:
-                                pre_op = find_pre_ops(program, input_name)[0]
-                                if pre_op.type == 'softmax' or pre_op.type == 'dropout':
-                                    continue
-                                elif pre_op.type == 'scale':
-                                    qkv_output_tensor.append(
-                                        input_name + '#/#{}'.format(
-                                            pre_op.attr('scale')))
-                                else:
-                                    qkv_output_tensor.append(input_name)
-                        ### find elementwise_add in skip layernorm
-                        elif op._op.type == 'elementwise_add' and not _is_skip_layernorm(
-                                program, op):
-                            op._op._set_attr("op_namescope", "skip_quant")
+                for op in ops:
+                    if op._op.type in ['matmul', 'matmul_v2'] and (
+                            not is_dynamic_weight_op(op)):
+                        input_names = op._op.input_arg_names
+                        for input_name in input_names:
+                            pre_op = find_pre_ops(program, input_name)[0]
+                            if pre_op.type == 'softmax' or pre_op.type == 'dropout':
+                                continue
+                            elif pre_op.type == 'scale':
+                                qkv_output_tensor.append(
+                                    input_name + '#/#{}'.format(
+                                        pre_op.attr('scale')))
+                            else:
+                                qkv_output_tensor.append(input_name)
+                same_scale_tensor_list.append(qkv_output_tensor)
 
-                    same_scale_tensor_list.append(qkv_output_tensor)
+        tmp_graph = GraphWrapper(program)
+        for op in tmp_graph.ops():
+            ### find elementwise_add in skip layernorm
+            if op._op.type == 'elementwise_add' and not _is_skip_layernorm(
+                    program, op):
+                op._op._set_attr("op_namescope", "skip_quant")
 
     if config['quant_post_first'] and for_test:
         if 'quantizable_op_type' not in calib_config:
@@ -421,7 +425,8 @@ def quant_aware(program,
                 quant_bits=config['activation_bits'],
                 skip_pattern=config['not_quant_pattern'],
                 quantizable_op_type=quant_dequant_ops,
-                is_test=not config['scale_trainable'])
+                is_test=not config['scale_trainable'],
+                scale_dict=scale_dict)
             quant_dequant_pass.apply(main_graph)
 
     out_scale_training_pass = OutScaleForTrainingPass(
@@ -449,7 +454,7 @@ def quant_aware(program,
         quant_program = main_graph.to_program()
     else:
         quant_program = paddle.static.CompiledProgram(main_graph.graph)
-    return quant_program, scale_dict
+    return quant_program, scale_dict, model_type, pattern_ops
 
 
 def quant_post_static(
