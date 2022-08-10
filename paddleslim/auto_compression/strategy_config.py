@@ -53,7 +53,8 @@ class BaseStrategy:
 class Quantization(BaseStrategy):
     def __init__(self,
                  quantize_op_types=[
-                     'conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'
+                     'conv2d', 'depthwise_conv2d', 'conv2d_transpose', 'mul',
+                     'matmul', 'matmul_v2'
                  ],
                  weight_bits=8,
                  activation_bits=8,
