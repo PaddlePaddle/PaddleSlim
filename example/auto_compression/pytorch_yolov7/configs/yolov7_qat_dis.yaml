@@ -3,9 +3,7 @@ Global:
   reader_config: configs/yolov7_reader.yaml
   input_list: {'image': 'x2paddle_images'}
   Evaluation: True
-  model_dir: ./yolov7_infer
-  model_filename: model.pdmodel
-  params_filename: model.pdiparams
+  model_dir: ./yolov7.onnx
 
 Distillation:
   alpha: 1.0

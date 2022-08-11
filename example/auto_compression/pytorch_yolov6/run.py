@@ -161,11 +161,9 @@ def main():
 
     ac = AutoCompression(
         model_dir=global_config["model_dir"],
-        model_filename=global_config["model_filename"],
-        params_filename=global_config["params_filename"],
+        train_dataloader=train_loader,
         save_dir=FLAGS.save_dir,
         config=all_config,
-        train_dataloader=train_loader,
         eval_callback=eval_func)
     ac.compress()
 

@@ -22,6 +22,7 @@ from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
 from paddleslim.quant import quant_post_static
+from paddleslim.common import load_onnx_model
 
 
 def argsparser():
@@ -77,20 +78,23 @@ def main():
 
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
+    load_onnx_model(global_config["model_dir"])
+    inference_model_path = global_config["model_dir"].rstrip().rstrip(
+        '.onnx') + '_infer'
     quant_post_static(
         executor=exe,
-        model_dir=global_config["model_dir"],
+        model_dir=inference_model_path,
         quantize_model_path=FLAGS.save_dir,
         data_loader=train_loader,
-        model_filename=global_config["model_filename"],
-        params_filename=global_config["params_filename"],
+        model_filename='model.pdmodel',
+        params_filename='model.pdiparams',
         batch_size=32,
         batch_nums=10,
         algo=FLAGS.algo,
         hist_percent=0.999,
         is_full_quantize=False,
         bias_correction=False,
-        onnx_format=False)
+        onnx_format=True)
 
 
 if __name__ == '__main__':

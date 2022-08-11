@@ -35,7 +35,7 @@ from .strategy_config import TrainConfig, ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
 from .config_helpers import load_config, extract_strategy_config, extract_train_config
 from .utils.predict import with_variable_shape
-from .utils import get_feed_vars, wrap_dataloader, load_inference_model
+from .utils import get_feed_vars, wrap_dataloader, load_inference_model, get_model_dir
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -49,10 +49,10 @@ except Exception as e:
 class AutoCompression:
     def __init__(self,
                  model_dir,
-                 model_filename,
-                 params_filename,
-                 save_dir,
                  train_dataloader,
+                 model_filename=None,
+                 params_filename=None,
+                 save_dir='./output',
                  config=None,
                  input_shapes=None,
                  target_speedup=None,
@@ -66,13 +66,13 @@ class AutoCompression:
             model_dir(str): The path of inference model that will be compressed, and
                 the model and params that saved by ``paddle.static.save_inference_model``
                 are under the path.
+            train_data_loader(Python Generator, Paddle.io.DataLoader): The
+                Generator or Dataloader provides train data, and it could
+                return a batch every time.
             model_filename(str):  The name of model file. 
             params_filename(str): The name of params file.
             save_dir(str): The path to save compressed model. The models in this directory will be overwrited
                 after calling 'compress()' function.
-            train_data_loader(Python Generator, Paddle.io.DataLoader): The
-                Generator or Dataloader provides train data, and it could
-                return a batch every time.
             input_shapes(dict|tuple|list): It is used when the model has implicit dimensions except batch size. 
                 If it is a dict, the key is the name of input and the value is the shape. 
                 Given the input shape of input "X" is [-1, 3, -1, -1] which means the batch size, hight
@@ -117,18 +117,8 @@ class AutoCompression:
             deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
         """
         self.model_dir = model_dir.rstrip('/')
-
-        if model_filename == 'None':
-            model_filename = None
-        self.model_filename = model_filename
-        if params_filename == 'None':
-            params_filename = None
-        self.params_filename = params_filename
-
-        if params_filename is None and model_filename is not None:
-            raise NotImplementedError(
-                "NOT SUPPORT parameters saved in separate files. Please convert it to single binary file first."
-            )
+        self.updated_model_dir, self.model_filename, self.params_filename = get_model_dir(
+            model_dir, model_filename, params_filename)
 
         self.final_dir = save_dir
         if not os.path.exists(self.final_dir):
@@ -163,8 +153,7 @@ class AutoCompression:
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
-        self.model_type = self._get_model_type(self._exe, self.model_dir,
-                                               model_filename, params_filename)
+        self.model_type = self._get_model_type()
 
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
@@ -249,8 +238,8 @@ class AutoCompression:
         paddle.enable_static()
         exe = paddle.static.Executor(paddle.CPUPlace())
         [inference_program, feed_target_names,
-         fetch_targets] = (load_inference_model(model_dir, exe, model_filename,
-                                                params_filename))
+         fetch_targets] = load_inference_model(model_dir, exe, model_filename,
+                                               params_filename)
 
         if type(input_shapes) in [list, tuple]:
             assert len(
@@ -310,23 +299,26 @@ class AutoCompression:
         exe = paddle.static.Executor(places)
         return exe, places
 
-    def _get_model_type(self, exe, model_dir, model_filename, params_filename):
-        [inference_program, _, _]= (load_inference_model( \
-            model_dir, \
-            model_filename=model_filename, params_filename=params_filename,
-            executor=exe))
+    def _get_model_type(self):
+        [inference_program, _, _] = (load_inference_model(
+            self.model_dir,
+            model_filename=self.model_filename,
+            params_filename=self.params_filename,
+            executor=self._exe))
         _, _, model_type = get_patterns(inference_program)
         if self.model_filename is None:
-            new_model_filename = '__new_model__'
+            opt_model_filename = '__opt_model__'
         else:
-            new_model_filename = 'new_' + self.model_filename
+            opt_model_filename = 'opt_' + self.model_filename
         program_bytes = inference_program._remove_training_info(
             clip_extra=False).desc.serialize_to_string()
-        with open(os.path.join(self.model_dir, new_model_filename), "wb") as f:
+        with open(
+                os.path.join(self.updated_model_dir, opt_model_filename),
+                "wb") as f:
             f.write(program_bytes)
         shutil.move(
-            os.path.join(self.model_dir, new_model_filename),
-            os.path.join(self.model_dir, self.model_filename))
+            os.path.join(self.updated_model_dir, opt_model_filename),
+            os.path.join(self.updated_model_dir, self.model_filename))
         _logger.info(f"Detect model type: {model_type}")
         return model_type
 
@@ -603,10 +595,16 @@ class AutoCompression:
                                  train_config):
         # start compress, including train/eval model
         # TODO: add the emd loss of evaluation model.
+        # If model is ONNX, convert it to inference model firstly.
+        load_inference_model(
+            self.model_dir,
+            model_filename=self.model_filename,
+            params_filename=self.params_filename,
+            executor=self._exe)
         if strategy == 'quant_post':
             quant_post(
                 self._exe,
-                model_dir=self.model_dir,
+                model_dir=self.updated_model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 data_loader=self.train_dataloader,
@@ -632,11 +630,16 @@ class AutoCompression:
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
-
+            # If model is ONNX, convert it to inference model firstly.
+            load_inference_model(
+                self.model_dir,
+                model_filename=self.model_filename,
+                params_filename=self.params_filename,
+                executor=self._exe)
             post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
-                model_dir=self.model_dir,
+                model_dir=self.updated_model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
