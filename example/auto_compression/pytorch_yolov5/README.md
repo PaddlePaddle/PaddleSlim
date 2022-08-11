@@ -22,7 +22,7 @@
 
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| YOLOv5s |  Base模型 | 640*640  |  37.4   |   5.95ms  |   2.44ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov5s_infer.tar) |
+| YOLOv5s |  Base模型 | 640*640  |  37.4   |   5.95ms  |   2.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx) |
 | YOLOv5s |  KL离线量化 | 640*640  |  36.0   |   - |   -   |  1.87ms  |  - | - |
 | YOLOv5s |  量化蒸馏训练 | 640*640  |  **36.9**   |   - |   -   |  **1.87ms**  |  [config](./configs/yolov5s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.onnx) |
 
@@ -60,37 +60,18 @@ pip install paddledet
 
 注：安装PaddleDet的目的是为了直接使用PaddleDetection中的Dataloader组件。
 
-（4）安装X2Paddle的1.3.6以上版本：
-```shell
-pip install x2paddle sympy onnx
-```
-
 #### 3.2 准备数据集
 
 本案例默认以COCO数据进行自动压缩实验，并且依赖PaddleDetection中数据读取模块，如果自定义COCO数据，或者其他格式数据，请参考[PaddleDetection数据准备文档](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.4/docs/tutorials/PrepareDataSet.md) 来准备数据。
 
 如果已经准备好数据集，请直接修改[./configs/yolov6_reader.yml]中`EvalDataset`的`dataset_dir`字段为自己数据集路径即可。
 
-#### 3.3 准备预测模型
-
-（1）准备ONNX模型：
+#### 3.3 准备ONNX预测模型
 
 可通过[ultralytics/yolov5](https://github.com/ultralytics/yolov5) 官方的[导出教程](https://github.com/ultralytics/yolov5/issues/251)来准备ONNX模型。也可以下载准备好的[yolov5s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx)。
 ```shell
 python export.py --weights yolov5s.pt --include onnx
 ```
-
-(2) 转换模型：
-```shell
-x2paddle --framework=onnx --model=yolov5s.onnx --save_dir=pd_model
-cp -r pd_model/inference_model/ yolov5s_infer
-```
-即可得到YOLOv5s模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中YOLOv5s的[Paddle预测模型](https://bj.bcebos.com/v1/paddle-slim-models/detection/yolov5s_infer.tar)。
-
-
-预测模型的格式为：`model.pdmodel` 和 `model.pdiparams`两个，带`pdmodel`的是模型文件，带`pdiparams`后缀的是权重文件。
-
-
 #### 3.4 自动压缩并产出模型
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：

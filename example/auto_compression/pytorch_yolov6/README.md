@@ -22,7 +22,7 @@
 
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| YOLOv6s |  Base模型 | 640*640  |  42.4   |   9.06ms  |   2.90ms   |  -  |  - | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_infer.tar) |
+| YOLOv6s |  Base模型 | 640*640  |  42.4   |   9.06ms  |   2.90ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx) |
 | YOLOv6s |  KL离线量化 | 640*640  |  30.3   |   - |   -   |  1.83ms  |  - | - |
 | YOLOv6s |  量化蒸馏训练 | 640*640  |  **41.3**   |   - |   -   |  **1.83ms**  |  [config](./configs/yolov6s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.onnx) |
 
@@ -36,7 +36,6 @@
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim > 2.3版本
 - PaddleDet >= 2.4
-- [X2Paddle](https://github.com/PaddlePaddle/X2Paddle) >= 1.3.6
 - opencv-python
 
 （1）安装paddlepaddle：
@@ -59,10 +58,6 @@ pip install paddledet
 
 注：安装PaddleDet的目的只是为了直接使用PaddleDetection中的Dataloader组件。
 
-（4）安装X2Paddle的1.3.6以上版本：
-```shell
-pip install x2paddle sympy onnx
-```
 
 #### 3.2 准备数据集
 
@@ -76,17 +71,6 @@ pip install x2paddle sympy onnx
 （1）准备ONNX模型：
 
 可通过[meituan/YOLOv6](https://github.com/meituan/YOLOv6)官方的[导出教程](https://github.com/meituan/YOLOv6/blob/main/deploy/ONNX/README.md)来准备ONNX模型。也可以下载已经准备好的[yolov6s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx)。
-
-
-(2) 转换模型：
-```
-x2paddle --framework=onnx --model=yolov6s.onnx --save_dir=pd_model
-cp -r pd_model/inference_model/ yolov6s_infer
-```
-即可得到YOLOv6s模型的预测模型（`model.pdmodel` 和 `model.pdiparams`）。如想快速体验，可直接下载上方表格中YOLOv6s的[Paddle预测模型](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_infer.tar)。
-
-
-预测模型的格式为：`model.pdmodel` 和 `model.pdiparams`两个，带`pdmodel`的是模型文件，带`pdiparams`后缀的是权重文件。
 
 
 #### 3.4 自动压缩并产出模型
