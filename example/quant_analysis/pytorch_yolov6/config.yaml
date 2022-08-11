@@ -1,0 +1,28 @@
+model_dir: ./yolov6s_infer
+model_filename: model.pdmodel
+params_filename: model.pdiparams
+save_dir: ./results
+quantizable_op_type: ["conv2d", "depthwise_conv2d"]
+
+metric: COCO
+num_classes: 80
+input_list: {'image': 'x2paddle_image_arrays'}
+arch: YOLOv6
+
+EvalDataset:
+  !COCODataSet
+    image_dir: val2017
+    anno_path: annotations/instances_val2017.json
+    dataset_dir: /paddle/dataset/coco/
+
+worker_num: 0
+
+# preprocess reader in test
+EvalReader:
+  sample_transforms:
+    - Decode: {}
+    - Resize: {target_size: [640, 640], keep_ratio: True}
+    - Pad: {size: [640, 640], fill_value: [114., 114., 114.]}
+    - NormalizeImage: {mean: [0, 0, 0], std: [1, 1, 1], is_scale: True}
+    - Permute: {}
+  batch_size: 1
