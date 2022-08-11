@@ -21,7 +21,7 @@ from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
-
+from paddleslim.common import load_onnx_model
 from post_process import YOLOv6PostProcess
 
 
@@ -77,12 +77,8 @@ def eval():
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
-    val_program, feed_target_names, fetch_targets = paddle.static.load_inference_model(
-        global_config["model_dir"],
-        exe,
-        model_filename=global_config["model_filename"],
-        params_filename=global_config["params_filename"])
-    print('Loaded model from: {}'.format(global_config["model_dir"]))
+    val_program, feed_target_names, fetch_targets = load_onnx_model(
+        global_config["model_dir"])
 
     metric = global_config['metric']
     for batch_id, data in enumerate(val_loader):

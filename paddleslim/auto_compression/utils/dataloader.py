@@ -3,6 +3,7 @@ import time
 import numpy as np
 import paddle
 from collections.abc import Iterable
+from .load_model import load_inference_model
 
 __all__ = ["wrap_dataloader", "get_feed_vars"]
 
@@ -13,7 +14,7 @@ def get_feed_vars(model_dir, model_filename, params_filename):
     paddle.enable_static()
     exe = paddle.static.Executor(paddle.CPUPlace())
     [inference_program, feed_target_names, fetch_targets] = (
-        paddle.static.load_inference_model(
+        load_inference_model(
             model_dir,
             exe,
             model_filename=model_filename,
