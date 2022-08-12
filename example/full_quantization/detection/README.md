@@ -20,10 +20,10 @@
 
 ### PicoDet-S-NPU
 
-| 模型  | Base mAP | 离线量化mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 |  配置文件 | 量化模型  |
-| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
-| PicoDet-S-NPU | 30.1  |  - | 44.2      |   -  |   -   |  -  |  [config](https://github.com/PaddlePaddle/PaddleDetection/tree/develop/configs/picodet/picodet_s_416_coco_npu.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar) |
-| PicoDet-S-NPU |  29.7  |  -  |  43.9   |   -  |   -   |  -  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/full_quantization/detection/configs/picodet_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_npu_quant.tar) |
+| 模型  | 策略 | mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 |  配置文件 | 模型  |
+| :-------- |:-------- |:--------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
+| PicoDet-S-NPU | Baseline | 30.1   |   -   |  -  |  -  | [config](https://github.com/PaddlePaddle/PaddleDetection/tree/develop/configs/picodet/picodet_s_416_coco_npu.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar) |
+| PicoDet-S-NPU |  量化训练 | 29.7  |   -  |   -   |  -  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/full_quantization/detection/configs/picodet_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_npu_quant.tar) |
 
 - mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
 
@@ -82,7 +82,6 @@ PicoDet-S-NPU模型，包含NMS：如快速体验，可直接下载[PicoDet-S-NP
 python tools/export_model.py \
         -c configs/picodet/picodet_s_416_coco_npu.yml \
         -o weights=https://paddledet.bj.bcebos.com/models/picodet_s_416_coco_npu.pdparams \
-        trt=True \
 ```
 
 
