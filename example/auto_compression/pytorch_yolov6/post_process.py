@@ -14,6 +14,8 @@
 
 import numpy as np
 import cv2
+import json
+import sys
 
 
 def box_area(boxes):
@@ -171,3 +173,59 @@ class YOLOv6PostProcess(object):
         bboxs = np.concatenate(bboxs, axis=0)
         box_nums = np.array(box_nums)
         return {'bbox': bboxs, 'bbox_num': box_nums}
+
+
+def coco_metric(anno_file, bboxes_list, bbox_nums_list, image_id_list):
+    try:
+        from pycocotools.coco import COCO
+        from pycocotools.cocoeval import COCOeval
+    except:
+        print(
+            "[ERROR] Not found pycocotools, please install by `pip install pycocotools`"
+        )
+        sys.exit(1)
+
+    coco_gt = COCO(anno_file)
+    cats = coco_gt.loadCats(coco_gt.getCatIds())
+    clsid2catid = {i: cat['id'] for i, cat in enumerate(cats)}
+    results = []
+    for bboxes, bbox_nums, image_id in zip(bboxes_list, bbox_nums_list,
+                                           image_id_list):
+        results += _get_det_res(bboxes, bbox_nums, image_id, clsid2catid)
+
+    output = "bbox.json"
+    with open(output, 'w') as f:
+        json.dump(results, f)
+
+    coco_dt = coco_gt.loadRes(output)
+    coco_eval = COCOeval(coco_gt, coco_dt, 'bbox')
+    coco_eval.evaluate()
+    coco_eval.accumulate()
+    coco_eval.summarize()
+    return coco_eval.stats
+
+
+def _get_det_res(bboxes, bbox_nums, image_id, label_to_cat_id_map):
+    det_res = []
+    k = 0
+    for i in range(len(bbox_nums)):
+        cur_image_id = int(image_id[i][0])
+        det_nums = bbox_nums[i]
+        for j in range(det_nums):
+            dt = bboxes[k]
+            k = k + 1
+            num_id, score, xmin, ymin, xmax, ymax = dt.tolist()
+            if int(num_id) < 0:
+                continue
+            category_id = label_to_cat_id_map[int(num_id)]
+            w = xmax - xmin
+            h = ymax - ymin
+            bbox = [xmin, ymin, w, h]
+            dt_res = {
+                'image_id': cur_image_id,
+                'category_id': category_id,
+                'bbox': bbox,
+                'score': score
+            }
+            det_res.append(dt_res)
+    return det_res

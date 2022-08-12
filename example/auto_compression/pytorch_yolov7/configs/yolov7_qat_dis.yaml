@@ -1,9 +1,11 @@
-
 Global:
-  reader_config: configs/yolov7_reader.yaml
-  input_list: {'image': 'x2paddle_images'}
-  Evaluation: True
   model_dir: ./yolov7.onnx
+  dataset_dir: dataset/coco/
+  train_image_dir: train2017
+  val_image_dir: val2017
+  train_anno_path: annotations/instances_train2017.json
+  val_anno_path: annotations/instances_val2017.json
+  Evaluation: True
 
 Distillation:
   alpha: 1.0
@@ -17,7 +19,7 @@ Quantization:
   - depthwise_conv2d
 
 TrainConfig:
-  train_iter: 8000
+  train_iter: 5000
   eval_iter: 1000
   learning_rate: 
     type: CosineAnnealingDecay 
