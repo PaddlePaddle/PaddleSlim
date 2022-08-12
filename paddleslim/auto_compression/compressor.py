@@ -66,7 +66,7 @@ class AutoCompression:
             model_dir(str): The path of inference model that will be compressed, and
                 the model and params that saved by ``paddle.static.save_inference_model``
                 are under the path.
-            train_data_loader(Python Generator, Paddle.io.DataLoader): The
+            train_dataloader(Python Generator, Paddle.io.DataLoader): The
                 Generator or Dataloader provides train data, and it could
                 return a batch every time.
             model_filename(str):  The name of model file. 
@@ -595,12 +595,13 @@ class AutoCompression:
                                  train_config):
         # start compress, including train/eval model
         # TODO: add the emd loss of evaluation model.
-        # If model is ONNX, convert it to inference model firstly.
-        load_inference_model(
-            self.model_dir,
-            model_filename=self.model_filename,
-            params_filename=self.params_filename,
-            executor=self._exe)
+        if self.updated_model_dir != self.model_dir:
+            # If model is ONNX, convert it to inference model firstly.
+            load_inference_model(
+                self.model_dir,
+                model_filename=self.model_filename,
+                params_filename=self.params_filename,
+                executor=self._exe)
         if strategy == 'quant_post':
             quant_post(
                 self._exe,
@@ -630,12 +631,13 @@ class AutoCompression:
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
-            # If model is ONNX, convert it to inference model firstly.
-            load_inference_model(
-                self.model_dir,
-                model_filename=self.model_filename,
-                params_filename=self.params_filename,
-                executor=self._exe)
+            if self.updated_model_dir != self.model_dir:
+                # If model is ONNX, convert it to inference model firstly.
+                load_inference_model(
+                    self.model_dir,
+                    model_filename=self.model_filename,
+                    params_filename=self.params_filename,
+                    executor=self._exe)
             post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
