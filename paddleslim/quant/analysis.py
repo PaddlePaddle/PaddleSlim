@@ -29,13 +29,49 @@ from paddle.fluid.executor import Executor, global_scope
 from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddleslim.quant.quanter import quant_post
 from paddleslim.core import GraphWrapper
-from .utils import wrap_dataloader, _get_op_input_var_names, load_variable_data
+from paddle.fluid.contrib.slim.quantization.utils import _get_op_input_var_names, load_variable_data
 from paddleslim.common import get_logger
 from ..common import get_logger
 
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ["AnalysisQuant"]
+
+
+def _valid_format(data):
+    is_dict = isinstance(data, dict)
+    list_with_one_dict = isinstance(
+        data, list) and len(data) == 1 and isinstance(data[0], dict)
+    return is_dict or list_with_one_dict
+
+
+def wrap_dataloader(dataloader, names):
+    """Create a wrapper of dataloader if the data returned by the dataloader is not a dict.
+    And the names will be the keys of dict returned by the wrapper.
+    """
+    if dataloader is None:
+        return dataloader
+    data = next(dataloader())
+    if _valid_format(data):
+        return dataloader
+
+    if isinstance(data, Iterable):
+        assert len(data) == len(
+            names
+        ), f"len(data) == len(names), but got len(data): {len(data)} and len(names): {len(names)}"
+    else:
+        assert len(
+            names
+        ) == 1, f"The length of name should 1 when data is not Iterable but got {len(names)}"
+
+    def gen():
+        for i, data in enumerate(dataloader()):
+            if not isinstance(data, Iterable):
+                data = [data]
+            yield dict((name_, np.array(data_))
+                       for name_, data_ in zip(names, data))
+
+    return gen
 
 
 class AnalysisQuant(object):
@@ -80,7 +116,6 @@ class AnalysisQuant(object):
         self.eval_function = eval_function
         self.quant_layer_names = []
         self.checkpoint_name = os.path.join(save_dir, checkpoint_name)
-        # self.quant_model_dir = os.path.join(save_dir, 'tmp_quant_model')
         self.quant_layer_metrics = {}
         self.batch_size = batch_size
         self.batch_nums = batch_nums
@@ -104,6 +139,7 @@ class AnalysisQuant(object):
         self.data_loader = wrap_dataloader(data_loader, self.feed_list)
 
         # evaluate before quant 
+        # TODO: self.eval_function can be None
         if self.eval_function is not None:
             self.base_metric = self.eval_function(
                 executor, program, self.feed_list, self.fetch_list)
@@ -138,7 +174,7 @@ class AnalysisQuant(object):
         self.load_checkpoint()
         self.tobe_analyized_layer = self.quantized_weight_var_name - set(
             list(self.quant_layer_metrics.keys()))
-        self.tobe_analyized_layer = sorted(list(self.tobe_analyized_layer))[:1]
+        self.tobe_analyized_layer = sorted(list(self.tobe_analyized_layer))
 
     def analysis(self):
         self.compute_quant_sensitivity()
@@ -257,7 +293,6 @@ class AnalysisQuant(object):
                 var.persistable = True
 
         batch_id = 0
-
         for data in self.data_loader():
             executor.run(program=program,
                          feed=data,
@@ -270,7 +305,6 @@ class AnalysisQuant(object):
 
         self.weight_histogram = {}
         self.act_histogram = {}
-
         for var_name in self.sensitive_act_ops:
             var_tensor = load_variable_data(scope, var_name)
             var_tensor = np.array(var_tensor)

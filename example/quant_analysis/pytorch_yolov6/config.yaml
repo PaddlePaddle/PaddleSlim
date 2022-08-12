@@ -13,7 +13,7 @@ EvalDataset:
   !COCODataSet
     image_dir: val2017
     anno_path: annotations/instances_val2017.json
-    dataset_dir: /paddle/dataset/coco/
+    dataset_dir: /dataset/coco/
 
 worker_num: 0
 
