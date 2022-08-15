@@ -17,13 +17,10 @@ import sys
 import numpy as np
 import argparse
 import paddle
-from ppdet.core.workspace import load_config, merge_config
-from ppdet.core.workspace import create
-from ppdet.metrics import COCOMetric, VOCMetric
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
-from paddleslim.quant import quant_post_static
+from paddleslim.auto_compression.config_helpers import load_config
 from paddleslim.common import load_onnx_model
-
+from paddleslim.quant import quant_post_static
+from dataset import COCOTrainDataset
 
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -49,32 +46,17 @@ def argsparser():
     return parser
 
 
-def reader_wrapper(reader, input_list):
-    def gen():
-        for data in reader:
-            in_dict = {}
-            if isinstance(input_list, list):
-                for input_name in input_list:
-                    in_dict[input_name] = data[input_name]
-            elif isinstance(input_list, dict):
-                for input_name in input_list.keys():
-                    in_dict[input_list[input_name]] = data[input_name]
-            yield in_dict
-
-    return gen
-
-
 def main():
     global global_config
-    all_config = load_slim_config(FLAGS.config_path)
-    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
+    all_config = load_config(FLAGS.config_path)
     global_config = all_config["Global"]
-    reader_cfg = load_config(global_config['reader_config'])
 
-    train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
-                                        reader_cfg['worker_num'],
-                                        return_list=True)
-    train_loader = reader_wrapper(train_loader, global_config['input_list'])
+    dataset = COCOTrainDataset(
+        dataset_dir=global_config['dataset_dir'],
+        image_dir=global_config['val_image_dir'],
+        anno_path=global_config['val_anno_path'])
+    train_loader = paddle.io.DataLoader(
+        dataset, batch_size=1, shuffle=True, drop_last=True, num_workers=0)
 
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
