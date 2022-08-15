@@ -19,7 +19,7 @@ import argparse
 import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from paddleslim.quant import quant_post_static
 
 

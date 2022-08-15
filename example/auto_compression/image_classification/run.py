@@ -24,7 +24,7 @@ import paddle
 import paddle.nn as nn
 from paddle.io import DataLoader
 from imagenet_reader import ImageNetDataset
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 
 
