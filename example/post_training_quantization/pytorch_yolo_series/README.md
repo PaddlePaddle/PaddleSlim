@@ -18,9 +18,8 @@
 
 
 ## 2.Benchmark
-| 模型  |  策略  | 输入尺寸 | mAP</sup>val</br>0.5:0.95 | 预测时延</sup></small>FP32</small></sup></br></sup>(ms) |预测时延</sup></small>FP16</small></sup></br></sup>(ms) | 预测时延</sup></small>INT8</small></sup></br></sup>(ms) |  配置文件 | Inference模型  |
-| :-------- |:-------- |:--------: | :------: | :-------: | :------: | :------: | :-------: | :--------: |
-
+| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
+| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | YOLOv5s |  Base模型 | 640*640  |  37.4   |   5.95ms  |   2.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx) |
 | YOLOv5s |  KL离线量化 | 640*640  |  36.0   |   - |   -   |  1.87ms  |  -  | - |
 |  |  |  |  |  |  |  |  |  |
@@ -99,8 +98,6 @@ python post_quant.py --config_path=./configs/yolov6s_ptq.yaml --save_dir=./yolov
 python post_quant.py --config_path=./configs/yolov7s_ptq.yaml --save_dir=./yolov7s_ptq_out
 ```
 
-注意：
-- 此demo默认传入`.onnx`模型，所以不需要传入`model_filename`和`params_filename`字段。
 
 #### 3.5 测试模型精度
 
@@ -110,8 +107,6 @@ export CUDA_VISIBLE_DEVICES=0
 python eval.py --config_path=./configs/yolov5s_ptq.yaml
 ```
 
-注意：
-- 离线量化结束后保存的模型不再是`.onnx`类型，所以需要传入`model_filename`和`params_filename`字段。
 
 #### 3.6 提高离线量化精度
 离线量化功能使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。所以PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，以可视化模型哪些层不适合量化，提高离线量化模型精度。以yolov6为例，具体使用如下：

@@ -47,8 +47,7 @@ def eval():
     exe = paddle.static.Executor(place)
 
     val_program, feed_target_names, fetch_targets = load_inference_model(
-        config["model_dir"], exe, config["model_filename"],
-        config["params_filename"])
+        config["model_dir"], exe, "model.pdmodel", "model.pdiparams")
 
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
     with tqdm(

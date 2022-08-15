@@ -1,6 +1,4 @@
 model_dir: ./yolov6s.onnx
-model_filename: None # do not need when the model type is onnx
-params_filename: None # do not need when the model type is onnx
 dataset_dir: /dataset/coco/
 train_image_dir: train2017
 val_image_dir: val2017
