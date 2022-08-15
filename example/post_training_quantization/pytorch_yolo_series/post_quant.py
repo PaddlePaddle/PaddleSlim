@@ -17,8 +17,7 @@ import sys
 import numpy as np
 import argparse
 import paddle
-from paddleslim.common import load_config
-from paddleslim.common import load_onnx_model
+from paddleslim.common import load_config, load_onnx_model
 from paddleslim.quant import quant_post_static
 from dataset import COCOTrainDataset
 
@@ -48,22 +47,25 @@ def argsparser():
 
 
 def main():
-    global global_config
-    all_config = load_config(FLAGS.config_path)
-    global_config = all_config["Global"]
+    global config
+    config = load_config(FLAGS.config_path)
 
     dataset = COCOTrainDataset(
-        dataset_dir=global_config['dataset_dir'],
-        image_dir=global_config['val_image_dir'],
-        anno_path=global_config['val_anno_path'])
+        dataset_dir=config['dataset_dir'],
+        image_dir=config['val_image_dir'],
+        anno_path=config['val_anno_path'])
     train_loader = paddle.io.DataLoader(
         dataset, batch_size=1, shuffle=True, drop_last=True, num_workers=0)
 
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
-    load_onnx_model(global_config["model_dir"])
-    inference_model_path = global_config["model_dir"].rstrip().rstrip(
+
+    # since the type pf model converted from pytorch is onnx,
+    # use load_onnx_model firstly and rename the model_dir
+    load_onnx_model(config["model_dir"])
+    inference_model_path = config["model_dir"].rstrip().rstrip(
         '.onnx') + '_infer'
+
     quant_post_static(
         executor=exe,
         model_dir=inference_model_path,

@@ -19,7 +19,7 @@ import argparse
 from tqdm import tqdm
 import paddle
 from paddleslim.common import load_config as load_slim_config
-from paddleslim.common import load_onnx_model
+from paddleslim.common import load_inference_model
 from post_process import YOLOv6PostProcess, coco_metric
 from dataset import COCOValDataset
 
@@ -46,8 +46,8 @@ def eval():
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
-    val_program, feed_target_names, fetch_targets = load_onnx_model(
-        global_config["model_dir"])
+    val_program, feed_target_names, fetch_targets = load_inference_model(
+        config["model_dir"], exe, "model.pdmodel", "model.pdiparams")
 
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
     with tqdm(
@@ -73,15 +73,14 @@ def eval():
 
 
 def main():
-    global global_config
-    all_config = load_slim_config(FLAGS.config_path)
-    global_config = all_config["Global"]
+    global config
+    config = load_slim_config(FLAGS.config_path)
 
     global val_loader
     dataset = COCOValDataset(
-        dataset_dir=global_config['dataset_dir'],
-        image_dir=global_config['val_image_dir'],
-        anno_path=global_config['val_anno_path'])
+        dataset_dir=config['dataset_dir'],
+        image_dir=config['val_image_dir'],
+        anno_path=config['val_anno_path'])
     global anno_file
     anno_file = dataset.ann_file
     val_loader = paddle.io.DataLoader(dataset, batch_size=1)

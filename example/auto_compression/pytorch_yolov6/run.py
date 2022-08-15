@@ -18,7 +18,7 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 import paddle
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 from dataset import COCOValDataset, COCOTrainDataset
 from post_process import YOLOv6PostProcess, coco_metric
@@ -75,7 +75,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 def main():
     global global_config
     all_config = load_slim_config(FLAGS.config_path)
-    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
+    assert "Global" in all_config, "Key 'Global' not found in config file. \n{}".format(
+        all_config)
     global_config = all_config["Global"]
 
     dataset = COCOTrainDataset(
