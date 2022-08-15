@@ -1,10 +1,11 @@
-
 Global:
-  reader_config: configs/yolov5_reader.yml
-  input_list: {'image': 'x2paddle_images'}
-  Evaluation: True
-  arch: 'YOLOv5'
   model_dir: ./yolov5s.onnx
+  dataset_dir: dataset/coco/
+  train_image_dir: train2017
+  val_image_dir: val2017
+  train_anno_path: annotations/instances_train2017.json
+  val_anno_path: annotations/instances_val2017.json
+  Evaluation: True
 
 Distillation:
   alpha: 1.0

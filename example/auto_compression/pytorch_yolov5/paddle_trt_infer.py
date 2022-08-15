@@ -241,12 +241,9 @@ def predict_image(predictor,
                   image_shape=[640, 640],
                   warmup=1,
                   repeats=1,
-                  threshold=0.5,
-                  arch='YOLOv5'):
+                  threshold=0.5):
     img, scale_factor = image_preprocess(image_file, image_shape)
-    inputs = {}
-    if arch == 'YOLOv5':
-        inputs['x2paddle_images'] = img
+    inputs['x2paddle_images'] = img
     input_names = predictor.get_input_names()
     for i in range(len(input_names)):
         input_tensor = predictor.get_input_handle(input_names[i])
