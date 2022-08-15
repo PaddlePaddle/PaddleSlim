@@ -13,7 +13,6 @@
 - [4.预测部署](#4预测部署)
 - [5.FAQ](5FAQ)
 
-飞桨模型转换工具[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)支持将```Caffe/TensorFlow/ONNX/PyTorch```的模型一键转为飞桨（PaddlePaddle）的预测模型。借助X2Paddle的能力，各种框架的推理模型可以很方便的使用PaddleSlim的自动化压缩功能。
 
 本示例将以[ultralytics/yolov5](https://github.com/ultralytics/yolov5)，[meituan/YOLOv6](https://github.com/meituan/YOLOv6)和[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)YOLO系列目标检测模型为例，将PyTorch框架模型转换为Paddle框架模型，再使用离线量化功能进行压缩。
 
@@ -23,17 +22,14 @@
 | :-------- |:-------- |:--------: | :------: | :-------: | :------: | :------: | :-------: | :--------: |
 
 | YOLOv5s |  Base模型 | 640*640  |  37.4   |   5.95ms  |   2.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx) |
-| YOLOv5s |  KL离线量化 | 640*640  |  36.0   |   - |   -   |  1.87ms  |  - | - |
-|         |            |          |         |     |       |          |    |    |
+| YOLOv5s |  KL离线量化 | 640*640  |  36.0   |   - |   -   |  1.87ms  |  -  | - |
+|  |  |  |  |  |  |  |  |  |
 | YOLOv6s |  Base模型 | 640*640  |  42.4   |   9.06ms  |   2.90ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx) |
 | YOLOv6s |  KL离线量化(量化分析前) | 640*640  |  30.3   |   - |   -   |  1.83ms  |  -  | - |
 | YOLOv6s |  KL离线量化(量化分析后) | 640*640  |  39.7   |   - |   -   |  -  |  -  | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_analyzed_ptq.tar) |
-
-|         |            |          |         |     |       |          |    |    |
-
+|  |  |  |  |  |  |  |  |  |
 | YOLOv7 |  Base模型 | 640*640  |  51.1   |   26.84ms  |   7.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx) |
-| YOLOv7 |  KL离线量化 | 640*640  |  50.2   |   - |   -   |  4.55ms  |  - | - |
-|         |            |          |         |     |       |          |    |    |
+| YOLOv7 |  KL离线量化 | 640*640  |  50.2   |   -  |   -   |  4.55ms  |  - | - |
 
 说明：
 - mAP的指标均在COCO val2017数据集中评测得到。
@@ -59,8 +55,23 @@ pip install paddleslim
 ```
 
 #### 3.2 准备数据集
+本示例默认以COCO数据进行自动压缩实验，可以从[MS COCO官网](https://cocodataset.org)下载[Train](http://images.cocodataset.org/zips/train2017.zip)、[Val](http://images.cocodataset.org/zips/val2017.zip)、[annotation](http://images.cocodataset.org/annotations/annotations_trainval2017.zip)。
 
-本案例默认以COCO数据进行自动压缩实验，并且依赖PaddleDetection中数据读取模块，如果自定义COCO数据，或者其他格式数据，请参考[PaddleDetection数据准备文档](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.4/docs/tutorials/PrepareDataSet.md) 来准备数据。
+目录格式如下：
+```
+dataset/coco/
+├── annotations
+│   ├── instances_train2017.json
+│   ├── instances_val2017.json
+│   |   ...
+├── train2017
+│   ├── 000000000009.jpg
+│   ├── 000000580008.jpg
+│   |   ...
+├── val2017
+│   ├── 000000000139.jpg
+│   ├── 000000000285.jpg
+```
 
 #### 3.3 准备预测模型
 （1）准备ONNX模型：
