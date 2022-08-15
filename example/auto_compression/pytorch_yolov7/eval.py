@@ -19,7 +19,7 @@ import argparse
 from tqdm import tqdm
 import paddle
 from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
-from paddleslim.common import load_onnx_model
+from paddleslim.auto_compression.utils import load_inference_model
 from post_process import YOLOv7PostProcess, coco_metric
 from dataset import COCOValDataset
 
@@ -46,8 +46,8 @@ def eval():
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
-    val_program, feed_target_names, fetch_targets = load_onnx_model(
-        global_config["model_dir"])
+    val_program, feed_target_names, fetch_targets = load_inference_model(
+        global_config["model_dir"], exe)
 
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
     with tqdm(

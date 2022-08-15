@@ -22,6 +22,7 @@ from paddleslim.common import load_onnx_model
 from paddleslim.quant import quant_post_static
 from dataset import COCOTrainDataset
 
+
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -76,7 +77,7 @@ def main():
         hist_percent=0.999,
         is_full_quantize=False,
         bias_correction=False,
-        onnx_format=True)
+        onnx_format=False)
 
 
 if __name__ == '__main__':
