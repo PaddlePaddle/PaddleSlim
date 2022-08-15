@@ -21,6 +21,5 @@ from .utils import *
 __all__ = [
     "AutoCompression", "Quantization", "Distillation",
     "MultiTeacherDistillation", "HyperParameterOptimization", "Prune",
-    "UnstructurePrune", "ProgramInfo", "TrainConfig", "save_config",
-    "load_config", "predict_compressed_model"
+    "UnstructurePrune", "ProgramInfo", "TrainConfig", "predict_compressed_model"
 ]

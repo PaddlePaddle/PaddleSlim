@@ -16,12 +16,12 @@ import os
 import sys
 import numpy as np
 import argparse
-from tqdm import tqdm
 import paddle
-from paddleslim.common import load_config as load_slim_config
-from paddleslim.common import load_onnx_model
+from tqdm import tqdm
 from post_process import YOLOv6PostProcess, coco_metric
-from dataset import COCOValDataset
+from dataset import COCOValDataset, COCOTrainDataset
+from paddleslim.common import load_config, load_onnx_model
+from paddleslim.quant.analysis import AnalysisQuant
 
 
 def argsparser():
@@ -37,18 +37,10 @@ def argsparser():
         type=str,
         default='gpu',
         help="which device used to compress.")
-
     return parser
 
 
-def eval():
-
-    place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
-    exe = paddle.static.Executor(place)
-
-    val_program, feed_target_names, fetch_targets = load_onnx_model(
-        global_config["model_dir"])
-
+def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
     with tqdm(
             total=len(val_loader),
@@ -56,9 +48,9 @@ def eval():
             ncols=80) as t:
         for data in val_loader:
             data_all = {k: np.array(v) for k, v in data.items()}
-            outs = exe.run(val_program,
-                           feed={feed_target_names[0]: data_all['image']},
-                           fetch_list=fetch_targets,
+            outs = exe.run(compiled_test_program,
+                           feed={test_feed_names[0]: data_all['image']},
+                           fetch_list=test_fetch_list,
                            return_numpy=False)
             res = {}
             postprocess = YOLOv6PostProcess(
@@ -68,25 +60,48 @@ def eval():
             bbox_nums_list.append(res['bbox_num'])
             image_id_list.append(np.array(data_all['im_id']))
             t.update()
-
-    coco_metric(anno_file, bboxes_list, bbox_nums_list, image_id_list)
+    map_res = coco_metric(anno_file, bboxes_list, bbox_nums_list, image_id_list)
+    return map_res[0]
 
 
 def main():
-    global global_config
-    all_config = load_slim_config(FLAGS.config_path)
-    global_config = all_config["Global"]
+
+    global config
+    config = load_config(FLAGS.config_path)
+
+    dataset = COCOTrainDataset(
+        dataset_dir=config['dataset_dir'],
+        image_dir=config['val_image_dir'],
+        anno_path=config['val_anno_path'])
+    data_loader = paddle.io.DataLoader(
+        dataset, batch_size=1, shuffle=True, drop_last=True, num_workers=0)
 
     global val_loader
     dataset = COCOValDataset(
-        dataset_dir=global_config['dataset_dir'],
-        image_dir=global_config['val_image_dir'],
-        anno_path=global_config['val_anno_path'])
+        dataset_dir=config['dataset_dir'],
+        image_dir=config['val_image_dir'],
+        anno_path=config['val_anno_path'])
     global anno_file
     anno_file = dataset.ann_file
-    val_loader = paddle.io.DataLoader(dataset, batch_size=1)
+    val_loader = paddle.io.DataLoader(
+        dataset, batch_size=1, shuffle=False, drop_last=False, num_workers=0)
 
-    eval()
+    load_onnx_model(config["model_dir"])
+    inference_model_path = config["model_dir"].rstrip().rstrip(
+        '.onnx') + '_infer'
+    analyzer = AnalysisQuant(
+        model_dir=inference_model_path,
+        model_filename='model.pdmodel',
+        params_filename='model.pdiparams',
+        eval_function=eval_function,
+        quantizable_op_type=config['quantizable_op_type'],
+        weight_quantize_type=config['weight_quantize_type'],
+        activation_quantize_type=config['activation_quantize_type'],
+        is_full_quantize=config['is_full_quantize'],
+        data_loader=data_loader,
+        batch_size=config['batch_size'],
+        save_dir=config['save_dir'], )
+    analyzer.analysis()
 
 
 if __name__ == '__main__':

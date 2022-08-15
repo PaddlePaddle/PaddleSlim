@@ -21,7 +21,7 @@ from paddleseg.cvlibs import Config as PaddleSegDataConfig
 from paddleseg.utils import worker_init_fn
 
 from paddleslim.auto_compression import AutoCompression
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from paddleseg.core.infer import reverse_transform
 from paddleseg.utils import metrics
 
