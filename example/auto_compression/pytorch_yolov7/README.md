@@ -35,8 +35,8 @@
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
-- PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim > 2.3版本
+- PaddlePaddle develop每日版本 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/develop/install/pip/linux-pip.html)下载安装）
+- PaddleSlim develop 版本
 
 （1）安装paddlepaddle：
 ```shell
@@ -48,7 +48,8 @@ pip install paddlepaddle-gpu
 
 （2）安装paddleslim：
 ```shell
-pip install paddleslim
+git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+python setup.py install
 ```
 
 
@@ -82,7 +83,7 @@ dataset/coco/
 可通过[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)的导出脚本来准备ONNX模型，具体步骤如下：
 ```shell
 git clone https://github.com/WongKinYiu/yolov7.git
-python3.7 export.py --weights yolov7-tiny.pt --grid
+python export.py --weights yolov7-tiny.pt --grid
 ```
 
 **注意**：目前ACT支持不带NMS模型，使用如上命令导出即可。也可以直接下载我们已经准备好的[yolov7.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov7-tiny.onnx)。

@@ -77,7 +77,7 @@ def main():
         hist_percent=0.999,
         is_full_quantize=False,
         bias_correction=False,
-        onnx_format=False)
+        onnx_format=True)
 
 
 if __name__ == '__main__':
