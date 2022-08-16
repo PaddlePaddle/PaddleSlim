@@ -183,3 +183,30 @@ def load_onnx_model(model_path, disable_feedback=False):
             os.path.join(inference_model_path, 'onnx2paddle_{}'.format(
                 model_idx)))
         return val_program, feed_target_names, fetch_targets
+
+
+def export_onnx(model_dir,
+                model_filename=None,
+                params_filename=None,
+                save_file_path='output.onnx',
+                opset_version=13,
+                deploy_backend='tensorrt'):
+    if not model_filename:
+        model_filename = 'model.pdmodel'
+    if not params_filename:
+        params_filename = 'model.pdiparams'
+    import pkg_resources as pkg
+    try:
+        pkg.require('paddle2onnx')
+    except:
+        from pip._internal import main
+        main(['install', 'paddle2onnx==1.0.0rc3'])
+    import paddle2onnx
+    paddle2onnx.command.c_paddle_to_onnx(
+        model_file=os.path.join(model_dir, model_filename),
+        params_file=os.path.join(model_dir, params_filename),
+        save_file=save_file_path,
+        opset_version=opset_version,
+        enable_onnx_checker=True,
+        deploy_backend=deploy_backend)
+    _logger.info('Convert model to ONNX: {}'.format(save_file_path))
