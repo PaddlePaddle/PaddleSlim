@@ -45,33 +45,41 @@ class AnalysisQuant(object):
             model_filename=None,
             params_filename=None,
             eval_function=None,
+            data_loader=None,
+            save_dir='analysis_results',
+            checkpoint_name='analysis_checkpoint.pkl',
+            num_histogram_plots=10,
             quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
             weight_quantize_type='abs_max',
             activation_quantize_type='moving_average_abs_max',
             is_full_quantize=False,
             batch_size=10,
-            batch_nums=10,
-            data_loader=None,
-            save_dir='analysis_results',
-            checkpoint_name='analysis_checkpoint.pkl',
-            num_histogram_plots=10, ):
+            batch_nums=10, ):
         """
         AnalysisQuant provides to analysis the sensitivity of each op in the model.
         
         Args:
-            model_dir(str): the path of fp32 model that will be quantized
-            model_filename(str): the model file name of the fp32 model
-            params_filename(str): the parameter file name of the fp32 model
+            model_dir(str): the path of fp32 model that will be quantized, it can also be '.onnx'
+            model_filename(str, optional): the model file name of the fp32 model
+            params_filename(str, optional): the parameter file name of the fp32 model
             eval_function(function): eval function, define by yourself to return the metric of the inference program, can be used to judge the metric of quantized model.  (TODO: optional)
-            quantizable_op_type(list, optional): op types that can be quantized
-            batch_size(int, optional): the batch size of DataLoader, default is 10
             data_loader(Python Generator, Paddle.io.DataLoader, optional): the
                 Generator or Dataloader provides calibrate data, and it could
                 return a batch every time
             save_dir(str, optional): the output dir that stores the analyzed information
             checkpoint_name(str, optional): the name of checkpoint file that saves analyzed information and avoids break off while ananlyzing
-            num_histogram_plots: the number histogram plots you want to visilize, the plots will show in one PDF file in the save_dir
+            num_histogram_plots: the number histogram plots you want to visilize, the plots will show in four PDF files for  both best and worst and for both weight and act ops in the save_dir
+            quantizable_op_type(list): op types that can be quantized
+            weight_quantize_type(str): quantization type for weights, support 'abs_max' and 'channel_wise_abs_max'
+            activation_quantize_type(str): quantization type for activation, now support 'range_abs_max', 'moving_average_abs_max' and 'abs_max'
+            is_full_quantize(bool): if True, apply quantization to all supported quantizable op type. If False, only apply quantization to the input quantizable_op_type. Default is False.
+            batch_size(int, optional): the batch size of DataLoader, default is 10
+            batch_nums(int, optional): the number of calibrate data is 'batch_size*batch_nums'
         """
+        if model_filename is None:
+            model_filename = 'model.pdmodel'
+        if params_filename is None:
+            params_filename = 'model.pdiparams'
         self.model_dir = model_dir
         self.model_filename = model_filename
         self.params_filename = params_filename
@@ -99,10 +107,10 @@ class AnalysisQuant(object):
 
         # load model 
         [program, self.feed_list, self.fetch_list]= load_inference_model( \
-            model_dir, \
+            self.model_dir, \
             executor=executor, \
-            model_filename=model_filename, \
-            params_filename=params_filename)
+            model_filename=self.model_filename, \
+            params_filename=self.params_filename)
 
         # create data_loader
         self.data_loader = wrap_dataloader(data_loader, self.feed_list)
@@ -167,7 +175,6 @@ class AnalysisQuant(object):
                         name, self.quant_layer_metrics[name]))
         _logger.info('Analysis file is saved in {}'.format(analysis_file))
         self.calculate_histogram()
-        self.draw_pdf()
 
     def save_checkpoint(self):
         if not os.path.exists(self.save_dir):
@@ -222,24 +229,52 @@ class AnalysisQuant(object):
             self.quant_layer_metrics[layer_name] = quant_metric
             self.save_checkpoint()
 
-    def get_sensitive_ops_name(self, graph, program):
-        sensitive_weight_ops = self.sensitivity_ranklist[:self.
-                                                         num_histogram_plots]
-        sensitive_act_ops = []
-        persistable_var_names = []
-        persistable_var_names = []
-        for var in program.list_vars():
-            if var.persistable:
-                persistable_var_names.append(var.name)
-        for op_name in sensitive_weight_ops:
+    def get_act_name_by_weight(self, program, weight_names,
+                               persistable_var_names):
+        act_ops_names = []
+        for op_name in weight_names:
             for block_id in range(len(program.blocks)):
                 for op in program.blocks[block_id].ops:
                     var_name_list = _get_op_input_var_names(op)
                     if op_name in var_name_list:
                         for var_name in var_name_list:
                             if var_name not in persistable_var_names:
-                                sensitive_act_ops.append(var_name)
-        return sensitive_act_ops, sensitive_weight_ops
+                                act_ops_names.append(var_name)
+        return act_ops_names
+
+    def get_hist_ops_name(self, graph, program):
+        if self.num_histogram_plots <= 0:
+            return []
+
+        best_weight_ops = self.sensitivity_ranklist[::-1][:self.
+                                                          num_histogram_plots]
+        worst_weight_ops = self.sensitivity_ranklist[:self.num_histogram_plots]
+
+        persistable_var_names = []
+        for var in program.list_vars():
+            if var.persistable:
+                persistable_var_names.append(var.name)
+
+        best_act_ops = self.get_act_name_by_weight(program, best_weight_ops,
+                                                   persistable_var_names)
+        worst_act_ops = self.get_act_name_by_weight(program, worst_weight_ops,
+                                                    persistable_var_names)
+        return [best_weight_ops, best_act_ops, worst_weight_ops, worst_act_ops]
+
+    def collect_ops_histogram(self, scope, ops):
+        hist = {}
+        for var_name in ops:
+            var_tensor = load_variable_data(scope, var_name)
+            var_tensor = np.array(var_tensor)
+            min_v = float(np.min(var_tensor))
+            max_v = float(np.max(var_tensor))
+            var_tensor = var_tensor.flatten()
+            _, hist_edges = np.histogram(
+                var_tensor.copy(),
+                bins=self.histogram_bins,
+                range=(min_v, max_v))
+            hist[var_name] = [var_tensor, hist_edges]
+        return hist
 
     def calculate_histogram(self):
         '''
@@ -258,13 +293,15 @@ class AnalysisQuant(object):
         scope = global_scope()
 
         graph = IrGraph(core.Graph(program.desc), for_test=False)
-        self.sensitive_act_ops, self.sensitive_weight_ops = self.get_sensitive_ops_name(
-            graph, program)
+        ops_tobe_draw_hist = self.get_hist_ops_name(graph, program)
+        if not ops_tobe_draw_hist:
+            return
 
         for var in program.list_vars():
             if var.name in self.quantized_act_var_name:
                 var.persistable = True
 
+        # sample before collect histogram
         batch_id = 0
         for data in self.data_loader():
             executor.run(program=program,
@@ -276,56 +313,25 @@ class AnalysisQuant(object):
             if batch_id >= self.batch_nums:
                 break
 
-        self.weight_histogram = {}
-        self.act_histogram = {}
-        for var_name in self.sensitive_act_ops:
-            var_tensor = load_variable_data(scope, var_name)
-            var_tensor = np.array(var_tensor)
-            min_v = float(np.min(var_tensor))
-            max_v = float(np.max(var_tensor))
-            var_tensor = var_tensor.flatten()
-            _, hist_edges = np.histogram(
-                var_tensor.copy(),
-                bins=self.histogram_bins,
-                range=(min_v, max_v))
-            self.act_histogram[var_name] = [var_tensor, hist_edges]
+        pdf_names = [
+            'best_weight_hist_result.pdf',
+            'best_act_hist_result.pdf',
+            'worst_weight_hist_result.pdf',
+            'worst_act_hist_result.pdf',
+        ]
+        for ops, save_pdf_name in zip(ops_tobe_draw_hist, pdf_names):
+            hist_data = self.collect_ops_histogram(scope, ops)
+            self.draw_pdf(hist_data, save_pdf_name)
 
-        for var_name in self.sensitive_weight_ops:
-            var_tensor = load_variable_data(scope, var_name)
-            var_tensor = np.array(var_tensor)
-            min_v = float(np.min(var_tensor))
-            max_v = float(np.max(var_tensor))
-            var_tensor = var_tensor.flatten()
-            _, hist_edges = np.histogram(
-                var_tensor.copy(),
-                bins=self.histogram_bins,
-                range=(min_v, max_v))
-            self.weight_histogram[var_name] = [var_tensor, hist_edges]
-
-    def draw_pdf(self):
-        pdf_path_a = os.path.join(self.save_dir, 'act_hist_result.pdf')
-        pdf_path_w = os.path.join(self.save_dir, 'weight_hist_result.pdf')
-        with PdfPages(pdf_path_a) as pdf:
-            for name in self.act_histogram:
-                plt.hist(
-                    self.act_histogram[name][0],
-                    bins=self.act_histogram[name][1])
+    def draw_pdf(self, hist_data, save_pdf_name):
+        pdf_path = os.path.join(self.save_dir, save_pdf_name)
+        with PdfPages(pdf_path) as pdf:
+            for name in hist_data:
+                plt.hist(hist_data[name][0], bins=hist_data[name][1])
                 plt.xlabel(name)
                 plt.ylabel("frequency")
                 plt.title("Hist of variable {}".format(name))
                 plt.show()
                 pdf.savefig()
             plt.close()
-        with PdfPages(pdf_path_w) as pdf:
-            for name in self.weight_histogram:
-                plt.hist(
-                    self.weight_histogram[name][0],
-                    bins=self.weight_histogram[name][1])
-                plt.xlabel(name)
-                plt.ylabel("frequency")
-                plt.title("Hist of variable {}".format(name))
-                plt.show()
-                pdf.savefig()
-            plt.close()
-        _logger.info('Histogram plots are saved in {} and {}'.format(
-            pdf_path_a, pdf_path_w))
+        _logger.info('Histogram plot is saved in {}'.format(pdf_path))

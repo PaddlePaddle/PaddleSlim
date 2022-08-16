@@ -1,3 +1,4 @@
+arch: YOLOv5
 model_dir: ./yolov5s.onnx
 dataset_dir: /dataset/coco/
 train_image_dir: train2017
