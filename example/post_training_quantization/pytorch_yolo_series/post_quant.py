@@ -79,7 +79,9 @@ def main():
         hist_percent=0.999,
         is_full_quantize=False,
         bias_correction=False,
-        onnx_format=True)
+        onnx_format=True,
+        skip_tensor_list=config['skip_tensor_list']
+        if 'skip_tensor_list' in config else None)
 
 
 if __name__ == '__main__':

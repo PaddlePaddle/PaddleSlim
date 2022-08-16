@@ -3,7 +3,7 @@
 目录：
 - [1.简介](#1简介)
 - [2.Benchmark](#2Benchmark)
-- [3.开始自动压缩](#离线量化流程)
+- [3.离线量化流程](#离线量化流程)
   - [3.1 准备环境](#31-准备环境)
   - [3.2 准备数据集](#32-准备数据集)
   - [3.3 准备预测模型](#33-准备预测模型)
@@ -54,7 +54,7 @@ pip install paddleslim
 ```
 
 #### 3.2 准备数据集
-本示例默认以COCO数据进行自动压缩实验，可以从[MS COCO官网](https://cocodataset.org)下载[Train](http://images.cocodataset.org/zips/train2017.zip)、[Val](http://images.cocodataset.org/zips/val2017.zip)、[annotation](http://images.cocodataset.org/annotations/annotations_trainval2017.zip)。
+本示例默认以COCO数据进行自动压缩实验，可以从 [MS COCO官网](https://cocodataset.org) 下载 [Train](http://images.cocodataset.org/zips/train2017.zip)、[Val](http://images.cocodataset.org/zips/val2017.zip)、[annotation](http://images.cocodataset.org/annotations/annotations_trainval2017.zip)。
 
 目录格式如下：
 ```
@@ -75,28 +75,28 @@ dataset/coco/
 #### 3.3 准备预测模型
 （1）准备ONNX模型：
 
-**yolov5**：可通过[ultralytics/yolov5](https://github.com/ultralytics/yolov5) 官方的[导出教程](https://github.com/ultralytics/yolov5/issues/251)来准备ONNX模型。也可以下载准备好的[yolov5s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx)。
+- YOLOv5：可通过[ultralytics/yolov5](https://github.com/ultralytics/yolov5) 官方的[导出教程](https://github.com/ultralytics/yolov5/issues/251)来准备ONNX模型，也可以下载准备好的[yolov5s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx)。
 
-**yolov6**：可通过[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)的导出脚本来准备ONNX模型。也可以直接下载我们已经准备好的[yolov7.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx)。
+- YOLOv6：可通过[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)的导出脚本来准备ONNX模型，也可以直接下载我们已经准备好的[yolov7.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx)。
 
-**yolov7**：可通过[meituan/YOLOv6](https://github.com/meituan/YOLOv6)官方的[导出教程](https://github.com/meituan/YOLOv6/blob/main/deploy/ONNX/README.md)来准备ONNX模型。也可以下载已经准备好的[yolov6s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx)。
+- YOLOv7：可通过[meituan/YOLOv6](https://github.com/meituan/YOLOv6)官方的[导出教程](https://github.com/meituan/YOLOv6/blob/main/deploy/ONNX/README.md)来准备ONNX模型，也可以下载已经准备好的[yolov6s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx)。
 
 
 #### 3.4 离线量化并产出模型
 离线量化示例通过post_quant.py脚本启动，会使用接口```paddleslim.quant.quant_post_static```对模型进行量化。配置config文件中模型路径、数据路径和量化相关的参数，配置完成后便可对模型进行离线量化。具体运行命令为：
-- yolov5
+- YOLOv5
 
 ```shell
 python post_quant.py --config_path=./configs/yolov5s_ptq.yaml --save_dir=./yolov5s_ptq_out
 ```
 
-- yolov6
+- YOLOv6
 
 ```shell
 python post_quant.py --config_path=./configs/yolov6s_ptq.yaml --save_dir=./yolov6s_ptq_out
 ```
 
-- yolov7
+- YOLOv7
 
 ```shell
 python post_quant.py --config_path=./configs/yolov7s_ptq.yaml --save_dir=./yolov7s_ptq_out
@@ -105,7 +105,8 @@ python post_quant.py --config_path=./configs/yolov7s_ptq.yaml --save_dir=./yolov
 
 #### 3.5 测试模型精度
 
-修改[yolov5s_ptq.yaml](./configs/yolov5s_ptq.yaml)中`model_dir`字段为模型存储路径，然后使用eval.py脚本得到模型的mAP：
+修改 [yolov5s_ptq.yaml](./configs/yolov5s_ptq.yaml) 中`model_dir`字段为模型存储路径，然后使用eval.py脚本得到模型的mAP：
+
 ```shell
 export CUDA_VISIBLE_DEVICES=0
 python eval.py --config_path=./configs/yolov5s_ptq.yaml
@@ -113,26 +114,37 @@ python eval.py --config_path=./configs/yolov5s_ptq.yaml
 
 
 #### 3.6 提高离线量化精度
-本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。由于yolov6离线量化效果较差，以yolov6为例，量化分析工具具体使用方法如下：
+本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。
+
+由于YOLOv6离线量化效果较差，以YOLOv6为例，量化分析工具具体使用方法如下：
 
 ```shell
 python analysis.py --config_path=./configs/yolov6s_analysis.yaml
 ```
 
-经过分析之后，会产出模型每一层量化后的精度，和较差层的weight和activation的分布图。在进行离线量化时，可以跳过这些导致精度下降较多的层，如yolov6中，经过分析后，可跳过`conv2d_2.w_0`， `conv2d_11.w_0`，`conv2d_15.w_0`， `conv2d_46.w_0`， `conv2d_49.w_0`，可使用[yolov6s_analyzed_ptq.yaml](./configs/yolov6s_analyzed_ptq.yaml)，然后再次进行离线量化。跳过这五层后，离线量化精度上升9.4个点。
-
-```shell
-python post_quant.py --config_path=./configs/yolov6s_analyzed_ptq.yaml --save_dir=./yolov6s_analyzed_ptq_out
-```
-
-注：
-- 分析后，每层量化的精度会默认保存在`./analysis_results/analysis.txt`，直方分布图会默认保存在`./analysis_results/act_hist_result.pdf`和 `./analysis_results/weight_hist_result.pdf`中。
+如下图，经过量化分析之后，可以发现`conv2d_2.w_0`， `conv2d_11.w_0`，`conv2d_15.w_0`， `conv2d_46.w_0`， `conv2d_49.w_0` 这些层会导致较大的精度损失。
 
 <p align="center">
 <img src="./images/sensitivity_rank.png" width=849 hspace='10'/> <br />
 </p>
 
 
+
+对比权重直方分布图后，可以发现量化损失较小的层数值分布相对平稳，数值处于-0.25到0.25之间，而量化损失较大的层数值分布非常极端，绝大部分值趋近于0，且数值处于-0.1到0.1之间，尽管看上去都是正太分布，但大量值为0是不利于量化统计scale值的。
+
+<p align="center">
+<img src="./images/hist_compare.png" width=849 hspace='10'/> <br />
+</p>
+
+
+经此分析，在进行离线量化时，可以跳过这些导致精度下降较多的层，可使用 [yolov6s_analyzed_ptq.yaml](./configs/yolov6s_analyzed_ptq.yaml)，然后再次进行离线量化。跳过这些层后，离线量化精度上升9.4个点。
+
+```shell
+python post_quant.py --config_path=./configs/yolov6s_analyzed_ptq.yaml --save_dir=./yolov6s_analyzed_ptq_out
+```
+
 ## 4.预测部署
 
+
 ## 5.FAQ
+- 如果想对模型进行自动压缩，可进入[YOLO系列模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series)中进行实验。
