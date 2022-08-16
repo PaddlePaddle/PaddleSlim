@@ -17,7 +17,7 @@ import sys
 import numpy as np
 import argparse
 import paddle
-from paddleslim.auto_compression.config_helpers import load_config
+from paddleslim.common import load_config
 from paddleslim.common import load_onnx_model
 from paddleslim.quant import quant_post_static
 from dataset import COCOTrainDataset

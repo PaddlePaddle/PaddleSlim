@@ -14,42 +14,7 @@
 import yaml
 import os
 from paddleslim.auto_compression.strategy_config import *
-
-__all__ = ['save_config', 'load_config']
-
-
-def print_arguments(args, level=0):
-    if level == 0:
-        print('-----------  Running Arguments -----------')
-    for arg, value in sorted(args.items()):
-        if isinstance(value, dict):
-            print('\t' * level, '%s:' % arg)
-            print_arguments(value, level + 1)
-        else:
-            print('\t' * level, '%s: %s' % (arg, value))
-    if level == 0:
-        print('------------------------------------------')
-
-
-def load_config(config):
-    """Load configurations from yaml file into dict.
-    Fields validation is skipped for loading some custom information.
-    Args:
-      config(str): The path of configuration file.
-    Returns:
-      dict: A dict storing configuration information.
-    """
-    if config is None:
-        return None
-    assert isinstance(
-        config,
-        str), f"config should be str but got type(config)={type(config)}"
-    assert os.path.exists(config) and os.path.isfile(
-        config), f"{config} not found or it is not a file."
-    with open(config) as f:
-        cfg = yaml.load(f, Loader=yaml.FullLoader)
-    print_arguments(cfg)
-    return cfg
+from ..common.config_helper import load_config
 
 
 def extract_strategy_config(config):
@@ -101,12 +66,3 @@ def extract_train_config(config):
                     **value) if value is not None else TrainConfig()
     # return default training config when it is not set
     return TrainConfig()
-
-
-def save_config(config, config_path):
-    """
-        convert dict config to yaml.
-    """
-    f = open(config_path, "w")
-    yaml.dump(config, f)
-    f.close()

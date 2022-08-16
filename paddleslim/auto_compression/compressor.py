@@ -29,13 +29,15 @@ from ..quant.quanter import convert, quant_post
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
 from ..common.patterns import get_patterns
+from ..common.load_model import load_inference_model, get_model_dir
+from ..common.dataloader import wrap_dataloader, get_feed_vars
+from ..common.config_helper import load_config
 from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import TrainConfig, ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
-from .config_helpers import load_config, extract_strategy_config, extract_train_config
+from .config_helpers import extract_strategy_config, extract_train_config
 from .utils.predict import with_variable_shape
-from .utils import get_feed_vars, wrap_dataloader, load_inference_model, get_model_dir
 
 _logger = get_logger(__name__, level=logging.INFO)
 

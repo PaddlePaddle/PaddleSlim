@@ -15,7 +15,7 @@ from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import Mcc, PearsonAndSpearman
-from paddleslim.auto_compression.config_helpers import load_config
+from paddleslim.common import load_config
 from paddleslim.auto_compression.compressor import AutoCompression
 
 
