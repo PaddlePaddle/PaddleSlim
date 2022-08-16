@@ -21,7 +21,7 @@ import time
 from paddle.inference import Config
 from paddle.inference import create_predictor
 
-from post_process import YOLOv6PostProcess
+from post_process import YOLOv7PostProcess
 
 CLASS_LABEL = [
     'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train',
@@ -241,9 +241,13 @@ def predict_image(predictor,
                   image_shape=[640, 640],
                   warmup=1,
                   repeats=1,
-                  threshold=0.5):
+                  threshold=0.5,
+                  arch='YOLOv5'):
     img, scale_factor = image_preprocess(image_file, image_shape)
-    inputs['x2paddle_image_arrays'] = img
+    if arch == 'YOLOv6':
+        inputs['x2paddle_image_arrays'] = img
+    else:
+        inputs['x2paddle_images'] = img
     input_names = predictor.get_input_names()
     for i in range(len(input_names)):
         input_tensor = predictor.get_input_handle(input_names[i])
@@ -272,7 +276,7 @@ def predict_image(predictor,
     print('Inference time(ms): min={}, max={}, avg={}'.format(
         round(time_min * 1000, 2),
         round(time_max * 1000, 1), round(time_avg * 1000, 1)))
-    postprocess = YOLOv6PostProcess(
+    postprocess = YOLOv7PostProcess(
         score_threshold=0.001, nms_threshold=0.65, multi_label=True)
     res = postprocess(np_boxes, scale_factor)
     res_img = draw_box(
@@ -303,6 +307,8 @@ if __name__ == '__main__':
         default='GPU',
         help="Choose the device you want to run, it can be: CPU/GPU/XPU, default is GPU"
     )
+    parser.add_argument(
+        '--arch', type=str, default='YOLOv5', help="architectures name.")
     parser.add_argument('--img_shape', type=int, default=640, help="input_size")
     args = parser.parse_args()
 
@@ -316,4 +322,5 @@ if __name__ == '__main__':
         args.image_file,
         image_shape=[args.img_shape, args.img_shape],
         warmup=warmup,
-        repeats=repeats)
+        repeats=repeats,
+        arch=args.arch)
