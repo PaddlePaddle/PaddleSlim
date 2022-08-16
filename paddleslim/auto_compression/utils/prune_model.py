@@ -5,7 +5,7 @@ import paddle
 import paddle.static as static
 from ...prune import Pruner
 from ...core import GraphWrapper
-from .load_model import load_inference_model
+from ...common.load_model import load_inference_model
 __all__ = ["get_sparse_model", "get_prune_model"]
 
 
@@ -19,9 +19,10 @@ def get_sparse_model(executor, places, model_file, param_file, ratio,
         ratio(float): The ratio to prune the model.
         save_path(str): The save path of pruned model.
     """
-    assert os.path.exists(model_file), f'{model_file} does not exist.'
+    assert os.path.exists(model_file), '{} does not exist.'.format(model_file)
     assert os.path.exists(
-        param_file) or param_file is None, f'{param_file} does not exist.'
+        param_file) or param_file is None, '{} does not exist.'.format(
+            param_file)
     paddle.enable_static()
 
     SKIP = ['image', 'feed', 'pool2d_0.tmp_0']

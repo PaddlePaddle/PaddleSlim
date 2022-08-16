@@ -18,8 +18,8 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 import paddle
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
-from paddleslim.auto_compression.utils import load_inference_model
+from paddleslim.common import load_config as load_slim_config
+from paddleslim.common import load_inference_model
 from post_process import YOLOv7PostProcess, coco_metric
 from dataset import COCOValDataset
 
