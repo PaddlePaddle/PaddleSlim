@@ -14,17 +14,19 @@
 
 ## 1. 简介
 
-飞桨模型转换工具[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)支持将```Caffe/TensorFlow/ONNX/PyTorch```的模型一键转为飞桨（PaddlePaddle）的预测模型。借助X2Paddle的能力，各种框架的推理模型可以很方便的使用PaddleSlim的自动化压缩功能。
-
-本示例将以[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)目标检测模型为例，将PyTorch框架模型转换为Paddle框架模型，再使用ACT自动压缩功能进行自动压缩。本示例使用的自动压缩策略为量化训练。
+本示例将以[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)目标检测模型为例，借助[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)的能力，将PyTorch框架模型转换为Paddle框架模型，再使用ACT自动压缩功能进行模型压缩，压缩后的模型可使用Paddle Inference或者导出至ONNX，利用TensorRT部署。
 
 ## 2.Benchmark
 
-| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
-| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| YOLOv7 |  Base模型 | 640*640  |  51.1   |   26.84ms  |   7.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx) |
-| YOLOv7 |  KL离线量化 | 640*640  |  50.2   |   - |   -   |  4.55ms  |  - | - |
-| YOLOv7 |  量化蒸馏训练 | 640*640  |  **50.8**   |   - |   -   |  **4.55ms**  |  [config](./configs/yolov7_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.onnx) |
+| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 模型体积 | 预测时延<sup><small>FP32</small><sup><br><sup> |预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> |  配置文件 | Inference模型  |
+| :-------- |:-------- |:--------: | :--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
+| YOLOv7 |  Base模型 | 640*640  |  51.1   | 141MB  |  26.84ms  |   7.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx) |
+| YOLOv7 |  离线量化 | 640*640  |  50.2   | 36MB |   - |   -   |  4.55ms  |  - | - |
+| YOLOv7 |  ACT量化训练 | 640*640  |  **50.9**   | 36MB |   - |   -   |  **4.55ms**  |  [config](./configs/yolov7_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.onnx) |
+|  |  |  |  |  |  |  |  |  |
+| YOLOv7-Tiny |  Base模型 | 640*640  |  37.3   | 24MB  |  5.06ms  |   2.32ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7-tiny.onnx) |
+| YOLOv7-Tiny |  离线量化 | 640*640  |  -   | 6.1MB  |   - |   -   |  1.68ms  |  - | - |
+| YOLOv7-Tiny |  ACT量化训练 | 640*640  |  **37.0**   | 6.1MB  |  - |   -   |  **1.68ms**  |  [config](./configs/yolov7_tiny_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_tiny_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_tiny_quant.onnx) |
 
 说明：
 - mAP的指标均在COCO val2017数据集中评测得到。
@@ -33,10 +35,8 @@
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
-- PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim > 2.3版本
-- PaddleDet >= 2.4
-- opencv-python
+- PaddlePaddle develop每日版本 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/develop/install/pip/linux-pip.html)下载安装）
+- PaddleSlim develop 版本
 
 （1）安装paddlepaddle：
 ```shell
@@ -48,22 +48,32 @@ pip install paddlepaddle-gpu
 
 （2）安装paddleslim：
 ```shell
-pip install paddleslim
+git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+python setup.py install
 ```
-
-（3）安装paddledet：
-```shell
-pip install paddledet
-```
-
-注：安装PaddleDet的目的只是为了直接使用PaddleDetection中的Dataloader组件。
 
 
 #### 3.2 准备数据集
 
-本案例默认以COCO数据进行自动压缩实验，并且依赖PaddleDetection中数据读取模块，如果自定义COCO数据，或者其他格式数据，请参考[PaddleDetection数据准备文档](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.4/docs/tutorials/PrepareDataSet.md) 来准备数据。
+本示例默认以COCO数据进行自动压缩实验，可以从[MS COCO官网](https://cocodataset.org)下载[Train](http://images.cocodataset.org/zips/train2017.zip)、[Val](http://images.cocodataset.org/zips/val2017.zip)、[annotation](http://images.cocodataset.org/annotations/annotations_trainval2017.zip)。
 
-如果已经准备好数据集，请直接修改[./configs/yolov7_reader.yml]中`EvalDataset`的`dataset_dir`字段为自己数据集路径即可。
+目录格式如下：
+```
+dataset/coco/
+├── annotations
+│   ├── instances_train2017.json
+│   ├── instances_val2017.json
+│   |   ...
+├── train2017
+│   ├── 000000000009.jpg
+│   ├── 000000580008.jpg
+│   |   ...
+├── val2017
+│   ├── 000000000139.jpg
+│   ├── 000000000285.jpg
+```
+
+如果是自定义数据集，请按照如上COCO数据格式准备数据。
 
 
 #### 3.3 准备预测模型
@@ -73,13 +83,10 @@ pip install paddledet
 可通过[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)的导出脚本来准备ONNX模型，具体步骤如下：
 ```shell
 git clone https://github.com/WongKinYiu/yolov7.git
-# 切换分支到u5分支，保持导出的ONNX模型后处理和YOLOv5一致
-git checkout u5
-# 下载好yolov7.pt权重后执行：
-python export.py --weights yolov7.pt --include onnx
+python export.py --weights yolov7-tiny.pt --grid
 ```
 
-也可以直接下载我们已经准备好的[yolov7.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx)。
+**注意**：目前ACT支持不带NMS模型，使用如上命令导出即可。也可以直接下载我们已经准备好的[yolov7.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov7-tiny.onnx)。
 
 #### 3.4 自动压缩并产出模型
 
@@ -88,13 +95,13 @@ python export.py --weights yolov7.pt --include onnx
 - 单卡训练：
 ```
 export CUDA_VISIBLE_DEVICES=0
-python run.py --config_path=./configs/yolov7_qat_dis.yaml --save_dir='./output/'
+python run.py --config_path=./configs/yolov7_tiny_qat_dis.yaml --save_dir='./output/'
 ```
 
 - 多卡训练：
 ```
 CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
-          --config_path=./configs/yolov7_qat_dis.yaml --save_dir='./output/'
+          --config_path=./configs/yolov7_tiny_qat_dis.yaml --save_dir='./output/'
 ```
 
 #### 3.5 测试模型精度
@@ -102,7 +109,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log -
 修改[yolov7_qat_dis.yaml](./configs/yolov7_qat_dis.yaml)中`model_dir`字段为模型存储路径，然后使用eval.py脚本得到模型的mAP：
 ```
 export CUDA_VISIBLE_DEVICES=0
-python eval.py --config_path=./configs/yolov7_qat_dis.yaml
+python eval.py --config_path=./configs/yolov7_tiny_qat_dis.yaml
 ```
 
 

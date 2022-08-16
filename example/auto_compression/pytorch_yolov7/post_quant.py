@@ -22,6 +22,7 @@ from paddleslim.common import load_onnx_model
 from paddleslim.quant import quant_post_static
 from dataset import COCOTrainDataset
 
+
 def argsparser():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
