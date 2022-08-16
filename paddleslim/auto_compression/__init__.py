@@ -19,7 +19,14 @@ from .config_helpers import *
 from .utils import *
 
 __all__ = [
-    "AutoCompression", "Quantization", "Distillation",
-    "MultiTeacherDistillation", "HyperParameterOptimization", "Prune",
-    "UnstructurePrune", "ProgramInfo", "TrainConfig", "predict_compressed_model"
+    "AutoCompression",
+    "Quantization",
+    "Distillation",
+    "MultiTeacherDistillation",
+    "HyperParameterOptimization",
+    "Prune",
+    "UnstructurePrune",
+    "ProgramInfo",
+    "TrainConfig",
+    "predict_compressed_model",
 ]

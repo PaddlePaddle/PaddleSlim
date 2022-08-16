@@ -28,7 +28,7 @@ def argsparser():
         '--config_path',
         type=str,
         default=None,
-        help="path of compression strategy config.",
+        help="path of post training quantization config.",
         required=True)
     parser.add_argument(
         '--save_dir',

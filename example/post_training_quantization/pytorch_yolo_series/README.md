@@ -4,7 +4,7 @@
 - [1.简介](#1简介)
 - [2.Benchmark](#2Benchmark)
 - [3.开始自动压缩](#离线量化流程)
-  - [3.1 环境准备](#31-准备环境)
+  - [3.1 准备环境](#31-准备环境)
   - [3.2 准备数据集](#32-准备数据集)
   - [3.3 准备预测模型](#33-准备预测模型)
   - [3.4 离线量化并产出模型](#34-离线量化并产出模型)
@@ -14,7 +14,7 @@
 - [5.FAQ](5FAQ)
 
 
-本示例将以[ultralytics/yolov5](https://github.com/ultralytics/yolov5)，[meituan/YOLOv6](https://github.com/meituan/YOLOv6)和[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)YOLO系列目标检测模型为例，将PyTorch框架模型转换为Paddle框架模型，再使用离线量化功能进行压缩。
+本示例将以[ultralytics/yolov5](https://github.com/ultralytics/yolov5)，[meituan/YOLOv6](https://github.com/meituan/YOLOv6) 和 [WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7) YOLO系列目标检测模型为例，将PyTorch框架产出的推理模型转换为Paddle推理模型，使用离线量化功能进行压缩，并使用敏感度分析功能提升离线量化精度。离线量化产出的模型可以用PaddleInference部署，也可以导出为ONNX格式模型文件，并用TensorRT部署。
 
 
 ## 2.Benchmark
@@ -113,7 +113,7 @@ python eval.py --config_path=./configs/yolov5s_ptq.yaml
 
 
 #### 3.6 提高离线量化精度
-离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。所以PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，以可视化模型哪些层不适合量化，提高离线量化模型精度。以yolov6为例，具体使用如下：
+本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。由于yolov6离线量化效果较差，以yolov6为例，量化分析工具具体使用方法如下：
 
 ```shell
 python analysis.py --config_path=./configs/yolov6s_analysis.yaml
