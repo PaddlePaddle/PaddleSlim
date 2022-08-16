@@ -1,5 +1,5 @@
 Global:
-  model_dir: ./yolov7.onnx
+  model_dir: ./yolov7-tiny.onnx
   dataset_dir: dataset/coco/
   train_image_dir: train2017
   val_image_dir: val2017
