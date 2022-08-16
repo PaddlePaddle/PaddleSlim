@@ -20,8 +20,16 @@
 
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 模型体积 | 预测时延<sup><small>FP32</small><sup><br><sup> |预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
+| YOLOv5s |  Base模型 | 640*640  |  37.4   | 28.1MB  | 5.95ms  |   2.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx) |
+| YOLOv5s |  离线量化 | 640*640  |  36.0   | 7.4MB |   - |   -   |  1.87ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
+| YOLOv5s |  ACT量化训练  | 640*640  |  **36.9**   | 7.4MB |    - |   -   |  **1.87ms**  |  [config](./configs/yolov5s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.onnx) |
+|  |  |  |  |  |  |  |  |  |
+| YOLOv6s |  Base模型 | 640*640  |  42.4   | 65.9MB |   9.06ms  |   2.90ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx) |
+| YOLOv6s |  KL离线量化 | 640*640  |  30.3   | 16.8MB |   - |   -   |  1.83ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
+| YOLOv6s |  量化蒸馏训练 | 640*640  |  **41.3**   | 16.8MB |   - |   -   |  **1.83ms**  |  [config](./configs/yolov6s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.onnx) |
+|  |  |  |  |  |  |  |  |  |
 | YOLOv7 |  Base模型 | 640*640  |  51.1   | 141MB  |  26.84ms  |   7.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx) |
-| YOLOv7 |  离线量化 | 640*640  |  50.2   | 36MB |   - |   -   |  4.55ms  |  - | - |
+| YOLOv7 |  离线量化 | 640*640  |  50.2   | 36MB |   - |   -   |  4.55ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
 | YOLOv7 |  ACT量化训练 | 640*640  |  **50.9**   | 36MB |   - |   -   |  **4.55ms**  |  [config](./configs/yolov7_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.onnx) |
 |  |  |  |  |  |  |  |  |  |
 | YOLOv7-Tiny |  Base模型 | 640*640  |  37.3   | 24MB  |  5.06ms  |   2.32ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7-tiny.onnx) |
@@ -80,7 +88,18 @@ dataset/coco/
 
 （1）准备ONNX模型：
 
-可通过[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)的导出脚本来准备ONNX模型，具体步骤如下：
+- YOLOv5:
+
+可通过[ultralytics/yolov5](https://github.com/ultralytics/yolov5) 官方的[导出教程](https://github.com/ultralytics/yolov5/issues/251)来准备ONNX模型。也可以下载准备好的[yolov5s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx)。
+```shell
+python export.py --weights yolov5s.pt --include onnx
+```
+
+- YOLOv6:
+
+可通过[meituan/YOLOv6](https://github.com/meituan/YOLOv6)官方的[导出教程](https://github.com/meituan/YOLOv6/blob/main/deploy/ONNX/README.md)来准备ONNX模型。也可以下载已经准备好的[yolov6s.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx)。
+
+- YOLOv7: 可通过[WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)的导出脚本来准备ONNX模型，具体步骤如下：
 ```shell
 git clone https://github.com/WongKinYiu/yolov7.git
 python export.py --weights yolov7-tiny.pt --grid
@@ -90,7 +109,9 @@ python export.py --weights yolov7-tiny.pt --grid
 
 #### 3.4 自动压缩并产出模型
 
-蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
+蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。
+
+本示例启动自动压缩以YOLOv7-Tiny为例，如果想要更换模型，可修改`--config_path`路径即可，具体运行命令为：
 
 - 单卡训练：
 ```
@@ -160,7 +181,4 @@ python paddle_trt_infer.py --model_path=output --image_file=images/000000570688.
 
 ## 5.FAQ
 
-- 如果想测试离线量化模型精度，可执行：
-```shell
-python post_quant.py --config_path=./configs/yolov7_qat_dis.yaml
-```
+- 如果想测试离线量化模型精度，可进入[YOLO系列模型离线量化示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series)中进行实验。

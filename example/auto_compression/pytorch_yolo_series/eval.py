@@ -18,9 +18,9 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 import paddle
-from paddleslim.common import load_config as load_slim_config
-from paddleslim.common import load_onnx_model
-from post_process import YOLOv6PostProcess, coco_metric
+from paddleslim.common import load_config
+from paddleslim.common import load_inference_model
+from post_process import YOLOPostProcess, coco_metric
 from dataset import COCOValDataset
 
 
@@ -46,8 +46,8 @@ def eval():
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
 
-    val_program, feed_target_names, fetch_targets = load_onnx_model(
-        global_config["model_dir"])
+    val_program, feed_target_names, fetch_targets = load_inference_model(
+        global_config["model_dir"], exe)
 
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
     with tqdm(
@@ -60,8 +60,7 @@ def eval():
                            feed={feed_target_names[0]: data_all['image']},
                            fetch_list=fetch_targets,
                            return_numpy=False)
-            res = {}
-            postprocess = YOLOv6PostProcess(
+            postprocess = YOLOPostProcess(
                 score_threshold=0.001, nms_threshold=0.65, multi_label=True)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
             bboxes_list.append(res['bbox'])
@@ -74,7 +73,7 @@ def eval():
 
 def main():
     global global_config
-    all_config = load_slim_config(FLAGS.config_path)
+    all_config = load_config(FLAGS.config_path)
     global_config = all_config["Global"]
 
     global val_loader

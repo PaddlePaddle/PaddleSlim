@@ -82,15 +82,15 @@ ACT相比传统的模型压缩方法，
 | [语义分割](./semantic_segmentation) | UNet                         | 65.00                  | 64.93                  | 15.29            | 10.23            | **1.49**   | NVIDIA Tesla T4   |
 | NLP                             | PP-MiniLM                    | 72.81                 | 72.44                 | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4   |
 | NLP                             | ERNIE 3.0-Medium             | 73.09                 | 72.40                 | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4   |
-| [目标检测](./pytorch_yolov5)             | YOLOv5s<br/>(PyTorch)        | 37.40                  | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4   |
-| [目标检测](./pytorch_yolov6)             | YOLOv6s<br/>(PyTorch)        | 42.4                  | 41.3                   | 9.06             | 1.83             | **4.95**   | NVIDIA Tesla T4   |
-| [目标检测](./pytorch_yolov7)             | YOLOv7<br/>(PyTorch)        | 51.1                  | 50.8                   | 26.84             | 4.55             | **5.89**   | NVIDIA Tesla T4   |
+| [目标检测](./pytorch_yolo_series)             | YOLOv5s<br/>(PyTorch)        | 37.40                  | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4   |
+| [目标检测](./pytorch_yolo_series)             | YOLOv6s<br/>(PyTorch)        | 42.4                  | 41.3                   | 9.06             | 1.83             | **4.95**   | NVIDIA Tesla T4   |
+| [目标检测](./pytorch_yolo_series)             | YOLOv7<br/>(PyTorch)        | 51.1                  | 50.8                   | 26.84             | 4.55             | **5.89**   | NVIDIA Tesla T4   |
 | [目标检测](./detection)             | PP-YOLOE-s                   | 43.1                   | 42.6                   |  6.51  |   2.12   |  **3.07**  | NVIDIA Tesla T4 |
 | [图像分类](./image_classification)  | MobileNetV1<br/>(TensorFlow) | 71.0                   | 70.22                  | 30.45            | 15.86            |  **1.92**  | SDMM865（骁龙865）     |  
 
 - 备注：目标检测精度指标为mAP（0.5:0.95）精度测量结果。图像分割精度指标为IoU精度测量结果。
 - 更多飞桨模型应用示例及Benchmark可以参考：[图像分类](./image_classification)，[目标检测](./detection)，[语义分割](./semantic_segmentation)，[自然语言处理](./nlp)
-- 更多其它框架应用示例及Benchmark可以参考：[YOLOv5(PyTorch)](./pytorch_yolov5)，[YOLOv6(PyTorch)](./pytorch_yolov6)，[YOLOv7(PyTorch)](./pytorch_yolov7)，[HuggingFace(PyTorch)](./pytorch_huggingface)，[MobileNet(TensorFlow)](./tensorflow_mobilenet)。
+- 更多其它框架应用示例及Benchmark可以参考：[YOLOv5(PyTorch)](./pytorch_yolo_series)，[YOLOv6(PyTorch)](./pytorch_yolo_series)，[YOLOv7(PyTorch)](./pytorch_yolo_series)，[HuggingFace(PyTorch)](./pytorch_huggingface)，[MobileNet(TensorFlow)](./tensorflow_mobilenet)。
 
 ## **环境准备**
 

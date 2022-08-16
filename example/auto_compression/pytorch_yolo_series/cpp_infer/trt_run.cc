@@ -19,6 +19,7 @@ using phi::dtype::float16;
 DEFINE_string(model_dir, "", "Directory of the inference model.");
 DEFINE_string(model_file, "", "Path of the inference model file.");
 DEFINE_string(params_file, "", "Path of the inference params file.");
+DEFINE_string(arch, "YOLOv5", "Architectures name, can be: YOLOv5, YOLOv6, YOLOv7.");
 DEFINE_string(run_mode, "trt_fp32", "run_mode which can be: trt_fp32, trt_fp16 and trt_int8");
 DEFINE_int32(batch_size, 1, "Batch size.");
 DEFINE_int32(gpu_id, 0, "GPU card ID num.");
@@ -106,11 +107,15 @@ int main(int argc, char *argv[]) {
   using dtype = float16;
   std::vector<dtype> input_data(FLAGS_batch_size * 3 * 640 * 640, dtype(1.0));
 
+  int out_box_shape = 25200;
+  if (FLAGS_arch == "YOLOv6"){
+    out_box_shape = 8400;
+  }
   dtype *out_data;
-  int out_data_size = FLAGS_batch_size * 25200 * 85;
+  int out_data_size = FLAGS_batch_size * out_box_shape * 85;
   cudaHostAlloc((void**)&out_data, sizeof(float) * out_data_size, cudaHostAllocMapped);
 
-  std::vector<int> out_shape{ FLAGS_batch_size, 1, 25200, 85};
+  std::vector<int> out_shape{ FLAGS_batch_size, 1, out_box_shape, 85};
   run<dtype>(predictor.get(), input_data, input_shape, out_data, out_shape);
   return 0;
 }

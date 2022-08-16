@@ -6,6 +6,7 @@ Global:
   train_anno_path: annotations/instances_train2017.json
   val_anno_path: annotations/instances_val2017.json
   Evaluation: True
+  arch: YOLOv5
 
 Distillation:
   alpha: 1.0
