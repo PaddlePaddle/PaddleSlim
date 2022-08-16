@@ -1,7 +1,8 @@
+arch: YOLOv6
 model_dir: ./yolov6s.onnx
 save_dir: ./analysis_results
 quantizable_op_type: ["conv2d", "depthwise_conv2d"]
-weight_quantize_type: 'channel_wise_abs_max'
+weight_quantize_type: 'abs_max'
 activation_quantize_type: 'moving_average_abs_max'
 is_full_quantize: False
 dataset_dir: /dataset/coco/

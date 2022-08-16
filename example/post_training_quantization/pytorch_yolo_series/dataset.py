@@ -10,10 +10,12 @@ class COCOValDataset(paddle.io.Dataset):
                  dataset_dir=None,
                  image_dir=None,
                  anno_path=None,
-                 img_size=[640, 640]):
+                 img_size=[640, 640],
+                 input_name='x2paddle_images'):
         self.dataset_dir = dataset_dir
         self.image_dir = image_dir
         self.img_size = img_size
+        self.input_name = input_name
         self.ann_file = os.path.join(dataset_dir, anno_path)
         self.coco = COCO(self.ann_file)
         ori_ids = list(sorted(self.coco.imgs.keys()))
@@ -110,4 +112,4 @@ class COCOTrainDataset(COCOValDataset):
         img_id = self.ids[idx]
         img = self._get_img_data_from_img_id(img_id)
         img, scale_factor = self.image_preprocess(img, self.img_size)
-        return {'x2paddle_image_arrays': img}
+        return {self.input_name: img}

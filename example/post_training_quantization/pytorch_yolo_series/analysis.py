@@ -69,10 +69,13 @@ def main():
     global config
     config = load_config(FLAGS.config_path)
 
+    input_name = 'x2paddle_image_arrays' if config[
+        'arch'] == 'YOLOv6' else 'x2paddle_images'
     dataset = COCOTrainDataset(
         dataset_dir=config['dataset_dir'],
         image_dir=config['val_image_dir'],
-        anno_path=config['val_anno_path'])
+        anno_path=config['val_anno_path'],
+        input_name=input_name)
     data_loader = paddle.io.DataLoader(
         dataset, batch_size=1, shuffle=True, drop_last=True, num_workers=0)
 
