@@ -17,16 +17,15 @@ import logging
 import os
 import shutil
 import sys
+import pkg_resources as pkg
 import paddle
-from x2paddle.decoder.onnx_decoder import ONNXDecoder
-from x2paddle.op_mapper.onnx2paddle.onnx_op_mapper import ONNXOpMapper
-from x2paddle.optimizer.optimizer import GraphOptimizer
-from x2paddle.utils import ConverterCheck
 
 from . import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
 
-__all__ = ['load_inference_model', 'get_model_dir', 'load_onnx_model']
+__all__ = [
+    'load_inference_model', 'get_model_dir', 'load_onnx_model', 'export_onnx'
+]
 
 
 def load_inference_model(path_prefix,
@@ -116,24 +115,37 @@ def load_onnx_model(model_path, disable_feedback=False):
         return val_program, feed_target_names, fetch_targets
     else:
         # onnx to paddle inference model.
+        try:
+            pkg.require('x2paddle')
+        except:
+            from pip._internal import main
+            main(['install', 'x2paddle'])
+        try:
+            from x2paddle.decoder.onnx_decoder import ONNXDecoder
+            from x2paddle.op_mapper.onnx2paddle.onnx_op_mapper import ONNXOpMapper
+            from x2paddle.optimizer.optimizer import GraphOptimizer
+            from x2paddle.utils import ConverterCheck
+        except:
+            _logger.error(
+                "x2paddle is not installed, please use \"pip install x2paddle\"."
+            )
         time_info = int(time.time())
         if not disable_feedback:
             ConverterCheck(
                 task="ONNX", time_info=time_info, convert_state="Start").start()
         # check onnx installation and version
         try:
+            pkg.require('onnx')
             import onnx
             version = onnx.version.version
             v0, v1, v2 = version.split('.')
             version_sum = int(v0) * 100 + int(v1) * 10 + int(v2)
             if version_sum < 160:
-                _logger.info("[ERROR] onnx>=1.6.0 is required")
-                sys.exit(1)
+                _logger.error(
+                    "onnx>=1.6.0 is required, please use \"pip install onnx\".")
         except:
-            _logger.info(
-                "[ERROR] onnx is not installed, use \"pip install onnx==1.6.0\"."
-            )
-            sys.exit(1)
+            from pip._internal import main
+            main(['install', 'onnx==1.12.0'])
 
         # support distributed convert model
         model_idx = paddle.distributed.get_rank(
@@ -183,3 +195,29 @@ def load_onnx_model(model_path, disable_feedback=False):
             os.path.join(inference_model_path, 'onnx2paddle_{}'.format(
                 model_idx)))
         return val_program, feed_target_names, fetch_targets
+
+
+def export_onnx(model_dir,
+                model_filename=None,
+                params_filename=None,
+                save_file_path='output.onnx',
+                opset_version=13,
+                deploy_backend='tensorrt'):
+    if not model_filename:
+        model_filename = 'model.pdmodel'
+    if not params_filename:
+        params_filename = 'model.pdiparams'
+    try:
+        pkg.require('paddle2onnx')
+    except:
+        from pip._internal import main
+        main(['install', 'paddle2onnx==1.0.0rc3'])
+    import paddle2onnx
+    paddle2onnx.command.c_paddle_to_onnx(
+        model_file=os.path.join(model_dir, model_filename),
+        params_file=os.path.join(model_dir, params_filename),
+        save_file=save_file_path,
+        opset_version=opset_version,
+        enable_onnx_checker=True,
+        deploy_backend=deploy_backend)
+    _logger.info('Convert model to ONNX: {}'.format(save_file_path))
