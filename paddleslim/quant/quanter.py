@@ -439,9 +439,9 @@ def quant_post_static(
                 When all parameters are saved in a single file, set it 
                 as filename. If parameters are saved in separate files, 
                 set it as 'None'. Default : 'None'.
-        save_model_filename(str): The name of model file to save the quantized inference program.  Default: '__model__'.
+        save_model_filename(str): The name of model file to save the quantized inference program.  Default: 'model.pdmodel'.
         save_params_filename(str): The name of file to save all related parameters. 
-                If it is set None, parameters will be saved in separate files. Default: '__params__'.
+                If it is set None, parameters will be saved in separate files. Default: 'model.pdiparams'.
         batch_size(int, optional): The batch size of DataLoader, default is 1.
         batch_nums(int, optional): If batch_nums is not None, the number of calibrate 
                         data is 'batch_size*batch_nums'. If batch_nums is None, use all data
