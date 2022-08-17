@@ -113,6 +113,7 @@ def main():
         config=all_config,
         eval_callback=eval_func)
     ac.compress()
+    ac.export_onnx()
 
 
 if __name__ == '__main__':

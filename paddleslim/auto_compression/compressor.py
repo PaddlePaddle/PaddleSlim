@@ -29,7 +29,7 @@ from ..quant.quanter import convert, quant_post
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
 from ..common.patterns import get_patterns
-from ..common.load_model import load_inference_model, get_model_dir
+from ..common.load_model import load_inference_model, get_model_dir, export_onnx
 from ..common.dataloader import wrap_dataloader, get_feed_vars
 from ..common.config_helper import load_config
 from ..analysis import TableLatencyPredictor
@@ -826,3 +826,17 @@ class AutoCompression:
             fetch_vars=test_program_info.fetch_targets,
             executor=self._exe,
             program=test_program)
+
+    def export_onnx(self,
+                    model_name='quant_model.onnx',
+                    deploy_backend='tensorrt'):
+        infer_model_path = os.path.join(self.final_dir, self.model_filename)
+        assert os.path.exists(
+            infer_model_path), 'Not found {}, please check it.'.format(
+                infer_model_path)
+        export_onnx(
+            self.final_dir,
+            model_filename=self.model_filename,
+            params_filename=self.params_filename,
+            save_file_path=os.path.join(self.final_dir, model_name),
+            deploy_backend=deploy_backend)

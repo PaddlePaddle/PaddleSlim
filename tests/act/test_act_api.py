@@ -8,8 +8,8 @@ import unittest
 import numpy as np
 from paddle.io import Dataset
 from paddleslim.auto_compression import AutoCompression
-from paddleslim.auto_compression.config_helpers import load_config
-from paddleslim.auto_compression.utils.load_model import load_inference_model
+from paddleslim.common import load_config
+from paddleslim.common import load_inference_model, export_onnx
 
 
 class RandomEvalDataset(Dataset):
@@ -142,6 +142,14 @@ class TestLoadONNXModel(ACTBase):
             executor=exe,
             model_filename='model.pdmodel',
             params_filename='model.paiparams')
+        # convert onnx
+        export_onnx(
+            self.model_dir,
+            model_filename='model.pdmodel',
+            params_filename='model.paiparams',
+            save_file_path='output.onnx',
+            opset_version=13,
+            deploy_backend='tensorrt')
 
 
 if __name__ == '__main__':
