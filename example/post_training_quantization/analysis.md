@@ -15,13 +15,7 @@ data_loader: None
 save_dir: 'analysis_results'
 checkpoint_name: 'analysis_checkpoint.pkl'
 num_histogram_plots: 10
-
-quantizable_op_type: ["conv2d", "depthwise_conv2d", "mul"]
-weight_quantize_type: 'abs_max'
-activation_quantize_type: 'moving_average_abs_max'
-is_full_quantize: False
-batch_size: 10
-batch_nums: 10
+ptq_config
 ```
 - model_dir: 必须传入的模型文件路径，可为文件夹名；若模型为ONNX类型，直接输入'.onnx'模型文件名称即可。
 - model_filename: 默认为None，若model_dir为文件夹名，则必须传入以'.pdmodel'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入。
@@ -31,18 +25,7 @@ batch_nums: 10
 - save_dir：分析后保存模型精度或pdf等文件的文件夹，默认为`analysis_results`。
 - checkpoint_name：由于模型可能存在大量层需要分析，因此分析过程中会中间保存结果，如果程序中断会自动加载已经分析好的结果，默认为`analysis_checkpoint.pkl`。
 - num_histogram_plots：需要可视化的直方分布图数量。可视化量化效果最好和最坏的该数量个权重和激活的分布图。默认为10。若不需要可视化直方图，设置为0即可。
-
-注：以下参数均为需要传入离线量化中的参数，保持默认不影响模型进行量化分析。
-- quantizable_op_type：需要进行量化的OP类型。通过以下代码可输出所有支持量化的OP类型：
-```
-from paddleslim.quant.quanter import TRANSFORM_PASS_OP_TYPES,QUANT_DEQUANT_PASS_OP_TYPES
-print(TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES)
-```
-- weight_quantize_type：参数量化方式。可选 'abs_max' , 'channel_wise_abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。 默认 'abs_max' 。
-- activation_quantize_type：激活量化方式，可选 'abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。默认为 'moving_average_abs_max'。
-- is_full_quantize：是否对模型进行全量化，默认为False。
-- batch_size：模型校准使用的batch size大小，默认为10。
-- batch_nums：模型校准时的总batch数量，默认为10。
+- ptq_config：可传入的离线量化中的参数，详细可参考[离线量化文档](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post)。
 
 
 
