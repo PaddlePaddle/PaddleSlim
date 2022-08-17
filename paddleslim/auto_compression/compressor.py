@@ -716,6 +716,8 @@ class AutoCompression:
         total_train_iter = 0
         stop_training = False
         for epoch_id in range(total_epochs):
+            if stop_training:
+                break
             for batch_id, data in enumerate(self.train_dataloader()):
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
@@ -784,7 +786,6 @@ class AutoCompression:
                         )
                 if (train_config.train_iter and total_train_iter >=
                         train_config.train_iter) or stop_training:
-                    epoch_id = total_epochs
                     break
 
         if 'unstructure' in self._strategy or train_config.sparse_model:
