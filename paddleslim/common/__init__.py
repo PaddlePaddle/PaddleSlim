@@ -25,7 +25,7 @@ from .analyze_helper import VarCollector
 from . import wrapper_function
 from . import recover_program
 from . import patterns
-from .load_model import load_inference_model, get_model_dir, load_onnx_model
+from .load_model import load_inference_model, get_model_dir, load_onnx_model, export_onnx
 from .dataloader import wrap_dataloader, get_feed_vars
 from .config_helper import load_config, save_config
 
