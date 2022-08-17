@@ -16,9 +16,14 @@ import os
 import copy
 import json
 import logging
+import collections
+import numpy as np
 
 import paddle
+from paddle.fluid import core
+from paddle.fluid.layer_helper import LayerHelper
 from paddle.fluid.framework import IrGraph
+from paddle.fluid.contrib.slim.quantization import WeightQuantization
 from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass
 from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
 from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
@@ -27,18 +32,17 @@ from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
+from ..common import get_logger
+_logger = get_logger(__name__, level=logging.INFO)
+
 try:
     from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
     from paddle.fluid.contrib.slim.quantization import QuantWeightPass
     from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
 except:
-    pass
-from paddle.fluid import core
-from paddle.fluid.contrib.slim.quantization import WeightQuantization
-from paddle.fluid.layer_helper import LayerHelper
-
-from ..common import get_logger
-_logger = get_logger(__name__, level=logging.INFO)
+    _logger.warning(
+        "Some functions fail to import, please update PaddlePaddle version to 2.3+"
+    )
 
 WEIGHT_QUANTIZATION_TYPES = [
     'abs_max', 'channel_wise_abs_max', 'range_abs_max', 'moving_average_abs_max'
@@ -97,23 +101,48 @@ _quant_config_default = {
 }
 
 
-# TODO: Hard-code, remove it when Paddle 2.3.1
-class OutScaleForTrainingPassV2(OutScaleForTrainingPass):
-    def __init__(self, scope=None, place=None, moving_rate=0.9):
-        OutScaleForTrainingPass.__init__(
-            self, scope=scope, place=place, moving_rate=moving_rate)
-
-    def _scale_name(self, var_name):
-        """
-        Return the scale name for the var named `var_name`.
-        """
-        return "%s@scale" % (var_name)
-
-
-# TODO: Hard-code, remove it when Paddle 2.3.1
-class OutScaleForInferencePassV2(OutScaleForInferencePass):
+class OutScaleForInferencePassV2(object):
     def __init__(self, scope=None):
-        OutScaleForInferencePass.__init__(self, scope=scope)
+        """
+        This pass is used for setting output scales of some operators.
+        These output scales may be used by tensorRT or some other inference engines.
+
+        Args:
+            scope(fluid.Scope): The scope is used to initialize these new parameters.
+        """
+        self._scope = scope
+        self._teller_set = utils._out_scale_op_list
+
+    def apply(self, graph):
+        """
+        Get output scales from the scope and set these scales in op_descs
+        of operators in the teller_set.
+
+        Args:
+            graph(IrGraph): the target graph.
+        """
+        assert isinstance(graph,
+                          IrGraph), 'graph must be the instance of IrGraph.'
+        collect_dict = collections.OrderedDict()
+        op_nodes = graph.all_op_nodes()
+        for op_node in op_nodes:
+            if op_node.name() in self._teller_set:
+                var_names = utils._get_op_output_var_names(op_node)
+                for var_name in var_names:
+                    in_node = graph._find_node_by_name(op_node.outputs,
+                                                       var_name)
+                    if in_node.dtype() not in \
+                        [core.VarDesc.VarType.FP64, core.VarDesc.VarType.FP32]:
+                        continue
+
+                    collect_dict[var_name] = {}
+                    scale_name = self._scale_name(var_name)
+                    scale_var = self._scope.find_var(scale_name)
+                    assert scale_var is not None, \
+                        "Can not find {} variable in the scope".format(scale_name)
+                    scale_value = np.array(scale_var.get_tensor())[0]
+                    collect_dict[var_name]['scale'] = float(scale_value)
+        return graph, collect_dict
 
     def _scale_name(self, var_name):
         """
@@ -328,7 +357,7 @@ def quant_aware(program,
             quantizable_op_type=quant_dequant_ops)
         quant_dequant_pass.apply(main_graph)
 
-    out_scale_training_pass = OutScaleForTrainingPassV2(
+    out_scale_training_pass = OutScaleForTrainingPass(
         scope=scope, place=place, moving_rate=config['moving_rate'])
     out_scale_training_pass.apply(main_graph)
 
@@ -361,8 +390,8 @@ def quant_post_static(
         data_loader=None,
         model_filename=None,
         params_filename=None,
-        save_model_filename='__model__',
-        save_params_filename='__params__',
+        save_model_filename='model.pdmodel',
+        save_params_filename='model.pdiparams',
         batch_size=1,
         batch_nums=None,
         scope=None,
@@ -513,6 +542,22 @@ def quant_post_static(
         quantize_model_path,
         model_filename=save_model_filename,
         params_filename=save_params_filename)
+    if onnx_format:
+        try:
+            collect_dict = post_training_quantization._calibration_scales
+            save_quant_table_path = os.path.join(quantize_model_path,
+                                                 'calibration_table.txt')
+            with open(save_quant_table_path, 'w') as txt_file:
+                for tensor_name in collect_dict.keys():
+                    write_line = '{} {}'.format(
+                        tensor_name, collect_dict[tensor_name]['scale']) + '\n'
+                    txt_file.write(write_line)
+            _logger.info("Quantization clip ranges of tensors is save in: {}".
+                         format(save_quant_table_path))
+        except:
+            _logger.warning(
+                "Unable to generate `calibration_table.txt`, please update PaddlePaddle >= 2.3.3"
+            )
 
 
 # We have changed the quant_post to quant_post_static.
@@ -521,7 +566,12 @@ def quant_post_static(
 quant_post = quant_post_static
 
 
-def convert(program, place, config=None, scope=None, save_int8=False):
+def convert(program,
+            place,
+            config=None,
+            scope=None,
+            save_int8=False,
+            save_clip_ranges_path='./'):
     """
     convert quantized and well-trained ``program`` to final  quantized
     ``program``that can be used to  save ``inference model``.
@@ -543,6 +593,7 @@ def convert(program, place, config=None, scope=None, save_int8=False):
         save_int8: Whether to return ``program`` which model parameters'
                 dtype is ``int8``. This parameter can only be used to
                 get model size. Default: ``False``.
+        save_clip_ranges_path: If config.onnx_format=True, quantization clip ranges will be saved locally.
 
     Returns:
         Tuple : freezed program which can be used for inference.
@@ -563,8 +614,19 @@ def convert(program, place, config=None, scope=None, save_int8=False):
     if config['onnx_format']:
         quant_weight_pass = QuantWeightPass(scope, place)
         quant_weight_pass.apply(test_graph)
-    else:
         out_scale_infer_pass = OutScaleForInferencePassV2(scope=scope)
+        _, collect_dict = out_scale_infer_pass.apply(test_graph)
+        save_quant_table_path = os.path.join(save_clip_ranges_path,
+                                             'calibration_table.txt')
+        with open(save_quant_table_path, 'w') as txt_file:
+            for tensor_name in collect_dict.keys():
+                write_line = '{} {}'.format(
+                    tensor_name, collect_dict[tensor_name]['scale']) + '\n'
+                txt_file.write(write_line)
+        _logger.info("Quantization clip ranges of tensors is save in: {}".
+                     format(save_quant_table_path))
+    else:
+        out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
         out_scale_infer_pass.apply(test_graph)
         # Freeze the graph after training by adjusting the quantize
         # operators' order for the inference.
