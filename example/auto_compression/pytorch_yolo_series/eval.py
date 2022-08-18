@@ -33,6 +33,8 @@ def argsparser():
         help="path of compression strategy config.",
         required=True)
     parser.add_argument(
+        '--batch_size', type=int, default=1, help="Batch size of model input.")
+    parser.add_argument(
         '--devices',
         type=str,
         default='gpu',
@@ -83,7 +85,8 @@ def main():
         anno_path=global_config['val_anno_path'])
     global anno_file
     anno_file = dataset.ann_file
-    val_loader = paddle.io.DataLoader(dataset, batch_size=1)
+    val_loader = paddle.io.DataLoader(
+        dataset, batch_size=FLAGS.batch_size, drop_last=True)
 
     eval()
 
