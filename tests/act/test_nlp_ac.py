@@ -48,10 +48,26 @@ class NLPAutoCompress(unittest.TestCase):
                 'wget https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar')
             os.system('tar -xf afqmc.tar')
         self.create_dataset()
+        self.get_train_config()
 
     def create_dataset(self):
         self.fake_dataset = RandomDataset(32)
         self.fake_eval_dataset = RandomEvalDataset(32)
+
+    def get_train_config(self):
+        self.train_config = {
+            'TrainConfig': {
+                'epochs': 1,
+                'eval_iter': 1,
+                'learning_rate': 2.0e-5,
+                'optimizer_builder': {
+                    'optimizer': {
+                        'type': 'AdamW'
+                    },
+                    'weight_decay': 0.01
+                },
+            }
+        }
 
     def test_nlp(self):
         input_ids = paddle.static.data(
@@ -74,6 +90,7 @@ class NLPAutoCompress(unittest.TestCase):
             model_dir='afqmc',
             model_filename="inference.pdmodel",
             params_filename="inference.pdiparams",
+            config=self.train_config,
             save_dir="output",
             train_dataloader=train_loader,
             eval_dataloader=eval_loader)
