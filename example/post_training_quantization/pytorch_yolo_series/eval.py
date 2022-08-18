@@ -20,7 +20,7 @@ from tqdm import tqdm
 import paddle
 from paddleslim.common import load_config as load_slim_config
 from paddleslim.common import load_inference_model
-from post_process import YOLOv6PostProcess, coco_metric
+from post_process import YOLOPostProcess, coco_metric
 from dataset import COCOValDataset
 
 
@@ -32,6 +32,8 @@ def argsparser():
         default=None,
         help="path of compression strategy config.",
         required=True)
+    parser.add_argument(
+        '--batch_size', type=int, default=1, help="Batch size of model input.")
     parser.add_argument(
         '--devices',
         type=str,
@@ -60,8 +62,7 @@ def eval():
                            feed={feed_target_names[0]: data_all['image']},
                            fetch_list=fetch_targets,
                            return_numpy=False)
-            res = {}
-            postprocess = YOLOv6PostProcess(
+            postprocess = YOLOPostProcess(
                 score_threshold=0.001, nms_threshold=0.65, multi_label=True)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
             bboxes_list.append(res['bbox'])
@@ -83,7 +84,8 @@ def main():
         anno_path=config['val_anno_path'])
     global anno_file
     anno_file = dataset.ann_file
-    val_loader = paddle.io.DataLoader(dataset, batch_size=1)
+    val_loader = paddle.io.DataLoader(
+        dataset, batch_size=FLAGS.batch_size, drop_last=True)
 
     eval()
 
