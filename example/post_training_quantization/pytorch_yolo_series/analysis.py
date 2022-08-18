@@ -68,6 +68,7 @@ def main():
 
     global config
     config = load_config(FLAGS.config_path)
+    ptq_config = config['PTQ']
 
     input_name = 'x2paddle_image_arrays' if config[
         'arch'] == 'YOLOv6' else 'x2paddle_images'
@@ -97,13 +98,9 @@ def main():
         model_filename='model.pdmodel',
         params_filename='model.pdiparams',
         eval_function=eval_function,
-        quantizable_op_type=config['quantizable_op_type'],
-        weight_quantize_type=config['weight_quantize_type'],
-        activation_quantize_type=config['activation_quantize_type'],
-        is_full_quantize=config['is_full_quantize'],
         data_loader=data_loader,
-        batch_size=config['batch_size'],
-        save_dir=config['save_dir'], )
+        save_dir=config['save_dir'],
+        ptq_config=ptq_config)
     analyzer.analysis()
 
 
