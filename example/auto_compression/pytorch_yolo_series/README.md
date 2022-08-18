@@ -151,7 +151,7 @@ python yolov7_onnx_trt.py --model_path=output/quant_model.onnx --image_file=imag
 进入[cpp_infer](./cpp_infer)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer/README.md)进行准备环境及编译，然后开始测试：
 ```shell
 # 编译
-bash complie.sh
+bash compile.sh
 # 执行
 ./build/trt_run --model_file yolov7_quant/model.pdmodel --params_file yolov7_quant/model.pdiparams --run_mode=trt_int8
 ```
