@@ -133,7 +133,7 @@ class AnalysisQuant(object):
         self.load_checkpoint()
         self.tobe_analyized_layer = self.quantized_weight_var_name - set(
             list(self.quant_layer_metrics.keys()))
-        self.tobe_analyized_layer = sorted(list(self.tobe_analyized_layer))[:1]
+        self.tobe_analyized_layer = sorted(list(self.tobe_analyized_layer))
 
     def analysis(self):
         self.compute_quant_sensitivity()
