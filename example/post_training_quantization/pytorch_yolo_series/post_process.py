@@ -70,9 +70,9 @@ def nms(boxes, scores, iou_threshold):
     return keep
 
 
-class YOLOv6PostProcess(object):
+class YOLOPostProcess(object):
     """
-    Post process of YOLOv6 network.
+    Post process of YOLO serise network.
     args:
         score_threshold(float): Threshold to filter out bounding boxes with low 
                 confidence score. If not provided, consider all boxes.
@@ -159,8 +159,8 @@ class YOLOv6PostProcess(object):
             if len(pred.shape) == 1:
                 pred = pred[np.newaxis, :]
             pred_bboxes = pred[:, :4]
-            scale_factor = np.tile(scale_factor[i][::-1], (1, 2))
-            pred_bboxes /= scale_factor
+            scale = np.tile(scale_factor[i][::-1], (2))
+            pred_bboxes /= scale
             bbox = np.concatenate(
                 [
                     pred[:, -1][:, np.newaxis], pred[:, -2][:, np.newaxis],

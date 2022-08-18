@@ -1,6 +1,6 @@
 arch: YOLOv5
 model_dir: ./yolov5s.onnx
-dataset_dir: /dataset/coco/
+dataset_dir: dataset/coco/
 train_image_dir: train2017
 val_image_dir: val2017
 train_anno_path: annotations/instances_train2017.json

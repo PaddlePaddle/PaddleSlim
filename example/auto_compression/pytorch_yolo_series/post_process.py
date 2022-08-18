@@ -159,8 +159,8 @@ class YOLOPostProcess(object):
             if len(pred.shape) == 1:
                 pred = pred[np.newaxis, :]
             pred_bboxes = pred[:, :4]
-            scale_factor = np.tile(scale_factor[i][::-1], (1, 2))
-            pred_bboxes /= scale_factor
+            scale = np.tile(scale_factor[i][::-1], (2))
+            pred_bboxes /= scale
             bbox = np.concatenate(
                 [
                     pred[:, -1][:, np.newaxis], pred[:, -2][:, np.newaxis],
