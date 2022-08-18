@@ -46,6 +46,11 @@ def argsparser():
         type=int,
         default=1281167,
         help="the number of total training images.")
+    parser.add_argument(
+        '--devices',
+        type=str,
+        default='gpu',
+        help="which device used to compress.")
     return parser
 
 
@@ -122,7 +127,10 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
 def main():
     rank_id = paddle.distributed.get_rank()
-    place = paddle.CUDAPlace(rank_id)
+    if args.devices == 'gpu':
+        place = paddle.CUDAPlace(rank_id)
+    else:
+        place = paddle.CPUPlace()
     global global_config
     all_config = load_slim_config(args.config_path)
 
