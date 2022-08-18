@@ -39,22 +39,16 @@ __all__ = ["AnalysisQuant"]
 
 
 class AnalysisQuant(object):
-    def __init__(
-            self,
-            model_dir,
-            model_filename=None,
-            params_filename=None,
-            eval_function=None,
-            data_loader=None,
-            save_dir='analysis_results',
-            checkpoint_name='analysis_checkpoint.pkl',
-            num_histogram_plots=10,
-            quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
-            weight_quantize_type='abs_max',
-            activation_quantize_type='moving_average_abs_max',
-            is_full_quantize=False,
-            batch_size=10,
-            batch_nums=10, ):
+    def __init__(self,
+                 model_dir,
+                 model_filename=None,
+                 params_filename=None,
+                 eval_function=None,
+                 data_loader=None,
+                 save_dir='analysis_results',
+                 checkpoint_name='analysis_checkpoint.pkl',
+                 num_histogram_plots=10,
+                 ptq_config=None):
         """
         AnalysisQuant provides to analysis the sensitivity of each op in the model.
         
@@ -68,13 +62,8 @@ class AnalysisQuant(object):
                 return a batch every time
             save_dir(str, optional): the output dir that stores the analyzed information
             checkpoint_name(str, optional): the name of checkpoint file that saves analyzed information and avoids break off while ananlyzing
-            num_histogram_plots: the number histogram plots you want to visilize, the plots will show in four PDF files for  both best and worst and for both weight and act ops in the save_dir
-            quantizable_op_type(list): op types that can be quantized
-            weight_quantize_type(str): quantization type for weights, support 'abs_max' and 'channel_wise_abs_max'
-            activation_quantize_type(str): quantization type for activation, now support 'range_abs_max', 'moving_average_abs_max' and 'abs_max'
-            is_full_quantize(bool): if True, apply quantization to all supported quantizable op type. If False, only apply quantization to the input quantizable_op_type. Default is False.
-            batch_size(int, optional): the batch size of DataLoader, default is 10
-            batch_nums(int, optional): the number of calibrate data is 'batch_size*batch_nums'
+            ptq_config(dict, optional): the args that can initialize PostTrainingQuantization
+            
         """
         if model_filename is None:
             model_filename = 'model.pdmodel'
@@ -83,20 +72,16 @@ class AnalysisQuant(object):
         self.model_dir = model_dir
         self.model_filename = model_filename
         self.params_filename = params_filename
-        self.batch_nums = batch_nums
-        self.quantizable_op_type = quantizable_op_type
-        self.weight_quantize_type = weight_quantize_type
-        self.activation_quantize_type = activation_quantize_type
-        self.is_full_quantize = is_full_quantize
         self.histogram_bins = 1000
         self.save_dir = save_dir
         self.eval_function = eval_function
         self.quant_layer_names = []
         self.checkpoint_name = os.path.join(save_dir, checkpoint_name)
         self.quant_layer_metrics = {}
-        self.batch_size = batch_size
-        self.batch_nums = batch_nums
         self.num_histogram_plots = num_histogram_plots
+        self.ptq_config = ptq_config
+        self.batch_nums = ptq_config[
+            'batch_nums'] if 'batch_nums' in ptq_config else 10
 
         if not os.path.exists(self.save_dir):
             os.mkdir(self.save_dir)
@@ -130,14 +115,9 @@ class AnalysisQuant(object):
             model_dir=self.model_dir,
             model_filename=self.model_filename,
             params_filename=self.params_filename,
-            batch_size=self.batch_size,
-            batch_nums=self.batch_nums,
-            algo='avg',  # fastest
-            quantizable_op_type=self.quantizable_op_type,
-            weight_quantize_type=self.weight_quantize_type,
-            activation_quantize_type=self.activation_quantize_type,
-            is_full_quantize=self.is_full_quantize,
-            skip_tensor_list=None, )
+            skip_tensor_list=None,
+            algo='avg',  #fastest
+            **self.ptq_config)
         program = post_training_quantization.quantize()
         self.quant_metric = self.eval_function(executor, program,
                                                self.feed_list, self.fetch_list)
@@ -208,14 +188,9 @@ class AnalysisQuant(object):
                 model_dir=self.model_dir,
                 model_filename=self.model_filename,
                 params_filename=self.params_filename,
-                batch_size=self.batch_size,
-                batch_nums=self.batch_nums,
-                algo='avg',  # fastest
-                quantizable_op_type=self.quantizable_op_type,
-                weight_quantize_type=self.weight_quantize_type,
-                activation_quantize_type=self.activation_quantize_type,
-                is_full_quantize=self.is_full_quantize,
-                skip_tensor_list=skip_list, )
+                skip_tensor_list=skip_list,
+                algo='avg',  #fastest
+                **self.ptq_config)
             program = post_training_quantization.quantize()
 
             _logger.info('Evaluating...')

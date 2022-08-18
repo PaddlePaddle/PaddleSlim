@@ -19,7 +19,6 @@ import argparse
 import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
-from paddleslim.common import load_config as load_slim_config
 from paddleslim.quant import quant_post_static
 
 
@@ -63,33 +62,32 @@ def reader_wrapper(reader, input_list):
 
 
 def main():
-    global global_config
-    all_config = load_slim_config(FLAGS.config_path)
-    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
-    global_config = all_config["Global"]
-    reader_cfg = load_config(global_config['reader_config'])
+    global config
+    config = load_config(FLAGS.config_path)
 
-    train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
-                                        reader_cfg['worker_num'],
+    train_loader = create('EvalReader')(config['TrainDataset'],
+                                        config['worker_num'],
                                         return_list=True)
-    train_loader = reader_wrapper(train_loader, global_config['input_list'])
+    train_loader = reader_wrapper(train_loader, config['input_list'])
 
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
     quant_post_static(
         executor=exe,
-        model_dir=global_config["model_dir"],
+        model_dir=config["model_dir"],
         quantize_model_path=FLAGS.save_dir,
         data_loader=train_loader,
-        model_filename=global_config["model_filename"],
-        params_filename=global_config["params_filename"],
+        model_filename=config["model_filename"],
+        params_filename=config["params_filename"],
         batch_size=4,
         batch_nums=64,
         algo=FLAGS.algo,
         hist_percent=0.999,
         is_full_quantize=False,
         bias_correction=False,
-        onnx_format=False)
+        onnx_format=False,
+        skip_tensor_list=config['skip_tensor_list']
+        if 'skip_tensor_list' in config else None)
 
 
 if __name__ == '__main__':
