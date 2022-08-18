@@ -43,8 +43,16 @@
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
-- PaddlePaddle develop每日版本 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/develop/install/pip/linux-pip.html)根据相应环境的安装指令进行安装）
+- PaddlePaddle >= 2.3.2版本 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)根据相应环境的安装指令进行安装）
 - PaddleSlim develop 版本
+
+（1）安装paddlepaddle
+```
+# CPU
+pip install paddlepaddle==2.3.2
+# GPU
+pip install paddlepaddle-gpu==2.3.2
+```
 
 （2）安装paddleslim：
 ```shell
