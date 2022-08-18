@@ -115,20 +115,18 @@ def load_onnx_model(model_path, disable_feedback=False):
         return val_program, feed_target_names, fetch_targets
     else:
         # onnx to paddle inference model.
+        assert os.path.exists(
+            model_path), 'Not found `{}`, please check model path.'.format(
+                model_path)
         try:
             pkg.require('x2paddle')
         except:
             from pip._internal import main
             main(['install', 'x2paddle'])
-        try:
-            from x2paddle.decoder.onnx_decoder import ONNXDecoder
-            from x2paddle.op_mapper.onnx2paddle.onnx_op_mapper import ONNXOpMapper
-            from x2paddle.optimizer.optimizer import GraphOptimizer
-            from x2paddle.utils import ConverterCheck
-        except:
-            _logger.error(
-                "x2paddle is not installed, please use \"pip install x2paddle\"."
-            )
+        from x2paddle.decoder.onnx_decoder import ONNXDecoder
+        from x2paddle.op_mapper.onnx2paddle.onnx_op_mapper import ONNXOpMapper
+        from x2paddle.optimizer.optimizer import GraphOptimizer
+        from x2paddle.utils import ConverterCheck
         time_info = int(time.time())
         if not disable_feedback:
             ConverterCheck(
