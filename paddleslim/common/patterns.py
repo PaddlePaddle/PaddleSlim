@@ -53,7 +53,6 @@ def _is_mha(pattern_ops, pattern_ops_type, skip_quant_tensor_list=[]):
     for op in pattern_ops:
         if op.type() in ['matmul', 'matmul_v2']:
             if not is_dynamic_weight_op(op):
-                skip_quant_tensor_list.extend(op._op.input('X'))
                 matmul_num += 1
     if matmul_num == 2:
         return True
@@ -108,8 +107,9 @@ def get_patterns(program, only_final_node=True):
                     out_var_name = op.all_outputs()[0]._var.name
 
                     shortcut_start_op = shortcut_start_op[0]
+                    next_op = graph.next_ops(op)
                     pattern_ops, pattern_ops_type = traversal_ops(
-                        shortcut_start_op, graph, op.idx())
+                        shortcut_start_op, graph, next_op[0].idx())
 
                     pattern_name = shortcut_start_op.type() + '$' + str(op.idx(
                     ))

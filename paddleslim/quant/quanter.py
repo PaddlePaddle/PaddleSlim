@@ -332,6 +332,7 @@ def quant_aware(program,
     if model_type is None or pattern_ops is None:
         pattern_ops, _, model_type = get_patterns(program)
     if model_type == 'transformer':
+        not_skip_quant_list = []
         for part_name, ops in pattern_ops.items():
             if 'MHA' in part_name:
                 qkv_weight_tensor = []
@@ -359,13 +360,19 @@ def quant_aware(program,
                                         pre_op.attr('scale')))
                             else:
                                 qkv_output_tensor.append(input_name)
+                    elif op._op.type == 'elementwise_add':
+                        if _is_skip_layernorm(program, op):
+                            not_skip_quant_list.append(op)
                 same_scale_tensor_list.append(qkv_output_tensor)
-
+            elif 'FFN' in part_name:
+                for op in ops:
+                    if op._op.type == 'elementwise_add':
+                        if _is_skip_layernorm(program, op):
+                            not_skip_quant_list.append(op)
         tmp_graph = GraphWrapper(program)
         for op in tmp_graph.ops():
             ### find elementwise_add in skip layernorm
-            if op._op.type == 'elementwise_add' and not _is_skip_layernorm(
-                    program, op):
+            if op._op.type == 'elementwise_add' and op not in not_skip_quant_list:
                 op._op._set_attr("op_namescope", "skip_quant")
 
     if config['quant_post_first'] and for_test:
