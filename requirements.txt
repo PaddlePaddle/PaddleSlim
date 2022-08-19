@@ -4,4 +4,3 @@ matplotlib
 pillow 
 pyyaml
 scikit-learn
-smac
