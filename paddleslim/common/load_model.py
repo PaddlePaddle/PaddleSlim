@@ -210,7 +210,7 @@ def export_onnx(model_dir,
         pkg.require('paddle2onnx')
     except:
         from pip._internal import main
-        main(['install', 'paddle2onnx==1.0.0rc3'])
+        main(['install', 'paddle2onnx==1.0.0rc4'])
     import paddle2onnx
     paddle2onnx.command.c_paddle_to_onnx(
         model_file=os.path.join(model_dir, model_filename),
