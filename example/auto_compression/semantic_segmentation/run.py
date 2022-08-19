@@ -38,6 +38,11 @@ def argsparser():
         type=str,
         default=None,
         help="directory to save compressed model.")
+    parser.add_argument(
+        '--devices',
+        type=str,
+        default='gpu',
+        help="which device used to compress.")
     return parser
 
 
@@ -123,7 +128,12 @@ def main(args):
     config = all_config["Global"]
 
     rank_id = paddle.distributed.get_rank()
-    place = paddle.CUDAPlace(rank_id)
+    if args.devices == 'gpu':
+        place = paddle.CUDAPlace(rank_id)
+        paddle.set_device('gpu')
+    else:
+        place = paddle.CPUPlace()
+        paddle.set_device('cpu')
     # step1: load dataset config and create dataloader
     data_cfg = PaddleSegDataConfig(config['reader_config'])
     train_dataset = data_cfg.train_dataset
