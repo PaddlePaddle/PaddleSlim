@@ -130,8 +130,10 @@ def main(args):
     rank_id = paddle.distributed.get_rank()
     if args.devices == 'gpu':
         place = paddle.CUDAPlace(rank_id)
+        paddle.set_device('gpu')
     else:
         place = paddle.CPUPlace()
+        paddle.set_device('cpu')
     # step1: load dataset config and create dataloader
     data_cfg = PaddleSegDataConfig(config['reader_config'])
     train_dataset = data_cfg.train_dataset

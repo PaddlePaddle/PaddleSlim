@@ -129,8 +129,10 @@ def main():
     rank_id = paddle.distributed.get_rank()
     if args.devices == 'gpu':
         place = paddle.CUDAPlace(rank_id)
+        paddle.set_device('gpu')
     else:
         place = paddle.CPUPlace()
+        paddle.set_device('cpu')
     global global_config
     all_config = load_slim_config(args.config_path)
 
