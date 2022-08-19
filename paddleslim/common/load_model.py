@@ -123,14 +123,6 @@ def load_onnx_model(model_path, disable_feedback=False):
         except:
             from pip._internal import main
             main(['install', 'x2paddle'])
-        from x2paddle.decoder.onnx_decoder import ONNXDecoder
-        from x2paddle.op_mapper.onnx2paddle.onnx_op_mapper import ONNXOpMapper
-        from x2paddle.optimizer.optimizer import GraphOptimizer
-        from x2paddle.utils import ConverterCheck
-        time_info = int(time.time())
-        if not disable_feedback:
-            ConverterCheck(
-                task="ONNX", time_info=time_info, convert_state="Start").start()
         # check onnx installation and version
         try:
             pkg.require('onnx')
@@ -145,6 +137,14 @@ def load_onnx_model(model_path, disable_feedback=False):
             from pip._internal import main
             main(['install', 'onnx==1.12.0'])
 
+        from x2paddle.decoder.onnx_decoder import ONNXDecoder
+        from x2paddle.op_mapper.onnx2paddle.onnx_op_mapper import ONNXOpMapper
+        from x2paddle.optimizer.optimizer import GraphOptimizer
+        from x2paddle.utils import ConverterCheck
+        time_info = int(time.time())
+        if not disable_feedback:
+            ConverterCheck(
+                task="ONNX", time_info=time_info, convert_state="Start").start()
         # support distributed convert model
         model_idx = paddle.distributed.get_rank(
         ) if paddle.distributed.get_world_size() > 1 else 0
@@ -164,9 +164,10 @@ def load_onnx_model(model_path, disable_feedback=False):
                 ConverterCheck(
                     task="ONNX", time_info=time_info,
                     convert_state="Success").start()
-        except:
-            _logger.info(
-                "[ERROR] x2paddle threw an exception, you can ask for help at: https://github.com/PaddlePaddle/X2Paddle/issues"
+        except Exception as e:
+            _logger.warning(e)
+            _logger.error(
+                "x2paddle threw an exception, you can ask for help at: https://github.com/PaddlePaddle/X2Paddle/issues"
             )
             sys.exit(1)
 
