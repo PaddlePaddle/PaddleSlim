@@ -135,8 +135,8 @@ def save_cls_model(model, input_shape, save_dir, data_type):
             weight_bits=8,
             activation_bits=8)
 
-        model_file = os.path.join(quantize_model_path, '__model__')
-        param_file = os.path.join(quantize_model_path, '__params__')
+        model_file = os.path.join(quantize_model_path, 'model.pdmodel')
+        param_file = os.path.join(quantize_model_path, 'model.pdiparams')
 
     return model_file, param_file
 

@@ -3,19 +3,19 @@ AutoCompression自动压缩功能
 
 AutoCompression
 ---------------
-.. py:class:: paddleslim.auto_compression.AutoCompression(model_dir, model_filename, params_filename, save_dir, strategy_config, train_config, train_dataloader, eval_callback, devices='gpu')
+.. py:class:: paddleslim.auto_compression.AutoCompression(model_dir, train_dataloader, model_filename, params_filename, save_dir, strategy_config, train_config, eval_callback, devices='gpu')
 
-`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/auto_compression.py#L32>`_
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/auto_compression.py#L49>`_
 
 根据指定的配置对使用 ``paddle.jit.save`` 接口或者 ``paddle.static.save_inference_model`` 接口保存的推理模型进行压缩。
 
 **参数: **
 
 - **model_dir(str)** - 需要压缩的推理模型所在的目录。
+- **train_dataloader(paddle.io.DataLoader)** - 训练数据迭代器。注意：如果选择离线量化超参搜索策略的话, ``train_dataloader`` 和 ``eval_callback`` 设置相同的数据读取即可。
 - **model_filename(str)** - 需要压缩的推理模型文件名称。
 - **params_filename(str)** - 需要压缩的推理模型参数文件名称。
 - **save_dir(str)** - 压缩后模型的所保存的目录。
-- **train_dataloader(paddle.io.DataLoader)** - 训练数据迭代器。注意：如果选择离线量化超参搜索策略的话, ``train_dataloader`` 和 ``eval_callback`` 设置相同的数据读取即可。
 - **train_config(dict)** - 训练配置。可以配置的参数请参考: `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L103>`_ 。注意：如果选择离线量化超参搜索策略的话， ``train_config`` 直接设置为 ``None`` 即可。
 - **strategy_config(dict, list(dict), 可选)** - 使用的压缩策略，可以通过设置多个单种策略来并行使用这些压缩方式。字典的关键字必须在: 
              ``Quantization`` (量化配置, 可配置的参数参考 `<https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24>`_ ), 
@@ -82,13 +82,13 @@ AutoCompression
 
    eval_dataloader = Cifar10(mode='eval')
 
-   ac = AutoCompression(model_path, model_filename, params_filename, save_dir, \
+   ac = AutoCompression(model_path, train_dataloader, model_filename, params_filename, save_dir, \
 
                         strategy_config="Quantization": Quantization(**default_ptq_config), 
 
                         "Distillation": HyperParameterOptimization(**default_distill_config)}, \
 
-                        train_config=None, train_dataloader=train_dataloader, eval_callback=eval_dataloader,devices='gpu')
+                        train_config=None, eval_callback=eval_dataloader,devices='gpu')
 
 ```
  

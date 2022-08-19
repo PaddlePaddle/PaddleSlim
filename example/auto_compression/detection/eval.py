@@ -20,7 +20,7 @@ import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from keypoint_utils import keypoint_post_process
 
 

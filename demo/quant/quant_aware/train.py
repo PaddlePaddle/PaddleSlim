@@ -126,6 +126,8 @@ def compress(args):
         'window_size': 10000,
         # The decay coefficient of moving average, default is 0.9
         'moving_rate': 0.9,
+        # Whether use onnx format or not
+        'onnx_format': args.onnx_format,
     }
 
     pretrain = True
@@ -294,10 +296,7 @@ def compress(args):
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
     ############################################################################################################
-    float_program, int8_program = convert(val_program, places, quant_config, \
-                                                        scope=None, \
-                                                        save_int8=True,
-                                                        onnx_format=args.onnx_format)
+    float_program = convert(val_program, places, quant_config)
     print("eval best_model after convert")
     final_acc1 = test(best_epoch, float_program)
     ############################################################################################################

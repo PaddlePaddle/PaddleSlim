@@ -22,7 +22,7 @@ import yaml
 from utils import preprocess, postprocess
 import paddle
 from paddle.inference import create_predictor
-from paddleslim.auto_compression.config_helpers import load_config
+from paddleslim.common import load_config
 
 
 def argsparser():

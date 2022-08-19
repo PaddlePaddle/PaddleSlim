@@ -21,28 +21,30 @@
 
 ### PaddleClas模型
 
-| 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) |
-|:------:|:------:|:------:|:------:|:------:|
-| MobileNetV1 | Baseline | 70.90 | - | 33.15 |
-| MobileNetV1 | 量化+蒸馏 | 70.57 | - | 13.64 |
-| ResNet50_vd | Baseline | 79.12 | 3.19 | - |
-| ResNet50_vd | 量化+蒸馏 | 78.74 | 0.92 | - |
-| ShuffleNetV2_x1_0 | Baseline | 68.65 | - | 10.43 |
-| ShuffleNetV2_x1_0 | 量化+蒸馏 | 68.32 | - | 5.51 |
-| SqueezeNet1_0_infer | Baseline | 59.60 | - | 35.98 |
-| SqueezeNet1_0_infer | 量化+蒸馏 | 59.45 | - | 16.96 |
-| PPLCNetV2_base | Baseline | 76.86 | - | 36.50 |
-| PPLCNetV2_base | 量化+蒸馏 | 76.43 | - | 15.79 |
-| PPHGNet_tiny | Baseline | 79.59 | 2.82 | - |
-| PPHGNet_tiny | 量化+蒸馏 | 79.20 | 0.98 | - |
-| InceptionV3 | Baseline | 79.14 | 4.79 | - |
-| InceptionV3 | 量化+蒸馏 | 78.32 | 1.47 | - |
-| EfficientNetB0 | Baseline | 77.02 | 1.95 | - |
-| EfficientNetB0 | 量化+蒸馏 | 75.39 | 1.44 | - |
-| GhostNet_x1_0 | Baseline | 74.02 | 2.93 | - |
-| GhostNet_x1_0 | 量化+蒸馏 | 72.62 | 1.03 | - |
-| MobileNetV3_large_x1_0 | Baseline | 75.32 | - | 16.62 |
-| MobileNetV3_large_x1_0 | 量化+蒸馏 | 70.93 | - | 9.85 |
+| 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) | 配置文件 | Inference模型 |
+|:------:|:------:|:------:|:------:|:------:|:------:|:------:|
+| MobileNetV1 | Baseline | 70.90 | - | 33.15 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar) |
+| MobileNetV1 | 量化+蒸馏 | 70.57 | - | 13.64 | [Config](./configs/MobileNetV1/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV1_QAT.tar) |
+| ResNet50_vd | Baseline | 79.12 | 3.19 | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/ResNet50_vd_infer.tar) |
+| ResNet50_vd | 量化+蒸馏 | 78.74 | 0.92 | - | [Config](./configs/ResNet50_vd/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/ResNet50_vd_QAT.tar) |
+| ShuffleNetV2_x1_0 | Baseline | 68.65 | - | 10.43 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/ShuffleNetV2_x1_0_infer.tar) |
+| ShuffleNetV2_x1_0 | 量化+蒸馏 | 68.32 | - | 5.51 | [Config](./configs/ShuffleNetV2_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/ShuffleNetV2_x1_0_QAT.tar) |
+| SqueezeNet1_0 | Baseline | 59.60 | - | 35.98 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/SqueezeNet1_0_infer.tar) |
+| SqueezeNet1_0 | 量化+蒸馏 | 59.45 | - | 16.96 | [Config](./configs/SqueezeNet1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/SqueezeNet1_0_QAT.tar) |
+| PPLCNetV2_base | Baseline | 76.86 | - | 36.50 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/PPLCNetV2_base_infer.tar) |
+| PPLCNetV2_base | 量化+蒸馏 | 76.43 | - | 15.79 | [Config](./configs/PPLCNetV2_base/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/PPLCNetV2_base_QAT.tar) |
+| PPHGNet_tiny | Baseline | 79.59 | 2.82 | - | - |[Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/PPHGNet_tiny_infer.tar) |
+| PPHGNet_tiny | 量化+蒸馏 | 79.20 | 0.98 | - | [Config](./configs/PPHGNet_tiny/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/PPHGNet_tiny_QAT.tar) |
+| InceptionV3 | Baseline | 79.14 | 4.79 | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/InceptionV3_infer.tar) |
+| InceptionV3 | 量化+蒸馏 | 78.32 | 1.47 | - | [Config](./configs/InceptionV3/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/InceptionV3_QAT.tar) |
+| EfficientNetB0 | Baseline | 77.02 | 1.95 | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/EfficientNetB0_infer.tar) |
+| EfficientNetB0 | 量化+蒸馏 | 75.39 | 1.44 | - | [Config](./configs/EfficientNetB0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/EfficientNetB0_QAT.tar) |
+| GhostNet_x1_0 | Baseline | 74.02 | 2.93 | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/GhostNet_x1_0_infer.tar) |
+| GhostNet_x1_0 | 量化+蒸馏 | 72.62 | 1.03 | - | [Config](./configs/GhostNet_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/GhostNet_x1_0_QAT.tar) |
+| MobileNetV3_large_x1_0 | Baseline | 75.32 | - | 16.62 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV3_large_x1_0_infer.tar) |
+| MobileNetV3_large_x1_0 | 量化+蒸馏 | 74.41 | - | 9.85 | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_QAT.tar) |
+| MobileNetV3_large_x1_0_ssld | Baseline | 78.96 | - | 16.62 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV3_large_x1_0_ssld_infer.tar) |
+| MobileNetV3_large_x1_0_ssld | 量化+蒸馏 | 77.17 | - | 9.85 | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_ssld_QAT.tar) |
 
 - ARM CPU 测试环境：`SDM865(4xA77+4xA55)`
 - Nvidia GPU 测试环境：

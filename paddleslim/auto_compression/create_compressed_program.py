@@ -23,7 +23,7 @@ from ..dist import *
 from ..common.recover_program import recover_inference_program, _remove_fetch_node
 from ..common import get_logger
 from .strategy_config import ProgramInfo
-from .utils import load_inference_model
+from ..common.load_model import load_inference_model
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
@@ -52,7 +52,8 @@ def _create_optimizer(train_config):
     optimizer_builder = train_config['optimizer_builder']
     assert isinstance(
         optimizer_builder, dict
-    ), f"Value of 'optimizer_builder' in train_config should be dict but got {type(optimizer_builder)}"
+    ), "Value of 'optimizer_builder' in train_config should be dict but got {}".format(
+        type(optimizer_builder))
     if 'grad_clip' in optimizer_builder:
         g_clip_params = optimizer_builder['grad_clip']
         g_clip_type = g_clip_params.pop('type')
@@ -444,9 +445,8 @@ def build_prune_program(executor,
             "####################channel pruning##########################")
         for param in pruned_program.global_block().all_parameters():
             if param.name in original_shapes:
-                _logger.info(
-                    f"{param.name}, from {original_shapes[param.name]} to {param.shape}"
-                )
+                _logger.info("{}, from {} to {}".format(
+                    param.name, original_shapes[param.name], param.shape))
         _logger.info(
             "####################channel pruning end##########################")
         train_program_info.program = pruned_program
