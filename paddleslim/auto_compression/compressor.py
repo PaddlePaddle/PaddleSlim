@@ -846,9 +846,12 @@ class AutoCompression:
         assert os.path.exists(
             infer_model_path), 'Not found {}, please check it.'.format(
                 infer_model_path)
+        onnx_save_path = os.path.join(self.final_dir, 'ONNX')
+        if not os.path.exists(onnx_save_path):
+            os.makedirs(onnx_save_path)
         export_onnx(
             self.final_dir,
             model_filename=self.model_filename,
             params_filename=self.params_filename,
-            save_file_path=os.path.join(self.final_dir, model_name),
+            save_file_path=os.path.join(onnx_save_path, model_name),
             deploy_backend=deploy_backend)
