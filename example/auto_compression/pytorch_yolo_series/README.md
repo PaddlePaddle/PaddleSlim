@@ -141,8 +141,9 @@ python eval.py --config_path=./configs/yolov7_tiny_qat_dis.yaml
 ├── model.pdiparams         # Paddle预测模型权重
 ├── model.pdmodel           # Paddle预测模型文件
 ├── calibration_table.txt   # Paddle量化后校准表
-quant_model.onnx      # 量化后转出的ONNX模型
-calibration.cache     # TensorRT可以直接加载的校准表
+├── ONNX
+│   ├── quant_model.onnx      # 量化后转出的ONNX模型
+│   ├── calibration.cache     # TensorRT可以直接加载的校准表
 ```
 
 #### 导出至ONNX使用TensorRT部署
