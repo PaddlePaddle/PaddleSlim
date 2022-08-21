@@ -18,23 +18,23 @@
 
 ## 2.Benchmark
 
-| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 模型体积 | 预测时延<sup><small>FP32</small><sup><br><sup> |预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> |  配置文件 | Inference模型  |
-| :-------- |:-------- |:--------: | :--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| YOLOv5s |  Base模型 | 640*640  |  37.4   | 28.1MB  | 5.95ms  |   2.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx) |
-| YOLOv5s |  离线量化 | 640*640  |  36.0   | 7.4MB |   - |   -   |  1.87ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
-| YOLOv5s |  ACT量化训练  | 640*640  |  **36.9**   | 7.4MB |    - |   -   |  **1.87ms**  |  [config](./configs/yolov5s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.onnx) |
+| 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 模型体积 | 预测时延<sup><small>FP32</small><sup><br><sup> |预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 内存占用 | 显存占用  |  配置文件 | Inference模型  |
+| :-------- |:-------- |:--------: | :--------: | :---------------------: | :----------------: | :----------------: |:----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
+| YOLOv5s |  Base模型 | 640*640  |  37.4   | 28.1MB  | 5.95ms  |   2.44ms   |  -  | 1718MB | 705MB | - |  [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx) |
+| YOLOv5s |  离线量化 | 640*640  |  36.0   | 7.4MB |   - |   -   |  1.87ms  | 736MB | 315MB  |   [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
+| YOLOv5s |  ACT量化训练  | 640*640  |  **36.9**   | 7.4MB |    - |   -   |  **1.87ms**  | 736MB | 315MB |  [config](./configs/yolov5s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov5s_quant.onnx) |
 |  |  |  |  |  |  |  |  |  |
-| YOLOv6s |  Base模型 | 640*640  |  42.4   | 65.9MB |   9.06ms  |   2.90ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx) |
-| YOLOv6s |  KL离线量化 | 640*640  |  30.3   | 16.8MB |   - |   -   |  1.83ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
-| YOLOv6s |  量化蒸馏训练 | 640*640  |  **41.3**   | 16.8MB |   - |   -   |  **1.83ms**  |  [config](./configs/yolov6s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.onnx) |
+| YOLOv6s |  Base模型 | 640*640  |  42.4   | 65.9MB |   9.06ms  |   2.90ms   |  - | 1208MB   | 555MB  | -  | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx) |
+| YOLOv6s |  KL离线量化 | 640*640  |  30.3   | 16.8MB |   - |   -   |  1.83ms  | 736MB   | 315MB | [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
+| YOLOv6s |  量化蒸馏训练 | 640*640  |  **41.3**   | 16.8MB |   - |   -   |  **1.83ms**  | 736MB   | 315MB |  [config](./configs/yolov6s_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_quant.onnx) |
 |  |  |  |  |  |  |  |  |  |
-| YOLOv7 |  Base模型 | 640*640  |  51.1   | 141MB  |  26.84ms  |   7.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx) |
-| YOLOv7 |  离线量化 | 640*640  |  50.2   | 36MB |   - |   -   |  4.55ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
-| YOLOv7 |  ACT量化训练 | 640*640  |  **50.9**   | 36MB |   - |   -   |  **4.55ms**  |  [config](./configs/yolov7_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.onnx) |
+| YOLOv7 |  Base模型 | 640*640  |  51.1   | 141MB  |  26.84ms  |   7.44ms   |  -  | 1722MB  | 917MB | -  | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx) |
+| YOLOv7 |  离线量化 | 640*640  |  50.2   | 36MB |   - |   -   |  4.55ms  | 827MB  | 363MB  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series) | - |
+| YOLOv7 |  ACT量化训练 | 640*640  |  **50.9**   | 36MB |   - |   -   |  **4.55ms**  | 827MB  | 363MB |  [config](./configs/yolov7_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_quant.onnx) |
 |  |  |  |  |  |  |  |  |  |
-| YOLOv7-Tiny |  Base模型 | 640*640  |  37.3   | 24MB  |  5.06ms  |   2.32ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7-tiny.onnx) |
-| YOLOv7-Tiny |  离线量化 | 640*640  |  35.8   | 6.1MB  |   - |   -   |  1.68ms  |  - | - |
-| YOLOv7-Tiny |  ACT量化训练 | 640*640  |  **37.0**   | 6.1MB  |  - |   -   |  **1.68ms**  |  [config](./configs/yolov7_tiny_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_tiny_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_tiny_quant.onnx) |
+| YOLOv7-Tiny |  Base模型 | 640*640  |  37.3   | 24MB  |  5.06ms  |   2.32ms   |  - | 738MB  | 349MB  | -  | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7-tiny.onnx) |
+| YOLOv7-Tiny |  离线量化 | 640*640  |  35.8   | 6.1MB  |   - |   -   |  1.68ms  | 729MB  | 315MB  |  - | - |
+| YOLOv7-Tiny |  ACT量化训练 | 640*640  |  **37.0**   | 6.1MB  |  - |   -   |  **1.68ms**  | 729MB  | 315MB |   [config](./configs/yolov7_tiny_qat_dis.yaml) | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_tiny_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov7_tiny_quant.onnx) |
 
 说明：
 - mAP的指标均在COCO val2017数据集中评测得到。
@@ -136,13 +136,26 @@ python eval.py --config_path=./configs/yolov7_tiny_qat_dis.yaml
 
 ## 4.预测部署
 
+执行完自动压缩后会生成:
+```shell
+├── model.pdiparams         # Paddle预测模型权重
+├── model.pdmodel           # Paddle预测模型文件
+├── calibration_table.txt   # Paddle量化后校准表
+quant_model.onnx      # 量化后转出的ONNX模型
+calibration.cache     # TensorRT可以直接加载的校准表
+```
+
 #### 导出至ONNX使用TensorRT部署
 
-执行完自动压缩后会默认在`save_dir`中生成`quant_model.onnx`的ONNX模型文件，可以直接使用TensorRT测试脚本进行验证。
+加载`quant_model.onnx`和`calibration.cache`，可以直接使用TensorRT测试脚本进行验证，详细代码可参考[./TensorRT]
 
 - 进行测试：
 ```shell
-python yolov7_onnx_trt.py --model_path=output/quant_model.onnx --image_file=images/000000570688.jpg --precision=int8
+cd TensorRT
+python trt_eval.py --onnx_model_file=yolov7_tiny_quant_onnx/yolov7_tiny_quant.onnx \
+                   --calibration_file=yolov7_tiny_quant_onnx/calibration.cache \
+                   --image_file=../images/000000570688.jpg \
+                   --precision_mode=int8
 ```
 
 #### Paddle-TensorRT部署
