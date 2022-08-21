@@ -389,7 +389,7 @@ class AutoCompression:
                 config.append(merge_config(quant_config, hpo_config))
 
             ### case6: quant_config & distill config ==> QAT & Distill
-            if quant_config is not None and self._distill_config is not None:
+            if quant_config is not None and self._distill_config is not None and 'ptq_hpo' not in strategy:
                 only_distillation = False
                 strategy.append('qat_dis')
                 config.append(merge_config(quant_config, self._distill_config))
