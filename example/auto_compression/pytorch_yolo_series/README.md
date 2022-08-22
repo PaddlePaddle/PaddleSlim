@@ -50,14 +50,13 @@
 ```
 # CPU
 pip install paddlepaddle==2.3.2
-# GPU
-pip install paddlepaddle-gpu==2.3.2
+# GPU 以Ubuntu、CUDA 11.2为例
+python -m pip install paddlepaddle-gpu==2.3.2.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
-（2）安装paddleslim：
+（2）安装paddleslim>=2.3.3：
 ```shell
-git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
-python setup.py install
+pip install paddleslim==2.3.3
 ```
 
 
