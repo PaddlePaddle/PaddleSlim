@@ -29,8 +29,8 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 
 ## **News** 📢
 
-* 🎉 2022.7.6 [**PaddleSlim v2.3.0**](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.0)全新发布！目前已经在图像分类、目标检测、图像分割、NLP等20多个模型验证正向效果。
-* 🔥 2022.7.14 晚 20:30，PaddleSlim自动压缩天使用户沟通会。与开发者共同探讨模型压缩痛点问题，欢迎大家扫码报名入群获取会议链接。
+* 🎉 2022.8.22 [**PaddleSlim v2.3.2**](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.2)全新发布！目前已经在图像分类、目标检测、图像分割、NLP等20多个模型验证正向效果。
+* 🔥 2022.8.22 晚 19:00，PaddleSlim自动压缩YOLO系列直播课，欢迎大家扫码进入直播技术交流群。
 
   <div align="center">
   <img src="https://user-images.githubusercontent.com/54695910/178181077-57a3a631-f495-4821-878d-ef5e74981718.jpg"  width = "150" height = "150" />
@@ -44,7 +44,7 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 
 ### **ACT核心思想**
 
-相比于传统手工压缩，自动化压缩的“自动”主要体现在4个方面：解耦训练代码、离线量化超参搜索、算法
+相比于传统手工压缩，自动化压缩的“自动”主要体现在4个方面：解耦训练代码、离线量化超参搜索、策略自动组合、硬件感知  （硬件延时预估）。
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/23690325/178102488-9f09e991-bfd6-4827-8641-849d9c3fa83c.png" align="middle"  width="800" />
@@ -80,8 +80,8 @@ ACT相比传统的模型压缩方法，
 | [语义分割](./semantic_segmentation) | PP-LiteSeg                   | 77.04                  | 76.93                  | 1.43             | 1.16             | **1.23**   | NVIDIA Tesla T4   |
 | [语义分割](./semantic_segmentation) | HRNet                        | 78.97                  | 78.90                  | 8.19             | 5.81             | **1.41**   | NVIDIA Tesla T4   |
 | [语义分割](./semantic_segmentation) | UNet                         | 65.00                  | 64.93                  | 15.29            | 10.23            | **1.49**   | NVIDIA Tesla T4   |
-| NLP                             | PP-MiniLM                    | 72.81                 | 72.44                 | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4   |
-| NLP                             | ERNIE 3.0-Medium             | 73.09                 | 72.40                 | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4   |
+| NLP (./nlp)                            | PP-MiniLM                    | 72.81                 | 72.44                 | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4   |
+| NLP (./nlp)                            | ERNIE 3.0-Medium             | 73.09                 | 72.40                 | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4   |
 | [目标检测](./pytorch_yolo_series)             | YOLOv5s<br/>(PyTorch)        | 37.40                  | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4   |
 | [目标检测](./pytorch_yolo_series)             | YOLOv6s<br/>(PyTorch)        | 42.4                  | 41.3                   | 9.06             | 1.83             | **4.95**   | NVIDIA Tesla T4   |
 | [目标检测](./pytorch_yolo_series)             | YOLOv7<br/>(PyTorch)        | 51.1                  | 50.8                   | 26.84             | 4.55             | **5.89**   | NVIDIA Tesla T4   |
