@@ -207,10 +207,10 @@ def export_onnx(model_dir,
     if not params_filename:
         params_filename = 'model.pdiparams'
     try:
-        pkg.require('paddle2onnx')
+        os.system(' python -m pip install -U paddle2onnx==1.0.0rc4')
     except:
         from pip._internal import main
-        main(['install', 'paddle2onnx==1.0.0rc3'])
+        main(['install', 'paddle2onnx==1.0.0rc4'])
     import paddle2onnx
     paddle2onnx.command.c_paddle_to_onnx(
         model_file=os.path.join(model_dir, model_filename),
@@ -218,5 +218,9 @@ def export_onnx(model_dir,
         save_file=save_file_path,
         opset_version=opset_version,
         enable_onnx_checker=True,
-        deploy_backend=deploy_backend)
+        deploy_backend=deploy_backend,
+        scale_file=os.path.join(model_dir, 'calibration_table.txt'),
+        calibration_file=os.path.join(
+            save_file_path.rstrip(os.path.split(save_file_path)[-1]),
+            'calibration.cache'))
     _logger.info('Convert model to ONNX: {}'.format(save_file_path))
