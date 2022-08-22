@@ -145,7 +145,5 @@ python eval.py --config_path=./configs/ppyoloe_l_qat_dis.yaml
 
 ## 5.FAQ
 
-- 如果想测试离线量化模型精度，可执行：
-```shell
-python post_quant.py --config_path=./configs/ppyoloe_s_qat_dis.yaml
-```
+
+- 如果想对模型进行离线量化，可进入[Detection模型离线量化示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/detection)中进行实验。

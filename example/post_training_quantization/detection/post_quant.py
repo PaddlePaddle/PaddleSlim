@@ -41,7 +41,7 @@ def argsparser():
         default='gpu',
         help="which device used to compress.")
     parser.add_argument(
-        '--algo', type=str, default='KL', help="post quant algo.")
+        '--algo', type=str, default='avg', help="post quant algo.")
 
     return parser
 
@@ -79,8 +79,8 @@ def main():
         data_loader=train_loader,
         model_filename=config["model_filename"],
         params_filename=config["params_filename"],
-        batch_size=4,
-        batch_nums=64,
+        batch_size=32,
+        batch_nums=10,
         algo=FLAGS.algo,
         hist_percent=0.999,
         is_full_quantize=False,
