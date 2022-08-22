@@ -21,7 +21,8 @@ import platform
 from setuptools import find_packages
 from setuptools import setup
 
-slim_version = "2.3.0"
+# develop version
+slim_version = "0.0.0"
 
 with open('./requirements.txt') as f:
     setup_requires = f.read().splitlines()
