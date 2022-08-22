@@ -144,6 +144,7 @@ python post_quant.py --config_path=./configs/yolov6s_analyzed_ptq.yaml --save_di
 ```
 
 ## 4.预测部署
+预测部署可参考[YOLO系列模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series)
 
 
 ## 5.FAQ
