@@ -29,8 +29,8 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 
 ## **News** 📢
 
-* 🎉 2022.8.22 [**PaddleSlim v2.3.3**](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.3)全新发布！目前已经在图像分类、目标检测、图像分割、NLP等20多个模型验证正向效果。
-* 🔥 2022.8.22 晚 19:00，PaddleSlim自动压缩YOLO系列直播课，欢迎大家扫码进入直播技术交流群。
+* 🎉 **2022.8.22** [**PaddleSlim v2.3.3**](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.3)全新发布！目前已经在图像分类、目标检测、图像分割、NLP等20多个模型验证正向效果。
+* 🔥 **2022.8.22 晚 19:00～20:00**，PaddleSlim自动压缩**YOLO系列直播课**，欢迎大家扫码进入直播技术交流群。
 
   <div align="center">
   <img src="https://user-images.githubusercontent.com/54695910/178181077-57a3a631-f495-4821-878d-ef5e74981718.jpg"  width = "150" height = "150" />
