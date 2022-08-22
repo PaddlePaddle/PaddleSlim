@@ -80,8 +80,8 @@ ACT相比传统的模型压缩方法，
 | [语义分割](./semantic_segmentation) | PP-LiteSeg                   | 77.04                  | 76.93                  | 1.43             | 1.16             | **1.23**   | NVIDIA Tesla T4   |
 | [语义分割](./semantic_segmentation) | HRNet                        | 78.97                  | 78.90                  | 8.19             | 5.81             | **1.41**   | NVIDIA Tesla T4   |
 | [语义分割](./semantic_segmentation) | UNet                         | 65.00                  | 64.93                  | 15.29            | 10.23            | **1.49**   | NVIDIA Tesla T4   |
-| NLP (./nlp)                            | PP-MiniLM                    | 72.81                 | 72.44                 | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4   |
-| NLP (./nlp)                            | ERNIE 3.0-Medium             | 73.09                 | 72.40                 | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4   |
+| [NLP](./nlp)                            | PP-MiniLM                    | 72.81                 | 72.44                 | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4   |
+| [NLP](./nlp)                            | ERNIE 3.0-Medium             | 73.09                 | 72.40                 | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4   |
 | [目标检测](./pytorch_yolo_series)             | YOLOv5s<br/>(PyTorch)        | 37.40                  | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4   |
 | [目标检测](./pytorch_yolo_series)             | YOLOv6s<br/>(PyTorch)        | 42.4                  | 41.3                   | 9.06             | 1.83             | **4.95**   | NVIDIA Tesla T4   |
 | [目标检测](./pytorch_yolo_series)             | YOLOv7<br/>(PyTorch)        | 51.1                  | 50.8                   | 26.84             | 4.55             | **5.89**   | NVIDIA Tesla T4   |
