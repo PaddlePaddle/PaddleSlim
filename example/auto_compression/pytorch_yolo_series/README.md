@@ -153,8 +153,8 @@ python eval.py --config_path=./configs/yolov7_tiny_qat_dis.yaml
 - 进行测试：
 ```shell
 cd TensorRT
-python trt_eval.py --onnx_model_file=yolov7_tiny_quant_onnx/yolov7_tiny_quant.onnx \
-                   --calibration_file=yolov7_tiny_quant_onnx/calibration.cache \
+python trt_eval.py --onnx_model_file=output/ONNX/quant_model.onnx \
+                   --calibration_file=output/ONNX/calibration.cache \
                    --image_file=../images/000000570688.jpg \
                    --precision_mode=int8
 ```

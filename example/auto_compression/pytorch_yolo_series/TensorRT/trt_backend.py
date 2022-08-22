@@ -139,10 +139,9 @@ class TrtEngine:
                 onnx_model = onnx.load(onnx_model_file)
             onnx_model = remove_initializer_from_input(onnx_model)
             if not parser.parse(onnx_model.SerializeToString()):
-                print("ERROR: Failed to parse the ONNX file.")
                 for error in range(parser.num_errors):
                     print(parser.get_error(error))
-                sys.exit(0)
+                raise Exception("ERROR: Failed to parse the ONNX file.")
 
             if shape_info is None:
                 builder.max_batch_size = 1

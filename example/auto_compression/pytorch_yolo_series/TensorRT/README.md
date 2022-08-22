@@ -38,4 +38,4 @@ python trt_eval.py --onnx_model_file=yolov7_tiny_quant_onnx/yolov7_tiny_quant.on
 
 ### FAQ
 
-- 测试内存和显存占用时，首次运行会将ONNX模型转换成TRT模型，耗时不准确，再此运行trt.eval.py可获取真实的内存和显存占用。
+- 测试内存和显存占用时，首次运行会将ONNX模型转换成TRT模型，耗时不准确，再此运行trt_eval.py可获取真实的内存和显存占用。
