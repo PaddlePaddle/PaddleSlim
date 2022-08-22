@@ -29,7 +29,6 @@ import shutil
 import glob
 from scipy.stats import wasserstein_distance
 
-import pkg_resources as pkg
 from paddleslim.common import get_logger
 from paddleslim.quant import quant_post
 
@@ -412,7 +411,7 @@ def quant_post_hpo(
     """
 
     try:
-        pkg.require('smac')
+        os.system(' python -m pip install -U smac')
     except:
         from pip._internal import main
         main(['install', 'smac'])
