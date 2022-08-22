@@ -55,7 +55,7 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 ACT相比传统的模型压缩方法，
 
 - 代码量减少 50% 以上
-- 压缩精度与手工压缩基本持平。在 PP-YOLOE 模型上，效果还优于手动压缩，
+- 压缩精度与手工压缩基本持平。在 **[PP-YOLOE](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/detection)** 模型上，效果优于手动压缩
 - 自动化压缩后的推理性能收益与手工压缩持平，相比压缩前，推理速度可以提升1.4~7.1倍。
 
 <p align="center">
