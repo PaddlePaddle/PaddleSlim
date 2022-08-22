@@ -415,7 +415,7 @@ def quant_post_hpo(
         pkg.require('smac')
     except:
         from pip._internal import main
-        main(['install', 'smac'])
+        main(['install', 'smac==1.1.1'])
     # smac
     from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
         UniformFloatHyperparameter, UniformIntegerHyperparameter
