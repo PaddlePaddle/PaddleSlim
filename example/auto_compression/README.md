@@ -94,19 +94,19 @@ ACT相比传统的模型压缩方法，
 
 ## **环境准备**
 
-- 安装PaddlePaddle >= 2.3.1：（可以参考[飞桨官网安装文档](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- 安装PaddlePaddle >= 2.3.2：（可以参考[飞桨官网安装文档](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 
   ```shell
   # CPU
   pip install paddlepaddle --upgrade
-  # GPU
-  pip install paddlepaddle-gpu --upgrade
+  # GPU 以CUDA11.2为例
+  python -m pip install paddlepaddle-gpu==2.3.2.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
   ```
 
-- 安装PaddleSlim >=2.3.0：
+- 安装PaddleSlim >=2.3.3：
 
   ```shell
-  pip install paddleslim
+  pip install paddleslim==2.3.3
   ```
 
 ## **快速开始**
