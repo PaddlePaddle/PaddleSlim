@@ -411,7 +411,7 @@ def quant_post_hpo(
     """
 
     try:
-        os.system(' python -m pip install -U smac')
+        import smac
     except:
         from pip._internal import main
         main(['install', 'smac'])

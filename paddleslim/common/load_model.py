@@ -207,7 +207,10 @@ def export_onnx(model_dir,
     if not params_filename:
         params_filename = 'model.pdiparams'
     try:
-        os.system(' python -m pip install -U paddle2onnx==1.0.0rc4')
+        import paddle2onnx
+        version = paddle2onnx.__version__
+        if version != '1.0.0rc4':
+            os.system('python -m pip install -U paddle2onnx==1.0.0rc4')
     except:
         from pip._internal import main
         main(['install', 'paddle2onnx==1.0.0rc4'])
