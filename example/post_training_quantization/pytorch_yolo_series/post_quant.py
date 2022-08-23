@@ -41,7 +41,7 @@ def argsparser():
         default='gpu',
         help="which device used to compress.")
     parser.add_argument(
-        '--algo', type=str, default='KL', help="post quant algo.")
+        '--algo', type=str, default='avg', help="post quant algo.")
 
     return parser
 

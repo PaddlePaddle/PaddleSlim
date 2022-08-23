@@ -115,24 +115,14 @@ def load_onnx_model(model_path, disable_feedback=False):
         return val_program, feed_target_names, fetch_targets
     else:
         # onnx to paddle inference model.
+        assert os.path.exists(
+            model_path), 'Not found `{}`, please check model path.'.format(
+                model_path)
         try:
             pkg.require('x2paddle')
         except:
             from pip._internal import main
             main(['install', 'x2paddle'])
-        try:
-            from x2paddle.decoder.onnx_decoder import ONNXDecoder
-            from x2paddle.op_mapper.onnx2paddle.onnx_op_mapper import ONNXOpMapper
-            from x2paddle.optimizer.optimizer import GraphOptimizer
-            from x2paddle.utils import ConverterCheck
-        except:
-            _logger.error(
-                "x2paddle is not installed, please use \"pip install x2paddle\"."
-            )
-        time_info = int(time.time())
-        if not disable_feedback:
-            ConverterCheck(
-                task="ONNX", time_info=time_info, convert_state="Start").start()
         # check onnx installation and version
         try:
             pkg.require('onnx')
@@ -147,6 +137,14 @@ def load_onnx_model(model_path, disable_feedback=False):
             from pip._internal import main
             main(['install', 'onnx==1.12.0'])
 
+        from x2paddle.decoder.onnx_decoder import ONNXDecoder
+        from x2paddle.op_mapper.onnx2paddle.onnx_op_mapper import ONNXOpMapper
+        from x2paddle.optimizer.optimizer import GraphOptimizer
+        from x2paddle.utils import ConverterCheck
+        time_info = int(time.time())
+        if not disable_feedback:
+            ConverterCheck(
+                task="ONNX", time_info=time_info, convert_state="Start").start()
         # support distributed convert model
         model_idx = paddle.distributed.get_rank(
         ) if paddle.distributed.get_world_size() > 1 else 0
@@ -166,9 +164,10 @@ def load_onnx_model(model_path, disable_feedback=False):
                 ConverterCheck(
                     task="ONNX", time_info=time_info,
                     convert_state="Success").start()
-        except:
-            _logger.info(
-                "[ERROR] x2paddle threw an exception, you can ask for help at: https://github.com/PaddlePaddle/X2Paddle/issues"
+        except Exception as e:
+            _logger.warning(e)
+            _logger.error(
+                "x2paddle threw an exception, you can ask for help at: https://github.com/PaddlePaddle/X2Paddle/issues"
             )
             sys.exit(1)
 
@@ -208,10 +207,10 @@ def export_onnx(model_dir,
     if not params_filename:
         params_filename = 'model.pdiparams'
     try:
-        pkg.require('paddle2onnx')
+        os.system(' python -m pip install -U paddle2onnx==1.0.0rc4')
     except:
         from pip._internal import main
-        main(['install', 'paddle2onnx==1.0.0rc3'])
+        main(['install', 'paddle2onnx==1.0.0rc4'])
     import paddle2onnx
     paddle2onnx.command.c_paddle_to_onnx(
         model_file=os.path.join(model_dir, model_filename),
@@ -219,5 +218,9 @@ def export_onnx(model_dir,
         save_file=save_file_path,
         opset_version=opset_version,
         enable_onnx_checker=True,
-        deploy_backend=deploy_backend)
+        deploy_backend=deploy_backend,
+        scale_file=os.path.join(model_dir, 'calibration_table.txt'),
+        calibration_file=os.path.join(
+            save_file_path.rstrip(os.path.split(save_file_path)[-1]),
+            'calibration.cache'))
     _logger.info('Convert model to ONNX: {}'.format(save_file_path))

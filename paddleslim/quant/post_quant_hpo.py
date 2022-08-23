@@ -29,13 +29,6 @@ import shutil
 import glob
 from scipy.stats import wasserstein_distance
 
-# smac
-from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
-    UniformFloatHyperparameter, UniformIntegerHyperparameter
-from smac.configspace import ConfigurationSpace
-from smac.facade.smac_hpo_facade import SMAC4HPO
-from smac.scenario.scenario import Scenario
-
 from paddleslim.common import get_logger
 from paddleslim.quant import quant_post
 
@@ -416,6 +409,18 @@ def quant_post_hpo(
     Returns:
         None
     """
+
+    try:
+        os.system(' python -m pip install -U smac')
+    except:
+        from pip._internal import main
+        main(['install', 'smac'])
+    # smac
+    from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
+        UniformFloatHyperparameter, UniformIntegerHyperparameter
+    from smac.configspace import ConfigurationSpace
+    from smac.facade.smac_hpo_facade import SMAC4HPO
+    from smac.scenario.scenario import Scenario
 
     global g_quant_config
     g_quant_config = QuantConfig(

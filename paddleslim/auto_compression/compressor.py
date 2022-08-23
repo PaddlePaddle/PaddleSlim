@@ -389,7 +389,7 @@ class AutoCompression:
                 config.append(merge_config(quant_config, hpo_config))
 
             ### case6: quant_config & distill config ==> QAT & Distill
-            if quant_config is not None and self._distill_config is not None:
+            if quant_config is not None and self._distill_config is not None and 'ptq_hpo' not in strategy:
                 only_distillation = False
                 strategy.append('qat_dis')
                 config.append(merge_config(quant_config, self._distill_config))
@@ -714,7 +714,10 @@ class AutoCompression:
         best_metric = -1.0
         total_epochs = train_config.epochs if train_config.epochs else 100
         total_train_iter = 0
+        stop_training = False
         for epoch_id in range(total_epochs):
+            if stop_training:
+                break
             for batch_id, data in enumerate(self.train_dataloader()):
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
@@ -760,6 +763,10 @@ class AutoCompression:
                                     abs(best_metric -
                                         self.metric_before_compressed)
                             ) / self.metric_before_compressed <= 0.005:
+                                _logger.info(
+                                    "The error rate between the compressed model and original model is less than 5%. The training process ends."
+                                )
+                                stop_training = True
                                 break
                         else:
                             _logger.info(
@@ -767,14 +774,18 @@ class AutoCompression:
                                 format(epoch_id, metric, best_metric))
                         if train_config.target_metric is not None:
                             if metric > float(train_config.target_metric):
+                                stop_training = True
+                                _logger.info(
+                                    "The metric of compressed model has reached the target metric. The training process ends."
+                                )
                                 break
 
                     else:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
-                if train_config.train_iter and total_train_iter >= train_config.train_iter:
-                    epoch_id = total_epochs
+                if (train_config.train_iter and total_train_iter >=
+                        train_config.train_iter) or stop_training:
                     break
 
         if 'unstructure' in self._strategy or train_config.sparse_model:
@@ -835,9 +846,12 @@ class AutoCompression:
         assert os.path.exists(
             infer_model_path), 'Not found {}, please check it.'.format(
                 infer_model_path)
+        onnx_save_path = os.path.join(self.final_dir, 'ONNX')
+        if not os.path.exists(onnx_save_path):
+            os.makedirs(onnx_save_path)
         export_onnx(
             self.final_dir,
             model_filename=self.model_filename,
             params_filename=self.params_filename,
-            save_file_path=os.path.join(self.final_dir, model_name),
+            save_file_path=os.path.join(onnx_save_path, model_name),
             deploy_backend=deploy_backend)
