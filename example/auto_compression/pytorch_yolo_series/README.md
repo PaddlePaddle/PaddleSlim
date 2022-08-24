@@ -147,15 +147,20 @@ python eval.py --config_path=./configs/yolov7_tiny_qat_dis.yaml
 
 #### 导出至ONNX使用TensorRT部署
 
-加载`quant_model.onnx`和`calibration.cache`，可以直接使用TensorRT测试脚本进行验证，详细代码可参考[./TensorRT]
+加载`quant_model.onnx`和`calibration.cache`，可以直接使用TensorRT测试脚本进行验证，详细代码可参考[TensorRT部署](/TensorRT)
 
-- 进行测试：
+- python测试：
 ```shell
 cd TensorRT
 python trt_eval.py --onnx_model_file=output/ONNX/quant_model.onnx \
                    --calibration_file=output/ONNX/calibration.cache \
                    --image_file=../images/000000570688.jpg \
                    --precision_mode=int8
+```
+
+- 速度测试
+```shell
+trtexec --onnx=output/ONNX/quant_model.onnx --avgRuns=1000 --workspace=1024 --calib=output/ONNX/calibration.cache --int8
 ```
 
 #### Paddle-TensorRT部署
