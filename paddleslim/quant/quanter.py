@@ -264,6 +264,7 @@ def quant_aware(program,
                 return_program=False,
                 calib_config={},
                 draw_graph=False,
+                return_scale_dict=False,
                 scale_dict=None,
                 model_type=None,
                 pattern_ops=None):
@@ -360,8 +361,12 @@ def quant_aware(program,
 
     skip_tensor_list = []
     same_scale_tensor_list = []
-    if model_type is None or pattern_ops is None:
+    if model_type == 'transformer' and pattern_ops is None:
         pattern_ops, _, model_type = get_patterns(program)
+        if model_type != 'transformer':
+            _logger.info(
+                'Warning! After analysis, the real model type is not transformer!'
+            )
     if model_type == 'transformer':
         not_skip_quant_list = []
         for part_name, ops in pattern_ops.items():
@@ -497,7 +502,11 @@ def quant_aware(program,
         quant_program = main_graph.to_program()
     else:
         quant_program = paddle.static.CompiledProgram(main_graph.graph)
-    return quant_program, scale_dict, model_type, pattern_ops
+
+    if return_scale_dict:
+        return quant_program, scale_dict, model_type, pattern_ops
+    else:
+        return quant_program
 
 
 def quant_post_static(
