@@ -35,7 +35,7 @@ try:
 except Exception as e:
     _logger.warning(e)
     _logger.warning(
-        f"If you want to use training-aware and post-training quantization, "
-        "please use Paddle >= {min_paddle_version} or develop version")
+        "If you want to use training-aware and post-training quantization, "
+        "please use Paddle >= {} or develop version".format(min_paddle_version))
 
 from .quant_embedding import quant_embedding

@@ -243,8 +243,8 @@ class QAT(object):
         """
         assert isinstance(model, paddle.nn.Layer), \
             "The model must be the instance of paddle.nn.Layer."
-
-        self._model = copy.deepcopy(model)
+        if self.weight_preprocess is not None or self.act_preprocess is not None:
+            self._model = copy.deepcopy(model)
 
         if inplace:
             quantize_model = self.imperative_qat.quantize(model)

@@ -23,7 +23,7 @@ import paddle
 import paddle.nn as nn
 from paddle.io import DataLoader
 from imagenet_reader import ImageNetDataset
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 
 
@@ -107,7 +107,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 def main():
     global global_config
     all_config = load_slim_config(args.config_path)
-    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
+    assert "Global" in all_config, "Key 'Global' not found in config file. \n{}".format(
+        all_config)
     global_config = all_config["Global"]
     global data_dir
     data_dir = global_config['data_dir']
