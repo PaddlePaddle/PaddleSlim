@@ -80,9 +80,9 @@ def main():
 
     global val_loader
     dataset = COCOValDataset(
-        dataset_dir=global_config['dataset_dir'],
-        image_dir=global_config['val_image_dir'],
-        anno_path=global_config['val_anno_path'])
+        dataset_dir=global_config['coco_dataset_dir'],
+        image_dir=global_config['coco_val_image_dir'],
+        anno_path=global_config['coco_val_anno_path'])
     global anno_file
     anno_file = dataset.ann_file
     val_loader = paddle.io.DataLoader(
