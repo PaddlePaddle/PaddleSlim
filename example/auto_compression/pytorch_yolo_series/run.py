@@ -20,7 +20,7 @@ from tqdm import tqdm
 import paddle
 from paddleslim.common import load_config
 from paddleslim.auto_compression import AutoCompression
-from dataset import COCOValDataset, COCOTrainDataset
+from dataset import COCOValDataset, COCOTrainDataset, yolo_image_preprocess
 from post_process import YOLOPostProcess, coco_metric
 
 
@@ -42,10 +42,16 @@ def argsparser():
         type=str,
         default='gpu',
         help="which device used to compress.")
-    parser.add_argument(
-        '--eval', type=bool, default=False, help="whether to run evaluation.")
 
     return parser
+
+
+def reader_wrapper(reader, input_name='x2paddle_images'):
+    def gen():
+        for data in reader:
+            yield {input_name: data[0]}
+
+    return gen
 
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
@@ -79,32 +85,45 @@ def main():
     global_config = all_config["Global"]
     input_name = 'x2paddle_image_arrays' if global_config[
         'arch'] == 'YOLOv6' else 'x2paddle_images'
-    dataset = COCOTrainDataset(
-        dataset_dir=global_config['dataset_dir'],
-        image_dir=global_config['train_image_dir'],
-        anno_path=global_config['train_anno_path'],
-        input_name=input_name)
-    train_loader = paddle.io.DataLoader(
-        dataset, batch_size=1, shuffle=True, drop_last=True, num_workers=0)
 
-    if 'Evaluation' in global_config.keys() and global_config[
-            'Evaluation'] and paddle.distributed.get_rank() == 0:
-        eval_func = eval_function
-        global val_loader
-        dataset = COCOValDataset(
-            dataset_dir=global_config['dataset_dir'],
-            image_dir=global_config['val_image_dir'],
-            anno_path=global_config['val_anno_path'])
-        global anno_file
-        anno_file = dataset.ann_file
-        val_loader = paddle.io.DataLoader(
-            dataset,
+    if global_config['image_path'] != 'None':
+        assert os.path.exists(global_config['image_path'])
+        paddle.vision.image.set_image_backend('cv2')
+        train_dataset = paddle.vision.datasets.ImageFolder(
+            global_config['image_path'], transform=yolo_image_preprocess)
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
             batch_size=1,
-            shuffle=False,
-            drop_last=False,
+            shuffle=True,
+            drop_last=True,
             num_workers=0)
-    else:
+        train_loader = reader_wrapper(train_loader, input_name=input_name)
         eval_func = None
+    else:
+        dataset = COCOTrainDataset(
+            dataset_dir=global_config['coco_dataset_dir'],
+            image_dir=global_config['coco_train_image_dir'],
+            anno_path=global_config['coco_train_anno_path'],
+            input_name=input_name)
+        train_loader = paddle.io.DataLoader(
+            dataset, batch_size=1, shuffle=True, drop_last=True, num_workers=0)
+        if paddle.distributed.get_rank() == 0:
+            eval_func = eval_function
+            global val_loader
+            dataset = COCOValDataset(
+                dataset_dir=global_config['coco_dataset_dir'],
+                image_dir=global_config['coco_val_image_dir'],
+                anno_path=global_config['coco_val_anno_path'])
+            global anno_file
+            anno_file = dataset.ann_file
+            val_loader = paddle.io.DataLoader(
+                dataset,
+                batch_size=1,
+                shuffle=False,
+                drop_last=False,
+                num_workers=0)
+        else:
+            eval_func = None
 
     ac = AutoCompression(
         model_dir=global_config["model_dir"],

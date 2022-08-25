@@ -1,4 +1,17 @@
-from pycocotools.coco import COCO
+# Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import cv2
 import os
 import numpy as np
@@ -12,6 +25,7 @@ class COCOValDataset(paddle.io.Dataset):
                  anno_path=None,
                  img_size=[640, 640],
                  input_name='x2paddle_images'):
+        from pycocotools.coco import COCO
         self.dataset_dir = dataset_dir
         self.image_dir = image_dir
         self.img_size = img_size
@@ -113,3 +127,39 @@ class COCOTrainDataset(COCOValDataset):
         img = self._get_img_data_from_img_id(img_id)
         img, scale_factor = self.image_preprocess(img, self.img_size)
         return {self.input_name: img}
+
+
+def _generate_scale(im, target_shape):
+    origin_shape = im.shape[:2]
+    im_size_min = np.min(origin_shape)
+    im_size_max = np.max(origin_shape)
+    target_size_min = np.min(target_shape)
+    target_size_max = np.max(target_shape)
+    im_scale = float(target_size_min) / float(im_size_min)
+    if np.round(im_scale * im_size_max) > target_size_max:
+        im_scale = float(target_size_max) / float(im_size_max)
+    im_scale_x = im_scale
+    im_scale_y = im_scale
+    return im_scale_y, im_scale_x
+
+
+def yolo_image_preprocess(img, target_shape=[640, 640]):
+    # Resize image
+    im_scale_y, im_scale_x = _generate_scale(img, target_shape)
+    img = cv2.resize(
+        img,
+        None,
+        None,
+        fx=im_scale_x,
+        fy=im_scale_y,
+        interpolation=cv2.INTER_LINEAR)
+    # Pad
+    im_h, im_w = img.shape[:2]
+    h, w = target_shape[:]
+    if h != im_h or w != im_w:
+        canvas = np.ones((h, w, 3), dtype=np.float32)
+        canvas *= np.array([114.0, 114.0, 114.0], dtype=np.float32)
+        canvas[0:im_h, 0:im_w, :] = img.astype(np.float32)
+        img = canvas
+    img = np.transpose(img / 255, [2, 0, 1])
+    return img.astype(np.float32)

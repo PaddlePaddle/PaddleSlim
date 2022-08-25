@@ -62,25 +62,47 @@ pip install paddleslim==2.3.3
 
 #### 3.2 准备数据集
 
-本示例默认以COCO数据进行自动压缩实验，可以从[MS COCO官网](https://cocodataset.org)下载[Train](http://images.cocodataset.org/zips/train2017.zip)、[Val](http://images.cocodataset.org/zips/val2017.zip)、[annotation](http://images.cocodataset.org/annotations/annotations_trainval2017.zip)。
+**选择(1)或(2)中一种方法准备数据即可。**
 
-目录格式如下：
-```
-dataset/coco/
-├── annotations
-│   ├── instances_train2017.json
-│   ├── instances_val2017.json
-│   |   ...
-├── train2017
-│   ├── 000000000009.jpg
-│   ├── 000000580008.jpg
-│   |   ...
-├── val2017
-│   ├── 000000000139.jpg
-│   ├── 000000000285.jpg
-```
+- （1）支持无标注图片，直接传入图片文件夹，但不支持评估模型mAP
 
-如果是自定义数据集，请按照如上COCO数据格式准备数据。
+  修改[config](./configs)中`image_path`路径为真实预测场景下的图片文件夹，图片数量依据数据集大小来定，尽量覆盖所有部署场景。
+  ```yaml
+  Global:
+    image_path: dataset/coco/val2017
+  ```
+
+- （2）支持加载COCO格式数据集，**可支持实时评估模型mAP**
+
+  可以从[MS COCO官网](https://cocodataset.org)下载[Train](http://images.cocodataset.org/zips/train2017.zip)、[Val](http://images.cocodataset.org/zips/val2017.zip)、[annotation](http://images.cocodataset.org/annotations/annotations_trainval2017.zip)。
+
+  目录格式如下：
+  ```
+  dataset/coco/
+  ├── annotations
+  │   ├── instances_train2017.json
+  │   ├── instances_val2017.json
+  │   |   ...
+  ├── train2017
+  │   ├── 000000000009.jpg
+  │   ├── 000000580008.jpg
+  │   |   ...
+  ├── val2017
+  │   ├── 000000000139.jpg
+  │   ├── 000000000285.jpg
+  ```
+
+  如果是自定义数据集，请按照如上COCO数据格式准备数据。
+
+  准备好数据集后，修改[config](./configs)中`coco_dataset_dir`路径。
+  ```yaml
+  Global:
+    coco_dataset_dir: dataset/coco/
+    coco_train_image_dir: train2017
+    coco_train_anno_path: annotations/instances_train2017.json
+    coco_val_image_dir: val2017
+    coco_val_anno_path: annotations/instances_val2017.json
+  ```
 
 
 #### 3.3 准备预测模型
