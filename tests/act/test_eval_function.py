@@ -56,12 +56,12 @@ class ACTEvalFunction(unittest.TestCase):
         super(ACTEvalFunction, self).__init__(*args, **kwargs)
         if not os.path.exists('MobileNetV1_infer'):
             os.system(
-                'wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
+                'wget -q https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
             )
             os.system('tar -xf MobileNetV1_infer.tar')
         if not os.path.exists('ILSVRC2012_data_demo'):
             os.system(
-                'wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
+                'wget -q https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
             )
             os.system('tar -xf ILSVRC2012_data_demo.tar.gz')
 
@@ -151,12 +151,12 @@ class ACTEvalFunction(unittest.TestCase):
             model_dir="./MobileNetV1_infer",
             model_filename="inference.pdmodel",
             params_filename="inference.pdiparams",
-            save_dir="MobileNetV1_quant",
+            save_dir="MobileNetV1_eval_quant",
             config='./qat_dist_train.yaml',
             train_dataloader=train_loader,
             eval_callback=eval_function)
         ac.compress()
-        os.system('rm -rf MobileNetV1_quant')
+        os.system('rm -rf MobileNetV1_eval_quant')
 
 
 if __name__ == '__main__':

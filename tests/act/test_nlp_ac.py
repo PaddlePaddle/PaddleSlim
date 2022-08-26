@@ -45,7 +45,8 @@ class NLPAutoCompress(unittest.TestCase):
         paddle.enable_static()
         if not os.path.exists('afqmc'):
             os.system(
-                'wget https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar')
+                'wget -q https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar'
+            )
             os.system('tar -xf afqmc.tar')
         self.create_dataset()
         self.get_train_config()
@@ -91,11 +92,11 @@ class NLPAutoCompress(unittest.TestCase):
             model_filename="inference.pdmodel",
             params_filename="inference.pdiparams",
             config=self.train_config,
-            save_dir="output",
+            save_dir="nlp_ac_output",
             train_dataloader=train_loader,
             eval_dataloader=eval_loader)
         ac.compress()
-        os.system("rm -rf output")
+        os.system("rm -rf nlp_ac_output")
         os.system("rm -rf afqmc*")
 
 

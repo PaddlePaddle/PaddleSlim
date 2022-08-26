@@ -125,7 +125,7 @@ class TestLoadONNXModel(ACTBase):
     def __init__(self, *args, **kwargs):
         super(TestLoadONNXModel, self).__init__(*args, **kwargs)
         os.system(
-            'wget https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx')
+            'wget -q https://paddle-slim-models.bj.bcebos.com/act/yolov5s.onnx')
         self.model_dir = 'yolov5s.onnx'
 
     def test_compress(self):
