@@ -640,6 +640,11 @@ class AutoCompression:
                     model_filename=self.model_filename,
                     params_filename=self.params_filename,
                     executor=self._exe)
+            if self.eval_function is None:
+                # If eval function is None, ptq_hpo will use emd distance to eval the quantized model, so need the dataloader without label
+                eval_dataloader = self.train_dataloader
+            else:
+                eval_dataloader = self.eval_dataloader
             post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
@@ -647,7 +652,7 @@ class AutoCompression:
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
-                eval_dataloader=self.eval_dataloader,
+                eval_dataloader=eval_dataloader,
                 eval_function=self.eval_function,
                 model_filename=self.model_filename,
                 params_filename=self.params_filename,
