@@ -413,8 +413,7 @@ def quant_post_hpo(
     try:
         import smac
     except:
-        from pip._internal import main
-        main(['install', 'smac'])
+        os.system('python -m pip install -U smac')
     # smac
     from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
         UniformFloatHyperparameter, UniformIntegerHyperparameter
