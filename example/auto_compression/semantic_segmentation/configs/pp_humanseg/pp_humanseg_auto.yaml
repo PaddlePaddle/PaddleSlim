@@ -4,6 +4,7 @@ Global:
   model_filename: model.pdmodel
   params_filename: model.pdiparams
   deploy_hardware: SD710
+  input_shapes: [1,3,398,224,224]
 
 TrainConfig:
   epochs: 14
