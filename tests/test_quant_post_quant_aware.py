@@ -43,8 +43,9 @@ class TestQuantPostQuantAwareCase1(StaticCase):
             encoder = TransformerEncoder(encoder_layer, 2)
             encoder_output = encoder(enc_input, attn_mask)
             first_token = encoder_output[:, 0]
+            bias = paddle.full(shape=[1, 128], fill_value=1e-6)
             linear = Linear(128, 2)
-            logits = linear(first_token)
+            logits = linear(first_token + bias)
             return logits
 
         enc_input = paddle.static.data(
@@ -98,7 +99,7 @@ class TestQuantPostQuantAwareCase1(StaticCase):
 
         def test(program):
             iter = 0
-            result = [[], [], []]
+            result = [[], []]
             for data in valid_loader():
                 cost, top1 = exe.run(program,
                                      feed=data,
@@ -119,7 +120,10 @@ class TestQuantPostQuantAwareCase1(StaticCase):
         config = {
             'weight_quantize_type': 'channel_wise_abs_max',
             'activation_quantize_type': 'moving_average_abs_max',
-            'quantize_op_types': ['depthwise_conv2d', 'mul', 'conv2d'],
+            'quantize_op_types':
+            ['conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'elementwise_add'],
+            'quant_post_first': True,
+            'scale_trainable': True
         }
         calib_config = {
             'data_loader': valid_loader,
@@ -145,7 +149,6 @@ class TestQuantPostQuantAwareCase1(StaticCase):
             scale_dict=scale_dict,
             model_type='transformer',
             return_scale_dict=True)
-
         train(quant_train_prog)
         quant_eval_prog, int8_prog = convert(
             quant_eval_prog, place, config, save_int8=True)
