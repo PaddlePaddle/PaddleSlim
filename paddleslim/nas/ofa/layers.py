@@ -20,7 +20,7 @@ import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
 import paddle.fluid.core as core
-from paddle import _C_ops
+from paddle import _C_ops, _legacy_C_ops
 from paddle.fluid.framework import in_dygraph_mode, _in_legacy_dygraph, _non_static_mode
 from paddle.fluid.data_feeder import check_variable_and_dtype
 from paddle.fluid.dygraph.layer_object_helper import LayerObjectHelper
@@ -993,7 +993,7 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
 
         if in_dygraph_mode():
             if feature_dim != self._mean.shape[0]:
-                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.final_state_batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = _legacy_C_ops.final_state_batch_norm(
                     input, weight, bias, mean, variance, self._momentum,
                     self._epsilon, self._data_format, not self.training,
                     self._use_global_stats, trainable_statistics, False, False)
@@ -1003,7 +1003,7 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                 variance_out[:feature_dim].set_value(variance_out_tmp)
                 return batch_norm_out
             else:
-                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.final_state_batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = _legacy_C_ops.final_state_batch_norm(
                     input, weight, bias, mean, variance, self._momentum,
                     self._epsilon, self._data_format, not self.training,
                     self._use_global_stats, trainable_statistics, False)
