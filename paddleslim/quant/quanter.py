@@ -284,7 +284,7 @@ def quant_aware(program,
             Default: ``None``.
         for_test(bool): If the 'program' parameter is a test program, this parameter should be set to ``True``. 
             Otherwise, set to ``False``.Default: False
-       weight_quantize_func(function): Function that defines how to quantize weight. Using this
+        weight_quantize_func(function): Function that defines how to quantize weight. Using this
                 can quickly test if user's quantization method works or not. In this function, user should
                 both define quantization function and dequantization function, that is, the function's input
                 is non-quantized weight and function returns dequantized weight. If None, will use
@@ -314,6 +314,12 @@ def quant_aware(program,
                 Default is False.
         draw_graph(bool): whether to draw graph when quantization is initialized. In order to prevent cycle,
                 the ERNIE model needs to be set to True. Default is False.
+        return_scale_dict(bool): If user want to return scale dict, model_type and pattern_ops, this argument should be set True.
+                Default is False.
+        scale_dict(dict): Use scale dict to initialize scales in program. Default is None.
+        model_type(str): Model type can be 'transformer' or 'non-transformer'. If model type is transformer, patterns will be analyzed.
+                Default is None.
+        pattern_ops(dict): Pattern_ops contain pattern name and corresponding ops. Default is None.
     Returns:
         paddle.static.CompiledProgram | paddle.static.Program: Program with quantization and dequantization ``operators``
     """
@@ -365,7 +371,7 @@ def quant_aware(program,
         pattern_ops, _, model_type = get_patterns(program)
         if model_type != 'transformer':
             _logger.info(
-                'Warning! After analysis, the real model type is not transformer!'
+                'Warning! After analysis, the real model type is not transformer! If you encounter this situation, please raise an issue let us know in which case "get_patterns" determines model type is not transformer.'
             )
     if model_type == 'transformer':
         not_skip_quant_list = []

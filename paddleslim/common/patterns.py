@@ -107,9 +107,8 @@ def get_patterns(program, only_final_node=True):
                     out_var_name = op.all_outputs()[0]._var.name
 
                     shortcut_start_op = shortcut_start_op[0]
-                    next_op = graph.next_ops(op)
                     pattern_ops, pattern_ops_type = traversal_ops(
-                        shortcut_start_op, graph, next_op[0].idx())
+                        shortcut_start_op, graph, op.idx())
 
                     pattern_name = shortcut_start_op.type() + '$' + str(op.idx(
                     ))
