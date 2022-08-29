@@ -164,7 +164,8 @@ def main(args):
         config=all_config,
         train_dataloader=train_dataloader,
         eval_callback=eval_function if nranks > 1 and rank_id != 0 else None,
-        deploy_hardware=config.get('deploy_hardware') or None)
+        deploy_hardware=config.get('deploy_hardware') or None,
+        input_shapes=config.get('input_shapes', None))
 
     # step3: start the compression job
     ac.compress()

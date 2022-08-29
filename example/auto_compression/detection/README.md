@@ -91,7 +91,7 @@ PPYOLOE-s模型，不包含NMS：如快速体验，可直接下载[PP-YOLOE-s导
 python tools/export_model.py \
         -c configs/ppyoloe/ppyoloe_crn_s_300e_coco.yml \
         -o weights=https://paddledet.bj.bcebos.com/models/ppyoloe_crn_s_300e_coco.pdparams \
-        trt=True exclude_nms=True \
+        trt=True exclude_post_process=True \
 ```
 
 #### 3.4 自动压缩并产出模型

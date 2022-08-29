@@ -1,11 +1,11 @@
 Global:
   model_dir: ./yolov7-tiny.onnx
-  dataset_dir: dataset/coco/
-  train_image_dir: train2017
-  val_image_dir: val2017
-  train_anno_path: annotations/instances_train2017.json
-  val_anno_path: annotations/instances_val2017.json
-  Evaluation: True
+  image_path: None      # If image_path is set, it will be trained directly based on unlabeled images, no need to set the COCO dataset path.
+  coco_dataset_dir: dataset/coco/
+  coco_train_image_dir: train2017
+  coco_train_anno_path: annotations/instances_train2017.json
+  coco_val_image_dir: val2017
+  coco_val_anno_path: annotations/instances_val2017.json
   arch: YOLOv7
 
 Distillation:
