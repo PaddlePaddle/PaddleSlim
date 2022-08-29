@@ -139,7 +139,7 @@ class TestQuantPostQuantAwareCase1(StaticCase):
             calib_config=calib_config,
             model_type='transformer',
             return_scale_dict=True)
-        quant_train_prog, _, _, _ = quant_aware(
+        quant_train_prog = quant_aware(
             main_prog,
             place,
             config,
@@ -147,8 +147,7 @@ class TestQuantPostQuantAwareCase1(StaticCase):
             calib_config=calib_config,
             return_program=True,
             scale_dict=scale_dict,
-            model_type='transformer',
-            return_scale_dict=True)
+            model_type='transformer')
         train(quant_train_prog)
         quant_eval_prog, int8_prog = convert(
             quant_eval_prog, place, config, save_int8=True)

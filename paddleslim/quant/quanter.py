@@ -411,6 +411,7 @@ def quant_aware(program,
             if op._op.type == 'elementwise_add' and op not in not_skip_quant_list:
                 op._op._set_attr("op_namescope", "skip_quant")
 
+    is_test = True if for_test else not config['scale_trainable']
     if config['quant_post_first'] and for_test:
         if 'quantizable_op_type' not in calib_config:
             calib_config['quantizable_op_type'] = config['quantize_op_types']
@@ -457,7 +458,7 @@ def quant_aware(program,
                 act_preprocess_func=act_preprocess_func,
                 optimizer_func=optimizer_func,
                 executor=executor,
-                is_test=not config['scale_trainable'])
+                is_test=is_test)
 
             transform_pass.apply(main_graph)
 
@@ -471,7 +472,7 @@ def quant_aware(program,
                 quant_bits=config['activation_bits'],
                 skip_pattern=config['not_quant_pattern'],
                 quantizable_op_type=quant_dequant_ops,
-                is_test=not config['scale_trainable'],
+                is_test=is_test,
                 scale_dict=scale_dict)
 
             quant_dequant_pass.apply(main_graph)
@@ -480,7 +481,7 @@ def quant_aware(program,
         scope=scope,
         place=place,
         moving_rate=config['moving_rate'],
-        is_test=not config['scale_trainable'],
+        is_test=is_test,
         scale_dict=scale_dict)
 
     out_scale_training_pass.apply(main_graph)
