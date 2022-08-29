@@ -12,4 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .ddpg_controller import *
+import logging
+
+try:
+    from .ddpg_controller import *
+except Exception as e:
+    logging.warning(e)
