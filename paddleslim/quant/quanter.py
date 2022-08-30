@@ -33,12 +33,16 @@ from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
 from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
 from ..common import get_logger
+from ..common.patterns import get_patterns
+from ..common.patterns_common import is_dynamic_weight_op, get_weight
+from ..core.graph_wrapper import GraphWrapper
 _logger = get_logger(__name__, level=logging.INFO)
 
 try:
     from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
     from paddle.fluid.contrib.slim.quantization import QuantWeightPass
     from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
+    from paddle.fluid.contrib.slim.quantization import PostTrainingQuantizationProgram
 except:
     _logger.warning(
         "Some functions fail to import, please update PaddlePaddle version to 2.3+"
@@ -98,6 +102,10 @@ _quant_config_default = {
     'is_full_quantize': False,
     # if True, use onnx format to quant.
     'onnx_format': False,
+    # quant post to get initial scale for quant_aware
+    'quant_post_first': False,
+    # whether scale can be train
+    'scale_trainable': True
 }
 
 
@@ -254,7 +262,12 @@ def quant_aware(program,
                 optimizer_func=None,
                 executor=None,
                 return_program=False,
-                draw_graph=False):
+                calib_config={},
+                draw_graph=False,
+                return_scale_dict=False,
+                scale_dict=None,
+                model_type=None,
+                pattern_ops=None):
     """Add quantization  and dequantization operators to "program" 
     for quantization training or testing.
 
@@ -271,7 +284,7 @@ def quant_aware(program,
             Default: ``None``.
         for_test(bool): If the 'program' parameter is a test program, this parameter should be set to ``True``. 
             Otherwise, set to ``False``.Default: False
-       weight_quantize_func(function): Function that defines how to quantize weight. Using this
+        weight_quantize_func(function): Function that defines how to quantize weight. Using this
                 can quickly test if user's quantization method works or not. In this function, user should
                 both define quantization function and dequantization function, that is, the function's input
                 is non-quantized weight and function returns dequantized weight. If None, will use
@@ -301,6 +314,12 @@ def quant_aware(program,
                 Default is False.
         draw_graph(bool): whether to draw graph when quantization is initialized. In order to prevent cycle,
                 the ERNIE model needs to be set to True. Default is False.
+        return_scale_dict(bool): If user want to return scale dict, model_type and pattern_ops, this argument should be set True.
+                Default is False.
+        scale_dict(dict): Use scale dict to initialize scales in program. Default is None.
+        model_type(str): Model type can be 'transformer' or 'non-transformer'. If model type is transformer, patterns will be analyzed.
+                Default is None.
+        pattern_ops(dict): Pattern_ops contain pattern name and corresponding ops. Default is None.
     Returns:
         paddle.static.CompiledProgram | paddle.static.Program: Program with quantization and dequantization ``operators``
     """
@@ -313,52 +332,164 @@ def quant_aware(program,
         config = _parse_configs(config)
     _logger.info("quant_aware config {}".format(config))
 
-    main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
+    def find_next_ops(program, var_name):
+        """
+        Find all followed ops for the input variable.
+        """
+        block = program.global_block()
+        res_ops = []
+        for op in block.ops:
+            if var_name in op.input_arg_names:
+                res_ops.append(op)
+        return res_ops
 
-    transform_pass_ops = []
-    quant_dequant_ops = []
-    for op_type in config['quantize_op_types']:
-        if op_type in TRANSFORM_PASS_OP_TYPES:
-            transform_pass_ops.append(op_type)
-        elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
-            quant_dequant_ops.append(op_type)
-    if len(transform_pass_ops) > 0:
-        trannsform_func = 'QuantizationTransformPassV2' if config[
-            'onnx_format'] else 'QuantizationTransformPass'
-        transform_pass = eval(trannsform_func)(
-            scope=scope,
-            place=place,
-            weight_bits=config['weight_bits'],
-            activation_bits=config['activation_bits'],
-            activation_quantize_type=config['activation_quantize_type'],
-            weight_quantize_type=config['weight_quantize_type'],
-            window_size=config['window_size'],
-            moving_rate=config['moving_rate'],
-            quantizable_op_type=transform_pass_ops,
-            skip_pattern=config['not_quant_pattern'],
-            weight_quantize_func=weight_quantize_func,
-            act_quantize_func=act_quantize_func,
-            weight_preprocess_func=weight_preprocess_func,
-            act_preprocess_func=act_preprocess_func,
-            optimizer_func=optimizer_func,
-            executor=executor)
+    def find_pre_ops(program, var_name):
+        """
+        Find all followed ops for the input variable.
+        """
+        block = program.global_block()
+        res_ops = []
+        for op in block.ops:
+            if var_name in op.output_arg_names:
+                res_ops.append(op)
+        return res_ops
 
-        transform_pass.apply(main_graph)
+    def _is_skip_layernorm(program, op):
+        if get_weight(op) is not None:
+            return False
 
-    if len(quant_dequant_ops) > 0:
-        qdq_func = 'AddQuantDequantPassV2' if config[
-            'onnx_format'] else 'AddQuantDequantPass'
-        quant_dequant_pass = eval(qdq_func)(
-            scope=scope,
-            place=place,
-            moving_rate=config['moving_rate'],
-            quant_bits=config['activation_bits'],
-            skip_pattern=config['not_quant_pattern'],
-            quantizable_op_type=quant_dequant_ops)
-        quant_dequant_pass.apply(main_graph)
+        output_names = op._op.output_arg_names
+        for output_name in output_names:
+            for next_op in find_next_ops(program, output_name):
+                if next_op.type == 'layer_norm':
+                    return True
+        return False
+
+    skip_tensor_list = []
+    same_scale_tensor_list = []
+    if model_type == 'transformer' and pattern_ops is None:
+        pattern_ops, _, model_type = get_patterns(program)
+        if model_type != 'transformer':
+            _logger.info(
+                'Warning! After analysis, the real model type is not transformer! If you encounter this situation, please raise an issue let us know in which case "get_patterns" determines model type is not transformer.'
+            )
+    if model_type == 'transformer':
+        not_skip_quant_list = []
+        for part_name, ops in pattern_ops.items():
+            if 'MHA' in part_name:
+                qkv_weight_tensor = []
+                qkv_output_tensor = []
+                ### get qkv
+                output_names = ops[0]._op.output_arg_names
+                for output_name in output_names:
+                    for next_op in find_next_ops(program, output_name):
+                        if next_op.type in ['mul', 'matmul_v2']:
+                            qkv_weight_tensor.append(next_op.input('Y')[0])
+
+                same_scale_tensor_list.append(qkv_weight_tensor)
+
+                for op in ops:
+                    if op._op.type in ['matmul', 'matmul_v2'] and (
+                            not is_dynamic_weight_op(op)):
+                        input_names = op._op.input_arg_names
+                        for input_name in input_names:
+                            pre_op = find_pre_ops(program, input_name)[0]
+                            if pre_op.type == 'softmax' or pre_op.type == 'dropout':
+                                continue
+                            elif pre_op.type == 'scale':
+                                qkv_output_tensor.append(
+                                    input_name + '#/#{}'.format(
+                                        pre_op.attr('scale')))
+                            else:
+                                qkv_output_tensor.append(input_name)
+                    elif op._op.type == 'elementwise_add':
+                        if _is_skip_layernorm(program, op):
+                            not_skip_quant_list.append(op)
+                same_scale_tensor_list.append(qkv_output_tensor)
+            elif 'FFN' in part_name:
+                for op in ops:
+                    if op._op.type == 'elementwise_add':
+                        if _is_skip_layernorm(program, op):
+                            not_skip_quant_list.append(op)
+        tmp_graph = GraphWrapper(program)
+        for op in tmp_graph.ops():
+            ### find elementwise_add in skip layernorm
+            if op._op.type == 'elementwise_add' and op not in not_skip_quant_list:
+                op._op._set_attr("op_namescope", "skip_quant")
+
+    is_test = True if for_test else not config['scale_trainable']
+    if config['quant_post_first'] and for_test:
+        if 'quantizable_op_type' not in calib_config:
+            calib_config['quantizable_op_type'] = config['quantize_op_types']
+        exe = paddle.static.Executor() if executor is None else executor
+        post_training_quantization = PostTrainingQuantizationProgram(
+            exe,
+            program,
+            freeze_model=False,
+            skip_tensor_list=skip_tensor_list,
+            same_scale_tensor_list=same_scale_tensor_list,
+            scale_trainable=config['scale_trainable'],
+            batch_nums=10,
+            scale_dict=scale_dict,
+            return_graph=True,
+            **calib_config)
+        main_graph = post_training_quantization.quantize()
+        scale_dict = post_training_quantization._scale_dict
+    else:
+        main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
+        transform_pass_ops = []
+        quant_dequant_ops = []
+        for op_type in config['quantize_op_types']:
+            if op_type in TRANSFORM_PASS_OP_TYPES:
+                transform_pass_ops.append(op_type)
+            elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
+                quant_dequant_ops.append(op_type)
+        if len(transform_pass_ops) > 0:
+            trannsform_func = 'QuantizationTransformPassV2' if config[
+                'onnx_format'] else 'QuantizationTransformPass'
+            transform_pass = eval(trannsform_func)(
+                scope=scope,
+                place=place,
+                weight_bits=config['weight_bits'],
+                activation_bits=config['activation_bits'],
+                activation_quantize_type=config['activation_quantize_type'],
+                weight_quantize_type=config['weight_quantize_type'],
+                window_size=config['window_size'],
+                moving_rate=config['moving_rate'],
+                quantizable_op_type=transform_pass_ops,
+                skip_pattern=config['not_quant_pattern'],
+                weight_quantize_func=weight_quantize_func,
+                act_quantize_func=act_quantize_func,
+                weight_preprocess_func=weight_preprocess_func,
+                act_preprocess_func=act_preprocess_func,
+                optimizer_func=optimizer_func,
+                executor=executor,
+                is_test=is_test)
+
+            transform_pass.apply(main_graph)
+
+        if len(quant_dequant_ops) > 0:
+            qdq_func = 'AddQuantDequantPassV2' if config[
+                'onnx_format'] else 'AddQuantDequantPass'
+            quant_dequant_pass = eval(qdq_func)(
+                scope=scope,
+                place=place,
+                moving_rate=config['moving_rate'],
+                quant_bits=config['activation_bits'],
+                skip_pattern=config['not_quant_pattern'],
+                quantizable_op_type=quant_dequant_ops,
+                is_test=is_test,
+                scale_dict=scale_dict)
+
+            quant_dequant_pass.apply(main_graph)
 
     out_scale_training_pass = OutScaleForTrainingPass(
-        scope=scope, place=place, moving_rate=config['moving_rate'])
+        scope=scope,
+        place=place,
+        moving_rate=config['moving_rate'],
+        is_test=is_test,
+        scale_dict=scale_dict)
+
     out_scale_training_pass.apply(main_graph)
 
     if (weight_preprocess_func is not None or
@@ -378,7 +509,11 @@ def quant_aware(program,
         quant_program = main_graph.to_program()
     else:
         quant_program = paddle.static.CompiledProgram(main_graph.graph)
-    return quant_program
+
+    if return_scale_dict:
+        return quant_program, scale_dict, model_type, pattern_ops
+    else:
+        return quant_program
 
 
 def quant_post_static(

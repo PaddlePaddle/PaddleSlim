@@ -51,6 +51,7 @@ def get_weight(op, return_name=True):
                 return inp.name()
             else:
                 return inp
+    return None
 
 
 def is_dynamic_weight_op(op):
