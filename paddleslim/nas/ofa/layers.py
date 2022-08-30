@@ -993,7 +993,7 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
 
         if in_dygraph_mode():
             if feature_dim != self._mean.shape[0]:
-                batch_norm_out, t1, t2, t3, t4, _ = _legacy_C_ops.final_state_batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
                     input, weight, bias, mean, variance, self._momentum,
                     self._epsilon, self._data_format, not self.training,
                     self._use_global_stats, trainable_statistics, False, False)
@@ -1003,7 +1003,7 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                 variance_out[:feature_dim].set_value(variance_out_tmp)
                 return batch_norm_out
             else:
-                batch_norm_out, t1, t2, t3, t4, _ = _legacy_C_ops.final_state_batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
                     input, weight, bias, mean, variance, self._momentum,
                     self._epsilon, self._data_format, not self.training,
                     self._use_global_stats, trainable_statistics, False)
@@ -1011,7 +1011,7 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
 
         elif _in_legacy_dygraph():
             if feature_dim != self._mean.shape[0]:
-                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = _legacy_C_ops.batch_norm(
                     input, weight, bias, mean, variance, None, mean_out_tmp,
                     variance_out_tmp, *attrs)
                 self._mean[:feature_dim].set_value(mean)
@@ -1020,7 +1020,7 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                 variance_out[:feature_dim].set_value(variance_out_tmp)
                 return batch_norm_out
             else:
-                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = _legacy_C_ops.batch_norm(
                     input, weight, bias, self._mean, self._variance, None,
                     mean_out, variance_out, *attrs)
                 return batch_norm_out
@@ -1113,7 +1113,7 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
 
         if _non_static_mode():
             if feature_dim != self._mean.shape[0]:
-                sync_batch_norm_out, _, _, _, _, _ = _C_ops.sync_batch_norm(
+                sync_batch_norm_out, _, _, _, _, _ = _legacy_C_ops.sync_batch_norm(
                     input, weight, bias, self._mean, self._variance, mean_out,
                     variance_out, *attrs)
 
@@ -1122,7 +1122,7 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
                 mean_out[:feature_dim].set_value(mean_out_tmp)
                 variance_out[:feature_dim].set_value(variance_out_tmp)
             else:
-                sync_batch_norm_out, _, _, _, _, _ = _C_ops.sync_batch_norm(
+                sync_batch_norm_out, _, _, _, _, _ = _legacy_C_ops.sync_batch_norm(
                     input, weight, bias, self._mean, self._variance, mean_out,
                     variance_out, *attrs)
 
@@ -1300,12 +1300,12 @@ class SuperLayerNorm(nn.LayerNorm):
         self.cur_config = {'prune_dim': feature_dim}
 
         if in_dygraph_mode():
-            out, _, _ = _C_ops.final_state_layer_norm(
-                input, weight, bias, self._epsilon, begin_norm_axis, False)
+            out, _, _ = _C_ops.layer_norm(input, weight, bias, self._epsilon,
+                                          begin_norm_axis, False)
         elif _in_legacy_dygraph():
-            out, _, _ = _C_ops.layer_norm(input, weight, bias, 'epsilon',
-                                          self._epsilon, 'begin_norm_axis',
-                                          begin_norm_axis)
+            out, _, _ = _legacy_C_ops.layer_norm(
+                input, weight, bias, 'epsilon', self._epsilon,
+                'begin_norm_axis', begin_norm_axis)
         else:
             check_variable_and_dtype(input, 'input', ['float32', 'float64'],
                                      'LayerNorm')
