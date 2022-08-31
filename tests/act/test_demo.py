@@ -31,14 +31,16 @@ class ImageNetDataset(DatasetFolder):
 class ACTDemo(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(ACTDemo, self).__init__(*args, **kwargs)
-        os.system(
-            'wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
-        )
-        os.system('tar -xf MobileNetV1_infer.tar')
-        os.system(
-            'wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
-        )
-        os.system('tar -xf ILSVRC2012_data_demo.tar.gz')
+        if not os.path.exists('MobileNetV1_infer'):
+            os.system(
+                'wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
+            )
+            os.system('tar -xf MobileNetV1_infer.tar')
+        if not os.path.exists('ILSVRC2012_data_demo'):
+            os.system(
+                'wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
+            )
+            os.system('tar -xf ILSVRC2012_data_demo.tar.gz')
 
     def test_demo(self):
         train_dataset = ImageNetDataset(
