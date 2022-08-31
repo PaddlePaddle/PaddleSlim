@@ -94,8 +94,8 @@ python tools/export_model.py \
 - PicoDet-s模型，包含NMS：如快速体验，可直接下载[PicoDet-s导出模型](https://paddledet.bj.bcebos.com/deploy/Inference/picodet_s_416_coco_lcnet.tar)
 
 ```shell
-python tools/export_model.py -c configs/picodet/picodet_s_320_coco_lcnet.yml \
-       -o weights=https://paddledet.bj.bcebos.com/models/picodet_s_320_coco_lcnet.pdparams \
+python tools/export_model.py -c configs/picodet/picodet_s_416_coco_lcnet.yml \
+       -o weights=https://paddledet.bj.bcebos.com/models/picodet_s_416_coco_lcnet.pdparams \
        --output_dir=output_inference \
 ```
 
