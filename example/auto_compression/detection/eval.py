@@ -42,21 +42,6 @@ def argsparser():
     return parser
 
 
-def reader_wrapper(reader, input_list):
-    def gen():
-        for data in reader:
-            in_dict = {}
-            if isinstance(input_list, list):
-                for input_name in input_list:
-                    in_dict[input_name] = data[input_name]
-            elif isinstance(input_list, dict):
-                for input_name in input_list.keys():
-                    in_dict[input_list[input_name]] = data[input_name]
-            yield in_dict
-
-    return gen
-
-
 def convert_numpy_data(data, metric):
     data_all = {}
     data_all = {k: np.array(v) for k, v in data.items()}

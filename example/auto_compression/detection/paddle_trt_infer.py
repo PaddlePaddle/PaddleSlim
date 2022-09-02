@@ -18,10 +18,60 @@ import numpy as np
 import argparse
 import time
 
+import paddle
 from paddle.inference import Config
 from paddle.inference import create_predictor
+from ppdet.core.workspace import load_config, create
+from ppdet.metrics import COCOMetric
 
 from post_process import PPYOLOEPostProcess
+
+
+def argsparser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--model_path', type=str, help="inference model filepath")
+    parser.add_argument(
+        '--image_file',
+        type=str,
+        default=None,
+        help="image path, if set image_file, it will not eval coco.")
+    parser.add_argument(
+        '--reader_config',
+        type=str,
+        default=None,
+        help="path of datset and reader config.",
+        required=True)
+    parser.add_argument(
+        '--benchmark',
+        type=bool,
+        default=False,
+        help="Whether run benchmark or not.")
+    parser.add_argument(
+        '--run_mode',
+        type=str,
+        default='paddle',
+        help="mode of running(paddle/trt_fp32/trt_fp16/trt_int8)")
+    parser.add_argument(
+        '--device',
+        type=str,
+        default='GPU',
+        help="Choose the device you want to run, it can be: CPU/GPU/XPU, default is GPU"
+    )
+    parser.add_argument(
+        '--use_dynamic_shape',
+        type=bool,
+        default=True,
+        help="Whether use dynamic shape or not.")
+    parser.add_argument('--img_shape', type=int, default=640, help="input_size")
+    parser.add_argument(
+        '--include_nms',
+        type=bool,
+        default=True,
+        help="Whether include nms or not.")
+
+    return parser
+
 
 CLASS_LABEL = [
     'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train',
@@ -130,14 +180,13 @@ def load_predictor(model_dir,
                    device='CPU',
                    min_subgraph_size=3,
                    use_dynamic_shape=False,
-                   trt_min_shape=3,
+                   trt_min_shape=1,
                    trt_max_shape=1280,
                    trt_opt_shape=640,
                    trt_calib_mode=False,
                    cpu_threads=1,
                    enable_mkldnn=False,
-                   enable_mkldnn_bfloat16=False,
-                   delete_shuffle_pass=False):
+                   enable_mkldnn_bfloat16=False):
     """set AnalysisConfig, generate AnalysisPredictor
     Args:
         model_dir (str): root path of __model__ and __params__
@@ -149,13 +198,12 @@ def load_predictor(model_dir,
         trt_opt_shape (int): opt shape for dynamic shape in trt
         trt_calib_mode (bool): If the model is produced by TRT offline quantitative
             calibration, trt_calib_mode need to set True
-        delete_shuffle_pass (bool): whether to remove shuffle_channel_detect_pass in TensorRT. 
-                                    Used by action model.
     Returns:
         predictor (PaddlePredictor): AnalysisPredictor
     Raises:
         ValueError: predict by TensorRT need device == 'GPU'.
     """
+    rerun_flag = False
     if device != 'GPU' and run_mode != 'paddle':
         raise ValueError(
             "Predict by TensorRT mode: {}, expect device=='GPU', but device == {}"
@@ -202,27 +250,23 @@ def load_predictor(model_dir,
             use_calib_mode=trt_calib_mode)
 
         if use_dynamic_shape:
-            min_input_shape = {
-                'image': [batch_size, 3, trt_min_shape, trt_min_shape]
-            }
-            max_input_shape = {
-                'image': [batch_size, 3, trt_max_shape, trt_max_shape]
-            }
-            opt_input_shape = {
-                'image': [batch_size, 3, trt_opt_shape, trt_opt_shape]
-            }
-            config.set_trt_dynamic_shape_info(min_input_shape, max_input_shape,
-                                              opt_input_shape)
-            print('trt set dynamic shape done!')
+            dynamic_shape_file = os.path.join(FLAGS.model_path,
+                                              'dynamic_shape.txt')
+            if os.path.exists(dynamic_shape_file):
+                config.enable_tuned_tensorrt_dynamic_shape(dynamic_shape_file,
+                                                           True)
+                print('trt set dynamic shape done!')
+            else:
+                config.collect_shape_range_info(dynamic_shape_file)
+                print('Start collect dynamic shape...')
+                rerun_flag = True
 
     # enable shared memory
     config.enable_memory_optim()
     # disable feed, fetch OP, needed by zero_copy_run
     config.switch_use_feed_fetch_ops(False)
-    if delete_shuffle_pass:
-        config.delete_pass("shuffle_channel_detect_pass")
     predictor = create_predictor(config)
-    return predictor
+    return predictor, rerun_flag
 
 
 def predict_image(predictor,
@@ -278,46 +322,83 @@ def predict_image(predictor,
     cv2.imwrite('result.jpg', res_img)
 
 
+def eval(predictor, val_loader, metric, include_nms=True, rerun_flag=False):
+    for batch_id, data in enumerate(val_loader):
+        data_all = {k: np.array(v) for k, v in data.items()}
+        input_names = predictor.get_input_names()
+        for i in range(len(input_names)):
+            input_tensor = predictor.get_input_handle(input_names[i])
+            input_tensor.copy_from_cpu(data_all[input_names[i]])
+        predictor.run()
+        output_names = predictor.get_output_names()
+        boxes_tensor = predictor.get_output_handle(output_names[0])
+        np_boxes = boxes_tensor.copy_to_cpu()
+        if include_nms:
+            boxes_num = predictor.get_output_handle(output_names[1])
+            np_boxes_num = boxes_num.copy_to_cpu()
+        if not include_nms:
+            postprocess = PPYOLOEPostProcess(
+                score_threshold=0.01, nms_threshold=0.6)
+            res = postprocess(np_boxes, data_all['scale_factor'])
+        else:
+            res = {'bbox': np_boxes, 'bbox_num': np_boxes_num}
+        metric.update(data_all, res)
+        if batch_id % 100 == 0:
+            print('Eval iter:', batch_id)
+    metric.accumulate()
+    metric.log()
+    metric.reset()
+
+
+def main():
+    predictor, rerun_flag = load_predictor(
+        FLAGS.model_path,
+        run_mode=FLAGS.run_mode,
+        device=FLAGS.device,
+        use_dynamic_shape=FLAGS.use_dynamic_shape)
+
+    if FLAGS.image_file:
+        warmup, repeats = 1, 1
+        if FLAGS.benchmark:
+            warmup, repeats = 50, 100
+        predict_image(
+            predictor,
+            FLAGS.image_file,
+            image_shape=[FLAGS.img_shape, FLAGS.img_shape],
+            warmup=warmup,
+            repeats=repeats,
+            include_nms=FLAGS.include_nms)
+    else:
+        reader_cfg = load_config(FLAGS.reader_config)
+
+        dataset = reader_cfg['EvalDataset']
+        global val_loader
+        val_loader = create('EvalReader')(reader_cfg['EvalDataset'],
+                                          reader_cfg['worker_num'],
+                                          return_list=True)
+        clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
+        anno_file = dataset.get_anno()
+        metric = COCOMetric(
+            anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
+        eval(
+            predictor,
+            val_loader,
+            metric,
+            include_nms=FLAGS.include_nms,
+            rerun_flag=rerun_flag)
+
+    if rerun_flag:
+        print(
+            "***** Collect dynamic shape done, Please rerun the program to get correct results. *****"
+        )
+
+
 if __name__ == '__main__':
+    paddle.enable_static()
+    parser = argsparser()
+    FLAGS = parser.parse_args()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--image_file', type=str, default=None, help="image path")
-    parser.add_argument(
-        '--model_path', type=str, help="inference model filepath")
-    parser.add_argument(
-        '--benchmark',
-        type=bool,
-        default=False,
-        help="Whether run benchmark or not.")
-    parser.add_argument(
-        '--run_mode',
-        type=str,
-        default='paddle',
-        help="mode of running(paddle/trt_fp32/trt_fp16/trt_int8)")
-    parser.add_argument(
-        '--device',
-        type=str,
-        default='GPU',
-        help="Choose the device you want to run, it can be: CPU/GPU/XPU, default is GPU"
-    )
-    parser.add_argument('--img_shape', type=int, default=640, help="input_size")
-    parser.add_argument(
-        '--include_nms',
-        type=bool,
-        default=True,
-        help="Whether include nms or not.")
-    args = parser.parse_args()
+    # DataLoader need run on cpu
+    paddle.set_device('cpu')
 
-    predictor = load_predictor(
-        args.model_path, run_mode=args.run_mode, device=args.device)
-    warmup, repeats = 1, 1
-    if args.benchmark:
-        warmup, repeats = 50, 100
-    predict_image(
-        predictor,
-        args.image_file,
-        image_shape=[args.img_shape, args.img_shape],
-        warmup=warmup,
-        repeats=repeats,
-        include_nms=args.include_nms)
+    main()
