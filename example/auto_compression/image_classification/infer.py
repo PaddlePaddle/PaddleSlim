@@ -47,6 +47,8 @@ def argsparser():
         default='inference.pdiparams',
         help='params file name')
     parser.add_argument('--batch_size', type=int, default=1)
+    parser.add_argument('--img_size', type=int, default=224)
+    parser.add_argument('--resize_size', type=int, default=256)
     parser.add_argument(
         '--eval', type=bool, default=False, help='Whether to evaluate')
     parser.add_argument('--data_path', type=str, default='./ILSVRC2012/')
@@ -57,7 +59,6 @@ def argsparser():
         type=bool,
         default=False,
         help='Whether to use mkldnn')
-
     parser.add_argument(
         '--cpu_num_threads', type=int, default=10, help='Number of cpu threads')
     parser.add_argument(
@@ -72,7 +73,7 @@ def argsparser():
     parser.add_argument(
         '--enable_profile',
         type=bool,
-        default=True,
+        default=False,
         help='Whether to enable profile')
     parser.add_argument('--gpu_mem', type=int, default=8000, help='GPU memory')
     parser.add_argument('--ir_optim', type=bool, default=True)
@@ -116,7 +117,7 @@ class Predictor(object):
         model_file = os.path.join(inference_model_dir, self.args.model_filename)
         params_file = os.path.join(inference_model_dir,
                                    self.args.params_filename)
-        args = paddle.inference.Config(model_file, params_file)
+        config = paddle.inference.Config(model_file, params_file)
         precision = paddle.inference.Config.Precision.Float32
         if self.args.use_int8:
             precision = paddle.inference.Config.Precision.Int8
@@ -124,30 +125,30 @@ class Predictor(object):
             precision = paddle.inference.Config.Precision.Half
 
         if self.args.use_gpu:
-            args.enable_use_gpu(self.args.gpu_mem, 0)
+            config.enable_use_gpu(self.args.gpu_mem, 0)
         else:
-            args.disable_gpu()
+            config.disable_gpu()
             if self.args.enable_mkldnn:
                 # cache 10 different shapes for mkldnn to avoid memory leak
-                args.set_mkldnn_cache_capacity(10)
-                args.enable_mkldnn()
-        args.set_cpu_math_library_num_threads(self.args.cpu_num_threads)
+                config.set_mkldnn_cache_capacity(10)
+                config.enable_mkldnn()
+        config.set_cpu_math_library_num_threads(self.args.cpu_num_threads)
 
         if self.args.enable_profile:
-            args.enable_profile()
-        args.switch_ir_optim(self.args.ir_optim)  # default true
+            config.enable_profile()
+        config.switch_ir_optim(self.args.ir_optim)  # default true
         if self.args.use_tensorrt:
-            args.enable_tensorrt_engine(
+            config.enable_tensorrt_engine(
                 precision_mode=precision,
                 max_batch_size=self.args.batch_size,
                 workspace_size=1 << 30,
                 min_subgraph_size=30,
                 use_calib_mode=False)
 
-        args.enable_memory_optim()
+        config.enable_memory_optim()
         # use zero copy
-        args.switch_use_feed_fetch_ops(False)
-        predictor = create_predictor(args)
+        config.switch_use_feed_fetch_ops(False)
+        predictor = create_predictor(config)
 
         return predictor
 
@@ -172,58 +173,50 @@ class Predictor(object):
             trt_msg, fp_message, args.batch_size, 1000 * test_time / test_num))
 
     def eval(self):
-        img_size = self.args.get("img_size", 224)
-        resize_size = self.args.get("resize_size", 256)
         if os.path.exists(self.args.data_path):
             val_loader = eval_reader(
                 self.args.data_path,
                 batch_size=self.args.batch_size,
-                crop_size=img_size,
-                resize_size=resize_size)
+                crop_size=self.args.img_size,
+                resize_size=self.args.resize_size)
         else:
-            image = np.ones(self.args.batch_size, 3, self.args.img_size,
-                            self.args.img_size).astype(np.float32)
-            val_loader = [image, None]
+            image = np.ones((1, 3, self.args.img_size,
+                             self.args.img_size)).astype(np.float32)
+            label = None
+            val_loader = [[image, label]]
         results = []
         with tqdm(
                 total=len(val_loader),
                 bar_format='Evaluation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
                 ncols=80) as t:
             for batch_id, (image, label) in enumerate(val_loader):
-                use_onnx = self.args.get("use_onnx", False)
-                if not use_onnx:
-                    input_names = self.paddle_predictor.get_input_names()
-                    input_tensor = self.paddle_predictor.get_input_handle(
-                        input_names[0])
-                    output_names = self.paddle_predictor.get_output_names()
-                    output_tensor = self.paddle_predictor.get_output_handle(
-                        output_names[0])
-                else:
-                    input_names = self.paddle_predictor.get_inputs()[0].name
-                    output_names = self.paddle_predictor.get_outputs()[0].name
+                input_names = self.paddle_predictor.get_input_names()
+                input_tensor = self.paddle_predictor.get_input_handle(
+                    input_names[0])
+                output_names = self.paddle_predictor.get_output_names()
+                output_tensor = self.paddle_predictor.get_output_handle(
+                    output_names[0])
+
                 image = np.array(image)
-                if not use_onnx:
-                    input_tensor.copy_from_cpu(image)
-                    self.paddle_predictor.run()
-                    batch_output = output_tensor.copy_to_cpu()
-                else:
-                    batch_output = self.paddle_predictor.run(
-                        output_names=[output_names],
-                        input_feed={input_names: image})[0]
-                if label is not None:
-                    label = np.array(label)
-                    sort_array = batch_output.argsort(axis=1)
-                    top_1_pred = sort_array[:, -1:][:, ::-1]
-                    top_1 = np.mean(label == top_1_pred)
-                    top_5_pred = sort_array[:, -5:][:, ::-1]
-                    acc_num = 0
-                    for i in range(len(label)):
-                        if label[i][0] in top_5_pred[i]:
-                            acc_num += 1
-                    top_5 = float(acc_num) / len(label)
-                    results.append([top_1, top_5])
-                else:
-                    results.append(batch_output)
+
+                input_tensor.copy_from_cpu(image)
+                self.paddle_predictor.run()
+                batch_output = output_tensor.copy_to_cpu()
+                sort_array = batch_output.argsort(axis=1)
+                top_1_pred = sort_array[:, -1:][:, ::-1]
+                if label is None:
+                    results.append(top_1_pred)
+                    break
+                label = np.array(label)
+                top_1 = np.mean(label == top_1_pred)
+                top_5_pred = sort_array[:, -5:][:, ::-1]
+                acc_num = 0
+                for i in range(len(label)):
+                    if label[i][0] in top_5_pred[i]:
+                        acc_num += 1
+                top_5 = float(acc_num) / len(label)
+                results.append([top_1, top_5])
+
             result = np.mean(np.array(results), axis=0)
         print('Evaluation result: {}'.format(result[0]))
 
@@ -234,4 +227,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     predictor = Predictor(args)
     predictor.predict()
-    predictor.eval()
+    if args.eval:
+        predictor.eval()
