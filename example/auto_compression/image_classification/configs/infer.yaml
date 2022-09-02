@@ -2,7 +2,8 @@ model_dir: "./MobileNetV1_infer"
 model_filename: "inference.pdmodel"
 params_filename: "inference.pdiparams"
 batch_size: 1
-image_size: 224
+data_dir: './ILSVRC2012_data_demo/ILSVRC2012/'
+img_size: 224
 use_gpu: True
 enable_mkldnn: True
 cpu_num_threads: 10
