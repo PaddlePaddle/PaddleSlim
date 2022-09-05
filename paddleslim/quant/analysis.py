@@ -308,5 +308,5 @@ class AnalysisQuant(object):
                 plt.title("Hist of variable {}".format(name))
                 plt.show()
                 pdf.savefig()
-            plt.close()
+                plt.close()
         _logger.info('Histogram plot is saved in {}'.format(pdf_path))

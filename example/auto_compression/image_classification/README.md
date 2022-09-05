@@ -128,7 +128,7 @@ python eval.py --config_path='./configs/MobileNetV1/qat_dis.yaml'
 
 环境配置：若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
-配置文件：```configs/infer.yaml```中有以下字段用于配置预测参数：
+以下字段用于配置预测参数：
 - ```inference_model_dir```：inference 模型文件所在目录，该目录下需要有文件 .pdmodel 和 .pdiparams 两个文件
 - ```model_filename```：inference_model_dir文件夹下的模型文件名称
 - ```params_filename```：inference_model_dir文件夹下的参数文件名称
@@ -148,7 +148,13 @@ python eval.py --config_path='./configs/MobileNetV1/qat_dis.yaml'
 
 准备好inference模型后，使用以下命令进行预测：
 ```shell
-python infer.py --config_path="configs/infer.yaml"
+python infer.py --model_dir='MobileNetV1_infer' \
+--model_filename='inference.pdmodel' \
+--model_filename='inference.pdiparams' \
+--eval=True \
+--use_gpu=True \
+--enable_mkldnn=True \
+--use_int8=True
 ```
 
 #### 4.2 PaddleLite端侧部署
