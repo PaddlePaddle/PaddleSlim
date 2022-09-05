@@ -244,6 +244,18 @@ python infer.py \
 --precision "int8"
 ```
 
+执行以下命令，使用Paddle Inference在相应数据集上测试精度:
+
+```
+export CUDA_VISIBLE_DEVICES=0
+python paddle_trt_infer.py \
+--model_path "./pp_humanseg_qat/model.pdmodel" \
+--params_path "./pp_humanseg_qat/model.pdiparams" \
+--dataset_config configs/dataset/humanseg_dataset.yaml \
+--use_trt True \
+--precision "int8"
+```
+
 <table><tbody>
 
 <tr>

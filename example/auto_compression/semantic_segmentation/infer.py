@@ -38,7 +38,6 @@ def _transforms(dataset):
     elif dataset == "cityscape":
         transforms.append(T.Normalize())
     return transforms
-    return T.Compose(transforms)
 
 
 def auto_tune_trt(args):
