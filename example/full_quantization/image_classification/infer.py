@@ -218,7 +218,6 @@ class Predictor(object):
                 results.append([top_1, top_5])
 
             result = np.mean(np.array(results), axis=0)
-            t.update()
         print('Evaluation result: {}'.format(result[0]))
 
 
