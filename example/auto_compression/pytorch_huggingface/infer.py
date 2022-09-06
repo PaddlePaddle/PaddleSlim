@@ -95,14 +95,18 @@ def parse_args():
         help="The maximum total input sequence length after tokenization. Sequences longer "
         "than this will be truncated, sequences shorter will be padded.", )
     parser.add_argument(
-        "--padding",
-        default='max_length',
+        "--perf_warmup_steps",
+        default=20,
         type=int,
-        help="Padding type", )
+        help="Warmup steps for performance test.", )
     parser.add_argument(
         "--use_trt",
         action='store_true',
         help="Whether to use inference engin TensorRT.", )
+    parser.add_argument(
+        "--perf",
+        action='store_true',
+        help="Whether to test performance.", )
     parser.add_argument(
         "--int8",
         action='store_true',
@@ -110,7 +114,7 @@ def parse_args():
     parser.add_argument(
         "--fp16",
         action='store_true',
-        help="Whether to use int8 inference.", )
+        help="Whether to use float16 inference.", )
     args = parser.parse_args()
     return args
 
@@ -184,7 +188,6 @@ class Predictor(object):
                     use_static=False,
                     use_calib_mode=False)
             elif args.fp16:
-
                 config.enable_tensorrt_engine(
                     workspace_size=1 << 30,
                     precision_mode=inference.PrecisionType.Half,
@@ -202,9 +205,20 @@ class Predictor(object):
                     use_calib_mode=False)
             print("Enable TensorRT is: {}".format(
                 config.tensorrt_engine_enabled()))
-            # Set min/max/opt tensor shape of each trt subgraph input according
-            # to dataset.
-            # For example, the config of TNEWS data should be 16, 32, 32, 31, 128, 32.
+
+            model_dir = os.path.dirname(args.model_path)
+            dynamic_shape_file = os.path.join(model_dir, 'dynamic_shape.txt')
+            if os.path.exists(dynamic_shape_file):
+                config.enable_tuned_tensorrt_dynamic_shape(dynamic_shape_file,
+                                                           True)
+                print('trt set dynamic shape done!')
+            else:
+                config.collect_shape_range_info(dynamic_shape_file)
+                print(
+                    'Start collect dynamic shape... Please eval again to get real result in TensorRT'
+                )
+                sys.exit()
+
         predictor = paddle.inference.create_predictor(config)
 
         input_handles = [
@@ -218,37 +232,72 @@ class Predictor(object):
 
         return cls(predictor, input_handles, output_handles)
 
-    def predict(self, dataset, collate_fn, batch_size):
+    def predict(self, dataset, collate_fn, args):
         batch_sampler = paddle.io.BatchSampler(
-            dataset, batch_size=batch_size, shuffle=False)
+            dataset, batch_size=args.batch_size, shuffle=False)
         data_loader = paddle.io.DataLoader(
             dataset=dataset,
             batch_sampler=batch_sampler,
             collate_fn=collate_fn,
             num_workers=0,
             return_list=True)
-        outputs = []
         end_time = 0
-        for data in data_loader:
-            for input_field, input_handle in zip(data, self.input_handles):
-                input_handle.copy_from_cpu(input_field.numpy() if isinstance(
-                    input_field, paddle.Tensor) else input_field)
-            for i in range(50):
+        if args.perf:
+            for i, data in enumerate(data_loader):
+                for input_field, input_handle in zip(data, self.input_handles):
+                    input_handle.copy_from_cpu(input_field.numpy(
+                    ) if isinstance(input_field, paddle.Tensor) else
+                                               input_field)
+
                 self.predictor.run()
 
+                output = [
+                    output_handle.copy_to_cpu()
+                    for output_handle in self.output_handles
+                ]
+
+                if i > args.perf_warmup_steps:
+                    break
+
             time1 = time.time()
-            repeats = 1000
-            for i in range(repeats):
+            for i, data in enumerate(data_loader):
+                for input_field, input_handle in zip(data, self.input_handles):
+                    input_handle.copy_from_cpu(input_field.numpy(
+                    ) if isinstance(input_field, paddle.Tensor) else
+                                               input_field)
                 self.predictor.run()
                 output = [
                     output_handle.copy_to_cpu()
                     for output_handle in self.output_handles
                 ]
-            time2 = time.time()
-            end_time = (time2 - time1) / repeats * 1000
-            break
-        print("task name: %s, inference time: %s ms." %
-              (args.task_name, end_time))
+
+            sequences_num = i * args.batch_size
+            print("task name: %s, time: %s qps/s, " %
+                  (args.task_name, sequences_num / (time.time() - time1)))
+
+        else:
+            metric = METRIC_CLASSES[args.task_name]()
+            metric.reset()
+            for i, data in enumerate(data_loader):
+                for input_field, input_handle in zip(data, self.input_handles):
+                    input_handle.copy_from_cpu(input_field.numpy(
+                    ) if isinstance(input_field, paddle.Tensor) else
+                                               input_field)
+                self.predictor.run()
+                output = [
+                    output_handle.copy_to_cpu()
+                    for output_handle in self.output_handles
+                ]
+
+                label = data[-1]
+                correct = metric.compute(
+                    paddle.to_tensor(output[0]),
+                    paddle.to_tensor(np.array(label).flatten()))
+                print(correct)
+                metric.update(correct)
+
+            res = metric.accumulate()
+            print("task name: %s, acc: %s, \n" % (args.task_name, res), end='')
 
 
 def main():
@@ -268,7 +317,7 @@ def main():
         tokenizer=tokenizer,
         label_list=dev_ds.label_list,
         max_seq_length=args.max_seq_length,
-        padding=args.padding,
+        task_name=args.task_name,
         return_attention_mask=True)
 
     dev_ds = dev_ds.map(trans_func)
@@ -278,7 +327,7 @@ def main():
         Pad(axis=0, pad_val=tokenizer.pad_token_id),  # segment
         Stack(dtype="int64" if dev_ds.label_list else "float32")  # label
     ): fn(samples)
-    predictor.predict(dev_ds, batchify_fn, args.batch_size)
+    predictor.predict(dev_ds, batchify_fn, args)
 
 
 if __name__ == "__main__":

@@ -138,7 +138,7 @@ def parse_args():
         help="Device selected for inference.", )
     parser.add_argument(
         "--batch_size",
-        default=16,
+        default=32,
         type=int,
         help="Batch size for predict.", )
     parser.add_argument(
@@ -161,13 +161,13 @@ def parse_args():
         action='store_true',
         help="Whether to test performance.", )
     parser.add_argument(
-        "--collect_shape",
-        action='store_true',
-        help="Whether collect shape range info.", )
-    parser.add_argument(
         "--int8",
         action='store_true',
         help="Whether to use int8 inference.", )
+    parser.add_argument(
+        "--fp16",
+        action='store_true',
+        help="Whether to use float16 inference.", )
     args = parser.parse_args()
     return args
 
@@ -203,6 +203,14 @@ class Predictor(object):
                     min_subgraph_size=5,
                     use_static=False,
                     use_calib_mode=False)
+            elif args.fp16:
+                config.enable_tensorrt_engine(
+                    workspace_size=1 << 30,
+                    precision_mode=inference.PrecisionType.Half,
+                    max_batch_size=args.batch_size,
+                    min_subgraph_size=5,
+                    use_static=False,
+                    use_calib_mode=False)
             else:
                 config.enable_tensorrt_engine(
                     workspace_size=1 << 30,
@@ -222,8 +230,10 @@ class Predictor(object):
                 print('trt set dynamic shape done!')
             else:
                 config.collect_shape_range_info(dynamic_shape_file)
-                print('Start collect dynamic shape...')
-                rerun_flag = True
+                print(
+                    'Start collect dynamic shape... Please eval again to get real result in TensorRT'
+                )
+                sys.exit()
 
         predictor = paddle.inference.create_predictor(config)
 
@@ -274,15 +284,17 @@ class Predictor(object):
                 output = self.predict_batch([input_ids, segment_ids])
                 if i > args.perf_warmup_steps:
                     break
-            time1 = time.time()
-            for batch in batches:
+            start_time = time.time()
+            for i, batch in enumerate(batches):
                 examples = self.convert_predict_batch(
                     args, batch, tokenizer, batchify_fn, dataset.label_list)
                 input_ids, segment_ids, _ = batchify_fn(examples)
                 output = self.predict_batch([input_ids, segment_ids])
 
-            print("task name: %s, time: %s, " %
-                  (args.task_name, time.time() - time1))
+            end_time = time.time()
+            sequences_num = i * args.batch_size
+            print("task name: %s, time: %s qps/s, " %
+                  (args.task_name, sequences_num / (end_time - start_time)))
 
         else:
             metric = METRIC_CLASSES[args.task_name]()
