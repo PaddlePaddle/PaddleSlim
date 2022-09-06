@@ -18,7 +18,7 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
 ## 产品动态
 
-- 🔥 **2022.08.16：自动化压缩功能升级**
+- 🔥 **2022.08.16：[自动化压缩](example/auto_compression)功能升级**
   - 支持直接加载ONNX模型和Paddle模型导出至ONNX
   - 发布量化分析工具试用版，发布[YOLO系列离线量化工具](example/post_training_quantization/pytorch_yolo_series/)
   - 更新[YOLO-Series自动化压缩模型库](example/auto_compression/pytorch_yolo_series)
