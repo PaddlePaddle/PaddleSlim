@@ -190,7 +190,7 @@ ac.compress()
 
   - 量化模型速度的测试依赖推理库的支持，所以确保安装的是带有TensorRT的PaddlePaddle。以下示例和展示的测试结果是基于Tesla V100、CUDA 10.2、python3.7得到的。
 
-  - 使用以下指令查看本地cuda版本，并且在[下载链接](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)中下载对应cuda版本和对应python版本的paddlepaddle安装包。
+  - 使用以下指令查看本地cuda版本，并且在[下载链接](https://www.paddlepaddle.org.cn/inference/user_guides/download_lib.html#python)中下载对应cuda版本和对应python版本的paddlepaddle安装包。
 
     ```shell
     cat /usr/local/cuda/version.txt ### CUDA Version 10.2.89
