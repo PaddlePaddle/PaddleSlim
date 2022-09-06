@@ -248,7 +248,7 @@ python infer.py \
 
 ```
 export CUDA_VISIBLE_DEVICES=0
-python paddle_trt_infer.py \
+python infer.py \
 --model_path "./pp_humanseg_qat/model.pdmodel" \
 --params_path "./pp_humanseg_qat/model.pdiparams" \
 --dataset_config configs/dataset/humanseg_dataset.yaml \
