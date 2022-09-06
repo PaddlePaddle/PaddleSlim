@@ -40,8 +40,7 @@ def argsparser():
         '--reader_config',
         type=str,
         default=None,
-        help="path of datset and reader config.",
-        required=True)
+        help="path of datset and reader config.")
     parser.add_argument(
         '--benchmark',
         type=bool,
