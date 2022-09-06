@@ -187,7 +187,7 @@ python setup.py install
 
 快速开始教程是能基于CIFAR10数据集快速运行起来的简单示例，若您是Paddle官方模型套件用户，请直接使用下方的CV模型压缩或者NLP模型压缩中教程。
 
-- 🔥 [自动压缩](demo/auto_compression)
+- 🔥 [自动压缩](example/auto_compression)
 - [量化训练](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
 - [离线量化](docs/zh_cn/quick_start/static/quant_post_static_tutorial.md)
 - [结构化剪枝](docs/zh_cn/quick_start/static/pruning_tutorial.md)
