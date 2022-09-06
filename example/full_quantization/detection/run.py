@@ -17,6 +17,7 @@ import sys
 import numpy as np
 import argparse
 import paddle
+from tqdm import tqdm
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
@@ -78,31 +79,34 @@ def convert_numpy_data(data, metric):
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric = global_config['metric']
-    for batch_id, data in enumerate(val_loader):
-        data_all = convert_numpy_data(data, metric)
-        data_input = {}
-        for k, v in data.items():
-            if isinstance(global_config['input_list'], list):
-                if k in test_feed_names:
-                    data_input[k] = np.array(v)
-            elif isinstance(global_config['input_list'], dict):
-                if k in global_config['input_list'].keys():
-                    data_input[global_config['input_list'][k]] = np.array(v)
-        outs = exe.run(compiled_test_program,
-                       feed=data_input,
-                       fetch_list=test_fetch_list,
-                       return_numpy=False)
-        res = {}
-        for out in outs:
-            v = np.array(out)
-            if len(v.shape) > 1:
-                res['bbox'] = v
-            else:
-                res['bbox_num'] = v
+    with tqdm(
+            total=len(val_loader),
+            bar_format='Evaluation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
+            ncols=80) as t:
+        for batch_id, data in enumerate(val_loader):
+            data_all = convert_numpy_data(data, metric)
+            data_input = {}
+            for k, v in data.items():
+                if isinstance(global_config['input_list'], list):
+                    if k in test_feed_names:
+                        data_input[k] = np.array(v)
+                elif isinstance(global_config['input_list'], dict):
+                    if k in global_config['input_list'].keys():
+                        data_input[global_config['input_list'][k]] = np.array(v)
+            outs = exe.run(compiled_test_program,
+                           feed=data_input,
+                           fetch_list=test_fetch_list,
+                           return_numpy=False)
+            res = {}
+            for out in outs:
+                v = np.array(out)
+                if len(v.shape) > 1:
+                    res['bbox'] = v
+                else:
+                    res['bbox_num'] = v
 
-        metric.update(data_all, res)
-        if batch_id % 100 == 0:
-            print('Eval iter:', batch_id)
+            metric.update(data_all, res)
+            t.update()
     metric.accumulate()
     metric.log()
     map_res = metric.get_results()
