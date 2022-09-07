@@ -194,6 +194,24 @@ Quantization:
 
 ## 5. 预测部署
 
+- Python部署:
+
+首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。
+
+然后使用[infer.py](./infer.py)进行部署：
+
+本示例将以ERNIE 3.0-Medium模型、afqmc数据集的为例，介绍如何利用Paddle—TensorRT测试压缩后模型的精度和速度。
+
+精度测试方法：
+```shell
+python infer.py --task_name='afqmc' --model_path='./save_ernie3.0_afqmc/' --device='gpu' --use_trt --int8
+```
+
+速度测试方法
+```shell
+python infer.py --task_name='afqmc' --model_path='./save_ernie3.0_afqmc/' --device='gpu' --use_trt --int8 --perf
+```
+
 - [PP-MiniLM Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm)
 - [ERNIE-3.0 Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/model_zoo/ernie-3.0)
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,34 +22,92 @@ import numpy as np
 
 import paddle
 from paddle import inference
+from paddle.metric import Metric, Accuracy, Precision, Recall
+from paddlenlp.transformers import AutoModelForTokenClassification, AutoTokenizer
 from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
-from paddle.metric import Metric, Accuracy, Precision, Recall
-from paddlenlp.metrics import AccuracyAndF1, Mcc, PearsonAndSpearman
-from paddlenlp.transformers import BertForSequenceClassification, BertTokenizer
+from paddlenlp.metrics import Mcc, PearsonAndSpearman
 
 METRIC_CLASSES = {
     "cola": Mcc,
     "sst-2": Accuracy,
-    "mrpc": AccuracyAndF1,
     "sts-b": PearsonAndSpearman,
-    "qqp": AccuracyAndF1,
     "mnli": Accuracy,
     "qnli": Accuracy,
     "rte": Accuracy,
+    "afqmc": Accuracy,
+    "tnews": Accuracy,
+    "iflytek": Accuracy,
+    "ocnli": Accuracy,
+    "cmnli": Accuracy,
+    "cluewsc2020": Accuracy,
+    "csl": Accuracy,
 }
 
-task_to_keys = {
-    "cola": ("sentence", None),
-    "mnli": ("sentence1", "sentence2"),
-    "mrpc": ("sentence1", "sentence2"),
-    "qnli": ("sentence1", "sentence2"),
-    "qqp": ("sentence1", "sentence2"),
-    "rte": ("sentence1", "sentence2"),
-    "sst-2": ("sentence", None),
-    "sts-b": ("sentence1", "sentence2"),
-    "wnli": ("sentence1", "sentence2"),
-}
+
+def convert_example(example, dataset, tokenizer, label_list,
+                    max_seq_length=512):
+    assert dataset in ['glue', 'clue'
+                       ], "This demo only supports for dataset glue or clue"
+    """Convert a glue example into necessary features."""
+    if dataset == 'glue':
+        # `label_list == None` is for regression task
+        label_dtype = "int64" if label_list else "float32"
+        # Get the label
+        label = example['labels']
+        label = np.array([label], dtype=label_dtype)
+        # Convert raw text to feature
+        example = tokenizer(example['sentence'], max_seq_len=max_seq_length)
+
+        return example['input_ids'], example['token_type_ids'], label
+
+    else:  #if dataset == 'clue':
+        # `label_list == None` is for regression task
+        label_dtype = "int64" if label_list else "float32"
+        # Get the label
+        example['label'] = np.array(
+            example["label"], dtype="int64").reshape((-1, 1))
+        label = example['label']
+        # Convert raw text to feature
+        if 'keyword' in example:  # CSL
+            sentence1 = " ".join(example['keyword'])
+            example = {
+                'sentence1': sentence1,
+                'sentence2': example['abst'],
+                'label': example['label']
+            }
+        elif 'target' in example:  # wsc
+            text, query, pronoun, query_idx, pronoun_idx = example[
+                'text'], example['target']['span1_text'], example['target'][
+                    'span2_text'], example['target']['span1_index'], example[
+                        'target']['span2_index']
+            text_list = list(text)
+            assert text[pronoun_idx:(pronoun_idx + len(
+                pronoun))] == pronoun, "pronoun: {}".format(pronoun)
+            assert text[query_idx:(query_idx + len(query)
+                                   )] == query, "query: {}".format(query)
+            if pronoun_idx > query_idx:
+                text_list.insert(query_idx, "_")
+                text_list.insert(query_idx + len(query) + 1, "_")
+                text_list.insert(pronoun_idx + 2, "[")
+                text_list.insert(pronoun_idx + len(pronoun) + 2 + 1, "]")
+            else:
+                text_list.insert(pronoun_idx, "[")
+                text_list.insert(pronoun_idx + len(pronoun) + 1, "]")
+                text_list.insert(query_idx + 2, "_")
+                text_list.insert(query_idx + len(query) + 2 + 1, "_")
+            text = "".join(text_list)
+            example['sentence'] = text
+        if tokenizer is None:
+            return example
+        if 'sentence' in example:
+            example = tokenizer(example['sentence'], max_seq_len=max_seq_length)
+        elif 'sentence1' in example:
+            example = tokenizer(
+                example['sentence1'],
+                text_pair=example['sentence2'],
+                max_seq_len=max_seq_length)
+        return example['input_ids'], example['token_type_ids'], label
 
 
 def parse_args():
@@ -58,20 +116,15 @@ def parse_args():
     # Required parameters
     parser.add_argument(
         "--task_name",
-        default='cola',
+        default='afqmc',
         type=str,
         help="The name of the task to perform predict, selected in the list: " +
         ", ".join(METRIC_CLASSES.keys()), )
     parser.add_argument(
-        "--model_type",
-        default='bert-base-cased',
+        "--dataset",
+        default='clue',
         type=str,
-        help="Model type selected in bert.")
-    parser.add_argument(
-        "--model_name_or_path",
-        default='bert-base-cased',
-        type=str,
-        help="The directory or name of model.", )
+        help="The dataset of model.", )
     parser.add_argument(
         "--model_path",
         default='./quant_models/model',
@@ -119,43 +172,6 @@ def parse_args():
     return args
 
 
-def convert_example(example,
-                    tokenizer,
-                    label_list,
-                    max_seq_length=512,
-                    task_name=None,
-                    is_test=False,
-                    padding='max_length',
-                    return_attention_mask=True):
-    if not is_test:
-        # `label_list == None` is for regression task
-        label_dtype = "int64" if label_list else "float32"
-        # Get the label
-        label = example['labels']
-        label = np.array([label], dtype=label_dtype)
-    # Convert raw text to feature
-    sentence1_key, sentence2_key = task_to_keys[task_name]
-    texts = ((example[sentence1_key], ) if sentence2_key is None else
-             (example[sentence1_key], example[sentence2_key]))
-    example = tokenizer(
-        *texts,
-        max_seq_len=max_seq_length,
-        padding=padding,
-        return_attention_mask=return_attention_mask)
-    if not is_test:
-        if return_attention_mask:
-            return example['input_ids'], example['attention_mask'], example[
-                'token_type_ids'], label
-        else:
-            return example['input_ids'], example['token_type_ids'], label
-    else:
-        if return_attention_mask:
-            return example['input_ids'], example['attention_mask'], example[
-                'token_type_ids']
-        else:
-            return example['input_ids'], example['token_type_ids']
-
-
 class Predictor(object):
     def __init__(self, predictor, input_handles, output_handles):
         self.predictor = predictor
@@ -164,8 +180,8 @@ class Predictor(object):
 
     @classmethod
     def create_predictor(cls, args):
-        config = paddle.inference.Config(args.model_path + ".pdmodel",
-                                         args.model_path + ".pdiparams")
+        config = paddle.inference.Config(args.model_path + "infer.pdmodel",
+                                         args.model_path + "infer.pdiparams")
         if args.device == "gpu":
             # set GPU configs accordingly
             config.enable_use_gpu(100, 0)
@@ -206,8 +222,8 @@ class Predictor(object):
             print("Enable TensorRT is: {}".format(
                 config.tensorrt_engine_enabled()))
 
-            model_dir = os.path.dirname(args.model_path)
-            dynamic_shape_file = os.path.join(model_dir, 'dynamic_shape.txt')
+            dynamic_shape_file = os.path.join(args.model_path,
+                                              'dynamic_shape.txt')
             if os.path.exists(dynamic_shape_file):
                 config.enable_tuned_tensorrt_dynamic_shape(dynamic_shape_file,
                                                            True)
@@ -232,68 +248,65 @@ class Predictor(object):
 
         return cls(predictor, input_handles, output_handles)
 
-    def predict(self, dataset, collate_fn, args):
-        batch_sampler = paddle.io.BatchSampler(
-            dataset, batch_size=args.batch_size, shuffle=False)
-        data_loader = paddle.io.DataLoader(
-            dataset=dataset,
-            batch_sampler=batch_sampler,
-            collate_fn=collate_fn,
-            num_workers=0,
-            return_list=True)
-        end_time = 0
+    def predict_batch(self, data):
+        for input_field, input_handle in zip(data, self.input_handles):
+            input_handle.copy_from_cpu(input_field)
+        self.predictor.run()
+        output = [
+            output_handle.copy_to_cpu() for output_handle in self.output_handles
+        ]
+        return output
+
+    def convert_predict_batch(self, args, data, tokenizer, batchify_fn,
+                              label_list):
+        examples = []
+        for example in data:
+            example = convert_example(
+                example,
+                args.dataset,
+                tokenizer,
+                label_list,
+                max_seq_length=args.max_seq_length)
+            examples.append(example)
+
+        return examples
+
+    def predict(self, dataset, tokenizer, batchify_fn, args):
+        batches = [
+            dataset[idx:idx + args.batch_size]
+            for idx in range(0, len(dataset), args.batch_size)
+        ]
         if args.perf:
-            for i, data in enumerate(data_loader):
-                for input_field, input_handle in zip(data, self.input_handles):
-                    input_handle.copy_from_cpu(input_field.numpy(
-                    ) if isinstance(input_field, paddle.Tensor) else
-                                               input_field)
-
-                self.predictor.run()
-
-                output = [
-                    output_handle.copy_to_cpu()
-                    for output_handle in self.output_handles
-                ]
-
+            for i, batch in enumerate(batches):
+                examples = self.convert_predict_batch(
+                    args, batch, tokenizer, batchify_fn, dataset.label_list)
+                input_ids, segment_ids, label = batchify_fn(examples)
+                output = self.predict_batch([input_ids, segment_ids])
                 if i > args.perf_warmup_steps:
                     break
+            start_time = time.time()
+            for i, batch in enumerate(batches):
+                examples = self.convert_predict_batch(
+                    args, batch, tokenizer, batchify_fn, dataset.label_list)
+                input_ids, segment_ids, _ = batchify_fn(examples)
+                output = self.predict_batch([input_ids, segment_ids])
 
-            time1 = time.time()
-            for i, data in enumerate(data_loader):
-                for input_field, input_handle in zip(data, self.input_handles):
-                    input_handle.copy_from_cpu(input_field.numpy(
-                    ) if isinstance(input_field, paddle.Tensor) else
-                                               input_field)
-                self.predictor.run()
-                output = [
-                    output_handle.copy_to_cpu()
-                    for output_handle in self.output_handles
-                ]
-
+            end_time = time.time()
             sequences_num = i * args.batch_size
             print("task name: %s, time: %s qps/s, " %
-                  (args.task_name, sequences_num / (time.time() - time1)))
+                  (args.task_name, sequences_num / (end_time - start_time)))
 
         else:
             metric = METRIC_CLASSES[args.task_name]()
             metric.reset()
-            for i, data in enumerate(data_loader):
-                for input_field, input_handle in zip(data, self.input_handles):
-                    input_handle.copy_from_cpu(input_field.numpy(
-                    ) if isinstance(input_field, paddle.Tensor) else
-                                               input_field)
-                self.predictor.run()
-                output = [
-                    output_handle.copy_to_cpu()
-                    for output_handle in self.output_handles
-                ]
-
-                label = data[-1]
+            for i, batch in enumerate(batches):
+                examples = self.convert_predict_batch(
+                    args, batch, tokenizer, batchify_fn, dataset.label_list)
+                input_ids, segment_ids, label = batchify_fn(examples)
+                output = self.predict_batch([input_ids, segment_ids])
                 correct = metric.compute(
-                    paddle.to_tensor(output[0]),
+                    paddle.to_tensor(output),
                     paddle.to_tensor(np.array(label).flatten()))
-                print(correct)
                 metric.update(correct)
 
             res = metric.accumulate()
@@ -303,31 +316,19 @@ class Predictor(object):
 def main():
     paddle.seed(42)
     args = parse_args()
+    args.task_name = args.task_name.lower()
 
     predictor = Predictor.create_predictor(args)
 
-    args.task_name = args.task_name.lower()
-    args.model_type = args.model_type.lower()
-
-    dev_ds = load_dataset('glue', args.task_name, splits='dev')
-    tokenizer = BertTokenizer.from_pretrained(args.model_name_or_path)
-
-    trans_func = partial(
-        convert_example,
-        tokenizer=tokenizer,
-        label_list=dev_ds.label_list,
-        max_seq_length=args.max_seq_length,
-        task_name=args.task_name,
-        return_attention_mask=True)
-
-    dev_ds = dev_ds.map(trans_func)
+    dev_ds = load_dataset('clue', args.task_name, splits='dev')
+    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     batchify_fn = lambda samples, fn=Tuple(
         Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input
-        Pad(axis=0, pad_val=0),
         Pad(axis=0, pad_val=tokenizer.pad_token_id),  # segment
         Stack(dtype="int64" if dev_ds.label_list else "float32")  # label
     ): fn(samples)
-    predictor.predict(dev_ds, batchify_fn, args)
+
+    outputs = predictor.predict(dev_ds, tokenizer, batchify_fn, args)
 
 
 if __name__ == "__main__":
