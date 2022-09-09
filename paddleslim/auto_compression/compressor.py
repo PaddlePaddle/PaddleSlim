@@ -668,6 +668,7 @@ class AutoCompression:
                 hist_percent=config.hist_percent,
                 batch_size=[1],
                 batch_num=config.batch_num,
+                onnx_format=config.onnx_format,
                 runcount_limit=config.max_quant_count)
 
         else:
