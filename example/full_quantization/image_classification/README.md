@@ -23,7 +23,7 @@
 | 模型 | 策略 | Top-1 Acc | GPU 耗时(ms) | ARM CPU 耗时(ms) | 配置文件 | Inference模型 |
 |:------:|:------:|:------:|:------:|:------:|:------:|:------:|
 | MobileNetV3_large_x1_0 | Baseline | 75.32 | - | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV3_large_x1_0_infer.tar) |
-| MobileNetV3_large_x1_0 | 全量化 | 74.41 | - | - | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_QAT.tar) |
+| MobileNetV3_large_x1_0 | 全量化 | 74.41 | - | - | [Config](./configs/mobilenetv3_large_qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_QAT.tar) |
 
 
 ## 3. 全量化流程
