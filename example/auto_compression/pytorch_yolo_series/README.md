@@ -169,7 +169,7 @@ python eval.py --config_path=./configs/yolov7_tiny_qat_dis.yaml
 
 #### 导出至ONNX使用TensorRT部署
 
-加载`quant_model.onnx`和`calibration.cache`，可以直接使用TensorRT测试脚本进行验证，详细代码可参考[TensorRT部署](/TensorRT)
+加载`quant_model.onnx`和`calibration.cache`，可以直接使用TensorRT测试脚本进行验证，详细代码可参考[TensorRT部署](./TensorRT)
 
 - python测试：
 ```shell
