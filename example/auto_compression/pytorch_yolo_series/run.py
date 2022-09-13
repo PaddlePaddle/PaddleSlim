@@ -56,6 +56,11 @@ def reader_wrapper(reader, input_name='x2paddle_images'):
 
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
+    postprocess = YOLOPostProcess(
+        score_threshold=0.001,
+        nms_threshold=0.65,
+        multi_label=True,
+        num_top_k=global_config.get('nms_num_top_k', 30000))
     with tqdm(
             total=len(val_loader),
             bar_format='Evaluation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
@@ -66,9 +71,6 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                            feed={test_feed_names[0]: data_all['image']},
                            fetch_list=test_fetch_list,
                            return_numpy=False)
-            res = {}
-            postprocess = YOLOPostProcess(
-                score_threshold=0.001, nms_threshold=0.65, multi_label=True)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
             bboxes_list.append(res['bbox'])
             bbox_nums_list.append(res['bbox_num'])

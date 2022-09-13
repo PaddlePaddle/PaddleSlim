@@ -51,6 +51,12 @@ def eval():
     val_program, feed_target_names, fetch_targets = load_inference_model(
         global_config["model_dir"], exe)
 
+    postprocess = YOLOPostProcess(
+        score_threshold=0.001,
+        nms_threshold=0.65,
+        multi_label=True,
+        num_top_k=global_config.get('nms_num_top_k', 30000))
+
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
     with tqdm(
             total=len(val_loader),
@@ -62,8 +68,6 @@ def eval():
                            feed={feed_target_names[0]: data_all['image']},
                            fetch_list=fetch_targets,
                            return_numpy=False)
-            postprocess = YOLOPostProcess(
-                score_threshold=0.001, nms_threshold=0.65, multi_label=True)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
             bboxes_list.append(res['bbox'])
             bbox_nums_list.append(res['bbox_num'])
