@@ -98,7 +98,8 @@ def eval():
 
 def main(args):
     global global_config
-    global_config = load_slim_config(args.config_path)
+    all_config = load_slim_config(args.config_path)
+    global_config = all_config["Global"]
 
     global data_dir
     data_dir = global_config['data_dir']

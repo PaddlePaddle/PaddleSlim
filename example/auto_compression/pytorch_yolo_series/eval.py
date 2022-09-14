@@ -55,7 +55,7 @@ def eval():
         score_threshold=0.001,
         nms_threshold=0.65,
         multi_label=True,
-        num_top_k=global_config.get('nms_num_top_k', 30000))
+        nms_top_k=global_config.get('nms_num_top_k', 30000))
 
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
     with tqdm(
