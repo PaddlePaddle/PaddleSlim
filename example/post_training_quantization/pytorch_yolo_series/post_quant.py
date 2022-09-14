@@ -42,6 +42,11 @@ def argsparser():
         help="which device used to compress.")
     parser.add_argument(
         '--algo', type=str, default='avg', help="post quant algo.")
+    parser.add_argument(
+        '--round_type', type=str, default='adaround', help="round type.")
+    parser.add_argument(
+        '--qdrop', type=bool, default=False, help='qdrop algo'
+    )
 
     return parser
 
@@ -82,7 +87,11 @@ def main():
         hist_percent=0.999,
         is_full_quantize=False,
         bias_correction=False,
-        onnx_format=True,
+        onnx_format=False,
+        weight_quantize_type='channel_wise_abs_max',
+        round_type=FLAGS.round_type,
+        qdrop=FLAGS.qdrop,
+        model_name= config['arch'],
         skip_tensor_list=config['skip_tensor_list']
         if 'skip_tensor_list' in config else None)
 
