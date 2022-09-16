@@ -80,7 +80,7 @@ class YOLOPostProcess(object):
         multi_label(bool): Whether keep multi label in boxes.
         keep_top_k(int): Number of total bboxes to be kept per image after NMS
                 step. -1 means keeping all bboxes after NMS step.
-        num_top_k(int): Maximum number of boxes put into torchvision.ops.nums()
+        nms_top_k(int): Maximum number of boxes put into nums.
     """
 
     def __init__(self,
@@ -88,12 +88,12 @@ class YOLOPostProcess(object):
                  nms_threshold=0.5,
                  multi_label=False,
                  keep_top_k=300,
-                 num_top_k=30000):
+                 nms_top_k=30000):
         self.score_threshold = score_threshold
         self.nms_threshold = nms_threshold
         self.multi_label = multi_label
         self.keep_top_k = keep_top_k
-        self.num_top_k = num_top_k
+        self.nms_top_k = nms_top_k
 
     def _xywh2xyxy(self, x):
         # Convert from [x, y, w, h] to [x1, y1, x2, y2]
