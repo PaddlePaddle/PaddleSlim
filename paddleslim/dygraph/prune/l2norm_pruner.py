@@ -38,6 +38,7 @@ class L2NormFilterPruner(FilterPruner):
 
         sorted_idx = scores.argsort()
         pruned_num = int(round(len(sorted_idx) * pruned_ratio))
+        pruned_num = max(len(sorted_idx) - 1, pruned_num)
         pruned_idx = sorted_idx[:pruned_num]
 
         mask_shape = [value.shape[pruned_axis]]
