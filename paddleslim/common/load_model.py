@@ -99,7 +99,9 @@ def get_model_dir(model_dir, model_filename, params_filename):
     return updated_model_dir, updated_model_filename, updated_params_filename
 
 
-def load_onnx_model(model_path, disable_feedback=False):
+def load_onnx_model(model_path,
+                    disable_feedback=False,
+                    enable_onnx_checker=True):
     assert model_path.endswith(
         '.onnx'
     ), '{} does not end with .onnx suffix and cannot be loaded.'.format(
@@ -121,8 +123,7 @@ def load_onnx_model(model_path, disable_feedback=False):
         try:
             pkg.require('x2paddle')
         except:
-            from pip._internal import main
-            main(['install', 'x2paddle'])
+            os.system('python -m pip install -U x2paddle==1.3.9')
         # check onnx installation and version
         try:
             pkg.require('onnx')
@@ -150,7 +151,7 @@ def load_onnx_model(model_path, disable_feedback=False):
         ) if paddle.distributed.get_world_size() > 1 else 0
         try:
             _logger.info("Now translating model from onnx to paddle.")
-            model = ONNXDecoder(model_path)
+            model = ONNXDecoder(model_path, enable_onnx_checker)
             mapper = ONNXOpMapper(model)
             mapper.paddle_graph.build()
             graph_opt = GraphOptimizer(source_frame="onnx")
