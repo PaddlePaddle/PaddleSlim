@@ -52,7 +52,7 @@ class TestSensitivity(unittest.TestCase):
             for _ratio, _loss in _value.items():
                 if not np.allclose(_losses[_ratio], _loss, atol=1e-2):
                     print(
-                        f'static loss: {static_sen[_name][_ratio]}; dygraph loss: {_loss}'
+                        f'ratio: {_ratio}; static loss: {_losses[_ratio]}; dygraph loss: {_loss}'
                     )
                     all_right = False
         self.assertTrue(all_right)
