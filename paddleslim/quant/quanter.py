@@ -692,7 +692,7 @@ def convert(program,
             out_scale_infer_pass.apply(test_graph)
         except:
             _logger.warning(
-                "Unable to insert quant/dequant linear op after every op node, please update PaddlePaddle >= 2.4.0"
+                "Unable to convert quant model with onnx_format=True, please update PaddlePaddle >= 2.4.0"
             )
     else:
         out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
