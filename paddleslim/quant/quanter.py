@@ -543,7 +543,9 @@ def quant_post_static(
         onnx_format=False,
         skip_tensor_list=None,
         is_use_cache_file=False,
-        cache_dir="./temp_post_training"):
+        cache_dir="./temp_post_training",
+        qdrop=False,
+        model_name=None):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -645,7 +647,9 @@ def quant_post_static(
             weight_quantize_type=weight_quantize_type,
             onnx_format=onnx_format,
             skip_tensor_list=skip_tensor_list,  # support in Paddle >= 2.3.1
-            optimize_model=optimize_model)
+            optimize_model=optimize_model,
+            qdrop=False,
+            model_name=None)
     except:
         post_training_quantization = PostTrainingQuantization(
             executor=executor,
@@ -669,7 +673,9 @@ def quant_post_static(
             activation_quantize_type=activation_quantize_type,
             weight_quantize_type=weight_quantize_type,
             onnx_format=onnx_format,
-            optimize_model=optimize_model)
+            optimize_model=optimize_model,
+            qdrop=False,
+            model_name=None)
 
     post_training_quantization.quantize()
     post_training_quantization.save_quantized_model(
