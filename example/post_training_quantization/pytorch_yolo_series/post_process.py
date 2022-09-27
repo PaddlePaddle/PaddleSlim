@@ -72,7 +72,7 @@ def nms(boxes, scores, iou_threshold):
 
 class YOLOPostProcess(object):
     """
-    Post process of YOLO serise network.
+    Post process of YOLO-series network.
     args:
         score_threshold(float): Threshold to filter out bounding boxes with low 
                 confidence score. If not provided, consider all boxes.
@@ -80,17 +80,20 @@ class YOLOPostProcess(object):
         multi_label(bool): Whether keep multi label in boxes.
         keep_top_k(int): Number of total bboxes to be kept per image after NMS
                 step. -1 means keeping all bboxes after NMS step.
+        nms_top_k(int): Maximum number of boxes put into nums.
     """
 
     def __init__(self,
                  score_threshold=0.25,
                  nms_threshold=0.5,
                  multi_label=False,
-                 keep_top_k=300):
+                 keep_top_k=300,
+                 nms_top_k=30000):
         self.score_threshold = score_threshold
         self.nms_threshold = nms_threshold
         self.multi_label = multi_label
         self.keep_top_k = keep_top_k
+        self.nms_top_k = nms_top_k
 
     def _xywh2xyxy(self, x):
         # Convert from [x, y, w, h] to [x1, y1, x2, y2]
@@ -103,7 +106,6 @@ class YOLOPostProcess(object):
 
     def _non_max_suppression(self, prediction):
         max_wh = 4096  # (pixels) minimum and maximum box width and height
-        nms_top_k = 30000
 
         cand_boxes = prediction[..., 4] > self.score_threshold  # candidates
         output = [np.zeros((0, 6))] * prediction.shape[0]
@@ -137,8 +139,8 @@ class YOLOPostProcess(object):
             num_box = boxes.shape[0]
             if not num_box:
                 continue
-            elif num_box > nms_top_k:
-                boxes = boxes[boxes[:, 4].argsort()[::-1][:nms_top_k]]
+            elif num_box > self.nms_top_k:
+                boxes = boxes[boxes[:, 4].argsort()[::-1][:self.nms_top_k]]
 
             # Batched NMS
             c = boxes[:, 5:6] * max_wh

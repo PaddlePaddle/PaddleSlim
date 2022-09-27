@@ -18,7 +18,7 @@ import numpy as np
 import argparse
 import paddle
 from tqdm import tqdm
-from post_process import YOLOv6PostProcess, coco_metric
+from post_process import YOLOPostProcess, coco_metric
 from dataset import COCOValDataset, COCOTrainDataset
 from paddleslim.common import load_config, load_onnx_model
 from paddleslim.quant.analysis import AnalysisQuant
@@ -53,7 +53,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                            fetch_list=test_fetch_list,
                            return_numpy=False)
             res = {}
-            postprocess = YOLOv6PostProcess(
+            postprocess = YOLOPostProcess(
                 score_threshold=0.001, nms_threshold=0.65, multi_label=True)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
             bboxes_list.append(res['bbox'])
