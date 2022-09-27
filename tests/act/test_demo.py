@@ -33,12 +33,12 @@ class ACTDemo(unittest.TestCase):
         super(ACTDemo, self).__init__(*args, **kwargs)
         if not os.path.exists('MobileNetV1_infer'):
             os.system(
-                'wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
+                'wget -q https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
             )
             os.system('tar -xf MobileNetV1_infer.tar')
         if not os.path.exists('ILSVRC2012_data_demo'):
             os.system(
-                'wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
+                'wget -q https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
             )
             os.system('tar -xf ILSVRC2012_data_demo.tar.gz')
 
