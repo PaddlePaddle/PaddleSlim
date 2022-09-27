@@ -171,7 +171,7 @@ def main():
         ptq_config=ptq_config)
 
     # plot the boxplot of activations of quantizable weights
-    # analyzer.plot_activation_distribution()
+    analyzer.plot_activation_distribution()
 
     # get the rank of sensitivity of each quantized layer
     # plot the histogram plot of best and worst activations and weights if plot_hist is True
