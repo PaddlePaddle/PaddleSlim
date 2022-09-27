@@ -51,7 +51,7 @@ def merge(teacher_program,
         scope = paddle.static.global_scope()
     if teacher_scope == None:
         teacher_scope = scope
-    teacher_program = teacher_program.clone(for_test=True)
+    teacher_program = teacher_program.clone()
     for teacher_var in teacher_program.list_vars():
         skip_rename = False
         if teacher_var.name != 'fetch' and (not merge_feed or

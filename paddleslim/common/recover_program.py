@@ -50,6 +50,7 @@ def _recover_reserve_space_with_bn(program):
                         persistable=False,
                         stop_gradient=True)
                     op.desc.set_output("ReserveSpace", [reserve_space.name])
+                    op.desc._set_attr("use_global_stats", False)
     return program
 
 

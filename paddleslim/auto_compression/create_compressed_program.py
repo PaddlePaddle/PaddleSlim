@@ -20,7 +20,7 @@ import paddle.optimizer as optimizer
 import paddle.regularizer as regularizer
 from ..quant.quanter import quant_aware, _quant_config_default, _parse_configs, pact, get_pact_optimizer
 from ..dist import *
-from ..common.recover_program import recover_inference_program, _remove_fetch_node
+from ..common.recover_program import recover_inference_program, _remove_fetch_node, _recover_reserve_space_with_bn
 from ..common import get_logger
 from .strategy_config import ProgramInfo
 from ..common.load_model import load_inference_model
@@ -170,6 +170,7 @@ def _load_program_and_merge(executor,
             executor=executor))
 
     _remove_fetch_node(teacher_program)
+    teacher_program = _recover_reserve_space_with_bn(teacher_program)
 
     if teacher_idx == None or teacher_idx == 1:
         test_program = train_program.clone(for_test=True)
