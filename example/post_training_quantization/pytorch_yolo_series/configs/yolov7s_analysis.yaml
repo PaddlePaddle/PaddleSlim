@@ -1,11 +1,11 @@
-arch: YOLOv6
-model_dir: ./yolov6s.onnx
+arch: YOLOv7
+model_dir: ./yolov7.onnx
 save_dir: ./analysis_results
 dataset_dir: /dataset/coco/
 val_image_dir: val2017
 val_anno_path: annotations/instances_val2017.json
 # Small Dataset to accelerate analysis
-fast_val_anno_path: annotations/small_instances_val2017.json  # if not exist, please set None
+fast_val_anno_path: annotations/small_instances_val2017.json # if not exist, please set None
 get_target_quant_model: False
 target_metric: None
 plot_hist: True
@@ -17,4 +17,3 @@ PTQ:
   is_full_quantize: False
   batch_size: 10
   batch_nums: 10
-

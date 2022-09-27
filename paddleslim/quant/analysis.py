@@ -20,7 +20,7 @@ import logging
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
-
+import random
 import paddle
 from paddle.fluid import core
 from paddle.fluid import framework
@@ -105,7 +105,7 @@ class AnalysisQuant(object):
         if self.eval_function is not None:
             self.base_metric = self.eval_function(
                 executor, program, self.feed_list, self.fetch_list)
-            _logger.info('before quantized, the accuracy of the model is: {}'.
+            _logger.info('Before quantized, the accuracy of the model is: {}'.
                          format(self.base_metric))
 
         # quant and evaluate after quant (skip_list = None)
@@ -121,7 +121,7 @@ class AnalysisQuant(object):
         program = post_training_quantization.quantize()
         self.quant_metric = self.eval_function(executor, program,
                                                self.feed_list, self.fetch_list)
-        _logger.info('after quantized, the accuracy of the model is: {}'.format(
+        _logger.info('After quantized, the accuracy of the model is: {}'.format(
             self.quant_metric))
 
         # get quantized weight and act var name
@@ -135,8 +135,13 @@ class AnalysisQuant(object):
             list(self.quant_layer_metrics.keys()))
         self.tobe_analyized_layer = sorted(list(self.tobe_analyized_layer))
 
-    def analysis(self):
-        self.compute_quant_sensitivity()
+    def compute_quant_sensitivity(self, plot_hist=True):
+        '''
+        compute the sensitivity of quantized layers by eval function
+        '''
+        assert self.data_loader is not None, "When computing the sensitivity of quantized layers, the data loader is needed"
+        assert self.eval_function is not None, "When computing the sensitivity of quantized layers, the eval function is needed"
+        self.eval_quant_model()
         self.sensitivity_ranklist = sorted(
             self.quant_layer_metrics,
             key=self.quant_layer_metrics.get,
@@ -154,7 +159,9 @@ class AnalysisQuant(object):
                     "quant layer name: {}, eval metric: {}\n".format(
                         name, self.quant_layer_metrics[name]))
         _logger.info('Analysis file is saved in {}'.format(analysis_file))
-        self.calculate_histogram()
+
+        if plot_hist:
+            self.calculate_histogram()
 
     def save_checkpoint(self):
         if not os.path.exists(self.save_dir):
@@ -171,12 +178,74 @@ class AnalysisQuant(object):
         _logger.info('load checkpoint from {}'.format(self.checkpoint_name))
         return True
 
-    def compute_quant_sensitivity(self):
+    def plot_activation_distribution(self):
+        '''
+        Collect and plot the distribution of the activation of each weight layer.
+        '''
+        devices = paddle.device.get_device().split(':')[0]
+        places = paddle.device._convert_to_place(devices)
+        executor = paddle.static.Executor(places)
+
+        [program, feed_list, fetch_list]= load_inference_model( \
+            self.model_dir, \
+            executor=executor, \
+            model_filename=self.model_filename, \
+            params_filename=self.params_filename)
+
+        scope = global_scope()
+
+        graph = IrGraph(core.Graph(program.desc), for_test=False)
+
+        persistable_var_names = []
+        for var in program.list_vars():
+            if var.persistable:
+                persistable_var_names.append(var.name)
+
+        weight_names = sorted(list(self.quantized_weight_var_name))
+        acts_weight_map = self.get_weight_act_map(program, weight_names,
+                                                  persistable_var_names)
+        all_acts = list(acts_weight_map.keys())
+        all_weights = [acts_weight_map[act] for act in all_acts]
+        act_distribution = []
+        for var_name in all_acts:
+            var_tensor = load_variable_data(scope, var_name)
+            var_tensor = var_tensor.flatten()
+            sample_num = len(var_tensor) if len(var_tensor) < 1000 else 1000
+            var_tensor = random.sample(list(var_tensor), sample_num)
+            act_distribution.append(var_tensor)
+
+        num_subplots = int(len(act_distribution) / 20) + (len(act_distribution)
+                                                          % 20 > 0)
+        all_values = sum(act_distribution, [])
+        max_value = np.max(all_values)
+        min_value = np.min(all_values)
+        pdf_path = os.path.join(self.save_dir, 'activation_distribution.pdf')
+        with PdfPages(pdf_path) as pdf:
+            for i in range(0, len(act_distribution), 20):
+                r = i + 20 if i + 20 < len(act_distribution) else len(
+                    act_distribution)
+                plt.boxplot(
+                    act_distribution[i:r],
+                    labels=all_weights[i:r],
+                    showbox=True,
+                    patch_artist=True)
+                plt.xticks(rotation=90)
+                plt.tick_params(axis='x')
+                plt.ylim([min_value, max_value])
+                plt.xlabel('Weight Name')
+                plt.ylabel("Activation Distribution")
+                plt.tight_layout()
+                plt.show()
+                pdf.savefig()
+                plt.close()
+        _logger.info('Distribution plots is saved in {}'.format(pdf_path))
+
+    def eval_quant_model(self):
         '''
         For each layer, quantize the weight op and evaluate the quantized model.
         '''
         for i, layer_name in enumerate(self.tobe_analyized_layer):
-            _logger.info('checking {}/{} quant model: quant layer {}'.format(
+            _logger.info('Checking {}/{} quant model: quant layer {}'.format(
                 i + 1, len(self.tobe_analyized_layer), layer_name))
             skip_list = copy.copy(list(self.quantized_weight_var_name))
             skip_list.remove(layer_name)
@@ -198,15 +267,14 @@ class AnalysisQuant(object):
                                               self.fetch_list)
             executor.close()
             _logger.info(
-                "quant layer name: {}, eval metric: {}, the loss caused by this layer: {}".
+                "Quantized layer name: {}, eval metric: {}, the loss caused by this layer: {}".
                 format(layer_name, quant_metric, self.base_metric -
                        quant_metric))
             self.quant_layer_metrics[layer_name] = quant_metric
             self.save_checkpoint()
 
-    def get_act_name_by_weight(self, program, weight_names,
-                               persistable_var_names):
-        act_ops_names = []
+    def get_weight_act_map(self, program, weight_names, persistable_var_names):
+        act_names = {}
         for op_name in weight_names:
             for block_id in range(len(program.blocks)):
                 for op in program.blocks[block_id].ops:
@@ -214,8 +282,8 @@ class AnalysisQuant(object):
                     if op_name in var_name_list:
                         for var_name in var_name_list:
                             if var_name not in persistable_var_names:
-                                act_ops_names.append(var_name)
-        return act_ops_names
+                                act_names[var_name] = op_name
+        return act_names
 
     def get_hist_ops_name(self, graph, program):
         if self.num_histogram_plots <= 0:
@@ -230,13 +298,13 @@ class AnalysisQuant(object):
             if var.persistable:
                 persistable_var_names.append(var.name)
 
-        best_act_ops = self.get_act_name_by_weight(program, best_weight_ops,
-                                                   persistable_var_names)
-        worst_act_ops = self.get_act_name_by_weight(program, worst_weight_ops,
-                                                    persistable_var_names)
-        return [best_weight_ops, best_act_ops, worst_weight_ops, worst_act_ops]
+        best_acts = self.get_weight_act_map(program, best_weight_ops,
+                                            persistable_var_names)
+        worst_acts = self.get_weight_act_map(program, worst_weight_ops,
+                                             persistable_var_names)
+        return [best_weight_ops, best_acts, worst_weight_ops, worst_acts]
 
-    def collect_ops_histogram(self, scope, ops):
+    def collect_tensors_histogram(self, scope, ops):
         hist = {}
         for var_name in ops:
             var_tensor = load_variable_data(scope, var_name)
@@ -268,8 +336,8 @@ class AnalysisQuant(object):
         scope = global_scope()
 
         graph = IrGraph(core.Graph(program.desc), for_test=False)
-        ops_tobe_draw_hist = self.get_hist_ops_name(graph, program)
-        if not ops_tobe_draw_hist:
+        tensors_tobe_draw_hist = self.get_hist_ops_name(graph, program)
+        if not tensors_tobe_draw_hist:
             return
 
         for var in program.list_vars():
@@ -294,19 +362,72 @@ class AnalysisQuant(object):
             'worst_weight_hist_result.pdf',
             'worst_act_hist_result.pdf',
         ]
-        for ops, save_pdf_name in zip(ops_tobe_draw_hist, pdf_names):
-            hist_data = self.collect_ops_histogram(scope, ops)
-            self.draw_pdf(hist_data, save_pdf_name)
+        for tensors, save_pdf_name in zip(tensors_tobe_draw_hist, pdf_names):
+            if isinstance(tensors, list):
+                hist_data = self.collect_tensors_histogram(scope, tensors)
+                self.draw_hist_pdf(hist_data, save_pdf_name, None)
+            else:
+                hist_data = self.collect_tensors_histogram(scope,
+                                                           list(tensors.keys()))
+                self.draw_hist_pdf(hist_data, save_pdf_name, tensors)
 
-    def draw_pdf(self, hist_data, save_pdf_name):
+    def draw_hist_pdf(self, hist_data, save_pdf_name, weight_act_map):
         pdf_path = os.path.join(self.save_dir, save_pdf_name)
         with PdfPages(pdf_path) as pdf:
             for name in hist_data:
                 plt.hist(hist_data[name][0], bins=hist_data[name][1])
                 plt.xlabel(name)
-                plt.ylabel("frequency")
-                plt.title("Hist of variable {}".format(name))
+                plt.ylabel("Frequency")
+                if 'act' in save_pdf_name:
+                    plt.title("Hist of Activation {}/Input of Weight {}".format(
+                        name, weight_act_map[name]))
+                else:
+                    plt.title("Hist of Weight {}".format(name))
                 plt.show()
                 pdf.savefig()
                 plt.close()
         _logger.info('Histogram plot is saved in {}'.format(pdf_path))
+
+    def get_target_quant_model(self, target_metric):
+        _logger.info(
+            'Start to Find quant model that satisfies the target metric.')
+        _logger.info(
+            'Make sure that you are using full eval dataset to get target quantized model.'
+        )
+        skip_list = []
+        rank_list = copy.copy(self.sensitivity_ranklist)
+        while True:
+            skip_list.append(rank_list.pop(0))
+            _logger.info('Skip Ops: {}'.format(skip_list))
+            executor = paddle.static.Executor(self.places)
+            post_training_quantization = PostTrainingQuantization(
+                executor=executor,
+                data_loader=self.data_loader,
+                model_dir=self.model_dir,
+                model_filename=self.model_filename,
+                params_filename=self.params_filename,
+                skip_tensor_list=skip_list,
+                **self.ptq_config)
+            program = post_training_quantization.quantize()
+
+            _logger.info('Evaluating...')
+            quant_metric = self.eval_function(executor, program, self.feed_list,
+                                              self.fetch_list)
+            _logger.info("Current eval metric: {}, the target metric: {}".
+                         format(quant_metric, target_metric))
+            if quant_metric >= target_metric:
+                quantize_model_path = os.path.join(self.save_dir,
+                                                   'target_quant_model')
+                _logger.info(
+                    'The quantized model satisfies the target metric and is saved to {}'.
+                    format(quantize_model_path))
+                post_training_quantization.save_quantized_model(
+                    quantize_model_path,
+                    model_filename='model.pdmodel',
+                    params_filename='model.pdiparams')
+                break
+            else:
+                _logger.info(
+                    'The quantized model does not satisfy the target metric. Skip next Op...'
+                )
+            executor.close()

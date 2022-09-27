@@ -126,12 +126,16 @@ def main():
     config = load_config(FLAGS.config_path)
     ptq_config = config['PTQ']
 
+    # val dataset is sufficient for PTQ
     data_loader = create('EvalReader')(config['EvalDataset'],
                                        config['worker_num'],
                                        return_list=True)
-    data_loader = reader_wrapper(data_loader, config['input_list'])
+    ptq_data_loader = reader_wrapper(data_loader, config['input_list'])
 
-    dataset = config['EvalDataset']
+    # fast_val_anno_path, such as annotation path of several pictures can accelerate analysis
+    dataset = config[
+        'FastEvalDataset'] if 'FastEvalDataset' in config else config[
+            'EvalDataset']
     global val_loader
     _eval_batch_sampler = paddle.io.BatchSampler(
         dataset, batch_size=config['EvalReader']['batch_size'])
@@ -162,10 +166,23 @@ def main():
         model_filename=config["model_filename"],
         params_filename=config["params_filename"],
         eval_function=eval_function,
-        data_loader=data_loader,
+        data_loader=ptq_data_loader,
         save_dir=config['save_dir'],
         ptq_config=ptq_config)
-    analyzer.analysis()
+
+    # plot the boxplot of activations of quantizable weights
+    # analyzer.plot_activation_distribution()
+
+    # get the rank of sensitivity of each quantized layer
+    # plot the histogram plot of best and worst activations and weights if plot_hist is True
+    analyzer.compute_quant_sensitivity(plot_hist=config['plot_hist'])
+
+    if config['get_target_quant_model']:
+        if 'FastEvalDataset' in config:
+            # change fast_val_loader to full val_loader
+            val_loader = data_loader
+        # get the quantized model that satisfies target metric you set
+        analyzer.get_target_quant_model(target_metric=config['target_metric'])
 
 
 if __name__ == '__main__':
