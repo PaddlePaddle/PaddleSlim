@@ -43,7 +43,7 @@ try:
     from paddle.fluid.contrib.slim.quantization import QuantWeightPass
     from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
     from paddle.fluid.contrib.slim.quantization import PostTrainingQuantizationProgram
-    from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePassV2
+    from paddle.fluid.contrib.slim.quantization import AddQuantDequantForInferencePass
 except:
     _logger.warning(
         "Some functions fail to import, please update PaddlePaddle version to 2.4+"
@@ -686,7 +686,7 @@ def convert(program,
         quant_weight_pass = QuantWeightPass(scope, place)
         quant_weight_pass.apply(test_graph)
         try:
-            out_scale_infer_pass = OutScaleForInferencePassV2(
+            out_scale_infer_pass = AddQuantDequantForInferencePass(
                 scope=scope, place=place, quant_bits=config['activation_bits'])
             out_scale_infer_pass.apply(test_graph)
         except:
