@@ -18,7 +18,7 @@ import numpy as np
 import argparse
 import paddle
 from tqdm import tqdm
-from post_process import YOLOv6PostProcess, coco_metric
+from post_process import YOLOPostProcess, coco_metric
 from dataset import COCOValDataset, COCOTrainDataset
 from paddleslim.common import load_config, load_onnx_model
 from paddleslim.quant.analysis import AnalysisQuant
@@ -53,7 +53,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                            fetch_list=test_fetch_list,
                            return_numpy=False)
             res = {}
-            postprocess = YOLOv6PostProcess(
+            postprocess = YOLOPostProcess(
                 score_threshold=0.001, nms_threshold=0.65, multi_label=True)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
             bboxes_list.append(res['bbox'])
@@ -72,6 +72,8 @@ def main():
 
     input_name = 'x2paddle_image_arrays' if config[
         'arch'] == 'YOLOv6' else 'x2paddle_images'
+
+    # val dataset is sufficient for PTQ
     dataset = COCOTrainDataset(
         dataset_dir=config['dataset_dir'],
         image_dir=config['val_image_dir'],
@@ -81,10 +83,12 @@ def main():
         dataset, batch_size=1, shuffle=True, drop_last=True, num_workers=0)
 
     global val_loader
+    # fast_val_anno_path, such as annotation path of several pictures can accelerate analysis
     dataset = COCOValDataset(
         dataset_dir=config['dataset_dir'],
         image_dir=config['val_image_dir'],
-        anno_path=config['val_anno_path'])
+        anno_path=config['fast_val_anno_path'] if
+        config['fast_val_anno_path'] is not None else config['val_anno_path'])
     global anno_file
     anno_file = dataset.ann_file
     val_loader = paddle.io.DataLoader(
@@ -101,7 +105,30 @@ def main():
         data_loader=data_loader,
         save_dir=config['save_dir'],
         ptq_config=ptq_config)
-    analyzer.analysis()
+
+    # plot the boxplot of activations of quantizable weights
+    analyzer.plot_activation_distribution()
+
+    # get the rank of sensitivity of each quantized layer
+    # plot the histogram plot of best and worst activations and weights if plot_hist is True
+    analyzer.compute_quant_sensitivity(plot_hist=config['plot_hist'])
+
+    if config['get_target_quant_model']:
+        if config['fast_val_anno_path'] is not None:
+            # change fast_val_loader to full val_loader
+            dataset = COCOValDataset(
+                dataset_dir=config['dataset_dir'],
+                image_dir=config['val_image_dir'],
+                anno_path=config['val_anno_path'])
+            anno_file = dataset.ann_file
+            val_loader = paddle.io.DataLoader(
+                dataset,
+                batch_size=1,
+                shuffle=False,
+                drop_last=False,
+                num_workers=0)
+        # get the quantized model that satisfies target metric you set
+        analyzer.get_target_quant_model(config['target_metric'])
 
 
 if __name__ == '__main__':
