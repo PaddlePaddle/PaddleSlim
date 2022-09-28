@@ -178,7 +178,7 @@ class AnalysisQuant(object):
         _logger.info('load checkpoint from {}'.format(self.checkpoint_name))
         return True
 
-    def plot_activation_distribution(self):
+    def plot_activation_distribution(self, axis=None):
         '''
         Collect and plot the distribution of the activation of each weight layer.
         '''
@@ -209,13 +209,15 @@ class AnalysisQuant(object):
         act_distribution = []
         for var_name in all_acts:
             var_tensor = load_variable_data(scope, var_name)
-            var_tensor = var_tensor.flatten()
+            if axis is None:
+                var_tensor = var_tensor.flatten()
+            else:
+                var_tensor = var_tensor.reshape(
+                    [-1, var_tensor.shape[axis]]).abs().max(axis=-1)
             sample_num = len(var_tensor) if len(var_tensor) < 1000 else 1000
             var_tensor = random.sample(list(var_tensor), sample_num)
             act_distribution.append(var_tensor)
 
-        num_subplots = int(len(act_distribution) / 20) + (len(act_distribution)
-                                                          % 20 > 0)
         all_values = sum(act_distribution, [])
         max_value = np.max(all_values)
         min_value = np.min(all_values)

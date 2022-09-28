@@ -138,6 +138,7 @@ python eval.py --config_path=./configs/ppyoloe_s_ptq.yaml
 python analysis.py --config_path=./configs/picodet_s_analysis.yaml
 ```
 
+
 如下图，经过量化分析之后，可以发现`conv2d_1.w_0`， `conv2d_3.w_0`，`conv2d_5.w_0`， `conv2d_7.w_0`， `conv2d_9.w_0` 这些层会导致较大的精度损失，这些层均为主干网络中靠前部分的`depthwise_conv`。
 
 <p align="center">
@@ -163,6 +164,8 @@ python post_quant.py --config_path=./configs/picodet_s_analyzed_ptq.yaml --save_
 
 注：分析之后若需要直接产出符合目标精度的量化模型，demo代码不会使用少量数据集验证，会自动使用全量验证数据。
 
+
+量化分析工具详细介绍见[量化分析工具介绍](../analysis.md)
 
 ## 4.预测部署
 预测部署可参考[Detection模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/detection)
