@@ -1,5 +1,5 @@
 arch: YOLOv7
-model_dir: ./yolov7s.onnx
+model_dir: ./yolov7.onnx
 dataset_dir: /dataset/coco/
 train_image_dir: train2017
 val_image_dir: val2017
