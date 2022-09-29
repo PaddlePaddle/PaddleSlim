@@ -157,6 +157,39 @@ class TestRoundingOptimizer(StaticCase):
                  )
         rounding_optimizer._run()
         rounding_optimizer._get_layers()
+
+        self.post_training_quantization._weight_quantize_type='abs_max'
+        self.post_training_quantization._quantized_threshold={}
+        self.post_training_quantization._set_activation_persistable()
+        for data in self.post_training_quantization._data_loader():
+            self.post_training_quantization._executor.run(program=self.post_training_quantization._program,
+                                feed=data,
+                                fetch_list=self.post_training_quantization._fetch_list,
+                                return_numpy=False,
+                                scope=self.post_training_quantization._scope)
+            self.post_training_quantization._sampling()
+        self.post_training_quantization._reset_activation_persistable()
+        rounding_optimizer = RoundingOptimizer(
+                 data_loader=self.post_training_quantization._data_loader,
+                 fp32_program=self.post_training_quantization._program,
+                 feed_list=self.post_training_quantization._feed_list,
+                 fetch_list=self.post_training_quantization._fetch_list,
+                 exe=self.post_training_quantization._executor,
+                 scope=self.post_training_quantization._scope,
+                 place=self.post_training_quantization._place,
+                 quantized_op_pairs=self.post_training_quantization._quantized_op_pairs,
+                 weight_quantize_type=self.post_training_quantization._weight_quantize_type,
+                 scale_dict=self.post_training_quantization._quantized_threshold,
+                 blocks=self._blocks,
+                 block_weights_names=self._block_weights_names,
+                 round_type='qdrop',
+                 num_iterations=self.post_training_quantization._batch_nums,
+                 lr=self.post_training_quantization._learning_rate,
+                 bias_correction=self.post_training_quantization._bias_correction,
+                 epochs=10,
+                 )
+        rounding_optimizer._run()
+
         
 
 
