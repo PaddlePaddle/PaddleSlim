@@ -153,7 +153,7 @@ class TestRoundingOptimizer(StaticCase):
                  num_iterations=self.post_training_quantization._batch_nums,
                  lr=self.post_training_quantization._learning_rate,
                  bias_correction=self.post_training_quantization._bias_correction,
-                 epochs=self.post_training_quantization._epochs,
+                 epochs=10,
                  )
         rounding_optimizer._run()
         rounding_optimizer._get_layers()
