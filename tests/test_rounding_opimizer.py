@@ -24,7 +24,6 @@ import paddle.dataset.mnist as reader
 import numpy as np
 from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddleslim.quant.rounding_optimizer import RoundingOptimizer
-
 class TestRoundingOptimizer(StaticCase):
     
     def __init__(self, *args, **kwargs):
@@ -49,20 +48,16 @@ class TestRoundingOptimizer(StaticCase):
         optimizer.minimize(avg_cost)
         main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
-
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(paddle.static.default_startup_program())
-
         def transform(x):
             return np.reshape(x, [1, 28, 28])
-
         train_dataset = paddle.vision.datasets.MNIST(
             mode='train', backend='cv2', transform=transform)
         test_dataset = paddle.vision.datasets.MNIST(
             mode='test', backend='cv2', transform=transform)
-
         train_loader = paddle.io.DataLoader(
             train_dataset,
             places=place,
@@ -70,22 +65,18 @@ class TestRoundingOptimizer(StaticCase):
             drop_last=True,
             batch_size=64,
             return_list=False)
-
         valid_loader = paddle.io.DataLoader(
             test_dataset,
             places=place,
             feed_list=[image, label],
             batch_size=64,
             return_list=False)
-
         def sample_generator_creator():
             def __reader__():
                 for data in test_dataset:
                     image, label = data
                     yield image, label
-
             return __reader__
-
         def train(program):
             iter = 0
             for data in train_loader():
@@ -107,7 +98,6 @@ class TestRoundingOptimizer(StaticCase):
             executor=exe,
             model_filename='model',
             params_filename='params')
-
         self.post_training_quantization = PostTrainingQuantization(
                                     exe,
                                     './test_rounding_optimizer',
@@ -157,41 +147,6 @@ class TestRoundingOptimizer(StaticCase):
                  )
         rounding_optimizer._run()
         rounding_optimizer._get_layers()
-
-        self.post_training_quantization._weight_quantize_type='abs_max'
-        self.post_training_quantization._quantized_threshold={}
-        self.post_training_quantization._set_activation_persistable()
-        for data in self.post_training_quantization._data_loader():
-            self.post_training_quantization._executor.run(program=self.post_training_quantization._program,
-                                feed=data,
-                                fetch_list=self.post_training_quantization._fetch_list,
-                                return_numpy=False,
-                                scope=self.post_training_quantization._scope)
-            self.post_training_quantization._sampling()
-        self.post_training_quantization._reset_activation_persistable()
-        rounding_optimizer = RoundingOptimizer(
-                 data_loader=self.post_training_quantization._data_loader,
-                 fp32_program=self.post_training_quantization._program,
-                 feed_list=self.post_training_quantization._feed_list,
-                 fetch_list=self.post_training_quantization._fetch_list,
-                 exe=self.post_training_quantization._executor,
-                 scope=self.post_training_quantization._scope,
-                 place=self.post_training_quantization._place,
-                 quantized_op_pairs=self.post_training_quantization._quantized_op_pairs,
-                 weight_quantize_type=self.post_training_quantization._weight_quantize_type,
-                 scale_dict=self.post_training_quantization._quantized_threshold,
-                 blocks=self._blocks,
-                 block_weights_names=self._block_weights_names,
-                 round_type='qdrop',
-                 num_iterations=self.post_training_quantization._batch_nums,
-                 lr=self.post_training_quantization._learning_rate,
-                 bias_correction=self.post_training_quantization._bias_correction,
-                 epochs=10,
-                 )
-        rounding_optimizer._run()
-
         
-
-
 if __name__ == '__main__':
     unittest.main()
