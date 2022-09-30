@@ -27,6 +27,22 @@ class RoundingOptimizerLoss(object):
                  weight=0.1,
                  rec_loss='mse',
                  beta_mode='const'):
+        """
+        Rounding Optimizer Loss Function.
+
+        Args:
+            program(paddle.static.Program): The student program after merge.
+            weight_block_names(list[list], optional): The names of all weights in this
+                block.
+            round_loss(str, optional): The type of round loss function.
+            rec_loss(str, optional): The type of reconstruct loss function.
+            beta_mode(str, optional): Update mode of hyperparameter beta.
+           
+        Returns:
+            total_loss(Variable): The sum of rec_loss and round_loss.
+            rec_loss(Variable): The reconstruct loss.
+            round_loss(Variable): The round loss.
+        """
 
         self.program = program
         self.round_loss = round_loss
@@ -86,6 +102,41 @@ class RoundingOptimizer(object):
             lr=0.1,
             bias_correction=False,
             epochs=20, ):
+        """
+        Rounding Optimizer, used to optimize the rounding policy
+        by reconstructing the intermediate output.
+
+        Args:
+            fp32_program(paddle.static.Program): FP32 ``inference program``.
+            executor(fluid.Executor): The executor to load, run and save the
+                quantized model.
+            scope(fluid.Scope, optional): The scope of the program, use it to load 
+                and save variables. If scope=None, get scope by global_scope(). 
+            place(paddle.CPUPlace or paddle.CUDAPlace): This parameter represents
+                the executor run on which device.
+            quantized_op_pairs(dict): Mapping of quanted op's output var name and op's
+                weight name, where key of dict is the weight name of op, and value 
+                is the output name of op.
+            weight_quantize_type(str): quantization type for weights,
+                support 'abs_max' and 'channel_wise_abs_max'. This param only specifies
+                the fake ops in saving quantized model, and we save the scale obtained
+                by post training quantization in fake ops. Compared to 'abs_max',
+                the model accuracy is usually higher when it is 'channel_wise_abs_max'.
+            scale_dict(dict): Mapping of var name and scale, where key of dict 
+                is the var name of op, and value is the scale.            
+            blocks(list[list], optional): A list of blocks, each of which is a subgraph 
+                of the FP32 program, with a single input and output.
+            block_weights_names(list[list], optional): The names of all weights in the 
+                block.
+            round_type(str, optional): The method of optimize weight rounding policy.
+                Currently supports ['adaround', 'brecq', 'qdrop'] methods.
+            lr(float, optional): The learning rate of adaround method.
+            bias_correction(bool, optional): If set as True, use the bias correction
+                method of https://arxiv.org/abs/1810.05723. Default is False.
+           
+        Returns:
+            None
+        """
 
         assert round_type in ['adaround', 'brecq', 'qdrop']
         if round_type in ['brecq', 'qdrop']:
