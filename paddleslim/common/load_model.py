@@ -230,7 +230,6 @@ def export_onnx(model_dir,
         opset_version=opset_version,
         enable_onnx_checker=True,
         deploy_backend=deploy_backend,
-        scale_file=os.path.join(model_dir, 'calibration_table.txt'),
         calibration_file=os.path.join(
             save_file_path.rstrip(os.path.split(save_file_path)[-1]),
             'calibration.cache'))
