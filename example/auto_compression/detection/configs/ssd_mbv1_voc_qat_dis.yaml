@@ -2,7 +2,7 @@ Global:
   reader_config: configs/ssd_reader.yml
   input_list: ['image', 'scale_factor', 'im_shape']
   Evaluation: True
-  model_dir: ./ssd_mobilenet_v1_300_120e_voc # https://bj.bcebos.com/v1/paddle-slim-models/act/ssd_mobilenet_v1_300_120e_voc.tar
+  model_dir: ./ssd_mobilenet_v1_300_120e_voc # Model Link: https://bj.bcebos.com/v1/paddle-slim-models/act/ssd_mobilenet_v1_300_120e_voc.tar
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
