@@ -14,10 +14,7 @@
 ## 1. 简介
 飞桨模型转换工具[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)支持将```Caffe/TensorFlow/ONNX/PyTorch```的模型一键转为飞桨（PaddlePaddle）的预测模型。借助X2Paddle的能力，PaddleSlim的自动压缩功能可方便地用于各种框架的推理模型。
 
-
 本示例将以[Pytorch](https://github.com/pytorch/pytorch)框架的自然语言处理模型为例，介绍如何自动压缩其他框架中的自然语言处理模型。本示例会利用[huggingface](https://github.com/huggingface/transformers)开源transformers库，将Pytorch框架模型转换为Paddle框架模型，再使用ACT自动压缩功能进行自动压缩。本示例使用的自动压缩策略为剪枝蒸馏和量化训练。
-
-
 
 
 ## 2. Benchmark
@@ -192,41 +189,38 @@ python run.py --config_path=./configs/cola.yaml  --eval True
 
 ## 4. 预测部署
 
-环境配置：若使用 Paddle TensorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
+量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
 
-启动配置：
 
-除需传入```task_name```任务名称，```model_name_or_path```模型名称，```model_path```保存inference模型的路径等基本参数外，还需根据预测环境传入预测参数：
-- ```device```：默认为gpu，可选为gpu, cpu, xpu
-- ```use_trt```：是否使用 TesorRT 预测引擎
-- ```int8```：是否启用```INT8```
-- ```fp16```：是否启用```FP16```
+- TensorRT预测：
 
-准备好inference模型后，可以使用```infer.py```进行预测，如使用 TesorRT 预测引擎测试 FP32 模型：
+环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
+
+首先下载量化好的模型：
 ```shell
-python -u ./infer.py \
-    --task_name cola \
-    --model_name_or_path bert-base-cased \
-    --model_path ./x2paddle_cola/model \
-    --batch_size 1 \
-    --max_seq_length 128 \
-    --device gpu \
-    --use_trt
+wget https://bj.bcebos.com/v1/paddle-slim-models/act/x2paddle_cola_new_calib.tar
+tar -xf x2paddle_cola_new_calib.tar
 ```
 
-如使用 TesorRT 预测引擎测试 INT8 模型：
 ```shell
-python -u ./infer.py \
-    --task_name cola \
-    --model_name_or_path bert-base-cased \
-    --model_path ./output/cola/model \
-    --batch_size 1 \
-    --max_seq_length 128 \
-    --device gpu \
-    --use_trt \
-    --int8
+python paddle_inference_eval.py \
+      --model_path=x2paddle_cola_new_calib \
+      --use_trt \
+      --precision=int8 \
+      --batch_size=1
 ```
 
+- MKLDNN预测：
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=x2paddle_cola_new_calib \
+      --device=cpu \
+      --use_mkldnn=True \
+      --cpu_threads=10 \
+      --batch_size=1 \
+      --precision=int8
+```
 
 
 

@@ -194,25 +194,41 @@ Quantization:
 
 ## 5. 预测部署
 
-- Python部署:
+量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
 
-首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。
 
-然后使用[infer.py](./infer.py)进行部署：
+- TensorRT预测：
 
-本示例将以ERNIE 3.0-Medium模型、afqmc数据集的为例，介绍如何利用Paddle—TensorRT测试压缩后模型的精度和速度。
+环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
-精度测试方法：
+首先下载量化好的模型：
 ```shell
-python infer.py --task_name='afqmc' --model_path='./save_ernie3.0_afqmc/' --device='gpu' --use_trt --int8
+wget https://bj.bcebos.com/v1/paddle-slim-models/act/save_ppminilm_afqmc_new_calib.tar
+tar -xf save_ppminilm_afqmc_new_calib.tar
 ```
 
-速度测试方法
 ```shell
-python infer.py --task_name='afqmc' --model_path='./save_ernie3.0_afqmc/' --device='gpu' --use_trt --int8 --perf
+python paddle_inference_eval.py \
+      --model_path=save_ernie3_afqmc_new_cablib \
+      --model_filename=infer.pdmodel \
+      --params_filename=infer.pdiparams \
+      --task_name='afqmc' \
+      --use_trt \
+      --precision=int8
 ```
 
-- [PP-MiniLM Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm)
-- [ERNIE-3.0 Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/model_zoo/ernie-3.0)
+- MKLDNN预测：
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=save_ernie3_afqmc_new_cablib \
+      --model_filename=infer.pdmodel \
+      --params_filename=infer.pdiparams \
+      --task_name='afqmc' \
+      --device=cpu \
+      --use_mkldnn=True \
+      --cpu_threads=10 \
+      --precision=int8
+```
 
 ## 6. FAQ
