@@ -98,9 +98,9 @@ class RoundingOptimizer(object):
             blocks,
             block_weights_names,
             round_type,
-            num_iterations=1000,
             lr=0.1,
             bias_correction=False,
+            num_iterations=1000,
             epochs=20, ):
         """
         Rounding Optimizer, used to optimize the rounding policy
