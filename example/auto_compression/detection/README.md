@@ -27,6 +27,11 @@
 - mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
 - PP-YOLOE-l模型在Tesla V100的GPU环境下测试，并且开启TensorRT，batch_size=1，包含NMS，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)。
 - PP-YOLOE-s模型在Tesla T4，TensorRT 8.4.1，CUDA 11.2，batch_size=1，不包含NMS，测试脚本是[cpp_infer_ppyoloe](./cpp_infer_ppyoloe)。
+### SSD on Pascal VOC
+| 模型  | Box AP | ACT量化Box AP | TRT-FP32 | TRT-INT8 |  配置文件 | 量化模型  |
+| :-------- |:-------- | :---------------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
+| SSD-MobileNetv1 |  73.8  |   73.52    |   4.0ms  |  1.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ssd_mbv1_voc_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ssd_mobilenet_v1_quant.tar) |
+- 测速环境：Tesla T4，TensorRT 8.4.1，CUDA 11.2，batch_size=1，包含NMS.
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
