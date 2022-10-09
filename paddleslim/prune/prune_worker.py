@@ -607,13 +607,18 @@ class mul(PruneWorker):
                 }])
         elif var == y:
             if (pruned_axis < y_num_col_dims) and (
-                    1 < len(x_shape) - x_num_col_dims):
+                    1 < len(x_shape) - x_num_col_dims) and max(x_shape[
+                        x_num_col_dims:]) != np.prod(y_shape[:y_num_col_dims]):
                 raise UnsupportOpError(
                     "Unsupport pruning y of mul when pruned_axis < y_num_col_dims and 1 < len(x_shape) - x_num_col_dims."
                 )
 
             tile = 1
             repeat = 1
+
+            self.append_pruned_vars(var, pruned_axis, trans)
+            self._visit_and_search(var, pruned_axis, trans)
+
             if pruned_axis >= y_num_col_dims:
                 for i in range(y_num_col_dims, pruned_axis):
                     tile *= y_shape[i]
@@ -632,16 +637,17 @@ class mul(PruneWorker):
                     tile *= y_shape[i]
                 for i in range(pruned_axis + 1, y_num_col_dims):
                     repeat *= y_shape[i]
-                self.append_pruned_vars(x,
-                                        len(x_shape) - 1, trans + [{
-                                            "tile": tile,
-                                            "repeat": repeat
-                                        }])
-                self._visit_and_search(x,
-                                       len(x_shape) - 1, trans + [{
-                                           "tile": tile,
-                                           "repeat": repeat
-                                       }])
+
+                new_pruned_axis = int(np.argmax(x_shape[
+                    x_num_col_dims:])) + x_num_col_dims
+                self.append_pruned_vars(x, new_pruned_axis, trans + [{
+                    "tile": tile,
+                    "repeat": repeat
+                }])
+                self._visit_and_search(x, new_pruned_axis, trans + [{
+                    "tile": tile,
+                    "repeat": repeat
+                }])
         elif var == out:
             if (pruned_axis == 0 and x_num_col_dims != 1) or (
                     pruned_axis == 1 and (len(y_shape) - y_num_col_dims) != 1):
