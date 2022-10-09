@@ -1,5 +1,5 @@
 Global:
-  reader_config: configs/dataset/cityscapes_1024x512_scale1.0.yml
+  reader_config: configs/deeplabv3/deeplabv3_reader.yml
   model_dir: ./RES-paddle2-Deeplabv3-ResNet50
   model_filename: model
   params_filename: params
@@ -11,12 +11,13 @@ Distillation:
   - conv2d_123.tmp_1
 
 Quantization:
+  onnx_format: True
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
 
 TrainConfig:
-  epochs: 10
+  epochs: 1
   eval_iter: 360
   learning_rate: 0.0001
   optimizer_builder:
