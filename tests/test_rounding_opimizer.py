@@ -17,7 +17,6 @@ import unittest
 import paddle
 from paddleslim.quant import quant_post_static
 from static_case import StaticCase
-sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
 import paddle.dataset.mnist as reader
