@@ -197,12 +197,15 @@ def coco_metric(anno_file, bboxes_list, bbox_nums_list, image_id_list):
     with open(output, 'w') as f:
         json.dump(results, f)
 
-    coco_dt = coco_gt.loadRes(output)
-    coco_eval = COCOeval(coco_gt, coco_dt, 'bbox')
-    coco_eval.evaluate()
-    coco_eval.accumulate()
-    coco_eval.summarize()
-    return coco_eval.stats
+    try:
+        coco_dt = coco_gt.loadRes(output)
+        coco_eval = COCOeval(coco_gt, coco_dt, 'bbox')
+        coco_eval.evaluate()
+        coco_eval.accumulate()
+        coco_eval.summarize()
+        return coco_eval.stats
+    except:
+        return [0.]
 
 
 def _get_det_res(bboxes, bbox_nums, image_id, label_to_cat_id_map):

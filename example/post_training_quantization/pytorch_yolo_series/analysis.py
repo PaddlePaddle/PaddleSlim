@@ -37,6 +37,12 @@ def argsparser():
         type=str,
         default='gpu',
         help="which device used to compress.")
+    parser.add_argument(
+        '--resume',
+        type=bool,
+        default=False,
+        help="When break off while ananlyzing, could resume analysis program and load already analyzed information."
+    )
     return parser
 
 
@@ -104,6 +110,7 @@ def main():
         eval_function=eval_function,
         data_loader=data_loader,
         save_dir=config['save_dir'],
+        resume=FLAGS.resume,
         ptq_config=ptq_config)
 
     # plot the boxplot of activations of quantizable weights
