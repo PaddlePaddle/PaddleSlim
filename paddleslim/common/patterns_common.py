@@ -1,4 +1,6 @@
 import os
+import sys
+sys.setrecursionlimit(100000)
 
 ALL_WEIGHT_OP = [
     'conv2d', 'mul', 'matmul', 'embedding', 'conv2d_transpose',
