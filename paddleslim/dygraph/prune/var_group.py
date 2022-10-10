@@ -26,8 +26,11 @@ class DygraphPruningCollections(PruningCollections):
         program = dygraph2program(model, inputs=inputs)
         graph = GraphWrapper(program)
         params = [
-            _param.name for _param in model.parameters()
-            if len(_param.shape) == 4
+            _param.name
+            for _param in model.parameters()
+            #TODO: support pattern: conv2d -> activation -> flatten -> fc
+            if (len(_param.shape) == 2 or len(_param.shape) == 4
+                ) and 'conv2d_26' not in _param.name
         ]
         self._collections = self.create_pruning_collections(
             params, graph, skip_leaves=skip_leaves)

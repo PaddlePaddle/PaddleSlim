@@ -704,6 +704,8 @@ class matmul(PruneWorker):
         if var == y:
             for x_i, y_i, out_i in mappings:
                 if pruned_axis == y_i:
+                    self.append_pruned_vars(var, y_i, pruned_idx)
+                    self._visit_and_search(var, y_i, pruned_idx)
                     if x_i != -1:
                         self.append_pruned_vars(x, x_i, pruned_idx)
                         self._visit_and_search(x, x_i, pruned_idx)
@@ -803,6 +805,15 @@ class flatten_contiguous_range(PruneWorker):
 
         start_axis = self.op.attr("start_axis")
         stop_axis = self.op.attr("stop_axis")
+
+        #NOTE: strict assertion: pruned axis must be C: [N, C, 1, 1]
+        if var in self.op.outputs("Out"):
+            out_var = self.op.outputs("Out")[0]
+            in_var = self.op.inputs("X")[0]
+            assert pruned_axis == start_axis and pruned_axis == int(
+                np.argmax(in_var.shape()[1:]) + 1)
+            self._visit_and_search(in_var, pruned_axis, transforms)
+
         if var in self.op.inputs("X"):
             out_var = self.op.outputs("Out")[0]
             in_var = self.op.inputs("X")[0]

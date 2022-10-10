@@ -53,14 +53,15 @@ model_list = models.__all__
 def get_pruned_params(args, model):
     params = []
     if args.model == "mobilenet_v1":
-        skip_vars = ['linear_0.b_0',
-                     'conv2d_0.w_0']  # skip the first conv2d and last linear
+        skip_vars = ['linear_0.b_0', 'conv2d_0.w_0',
+                     'conv2d_26.w_0']  # skip the first conv2d and last linear
         for sublayer in model.sublayers():
             for param in sublayer.parameters(include_sublayers=False):
                 if isinstance(
                         sublayer, paddle.nn.Conv2D
                 ) and sublayer._groups == 1 and param.name not in skip_vars:
                     params.append(param.name)
+        params.append('linear_0.w_0')
     elif args.model == "mobilenet_v2":
         for sublayer in model.sublayers():
             for param in sublayer.parameters(include_sublayers=False):
@@ -182,7 +183,7 @@ def compress(args):
         flops(net, [1] + image_shape) / 1000, plan.pruned_flops))
 
     for param in net.parameters():
-        if "conv2d" in param.name:
+        if "conv2d" in param.name or 'linear' in param.name:
             print("{}\t{}".format(param.name, param.shape))
 
     net.train()
