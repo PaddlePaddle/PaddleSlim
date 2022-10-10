@@ -429,6 +429,12 @@ class relu(activation):
 
 
 @PRUNE_WORKER.register
+class gelu(activation):
+    def __init__(self, op, pruned_params, visited, skip_stranger):
+        super(gelu, self).__init__(op, pruned_params, visited, skip_stranger)
+
+
+@PRUNE_WORKER.register
 class leaky_relu(activation):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(leaky_relu, self).__init__(op, pruned_params, visited,
@@ -686,6 +692,8 @@ class matmul(PruneWorker):
             mappings = [(1, -1, 1), (2, 0, -1)]
         elif x_shape_len == 2 and y_shape_len == 3:
             mappings = [(0, -1, 1), (1, 1, -1), (-1, 2, 2)]
+        elif x_shape_len == 3 and y_shape_len == 2:
+            mappings = [(2, 0, -1), (-1, 1, 1)]
         elif x_shape_len >= 3 and y_shape_len >= 3:
             mappings = [(x_shape_len - 2, -1, x_shape_len - 2),
                         (x_shape_len - 1, x_shape_len - 2, -1),
