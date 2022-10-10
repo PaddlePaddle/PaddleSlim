@@ -165,11 +165,6 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 
 
 ## 安装
-安装依赖：
-```bash
-pip install swig
-```
-> macOS + Python3.9环境或者Windows环境下，请参考[链接](https://github.com/PaddlePaddle/PaddleSlim/issues/1258)。
 
 安装最新版本：
 ```bash
