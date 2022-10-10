@@ -1,7 +1,7 @@
 arch: YOLOv7
 model_dir: ./yolov7.onnx
 save_dir: ./analysis_results
-dataset_dir: /dataset/coco/
+dataset_dir: dataset/coco/
 val_image_dir: val2017
 val_anno_path: annotations/instances_val2017.json
 # Small Dataset to accelerate analysis
@@ -15,5 +15,6 @@ PTQ:
   weight_quantize_type: 'abs_max'
   activation_quantize_type: 'moving_average_abs_max'
   is_full_quantize: False
+  onnx_format: False
   batch_size: 10
   batch_nums: 10
