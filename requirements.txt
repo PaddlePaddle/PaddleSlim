@@ -4,3 +4,4 @@ matplotlib
 pillow 
 pyyaml
 scikit-learn
+swig

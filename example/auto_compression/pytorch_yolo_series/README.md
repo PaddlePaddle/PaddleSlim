@@ -8,7 +8,6 @@
   - [3.2 准备数据集](#32-准备数据集)
   - [3.3 准备预测模型](#33-准备预测模型)
   - [3.4 自动压缩并产出模型](#34-自动压缩并产出模型)
-  - [3.5 测试模型精度](#35-测试模型精度)
 - [4.预测部署](#4预测部署)
 - [5.FAQ](5FAQ)
 
@@ -149,14 +148,6 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log -
           --config_path=./configs/yolov7_tiny_qat_dis.yaml --save_dir='./output/'
 ```
 
-#### 3.5 测试模型精度
-
-修改[yolov7_qat_dis.yaml](./configs/yolov7_qat_dis.yaml)中`model_dir`字段为模型存储路径，然后使用eval.py脚本得到模型的mAP：
-```
-export CUDA_VISIBLE_DEVICES=0
-python eval.py --config_path=./configs/yolov7_tiny_qat_dis.yaml
-```
-
 
 ## 4.预测部署
 
@@ -164,10 +155,68 @@ python eval.py --config_path=./configs/yolov7_tiny_qat_dis.yaml
 ```shell
 ├── model.pdiparams         # Paddle预测模型权重
 ├── model.pdmodel           # Paddle预测模型文件
-├── calibration_table.txt   # Paddle量化后校准表
 ├── ONNX
 │   ├── quant_model.onnx      # 量化后转出的ONNX模型
 │   ├── calibration.cache     # TensorRT可以直接加载的校准表
+```
+
+#### Paddle Inference部署测试
+
+量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
+
+以下字段用于配置预测参数：
+
+| 参数名 | 含义 |
+|:------:|:------:|
+| model_path | inference 模型文件所在目录，该目录下需要有文件 model.pdmodel 和 model.pdiparams 两个文件 |
+| dataset_dir | eval时数据验证集路径， 默认`dataset/coco` |
+| image_file | 如果只测试单张图片效果，直接根据image_file指定图片路径 |
+| device | 使用GPU或者CPU预测，可选CPU/GPU   |
+| use_trt | 是否使用 TesorRT 预测引擎   |
+| use_mkldnn | 是否启用```MKL-DNN```加速库，注意```use_mkldnn```与```use_gpu```同时为```True```时，将忽略```enable_mkldnn```，而使用```GPU```预测  |
+| cpu_threads | CPU预测时，使用CPU线程数量，默认10  |
+| precision | 预测精度，包括`fp32/fp16/int8`  |
+
+ TensorRT Python部署:
+
+首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。
+
+然后使用[paddle_inference_eval.py](./paddle_inference_eval.py)进行部署：
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=output \
+      --reader_config=configs/yoloe_reader.yml \
+      --use_trt=True \
+      --precision=int8
+```
+
+- MKLDNN预测：
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=output \
+      --reader_config=configs/yoloe_reader.yml \
+      --device=CPU \
+      --use_mkldnn=True \
+      --cpu_threads=10 \
+      --precision=int8
+```
+
+- 测试单张图片
+
+```shell
+python paddle_inference_eval.py --model_path=output --image_file=images/000000570688.jpg --use_trt=True --precision=int8
+```
+
+- C++部署
+
+进入[cpp_infer](./cpp_infer)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer/README.md)进行准备环境及编译，然后开始测试：
+```shell
+# 编译
+bash compile.sh
+# 执行
+./build/trt_run --model_file yolov7_quant/model.pdmodel --params_file yolov7_quant/model.pdiparams --run_mode=trt_int8
 ```
 
 #### 导出至ONNX使用TensorRT部署
@@ -186,26 +235,6 @@ python trt_eval.py --onnx_model_file=output/ONNX/quant_model.onnx \
 - 速度测试
 ```shell
 trtexec --onnx=output/ONNX/quant_model.onnx --avgRuns=1000 --workspace=1024 --calib=output/ONNX/calibration.cache --int8
-```
-
-#### Paddle-TensorRT部署
-- C++部署
-
-进入[cpp_infer](./cpp_infer)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer/README.md)进行准备环境及编译，然后开始测试：
-```shell
-# 编译
-bash compile.sh
-# 执行
-./build/trt_run --model_file yolov7_quant/model.pdmodel --params_file yolov7_quant/model.pdiparams --run_mode=trt_int8
-```
-
-- Python部署:
-
-首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。
-
-然后使用[paddle_trt_infer.py](./paddle_trt_infer.py)进行部署：
-```shell
-python paddle_trt_infer.py --model_path=output --image_file=images/000000570688.jpg --benchmark=True --run_mode=trt_int8
 ```
 
 ## 5.FAQ
