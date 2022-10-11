@@ -150,6 +150,94 @@ class PruneWorker(object):
 
 
 @PRUNE_WORKER.register
+class reshape2(PruneWorker):
+    def __init__(self, op, pruned_params, visited, skip_stranger):
+        super(reshape2, self).__init__(op, pruned_params, visited,
+                                       skip_stranger)
+
+    def _valied_reshap2(self, shape):
+        # case1: only reshape last several dimensions. e.g. [0,0,1,2] returns True while [1,0,0,1] returns False.
+        changed = False
+        for sh in shape:
+            if sh == 0 and changed:
+                return False
+            if sh != 0:
+                changed = True
+        return True
+
+    #NOTE: we might not need this assertion
+    def _valid_pruned_axis(self, shape, pruned_axis):
+        last_zero_index = -1
+        for i in range(shape):
+            if shape[i] == 0: last_zero_index = i
+        if pruned_axis <= last_zero_index:
+            return pruned_axis
+        elif pruned_axis > last_zero_index:
+            return pruned_axis
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        in_var = self.op.inputs("X")[0]
+        out_var = self.op.outputs("Out")[0]
+
+        in_shape = in_var.shape()
+        out_shape = out_var.shape()
+        shape = self.op.attr("shape")
+        assert self._valid_reshape2(
+            shape), "we don't support the shape {} in pruning".format(shape)
+        # assert self._valid_pruned_axis(shape, pruned_axis), "we don't support pruned axis is {} when shape is changing from {} to {}".format(pruned_axis, in_shape, out_shape)
+        if var in self.op.inputs("X"):
+            #TODO: change pruned_idx according to the new shape
+            self._visit_and_search(out_var, pruned_axis, pruned_idx)
+        elif var in self.op.outputs("Out"):
+            self._visit_and_search(in_var, pruned_axis, pruned_idx)
+
+
+@PUNER_WORKER.register
+class transpose(PruneWorker):
+    def __init__(self, op, pruned_params, visited, skip_stranger):
+        super(transpose, self).__init__(op, pruned_params, visited,
+                                        skip_stranger)
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        axis = self.op.attr('axis')
+        in_var = self.op.inputs("X")[0]
+        out_var = self.op.outputs("Out")[0]
+        if var in self.op.inputs("X"):
+            new_pruned_axis = axis[pruned_axis]
+            self._visit_and_search(out_var, new_pruned_axis, pruned_idx)
+        elif var in self.op.outputs("Out"):
+            new_pruned_axis = axis[pruned_axis]
+            self._visit_and_search(in_var, new_pruned_axis, pruned_idx)
+
+
+@PRUNE_WORKER.register
+class split(PruneWorker):
+    def __init__(self, op, pruned_params, visited, stranger):
+        super(split, self).__init__(op, pruned_params, visited, skip_stranger)
+
+    def _get_in_pruned_idx(self, i, num, pruned_idx):
+        return pruned_idx
+
+    def _get_out_pruned_idx(self, i, num, pruned_idx):
+        return pruned_idx
+
+    def _prune(self, var, pruned_axis, pruned_idx):
+        axis = self.op.attr('axis')
+        num = self.op.attr('num')
+        assert pruned_axis != axis, "the pruned axis mustn't be same as split axis"
+
+        in_var = self.op.inputs("X")[0]
+        out_vars = self.op.outputs("Out")
+        if var in self.op.inputs("X"):
+            for i, out_var in enumerate(out_vars):
+                new_pruned_idx = self._get_out_pruned_idx(i, num, pruned_idx)
+                self._visit_and_search(out_var, pruned_axis, new_pruned_idx)
+        if var in self.op.outputs("Out"):
+            new_pruned_idx = self._get_in_pruned_idx(num, pruned_idx)
+            self._visit_and_search(in_var, pruned_axis, new_pruned_idx)
+
+
+@PRUNE_WORKER.register
 class conv2d(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(conv2d, self).__init__(op, pruned_params, visited, skip_stranger)
