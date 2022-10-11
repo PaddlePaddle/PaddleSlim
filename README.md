@@ -310,6 +310,6 @@ python setup.py install
 
 - 欢迎加入PaddleSlim 微信技术交流群
 
-<div align="center">
-  <img src="https://user-images.githubusercontent.com/48054808/157800467-2a9946ad-30d1-49a9-b9db-ba33413d9c90.pn"  width = "250" />  
+ <div align="center">
+  <img src="https://user-images.githubusercontent.com/54695910/194990576-8c287d06-9543-4677-a496-5918a22c835d.png"  width = "225" height = "225" />
   </div>
