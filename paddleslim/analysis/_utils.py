@@ -91,6 +91,9 @@ def opt_model(opt="paddle_lite_opt",
         model_out = os.path.join(model_out, 'model')
     else:
         model_out = model_out + '.nb'
+    assert os.path.exists(
+        model_out
+    ), 'There is an error during \'opt\' conversion model, please check the above error message.'
     return model_out
 
 
@@ -133,7 +136,8 @@ def save_cls_model(model, input_shape, save_dir, data_type):
             batch_size=input_shape[0],
             batch_nums=1,
             weight_bits=8,
-            activation_bits=8)
+            activation_bits=8,
+            quantizable_op_type=["conv2d", "depthwise_conv2d"])
 
         model_file = os.path.join(quantize_model_path, 'model.pdmodel')
         param_file = os.path.join(quantize_model_path, 'model.pdiparams')

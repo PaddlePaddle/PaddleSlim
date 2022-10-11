@@ -99,7 +99,9 @@ def get_model_dir(model_dir, model_filename, params_filename):
     return updated_model_dir, updated_model_filename, updated_params_filename
 
 
-def load_onnx_model(model_path, disable_feedback=False):
+def load_onnx_model(model_path,
+                    disable_feedback=False,
+                    enable_onnx_checker=True):
     assert model_path.endswith(
         '.onnx'
     ), '{} does not end with .onnx suffix and cannot be loaded.'.format(
@@ -119,10 +121,16 @@ def load_onnx_model(model_path, disable_feedback=False):
             model_path), 'Not found `{}`, please check model path.'.format(
                 model_path)
         try:
-            pkg.require('x2paddle')
+            import x2paddle
+            version = x2paddle.__version__
+            v0, v1, v2 = version.split('.')
+            version_sum = int(v0) * 100 + int(v1) * 10 + int(v2)
+            if version_sum < 139:
+                _logger.error(
+                    "x2paddle>=1.3.9 is required, please use \"pip install x2paddle\"."
+                )
         except:
-            from pip._internal import main
-            main(['install', 'x2paddle'])
+            os.system('python -m pip install -U x2paddle')
         # check onnx installation and version
         try:
             pkg.require('onnx')
@@ -150,7 +158,7 @@ def load_onnx_model(model_path, disable_feedback=False):
         ) if paddle.distributed.get_world_size() > 1 else 0
         try:
             _logger.info("Now translating model from onnx to paddle.")
-            model = ONNXDecoder(model_path)
+            model = ONNXDecoder(model_path, enable_onnx_checker)
             mapper = ONNXOpMapper(model)
             mapper.paddle_graph.build()
             graph_opt = GraphOptimizer(source_frame="onnx")
@@ -222,7 +230,6 @@ def export_onnx(model_dir,
         opset_version=opset_version,
         enable_onnx_checker=True,
         deploy_backend=deploy_backend,
-        scale_file=os.path.join(model_dir, 'calibration_table.txt'),
         calibration_file=os.path.join(
             save_file_path.rstrip(os.path.split(save_file_path)[-1]),
             'calibration.cache'))

@@ -137,6 +137,7 @@ def main(args):
     # step1: load dataset config and create dataloader
     data_cfg = PaddleSegDataConfig(config['reader_config'])
     train_dataset = data_cfg.train_dataset
+    global eval_dataset
     eval_dataset = data_cfg.val_dataset
     batch_sampler = paddle.io.DistributedBatchSampler(
         train_dataset,
@@ -163,7 +164,7 @@ def main(args):
         save_dir=args.save_dir,
         config=all_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function if nranks > 1 and rank_id != 0 else None,
+        eval_callback=eval_function if rank_id == 0 else None,
         deploy_hardware=config.get('deploy_hardware') or None,
         input_shapes=config.get('input_shapes', None))
 
