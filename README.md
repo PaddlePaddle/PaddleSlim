@@ -308,8 +308,8 @@ python setup.py install
 
 - 如果你发现任何PaddleSlim存在的问题或者是建议, 欢迎通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSlim/issues)给我们提issues。
 
-- 欢迎加入PaddleSlim 微信技术交流群（添加并回复小助手“Slim”）
+- 欢迎加入PaddleSlim 微信技术交流群
 
 <div align="center">
-  <img src="docs/images/wechat_qr_code.png"  width = "250" />  
+  <img src="https://user-images.githubusercontent.com/48054808/157800467-2a9946ad-30d1-49a9-b9db-ba33413d9c90.pn"  width = "250" />  
   </div>
