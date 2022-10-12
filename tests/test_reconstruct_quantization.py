@@ -107,8 +107,8 @@ class TestRoundingOptimizer(StaticCase):
 
         self.data_loader = sample_generator_creator()
 
-        self._blocks = [['image', 'batch_norm_26.tmp_4']]
-        self._block_weights_names = [[
+        self._regions = [['image', 'batch_norm_26.tmp_4']]
+        self._region_weights_names = [[
             'conv1_weights', 'conv2_1_dw_weights', 'conv2_1_sep_weights',
             'conv2_2_dw_weights', 'conv2_2_sep_weights', 'conv3_1_dw_weights',
             'conv3_1_sep_weights', 'conv3_2_dw_weights', 'conv3_2_sep_weights',
@@ -133,10 +133,10 @@ class TestRoundingOptimizer(StaticCase):
             params_filename='params',
             batch_nums=10,
             algo='abs_max',
-            blocks=self._blocks,
-            block_weights_names=self._block_weights_names,
-            recon_grit='block-wise',
-            is_intro_act_noise=True, )
+            regions=self._regions,
+            region_weights_names=self._region_weights_names,
+            recon_level='region-wise',
+            simulate_activation_quant=True)
 
 
 if __name__ == '__main__':

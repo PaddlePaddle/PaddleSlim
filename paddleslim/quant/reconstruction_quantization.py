@@ -143,9 +143,12 @@ class ReconstructionQuantization(PostTrainingQuantization):
                 self._quantized_threshold[var_name] = \
                     np.array(self._quantized_var_avg[var_name]).mean()
             self._scale_dict = self._quantized_threshold
-        if self._algo in ["KL", "hist"]:
+
+        elif self._algo in ["KL", "hist"]:
             self._calculate_kl_hist_threshold()
             self._scale_dict = self._quantized_var_threshold
+        else:
+            self._scale_dict = self._quantized_threshold
 
     def _reconstruction(self):
         reconstruction_quanter = ReconstructionQuanter(
