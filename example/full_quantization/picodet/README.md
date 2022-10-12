@@ -23,7 +23,7 @@
 | 模型  | 策略 | mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 |  配置文件 | 模型  |
 | :-------- |:-------- |:--------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
 | PicoDet-S-NPU | Baseline | 30.1   |   -   |  -  |  -  | [config](https://github.com/PaddlePaddle/PaddleDetection/tree/develop/configs/picodet/picodet_s_416_coco_npu.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar) |
-| PicoDet-S-NPU |  量化训练 | 29.7  |   -  |   -   |  -  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/full_quantization/detection/configs/picodet_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_npu_quant.tar) |
+| PicoDet-S-NPU |  量化训练 | 29.7  |   -  |   -   |  -  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/full_quantization/picodet/configs/picodet_npu_with_postprocess.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_npu_quant.tar) |
 
 - mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
 
@@ -104,6 +104,12 @@ python run.py --config_path=./configs/picodet_npu_with_postprocess.yaml --save_d
 CUDA_VISIBLE_DEVICES=0,1,2,3
 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
           --config_path=./configs/picodet_npu_with_postprocess.yaml --save_dir='./output/'
+```
+
+- 不带后处理PicoDet模型训练：
+```
+export CUDA_VISIBLE_DEVICES=0
+python run.py --config_path=./configs/picodet_npu.yaml --save_dir='./output/'
 ```
 
 #### 3.5 测试模型精度
