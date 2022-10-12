@@ -31,7 +31,7 @@
 
 #### 3.1 准备环境
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.3
+- PaddleSlim >= 2.3.4
 - PaddleDet >= 2.4
 - opencv-python
 
@@ -67,9 +67,6 @@ pip install paddledet
 
 预测模型的格式为：`model.pdmodel` 和 `model.pdiparams`两个，带`pdmodel`的是模型文件，带`pdiparams`后缀的是权重文件。
 
-注：其他像`__model__`和`__params__`分别对应`model.pdmodel` 和 `model.pdiparams`文件。
-
-
 根据[PaddleDetection文档](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/docs/tutorials/GETTING_STARTED_cn.md#8-%E6%A8%A1%E5%9E%8B%E5%AF%BC%E5%87%BA) 导出Inference模型，具体可参考下方PicoDet-S-NPU模型的导出示例：
 - 下载代码
 ```
@@ -77,13 +74,20 @@ git clone https://github.com/PaddlePaddle/PaddleDetection.git
 ```
 - 导出预测模型
 
-PicoDet-S-NPU模型，包含NMS：如快速体验，可直接下载[PicoDet-S-NPU导出模型](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar)
+PicoDet-S-NPU模型，包含后处理：如快速体验，可直接下载[PicoDet-S-NPU导出模型](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar)
 ```shell
 python tools/export_model.py \
         -c configs/picodet/picodet_s_416_coco_npu.yml \
         -o weights=https://paddledet.bj.bcebos.com/models/picodet_s_416_coco_npu.pdparams \
 ```
 
+导出PicoDet-S-NPU不带后处理模型：
+```shell
+python tools/export_model.py \
+        -c configs/picodet/picodet_s_416_coco_npu.yml \
+        -o weights=https://paddledet.bj.bcebos.com/models/picodet_s_416_coco_npu.pdparams \
+        export.benchmark=True
+```
 
 #### 3.4 全量化并产出模型
 
@@ -92,14 +96,14 @@ python tools/export_model.py \
 - 单卡训练：
 ```
 export CUDA_VISIBLE_DEVICES=0
-python run.py --config_path=./configs/picodet_s_qat_dis.yaml --save_dir='./output/'
+python run.py --config_path=./configs/picodet_npu_with_postprocess.yaml --save_dir='./output/'
 ```
 
 - 多卡训练：
 ```
 CUDA_VISIBLE_DEVICES=0,1,2,3
 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
-          --config_path=./configs/picodet_s_qat_dis.yaml --save_dir='./output/'
+          --config_path=./configs/picodet_npu_with_postprocess.yaml --save_dir='./output/'
 ```
 
 #### 3.5 测试模型精度
@@ -107,7 +111,7 @@ python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
 使用eval.py脚本得到模型的mAP：
 ```
 export CUDA_VISIBLE_DEVICES=0
-python eval.py --config_path=./configs/picodet_s_qat_dis.yaml
+python eval.py --config_path=./configs/picodet_npu_with_postprocess.yaml
 ```
 
 **注意**：
