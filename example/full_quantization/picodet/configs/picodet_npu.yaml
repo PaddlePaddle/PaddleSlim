@@ -1,8 +1,9 @@
 Global:
   reader_config: ./configs/picodet_reader.yml
-  input_list: ['image', 'scale_factor']
+  input_list: ['image']
+  include_post_process: False
   Evaluation: True
-  model_dir: ./picodet_s_416_coco_npu/
+  model_dir: ./picodet_s_416_coco_npu
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
