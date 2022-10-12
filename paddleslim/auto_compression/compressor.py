@@ -134,6 +134,12 @@ class AutoCompression:
         if not os.path.exists(self.final_dir):
             os.makedirs(self.final_dir)
 
+        self.model_type = None
+        ### don't need to get model type if specify compress config.
+        if config is not None:
+            self.model_type = self._get_model_type(
+                self._exe, self.model_dir, model_filename, params_filename)
+
         # load config
         if isinstance(config, str):
             config = load_config(config)
@@ -161,8 +167,6 @@ class AutoCompression:
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
-        self.model_type = self._get_model_type(self._exe, self.model_dir,
-                                               model_filename, params_filename)
 
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
