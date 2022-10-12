@@ -1,4 +1,4 @@
-#   Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
+#   Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,21 +22,11 @@ import time
 
 import numpy as np
 import paddle
+
 import paddle.fluid as fluid
-import six
-try:
-    from tqdm import tqdm
-except:
-    from paddle.fluid.contrib.slim.quantization.utils import tqdm
-from inspect import isgeneratorfunction
-from paddle.fluid import io
-from paddle.fluid import core
-from paddle.fluid import reader
-from paddle.fluid import framework
-from paddle.fluid import unique_name
-from paddle.fluid.executor import global_scope, Executor
-from paddle.fluid.framework import IrGraph
 from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
+from paddle.fluid.contrib.slim.quantization import utils
+
 from ..dist import merge
 from ..core.graph_wrapper import GraphWrapper
 from ..common import get_logger
@@ -52,65 +42,14 @@ GAMMA = -0.1
 ZETA = 1.1
 
 
-def _all_persistable_var_names(program):
-    persistable_var_names = []
-    for var in program.list_vars():
-        if var.persistable:
-            persistable_var_names.append(var.name)
-    return persistable_var_names
+class Collections(object):
+    def __init__(self, **kwargs):
+        self._config = dict()
+        for k, v in kwargs.items():
+            self._config[k] = v
 
-
-def _remove_unused_var_nodes(graph):
-    all_used_vars = set()
-    ops = graph.all_op_nodes()
-    for op_node in ops:
-        for input_node in op_node.inputs:
-            all_used_vars.add(input_node)
-        for output_node in op_node.outputs:
-            all_used_vars.add(output_node)
-
-    all_used_vars = {n.node for n in all_used_vars}
-    all_unused_vars = {
-        n
-        for n in filter(
-            lambda node: node.node not in all_used_vars,
-            graph.all_var_nodes(), )
-    }
-    graph.safe_remove_nodes(all_unused_vars)
-    return graph
-
-
-def _remove_ctrl_vars(graph):
-    remove_ctr_vars = set()
-    for node in graph.all_var_nodes():
-        if node.is_ctrl_var():
-            remove_ctr_vars.add(node)
-    graph.safe_remove_nodes(remove_ctr_vars)
-    return graph
-
-
-def _apply_pass(
-        scope,
-        graph,
-        pass_name,
-        attrs=None,
-        attr_values=None,
-        debug=False, ):
-    ir_pass = core.get_pass(pass_name)
-    cpp_graph = graph.graph
-    if not cpp_graph.has('__param_scope__'):
-        cpp_graph.set_not_owned('__param_scope__', scope)
-    if attrs:
-        assert attr_values and len(attrs) == len(
-            attr_values,
-        ), "Different number of pass attributes and their values."
-        for attr, value in zip(attrs, attr_values):
-            ir_pass.set(attr, value)
-    ir_pass.apply(cpp_graph)
-    if debug:
-        graph.draw('.', 'qat_fp32_{}'.format(pass_name), graph.all_op_nodes())
-    _remove_unused_var_nodes(graph)
-    return graph
+    def _get_config(self):
+        return self._config
 
 
 class ReconstructionQuantization(PostTrainingQuantization):
@@ -120,213 +59,16 @@ class ReconstructionQuantization(PostTrainingQuantization):
     quantized variables.
     """
 
-    def __init__(
-            self,
-            executor,
-            model_dir,
-            scope=None,
-            model_filename=None,
-            params_filename=None,
-            batch_generator=None,
-            sample_generator=None,
-            data_loader=None,
-            batch_size=10,
-            batch_nums=None,
-            algo="KL",
-            hist_percent=0.99999,
-            quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
-            recon_grit='layer-wise',
-            is_intro_act_noise=False,
-            learning_rate=0.1,
-            is_full_quantize=False,
-            bias_correction=False,
-            activation_bits=8,
-            weight_bits=8,
-            activation_quantize_type='range_abs_max',
-            weight_quantize_type='channel_wise_abs_max',
-            onnx_format=False,
-            freeze_model=True,
-            optimize_model=False,
-            is_use_cache_file=False,
-            skip_tensor_list=None,
-            same_scale_tensor_list=None,
-            cache_dir=None,
-            scale_dict=None,
-            return_graph=False,
-            blocks=None,
-            block_weights_names=None,
-            epochs=20,
-            scale_trainable=False, ):
+    def __init__(self, PTQCollections, RSQCollections):
         '''
-        Constructor.
-
         Args:
-            executor(fluid.Executor): The executor to load, run and save the
-                quantized model.
-            scope(fluid.Scope, optional): The scope of the program, use it to load
-                and save variables. If scope=None, get scope by global_scope().
-            model_dir(str): The path of the fp32 model that will be quantized,
-                and the model and params files are under the path.
-            model_filename(str, optional): The name of file to load the inference
-                program. If it is None, the default filename '__model__' will
-                be used. Default is 'None'.
-            params_filename(str, optional): The name of file to load all parameters.
-                When all parameters were saved in a single binary file, set it
-                as the real filename. If parameters were saved in separate files,
-                set it as 'None'. Default is 'None'.
-            batch_generator(Python Generator): The batch generator provides
-                calibrate data for DataLoader, and it returns a batch every
-                time. Note that, sample_generator and batch_generator, only one
-                should be set. Beisdes, batch_generator supports lod tensor.
-            sample_generator(Python Generator): The sample generator provides
-                calibrate data for DataLoader, and it only returns a sample every
-                time. Note that, sample_generator and batch_generator, only one
-                should be set. Beisdes, sample_generator dose not support lod tensor.
-            data_loader(Python Generator, Paddle.io.DataLoader, optional): The
-                Generator or Dataloader provides calibrate data, and it could
-                return a batch every time.
-            batch_size(int, optional): The batch size of DataLoader. Default is 10.
-            batch_nums(int, optional): If batch_nums is not None, the number of
-                calibrate data is batch_size*batch_nums. If batch_nums is None, use
-                all data provided by sample_generator as calibrate data.
-            algo(str, optional): If algo='KL', use KL-divergenc method to
-                get the KL threshold for quantized activations and get the abs_max
-                value for quantized weights. If algo='abs_max', get the abs max
-                value for activations and weights. If algo= 'min_max', get the min
-                and max value for quantized activations and weights. If algo='avg',
-                get the average value among the max values for activations. If
-                algo= 'hist', get the value of 'hist_percent' quantile as the threshold.
-                If algo='mse', get the value which makes the quantization mse loss
-                minimal. Default is KL.
-            hist_percent(float, optional): The threshold of algo 'hist' for activations.
-                Default is 0.99999.
-            quantizable_op_type(list[str], optional): List the type of ops
-                that will be quantized. Default is ["conv2d", "depthwise_conv2d",
-                "mul"].
-            recon_grit(str, optional): The type of reconstruction granularity.
-                Currently supports ['layer-wise', 'block-wise'] types.
-            is_intro_act_noise(bool, optional): Whether the noise caused by activation
-                quantization is introduced in the reconstruction process.
-            learning_rate(float, optional): The learning rate of adaround method.
-            is_full_quantized(bool, optional): If set is_full_quantized as True,
-                apply quantization to all supported quantizable op type. If set
-                is_full_quantized as False, only apply quantization to the op type
-                according to the input quantizable_op_type.
-            bias_correction(bool, optional): If set as True, use the bias correction
-                method of https://arxiv.org/abs/1810.05723. Default is False.
-            activation_bits(int): quantization bit number for activation.
-            weight_bits(int, optional): quantization bit number for weights.
-            activation_quantize_type(str): quantization type for activation,
-                now support 'range_abs_max', 'moving_average_abs_max' and 'abs_max'.
-                This param only specifies the fake ops in saving quantized model.
-                If it is 'range_abs_max' or 'moving_average_abs_max', we save the scale
-                obtained by post training quantization in fake ops. Note that, if it
-                is 'abs_max', the scale will not be saved in fake ops.
-            weight_quantize_type(str): quantization type for weights,
-                support 'abs_max' and 'channel_wise_abs_max'. This param only specifies
-                the fake ops in saving quantized model, and we save the scale obtained
-                by post training quantization in fake ops. Compared to 'abs_max',
-                the model accuracy is usually higher when it is 'channel_wise_abs_max'.
-            onnx_format(bool): Whether to export the quantized model with format of ONNX.
-                Default is False.
-            freeze_model(bool): Whether to convert quantized and trained ``program`` to final
-                quantized ``program``. Default: True.
-            skip_tensor_list(list): List of skip quant tensor name. Default: None.
-            same_scale_tensor_list(list(list)): The list of tensor keep same scale in the outermost
-                list, the final scale about every list is the max of the scale in the list
-                of tensor. Default: None.
-            optimize_model(bool, optional): If set optimize_model as True, it applies
-                some passes to the model before quantization, and it supports
-                `conv2d/depthwise_conv2d + bn` pass so far. Some targets require the
-                weights are quantized by tensor-wise method, which means the weights
-                scale for all channel are the same. However, if fuse
-                `conv2d/depthwise_conv2d + bn`, the weights scale for all channel will
-                be different. In address this problem, fuse the pattern before
-                quantization. Default False.
-            is_use_cache_file(bool, optional): This param is deprecated.
-            cache_dir(str, optional): This param is deprecated.
-            blocks(list[list], optional): The list of some blocks, each block is subgraph of
-                fp32 program and it will have exact 1 input operation and 1 output operation.
-            block_weights_names(list[list], optional): The weight names inside every block.
+            PTQCollections(Collections): The parameters set required for post training quantization.
+            RSQCollections(Collections): The parameters set required for reconstruction quantization.    
         Returns:
             None
-
-        Examples:
-        .. code-block:: python
-            import paddle.fluid as fluid
-            from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
-
-            exe = fluid.Executor(fluid.CPUPlace())
-            model_dir = path/to/fp32_model_params
-            # set model_filename as None when the filename is __model__,
-            # otherwise set it as the real filename
-            model_filename = None
-            # set params_filename as None when all parameters were saved in
-            # separate files, otherwise set it as the real filename
-            params_filename = None
-            save_model_path = path/to/save_model_path
-            # prepare the sample generator according to the model, and the
-            # sample generator must return a sample every time. The reference
-            # document: https://www.paddlepaddle.org.cn/documentation/docs/zh
-            # /user_guides/howto/prepare_data/use_py_reader.html
-            sample_generator = your_sample_generator
-            batch_size = 10
-            batch_nums = 10
-            algo = "KL"
-            quantizable_op_type = ["conv2d", "depthwise_conv2d", "mul"]
-            rsq = ReconstructionQuantization(
-                        executor=exe,
-                        sample_generator=sample_generator,
-                        model_dir=model_dir,
-                        model_filename=model_filename,
-                        params_filename=params_filename,
-                        batch_size=batch_size,
-                        batch_nums=batch_nums,
-                        algo=algo,
-                        quantizable_op_type=quantizable_op_type)
-            rsq.quantize()
-            rsq.save_quantized_model(save_model_path)
         '''
-
-        super().__init__(
-            executor=executor,
-            model_dir=model_dir,
-            scope=scope,
-            model_filename=model_filename,
-            params_filename=params_filename,
-            batch_generator=batch_generator,
-            sample_generator=sample_generator,
-            data_loader=data_loader,
-            batch_size=batch_size,
-            batch_nums=batch_nums,
-            algo=algo,
-            hist_percent=hist_percent,
-            quantizable_op_type=quantizable_op_type,
-            learning_rate=learning_rate,
-            is_full_quantize=is_full_quantize,
-            activation_bits=activation_bits,
-            weight_bits=weight_bits,
-            activation_quantize_type=activation_quantize_type,
-            weight_quantize_type=weight_quantize_type,
-            onnx_format=onnx_format,
-            freeze_model=freeze_model,
-            optimize_model=optimize_model,
-            is_use_cache_file=is_use_cache_file,
-            skip_tensor_list=skip_tensor_list,
-            same_scale_tensor_list=same_scale_tensor_list,
-            cache_dir=cache_dir,
-            scale_dict=scale_dict,
-            return_graph=return_graph,
-            round_type='adaround', )
-
-        assert recon_grit in ['layer-wise', 'block-wise']
-        self._recon_grit = recon_grit
-        self._is_intro_act_noise = is_intro_act_noise
-        self._bias_correction = bias_correction
-        self._blocks = blocks
-        self._block_weights_names = block_weights_names
-        self._epochs = epochs
-        self._scale_trainable = scale_trainable
+        super().__init__(**PTQCollections._get_config())
+        self._config = RSQCollections._get_config()
 
     def quantize(self):
         '''
@@ -344,27 +86,41 @@ class ReconstructionQuantization(PostTrainingQuantization):
         self._set_activation_persistable()
 
         if self._algo in ["KL", "hist"]:
-            batch_id = 0
-            with tqdm(
-                    total=self._batch_nums,
-                    bar_format='Preparation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
-                    ncols=80, ) as t:
-                for data in self._data_loader():
-                    self._executor.run(
-                        program=self._program,
-                        feed=data,
-                        fetch_list=self._fetch_list,
-                        return_numpy=False,
-                        scope=self._scope, )
-                    self._collect_activation_abs_min_max()
-                    batch_id += 1
-                    t.update()
-                    if self._batch_nums and batch_id >= self._batch_nums:
-                        break
-            self._init_sampling_act_histogram()
+            self._preparation()
+        self._sampling_threshold()
+        self._calculate_threshold()
+        self._reset_activation_persistable()
+        self._reconstruction()
+        self._postprocessing()
+        if not self._return_graph:
+            return self._program
+        else:
+            main_graph = IrGraph(core.Graph(self._program.desc), for_test=True)
+            return main_graph
 
+    def _preparation(self):
         batch_id = 0
-        with tqdm(
+        with utils.tqdm(
+                total=self._batch_nums,
+                bar_format='Preparation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
+                ncols=80, ) as t:
+            for data in self._data_loader():
+                self._executor.run(
+                    program=self._program,
+                    feed=data,
+                    fetch_list=self._fetch_list,
+                    return_numpy=False,
+                    scope=self._scope, )
+                self._collect_activation_abs_min_max()
+                batch_id += 1
+                t.update()
+                if self._batch_nums and batch_id >= self._batch_nums:
+                    break
+        self._init_sampling_act_histogram()
+
+    def _sampling_threshold(self):
+        batch_id = 0
+        with utils.tqdm(
                 total=self._batch_nums,
                 bar_format='Sampling stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
                 ncols=80, ) as t:
@@ -381,19 +137,17 @@ class ReconstructionQuantization(PostTrainingQuantization):
                 if self._batch_nums and batch_id >= self._batch_nums:
                     break
 
+    def _calculate_threshold(self):
         if self._algo == 'avg':
             for var_name in self._quantized_act_var_name:
                 self._quantized_threshold[var_name] = \
                     np.array(self._quantized_var_avg[var_name]).mean()
+            self._scale_dict = self._quantized_threshold
         if self._algo in ["KL", "hist"]:
             self._calculate_kl_hist_threshold()
-        self._reset_activation_persistable()
+            self._scale_dict = self._quantized_var_threshold
 
-        if self._algo in ["KL", "hist"]:
-            scale_dict = self._quantized_var_threshold
-        else:
-            scale_dict = self._quantized_threshold
-
+    def _reconstruction(self):
         reconstruction_quanter = ReconstructionQuanter(
             data_loader=self._data_loader,
             fp32_program=self._program,
@@ -404,18 +158,19 @@ class ReconstructionQuantization(PostTrainingQuantization):
             place=self._place,
             quantized_op_pairs=self._quantized_op_pairs,
             weight_quantize_type=self._weight_quantize_type,
-            scale_dict=copy.deepcopy(scale_dict),
-            blocks=self._blocks,
-            block_weights_names=self._block_weights_names,
-            recon_grit=self._recon_grit,
-            is_intro_act_noise=self._is_intro_act_noise,
+            scale_dict=copy.deepcopy(self._scale_dict),
+            regions=self._config['regions'],
+            region_weights_names=self._config['region_weights_names'],
+            recon_level=self._config['recon_level'],
+            simulate_activation_quant=self._config['simulate_activation_quant'],
             num_iterations=self._batch_nums,
             lr=self._learning_rate,
             bias_correction=self._bias_correction,
-            epochs=self._epochs,
-            scale_trainable=self._scale_trainable, )
+            epochs=self._config['epochs'],
+            scale_trainable=self._config['scale_trainable'])
         self._program = reconstruction_quanter._run()
 
+    def _postprocessing(self):
         if self._algo is 'min_max':
             self._save_input_threhold()
         else:
@@ -446,37 +201,31 @@ class ReconstructionQuantization(PostTrainingQuantization):
                 persistables.extend(_op.input('X'))
                 _op.desc.set_input("X", persistables)
 
-        if not self._return_graph:
-            return self._program
-        else:
-            main_graph = IrGraph(core.Graph(self._program.desc), for_test=True)
-            return main_graph
-
 
 class ReconstructionQuanter(object):
-    def __init__(
-            self,
-            data_loader,
-            fp32_program,
-            feed_list,
-            fetch_list,
-            exe,
-            scope,
-            place,
-            quantized_op_pairs,
-            weight_quantize_type,
-            scale_dict,
-            blocks,
-            block_weights_names,
-            recon_grit,
-            is_intro_act_noise,
-            num_iterations=1000,
-            lr=0.1,
-            bias_correction=False,
-            epochs=20,
-            scale_trainable=False, ):
+    def __init__(self,
+                 data_loader,
+                 fp32_program,
+                 feed_list,
+                 fetch_list,
+                 exe,
+                 scope,
+                 place,
+                 quantized_op_pairs,
+                 weight_quantize_type,
+                 scale_dict,
+                 regions,
+                 region_weights_names,
+                 recon_level,
+                 simulate_activation_quant,
+                 num_iterations=1000,
+                 lr=0.1,
+                 bias_correction=False,
+                 epochs=20,
+                 scale_trainable=False,
+                 drop_prob=0.5):
         '''
-        Rounding Optimizer, used to optimize the rounding policy
+        Reconstruction Quanter, used to optimize the rounding policy
         by reconstructing the intermediate output.
 
         Args:
@@ -499,29 +248,37 @@ class ReconstructionQuanter(object):
                 the model accuracy is usually higher when it is 'channel_wise_abs_max'.
             scale_dict(dict, optional): Mapping of var's name and var's scales, where key
                 of dict is the var name, and value is the quant scales of var.
-            recon_grit(str, optional): The type of reconstruction granularity.
-                Currently supports ['layer-wise', 'block-wise'] types.
-            is_intro_act_noise(bool, optional): Whether the noise caused by activation
-                quantization is introduced in the reconstruction process.
-            blocks(list[list], optional): The list of some blocks, each block is subgraph of
-                fp32 program and it will have exact 1 input operation and 1 output operation.
-            block_weights_names(list[list], optional): The weight names inside every block.
-            lr(float, optional): The learning rate of Rounding Optimizer.
+            recon_level(str, optional): The type of reconstruction granularity.
+                Currently supports ['layer-wise', 'region-wise'] types. Default is layer-wise.
+            simulate_activation_quant(bool, optional): Whether we need the noise caused by activation 
+                quantization during the reconstruction process.
+            regions(list[list], optional): The list of some regions, each region is subgraph of
+                fp32 program and it will have exact 1 input operation and 1 output operation. When 
+                the recon-level is region, the reconstruction loss of each region is minimized.
+                Default is None.
+            region_weights_names(list[list], optional): The weight names inside every region.
+                Default is None.
+            lr(float, optional): The learning rate of Reconstruction Quanter. Default is 0.1.
             bias_correction(bool, optional): If set as True, use the bias correction
                 method of https://arxiv.org/abs/1810.05723. Default is False.
-
+            scale_trainable: Wether weight‘s scale can be train. Default is False.
+            drop_prob: The activation quantization dropping probability, and it is valid only if 
+                simulate_activation_quant is True. Default is 0.5.
         Returns:
             None
         '''
 
-        assert recon_grit in ['layer-wise', 'block-wise']
-        if recon_grit == 'block-wise':
-            assert blocks is not None, "The blocks cannot be None."
-            assert block_weights_names is not None, "The block_weights_names cannot be None."
-        self._is_intro_act_noise = is_intro_act_noise
+        assert recon_level in [
+            'layer-wise', 'region-wise'
+        ], "recon_level must be one of the ['layer-wise', 'region-wise'],but received: {}".format(
+            recon_level)
+        if recon_level == 'region-wise':
+            assert regions is not None, "The regions cannot be None."
+            assert region_weights_names is not None, "The region_weights_names cannot be None."
+        self._simulate_activation_quant = simulate_activation_quant
         self._program = fp32_program
         self._data_loader = data_loader
-        self._recon_grit = recon_grit
+        self._recon_level = recon_level
         self._feed_list = feed_list
         self._fetch_list = fetch_list
         self._exe = exe
@@ -534,18 +291,19 @@ class ReconstructionQuanter(object):
         self._num_iterations = num_iterations
         self._epochs = epochs
         self._lr = lr
-        self._blocks = blocks
-        self._block_weights_names = block_weights_names
+        self._regions = regions
+        self._region_weights_names = region_weights_names
         self._bias_correction = bias_correction
-        if self._recon_grit == 'layer-wise':
-            blocks, block_weights_names = self._get_layers()
-            self._blocks = blocks
-            self._block_weights_names = block_weights_names
+        if self._recon_level == 'layer-wise':
+            regions, region_weights_names = self._get_layers()
+            self._regions = regions
+            self._region_weights_names = region_weights_names
         self._scale_trainable = scale_trainable
+        self._drop_prob = drop_prob
 
     def _get_layers(self):
-        blocks = []
-        block_weights_names = []
+        regions = []
+        region_weights_names = []
         persistable_var_names = self._all_persistable_var_names()
         self._input_weight_pairs = {}
         for block_id in range(len(self._program.blocks)):
@@ -557,12 +315,12 @@ class ReconstructionQuanter(object):
                         self._input_weight_pairs[in_var_name] = in_var_names
                         break
         for name in self._weight_var_names:
-            block_weights_names.append([name])
-            block_ = []
-            block_.append(self._input_weight_pairs[name][0])
-            block_.append(self._quantized_op_pairs[name])
-            blocks.append(block_)
-        return blocks, block_weights_names
+            region_weights_names.append([name])
+            region_ = []
+            region_.append(self._input_weight_pairs[name][0])
+            region_.append(self._quantized_op_pairs[name])
+            regions.append(region_)
+        return regions, region_weights_names
 
     def _preprocess(self):
         data_name_map = {}
@@ -588,22 +346,22 @@ class ReconstructionQuanter(object):
                 weight_np_floor, )
         self._graph = GraphWrapper(self._student_program)
 
-        if self._is_intro_act_noise:
+        if self._simulate_activation_quant:
             self._insert_drop_quant_dequant()
         self._insert_soft_rounding()
-        self._isolate_blocks()
+        self._isolate_regions()
 
     def _run(self):
         self._preprocess()
         startup_program = paddle.static.Program()
-        for k in range(len(self._blocks)):
-            block_ = self._blocks[k]
-            names = self._block_weights_names[k]
+        for k in range(len(self._regions)):
+            region_ = self._regions[k]
+            names = self._region_weights_names[k]
             tmp_program = self._student_program.clone()
-            quant_op_out_name = block_[1]
+            quant_op_out_name = region_[1]
             with paddle.static.program_guard(tmp_program, startup_program):
-                loss_function = RecontructionQuanterLoss(tmp_program, names)
-                quant_op_out_name = block_[1]
+                loss_function = ReconstructionQuanterLoss(tmp_program, names)
+                quant_op_out_name = region_[1]
                 student_var = tmp_program.global_block().var(quant_op_out_name)
                 teacher_var = tmp_program.global_block().var("teacher_" +
                                                              quant_op_out_name)
@@ -728,7 +486,8 @@ class ReconstructionQuanter(object):
         scale = scale / bnt
         dequantized_tensor = paddle.round(x / scale) * scale
         quant_noise = x - dequantized_tensor
-        random_noise = paddle.nn.functional.dropout(quant_noise, p=0.5)
+        random_noise = paddle.nn.functional.dropout(
+            quant_noise, p=self._drop_prob)
         return x + random_noise
 
     def _insert_drop_quant_dequant(self):
@@ -897,8 +656,8 @@ class ReconstructionQuanter(object):
             else:
                 op._op._rename_input(inputs.name, out.name)
 
-    def _isolate_blocks(self):
-        starts = [block[0] for block in self._blocks]
+    def _isolate_regions(self):
+        starts = [region[0] for region in self._regions]
         var2duplications = self._duplicate_vars(starts)
         for vars_ in var2duplications.values():
             for var_ in vars_:
@@ -985,34 +744,33 @@ class ReconstructionQuanter(object):
 
 
 class ReconstructionQuanterLoss(object):
-    def __init__(
-            self,
-            program,
-            weight_block_names=None,
-            round_loss_mode='relaxation',
-            rec_loss_mode='mse',
-            beta_mode='const',
-            weight=0.1, ):
+    def __init__(self,
+                 program,
+                 weight_region_names=None,
+                 round_loss_type='relaxation',
+                 rec_loss_type='mse',
+                 beta_type='const',
+                 weight=0.1):
         """
         The loss function of Rounding Optimizer.
 
         Args:
             program(Program): The student program.
-            weight_block_names(list, optional): The weight names inside a block.
-            round_loss_mode(str): The rounding loss function mode.
-            rec_loss_mode(str): The reconstruction loss function mode.
-            beta_mode(str): The parameter beta mode.
+            weight_region_names(list, optional): The weight names inside a region.
+            round_loss_type(str): The type of rounding loss function.
+            rec_loss_type(str): The type of reconstruction loss function.
+            beta_type(str): The type of hyer-parameter beta.
         Returns:
             total_loss(Variable): The sum of rounding loss and reconstruction loss.
             rec_loss(Variable): The reconstruction loss.
             round_loss(Variable): The rounding loss.
         """
         self.program = program
-        self.round_loss_mode = round_loss_mode
+        self.round_loss_type = round_loss_type
         self.weight = weight
-        self.rec_loss_mode = rec_loss_mode
-        self.weight_block_names = weight_block_names
-        self.beta_mode = beta_mode
+        self.rec_loss_type = rec_loss_type
+        self.weight_region_names = weight_region_names
+        self.beta_type = beta_type
 
     def compute_soft_rounding(self, alpha_v):
         return paddle.clip(
@@ -1020,7 +778,7 @@ class ReconstructionQuanterLoss(object):
             1)
 
     def get_loss(self, student_tensor, teacher_tensor, scheduler):
-        if self.rec_loss_mode == 'mse':
+        if self.rec_loss_type == 'mse':
             rec_loss = paddle.nn.functional.mse_loss(
                 student_tensor,
                 teacher_tensor, )
@@ -1029,14 +787,14 @@ class ReconstructionQuanterLoss(object):
                 'Not supported reconstruction loss function: {}'.format(
                     self.rec_loss, ), )
 
-        if self.beta_mode == 'const':
+        if self.beta_type == 'const':
             self.beta = 3
         else:
             self.beta = scheduler.get_lr()
 
-        if self.round_loss_mode == 'relaxation':
+        if self.round_loss_type == 'relaxation':
             round_loss = 0.0
-            for name in self.weight_block_names:
+            for name in self.weight_region_names:
                 alpha_v = self.program.global_block().var(name + '.alpha')
                 h_v = self.compute_soft_rounding(alpha_v)
                 round_loss += self.weight * \
@@ -1045,3 +803,173 @@ class ReconstructionQuanterLoss(object):
             raise NotImplementedError
         total_loss = rec_loss + round_loss
         return total_loss, rec_loss, round_loss
+
+
+def quant_recon_static(executor,
+                       model_dir,
+                       quantize_model_path,
+                       batch_generator=None,
+                       sample_generator=None,
+                       data_loader=None,
+                       model_filename=None,
+                       params_filename=None,
+                       save_model_filename='model.pdmodel',
+                       save_params_filename='model.pdiparams',
+                       batch_size=1,
+                       batch_nums=None,
+                       scope=None,
+                       algo='hist',
+                       recon_level='layer-wise',
+                       simulate_activation_quant=False,
+                       hist_percent=0.9999,
+                       bias_correction=False,
+                       quantizable_op_type=[
+                           "conv2d",
+                           "depthwise_conv2d",
+                           "mul",
+                           "matmul",
+                           "matmul_v2",
+                       ],
+                       is_full_quantize=False,
+                       weight_bits=8,
+                       activation_bits=8,
+                       activation_quantize_type='range_abs_max',
+                       weight_quantize_type='channel_wise_abs_max',
+                       optimize_model=False,
+                       onnx_format=False,
+                       skip_tensor_list=None,
+                       is_use_cache_file=False,
+                       cache_dir="./temp_recon_quantization",
+                       regions=None,
+                       region_weights_names=None,
+                       epochs=20,
+                       scale_trainable=False,
+                       drop_prob=0.5):
+    """
+    The function utilizes static post training quantization method to
+    quantize the fp32 model. It uses calibrate data to calculate the
+    scale factor of quantized variables, and inserts fake quantization
+    and dequantization operators to obtain the quantized model.
+
+    Args:
+        executor(paddle.static.Executor): The executor to load, run and save the
+            quantized model.
+        model_dir(str): The path of fp32 model that will be quantized, and
+            the model and params that saved by ``paddle.static.io.save_inference_model``
+            are under the path.
+        quantize_model_path(str): The path to save quantized model using api
+            ``paddle.static.io.save_inference_model``.
+        batch_generator(Python Generator): The batch generator provides
+            calibrate data for DataLoader, and it returns a batch every
+            time. For sample_generator and batch_generator, only one
+            can be set. Beisdes, batch_generator supports lod tensor.
+        sample_generator(Python Generator): The sample generator provides
+            calibrate data for DataLoader, and it only returns a sample every time.
+        data_loader(Python Generator, Paddle.io.DataLoader, optional): The
+            Generator or Dataloader provides calibrate data, and it could
+            return a batch every time.
+        model_filename(str, optional): The name of model file. If parameters
+            are saved in separate files, set it as 'None'. Default: 'None'.
+        params_filename(str, optional): The name of params file.
+            When all parameters are saved in a single file, set it
+            as filename. If parameters are saved in separate files,
+            set it as 'None'. Default : 'None'.
+        save_model_filename(str): The name of model file to save the quantized inference program.  Default: 'model.pdmodel'.
+        save_params_filename(str): The name of file to save all related parameters.
+            If it is set None, parameters will be saved in separate files. Default: 'model.pdiparams'.
+        batch_size(int, optional): The batch size of DataLoader, default is 1.
+        batch_nums(int, optional): If batch_nums is not None, the number of calibrate
+            data is 'batch_size*batch_nums'. If batch_nums is None, use all data
+            generated by sample_generator  as calibrate data.
+        scope(paddle.static.Scope, optional): The scope to run program, use it to load
+            and save variables. If scope is None, will use paddle.static.global_scope().
+        algo(str, optional): If algo='KL', use KL-divergenc method to
+            get the scale factor. If algo='hist', use the hist_percent of histogram
+            to get the scale factor. If algo='mse', search for the best scale factor which
+            makes the mse loss minimal. Use one batch of data for mse is enough. If
+            algo='avg', use the average of abs_max values  to get the scale factor. If
+            algo='abs_max', use abs_max method to get the scale factor. Default: 'hist'.
+        recon_level(str, optional): The type of reconstruction granularity.
+            Currently supports ['layer-wise', 'region-wise'] types. Default is layer-wise.
+        simulate_activation_quant(bool, optional): Whether we need the noise caused by activation 
+            quantization during the reconstruction process. Default is False.
+        hist_percent(float, optional): The percentile of histogram for algo hist.Default:0.9999.
+        bias_correction(bool, optional): Bias correction method of https://arxiv.org/abs/1810.05723.
+            Default: False.
+        quantizable_op_type(list[str], optional): The list of op types
+            that will be quantized. Default: ["conv2d", "depthwise_conv2d", "mul"].
+        weight_bits(int, optional): quantization bit number for weights.
+        activation_bits(int): quantization bit number for activation.
+            activation_quantize_type(str): quantization type for activation,
+            now support 'range_abs_max', 'moving_average_abs_max' and 'abs_max'.
+            This parameter only specifies the fake ops in quantized model.
+            If it is 'range_abs_max' or 'moving_average_abs_max', we save the scale
+            obtained by post training quantization in fake ops. If it
+            is 'abs_max', the scale will not be saved in fake ops.
+        weight_quantize_type(str): quantization type for weights,
+            support 'abs_max' and 'channel_wise_abs_max'. Compared to 'abs_max',
+            the model accuracy is usually higher when using 'channel_wise_abs_max'.
+        is_full_quantize(bool): if True, apply quantization to all supported quantizable op type.
+            If False, only apply quantization to the input quantizable_op_type. Default is False.
+        optimize_model(bool, optional): If set optimize_model as True, it applies some
+            passes to optimize the model before quantization. So far, the place of
+            executor must be cpu it supports fusing batch_norm into convs.
+        onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is False.
+        skip_tensor_list(list): List of skip quant tensor name.
+        is_use_cache_file(bool): This param is deprecated.
+        cache_dir(str): This param is deprecated.
+        epochs: The number of steps in the reconstruction proces. Default is 20.
+        scale_trainable: Wether weight‘s scale can be train. Default is False.
+        drop_prob: The activation quantization dropping probability, and it is valid only if 
+            simulate_activation_quant is True. Default is 0.5.
+        regions(list[list], optional): The list of some regions, each region is subgraph of
+            fp32 program and it will have exact 1 input operation and 1 output operation. When 
+            the recon-level is region, the reconstruction loss of each region is minimized.
+            Default is None.
+        region_weights_names(list[list], optional): The weight names inside every region.
+            Default is None.
+    Returns:
+        None
+    """
+
+    PTQCollections = Collections(
+        executor=executor,
+        sample_generator=sample_generator,
+        batch_generator=batch_generator,
+        data_loader=data_loader,
+        model_dir=model_dir,
+        model_filename=model_filename,
+        params_filename=params_filename,
+        batch_size=batch_size,
+        batch_nums=batch_nums,
+        scope=scope,
+        algo=algo,
+        hist_percent=hist_percent,
+        bias_correction=bias_correction,
+        quantizable_op_type=quantizable_op_type,
+        is_full_quantize=is_full_quantize,
+        weight_bits=weight_bits,
+        activation_bits=activation_bits,
+        activation_quantize_type=activation_quantize_type,
+        weight_quantize_type=weight_quantize_type,
+        onnx_format=onnx_format,
+        skip_tensor_list=skip_tensor_list,
+        optimize_model=optimize_model,
+        round_type='adaround')
+
+    RSQCollections = Collections(
+        recon_level=recon_level,
+        simulate_activation_quant=simulate_activation_quant,
+        regions=regions,
+        region_weights_names=region_weights_names,
+        epochs=epochs,
+        scale_trainable=scale_trainable)
+
+    reconstruction_quantization = ReconstructionQuantization(
+        PTQCollections=PTQCollections, RSQCollections=RSQCollections)
+
+    reconstruction_quantization.quantize()
+    reconstruction_quantization.save_quantized_model(
+        quantize_model_path,
+        model_filename=save_model_filename,
+        params_filename=save_params_filename)
