@@ -21,7 +21,7 @@ from paddleseg.cvlibs import Config as PaddleSegDataConfig
 from paddleseg.utils import worker_init_fn
 
 from paddleslim.auto_compression import AutoCompression
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from paddleseg.core.infer import reverse_transform
 from paddleseg.utils import metrics
 
@@ -38,6 +38,11 @@ def argsparser():
         type=str,
         default=None,
         help="directory to save compressed model.")
+    parser.add_argument(
+        '--devices',
+        type=str,
+        default='gpu',
+        help="which device used to compress.")
     return parser
 
 
@@ -47,7 +52,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     loader = paddle.io.DataLoader(
         eval_dataset,
         batch_sampler=batch_sampler,
-        num_workers=1,
+        num_workers=0,
         return_list=True, )
 
     total_iters = len(loader)
@@ -123,10 +128,16 @@ def main(args):
     config = all_config["Global"]
 
     rank_id = paddle.distributed.get_rank()
-    place = paddle.CUDAPlace(rank_id)
+    if args.devices == 'gpu':
+        place = paddle.CUDAPlace(rank_id)
+        paddle.set_device('gpu')
+    else:
+        place = paddle.CPUPlace()
+        paddle.set_device('cpu')
     # step1: load dataset config and create dataloader
     data_cfg = PaddleSegDataConfig(config['reader_config'])
     train_dataset = data_cfg.train_dataset
+    global eval_dataset
     eval_dataset = data_cfg.val_dataset
     batch_sampler = paddle.io.DistributedBatchSampler(
         train_dataset,
@@ -137,7 +148,7 @@ def main(args):
         train_dataset,
         places=[place],
         batch_sampler=batch_sampler,
-        num_workers=2,
+        num_workers=0,
         return_list=True,
         worker_init_fn=worker_init_fn)
     train_dataloader = reader_wrapper(train_loader)
@@ -153,8 +164,9 @@ def main(args):
         save_dir=args.save_dir,
         config=all_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function if nranks > 1 and rank_id != 0 else None,
-        deploy_hardware=config.get('deploy_hardware') or None)
+        eval_callback=eval_function if rank_id == 0 else None,
+        deploy_hardware=config.get('deploy_hardware') or None,
+        input_shapes=config.get('input_shapes', None))
 
     # step3: start the compression job
     ac.compress()

@@ -1,0 +1,7 @@
+model_dir: ./MobileNetV3_large_x1_0_infer
+model_filename: inference.pdmodel
+params_filename: inference.pdiparams
+batch_size: 128
+data_dir: ./ILSVRC2012_data_demo/ILSVRC2012/
+img_size: 224
+resize_size: 256

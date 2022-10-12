@@ -16,7 +16,6 @@ import logging
 from ..log_helper import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
 try:
-    import parl
     from .ddpg import *
 except ImportError as e:
     pass

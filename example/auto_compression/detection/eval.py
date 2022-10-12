@@ -20,8 +20,9 @@ import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from keypoint_utils import keypoint_post_process
+from post_process import PPYOLOEPostProcess
 
 
 def argsparser():
@@ -103,6 +104,10 @@ def eval():
         if 'arch' in global_config and global_config['arch'] == 'keypoint':
             res = keypoint_post_process(data, data_input, exe, val_program,
                                         fetch_targets, outs)
+        if 'arch' in global_config and global_config['arch'] == 'PPYOLOE':
+            postprocess = PPYOLOEPostProcess(
+                score_threshold=0.01, nms_threshold=0.6)
+            res = postprocess(np.array(outs[0]), data_all['scale_factor'])
         else:
             for out in outs:
                 v = np.array(out)

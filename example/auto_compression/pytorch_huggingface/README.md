@@ -14,10 +14,7 @@
 ## 1. 简介
 飞桨模型转换工具[X2Paddle](https://github.com/PaddlePaddle/X2Paddle)支持将```Caffe/TensorFlow/ONNX/PyTorch```的模型一键转为飞桨（PaddlePaddle）的预测模型。借助X2Paddle的能力，PaddleSlim的自动压缩功能可方便地用于各种框架的推理模型。
 
-
-本示例将以[Pytorch](https://github.com/pytorch/pytorch)框架的自然语言处理模型为例，介绍如何自动压缩其他框架中的自然语言处理模型。本示例会利用[huggingface](https://github.com/huggingface/transformers)开源transformers库，将Pytorch框架模型转换为Paddle框架模型，再使用ACT自动压缩功能进行自动压缩。本示例使用的自动压缩策略为剪枝蒸馏和离线量化(```Post-training quantization```)。
-
-
+本示例将以[Pytorch](https://github.com/pytorch/pytorch)框架的自然语言处理模型为例，介绍如何自动压缩其他框架中的自然语言处理模型。本示例会利用[huggingface](https://github.com/huggingface/transformers)开源transformers库，将Pytorch框架模型转换为Paddle框架模型，再使用ACT自动压缩功能进行自动压缩。本示例使用的自动压缩策略为剪枝蒸馏和量化训练。
 
 
 ## 2. Benchmark
@@ -27,13 +24,13 @@
 | 模型 | 策略 | CoLA | MRPC | QNLI | QQP | RTE | SST2  | STSB  | AVG |
 |:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|:------:|:------:|:------:|
 | bert-base-cased | Base模型| 60.06 | 84.31 | 90.68 | 90.84 | 63.53 | 91.63  | 88.46 |  81.35  |
-| bert-base-cased |剪枝蒸馏+离线量化| 60.52 | 84.80 | 90.59 | 90.42 | 64.26 | 91.63 | 88.51 |  81.53 |
+| bert-base-cased |剪枝蒸馏+量化训练| 58.69 | 85.05 | 90.74 | 90.42 | 65.34 | 92.08 | 88.22 |  81.51 |
 
 模型在多个任务上平均精度以及加速对比如下：
 |  bert-base-cased | Accuracy（avg） | 时延(ms) | 加速比 |
 |:-------:|:----------:|:------------:| :------:|
 | 压缩前 |  81.35 | 11.60 | - |
-| 压缩后 |  81.53 | 4.83 | 2.40 |
+| 压缩后 |  81.51 | 4.83 | 2.40 |
 
 - Nvidia GPU 测试环境：
   - 硬件：NVIDIA Tesla T4 单卡
@@ -192,25 +189,39 @@ python run.py --config_path=./configs/cola.yaml  --eval True
 
 ## 4. 预测部署
 
-准备好inference模型后，可以使用```infer.py```进行预测，比如：
+量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
+
+
+- TensorRT预测：
+
+环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
+
+首先下载量化好的模型：
 ```shell
-python -u ./infer.py \
-    --task_name cola \
-    --model_name_or_path bert-base-cased \
-    --model_path ./x2paddle_cola/model \
-    --batch_size 1 \
-    --max_seq_length 128 \
-    --device gpu \
-    --use_trt \  
+wget https://bj.bcebos.com/v1/paddle-slim-models/act/x2paddle_cola_new_calib.tar
+tar -xf x2paddle_cola_new_calib.tar
 ```
 
-除需传入```task_name```任务名称，```model_name_or_path```模型名称，```model_path```保存inference模型的路径等基本参数外，还需根据预测环境传入预测参数：
-- ```device```：默认为gpu，可选为gpu, cpu, xpu
-- ```use_trt```：是否使用 TesorRT 预测引擎
-- ```int8```：是否启用```INT8```
-- ```fp16```：是否启用```FP16```
+```shell
+python paddle_inference_eval.py \
+      --model_path=x2paddle_cola_new_calib \
+      --use_trt \
+      --precision=int8 \
+      --batch_size=1
+```
+
+- MKLDNN预测：
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=x2paddle_cola_new_calib \
+      --device=cpu \
+      --use_mkldnn=True \
+      --cpu_threads=10 \
+      --batch_size=1 \
+      --precision=int8
+```
 
 
-若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
 ## 5. FAQ

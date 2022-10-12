@@ -118,7 +118,7 @@ quant_post_dynamic
 quant_post_static
 ---------------
 
-.. py:function:: paddleslim.quant.quant_post_static(executor,model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='__model__', save_params_filename='__params__', batch_size=16, batch_nums=None, scope=None, algo='KL', round_type='round', quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', onnx_format=False, skip_tensor_list=None, optimize_model=False)
+.. py:function:: paddleslim.quant.quant_post_static(executor,model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='model.pdmodel', save_params_filename='model.pdiparams', batch_size=16, batch_nums=None, scope=None, algo='KL', round_type='round', quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', onnx_format=False, skip_tensor_list=None, optimize_model=False)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
 
@@ -217,15 +217,15 @@ quant_post_static
         target_vars=[out],
         main_program=val_prog,
         executor=exe,
-        model_filename='__model__',
-        params_filename='__params__')
+        model_filename='model.pdmodel',
+        params_filename='model.pdiparams')
     quant_post_static(
         executor=exe,
         model_dir='./model_path',
         quantize_model_path='./save_path',
         sample_generator=val_reader,
-        model_filename='__model__',
-        params_filename='__params__',
+        model_filename='model.pdmodel',
+        params_filename='model.pdiparams',
         batch_size=16,
         batch_nums=10)
 

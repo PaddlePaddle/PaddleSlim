@@ -15,7 +15,7 @@ from paddlenlp.datasets import load_dataset
 from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import Mcc, PearsonAndSpearman
-from paddleslim.auto_compression.config_helpers import load_config
+from paddleslim.common import load_config
 from paddleslim.auto_compression.compressor import AutoCompression
 
 
@@ -302,8 +302,7 @@ def main():
         save_dir=args.save_dir,
         config=all_config,
         train_dataloader=train_dataloader,
-        eval_callback=eval_function
-        if 'HyperParameterOptimization' not in all_config else eval_dataloader,
+        eval_callback=eval_function,
         eval_dataloader=eval_dataloader)
 
     if not os.path.exists(args.save_dir):

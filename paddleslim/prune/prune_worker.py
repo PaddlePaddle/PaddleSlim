@@ -522,7 +522,6 @@ class depthwise_conv2d(PruneWorker):
         channel_axis = 1
         if data_format == "NHWC":
             channel_axis = 3
-
         if var == _in_var:
             assert pruned_axis == channel_axis, "The Input of conv2d can only be pruned at channel axis, but got {}".format(
                 pruned_axis)
@@ -533,7 +532,6 @@ class depthwise_conv2d(PruneWorker):
                 "repeat": repeat
             }])
             # kernel_number * groups will be pruned by reducing groups
-            self.append_pruned_vars(_filter, 1, transforms)
             self._visit_and_search(_filter, 0, transforms + [{
                 "repeat": repeat
             }])
@@ -546,14 +544,13 @@ class depthwise_conv2d(PruneWorker):
             }])
         elif var == _filter:
             assert pruned_axis == 0, "The filter of depthwise conv2d can only be pruned at axis 0."
-            self.append_pruned_vars(_filter, 1, transforms)
+            self.append_pruned_vars(_filter, 0, transforms)
             self._visit_and_search(_in_var, channel_axis, transforms)
             self._visit_and_search(_out, channel_axis, transforms)
         elif var == _out:
             assert pruned_axis == channel_axis, "The Input of conv2d can only be pruned at channel axis, but got {}".format(
                 pruned_axis)
             self.append_pruned_vars(_filter, 0, transforms)
-            self.append_pruned_vars(_filter, 1, transforms)
             self._visit_and_search(_filter, 0, transforms)
             # It will not pruning number of kernels in depthwise conv2d,
             # so it is not neccesary to search succeed operators. 

@@ -26,7 +26,7 @@
 | 模型 | 策略 | AFQMC | TNEWS | IFLYTEK | CMNLI | OCNLI | CLUEWSC2020 | CSL | AVG |
 |:------:|:------:|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|:------:|
 | PP-MiniLM | Base模型| 74.03 | 56.66 | 60.21 | 80.98 | 76.20 | 84.21 | 77.36 | 72.81 |
-| PP-MiniLM |剪枝蒸馏+离线量化| 73.56 | 56.38 | 59.87 | 80.80 | 76.44 | 82.23 | 77.77 | 72.44 |
+| PP-MiniLM |剪枝蒸馏+离线量化| 74.03 | 56.62 | 60.18 | 80.87 | 75.28 | 80.92 | 75.03 | 71.85 |
 | ERNIE 3.0-Medium | Base模型| 75.35 | 57.45 | 60.17 | 81.16 | 77.19 | 80.59 | 79.70 | 73.09 |
 | ERNIE 3.0-Medium | 剪枝+量化训练| 74.17 | 56.84 | 59.75 | 80.54 | 76.03 | 76.97 | 80.80 | 72.16 |
 
@@ -194,7 +194,41 @@ Quantization:
 
 ## 5. 预测部署
 
-- [PP-MiniLM Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/examples/model_compression/pp-minilm)
-- [ERNIE-3.0 Paddle Inference Python部署](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/model_zoo/ernie-3.0)
+量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
+
+
+- TensorRT预测：
+
+环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
+
+首先下载量化好的模型：
+```shell
+wget https://bj.bcebos.com/v1/paddle-slim-models/act/save_ppminilm_afqmc_new_calib.tar
+tar -xf save_ppminilm_afqmc_new_calib.tar
+```
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=save_ernie3_afqmc_new_cablib \
+      --model_filename=infer.pdmodel \
+      --params_filename=infer.pdiparams \
+      --task_name='afqmc' \
+      --use_trt \
+      --precision=int8
+```
+
+- MKLDNN预测：
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=save_ernie3_afqmc_new_cablib \
+      --model_filename=infer.pdmodel \
+      --params_filename=infer.pdiparams \
+      --task_name='afqmc' \
+      --device=cpu \
+      --use_mkldnn=True \
+      --cpu_threads=10 \
+      --precision=int8
+```
 
 ## 6. FAQ
