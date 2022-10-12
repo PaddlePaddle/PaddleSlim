@@ -252,10 +252,10 @@ class ReconstructionQuanter(object):
             scale_dict(dict, optional): Mapping of var's name and var's scales, where key
                 of dict is the var name, and value is the quant scales of var.
             recon_level(str, optional): The type of reconstruction granularity.
-                Currently supports ['layer-wise', 'region-wise'] types. Default is layer-wise.
+                Currently support ['layer-wise', 'region-wise'] types. Default is layer-wise.
             simulate_activation_quant(bool, optional): Whether we need the noise caused by activation 
                 quantization during the reconstruction process.
-            regions(list[list], optional): The list of some regions, each region is subgraph of
+            regions(list[list], optional): The list of some regions, each region is a subgraph of
                 fp32 program and it will have exact 1 input operation and 1 output operation. When 
                 the recon-level is region, the reconstruction loss of each region is minimized.
                 Default is None.
@@ -264,8 +264,8 @@ class ReconstructionQuanter(object):
             lr(float, optional): The learning rate of Reconstruction Quanter. Default is 0.1.
             bias_correction(bool, optional): If set as True, use the bias correction
                 method of https://arxiv.org/abs/1810.05723. Default is False.
-            scale_trainable: Wether weight‘s scale can be train. Default is False.
-            drop_prob: The activation quantization dropping probability, and it is valid only if 
+            scale_trainable: Wether weight‘s scale is trainable. Default is False.
+            drop_prob: The dropout probability of activation quantization, and it is valid only if 
                 simulate_activation_quant is True. Default is 0.5.
         Returns:
             None
@@ -762,7 +762,7 @@ class ReconstructionQuanterLoss(object):
             weight_region_names(list, optional): The weight names inside a region.
             round_loss_type(str): The type of rounding loss function.
             rec_loss_type(str): The type of reconstruction loss function.
-            beta_type(str): The type of hyer-parameter beta.
+            beta_type(str): The type of hyper-parameter beta.
         Returns:
             total_loss(Variable): The sum of rounding loss and reconstruction loss.
             rec_loss(Variable): The reconstruction loss.
@@ -893,7 +893,7 @@ def quant_recon_static(executor,
             algo='avg', use the average of abs_max values  to get the scale factor. If
             algo='abs_max', use abs_max method to get the scale factor. Default: 'hist'.
         recon_level(str, optional): The type of reconstruction granularity.
-            Currently supports ['layer-wise', 'region-wise'] types. Default is layer-wise.
+            Currently support ['layer-wise', 'region-wise'] types. Default is layer-wise.
         simulate_activation_quant(bool, optional): Whether we need the noise caused by activation 
             quantization during the reconstruction process. Default is False.
         hist_percent(float, optional): The percentile of histogram for algo hist.Default:0.9999.
@@ -922,10 +922,10 @@ def quant_recon_static(executor,
         is_use_cache_file(bool): This param is deprecated.
         cache_dir(str): This param is deprecated.
         epochs: The number of steps in the reconstruction proces. Default is 20.
-        scale_trainable: Wether weight‘s scale can be train. Default is False.
-        drop_prob: The activation quantization dropping probability, and it is valid only if 
+        scale_trainable: Wether weight‘s scale is trainable. Default is False.
+        drop_prob: The dropout probability of activation quantization, and it is valid only if 
             simulate_activation_quant is True. Default is 0.5.
-        regions(list[list], optional): The list of some regions, each region is subgraph of
+        regions(list[list], optional): The list of some regions, each region is a subgraph of
             fp32 program and it will have exact 1 input operation and 1 output operation. When 
             the recon-level is region, the reconstruction loss of each region is minimized.
             Default is None.
