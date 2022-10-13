@@ -491,7 +491,7 @@ class ReconstructionQuanter(object):
         quant_noise = x - dequantized_tensor
         random_noise = paddle.nn.functional.dropout(
             quant_noise, p=self._drop_prob)
-        return x + random_noise
+        return x - random_noise
 
     def _insert_drop_quant_dequant(self):
         for op in self._graph.ops():
