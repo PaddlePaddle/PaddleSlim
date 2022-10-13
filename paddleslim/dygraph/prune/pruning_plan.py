@@ -102,7 +102,6 @@ class PruningPlan():
             var_tmp = v.get(param_name)
             #NOTE: var_tmp.shape == [1] is used to skip variables like beta1_pow_acc in Adam optimizer. Its shape is [1] and there's no need to prune this one-value variable.
             if var_tmp is None or var_tmp.shape == [1]:
-                if var_tmp is not None: print(var_tmp.name, var_tmp.shape)
                 continue
             t_value = var_tmp.value().get_tensor()
             value = np.array(t_value).astype("float32")
@@ -208,8 +207,13 @@ class PruningPlan():
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
-
         for name, sub_layer in model.named_sublayers(include_self=True):
+            if 'reshape' in name and "layers.0" in name:
+                shape = sub_layer.__getattr__("shape")
+                shape[2] = int(shape[2] * 0.75)
+                sub_layer.__setattr__("shape", shape)
+                print("setting param: {} shape to {}".format(
+                    name, sub_layer.__getattr__("shape")))
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
                     for _mask in self._masks[param.name]:
@@ -240,9 +244,10 @@ class PruningPlan():
                                           format(param.name))
                         # save optimizer accumulators into layer buffer
                         self._buffer_opt(param.name, sub_layer, opt)
-
+                        # print('============pruned value shape============')
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims, value)
+                        # print(pruned_value.shape)
                         self._prune_opt(param.name, dims, bool_mask, opt)
 
                         p = t_value._place()

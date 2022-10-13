@@ -53,6 +53,7 @@ def l1_norm(group, values, graph):
                 "The value of tensor '{}' is not found, so it will not be used when evaluating importance of pruned structures.".
                 format(name))
             continue
+        # print('calculate scores for: {}'.format(name))
         value = values[name]
         axis = pruning_details.axis
         reduce_dims = [i for i in range(len(value.shape)) if i != axis]

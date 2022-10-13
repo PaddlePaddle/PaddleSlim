@@ -23,15 +23,22 @@ class DygraphPruningCollections(PruningCollections):
     def __init__(self, model, inputs, skip_leaves=True):
         _logger.debug("Parsing model with input: {}".format(inputs))
         # model can be in training mode, because some model contains auxiliary parameters for training.
-        program = dygraph2program(model, inputs=inputs)
+        program = dygraph2program(
+            model, inputs=inputs, dtypes=['int64'] * len(inputs))
+        # program = dygraph2program(model, inputs=inputs)
+
         graph = GraphWrapper(program)
         params = [
             _param.name
             for _param in model.parameters()
-            #TODO: support pattern: conv2d -> activation -> flatten -> fc
-            if (len(_param.shape) == 2 or len(_param.shape) == 4
-                ) and 'conv2d_26' not in _param.name
+            # if (len(_param.shape) == 2 or len(_param.shape) == 4) and 'conv2d_26' not in _param.name 
+            # if len(_param.shape) == 2 and (_param.shape[0] == 4*_param.shape[1] or _param.shape[1] == 4*_param.shape[0])
+            # if len(_param.shape) == 2 and (_param.shape[1] == 3*_param.shape[0])
+            if _param.name == 'linear_0.w_0'
+            # if len(_param.shape) == 4
         ]
+        print('=======params=======')
+        print(params)
         self._collections = self.create_pruning_collections(
             params, graph, skip_leaves=skip_leaves)
         _logger.info("Found {} collections.".format(len(self._collections)))

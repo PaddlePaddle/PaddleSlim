@@ -17,7 +17,7 @@ class L1NormFilterPruner(FilterPruner):
         super(L1NormFilterPruner, self).__init__(
             model, inputs, sen_file=sen_file, opt=opt, skip_leaves=skip_leaves)
 
-    def cal_mask(self, pruned_ratio, collection):
+    def cal_mask(self, pruned_ratio, collection, reshape=-1):
         var_name = collection.master_name
         pruned_axis = collection.master_axis
         value = collection.values[var_name]
@@ -29,6 +29,11 @@ class L1NormFilterPruner(FilterPruner):
                 if _groups is not None and _groups > 1:
                     groups = _groups
                     break
+
+        original_shape = value.shape
+        if reshape > 0:
+            k = int(value.size / value.shape[0] / reshape)
+            value = value.reshape((value.shape[0], reshape, k))
 
         reduce_dims = [i for i in range(len(value.shape)) if i != pruned_axis]
         l1norm = np.mean(np.abs(value), axis=tuple(reduce_dims))
@@ -46,4 +51,9 @@ class L1NormFilterPruner(FilterPruner):
         if groups > 1:
             mask = mask.reshape([groups, -1])
         mask[pruned_idx] = 0
+
+        if reshape is not None:
+            mask = np.repeat(mask[:, np.newaxis], k, axis=1)
+            return mask.flatten()
+
         return mask.reshape(mask_shape)

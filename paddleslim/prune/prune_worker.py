@@ -41,6 +41,8 @@ OPS_UNCHANGE_SHAPE += [
     'dropout',
     'cast',
     'hard_swish',
+    'fused_softmax_mask_upper_triangle',
+    'softmax',
     'hard_sigmoid',
 ]
 
@@ -77,24 +79,27 @@ class PruneWorker(object):
         ).split(",")
         self.skip_vars = skip_vars
 
-    def prune(self, var, pruned_axis, pruned_idx):
+    def prune(self, var, pruned_axis, transforms):
         """ 
         Infer the shape of variables related with current operator, predecessor and successor. 
         It will search the graph to find all varibles related with `var` and record the information of pruning.
         Args:
             var(Variable): The root variable of searching. It can be the input or output of current operator.
             pruned_axis(int): The axis to be pruned of root variable.
-            pruned_idx(int): The indices to be pruned in `pruned_axis` of root variable.
+            transforms(list<dict>): The transforms applied the the current variable/mask.
         """
         if var.name() in self.skip_vars:
             raise UnsupportOpError("Variable {} was skipped.".format(var.name(
             )))
+
         if self._visit(var, pruned_axis):
-            self._prune(var, pruned_axis, pruned_idx)
+            # print('pruned var: {}'.format(var))
+            self._prune(var, pruned_axis, transforms)
 
     def _visit(self, var, pruned_axis):
         key = "_".join([str(self.op.idx()), var.name()])
         key = "_".join([key, self.op.all_inputs()[0].name()])
+        # print(key, self.visited)
         if pruned_axis not in self.visited:
             self.visited[pruned_axis] = {}
         if key in self.visited[pruned_axis]:
@@ -109,16 +114,18 @@ class PruneWorker(object):
             raise UnsupportOpError("Variable {} was skipped.".format(var.name(
             )))
         pre_ops = var.inputs()
+        # print('=======pre-ops==========')
+        # print(pre_ops)
         for op in pre_ops:
             self._prune_op(op, var, axis, transforms)
         next_ops = var.outputs()
         for op in next_ops:
             self._prune_op(op, var, axis, transforms)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         raise NotImplementedError('Abstract method.')
 
-    def _prune_op(self, op, var, pruned_axis, pruned_idx, visited=None):
+    def _prune_op(self, op, var, pruned_axis, transforms, visited=None):
         if op.type().endswith("_grad"):
             return
         if visited is not None:
@@ -137,13 +144,14 @@ class PruneWorker(object):
                     op.type()))
 
         _logger.debug("\nfrom: {}\nto: {}\npruned_axis: {}; var: {}\ntrans: {}".
-                      format(self.op, op, pruned_axis, var.name(), pruned_idx))
+                      format(self.op, op, pruned_axis, var.name(), transforms))
         _logger.debug(
             f"visit {op.type()} by var [{var.name()}] on axis [{pruned_axis}];\t visited={self.visited}\n"
         )
+        # print("prune {} in recursion".format(cls))
         worker = cls(op, self.pruned_params, self.visited, self.skip_stranger)
         worker.skip_vars = self.skip_vars
-        worker.prune(var, pruned_axis, pruned_idx)
+        worker.prune(var, pruned_axis, transforms)
 
     def append_pruned_vars(self, var, axis, transforms):
         self.pruned_params.append((var, axis, transforms, self.op))
@@ -155,7 +163,7 @@ class reshape2(PruneWorker):
         super(reshape2, self).__init__(op, pruned_params, visited,
                                        skip_stranger)
 
-    def _valied_reshap2(self, shape):
+    def _valid_reshape2(self, shape):
         # case1: only reshape last several dimensions. e.g. [0,0,1,2] returns True while [1,0,0,1] returns False.
         changed = False
         for sh in shape:
@@ -175,9 +183,55 @@ class reshape2(PruneWorker):
         elif pruned_axis > last_zero_index:
             return pruned_axis
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _get_idx_after_expanding_dims(self, pruned_axis, transforms,
+                                      shorter_shape, longer_shape):
+        assert len(shorter_shape) < len(
+            longer_shape
+        ), "length of {} must be smaller than length of {}.".format(
+            shorter_shape, longer_shape)
+        # print(shorter_shape)
+        dim_old = shorter_shape[pruned_axis]
+        dim_new = longer_shape[pruned_axis]
+        k = dim_old / dim_new
+        assert k == longer_shape[
+            pruned_axis + 1], "k is {} while longer shape is {}[{}]".format(
+                k, longer_shape, pruned_axis + 1)
+        transforms = np.array(transforms, dtype='int32')
+        pruned_rows = transforms / k
+        pruned_cols = transforms % k
+        new_transforms = []
+        for row in range(dim_new):
+            prune_this_row = row in pruned_rows
+            prune_this_row = prune_this_row and (len(prued_rows) == k)
+            if prune_this_row:
+                new_transforms.append(row)
+
+        return new_transforms
+
+    def _get_idx_after_shrinking_dims(self, pruned_axis, transforms,
+                                      longer_shape, shorter_shape):
+        assert len(shorter_shape) < len(
+            longer_shape
+        ), "length of {} must be smaller than length of {}.".format(
+            shorter_shape, longer_shape)
+
+        dim_old = longer_shape[pruned_axis]
+        dim_new = shorter_shape[pruned_axis]
+        k = dim_new / dim_old
+        assert k == longer_shape[pruned_axis + 1]
+
+        new_transforms = []
+        for row in range(dim_old):
+            if row in transforms:
+                new_transforms.expand(
+                    [i for i in range(row * k, (row + 1) * k)])
+
+        return new_transforms
+
+    def _prune(self, var, pruned_axis, transforms):
         in_var = self.op.inputs("X")[0]
         out_var = self.op.outputs("Out")[0]
+        xshape_var = self.op.outputs("XShape")[0]
 
         in_shape = in_var.shape()
         out_shape = out_var.shape()
@@ -185,56 +239,50 @@ class reshape2(PruneWorker):
         assert self._valid_reshape2(
             shape), "we don't support the shape {} in pruning".format(shape)
         # assert self._valid_pruned_axis(shape, pruned_axis), "we don't support pruned axis is {} when shape is changing from {} to {}".format(pruned_axis, in_shape, out_shape)
+        self.append_pruned_vars(xshape_var, pruned_axis + 1, transforms)
         if var in self.op.inputs("X"):
-            #TODO: change pruned_idx according to the new shape
-            self._visit_and_search(out_var, pruned_axis, pruned_idx)
+            if (len(out_shape) > len(in_shape)):
+                self.op.set_attr('shape',
+                                 [0, 0, int(shape[2] * 0.75), shape[3]])
+                transform = {"squeeze": out_shape[pruned_axis + 1]}
+            elif (len(out_shape) < len(in_shape)):
+                self.op.set_attr('shape', [0, 0, int(shape[2] * 0.75)])
+                transform = {"repeat": in_shape[pruned_axis + 1]}
+            else:
+                transform = {}
+            print(self.op.attr('shape'))
+            self._visit_and_search(out_var, pruned_axis,
+                                   transforms + [transform])
         elif var in self.op.outputs("Out"):
-            self._visit_and_search(in_var, pruned_axis, pruned_idx)
+            if (len(in_shape) > len(out_shape)):
+                self.op.set_attr('shape', [0, 0, int(shape[2] * 0.75)])
+                transform = {"squeeze": in_shape[pruned_axis + 1]}
+            elif (len(in_shape) < len(in_shape)):
+                self.op.set_attr('shape',
+                                 [0, 0, int(shape[2] * 0.75), shape[3]])
+                transform = {"repeat": out_shape[pruned_axis + 1]}
+            else:
+                transform = {}
+            self._visit_and_search(in_var, pruned_axis,
+                                   transforms + [transform])
 
 
-@PUNER_WORKER.register
-class transpose(PruneWorker):
+@PRUNE_WORKER.register
+class transpose2(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
-        super(transpose, self).__init__(op, pruned_params, visited,
-                                        skip_stranger)
+        super(transpose2, self).__init__(op, pruned_params, visited,
+                                         skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         axis = self.op.attr('axis')
         in_var = self.op.inputs("X")[0]
         out_var = self.op.outputs("Out")[0]
         if var in self.op.inputs("X"):
             new_pruned_axis = axis[pruned_axis]
-            self._visit_and_search(out_var, new_pruned_axis, pruned_idx)
+            self._visit_and_search(out_var, new_pruned_axis, transforms)
         elif var in self.op.outputs("Out"):
             new_pruned_axis = axis[pruned_axis]
-            self._visit_and_search(in_var, new_pruned_axis, pruned_idx)
-
-
-@PRUNE_WORKER.register
-class split(PruneWorker):
-    def __init__(self, op, pruned_params, visited, stranger):
-        super(split, self).__init__(op, pruned_params, visited, skip_stranger)
-
-    def _get_in_pruned_idx(self, i, num, pruned_idx):
-        return pruned_idx
-
-    def _get_out_pruned_idx(self, i, num, pruned_idx):
-        return pruned_idx
-
-    def _prune(self, var, pruned_axis, pruned_idx):
-        axis = self.op.attr('axis')
-        num = self.op.attr('num')
-        assert pruned_axis != axis, "the pruned axis mustn't be same as split axis"
-
-        in_var = self.op.inputs("X")[0]
-        out_vars = self.op.outputs("Out")
-        if var in self.op.inputs("X"):
-            for i, out_var in enumerate(out_vars):
-                new_pruned_idx = self._get_out_pruned_idx(i, num, pruned_idx)
-                self._visit_and_search(out_var, pruned_axis, new_pruned_idx)
-        if var in self.op.outputs("Out"):
-            new_pruned_idx = self._get_in_pruned_idx(num, pruned_idx)
-            self._visit_and_search(in_var, pruned_axis, new_pruned_idx)
+            self._visit_and_search(in_var, new_pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -256,7 +304,7 @@ class conv2d(PruneWorker):
         return (num_channels == groups and num_channels != 1 and
                 num_filters % num_channels == 0)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         if self._is_depthwise_conv(self.op):
             _logger.debug(f"Meet conv2d who is depthwise conv2d actually.")
             worker = depthwise_conv2d(
@@ -264,7 +312,7 @@ class conv2d(PruneWorker):
                 self.pruned_params,
                 visited=self.visited,
                 skip_stranger=self.skip_stranger)
-            return worker._prune(var, pruned_axis, pruned_idx)
+            return worker._prune(var, pruned_axis, transforms)
 
         data_format = self.op.attr("data_format")
         groups = self.op.attr("groups")
@@ -275,39 +323,39 @@ class conv2d(PruneWorker):
             assert pruned_axis == channel_axis, "The Input of conv2d can only be pruned at channel axis, but got {}; var: {}".format(
                 pruned_axis, var.name())
             filter_var = self.op.inputs("Filter")[0]
-            self.append_pruned_vars(filter_var, 1, pruned_idx)
+            self.append_pruned_vars(filter_var, 1, transforms)
             if groups is None or groups == 1:
-                self._visit_and_search(filter_var, 1, pruned_idx)
+                self._visit_and_search(filter_var, 1, transforms)
 
         elif var in self.op.inputs("Filter"):
             assert pruned_axis in [0, 1]
 
-            self.append_pruned_vars(var, pruned_axis, pruned_idx)
+            self.append_pruned_vars(var, pruned_axis, transforms)
 
             if groups is None or groups == 1 or pruned_axis == 0:
-                self._visit_and_search(var, pruned_axis, pruned_idx)
+                self._visit_and_search(var, pruned_axis, transforms)
 
             if pruned_axis == 0:
                 if len(self.op.inputs("Bias")) > 0:
                     self.append_pruned_vars(
-                        self.op.inputs("Bias"), channel_axis, pruned_idx)
+                        self.op.inputs("Bias"), channel_axis, transforms)
                 output_var = self.op.outputs("Output")[0]
-                self._visit_and_search(output_var, channel_axis, pruned_idx)
+                self._visit_and_search(output_var, channel_axis, transforms)
 
             elif pruned_axis == 1:
                 input_var = self.op.inputs("Input")[0]
-                self._visit_and_search(input_var, channel_axis, pruned_idx)
+                self._visit_and_search(input_var, channel_axis, transforms)
         elif var in self.op.outputs("Output"):
             assert pruned_axis == channel_axis, "pruned_axis: {}; var: {}".format(
                 pruned_axis, var.name())
 
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 0)
-            self.append_pruned_vars(filter_var, 0, pruned_idx)
-            self._visit_and_search(filter_var, 0, pruned_idx)
+            self.append_pruned_vars(filter_var, 0, transforms)
+            self._visit_and_search(filter_var, 0, transforms)
             if len(self.op.inputs("Bias")) > 0:
                 self.append_pruned_vars(
-                    self.op.inputs("Bias")[0], channel_axis, pruned_idx)
+                    self.op.inputs("Bias")[0], channel_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -316,7 +364,7 @@ class conv2d_transpose(PruneWorker):
         super(conv2d_transpose, self).__init__(op, pruned_params, visited,
                                                skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         data_format = self.op.attr("data_format")
         channel_axis = 1
         if data_format == "NHWC":
@@ -326,8 +374,8 @@ class conv2d_transpose(PruneWorker):
                 pruned_axis, var.name())
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 0)
-            self.append_pruned_vars(filter_var, 0, pruned_idx)
-            self._visit_and_search(filter_var, 0, pruned_idx)
+            self.append_pruned_vars(filter_var, 0, transforms)
+            self._visit_and_search(filter_var, 0, transforms)
 
         elif var in self.op.inputs("Filter"):
             _logger.warn("Skip pruning output channels of conv2d_transpose!")
@@ -338,15 +386,15 @@ class conv2d_transpose(PruneWorker):
 
             filter_var = self.op.inputs("Filter")[0]
             self._visit(filter_var, 1)
-            self.append_pruned_vars(filter_var, 1, pruned_idx)
+            self.append_pruned_vars(filter_var, 1, transforms)
 
-            self._visit_and_search(filter_var, 1, pruned_idx)
+            self._visit_and_search(filter_var, 1, transforms)
 
             if len(self.op.inputs("Bias")) > 0:
                 self.append_pruned_vars(
-                    self.op.inputs("Bias")[0], channel_axis, pruned_idx)
+                    self.op.inputs("Bias")[0], channel_axis, transforms)
             output_var = self.op.outputs("Output")[0]
-            self._visit_and_search(output_var, channel_axis, pruned_idx)
+            self._visit_and_search(output_var, channel_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -355,22 +403,22 @@ class batch_norm(PruneWorker):
         super(batch_norm, self).__init__(op, pruned_params, visited,
                                          skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         if (var not in self.op.outputs("Y")) and (
                 var not in self.op.inputs("X")):
             return
 
         if var in self.op.outputs("Y"):
             in_var = self.op.inputs("X")[0]
-            self._visit_and_search(in_var, pruned_axis, pruned_idx)
+            self._visit_and_search(in_var, pruned_axis, transforms)
 
         for param in ["Scale", "Bias", "Mean", "Variance"]:
             param_var = self.op.inputs(param)[0]
-            self._visit_and_search(param_var, 0, pruned_idx)
-            self.append_pruned_vars(param_var, 0, pruned_idx)
+            self._visit_and_search(param_var, 0, transforms)
+            self.append_pruned_vars(param_var, 0, transforms)
 
         out_var = self.op.outputs("Y")[0]
-        self._visit_and_search(out_var, pruned_axis, pruned_idx)
+        self._visit_and_search(out_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -385,7 +433,7 @@ class elementwise_op(PruneWorker):
         super(elementwise_op, self).__init__(op, pruned_params, visited,
                                              skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         axis = self.op.attr("axis")
         if axis == -1:
             x = self.op.inputs("X")[0]
@@ -404,8 +452,8 @@ class elementwise_op(PruneWorker):
                 # for bias
                 if name == "Y" and actual_axis >= 0 and not (
                         len(in_var.shape()) == 1 and in_var.shape()[0] == 1):
-                    self.append_pruned_vars(in_var, actual_axis, pruned_idx)
-                self._visit_and_search(in_var, actual_axis, pruned_idx)
+                    self.append_pruned_vars(in_var, actual_axis, transforms)
+                self._visit_and_search(in_var, actual_axis, transforms)
 
         else:
             if var in self.op.inputs("X"):
@@ -419,18 +467,18 @@ class elementwise_op(PruneWorker):
 
                 if y_pruned_axis >= 0 and not (len(in_var.shape()) == 1 and
                                                in_var.shape()[0] == 1):
-                    self.append_pruned_vars(in_var, y_pruned_axis, pruned_idx)
-                    self._visit_and_search(in_var, y_pruned_axis, pruned_idx)
+                    self.append_pruned_vars(in_var, y_pruned_axis, transforms)
+                    self._visit_and_search(in_var, y_pruned_axis, transforms)
             elif var in self.op.inputs("Y"):
                 in_var = self.op.inputs("X")[0]
                 if len(in_var.shape()) != len(var.shape()):
                     assert (len(var.shape()) < len(in_var.shape()))
                     pruned_axis = pruned_axis + axis
                 if pruned_axis <= len(in_var.shape()):
-                    self._visit_and_search(in_var, pruned_axis, pruned_idx)
+                    self._visit_and_search(in_var, pruned_axis, transforms)
 
             out_var = self.op.outputs("Out")[0]
-            self._visit_and_search(out_var, pruned_axis, pruned_idx)
+            self._visit_and_search(out_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -462,13 +510,13 @@ class activation(PruneWorker):
         self.input_name = "X"
         self.output_name = "Out"
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         if var in self.op.outputs(self.output_name):
             in_var = self.op.inputs(self.input_name)[0]
-            self._visit_and_search(in_var, pruned_axis, pruned_idx)
+            self._visit_and_search(in_var, pruned_axis, transforms)
         if var in self.op.inputs(self.input_name):
             out_var = self.op.outputs(self.output_name)[0]
-            self._visit_and_search(out_var, pruned_axis, pruned_idx)
+            self._visit_and_search(out_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -477,14 +525,15 @@ class default_worker(PruneWorker):
         super(default_worker, self).__init__(op, pruned_params, visited,
                                              skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
+        # print(var.name(), pruned_axis, var.shape())
         if var in self.op.all_outputs():
             for in_var in self.op.all_inputs():
                 if len(in_var.shape()) == len(var.shape()):
-                    self._visit_and_search(in_var, pruned_axis, pruned_idx)
+                    self._visit_and_search(in_var, pruned_axis, transforms)
         for out_var in self.op.all_outputs():
             if len(out_var.shape()) == len(var.shape()):
-                self._visit_and_search(out_var, pruned_axis, pruned_idx)
+                self._visit_and_search(out_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -552,16 +601,16 @@ class sum(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(sum, self).__init__(op, pruned_params, visited, skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         if var in self.op.outputs("Out"):
             for in_var in self.op.inputs("X"):
-                self._visit_and_search(in_var, pruned_axis, pruned_idx)
+                self._visit_and_search(in_var, pruned_axis, transforms)
         elif var in self.op.inputs("X"):
             for in_var in self.op.inputs("X"):
                 if in_var != var:
-                    self._visit_and_search(in_var, pruned_axis, pruned_idx)
+                    self._visit_and_search(in_var, pruned_axis, transforms)
         out_var = self.op.outputs("Out")[0]
-        self._visit_and_search(out_var, pruned_axis, pruned_idx)
+        self._visit_and_search(out_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -576,7 +625,7 @@ class split(PruneWorker):
     def _prune(self, var, pruned_axis, transforms):
         if var == self.in_var:
             if pruned_axis != self.axis:
-                for out_var in self.out_vars:
+                for i, out_var in enumerate(self.out_vars):
                     self._visit_and_search(out_var, pruned_axis, transforms)
             else:
                 raise UnsupportOpError(
@@ -700,6 +749,7 @@ class mul(PruneWorker):
                     "repeat": repeat
                 }])
         elif var == y:
+            # print("pruned axis: {}, y_num_col_dims: {}, x_shape: {}, x_num_col_dims: {}".format(pruned_axis, y_num_col_dims, x_shape, x_num_col_dims))
             if (pruned_axis < y_num_col_dims) and (
                     1 < len(x_shape) - x_num_col_dims) and max(x_shape[
                         x_num_col_dims:]) != np.prod(y_shape[:y_num_col_dims]):
@@ -731,17 +781,24 @@ class mul(PruneWorker):
                     tile *= y_shape[i]
                 for i in range(pruned_axis + 1, y_num_col_dims):
                     repeat *= y_shape[i]
-
                 new_pruned_axis = int(np.argmax(x_shape[
                     x_num_col_dims:])) + x_num_col_dims
-                self.append_pruned_vars(x, new_pruned_axis, trans + [{
-                    "tile": tile,
-                    "repeat": repeat
-                }])
-                self._visit_and_search(x, new_pruned_axis, trans + [{
-                    "tile": tile,
-                    "repeat": repeat
-                }])
+                self.append_pruned_vars(
+                    x,
+                    # len(x_shape) - 1, trans + [{
+                    new_pruned_axis,
+                    trans + [{
+                        "tile": tile,
+                        "repeat": repeat
+                    }])
+                self._visit_and_search(
+                    x,
+                    # len(x_shape) - 1, trans + [{
+                    new_pruned_axis,
+                    trans + [{
+                        "tile": tile,
+                        "repeat": repeat
+                    }])
         elif var == out:
             if (pruned_axis == 0 and x_num_col_dims != 1) or (
                     pruned_axis == 1 and (len(y_shape) - y_num_col_dims) != 1):
@@ -763,7 +820,7 @@ class matmul(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(matmul, self).__init__(op, pruned_params, visited, skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         x = self.op.inputs("X")[0]
         y = self.op.inputs("Y")[0]
         out = self.op.outputs("Out")[0]
@@ -781,43 +838,51 @@ class matmul(PruneWorker):
         elif x_shape_len == 2 and y_shape_len == 3:
             mappings = [(0, -1, 1), (1, 1, -1), (-1, 2, 2)]
         elif x_shape_len == 3 and y_shape_len == 2:
-            mappings = [(2, 0, -1), (-1, 1, 1)]
+            mappings = [(2, 0, -1), (-1, 1, 2)]
+        elif x_shape_len == 4 and y_shape_len == 4:
+            mappings = [(1, 1, 1)]
         elif x_shape_len >= 3 and y_shape_len >= 3:
             mappings = [(x_shape_len - 2, -1, x_shape_len - 2),
                         (x_shape_len - 1, x_shape_len - 2, -1),
                         (-1, x_shape_len - 1, x_shape_len - 1)]
-
+        # print(var.name(), x.shape(), y.shape(), mappings, pruned_axis)
         if var == x:
             for x_i, y_i, out_i in mappings:
                 if pruned_axis == x_i:
                     if y_i != -1:
-                        self.append_pruned_vars(y, y_i, pruned_idx)
-                        self._visit_and_search(y, y_i, pruned_idx)
+                        if 'w_' in y.name():
+                            self.append_pruned_vars(y, y_i, transforms)
+                        self._visit_and_search(y, y_i, transforms)
+                        # print("add and prune: {}".format(y))
                     if out_i != -1:
-                        #self.append_pruned_vars(out, out_i, pruned_idx)
-                        self._visit_and_search(out, out_i, pruned_idx)
+                        self._visit_and_search(out, out_i, transforms)
+                        # print("prune: {}".format(out))
                     break
         if var == y:
             for x_i, y_i, out_i in mappings:
                 if pruned_axis == y_i:
-                    self.append_pruned_vars(var, y_i, pruned_idx)
-                    self._visit_and_search(var, y_i, pruned_idx)
-                    if x_i != -1:
-                        self.append_pruned_vars(x, x_i, pruned_idx)
-                        self._visit_and_search(x, x_i, pruned_idx)
+                    if 'w_' in var.name():
+                        self.append_pruned_vars(var, y_i, transforms)
+                        self._visit_and_search(var, y_i, transforms)
+                    # if x_i != -1:
+                    #     print("+++++++++++++", x)
+                    #     # self.append_pruned_vars(x, x_i, transforms)
+                    #     self._visit_and_search(x, x_i, transforms)
                     if out_i != -1:
-                        #self.append_pruned_vars(out, out_i, pruned_idx)
-                        self._visit_and_search(out, out_i, pruned_idx)
+                        # print("==========", out)
+                        self._visit_and_search(out, out_i, transforms)
                     break
         if var == out:
             for x_i, y_i, out_i in mappings:
                 if pruned_axis == out_i:
                     if x_i != -1:
-                        self.append_pruned_vars(x, x_i, pruned_idx)
-                        self._visit_and_search(x, x_i, pruned_idx)
+                        if 'w_' in x.name():
+                            self.append_pruned_vars(x, x_i, transforms)
+                        self._visit_and_search(x, x_i, transforms)
                     if y_i != -1:
-                        self.append_pruned_vars(y, y_i, pruned_idx)
-                        self._visit_and_search(y, y_i, pruned_idx)
+                        if 'w_' in y.name():
+                            self.append_pruned_vars(y, y_i, transforms)
+                        self._visit_and_search(y, y_i, transforms)
                     break
 
 
@@ -833,13 +898,13 @@ class scale(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(scale, self).__init__(op, pruned_params, visited, skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         if var in self.op.inputs("X"):
             out_var = self.op.outputs("Out")[0]
-            self._visit_and_search(out_var, pruned_axis, pruned_idx)
+            self._visit_and_search(out_var, pruned_axis, transforms)
         elif var in self.op.outputs("Out"):
             in_var = self.op.inputs("X")[0]
-            self._visit_and_search(in_var, pruned_axis, pruned_idx)
+            self._visit_and_search(in_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -848,10 +913,10 @@ class momentum(PruneWorker):
         super(momentum, self).__init__(op, pruned_params, visited,
                                        skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         if var in self.op.inputs("Param"):
             velocity_var = self.op.inputs("Velocity")[0]
-            self.append_pruned_vars(velocity_var, pruned_axis, pruned_idx)
+            self.append_pruned_vars(velocity_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -859,12 +924,12 @@ class adam(PruneWorker):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(adam, self).__init__(op, pruned_params, visited, skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         if var in self.op.inputs("Param"):
             moment1_var = self.op.inputs("Moment1")[0]
-            self.append_pruned_vars(moment1_var, pruned_axis, pruned_idx)
+            self.append_pruned_vars(moment1_var, pruned_axis, transforms)
             moment2_var = self.op.inputs("Moment2")[0]
-            self.append_pruned_vars(moment2_var, pruned_axis, pruned_idx)
+            self.append_pruned_vars(moment2_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -873,22 +938,22 @@ class affine_channel(PruneWorker):
         super(affine_channel, self).__init__(op, pruned_params, visited,
                                              skip_stranger)
 
-    def _prune(self, var, pruned_axis, pruned_idx):
+    def _prune(self, var, pruned_axis, transforms):
         if (var not in self.op.outputs("Out")) and (
                 var not in self.op.inputs("X")):
             return
 
         if var in self.op.outputs("Out"):
             in_var = self.op.inputs("X")[0]
-            self._visit_and_search(in_var, pruned_axis, pruned_idx)
+            self._visit_and_search(in_var, pruned_axis, transforms)
 
         for param in ["Scale", "Bias"]:
             param_var = self.op.inputs(param)[0]
-            self._visit_and_search(param_var, 0, pruned_idx)
-            self.append_pruned_vars(param_var, 0, pruned_idx)
+            self._visit_and_search(param_var, 0, transforms)
+            self.append_pruned_vars(param_var, 0, transforms)
 
         out_var = self.op.outputs("Out")[0]
-        self._visit_and_search(out_var, pruned_axis, pruned_idx)
+        self._visit_and_search(out_var, pruned_axis, transforms)
 
 
 @PRUNE_WORKER.register
@@ -898,11 +963,8 @@ class flatten_contiguous_range(PruneWorker):
                                                        visited, skip_stranger)
 
     def _prune(self, var, pruned_axis, transforms):
-
         start_axis = self.op.attr("start_axis")
         stop_axis = self.op.attr("stop_axis")
-
-        #NOTE: strict assertion: pruned axis must be C: [N, C, 1, 1]
         if var in self.op.outputs("Out"):
             out_var = self.op.outputs("Out")[0]
             in_var = self.op.inputs("X")[0]
@@ -911,6 +973,7 @@ class flatten_contiguous_range(PruneWorker):
             self._visit_and_search(in_var, pruned_axis, transforms)
 
         if var in self.op.inputs("X"):
+            # print('prune flatten: {}'.format(var))
             out_var = self.op.outputs("Out")[0]
             in_var = self.op.inputs("X")[0]
             stride = 1

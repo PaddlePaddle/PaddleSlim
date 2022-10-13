@@ -89,7 +89,9 @@ class Pruner():
         ratios = dict(zip(params, ratios))
         values = {}
         for _collection in collections:
+            # print(_collection)
             for _var_name in _collection.variables():
+                # print(_var_name)
                 var = scope.find_var(_var_name)
                 if var is not None:
                     value = np.array(var.get_tensor())
@@ -128,9 +130,9 @@ class Pruner():
                                 new_groups = int(
                                     (_groups * _filter_num - len(pruned_idx)) /
                                     _filter_num)
-                                _logger.info(
-                                    f"change groups of {op.type()}({param.name()}) from {op.attr('groups')} to {new_groups};"
-                                )
+                                # _logger.info(
+                                #     f"change groups of {op.type()}({param.name()}) from {op.attr('groups')} to {new_groups};"
+                                #  )
                                 op.set_attr("groups", new_groups)
 
                         origin_shape = copy.deepcopy(param.shape())
@@ -155,6 +157,8 @@ class Pruner():
                             pruned_idx,
                             pruned_axis=pruned_axis,
                             lazy=lazy)
+                        # if param.name() in params:
+                        # print(param.name(), pruned_param.shape)
                         param_t.set(pruned_param, place)
                     except IndexError as e:
                         _logger.error(
@@ -188,6 +192,13 @@ class Pruner():
                     for idx in src:
                         idx = idx * repeat
                         target.extend(range(idx, idx + repeat))
+                elif "squeeze" in trans:
+                    repeat = trans['repeat']
+                    targets_set = set()
+                    for idx in src:
+                        targets_set.add(idx / repeat)
+                    target = list(targets_set)
+
                 src = target
 
             ret.append((name, axis, src))
