@@ -168,14 +168,11 @@ def main():
         eval_function=eval_function,
         data_loader=ptq_data_loader,
         save_dir=config['save_dir'],
-        ptq_config=ptq_config)
+        ptq_config=ptq_config,
+        resume=True, )
 
-    # plot the boxplot of activations of quantizable weights
-    analyzer.plot_activation_distribution()
-
-    # get the rank of sensitivity of each quantized layer
-    # plot the histogram plot of best and worst activations and weights if plot_hist is True
-    analyzer.compute_quant_sensitivity(plot_hist=config['plot_hist'])
+    analyzer.statistical_analyse()
+    analyzer.metric_error_analyse()
 
     if config['get_target_quant_model']:
         if 'FastEvalDataset' in config:
