@@ -63,6 +63,7 @@ def default_idx_selector(group, scores, ratios):
     sorted_idx = score.argsort()
     ratio = ratios[name]
     pruned_num = int(round(len(sorted_idx) * ratio))
+    pruned_num = min(len(sorted_idx) - 1, pruned_num)
     pruned_idx = sorted_idx[:pruned_num]
     # convert indices of channel groups to indices of channels.
     if max_groups > 1:

@@ -4,6 +4,11 @@ save_dir: ./analysis_results
 dataset_dir: /dataset/coco/
 val_image_dir: val2017
 val_anno_path: annotations/instances_val2017.json
+# Small Dataset to accelerate analysis
+fast_val_anno_path: annotations/small_instances_val2017.json  # if not exist, please set None
+get_target_quant_model: False
+target_metric: None
+plot_hist: True
 
 PTQ:
   quantizable_op_type: ["conv2d", "depthwise_conv2d"]

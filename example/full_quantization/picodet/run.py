@@ -17,11 +17,14 @@ import sys
 import numpy as np
 import argparse
 import paddle
+from tqdm import tqdm
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
 from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
+
+from post_process import PicoDetPostProcess
 
 
 def argsparser():
@@ -61,55 +64,56 @@ def reader_wrapper(reader, input_list):
     return gen
 
 
-def convert_numpy_data(data, metric):
-    data_all = {}
-    data_all = {k: np.array(v) for k, v in data.items()}
-    if isinstance(metric, VOCMetric):
-        for k, v in data_all.items():
-            if not isinstance(v[0], np.ndarray):
-                tmp_list = []
-                for t in v:
-                    tmp_list.append(np.array(t))
-                data_all[k] = np.array(tmp_list)
-    else:
-        data_all = {k: np.array(v) for k, v in data.items()}
-    return data_all
-
-
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric = global_config['metric']
-    for batch_id, data in enumerate(val_loader):
-        data_all = convert_numpy_data(data, metric)
-        data_input = {}
-        for k, v in data.items():
-            if isinstance(global_config['input_list'], list):
+    with tqdm(
+            total=len(val_loader),
+            bar_format='Evaluation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
+            ncols=80) as t:
+        for data in val_loader:
+            data_all = {k: np.array(v) for k, v in data.items()}
+            batch_size = data_all['image'].shape[0]
+            data_input = {}
+            for k, v in data.items():
                 if k in test_feed_names:
                     data_input[k] = np.array(v)
-            elif isinstance(global_config['input_list'], dict):
-                if k in global_config['input_list'].keys():
-                    data_input[global_config['input_list'][k]] = np.array(v)
-        outs = exe.run(compiled_test_program,
-                       feed=data_input,
-                       fetch_list=test_fetch_list,
-                       return_numpy=False)
-        res = {}
-        for out in outs:
-            v = np.array(out)
-            if len(v.shape) > 1:
-                res['bbox'] = v
-            else:
-                res['bbox_num'] = v
 
-        metric.update(data_all, res)
-        if batch_id % 100 == 0:
-            print('Eval iter:', batch_id)
+            outs = exe.run(compiled_test_program,
+                           feed=data_input,
+                           fetch_list=test_fetch_list,
+                           return_numpy=False)
+            if not global_config['include_post_process']:
+                np_score_list, np_boxes_list = [], []
+                for i, out in enumerate(outs):
+                    if i < 4:
+                        np_score_list.append(
+                            np.array(out).reshape(batch_size, -1, num_classes))
+                    else:
+                        np_boxes_list.append(
+                            np.array(out).reshape(batch_size, -1, 32))
+                post_processor = PicoDetPostProcess(
+                    data_all['image'].shape[2:],
+                    data_all['im_shape'],
+                    data_all['scale_factor'],
+                    score_threshold=0.01,
+                    nms_threshold=0.6)
+                res = post_processor(np_score_list, np_boxes_list)
+            else:
+                res = {}
+                for out in outs:
+                    v = np.array(out)
+                    if len(v.shape) > 1:
+                        res['bbox'] = v
+                    else:
+                        res['bbox_num'] = v
+
+            metric.update(data_all, res)
+            t.update()
     metric.accumulate()
     metric.log()
     map_res = metric.get_results()
     metric.reset()
-    map_key = 'keypoint' if 'arch' in global_config and global_config[
-        'arch'] == 'keypoint' else 'bbox'
-    return map_res[map_key][0]
+    return map_res['bbox'][0]
 
 
 def main():
@@ -119,9 +123,9 @@ def main():
     global_config = all_config["Global"]
     reader_cfg = load_config(global_config['reader_config'])
 
-    train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
-                                        reader_cfg['worker_num'],
-                                        return_list=True)
+    train_loader = create('TrainReader')(reader_cfg['TrainDataset'],
+                                         reader_cfg['worker_num'],
+                                         return_list=True)
     train_loader = reader_wrapper(train_loader, global_config['input_list'])
 
     if 'Evaluation' in global_config.keys() and global_config[
@@ -135,23 +139,12 @@ def main():
                                           reader_cfg['worker_num'],
                                           batch_sampler=_eval_batch_sampler,
                                           return_list=True)
-        metric = None
-        if reader_cfg['metric'] == 'COCO':
-            clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
-            anno_file = dataset.get_anno()
-            metric = COCOMetric(
-                anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
-        elif reader_cfg['metric'] == 'VOC':
-            metric = VOCMetric(
-                label_list=dataset.get_label_list(),
-                class_num=reader_cfg['num_classes'],
-                map_type=reader_cfg['map_type'])
-        elif reader_cfg['metric'] == 'KeyPointTopDownCOCOEval':
-            anno_file = dataset.get_anno()
-            metric = KeyPointTopDownCOCOEval(anno_file,
-                                             len(dataset), 17, 'output_eval')
-        else:
-            raise ValueError("metric currently only supports COCO and VOC.")
+        global num_classes
+        num_classes = reader_cfg['num_classes']
+        clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
+        anno_file = dataset.get_anno()
+        metric = COCOMetric(
+            anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
         global_config['metric'] = metric
     else:
         eval_func = None
