@@ -47,6 +47,17 @@ def argsparser():
         '--round_type', type=str, default='adaround', help="round type.")
     parser.add_argument('--gpu', type=int, default=0, help='gpu index')
 
+    parser.add_argument(
+        '--recon_level',
+        type=str,
+        default='layer-wise',
+        help='reconstruction level')
+    parser.add_argument(
+        '--simulate_activation_quant',
+        type=bool,
+        default=False,
+        help='simulate activation quant')
+
     return parser
 
 
@@ -89,13 +100,14 @@ def main():
         bias_correction=False,
         onnx_format=False,
         weight_quantize_type='channel_wise_abs_max',
-        recon_level='region-wise',
-        simulate_activation_quant=False,
+        recon_level=FLAGS.recon_level,
+        simulate_activation_quant=FLAGS.simulate_activation_quant,
         regions=config['regions'],
         region_weights_names=config['region_weights_names'],
         skip_tensor_list=config['skip_tensor_list']
         if 'skip_tensor_list' in config else None,
-        epochs=40)
+        epochs=20,
+        lr=0.1)
 
 
 if __name__ == '__main__':
