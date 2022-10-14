@@ -92,11 +92,7 @@ class ReconstructionQuantization(PostTrainingQuantization):
         self._reset_activation_persistable()
         self._reconstruction()
         self._postprocessing()
-        if not self._return_graph:
-            return self._program
-        else:
-            main_graph = IrGraph(core.Graph(self._program.desc), for_test=True)
-            return main_graph
+        return self._program
 
     def _preparation(self):
         batch_id = 0
