@@ -180,8 +180,7 @@ class ReconstructionQuantization(PostTrainingQuantization):
             self._update_program()
 
         # save out_threshold for quantized ops.
-        if not self.FLAG:
-            self._save_output_threshold()
+        self._save_output_threshold()
 
         if any(op_type in self._quantizable_op_type
                for op_type in self._dynamic_quantize_op_type):
