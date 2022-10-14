@@ -167,7 +167,7 @@ class ReconstructionQuantization(PostTrainingQuantization):
             recon_level=self._config['recon_level'],
             simulate_activation_quant=self._config['simulate_activation_quant'],
             num_iterations=self._batch_nums,
-            lr=self._learning_rate,
+            lr=self._config['lr'],
             bias_correction=self._bias_correction,
             epochs=self._config['epochs'],
             scale_trainable=self._config['scale_trainable'])
@@ -847,7 +847,8 @@ def quant_recon_static(executor,
                        region_weights_names=None,
                        epochs=20,
                        scale_trainable=False,
-                       drop_prob=0.5):
+                       drop_prob=0.5,
+                       lr=0.1):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -966,7 +967,8 @@ def quant_recon_static(executor,
         regions=regions,
         region_weights_names=region_weights_names,
         epochs=epochs,
-        scale_trainable=scale_trainable)
+        scale_trainable=scale_trainable,
+        lr=lr)
 
     reconstruction_quantization = ReconstructionQuantization(
         PTQCollections=PTQCollections, RSQCollections=RSQCollections)
