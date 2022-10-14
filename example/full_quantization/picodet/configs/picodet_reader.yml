@@ -7,18 +7,27 @@ TrainDataset:
   !COCODataSet
     image_dir: train2017
     anno_path: annotations/instances_train2017.json
-    dataset_dir: /paddle/dataset/coco/
+    dataset_dir: dataset/coco/
 
 EvalDataset:
   !COCODataSet
     image_dir: val2017
     anno_path: annotations/instances_val2017.json
-    dataset_dir: /paddle/dataset/coco/
+    dataset_dir: dataset/coco/
 
-worker_num: 6
+worker_num: 0
 eval_height: &eval_height 416
 eval_width: &eval_width 416
 eval_size: &eval_size [*eval_height, *eval_width]
+
+TrainReader:
+  sample_transforms:
+  - Decode: {}
+  - Resize: {interp: 2, target_size: *eval_size, keep_ratio: False}
+  - NormalizeImage: {mean: [0, 0, 0], std: [1, 1, 1], is_scale: True}
+  - Permute: {}
+  batch_size: 8
+  shuffle: false
 
 EvalReader:
   sample_transforms:
@@ -26,7 +35,5 @@ EvalReader:
   - Resize: {interp: 2, target_size: *eval_size, keep_ratio: False}
   - NormalizeImage: {mean: [0, 0, 0], std: [1, 1, 1], is_scale: True}
   - Permute: {}
-  batch_transforms:
-  - PadBatch: {pad_to_stride: 32}
-  batch_size: 8
+  batch_size: 1
   shuffle: false
