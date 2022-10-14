@@ -208,7 +208,7 @@ class PruningPlan():
         on one dimension.
         """
         for name, sub_layer in model.named_sublayers(include_self=True):
-            if 'reshape' in name and "layers.0" in name:
+            if 'reshape' in name:
                 shape = sub_layer.__getattr__("shape")
                 shape[2] = int(shape[2] * 0.75)
                 sub_layer.__setattr__("shape", shape)

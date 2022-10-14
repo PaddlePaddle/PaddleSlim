@@ -34,7 +34,10 @@ class DygraphPruningCollections(PruningCollections):
             # if (len(_param.shape) == 2 or len(_param.shape) == 4) and 'conv2d_26' not in _param.name 
             # if len(_param.shape) == 2 and (_param.shape[0] == 4*_param.shape[1] or _param.shape[1] == 4*_param.shape[0])
             # if len(_param.shape) == 2 and (_param.shape[1] == 3*_param.shape[0])
-            if _param.name == 'linear_0.w_0'
+            # if _param.name == 'linear_0.w_0'
+            if len(_param.shape) == 2 and (_param.shape[1] == 4 * _param.shape[
+                0]) or (len(_param.shape) == 2 and (_param.shape[1] == 3 *
+                                                    _param.shape[0]))
             # if len(_param.shape) == 4
         ]
         print('=======params=======')

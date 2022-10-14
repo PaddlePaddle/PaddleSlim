@@ -21,6 +21,11 @@ class L1NormFilterPruner(FilterPruner):
         var_name = collection.master_name
         pruned_axis = collection.master_axis
         value = collection.values[var_name]
+
+        if value.shape[1] == 3 * value.shape[0]:
+            reshape = reshape
+        else:
+            reshape = -1
         groups = 1
         for _detail in collection.all_pruning_details():
             assert (isinstance(_detail.axis, int))
@@ -52,7 +57,7 @@ class L1NormFilterPruner(FilterPruner):
             mask = mask.reshape([groups, -1])
         mask[pruned_idx] = 0
 
-        if reshape is not None:
+        if reshape != -1:
             mask = np.repeat(mask[:, np.newaxis], k, axis=1)
             return mask.flatten()
 
