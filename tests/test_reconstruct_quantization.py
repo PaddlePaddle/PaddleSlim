@@ -138,6 +138,25 @@ class TestRoundingOptimizer(StaticCase):
             recon_level='region-wise',
             simulate_activation_quant=True)
 
+    def test_qdrop(self):
+        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
+        ) else paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
+        quant_recon_static(
+            exe,
+            './test_rounding_optimizer',
+            quantize_model_path='rsq_out',
+            sample_generator=self.data_loader,
+            model_filename='model',
+            params_filename='params',
+            batch_nums=10,
+            algo='KL',
+            regions=self._regions,
+            region_weights_names=self._region_weights_names,
+            recon_level='layer-wise',
+            simulate_activation_quant=True,
+            bias_correction=True)
+
 
 if __name__ == '__main__':
     unittest.main()
