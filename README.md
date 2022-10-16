@@ -182,6 +182,9 @@ git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
 python setup.py install
 ```
 
+### 验证安装
+
+安装完成后您可以使用 python 或 python3 进入 python 解释器，输入import paddleslim, 没有报错则说明安装成功。
 
 ### 快速开始
 
