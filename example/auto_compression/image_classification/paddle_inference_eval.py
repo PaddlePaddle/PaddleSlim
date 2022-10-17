@@ -172,9 +172,9 @@ class Predictor(object):
                 crop_size=args.img_size,
                 resize_size=args.resize_size)
         else:
-            image = np.ones(
-                (1, 3, args.img_size, args.img_size)).astype(np.float32)
-            label = None
+            image = np.ones((args.batch_size, 3, args.img_size,
+                             args.img_size)).astype(np.float32)
+            label = [[None]] * args.batch_size
             val_loader = [[image, label]]
         results = []
         input_names = self.paddle_predictor.get_input_names()

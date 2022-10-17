@@ -207,21 +207,21 @@ ac.compress()
   - 测试FP32模型的速度
 
     ```
-    python ./image_classification/infer.py
+    python ./image_classification/paddle_inference_eval.py --model_path='./MobileNetV1_infer' --use_gpu=True --use_trt=True
     ### using tensorrt FP32    batch size: 1 time(ms): 0.6140608787536621
     ```
 
   - 测试FP16模型的速度
 
     ```
-    python ./image_classification/infer.py --use_fp16=True
+    python ./image_classification/paddle_inference_eval.py --model_path='./MobileNetV1_infer' --use_gpu=True --use_trt=True --use_fp16=True
     ### using tensorrt FP16    batch size: 1 time(ms): 0.5795984268188477
     ```
 
   - 测试INT8模型的速度
 
     ```
-    python ./image_classification/infer.py --model_dir=./MobileNetV1_quant/ --use_int8=True
+    python ./image_classification/paddle_inference_eval.py --model_path='./MobileNetV1_quant/' --use_gpu=True --use_trt=True --use_int8=True
     ### using tensorrt INT8 batch size: 1 time(ms): 0.5213963985443115
     ```
 
