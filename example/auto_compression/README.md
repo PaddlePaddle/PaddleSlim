@@ -33,7 +33,7 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 * 🔥 **2022.8.22 晚 19:00～20:00**，PaddleSlim自动压缩**YOLO系列直播课**，欢迎大家扫码进入直播技术交流群。
 
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/196075814-726b9a29-8a6b-4775-b967-685df7d69e8e.png" width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/196076179-f6de2472-6a5b-439b-90d4-4d4180e3daeb.png" width = "225" height = "225" />
   </div>
 
 ## **特性**
