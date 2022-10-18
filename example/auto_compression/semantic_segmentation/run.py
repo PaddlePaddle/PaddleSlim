@@ -63,7 +63,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     print("Start evaluating (total_samples: {}, total_iters: {})...".format(
         len(eval_dataset), total_iters))
 
-    for iter, (image, label) in enumerate(loader):
+    for iters, (image, label) in enumerate(loader):
         paddle.enable_static()
 
         label = np.array(label).astype('int64')
@@ -97,6 +97,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         intersect_area_all = intersect_area_all + intersect_area
         pred_area_all = pred_area_all + pred_area
         label_area_all = label_area_all + label_area
+        if iters % 100 == 0:
+            print("Eval iter:", iters)
 
     class_iou, miou = metrics.mean_iou(intersect_area_all, pred_area_all,
                                        label_area_all)
@@ -113,11 +115,11 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     return miou
 
 
-def reader_wrapper(reader):
+def reader_wrapper(reader, input_name):
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.array(data[0])
-            yield {"x": imgs}
+            yield {input_name: imgs}
 
     return gen
 
@@ -139,9 +141,10 @@ def main(args):
     train_dataset = data_cfg.train_dataset
     global eval_dataset
     eval_dataset = data_cfg.val_dataset
+    batch_size = config.get('batch_size')
     batch_sampler = paddle.io.DistributedBatchSampler(
         train_dataset,
-        batch_size=data_cfg.batch_size,
+        batch_size=batch_size if batch_size else data_cfg.batch_size,
         shuffle=True,
         drop_last=True)
     train_loader = paddle.io.DataLoader(
@@ -151,7 +154,7 @@ def main(args):
         num_workers=0,
         return_list=True,
         worker_init_fn=worker_init_fn)
-    train_dataloader = reader_wrapper(train_loader)
+    train_dataloader = reader_wrapper(train_loader, config['input_name'])
 
     nranks = paddle.distributed.get_world_size()
     rank_id = paddle.distributed.get_rank()
