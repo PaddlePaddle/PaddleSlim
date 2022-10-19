@@ -28,7 +28,7 @@ from ppocr.losses import build_loss
 from ppocr.optimizer import build_optimizer
 from ppocr.postprocess import build_post_process
 from ppocr.metrics import build_metric
-
+from paddleslim.common.dataloader import get_feed_vars
 logger = get_logger(__name__, level=logging.INFO)
 
 
@@ -131,6 +131,9 @@ def main():
         all_config['TrainConfig']['learning_rate']['T_max'] = steps
         print('total training steps:', steps)
 
+    global_config['input_name'] = get_feed_vars(
+        global_config['model_dir'], global_config['model_filename'],
+        global_config['params_filename'])
     ac = AutoCompression(
         model_dir=global_config['model_dir'],
         model_filename=global_config['model_filename'],

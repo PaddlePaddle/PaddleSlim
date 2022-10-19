@@ -27,6 +27,7 @@ from paddle.io import DataLoader
 from imagenet_reader import ImageNetDataset
 from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
+from paddleslim.common.dataloader import get_feed_vars
 
 
 def argsparser():
@@ -175,6 +176,9 @@ def main():
         shuffle=True,
         drop_last=True,
         num_workers=0)
+    global_config['input_name'] = get_feed_vars(
+        global_config['model_dir'], global_config['model_filename'],
+        global_config['params_filename'])
     train_dataloader = reader_wrapper(train_loader, global_config['input_name'])
 
     ac = AutoCompression(

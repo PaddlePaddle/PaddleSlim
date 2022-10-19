@@ -1,5 +1,4 @@
 Global:
-  input_name: x
   reader_config: configs/dataset/cityscapes_1024x512_scale1.0.yml
   model_dir: ./RES-paddle2-HRNetW18-Seg
   model_filename: model

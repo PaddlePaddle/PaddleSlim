@@ -18,12 +18,12 @@ import random
 import paddle
 import numpy as np
 from paddleseg.cvlibs import Config as PaddleSegDataConfig
-from paddleseg.utils import worker_init_fn
+from paddleseg.utils import worker_init_fn, metrics
+from paddleseg.core.infer import reverse_transform
 
 from paddleslim.auto_compression import AutoCompression
 from paddleslim.common import load_config as load_slim_config
-from paddleseg.core.infer import reverse_transform
-from paddleseg.utils import metrics
+from paddleslim.common.dataloader import get_feed_vars
 
 
 def argsparser():
@@ -154,7 +154,10 @@ def main(args):
         num_workers=0,
         return_list=True,
         worker_init_fn=worker_init_fn)
-    train_dataloader = reader_wrapper(train_loader, config['input_name'])
+
+    input_name = get_feed_vars(config['model_dir'], config['model_filename'],
+                               config['params_filename'])
+    train_dataloader = reader_wrapper(train_loader, input_name)
 
     nranks = paddle.distributed.get_world_size()
     rank_id = paddle.distributed.get_rank()
