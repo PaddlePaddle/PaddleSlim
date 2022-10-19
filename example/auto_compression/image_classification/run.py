@@ -58,6 +58,9 @@ def argsparser():
 
 # yapf: enable
 def reader_wrapper(reader, input_name):
+    if isinstance(input_name, list) and len(input_name) == 1:
+        input_name = input_name[0]
+
     def gen():
         for i, (imgs, label) in enumerate(reader()):
             yield {input_name: imgs}

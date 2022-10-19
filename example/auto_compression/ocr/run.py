@@ -54,6 +54,9 @@ def argsparser():
 
 
 def reader_wrapper(reader, input_name):
+    if isinstance(input_name, list) and len(input_name) == 1:
+        input_name = input_name[0]
+
     def gen():
         for i, batch in enumerate(reader()):
             yield {input_name: batch[0]}

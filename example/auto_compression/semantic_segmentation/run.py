@@ -116,6 +116,9 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 
 
 def reader_wrapper(reader, input_name):
+    if isinstance(input_name, list) and len(input_name) == 1:
+        input_name = input_name[0]
+
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.array(data[0])
