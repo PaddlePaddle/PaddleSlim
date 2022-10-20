@@ -46,7 +46,8 @@
 
 #### 3.1 准备环境
 - PaddlePaddle >= 2.3.2版本 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)根据相应环境的安装指令进行安装）
-- PaddleSlim develop 版本
+- PaddleSlim >= 2.3.3版本
+- x2paddle == 1.3.8
 
 （1）安装paddlepaddle
 ```
@@ -56,11 +57,15 @@ pip install paddlepaddle==2.3.2
 python -m pip install paddlepaddle-gpu==2.3.2.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
-（2）安装paddleslim>=2.3.3：
+（2）安装paddleslim>=2.3.3
 ```shell
 pip install paddleslim==2.3.3
 ```
 
+（3）安装 x2paddle==1.3.8
+```shell
+pip install x2paddle==1.3.8
+```
 
 #### 3.2 准备数据集
 
