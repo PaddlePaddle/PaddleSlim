@@ -383,8 +383,9 @@ class ReconstructionQuanter(object):
             self._exe.run(startup_program)
             start_time = time.time()
             prev_start_time = start_time
+            loader = self._data_loader()
             for epoch in range(self._epochs):
-                for i, data in enumerate(self._data_loader()):
+                for i, data in enumerate(loader):
                     prev_start_time = start_time
                     start_time = time.time()
                     out = self._exe.run(
