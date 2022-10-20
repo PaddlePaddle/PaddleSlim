@@ -24,6 +24,8 @@ Quantization:
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
+  - matmul
+  - matmul_v2
   weight_bits: 8
 
 TrainConfig:

@@ -33,11 +33,6 @@ def argsparser():
         type=str,
         default='./image_classification/configs/eval.yaml',
         help="path of compression strategy config.")
-    parser.add_argument(
-        '--model_dir',
-        type=str,
-        default='./MobileNetV1_infer',
-        help='model directory')
     return parser
 
 
@@ -92,6 +87,8 @@ def eval():
                 acc_num += 1
         top_5 = float(acc_num) / len(label)
         results.append([top_1, top_5])
+        if batch_id % 100 == 0:
+            print('Eval iter:', batch_id)
     result = np.mean(np.array(results), axis=0)
     return result[0]
 
@@ -103,8 +100,6 @@ def main(args):
 
     global data_dir
     data_dir = global_config['data_dir']
-    if args.model_dir != global_config['model_dir']:
-        global_config['model_dir'] = args.model_dir
 
     global img_size, resize_size
     img_size = int(global_config[
