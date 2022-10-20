@@ -15,16 +15,33 @@
 from collections import namedtuple
 
 __all__ = [
-    "BaseStrategy", "Quantization", "Distillation", "MultiTeacherDistillation",
-    "HyperParameterOptimization", "ChannelPrune", "UnstructurePrune",
-    "TransformerPrune", "ASPPrune", "merge_config", "ProgramInfo",
-    "TrainConfig", "SUPPORTED_CONFIG", "TRAIN_CONFIG_NAME", "QuantPost"
+    "BaseStrategy",
+    "Quantization",
+    "Distillation",
+    "MultiTeacherDistillation",
+    "HyperParameterOptimization",
+    "ChannelPrune",
+    "UnstructurePrune",
+    "TransformerPrune",
+    "ASPPrune",
+    "merge_config",
+    "ProgramInfo",
+    "TrainConfig",
+    "SUPPORTED_CONFIG",
+    "TRAIN_CONFIG_NAME",
+    "QuantPost",
 ]
 
 SUPPORTED_CONFIG = [
-    "Quantization", "Distillation", "MultiTeacherDistillation",
-    "HyperParameterOptimization", "ChannelPrune", "UnstructurePrune",
-    "TransformerPrune", "ASPPrune", "QuantPost"
+    "Quantization",
+    "Distillation",
+    "MultiTeacherDistillation",
+    "HyperParameterOptimization",
+    "ChannelPrune",
+    "UnstructurePrune",
+    "TransformerPrune",
+    "ASPPrune",
+    "QuantPost",
 ]
 
 TRAIN_CONFIG_NAME = "TrainConfig"
