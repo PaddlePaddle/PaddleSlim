@@ -24,6 +24,7 @@ from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 from keypoint_utils import keypoint_post_process
 from post_process import PPYOLOEPostProcess
+from paddleslim.common.dataloader import get_feed_vars
 
 
 def argsparser():
@@ -134,6 +135,9 @@ def main():
     train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
                                         reader_cfg['worker_num'],
                                         return_list=True)
+    global_config['input_list'] = get_feed_vars(
+        global_config['model_dir'], global_config['model_filename'],
+        global_config['params_filename'])
     train_loader = reader_wrapper(train_loader, global_config['input_list'])
 
     if 'Evaluation' in global_config.keys() and global_config[
