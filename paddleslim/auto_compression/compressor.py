@@ -26,6 +26,7 @@ import paddle
 import itertools
 import paddle.distributed.fleet as fleet
 from ..quant.quanter import convert, quant_post
+from ..quant.reconstruction_quantization import quant_recon_static
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
 from ..common.patterns import get_patterns
@@ -333,6 +334,7 @@ class AutoCompression:
         for strategy_c in strategy_config:
             quant_config = strategy_c.get("Quantization", None)
             hpo_config = strategy_c.get("HyperParameterOptimization", None)
+            ptq_config = strategy_c.get("QuantPost", None)
             prune_config = strategy_c.get("ChannelPrune", None)
             asp_config = strategy_c.get("ASPPrune", None)
             transformer_prune_config = strategy_c.get("TransformerPrune", None)
@@ -383,10 +385,10 @@ class AutoCompression:
                                  self._distill_config))
 
             ### case5: quant_config & hpo_config ==> PTQ & HPO
-            if quant_config is not None and hpo_config is not None:
+            if ptq_config is not None and hpo_config is not None:
                 only_distillation = False
                 strategy.append('ptq_hpo')
-                config.append(merge_config(quant_config, hpo_config))
+                config.append(merge_config(ptq_config, hpo_config))
 
             ### case6: quant_config & distill config ==> QAT & Distill
             if quant_config is not None and self._distill_config is not None and 'ptq_hpo' not in strategy:
@@ -402,6 +404,11 @@ class AutoCompression:
                 else:
                     strategy.append('multi_teacher_dis')
                     config.append(multi_teacher_distill_config)
+
+            ### case8: qtp_config
+            if ptq_config is not None:
+                strategy.append('quant_post')
+                config.append(ptq_config)
 
         ### NOTE: keep quantation in the last step
         idx = -1
@@ -494,10 +501,12 @@ class AutoCompression:
 
         self._quant_config = None
         ### add quant_aware program, quant always is last step
+        #'''
         if 'qat' in strategy:
             train_program_info, test_program_info, self._quant_config = build_quant_program(
                 self._exe, self._places, config_dict, train_program_info,
                 test_program_info)
+        #'''
         if train_config.sparse_model:
             from ..prune.unstructured_pruner import UnstructuredPruner
             # NOTE: The initialization parameter of this pruner doesn't work, it is only used to call the 'set_static_masks' function
@@ -562,6 +571,7 @@ class AutoCompression:
         config = None
         train_config = None
         strategy_idx = None
+        self.final_metric = -1.0
         for strategy_idx, (
                 strategy, config, train_config
         ) in enumerate(zip(self._strategy, self._config, self.train_config)):
@@ -589,6 +599,18 @@ class AutoCompression:
                 if os.path.isfile(_file_path):
                     shutil.copy(_file_path, final_model_path)
             shutil.rmtree(self.tmp_dir)
+
+            if self.eval_function is not None and self.final_metric < 0.0:
+                [inference_program, feed_target_names, fetch_targets]= load_inference_model( \
+                    final_model_path, \
+                    model_filename=self.model_filename, params_filename=self.params_filename,
+                    executor=self._exe)
+                self.final_metric = self.eval_function(
+                    self._exe, inference_program, feed_target_names,
+                    fetch_targets)
+            _logger.info("==> The metric of final model is {:.4f}".format(
+                self.final_metric))
+
             _logger.info(
                 "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))
@@ -605,41 +627,63 @@ class AutoCompression:
                 params_filename=self.params_filename,
                 executor=self._exe)
         if strategy == 'quant_post':
-            quant_post(
-                self._exe,
-                model_dir=self.updated_model_dir,
-                quantize_model_path=os.path.join(
-                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
-                data_loader=self.train_dataloader,
-                model_filename=self.model_filename,
-                params_filename=self.params_filename,
-                save_model_filename=self.model_filename,
-                save_params_filename=self.params_filename,
-                batch_size=1,
-                batch_nums=config.batch_num,
-                algo=config.ptq_algo,
-                round_type='round',
-                bias_correct=config.bias_correct,
-                hist_percent=config.hist_percent,
-                quantizable_op_type=config.quantize_op_types,
-                is_full_quantize=config.is_full_quantize,
-                weight_bits=config.weight_bits,
-                activation_bits=config.activation_bits,
-                activation_quantize_type='range_abs_max',
-                weight_quantize_type=config.weight_quantize_type,
-                onnx_format=False)
+            if config.recon_level is None:
+                quant_post(
+                    self._exe,
+                    model_dir=self.updated_model_dir,
+                    quantize_model_path=os.path.join(
+                        self.tmp_dir,
+                        'strategy_{}'.format(str(strategy_idx + 1))),
+                    data_loader=self.train_dataloader,
+                    model_filename=self.model_filename,
+                    params_filename=self.params_filename,
+                    save_model_filename=self.model_filename,
+                    save_params_filename=self.params_filename,
+                    batch_size=config.batch_size,
+                    batch_nums=config.batch_num,
+                    algo=config.algo,
+                    bias_correction=config.bias_correction,
+                    hist_percent=config.hist_percent,
+                    quantizable_op_type=config.quantize_op_types,
+                    is_full_quantize=config.is_full_quantize,
+                    weight_bits=config.weight_bits,
+                    activation_bits=config.activation_bits,
+                    activation_quantize_type=config.activation_quantize_type,
+                    weight_quantize_type=config.weight_quantize_type,
+                    onnx_format=config.onnx_format)
+            else:
+                quant_recon_static(
+                    executor=self._exe,
+                    model_dir=self.updated_model_dir,
+                    quantize_model_path=os.path.join(
+                        self.tmp_dir,
+                        'strategy_{}'.format(str(strategy_idx + 1))),
+                    data_loader=self.train_dataloader,
+                    model_filename=self.model_filename,
+                    params_filename=self.params_filename,
+                    batch_size=config.batch_size,
+                    batch_nums=config.batch_nums,
+                    algo=config.algo,
+                    hist_percent=config.hist_percent,
+                    is_full_quantize=config.is_full_quantize,
+                    bias_correction=config.bias_correction,
+                    onnx_format=config.onnx_format,
+                    weight_bits=config.weight_bits,
+                    activation_bits=config.activation_bits,
+                    weight_quantize_type=config.weight_quantize_type,
+                    activation_quantize_type=config.activation_quantize_type,
+                    recon_level=config.recon_level,
+                    simulate_activation_quant=config.simulate_activation_quant,
+                    regions=config.regions,
+                    region_weights_names=config.region_weights_names,
+                    skip_tensor_list=config.skip_tensor_list,
+                    epochs=config.epochs,
+                    lr=config.lr)
 
         elif strategy == 'ptq_hpo':
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
-            if self.updated_model_dir != self.model_dir:
-                # If model is ONNX, convert it to inference model firstly.
-                load_inference_model(
-                    self.model_dir,
-                    model_filename=self.model_filename,
-                    params_filename=self.params_filename,
-                    executor=self._exe)
             if self.eval_function is None:
                 # If eval function is None, ptq_hpo will use emd distance to eval the quantized model, so need the dataloader without label
                 eval_dataloader = self.train_dataloader
@@ -769,7 +813,7 @@ class AutoCompression:
                                         self.metric_before_compressed)
                             ) / self.metric_before_compressed <= 0.005:
                                 _logger.info(
-                                    "The error rate between the compressed model and original model is less than 5%. The training process ends."
+                                    "The error rate between the compressed model and original model is less than 0.5%. The training process ends."
                                 )
                                 stop_training = True
                                 break
@@ -791,8 +835,9 @@ class AutoCompression:
                         )
                 if (train_config.train_iter and total_train_iter >=
                         train_config.train_iter) or stop_training:
+                    stop_training = True
                     break
-
+        self.final_metric = best_metric
         if 'unstructure' in self._strategy or train_config.sparse_model:
             self._pruner.update_params()
 

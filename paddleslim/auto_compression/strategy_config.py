@@ -15,31 +15,16 @@
 from collections import namedtuple
 
 __all__ = [
-    "BaseStrategy",
-    "Quantization",
-    "Distillation",
-    "MultiTeacherDistillation",
-    "HyperParameterOptimization",
-    "ChannelPrune",
-    "UnstructurePrune",
-    "TransformerPrune",
-    "ASPPrune",
-    "merge_config",
-    "ProgramInfo",
-    "TrainConfig",
-    "SUPPORTED_CONFIG",
-    "TRAIN_CONFIG_NAME",
+    "BaseStrategy", "Quantization", "Distillation", "MultiTeacherDistillation",
+    "HyperParameterOptimization", "ChannelPrune", "UnstructurePrune",
+    "TransformerPrune", "ASPPrune", "merge_config", "ProgramInfo",
+    "TrainConfig", "SUPPORTED_CONFIG", "TRAIN_CONFIG_NAME", "QuantPost"
 ]
 
 SUPPORTED_CONFIG = [
-    "Quantization",
-    "Distillation",
-    "MultiTeacherDistillation",
-    "HyperParameterOptimization",
-    "ChannelPrune",
-    "UnstructurePrune",
-    "TransformerPrune",
-    "ASPPrune",
+    "Quantization", "Distillation", "MultiTeacherDistillation",
+    "HyperParameterOptimization", "ChannelPrune", "UnstructurePrune",
+    "TransformerPrune", "ASPPrune", "QuantPost"
 ]
 
 TRAIN_CONFIG_NAME = "TrainConfig"
@@ -180,6 +165,51 @@ class HyperParameterOptimization(BaseStrategy):
         self.hist_percent = hist_percent
         self.batch_num = batch_num
         self.max_quant_count = max_quant_count
+
+
+class QuantPost(BaseStrategy):
+    def __init__(self,
+                 batch_size=1,
+                 batch_nums=None,
+                 epochs=20,
+                 lr=0.1,
+                 algo='hist',
+                 hist_percent=0.999,
+                 regions=None,
+                 region_weights_names=None,
+                 recon_level=None,
+                 is_full_quantize=False,
+                 bias_correction=False,
+                 weight_quantize_type='channel_wise_abs_max',
+                 activation_quantize_type='range_abs_max',
+                 simulate_activation_quant=False,
+                 skip_tensor_list=None,
+                 onnx_format=False,
+                 quantizable_op_type=[
+                     "conv2d", "depthwise_conv2d", "mul", "matmul", "matmul_v2"
+                 ],
+                 weight_bits=8,
+                 activation_bits=8):
+        super(QuantPost, self).__init__("PTQ")
+        self.batch_size = batch_size
+        self.batch_nums = batch_nums
+        self.epochs = epochs
+        self.lr = lr
+        self.algo = algo
+        self.hist_percent = hist_percent
+        self.regions = regions
+        self.region_weights_names = region_weights_names
+        self.recon_level = recon_level
+        self.is_full_quantize = is_full_quantize
+        self.bias_correction = bias_correction
+        self.weight_quantize_type = weight_quantize_type
+        self.activation_quantize_type = activation_quantize_type
+        self.simulate_activation_quant = simulate_activation_quant
+        self.skip_tensor_list = skip_tensor_list
+        self.onnx_format = onnx_format
+        self.quantizable_op_type = quantizable_op_type
+        self.weight_bits = weight_bits
+        self.activation_bits = activation_bits
 
 
 class ChannelPrune:
