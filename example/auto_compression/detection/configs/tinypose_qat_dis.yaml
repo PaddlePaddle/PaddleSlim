@@ -1,7 +1,6 @@
 Global:
   arch: 'keypoint'
   reader_config: configs/tinypose_reader.yml
-  input_list: ['image']
   Evaluation: True
   model_dir: ./tinypose_128x96
   model_filename: model.pdmodel
