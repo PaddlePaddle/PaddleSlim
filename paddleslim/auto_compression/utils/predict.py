@@ -5,6 +5,7 @@ from ...analysis import TableLatencyPredictor
 from .prune_model import get_sparse_model, get_prune_model
 from .fake_ptq import post_quant_fake
 from ...common.load_model import load_inference_model
+import platform
 
 
 def with_variable_shape(model_dir, model_filename=None, params_filename=None):

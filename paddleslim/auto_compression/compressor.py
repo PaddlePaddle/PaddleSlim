@@ -601,17 +601,23 @@ class AutoCompression:
                                  train_config):
         # start compress, including train/eval model
         # TODO: add the emd loss of evaluation model.
-        if self.updated_model_dir != self.model_dir:
+        if strategy_idx == 0:
+            model_dir = self.model_dir
+        else:
+            model_dir = os.path.join(self.tmp_dir,
+                                     'strategy_{}'.format(str(strategy_idx)))
+
+        if self.updated_model_dir != model_dir:
             # If model is ONNX, convert it to inference model firstly.
             load_inference_model(
-                self.model_dir,
+                model_dir,
                 model_filename=self.model_filename,
                 params_filename=self.params_filename,
                 executor=self._exe)
         if strategy == 'quant_post':
             quant_post(
                 self._exe,
-                model_dir=self.updated_model_dir,
+                model_dir=model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 data_loader=self.train_dataloader,
@@ -637,10 +643,10 @@ class AutoCompression:
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
-            if self.updated_model_dir != self.model_dir:
+            if self.updated_model_dir != model_dir:
                 # If model is ONNX, convert it to inference model firstly.
                 load_inference_model(
-                    self.model_dir,
+                    model_dir,
                     model_filename=self.model_filename,
                     params_filename=self.params_filename,
                     executor=self._exe)
@@ -652,7 +658,7 @@ class AutoCompression:
             post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
-                model_dir=self.updated_model_dir,
+                model_dir=model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
@@ -676,12 +682,6 @@ class AutoCompression:
 
         else:
             assert 'dis' in strategy, "Only support optimizer compressed model by distillation loss."
-
-            if strategy_idx == 0:
-                model_dir = self.model_dir
-            else:
-                model_dir = os.path.join(
-                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx)))
 
             [inference_program, feed_target_names, fetch_targets]= load_inference_model( \
                 model_dir, \

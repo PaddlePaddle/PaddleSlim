@@ -1,5 +1,4 @@
 Global:
-  input_name: inputs
   model_dir: SqueezeNet1_0_infer
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams

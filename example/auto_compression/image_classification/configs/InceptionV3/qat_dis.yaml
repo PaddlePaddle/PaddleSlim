@@ -1,5 +1,4 @@
 Global:
-  input_name: x
   model_dir: save_quant_inception
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
