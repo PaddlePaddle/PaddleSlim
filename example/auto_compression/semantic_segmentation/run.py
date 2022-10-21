@@ -18,12 +18,12 @@ import random
 import paddle
 import numpy as np
 from paddleseg.cvlibs import Config as PaddleSegDataConfig
-from paddleseg.utils import worker_init_fn
+from paddleseg.utils import worker_init_fn, metrics
+from paddleseg.core.infer import reverse_transform
 
 from paddleslim.auto_compression import AutoCompression
 from paddleslim.common import load_config as load_slim_config
-from paddleseg.core.infer import reverse_transform
-from paddleseg.utils import metrics
+from paddleslim.common.dataloader import get_feed_vars
 
 
 def argsparser():
@@ -63,7 +63,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     print("Start evaluating (total_samples: {}, total_iters: {})...".format(
         len(eval_dataset), total_iters))
 
-    for iter, (image, label) in enumerate(loader):
+    for iters, (image, label) in enumerate(loader):
         paddle.enable_static()
 
         label = np.array(label).astype('int64')
@@ -97,6 +97,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         intersect_area_all = intersect_area_all + intersect_area
         pred_area_all = pred_area_all + pred_area
         label_area_all = label_area_all + label_area
+        if iters % 100 == 0:
+            print("Eval iter:", iters)
 
     class_iou, miou = metrics.mean_iou(intersect_area_all, pred_area_all,
                                        label_area_all)
@@ -113,11 +115,14 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     return miou
 
 
-def reader_wrapper(reader):
+def reader_wrapper(reader, input_name):
+    if isinstance(input_name, list) and len(input_name) == 1:
+        input_name = input_name[0]
+
     def gen():
         for i, data in enumerate(reader()):
             imgs = np.array(data[0])
-            yield {"x": imgs}
+            yield {input_name: imgs}
 
     return gen
 
@@ -139,9 +144,10 @@ def main(args):
     train_dataset = data_cfg.train_dataset
     global eval_dataset
     eval_dataset = data_cfg.val_dataset
+    batch_size = config.get('batch_size')
     batch_sampler = paddle.io.DistributedBatchSampler(
         train_dataset,
-        batch_size=data_cfg.batch_size,
+        batch_size=batch_size if batch_size else data_cfg.batch_size,
         shuffle=True,
         drop_last=True)
     train_loader = paddle.io.DataLoader(
@@ -151,7 +157,10 @@ def main(args):
         num_workers=0,
         return_list=True,
         worker_init_fn=worker_init_fn)
-    train_dataloader = reader_wrapper(train_loader)
+
+    input_name = get_feed_vars(config['model_dir'], config['model_filename'],
+                               config['params_filename'])
+    train_dataloader = reader_wrapper(train_loader, input_name)
 
     nranks = paddle.distributed.get_world_size()
     rank_id = paddle.distributed.get_rank()

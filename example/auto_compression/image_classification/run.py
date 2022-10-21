@@ -27,6 +27,7 @@ from paddle.io import DataLoader
 from imagenet_reader import ImageNetDataset
 from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
+from paddleslim.common.dataloader import get_feed_vars
 
 
 def argsparser():
@@ -57,6 +58,9 @@ def argsparser():
 
 # yapf: enable
 def reader_wrapper(reader, input_name):
+    if isinstance(input_name, list) and len(input_name) == 1:
+        input_name = input_name[0]
+
     def gen():
         for i, (imgs, label) in enumerate(reader()):
             yield {input_name: imgs}
@@ -175,6 +179,9 @@ def main():
         shuffle=True,
         drop_last=True,
         num_workers=0)
+    global_config['input_name'] = get_feed_vars(
+        global_config['model_dir'], global_config['model_filename'],
+        global_config['params_filename'])
     train_dataloader = reader_wrapper(train_loader, global_config['input_name'])
 
     ac = AutoCompression(

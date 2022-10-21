@@ -87,6 +87,8 @@ class AnalysisQuant(object):
             'is_full_quantize'] if 'is_full_quantize' in ptq_config else False
         self.onnx_format = ptq_config[
             'onnx_format'] if 'onnx_format' in ptq_config else False
+        if 'algo' not in ptq_config:
+            ptq_config['algo'] = 'avg'
 
         if not os.path.exists(self.save_dir):
             os.mkdir(self.save_dir)
@@ -126,7 +128,6 @@ class AnalysisQuant(object):
             model_filename=self.model_filename,
             params_filename=self.params_filename,
             skip_tensor_list=None,
-            algo='avg',  #fastest
             onnx_format=self.onnx_format,
             **self.ptq_config)
         program = post_training_quantization.quantize()
@@ -283,7 +284,6 @@ class AnalysisQuant(object):
                 params_filename=self.params_filename,
                 skip_tensor_list=skip_list,
                 onnx_format=self.onnx_format,
-                algo='avg',  #fastest
                 **self.ptq_config)
             program = post_training_quantization.quantize()
             _logger.info('Evaluating...')

@@ -22,7 +22,7 @@
 
 | 模型  | 策略 | mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 |  配置文件 | 模型  |
 | :-------- |:-------- |:--------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
-| PicoDet-S-NPU | Baseline | 30.1   |   -   |  -  |  -  | [config](https://github.com/PaddlePaddle/PaddleDetection/tree/develop/configs/picodet/picodet_s_416_coco_npu.yml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar) |
+| PicoDet-S-NPU | Baseline | 30.1   |   -   |  -  |  -  | [config](https://github.com/PaddlePaddle/PaddleDetection/tree/develop/configs/picodet/picodet_s_416_coco_npu.yml) | [带后处理](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar) &#124; [不带后处理](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu_no_postprocess.tar) |
 | PicoDet-S-NPU |  量化训练 | 29.7  |   -  |   -   |  -  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/full_quantization/picodet/configs/picodet_npu_with_postprocess.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_npu_quant.tar) |
 
 - mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
@@ -74,14 +74,14 @@ git clone https://github.com/PaddlePaddle/PaddleDetection.git
 ```
 - 导出预测模型
 
-PicoDet-S-NPU模型，包含后处理：如快速体验，可直接下载[PicoDet-S-NPU导出模型](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar)
+PicoDet-S-NPU模型，包含后处理：如快速体验，可直接下载[PicoDet-S-NPU带后处理导出模型](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu.tar)
 ```shell
 python tools/export_model.py \
         -c configs/picodet/picodet_s_416_coco_npu.yml \
         -o weights=https://paddledet.bj.bcebos.com/models/picodet_s_416_coco_npu.pdparams \
 ```
 
-导出PicoDet-S-NPU不带后处理模型：
+导出PicoDet-S-NPU不带后处理模型：（也可直接下载[PicoDet-S-NPU不带后处理导出模型](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_416_coco_npu_no_postprocess.tar)）
 ```shell
 python tools/export_model.py \
         -c configs/picodet/picodet_s_416_coco_npu.yml \
