@@ -11,6 +11,7 @@ Distillation:
   - conv2d_37.tmp_1
 
 Quantization:
+  onnx_format: True
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
