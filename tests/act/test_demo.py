@@ -56,7 +56,7 @@ class ACTDemo(unittest.TestCase):
             params_filename="inference.pdiparams",
             save_dir="MobileNetV1_quant",
             config={
-                'Quantization': {},
+                'QuantPost': {},
                 "HyperParameterOptimization": {
                     'ptq_algo': ['avg'],
                     'max_quant_count': 3
