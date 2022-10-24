@@ -116,7 +116,7 @@ python eval.py --config_path=./configs/yolov5s_ptq.yaml
 
 
 #### 3.6 提高离线量化精度
-本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。
+本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisQuant```详解见[AnalysisQuant.md](../../../../docs/zh_cn/tutorials/quant/AnalysisQuant.md)。
 
 由于YOLOv6离线量化效果较差，以YOLOv6为例，量化分析工具具体使用方法如下：
 
@@ -147,6 +147,8 @@ python post_quant.py --config_path=./configs/yolov6s_analyzed_ptq.yaml --save_di
 ```
 
 如想分析之后直接产出符合目标精度的量化模型，可在 `yolov6s_analysis.yaml` 中将`get_target_quant_model`设置为True，并填写 `target_metric`，注意 `target_metric` 不能比原模型精度高。
+
+
 
 **加速分析过程**
 
