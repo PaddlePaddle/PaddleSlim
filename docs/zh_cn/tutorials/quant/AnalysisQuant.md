@@ -81,19 +81,6 @@ analyzer.statistical_analyse()
 	- Diff Std：量化前后该Variable的相差的方差值
 
 
-以检测模型中的picodet-s为例，从以下激活箱状图（部分层）中可以发现，`conv2d_7.w_0`， `conv2d_9.w_0` 这两层的激活输入有大量离群点，会导致量化效果较差。
-
-<p align="center">
-<img src="./detection/images/act_distribution.png" width=849 hspace='10'/> <br />
-</p>
-
-以检测模型中的picodet-s为例，从`analysis.txt`可以发现`conv2d_1.w_0`， `conv2d_3.w_0`，`conv2d_5.w_0`， `conv2d_7.w_0`， `conv2d_9.w_0` 这些层会导致较大的精度损失。这一现象符合对激活箱状图的观察。
-
-<p align="center">
-<img src="./detection/images/picodet_analysis.png" width=849 hspace='10'/> <br />
-</p>
-
-
 **精度误差分析**
 ```
 analyzer.metric_error_analyse()
