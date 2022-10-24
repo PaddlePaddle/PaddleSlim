@@ -202,7 +202,7 @@ class QuantPost(BaseStrategy):
                  simulate_activation_quant=False,
                  skip_tensor_list=None,
                  onnx_format=False,
-                 quantizable_op_type=[
+                 quantize_op_types=[
                      "conv2d", "depthwise_conv2d", "mul", "matmul", "matmul_v2"
                  ],
                  weight_bits=8,
@@ -224,7 +224,7 @@ class QuantPost(BaseStrategy):
         self.simulate_activation_quant = simulate_activation_quant
         self.skip_tensor_list = skip_tensor_list
         self.onnx_format = onnx_format
-        self.quantizable_op_type = quantizable_op_type
+        self.quantize_op_types = quantize_op_types
         self.weight_bits = weight_bits
         self.activation_bits = activation_bits
 

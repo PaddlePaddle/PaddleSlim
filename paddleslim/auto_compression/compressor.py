@@ -646,7 +646,7 @@ class AutoCompression:
                     save_model_filename=self.model_filename,
                     save_params_filename=self.params_filename,
                     batch_size=config.batch_size,
-                    batch_nums=config.batch_num,
+                    batch_nums=config.batch_nums,
                     algo=config.algo,
                     bias_correction=config.bias_correction,
                     hist_percent=config.hist_percent,
@@ -671,6 +671,7 @@ class AutoCompression:
                     batch_nums=config.batch_nums,
                     algo=config.algo,
                     hist_percent=config.hist_percent,
+                    quantizable_op_type=config.quantize_op_types,
                     is_full_quantize=config.is_full_quantize,
                     bias_correction=config.bias_correction,
                     onnx_format=config.onnx_format,
@@ -685,7 +686,7 @@ class AutoCompression:
                     skip_tensor_list=config.skip_tensor_list,
                     epochs=config.epochs,
                     lr=config.lr)
-                    
+
         elif strategy == 'ptq_hpo':
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
