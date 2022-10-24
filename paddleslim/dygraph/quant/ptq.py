@@ -118,7 +118,7 @@ class PTQ(object):
 
         return fuse_list
 
-    def save_quantized_model(self, model, path, input_spec=None):
+    def save_quantized_model(self, model, path, input_spec=None, **kwargs):
         """
         Save the quantized inference model.
 
@@ -131,7 +131,7 @@ class PTQ(object):
                 InputSpec or example Tensor. If None, all input variables of 
                 the original Layer's forward method would be the inputs of
                 the saved model. Default: None.
-
+            configs (dict, optional): Other save configuration options for compatibility.
         Returns:
             None
         """
@@ -143,7 +143,7 @@ class PTQ(object):
             model.eval()
 
         self.ptq.save_quantized_model(
-            model=model, path=path, input_spec=input_spec)
+            model=model, path=path, input_spec=input_spec, **kwargs)
 
         if training:
             model.train()
