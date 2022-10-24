@@ -619,10 +619,16 @@ class AutoCompression:
                                  train_config):
         # start compress, including train/eval model
         # TODO: add the emd loss of evaluation model.
-        if self.updated_model_dir != self.model_dir:
+        if strategy_idx == 0:
+            model_dir = self.model_dir
+        else:
+            model_dir = os.path.join(self.tmp_dir,
+                                     'strategy_{}'.format(str(strategy_idx)))
+
+        if self.updated_model_dir != model_dir:
             # If model is ONNX, convert it to inference model firstly.
             load_inference_model(
-                self.model_dir,
+                model_dir,
                 model_filename=self.model_filename,
                 params_filename=self.params_filename,
                 executor=self._exe)
@@ -679,7 +685,7 @@ class AutoCompression:
                     skip_tensor_list=config.skip_tensor_list,
                     epochs=config.epochs,
                     lr=config.lr)
-
+                    
         elif strategy == 'ptq_hpo':
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
@@ -692,7 +698,7 @@ class AutoCompression:
             post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
-                model_dir=self.updated_model_dir,
+                model_dir=model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
@@ -712,16 +718,11 @@ class AutoCompression:
                 hist_percent=config.hist_percent,
                 batch_size=[1],
                 batch_num=config.batch_num,
+                onnx_format=config.onnx_format,
                 runcount_limit=config.max_quant_count)
 
         else:
             assert 'dis' in strategy, "Only support optimizer compressed model by distillation loss."
-
-            if strategy_idx == 0:
-                model_dir = self.model_dir
-            else:
-                model_dir = os.path.join(
-                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx)))
 
             [inference_program, feed_target_names, fetch_targets]= load_inference_model( \
                 model_dir, \
