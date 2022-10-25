@@ -16,7 +16,7 @@ This tutorial uses the GLUE/SST-2 dataset as an example to perform 1-bit quantiz
 
 ```shell
 pip install paddlenlp
-pip install paddlepaddle_gpu
+pip install paddlepaddle_gpu==2.4rc0
 ```
 
 ### Acquisition of data and training models

@@ -29,7 +29,7 @@ TinyBERT蒸馏流程图
 
 ```shell
 pip install paddlenlp
-pip install paddlepaddle_gpu
+pip install paddlepaddle_gpu==2.4rc0
 ```
 
 ## 数据、预训练模型介绍及获取
