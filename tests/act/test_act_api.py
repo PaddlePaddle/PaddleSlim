@@ -160,7 +160,10 @@ class TestDictPTQ(ACTBase):
         image = paddle.static.data(
             name='data', shape=[-1, 3, 32, 32], dtype='float32')
         train_loader = paddle.io.DataLoader(
-            self.eval_dataset, feed_list=[image], batch_size=4)
+            self.eval_dataset,
+            feed_list=[image],
+            batch_size=4,
+            return_list=False)
         ac = AutoCompression(
             model_dir=self.tmpdir.name,
             model_filename="infer.pdmodel",
@@ -181,7 +184,10 @@ class TestDictPTQRecon(ACTBase):
         image = paddle.static.data(
             name='data', shape=[-1, 3, 32, 32], dtype='float32')
         train_loader = paddle.io.DataLoader(
-            self.eval_dataset, feed_list=[image], batch_size=4)
+            self.eval_dataset,
+            feed_list=[image],
+            batch_size=4,
+            return_list=False)
         ac = AutoCompression(
             model_dir=self.tmpdir.name,
             model_filename="infer.pdmodel",

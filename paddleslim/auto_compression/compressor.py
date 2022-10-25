@@ -608,8 +608,9 @@ class AutoCompression:
                 self.final_metric = self.eval_function(
                     self._exe, inference_program, feed_target_names,
                     fetch_targets)
-            _logger.info("==> The metric of final model is {:.4f}".format(
-                self.final_metric))
+            if self.eval_function is not None:
+                _logger.info("==> The metric of final model is {:.4f}".format(
+                    self.final_metric))
 
             _logger.info(
                 "==> The ACT compression has been completed and the final model is saved in `{}`".
