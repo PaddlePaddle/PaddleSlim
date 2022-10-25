@@ -86,8 +86,6 @@ class AnalysisQuant(object):
             'is_full_quantize'] if 'is_full_quantize' in ptq_config else False
         self.onnx_format = ptq_config[
             'onnx_format'] if 'onnx_format' in ptq_config else False
-        if 'algo' not in ptq_config:
-            ptq_config['algo'] = 'avg'
 
         if not os.path.exists(self.save_dir):
             os.mkdir(self.save_dir)
