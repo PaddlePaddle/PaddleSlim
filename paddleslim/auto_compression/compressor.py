@@ -699,7 +699,7 @@ class AutoCompression:
             post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
-                model_dir=model_dir,
+                model_dir=self.updated_model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
