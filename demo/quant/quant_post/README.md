@@ -10,7 +10,7 @@
 
 ### 环境准备
 
-PaddlePaddle >= 2.3 或develop版本
+PaddlePaddle >= 2.4rc0 或develop版本
 
 ### 准备数据
 
