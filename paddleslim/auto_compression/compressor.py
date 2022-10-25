@@ -405,8 +405,8 @@ class AutoCompression:
                     strategy.append('multi_teacher_dis')
                     config.append(multi_teacher_distill_config)
 
-            ### case8: qtp_config
-            if ptq_config is not None:
+            ### case8: only qtp_config ==> PTQ
+            if ptq_config is not None and hpo_config is None:
                 strategy.append('quant_post')
                 config.append(ptq_config)
 
