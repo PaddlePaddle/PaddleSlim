@@ -172,7 +172,7 @@ python fine_tune.py --config_path=./configs/yolov6s_fine_tune.yaml --recon_level
 其中`recon_level`表示重构的粒度，默认为`layer-wise`，即逐层重构。如下图，该工具首先会统计激活和权重量化需要的`scales`，随后为每个权重添加`soft-rounding`操作使得权重的取整方式可学习，以及逐层的增加重构`loss`。
 
 <p align="center">
-<img src="./images/adaround.png" width=749 hspace='10'/> <br />
+<img src="../../../docs/images/adaround.png" width=749 hspace='10'/> <br />
 </p>
 
 通过最小化重构`loss`，为每层的权重学习最合适的`round`方式，其思想类似[论文](https://arxiv.org/abs/2004.10568)提出的`Adround`方法。
@@ -180,7 +180,7 @@ python fine_tune.py --config_path=./configs/yolov6s_fine_tune.yaml --recon_level
 类似的，该工具还支持以`region/block`为单位添加重构`loss`，类似[论文](https://arxiv.org/pdf/2102.05426)提出的`BRECQ`方法，其中`region`可能包含多层，如下图所示。
 
 <p align="center">
-<img src="./images/brecq.png" width=749 hspace='10'/> <br />
+<img src="../../../docs/images/brecq.png" width=749 hspace='10'/> <br />
 </p>
 
 具体运行命令如下：
@@ -191,7 +191,7 @@ python fine_tune.py --config_path=./configs/yolov6s_fine_tune.yaml --recon_level
 此外，该工具还支持在重构过程中引入激活量化产生的噪声，如下图所示，在每层前插入`quant/dequant`节点，随机的进行激活量化，核心思想类似[论文](https://arxiv.org/pdf/2203.05740)提出的`QDrop`方法。
 
 <p align="center">
-<img src="./images/qdrop.png" width=749 hspace='10'/> <br />
+<img src="../../../docs/images/qdrop.png" width=749 hspace='10'/> <br />
 </p>
 
 
