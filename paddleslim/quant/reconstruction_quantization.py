@@ -157,6 +157,8 @@ class ReconstructionQuantization(PostTrainingQuantization):
             place=self._place,
             quantized_op_pairs=self._quantized_op_pairs,
             weight_quantize_type=self._weight_quantize_type,
+            activation_bits=self._activation_bits,
+            weight_bits=self._weight_bits,
             scale_dict=copy.deepcopy(self._scale_dict),
             regions=self._config['regions'],
             region_weights_names=self._config['region_weights_names'],
@@ -165,8 +167,7 @@ class ReconstructionQuantization(PostTrainingQuantization):
             num_iterations=self._batch_nums,
             lr=self._config['lr'],
             bias_correction=self._bias_correction,
-            epochs=self._config['epochs'],
-            scale_trainable=self._config['scale_trainable'])
+            epochs=self._config['epochs'], )
         self._program = reconstruction_quanter._run()
 
     def _postprocessing(self):
@@ -211,6 +212,8 @@ class ReconstructionQuanter(object):
                  place,
                  quantized_op_pairs,
                  weight_quantize_type,
+                 activation_bits,
+                 weight_bits,
                  scale_dict,
                  regions,
                  region_weights_names,
@@ -220,7 +223,6 @@ class ReconstructionQuanter(object):
                  lr=0.1,
                  bias_correction=False,
                  epochs=20,
-                 scale_trainable=False,
                  drop_prob=0.5):
         '''
         Reconstruction Quanter, used to optimize the rounding policy
@@ -259,7 +261,6 @@ class ReconstructionQuanter(object):
             lr(float, optional): The learning rate of Reconstruction Quanter. Default is 0.1.
             bias_correction(bool, optional): If set as True, use the bias correction
                 method of https://arxiv.org/abs/1810.05723. Default is False.
-            scale_trainable: Wether weight‘s scale is trainable. Default is False.
             drop_prob: The dropout probability of activation quantization, and it is valid only if 
                 simulate_activation_quant is True. Default is 0.5.
         Returns:
@@ -286,6 +287,8 @@ class ReconstructionQuanter(object):
         self._weight_var_names = list(self._quantized_op_pairs.keys())
         self._weight_quantize_type = weight_quantize_type
         self._scale_dict = scale_dict
+        self._activation_bits = activation_bits
+        self._weight_bits = weight_bits
         self._num_iterations = num_iterations
         self._epochs = epochs
         self._lr = lr
@@ -296,7 +299,6 @@ class ReconstructionQuanter(object):
             regions, region_weights_names = self._get_layers()
             self._regions = regions
             self._region_weights_names = region_weights_names
-        self._scale_trainable = scale_trainable
         self._drop_prob = drop_prob
 
     def _get_layers(self):
@@ -336,7 +338,9 @@ class ReconstructionQuanter(object):
         for name in self._weight_var_names:
             weight_np = utils.load_variable_data(self._scope, name)
             scale = self._scale_dict[name]
-            weight_np_floor = np.floor(utils.quant_tensor(weight_np, scale))
+            weight_np_floor = np.floor(
+                utils.quant_tensor(
+                    x=weight_np, scale=scale, weight_bits=self._weight_bits))
             utils.set_variable_data(
                 self._scope,
                 self._place,
@@ -359,7 +363,6 @@ class ReconstructionQuanter(object):
             quant_op_out_name = region_[1]
             with paddle.static.program_guard(tmp_program, startup_program):
                 loss_function = ReconstructionQuanterLoss(tmp_program, names)
-                quant_op_out_name = region_[1]
                 student_var = tmp_program.global_block().var(quant_op_out_name)
                 teacher_var = tmp_program.global_block().var("teacher_" +
                                                              quant_op_out_name)
@@ -385,7 +388,11 @@ class ReconstructionQuanter(object):
             prev_start_time = start_time
             loader = self._data_loader()
             for epoch in range(self._epochs):
-                for i, data in enumerate(loader):
+                for i, data in (
+                        enumerate(loader) if
+                    (isinstance(self._data_loader, paddle.fluid.io.DataLoader)
+                     and self._data_loader.batch_size == 1) else
+                        enumerate(self._data_loader())):
                     prev_start_time = start_time
                     start_time = time.time()
                     out = self._exe.run(
@@ -418,13 +425,13 @@ class ReconstructionQuanter(object):
         alpha = -np.log((ZETA - GAMMA) / (tensor - GAMMA) - 1)
         return alpha
 
-    def _soft_rounding(self, weight, scale, weight_bits=8):
+    def _soft_rounding(self, weight, scale):
         """
         Define network of soft rounding.
         Args:
         weight: The quanted weight with dtype=float32
         """
-        bnt = (1 << (weight_bits - 1)) - 1
+        bnt = (1 << (self._weight_bits - 1)) - 1
 
         def _dequant(x, scale):
             s = (scale + 1e-8) / bnt
@@ -470,18 +477,18 @@ class ReconstructionQuanter(object):
                 scale = np.array(scale)
                 scale = scale.reshape(scale.shape[0], 1)
                 if len(shape) == 2:
-                    scale = scale.repeat(shape[0], axis=0)
+                    scale = scale.repeat(shape[0], axis=1).T
                 else:
                     scale = scale.repeat(shape[1] * shape[2] * shape[3], axis=1)
-                scale = scale.reshape(shape)
+                    scale = scale.reshape(shape)
             self._insert_func(var=weight, scale=scale, func="_soft_rounding")
 
-    def _drop_quant_dequant(self, inputs, scale, weight_bits=8):
+    def _drop_quant_dequant(self, inputs, scale):
         x = paddle.static.data(
             shape=inputs.shape,
             dtype=inputs.dtype,
             name=inputs.name + '.tmp', )
-        bnt = (1 << (weight_bits - 1)) - 1
+        bnt = (1 << (self._weight_bits - 1)) - 1
         scale = scale / bnt
         dequantized_tensor = paddle.round(x / scale) * scale
         quant_noise = x - dequantized_tensor
@@ -537,8 +544,7 @@ class ReconstructionQuanter(object):
                     shape=new_var.shape,
                     dtype=new_var.dtype,
                     type=new_var.type,
-                    stop_gradient=True,
-                    trainable=self._scale_trainable, )
+                    stop_gradient=True, )
             else:
                 if func == "_soft_rounding":
                     program.global_block().create_var(
@@ -721,7 +727,7 @@ class ReconstructionQuanter(object):
                 weight_quant_tensor,
                 scale,
                 quant_axis=0,
-                weight_bits=8, )
+                weight_bits=self._weight_bits, )
             utils.set_variable_data(
                 self._scope,
                 self._place,
@@ -826,8 +832,6 @@ def quant_recon_static(executor,
                            "conv2d",
                            "depthwise_conv2d",
                            "mul",
-                           "matmul",
-                           "matmul_v2",
                        ],
                        is_full_quantize=False,
                        weight_bits=8,
@@ -842,7 +846,6 @@ def quant_recon_static(executor,
                        regions=None,
                        region_weights_names=None,
                        epochs=20,
-                       scale_trainable=False,
                        drop_prob=0.5,
                        lr=0.1):
     """
@@ -919,7 +922,6 @@ def quant_recon_static(executor,
         is_use_cache_file(bool): This param is deprecated.
         cache_dir(str): This param is deprecated.
         epochs: The number of steps in the reconstruction proces. Default is 20.
-        scale_trainable: Wether weight‘s scale is trainable. Default is False.
         drop_prob: The dropout probability of activation quantization, and it is valid only if 
             simulate_activation_quant is True. Default is 0.5.
         regions(list[list], optional): The list of some regions, each region is a subgraph of
@@ -963,7 +965,6 @@ def quant_recon_static(executor,
         regions=regions,
         region_weights_names=region_weights_names,
         epochs=epochs,
-        scale_trainable=scale_trainable,
         lr=lr)
 
     reconstruction_quantization = ReconstructionQuantization(
