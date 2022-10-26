@@ -101,6 +101,6 @@ python eval.py --config_path='./configs/mobilenetv3_large_qat_dis.yaml'
 
 #### 4.1 PaddleLite端侧部署
 PaddleLite端侧部署可参考：
-- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleClas/blob/develop/docs/zh_CN/inference_deployment/paddle_lite_deploy.md)
+- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleClas/blob/develop/docs/zh_CN/deployment/image_classification/paddle_lite.md)
 
 ## 5.FAQ
