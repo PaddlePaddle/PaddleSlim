@@ -131,7 +131,7 @@ class PTQ(object):
                 InputSpec or example Tensor. If None, all input variables of 
                 the original Layer's forward method would be the inputs of
                 the saved model. Default: None.
-            configs (dict, optional): Other save configuration options for compatibility.
+            kwargs (dict, optional): Other save configuration options for compatibility.
         Returns:
             None
         """
