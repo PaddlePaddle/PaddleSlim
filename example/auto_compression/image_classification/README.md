@@ -167,6 +167,6 @@ python paddle_inference_eval.py \
 
 #### 4.2 PaddleLite端侧部署
 PaddleLite端侧部署可参考：
-- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleClas/blob/develop/docs/zh_CN/inference_deployment/paddle_lite_deploy.md)
+- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleClas/blob/develop/docs/zh_CN/deployment/image_classification/paddle_lite.md)
 
 ## 5.FAQ
