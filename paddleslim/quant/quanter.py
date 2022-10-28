@@ -416,7 +416,8 @@ def quant_aware(program,
                 executor=executor,
                 is_test=is_test)
 
-            transform_pass.apply(main_graph)
+            for sub_graph in main_graph.all_sub_graphs():
+                transform_pass.apply(sub_graph)
 
         if len(quant_dequant_ops) > 0:
             qdq_func = 'AddQuantDequantPassV2' if config[
@@ -431,7 +432,8 @@ def quant_aware(program,
                 is_test=is_test,
                 scale_dict=scale_dict)
 
-            quant_dequant_pass.apply(main_graph)
+            for sub_graph in main_graph.all_sub_graphs():
+                quant_dequant_pass.apply(sub_graph)
 
     out_scale_training_pass = OutScaleForTrainingPass(
         scope=scope,
@@ -440,7 +442,8 @@ def quant_aware(program,
         is_test=is_test,
         scale_dict=scale_dict)
 
-    out_scale_training_pass.apply(main_graph)
+    for sub_graph in main_graph.all_sub_graphs():
+        out_scale_training_pass.apply(sub_graph)
 
     if (weight_preprocess_func is not None or
             act_preprocess_func is not None) and not for_test:
@@ -684,18 +687,21 @@ def convert(program,
 
     if config['onnx_format']:
         quant_weight_pass = QuantWeightPass(scope, place)
-        quant_weight_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            quant_weight_pass.apply(sub_graph)
         try:
             out_scale_infer_pass = AddQuantDequantForInferencePass(
                 scope=scope, place=place, quant_bits=config['activation_bits'])
-            out_scale_infer_pass.apply(test_graph)
+            for sub_graph in test_graph.all_sub_graphs():
+                out_scale_infer_pass.apply(sub_graph)
         except:
             _logger.warning(
                 "Unable to convert quant model with onnx_format=True, please update PaddlePaddle >= 2.4.0"
             )
     else:
         out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
-        out_scale_infer_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            out_scale_infer_pass.apply(sub_graph)
         # Freeze the graph after training by adjusting the quantize
         # operators' order for the inference.
         freeze_pass = QuantizationFreezePass(
@@ -706,13 +712,31 @@ def convert(program,
             weight_quantize_type=config['weight_quantize_type'])
         if os.path.exists(VARS_MAPPING_TABLE):
             test_graph.out_node_mapping_table = load_dict()
-        freeze_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            freeze_pass.apply(sub_graph)
 
     freezed_program = test_graph.to_program()
 
+    # Move sub blocks persistable var to global block
+    global_block = freezed_program.global_block()
+    for _op in global_block.ops:
+        if _op.type == "while":
+            _block_id = _op.attr("sub_block").id
+            _block = freezed_program.block(_block_id)
+            persistables = []
+            for _name, _var in _block.vars.items():
+                if _var.persistable:
+                    global_block._clone_variable(_var)
+                    persistables.append(_name)
+            for _name in persistables:
+                _block._remove_var(_name)
+            persistables.extend(_op.input('X'))
+            _op.desc.set_input("X", persistables)
+
     if save_int8:
         convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
-        convert_int8_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            convert_int8_pass.apply(sub_graph)
         freezed_program_int8 = test_graph.to_program()
         return freezed_program, freezed_program_int8
     else:
