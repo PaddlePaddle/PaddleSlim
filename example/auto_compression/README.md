@@ -33,7 +33,7 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 * 🔥 **2022.8.22 晚 19:00～20:00**，PaddleSlim自动压缩**YOLO系列直播课**，欢迎大家扫码进入直播技术交流群。
 
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/197434181-e21f9ea1-a3bd-482f-b622-c19bb152ff75.png" width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/198922712-9db284c3-5f8f-40fc-a78e-5c8e9ed1565b.png" width = "225" height = "225" />
   </div>
 
 ## **特性**
@@ -253,7 +253,7 @@ ac.compress()
 - 微信扫描二维码并填写问卷之后，加入技术交流群
 
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/197434181-e21f9ea1-a3bd-482f-b622-c19bb152ff75.png"  width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/198922712-9db284c3-5f8f-40fc-a78e-5c8e9ed1565b.png"  width = "225" height = "225" />
   </div>
 
 - 如果你发现任何关于ACT自动化压缩工具的问题或者是建议, 欢迎通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSlim/issues)给我们提issues。同时欢迎贡献更多优秀模型，共建开源生态。
