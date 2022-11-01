@@ -112,7 +112,7 @@ class AnalysisQuant(object):
         self.data_loader = wrap_dataloader(data_loader, self.feed_list)
 
         # quant model to get quantizable ops 
-        post_training_quantization = self.create_ptq(executor, None, 'avg')
+        post_training_quantization = self.create_ptq(executor, None)
 
         _logger.info('Run PTQ before analysis.')
         program = post_training_quantization.quantize()
@@ -170,7 +170,7 @@ class AnalysisQuant(object):
                 writer.writerow(d)
         _logger.info('Activation Statistic is saved in {}'.format(save_path))
 
-    def create_ptq(self, executor, skip_tensor_list, algo):
+    def create_ptq(self, executor, skip_tensor_list):
         return PostTrainingQuantization(
             executor=executor,
             data_loader=self.data_loader,
@@ -178,7 +178,6 @@ class AnalysisQuant(object):
             model_filename=self.model_filename,
             params_filename=self.params_filename,
             skip_tensor_list=skip_tensor_list,
-            algo=algo,  # avg fastest
             onnx_format=self.onnx_format,
             **self.ptq_config)
 
@@ -196,8 +195,7 @@ class AnalysisQuant(object):
 
     def eval_quant_model(self, skip_list):
         executor = paddle.static.Executor(self.places)
-        post_training_quantization = self.create_ptq(
-            executor, skip_list, algo='avg')
+        post_training_quantization = self.create_ptq(executor, skip_list)
         program = post_training_quantization.quantize()
         _logger.info('Evaluating...')
         if self.onnx_format:
@@ -313,7 +311,7 @@ class AnalysisQuant(object):
         _logger.info('Collecting Statistic After PTQ...')
         executor = paddle.static.Executor(self.places)
         scope = global_scope()
-        post_training_quantization = self.create_ptq(executor, None, algo='avg')
+        post_training_quantization = self.create_ptq(executor, None)
         program = post_training_quantization.quantize()
 
         persistable_var_names = []
@@ -538,11 +536,7 @@ class AnalysisQuant(object):
             skip_list.append(rank_list.pop(0))
             _logger.info('Skip Ops: {}'.format(skip_list))
             executor = paddle.static.Executor(self.places)
-            post_training_quantization = self.create_ptq(
-                executor,
-                skip_list,
-                algo=self.ptq_config['algo']
-                if 'algo' in self.ptq_config else 'KL')
+            post_training_quantization = self.create_ptq(executor, skip_list)
             program = post_training_quantization.quantize()
 
             _logger.info('Evaluating...')
