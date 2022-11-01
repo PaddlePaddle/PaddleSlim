@@ -3,6 +3,7 @@ Global:
   model_dir: ./RES-paddle2-Deeplabv3-ResNet50
   model_filename: model
   params_filename: params
+  batch_size: 4
 
 Distillation:
   alpha: 1.0
@@ -11,12 +12,13 @@ Distillation:
   - conv2d_123.tmp_1
 
 Quantization:
+  onnx_format: True
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
 
 TrainConfig:
-  epochs: 10
+  epochs: 1
   eval_iter: 360
   learning_rate: 0.0001
   optimizer_builder:

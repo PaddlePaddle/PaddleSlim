@@ -18,14 +18,16 @@ import argparse
 import functools
 from functools import partial
 import math
+from tqdm import tqdm
 
 import numpy as np
 import paddle
 import paddle.nn as nn
 from paddle.io import DataLoader
 from imagenet_reader import ImageNetDataset
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
+from paddleslim.common.dataloader import get_feed_vars
 
 
 def argsparser():
@@ -46,11 +48,19 @@ def argsparser():
         type=int,
         default=1281167,
         help="the number of total training images.")
+    parser.add_argument(
+        '--devices',
+        type=str,
+        default='gpu',
+        help="which device used to compress.")
     return parser
 
 
 # yapf: enable
 def reader_wrapper(reader, input_name):
+    if isinstance(input_name, list) and len(input_name) == 1:
+        input_name = input_name[0]
+
     def gen():
         for i, (imgs, label) in enumerate(reader()):
             yield {input_name: imgs}
@@ -82,47 +92,55 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         resize_size=resize_size)
 
     results = []
-    print('Evaluating...')
-    for batch_id, (image, label) in enumerate(val_loader):
-        # top1_acc, top5_acc
-        if len(test_feed_names) == 1:
-            image = np.array(image)
-            label = np.array(label).astype('int64')
-            pred = exe.run(compiled_test_program,
-                           feed={test_feed_names[0]: image},
-                           fetch_list=test_fetch_list)
-            pred = np.array(pred[0])
-            label = np.array(label)
-            sort_array = pred.argsort(axis=1)
-            top_1_pred = sort_array[:, -1:][:, ::-1]
-            top_1 = np.mean(label == top_1_pred)
-            top_5_pred = sort_array[:, -5:][:, ::-1]
-            acc_num = 0
-            for i in range(len(label)):
-                if label[i][0] in top_5_pred[i]:
-                    acc_num += 1
-            top_5 = float(acc_num) / len(label)
-            results.append([top_1, top_5])
-        else:
-            # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
-            image = np.array(image)
-            label = np.array(label).astype('int64')
-            result = exe.run(
-                compiled_test_program,
-                feed={test_feed_names[0]: image,
-                      test_feed_names[1]: label},
-                fetch_list=test_fetch_list)
-            result = [np.mean(r) for r in result]
-            results.append(result)
-        if batch_id % 100 == 0:
-            print('Eval iter: ', batch_id)
+    with tqdm(
+            total=len(val_loader),
+            bar_format='Evaluation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
+            ncols=80) as t:
+        for batch_id, (image, label) in enumerate(val_loader):
+            # top1_acc, top5_acc
+            if len(test_feed_names) == 1:
+                image = np.array(image)
+                label = np.array(label).astype('int64')
+                pred = exe.run(compiled_test_program,
+                               feed={test_feed_names[0]: image},
+                               fetch_list=test_fetch_list)
+                pred = np.array(pred[0])
+                label = np.array(label)
+                sort_array = pred.argsort(axis=1)
+                top_1_pred = sort_array[:, -1:][:, ::-1]
+                top_1 = np.mean(label == top_1_pred)
+                top_5_pred = sort_array[:, -5:][:, ::-1]
+                acc_num = 0
+                for i in range(len(label)):
+                    if label[i][0] in top_5_pred[i]:
+                        acc_num += 1
+                top_5 = float(acc_num) / len(label)
+                results.append([top_1, top_5])
+            else:
+                # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
+                image = np.array(image)
+                label = np.array(label).astype('int64')
+                result = exe.run(compiled_test_program,
+                                 feed={
+                                     test_feed_names[0]: image,
+                                     test_feed_names[1]: label
+                                 },
+                                 fetch_list=test_fetch_list)
+                result = [np.mean(r) for r in result]
+                results.append(result)
+            t.update()
     result = np.mean(np.array(results), axis=0)
     return result[0]
 
 
 def main():
     rank_id = paddle.distributed.get_rank()
-    place = paddle.CUDAPlace(rank_id)
+    if args.devices == 'gpu':
+        place = paddle.CUDAPlace(rank_id)
+        paddle.set_device('gpu')
+    else:
+        place = paddle.CPUPlace()
+        paddle.set_device('cpu')
     global global_config
     all_config = load_slim_config(args.config_path)
 
@@ -161,6 +179,9 @@ def main():
         shuffle=True,
         drop_last=True,
         num_workers=0)
+    global_config['input_name'] = get_feed_vars(
+        global_config['model_dir'], global_config['model_filename'],
+        global_config['params_filename'])
     train_dataloader = reader_wrapper(train_loader, global_config['input_name'])
 
     ac = AutoCompression(

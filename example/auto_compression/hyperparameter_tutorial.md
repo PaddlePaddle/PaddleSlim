@@ -8,35 +8,37 @@
 量化参数主要设置量化比特数和量化op类型，其中量化op包含卷积层（conv2d, depthwise_conv2d）和全连接层（mul, matmul_v2）。以下为只量化卷积层的示例：
 ```yaml
 Quantization:
-    use_pact: true                                # 量化训练是否使用PACT方法
+    use_pact: false                               # 量化训练是否使用PACT方法
+    weight_quantize_type: 'channel_wise_abs_max'  # 权重量化方式
+    quantize_op_types: [conv2d, depthwise_conv2d] # 量化OP列表
+    onnx_format: false                            # 是否采用ONNX量化标准格式
+    ############### 不常用，以下参数不用设置 #########################
     activation_bits: 8                            # 激活量化比特数
     weight_bits: 8                                # 权重量化比特数
-    activation_quantize_type: 'range_abs_max'     # 激活量化方式
-    weight_quantize_type: 'channel_wise_abs_max'  # 权重量化方式
-    not_quant_pattern: [skip_quant]               # 跳过量化层的name_scpoe命名(保持默认即可)
-    quantize_op_types: [conv2d, depthwise_conv2d] # 量化OP列表
-    dtype: 'int8'                                 # 量化后的参数类型，默认 int8 , 目前仅支持 int8
-    window_size: 10000                            # 'range_abs_max' 量化方式的 window size ，默认10000。
-    moving_rate: 0.9                              # 'moving_average_abs_max' 量化方式的衰减系数，默认 0.9。
-    for_tensorrt: false                           # 量化后的模型是否使用 TensorRT 进行预测。如果是的话，量化op类型为： TENSORRT_OP_TYPES 。默认值为False.
-    is_full_quantize: false                       # 是否全量化
-    onnx_format: false                            # 是否采用ONNX量化标准格式
+    activation_quantize_type: 'moving_average_abs_max'     # 激活量化方式 [保持默认即可]
+    not_quant_pattern: [skip_quant]               # 跳过量化层的name_scpoe命名  [保持默认即可]
+    dtype: 'int8'                                 # 量化后的参数类型，默认 int8 , 目前仅支持 int8  [保持默认即可]
+    window_size: 10000                            # 'range_abs_max' 量化方式的 window size ，默认10000。  [保持默认即可]
+    moving_rate: 0.9                              # 'moving_average_abs_max' 量化方式的衰减系数，默认 0.9。  [保持默认即可]
+    for_tensorrt: false                           # 量化后的模型是否使用 TensorRT 进行预测。如果是的话，量化op类型为： TENSORRT_OP_TYPES 。默认值为False.  [保持默认即可]
+    is_full_quantize: false                       # 是否全量化  [保持默认即可]
 ```
 
 以上配置项说明如下：
 
 
 - use_pact: 是否开启PACT。一般情况下，开启PACT后，量化产出的模型精度会更高。算法原理请参考：[PACT: Parameterized Clipping Activation for Quantized Neural Networks](https://arxiv.org/abs/1805.06085)
-- activation_bits:  激活量化bit数，可选1~8。默认为8。
-- weight_bits: 参数量化bit数，可选1~8。默认为8。
-- activation_quantize_type: 激活量化方式，可选 'abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。如果使用 TensorRT 加载量化后的模型来预测，请使用 'range_abs_max' 或 'moving_average_abs_max' 。默认为 'moving_average_abs_max'。
 - weight_quantize_type: 参数量化方式。可选 'abs_max' , 'channel_wise_abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。如果使用 TensorRT 加载量化后的模型来预测，请使用 'channel_wise_abs_max' 。 默认 'channel_wise_abs_max' 。
-- not_quant_pattern: 所有 `name_scope` 包含 'not_quant_pattern' 字符串的 op ，都不量化。 `name_scope` 设置方式请参考 [paddle.static.name_scope](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/name_scope_cn.html#name-scope)。
 - quantize_op_types：需要进行量化的OP类型。通过以下代码输出所有支持量化的OP类型：
 ```
 from paddleslim.quant.quanter import TRANSFORM_PASS_OP_TYPES,QUANT_DEQUANT_PASS_OP_TYPES
 print(TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES)
 ```
+- onnx_format: 是否采用ONNX量化格式标准，如果需要导出成ONNX，则需要设置为True。
+- activation_bits:  激活量化bit数，可选1~8。默认为8。
+- weight_bits: 参数量化bit数，可选1~8。默认为8。
+- activation_quantize_type: 激活量化方式，可选 'abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。如果使用 TensorRT 加载量化后的模型来预测，请使用 'range_abs_max' 或 'moving_average_abs_max' 。默认为 'moving_average_abs_max'。
+- not_quant_pattern: 所有 `name_scope` 包含 'not_quant_pattern' 字符串的 op ，都不量化。 `name_scope` 设置方式请参考 [paddle.static.name_scope](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/name_scope_cn.html#name-scope)。
 - dtype: 量化后的参数类型，默认 int8 , 目前仅支持 int8
 - window_size: 'range_abs_max' 量化方式的 window size ，默认10000。
 - moving_rate: 'moving_average_abs_max' 量化方式的衰减系数，默认 0.9。
@@ -45,7 +47,6 @@ print(TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES)
 from paddleslim.quant.quanter import TENSORRT_OP_TYPES
 print(TENSORRT_OP_TYPES)
 ```
-
 - is_full_quantize: 是否量化所有可支持op类型。默认值为False.
 
 
@@ -56,14 +57,12 @@ print(TENSORRT_OP_TYPES)
 Distillation:
     alpha: 1.0
     loss: l2
-    node:
+    node:  # 会默认选择，一般不用设置，除非自动选择的节点有问题，需要手动调整时，再设置
     - relu_30.tmp_0
-
-    teacher_model_dir: ./inference_model
-    # teacher_model_filename: 预测模型文件，格式为 *.pdmodel 或 __model__
-    teacher_model_filename: model.pdmodel
-    # teacher_params_filename: 预测模型参数文件，格式为 *.pdiparams 或 __params__
-    teacher_params_filename: model.pdiparams
+    ############ 以下参数无需设置，默认teacher模型为压缩前模型，除非指定其他模型为teacher模型才需设置以下参数  ##############
+    teacher_model_dir: ./inference_model       # 模型路径
+    teacher_model_filename: model.pdmodel      # 预测模型文件
+    teacher_params_filename: model.pdiparams   # 预测模型参数文件
 ```
 以上配置项说明如下：
 

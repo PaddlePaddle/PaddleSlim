@@ -4,7 +4,8 @@ import paddle
 from ...analysis import TableLatencyPredictor
 from .prune_model import get_sparse_model, get_prune_model
 from .fake_ptq import post_quant_fake
-from .load_model import load_inference_model
+from ...common.load_model import load_inference_model
+import platform
 
 
 def with_variable_shape(model_dir, model_filename=None, params_filename=None):
@@ -53,7 +54,7 @@ def predict_compressed_model(executor,
         latency_dict(dict): The latency latency of the model under various compression strategies.
     """
     local_rank = paddle.distributed.get_rank()
-    quant_model_path = f'quant_model_rank_{local_rank}_tmp'
+    quant_model_path = 'quant_model_rank_{}_tmp'.format(local_rank)
     prune_model_path = f'prune_model_rank_{local_rank}_tmp'
     sparse_model_path = f'sparse_model_rank_{local_rank}_tmp'
 

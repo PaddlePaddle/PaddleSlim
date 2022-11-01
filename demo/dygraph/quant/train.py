@@ -165,6 +165,8 @@ def compress(args):
         'moving_rate': 0.9,
         # for dygraph quantization, layers of type in quantizable_layer_type will be quantized
         'quantizable_layer_type': ['Conv2D', 'Linear'],
+        # # Whether to export the quantized model with format of ONNX.
+        'onnx_format': args.onnx_format,
     }
 
     if args.use_pact:
@@ -360,8 +362,7 @@ def compress(args):
             input_spec=[
                 paddle.static.InputSpec(
                     shape=[None, 3, 224, 224], dtype='float32')
-            ],
-            onnx_format=args.onnx_format)
+            ])
 
 
 def main():

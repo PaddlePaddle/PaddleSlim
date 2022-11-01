@@ -1,33 +1,33 @@
 Global:
   reader_config: configs/ssd_reader.yml
-  input_list: ['image', 'scale_factor', 'im_shape']
   Evaluation: True
-  model_dir: ./ssd_mobilenet_v1_300_120e_voc
+  model_dir: ./ssd_mobilenet_v1_300_120e_voc # Model Link: https://bj.bcebos.com/v1/paddle-slim-models/act/ssd_mobilenet_v1_300_120e_voc.tar
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
 Distillation:
   alpha: 1.0
-  loss: l2
+  loss: soft_label
   node:
   - concat_0.tmp_0
   - concat_2.tmp_0
+  - concat_1.tmp_0
 
 Quantization:
-  activation_quantize_type: 'range_abs_max'
+  use_pact: True
+  weight_quantize_type: 'channel_wise_abs_max'
+  activation_quantize_type: 'moving_average_abs_max'
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
+  onnx_format: True
 
 TrainConfig:
-  train_iter: 80000
-  eval_iter: 1000
-  learning_rate:  
-    type: CosineAnnealingDecay
-    learning_rate: 0.00001
-    T_max: 120000
+  epochs: 5
+  eval_iter: 300
+  learning_rate: 0.001
   optimizer_builder:
     optimizer: 
       type: SGD
     weight_decay: 4.0e-05
-
+  origin_metric: 0.738

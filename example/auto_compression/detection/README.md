@@ -7,8 +7,7 @@
   - [3.1 环境准备](#31-准备环境)
   - [3.2 准备数据集](#32-准备数据集)
   - [3.3 准备预测模型](#33-准备预测模型)
-  - [3.4 测试模型精度](#34-测试模型精度)
-  - [3.5 自动压缩并产出模型](#35-自动压缩并产出模型)
+  - [3.4 自动压缩并产出模型](#34-自动压缩并产出模型)
 - [4.预测部署](#4预测部署)
 - [5.FAQ](5FAQ)
 
@@ -22,12 +21,17 @@
 
 | 模型  | Base mAP | 离线量化mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 |  配置文件 | 量化模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
-| PP-YOLOE-l | 50.9  |  - | 50.6  |   11.2ms  |   7.7ms   |  **6.7ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
-| PP-YOLOE-s |  43.1  |   26.2 |   42.6   |   6.51ms  |   2.77ms   |  **2.12ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/auto_compression/detection/configs/ppyoloe_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_quant.tar) |
+| PP-YOLOE-l | 50.9  |  - | 50.6  |   11.2ms  |   7.7ms   |  **6.7ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
+| PP-YOLOE-s |  43.1  |   41.2 |   42.6   |   6.51ms  |   2.77ms   |  **2.12ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_quant.tar) |
 
 - mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
 - PP-YOLOE-l模型在Tesla V100的GPU环境下测试，并且开启TensorRT，batch_size=1，包含NMS，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)。
 - PP-YOLOE-s模型在Tesla T4，TensorRT 8.4.1，CUDA 11.2，batch_size=1，不包含NMS，测试脚本是[cpp_infer_ppyoloe](./cpp_infer_ppyoloe)。
+### SSD on Pascal VOC
+| 模型  | Box AP | ACT量化Box AP | TRT-FP32 | TRT-INT8 |  配置文件 | 量化模型  |
+| :-------- |:-------- | :---------------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
+| SSD-MobileNetv1 |  73.8  |   73.52    |   4.0ms  |  1.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ssd_mbv1_voc_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ssd_mobilenet_v1_quant.tar) |
+- 测速环境：Tesla T4，TensorRT 8.4.1，CUDA 11.2，batch_size=1，包含NMS.
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
@@ -39,9 +43,9 @@
 安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle
-# GPU
-pip install paddlepaddle-gpu
+pip install paddlepaddle==2.3.2
+# GPU 以Ubuntu、CUDA 11.2为例
+python -m pip install paddlepaddle-gpu==2.3.2.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
 安装paddleslim：
@@ -91,7 +95,7 @@ PPYOLOE-s模型，不包含NMS：如快速体验，可直接下载[PP-YOLOE-s导
 python tools/export_model.py \
         -c configs/ppyoloe/ppyoloe_crn_s_300e_coco.yml \
         -o weights=https://paddledet.bj.bcebos.com/models/ppyoloe_crn_s_300e_coco.pdparams \
-        trt=True exclude_nms=True \
+        trt=True exclude_post_process=True \
 ```
 
 #### 3.4 自动压缩并产出模型
@@ -110,23 +114,52 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log -
           --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./output/'
 ```
 
-#### 3.5 测试模型精度
-
-使用eval.py脚本得到模型的mAP：
-```
-export CUDA_VISIBLE_DEVICES=0
-python eval.py --config_path=./configs/ppyoloe_l_qat_dis.yaml
-```
-
-**注意**：
-- 要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
 
 ## 4.预测部署
 
-- 如果模型包含NMS，可以参考[PaddleDetection部署教程](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy)，GPU上量化模型开启TensorRT并设置trt_int8模式进行部署。
+#### 4.1 Paddle Inference 验证性能
 
-- 模型为PPYOLOE，同时不包含NMS，使用以下预测demo进行部署：
-  - Paddle-TensorRT C++部署
+量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
+
+以下字段用于配置预测参数：
+
+| 参数名 | 含义 |
+|:------:|:------:|
+| model_path | inference 模型文件所在目录，该目录下需要有文件 model.pdmodel 和 model.pdiparams 两个文件 |
+| reader_config | eval时模型reader的配置文件路径 |
+| image_file | 如果只测试单张图片效果，直接根据image_file指定图片路径 |
+| device | 使用GPU或者CPU预测，可选CPU/GPU   |
+| use_trt | 是否使用 TesorRT 预测引擎   |
+| use_mkldnn | 是否启用```MKL-DNN```加速库，注意```use_mkldnn```与```use_gpu```同时为```True```时，将忽略```enable_mkldnn```，而使用```GPU```预测  |
+| cpu_threads | CPU预测时，使用CPU线程数量，默认10  |
+| precision | 预测精度，包括`fp32/fp16/int8`  |
+
+
+- TensorRT预测：
+
+环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=models/ppyoloe_crn_l_300e_coco_quant \
+      --reader_config=configs/yoloe_reader.yml \
+      --use_trt=True \
+      --precision=int8
+```
+
+- MKLDNN预测：
+
+```shell
+python paddle_inference_eval.py \
+      --model_path=models/ppyoloe_crn_l_300e_coco_quant \
+      --reader_config=configs/yoloe_reader.yml \
+      --device=CPU \
+      --use_mkldnn=True \
+      --cpu_threads=10 \
+      --precision=int8
+```
+
+- 模型为PPYOLOE，同时不包含NMS，可以使用C++预测demo进行测速：
 
   进入[cpp_infer](./cpp_infer_ppyoloe)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer_ppyoloe/README.md)进行准备环境及编译，然后开始测试：
   ```shell
@@ -136,16 +169,6 @@ python eval.py --config_path=./configs/ppyoloe_l_qat_dis.yaml
   ./build/trt_run --model_file ppyoloe_s_quant/model.pdmodel --params_file ppyoloe_s_quant/model.pdiparams --run_mode=trt_int8
   ```
 
-  - Paddle-TensorRT Python部署:
-
-  首先安装带有TensorRT的[Paddle安装包](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python)。然后使用[paddle_trt_infer.py](./paddle_trt_infer.py)进行部署：
-  ```shell
-  python paddle_trt_infer.py --model_path=output --image_file=images/000000570688.jpg --benchmark=True --run_mode=trt_int8
-  ```
-
 ## 5.FAQ
 
-- 如果想测试离线量化模型精度，可执行：
-```shell
-python post_quant.py --config_path=./configs/ppyoloe_s_qat_dis.yaml
-```
+- 如果想对模型进行离线量化，可进入[Detection模型离线量化示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/detection)中进行实验。

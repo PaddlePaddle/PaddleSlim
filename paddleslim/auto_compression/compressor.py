@@ -29,13 +29,15 @@ from ..quant.quanter import convert, quant_post
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
 from ..common.patterns import get_patterns
+from ..common.load_model import load_inference_model, get_model_dir, export_onnx
+from ..common.dataloader import wrap_dataloader, get_feed_vars
+from ..common.config_helper import load_config
 from ..analysis import TableLatencyPredictor
 from .create_compressed_program import build_distill_program, build_quant_program, build_prune_program, remove_unused_var_nodes
 from .strategy_config import TrainConfig, ProgramInfo, merge_config
 from .auto_strategy import prepare_strategy, get_final_quant_config, create_strategy_config, create_train_config
-from .config_helpers import load_config, extract_strategy_config, extract_train_config
+from .config_helpers import extract_strategy_config, extract_train_config
 from .utils.predict import with_variable_shape
-from .utils import get_feed_vars, wrap_dataloader, load_inference_model
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -49,10 +51,10 @@ except Exception as e:
 class AutoCompression:
     def __init__(self,
                  model_dir,
-                 model_filename,
-                 params_filename,
-                 save_dir,
                  train_dataloader,
+                 model_filename=None,
+                 params_filename=None,
+                 save_dir='./output',
                  config=None,
                  input_shapes=None,
                  target_speedup=None,
@@ -66,13 +68,13 @@ class AutoCompression:
             model_dir(str): The path of inference model that will be compressed, and
                 the model and params that saved by ``paddle.static.save_inference_model``
                 are under the path.
+            train_dataloader(Python Generator, Paddle.io.DataLoader): The
+                Generator or Dataloader provides train data, and it could
+                return a batch every time.
             model_filename(str):  The name of model file. 
             params_filename(str): The name of params file.
             save_dir(str): The path to save compressed model. The models in this directory will be overwrited
                 after calling 'compress()' function.
-            train_data_loader(Python Generator, Paddle.io.DataLoader): The
-                Generator or Dataloader provides train data, and it could
-                return a batch every time.
             input_shapes(dict|tuple|list): It is used when the model has implicit dimensions except batch size. 
                 If it is a dict, the key is the name of input and the value is the shape. 
                 Given the input shape of input "X" is [-1, 3, -1, -1] which means the batch size, hight
@@ -117,18 +119,8 @@ class AutoCompression:
             deploy_hardware(str, optional): The hardware you want to deploy. Default: 'gpu'.
         """
         self.model_dir = model_dir.rstrip('/')
-
-        if model_filename == 'None':
-            model_filename = None
-        self.model_filename = model_filename
-        if params_filename == 'None':
-            params_filename = None
-        self.params_filename = params_filename
-
-        if params_filename is None and model_filename is not None:
-            raise NotImplementedError(
-                "NOT SUPPORT parameters saved in separate files. Please convert it to single binary file first."
-            )
+        self.updated_model_dir, self.model_filename, self.params_filename = get_model_dir(
+            model_dir, model_filename, params_filename)
 
         self.final_dir = save_dir
         if not os.path.exists(self.final_dir):
@@ -163,8 +155,7 @@ class AutoCompression:
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
-        self.model_type = self._get_model_type(self._exe, self.model_dir,
-                                               model_filename, params_filename)
+        self.model_type = self._get_model_type()
 
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
@@ -249,8 +240,8 @@ class AutoCompression:
         paddle.enable_static()
         exe = paddle.static.Executor(paddle.CPUPlace())
         [inference_program, feed_target_names,
-         fetch_targets] = (load_inference_model(model_dir, exe, model_filename,
-                                                params_filename))
+         fetch_targets] = load_inference_model(model_dir, exe, model_filename,
+                                               params_filename)
 
         if type(input_shapes) in [list, tuple]:
             assert len(
@@ -310,23 +301,26 @@ class AutoCompression:
         exe = paddle.static.Executor(places)
         return exe, places
 
-    def _get_model_type(self, exe, model_dir, model_filename, params_filename):
-        [inference_program, _, _]= (load_inference_model( \
-            model_dir, \
-            model_filename=model_filename, params_filename=params_filename,
-            executor=exe))
+    def _get_model_type(self):
+        [inference_program, _, _] = (load_inference_model(
+            self.model_dir,
+            model_filename=self.model_filename,
+            params_filename=self.params_filename,
+            executor=self._exe))
         _, _, model_type = get_patterns(inference_program)
         if self.model_filename is None:
-            new_model_filename = '__new_model__'
+            opt_model_filename = '__opt_model__'
         else:
-            new_model_filename = 'new_' + self.model_filename
+            opt_model_filename = 'opt_' + self.model_filename
         program_bytes = inference_program._remove_training_info(
             clip_extra=False).desc.serialize_to_string()
-        with open(os.path.join(self.model_dir, new_model_filename), "wb") as f:
+        with open(
+                os.path.join(self.updated_model_dir, opt_model_filename),
+                "wb") as f:
             f.write(program_bytes)
         shutil.move(
-            os.path.join(self.model_dir, new_model_filename),
-            os.path.join(self.model_dir, self.model_filename))
+            os.path.join(self.updated_model_dir, opt_model_filename),
+            os.path.join(self.updated_model_dir, self.model_filename))
         _logger.info(f"Detect model type: {model_type}")
         return model_type
 
@@ -395,7 +389,7 @@ class AutoCompression:
                 config.append(merge_config(quant_config, hpo_config))
 
             ### case6: quant_config & distill config ==> QAT & Distill
-            if quant_config is not None and self._distill_config is not None:
+            if quant_config is not None and self._distill_config is not None and 'ptq_hpo' not in strategy:
                 only_distillation = False
                 strategy.append('qat_dis')
                 config.append(merge_config(quant_config, self._distill_config))
@@ -603,10 +597,23 @@ class AutoCompression:
                                  train_config):
         # start compress, including train/eval model
         # TODO: add the emd loss of evaluation model.
+        if strategy_idx == 0:
+            model_dir = self.model_dir
+        else:
+            model_dir = os.path.join(self.tmp_dir,
+                                     'strategy_{}'.format(str(strategy_idx)))
+
+        if self.updated_model_dir != model_dir:
+            # If model is ONNX, convert it to inference model firstly.
+            load_inference_model(
+                model_dir,
+                model_filename=self.model_filename,
+                params_filename=self.params_filename,
+                executor=self._exe)
         if strategy == 'quant_post':
             quant_post(
                 self._exe,
-                model_dir=self.model_dir,
+                model_dir=model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 data_loader=self.train_dataloader,
@@ -632,15 +639,26 @@ class AutoCompression:
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
-
+            if self.updated_model_dir != model_dir:
+                # If model is ONNX, convert it to inference model firstly.
+                load_inference_model(
+                    model_dir,
+                    model_filename=self.model_filename,
+                    params_filename=self.params_filename,
+                    executor=self._exe)
+            if self.eval_function is None:
+                # If eval function is None, ptq_hpo will use emd distance to eval the quantized model, so need the dataloader without label
+                eval_dataloader = self.train_dataloader
+            else:
+                eval_dataloader = self.eval_dataloader
             post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
-                model_dir=self.model_dir,
+                model_dir=model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
-                eval_dataloader=self.eval_dataloader,
+                eval_dataloader=eval_dataloader,
                 eval_function=self.eval_function,
                 model_filename=self.model_filename,
                 params_filename=self.params_filename,
@@ -656,16 +674,11 @@ class AutoCompression:
                 hist_percent=config.hist_percent,
                 batch_size=[1],
                 batch_num=config.batch_num,
+                onnx_format=config.onnx_format,
                 runcount_limit=config.max_quant_count)
 
         else:
             assert 'dis' in strategy, "Only support optimizer compressed model by distillation loss."
-
-            if strategy_idx == 0:
-                model_dir = self.model_dir
-            else:
-                model_dir = os.path.join(
-                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx)))
 
             [inference_program, feed_target_names, fetch_targets]= load_inference_model( \
                 model_dir, \
@@ -707,7 +720,10 @@ class AutoCompression:
         best_metric = -1.0
         total_epochs = train_config.epochs if train_config.epochs else 100
         total_train_iter = 0
+        stop_training = False
         for epoch_id in range(total_epochs):
+            if stop_training:
+                break
             for batch_id, data in enumerate(self.train_dataloader()):
                 np_probs_float, = self._exe.run(train_program_info.program, \
                     feed=data, \
@@ -753,6 +769,10 @@ class AutoCompression:
                                     abs(best_metric -
                                         self.metric_before_compressed)
                             ) / self.metric_before_compressed <= 0.005:
+                                _logger.info(
+                                    "The error rate between the compressed model and original model is less than 5%. The training process ends."
+                                )
+                                stop_training = True
                                 break
                         else:
                             _logger.info(
@@ -760,14 +780,18 @@ class AutoCompression:
                                 format(epoch_id, metric, best_metric))
                         if train_config.target_metric is not None:
                             if metric > float(train_config.target_metric):
+                                stop_training = True
+                                _logger.info(
+                                    "The metric of compressed model has reached the target metric. The training process ends."
+                                )
                                 break
 
                     else:
                         _logger.warning(
                             "Not set eval function, so unable to test accuracy performance."
                         )
-                if train_config.train_iter and total_train_iter >= train_config.train_iter:
-                    epoch_id = total_epochs
+                if (train_config.train_iter and total_train_iter >=
+                        train_config.train_iter) or stop_training:
                     break
 
         if 'unstructure' in self._strategy or train_config.sparse_model:
@@ -797,7 +821,8 @@ class AutoCompression:
                 test_program,
                 self._places,
                 self._quant_config,
-                scope=paddle.static.global_scope())
+                scope=paddle.static.global_scope(),
+                save_clip_ranges_path=self.final_dir)
 
         feed_vars = [
             test_program.global_block().var(name)
@@ -819,3 +844,20 @@ class AutoCompression:
             fetch_vars=test_program_info.fetch_targets,
             executor=self._exe,
             program=test_program)
+
+    def export_onnx(self,
+                    model_name='quant_model.onnx',
+                    deploy_backend='tensorrt'):
+        infer_model_path = os.path.join(self.final_dir, self.model_filename)
+        assert os.path.exists(
+            infer_model_path), 'Not found {}, please check it.'.format(
+                infer_model_path)
+        onnx_save_path = os.path.join(self.final_dir, 'ONNX')
+        if not os.path.exists(onnx_save_path):
+            os.makedirs(onnx_save_path)
+        export_onnx(
+            self.final_dir,
+            model_filename=self.model_filename,
+            params_filename=self.params_filename,
+            save_file_path=os.path.join(onnx_save_path, model_name),
+            deploy_backend=deploy_backend)
