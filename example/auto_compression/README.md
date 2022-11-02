@@ -33,7 +33,7 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 * 🔥 **2022.8.22 晚 19:00～20:00**，PaddleSlim自动压缩**YOLO系列直播课**，欢迎大家扫码进入直播技术交流群。
 
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/197434181-e21f9ea1-a3bd-482f-b622-c19bb152ff75.png" width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/198922712-9db284c3-5f8f-40fc-a78e-5c8e9ed1565b.png" width = "225" height = "225" />
   </div>
 
 ## **特性**
@@ -68,25 +68,38 @@ ACT相比传统的模型压缩方法，
 
 <font size=0.5>
 
-| 模型类型                            | model name                   | 压缩前<br/>精度(Top1 Acc %) | 压缩后<br/>精度(Top1 Acc %) | 压缩前<br/>推理时延（ms） | 压缩后<br/>推理时延（ms） | 推理<br/>加速比 | 芯片                |
-| ------------------------------- | ---------------------------- | ---------------------- | ---------------------- | ---------------- | ---------------- | ---------- | ----------------- |
-| [图像分类](./image_classification)  | MobileNetV1                  | 70.90                  | 70.57                  | 33.15            | 13.64            | **2.43**   | SDM865（骁龙865）     |
-| [图像分类](./image_classification)  | ShuffleNetV2_x1_0            | 68.65                  | 68.32                  | 10.43            | 5.51             | **1.89**   | SDM865（骁龙865）     |
-| [图像分类](./image_classification)  | SqueezeNet1_0_infer          | 59.60                  | 59.45                  | 35.98            | 16.96            | **2.12**   | SDM865（骁龙865）     |
-| [图像分类](./image_classification)  | PPLCNetV2_base               | 76.86                  | 76.43                  | 36.50            | 15.79            | **2.31**   | SDM865（骁龙865）     |
-| [图像分类](./image_classification)  | ResNet50_vd                  | 79.12                  | 78.74                  | 3.19             | 0.92             | **3.47**   | NVIDIA Tesla T4   |
-| [语义分割](./semantic_segmentation) | PPHGNet_tiny                 | 79.59                  | 79.20                  | 2.82             | 0.98             | **2.88**   | NVIDIA Tesla T4   |
-| [语义分割](./semantic_segmentation) | PP-HumanSeg-Lite             | 92.87                  | 92.35                  | 56.36            | 37.71            | **1.49**   | SDM710            |
-| [语义分割](./semantic_segmentation) | PP-LiteSeg                   | 77.04                  | 76.93                  | 1.43             | 1.16             | **1.23**   | NVIDIA Tesla T4   |
-| [语义分割](./semantic_segmentation) | HRNet                        | 78.97                  | 78.90                  | 8.19             | 5.81             | **1.41**   | NVIDIA Tesla T4   |
-| [语义分割](./semantic_segmentation) | UNet                         | 65.00                  | 64.93                  | 15.29            | 10.23            | **1.49**   | NVIDIA Tesla T4   |
-| [NLP](./nlp)                            | PP-MiniLM                    | 72.81                 | 72.44                 | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4   |
-| [NLP](./nlp)                            | ERNIE 3.0-Medium             | 73.09                 | 72.40                 | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4   |
-| [目标检测](./pytorch_yolo_series)             | YOLOv5s<br/>(PyTorch)        | 37.40                  | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4   |
-| [目标检测](./pytorch_yolo_series)             | YOLOv6s<br/>(PyTorch)        | 42.4                  | 41.3                   | 9.06             | 1.83             | **4.95**   | NVIDIA Tesla T4   |
-| [目标检测](./pytorch_yolo_series)             | YOLOv7<br/>(PyTorch)        | 51.1                  | 50.8                   | 26.84             | 4.55             | **5.89**   | NVIDIA Tesla T4   |
-| [目标检测](./detection)             | PP-YOLOE-s                   | 43.1                   | 42.6                   |  6.51  |   2.12   |  **3.07**  | NVIDIA Tesla T4 |
-| [图像分类](./image_classification)  | MobileNetV1<br/>(TensorFlow) | 71.0                   | 70.22                  | 30.45            | 15.86            |  **1.92**  | SDMM865（骁龙865）     |  
+| 模型类型                            | model name                    | 压缩前<br/>精度(Top1 Acc %) | 压缩后<br/>精度(Top1 Acc %) | 压缩前<br/>推理时延（ms） | 压缩后<br/>推理时延（ms） | 推理<br/>加速比 | 芯片              |
+| ------------------------------- | ----------------------------- | ---------------------- | ---------------------- | ---------------- | ---------------- | ---------- | --------------- |
+| [图像分类](./image_classification)  | MobileNetV1                   | 70.90                  | 70.57                  | 33.15            | 13.64            | **2.43**   | SDM865（骁龙865）   |
+| [图像分类](./image_classification)  | MobileNetV3_large_x1_0        | 75.32                  | 74.04                  | 16.62            | 9.85             | **1.69**   | SDM865（骁龙865）   |
+| [图像分类](./image_classification)  | MobileNetV3_large_x1_0_ssld   | 78.96                  | 77.17                  | 16.62            | 9.85             | **1.69**   | SDM865（骁龙865）   |
+| [图像分类](./image_classification)  | ShuffleNetV2_x1_0             | 68.65                  | 68.32                  | 10.43            | 5.51             | **1.89**   | SDM865（骁龙865）   |
+| [图像分类](./image_classification)  | SqueezeNet1_0_infer           | 59.60                  | 59.45                  | 35.98            | 16.96            | **2.12**   | SDM865（骁龙865）   |
+| [图像分类](./image_classification)  | PPLCNetV2_base                | 76.86                  | 76.39                  | 36.50            | 15.79            | **2.31**   | SDM865（骁龙865）   |
+| [图像分类](./image_classification)  | ResNet50_vd                   | 79.12                  | 78.74                  | 3.19             | 0.92             | **3.47**   | NVIDIA Tesla T4 |
+| [图像分类](./image_classification)  | PPHGNet_tiny                  | 79.59                  | 79.20                  | 2.82             | 0.98             | **2.88**   | NVIDIA Tesla T4 |
+| [图像分类](./image_classification)  | InceptionV3                   | 79.14                  | 78.32                  | 4.79             | 1.47             | **3.26**   | NVIDIA Tesla T4 |
+| [图像分类](./image_classification)  | EfficientNetB0                | 77.02                  | 74.27                  | 1.95             | 1.44             | **1.35**   | NVIDIA Tesla T4 |
+| [图像分类](./image_classification)  | GhostNet_x1_0                 | 74.02                  | 72.62                  | 2.93             | 1.03             | **2.84**   | NVIDIA Tesla T4 |
+| [语义分割](./semantic_segmentation) | PP-HumanSeg-Lite              | 92.87                  | 92.35                  | 56.36            | 37.71            | **1.49**   | SDM710          |
+| [语义分割](./semantic_segmentation) | PP-LiteSeg                    | 77.04                  | 76.93                  | 1.43             | 1.16             | **1.23**   | NVIDIA Tesla T4 |
+| [语义分割](./semantic_segmentation) | HRNet                         | 78.97                  | 78.90                  | 8.188            | 5.812            | **1.41**   | NVIDIA Tesla T4 |
+| [语义分割](./semantic_segmentation) | UNet                          | 65.00                  | 64.93                  | 15.29            | 10.23            | **1.49**   | NVIDIA Tesla T4 |
+| [语义分割](./semantic_segmentation) | Deeplabv3-ResNet50            | 79.90                  | 79.26                  | 12.766           | 8.839            | **1.44**   | NVIDIA Tesla T4 |
+| [语义分割](./semantic_segmentation) | BiSeNetV2                     | 73.17                  | 73.20                  | 35.61            | 15.94            | **2.23**   | NVIDIA Tesla T4 |
+| [NLP](./nlp)                    | PP-MiniLM                     | 72.81                  | 72.44                  | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4 |
+| [NLP](./nlp)                    | ERNIE 3.0-Medium              | 73.09                  | 72.40                  | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4 |
+| [NLP](./pytorch_huggingface)    | bert-base-cased（Hugging-Face） | 81.35                  | 81.51                  | 11.60            | 4.83             | **2.40**   | NVIDIA Tesla T4 |
+| [目标检测](./detection)             | SSD-MobileNetv1               | 73.8(voc)              | 73.52                  | 4.0              | 1.7              | **2.35**   | NVIDIA Tesla T4 |
+| [目标检测](./pytorch_yolo_series)   | YOLOv5s<br/>(PyTorch)         | 37.4                   | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4 |
+| [目标检测](./pytorch_yolo_series)   | YOLOv6s<br/>(PyTorch)         | 42.4                   | 41.3                   | 9.06             | 1.83             | **4.95**   | NVIDIA Tesla T4 |
+| [目标检测](./pytorch_yolo_series)   | YOLOv6s_v2(PyTorch)           | 43.4                   | 43.0                   | 9.06             | 1.83             | **4.95**   | NVIDIA Tesla T4 |
+| [目标检测](./pytorch_yolo_series)   | YOLOv7-Tiny(PyTorch)          | 37.3                   | 37.0                   | 5.06             | 1.68             | **3.01**   | NVIDIA Tesla T4 |
+| [目标检测](./pytorch_yolo_series)   | YOLOv7<br/>(PyTorch)          | 51.1                   | 50.8                   | 26.84            | 4.55             | **5.89**   | NVIDIA Tesla T4 |
+| [目标检测](./detection)             | PP-YOLOE-l                    | 50.9                   | 50.6                   | 11.2             | 6.7              | **1.67**   | NVIDIA Tesla T4 |
+| [目标检测](./detection)             | PP-YOLOE-s                    | 43.1                   | 42.6                   | 6.51             | 2.12             | **3.07**   | NVIDIA Tesla T4 |
+| [图像分类](./image_classification)  | MobileNetV1<br/>(TensorFlow)  | 71.0                   | 70.22                  | 30.45            | 15.86            | **1.92**   | SDMM865（骁龙865）  |
+
 
 - 备注：目标检测精度指标为mAP（0.5:0.95）精度测量结果。图像分割精度指标为IoU精度测量结果。
 - 更多飞桨模型应用示例及Benchmark可以参考：[图像分类](./image_classification)，[目标检测](./detection)，[语义分割](./semantic_segmentation)，[自然语言处理](./nlp)
@@ -240,7 +253,7 @@ ac.compress()
 - 微信扫描二维码并填写问卷之后，加入技术交流群
 
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/197434181-e21f9ea1-a3bd-482f-b622-c19bb152ff75.png"  width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/198922712-9db284c3-5f8f-40fc-a78e-5c8e9ed1565b.png"  width = "225" height = "225" />
   </div>
 
 - 如果你发现任何关于ACT自动化压缩工具的问题或者是建议, 欢迎通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSlim/issues)给我们提issues。同时欢迎贡献更多优秀模型，共建开源生态。
