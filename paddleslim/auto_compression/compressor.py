@@ -126,9 +126,6 @@ class AutoCompression:
         if not os.path.exists(self.final_dir):
             os.makedirs(self.final_dir)
 
-        paddle.enable_static()
-        self._exe, self._places = self._prepare_envs()
-
         # load config
         if isinstance(config, str):
             config = load_config(config)
@@ -141,11 +138,6 @@ class AutoCompression:
         else:
             self.train_config = None
         self.strategy_config = extract_strategy_config(config)
-
-        self.model_type = None
-        ### don't need to get model type if specify compress config.
-        if self.strategy_config is None:
-            self.model_type = self._get_model_type()
 
         # prepare dataloader
         self.feed_vars = get_feed_vars(self.model_dir, model_filename,
@@ -160,6 +152,10 @@ class AutoCompression:
         self.target_speedup = target_speedup
         self.eval_function = eval_callback
         self.deploy_hardware = deploy_hardware
+
+        paddle.enable_static()
+        self._exe, self._places = self._prepare_envs()
+        self.model_type = self._get_model_type()
 
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
