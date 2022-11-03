@@ -39,7 +39,7 @@
 
   - 硬件：NVIDIA Tesla T4 单卡
   - 软件：CUDA 11.0, cuDNN 8.0, TensorRT 8.0
-  - 测试配置：batch_size: 40, max_seq_len: 128
+  - 测试配置：batch_size: 40
 
 下面将以开源数据集为例介绍如何对PP-HumanSeg-Lite进行自动压缩。
 
