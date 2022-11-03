@@ -29,11 +29,10 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 
 ## **News** 📢
 
-* 🎉 **2022.8.22** [**PaddleSlim v2.3.3**](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.3)全新发布！目前已经在图像分类、目标检测、图像分割、NLP等20多个模型验证正向效果。
-* 🔥 **2022.8.22 晚 19:00～20:00**，PaddleSlim自动压缩**YOLO系列直播课**，欢迎大家扫码进入直播技术交流群。
+* 🔥 **2022.11.7～2022.11.8 晚 20:30～21:30**，PaddleSlim自动压缩**CV专场和NLP专场**，欢迎大家扫码进入直播技术交流群。
 
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/198922712-9db284c3-5f8f-40fc-a78e-5c8e9ed1565b.png" width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg" width = "225" height = "225" />
   </div>
 
 ## **特性**
@@ -220,21 +219,21 @@ ac.compress()
   - 测试FP32模型的速度
 
     ```
-    python ./image_classification/infer.py
+    python ./image_classification/paddle_inference_eval.py --model_path='./MobileNetV1_infer' --use_gpu=True --use_trt=True
     ### using tensorrt FP32    batch size: 1 time(ms): 0.6140608787536621
     ```
 
   - 测试FP16模型的速度
 
     ```
-    python ./image_classification/infer.py --use_fp16=True
+    python ./image_classification/paddle_inference_eval.py --model_path='./MobileNetV1_infer' --use_gpu=True --use_trt=True --use_fp16=True
     ### using tensorrt FP16    batch size: 1 time(ms): 0.5795984268188477
     ```
 
   - 测试INT8模型的速度
 
     ```
-    python ./image_classification/infer.py --model_dir=./MobileNetV1_quant/ --use_int8=True
+    python ./image_classification/paddle_inference_eval.py --model_path='./MobileNetV1_quant/' --use_gpu=True --use_trt=True --use_int8=True
     ### using tensorrt INT8 batch size: 1 time(ms): 0.5213963985443115
     ```
 
@@ -253,7 +252,7 @@ ac.compress()
 - 微信扫描二维码并填写问卷之后，加入技术交流群
 
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/198922712-9db284c3-5f8f-40fc-a78e-5c8e9ed1565b.png"  width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg"  width = "225" height = "225" />
   </div>
 
 - 如果你发现任何关于ACT自动化压缩工具的问题或者是建议, 欢迎通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSlim/issues)给我们提issues。同时欢迎贡献更多优秀模型，共建开源生态。
