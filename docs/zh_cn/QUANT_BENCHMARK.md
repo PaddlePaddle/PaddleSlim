@@ -2,7 +2,7 @@
 
 ## 图像分类
 
-| 模型 | 示例 | Top-1 Acc<sup>FP32</sup> | Top-1 Acc<sup>INT8</sup>  | 模型体积<sup>FP32</sup> | 模型体积<sup>INT8</sup> | TRT<sup>FP3</sup> | TRT<sup>FP16</sup> | TRT<sup>INT8</sup> | CPU<sup>FP32</sup> | CPU<sup>INT8</sup> | ARM-CPU<sup>FP32</sup>| ARM-CPU<sup>INT8</sup> |  
+| 模型 | 示例 | Top-1 Acc<sup>FP32</sup> | Top-1 Acc<sup>INT8</sup>  | 模型体积<sup>FP32</sup> | 模型体积<sup>INT8</sup> | TRT<sup>FP32</sup> | TRT<sup>FP16</sup> | TRT<sup>INT8</sup> | CPU<sup>FP32</sup> | CPU<sup>INT8</sup> | ARM-CPU<sup>FP32</sup>| ARM-CPU<sup>INT8</sup> |  
 |:---:|:---:|:----:|:---:|:-----:|:-----:|:-----:|:-----:|:-----:|:----:|:---:|:-----:|:-----:|  
 | ResNet50-vd | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/image_classification) | 79.08 | 78.17 | 98MB | 25MB | 7.0ms | 2.4ms | 1.6ms | 77.7ms | 24.7ms | - | - |
 | MobileNetV3_large_x1_0 | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/image_classification) | 75.32 | 74.04 | 22MB | 5.6MB | 2.3ms | 1.4ms | 1.1ms | 11.3ms | 7.7ms | 16.6ms | 9.8ms |
@@ -21,13 +21,13 @@
 
 ## 目标检测
 
-| 模型 | 示例 | Top-1 Acc<sup>FP32</sup> | Top-1 Acc<sup>INT8</sup>  | 模型体积<sup>FP32</sup> | 模型体积<sup>INT8</sup> | TRT<sup>FP3</sup> | TRT<sup>FP16</sup> | TRT<sup>INT8</sup> | CPU<sup>FP32</sup> | CPU<sup>INT8</sup> | ARM-CPU<sup>FP32</sup>| ARM-CPU<sup>INT8</sup> |  
+| 模型 | 示例 | mAP(0.5:0.95)<sup>FP32</sup> | mAP(0.5:0.95)<sup>INT8</sup>  | 模型体积<sup>FP32</sup> | 模型体积<sup>INT8</sup> | TRT<sup>FP32</sup> | TRT<sup>FP16</sup> | TRT<sup>INT8</sup> | CPU<sup>FP32</sup> | CPU<sup>INT8</sup> | ARM-CPU<sup>FP32</sup>| ARM-CPU<sup>INT8</sup> |  
 |:---:|:---:|:----:|:---:|:-----:|:-----:|:-----:|:-----:|:-----:|:----:|:---:|:-----:|:-----:|  
 | PP-YOLOE-l | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/detection) | 50.9 | 50.6 | 98MB | 25MB | - | - | - | 1526ms | 1081ms | - | - |
 | PP-PicoDet | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/detection) | 50.9 | 50.6 | 98MB | 25MB | - | 6.8ms | 6.1ms | 56.9ms | 39.0ms | - | - |
-| YOLOv5s | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series) | 37.4 | 36.9 | 28.1MB | 7.4MB | - | 8.5ms | 7.4ms | 310.5ms | 265.7ms | - | - |
-| YOLOv6s | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series) | 42.4 | 41.3 | 65.9MB | 16.8MB | - | 7.4ms | 5.3ms | 387.3ms | 157.2ms | - | - |
-| YOLOv7 | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series) | 51.1 | 50.8 | 141.4MB | 35.8MB | - | 17.0ms | 12.4ms | 1268.6ms | 864.3ms | - | - |
+| YOLOv5s | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series) | 37.4 | 36.9 | 28.1MB | 7.4MB | 14.5ms | 8.5ms | 7.4ms | 310.5ms | 265.7ms | - | - |
+| YOLOv6s | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series) | 42.4 | 41.3 | 65.9MB | 16.8MB | 17.4ms | 7.4ms | 5.3ms | 387.3ms | 157.2ms | - | - |
+| YOLOv7 | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series) | 51.1 | 50.8 | 141.4MB | 35.8MB | 48.2 | 17.0ms | 12.4ms | 1268.6ms | 864.3ms | - | - |
 
 测试环境：
 - GPU: Tesla T4; cuda11.1/cudnn8.1.1/trt8.4.0.6;
@@ -39,7 +39,7 @@
 
 ## 语义分割
 
-| 模型 | 示例 | Top-1 Acc<sup>FP32</sup> | Top-1 Acc<sup>INT8</sup>  | 模型体积<sup>FP32</sup> | 模型体积<sup>INT8</sup> | TRT<sup>FP3</sup> | TRT<sup>FP16</sup> | TRT<sup>INT8</sup> | CPU<sup>FP32</sup> | CPU<sup>INT8</sup> | ARM-CPU<sup>FP32</sup>| ARM-CPU<sup>INT8</sup> |  
+| 模型 | 示例 | mIoU<sup>FP32</sup> | mIoU<sup>INT8</sup>  | 模型体积<sup>FP32</sup> | 模型体积<sup>INT8</sup> | TRT<sup>FP32</sup> | TRT<sup>FP16</sup> | TRT<sup>INT8</sup> | CPU<sup>FP32</sup> | CPU<sup>INT8</sup> | ARM-CPU<sup>FP32</sup>| ARM-CPU<sup>INT8</sup> |  
 |:---:|:---:|:----:|:---:|:-----:|:-----:|:-----:|:-----:|:-----:|:----:|:---:|:-----:|:-----:|  
 | PP-HumanSeg-Lite | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/semantic_segmentation) | 96.0 | 95.94 | 0.54MB | 0.2MB | 2.7ms | 2.1ms | 1.9ms | 63.8ms | 59.6ms | 56.36ms | 49.65ms |
 | PP-Liteseg | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/semantic_segmentation) | 77.04 | 76.99 | 31MB | 7.8MB | 46.4ms | 30.4ms | 27.1ms | 1289ms | 785ms | - | - |
@@ -58,7 +58,7 @@
 
 ## NLP
 
-| 模型 | 示例 | Top-1 Acc<sup>FP32</sup> | Top-1 Acc<sup>INT8</sup>  | 模型体积<sup>FP32</sup> | 模型体积<sup>INT8</sup> | TRT<sup>FP3</sup> | TRT<sup>FP16</sup> | TRT<sup>INT8</sup> | CPU<sup>FP32</sup> | CPU<sup>INT8</sup> | ARM-CPU<sup>FP32</sup>| ARM-CPU<sup>INT8</sup> |  
+| 模型 | 示例 | Acc<sup>FP32</sup> | Acc<sup>INT8</sup>  | 模型体积<sup>FP32</sup> | 模型体积<sup>INT8</sup> | TRT<sup>FP32</sup> | TRT<sup>FP16</sup> | TRT<sup>INT8</sup> | CPU<sup>FP32</sup> | CPU<sup>INT8</sup> | ARM-CPU<sup>FP32</sup>| ARM-CPU<sup>INT8</sup> |  
 |:---:|:---:|:----:|:---:|:-----:|:-----:|:-----:|:-----:|:-----:|:----:|:---:|:-----:|:-----:|  
 | ERNIE 3.0-Medium | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/nlp) | 75.37 | 74.4 | 288MB | 155MB | 73.84ms | 11.38ms | 4.43ms | 1519ms | 591ms | - | - |
 | PP-MiniLM | [示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/nlp) | 74.03 | 73.3 | 228MB | 106MB | 2.7ms | 73.72ms | 11.24ms | 1454ms | 702ms | - | - |
