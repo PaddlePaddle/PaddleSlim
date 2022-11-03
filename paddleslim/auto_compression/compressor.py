@@ -491,7 +491,7 @@ class AutoCompression:
                 strategy, self.patterns, self.eval_dataloader)
 
         if train_config.use_fleet:
-            dist_strategy = _prepare_fleet_strategy(train_config)
+            dist_strategy = self._prepare_fleet_strategy(train_config)
         else:
             dist_strategy = None
 
