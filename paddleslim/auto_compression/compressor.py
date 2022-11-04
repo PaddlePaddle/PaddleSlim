@@ -155,8 +155,7 @@ class AutoCompression:
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
-        self.default_distill_node_pair, self.patterns, self.model_type = self._preprocess(
-        )
+        self.default_distill_node_pair, self.model_type = self._preprocess()
 
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
@@ -189,7 +188,6 @@ class AutoCompression:
 
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
-
         self.train_config = self._get_final_train_config(
             self.train_config, self._strategy, self.model_type)
         _logger.info(f"Selected strategies: {self._strategy}")
@@ -316,10 +314,9 @@ class AutoCompression:
             distill_node.append('teacher_' + out_var.name())
             distill_node.append(out_var.name())
 
-        patterns = {}
         model_type = None
         if not isinstance(self.strategy_config, dict):
-            patterns, model_type = get_patterns(inference_program)
+            _, model_type = get_patterns(inference_program)
             _logger.info(f"Detect model type: {model_type}")
 
         if self.model_filename is None:
@@ -336,7 +333,7 @@ class AutoCompression:
             os.path.join(self.updated_model_dir, opt_model_filename),
             os.path.join(self.updated_model_dir, self.model_filename))
 
-        return distill_node, patterns, model_type
+        return distill_node, model_type
 
     def _prepare_strategy(self, strategy_config):
         if not isinstance(strategy_config, list):
@@ -452,7 +449,7 @@ class AutoCompression:
         return strategy
 
     def _prepare_program(self, program, feed_target_names, fetch_targets,
-                         strategy, config, train_config):
+                         patterns, strategy, config, train_config):
         train_program = recover_inference_program(program)
         startup_program = paddle.static.Program()
         train_program_info = ProgramInfo(startup_program, train_program,
@@ -484,11 +481,9 @@ class AutoCompression:
         ### add prune program
         self._pruner = None
         if 'prune' in strategy:
-            if 'transformer' in strategy and not self.patterns:
-                self.patterns, _ = get_patterns(program)
             self._pruner, train_program_info = build_prune_program(
                 self._exe, self._places, config_dict, train_program_info,
-                strategy, self.patterns, self.eval_dataloader)
+                strategy, patterns, self.eval_dataloader)
 
         if train_config.use_fleet:
             dist_strategy = self._prepare_fleet_strategy(train_config)
@@ -717,9 +712,12 @@ class AutoCompression:
                           train_config.origin_metric, metric))
                 self.metric_before_compressed = metric
 
+            patterns = None
+            if 'transformer' in strategy:
+                patterns, _ = get_patterns(inference_program)
             train_program_info, test_program_info = self._prepare_program(
-                inference_program, feed_target_names, fetch_targets, strategy,
-                config, train_config)
+                inference_program, feed_target_names, fetch_targets, patterns,
+                strategy, config, train_config)
             if 'unstructure' in self._strategy:
                 test_program_info.program._program = remove_unused_var_nodes(
                     test_program_info.program._program)
