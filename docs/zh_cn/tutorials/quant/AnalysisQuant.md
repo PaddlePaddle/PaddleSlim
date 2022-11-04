@@ -1,15 +1,15 @@
 # 量化分析工具详细教程
 
 ## 1. 量化分析工具功能
-1. statistical_analyse：
+1. 统计分析(statistical_analyse)：
     - 可视化激活和权重箱状图。箱状图可发现是否出现离群点。
     - 可视化权重和激活直方分布图。直方分布图可观察更具体的数值分布。
     - 提供量化前后权重和激活的具体数据信息，包括min，max，mean，std等
 
-2. metric_error_analyse：
+2. 精度误差分析(metric_error_analyse)：
     - 遍历量化模型的每层，并计算量化后精度。该功能可以定位具体某层导致的量化损失。
 
-3. get_target_quant_model：
+3. 获取目标模型(get_target_quant_model)：
     - 输入预期精度，直接产出符合预期精度的量化模型。
 
 
@@ -89,7 +89,7 @@ analyzer.metric_error_analyse()
 
 
 
-**直接产出符合预期精度的量化模型**
+**直接产出符合预期精度的目标量化模型**
 ```
 analyzer.get_target_quant_model(target_metric)
 ```
