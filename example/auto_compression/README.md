@@ -29,8 +29,8 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 
 ## **News** 📢
 
-* 🔥 【**直播分享**】**2022.11.7 晚 20:30～21:30**，PaddleSlim自动压缩**CV专场**，扫码报名，进入直播技术交流群
-* 🔥 【**直播分享**】**2022.11.8 晚 20:30～21:30**，PaddleSlim自动压缩**NLP专场**，扫码报名，进入直播技术交流群
+* 🔥 【**直播分享**】**2022.11.7 晚 20:30～21:30**《PaddleSlim自动压缩**CV专场**》。扫码报名，进入直播技术交流群
+* 🔥 【**直播分享**】**2022.11.8 晚 20:30～21:30** 《PaddleSlim自动压缩**NLP专场**》。扫码报名，进入直播技术交流群
 
   <div align="center">
   <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg" width = "225" height = "225" />
