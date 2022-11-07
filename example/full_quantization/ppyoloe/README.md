@@ -72,6 +72,8 @@ git clone https://github.com/PaddlePaddle/PaddleDetection.git
 ```
 - 导出预测模型
 
+注意：PP-YOLOE默认导出640x640输入的模型，如果模型输入需要改为416x416，需要在导出时修改ppdet中[ppyoloe_reader.yml](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.5/configs/ppyoloe/_base_/ppyoloe_reader.yml#L2)的`eval_height`和`eval_width`为416。
+
 包含NMS：
 ```shell
 python tools/export_model.py \
