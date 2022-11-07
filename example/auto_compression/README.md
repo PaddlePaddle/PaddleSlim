@@ -137,6 +137,8 @@ tar -xf ILSVRC2012_data_demo.tar.gz
 
 - **2.运行自动化压缩**
 
+由于目前离线量化超参搜索仅支持Linux系统，以下示例需在Linux环境中测试。
+
 ```python
 # 导入依赖包
 import paddle
