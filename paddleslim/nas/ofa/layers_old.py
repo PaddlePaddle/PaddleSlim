@@ -24,7 +24,8 @@ from paddle.fluid.framework import _varbase_creator, in_dygraph_mode, _in_legacy
 from paddle import _C_ops, _legacy_C_ops
 from paddle.fluid.data_feeder import check_variable_and_dtype
 from paddle.fluid.dygraph.layer_object_helper import LayerObjectHelper
-from paddle.fluid.dygraph.nn import InstanceNorm, Conv2D, Conv2DTranspose, BatchNorm
+from paddle.nn import Conv2D
+from paddle.fluid.dygraph.nn import InstanceNorm, Conv2DTranspose, BatchNorm
 
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
@@ -42,7 +43,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 ### TODO: if task is elastic width, need to add re_organize_middle_weight in 1x1 conv in MBBlock
 
 
-class SuperConv2D(fluid.dygraph.Conv2D):
+class SuperConv2D(Conv2D):
     """
     This interface is used to construct a callable object of the ``SuperConv2D``  class.
     The difference between ```SuperConv2D``` and ```Conv2D``` is: ```SuperConv2D``` need 
@@ -308,13 +309,13 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             padding = self._padding
 
         if self._l_type == 'conv2d':
-            attrs = ('strides', self._stride, 'paddings', padding, 'dilations',
-                     self._dilation, 'groups', groups
-                     if groups else 1, 'use_cudnn', self._use_cudnn)
+            attrs = ('strides', self._stride, 'paddings', padding, 'groups',
+                     groups if groups else 1, 'dilations', self._dilation,
+                     'use_cudnn', self._use_cudnn)
             if in_dygraph_mode():
-                out = _C_ops.conv2d(
-                    input, weight, self._stride, padding, "EXPLICIT", groups
-                    if groups else 1, self._dilation, "NCHW", False, -1, False)
+                out = _C_ops.conv2d(input, weight, self._stride, padding,
+                                    "EXPLICIT", self._dilation, groups
+                                    if groups else 1, "NCHW")
             elif _in_legacy_dygraph():
                 out = _legacy_C_ops.conv2d(input, weight, *attrs)
         elif self._l_type == 'depthwise_conv2d':
@@ -810,10 +811,10 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
 
         if self.conv[2]._l_type == 'conv2d':
             if in_dygraph_mode():
-                out = _C_ops.conv2d(
-                    input, weight, self.conv[2]._stride, self.conv[2]._padding,
-                    "EXPLICIT", self.conv[2]._groups if self.conv[2]._groups
-                    else 1, self.conv[2]._dilation, "NCHW", False, -1, False)
+                out = _C_ops.conv2d(input, weight, self.conv[2]._stride,
+                                    self.conv[2]._padding, "EXPLICIT",
+                                    self.conv[2]._dilation, self.conv[2]._groups
+                                    if self.conv[2]._groups else 1, "NCHW")
 
             elif _in_legacy_dygraph():
                 attrs = ('strides', self.conv[2]._stride, 'paddings',
@@ -950,18 +951,18 @@ class SuperBatchNorm(fluid.dygraph.BatchNorm):
         if in_dygraph_mode():
             if feature_dim != self._mean.shape[0]:
                 batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
-                    input, weight, bias, mean, variance, self._momentum,
-                    self._epsilon, self._data_layout, not self.training,
-                    self._use_global_stats, self._trainable_statistics, False)
+                    input, mean, variance, weight, bias, not self.training,
+                    self._momentum, self._epsilon, self._data_layout,
+                    self._use_global_stats, self._trainable_statistics)
                 self._mean[:feature_dim] = mean
                 self._variance[:feature_dim] = variance
                 mean_out[:feature_dim] = mean_out_tmp
                 variance_out[:feature_dim] = variance_out_tmp
             else:
                 batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
-                    input, weight, bias, mean, variance, self._momentum,
-                    self._epsilon, self._data_layout, not self.training,
-                    self._use_global_stats, self._trainable_statistics, False)
+                    input, mean, variance, weight, bias, not self.training,
+                    self._momentum, self._epsilon, self._data_layout,
+                    self._use_global_stats, self._trainable_statistics)
             return batch_norm_out
 
         elif _in_legacy_dygraph():
