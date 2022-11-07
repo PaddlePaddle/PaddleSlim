@@ -503,12 +503,10 @@ class AutoCompression:
 
         self._quant_config = None
         ### add quant_aware program, quant always is last step
-        #'''
         if 'qat' in strategy:
             train_program_info, test_program_info, self._quant_config = build_quant_program(
                 self._exe, self._places, config_dict, train_program_info,
                 test_program_info)
-        #'''
         if train_config.sparse_model:
             from ..prune.unstructured_pruner import UnstructuredPruner
             # NOTE: The initialization parameter of this pruner doesn't work, it is only used to call the 'set_static_masks' function
