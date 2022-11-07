@@ -308,13 +308,13 @@ class SuperConv2D(fluid.dygraph.Conv2D):
             padding = self._padding
 
         if self._l_type == 'conv2d':
-            attrs = ('strides', self._stride, 'paddings', padding, 'dilations',
-                     self._dilation, 'groups', groups
-                     if groups else 1, 'use_cudnn', self._use_cudnn)
+            attrs = ('strides', self._stride, 'paddings', padding, 'groups',
+                     groups if groups else 1, 'dilations', self._dilation,
+                     'use_cudnn', self._use_cudnn)
             if in_dygraph_mode():
-                out = _C_ops.conv2d(
-                    input, weight, self._stride, padding, "EXPLICIT", groups
-                    if groups else 1, self._dilation, "NCHW", False, -1, False)
+                out = _C_ops.conv2d(input, weight, self._stride, padding,
+                                    "EXPLICIT", self._dilation, groups
+                                    if groups else 1, "NCHW")
             elif _in_legacy_dygraph():
                 out = _legacy_C_ops.conv2d(input, weight, *attrs)
         elif self._l_type == 'depthwise_conv2d':
@@ -810,10 +810,10 @@ class SuperSeparableConv2D(fluid.dygraph.Layer):
 
         if self.conv[2]._l_type == 'conv2d':
             if in_dygraph_mode():
-                out = _C_ops.conv2d(
-                    input, weight, self.conv[2]._stride, self.conv[2]._padding,
-                    "EXPLICIT", self.conv[2]._groups if self.conv[2]._groups
-                    else 1, self.conv[2]._dilation, "NCHW", False, -1, False)
+                out = _C_ops.conv2d(input, weight, self.conv[2]._stride,
+                                    self.conv[2]._padding, "EXPLICIT",
+                                    self.conv[2]._dilation, self.conv[2]._groups
+                                    if self.conv[2]._groups else 1, "NCHW")
 
             elif _in_legacy_dygraph():
                 attrs = ('strides', self.conv[2]._stride, 'paddings',
