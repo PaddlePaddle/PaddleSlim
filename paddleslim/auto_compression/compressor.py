@@ -155,7 +155,7 @@ class AutoCompression:
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
-        self.default_distill_node_pair, self.model_type = self._preprocess()
+        self.default_distill_node_pair, self.model_type = self._get_model_info()
 
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
@@ -300,7 +300,7 @@ class AutoCompression:
         exe = paddle.static.Executor(places)
         return exe, places
 
-    def _preprocess(self):
+    def _get_model_info(self):
         [inference_program, _, _] = (load_inference_model(
             self.model_dir,
             model_filename=self.model_filename,
