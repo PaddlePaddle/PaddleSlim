@@ -92,18 +92,18 @@ python tools/export_model.py \
 
 #### 3.4 全量化并产出模型
 
-全量化示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行全量化。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
+全量化示例通过auto_compress.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行全量化。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
 
 - 单卡训练：
 ```
 export CUDA_VISIBLE_DEVICES=0
-python run.py --config_path=./configs/ppyoloe_s_416_qat_dis.yaml --save_dir='./output/'
+python auto_compress.py --config_path=./configs/ppyoloe_s_416_qat_dis.yaml --save_dir='./output/'
 ```
 
 - 多卡训练：
 ```
 CUDA_VISIBLE_DEVICES=0,1,2,3
-python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
+python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 auto_compress.py \
           --config_path=./configs/ppyoloe_s_416_qat_dis.yaml --save_dir='./output/'
 ```
 
