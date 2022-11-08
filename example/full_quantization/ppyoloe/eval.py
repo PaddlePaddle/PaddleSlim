@@ -41,18 +41,6 @@ def argsparser():
     return parser
 
 
-def reader_wrapper(reader, input_list):
-    def gen():
-        for data in reader:
-            in_dict = {}
-            if isinstance(input_list, list):
-                for input_name in input_list:
-                    in_dict[input_name] = data[input_name]
-            yield in_dict
-
-    return gen
-
-
 def eval():
 
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()

@@ -107,6 +107,11 @@ python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
           --config_path=./configs/ppyoloe_s_416_qat_dis.yaml --save_dir='./output/'
 ```
 
+- 离线量化
+```
+python post_quant.py --config_path=./configs/ppyoloe_s_416_qat_dis.yaml
+```
+
 #### 3.5 测试模型精度
 
 - 使用eval.py脚本得到模型的mAP：

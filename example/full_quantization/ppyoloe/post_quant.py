@@ -74,6 +74,7 @@ def main():
                                         reader_cfg['worker_num'],
                                         return_list=True)
     train_loader = reader_wrapper(train_loader, global_config['input_list'])
+    ptq_config = all_config['PTQ']
 
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
     exe = paddle.static.Executor(place)
@@ -84,13 +85,15 @@ def main():
         data_loader=train_loader,
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"],
-        batch_size=32,
-        batch_nums=10,
+        quantizable_op_type=ptq_config['quantizable_op_type'],
+        activation_quantize_type=ptq_config['activation_quantize_type'],
+        batch_size=ptq_config['batch_size'],
+        batch_nums=ptq_config['batch_nums'],
         algo=FLAGS.algo,
         hist_percent=0.999,
-        is_full_quantize=False,
+        is_full_quantize=ptq_config['is_full_quantize'],
         bias_correction=False,
-        onnx_format=False,
+        onnx_format=ptq_config['onnx_format'],
         skip_tensor_list=None)
 
 
