@@ -21,7 +21,7 @@
 | 模型  | 策略 | mAP | TRT-FP32 | TRT-FP16 | TRT-INT8  | 模型  |
 | :-------- |:-------- |:--------: | :----------------: | :----------------: | :---------------: | :---------------------: |
 | PP-YOLOE-s-416 | Baseline | 39.1   |   -   |  -  |  -  | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_no_postprocess_416.tar) |
-| PP-YOLOE-s-416 |  量化训练 | 38.5  |   -  |   -   |  -  | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_no_postprocess_416_quant.tar) |
+| PP-YOLOE-s-416 |  量化训练 | 38.5  |   -  |   -   |  -  | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_no_postprocess_416_quant.tar) &#124; [ONNX Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_quant_416_no_postprocess.onnx) |
 
 - mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
 
@@ -117,6 +117,18 @@ python eval.py --config_path=./configs/ppyoloe_s_416_qat_dis.yaml
 
 **注意**：
 - 要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
+
+- 导出ONNX，使用ONNXRuntime测试模型精度：
+首先导出onnx量化模型
+```
+paddle2onnx --model_dir=ptq_out/ --model_filename=model.pdmodel --params_filename=model.pdiparams --save_file=ppyoloe_s_quant_416 --deploy_backend=rkn
+```
+可以根据不同部署后端设置`--deploy_backend`
+
+然后进行评估：
+```shell
+python3.7 onnxruntime_eval.py --reader_config=configs/yolo_416_reader.yml --model_path=ppyoloe_s_quant_416_no_postprocess.onnx
+```
 
 ## 4.预测部署
 
