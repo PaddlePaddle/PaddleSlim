@@ -994,9 +994,9 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         if in_dygraph_mode():
             if feature_dim != self._mean.shape[0]:
                 batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
-                    input, weight, bias, mean, variance, self._momentum,
-                    self._epsilon, self._data_format, not self.training,
-                    self._use_global_stats, trainable_statistics, False, False)
+                    input, mean, variance, weight, bias, not self.training,
+                    self._momentum, self._epsilon, self._data_format,
+                    self._use_global_stats, trainable_statistics)
                 self._mean[:feature_dim].set_value(mean)
                 self._variance[:feature_dim].set_value(variance)
                 mean_out[:feature_dim].set_value(mean_out_tmp)
@@ -1004,9 +1004,9 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                 return batch_norm_out
             else:
                 batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
-                    input, weight, bias, mean, variance, self._momentum,
-                    self._epsilon, self._data_format, not self.training,
-                    self._use_global_stats, trainable_statistics, False)
+                    input, mean, variance, weight, bias, not self.training,
+                    self._momentum, self._epsilon, self._data_format,
+                    self._use_global_stats, trainable_statistics)
                 return batch_norm_out
 
         elif _in_legacy_dygraph():

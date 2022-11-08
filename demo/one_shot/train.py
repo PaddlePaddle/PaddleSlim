@@ -21,7 +21,8 @@ import os
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.optimizer import AdamOptimizer
-from paddle.fluid.dygraph.nn import Conv2D, Pool2D, Linear
+from paddle.nn import Conv2D
+from paddle.fluid.dygraph.nn import Pool2D, Linear
 from paddle.fluid.dygraph.base import to_variable
 
 from paddleslim.nas.one_shot import SuperMnasnet
@@ -142,8 +143,7 @@ def train_mnist(args, model, tokens=None):
     epoch_num = args.epoch
     BATCH_SIZE = 64
 
-    adam = AdamOptimizer(
-        learning_rate=0.001, parameter_list=model.parameters())
+    adam = AdamOptimizer(learning_rate=0.001, parameter_list=model.parameters())
 
     train_reader = paddle.fluid.io.batch(
         paddle.dataset.mnist.train(), batch_size=BATCH_SIZE, drop_last=True)
@@ -187,8 +187,7 @@ def train_mnist(args, model, tokens=None):
         print("Loss at epoch {} , acc is: {}".format(epoch, test_acc))
 
     save_parameters = (not args.use_data_parallel) or (
-        args.use_data_parallel and
-        fluid.dygraph.parallel.Env().local_rank == 0)
+        args.use_data_parallel and fluid.dygraph.parallel.Env().local_rank == 0)
     if save_parameters:
         fluid.save_dygraph(model.state_dict(), "save_temp")
         print("checkpoint saved")
