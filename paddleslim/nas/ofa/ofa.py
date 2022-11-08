@@ -18,15 +18,8 @@ from collections import namedtuple
 import paddle
 import paddle.fluid as fluid
 from .utils.utils import get_paddle_version, remove_model_fn, build_input
-pd_ver = get_paddle_version()
-if pd_ver == 185:
-    from .layers_old import SuperConv2D, SuperLinear
-    Layer = paddle.fluid.dygraph.Layer
-    DataParallel = paddle.fluid.dygraph.DataParallel
-else:
-    from .layers import SuperConv2D, SuperLinear
-    Layer = paddle.nn.Layer
-    DataParallel = paddle.DataParallel
+from .layers import SuperConv2D, SuperLinear
+from paddle.nn import Layer
 from .layers_base import BaseBlock, Block
 from .utils.utils import search_idx
 from ...common import get_logger
@@ -98,7 +91,7 @@ class OFABase(Layer):
         key2name = dict()
         elastic_task = set()
         model_to_traverse = self.model._layers if isinstance(
-            self.model, DataParallel) else self.model
+            self.model, paddle.DataParallel) else self.model
         for name, sublayer in model_to_traverse.named_sublayers():
             if isinstance(sublayer, BaseBlock):
                 sublayer.set_supernet(self)
@@ -291,7 +284,7 @@ class OFA(OFABase):
         # if mapping layer is NOT None, add hook and compute distill loss about mapping layers.
         mapping_layers = getattr(self.distill_config, 'mapping_layers', None)
         if mapping_layers != None:
-            if isinstance(self.model, DataParallel):
+            if isinstance(self.model, paddle.DataParallel):
                 for idx, name in enumerate(mapping_layers):
                     if name[:7] != '_layers':
                         mapping_layers[idx] = '_layers.' + name
@@ -602,7 +595,7 @@ class OFA(OFABase):
             origin_model = self.model
 
         origin_model = origin_model._layers if isinstance(
-            origin_model, DataParallel) else origin_model
+            origin_model, paddle.DataParallel) else origin_model
 
         _logger.info("Start to get pruned params, please wait...")
         pruned_param, pruned_groups = self._get_model_pruned_weight()
@@ -697,13 +690,13 @@ class OFA(OFABase):
 
             ### find shortcut block using static model
             model_to_traverse = self.model._layers if isinstance(
-                self.model, DataParallel) else self.model
+                self.model, paddle.DataParallel) else self.model
             _st_prog = dygraph2program(
                 model_to_traverse, inputs=input_shapes, dtypes=input_dtypes)
 
         else:
             model_to_traverse = self.model._layers if isinstance(
-                self.model, DataParallel) else self.model
+                self.model, paddle.DataParallel) else self.model
 
             model_to_traverse.eval()
             _st_prog = dygraph2program(model_to_traverse, inputs=input_spec)
