@@ -22,8 +22,9 @@ from collections.abc import Iterable
 
 import paddle
 import paddle.fluid as fluid
+from paddle.nn import Conv2D
 from paddle.fluid.dygraph import Embedding, LayerNorm, Linear
-from paddle.fluid.dygraph import Conv2D, BatchNorm, Pool2D
+from paddle.fluid.dygraph import BatchNorm, Pool2D
 from paddle.fluid.dygraph import Layer
 from paddle.fluid.dygraph import to_variable
 from paddle.fluid.initializer import NormalInitializer
