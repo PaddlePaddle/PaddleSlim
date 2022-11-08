@@ -23,7 +23,7 @@ class DConvBlock(fluid.dygraph.Layer):
         self.stride = stride
         self.flops = 0
         self.flops_calculated = False
-        self.expand = fluid.dygraph.Conv2D(
+        self.expand = paddle.nn.Conv2D(
             in_channels,
             num_filters=in_channels * expansion,
             filter_size=1,
@@ -34,7 +34,7 @@ class DConvBlock(fluid.dygraph.Layer):
         self.expand_bn = fluid.dygraph.BatchNorm(
             num_channels=in_channels * expansion, act='relu6')
 
-        self.dconv = fluid.dygraph.Conv2D(
+        self.dconv = paddle.nn.Conv2D(
             in_channels * expansion,
             num_filters=in_channels * expansion,
             filter_size=kernel_size,
@@ -47,7 +47,7 @@ class DConvBlock(fluid.dygraph.Layer):
         self.dconv_bn = fluid.dygraph.BatchNorm(
             num_channels=in_channels * expansion, act='relu6')
 
-        self.project = fluid.dygraph.Conv2D(
+        self.project = paddle.nn.Conv2D(
             in_channels * expansion,
             num_filters=channels,
             filter_size=1,
@@ -58,7 +58,7 @@ class DConvBlock(fluid.dygraph.Layer):
         self.project_bn = fluid.dygraph.BatchNorm(
             num_channels=channels, act=None)
 
-        self.shortcut = fluid.dygraph.Conv2D(
+        self.shortcut = paddle.nn.Conv2D(
             in_channels,
             num_filters=channels,
             filter_size=1,
@@ -135,9 +135,9 @@ class AuxiliaryHead(fluid.dygraph.Layer):
 
         self.pool1 = fluid.dygraph.Pool2D(
             5, 'avg', pool_stride=3, pool_padding=0)
-        self.conv1 = fluid.dygraph.Conv2D(128, 1, bias_attr=False)
+        self.conv1 = paddle.nn.Conv2D(128, 1, bias_attr=False)
         self.bn1 = fluid.dygraph.BatchNorm(128, act='relu6')
-        self.conv2 = fluid.dygraph.Conv2D(768, 2, bias_attr=False)
+        self.conv2 = paddle.nn.Conv2D(768, 2, bias_attr=False)
         self.bn2 = fluid.dygraph.BatchNorm(768, act='relu6')
         self.classifier = fluid.dygraph.FC(num_classes, act='softmax')
         self.layer_helper = LayerHelper(self.full_name(), act='relu6')
@@ -167,10 +167,10 @@ class SuperMnasnet(OneShotSuperNet):
         self.repeat_times = repeat_times
         self.flops_calculated = False
         self.last_tokens = None
-        self._conv = fluid.dygraph.Conv2D(
+        self._conv = paddle.nn.Conv2D(
             input_channels, 32, 3, 1, 1, act=None, bias_attr=False)
         self._bn = fluid.dygraph.BatchNorm(32, act='relu6')
-        self._sep_conv = fluid.dygraph.Conv2D(
+        self._sep_conv = paddle.nn.Conv2D(
             32,
             32,
             3,
@@ -181,11 +181,11 @@ class SuperMnasnet(OneShotSuperNet):
             use_cudnn=False,
             bias_attr=False)
         self._sep_conv_bn = fluid.dygraph.BatchNorm(32, act='relu6')
-        self._sep_project = fluid.dygraph.Conv2D(
+        self._sep_project = paddle.nn.Conv2D(
             32, 16, 1, 1, 0, act=None, bias_attr=False)
         self._sep_project_bn = fluid.dygraph.BatchNorm(16, act='relu6')
 
-        self._final_conv = fluid.dygraph.Conv2D(
+        self._final_conv = paddle.nn.Conv2D(
             320, out_channels, 1, 1, 0, act=None, bias_attr=False)
         self._final_bn = fluid.dygraph.BatchNorm(out_channels, act='relu6')
         self.stride = stride

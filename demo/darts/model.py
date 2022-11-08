@@ -20,7 +20,8 @@ import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
 from paddle.fluid.initializer import ConstantInitializer, MSRAInitializer
-from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
+from paddle.nn import Conv2D
+from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
 from genotypes import Genotype
