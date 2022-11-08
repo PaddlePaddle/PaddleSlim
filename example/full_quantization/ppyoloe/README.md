@@ -120,8 +120,7 @@ export CUDA_VISIBLE_DEVICES=0
 python eval.py --config_path=./configs/ppyoloe_s_416_qat_dis.yaml
 ```
 
-**注意**：
-- 要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
+**注意**：要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
 
 - 导出ONNX，使用ONNXRuntime测试模型精度：
 首先导出onnx量化模型
