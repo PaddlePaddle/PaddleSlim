@@ -28,7 +28,6 @@ import tarfile
 import zipfile
 import logging
 import paddle.fluid as fluid
-import paddle.compat as cpt
 from paddle.fluid import core
 from paddle.fluid.framework import Program
 
@@ -128,7 +127,7 @@ def load_persistable_nodes(executor, dirname, graph):
     persistable_nodes = []
     all_persistable_nodes = graph.all_persistable_nodes()
     for node in all_persistable_nodes:
-        name = cpt.to_text(node.name())
+        name = node.name()
         if name not in persistable_node_names:
             persistable_node_names.add(name)
             persistable_nodes.append(node)

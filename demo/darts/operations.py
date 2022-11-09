@@ -13,7 +13,8 @@
 # limitations under the License.
 
 import paddle.fluid as fluid
-from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm
+from paddle.nn import Conv2D
+from paddle.fluid.dygraph.nn import Pool2D, BatchNorm
 from paddle.fluid.param_attr import ParamAttr
 from paddle.fluid.initializer import ConstantInitializer, MSRAInitializer
 
@@ -58,10 +59,8 @@ OPS = {
 
 
 def bn_param_config(affine=False):
-    gama = ParamAttr(
-        initializer=ConstantInitializer(value=1), trainable=affine)
-    beta = ParamAttr(
-        initializer=ConstantInitializer(value=0), trainable=affine)
+    gama = ParamAttr(initializer=ConstantInitializer(value=1), trainable=affine)
+    beta = ParamAttr(initializer=ConstantInitializer(value=0), trainable=affine)
     return gama, beta
 
 
@@ -107,8 +106,7 @@ class FactorizedReduce(fluid.dygraph.Layer):
             param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
-        self.bn = BatchNorm(
-            num_channels=c_out, param_attr=gama, bias_attr=beta)
+        self.bn = BatchNorm(num_channels=c_out, param_attr=gama, bias_attr=beta)
 
     def forward(self, x):
         x = fluid.layers.relu(x)
@@ -140,8 +138,7 @@ class SepConv(fluid.dygraph.Layer):
             param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
-        self.bn1 = BatchNorm(
-            num_channels=c_in, param_attr=gama, bias_attr=beta)
+        self.bn1 = BatchNorm(num_channels=c_in, param_attr=gama, bias_attr=beta)
         self.conv3 = Conv2D(
             num_channels=c_in,
             num_filters=c_in,
@@ -257,8 +254,7 @@ class ReLUConvBN(fluid.dygraph.Layer):
             param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
-        self.bn = BatchNorm(
-            num_channels=c_out, param_attr=gama, bias_attr=beta)
+        self.bn = BatchNorm(num_channels=c_out, param_attr=gama, bias_attr=beta)
 
     def forward(self, x):
         x = fluid.layers.relu(x)

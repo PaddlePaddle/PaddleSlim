@@ -19,9 +19,8 @@ import argparse
 import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
-from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
+from ppdet.metrics import COCOMetric
 from paddleslim.common import load_config as load_slim_config
-from keypoint_utils import keypoint_post_process
 from post_process import PPYOLOEPostProcess
 
 
@@ -42,21 +41,6 @@ def argsparser():
     return parser
 
 
-def convert_numpy_data(data, metric):
-    data_all = {}
-    data_all = {k: np.array(v) for k, v in data.items()}
-    if isinstance(metric, VOCMetric):
-        for k, v in data_all.items():
-            if not isinstance(v[0], np.ndarray):
-                tmp_list = []
-                for t in v:
-                    tmp_list.append(np.array(t))
-                data_all[k] = np.array(tmp_list)
-    else:
-        data_all = {k: np.array(v) for k, v in data.items()}
-    return data_all
-
-
 def eval():
 
     place = paddle.CUDAPlace(0) if FLAGS.devices == 'gpu' else paddle.CPUPlace()
@@ -71,7 +55,7 @@ def eval():
 
     metric = global_config['metric']
     for batch_id, data in enumerate(val_loader):
-        data_all = convert_numpy_data(data, metric)
+        data_all = {k: np.array(v) for k, v in data.items()}
         data_input = {}
         for k, v in data.items():
             if k in feed_target_names:
@@ -82,10 +66,7 @@ def eval():
                        fetch_list=fetch_targets,
                        return_numpy=False)
         res = {}
-        if 'arch' in global_config and global_config['arch'] == 'keypoint':
-            res = keypoint_post_process(data, data_input, exe, val_program,
-                                        fetch_targets, outs)
-        if 'arch' in global_config and global_config['arch'] == 'PPYOLOE':
+        if 'exclude_nms' in global_config and global_config['exclude_nms']:
             postprocess = PPYOLOEPostProcess(
                 score_threshold=0.01, nms_threshold=0.6)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
@@ -116,22 +97,10 @@ def main():
                                       reader_cfg['worker_num'],
                                       return_list=True)
     metric = None
-    if reader_cfg['metric'] == 'COCO':
-        clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
-        anno_file = dataset.get_anno()
-        metric = COCOMetric(
-            anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
-    elif reader_cfg['metric'] == 'VOC':
-        metric = VOCMetric(
-            label_list=dataset.get_label_list(),
-            class_num=reader_cfg['num_classes'],
-            map_type=reader_cfg['map_type'])
-    elif reader_cfg['metric'] == 'KeyPointTopDownCOCOEval':
-        anno_file = dataset.get_anno()
-        metric = KeyPointTopDownCOCOEval(anno_file,
-                                         len(dataset), 17, 'output_eval')
-    else:
-        raise ValueError("metric currently only supports COCO and VOC.")
+    clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
+    anno_file = dataset.get_anno()
+    metric = COCOMetric(
+        anno_file=anno_file, clsid2catid=clsid2catid, IouType='bbox')
     global_config['metric'] = metric
 
     eval()
