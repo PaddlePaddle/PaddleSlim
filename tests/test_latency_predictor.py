@@ -109,7 +109,7 @@ class ModelCase5(paddle.nn.Layer):
     def forward(self, inputs):
         image = inputs['image']
         image = self.bn1(image)
-        img_size = paddle.fluid.data(
+        img_size = paddle.paddle.static.data(
             name='img_size', shape=[None, 2], dtype='int64')
         anchors = [10, 13, 16, 30, 33, 23]
         boxes, scores = paddle.fluid.layers.yolo_box(
@@ -179,7 +179,7 @@ class ModelCase7(paddle.nn.Layer):
     def forward(self, inputs):
         image = inputs['image']
         image = self.bn1(image)
-        img_size = paddle.fluid.data(
+        img_size = paddle.paddle.static.data(
             name='img_size', shape=[None, 2], dtype='int64')
         anchors = [10, 13, 16, 30, 33, 23]
         boxes, scores = paddle.fluid.layers.yolo_box(
@@ -249,8 +249,7 @@ class TestCase3(unittest.TestCase):
         pred = LatencyPredictor()
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
+            fluid_program = paddle.static.Program.parse_from_string(f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
             graph_keys = pred._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
@@ -334,8 +333,7 @@ class TestCase8(unittest.TestCase):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
+            fluid_program = paddle.static.Program.parse_from_string(f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
             graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
@@ -358,8 +356,7 @@ class TestCase9(unittest.TestCase):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
+            fluid_program = paddle.static.Program.parse_from_string(f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
             graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0

@@ -793,24 +793,24 @@ def pact(x, name=None):
     helper = LayerHelper("pact", **locals())
     dtype = 'float32'
     init_thres = 20
-    u_param_attr = paddle.fluid.ParamAttr(
+    u_param_attr = paddle.paddle.ParamAttr(
         name=x.name + '_pact',
-        initializer=paddle.fluid.initializer.ConstantInitializer(
+        initializer=paddle.paddle.nn.initializer.ConstantInitializer(
             value=init_thres),
         regularizer=paddle.fluid.regularizer.L2Decay(0.0001),
         learning_rate=1)
     u_param = helper.create_parameter(attr=u_param_attr, shape=[1], dtype=dtype)
     x = paddle.fluid.layers.elementwise_sub(
         x,
-        paddle.fluid.layers.relu(
+        paddle.paddle.nn.functional.relu(
             paddle.fluid.layers.elementwise_sub(x, u_param)))
     x = paddle.fluid.layers.elementwise_add(
         x,
-        paddle.fluid.layers.relu(
+        paddle.paddle.nn.functional.relu(
             paddle.fluid.layers.elementwise_sub(-u_param, x)))
 
     return x
 
 
 def get_pact_optimizer():
-    return paddle.fluid.optimizer.MomentumOptimizer(0.0001, 0.9)
+    return paddle.paddle.optimizer.Momentum(0.0001, 0.9)

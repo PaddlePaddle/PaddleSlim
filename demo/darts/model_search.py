@@ -18,7 +18,7 @@ from __future__ import print_function
 
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.fluid.initializer import NormalInitializer, MSRAInitializer, ConstantInitializer
+from paddle.paddle.nn.initializer import NormalInitializer, MSRAInitializer, ConstantInitializer
 from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
@@ -30,16 +30,16 @@ def channel_shuffle(x, groups):
     channels_per_group = num_channels // groups
 
     # reshape
-    x = fluid.layers.reshape(
-        x, [batchsize, groups, channels_per_group, height, width])
+    x = paddle.reshape(x,
+                       [batchsize, groups, channels_per_group, height, width])
     x = fluid.layers.transpose(x, [0, 2, 1, 3, 4])
 
     # flatten
-    x = fluid.layers.reshape(x, [batchsize, num_channels, height, width])
+    x = paddle.reshape(x, [batchsize, num_channels, height, width])
     return x
 
 
-class MixedOp(fluid.dygraph.Layer):
+class MixedOp(paddle.nn.Layer):
     def __init__(self, c_cur, stride, method):
         super(MixedOp, self).__init__()
         self._method = method
@@ -53,10 +53,10 @@ class MixedOp(fluid.dygraph.Layer):
             op = OPS[primitive](c_cur // self._k, stride, False)
             if 'pool' in primitive:
                 gama = ParamAttr(
-                    initializer=fluid.initializer.Constant(value=1),
+                    initializer=paddle.nn.initializer.Constant(value=1),
                     trainable=False)
                 beta = ParamAttr(
-                    initializer=fluid.initializer.Constant(value=0),
+                    initializer=paddle.nn.initializer.Constant(value=0),
                     trainable=False)
                 BN = BatchNorm(
                     c_cur // self._k, param_attr=gama, bias_attr=beta)
@@ -74,9 +74,9 @@ class MixedOp(fluid.dygraph.Layer):
                 [weights[i] * op(xtemp) for i, op in enumerate(self._ops)])
 
             if temp1.shape[2] == x.shape[2]:
-                out = fluid.layers.concat([temp1, xtemp2], axis=1)
+                out = paddle.concat([temp1, xtemp2], axis=1)
             else:
-                out = fluid.layers.concat([temp1, self.mp(xtemp2)], axis=1)
+                out = paddle.concat([temp1, self.mp(xtemp2)], axis=1)
             out = channel_shuffle(out, self._k)
         else:
             out = fluid.layers.sums(
@@ -84,9 +84,9 @@ class MixedOp(fluid.dygraph.Layer):
         return out
 
 
-class Cell(fluid.dygraph.Layer):
-    def __init__(self, steps, multiplier, c_prev_prev, c_prev, c_cur,
-                 reduction, reduction_prev, method):
+class Cell(paddle.nn.Layer):
+    def __init__(self, steps, multiplier, c_prev_prev, c_prev, c_cur, reduction,
+                 reduction_prev, method):
         super(Cell, self).__init__()
         self.reduction = reduction
 
@@ -127,11 +127,11 @@ class Cell(fluid.dygraph.Layer):
                 ])
             offset += len(states)
             states.append(s)
-        out = fluid.layers.concat(input=states[-self._multiplier:], axis=1)
+        out = paddle.concat(input=states[-self._multiplier:], axis=1)
         return out
 
 
-class Network(fluid.dygraph.Layer):
+class Network(paddle.nn.Layer):
     def __init__(self,
                  c_in,
                  num_classes,
@@ -156,13 +156,13 @@ class Network(fluid.dygraph.Layer):
                 num_filters=c_cur,
                 filter_size=3,
                 padding=1,
-                param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+                param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
                 bias_attr=False),
             BatchNorm(
                 num_channels=c_cur,
-                param_attr=fluid.ParamAttr(
+                param_attr=paddle.ParamAttr(
                     initializer=ConstantInitializer(value=1)),
-                bias_attr=fluid.ParamAttr(
+                bias_attr=paddle.ParamAttr(
                     initializer=ConstantInitializer(value=0))))
 
         c_prev_prev, c_prev, c_cur = c_cur, c_cur, c_in
@@ -194,31 +194,33 @@ class Network(fluid.dygraph.Layer):
         weights2 = None
         for i, cell in enumerate(self.cells):
             if cell.reduction:
-                weights = fluid.layers.softmax(self.alphas_reduce)
+                weights = paddle.nn.functional.softmax(self.alphas_reduce)
                 if self._method == "PC-DARTS":
                     n = 3
                     start = 2
-                    weights2 = fluid.layers.softmax(self.betas_reduce[0:2])
+                    weights2 = paddle.nn.functional.softmax(self.betas_reduce[
+                        0:2])
                     for i in range(self._steps - 1):
                         end = start + n
-                        tw2 = fluid.layers.softmax(self.betas_reduce[start:
-                                                                     end])
+                        tw2 = paddle.nn.functional.softmax(self.betas_reduce[
+                            start:end])
                         start = end
                         n += 1
-                        weights2 = fluid.layers.concat([weights2, tw2])
+                        weights2 = paddle.concat([weights2, tw2])
             else:
-                weights = fluid.layers.softmax(self.alphas_normal)
+                weights = paddle.nn.functional.softmax(self.alphas_normal)
                 if self._method == "PC-DARTS":
                     n = 3
                     start = 2
-                    weights2 = fluid.layers.softmax(self.betas_normal[0:2])
+                    weights2 = paddle.nn.functional.softmax(self.betas_normal[
+                        0:2])
                     for i in range(self._steps - 1):
                         end = start + n
-                        tw2 = fluid.layers.softmax(self.betas_normal[start:
-                                                                     end])
+                        tw2 = paddle.nn.functional.softmax(self.betas_normal[
+                            start:end])
                         start = end
                         n += 1
-                        weights2 = fluid.layers.concat([weights2, tw2])
+                        weights2 = paddle.concat([weights2, tw2])
             s0, s1 = s1, cell(s0, s1, weights, weights2)
         out = self.global_pooling(s1)
         out = fluid.layers.squeeze(out, axes=[2, 3])
@@ -228,7 +230,7 @@ class Network(fluid.dygraph.Layer):
     def _loss(self, input, target):
         logits = self(input)
         loss = fluid.layers.reduce_mean(
-            fluid.layers.softmax_with_cross_entropy(logits, target))
+            paddle.nn.functional.softmax_with_cross_entropy(logits, target))
         return loss
 
     def new(self):
@@ -239,12 +241,12 @@ class Network(fluid.dygraph.Layer):
     def _initialize_alphas(self):
         k = sum(1 for i in range(self._steps) for n in range(2 + i))
         num_ops = len(self._primitives)
-        self.alphas_normal = fluid.layers.create_parameter(
+        self.alphas_normal = paddle.static.create_parameter(
             shape=[k, num_ops],
             dtype="float32",
             default_initializer=NormalInitializer(
                 loc=0.0, scale=1e-3))
-        self.alphas_reduce = fluid.layers.create_parameter(
+        self.alphas_reduce = paddle.static.create_parameter(
             shape=[k, num_ops],
             dtype="float32",
             default_initializer=NormalInitializer(
@@ -254,12 +256,12 @@ class Network(fluid.dygraph.Layer):
             self.alphas_reduce,
         ]
         if self._method == "PC-DARTS":
-            self.betas_normal = fluid.layers.create_parameter(
+            self.betas_normal = paddle.static.create_parameter(
                 shape=[k],
                 dtype="float32",
                 default_initializer=NormalInitializer(
                     loc=0.0, scale=1e-3))
-            self.betas_reduce = fluid.layers.create_parameter(
+            self.betas_reduce = paddle.static.create_parameter(
                 shape=[k],
                 dtype="float32",
                 default_initializer=NormalInitializer(

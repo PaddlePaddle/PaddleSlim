@@ -24,18 +24,18 @@ from layers import conv_bn_layer
 
 class TestPrune(StaticCase):
     def test_concat(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         #                                  X              
         # conv1   conv2-->concat         conv3-->sum-->out
         #     |            ^ |                    ^
         #     |____________| |____________________|
         #
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(input, 8, 3, "conv2", sync_bn=True)
-            tmp = fluid.layers.concat([conv1, conv2], axis=1)
+            tmp = paddle.concat([conv1, conv2], axis=1)
             conv3 = conv_bn_layer(input, 16, 3, "conv3", bias=None)
             out = conv3 + tmp
 
@@ -43,8 +43,8 @@ class TestPrune(StaticCase):
         for param in main_program.global_block().all_parameters():
             shapes[param.name] = param.shape
 
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
@@ -106,10 +106,10 @@ class TestPrune(StaticCase):
 
 class TestSplit(StaticCase):
     def test_split(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(input, 4, 3, "conv2")
             split_0, split_1 = paddle.split(conv1, 2, axis=1)
@@ -121,8 +121,8 @@ class TestSplit(StaticCase):
         for param in main_program.global_block().all_parameters():
             shapes[param.name] = param.shape
 
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
@@ -150,16 +150,16 @@ class TestSplit(StaticCase):
 
 class TestMul(StaticCase):
     def test_mul(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
-            fc_0 = paddle.fluid.layers.fc(conv1, size=10)
-            fc_1 = paddle.fluid.layers.fc(fc_0, size=10)
+            fc_0 = paddle.paddle.static.nn.fc(conv1, size=10)
+            fc_1 = paddle.paddle.static.nn.fc(fc_0, size=10)
 
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()

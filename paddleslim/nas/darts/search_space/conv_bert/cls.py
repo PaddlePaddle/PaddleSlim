@@ -129,7 +129,7 @@ class AdaBERTClassifier(Layer):
         kd_weights = np.array(kd_weights)
         kd_weights = np.squeeze(kd_weights)
         kd_weights = to_variable(kd_weights)
-        kd_weights = fluid.layers.softmax(-kd_weights)
+        kd_weights = paddle.nn.functional.softmax(-kd_weights)
 
         kd_losses = []
         for i in range(len(s_logits)):
@@ -137,8 +137,8 @@ class AdaBERTClassifier(Layer):
             t_logit = t_logits[j]
             s_logit = s_logits[i]
             t_logit.stop_gradient = True
-            t_probs = fluid.layers.softmax(t_logit)  # P_j^T
-            s_probs = fluid.layers.softmax(s_logit / self.T)  #P_j^S
+            t_probs = paddle.nn.functional.softmax(t_logit)  # P_j^T
+            s_probs = paddle.nn.functional.softmax(s_logit / self.T)  #P_j^S
             #kd_loss = -t_probs * fluid.layers.log(s_probs)
             kd_loss = fluid.layers.cross_entropy(
                 input=s_probs, label=t_probs, soft_label=True)
@@ -149,13 +149,13 @@ class AdaBERTClassifier(Layer):
 
         losses = []
         for logit in s_logits:
-            ce_loss, probs = fluid.layers.softmax_with_cross_entropy(
+            ce_loss, probs = paddle.nn.functional.softmax_with_cross_entropy(
                 logits=logit, label=labels, return_softmax=True)
             loss = fluid.layers.mean(x=ce_loss)
             losses.append(loss)
 
             num_seqs = fluid.layers.create_tensor(dtype='int64')
-            accuracy = fluid.layers.accuracy(
+            accuracy = paddle.static.accuracy(
                 input=probs, label=labels, total=num_seqs)
         ce_loss = fluid.layers.sum(losses)
 

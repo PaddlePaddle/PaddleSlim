@@ -237,7 +237,7 @@ class ReconstructionQuanter(object):
             data_loader(Python Generator, Paddle.io.DataLoader, optional): The
                 Generator or Dataloader provides calibrate data, and it could
                 return a batch every time.
-            executor(fluid.Executor): The executor to load, run and save the
+            executor(paddle.static.Executor): The executor to load, run and save the
                 quantized model.
             scope(fluid.Scope, optional): The scope of the program, use it to load
                 and save variables. If scope=None, get scope by global_scope().
@@ -462,7 +462,7 @@ class ReconstructionQuanter(object):
             shape=weight.shape,
             dtype=weight.dtype,
             name=weight.name + ".alpha",
-            default_initializer=fluid.initializer.NumpyArrayInitializer(
+            default_initializer=paddle.nn.initializer.NumpyArrayInitializer(
                 self._alpha, ), )
 
         h_v = paddle.clip(
@@ -475,7 +475,7 @@ class ReconstructionQuanter(object):
                 dtype=weight.dtype,
                 shape=weight.shape,
                 name=weight.name + '.scale',
-                default_initializer=fluid.initializer.NumpyArrayInitializer(
+                default_initializer=paddle.nn.initializer.NumpyArrayInitializer(
                     scale, ))
         else:
             scale_var = scale

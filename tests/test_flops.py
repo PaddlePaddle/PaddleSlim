@@ -22,10 +22,10 @@ from static_case import StaticCase
 
 class TestPrune(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2

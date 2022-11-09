@@ -119,11 +119,11 @@ class ResNet():
             input=conv, pool_type='avg', global_pooling=True)
         stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
 
-        out = fluid.layers.fc(
+        out = paddle.static.nn.fc(
             input=pool,
             size=class_dim,
-            param_attr=fluid.param_attr.ParamAttr(
-                initializer=fluid.initializer.Uniform(-stdv, stdv)))
+            param_attr=paddle.ParamAttr(
+                initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
 
         return out
 
@@ -135,7 +135,7 @@ class ResNet():
                       groups=1,
                       act=None,
                       name=None):
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=input,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -149,7 +149,7 @@ class ResNet():
             bn_name = "bn_" + name
         else:
             bn_name = "bn" + name[3:]
-        return fluid.layers.batch_norm(
+        return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
             param_attr=ParamAttr(name=bn_name + '_scale'),
@@ -173,7 +173,7 @@ class ResNet():
             pool_type='avg',
             ceil_mode=True)
 
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=pool,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -187,7 +187,7 @@ class ResNet():
             bn_name = "bn_" + name
         else:
             bn_name = "bn" + name[3:]
-        return fluid.layers.batch_norm(
+        return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
             param_attr=ParamAttr(name=bn_name + '_scale'),

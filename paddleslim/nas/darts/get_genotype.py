@@ -51,23 +51,23 @@ def get_genotype(model):
     if model._method == "PC-DARTS":
         n = 3
         start = 2
-        weightsr2 = fluid.layers.softmax(model.betas_reduce[0:2])
-        weightsn2 = fluid.layers.softmax(model.betas_normal[0:2])
+        weightsr2 = paddle.nn.functional.softmax(model.betas_reduce[0:2])
+        weightsn2 = paddle.nn.functional.softmax(model.betas_normal[0:2])
         for i in range(model._steps - 1):
             end = start + n
-            tw2 = fluid.layers.softmax(model.betas_reduce[start:end])
-            tn2 = fluid.layers.softmax(model.betas_normal[start:end])
+            tw2 = paddle.nn.functional.softmax(model.betas_reduce[start:end])
+            tn2 = paddle.nn.functional.softmax(model.betas_normal[start:end])
             start = end
             n += 1
-            weightsr2 = fluid.layers.concat([weightsr2, tw2])
-            weightsn2 = fluid.layers.concat([weightsn2, tn2])
+            weightsr2 = paddle.concat([weightsr2, tw2])
+            weightsn2 = paddle.concat([weightsn2, tn2])
         weightsr2 = weightsr2.numpy()
         weightsn2 = weightsn2.numpy()
 
     gene_normal = _parse(
-        fluid.layers.softmax(model.alphas_normal).numpy(), weightsn2)
+        paddle.nn.functional.softmax(model.alphas_normal).numpy(), weightsn2)
     gene_reduce = _parse(
-        fluid.layers.softmax(model.alphas_reduce).numpy(), weightsr2)
+        paddle.nn.functional.softmax(model.alphas_reduce).numpy(), weightsr2)
 
     concat = range(2 + model._steps - model._multiplier, model._steps + 2)
     genotype = Genotype(

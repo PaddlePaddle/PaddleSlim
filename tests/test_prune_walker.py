@@ -28,8 +28,8 @@ from paddleslim.prune.prune_worker import *
 
 class TestPrune(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         #   X       X              O       X              O
         # conv1-->conv2-->sum1-->conv3-->conv4-->sum2-->conv5-->conv6
         #     |            ^ |                    ^
@@ -38,9 +38,11 @@ class TestPrune(StaticCase):
         # X: prune output channels
         # O: prune input channels
         with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[None, 3, 16, 16])
-                label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(
+                    name="image", shape=[None, 3, 16, 16])
+                label = paddle.static.data(
+                    name='label', shape=[None, 1], dtype='int64')
                 conv1 = conv_bn_layer(input, 8, 3, "conv1", act='relu')
                 conv2 = conv_bn_layer(conv1, 8, 3, "conv2", act='leaky_relu')
                 sum1 = conv1 + conv2
@@ -78,9 +80,11 @@ class TestPrune(StaticCase):
                     mult, 8, 3, "Depthwise_Conv7", groups=8, use_cudnn=False)
                 floored = fluid.layers.floor(conv7)
                 scaled = fluid.layers.scale(floored)
-                concated = fluid.layers.concat([scaled, mult], axis=1)
+                concated = paddle.concat([scaled, mult], axis=1)
                 conv8 = conv_bn_layer(concated, 8, 3, "conv8")
-                predict = fluid.layers.fc(input=conv8, size=10, act='softmax')
+                predict = paddle.static.nn.fc(input=conv8,
+                                              size=10,
+                                              act='softmax')
                 cost = fluid.layers.cross_entropy(input=predict, label=label)
                 adam_optimizer = fluid.optimizer.AdamOptimizer(0.01)
                 avg_cost = fluid.layers.mean(cost)
@@ -93,8 +97,8 @@ class TestPrune(StaticCase):
         #TODO: To support pruning convolution before fc layer.
         params.remove('conv8_weights')
 
-        place = fluid.CUDAPlace(0)
-        exe = fluid.Executor(place)
+        place = paddle.CUDAPlace(0)
+        exe = paddle.static.Executor(place)
         exe.run(startup_program)
         x = np.random.random(size=(10, 3, 16, 16)).astype('float32')
         label = np.random.random(size=(10, 1)).astype('int64')
@@ -105,7 +109,7 @@ class TestPrune(StaticCase):
         pruner = Pruner()
         main_program, _, _ = pruner.prune(
             main_program,
-            fluid.global_scope(),
+            paddle.static.global_scope,
             params=params,
             ratios=[0.5] * len(params),
             place=place,
@@ -122,11 +126,12 @@ class TestPrune(StaticCase):
 
 class TestUnsqueeze2(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[None, 3, 16, 16])
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(
+                    name="image", shape=[None, 3, 16, 16])
                 conv1 = conv_bn_layer(input, 8, 3, "conv1", act='relu')
                 out = paddle.unsqueeze(conv1, axis=[0])
 
@@ -162,11 +167,11 @@ class TestUnsqueeze2(StaticCase):
 
 class TestSqueeze2(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[1, 3, 16, 16])
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(name="image", shape=[1, 3, 16, 16])
                 conv1 = conv_bn_layer(
                     input, 8, 3, "conv1", act='relu')  #[1, 8, 1, 1]
                 out = paddle.squeeze(conv1)
@@ -203,11 +208,11 @@ class TestSqueeze2(StaticCase):
 
 class TestSum(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[1, 3, 16, 16])
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(name="image", shape=[1, 3, 16, 16])
                 conv1 = conv_bn_layer(
                     input, 8, 3, "conv1", act='relu')  #[1, 8, 1, 1]
                 conv2 = conv_bn_layer(
@@ -247,11 +252,11 @@ class TestSum(StaticCase):
 
 class TestUnsupportAndDefault(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[1, 3, 16, 16])
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(name="image", shape=[1, 3, 16, 16])
                 conv1 = conv_bn_layer(
                     input, 8, 3, "conv1", act='relu')  #[1, 8, 1, 1]
                 # hit default pruning worker
@@ -279,11 +284,11 @@ class TestUnsupportAndDefault(StaticCase):
 
 class TestConv2d(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[1, 3, 16, 16])
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(name="image", shape=[1, 3, 16, 16])
 
                 conv1 = conv_bn_layer(
                     input, 6, 3, "conv1", groups=1, bias=True, act='relu')
@@ -338,11 +343,11 @@ class TestPruneWorker(unittest.TestCase):
         pass
 
     def create_graph(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         with paddle.fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[8, 8, 16, 16])
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(name="image", shape=[8, 8, 16, 16])
                 self.define_layer(input)
         self.graph = GraphWrapper(main_program)
         self.in_var = self.graph.var(self.input.name)
@@ -493,8 +498,8 @@ class TestMul(TestPruneWorker):
         self.ret = ret
 
     def define_layer(self, input):
-        x = fluid.data(name="x", shape=[1, 1, 1, 1])
-        y = fluid.data(name="y", shape=[1, 1, 1, 1])
+        x = paddle.static.data(name="x", shape=[1, 1, 1, 1])
+        y = paddle.static.data(name="y", shape=[1, 1, 1, 1])
         self.input = x
         self.y = y
         out = paddle.fluid.layers.mul(x,
@@ -560,8 +565,8 @@ class TestMatmul(TestPruneWorker):
         self.y_shape = [8, 7]
 
     def define_layer(self, input):
-        x = fluid.data(name="x", shape=self.x_shape)
-        y = fluid.data(name="y", shape=self.y_shape)
+        x = paddle.static.data(name="x", shape=self.x_shape)
+        y = paddle.static.data(name="y", shape=self.y_shape)
         self.input = x
         self.y = y
         out = paddle.matmul(x, y)
@@ -732,8 +737,8 @@ class TestAffineChannel(TestPruneWorker):
             input, 3, 8, name="conv1", bias_attr=False)
 
         self.input = conv1
-        scale = fluid.data(name="scale", shape=[conv1.shape[1]])
-        bias = fluid.data(name="bias", shape=[conv1.shape[1]])
+        scale = paddle.static.data(name="scale", shape=[conv1.shape[1]])
+        bias = paddle.static.data(name="bias", shape=[conv1.shape[1]])
         out = paddle.fluid.layers.affine_channel(conv1, scale=scale, bias=bias)
         self.output = out
 

@@ -63,13 +63,13 @@ def parse_args():
 
 
 def transform_and_save_int8_model(original_path, save_path):
-    place = fluid.CPUPlace()
-    exe = fluid.Executor(place)
-    inference_scope = fluid.executor.global_scope()
+    place = paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
+    inference_scope = paddle.static.Executor.global_scope()
     model_filename = 'model.pdmodel'
     params_filename = 'model.pdiparams'
 
-    with fluid.scope_guard(inference_scope):
+    with paddle.static.scope_guard(inference_scope):
         if os.path.exists(os.path.join(original_path, '__model__')):
             [inference_program, feed_target_names,
              fetch_targets] = fluid.io.load_inference_model(original_path, exe)
@@ -98,7 +98,7 @@ def transform_and_save_int8_model(original_path, save_path):
             _debug=test_args.debug)
         graph = transform_to_mkldnn_int8_pass.apply(graph)
         inference_program = graph.to_program()
-        with fluid.scope_guard(inference_scope):
+        with paddle.static.scope_guard(inference_scope):
             fluid.io.save_inference_model(
                 save_path,
                 feed_target_names,

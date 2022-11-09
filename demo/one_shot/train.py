@@ -43,7 +43,7 @@ def parse_args():
     return args
 
 
-class SimpleImgConv(fluid.dygraph.Layer):
+class SimpleImgConv(paddle.nn.Layer):
     def __init__(self,
                  num_channels,
                  num_filters,
@@ -76,7 +76,7 @@ class SimpleImgConv(fluid.dygraph.Layer):
         return x
 
 
-class MNIST(fluid.dygraph.Layer):
+class MNIST(paddle.nn.Layer):
     def __init__(self):
         super(MNIST, self).__init__()
 
@@ -91,8 +91,8 @@ class MNIST(fluid.dygraph.Layer):
         self._fc = Linear(
             self.pool_2_shape,
             10,
-            param_attr=fluid.param_attr.ParamAttr(
-                initializer=fluid.initializer.NormalInitializer(
+            param_attr=paddle.ParamAttr(
+                initializer=paddle.nn.initializer.NormalInitializer(
                     loc=0.0, scale=scale)),
             act="softmax")
 
@@ -101,10 +101,10 @@ class MNIST(fluid.dygraph.Layer):
 
         x = self.arch(x, tokens=tokens)  # addddddd
         x = self._simple_img_conv_pool_2(x)
-        x = fluid.layers.reshape(x, shape=[-1, self.pool_2_shape])
+        x = paddle.reshape(x, shape=[-1, self.pool_2_shape])
         x = self._fc(x)
         if label is not None:
-            acc = fluid.layers.accuracy(input=x, label=label)
+            acc = paddle.static.accuracy(input=x, label=label)
             return x, acc
         else:
             return x
@@ -195,7 +195,7 @@ def train_mnist(args, model, tokens=None):
 
 if __name__ == '__main__':
     args = parse_args()
-    place = fluid.CPUPlace()
+    place = paddle.CPUPlace()
     with fluid.dygraph.guard(place):
         model = MNIST()
         # step 1: training super net

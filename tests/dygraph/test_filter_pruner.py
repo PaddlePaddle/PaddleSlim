@@ -137,7 +137,7 @@ class TestPruningGroupConv2d(unittest.TestCase):
                 pruner.restore()
 
 
-from paddle.fluid import ParamAttr
+import paddle.ParamAttr as ParamAttr
 
 
 class MulNet(paddle.nn.Layer):

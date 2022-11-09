@@ -253,7 +253,7 @@ class InceptionABlockSpace(SearchSpaceBase):
             act='relu',
             name=name + '_conv4_3')
 
-        concat = fluid.layers.concat(
+        concat = paddle.concat(
             [conv1, conv2, conv3, conv4], axis=1, name=name + '_concat')
         return concat
 
@@ -506,7 +506,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
             act='relu',
             name=name + '_conv4_3_2')
 
-        concat = fluid.layers.concat(
+        concat = paddle.concat(
             [conv1, conv2, conv3_1, conv3_2, conv4_1, conv4_2],
             axis=1,
             name=name + '_concat')

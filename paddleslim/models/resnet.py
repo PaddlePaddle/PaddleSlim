@@ -79,13 +79,13 @@ class ResNet():
                 input=conv, pool_size=7, pool_type='avg', global_pooling=True)
             stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
             fc_name = fc_name if fc_name is None else prefix_name + fc_name
-            out = fluid.layers.fc(input=pool,
-                                  size=class_dim,
-                                  act='softmax',
-                                  name=fc_name,
-                                  param_attr=fluid.param_attr.ParamAttr(
-                                      initializer=fluid.initializer.Uniform(
-                                          -stdv, stdv)))
+            out = paddle.static.nn.fc(
+                input=pool,
+                size=class_dim,
+                act='softmax',
+                name=fc_name,
+                param_attr=paddle.ParamAttr(
+                    initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
         else:
             for block in range(len(depth)):
                 for i in range(depth[block]):
@@ -102,13 +102,13 @@ class ResNet():
                 input=conv, pool_type='avg', global_pooling=True)
             stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
             fc_name = fc_name if fc_name is None else prefix_name + fc_name
-            out = fluid.layers.fc(
+            out = paddle.static.nn.fc(
                 input=pool,
                 size=class_dim,
                 act='softmax',
                 name=fc_name,
-                param_attr=fluid.param_attr.ParamAttr(
-                    initializer=fluid.initializer.Uniform(-stdv, stdv)))
+                param_attr=paddle.ParamAttr(
+                    initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
 
         return out
 
@@ -120,7 +120,7 @@ class ResNet():
                       groups=1,
                       act=None,
                       name=None):
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=input,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -138,7 +138,7 @@ class ResNet():
                 bn_name = "bn" + name[3:]
         else:
             bn_name = name.split("_", 1)[0] + "_bn" + name.split("_", 1)[1][3:]
-        return fluid.layers.batch_norm(
+        return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
             name=bn_name + '.output.1',

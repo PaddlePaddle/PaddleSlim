@@ -15,7 +15,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print_arguments(args)
     paddle.enable_static()
-    place = fluid.CPUPlace()
+    place = paddle.CPUPlace()
     exe = paddle.static.Executor(paddle.CPUPlace())
 
     [inference_program, feed_target_names,

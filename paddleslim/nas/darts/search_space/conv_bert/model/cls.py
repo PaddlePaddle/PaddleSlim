@@ -57,12 +57,13 @@ class ClsModelLayer(Layer):
             fc = Linear(
                 input_dim=self.config["hidden_size"],
                 output_dim=num_labels,
-                param_attr=fluid.ParamAttr(
+                param_attr=paddle.ParamAttr(
                     name="cls_out_%d_w" % i,
-                    initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
-                bias_attr=fluid.ParamAttr(
+                    initializer=paddle.nn.initializer.TruncatedNormal(
+                        scale=0.02)),
+                bias_attr=paddle.ParamAttr(
                     name="cls_out_%d_b" % i,
-                    initializer=fluid.initializer.Constant(0.)))
+                    initializer=paddle.nn.initializer.Constant(0.)))
             fc = self.add_sublayer("cls_fc_%d" % i, fc)
             self.cls_fc.append(fc)
 
@@ -76,21 +77,21 @@ class ClsModelLayer(Layer):
         input_mask = data_ids[3]
         labels = data_ids[4]
 
-        enc_outputs, next_sent_feats = self.bert_layer(
-            src_ids, position_ids, sentence_ids, input_mask)
+        enc_outputs, next_sent_feats = self.bert_layer(src_ids, position_ids,
+                                                       sentence_ids, input_mask)
         logits = []
         losses = []
         accuracys = []
         for next_sent_feat, fc in zip(next_sent_feats, self.cls_fc):
 
-            cls_feat = fluid.layers.dropout(
+            cls_feat = paddle.nn.functional.dropout(
                 x=next_sent_feat,
                 dropout_prob=0.1,
                 dropout_implementation="upscale_in_train")
             logit = fc(cls_feat)
             logits.append(logit)
 
-            ce_loss, probs = fluid.layers.softmax_with_cross_entropy(
+            ce_loss, probs = paddle.nn.functional.softmax_with_cross_entropy(
                 logits=logit, label=labels, return_softmax=True)
             loss = fluid.layers.mean(x=ce_loss)
             losses.append(loss)
@@ -99,7 +100,7 @@ class ClsModelLayer(Layer):
                 loss *= self.loss_scaling
 
             num_seqs = fluid.layers.create_tensor(dtype='int64')
-            accuracy = fluid.layers.accuracy(
+            accuracy = paddle.static.accuracy(
                 input=probs, label=labels, total=num_seqs)
             accuracys.append(accuracy)
         total_loss = fluid.layers.sum(losses)

@@ -50,8 +50,7 @@ def train_one_epoch(model, train_loader, valid_loader, optimizer,
             total_loss, acc, ce_loss, kd_loss, _ = model._layers.loss(
                 train_data, epoch)
         else:
-            total_loss, acc, ce_loss, kd_loss, _ = model.loss(train_data,
-                                                              epoch)
+            total_loss, acc, ce_loss, kd_loss, _ = model.loss(train_data, epoch)
 
         if use_data_parallel:
             total_loss = model.scale_loss(total_loss)
@@ -82,8 +81,8 @@ def train_one_epoch(model, train_loader, valid_loader, optimizer,
             arch_loss.backward()
         arch_optimizer.minimize(arch_loss)
         model.clear_gradients()
-        probs = fluid.layers.softmax(arch_logits[-1])
-        val_acc = fluid.layers.accuracy(input=probs, label=valid_data[4])
+        probs = paddle.nn.functional.softmax(arch_logits[-1])
+        val_acc = paddle.static.accuracy(input=probs, label=valid_data[4])
         val_accs.update(val_acc.numpy(), batch_size)
 
         if step_id % log_freq == 0:
@@ -100,8 +99,8 @@ def train_one_epoch(model, train_loader, valid_loader, optimizer,
 def main():
     # whether use multi-gpus
     use_data_parallel = False
-    place = fluid.CUDAPlace(fluid.dygraph.parallel.Env(
-    ).dev_id) if use_data_parallel else fluid.CUDAPlace(0)
+    place = paddle.CUDAPlace(fluid.dygraph.parallel.Env(
+    ).dev_id) if use_data_parallel else paddle.CUDAPlace(0)
 
     BERT_BASE_PATH = "./data/pretrained_models/uncased_L-12_H-768_A-12"
     vocab_path = BERT_BASE_PATH + "/vocab.txt"
@@ -140,11 +139,10 @@ def main():
         model_parameters = []
         for p in model.parameters():
             if (p.name not in [a.name for a in model.arch_parameters()] and
-                    p.name not in
-                [a.name for a in model.teacher.parameters()]):
+                    p.name not in [a.name for a in model.teacher.parameters()]):
                 model_parameters.append(p)
 
-        optimizer = fluid.optimizer.MomentumOptimizer(
+        optimizer = paddle.optimizer.Momentum(
             learning_rate,
             0.9,
             regularization=fluid.regularizer.L2DecayRegularizer(3e-4),

@@ -87,12 +87,12 @@ class TestRLNAS(StaticCase):
 
     def test_all_function(self):
         ### unittest for next_archs
-        next_program = fluid.Program()
-        startup_program = fluid.Program()
-        token2arch_program = fluid.Program()
+        next_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        token2arch_program = paddle.static.Program()
 
-        with fluid.program_guard(next_program, startup_program):
-            inputs = fluid.data(
+        with paddle.static.program_guard(next_program, startup_program):
+            inputs = paddle.static.data(
                 name='input', shape=[None, 3, 32, 32], dtype='float32')
             archs = self.rlnas.next_archs(1)[0]
             current_tokens = self.rlnas.tokens
@@ -105,8 +105,8 @@ class TestRLNAS(StaticCase):
         self.assertTrue(self.rlnas.reward(float(1.0)), "reward is False")
 
         ### uniitest for tokens2arch
-        with fluid.program_guard(token2arch_program, startup_program):
-            inputs = fluid.data(
+        with paddle.static.program_guard(token2arch_program, startup_program):
+            inputs = paddle.static.data(
                 name='input', shape=[None, 3, 32, 32], dtype='float32')
             arch = self.rlnas.tokens2arch(self.rlnas.tokens[0])
             for arch in archs:
@@ -116,10 +116,10 @@ class TestRLNAS(StaticCase):
 
     def test_final_archs(self):
         ### unittest for final_archs
-        final_program = fluid.Program()
-        final_startup_program = fluid.Program()
-        with fluid.program_guard(final_program, final_startup_program):
-            inputs = fluid.data(
+        final_program = paddle.static.Program()
+        final_startup_program = paddle.static.Program()
+        with paddle.static.program_guard(final_program, final_startup_program):
+            inputs = paddle.static.data(
                 name='input', shape=[None, 3, 32, 32], dtype='float32')
             archs = self.rlnas.final_archs(1)[0]
             current_tokens = self.rlnas.tokens

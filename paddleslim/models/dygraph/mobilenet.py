@@ -21,7 +21,7 @@ import numpy as np
 import argparse
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.initializer import MSRA
+from paddle.paddle.nn.initializer import MSRA
 from paddle.fluid.param_attr import ParamAttr
 from paddle.fluid.layer_helper import LayerHelper
 from paddle.nn import Conv2D
@@ -30,7 +30,7 @@ from paddle.fluid.dygraph.base import to_variable
 from paddle.fluid import framework
 
 
-class ConvBNLayer(fluid.dygraph.Layer):
+class ConvBNLayer(paddle.nn.Layer):
     def __init__(self,
                  num_channels,
                  filter_size,
@@ -71,7 +71,7 @@ class ConvBNLayer(fluid.dygraph.Layer):
         return y
 
 
-class DepthwiseSeparable(fluid.dygraph.Layer):
+class DepthwiseSeparable(paddle.nn.Layer):
     def __init__(self,
                  num_channels,
                  num_filters1,
@@ -104,7 +104,7 @@ class DepthwiseSeparable(fluid.dygraph.Layer):
         return y
 
 
-class MobileNetV1(fluid.dygraph.Layer):
+class MobileNetV1(paddle.nn.Layer):
     def __init__(self, scale=1.0, class_dim=100):
         super(MobileNetV1, self).__init__()
         self.scale = scale
@@ -233,7 +233,7 @@ class MobileNetV1(fluid.dygraph.Layer):
             y = dws(y)
 
         y = self.pool2d_avg(y)
-        y = fluid.layers.reshape(y, shape=[-1, 1024])
+        y = paddle.reshape(y, shape=[-1, 1024])
         y = self.out(y)
 
         return y

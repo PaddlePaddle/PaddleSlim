@@ -17,7 +17,7 @@ import logging
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid import ParamAttr
+import paddle.ParamAttr as ParamAttr
 from paddle.fluid.layers import RNNCell, LSTMCell, rnn
 from paddle.fluid.contrib.layers import basic_lstm
 from ...controller import RLBaseController
@@ -26,7 +26,7 @@ from ..utils import RLCONTROLLER
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-uniform_initializer = lambda x: fluid.initializer.UniformInitializer(low=-x, high=x)
+uniform_initializer = lambda x: paddle.nn.initializer.UniformInitializer(low=-x, high=x)
 
 
 class lstm_cell(RNNCell):
@@ -173,20 +173,24 @@ class LSTM(RLBaseController):
 
             paddle.assign(
                 fluid.layers.uniform_random(shape=self.g_emb.shape), self.g_emb)
-            hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
-            cell = fluid.data(name='cell', shape=[None, self.hidden_size])
+            hidden = paddle.static.data(
+                name='hidden', shape=[None, self.hidden_size])
+            cell = paddle.static.data(
+                name='cell', shape=[None, self.hidden_size])
             self.tokens = self._network(hidden, cell, is_inference=is_inference)
 
         with paddle.static.program_guard(self.learn_program):
-            hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
-            cell = fluid.data(name='cell', shape=[None, self.hidden_size])
-            init_actions = fluid.data(
+            hidden = paddle.static.data(
+                name='hidden', shape=[None, self.hidden_size])
+            cell = paddle.static.data(
+                name='cell', shape=[None, self.hidden_size])
+            init_actions = paddle.static.data(
                 name='init_actions',
                 shape=[None, len(self.range_tables)],
                 dtype='int64')
             self._network(hidden, cell, init_actions=init_actions)
 
-            rewards = fluid.data(name='rewards', shape=[None])
+            rewards = paddle.static.data(name='rewards', shape=[None])
             self.rewards = paddle.mean(rewards)
 
             if self.weight_entropy is not None:

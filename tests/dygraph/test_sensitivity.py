@@ -95,19 +95,21 @@ class TestSensitivity(unittest.TestCase):
 
     def static_sen(self, params):
         paddle.enable_static()
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[None, 1, 28, 28])
-                label = fluid.data(name="label", shape=[None, 1], dtype="int64")
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(
+                    name="image", shape=[None, 1, 28, 28])
+                label = paddle.static.data(
+                    name="label", shape=[None, 1], dtype="int64")
                 model = paddle.vision.models.LeNet()
                 out = model(input)
-                acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
+                acc_top1 = paddle.static.accuracy(input=out, label=label, k=1)
         eval_program = main_program.clone(for_test=True)
-        place = fluid.CUDAPlace(0)
-        scope = fluid.global_scope()
-        exe = fluid.Executor(place)
+        place = paddle.CUDAPlace(0)
+        scope = paddle.static.global_scope
+        exe = paddle.static.Executor(place)
         exe.run(startup_program)
 
         val_reader = paddle.fluid.io.batch(self.val_reader, batch_size=128)

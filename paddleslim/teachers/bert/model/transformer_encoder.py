@@ -46,16 +46,17 @@ class PrePostProcessLayer(Layer):
                             self.sublayers(include_self=True)),
                         LayerNorm(
                             normalized_shape=d_model,
-                            param_attr=fluid.ParamAttr(
+                            param_attr=paddle.ParamAttr(
                                 name=name + "_layer_norm_scale",
-                                initializer=fluid.initializer.Constant(1.)),
-                            bias_attr=fluid.ParamAttr(
+                                initializer=paddle.nn.initializer.Constant(1.)),
+                            bias_attr=paddle.ParamAttr(
                                 name=name + "_layer_norm_bias",
-                                initializer=fluid.initializer.Constant(0.)))))
+                                initializer=paddle.nn.initializer.Constant(
+                                    0.)))))
                 self.exec_order += "n"
             elif cmd == "d":  # add dropout
                 if dropout_rate:
-                    self.functors.append(lambda x: fluid.layers.dropout(
+                    self.functors.append(lambda x: paddle.nn.functional.dropout(
                         x, dropout_prob=dropout_rate, is_test=False))
                     self.exec_order += "d"
 
@@ -85,7 +86,7 @@ class PositionwiseFeedForwardLayer(Layer):
         self._i2h = Linear(
             input_dim=d_model,
             output_dim=d_inner_hid,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + '_fc_0.w_0', initializer=param_initializer),
             bias_attr=name + '_fc_0.b_0',
             act=hidden_act)
@@ -93,7 +94,7 @@ class PositionwiseFeedForwardLayer(Layer):
         self._h2o = Linear(
             input_dim=d_inner_hid,
             output_dim=d_model,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + '_fc_1.w_0', initializer=param_initializer),
             bias_attr=name + '_fc_1.b_0')
 
@@ -107,7 +108,7 @@ class PositionwiseFeedForwardLayer(Layer):
         """
         hidden = self._i2h(x)
         if self._dropout_rate:
-            hidden = fluid.layers.dropout(
+            hidden = paddle.nn.functional.dropout(
                 hidden,
                 dropout_prob=self._dropout_rate,
                 upscale_in_train="upscale_in_train",
@@ -142,28 +143,28 @@ class MultiHeadAttentionLayer(Layer):
         self._q_fc = Linear(
             input_dim=d_model,
             output_dim=d_key * n_head,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + '_query_fc.w_0', initializer=param_initializer),
             bias_attr=name + '_query_fc.b_0')
 
         self._k_fc = Linear(
             input_dim=d_model,
             output_dim=d_key * n_head,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + '_key_fc.w_0', initializer=param_initializer),
             bias_attr=name + '_key_fc.b_0')
 
         self._v_fc = Linear(
             input_dim=d_model,
             output_dim=d_value * n_head,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + '_value_fc.w_0', initializer=param_initializer),
             bias_attr=name + '_value_fc.b_0')
 
         self._proj_fc = Linear(
             input_dim=d_value * n_head,
             output_dim=d_model,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + '_output_fc.w_0', initializer=param_initializer),
             bias_attr=name + '_output_fc.b_0')
 
@@ -187,21 +188,21 @@ class MultiHeadAttentionLayer(Layer):
         # split head
 
         q_hidden_size = q.shape[-1]
-        reshaped_q = fluid.layers.reshape(
+        reshaped_q = paddle.reshape(
             x=q,
             shape=[0, 0, self._n_head, q_hidden_size // self._n_head],
             inplace=False)
         transpose_q = fluid.layers.transpose(x=reshaped_q, perm=[0, 2, 1, 3])
 
         k_hidden_size = k.shape[-1]
-        reshaped_k = fluid.layers.reshape(
+        reshaped_k = paddle.reshape(
             x=k,
             shape=[0, 0, self._n_head, k_hidden_size // self._n_head],
             inplace=False)
         transpose_k = fluid.layers.transpose(x=reshaped_k, perm=[0, 2, 1, 3])
 
         v_hidden_size = v.shape[-1]
-        reshaped_v = fluid.layers.reshape(
+        reshaped_v = paddle.reshape(
             x=v,
             shape=[0, 0, self._n_head, v_hidden_size // self._n_head],
             inplace=False)
@@ -217,9 +218,9 @@ class MultiHeadAttentionLayer(Layer):
         #alpha=self._d_model**-0.5)
         if attn_bias is not None:
             product += attn_bias
-        weights = fluid.layers.softmax(product)
+        weights = paddle.nn.functional.softmax(product)
         if self._dropout_rate:
-            weights_droped = fluid.layers.dropout(
+            weights_droped = paddle.nn.functional.dropout(
                 weights,
                 dropout_prob=self._dropout_rate,
                 dropout_implementation="upscale_in_train",
@@ -232,7 +233,7 @@ class MultiHeadAttentionLayer(Layer):
         if len(out.shape) != 4:
             raise ValueError("Input(x) should be a 4-D Tensor.")
         trans_x = fluid.layers.transpose(out, perm=[0, 2, 1, 3])
-        final_out = fluid.layers.reshape(
+        final_out = paddle.reshape(
             x=trans_x,
             shape=[0, 0, trans_x.shape[2] * trans_x.shape[3]],
             inplace=False)

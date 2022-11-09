@@ -52,16 +52,17 @@ class TestPrune(unittest.TestCase):
 
     def static_prune(self, net, ratios):
         paddle.enable_static()
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[None, 3, 16, 16])
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(
+                    name="image", shape=[None, 3, 16, 16])
                 model = net(pretrained=False)
                 out = model(input)
 
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
         scope = fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()

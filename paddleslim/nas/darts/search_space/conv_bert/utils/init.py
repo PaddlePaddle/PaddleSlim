@@ -27,12 +27,13 @@ def cast_fp32_to_fp16(exe, main_program):
     print("Cast parameters to float16 data format.")
     for param in main_program.global_block().all_parameters():
         if not param.name.endswith(".master"):
-            param_t = fluid.global_scope().find_var(param.name).get_tensor()
+            param_t = paddle.static.global_scope.find_var(
+                param.name).get_tensor()
             data = np.array(param_t)
             if param.name.find("layer_norm") == -1:
                 param_t.set(np.float16(data).view(np.uint16), exe.place)
-            master_param_var = fluid.global_scope().find_var(param.name +
-                                                             ".master")
+            master_param_var = paddle.static.global_scope.find_var(param.name +
+                                                                   ".master")
             if master_param_var is not None:
                 master_param_var.get_tensor().set(data, exe.place)
 
@@ -116,8 +117,8 @@ def init_from_static_model(dir_path, cls_model, bert_config):
 
     _param0 = load_numpy_weight("pre_encoder_layer_norm_scale")
     _param1 = load_numpy_weight("pre_encoder_layer_norm_bias")
-    cls_model.bert_layer.pre_process_layer._sub_layers[
-        "layer_norm_0"].set_dict({
+    cls_model.bert_layer.pre_process_layer._sub_layers["layer_norm_0"].set_dict(
+        {
             "weight": _param0,
             "bias": _param1
         })

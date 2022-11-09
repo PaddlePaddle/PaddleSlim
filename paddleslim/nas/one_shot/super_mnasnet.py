@@ -7,7 +7,7 @@ from .one_shot_nas import OneShotSuperNet
 __all__ = ['SuperMnasnet']
 
 
-class DConvBlock(fluid.dygraph.Layer):
+class DConvBlock(paddle.nn.Layer):
     def __init__(self,
                  name_scope,
                  in_channels,
@@ -96,7 +96,7 @@ class DConvBlock(fluid.dygraph.Layer):
         return proj_x
 
 
-class SearchBlock(fluid.dygraph.Layer):
+class SearchBlock(paddle.nn.Layer):
     def __init__(self,
                  name_scope,
                  in_channels,
@@ -129,7 +129,7 @@ class SearchBlock(fluid.dygraph.Layer):
         return out
 
 
-class AuxiliaryHead(fluid.dygraph.Layer):
+class AuxiliaryHead(paddle.nn.Layer):
     def __init__(self, name_scope, num_classes):
         super(AuxiliaryHead, self).__init__(name_scope)
 
@@ -243,7 +243,8 @@ class SuperMnasnet(OneShotSuperNet):
         x = proj_x
         for ind in range(len(self.block_list)):
             for b_ind, block in enumerate(self.block_list[ind]):
-                x = fluid.layers.dropout(block(x, tokens[ind * 6 + b_ind]), 0.)
+                x = paddle.nn.functional.dropout(
+                    block(x, tokens[ind * 6 + b_ind]), 0.)
                 if not self.flops_calculated:
                     self.flops += block.flops[tokens[ind * 6 + b_ind]]
             if ind == len(self.block_list) * 2 // 3 - 1 and self.use_auxhead:

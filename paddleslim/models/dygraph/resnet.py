@@ -19,7 +19,7 @@ from paddle.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
 
 
-class ConvBNLayer(fluid.dygraph.Layer):
+class ConvBNLayer(paddle.nn.Layer):
     def __init__(self,
                  num_channels,
                  num_filters,
@@ -48,7 +48,7 @@ class ConvBNLayer(fluid.dygraph.Layer):
         return y
 
 
-class BottleneckBlock(fluid.dygraph.Layer):
+class BottleneckBlock(paddle.nn.Layer):
     def __init__(self, num_channels, num_filters, stride, shortcut=True):
         super(BottleneckBlock, self).__init__()
 
@@ -96,7 +96,7 @@ class BottleneckBlock(fluid.dygraph.Layer):
         return layer_helper.append_activation(y)
 
 
-class ResNet(fluid.dygraph.Layer):
+class ResNet(paddle.nn.Layer):
     def __init__(self, layers=50, class_dim=100):
         super(ResNet, self).__init__()
 
@@ -145,14 +145,14 @@ class ResNet(fluid.dygraph.Layer):
         self.out = Linear(
             self.pool2d_avg_output,
             class_dim,
-            param_attr=fluid.param_attr.ParamAttr(
-                initializer=fluid.initializer.Uniform(-stdv, stdv)))
+            param_attr=paddle.ParamAttr(
+                initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
 
     def forward(self, inputs):
         y = self.conv(inputs)
         for bottleneck_block in self.bottleneck_block_list:
             y = bottleneck_block(y)
         y = self.pool2d_avg(y)
-        y = fluid.layers.reshape(y, shape=[-1, self.pool2d_avg_output])
+        y = paddle.reshape(y, shape=[-1, self.pool2d_avg_output])
         y = self.out(y)
         return y

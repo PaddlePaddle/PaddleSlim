@@ -75,31 +75,31 @@ class BertModelLayer(Layer):
         self._sent_emb_name = "sent_embedding"
         self._dtype = "float16" if use_fp16 else "float32"
 
-        self._param_initializer = fluid.initializer.TruncatedNormal(
+        self._param_initializer = paddle.nn.initializer.TruncatedNormal(
             scale=config['initializer_range'])
 
         self._src_emb = Embedding(
             size=[self._voc_size, self._emb_size],
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=self._word_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
         self._pos_emb = Embedding(
             size=[self._max_position_seq_len, self._emb_size],
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=self._pos_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
         self._sent_emb = Embedding(
             size=[self._sent_types, self._emb_size],
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=self._sent_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
         self.pooled_fc = Linear(
             input_dim=self._emb_size,
             output_dim=self._emb_size,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name="pooled_fc.w_0", initializer=self._param_initializer),
             bias_attr="pooled_fc.b_0",
             act="tanh")
@@ -156,7 +156,7 @@ class BertModelLayer(Layer):
             next_sent_feat = fluid.layers.slice(
                 input=enc_output, axes=[1], starts=[0], ends=[1])
             next_sent_feat = self.pooled_fc(next_sent_feat)
-            next_sent_feat = fluid.layers.reshape(
+            next_sent_feat = paddle.reshape(
                 next_sent_feat, shape=[-1, self._emb_size])
             next_sent_feats.append(next_sent_feat)
 
@@ -181,7 +181,7 @@ class PretrainModelLayer(Layer):
         self._prepostprocess_dropout = config['hidden_dropout_prob']
 
         self._word_emb_name = "word_embedding"
-        self._param_initializer = fluid.initializer.TruncatedNormal(
+        self._param_initializer = paddle.nn.initializer.TruncatedNormal(
             scale=config['initializer_range'])
         self._weight_sharing = weight_sharing
         self.use_fp16 = use_fp16
@@ -196,21 +196,21 @@ class PretrainModelLayer(Layer):
         self.pooled_fc = Linear(
             input_dim=self._emb_size,
             output_dim=self._emb_size,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name="mask_lm_trans_fc.w_0",
                 initializer=self._param_initializer),
             bias_attr="mask_lm_trans_fc.b_0",
             act="tanh")
 
-        self.mask_lm_out_bias_attr = fluid.ParamAttr(
+        self.mask_lm_out_bias_attr = paddle.ParamAttr(
             name="mask_lm_out_fc.b_0",
-            initializer=fluid.initializer.Constant(value=0.0))
+            initializer=paddle.nn.initializer.Constant(value=0.0))
 
         if not self._weight_sharing:
             self.out_fc = Linear(
                 input_dim=self._emb_size,
                 output_dim=self._voc_size,
-                param_attr=fluid.ParamAttr(
+                param_attr=paddle.ParamAttr(
                     name="mask_lm_out_fc.w_0",
                     initializer=self._param_initializer),
                 bias_attr=self.mask_lm_out_bias_attr)
@@ -224,7 +224,7 @@ class PretrainModelLayer(Layer):
         self.next_sent_fc = Linear(
             input_dim=self._emb_size,
             output_dim=2,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name="next_sent_fc.w_0", initializer=self._param_initializer),
             bias_attr="next_sent_fc.b_0")
 
@@ -237,10 +237,10 @@ class PretrainModelLayer(Layer):
 
         enc_output, next_sent_feat = self.bert_layer(src_ids, position_ids,
                                                      sentence_ids, input_mask)
-        reshaped_emb_out = fluid.layers.reshape(
+        reshaped_emb_out = paddle.reshape(
             x=enc_output, shape=[-1, self._emb_size])
 
-        mask_feat = fluid.layers.gather(input=reshaped_emb_out, index=mask_pos)
+        mask_feat = paddle.gather(input=reshaped_emb_out, index=mask_pos)
 
         mask_trans_feat = self.pooled_fc(mask_feat)
         mask_trans_feat = self.pre_process_layer(None, mask_trans_feat, "n",
@@ -255,16 +255,16 @@ class PretrainModelLayer(Layer):
         else:
             fc_out = self.out_fc(mask_trans_feat)
 
-        mask_lm_loss = fluid.layers.softmax_with_cross_entropy(
+        mask_lm_loss = paddle.nn.functional.softmax_with_cross_entropy(
             logits=fc_out, label=mask_label)
         mean_mask_lm_loss = fluid.layers.mean(mask_lm_loss)
 
         next_sent_fc_out = self.next_sent_fc(next_sent_feat)
 
-        next_sent_loss, next_sent_softmax = fluid.layers.softmax_with_cross_entropy(
+        next_sent_loss, next_sent_softmax = paddle.nn.functional.softmax_with_cross_entropy(
             logits=next_sent_fc_out, label=labels, return_softmax=True)
 
-        next_sent_acc = fluid.layers.accuracy(
+        next_sent_acc = paddle.static.accuracy(
             input=next_sent_softmax, label=labels)
 
         mean_next_sent_loss = fluid.layers.mean(next_sent_loss)

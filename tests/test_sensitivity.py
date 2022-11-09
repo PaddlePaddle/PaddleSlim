@@ -24,11 +24,12 @@ from layers import conv_bn_layer
 
 class TestSensitivity(StaticCase):
     def test_sensitivity(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 1, 28, 28])
-            label = fluid.data(name="label", shape=[None, 1], dtype="int64")
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 1, 28, 28])
+            label = paddle.static.data(
+                name="label", shape=[None, 1], dtype="int64")
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2
@@ -37,12 +38,12 @@ class TestSensitivity(StaticCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
-            out = fluid.layers.fc(conv6, size=10, act='softmax')
-            acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
+            out = paddle.static.nn.fc(conv6, size=10, act='softmax')
+            acc_top1 = paddle.static.accuracy(input=out, label=label, k=1)
         eval_program = main_program.clone(for_test=True)
 
-        place = fluid.CUDAPlace(0)
-        exe = fluid.Executor(place)
+        place = paddle.CUDAPlace(0)
+        exe = paddle.static.Executor(place)
         exe.run(startup_program)
 
         val_reader = paddle.fluid.io.batch(

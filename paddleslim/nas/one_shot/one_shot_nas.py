@@ -24,7 +24,7 @@ def OneShotSearch(model, eval_func, strategy='sa', search_steps=100):
     Search a best tokens which represents a sub-network.
 
     Args:
-        model(fluid.dygraph.Layer): A dynamic graph module whose sub-modules should contain
+        model(paddle.nn.Layer): A dynamic graph module whose sub-modules should contain
                                     one instance of `OneShotSuperNet` at least.
         eval_func(function): A callback function which accept model and tokens as arguments.
         strategy(str): The name of strategy used to search. Default: 'sa'.
@@ -53,7 +53,7 @@ def OneShotSearch(model, eval_func, strategy='sa', search_steps=100):
     return contoller.best_tokens()
 
 
-class OneShotSuperNet(fluid.dygraph.Layer):
+class OneShotSuperNet(paddle.nn.Layer):
     """The base class of super net used in one-shot searching strategy.
     A super net is a dygraph layer.
     

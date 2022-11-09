@@ -38,11 +38,11 @@ class Architect(object):
             self.unrolled_model = self.model.new()
             self.unrolled_model_params = [
                 p for p in self.unrolled_model.parameters()
-                if p.name not in [
-                    a.name for a in self.unrolled_model.arch_parameters()
-                ] and p.trainable
+                if p.name not in
+                [a.name
+                 for a in self.unrolled_model.arch_parameters()] and p.trainable
             ]
-            self.unrolled_optimizer = fluid.optimizer.MomentumOptimizer(
+            self.unrolled_optimizer = paddle.optimizer.Momentum(
                 self.eta,
                 self.network_momentum,
                 regularization=fluid.regularizer.L2DecayRegularizer(
@@ -129,9 +129,8 @@ class Architect(object):
 
     def _hessian_vector_product(self, vector, input, target, r=1e-2):
         R = r * fluid.layers.rsqrt(
-            fluid.layers.sum([
-                fluid.layers.reduce_sum(fluid.layers.square(v)) for v in vector
-            ]))
+            fluid.layers.sum(
+                [fluid.layers.reduce_sum(paddle.square(v)) for v in vector]))
 
         model_params = [
             p for p in self.model.parameters()

@@ -17,7 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import paddle.fluid as fluid
-from paddle.fluid.initializer import MSRA
+from paddle.paddle.nn.initializer import MSRA
 from paddle.fluid.param_attr import ParamAttr
 
 __all__ = [
@@ -40,8 +40,7 @@ class SlimMobileNet():
             self.cfg_stride = [1, 2, 2, 2, 1, 2]
             self.cfg_se = [False, False, True, False, True, True]
             self.cfg_act = [
-                'relu', 'relu', 'relu', 'hard_swish', 'hard_swish',
-                'hard_swish'
+                'relu', 'relu', 'relu', 'hard_swish', 'hard_swish', 'hard_swish'
             ]
             self.cls_ch_squeeze = 960
             self.cls_ch_expand = 1280
@@ -129,7 +128,7 @@ class SlimMobileNet():
             name='conv_last')
         conv = fluid.layers.pool2d(
             input=conv, pool_type='avg', global_pooling=True, use_cudnn=False)
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=conv,
             num_filters=cls_ch_expand,
             filter_size=1,
@@ -139,11 +138,11 @@ class SlimMobileNet():
             param_attr=ParamAttr(name='last_1x1_conv_weights'),
             bias_attr=False)
         conv = fluid.layers.hard_swish(conv)
-        drop = fluid.layers.dropout(x=conv, dropout_prob=0.2)
-        out = fluid.layers.fc(input=drop,
-                              size=class_dim,
-                              param_attr=ParamAttr(name='fc_weights'),
-                              bias_attr=ParamAttr(name='fc_offset'))
+        drop = paddle.nn.functional.dropout(x=conv, dropout_prob=0.2)
+        out = paddle.static.nn.fc(input=drop,
+                                  size=class_dim,
+                                  param_attr=ParamAttr(name='fc_weights'),
+                                  bias_attr=ParamAttr(name='fc_offset'))
         return out
 
     def conv_bn_layer(self,
@@ -158,7 +157,7 @@ class SlimMobileNet():
                       name=None,
                       use_cudnn=True,
                       res_last_bn_init=False):
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=input,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -170,7 +169,7 @@ class SlimMobileNet():
             param_attr=ParamAttr(name=name + '_weights'),
             bias_attr=False)
         bn_name = name + '_bn'
-        bn = fluid.layers.batch_norm(
+        bn = paddle.static.nn.batch_norm(
             input=conv,
             param_attr=ParamAttr(
                 name=bn_name + "_scale",
@@ -184,7 +183,7 @@ class SlimMobileNet():
             moving_variance_name=bn_name + '_variance')
         if if_act:
             if act == 'relu':
-                bn = fluid.layers.relu(bn)
+                bn = paddle.nn.functional.relu(bn)
             elif act == 'hard_swish':
                 bn = fluid.layers.hard_swish(bn)
         return bn
@@ -201,14 +200,14 @@ class SlimMobileNet():
         num_mid_filter = num_out_filter // ratio
         pool = fluid.layers.pool2d(
             input=input, pool_type='avg', global_pooling=True, use_cudnn=False)
-        conv1 = fluid.layers.conv2d(
+        conv1 = paddle.static.nn.conv2d(
             input=pool,
             filter_size=1,
             num_filters=num_mid_filter,
             act='relu',
             param_attr=ParamAttr(name=name + '_1_weights'),
             bias_attr=ParamAttr(name=name + '_1_offset'))
-        conv2 = fluid.layers.conv2d(
+        conv2 = paddle.static.nn.conv2d(
             input=conv1,
             filter_size=1,
             num_filters=num_out_filter,

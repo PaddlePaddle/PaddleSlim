@@ -52,7 +52,7 @@ class DARTSearch(object):
         model(Paddle DyGraph model): Super Network for Search.
         train_reader(Python Generator): Generator to provide training data.
         valid_reader(Python Generator): Generator to provide validation  data.
-        place(fluid.CPUPlace()|fluid.CUDAPlace(N)): This parameter represents the executor run on which device.
+        place(paddle.CPUPlace()|paddle.CUDAPlace(N)): This parameter represents the executor run on which device.
         learning_rate(float): Model parameter initial learning rate. Default: 0.025.
         batch_size(int): Minibatch size. Default: 64.
         arch_learning_rate(float): Learning rate for arch encoding. Default: 3e-4.
@@ -122,10 +122,11 @@ class DARTSearch(object):
                                valid_label)
 
             logits = self.model(train_image)
-            prec1 = fluid.layers.accuracy(input=logits, label=train_label, k=1)
-            prec5 = fluid.layers.accuracy(input=logits, label=train_label, k=5)
+            prec1 = paddle.static.accuracy(input=logits, label=train_label, k=1)
+            prec5 = paddle.static.accuracy(input=logits, label=train_label, k=5)
             loss = fluid.layers.reduce_mean(
-                fluid.layers.softmax_with_cross_entropy(logits, train_label))
+                paddle.nn.functional.softmax_with_cross_entropy(logits,
+                                                                train_label))
 
             if self.use_data_parallel:
                 loss = self.model.scale_loss(loss)
@@ -161,10 +162,10 @@ class DARTSearch(object):
             label = to_variable(label)
             n = image.shape[0]
             logits = self.model(image)
-            prec1 = fluid.layers.accuracy(input=logits, label=label, k=1)
-            prec5 = fluid.layers.accuracy(input=logits, label=label, k=5)
+            prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
+            prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
             loss = fluid.layers.reduce_mean(
-                fluid.layers.softmax_with_cross_entropy(logits, label))
+                paddle.nn.functional.softmax_with_cross_entropy(logits, label))
             objs.update(loss.numpy(), n)
             top1.update(prec1.numpy(), n)
             top5.update(prec5.numpy(), n)
@@ -198,7 +199,7 @@ class DARTSearch(object):
             self.learning_rate, step_per_epoch, self.num_epochs)
 
         clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0)
-        optimizer = fluid.optimizer.MomentumOptimizer(
+        optimizer = paddle.optimizer.Momentum(
             learning_rate,
             0.9,
             regularization=fluid.regularizer.L2DecayRegularizer(3e-4),

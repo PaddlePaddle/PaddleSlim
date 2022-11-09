@@ -24,10 +24,10 @@ import numpy
 
 class TestSaveAndLoad(StaticCase):
     def test_prune(self):
-        train_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.program_guard(train_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        train_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.static.program_guard(train_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2
@@ -36,9 +36,10 @@ class TestSaveAndLoad(StaticCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
-            feature = fluid.layers.reshape(conv6, [-1, 128, 16])
-            predict = fluid.layers.fc(input=feature, size=10, act='softmax')
-            label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+            feature = paddle.reshape(conv6, [-1, 128, 16])
+            predict = paddle.static.nn.fc(input=feature, size=10, act='softmax')
+            label = paddle.static.data(
+                name='label', shape=[None, 1], dtype='int64')
             print(label.shape)
             print(predict.shape)
             cost = fluid.layers.cross_entropy(input=predict, label=label)
@@ -46,10 +47,10 @@ class TestSaveAndLoad(StaticCase):
             adam_optimizer = fluid.optimizer.AdamOptimizer(0.01)
             adam_optimizer.minimize(avg_cost)
 
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
 
-        scope = fluid.global_scope()
+        scope = paddle.static.global_scope
         exe.run(startup_program, scope=scope)
         criterion = 'bn_scale'
         pruner = Pruner(criterion)
@@ -72,10 +73,11 @@ class TestSaveAndLoad(StaticCase):
                              fetch_list=[cost.name])
 
         save_model(exe, main_program, 'model_file')
-        pruned_program = fluid.Program()
-        pruned_startup_program = fluid.Program()
-        with fluid.program_guard(pruned_program, pruned_startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        pruned_program = paddle.static.Program()
+        pruned_startup_program = paddle.static.Program()
+        with paddle.static.program_guard(pruned_program,
+                                         pruned_startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2

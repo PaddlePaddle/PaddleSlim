@@ -48,8 +48,7 @@ def train_one_epoch(model, train_loader, optimizer, epoch, use_data_parallel,
             total_loss, acc, ce_loss, kd_loss, _ = model._layers.loss(
                 train_data, epoch)
         else:
-            total_loss, acc, ce_loss, kd_loss, _ = model.loss(train_data,
-                                                              epoch)
+            total_loss, acc, ce_loss, kd_loss, _ = model.loss(train_data, epoch)
 
         if use_data_parallel:
             total_loss = model.scale_loss(total_loss)
@@ -76,8 +75,8 @@ def train_one_epoch(model, train_loader, optimizer, epoch, use_data_parallel,
 def main():
     # whether use multi-gpus
     use_data_parallel = False
-    place = fluid.CUDAPlace(fluid.dygraph.parallel.Env(
-    ).dev_id) if use_data_parallel else fluid.CUDAPlace(0)
+    place = paddle.CUDAPlace(fluid.dygraph.parallel.Env(
+    ).dev_id) if use_data_parallel else paddle.CUDAPlace(0)
 
     BERT_BASE_PATH = "./data/pretrained_models/uncased_L-12_H-768_A-12"
     vocab_path = BERT_BASE_PATH + "/vocab.txt"
@@ -120,7 +119,7 @@ def main():
         if use_fixed_gumbel:
             # make sure gumbel arch is constant
             np.random.seed(1)
-            fluid.default_main_program().random_seed = 1
+            paddle.static.default_main_program().random_seed = 1
         model = AdaBERTClassifier(
             num_labels,
             n_layer=max_layer,
@@ -136,11 +135,10 @@ def main():
         model_parameters = []
         for p in model.parameters():
             if (p.name not in [a.name for a in model.arch_parameters()] and
-                    p.name not in
-                [a.name for a in model.teacher.parameters()]):
+                    p.name not in [a.name for a in model.teacher.parameters()]):
                 model_parameters.append(p)
 
-        optimizer = fluid.optimizer.MomentumOptimizer(
+        optimizer = paddle.optimizer.Momentum(
             learning_rate,
             0.9,
             regularization=fluid.regularizer.L2DecayRegularizer(3e-4),
@@ -195,9 +193,8 @@ def main():
             loss, acc = valid_one_epoch(model, dev_loader, epoch_id, log_freq)
             if acc > best_valid_acc:
                 best_valid_acc = acc
-            logger.info(
-                "dev set, ce_loss {:.6f}; acc {:.6f}, best_acc {:.6f};".format(
-                    loss, acc, best_valid_acc))
+            logger.info("dev set, ce_loss {:.6f}; acc {:.6f}, best_acc {:.6f};".
+                        format(loss, acc, best_valid_acc))
 
 
 if __name__ == '__main__':

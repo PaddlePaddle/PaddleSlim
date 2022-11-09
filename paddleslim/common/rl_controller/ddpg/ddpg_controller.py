@@ -42,27 +42,28 @@ class DDPGAgent(parl.Agent):
         self.learn_program = paddle.static.Program()
 
         with paddle.static.program_guard(self.pred_program):
-            obs = fluid.data(
+            obs = paddle.static.data(
                 name='obs', shape=[None, self.obs_dim], dtype='float32')
             self.pred_act = self.alg.predict(obs)
 
         with paddle.static.program_guard(self.learn_program):
-            obs = fluid.data(
+            obs = paddle.static.data(
                 name='obs', shape=[None, self.obs_dim], dtype='float32')
-            act = fluid.data(
+            act = paddle.static.data(
                 name='act', shape=[None, self.act_dim], dtype='float32')
-            reward = fluid.data(name='reward', shape=[None], dtype='float32')
-            next_obs = fluid.data(
+            reward = paddle.static.data(
+                name='reward', shape=[None], dtype='float32')
+            next_obs = paddle.static.data(
                 name='next_obs', shape=[None, self.obs_dim], dtype='float32')
-            terminal = fluid.data(
+            terminal = paddle.static.data(
                 name='terminal', shape=[None, 1], dtype='bool')
             _, self.critic_cost = self.alg.learn(obs, act, reward, next_obs,
                                                  terminal)
 
     def predict(self, obs):
-        act = self.fluid_executor.run(self.pred_program,
-                                      feed={'obs': obs},
-                                      fetch_list=[self.pred_act])[0]
+        act = self.paddle.static.Executor.run(self.pred_program,
+                                              feed={'obs': obs},
+                                              fetch_list=[self.pred_act])[0]
         return act
 
     def learn(self, obs, act, reward, next_obs, terminal):
@@ -73,9 +74,8 @@ class DDPGAgent(parl.Agent):
             'next_obs': next_obs,
             'terminal': terminal
         }
-        critic_cost = self.fluid_executor.run(self.learn_program,
-                                              feed=feed,
-                                              fetch_list=[self.critic_cost])[0]
+        critic_cost = self.paddle.static.Executor.run(
+            self.learn_program, feed=feed, fetch_list=[self.critic_cost])[0]
         self.alg.sync_target()
         return critic_cost
 

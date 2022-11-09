@@ -29,10 +29,10 @@ class TestModel(StaticCase):
         self.prefix = prefix
 
     def test_model(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             if self.prefix is not None:
                 model = models.__dict__[self.model_name](
                     prefix_name=self.prefix)

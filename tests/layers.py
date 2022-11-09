@@ -26,7 +26,7 @@ def conv_bn_layer(input,
                   bias=False,
                   use_cudnn=True,
                   sync_bn=False):
-    conv = fluid.layers.conv2d(
+    conv = paddle.static.nn.conv2d(
         input=input,
         num_filters=num_filters,
         filter_size=filter_size,
@@ -47,7 +47,7 @@ def conv_bn_layer(input,
             name=bn_name)
         return bn(conv)
     else:
-        return fluid.layers.batch_norm(
+        return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
             name=bn_name + '_output',

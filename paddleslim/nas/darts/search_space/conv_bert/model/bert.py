@@ -27,8 +27,8 @@ from paddle.nn import Conv2D
 from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer
 from paddle.fluid.dygraph import Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph import to_variable, guard
-from paddle.fluid import ParamAttr
-from paddle.fluid.initializer import MSRA
+import paddle.ParamAttr as ParamAttr
+from paddle.paddle.nn.initializer import MSRA
 from .transformer_encoder import EncoderLayer
 
 
@@ -67,31 +67,31 @@ class BertModelLayer(Layer):
 
         self._conv_type = conv_type
         self._search_layer = search_layer
-        self._param_initializer = fluid.initializer.TruncatedNormal(
+        self._param_initializer = paddle.nn.initializer.TruncatedNormal(
             scale=initializer_range)
 
         self._src_emb = Embedding(
             size=[self._voc_size, self._emb_size],
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=self._word_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
         self._pos_emb = Embedding(
             size=[self._max_position_seq_len, self._emb_size],
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=self._pos_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
         self._sent_emb = Embedding(
             size=[self._sent_types, self._emb_size],
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=self._sent_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
         self._emb_fac = Linear(
             input_dim=self._emb_size,
             output_dim=self._hidden_size,
-            param_attr=fluid.ParamAttr(name="s_emb_factorization"))
+            param_attr=paddle.ParamAttr(name="s_emb_factorization"))
 
         self._encoder = EncoderLayer(
             num_labels=num_labels,

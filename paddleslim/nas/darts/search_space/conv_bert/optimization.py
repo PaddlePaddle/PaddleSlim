@@ -162,9 +162,9 @@ class Optimizer(object):
                         param.name].numpy(
                         ) * self.weight_decay * self.scheduled_lr.step()
                 else:
-                    updated_param = param.numpy(
-                    ) - param_list[param.name].numpy(
-                    ) * self.weight_decay * self.scheduled_lr.step().numpy()
+                    updated_param = param.numpy() - param_list[
+                        param.name].numpy(
+                        ) * self.weight_decay * self.scheduled_lr.step().numpy()
                 updated_param_var = fluid.dygraph.to_variable(updated_param)
                 param = updated_param_var
-                #param = fluid.layers.reshape(x=updated_param_var, shape=list(updated_param_var.shape))
+                #param = paddle.reshape(x=updated_param_var, shape=list(updated_param_var.shape))

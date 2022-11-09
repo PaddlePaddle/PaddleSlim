@@ -27,9 +27,9 @@ from paddle.fluid.dygraph import Embedding, LayerNorm, Linear
 from paddle.fluid.dygraph import BatchNorm, Pool2D
 from paddle.fluid.dygraph import Layer
 from paddle.fluid.dygraph import to_variable
-from paddle.fluid.initializer import NormalInitializer
-from paddle.fluid import ParamAttr
-from paddle.fluid.initializer import MSRA, ConstantInitializer
+from paddle.paddle.nn.initializer import NormalInitializer
+import paddle.ParamAttr as ParamAttr
+from paddle.paddle.nn.initializer import MSRA, ConstantInitializer
 
 ConvBN_PRIMITIVES = [
     'std_conv_bn_3',
@@ -60,7 +60,7 @@ OPS = {
 }
 
 
-class MixedOp(fluid.dygraph.Layer):
+class MixedOp(paddle.nn.Layer):
     def __init__(self, n_channel, name=None):
         super(MixedOp, self).__init__()
         PRIMITIVES = ConvBN_PRIMITIVES
@@ -70,10 +70,10 @@ class MixedOp(fluid.dygraph.Layer):
                                 if name is None else name + "/" + primitive)
             if 'pool' in primitive:
                 gama = ParamAttr(
-                    initializer=fluid.initializer.Constant(value=1),
+                    initializer=paddle.nn.initializer.Constant(value=1),
                     trainable=False)
                 beta = ParamAttr(
-                    initializer=fluid.initializer.Constant(value=0),
+                    initializer=paddle.nn.initializer.Constant(value=0),
                     trainable=False)
                 BN = BatchNorm(n_channel, param_attr=gama, bias_attr=beta)
                 op = fluid.dygraph.Sequential(op, BN)
@@ -97,7 +97,7 @@ def gumbel_softmax(logits, epoch, temperature=1.0, hard=True, eps=1e-10):
 
     logits = logits + to_variable(U)
     logits = logits / temperature
-    logits = fluid.layers.softmax(logits)
+    logits = paddle.nn.functional.softmax(logits)
 
     if hard:
         maxes = fluid.layers.reduce_max(logits, dim=1, keep_dim=True)
@@ -111,7 +111,7 @@ def gumbel_softmax(logits, epoch, temperature=1.0, hard=True, eps=1e-10):
     return out
 
 
-class Zero(fluid.dygraph.Layer):
+class Zero(paddle.nn.Layer):
     def __init__(self):
         super(Zero, self).__init__()
 
@@ -120,7 +120,7 @@ class Zero(fluid.dygraph.Layer):
         return x
 
 
-class Identity(fluid.dygraph.Layer):
+class Identity(paddle.nn.Layer):
     def __init__(self):
         super(Identity, self).__init__()
 
@@ -128,7 +128,7 @@ class Identity(fluid.dygraph.Layer):
         return x
 
 
-class ReluConvBN(fluid.dygraph.Layer):
+class ReluConvBN(paddle.nn.Layer):
     def __init__(self,
                  in_c=768,
                  out_c=768,
@@ -139,9 +139,9 @@ class ReluConvBN(fluid.dygraph.Layer):
                  use_cudnn=True,
                  name=None):
         super(ReluConvBN, self).__init__()
-        conv_param = fluid.ParamAttr(
+        conv_param = paddle.ParamAttr(
             name=name if name is None else (name + "_conv.weights"),
-            initializer=fluid.initializer.MSRA())
+            initializer=paddle.nn.initializer.MSRA())
 
         self.conv = Conv2D(
             in_c,
@@ -156,20 +156,22 @@ class ReluConvBN(fluid.dygraph.Layer):
             use_cudnn=use_cudnn)
 
         gama = ParamAttr(
-            initializer=fluid.initializer.Constant(value=1), trainable=affine)
+            initializer=paddle.nn.initializer.Constant(value=1),
+            trainable=affine)
         beta = ParamAttr(
-            initializer=fluid.initializer.Constant(value=0), trainable=affine)
+            initializer=paddle.nn.initializer.Constant(value=0),
+            trainable=affine)
 
         self.bn = BatchNorm(out_c, param_attr=gama, bias_attr=beta)
 
     def forward(self, inputs):
-        inputs = fluid.layers.relu(inputs)
+        inputs = paddle.nn.functional.relu(inputs)
         conv = self.conv(inputs)
         bn = self.bn(conv)
         return bn
 
 
-class Cell(fluid.dygraph.Layer):
+class Cell(paddle.nn.Layer):
     def __init__(self, steps, n_channel, name=None):
         super(Cell, self).__init__()
         self._steps = steps
@@ -200,7 +202,7 @@ class Cell(fluid.dygraph.Layer):
             offset += len(states)
             states.append(s)
         out = fluid.layers.sums(states[-self._steps:])
-        #out = fluid.layers.concat(input=states[-self._steps:], axis=1)
+        #out = paddle.concat(input=states[-self._steps:], axis=1)
         return out
 
 
@@ -231,14 +233,14 @@ class EncoderLayer(Layer):
                 num_filters=self._n_channel,
                 filter_size=[3, self._hidden_size],
                 padding=[1, 0],
-                param_attr=fluid.ParamAttr(initializer=MSRA()),
+                param_attr=paddle.ParamAttr(initializer=MSRA()),
                 bias_attr=False),
             BatchNorm(
                 num_channels=self._n_channel,
-                param_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.Constant(value=1)),
-                bias_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.Constant(value=0))))
+                param_attr=paddle.ParamAttr(
+                    initializer=paddle.nn.initializer.Constant(value=1)),
+                bias_attr=paddle.ParamAttr(
+                    initializer=paddle.nn.initializer.Constant(value=0))))
 
         self.stem1 = fluid.dygraph.Sequential(
             Conv2D(
@@ -246,14 +248,14 @@ class EncoderLayer(Layer):
                 num_filters=self._n_channel,
                 filter_size=[3, self._hidden_size],
                 padding=[1, 0],
-                param_attr=fluid.ParamAttr(initializer=MSRA()),
+                param_attr=paddle.ParamAttr(initializer=MSRA()),
                 bias_attr=False),
             BatchNorm(
                 num_channels=self._n_channel,
-                param_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.Constant(value=1)),
-                bias_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.Constant(value=0))))
+                param_attr=paddle.ParamAttr(
+                    initializer=paddle.nn.initializer.Constant(value=1)),
+                bias_attr=paddle.ParamAttr(
+                    initializer=paddle.nn.initializer.Constant(value=0))))
 
         cells = []
         for i in range(n_layer):
@@ -267,7 +269,7 @@ class EncoderLayer(Layer):
 
         k = sum(1 for i in range(self._steps) for n in range(2 + i))
         num_ops = self._n_ops
-        self.alphas = fluid.layers.create_parameter(
+        self.alphas = paddle.static.create_parameter(
             shape=[k, num_ops],
             dtype="float32",
             default_initializer=NormalInitializer(
@@ -279,11 +281,11 @@ class EncoderLayer(Layer):
         for i in range(self._n_layer):
             bn = BatchNorm(
                 num_channels=self._n_channel,
-                param_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.Constant(value=1),
+                param_attr=paddle.ParamAttr(
+                    initializer=paddle.nn.initializer.Constant(value=1),
                     trainable=False),
-                bias_attr=fluid.ParamAttr(
-                    initializer=fluid.initializer.Constant(value=0),
+                bias_attr=paddle.ParamAttr(
+                    initializer=paddle.nn.initializer.Constant(value=0),
                     trainable=False))
             out = Linear(
                 self._n_channel,
@@ -328,7 +330,7 @@ class EncoderLayer(Layer):
             # (bs, n_channel, seq_len, 1)
             tmp = self._bns[i](s1)
             tmp = self.pool2d_avg(tmp)
-            tmp = fluid.layers.reshape(tmp, shape=[-1, 0])
+            tmp = paddle.reshape(tmp, shape=[-1, 0])
             tmp = self._outs[i](tmp)
             enc_outputs.append(tmp)
 
