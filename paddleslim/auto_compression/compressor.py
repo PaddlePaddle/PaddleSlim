@@ -311,7 +311,7 @@ class AutoCompression:
         if self.model_filename is None:
             opt_model_filename = '__opt_model__'
         else:
-            opt_model_filename = 'opt_' + self.model_filename
+            opt_model_filename = self.model_filename
         program_bytes = inference_program._remove_training_info(
             clip_extra=False).desc.serialize_to_string()
         with open(
@@ -548,8 +548,8 @@ class AutoCompression:
 
     def create_tmp_dir(self, base_dir, prefix="tmp"):
         # create a new temp directory in final dir
-        s_datetime = strftime("%Y_%m_%d_%H_%M_%S", gmtime())
-        tmp_base_name = "_".join([prefix, str(os.getpid()), s_datetime])
+        s_datetime = strftime("%Y_%m_%d_%H_%M", gmtime())
+        tmp_base_name = "_".join([prefix, str(os.getppid()), s_datetime])
         tmp_dir = os.path.join(base_dir, tmp_base_name)
         if not os.path.exists(tmp_dir):
             os.makedirs(tmp_dir)
@@ -580,10 +580,10 @@ class AutoCompression:
                 self.single_strategy_compress(quant_strategy[0],
                                               quant_config[0], strategy_idx,
                                               train_config)
-        tmp_model_path = os.path.join(
-            self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
-        final_model_path = os.path.join(self.final_dir)
         if paddle.distributed.get_rank() == 0:
+            tmp_model_path = os.path.join(
+                self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1)))
+            final_model_path = os.path.join(self.final_dir)
             for _file in os.listdir(tmp_model_path):
                 _file_path = os.path.join(tmp_model_path, _file)
                 if os.path.isfile(_file_path):
@@ -713,7 +713,8 @@ class AutoCompression:
                     test_program_info.program._program)
             test_program_info = self._start_train(
                 train_program_info, test_program_info, strategy, train_config)
-            self._save_model(test_program_info, strategy, strategy_idx)
+            if paddle.distributed.get_rank() == 0:
+                self._save_model(test_program_info, strategy, strategy_idx)
 
     def _start_train(self, train_program_info, test_program_info, strategy,
                      train_config):
@@ -848,16 +849,17 @@ class AutoCompression:
     def export_onnx(self,
                     model_name='quant_model.onnx',
                     deploy_backend='tensorrt'):
-        infer_model_path = os.path.join(self.final_dir, self.model_filename)
-        assert os.path.exists(
-            infer_model_path), 'Not found {}, please check it.'.format(
-                infer_model_path)
-        onnx_save_path = os.path.join(self.final_dir, 'ONNX')
-        if not os.path.exists(onnx_save_path):
-            os.makedirs(onnx_save_path)
-        export_onnx(
-            self.final_dir,
-            model_filename=self.model_filename,
-            params_filename=self.params_filename,
-            save_file_path=os.path.join(onnx_save_path, model_name),
-            deploy_backend=deploy_backend)
+        if paddle.distributed.get_rank() == 0:
+            infer_model_path = os.path.join(self.final_dir, self.model_filename)
+            assert os.path.exists(
+                infer_model_path), 'Not found {}, please check it.'.format(
+                    infer_model_path)
+            onnx_save_path = os.path.join(self.final_dir, 'ONNX')
+            if not os.path.exists(onnx_save_path):
+                os.makedirs(onnx_save_path)
+            export_onnx(
+                self.final_dir,
+                model_filename=self.model_filename,
+                params_filename=self.params_filename,
+                save_file_path=os.path.join(onnx_save_path, model_name),
+                deploy_backend=deploy_backend)
