@@ -21,7 +21,7 @@ import numpy as np
 import argparse
 import paddle
 import paddle.fluid as fluid
-from paddle.paddle.nn.initializer import MSRA
+from paddle.nn.initializer import MSRA
 from paddle.fluid.param_attr import ParamAttr
 from paddle.fluid.layer_helper import LayerHelper
 from paddle.nn import Conv2D

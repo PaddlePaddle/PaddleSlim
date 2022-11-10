@@ -22,7 +22,6 @@ import six
 import numpy as np
 import time
 import paddle
-import paddle.fluid as fluid
 from paddle.fluid.framework import IrGraph
 from paddle.fluid.contrib.slim.quantization import Quant2Int8MkldnnPass
 from paddle.fluid import core
@@ -71,11 +70,11 @@ def transform_and_save_int8_model(original_path, save_path):
 
     with paddle.static.scope_guard(inference_scope):
         if os.path.exists(os.path.join(original_path, '__model__')):
-            [inference_program, feed_target_names,
-             fetch_targets] = fluid.io.load_inference_model(original_path, exe)
+            [inference_program, feed_target_names, fetch_targets
+             ] = paddle.static.load_inference_model(original_path, exe)
         else:
             [inference_program, feed_target_names,
-             fetch_targets] = fluid.io.load_inference_model(
+             fetch_targets] = paddle.static.load_inference_model(
                  original_path, exe, model_filename, params_filename)
 
         ops_to_quantize = set()
@@ -99,7 +98,7 @@ def transform_and_save_int8_model(original_path, save_path):
         graph = transform_to_mkldnn_int8_pass.apply(graph)
         inference_program = graph.to_program()
         with paddle.static.scope_guard(inference_scope):
-            fluid.io.save_inference_model(
+            paddle.static.save_inference_model(
                 save_path,
                 feed_target_names,
                 fetch_targets,

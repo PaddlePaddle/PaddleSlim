@@ -153,11 +153,11 @@ class SampleTester(unittest.TestCase):
         inference_scope = paddle.static.Executor.global_scope()
         with paddle.static.scope_guard(inference_scope):
             if os.path.exists(os.path.join(model_path, '__model__')):
-                [inference_program, feed_target_names,
-                 fetch_targets] = fluid.io.load_inference_model(model_path, exe)
+                [inference_program, feed_target_names, fetch_targets
+                 ] = paddle.static.load_inference_model(model_path, exe)
             else:
                 [inference_program, feed_target_names,
-                 fetch_targets] = fluid.io.load_inference_model(
+                 fetch_targets] = paddle.static.load_inference_model(
                      model_path, exe, 'model', 'params')
 
             graph = IrGraph(core.Graph(inference_program.desc), for_test=True)

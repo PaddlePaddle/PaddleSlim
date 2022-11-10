@@ -102,7 +102,7 @@ class TestQuantPostOnlyWeightCase1(StaticCase):
 
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
-        paddle.fluid.io.save_inference_model(
+        paddle.static.save_inference_model(
             dirname='./test_quant_post_dynamic',
             feeded_var_names=[image.name, label.name],
             target_vars=[avg_cost, acc_top1, acc_top5],
@@ -117,7 +117,7 @@ class TestQuantPostOnlyWeightCase1(StaticCase):
             model_filename='model',
             params_filename='params',
             generate_test_model=True)
-        quant_post_prog, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
+        quant_post_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
             dirname='./test_quant_post_inference/test_model', executor=exe)
         top1_2, top5_2 = test(quant_post_prog, fetch_targets)
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))

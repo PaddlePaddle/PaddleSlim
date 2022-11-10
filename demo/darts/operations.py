@@ -16,7 +16,7 @@ import paddle.fluid as fluid
 from paddle.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D, BatchNorm
 from paddle.fluid.param_attr import ParamAttr
-from paddle.paddle.nn.initializer import ConstantInitializer, MSRAInitializer
+from paddle.nn.initializer import ConstantInitializer, MSRAInitializer
 
 
 OPS = {

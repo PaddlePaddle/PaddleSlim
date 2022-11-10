@@ -19,7 +19,7 @@ from __future__ import print_function
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.paddle.nn.initializer import ConstantInitializer, MSRAInitializer
+from paddle.nn.initializer import ConstantInitializer, MSRAInitializer
 from paddle.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable

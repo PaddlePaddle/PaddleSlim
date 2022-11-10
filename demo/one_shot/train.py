@@ -189,7 +189,7 @@ def train_mnist(args, model, tokens=None):
     save_parameters = (not args.use_data_parallel) or (
         args.use_data_parallel and fluid.dygraph.parallel.Env().local_rank == 0)
     if save_parameters:
-        fluid.save_dygraph(model.state_dict(), "save_temp")
+        paddle.save(model.state_dict(), "save_temp")
         print("checkpoint saved")
 
 

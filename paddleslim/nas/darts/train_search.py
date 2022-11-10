@@ -256,6 +256,5 @@ class DARTSearch(object):
                 logger.info("Epoch {}, valid_acc {:.6f}".format(epoch,
                                                                 valid_top1))
             if save_parameters:
-                fluid.save_dygraph(
-                    self.model.state_dict(),
-                    os.path.join(self.save_dir, str(epoch), "params"))
+                paddle.save(self.model.state_dict(),
+                            os.path.join(self.save_dir, str(epoch), "params"))

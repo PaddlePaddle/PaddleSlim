@@ -19,7 +19,7 @@ from __future__ import print_function
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.paddle.nn.initializer import UniformInitializer, ConstantInitializer
+from paddle.nn.initializer import UniformInitializer, ConstantInitializer
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE

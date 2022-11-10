@@ -112,7 +112,7 @@ class TestQuantAwareCase1(StaticCase):
 
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
-        paddle.fluid.io.save_inference_model(
+        paddle.static.save_inference_model(
             dirname='./test_quant_post',
             feeded_var_names=[image.name, label.name],
             target_vars=[avg_cost, acc_top1, acc_top5],
@@ -129,7 +129,7 @@ class TestQuantAwareCase1(StaticCase):
             model_filename='model',
             params_filename='params',
             batch_nums=10)
-        quant_post_prog, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
+        quant_post_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
             dirname='./test_quant_post_inference',
             executor=exe,
             model_filename='model.pdmodel',

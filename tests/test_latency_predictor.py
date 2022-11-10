@@ -109,7 +109,7 @@ class ModelCase5(paddle.nn.Layer):
     def forward(self, inputs):
         image = inputs['image']
         image = self.bn1(image)
-        img_size = paddle.paddle.static.data(
+        img_size = paddle.static.data(
             name='img_size', shape=[None, 2], dtype='int64')
         anchors = [10, 13, 16, 30, 33, 23]
         boxes, scores = paddle.fluid.layers.yolo_box(
@@ -179,7 +179,7 @@ class ModelCase7(paddle.nn.Layer):
     def forward(self, inputs):
         image = inputs['image']
         image = self.bn1(image)
-        img_size = paddle.paddle.static.data(
+        img_size = paddle.static.data(
             name='img_size', shape=[None, 2], dtype='int64')
         anchors = [10, 13, 16, 30, 33, 23]
         boxes, scores = paddle.fluid.layers.yolo_box(

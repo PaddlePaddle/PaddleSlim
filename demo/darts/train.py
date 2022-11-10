@@ -213,8 +213,8 @@ def main(args):
             if valid_top1 > best_acc:
                 best_acc = valid_top1
                 if save_parameters:
-                    fluid.save_dygraph(model.state_dict(),
-                                       args.model_save_dir + "/best_model")
+                    paddle.save(model.state_dict(),
+                                args.model_save_dir + "/best_model")
             logger.info("Epoch {}, valid_acc {:.6f}, best_valid_acc {:.6f}".
                         format(epoch, valid_top1, best_acc))
 

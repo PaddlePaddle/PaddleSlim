@@ -27,7 +27,7 @@ import paddle
 from paddle.fluid import core
 from paddle.fluid import framework
 from paddle.fluid.framework import IrGraph
-from paddle.paddle.static.Executor import global_scope
+from paddle.static.Executor import global_scope
 from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
 from paddle.fluid.contrib.slim.quantization.utils import _get_op_input_var_names, _get_op_output_var_names, load_variable_data
 from .quanter import quant_post

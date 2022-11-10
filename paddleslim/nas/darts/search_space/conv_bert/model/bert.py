@@ -28,7 +28,7 @@ from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer
 from paddle.fluid.dygraph import Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph import to_variable, guard
 import paddle.ParamAttr as ParamAttr
-from paddle.paddle.nn.initializer import MSRA
+from paddle.nn.initializer import MSRA
 from .transformer_encoder import EncoderLayer
 
 

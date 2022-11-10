@@ -27,9 +27,9 @@ from paddle.fluid.dygraph import Embedding, LayerNorm, Linear
 from paddle.fluid.dygraph import BatchNorm, Pool2D
 from paddle.fluid.dygraph import Layer
 from paddle.fluid.dygraph import to_variable
-from paddle.paddle.nn.initializer import NormalInitializer
+from paddle.nn.initializer import NormalInitializer
 import paddle.ParamAttr as ParamAttr
-from paddle.paddle.nn.initializer import MSRA, ConstantInitializer
+from paddle.nn.initializer import MSRA, ConstantInitializer
 
 ConvBN_PRIMITIVES = [
     'std_conv_bn_3',

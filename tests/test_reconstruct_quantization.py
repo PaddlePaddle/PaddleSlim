@@ -96,7 +96,7 @@ class TestRoundingOptimizer(StaticCase):
                         format(iter, cost, top1, top5))
 
         train(main_prog)
-        paddle.fluid.io.save_inference_model(
+        paddle.static.save_inference_model(
             dirname='./test_rounding_optimizer',
             feeded_var_names=[image.name, label.name],
             target_vars=[avg_cost, acc_top1, acc_top5],

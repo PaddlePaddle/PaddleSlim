@@ -438,7 +438,7 @@ def compress(args):
     _logger.info("final acc:{}".format(final_acc1))
 
     # 4. Save inference model
-    paddle.fluid.io.save_inference_model(
+    paddle.static.save_inference_model(
         dirname=model_path,
         feeded_var_names=[image.name],
         target_vars=[out],

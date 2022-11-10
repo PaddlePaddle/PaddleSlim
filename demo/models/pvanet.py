@@ -4,7 +4,7 @@ from __future__ import print_function
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.paddle.nn.initializer import MSRA
+from paddle.nn.initializer import MSRA
 from paddle.fluid.param_attr import ParamAttr
 import os, sys, time, math
 import numpy as np

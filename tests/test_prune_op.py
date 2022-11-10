@@ -155,8 +155,8 @@ class TestMul(StaticCase):
         with paddle.static.program_guard(main_program, startup_program):
             input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
-            fc_0 = paddle.paddle.static.nn.fc(conv1, size=10)
-            fc_1 = paddle.paddle.static.nn.fc(fc_0, size=10)
+            fc_0 = paddle.static.nn.fc(conv1, size=10)
+            fc_1 = paddle.static.nn.fc(fc_0, size=10)
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)

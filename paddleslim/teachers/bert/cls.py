@@ -95,8 +95,8 @@ class BERTClassifier(Layer):
         elif self.init_pretraining_params:
             print("Load pre-trained model from %s" %
                   self.init_pretraining_params)
-            init_from_static_model(self.init_pretraining_params,
-                                   self.cls_model, self.bert_config)
+            init_from_static_model(self.init_pretraining_params, self.cls_model,
+                                   self.bert_config)
         else:
             raise Exception(
                 "You should load pretrained model for training this teacher model."
@@ -197,8 +197,8 @@ class BERTClassifier(Layer):
             parameter_list=self.cls_model.parameters())
 
         if use_data_parallel:
-            self.cls_model = fluid.dygraph.parallel.DataParallel(
-                self.cls_model, strategy)
+            self.cls_model = fluid.dygraph.parallel.DataParallel(self.cls_model,
+                                                                 strategy)
             train_data_generator = fluid.contrib.reader.distributed_batch_reader(
                 train_data_generator)
 
@@ -234,8 +234,8 @@ class BERTClassifier(Layer):
 
                 save_path = os.path.join(checkpoints,
                                          "steps" + "_" + str(steps))
-                fluid.save_dygraph(self.cls_model.state_dict(), save_path)
-                fluid.save_dygraph(optimizer.optimizer.state_dict(), save_path)
+                paddle.save(self.cls_model.state_dict(), save_path)
+                paddle.save(optimizer.optimizer.state_dict(), save_path)
                 print("Save model parameters and optimizer status at %s" %
                       save_path)
 
@@ -243,7 +243,7 @@ class BERTClassifier(Layer):
 
         if fluid.dygraph.parallel.Env().local_rank == 0:
             save_path = os.path.join(checkpoints, "final")
-            fluid.save_dygraph(self.cls_model.state_dict(), save_path)
-            fluid.save_dygraph(optimizer.optimizer.state_dict(), save_path)
+            paddle.save(self.cls_model.state_dict(), save_path)
+            paddle.save(optimizer.optimizer.state_dict(), save_path)
             print("Save model parameters and optimizer status at %s" %
                   save_path)

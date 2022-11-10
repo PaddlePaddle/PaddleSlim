@@ -143,7 +143,7 @@ def train(exe, train_program, train_out, test_program, test_out, args):
                 best_ave = temp_ave
                 print('Best AVE: {}'.format(best_ave))
                 out_feature, test_reader, flods, flags = test_out
-                fluid.io.save_inference_model(
+                paddle.static.save_inference_model(
                     executor=exe,
                     dirname='./out_inference',
                     feeded_var_names=['image_test'],
@@ -340,7 +340,7 @@ def main():
             batch_nums=np.random.randint(4, 10))
     elif args.action == 'test':
         [inference_program, feed_target_names,
-         fetch_targets] = fluid.io.load_inference_model(
+         fetch_targets] = paddle.static.load_inference_model(
              dirname='./quant_model/',
              model_filename=None,
              params_filename=None,

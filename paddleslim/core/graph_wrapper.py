@@ -18,7 +18,7 @@ import pickle
 import numpy as np
 from collections import OrderedDict
 from collections.abc import Iterable
-from paddle.fluid.framework import Program, program_guard, Parameter, Variable
+from paddle.static import Program, program_guard, Variable
 
 __all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper']
 
@@ -37,7 +37,7 @@ OPTIMIZER_OPS = [
 
 class VarWrapper(object):
     def __init__(self, var, graph):
-        assert isinstance(var, (Variable, Parameter))
+        assert isinstance(var, Variable)
         assert isinstance(graph, GraphWrapper)
         self._var = var
         self._graph = graph
@@ -105,7 +105,7 @@ class VarWrapper(object):
         return ops
 
     def is_parameter(self):
-        return isinstance(self._var, Parameter)
+        self._var.is_parameter()
 
 
 class OpWrapper(object):
@@ -273,7 +273,7 @@ class GraphWrapper(object):
         Args:
             var(VarWrapper): The given varibale.
         """
-        return isinstance(var._var, Parameter)
+        return var._var.is_parameter()
 
     def is_persistable(self, var):
         """
@@ -370,7 +370,7 @@ class GraphWrapper(object):
         assert isinstance(op, OpWrapper)
         params = []
         for var in op.all_inputs():
-            if isinstance(var._var, Parameter):
+            if var._var.is_parameter():
                 params.append(var)
         assert len(params) > 0
         return params

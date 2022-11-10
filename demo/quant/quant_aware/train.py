@@ -309,7 +309,7 @@ def compress(args):
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
 
-    paddle.fluid.io.save_inference_model(
+    paddle.static.save_inference_model(
         dirname=float_path,
         feeded_var_names=[image.name],
         target_vars=[out],
