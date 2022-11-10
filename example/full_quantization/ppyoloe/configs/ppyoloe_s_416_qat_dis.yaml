@@ -7,9 +7,10 @@ Global:
   model_filename: model.pdmodel
   params_filename: model.pdiparams
 
-PTQ:
+PTQ:  # Post Training Quantization
   quantizable_op_type: ["conv2d", "depthwise_conv2d"]
   activation_quantize_type: 'moving_average_abs_max'
+  algo: avg
   is_full_quantize: True
   onnx_format: False
   batch_size: 10
@@ -19,7 +20,7 @@ Distillation:
   alpha: 1.0
   loss: soft_label
 
-Quantization:
+Quantization:   # Auto Compression
   onnx_format: true
   use_pact: true
   activation_quantize_type: 'moving_average_abs_max'
