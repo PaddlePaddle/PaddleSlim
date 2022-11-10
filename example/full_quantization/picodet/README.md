@@ -91,6 +91,8 @@ python tools/export_model.py \
 
 #### 3.4 全量化并产出模型
 
+##### 自动化压缩
+
 全量化示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行全量化。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
 
 - 单卡训练：
@@ -112,6 +114,12 @@ export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/picodet_npu.yaml --save_dir='./output/'
 ```
 
+##### 离线量化
+
+```
+python post_quant.py --config_path=./configs/picodet_npu_with_postprocess.yaml --save_dir='./output/'
+```
+
 #### 3.5 测试模型精度
 
 - 使用eval.py脚本得到模型的mAP：
@@ -121,6 +129,17 @@ python eval.py --config_path=./configs/picodet_npu_with_postprocess.yaml
 ```
 
 - 使用ONNXRuntime测试模型mAP：
+如果要导出至ONNX部署，需要将自动化压缩配置文件中`Quantization`里设置：`onnx_format=True`。使用离线量化产出模型需要将配置文件中`PTQ`里设置：`onnx_format=True`。
+导出ONNX模型：
+
+```
+paddle2onnx --model_dir=picodet_s_416_coco_npu/ \
+            --model_filename=model.pdmodel \
+            --params_filename=model.pdiparams \
+            --save_file=picodet_s_416_coco_npu \
+            --deploy_backend='onnxruntime'
+```
+测试精度：
 ```
 python onnxruntime_eval.py \
         --reader_config=configs/picodet_reader.yml \
