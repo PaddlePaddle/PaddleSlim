@@ -205,7 +205,7 @@ class AutoCompression:
                 ### The TrainConfig for quantization is extrapolate from above.
                 tmp_train_config = copy.deepcopy(train_config.__dict__)
                 ### the epoch, train_iter, learning rate of quant is 10% of the prune compress
-                if self.model_type != 'transformer':
+                if self.model_type != 'transformer' and train_config.epochs is not None:
                     tmp_train_config['epochs'] = max(
                         int(train_config.epochs * 0.1), 1)
                 if train_config.train_iter is not None:
