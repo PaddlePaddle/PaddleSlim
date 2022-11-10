@@ -42,8 +42,6 @@ def argsparser():
         type=str,
         default='gpu',
         help="which device used to compress.")
-    parser.add_argument(
-        '--algo', type=str, default='avg', help="post quant algo.")
 
     return parser
 
@@ -89,7 +87,7 @@ def main():
         activation_quantize_type=ptq_config['activation_quantize_type'],
         batch_size=ptq_config['batch_size'],
         batch_nums=ptq_config['batch_nums'],
-        algo=FLAGS.algo,
+        algo=ptq_config['algo'],
         hist_percent=0.999,
         is_full_quantize=ptq_config['is_full_quantize'],
         bias_correction=False,
