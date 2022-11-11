@@ -43,8 +43,6 @@ def argsparser():
         help="which device used to compress.")
     parser.add_argument(
         '--algo', type=str, default='avg', help="post quant algo.")
-    parser.add_argument(
-        '--round_type', type=str, default='adaround', help="round type.")
     parser.add_argument('--gpu', type=int, default=0, help='gpu index')
 
     parser.add_argument(
@@ -59,6 +57,10 @@ def argsparser():
         help='simulate activation quant')
     parser.add_argument(
         '--epochs', type=int, default=20, help='steps to reconstruct')
+    parser.add_argument(
+        '--lr', type=float, default=0.1, help='learning rate of reconstruct')
+    parser.add_argument(
+        '--limit', type=int, default=5, help='size of each region')
 
     return parser
 
@@ -104,10 +106,11 @@ def main():
         weight_quantize_type='channel_wise_abs_max',
         recon_level=FLAGS.recon_level,
         simulate_activation_quant=FLAGS.simulate_activation_quant,
-        regions=config['regions'],
-        region_weights_names=config['region_weights_names'],
+        regions=None,
+        region_weights_names=None,
         epochs=FLAGS.epochs,
-        lr=0.1)
+        lr=FLAGS.lr,
+        limit=FLAGS.limit)
 
 
 if __name__ == '__main__':
