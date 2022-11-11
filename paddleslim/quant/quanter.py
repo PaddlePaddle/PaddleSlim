@@ -685,10 +685,12 @@ def convert(program,
     if config['onnx_format']:
         quant_weight_pass = QuantWeightPass(scope, place)
         quant_weight_pass.apply(test_graph)
+        print('==================Apply QuantWeightPass=====================')
         try:
             out_scale_infer_pass = AddQuantDequantForInferencePass(
                 scope=scope, place=place, quant_bits=config['activation_bits'])
             out_scale_infer_pass.apply(test_graph)
+            print('===============Apply AddQuantDequantForInferencePass================')
         except:
             _logger.warning(
                 "Unable to convert quant model with onnx_format=True, please update PaddlePaddle >= 2.4.0"
@@ -696,6 +698,7 @@ def convert(program,
     else:
         out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
         out_scale_infer_pass.apply(test_graph)
+        print('=============Apply OutScaleForInferencePass===================')
         # Freeze the graph after training by adjusting the quantize
         # operators' order for the inference.
         freeze_pass = QuantizationFreezePass(
@@ -707,12 +710,14 @@ def convert(program,
         if os.path.exists(VARS_MAPPING_TABLE):
             test_graph.out_node_mapping_table = load_dict()
         freeze_pass.apply(test_graph)
+        print('===============Apply QuantizationFreezePass=================')
 
     freezed_program = test_graph.to_program()
 
     if save_int8:
         convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
         convert_int8_pass.apply(test_graph)
+        print('=============Apply ConvertToInt8Pass======================')
         freezed_program_int8 = test_graph.to_program()
         return freezed_program, freezed_program_int8
     else:
