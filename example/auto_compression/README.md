@@ -177,7 +177,7 @@ ac = AutoCompression(
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="MobileNetV1_quant",
-    config={'Quantization': {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
+    config={'QuantPost': {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
     train_dataloader=train_loader,
     eval_dataloader=train_loader)
 ac.compress()

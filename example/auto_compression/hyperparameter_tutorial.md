@@ -69,7 +69,7 @@ QuantPost:
 以上配置项说明如下：
 - batch_size: 设置每个 batch 的图片数量。默认值为32。
 - batch_nums: 离线量化迭代次数。如果设置为 None ，则会一直运行到全部训练数据迭代结束；否则，迭代次数为 batch_nums, 即参与对 Scale 进行校正的样本个数为 batch_nums * batch_size 。
-- algo: 量化时使用的算法名称，可为 'KL'，'mse', 'hist'， 'avg' 或 'abs_max'。该参数仅针对激活值的量化，因为参数值的量化使用的方式为 'channel_wise_abs_max' . 当 algo 设置为 'abs_max' 时，使用校正数据的激活值的绝对值的最大值当作 Scale 值，当设置为 'KL' 时，则使用KL散度的方法来计算 Scale 值，当设置为 'avg' 时，使用校正数据激活值的最大绝对值平均数作为 Scale 值，当设置为 'hist' 时，则使用基于百分比的直方图的方法来计算 Scale 值，当设置为 'mse' 时，则使用搜索最小mse损失的方法来计算 Scale 值。默认值为 'hist' 。
+- algo: 量化时使用的算法名称，可为 'KL'，'mse', 'hist'， 'avg' 或 'abs_max'。当 algo 设置为 'abs_max' 时，使用校正数据的激活值的绝对值的最大值当作 scale 值，当设置为 'KL' 时，则使用KL散度的方法来计算 Scale 值，当设置为 'avg' 时，使用校正数据激活值的最大绝对值平均数作为 scale 值，当设置为 'hist' 时，则使用基于百分比的直方图的方法来计算 scale 值，当设置为 'mse' 时，则使用搜索最小mse损失的方法来计算 scale 值。默认值为 'hist' 。
 - hist_percent: 'hist' 方法的百分位数。默认值为0.9999。
 - bias_correct: 是否使用 bias correction 算法。默认值为 False 。
 - recon_level: 设置该参数将在离线量化之后进行逐区域重建训练，目前支持 'layer-wise' 和 'region-wise'。当设置为'layer-wise'时， 以层为单位进行重建训练；当设置为'region-wise'时，以 `regions` 中每个块区域为单位进行重建训练；当设置为 None 时，则不进行重建训练。 默认值为 None 。
