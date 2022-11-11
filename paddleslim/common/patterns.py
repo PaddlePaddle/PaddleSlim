@@ -79,8 +79,7 @@ def _is_ffn(pattern_ops, pattern_ops_type):
 
 
 def get_patterns(program, only_final_node=True):
-    """ distinguish the pattern in the program and get distillation node """
-    distill_node = []
+    """ distinguish the pattern in the program and get model type """
     skip_quant_tensor_list = []
     patterns = {}
     graph = GraphWrapper(program)
@@ -124,10 +123,6 @@ def get_patterns(program, only_final_node=True):
                         pattern_name = 'FFN$' + str(block_num)
                         block_num += 1
 
-                        if not only_final_node:
-                            distill_node.append('teacher_' + out_var_name)
-                            distill_node.append(out_var_name)
-
                     if model_type == 'transformer' and (
                             'fetch' in pattern_ops_type or
                             pattern_ops_type[-1] == 'scale'):
@@ -140,16 +135,6 @@ def get_patterns(program, only_final_node=True):
 
                     patterns[pattern_name] = pattern_ops
 
-                    if model_type != 'transformer' and (not only_final_node):
-                        distill_node.append('teacher_' + out_var_name)
-                        distill_node.append(out_var_name)
-
-    ### add the output of final weight node to distill node
-    final_weight_node = find_final_nodes(program)
-    for out_var in final_weight_node:
-        distill_node.append('teacher_' + out_var.name())
-        distill_node.append(out_var.name())
-
     #### skip quant matmul in attention
     if model_type == 'transformer':
         for block_id in range(len(program.blocks)):
@@ -158,4 +143,4 @@ def get_patterns(program, only_final_node=True):
                     if inp_name in skip_quant_tensor_list:
                         op._set_attr("op_namescope", "skip_quant")
 
-    return patterns, distill_node, model_type
+    return patterns, model_type
