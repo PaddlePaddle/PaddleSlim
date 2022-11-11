@@ -29,7 +29,7 @@ from ..quant.quanter import convert, quant_post
 from ..quant.reconstruction_quantization import quant_recon_static
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
-from ..common.patterns import get_patterns
+from ..common.patterns import get_patterns, find_final_nodes
 from ..common.load_model import load_inference_model, get_model_dir, export_onnx
 from ..common.dataloader import wrap_dataloader, get_feed_vars
 from ..common.config_helper import load_config
@@ -158,7 +158,7 @@ class AutoCompression:
 
         paddle.enable_static()
         self._exe, self._places = self._prepare_envs()
-        self.model_type = self._get_model_type()
+        self.default_distill_node_pair, self.model_type = self._get_model_info()
 
         if self.train_config is not None and self.train_config.use_fleet:
             fleet.init(is_collective=True)
@@ -191,7 +191,6 @@ class AutoCompression:
 
         self._strategy, self._config = self._prepare_strategy(
             self.strategy_config)
-
         self.train_config = self._get_final_train_config(
             self.train_config, self._strategy, self.model_type)
         _logger.info(f"Selected strategies: {self._strategy}")
@@ -209,7 +208,7 @@ class AutoCompression:
                 ### The TrainConfig for quantization is extrapolate from above.
                 tmp_train_config = copy.deepcopy(train_config.__dict__)
                 ### the epoch, train_iter, learning rate of quant is 10% of the prune compress
-                if self.model_type != 'transformer':
+                if self.model_type != 'transformer' and train_config.epochs is not None:
                     tmp_train_config['epochs'] = max(
                         int(train_config.epochs * 0.1), 1)
                 if train_config.train_iter is not None:
@@ -304,13 +303,25 @@ class AutoCompression:
         exe = paddle.static.Executor(places)
         return exe, places
 
-    def _get_model_type(self):
+    def _get_model_info(self):
         [inference_program, _, _] = (load_inference_model(
             self.model_dir,
             model_filename=self.model_filename,
             params_filename=self.params_filename,
             executor=self._exe))
-        _, _, model_type = get_patterns(inference_program)
+
+        ### set the output of final weight node as the default distillation node
+        distill_node = []
+        final_weight_node = find_final_nodes(inference_program)
+        for out_var in final_weight_node:
+            distill_node.append('teacher_' + out_var.name())
+            distill_node.append(out_var.name())
+
+        model_type = None
+        if not isinstance(self.strategy_config, dict):
+            _, model_type = get_patterns(inference_program)
+            _logger.info(f"Detect model type: {model_type}")
+
         if self.model_filename is None:
             opt_model_filename = '__opt_model__'
         else:
@@ -324,8 +335,8 @@ class AutoCompression:
         shutil.move(
             os.path.join(self.updated_model_dir, opt_model_filename),
             os.path.join(self.updated_model_dir, self.model_filename))
-        _logger.info(f"Detect model type: {model_type}")
-        return model_type
+
+        return distill_node, model_type
 
     def _prepare_strategy(self, strategy_config):
         if not isinstance(strategy_config, list):
@@ -447,8 +458,7 @@ class AutoCompression:
         return strategy
 
     def _prepare_program(self, program, feed_target_names, fetch_targets,
-                         patterns, default_distill_node_pair, strategy, config,
-                         train_config):
+                         patterns, strategy, config, train_config):
         train_program = recover_inference_program(program)
         startup_program = paddle.static.Program()
         train_program_info = ProgramInfo(startup_program, train_program,
@@ -485,7 +495,7 @@ class AutoCompression:
                 strategy, patterns, self.eval_dataloader)
 
         if train_config.use_fleet:
-            dist_strategy = _prepare_fleet_strategy(train_config)
+            dist_strategy = self._prepare_fleet_strategy(train_config)
         else:
             dist_strategy = None
 
@@ -499,7 +509,7 @@ class AutoCompression:
                 train_program_info,
                 pruner=self._pruner,
                 dist_strategy=dist_strategy,
-                default_distill_node_pair=default_distill_node_pair)
+                default_distill_node_pair=self.default_distill_node_pair)
 
         self._quant_config = None
         ### add quant_aware program, quant always is last step
@@ -748,12 +758,12 @@ class AutoCompression:
                           train_config.origin_metric, metric))
                 self.metric_before_compressed = metric
 
-            patterns, default_distill_node_pair, _ = get_patterns(
-                inference_program)
-
+            patterns = None
+            if 'transformer' in strategy:
+                patterns, _ = get_patterns(inference_program)
             train_program_info, test_program_info = self._prepare_program(
                 inference_program, feed_target_names, fetch_targets, patterns,
-                default_distill_node_pair, strategy, config, train_config)
+                strategy, config, train_config)
             if 'unstructure' in self._strategy:
                 test_program_info.program._program = remove_unused_var_nodes(
                     test_program_info.program._program)
