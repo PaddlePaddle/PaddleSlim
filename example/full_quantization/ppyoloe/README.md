@@ -122,10 +122,13 @@ python eval.py --config_path=./configs/ppyoloe_s_416_qat_dis.yaml
 
 **注意**：要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
 
-- 导出ONNX，使用ONNXRuntime测试模型精度：
+- 量化导出ONNX，使用ONNXRuntime测试模型精度：
 首先导出onnx量化模型
 ```
-paddle2onnx --model_dir=ptq_out/ --model_filename=model.pdmodel --params_filename=model.pdiparams --save_file=ppyoloe_s_quant_416 --deploy_backend=rkn
+paddle2onnx --model_dir=ptq_out/ --model_filename=model.pdmodel \
+            --params_filename=model.pdiparams \
+            --save_file=ppyoloe_s_quant_416 \
+            --deploy_backend=rknn
 ```
 可以根据不同部署后端设置`--deploy_backend`
 
