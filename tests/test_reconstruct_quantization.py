@@ -107,19 +107,6 @@ class TestRoundingOptimizer(StaticCase):
 
         self.data_loader = sample_generator_creator()
 
-        self._regions = [['image', 'batch_norm_26.tmp_4']]
-        self._region_weights_names = [[
-            'conv1_weights', 'conv2_1_dw_weights', 'conv2_1_sep_weights',
-            'conv2_2_dw_weights', 'conv2_2_sep_weights', 'conv3_1_dw_weights',
-            'conv3_1_sep_weights', 'conv3_2_dw_weights', 'conv3_2_sep_weights',
-            'conv4_1_dw_weights', 'conv4_1_sep_weights', 'conv4_2_dw_weights',
-            'conv4_2_sep_weights', 'conv5_1_dw_weights', 'conv5_1_sep_weights',
-            'conv5_2_dw_weights', 'conv5_2_sep_weights', 'conv5_3_dw_weights',
-            'conv5_3_sep_weights', 'conv5_4_dw_weights', 'conv5_4_sep_weights',
-            'conv5_5_dw_weights', 'conv5_5_sep_weights', 'conv5_6_dw_weights',
-            'conv5_6_sep_weights', 'conv6_dw_weights', 'conv6_sep_weights'
-        ]]
-
     def test_qdrop(self):
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
@@ -133,8 +120,8 @@ class TestRoundingOptimizer(StaticCase):
             params_filename='params',
             batch_nums=10,
             algo='abs_max',
-            regions=self._regions,
-            region_weights_names=self._region_weights_names,
+            regions=None,
+            region_weights_names=None,
             recon_level='region-wise',
             simulate_activation_quant=True)
 
@@ -151,8 +138,8 @@ class TestRoundingOptimizer(StaticCase):
             params_filename='params',
             batch_nums=10,
             algo='KL',
-            regions=self._regions,
-            region_weights_names=self._region_weights_names,
+            regions=None,
+            region_weights_names=None,
             recon_level='layer-wise',
             simulate_activation_quant=True,
             bias_correction=True)
