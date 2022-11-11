@@ -57,6 +57,8 @@ def argsparser():
         type=bool,
         default=False,
         help='simulate activation quant')
+    parser.add_argument(
+        '--epochs', type=int, default=20, help='steps to reconstruct')
 
     return parser
 
@@ -104,9 +106,7 @@ def main():
         simulate_activation_quant=FLAGS.simulate_activation_quant,
         regions=config['regions'],
         region_weights_names=config['region_weights_names'],
-        skip_tensor_list=config['skip_tensor_list']
-        if 'skip_tensor_list' in config else None,
-        epochs=20,
+        epochs=FLAGS.epochs,
         lr=0.1)
 
 

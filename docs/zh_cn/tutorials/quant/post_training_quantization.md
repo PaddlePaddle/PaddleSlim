@@ -62,16 +62,20 @@ $$
 
 ### 对于权重量化
 
-在对权重scale参数进行量化时，一般直接采用选取绝对值最大值的方式。对于权重量化，还可通过其他方法提升量化的精度，比如矫正weight偏差，round方法等，比如PaddleSlim中目前支持以下几种方法：
+在对权重scale参数进行量化时，一般直接采用选取绝对值最大值的方式。对于权重量化，还可通过其他方法提升量化的精度，比如矫正weight偏差，Adaround/BRECQ/QDrop方法等，比如PaddleSlim中目前支持以下几种方法：
 
 | 权重量化方法    |   详解     |
 | :-------- | :--------: |
 | bias_correction | 通过简单的校正常数来补偿权重weight量化前后的均值和方差的固有偏差，参考自[论文](https://arxiv.org/abs/1810.05723)。 |
 |  Adaround | 对每层weight值进行量化时，不再采样固定四舍五入方法，而是自适应的决定weight量化时将浮点值近似到最近右定点值还是左定点值。具体的算法原理参考自[论文](https://arxiv.org/abs/2004.10568)。 |
+|  BRECQ | 对每层weight值进行量化时，不再采样固定四舍五入方法，而是自适应的决定weight量化时将浮点值近似到最近右定点值还是左定点值，同时以region为单位调整weight。具体的算法原理参考自[论文](https://arxiv.org/abs/2102.05426)。 |
+|  QDrop | 对每层weight值进行量化时，不再采样固定四舍五入方法，而是自适应的决定weight量化时将浮点值近似到最近右定点值还是左定点值，同时以dropout的方式引入激活量化的噪声。具体的算法原理参考自[论文](https://arxiv.org/abs/2203.05740)。 |
 
 说明：
 - 如果想使用bias_correction，可以在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`bias_correction`参数为True即可，默认为False。
 - 如果想使用Adaround方法，可以在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`round_type`参数为`adaround`即可，默认为`round`。
+- 如果想使用BRECQ方法，可以在PaddleSlim的[量化重构接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`recon_level`参数为`regionn-wise`即可，默认为`layer-wise`。
+- 如果想使用QDrop方法，可以在PaddleSlim的[量化重构接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`simulate_activation_quant`参数为`True`即可，默认为`False`。
 
 ### 效果对比
 
