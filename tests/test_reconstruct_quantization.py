@@ -107,7 +107,7 @@ class TestRoundingOptimizer(StaticCase):
 
         self.data_loader = sample_generator_creator()
 
-    def test_qdrop(self):
+    def test_qdrop_region(self):
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
@@ -118,14 +118,15 @@ class TestRoundingOptimizer(StaticCase):
             sample_generator=self.data_loader,
             model_filename='model',
             params_filename='params',
-            batch_nums=10,
+            batch_nums=1,
+            epochs=1,
             algo='abs_max',
             regions=None,
             region_weights_names=None,
             recon_level='region-wise',
             simulate_activation_quant=True)
 
-    def test_qdrop(self):
+    def test_qdrop_layer(self):
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
@@ -136,7 +137,8 @@ class TestRoundingOptimizer(StaticCase):
             sample_generator=self.data_loader,
             model_filename='model',
             params_filename='params',
-            batch_nums=10,
+            batch_nums=1,
+            epochs=1,
             algo='KL',
             regions=None,
             region_weights_names=None,
