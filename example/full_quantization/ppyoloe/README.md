@@ -77,16 +77,16 @@ git clone https://github.com/PaddlePaddle/PaddleDetection.git
 包含NMS：
 ```shell
 python tools/export_model.py \
-        -c configs/ppyoloe/ppyoloe_crn_s_300e_coco.yml \
-        -o weights=https://paddledet.bj.bcebos.com/models/ppyoloe_crn_s_300e_coco.pdparams \
+        -c configs/ppyoloe/ppyoloe_crn_s_400e_coco.yml \
+        -o weights=https://paddledet.bj.bcebos.com/models/ppyoloe_crn_s_400e_coco.pdparams \
         trt=True \
 ```
 
 不包含NMS：
 ```shell
 python tools/export_model.py \
-        -c configs/ppyoloe/ppyoloe_crn_s_300e_coco.yml \
-        -o weights=https://paddledet.bj.bcebos.com/models/ppyoloe_crn_s_300e_coco.pdparams \
+        -c configs/ppyoloe/ppyoloe_crn_s_400e_coco.yml \
+        -o weights=https://paddledet.bj.bcebos.com/models/ppyoloe_crn_s_400e_coco.pdparams \
         trt=True exclude_post_process=True \
 ```
 
