@@ -26,6 +26,7 @@ import paddle
 import itertools
 import paddle.distributed.fleet as fleet
 from ..quant.quanter import convert, quant_post
+from ..quant.reconstruction_quantization import quant_recon_static
 from ..common.recover_program import recover_inference_program
 from ..common import get_logger
 from ..common.patterns import get_patterns, find_final_nodes
@@ -88,27 +89,29 @@ class AutoCompression:
                 to None. Default: None. 
             strategy_config(dict, list(dict), optional): The strategy config. You can set single config to get multi-strategy config, such as
                 1. set ``Quantization`` and ``Distillation`` to get quant_aware and distillation compress config.
-                    The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
-                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
-                2. set ``Quantization`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
-                    The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L24`_ .
-                    The HyperParameterOptimization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L73`_ .
+                    The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L55`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L107`_ .
+                2. set ``QuantPost`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
+                    The QuantPost config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L187`_ .
+                    The HyperParameterOptimization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L160`_ .
                 3. set ``ChannelPrune`` and ``Distillation`` to get channel prune and distillation compress config.
-                    The ChannelPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
-                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                    The ChannelPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L254`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L107`_ .
                 4. set ``ASPPrune`` and ``Distillation`` to get asp prune and distillation compress config.
-                    The ASPPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
-                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                    The ASPPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L268`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L107`_ .
                 5. set ``TransformerPrune`` and ``Distillation`` to get transformer prune and distillation compress config.
-                    The TransformerPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L82`_ .
-                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                    The TransformerPrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L278`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L107`_ .
                 6. set ``UnstructurePrune`` and ``Distillation`` to get unstructureprune and distillation compress config.
-                    The UnstructurePrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L91`_ .
-                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                    The UnstructurePrune config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L288`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L107`_ .
                 7. set ``Distillation`` to use one teacher modol to distillation student model.
-                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L39`_ .
+                    The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L107`_ .
                 8. set ``MultiTeacherDistillation`` to use multi-teacher to distillation student model.
-                    The MultiTeacherDistillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L56`_ .
+                    The MultiTeacherDistillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L134`_ .
+                9. set ``QuantPost`` to get quant_post compress config.
+                    The QuantPost config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L187`_ .
 
                 If set to None, will choose a strategy automatically. Default: None.
             target_speedup(float, optional): target speedup ratio by the way of auto compress. Default: None.
@@ -344,6 +347,7 @@ class AutoCompression:
         for strategy_c in strategy_config:
             quant_config = strategy_c.get("Quantization", None)
             hpo_config = strategy_c.get("HyperParameterOptimization", None)
+            ptq_config = strategy_c.get("QuantPost", None)
             prune_config = strategy_c.get("ChannelPrune", None)
             asp_config = strategy_c.get("ASPPrune", None)
             transformer_prune_config = strategy_c.get("TransformerPrune", None)
@@ -394,10 +398,10 @@ class AutoCompression:
                                  self._distill_config))
 
             ### case5: quant_config & hpo_config ==> PTQ & HPO
-            if quant_config is not None and hpo_config is not None:
+            if ptq_config is not None and hpo_config is not None:
                 only_distillation = False
                 strategy.append('ptq_hpo')
-                config.append(merge_config(quant_config, hpo_config))
+                config.append(merge_config(ptq_config, hpo_config))
 
             ### case6: quant_config & distill config ==> QAT & Distill
             if quant_config is not None and self._distill_config is not None and 'ptq_hpo' not in strategy:
@@ -413,6 +417,11 @@ class AutoCompression:
                 else:
                     strategy.append('multi_teacher_dis')
                     config.append(multi_teacher_distill_config)
+
+            ### case8: only qtp_config ==> PTQ
+            if ptq_config is not None and hpo_config is None:
+                strategy.append('quant_post')
+                config.append(ptq_config)
 
         ### NOTE: keep quantation in the last step
         idx = -1
@@ -572,6 +581,7 @@ class AutoCompression:
         config = None
         train_config = None
         strategy_idx = None
+        self.final_metric = -1.0
         for strategy_idx, (
                 strategy, config, train_config
         ) in enumerate(zip(self._strategy, self._config, self.train_config)):
@@ -599,6 +609,19 @@ class AutoCompression:
                 if os.path.isfile(_file_path):
                     shutil.copy(_file_path, final_model_path)
             shutil.rmtree(self.tmp_dir)
+
+            if self.eval_function is not None and self.final_metric < 0.0:
+                [inference_program, feed_target_names, fetch_targets]= load_inference_model( \
+                    final_model_path, \
+                    model_filename=self.model_filename, params_filename=self.params_filename,
+                    executor=self._exe)
+                self.final_metric = self.eval_function(
+                    self._exe, inference_program, feed_target_names,
+                    fetch_targets)
+            if self.eval_function is not None:
+                _logger.info("==> The metric of final model is {:.4f}".format(
+                    self.final_metric))
+
             _logger.info(
                 "==> The ACT compression has been completed and the final model is saved in `{}`".
                 format(final_model_path))
@@ -621,41 +644,64 @@ class AutoCompression:
                 params_filename=self.params_filename,
                 executor=self._exe)
         if strategy == 'quant_post':
-            quant_post(
-                self._exe,
-                model_dir=model_dir,
-                quantize_model_path=os.path.join(
-                    self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
-                data_loader=self.train_dataloader,
-                model_filename=self.model_filename,
-                params_filename=self.params_filename,
-                save_model_filename=self.model_filename,
-                save_params_filename=self.params_filename,
-                batch_size=1,
-                batch_nums=config.batch_num,
-                algo=config.ptq_algo,
-                round_type='round',
-                bias_correct=config.bias_correct,
-                hist_percent=config.hist_percent,
-                quantizable_op_type=config.quantize_op_types,
-                is_full_quantize=config.is_full_quantize,
-                weight_bits=config.weight_bits,
-                activation_bits=config.activation_bits,
-                activation_quantize_type='range_abs_max',
-                weight_quantize_type=config.weight_quantize_type,
-                onnx_format=False)
+            if config.recon_level is None:
+                quant_post(
+                    self._exe,
+                    model_dir=self.updated_model_dir,
+                    quantize_model_path=os.path.join(
+                        self.tmp_dir,
+                        'strategy_{}'.format(str(strategy_idx + 1))),
+                    data_loader=self.train_dataloader,
+                    model_filename=self.model_filename,
+                    params_filename=self.params_filename,
+                    save_model_filename=self.model_filename,
+                    save_params_filename=self.params_filename,
+                    batch_size=config.batch_size,
+                    batch_nums=config.batch_nums,
+                    algo=config.algo,
+                    bias_correction=config.bias_correction,
+                    hist_percent=config.hist_percent,
+                    quantizable_op_type=config.quantize_op_types,
+                    is_full_quantize=config.is_full_quantize,
+                    weight_bits=config.weight_bits,
+                    activation_bits=config.activation_bits,
+                    activation_quantize_type=config.activation_quantize_type,
+                    weight_quantize_type=config.weight_quantize_type,
+                    onnx_format=config.onnx_format)
+            else:
+                quant_recon_static(
+                    executor=self._exe,
+                    model_dir=self.updated_model_dir,
+                    quantize_model_path=os.path.join(
+                        self.tmp_dir,
+                        'strategy_{}'.format(str(strategy_idx + 1))),
+                    data_loader=self.train_dataloader,
+                    model_filename=self.model_filename,
+                    params_filename=self.params_filename,
+                    batch_size=config.batch_size,
+                    batch_nums=config.batch_nums,
+                    algo=config.algo,
+                    hist_percent=config.hist_percent,
+                    quantizable_op_type=config.quantize_op_types,
+                    is_full_quantize=config.is_full_quantize,
+                    bias_correction=config.bias_correction,
+                    onnx_format=config.onnx_format,
+                    weight_bits=config.weight_bits,
+                    activation_bits=config.activation_bits,
+                    weight_quantize_type=config.weight_quantize_type,
+                    activation_quantize_type=config.activation_quantize_type,
+                    recon_level=config.recon_level,
+                    simulate_activation_quant=config.simulate_activation_quant,
+                    regions=config.regions,
+                    region_weights_names=config.region_weights_names,
+                    skip_tensor_list=config.skip_tensor_list,
+                    epochs=config.epochs,
+                    lr=config.lr)
 
         elif strategy == 'ptq_hpo':
             if platform.system().lower() != 'linux':
                 raise NotImplementedError(
                     "post-quant-hpo is not support in system other than linux")
-            if self.updated_model_dir != model_dir:
-                # If model is ONNX, convert it to inference model firstly.
-                load_inference_model(
-                    model_dir,
-                    model_filename=self.model_filename,
-                    params_filename=self.params_filename,
-                    executor=self._exe)
             if self.eval_function is None:
                 # If eval function is None, ptq_hpo will use emd distance to eval the quantized model, so need the dataloader without label
                 eval_dataloader = self.train_dataloader
@@ -664,7 +710,7 @@ class AutoCompression:
             post_quant_hpo.quant_post_hpo(
                 self._exe,
                 self._places,
-                model_dir=model_dir,
+                model_dir=self.updated_model_dir,
                 quantize_model_path=os.path.join(
                     self.tmp_dir, 'strategy_{}'.format(str(strategy_idx + 1))),
                 train_dataloader=self.train_dataloader,
@@ -781,7 +827,7 @@ class AutoCompression:
                                         self.metric_before_compressed)
                             ) / self.metric_before_compressed <= 0.005:
                                 _logger.info(
-                                    "The error rate between the compressed model and original model is less than 5%. The training process ends."
+                                    "The error rate between the compressed model and original model is less than 0.5%. The training process ends."
                                 )
                                 stop_training = True
                                 break
@@ -803,8 +849,9 @@ class AutoCompression:
                         )
                 if (train_config.train_iter and total_train_iter >=
                         train_config.train_iter) or stop_training:
+                    stop_training = True
                     break
-
+        self.final_metric = best_metric
         if 'unstructure' in self._strategy or train_config.sparse_model:
             self._pruner.update_params()
 

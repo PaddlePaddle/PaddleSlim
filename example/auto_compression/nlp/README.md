@@ -157,7 +157,9 @@ Prune:
   pruned_ratio: 0.25
 ```
 
-- 优化参数
+- 离线量化超参搜索
+
+本示例的离线量化采取了超参搜索策略，以选择最优的超参数取得更好的离线量化效果。首先，配置待搜索的参数：
 
 ```yaml
 HyperParameterOptimization:
@@ -177,12 +179,12 @@ HyperParameterOptimization:
   - channel_wise_abs_max
 ```
 
-- 量化参数
+其次，配置离线量化参数：
 
 量化参数主要设置量化比特数和量化op类型，其中量化op包含卷积层（conv2d, depthwise_conv2d）和全连接层（mul，matmul_v2）。
 
 ```yaml
-Quantization:
+QuantPost:
   activation_bits: 8
   quantize_op_types:
   - conv2d
