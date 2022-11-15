@@ -305,10 +305,10 @@ class ReconstructionQuanter(object):
 
         if recon_level == 'region-wise' and regions is None:
             builder = RegionBuilder(program=self._program)
-            print('Begin Region division')
+            _logger.info('Begin Region division')
             self._regions, self._region_weights_names = builder._create_regions(
                 limit=self._limit)
-            print('End Region division')
+            _logger.info('End Region division')
         elif self._recon_level == 'layer-wise':
             regions, region_weights_names = self._get_layers()
             self._regions = regions
@@ -381,8 +381,7 @@ class ReconstructionQuanter(object):
                 scheduler = paddle.optimizer.lr.CosineAnnealingDecay(
                     learning_rate=20,
                     eta_min=2,
-                    T_max=2000,
-                    verbose=True, )
+                    T_max=2000, )
                 total_loss, recon_loss, round_loss = loss_function.get_loss(
                     student_var,
                     teacher_var,

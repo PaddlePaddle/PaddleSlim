@@ -14,6 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
+import tempfile
 import paddle
 from paddleslim.quant import quant_post_static
 from static_case import StaticCase
@@ -25,33 +26,39 @@ import numpy as np
 from paddleslim.quant import quant_recon_static
 
 
-class TestRoundingOptimizer(StaticCase):
+class ReconPTQ(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestRoundingOptimizer, self).__init__(*args, **kwargs)
+        super(ReconPTQ, self).__init__(*args, **kwargs)
         paddle.enable_static()
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="test_")
         self._gen_model()
 
     def _gen_model(self):
-        image = paddle.static.data(
-            name='image', shape=[None, 1, 28, 28], dtype='float32')
-        label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-        model = MobileNet()
-        out = model.net(input=image, class_dim=10)
-        cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
-        avg_cost = paddle.mean(x=cost)
-        acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
-        acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
-        optimizer = paddle.optimizer.Momentum(
-            momentum=0.9,
-            learning_rate=0.01,
-            weight_decay=paddle.regularizer.L2Decay(4e-5))
-        optimizer.minimize(avg_cost)
-        main_prog = paddle.static.default_main_program()
-        val_prog = main_prog.clone(for_test=True)
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        exe.run(paddle.static.default_startup_program())
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.static.program_guard(main_program, startup_program):
+            image = paddle.static.data(
+                name='image', shape=[None, 1, 28, 28], dtype='float32')
+            label = paddle.static.data(
+                name='label', shape=[None, 1], dtype='int64')
+            model = MobileNet()
+            out = model.net(input=image, class_dim=10)
+            cost = paddle.nn.functional.loss.cross_entropy(
+                input=out, label=label)
+            avg_cost = paddle.mean(x=cost)
+            acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
+            acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
+
+            val_program = main_program.clone(for_test=True)
+            optimizer = paddle.optimizer.Momentum(
+                momentum=0.9,
+                learning_rate=0.01,
+                weight_decay=paddle.regularizer.L2Decay(4e-5))
+            optimizer.minimize(avg_cost)
+        exe.run(startup_program)
 
         def transform(x):
             return np.reshape(x, [1, 28, 28])
@@ -95,17 +102,25 @@ class TestRoundingOptimizer(StaticCase):
                         'train iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
                         format(iter, cost, top1, top5))
 
-        train(main_prog)
+        train(main_program)
         paddle.fluid.io.save_inference_model(
-            dirname='./test_rounding_optimizer',
-            feeded_var_names=[image.name, label.name],
-            target_vars=[avg_cost, acc_top1, acc_top5],
-            main_program=val_prog,
+            dirname=self.tmpdir.name,
+            feeded_var_names=[image.name],
+            target_vars=[out],
+            main_program=val_program,
             executor=exe,
-            model_filename='model',
-            params_filename='params')
-
+            model_filename='model.pdmodel',
+            params_filename='params.pdiparams')
+        print(f"saved infer model to [{self.tmpdir.name}]")
         self.data_loader = sample_generator_creator()
+
+    def __del__(self):
+        self.tmpdir.cleanup()
+
+
+class TestReconRegion(ReconPTQ):
+    def __init__(self, *args, **kwargs):
+        super(TestReconRegion, self).__init__(*args, **kwargs)
 
     def test_qdrop_region(self):
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
@@ -113,11 +128,11 @@ class TestRoundingOptimizer(StaticCase):
         exe = paddle.static.Executor(place)
         quant_recon_static(
             exe,
-            './test_rounding_optimizer',
-            quantize_model_path='rsq_out',
+            self.tmpdir.name,
+            quantize_model_path='output_region',
             sample_generator=self.data_loader,
-            model_filename='model',
-            params_filename='params',
+            model_filename='model.pdmodel',
+            params_filename='params.pdiparams',
             batch_nums=1,
             epochs=1,
             algo='abs_max',
@@ -126,17 +141,22 @@ class TestRoundingOptimizer(StaticCase):
             recon_level='region-wise',
             simulate_activation_quant=True)
 
+
+class TestReconLayer(ReconPTQ):
+    def __init__(self, *args, **kwargs):
+        super(TestReconLayer, self).__init__(*args, **kwargs)
+
     def test_qdrop_layer(self):
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         quant_recon_static(
             exe,
-            './test_rounding_optimizer',
-            quantize_model_path='rsq_out',
+            self.tmpdir.name,
+            quantize_model_path='output_layer',
             sample_generator=self.data_loader,
-            model_filename='model',
-            params_filename='params',
+            model_filename='model.pdmodel',
+            params_filename='params.pdiparams',
             batch_nums=1,
             epochs=1,
             algo='KL',
