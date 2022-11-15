@@ -128,7 +128,7 @@ def create_strategy_config(strategy_str, model_type):
             quant_config = Quantization(**default_quant_config)
             hpo_config = HyperParameterOptimization(**hpo_config_tester)
             configs.append({
-                'Quantization': quant_config,
+                'QuantPost': quant_config,
                 'HyperParameterOptimization': hpo_config
             })
         else:
@@ -251,7 +251,7 @@ def get_final_quant_config(ptq_loss, model_type=None):
         quant_config = Quantization(**default_quant_config)
         hpo_config = HyperParameterOptimization(**default_hpo_config)
         configs = [{
-            'Quantization': quant_config,
+            'QuantPost': quant_config,
             'HyperParameterOptimization': hpo_config
         }]
 

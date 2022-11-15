@@ -153,5 +153,55 @@ class TestLoadONNXModel(ACTBase):
             deploy_backend='tensorrt')
 
 
+class TestDictPTQ(ACTBase):
+    def __init__(self, *args, **kwargs):
+        super(TestDictPTQ, self).__init__(*args, **kwargs)
+
+    def test_compress(self):
+        image = paddle.static.data(
+            name='data', shape=[-1, 3, 32, 32], dtype='float32')
+        train_loader = paddle.io.DataLoader(
+            self.eval_dataset,
+            feed_list=[image],
+            batch_size=4,
+            return_list=False)
+        ac = AutoCompression(
+            model_dir=self.tmpdir.name,
+            model_filename="infer.pdmodel",
+            params_filename="infer.pdiparams",
+            save_dir="output",
+            config={'QuantPost': {}},
+            train_dataloader=train_loader,
+            eval_dataloader=train_loader
+        )  # eval_function to verify accuracy         
+        ac.compress()
+
+
+class TestDictPTQRecon(ACTBase):
+    def __init__(self, *args, **kwargs):
+        super(TestDictPTQRecon, self).__init__(*args, **kwargs)
+
+    def test_compress(self):
+        image = paddle.static.data(
+            name='data', shape=[-1, 3, 32, 32], dtype='float32')
+        train_loader = paddle.io.DataLoader(
+            self.eval_dataset,
+            feed_list=[image],
+            batch_size=4,
+            return_list=False)
+        ac = AutoCompression(
+            model_dir=self.tmpdir.name,
+            model_filename="infer.pdmodel",
+            params_filename="infer.pdiparams",
+            save_dir="output",
+            config={'QuantPost': {
+                'recon_level': 'layer-wise'
+            }},
+            train_dataloader=train_loader,
+            eval_dataloader=train_loader
+        )  # eval_function to verify accuracy         
+        ac.compress()
+
+
 if __name__ == '__main__':
     unittest.main()
