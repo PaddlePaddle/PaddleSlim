@@ -119,6 +119,7 @@ class TestDictQATDist(ACTBase):
             train_dataloader=train_loader,
             eval_dataloader=train_loader)  # eval_function to verify accuracy
         ac.compress()
+        ac.export_onnx()
 
 
 class TestLoadONNXModel(ACTBase):
