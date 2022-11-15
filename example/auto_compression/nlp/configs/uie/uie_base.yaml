@@ -1,0 +1,31 @@
+Global:
+  model_dir: ./UIE
+  model_filename: inference.pdmodel
+  params_filename: inference.pdiparams
+  batch_size: 1
+  max_seq_length: 512
+TrainConfig:
+  epochs: 200
+  eval_iter: 100
+  learning_rate: 1.0e-5
+  optimizer_builder:
+    optimizer:
+      type: AdamW
+    weight_decay: 0.01
+
+Quantization:
+  use_pact: false
+  activation_bits: 8
+  is_full_quantize: false
+  onnx_format: True
+  activation_quantize_type: moving_average_abs_max
+  weight_quantize_type: channel_wise_abs_max
+  not_quant_pattern:
+  - skip_quant
+  quantize_op_types:
+  - matmul
+  - matmul_v2
+  weight_bits: 8
+Distillation:
+  alpha: 1.0
+  loss: l2
