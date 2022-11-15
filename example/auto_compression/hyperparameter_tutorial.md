@@ -3,7 +3,7 @@
 
 ## 1.1 各压缩方法超参解析
 
-### 1.1.1 量化（quantization）
+### 1.1.1 量化训练（quantization）
 
 量化参数主要设置量化比特数和量化op类型，其中量化op包含卷积层（conv2d, depthwise_conv2d）和全连接层（mul, matmul_v2）。以下为只量化卷积层的示例：
 ```yaml
@@ -50,7 +50,53 @@ print(TENSORRT_OP_TYPES)
 - is_full_quantize: 是否量化所有可支持op类型。默认值为False.
 
 
-### 1.1.2 知识蒸馏（knowledge distillation）
+### 1.1.2 离线量化（post-traing quantization）
+离线量化中基本的量化参数和量化训练相同，不再赘述。以下介绍离线量化特有的参数：
+```yaml
+QuantPost:
+    batch_size: 32
+    batch_nums: None
+    algo: 'hist'
+    hist_percent: 0.999
+    bias_correct: False
+    recon_level: None
+    regions: None
+    epochs: 20
+    lr: 0.1
+    simulate_activation_quant: False
+    skip_tensor_list: None
+```
+以上配置项说明如下：
+- batch_size: 设置每个 batch 的图片数量。默认值为32。
+- batch_nums: 离线量化迭代次数。如果设置为 None ，则会一直运行到全部训练数据迭代结束；否则，迭代次数为 batch_nums, 即参与对 Scale 进行校正的样本个数为 batch_nums * batch_size 。
+- algo: 量化时使用的算法名称，可为 'KL'，'mse', 'hist'， 'avg' 或 'abs_max'。当 algo 设置为 'abs_max' 时，使用校正数据的激活值的绝对值的最大值当作 scale 值，当设置为 'KL' 时，则使用KL散度的方法来计算 Scale 值，当设置为 'avg' 时，使用校正数据激活值的最大绝对值平均数作为 scale 值，当设置为 'hist' 时，则使用基于百分比的直方图的方法来计算 scale 值，当设置为 'mse' 时，则使用搜索最小mse损失的方法来计算 scale 值。默认值为 'hist' 。
+- hist_percent: 'hist' 方法的百分位数。默认值为0.9999。
+- bias_correct: 是否使用 bias correction 算法。默认值为 False 。
+- recon_level: 设置该参数将在离线量化之后进行逐区域重建训练，目前支持 'layer-wise' 和 'region-wise'。当设置为'layer-wise'时， 以层为单位进行重建训练；当设置为'region-wise'时，以 `regions` 中每个块区域为单位进行重建训练；当设置为 None 时，则不进行重建训练。 默认值为 None 。
+- regions(list[list]): 当 recon_level 是 'region-wise' 时，需要设置该参数。该列表中每个元素由一个区域的输入和输出变量名组成，可参考该[示例](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/post_training_quantization/pytorch_yolo_series/configs/yolov6s_fine_tune.yaml#L11)。
+- epochs: 逐区域重建训练的训练次数。每个 epoch 内的样本数量为 batch_nums * batch_size 。默认值为20。
+- lr: 设置逐区域重建训练的学习率。
+- simulate_activation_quant: 是否在重建训练中引入激活量化噪声。默认值为 False 。
+- skip_tensor_list: 不进行量化的 Tensor 列表，需填入 Tensor 的 name。Tensor 的name 可以通过可视化工具查看。默认值为 None 。
+
+
+### 1.1.3 离线量化超参优化（hyper parameter optimization）
+超参优化是对离线量化中的超参数进行搜索，以选择最优的超参实现更好的量化效果。离线量化超参优化需要设置 `QuantPost` 和 `HyperParameterOptimization`。
+```yaml
+HyperParameterOptimization:
+    ptq_algo: ["KL", "hist", "avg", "mse"]
+    bias_correct: [True, False]
+    hist_percent: [0.98, 0.999],
+    batch_num: [10, 30],
+```
+以上配置项说明如下：
+- ptq_algo: 设置待搜索的离线量化算法。
+- bias_correct: 是否使用 bias correction 算法。
+- hist_percent: 设置 'hist' 算法阈值的上限和下限，实际百分比在此范围内均匀采样而得。
+- batch_num: 设置 'batch_num' 的上下限，实际数值在此范围内均匀采样而得。
+
+
+### 1.1.4 知识蒸馏（knowledge distillation）
 
 蒸馏参数主要设置蒸馏节点（`node`）和教师预测模型路径，如下所示：
 ```yaml
@@ -96,7 +142,7 @@ Distillation:
 - teacher_params_filename: 教师模型的参数文件名称，格式为 *.pdiparams 或 __params__。仅当设置`teacher_model_dir`后生效。
 
 
-### 1.1.3 结构化稀疏（sparsity）
+### 1.1.5 结构化稀疏（sparsity）
 
 结构化稀疏参数设置如下所示：
 ```yaml
@@ -126,7 +172,7 @@ for var_ in inference_program.list_vars():
 
 - criterion: 评估卷积通道重要性的指标。可选 “l1_norm” , “bn_scale” , “geometry_median”。具体定义和使用可参考[结构化稀疏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html)。
 
-### 1.1.4 ASP半结构化稀疏
+### 1.1.6 ASP半结构化稀疏
 
 半结构化稀疏参数设置如下所示：
 ```yaml
@@ -151,7 +197,7 @@ for var_ in inference_program.list_vars():
 
 或者，使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。
 
-### 1.1.5 Transformer结构化剪枝
+### 1.1.7 Transformer结构化剪枝
 
 针对Transformer结构的结构化剪枝参数设置如下所示：
 ```yaml
@@ -160,7 +206,7 @@ TransformerPrune:
 ```
 - pruned_ratio: 每个全链接层的被剪裁的比例。
 
-### 1.1.6 非结构化稀疏策略
+### 1.1.8 非结构化稀疏策略
 
 非结构化稀疏参数设置如下所示：
 ```yaml
@@ -200,7 +246,7 @@ UnstructurePrune:
 - local_sparsity 表示剪裁比例（ratio）应用的范围，仅在 'ratio' 模式生效。local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。各个矩阵稀疏度保持一致时，稀疏加速更显著。
 - 更多非结构化稀疏的参数含义详见[非结构化稀疏API文档](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/dygraph/pruners/unstructured_pruner.rst)
 
-### 1.1.7 训练超参
+### 1.1.9 训练超参
 
 训练参数主要设置学习率、训练次数（epochs）和优化器等。
 ```yaml

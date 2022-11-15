@@ -34,7 +34,7 @@
 |  模型 |策略| Accuracy（avg） | 预测时延<sup><small>FP32</small><sup><br><sup> | 预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 加速比 |
 |:-------:|:--------:|:----------:|:------------:|:------:|:------:|:------:|
 |PP-MiniLM| Base模型|  72.81 | 94.49ms | 23.31ms | - |  - |
-|PP-MiniLM| 剪枝+离线量化 |  72.44 | - | - | 15.76ms | 5.99x |
+|PP-MiniLM| 剪枝+离线量化 |  71.85 | - | - | 15.76ms | 5.99x |
 |ERNIE 3.0-Medium| Base模型| 73.09  | 89.71ms | 20.76ms | - | - |
 |ERNIE 3.0-Medium| 剪枝+量化训练 |  72.16 | - | - | 14.08ms | 6.37x |
 
@@ -157,7 +157,9 @@ Prune:
   pruned_ratio: 0.25
 ```
 
-- 优化参数
+- 离线量化超参搜索
+
+本示例的离线量化采取了超参搜索策略，以选择最优的超参数取得更好的离线量化效果。首先，配置待搜索的参数：
 
 ```yaml
 HyperParameterOptimization:
@@ -177,12 +179,12 @@ HyperParameterOptimization:
   - channel_wise_abs_max
 ```
 
-- 量化参数
+其次，配置离线量化参数：
 
 量化参数主要设置量化比特数和量化op类型，其中量化op包含卷积层（conv2d, depthwise_conv2d）和全连接层（mul，matmul_v2）。
 
 ```yaml
-Quantization:
+QuantPost:
   activation_bits: 8
   quantize_op_types:
   - conv2d
