@@ -34,7 +34,7 @@
 |  模型 |策略| Accuracy（avg） | 预测时延<sup><small>FP32</small><sup><br><sup> | 预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 加速比 |
 |:-------:|:--------:|:----------:|:------------:|:------:|:------:|:------:|
 |PP-MiniLM| Base模型|  72.81 | 94.49ms | 23.31ms | - |  - |
-|PP-MiniLM| 剪枝+离线量化 |  72.44 | - | - | 15.76ms | 5.99x |
+|PP-MiniLM| 剪枝+离线量化 |  71.85 | - | - | 15.76ms | 5.99x |
 |ERNIE 3.0-Medium| Base模型| 73.09  | 89.71ms | 20.76ms | - | - |
 |ERNIE 3.0-Medium| 剪枝+量化训练 |  72.16 | - | - | 14.08ms | 6.37x |
 
