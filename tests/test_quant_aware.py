@@ -27,27 +27,30 @@ import numpy as np
 
 class TestQuantAwareCase2(StaticCase):
     def test_accuracy(self):
-        self.image = paddle.static.data(
-            name='image', shape=[None, 1, 28, 28], dtype='float32')
-        label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-        model = MobileNet()
-        self.out = model.net(input=self.image, class_dim=10)
-        cost = paddle.nn.functional.loss.cross_entropy(input=self.out, label=label)
-        avg_cost = paddle.mean(x=cost)
-        acc_top1 = paddle.metric.accuracy(input=self.out, label=label, k=1)
-        acc_top5 = paddle.metric.accuracy(input=self.out, label=label, k=5)
-        optimizer = paddle.optimizer.Momentum(
-            momentum=0.9,
-            learning_rate=0.01,
-            weight_decay=paddle.regularizer.L2Decay(4e-5))
-        optimizer.minimize(avg_cost)
         main_prog = paddle.static.default_main_program()
+        startup_prog = paddle.static.default_startup_program()
+        with paddle.static.program_guard(main_prog, startup_prog):
+            self.image = paddle.static.data(name='image', shape=[None, 1, 28, 28], dtype='float32')
+            self.label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
+
+            model = MobileNet()
+            self.out = model.net(input=self.image, class_dim=10)
+            cost = paddle.nn.functional.loss.cross_entropy(input=self.out, label=self.label)
+            avg_cost = paddle.mean(x=cost)
+            acc_top1 = paddle.metric.accuracy(input=self.out, label=self.label, k=1)
+            acc_top5 = paddle.metric.accuracy(input=self.out, label=self.label, k=5)
+            optimizer = paddle.optimizer.Momentum(
+                momentum=0.9,
+                learning_rate=0.01,
+                weight_decay=paddle.regularizer.L2Decay(4e-5))
+            optimizer.minimize(avg_cost)
+
         val_prog = main_prog.clone(for_test=True)
 
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        exe.run(paddle.static.default_startup_program())
+        exe.run(startup_prog)
 
         config = {
             'weight_quantize_type': 'channel_wise_abs_max',
@@ -63,6 +66,11 @@ class TestQuantAwareCase2(StaticCase):
         
         quant_eval_prog = convert(
             quant_eval_prog, place, config)
+
+        image = np.random.random((4, 1, 28, 28)).astype("float32")
+        label = np.random.randint(0, 10, (4, 1)).astype("int64")
+        loss = exe.run(quant_eval_prog, feed={'image': image, 'label': label}, fetch_list=[avg_cost.name])
+        print(loss)
 
         paddle.fluid.io.save_inference_model(
             dirname='infer2',
