@@ -143,7 +143,12 @@ python -m paddle.distributed.launch run.py --save_dir='./save_quant_mobilev1/' -
 
 - TensorRT预测：
 
-环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
+环境配置：如果使用 TesorRT 预测引擎，需安装的是带有TensorRT的PaddlePaddle，使用以下指令查看本地cuda版本，并且在[下载链接](https://www.paddlepaddle.org.cn/inference/user_guides/download_lib.html#python)中下载对应cuda版本和对应python版本的PaddlePaddle安装包。
+
+    ```shell
+    cat /usr/local/cuda/version.txt ### CUDA Version 10.2.89
+    ### 10.2.89 为cuda版本号，可以根据这个版本号选择需要安装的带有TensorRT的PaddlePaddle安装包。
+    ```
 
 ```shell
 python paddle_inference_eval.py \

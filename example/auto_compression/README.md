@@ -98,7 +98,7 @@ ACT相比传统的模型压缩方法，
 
   ```shell
   # CPU
-  pip install paddlepaddle==2.4rc0 
+  pip install paddlepaddle==2.4rc0
   # GPU 以CUDA11.2为例
   python -m pip install paddlepaddle_gpu==2.4rc0 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
   ```
@@ -123,6 +123,8 @@ tar -xf ILSVRC2012_data_demo.tar.gz
 ```
 
 - **2.运行自动化压缩**
+
+由于目前离线量化超参搜索仅支持Linux系统，以下默认示例需在Linux环境中测试。如果想要在Windows环境中测试，可以使用代码中Windows环境的config，由于Windows环境中配置的压缩策略为量化训练，所以需要全量数据集，否则会有一定的精度下降。
 
 ```python
 # 导入依赖包
@@ -162,7 +164,8 @@ ac = AutoCompression(
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="MobileNetV1_quant",
-    config={'Quantization': {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
+    config={"Quantization": {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
+    ### config={"Quantization": {}, "Distillation": {}}, ### 如果您的系统为Windows系统, 请使用当前这一行配置
     train_dataloader=train_loader,
     eval_dataloader=train_loader)
 ac.compress()
@@ -190,7 +193,7 @@ ac.compress()
 
   - 量化模型速度的测试依赖推理库的支持，所以确保安装的是带有TensorRT的PaddlePaddle。以下示例和展示的测试结果是基于Tesla V100、CUDA 10.2、Python3.7、TensorRT得到的。
 
-  - 使用以下指令查看本地cuda版本，并且在[下载链接](https://www.paddlepaddle.org.cn/inference/user_guides/download_lib.html#python)中下载对应cuda版本和对应python版本的paddlepaddle安装包。
+  - 使用以下指令查看本地cuda版本，并且在[下载链接](https://www.paddlepaddle.org.cn/inference/user_guides/download_lib.html#python)中下载对应cuda版本和对应python版本的PaddlePaddle安装包。
 
     ```shell
     cat /usr/local/cuda/version.txt ### CUDA Version 10.2.89
