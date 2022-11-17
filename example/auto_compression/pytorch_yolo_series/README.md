@@ -246,3 +246,5 @@ trtexec --onnx=output/ONNX/quant_model.onnx --avgRuns=1000 --workspace=1024 --ca
 ## 5.FAQ
 
 - 如果想对模型进行离线量化，可进入[YOLO系列模型离线量化示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series)中进行实验。
+
+- 欢迎使用FastDeploy一键压缩及部署[示例](https://github.com/PaddlePaddle/FastDeploy/tree/develop/examples/vision/detection/yolov5/quantize)，支持丰富的预测后端，上手更简单。
