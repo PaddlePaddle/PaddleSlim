@@ -166,8 +166,13 @@ class ReconstructionQuantization(PostTrainingQuantization):
             lr=self._config['lr'],
             bias_correction=self._bias_correction,
             epochs=self._config['epochs'],
-            scale_trainable=self._config['scale_trainable'])
-        self._program = reconstruction_quanter._run()
+            limit=self._config['limit'])
+        self._program, self._scale_dict = reconstruction_quanter._run()
+
+        if self._algo in ["KL", "hist"]:
+            self._quantized_var_threshold = self._scale_dict
+        else:
+            self._quantized_threshold = self._scale_dict
 
     def _postprocessing(self):
         if self._algo is 'min_max':
@@ -220,8 +225,8 @@ class ReconstructionQuanter(object):
                  lr=0.1,
                  bias_correction=False,
                  epochs=20,
-                 scale_trainable=False,
-                 drop_prob=0.5):
+                 drop_prob=0.5,
+                 limit=5):
         '''
         Reconstruction Quanter, used to optimize the rounding policy
         by reconstructing the intermediate output.
@@ -259,20 +264,17 @@ class ReconstructionQuanter(object):
             lr(float, optional): The learning rate of Reconstruction Quanter. Default is 0.1.
             bias_correction(bool, optional): If set as True, use the bias correction
                 method of https://arxiv.org/abs/1810.05723. Default is False.
-            scale_trainable: Wether weight‘s scale is trainable. Default is False.
-            drop_prob: The dropout probability of activation quantization, and it is valid only if 
+            drop_prob(float, optional): The dropout probability of activation quantization, and it is valid only if
                 simulate_activation_quant is True. Default is 0.5.
+            limit(int, optional): The size of each region. Default is 5.
         Returns:
             None
         '''
 
         assert recon_level in [
             'layer-wise', 'region-wise'
-        ], "recon_level must be one of the ['layer-wise', 'region-wise'],but received: {}".format(
+        ], "recon_level must be one of the ['layer-wise', 'region-wise'], but received: {}".format(
             recon_level)
-        if recon_level == 'region-wise':
-            assert regions is not None, "The regions cannot be None."
-            assert region_weights_names is not None, "The region_weights_names cannot be None."
         self._simulate_activation_quant = simulate_activation_quant
         self._program = fp32_program
         self._data_loader = data_loader
@@ -292,11 +294,18 @@ class ReconstructionQuanter(object):
         self._regions = regions
         self._region_weights_names = region_weights_names
         self._bias_correction = bias_correction
-        if self._recon_level == 'layer-wise':
+        self._limit = limit
+
+        if recon_level == 'region-wise' and regions is None:
+            builder = RegionBuilder(program=self._program)
+            _logger.info('Begin Region division')
+            self._regions, self._region_weights_names = builder._create_regions(
+                limit=self._limit)
+            _logger.info('End Region division')
+        elif self._recon_level == 'layer-wise':
             regions, region_weights_names = self._get_layers()
             self._regions = regions
             self._region_weights_names = region_weights_names
-        self._scale_trainable = scale_trainable
         self._drop_prob = drop_prob
 
     def _get_layers(self):
@@ -321,6 +330,12 @@ class ReconstructionQuanter(object):
         return regions, region_weights_names
 
     def _preprocess(self):
+        if self._weight_quantize_type == 'channel_wise_abs_max':
+            for name in self._weight_var_names:
+                for i, s in enumerate(self._scale_dict[name]):
+                    if s == 0.0:
+                        self._scale_dict[name][i] = 1e-8
+
         data_name_map = {}
         for name in self._feed_list:
             data_name_map[name] = name
@@ -357,8 +372,10 @@ class ReconstructionQuanter(object):
             region_ = self._regions[k]
             tmp_program.global_block().var(region_[0]).stop_gradient = True
             quant_op_out_name = region_[1]
+            _logger.info(f"Region's input: {region_[0]}   output: {region_[1]}")
+
             names = self._region_weights_names[k]
-            _logger.info(f"Current weights: {names}")
+            _logger.info(f"Current quanted weights: {names}")
             loss_function = ReconstructionQuanterLoss(
                 program=tmp_program, weight_region_names=names)
             update_params = [
@@ -407,6 +424,9 @@ class ReconstructionQuanter(object):
                     sys.stdout.flush()
                     if i + 1 == self._num_iterations:
                         break
+
+        if self._weight_quantize_type == 'channel_wise_abs_max':
+            self._update_scale()
         self._update_weights_to_int()
         if self._bias_correction:
             self._bias_correction_w()
@@ -472,7 +492,7 @@ class ReconstructionQuanter(object):
                 scale = np.array(scale)
                 scale = scale.reshape(scale.shape[0], 1)
                 if len(shape) == 2:
-                    scale = scale.repeat(shape[0], axis=0)
+                    scale = scale.repeat(shape[0], axis=1).T
                 else:
                     scale = scale.repeat(shape[1] * shape[2] * shape[3], axis=1)
                 scale = scale.reshape(shape)
@@ -614,6 +634,9 @@ class ReconstructionQuanter(object):
                           op.input('X')[0].endswith('scale')
                           ) or _type == 'sigmoid':
                         _inputs = {'X': op.input('X')[0]}
+                    elif (_type == 'scale' and
+                          op.input('X')[0].endswith('copy')):
+                        _inputs = {'X': var._var}
                     else:
                         _inputs = {'X': op.input('X')[0] + '.rounding'}
                 elif func == "_drop_quant_dequant":
@@ -806,6 +829,202 @@ class ReconstructionQuanterLoss(object):
         return total_loss, rec_loss, round_loss
 
 
+class PriorityQueue:
+    def __init__(self):
+        self._data = []
+        self._ops = set()
+        self._idx = 0
+        self._lazy_tag = True
+
+    def pop(self):
+        if not self._lazy_tag:
+            self._data = sorted(self._data, key=lambda x: x[0])
+            self._lazy_tag = True
+        if self._idx >= len(self._data): raise IndexError('Index out of range!')
+        ele = self._data[self._idx]
+        self._idx += 1
+        return ele
+
+    def push(self, depth, op):
+        if op in self._ops: return
+        self._data.append((depth, op))
+        self._ops.add(op)
+        self._lazy_tag = False
+
+    def empty(self):
+        return self._idx >= len(self._data)
+
+
+class RegionBuilder(object):
+    def __init__(self, program):
+        self._program = program
+        self._graph = GraphWrapper(self._program)
+        self._op_idx_map = {}
+        for op in self._graph.ops():
+            self._op_idx_map[op.idx()] = op
+        self._depth = {}
+        self._init_depth()
+        self._cache = {}
+        self._regions = []
+        self._region_weights_names = []
+
+    def _init_depth(self):
+        for op in self._graph.ops():
+            if len(self._graph.pre_ops(op)) == 0:
+                self._depth[op.idx()] = 0
+                continue
+
+            depths_cache = []
+            for up_op in self._graph.pre_ops(op):
+                assert up_op.idx() in self._depth
+                depths_cache.append(self._depth[up_op.idx()])
+            self._depth[op.idx()] = max(depths_cache) + 1
+
+    def _build(self, op, limit):
+        def _find_multi_input_ep(op):
+            least_first_queue = PriorityQueue()
+
+            for down_op in self._graph.next_ops(op):
+                least_first_queue.push(self._depth[down_op.idx()],
+                                       down_op.idx())
+
+            while not least_first_queue.empty():
+                iter_op_idx = least_first_queue.pop()[-1]
+                iter_op = self._op_idx_map[iter_op_idx]
+                if (least_first_queue.empty() and
+                        len(self._graph.pre_ops(iter_op)) > 1):
+                    return iter_op
+                for down_op in self._graph.next_ops(iter_op):
+                    least_first_queue.push(self._depth[down_op.idx()],
+                                           down_op.idx())
+            return None
+
+        def _find_coherent_ep(op):
+            ops = self._graph.next_ops(op)
+            if len(ops) == 1:
+                following_op = ops[0]
+                if following_op.type() == 'fetch':
+                    return None
+                inps = op.all_inputs()
+                non_parameter_input = 0
+                for var in inps:
+                    if not var._var.persistable:
+                        non_parameter_input += 1
+                upstream_ops = len(self._graph.pre_ops(following_op))
+                if non_parameter_input == 1 and upstream_ops == 1:
+                    return ops[0]
+            return None
+
+        sp, ep, future_ep = op, op, op
+        while future_ep is not None:
+            if len(self._graph.next_ops(ep)) <= 1:
+                future_ep = _find_coherent_ep(ep)
+            else:
+                future_ep = _find_multi_input_ep(ep)
+
+            if future_ep is None or self._depth[future_ep.idx()] - self._depth[
+                    sp.idx()] >= limit:
+                return self._create_region(sp, ep)
+            ep = future_ep
+
+        return self._create_region(sp=sp, ep=ep)
+
+    def _opset_matching(self, sp, ep):
+
+        if sp.idx() in self._cache: return self._cache[sp.idx()]
+
+        ret_collection = set()
+
+        following_ops = self._graph.next_ops(sp)
+
+        if (len(following_ops)) == 0:
+            return ret_collection.add(sp.idx())
+
+        for op in following_ops:
+            if op == ep:
+                ret_collection.update([sp.idx(), op.idx()])
+            else:
+                further_res = self._opset_matching(sp=op, ep=ep)
+
+                if further_res is None:
+                    return None
+
+                if len(further_res) > 0:
+                    ret_collection.update(further_res)
+                    ret_collection.add(sp.idx())
+        self._cache[sp.idx()] = ret_collection
+        return ret_collection
+
+    def opset_matching(self, sp, ep):
+
+        ret_collection, candidates = set(), set()
+        for op in self._graph.ops():
+            if op == sp:
+                candidates.add(op.idx())
+        for idx in candidates:
+            op = self._op_idx_map[idx]
+            partial_matchings = self._opset_matching(sp=op, ep=ep)
+            if partial_matchings is None:
+                return None
+            if len(partial_matchings) > 0:
+                ret_collection.update(partial_matchings)
+        self._cache.clear()
+        return ret_collection
+
+    def _create_region(self, sp, ep):
+        rps = self.opset_matching(sp, ep)
+        return sp, ep, rps
+
+    def _create_regions(self, limit):
+        visited = []
+        for op in self._graph.ops():
+            region = []
+            region_weight_names = []
+            if op.type() == 'fill_constant': continue
+            if op.type() == 'feed': continue
+            if op.type() == 'fetch': continue
+            if op.idx() in visited: continue
+
+            sp, ep, rps = self._build(op=op, limit=limit)
+            if rps is None:
+                continue
+            ops = [self._op_idx_map[idx] for idx in rps]
+
+            # add region's input var
+            inps = sp.all_inputs()
+            for var in inps:
+                if not var._var.persistable:
+                    region.append(var._var.name)
+                    break
+
+            # add region's output var
+            if ep.type() == 'batch_norm':
+                out_var = ep.outputs('Y')
+            else:
+                out_var = ep.all_outputs()
+            if not out_var[0]._var.persistable:
+                region.append(out_var[0]._var.name)
+
+            for idx in rps:
+                visited.append(idx)
+                op = self._op_idx_map[idx]
+                if op.type() not in [
+                        "conv2d", "depthwise_conv2d", "mul", "matmul",
+                        "matmul_v2"
+                ]:
+                    continue
+                inps = op.all_inputs()
+                for var in inps:
+                    if var._var.persistable:
+                        region_weight_names.append(var._var.name)
+
+            if len(region) < 2 or len(region_weight_names) < 1: continue
+            self._regions.append(region)
+            self._region_weights_names.append(region_weight_names)
+
+        return self._regions, self._region_weights_names
+
+
 def quant_recon_static(executor,
                        model_dir,
                        quantize_model_path,
@@ -846,7 +1065,8 @@ def quant_recon_static(executor,
                        epochs=20,
                        scale_trainable=False,
                        drop_prob=0.5,
-                       lr=0.1):
+                       lr=0.1,
+                       limit=6):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -920,9 +1140,8 @@ def quant_recon_static(executor,
         skip_tensor_list(list): List of skip quant tensor name.
         is_use_cache_file(bool): This param is deprecated.
         cache_dir(str): This param is deprecated.
-        epochs: The number of steps in the reconstruction proces. Default is 20.
-        scale_trainable: Wether weight‘s scale is trainable. Default is False.
-        drop_prob: The dropout probability of activation quantization, and it is valid only if 
+        epochs(int): The number of steps in the reconstruction proces. Default is 20.
+        drop_prob(float): The dropout probability of activation quantization, and it is valid only if
             simulate_activation_quant is True. Default is 0.5.
         regions(list[list], optional): The list of some regions, each region is a subgraph of
             fp32 program and it will have exact 1 input operation and 1 output operation. When 
@@ -930,6 +1149,7 @@ def quant_recon_static(executor,
             Default is None.
         region_weights_names(list[list], optional): The weight names inside every region.
             Default is None.
+        limit(int): The size of each region. Default is 6.
     Returns:
         None
     """
@@ -965,8 +1185,8 @@ def quant_recon_static(executor,
         regions=regions,
         region_weights_names=region_weights_names,
         epochs=epochs,
-        scale_trainable=scale_trainable,
-        lr=lr)
+        lr=lr,
+        limit=limit)
 
     reconstruction_quantization = ReconstructionQuantization(
         PTQCollections=PTQCollections, RSQCollections=RSQCollections)
