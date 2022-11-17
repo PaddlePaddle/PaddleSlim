@@ -367,8 +367,11 @@ class ReconstructionQuanter(object):
             names = self._region_weights_names[k]
             _logger.info(f"Current weights: {names}")
             loss_function = ReconstructionQuanterLoss(
-                    program=tmp_program, weight_region_names=names)
-            update_params = [tmp_program.global_block().var(name+'.alpha') for name in names]
+                program=tmp_program, weight_region_names=names)
+            update_params = [
+                tmp_program.global_block().var(name + '.alpha')
+                for name in names
+            ]
 
             with paddle.static.program_guard(tmp_program, startup_program):
                 student_var = tmp_program.global_block().var(quant_op_out_name)
@@ -382,7 +385,8 @@ class ReconstructionQuanter(object):
                     "recon_loss": recon_loss,
                     "round_loss": round_loss,
                 }
-                optimizer = paddle.optimizer.Adam(learning_rate=self._lr, parameters=update_params)
+                optimizer = paddle.optimizer.Adam(
+                    learning_rate=self._lr, parameters=update_params)
                 optimizer.minimize(total_loss)
             self._exe.run(startup_program)
             start_time = time.time()
@@ -407,7 +411,7 @@ class ReconstructionQuanter(object):
                                 np.mean(out[2]),
                                 start_time - prev_start_time), )
                     sys.stdout.flush()
-                    if i+1 == self._num_iterations:
+                    if i + 1 == self._num_iterations:
                         break
 
         self._update_scale()
