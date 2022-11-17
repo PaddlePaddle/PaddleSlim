@@ -1,5 +1,5 @@
 arch: YOLOv6
-model_dir: ./yolov6s.onnx
+model_dir:  ./yolov6s.onnx
 dataset_dir: /dataset/coco/
 model_filename: model.pdmodel
 params_filename: model.pdiparams
@@ -8,25 +8,3 @@ val_image_dir: val2017
 train_anno_path: annotations/instances_train2017.json
 val_anno_path: annotations/instances_val2017.json
 skip_tensor_list: None
-regions: [['x2paddle_image_arrays','relu_8.tmp_0'],
-          ['relu_8.tmp_0','relu_15.tmp_0'],
-          ['relu_15.tmp_0','relu_21.tmp_0'],
-          ['concat_1.tmp_0','relu_26.tmp_0'],
-          ['concat_2.tmp_0', 'relu_30.tmp_0'],
-          ['relu_30.tmp_0', 'concat_4.tmp_0'],
-          ['relu_30.tmp_0', 'relu_31.tmp_0'],
-          ['concat_3.tmp_0', 'relu_35.tmp_0'],
-          ['relu_35.tmp_0', 'relu_36.tmp_0'],
-          ['concat_5.tmp_0', 'concat_10.tmp_0'],
-          ['relu_35.tmp_0', 'concat_8.tmp_0']]
-region_weights_names: [['conv2d_0.w_0','conv2d_1.w_0','conv2d_2.w_0','conv2d_3.w_0','conv2d_4.w_0','conv2d_5.w_0','conv2d_6.w_0','conv2d_7.w_0','conv2d_8.w_0'],
-                    ['conv2d_9.w_0','conv2d_10.w_0','conv2d_11.w_0','conv2d_12.w_0','conv2d_13.w_0','conv2d_14.w_0','conv2d_15.w_0'],
-                    ['conv2d_16.w_0','conv2d_17.w_0','conv2d_18.w_0','conv2d_19.w_0','conv2d_20.w_0','conv2d_21.w_0'],
-                    ['conv2d_22.w_0','conv2d_23.w_0','conv2d_24.w_0','conv2d_25.w_0','conv2d_26.w_0'],
-                    ['conv2d_27.w_0','conv2d_28.w_0','conv2d_29.w_0','conv2d_30.w_0'],
-                    ['conv2d_32.w_0','conv2d_34.w_0','conv2d_35.w_0','conv2d_37.w_0','conv2d_38.w_0','conv2d_39.w_0'],
-                    ['conv2d_31.w_0'],
-                    ['conv2d_33.w_0','conv2d_36.w_0','conv2d_40.w_0','conv2d_41.w_0'],
-                    ['conv2d_42.w_0'],
-                    ['conv2d_44.w_0','conv2d_47.w_0','conv2d_51.w_0','conv2d_52.w_0','conv2d_53.w_0','conv2d_54.w_0','conv2d_55.w_0','conv2d_56.w_0','conv2d_57.w_0','conv2d_58.w_0'],
-                    ['conv2d_43.w_0','conv2d_45.w_0','conv2d_46.w_0','conv2d_49.w_0','conv2d_48.w_0','conv2d_50.w_0'],] 
