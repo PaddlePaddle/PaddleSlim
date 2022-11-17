@@ -19,7 +19,7 @@ import paddle
 from paddleslim.quant import quant_post_static
 from static_case import StaticCase
 sys.path.append("../demo")
-from models import MobileNet
+from models import *
 from layers import conv_bn_layer
 import paddle.dataset.mnist as reader
 import numpy as np
@@ -44,7 +44,7 @@ class ReconPTQ(unittest.TestCase):
                 name='image', shape=[None, 1, 28, 28], dtype='float32')
             label = paddle.static.data(
                 name='label', shape=[None, 1], dtype='int64')
-            model = MobileNet()
+            model = MobileNetV2()
             out = model.net(input=image, class_dim=10)
             cost = paddle.nn.functional.loss.cross_entropy(
                 input=out, label=label)

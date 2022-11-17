@@ -372,9 +372,10 @@ class ReconstructionQuanter(object):
             region_ = self._regions[k]
             tmp_program.global_block().var(region_[0]).stop_gradient = True
             quant_op_out_name = region_[1]
+            _logger.info(f"Region's input: {region_[0]}   output: {region_[1]}")
 
             names = self._region_weights_names[k]
-            _logger.info(f"Current weights: {names}")
+            _logger.info(f"Current quanted weights: {names}")
             loss_function = ReconstructionQuanterLoss(
                 program=tmp_program, weight_region_names=names)
             update_params = [
@@ -942,6 +943,8 @@ class RegionBuilder(object):
             ops = self._graph.next_ops(op)
             if len(ops) == 1:
                 following_op = ops[0]
+                if following_op.type() == 'fetch':
+                    return None
                 inps = op.all_inputs()
                 non_parameter_input = 0
                 for var in inps:
@@ -960,7 +963,7 @@ class RegionBuilder(object):
                 future_ep = _find_multi_input_ep(ep)
 
             if future_ep is None or self._depth[future_ep.idx()] - self._depth[
-                    sp.idx()] > limit:
+                    sp.idx()] >= limit:
                 return self._create_region(sp, ep)
             ep = future_ep
 
@@ -1019,23 +1022,29 @@ class RegionBuilder(object):
             region_weight_names = []
             if op.type() == 'fill_constant': continue
             if op.type() == 'feed': continue
+            if op.type() == 'fetch': continue
             if op.idx() in visited: continue
+
             sp, ep, rps = self._build(op=op, limit=limit)
             if rps is None:
                 continue
             ops = [self._op_idx_map[idx] for idx in rps]
 
+            # add region's input var
             inps = sp.all_inputs()
             for var in inps:
                 if not var._var.persistable:
                     region.append(var._var.name)
                     break
 
-            oups = ep.all_outputs()
-            for var in oups:
-                if not var._var.persistable:
-                    region.append(var._var.name)
-                    break
+            # add region's output var
+            if ep.type() == 'batch_norm':
+                out_var = ep.outputs('Y')
+            else:
+                out_var = ep.all_outputs()
+            if not out_var[0]._var.persistable:
+                region.append(out_var[0]._var.name)
+
             for idx in rps:
                 visited.append(idx)
                 op = self._op_idx_map[idx]
@@ -1052,6 +1061,7 @@ class RegionBuilder(object):
             if len(region) < 2 or len(region_weight_names) < 1: continue
             self._regions.append(region)
             self._region_weights_names.append(region_weight_names)
+
         return self._regions, self._region_weights_names
 
 
@@ -1092,7 +1102,7 @@ def quant_recon_static(executor,
                        epochs=20,
                        drop_prob=0.5,
                        lr=0.1,
-                       limit=5):
+                       limit=6):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -1174,7 +1184,7 @@ def quant_recon_static(executor,
             Default is None.
         region_weights_names(list[list], optional): The weight names inside every region.
             Default is None.
-        limit(int): The size of each region. Default is 5.
+        limit(int): The size of each region. Default is 6.
     Returns:
         None
     """
