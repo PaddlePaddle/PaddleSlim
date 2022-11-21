@@ -263,7 +263,12 @@ class AutoCompression:
         save_path = os.path.join(save_path, "infered_shape")
         os.makedirs(save_path)
         paddle.static.save_inference_model(
-            save_path, feed_vars, fetch_targets, exe, program=inference_program)
+            save_path,
+            feed_vars,
+            fetch_targets,
+            exe,
+            program=inference_program,
+            clip_extra=False)
         _logger.info(f"Saved model infered shape to {save_path}")
 
     @property
@@ -843,7 +848,8 @@ class AutoCompression:
             feed_vars=feed_vars,
             fetch_vars=test_program_info.fetch_targets,
             executor=self._exe,
-            program=test_program)
+            program=test_program,
+            clip_extra=False)
 
     def export_onnx(self,
                     model_name='quant_model.onnx',
