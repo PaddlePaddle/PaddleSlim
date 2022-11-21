@@ -97,7 +97,7 @@ def eval():
     acc5 = correct_5_num / total_num
     avg_time = cost_time / total_num
     print("End test: test image {}".format(total_num))
-    print("test_acc1: {:.4f}; test_acc5: {:.4f}; avg time {:.5f} sec/img".format(
+    print("test_acc1: {:.4f}; test_acc5: {:.4f}; avg time: {:.5f} sec/img".format(
         acc1, acc5, avg_time))
     print("\n")
 
