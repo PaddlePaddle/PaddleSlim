@@ -183,7 +183,7 @@ BERT-base模型是一个迁移能力很强的通用语义表示模型，但是�
 
 ```shell
 pip install paddlenlp
-pip install paddlepaddle_gpu==2.4rc0
+pip install paddlepaddle_gpu
 ```
 
 ### 2.2 Fine-tuing
