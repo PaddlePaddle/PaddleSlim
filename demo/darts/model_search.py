@@ -18,7 +18,7 @@ from __future__ import print_function
 
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import NormalInitializer, MSRAInitializer, ConstantInitializer
+from paddle.nn.initializer import NormalInitializer, KaimingUniform, ConstantInitializer
 from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
@@ -156,7 +156,7 @@ class Network(paddle.nn.Layer):
                 num_filters=c_cur,
                 filter_size=3,
                 padding=1,
-                param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+                param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
                 bias_attr=False),
             BatchNorm(
                 num_channels=c_cur,
@@ -184,8 +184,8 @@ class Network(paddle.nn.Layer):
         self.classifier = Linear(
             input_dim=c_prev,
             output_dim=num_classes,
-            param_attr=ParamAttr(initializer=MSRAInitializer()),
-            bias_attr=ParamAttr(initializer=MSRAInitializer()))
+            param_attr=ParamAttr(initializer=KaimingUniform()),
+            bias_attr=ParamAttr(initializer=KaimingUniform()))
 
         self._initialize_alphas()
 

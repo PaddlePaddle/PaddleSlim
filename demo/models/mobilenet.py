@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import paddle.fluid as fluid
-from paddle.nn.initializer import MSRA
+from paddle.nn.initializer import KaimingUniform
 from paddle.fluid.param_attr import ParamAttr
 
 __all__ = ['MobileNet']
@@ -131,7 +131,7 @@ class MobileNet():
             output = paddle.static.nn.fc(input=input,
                                          size=class_dim,
                                          param_attr=ParamAttr(
-                                             initializer=MSRA(),
+                                             initializer=KaimingUniform(),
                                              name="fc7_weights"),
                                          bias_attr=ParamAttr(name="fc7_offset"))
 
@@ -158,7 +158,7 @@ class MobileNet():
             act=None,
             use_cudnn=use_cudnn,
             param_attr=ParamAttr(
-                initializer=MSRA(), name=name + "_weights"),
+                initializer=KaimingUniform(), name=name + "_weights"),
             bias_attr=False)
         bn_name = name + "_bn"
         return paddle.static.nn.batch_norm(

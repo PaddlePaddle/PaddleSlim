@@ -16,7 +16,7 @@ import paddle.fluid as fluid
 from paddle.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D, BatchNorm
 from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import ConstantInitializer, MSRAInitializer
+from paddle.nn.initializer import ConstantInitializer, KaimingUniform
 
 
 OPS = {
@@ -95,7 +95,7 @@ class FactorizedReduce(paddle.nn.Layer):
             filter_size=1,
             stride=2,
             padding=0,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv2 = Conv2D(
             num_channels=c_in,
@@ -103,7 +103,7 @@ class FactorizedReduce(paddle.nn.Layer):
             filter_size=1,
             stride=2,
             padding=0,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn = BatchNorm(num_channels=c_out, param_attr=gama, bias_attr=beta)
@@ -127,7 +127,7 @@ class SepConv(paddle.nn.Layer):
             padding=padding,
             groups=c_in,
             use_cudnn=False,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv2 = Conv2D(
             num_channels=c_in,
@@ -135,7 +135,7 @@ class SepConv(paddle.nn.Layer):
             filter_size=1,
             stride=1,
             padding=0,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn1 = BatchNorm(num_channels=c_in, param_attr=gama, bias_attr=beta)
@@ -147,7 +147,7 @@ class SepConv(paddle.nn.Layer):
             padding=padding,
             groups=c_in,
             use_cudnn=False,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv4 = Conv2D(
             num_channels=c_in,
@@ -155,7 +155,7 @@ class SepConv(paddle.nn.Layer):
             filter_size=1,
             stride=1,
             padding=0,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn2 = BatchNorm(
@@ -192,14 +192,14 @@ class DilConv(paddle.nn.Layer):
             dilation=dilation,
             groups=c_in,
             use_cudnn=False,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv2 = Conv2D(
             num_channels=c_in,
             num_filters=c_out,
             filter_size=1,
             padding=0,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn1 = BatchNorm(
@@ -221,14 +221,14 @@ class Conv_7x1_1x7(paddle.nn.Layer):
             num_filters=c_out,
             filter_size=(1, 7),
             padding=(0, 3),
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv2 = Conv2D(
             num_channels=c_in,
             num_filters=c_out,
             filter_size=(7, 1),
             padding=(3, 0),
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn1 = BatchNorm(
@@ -251,7 +251,7 @@ class ReLUConvBN(paddle.nn.Layer):
             filter_size=kernel_size,
             stride=stride,
             padding=padding,
-            param_attr=paddle.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn = BatchNorm(num_channels=c_out, param_attr=gama, bias_attr=beta)

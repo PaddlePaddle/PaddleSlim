@@ -4,7 +4,7 @@ from __future__ import print_function
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import MSRA
+from paddle.nn.initializer import KaimingUniform
 from paddle.fluid.param_attr import ParamAttr
 import os, sys, time, math
 import numpy as np
@@ -87,7 +87,8 @@ class PVANet():
         output = paddle.static.nn.fc(input=input,
                                      size=class_dim,
                                      param_attr=ParamAttr(
-                                         initializer=MSRA(), name="fc_weights"),
+                                         initializer=KaimingUniform(),
+                                         name="fc_weights"),
                                      bias_attr=ParamAttr(name="fc_offset"))
 
         return output

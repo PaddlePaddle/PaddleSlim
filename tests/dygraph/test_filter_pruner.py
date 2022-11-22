@@ -137,9 +137,6 @@ class TestPruningGroupConv2d(unittest.TestCase):
                 pruner.restore()
 
 
-import paddle.ParamAttr as ParamAttr
-
-
 class MulNet(paddle.nn.Layer):
     """
     [3, 36] X conv(x)

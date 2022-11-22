@@ -17,7 +17,6 @@ import logging
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-import paddle.ParamAttr as ParamAttr
 from paddle.fluid.layers import RNNCell, LSTMCell, rnn
 from paddle.fluid.contrib.layers import basic_lstm
 from ...controller import RLBaseController
@@ -26,7 +25,7 @@ from ..utils import RLCONTROLLER
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-uniform_initializer = lambda x: paddle.nn.initializer.UniformInitializer(low=-x, high=x)
+uniform_initializer = lambda x: paddle.nn.initializer.Uniform(low=-x, high=x)
 
 
 class lstm_cell(RNNCell):

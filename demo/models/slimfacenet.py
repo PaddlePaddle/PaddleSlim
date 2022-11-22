@@ -18,7 +18,7 @@ import numpy as np
 
 import paddle
 import paddle.fluid as fluid
-from paddle.nn.initializer import MSRA
+from paddle.nn.initializer import KaimingUniform
 from paddle.fluid.param_attr import ParamAttr
 
 
@@ -154,7 +154,7 @@ class SlimFaceNet():
             use_cudnn=True,
             param_attr=ParamAttr(
                 name='linear_conv1x1_weights',
-                initializer=MSRA(),
+                initializer=KaimingUniform(),
                 regularizer=fluid.regularizer.L2Decay(4e-4)),
             bias_attr=False)
         bn_name = 'linear_conv1x1_bn'
@@ -278,7 +278,7 @@ class SlimFaceNet():
             act=None,
             use_cudnn=use_cudnn,
             param_attr=ParamAttr(
-                name=name + '_weights', initializer=MSRA()),
+                name=name + '_weights', initializer=KaimingUniform()),
             bias_attr=False)
         bn_name = name + '_bn'
         bn = paddle.static.nn.batch_norm(

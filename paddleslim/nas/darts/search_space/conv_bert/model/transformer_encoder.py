@@ -28,8 +28,7 @@ from paddle.fluid.dygraph import BatchNorm, Pool2D
 from paddle.fluid.dygraph import Layer
 from paddle.fluid.dygraph import to_variable
 from paddle.nn.initializer import NormalInitializer
-import paddle.ParamAttr as ParamAttr
-from paddle.nn.initializer import MSRA, ConstantInitializer
+from paddle.nn.initializer import KaimingUniform, ConstantInitializer
 
 ConvBN_PRIMITIVES = [
     'std_conv_bn_3',
@@ -141,7 +140,7 @@ class ReluConvBN(paddle.nn.Layer):
         super(ReluConvBN, self).__init__()
         conv_param = paddle.ParamAttr(
             name=name if name is None else (name + "_conv.weights"),
-            initializer=paddle.nn.initializer.MSRA())
+            initializer=paddle.nn.initializer.KaimingUniform())
 
         self.conv = Conv2D(
             in_c,
@@ -233,7 +232,7 @@ class EncoderLayer(Layer):
                 num_filters=self._n_channel,
                 filter_size=[3, self._hidden_size],
                 padding=[1, 0],
-                param_attr=paddle.ParamAttr(initializer=MSRA()),
+                param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
                 bias_attr=False),
             BatchNorm(
                 num_channels=self._n_channel,
@@ -248,7 +247,7 @@ class EncoderLayer(Layer):
                 num_filters=self._n_channel,
                 filter_size=[3, self._hidden_size],
                 padding=[1, 0],
-                param_attr=paddle.ParamAttr(initializer=MSRA()),
+                param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
                 bias_attr=False),
             BatchNorm(
                 num_channels=self._n_channel,
@@ -290,8 +289,8 @@ class EncoderLayer(Layer):
             out = Linear(
                 self._n_channel,
                 num_labels,
-                param_attr=ParamAttr(initializer=MSRA()),
-                bias_attr=ParamAttr(initializer=MSRA()))
+                param_attr=ParamAttr(initializer=KaimingUniform()),
+                bias_attr=ParamAttr(initializer=KaimingUniform()))
             self.bns.append(bn)
             self.outs.append(out)
         self._bns = fluid.dygraph.LayerList(self.bns)

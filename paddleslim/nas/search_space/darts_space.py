@@ -19,7 +19,7 @@ from __future__ import print_function
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import UniformInitializer, ConstantInitializer
+from paddle.nn.initializer import Uniform, ConstantInitializer
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
@@ -116,11 +116,11 @@ class DartsSpace(SearchSpaceBase):
                                   num_classes,
                                   param_attr=paddle.ParamAttr(
                                       name=name + "/fc_weights",
-                                      initializer=UniformInitializer(
+                                      initializer=Uniform(
                                           low=-k, high=k)),
                                   bias_attr=paddle.ParamAttr(
                                       name=name + "/fc_bias",
-                                      initializer=UniformInitializer(
+                                      initializer=Uniform(
                                           low=-k, high=k)))
         return out
 
@@ -395,8 +395,7 @@ class DartsSpace(SearchSpaceBase):
             stride=stride,
             padding=padding,
             param_attr=paddle.ParamAttr(
-                name=name + "/conv",
-                initializer=UniformInitializer(
+                name=name + "/conv", initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         bn1 = paddle.static.nn.batch_norm(
@@ -432,7 +431,7 @@ class DartsSpace(SearchSpaceBase):
             use_cudnn=False,
             param_attr=paddle.ParamAttr(
                 name=name + "/sep_conv_1_1",
-                initializer=UniformInitializer(
+                initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         k = (1. / x.shape[1] / 1 / 1)**0.5
@@ -443,7 +442,7 @@ class DartsSpace(SearchSpaceBase):
             padding=0,
             param_attr=paddle.ParamAttr(
                 name=name + "/sep_conv_1_2",
-                initializer=UniformInitializer(
+                initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         gama, beta = self._bn_param_config(name, affine, "sep_conv_bn1")
@@ -466,8 +465,7 @@ class DartsSpace(SearchSpaceBase):
             groups=c_in,
             use_cudnn=False,
             param_attr=paddle.ParamAttr(
-                name=name + "/sep_conv2_1",
-                initializer=UniformInitializer(
+                name=name + "/sep_conv2_1", initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         k = (1. / x.shape[1] / 1 / 1)**0.5
@@ -477,8 +475,7 @@ class DartsSpace(SearchSpaceBase):
             1,
             padding=0,
             param_attr=paddle.ParamAttr(
-                name=name + "/sep_conv2_2",
-                initializer=UniformInitializer(
+                name=name + "/sep_conv2_2", initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         gama, beta = self._bn_param_config(name, affine, "sep_conv_bn2")
@@ -512,8 +509,7 @@ class DartsSpace(SearchSpaceBase):
             groups=c_in,
             use_cudnn=False,
             param_attr=paddle.ParamAttr(
-                name=name + "/dil_conv1",
-                initializer=UniformInitializer(
+                name=name + "/dil_conv1", initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         k = (1. / x.shape[1] / 1 / 1)**0.5
@@ -523,8 +519,7 @@ class DartsSpace(SearchSpaceBase):
             1,
             padding=0,
             param_attr=paddle.ParamAttr(
-                name=name + "/dil_conv2",
-                initializer=UniformInitializer(
+                name=name + "/dil_conv2", initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         gama, beta = self._bn_param_config(name, affine, "dil_conv_bn")
@@ -547,8 +542,7 @@ class DartsSpace(SearchSpaceBase):
             1,
             stride=2,
             param_attr=paddle.ParamAttr(
-                name=name + "/fr_conv1",
-                initializer=UniformInitializer(
+                name=name + "/fr_conv1", initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         k = (1. / x_sliced.shape[1] / 1 / 1)**0.5
@@ -558,8 +552,7 @@ class DartsSpace(SearchSpaceBase):
             1,
             stride=2,
             param_attr=paddle.ParamAttr(
-                name=name + "/fr_conv2",
-                initializer=UniformInitializer(
+                name=name + "/fr_conv2", initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         x = paddle.concat(input=[conv1, conv2], axis=1)
@@ -589,8 +582,7 @@ class DartsSpace(SearchSpaceBase):
             stride=stride,
             padding=padding,
             param_attr=paddle.ParamAttr(
-                name=name + "/rcb_conv",
-                initializer=UniformInitializer(
+                name=name + "/rcb_conv", initializer=Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         gama, beta = self._bn_param_config(name, affine, "rcb_bn")

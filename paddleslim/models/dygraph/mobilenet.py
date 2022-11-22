@@ -21,7 +21,7 @@ import numpy as np
 import argparse
 import paddle
 import paddle.fluid as fluid
-from paddle.nn.initializer import MSRA
+from paddle.nn.initializer import KaimingUniform
 from paddle.fluid.param_attr import ParamAttr
 from paddle.fluid.layer_helper import LayerHelper
 from paddle.nn import Conv2D
@@ -54,7 +54,8 @@ class ConvBNLayer(paddle.nn.Layer):
             act=None,
             use_cudnn=use_cudnn,
             param_attr=ParamAttr(
-                initializer=MSRA(), name=self.full_name() + "_weights"),
+                initializer=KaimingUniform(),
+                name=self.full_name() + "_weights"),
             bias_attr=False)
 
         self._batch_norm = BatchNorm(
@@ -224,7 +225,8 @@ class MobileNetV1(paddle.nn.Layer):
             int(1024 * scale),
             class_dim,
             param_attr=ParamAttr(
-                initializer=MSRA(), name=self.full_name() + "fc7_weights"),
+                initializer=KaimingUniform(),
+                name=self.full_name() + "fc7_weights"),
             bias_attr=ParamAttr(name=self.full_name() + "fc7_offset"))
 
     def forward(self, inputs):

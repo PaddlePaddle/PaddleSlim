@@ -1,5 +1,5 @@
 import paddle.fluid as fluid
-from paddle.nn.initializer import MSRA
+from paddle.nn.initializer import KaimingUniform
 from paddle.fluid.param_attr import ParamAttr
 import math
 

@@ -19,7 +19,7 @@ from __future__ import print_function
 import numpy as np
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import ConstantInitializer, MSRAInitializer
+from paddle.nn.initializer import ConstantInitializer, KaimingUniform
 from paddle.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable
@@ -39,7 +39,7 @@ class ConvBN(paddle.nn.Layer):
             padding=padding,
             param_attr=paddle.ParamAttr(
                 name=name + "_conv" if name is not None else None,
-                initializer=MSRAInitializer()),
+                initializer=KaimingUniform()),
             bias_attr=False)
         self.bn = BatchNorm(
             num_channels=c_out,
@@ -68,10 +68,10 @@ class Classifier(paddle.nn.Layer):
             output_dim=num_classes,
             param_attr=paddle.ParamAttr(
                 name=name + "_fc_weights" if name is not None else None,
-                initializer=MSRAInitializer()),
+                initializer=KaimingUniform()),
             bias_attr=paddle.ParamAttr(
                 name=name + "_fc_bias" if name is not None else None,
-                initializer=MSRAInitializer()))
+                initializer=KaimingUniform()))
 
     def forward(self, x):
         x = self.pool2d(x)
