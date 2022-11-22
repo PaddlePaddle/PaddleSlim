@@ -88,7 +88,7 @@ class AutoCompression:
                 Only one strategy(quant_post with hyperparameter optimization) can set train_config 
                 to None. Default: None. 
             strategy_config(dict, list(dict), optional): The strategy config. You can set single config to get multi-strategy config, such as
-                1. set ``Quantization`` and ``Distillation`` to get quant_aware and distillation compress config.
+                1. set ``QuantAware`` and ``Distillation`` to get quant_aware and distillation compress config.
                     The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L55`_ .
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L107`_ .
                 2. set ``QuantPost`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
@@ -350,7 +350,7 @@ class AutoCompression:
         strategy = []
         config = []
         for strategy_c in strategy_config:
-            quant_config = strategy_c.get("Quantization", None)
+            quant_config = strategy_c.get("QuantAware", None)
             hpo_config = strategy_c.get("HyperParameterOptimization", None)
             ptq_config = strategy_c.get("QuantPost", None)
             prune_config = strategy_c.get("ChannelPrune", None)

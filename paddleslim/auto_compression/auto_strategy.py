@@ -125,17 +125,17 @@ def create_strategy_config(strategy_str, model_type):
         ### only platform is linux can use smac to do hyperparameter optimization
         ### choose quant_aware to do quantization in other platform
         if platform.system().lower() == 'linux':
-            quant_config = Quantization(**default_quant_config)
+            quant_config = QuantAware(**default_quant_config)
             hpo_config = HyperParameterOptimization(**hpo_config_tester)
             configs.append({
                 'QuantPost': quant_config,
                 'HyperParameterOptimization': hpo_config
             })
         else:
-            quant_config = Quantization(**default_quant_config)
+            quant_config = QuantAware(**default_quant_config)
             dis_config = Distillation()
             configs.append({
-                'Quantization': quant_config,
+                'QuantAware': quant_config,
                 'Distillation': dis_config
             })
 
@@ -248,7 +248,7 @@ def get_final_quant_config(ptq_loss, model_type=None):
         return None
     ### if emd loss less than MAGIC_MAX_EMD_DISTANCE, select quant_post & hpo.
     elif ptq_loss < MAGIC_MAX_EMD_DISTANCE:
-        quant_config = Quantization(**default_quant_config)
+        quant_config = QuantAware(**default_quant_config)
         hpo_config = HyperParameterOptimization(**default_hpo_config)
         configs = [{
             'QuantPost': quant_config,
@@ -257,9 +257,9 @@ def get_final_quant_config(ptq_loss, model_type=None):
 
     ### if emd loss greater than MAGIC_MAX_EMD_DISTANCE, select qat & dist.
     else:
-        quant_config = Quantization(**default_quant_config)
+        quant_config = QuantAware(**default_quant_config)
         dis_config = Distillation()
-        configs = [{'Quantization': quant_config, 'Distillation': dis_config}]
+        configs = [{'QuantAware': quant_config, 'Distillation': dis_config}]
         _logger.info("Start Quantization and Distillation Training.")
 
     return configs
