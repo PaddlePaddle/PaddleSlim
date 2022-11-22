@@ -61,8 +61,14 @@ python -m pip install paddlepaddle_gpu==2.4rc0 -f https://www.paddlepaddle.org.c
 pip install paddleslim==2.4rc
 ```
 
+#### 版本对齐
 
-#### 3.2 准备数据集
+|  PaddleSlim   | x2paddle   |
+| :-----------: | :------------: |
+| 2.3.x         | 1.3.8          |
+| develop / 2.4         | 1.3.9          |
+
+### 3.2 准备数据集
 
 **选择(1)或(2)中一种方法准备数据即可。**
 
@@ -107,7 +113,7 @@ pip install paddleslim==2.4rc
   ```
 
 
-#### 3.3 准备预测模型
+### 3.3 准备预测模型
 
 （1）准备ONNX模型：
 
@@ -130,7 +136,7 @@ pip install paddleslim==2.4rc
 
   **注意**：目前ACT支持**不带NMS**模型，使用如上命令导出即可。也可以直接下载我们已经准备好的[yolov7.onnx](https://paddle-slim-models.bj.bcebos.com/act/yolov7-tiny.onnx)。
 
-#### 3.4 自动压缩并产出模型
+### 3.4 自动压缩并产出模型
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。
 
@@ -160,7 +166,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log -
 │   ├── calibration.cache     # TensorRT可以直接加载的校准表
 ```
 
-#### Paddle Inference部署测试
+### Paddle Inference部署测试
 
 量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
 
@@ -219,7 +225,7 @@ bash compile.sh
 ./build/trt_run --model_file yolov7_quant/model.pdmodel --params_file yolov7_quant/model.pdiparams --run_mode=trt_int8
 ```
 
-#### 导出至ONNX使用TensorRT部署
+### 导出至ONNX使用TensorRT部署
 
 加载`quant_model.onnx`和`calibration.cache`，可以直接使用TensorRT测试脚本进行验证，详细代码可参考[TensorRT部署](./TensorRT)
 
