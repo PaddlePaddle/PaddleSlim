@@ -18,12 +18,9 @@ from __future__ import print_function
 
 import copy
 import paddle
-import paddle.nn as nn
-
-from paddle.nn import LogSoftmax
 
 
-class DML(nn.Layer):
+class DML(paddle.nn.Layer):
     def __init__(self, model, use_parallel=False):
         super(DML, self).__init__()
         self.model = model
@@ -66,11 +63,11 @@ class DML(nn.Layer):
             cur_kl_loss = 0
             for j in range(self.model_num):
                 if i != j:
-                    log_softmax = LogSoftmax(axis=1)
+                    log_softmax = paddle.nn.LogSoftmax(axis=1)
                     x = log_softmax(logits[i])
 
-                    y = nn.functional.softmax(logits[j], axis=1)
-                    cur_kl_loss += nn.functional.kl_div(
+                    y = paddle.nn.functional.softmax(logits[j], axis=1)
+                    cur_kl_loss += paddle.nn.functional.kl_div(
                         x, y, reduction='batchmean')
             kl_losses.append(cur_kl_loss / (self.model_num - 1))
         return kl_losses

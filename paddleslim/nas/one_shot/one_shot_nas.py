@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 from ...common import SAController
 
 __all__ = ['OneShotSuperNet', 'OneShotSearch']

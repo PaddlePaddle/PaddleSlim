@@ -2,9 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import paddle
-import paddle.fluid as fluid
 import math
-from paddle.fluid.param_attr import ParamAttr
 
 __all__ = ["ResNet", "ResNet34", "ResNet50", "ResNet101", "ResNet152"]
 
@@ -51,7 +49,7 @@ class ResNet():
             stride=2,
             act='relu',
             name=prefix_name + conv1_name)
-        conv = fluid.layers.pool2d(
+        conv = paddle.fluid.layers.pool2d(
             input=conv,
             pool_size=3,
             pool_stride=2,
@@ -75,7 +73,7 @@ class ResNet():
                         stride=2 if i == 0 and block != 0 else 1,
                         name=conv_name)
 
-            pool = fluid.layers.pool2d(
+            pool = paddle.fluid.layers.pool2d(
                 input=conv, pool_size=7, pool_type='avg', global_pooling=True)
             stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
             fc_name = fc_name if fc_name is None else prefix_name + fc_name
@@ -98,7 +96,7 @@ class ResNet():
                         is_first=block == i == 0,
                         name=conv_name)
 
-            pool = fluid.layers.pool2d(
+            pool = paddle.fluid.layers.pool2d(
                 input=conv, pool_type='avg', global_pooling=True)
             stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
             fc_name = fc_name if fc_name is None else prefix_name + fc_name
@@ -128,7 +126,7 @@ class ResNet():
             padding=(filter_size - 1) // 2,
             groups=groups,
             act=None,
-            param_attr=ParamAttr(name=name + "_weights"),
+            param_attr=paddle.ParamAttr(name=name + "_weights"),
             bias_attr=False,
             name=name + '.conv2d.output.1')
         if self.prefix_name == '':
@@ -142,8 +140,8 @@ class ResNet():
             input=conv,
             act=act,
             name=bn_name + '.output.1',
-            param_attr=ParamAttr(name=bn_name + '_scale'),
-            bias_attr=ParamAttr(bn_name + '_offset'),
+            param_attr=paddle.ParamAttr(name=bn_name + '_scale'),
+            bias_attr=paddle.ParamAttr(bn_name + '_offset'),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance', )
 
@@ -182,8 +180,7 @@ class ResNet():
             is_first=False,
             name=name + "_branch1")
 
-        return fluid.layers.elementwise_add(
-            x=short, y=conv2, act='relu', name=name + ".add.output.5")
+        return paddle.add(x=short, y=conv2, name=name + ".add.output.5")
 
     def basic_block(self, input, num_filters, stride, is_first, name):
         conv0 = self.conv_bn_layer(
@@ -201,7 +198,7 @@ class ResNet():
             name=name + "_branch2b")
         short = self.shortcut(
             input, num_filters, stride, is_first, name=name + "_branch1")
-        return fluid.layers.elementwise_add(x=short, y=conv1, act='relu')
+        return paddle.add(x=short, y=conv1)
 
 
 def ResNet34(prefix_name=''):

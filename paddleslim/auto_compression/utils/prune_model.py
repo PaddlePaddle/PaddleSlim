@@ -2,7 +2,6 @@ import os
 import time
 import numpy as np
 import paddle
-import paddle.static as static
 from ...prune import Pruner
 from ...core import GraphWrapper
 from ...common.load_model import load_inference_model
@@ -34,8 +33,8 @@ def get_sparse_model(executor, places, model_file, param_file, ratio,
     else:
         param_name = param_file.split('/')[-1]
 
-    main_prog = static.Program()
-    startup_prog = static.Program()
+    main_prog = paddle.static.Program()
+    startup_prog = paddle.static.Program()
     executor.run(startup_prog)
 
     inference_program, feed_target_names, fetch_targets = load_inference_model(
@@ -90,7 +89,7 @@ def get_sparse_model(executor, places, model_file, param_file, ratio,
     model_name = '.'.join(model_name.split('.')
                           [:-1]) if model_name is not None else 'model'
     save_path = os.path.join(save_path, model_name)
-    static.save_inference_model(
+    paddle.static.save_inference_model(
         save_path,
         feed_vars=feed_vars,
         fetch_vars=fetch_targets,
@@ -123,9 +122,9 @@ def get_prune_model(executor, places, model_file, param_file, ratio, save_path):
     else:
         param_name = param_file.split('/')[-1]
 
-    main_prog = static.Program()
-    startup_prog = static.Program()
-    scope = static.global_scope()
+    main_prog = paddle.static.Program()
+    startup_prog = paddle.static.Program()
+    scope = paddle.static.global_scope()
     executor.run(startup_prog)
 
     inference_program, feed_target_names, fetch_targets = load_inference_model(
@@ -165,7 +164,7 @@ def get_prune_model(executor, places, model_file, param_file, ratio, save_path):
     model_name = '.'.join(model_name.split('.')
                           [:-1]) if model_name is not None else 'model'
     save_path = os.path.join(save_path, model_name)
-    static.save_inference_model(
+    paddle.static.save_inference_model(
         save_path,
         feed_vars=feed_vars,
         fetch_vars=fetch_targets,

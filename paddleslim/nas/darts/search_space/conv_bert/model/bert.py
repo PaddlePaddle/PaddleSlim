@@ -22,16 +22,10 @@ import six
 import json
 import numpy as np
 import paddle
-import paddle.fluid as fluid
-from paddle.nn import Conv2D
-from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer
-from paddle.fluid.dygraph import Pool2D, BatchNorm, Linear
-from paddle.fluid.dygraph import to_variable, guard
-from paddle.nn.initializer import KaimingUniform
 from .transformer_encoder import EncoderLayer
 
 
-class BertModelLayer(Layer):
+class BertModelLayer(paddle.nn.Layer):
     def __init__(self,
                  num_labels,
                  emb_size=128,
@@ -69,28 +63,28 @@ class BertModelLayer(Layer):
         self._param_initializer = paddle.nn.initializer.TruncatedNormal(
             scale=initializer_range)
 
-        self._src_emb = Embedding(
+        self._src_emb = paddle.fluid.dygraph.nn.Embedding(
             size=[self._voc_size, self._emb_size],
             param_attr=paddle.ParamAttr(
                 name=self._word_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
-        self._pos_emb = Embedding(
+        self._pos_emb = paddle.fluid.dygraph.nn.Embedding(
             size=[self._max_position_seq_len, self._emb_size],
             param_attr=paddle.ParamAttr(
                 name=self._pos_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
-        self._sent_emb = Embedding(
+        self._sent_emb = paddle.fluid.dygraph.nn.Embedding(
             size=[self._sent_types, self._emb_size],
             param_attr=paddle.ParamAttr(
                 name=self._sent_emb_name, initializer=self._param_initializer),
             dtype=self._dtype)
 
-        self._emb_fac = Linear(
-            input_dim=self._emb_size,
-            output_dim=self._hidden_size,
-            param_attr=paddle.ParamAttr(name="s_emb_factorization"))
+        self._emb_fac = paddle.nn.Linear(
+            in_features=self._emb_size,
+            out_features=self._hidden_size,
+            weight_attr=paddle.ParamAttr(name="s_emb_factorization"))
 
         self._encoder = EncoderLayer(
             num_labels=num_labels,

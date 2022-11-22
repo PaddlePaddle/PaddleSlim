@@ -16,7 +16,7 @@ from .utils.utils import get_paddle_version
 pd_ver = get_paddle_version()
 import paddle
 if pd_ver == 185:
-    Layer = paddle.fluid.dygraph.Layer
+    Layer = paddle.nn.Layer
 else:
     Layer = paddle.nn.Layer
 

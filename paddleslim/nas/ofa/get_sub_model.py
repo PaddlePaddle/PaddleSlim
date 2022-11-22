@@ -14,7 +14,6 @@
 
 import numpy as np
 import paddle
-from paddle.fluid import core
 from .layers_base import BaseBlock
 
 __all__ = ['check_search_space']

@@ -17,9 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import Uniform, ConstantInitializer
+import paddle
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
@@ -109,24 +107,25 @@ class DartsSpace(SearchSpaceBase):
         return net_arch
 
     def _classifier(self, x, num_classes, name):
-        out = fluid.layers.pool2d(x, pool_type='avg', global_pooling=True)
-        out = fluid.layers.squeeze(out, axes=[2, 3])
+        out = paddle.fluid.layers.pool2d(
+            x, pool_type='avg', global_pooling=True)
+        out = paddle.squeeze(x=out, axis=[2, 3])
         k = (1. / out.shape[1])**0.5
         out = paddle.static.nn.fc(out,
                                   num_classes,
                                   param_attr=paddle.ParamAttr(
                                       name=name + "/fc_weights",
-                                      initializer=Uniform(
+                                      initializer=paddle.nn.initializer.Uniform(
                                           low=-k, high=k)),
                                   bias_attr=paddle.ParamAttr(
                                       name=name + "/fc_bias",
-                                      initializer=Uniform(
+                                      initializer=paddle.nn.initializer.Uniform(
                                           low=-k, high=k)))
         return out
 
     def _auxiliary_cifar(self, x, num_classes, name):
         x = paddle.nn.functional.relu(x)
-        pooled = fluid.layers.pool2d(
+        pooled = paddle.fluid.layers.pool2d(
             x, pool_size=5, pool_stride=3, pool_padding=0, pool_type='avg')
         conv1 = self._conv_bn(
             x=pooled,
@@ -310,7 +309,7 @@ class DartsSpace(SearchSpaceBase):
                         drop_path_cell,
                         is_train,
                         name=None):
-        hidden0_0 = fluid.layers.pool2d(
+        hidden0_0 = paddle.fluid.layers.pool2d(
             input=s0,
             pool_size=3,
             pool_type="max",
@@ -330,7 +329,7 @@ class DartsSpace(SearchSpaceBase):
                 name=name + '_reduction_cell_hidden0_0')
         r0 = hidden0_0 + hidden0_1
 
-        hidden1_0 = fluid.layers.pool2d(
+        hidden1_0 = paddle.fluid.layers.pool2d(
             input=s1,
             pool_size=3,
             pool_type="max",
@@ -365,7 +364,7 @@ class DartsSpace(SearchSpaceBase):
         r2 = hidden2_0 + hidden2_1
 
         hidden3_0 = r0
-        hidden3_1 = fluid.layers.pool2d(
+        hidden3_1 = paddle.fluid.layers.pool2d(
             input=s1,
             pool_size=3,
             pool_type="max",
@@ -395,17 +394,18 @@ class DartsSpace(SearchSpaceBase):
             stride=stride,
             padding=padding,
             param_attr=paddle.ParamAttr(
-                name=name + "/conv", initializer=Uniform(
+                name=name + "/conv",
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         bn1 = paddle.static.nn.batch_norm(
             conv1,
             param_attr=paddle.ParamAttr(
                 name=name + "/bn_scale",
-                initializer=ConstantInitializer(value=1)),
+                initializer=paddle.nn.initializer.ConstantInitializer(value=1)),
             bias_attr=paddle.ParamAttr(
                 name=name + "/bn_offset",
-                initializer=ConstantInitializer(value=0)),
+                initializer=paddle.nn.initializer.ConstantInitializer(value=0)),
             moving_mean_name=name + "/bn_mean",
             moving_variance_name=name + "/bn_variance")
         return bn1
@@ -431,7 +431,7 @@ class DartsSpace(SearchSpaceBase):
             use_cudnn=False,
             param_attr=paddle.ParamAttr(
                 name=name + "/sep_conv_1_1",
-                initializer=Uniform(
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         k = (1. / x.shape[1] / 1 / 1)**0.5
@@ -442,7 +442,7 @@ class DartsSpace(SearchSpaceBase):
             padding=0,
             param_attr=paddle.ParamAttr(
                 name=name + "/sep_conv_1_2",
-                initializer=Uniform(
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         gama, beta = self._bn_param_config(name, affine, "sep_conv_bn1")
@@ -465,7 +465,8 @@ class DartsSpace(SearchSpaceBase):
             groups=c_in,
             use_cudnn=False,
             param_attr=paddle.ParamAttr(
-                name=name + "/sep_conv2_1", initializer=Uniform(
+                name=name + "/sep_conv2_1",
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         k = (1. / x.shape[1] / 1 / 1)**0.5
@@ -475,7 +476,8 @@ class DartsSpace(SearchSpaceBase):
             1,
             padding=0,
             param_attr=paddle.ParamAttr(
-                name=name + "/sep_conv2_2", initializer=Uniform(
+                name=name + "/sep_conv2_2",
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         gama, beta = self._bn_param_config(name, affine, "sep_conv_bn2")
@@ -509,7 +511,8 @@ class DartsSpace(SearchSpaceBase):
             groups=c_in,
             use_cudnn=False,
             param_attr=paddle.ParamAttr(
-                name=name + "/dil_conv1", initializer=Uniform(
+                name=name + "/dil_conv1",
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         k = (1. / x.shape[1] / 1 / 1)**0.5
@@ -519,7 +522,8 @@ class DartsSpace(SearchSpaceBase):
             1,
             padding=0,
             param_attr=paddle.ParamAttr(
-                name=name + "/dil_conv2", initializer=Uniform(
+                name=name + "/dil_conv2",
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         gama, beta = self._bn_param_config(name, affine, "dil_conv_bn")
@@ -542,7 +546,8 @@ class DartsSpace(SearchSpaceBase):
             1,
             stride=2,
             param_attr=paddle.ParamAttr(
-                name=name + "/fr_conv1", initializer=Uniform(
+                name=name + "/fr_conv1",
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         k = (1. / x_sliced.shape[1] / 1 / 1)**0.5
@@ -552,7 +557,8 @@ class DartsSpace(SearchSpaceBase):
             1,
             stride=2,
             param_attr=paddle.ParamAttr(
-                name=name + "/fr_conv2", initializer=Uniform(
+                name=name + "/fr_conv2",
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         x = paddle.concat(input=[conv1, conv2], axis=1)
@@ -582,7 +588,8 @@ class DartsSpace(SearchSpaceBase):
             stride=stride,
             padding=padding,
             param_attr=paddle.ParamAttr(
-                name=name + "/rcb_conv", initializer=Uniform(
+                name=name + "/rcb_conv",
+                initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
         gama, beta = self._bn_param_config(name, affine, "rcb_bn")
@@ -597,21 +604,18 @@ class DartsSpace(SearchSpaceBase):
     def _bn_param_config(self, name='', affine=False, op=None):
         gama_name = name + "/" + str(op) + "/gama"
         beta_name = name + "/" + str(op) + "/beta"
-        gama = ParamAttr(
+        gama = paddle.ParamAttr(
             name=gama_name,
-            initializer=ConstantInitializer(value=1),
+            initializer=paddle.nn.initializer.ConstantInitializer(value=1),
             trainable=affine)
-        beta = ParamAttr(
+        beta = paddle.ParamAttr(
             name=beta_name,
-            initializer=ConstantInitializer(value=0),
+            initializer=paddle.nn.initializer.ConstantInitializer(value=0),
             trainable=affine)
         return gama, beta
 
     def _drop_path(self, x, drop_prob, mask, name=None):
         keep_prob = 1 - drop_prob[0]
-        x = fluid.layers.elementwise_mul(
-            x / keep_prob,
-            mask,
-            axis=0,
-            name=name + '_drop_path_elementwise_mul')
+        x = paddle.multiply(
+            x=x / keep_prob, y=mask, name=name + '_drop_path_elementwise_mul')
         return x

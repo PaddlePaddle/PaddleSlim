@@ -13,10 +13,6 @@
 # limitations under the License.
 
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid.layer_helper import LayerHelper
-from paddle.nn import Conv2D
-from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
 
 
 class ConvBNLayer(paddle.nn.Layer):
@@ -29,7 +25,7 @@ class ConvBNLayer(paddle.nn.Layer):
                  act=None):
         super(ConvBNLayer, self).__init__()
 
-        self._conv = Conv2D(
+        self._conv = paddle.nn.Conv2D(
             num_channels=num_channels,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -39,7 +35,7 @@ class ConvBNLayer(paddle.nn.Layer):
             act=None,
             bias_attr=False)
 
-        self._batch_norm = BatchNorm(num_filters, act=act)
+        self._batch_norm = paddle.nn.BatchNorm(num_filters, act=act)
 
     def forward(self, inputs):
         y = self._conv(inputs)
@@ -90,9 +86,10 @@ class BottleneckBlock(paddle.nn.Layer):
         else:
             short = self.short(inputs)
 
-        y = fluid.layers.elementwise_add(x=short, y=conv2)
+        y = paddle.add(x=short, y=conv2)
 
-        layer_helper = LayerHelper(self.full_name(), act='relu')
+        layer_helper = paddle.fluid.layer_helper.LayerHelper(
+            self.full_name(), act='relu')
         return layer_helper.append_activation(y)
 
 
@@ -116,7 +113,7 @@ class ResNet(paddle.nn.Layer):
 
         self.conv = ConvBNLayer(
             num_channels=3, num_filters=64, filter_size=7, stride=1, act='relu')
-        self.pool2d_max = Pool2D(
+        self.pool2d_max = paddle.fluid.dygraph.Pool2D(
             pool_size=3, pool_stride=2, pool_padding=1, pool_type='max')
 
         self.bottleneck_block_list = []
@@ -134,7 +131,7 @@ class ResNet(paddle.nn.Layer):
                 self.bottleneck_block_list.append(bottleneck_block)
                 shortcut = True
 
-        self.pool2d_avg = Pool2D(
+        self.pool2d_avg = paddle.fluid.dygraph.Pool2D(
             pool_size=7, pool_type='avg', global_pooling=True)
 
         self.pool2d_avg_output = num_filters[len(num_filters) - 1] * 4 * 1 * 1
@@ -142,10 +139,10 @@ class ResNet(paddle.nn.Layer):
         import math
         stdv = 1.0 / math.sqrt(2048 * 1.0)
 
-        self.out = Linear(
-            self.pool2d_avg_output,
-            class_dim,
-            param_attr=paddle.ParamAttr(
+        self.out = paddle.nn.Linear(
+            in_features=self.pool2d_avg_output,
+            out_features=class_dim,
+            weight_attr=paddle.ParamAttr(
                 initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
 
     def forward(self, inputs):

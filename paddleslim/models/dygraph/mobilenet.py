@@ -20,14 +20,6 @@ import math
 import numpy as np
 import argparse
 import paddle
-import paddle.fluid as fluid
-from paddle.nn.initializer import KaimingUniform
-from paddle.fluid.param_attr import ParamAttr
-from paddle.fluid.layer_helper import LayerHelper
-from paddle.nn import Conv2D
-from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
-from paddle.fluid.dygraph.base import to_variable
-from paddle.fluid import framework
 
 
 class ConvBNLayer(paddle.nn.Layer):
@@ -44,7 +36,7 @@ class ConvBNLayer(paddle.nn.Layer):
                  name=None):
         super(ConvBNLayer, self).__init__()
 
-        self._conv = Conv2D(
+        self._conv = paddle.nn.Conv2D(
             num_channels=num_channels,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -53,16 +45,18 @@ class ConvBNLayer(paddle.nn.Layer):
             groups=num_groups,
             act=None,
             use_cudnn=use_cudnn,
-            param_attr=ParamAttr(
-                initializer=KaimingUniform(),
+            param_attr=paddle.ParamAttr(
+                initializer=paddle.nn.initializer.KaimingUniform(),
                 name=self.full_name() + "_weights"),
             bias_attr=False)
 
-        self._batch_norm = BatchNorm(
+        self._batch_norm = paddle.nn.BatchNorm(
             num_filters,
             act=act,
-            param_attr=ParamAttr(name=self.full_name() + "_bn" + "_scale"),
-            bias_attr=ParamAttr(name=self.full_name() + "_bn" + "_offset"),
+            param_attr=paddle.ParamAttr(
+                name=self.full_name() + "_bn" + "_scale"),
+            bias_attr=paddle.ParamAttr(
+                name=self.full_name() + "_bn" + "_offset"),
             moving_mean_name=self.full_name() + "_bn" + '_mean',
             moving_variance_name=self.full_name() + "_bn" + '_variance')
 
@@ -219,15 +213,16 @@ class MobileNetV1(paddle.nn.Layer):
             name="conv6")
         self.dwsl.append(dws6)
 
-        self.pool2d_avg = Pool2D(pool_type='avg', global_pooling=True)
+        self.pool2d_avg = paddle.fluid.dygraph.Pool2D(
+            pool_type='avg', global_pooling=True)
 
-        self.out = Linear(
-            int(1024 * scale),
-            class_dim,
-            param_attr=ParamAttr(
-                initializer=KaimingUniform(),
+        self.out = paddle.nn.Linear(
+            in_features=int(1024 * scale),
+            out_features=class_dim,
+            weight_attr=paddle.ParamAttr(
+                initializer=paddle.nn.initializer.KaimingUniform(),
                 name=self.full_name() + "fc7_weights"),
-            bias_attr=ParamAttr(name=self.full_name() + "fc7_offset"))
+            bias_attr=paddle.ParamAttr(name=self.full_name() + "fc7_offset"))
 
     def forward(self, inputs):
         y = self.conv1(inputs)

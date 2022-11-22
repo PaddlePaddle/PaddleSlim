@@ -14,7 +14,6 @@
 
 from __future__ import print_function
 import paddle
-import paddle.fluid as fluid
 
 
 def cast_fp16_to_fp32(i, o, prog):
@@ -23,8 +22,8 @@ def cast_fp16_to_fp32(i, o, prog):
         inputs={"X": i},
         outputs={"Out": o},
         attrs={
-            "in_dtype": fluid.core.VarDesc.VarType.FP16,
-            "out_dtype": fluid.core.VarDesc.VarType.FP32
+            "in_dtype": paddle.fluid.core.VarDesc.VarType.FP16,
+            "out_dtype": paddle.fluid.core.VarDesc.VarType.FP32
         })
 
 
@@ -34,8 +33,8 @@ def cast_fp32_to_fp16(i, o, prog):
         inputs={"X": i},
         outputs={"Out": o},
         attrs={
-            "in_dtype": fluid.core.VarDesc.VarType.FP32,
-            "out_dtype": fluid.core.VarDesc.VarType.FP16
+            "in_dtype": paddle.fluid.core.VarDesc.VarType.FP32,
+            "out_dtype": paddle.fluid.core.VarDesc.VarType.FP16
         })
 
 
@@ -43,10 +42,10 @@ def copy_to_master_param(p, block):
     v = block.vars.get(p.name, None)
     if v is None:
         raise ValueError("no param name %s found!" % p.name)
-    new_p = fluid.framework.Parameter(
+    new_p = paddle.fluid.framework.Parameter(
         block=block,
         shape=v.shape,
-        dtype=fluid.core.VarDesc.VarType.FP32,
+        dtype=paddle.fluid.core.VarDesc.VarType.FP32,
         type=v.type,
         lod_level=v.lod_level,
         stop_gradient=p.stop_gradient,
@@ -63,7 +62,7 @@ def create_master_params_grads(params_grads, main_prog, startup_prog,
                                loss_scaling):
     master_params_grads = []
     tmp_role = main_prog._current_role
-    OpRole = fluid.core.op_proto_and_checker_maker.OpRole
+    OpRole = paddle.fluid.core.op_proto_and_checker_maker.OpRole
     main_prog._current_role = OpRole.Backward
     for p, g in params_grads:
         # create master parameters
@@ -80,7 +79,7 @@ def create_master_params_grads(params_grads, main_prog, startup_prog,
                 scaled_g = g
             master_params_grads.append([p, scaled_g])
             continue
-        master_grad = fluid.layers.cast(g, "float32")
+        master_grad = paddle.cast(g, "float32")
         if loss_scaling > 1:
             master_grad = master_grad / float(loss_scaling)
         master_params_grads.append([master_param, master_grad])

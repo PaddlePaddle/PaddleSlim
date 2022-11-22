@@ -1,6 +1,4 @@
 import paddle
-from paddle import fluid
-from paddle.fluid.layer_helper import LayerHelper
 import numpy as np
 from .one_shot_nas import OneShotSuperNet
 
@@ -31,7 +29,7 @@ class DConvBlock(paddle.nn.Layer):
             padding=0,
             act=None,
             bias_attr=False)
-        self.expand_bn = fluid.dygraph.BatchNorm(
+        self.expand_bn = paddle.nn.BatchNorm(
             num_channels=in_channels * expansion, act='relu6')
 
         self.dconv = paddle.nn.Conv2D(
@@ -44,7 +42,7 @@ class DConvBlock(paddle.nn.Layer):
             bias_attr=False,
             groups=in_channels * expansion,
             use_cudnn=False)
-        self.dconv_bn = fluid.dygraph.BatchNorm(
+        self.dconv_bn = paddle.nn.BatchNorm(
             num_channels=in_channels * expansion, act='relu6')
 
         self.project = paddle.nn.Conv2D(
@@ -55,8 +53,7 @@ class DConvBlock(paddle.nn.Layer):
             padding=0,
             act=None,
             bias_attr=False)
-        self.project_bn = fluid.dygraph.BatchNorm(
-            num_channels=channels, act=None)
+        self.project_bn = paddle.nn.BatchNorm(num_channels=channels, act=None)
 
         self.shortcut = paddle.nn.Conv2D(
             in_channels,
@@ -66,8 +63,7 @@ class DConvBlock(paddle.nn.Layer):
             padding=0,
             act=None,
             bias_attr=False)
-        self.shortcut_bn = fluid.dygraph.BatchNorm(
-            num_channels=channels, act=None)
+        self.shortcut_bn = paddle.nn.BatchNorm(num_channels=channels, act=None)
 
     def get_flops(self, input, output, op):
         if not self.flops_calculated:
@@ -91,7 +87,7 @@ class DConvBlock(paddle.nn.Layer):
             shortcut = inputs
         self.flops_calculated = True
         if self.stride == 1:
-            out = fluid.layers.elementwise_add(x=proj_x, y=shortcut)
+            out = paddle.add(x=proj_x, y=shortcut)
             return out
         return proj_x
 
@@ -133,14 +129,15 @@ class AuxiliaryHead(paddle.nn.Layer):
     def __init__(self, name_scope, num_classes):
         super(AuxiliaryHead, self).__init__(name_scope)
 
-        self.pool1 = fluid.dygraph.Pool2D(
+        self.pool1 = paddle.fluid.dygraph.Pool2D(
             5, 'avg', pool_stride=3, pool_padding=0)
         self.conv1 = paddle.nn.Conv2D(128, 1, bias_attr=False)
-        self.bn1 = fluid.dygraph.BatchNorm(128, act='relu6')
+        self.bn1 = paddle.nn.BatchNorm(128, act='relu6')
         self.conv2 = paddle.nn.Conv2D(768, 2, bias_attr=False)
-        self.bn2 = fluid.dygraph.BatchNorm(768, act='relu6')
-        self.classifier = fluid.dygraph.FC(num_classes, act='softmax')
-        self.layer_helper = LayerHelper(self.full_name(), act='relu6')
+        self.bn2 = paddle.nn.BatchNorm(768, act='relu6')
+        self.classifier = paddle.fluid.dygraph.FC(num_classes, act='softmax')
+        self.layer_helper = paddle.fluid.layer_helper.LayerHelper(
+            self.full_name(), act='relu6')
 
     def forward(self, inputs):  #pylint: disable=arguments-differ
         inputs = self.layer_helper.append_activation(inputs)
@@ -169,7 +166,7 @@ class SuperMnasnet(OneShotSuperNet):
         self.last_tokens = None
         self._conv = paddle.nn.Conv2D(
             input_channels, 32, 3, 1, 1, act=None, bias_attr=False)
-        self._bn = fluid.dygraph.BatchNorm(32, act='relu6')
+        self._bn = paddle.nn.BatchNorm(32, act='relu6')
         self._sep_conv = paddle.nn.Conv2D(
             32,
             32,
@@ -180,14 +177,14 @@ class SuperMnasnet(OneShotSuperNet):
             act=None,
             use_cudnn=False,
             bias_attr=False)
-        self._sep_conv_bn = fluid.dygraph.BatchNorm(32, act='relu6')
+        self._sep_conv_bn = paddle.nn.BatchNorm(32, act='relu6')
         self._sep_project = paddle.nn.Conv2D(
             32, 16, 1, 1, 0, act=None, bias_attr=False)
-        self._sep_project_bn = fluid.dygraph.BatchNorm(16, act='relu6')
+        self._sep_project_bn = paddle.nn.BatchNorm(16, act='relu6')
 
         self._final_conv = paddle.nn.Conv2D(
             320, out_channels, 1, 1, 0, act=None, bias_attr=False)
-        self._final_bn = fluid.dygraph.BatchNorm(out_channels, act='relu6')
+        self._final_bn = paddle.nn.BatchNorm(out_channels, act='relu6')
         self.stride = stride
         self.block_list = []
         self.use_auxhead = use_auxhead

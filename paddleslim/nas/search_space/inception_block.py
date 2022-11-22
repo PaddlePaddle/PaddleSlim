@@ -17,8 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
+import paddle
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
@@ -194,7 +193,7 @@ class InceptionABlockSpace(SearchSpaceBase):
                     stride,
                     pool_type,
                     name=None):
-        pool1 = fluid.layers.pool2d(
+        pool1 = paddle.fluid.layers.pool2d(
             input=data,
             pool_size=filter_size,
             pool_padding='SAME',
@@ -433,7 +432,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
                     stride,
                     pool_type,
                     name=None):
-        pool1 = fluid.layers.pool2d(
+        pool1 = paddle.fluid.layers.pool2d(
             input=data,
             pool_size=filter_size,
             pool_padding='SAME',

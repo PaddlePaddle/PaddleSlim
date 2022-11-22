@@ -20,7 +20,7 @@ import ast
 import copy
 
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 
 
 def cast_fp32_to_fp16(exe, main_program):
@@ -43,11 +43,11 @@ def init_checkpoint(exe, init_checkpoint_path, main_program, use_fp16=False):
         init_checkpoint_path), "[%s] cann't be found." % init_checkpoint_path
 
     def existed_persitables(var):
-        if not fluid.io.is_persistable(var):
+        if not paddle.fluid.io.is_persistable(var):
             return False
         return os.path.exists(os.path.join(init_checkpoint_path, var.name))
 
-    fluid.io.load_vars(
+    paddle.static.load_vars(
         exe,
         init_checkpoint_path,
         main_program=main_program,
@@ -66,11 +66,11 @@ def init_pretraining_params(exe,
                           ), "[%s] cann't be found." % pretraining_params_path
 
     def existed_params(var):
-        if not isinstance(var, fluid.framework.Parameter):
+        if not isinstance(var, paddle.fluid.framework.Parameter):
             return False
         return os.path.exists(os.path.join(pretraining_params_path, var.name))
 
-    fluid.io.load_vars(
+    paddle.static.load_vars(
         exe,
         pretraining_params_path,
         main_program=main_program,

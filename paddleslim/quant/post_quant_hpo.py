@@ -21,7 +21,6 @@ from time import gmtime, strftime
 import numpy as np
 import shutil
 import paddle
-import paddle.fluid as fluid
 import logging
 import argparse
 import functools

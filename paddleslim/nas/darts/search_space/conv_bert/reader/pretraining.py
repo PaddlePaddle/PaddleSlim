@@ -26,7 +26,6 @@ import collections
 import tokenization
 
 import paddle
-import paddle.fluid as fluid
 
 from batching import prepare_batch_data
 

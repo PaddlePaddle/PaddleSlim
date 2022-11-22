@@ -29,9 +29,6 @@ import argparse
 import numpy as np
 import multiprocessing
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid.dygraph import to_variable, Layer, Linear
-from paddle.fluid.dygraph.base import to_variable
 from .reader.cls import *
 from .model.bert import BertModelLayer
 from .optimization import Optimizer
@@ -41,7 +38,7 @@ from paddleslim.teachers.bert import BERTClassifier
 __all__ = ["AdaBERTClassifier"]
 
 
-class AdaBERTClassifier(Layer):
+class AdaBERTClassifier(paddle.nn.Layer):
     def __init__(self,
                  num_labels,
                  n_layer=8,
@@ -102,7 +99,7 @@ class AdaBERTClassifier(Layer):
             print(
                 "Assigning embedding[{}] from teacher to embedding[{}] in student.".
                 format(t_emb.name, s_emb.name))
-            fluid.layers.assign(input=t_emb, output=s_emb)
+            paddle.assign(input=t_emb, output=s_emb)
             print(
                 "Assigned embedding[{}] from teacher to embedding[{}] in student.".
                 format(t_emb.name, s_emb.name))
@@ -128,7 +125,7 @@ class AdaBERTClassifier(Layer):
 
         kd_weights = np.array(kd_weights)
         kd_weights = np.squeeze(kd_weights)
-        kd_weights = to_variable(kd_weights)
+        kd_weights = paddle.to_tensor(data=kd_weights)
         kd_weights = paddle.nn.functional.softmax(-kd_weights)
 
         kd_losses = []
@@ -140,24 +137,24 @@ class AdaBERTClassifier(Layer):
             t_probs = paddle.nn.functional.softmax(t_logit)  # P_j^T
             s_probs = paddle.nn.functional.softmax(s_logit / self.T)  #P_j^S
             #kd_loss = -t_probs * fluid.layers.log(s_probs)
-            kd_loss = fluid.layers.cross_entropy(
+            kd_loss = paddle.nn.functional.cross_entropy(
                 input=s_probs, label=t_probs, soft_label=True)
-            kd_loss = fluid.layers.reduce_mean(kd_loss)
-            kd_loss = fluid.layers.scale(kd_loss, scale=kd_weights[i])
+            kd_loss = paddle.mean(x=kd_loss)
+            kd_loss = paddle.scale(kd_loss, scale=kd_weights[i])
             kd_losses.append(kd_loss)
-        kd_loss = fluid.layers.sum(kd_losses)
+        kd_loss = paddle.fluid.layers.sum(kd_losses)
 
         losses = []
         for logit in s_logits:
             ce_loss, probs = paddle.nn.functional.softmax_with_cross_entropy(
                 logits=logit, label=labels, return_softmax=True)
-            loss = fluid.layers.mean(x=ce_loss)
+            loss = paddle.mean(x=ce_loss)
             losses.append(loss)
 
-            num_seqs = fluid.layers.create_tensor(dtype='int64')
+            num_seqs = paddle.fluid.layers.create_tensor(dtype='int64')
             accuracy = paddle.static.accuracy(
                 input=probs, label=labels, total=num_seqs)
-        ce_loss = fluid.layers.sum(losses)
+        ce_loss = paddle.fluid.layers.sum(losses)
 
         total_loss = (1 - self._gamma) * ce_loss + self._gamma * kd_loss
 

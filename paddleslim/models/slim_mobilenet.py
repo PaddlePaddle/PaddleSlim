@@ -15,10 +15,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-import paddle.fluid as fluid
-from paddle.nn.initializer import KaimingUniform
-from paddle.fluid.param_attr import ParamAttr
+import paddle
 
 __all__ = [
     'SlimMobileNet_v1', 'SlimMobileNet_v2', 'SlimMobileNet_v3',
@@ -126,7 +123,7 @@ class SlimMobileNet():
             if_act=True,
             act='hard_swish',
             name='conv_last')
-        conv = fluid.layers.pool2d(
+        conv = paddle.fluid.layers.pool2d(
             input=conv, pool_type='avg', global_pooling=True, use_cudnn=False)
         conv = paddle.static.nn.conv2d(
             input=conv,
@@ -135,14 +132,15 @@ class SlimMobileNet():
             stride=1,
             padding=0,
             act=None,
-            param_attr=ParamAttr(name='last_1x1_conv_weights'),
+            param_attr=paddle.ParamAttr(name='last_1x1_conv_weights'),
             bias_attr=False)
-        conv = fluid.layers.hard_swish(conv)
+        conv = paddle.nn.functional.hardswish(x=conv)
         drop = paddle.nn.functional.dropout(x=conv, dropout_prob=0.2)
-        out = paddle.static.nn.fc(input=drop,
-                                  size=class_dim,
-                                  param_attr=ParamAttr(name='fc_weights'),
-                                  bias_attr=ParamAttr(name='fc_offset'))
+        out = paddle.static.nn.fc(
+            input=drop,
+            size=class_dim,
+            param_attr=paddle.ParamAttr(name='fc_weights'),
+            bias_attr=paddle.ParamAttr(name='fc_offset'))
         return out
 
     def conv_bn_layer(self,
@@ -166,26 +164,24 @@ class SlimMobileNet():
             groups=num_groups,
             act=None,
             use_cudnn=use_cudnn,
-            param_attr=ParamAttr(name=name + '_weights'),
+            param_attr=paddle.ParamAttr(name=name + '_weights'),
             bias_attr=False)
         bn_name = name + '_bn'
         bn = paddle.static.nn.batch_norm(
             input=conv,
-            param_attr=ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=bn_name + "_scale",
-                regularizer=fluid.regularizer.L2DecayRegularizer(
-                    regularization_coeff=0.0)),
-            bias_attr=ParamAttr(
+                regularizer=paddle.regularizer.L2Decay(coeff=0.0)),
+            bias_attr=paddle.ParamAttr(
                 name=bn_name + "_offset",
-                regularizer=fluid.regularizer.L2DecayRegularizer(
-                    regularization_coeff=0.0)),
+                regularizer=paddle.regularizer.L2Decay(coeff=0.0)),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
         if if_act:
             if act == 'relu':
                 bn = paddle.nn.functional.relu(bn)
             elif act == 'hard_swish':
-                bn = fluid.layers.hard_swish(bn)
+                bn = paddle.nn.functional.hardswish(x=bn)
         return bn
 
     def make_divisible(self, v, divisor=8, min_value=None):
@@ -198,23 +194,23 @@ class SlimMobileNet():
 
     def se_block(self, input, num_out_filter, ratio=4, name=None):
         num_mid_filter = num_out_filter // ratio
-        pool = fluid.layers.pool2d(
+        pool = paddle.fluid.layers.pool2d(
             input=input, pool_type='avg', global_pooling=True, use_cudnn=False)
         conv1 = paddle.static.nn.conv2d(
             input=pool,
             filter_size=1,
             num_filters=num_mid_filter,
             act='relu',
-            param_attr=ParamAttr(name=name + '_1_weights'),
-            bias_attr=ParamAttr(name=name + '_1_offset'))
+            param_attr=paddle.ParamAttr(name=name + '_1_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_1_offset'))
         conv2 = paddle.static.nn.conv2d(
             input=conv1,
             filter_size=1,
             num_filters=num_out_filter,
             act='hard_sigmoid',
-            param_attr=ParamAttr(name=name + '_2_weights'),
-            bias_attr=ParamAttr(name=name + '_2_offset'))
-        scale = fluid.layers.elementwise_mul(x=input, y=conv2, axis=0)
+            param_attr=paddle.ParamAttr(name=name + '_2_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_2_offset'))
+        scale = paddle.multiply(x=input, y=conv2)
         return scale
 
     def residual_unit(self,
@@ -269,7 +265,7 @@ class SlimMobileNet():
         if num_in_filter != num_out_filter or stride != 1:
             return conv2
         else:
-            return fluid.layers.elementwise_add(x=input, y=conv2, act=None)
+            return paddle.add(x=input, y=conv2)
 
 
 def SlimMobileNet_v1(token):

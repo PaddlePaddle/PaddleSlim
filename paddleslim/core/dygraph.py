@@ -3,11 +3,6 @@ import paddle
 import collections
 import logging
 import numpy as np
-from paddle.fluid import core
-from paddle.fluid.framework import _dygraph_tracer, dygraph_only, _dygraph_guard, program_guard, in_dygraph_mode
-from paddle.fluid.dygraph.base import program_desc_tracing_guard, _switch_declarative_mode_guard_
-from paddle.fluid.dygraph.layers import Layer
-from paddle.fluid.framework import Block, ParamBase, Program, Variable
 from ..common import get_logger
 
 __all__ = ["dygraph2program"]
@@ -76,11 +71,11 @@ def extract_vars(inputs):
         inputs(Variable | list<Object> | dict): 
     """
     vars = []
-    if isinstance(inputs, Variable):
+    if isinstance(inputs, paddle.static.Variable):
         vars = [inputs]
     elif isinstance(inputs, dict):
         for _key, _value in inputs.items():
-            if isinstance(_value, Variable):
+            if isinstance(_value, paddle.static.Variable):
                 vars.append(_value)
             else:
                 _logger.warn(
@@ -109,12 +104,13 @@ def to_variables(inputs, is_static=False):
     """
     Find and rename variables. Find np.ndarray and convert it to variable.
     """
-    if isinstance(inputs, (Variable, paddle.Tensor)) or isinstance(inputs,
-                                                                   np.ndarray):
+    if isinstance(inputs,
+                  (paddle.static.Variable, paddle.Tensor)) or isinstance(
+                      inputs, np.ndarray):
         if is_static:
             return _to_var(inputs)
         else:
-            return paddle.fluid.dygraph.to_variable(inputs)
+            return paddle.to_tensor(data=inputs)
     elif isinstance(inputs, dict):
         ret = {}
         for _key in inputs:
@@ -127,7 +123,7 @@ def to_variables(inputs, is_static=False):
         return ret
 
 
-@dygraph_only
+@paddle.fluid.framework.dygraph_only
 def dygraph2program(layer,
                     inputs,
                     feed_prefix='feed_',
@@ -137,17 +133,17 @@ def dygraph2program(layer,
                     extract_outputs_fn=None,
                     dtypes=None):
     print(type(layer))
-    assert isinstance(layer, Layer)
+    assert isinstance(layer, paddle.nn.Layer)
     extract_inputs_fn = extract_inputs_fn if extract_inputs_fn is not None else extract_vars
     extract_outputs_fn = extract_outputs_fn if extract_outputs_fn is not None else extract_vars
 
-    if in_dygraph_mode():
+    if paddle.in_dynamic_mode():
         return _dy2prog(layer, inputs, feed_prefix, fetch_prefix, tmp_prefix,
                         extract_inputs_fn, extract_outputs_fn, dtypes)
 
-    tracer = _dygraph_tracer()._get_program_desc_tracer()
+    tracer = paddle.fluid.framework._dygraph_tracer()._get_program_desc_tracer()
 
-    with program_desc_tracing_guard(True):
+    with paddle.fluid.dygraph.base.program_desc_tracing_guard(True):
 
         if _is_shape(inputs):
             shapes = [inputs]
@@ -168,10 +164,10 @@ def dygraph2program(layer,
             input_var_list, feed_prefix, out_var_list, fetch_prefix, tmp_prefix)
         tracer.reset()
 
-    with _dygraph_guard(None):
-        program = Program()
+    with paddle.fluid.framework._dygraph_guard(None):
+        program = paddle.static.Program()
         program.desc = program_desc
-        program.blocks = [Block(program, 0)]
+        program.blocks = [paddle.fluid.framework.Block(program, 0)]
         program._sync_with_cpp()
     return program
 
@@ -188,9 +184,11 @@ def _dy2prog(layer,
     Tracing program in Eager Mode.
     """
     paddle.enable_static()
-    program = Program()
+    program = paddle.static.Program()
     # convert ParamBase into Parameter automatically by _switch_declarative_mode_guard_
-    with program_guard(program), _switch_declarative_mode_guard_(True):
+    with paddle.static.program_guard(
+            program), paddle.fluid.dygraph.base._switch_declarative_mode_guard_(
+                True):
         if _is_shape(inputs):
             shapes = [inputs]
             inputs = _create_tensors(shapes, dtypes=dtypes, is_static=True)

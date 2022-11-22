@@ -22,14 +22,12 @@ import json
 import numpy as np
 
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid.dygraph import Linear, Layer
 
 from .bert import BertModelLayer
 from paddleslim.teachers.bert import BERTClassifier
 
 
-class ClsModelLayer(Layer):
+class ClsModelLayer(paddle.nn.Layer):
     """
     classify model
     """
@@ -54,10 +52,10 @@ class ClsModelLayer(Layer):
 
         self.cls_fc = list()
         for i in range(self.n_layers):
-            fc = Linear(
-                input_dim=self.config["hidden_size"],
-                output_dim=num_labels,
-                param_attr=paddle.ParamAttr(
+            fc = paddle.nn.Linear(
+                in_features=self.config["hidden_size"],
+                out_features=num_labels,
+                weight_attr=paddle.ParamAttr(
                     name="cls_out_%d_w" % i,
                     initializer=paddle.nn.initializer.TruncatedNormal(
                         scale=0.02)),
@@ -93,16 +91,16 @@ class ClsModelLayer(Layer):
 
             ce_loss, probs = paddle.nn.functional.softmax_with_cross_entropy(
                 logits=logit, label=labels, return_softmax=True)
-            loss = fluid.layers.mean(x=ce_loss)
+            loss = paddle.mean(x=ce_loss)
             losses.append(loss)
 
             if self.use_fp16 and self.loss_scaling > 1.0:
                 loss *= self.loss_scaling
 
-            num_seqs = fluid.layers.create_tensor(dtype='int64')
+            num_seqs = paddle.fluid.layers.create_tensor(dtype='int64')
             accuracy = paddle.static.accuracy(
                 input=probs, label=labels, total=num_seqs)
             accuracys.append(accuracy)
-        total_loss = fluid.layers.sum(losses)
+        total_loss = paddle.fluid.layers.sum(losses)
 
         return total_loss, logits, losses, accuracys, num_seqs

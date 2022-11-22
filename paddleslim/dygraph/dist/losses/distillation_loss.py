@@ -14,14 +14,13 @@
 
 import numpy as np
 import paddle
-import paddle.nn as nn
 
 from .basic_loss import BASIC_LOSS
 
 __all__ = ["DistillationLoss", "ShapeAlign"]
 
 
-class DistillationLoss(nn.Layer):
+class DistillationLoss(paddle.nn.Layer):
     """
     DistillationLoss
     Args:
@@ -78,7 +77,7 @@ class DistillationLoss(nn.Layer):
         return loss_dict
 
 
-class ShapeAlign(nn.Layer):
+class ShapeAlign(paddle.nn.Layer):
     """
     Align the feature map between student and teacher.
     Args:

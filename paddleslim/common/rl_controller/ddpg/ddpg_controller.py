@@ -16,7 +16,6 @@ import numpy as np
 import parl
 from parl import layers
 import paddle
-from paddle import fluid
 from ..utils import RLCONTROLLER, action_mapping
 from ...controller import RLBaseController
 from .ddpg_model import DefaultDDPGModel as default_ddpg_model

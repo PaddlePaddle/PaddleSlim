@@ -29,8 +29,6 @@ import argparse
 import numpy as np
 import multiprocessing
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid.dygraph import to_variable, Layer
 from .reader.cls import *
 from .model.bert import BertConfig
 from .model.cls import ClsModelLayer
@@ -44,16 +42,16 @@ def create_data(batch):
     """
     convert data to variable
     """
-    src_ids = to_variable(batch[0], "src_ids")
-    position_ids = to_variable(batch[1], "position_ids")
-    sentence_ids = to_variable(batch[2], "sentence_ids")
-    input_mask = to_variable(batch[3], "input_mask")
-    labels = to_variable(batch[4], "labels")
+    src_ids = paddle.to_tensor(data=batch[0])
+    position_ids = paddle.to_tensor(data=batch[1])
+    sentence_ids = paddle.to_tensor(data=batch[2])
+    input_mask = paddle.to_tensor(data=batch[3])
+    labels = paddle.to_tensor(data=batch[4])
     labels.stop_gradient = True
     return src_ids, position_ids, sentence_ids, input_mask, labels
 
 
-class BERTClassifier(Layer):
+class BERTClassifier(paddle.nn.Layer):
     def __init__(self,
                  num_labels,
                  task_name="mnli",
@@ -70,12 +68,12 @@ class BERTClassifier(Layer):
         self.bert_config = BertConfig(bert_config_path)
 
         if use_cuda:
-            self.dev_count = fluid.core.get_cuda_device_count()
+            self.dev_count = paddle.fluid.core.get_cuda_device_count()
         else:
             self.dev_count = int(
                 os.environ.get('CPU_NUM', multiprocessing.cpu_count()))
 
-        self.trainer_count = fluid.dygraph.parallel.Env().nranks
+        self.trainer_count = paddle.fluid.dygraph.parallel.Env().nranks
 
         self.processors = {
             'xnli': XnliProcessor,
@@ -90,7 +88,7 @@ class BERTClassifier(Layer):
         if model_path is not None:
             #restore the model
             print("Load params from %s" % model_path)
-            model_dict, _ = fluid.load_dygraph(model_path)
+            model_dict, _ = paddle.fluid.load_dygraph(model_path)
             self.cls_model.load_dict(model_dict)
         elif self.init_pretraining_params:
             print("Load pre-trained model from %s" %
@@ -184,7 +182,7 @@ class BERTClassifier(Layer):
         print("Num warmup steps: %d" % warmup_steps)
 
         if use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
+            strategy = paddle.fluid.dygraph.parallel.prepare_context()
 
         optimizer = Optimizer(
             warmup_steps=warmup_steps,
@@ -197,9 +195,8 @@ class BERTClassifier(Layer):
             parameter_list=self.cls_model.parameters())
 
         if use_data_parallel:
-            self.cls_model = fluid.dygraph.parallel.DataParallel(self.cls_model,
-                                                                 strategy)
-            train_data_generator = fluid.contrib.reader.distributed_batch_reader(
+            self.cls_model = paddle.DataParallel(self.cls_model, strategy)
+            train_data_generator = paddle.fluid.contrib.reader.distributed_batch_reader(
                 train_data_generator)
 
         steps = 0
@@ -227,7 +224,7 @@ class BERTClassifier(Layer):
                        accuracys[-1].numpy(), skip_steps / used_time))
                 time_begin = time.time()
 
-            if steps != 0 and steps % save_steps == 0 and fluid.dygraph.parallel.Env(
+            if steps != 0 and steps % save_steps == 0 and paddle.fluid.dygraph.parallel.Env(
             ).local_rank == 0:
 
                 self.test(data_dir, batch_size=64, max_seq_len=512)
@@ -241,7 +238,7 @@ class BERTClassifier(Layer):
 
             steps += 1
 
-        if fluid.dygraph.parallel.Env().local_rank == 0:
+        if paddle.fluid.dygraph.parallel.Env().local_rank == 0:
             save_path = os.path.join(checkpoints, "final")
             paddle.save(self.cls_model.state_dict(), save_path)
             paddle.save(optimizer.optimizer.state_dict(), save_path)

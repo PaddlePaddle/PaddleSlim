@@ -17,13 +17,6 @@
 import numpy as np
 import logging
 import paddle
-import paddle.nn as nn
-import paddle.nn.functional as F
-import paddle.fluid.core as core
-from paddle import _C_ops, _legacy_C_ops
-from paddle.fluid.framework import in_dygraph_mode, _in_legacy_dygraph, _non_static_mode
-from paddle.fluid.data_feeder import check_variable_and_dtype
-from paddle.fluid.dygraph.layer_object_helper import LayerObjectHelper
 
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
@@ -42,7 +35,7 @@ _logger = get_logger(__name__, level=logging.INFO)
 ### TODO: if task is elastic width, need to add re_organize_middle_weight in 1x1 conv in MBBlock
 
 
-class SuperConv2D(nn.Conv2D):
+class SuperConv2D(paddle.nn.Conv2D):
     """This interface is used to construct a callable object of the ``SuperConv2D``  class.
     Note: the channel in config need to less than first defined.
     The super convolution2D layer calculates the output based on the input, filter
@@ -201,7 +194,7 @@ class SuperConv2D(nn.Conv2D):
                 scale_param[param_name] = self.create_parameter(
                     attr=paddle.ParamAttr(
                         name=self._full_name + param_name,
-                        initializer=nn.initializer.Assign(np.eye(ks_t))),
+                        initializer=paddle.nn.initializer.Assign(np.eye(ks_t))),
                     shape=(ks_t, ks_t),
                     dtype=self._dtype)
 
@@ -317,7 +310,7 @@ class SuperConv2D(nn.Conv2D):
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
         self.cur_config['prune_group'] = groups
-        out = F.conv2d(
+        out = paddle.nn.functional.conv2d(
             input,
             weight,
             bias=bias,
@@ -350,7 +343,7 @@ class SuperDepthwiseConv2D(SuperConv2D):
         return groups, in_nc, out_nc
 
 
-class SuperConv2DTranspose(nn.Conv2DTranspose):
+class SuperConv2DTranspose(paddle.nn.Conv2DTranspose):
     """
     This interface is used to construct a callable object of the ``SuperConv2DTranspose`` 
     class.
@@ -510,7 +503,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
                 scale_param[param_name] = self.create_parameter(
                     attr=paddle.ParamAttr(
                         name=self._full_name + param_name,
-                        initializer=nn.initializer.Assign(np.eye(ks_t))),
+                        initializer=paddle.nn.initializer.Assign(np.eye(ks_t))),
                     shape=(ks_t, ks_t),
                     dtype=self._dtype)
 
@@ -623,7 +616,7 @@ class SuperConv2DTranspose(nn.Conv2DTranspose):
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
         self.cur_config['prune_group'] = groups
-        out = F.conv2d_transpose(
+        out = paddle.nn.functional.conv2d_transpose(
             input,
             weight,
             bias=bias,
@@ -658,7 +651,7 @@ class SuperDepthwiseConv2DTranspose(SuperConv2DTranspose):
 
 
 ### NOTE: only search channel, write for GAN-compression, maybe change to SuperDepthwiseConv and SuperConv after.
-class SuperSeparableConv2D(nn.Layer):
+class SuperSeparableConv2D(paddle.nn.Layer):
     """
     This interface is used to construct a callable object of the ``SuperSeparableConv2D``
     class.
@@ -706,12 +699,12 @@ class SuperSeparableConv2D(nn.Layer):
                  stride=1,
                  padding=0,
                  dilation=1,
-                 norm_layer=nn.InstanceNorm2D,
+                 norm_layer=paddle.nn.InstanceNorm2D,
                  bias_attr=None,
                  scale_factor=1):
         super(SuperSeparableConv2D, self).__init__()
-        self.conv = nn.LayerList([
-            nn.Conv2D(
+        self.conv = paddle.nn.LayerList([
+            paddle.nn.Conv2D(
                 in_channels=in_channels,
                 out_channels=in_channels * scale_factor,
                 kernel_size=kernel_size,
@@ -724,7 +717,7 @@ class SuperSeparableConv2D(nn.Layer):
         self.conv.extend([norm_layer(in_channels * scale_factor)])
 
         self.conv.extend([
-            nn.Conv2D(
+            paddle.nn.Conv2D(
                 in_channels=in_channels * scale_factor,
                 out_channels=out_channels,
                 kernel_size=1,
@@ -767,7 +760,7 @@ class SuperSeparableConv2D(nn.Layer):
         else:
             bias = self.conv[0].bias
 
-        conv0_out = F.conv2d(
+        conv0_out = paddle.nn.functional.conv2d(
             input,
             weight,
             bias,
@@ -786,7 +779,7 @@ class SuperSeparableConv2D(nn.Layer):
         else:
             bias = self.conv[2].bias
         self.cur_config['prune_dim'] = list(weight.shape)
-        conv1_out = F.conv2d(
+        conv1_out = paddle.nn.functional.conv2d(
             norm_out,
             weight,
             bias,
@@ -798,7 +791,7 @@ class SuperSeparableConv2D(nn.Layer):
         return conv1_out
 
 
-class SuperLinear(nn.Linear):
+class SuperLinear(paddle.nn.Linear):
     """
     Super Fully-connected linear transformation layer. 
     
@@ -904,11 +897,12 @@ class SuperLinear(nn.Linear):
         else:
             bias = self.bias
         self.cur_config['prune_dim'] = list(weight.shape)
-        out = F.linear(x=input, weight=weight, bias=bias, name=self.name)
+        out = paddle.nn.functional.linear(
+            x=input, weight=weight, bias=bias, name=self.name)
         return out
 
 
-class SuperBatchNorm2D(nn.BatchNorm2D):
+class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
     """
     This interface is used to construct a callable object of the ``SuperBatchNorm2D`` class. 
     Parameters:
@@ -991,9 +985,9 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                  "use_global_stats", self._use_global_stats,
                  "trainable_statistics", trainable_statistics)
 
-        if in_dygraph_mode():
+        if paddle.in_dynamic_mode():
             if feature_dim != self._mean.shape[0]:
-                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = paddle._C_ops.batch_norm(
                     input, mean, variance, weight, bias, not self.training,
                     self._momentum, self._epsilon, self._data_format,
                     self._use_global_stats, trainable_statistics)
@@ -1003,15 +997,15 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                 variance_out[:feature_dim].set_value(variance_out_tmp)
                 return batch_norm_out
             else:
-                batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = paddle._C_ops.batch_norm(
                     input, mean, variance, weight, bias, not self.training,
                     self._momentum, self._epsilon, self._data_format,
                     self._use_global_stats, trainable_statistics)
                 return batch_norm_out
 
-        elif _in_legacy_dygraph():
+        elif paddle.fluid.framework._in_legacy_dygraph():
             if feature_dim != self._mean.shape[0]:
-                batch_norm_out, t1, t2, t3, t4, _ = _legacy_C_ops.batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = paddle._legacy_C_ops.batch_norm(
                     input, weight, bias, mean, variance, None, mean_out_tmp,
                     variance_out_tmp, *attrs)
                 self._mean[:feature_dim].set_value(mean)
@@ -1020,13 +1014,13 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                 variance_out[:feature_dim].set_value(variance_out_tmp)
                 return batch_norm_out
             else:
-                batch_norm_out, t1, t2, t3, t4, _ = _legacy_C_ops.batch_norm(
+                batch_norm_out, t1, t2, t3, t4, _ = paddle._legacy_C_ops.batch_norm(
                     input, weight, bias, self._mean, self._variance, None,
                     mean_out, variance_out, *attrs)
                 return batch_norm_out
 
-        check_variable_and_dtype(input, 'input',
-                                 ['float16', 'float32', 'float64'], 'BatchNorm')
+        paddle.fluid.data_feeder.check_variable_and_dtype(
+            input, 'input', ['float16', 'float32', 'float64'], 'BatchNorm')
 
         # for static need dict
         attrs = {
@@ -1048,7 +1042,8 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
             "Variance": [variance]
         }
 
-        helper = LayerObjectHelper('batch_norm')
+        helper = paddle.fluid.dygraph.layer_object_helper.LayerObjectHelper(
+            'batch_norm')
 
         param_dtype = input.dtype if input.dtype != 'float16' else 'float32'
         saved_mean = helper.create_variable_for_type_inference(
@@ -1077,7 +1072,7 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
         return batch_norm_out
 
 
-class SuperSyncBatchNorm(nn.SyncBatchNorm):
+class SuperSyncBatchNorm(paddle.nn.SyncBatchNorm):
     def __init__(self,
                  num_features,
                  momentum=0.9,
@@ -1111,9 +1106,9 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
                  "use_mkldnn", False, "fuse_with_relu", False,
                  "use_global_stats", False, 'trainable_statistics', False)
 
-        if _non_static_mode():
+        if paddle.fluid.framework._non_static_mode():
             if feature_dim != self._mean.shape[0]:
-                sync_batch_norm_out, _, _, _, _, _ = _legacy_C_ops.sync_batch_norm(
+                sync_batch_norm_out, _, _, _, _, _ = paddle._legacy_C_ops.sync_batch_norm(
                     input, weight, bias, self._mean, self._variance, mean_out,
                     variance_out, *attrs)
 
@@ -1122,13 +1117,13 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
                 mean_out[:feature_dim].set_value(mean_out_tmp)
                 variance_out[:feature_dim].set_value(variance_out_tmp)
             else:
-                sync_batch_norm_out, _, _, _, _, _ = _legacy_C_ops.sync_batch_norm(
+                sync_batch_norm_out, _, _, _, _, _ = paddle._legacy_C_ops.sync_batch_norm(
                     input, weight, bias, self._mean, self._variance, mean_out,
                     variance_out, *attrs)
 
             return sync_batch_norm_out
 
-        check_variable_and_dtype(
+        paddle.fluid.data_feeder.check_variable_and_dtype(
             input, 'input', ['float16', 'float32', 'float64'], 'SyncBatchNorm')
 
         attrs = {
@@ -1150,7 +1145,8 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
             "Variance": [self._variance]
         }
 
-        helper = LayerObjectHelper('sync_batch_norm')
+        helper = paddle.fluid.dygraph.layer_object_helper.LayerObjectHelper(
+            'sync_batch_norm')
 
         saved_mean = helper.create_variable_for_type_inference(
             dtype=self._dtype, stop_gradient=True)
@@ -1172,7 +1168,7 @@ class SuperSyncBatchNorm(nn.SyncBatchNorm):
         return sync_batch_norm_out
 
 
-class SuperInstanceNorm2D(nn.InstanceNorm2D):
+class SuperInstanceNorm2D(paddle.nn.InstanceNorm2D):
     """
     This interface is used to construct a callable object of the ``SuperInstanceNorm2D`` class. 
     Parameters:
@@ -1226,10 +1222,11 @@ class SuperInstanceNorm2D(nn.InstanceNorm2D):
             scale = self.scale[:feature_dim]
             bias = self.bias[:feature_dim]
         self.cur_config = {'prune_dim': feature_dim}
-        return F.instance_norm(input, scale, bias, eps=self._epsilon)
+        return paddle.nn.functional.instance_norm(
+            input, scale, bias, eps=self._epsilon)
 
 
-class SuperLayerNorm(nn.LayerNorm):
+class SuperLayerNorm(paddle.nn.LayerNorm):
     """
     This interface is used to construct a callable object of the ``SuperLayerNorm`` class.
     The difference between ```SuperLayerNorm``` and ```LayerNorm``` is: 
@@ -1299,16 +1296,16 @@ class SuperLayerNorm(nn.LayerNorm):
             bias = None
         self.cur_config = {'prune_dim': feature_dim}
 
-        if in_dygraph_mode():
-            out, _, _ = _C_ops.layer_norm(input, weight, bias, self._epsilon,
-                                          begin_norm_axis, False)
-        elif _in_legacy_dygraph():
-            out, _, _ = _legacy_C_ops.layer_norm(
+        if paddle.in_dynamic_mode():
+            out, _, _ = paddle._C_ops.layer_norm(
+                input, weight, bias, self._epsilon, begin_norm_axis, False)
+        elif paddle.fluid.framework._in_legacy_dygraph():
+            out, _, _ = paddle._legacy_C_ops.layer_norm(
                 input, weight, bias, 'epsilon', self._epsilon,
                 'begin_norm_axis', begin_norm_axis)
         else:
-            check_variable_and_dtype(input, 'input', ['float32', 'float64'],
-                                     'LayerNorm')
+            paddle.fluid.data_feeder.check_variable_and_dtype(
+                input, 'input', ['float32', 'float64'], 'LayerNorm')
 
             inputs = dict()
             inputs['X'] = [input]
@@ -1321,7 +1318,8 @@ class SuperLayerNorm(nn.LayerNorm):
                 "begin_norm_axis": begin_norm_axis
             }
 
-            helper = LayerObjectHelper('layer_norm')
+            helper = paddle.fluid.dygraph.layer_object_helper.LayerObjectHelper(
+                'layer_norm')
 
             dtype = input.dtype
             mean_out = helper.create_variable_for_type_inference(
@@ -1347,7 +1345,7 @@ class SuperLayerNorm(nn.LayerNorm):
         return out
 
 
-class SuperEmbedding(nn.Embedding):
+class SuperEmbedding(paddle.nn.Embedding):
     """
     This interface is used to construct a callable object of the ``SuperEmbedding`` class.
     Parameters:
@@ -1434,7 +1432,7 @@ class SuperEmbedding(nn.Embedding):
         else:
             weight = self.weight[:, :out_nc]
         self.cur_config = {'prune_dim': list(weight.shape)}
-        return F.embedding(
+        return paddle.nn.functional.embedding(
             input,
             weight=weight,
             padding_idx=self._padding_idx,

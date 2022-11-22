@@ -22,8 +22,6 @@ import math
 from multiprocessing.dummy import Pool as ThreadPool
 
 import paddle
-from paddle.fluid.framework import IrGraph
-from paddle.fluid import core
 
 from ..common import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
@@ -155,8 +153,8 @@ def _clear_var(var_name, scope):
 
 
 def _get_var_dtype(config):
-    return core.VarDesc.VarType.INT8 if config['dtype'] == 'int8' \
-        else  core.VarDesc.VarType.INT16
+    return paddle.fluid.core.VarDesc.VarType.INT8 if config['dtype'] == 'int8' \
+        else  paddle.fluid.core.VarDesc.VarType.INT16
 
 
 def _quant_embedding_abs_max(graph, scope, place, config, var_name,
@@ -191,7 +189,7 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
             name=_get_dequant_var_name(var_node.name()),
             var_type=var_node.type(),
             shape=var_node.shape(),
-            var_dtype=core.VarDesc.VarType.FP32)
+            var_dtype=paddle.fluid.core.VarDesc.VarType.FP32)
         scope.var(dequant_var_node.name())
 
         max_range = (1 << (config['quantize_bits'] - 1)) - 1
@@ -200,7 +198,8 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
             op_type='dequantize_abs_max',
             attrs={
                 'max_range': float(max_range),
-                'op_role': core.op_proto_and_checker_maker.OpRole.Forward
+                'op_role':
+                paddle.fluid.core.op_proto_and_checker_maker.OpRole.Forward
             },
             inputs={'X': var_node,
                     'Scale': scale_node},
@@ -233,7 +232,7 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
         _get_scale_var_name(var_name),
         var_type=embedding_node.type(),
         shape=[1],
-        var_dtype=core.VarDesc.VarType.FP32)
+        var_dtype=paddle.fluid.core.VarDesc.VarType.FP32)
     quant_tensor_var = graph.create_persistable_node(
         _get_quant_var_name(var_name),
         var_type=embedding_node.type(),
@@ -319,13 +318,16 @@ def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
             name=_get_dequant_var_name(var_node.name()),
             var_type=var_node.type(),
             shape=var_node.shape(),
-            var_dtype=core.VarDesc.VarType.FP32)
+            var_dtype=paddle.fluid.core.VarDesc.VarType.FP32)
         scope.var(dequant_var_node.name())
 
         output_ops = var_node.outputs
         dequant_op = graph.create_op_node(
             op_type='dequantize_log',
-            attrs={'op_role': core.op_proto_and_checker_maker.OpRole.Forward},
+            attrs={
+                'op_role':
+                paddle.fluid.core.op_proto_and_checker_maker.OpRole.Forward
+            },
             inputs={'X': var_node,
                     'Dict': topk_num_node},
             outputs={'Out': dequant_var_node})
@@ -348,12 +350,12 @@ def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
         _get_dict_var_name(var_name),
         var_type=embedding_node.type(),
         shape=topk_num.shape,
-        var_dtype=core.VarDesc.VarType.FP32)
+        var_dtype=paddle.fluid.core.VarDesc.VarType.FP32)
     quant_tensor_var = graph.create_persistable_node(
         _get_quant_var_name(var_name),
         var_type=embedding_node.type(),
         shape=embedding_node.shape(),
-        var_dtype=core.VarDesc.VarType.INT8)
+        var_dtype=paddle.fluid.core.VarDesc.VarType.INT8)
     # create var in scope
     scope.var(_get_quant_var_name(var_name))
     scope.var(_get_dict_var_name(var_name))
@@ -391,7 +393,7 @@ def _split_embedding_seq_pool(graph, op):
     out = outputs[0]
     lookup_out = graph.create_var_node(
         name=ids.name() + '.look_up_table.out',
-        var_type=core.VarDesc.VarType.LOD_TENSOR,
+        var_type=paddle.fluid.core.VarDesc.VarType.LOD_TENSOR,
         shape=[1],
         var_dtype=weight.dtype())
     lookup_table_op = graph.create_op_node(
@@ -409,7 +411,7 @@ def _split_embedding_seq_pool(graph, op):
     graph.link_to(lookup_table_op, lookup_out)
     max_index = graph.create_var_node(
         name=ids.name() + '.seq_pool_op.max_index',
-        var_type=core.VarDesc.VarType.LOD_TENSOR,
+        var_type=paddle.fluid.core.VarDesc.VarType.LOD_TENSOR,
         shape=[1],
         var_dtype=weight.dtype())
 
@@ -449,7 +451,8 @@ def quant_embedding(program, place, config=None, scope=None):
     config = _merge_config(copy.deepcopy(_default_config), config)
     scope = paddle.static.global_scope() if scope is None else scope
 
-    graph = IrGraph(core.Graph(program.desc), for_test=True)
+    graph = paddle.fluid.framework.IrGraph(
+        paddle.fluid.core.Graph(program.desc), for_test=True)
     quantize_params_map = {}
     all_op = graph.all_op_nodes()
     for op in all_op:

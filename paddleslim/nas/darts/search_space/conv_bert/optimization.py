@@ -18,12 +18,11 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-
-from paddle.fluid.dygraph.learning_rate_scheduler import LearningRateDecay
+import paddle
 
 
-class ConstantLR(LearningRateDecay):
+class ConstantLR(
+        paddle.fluid.dygraph.learning_rate_scheduler.LearningRateDecay):
     def __init__(self, learning_rate, begin=0, step=1, dtype='float32'):
         super(ConstantLR, self).__init__(begin, step, dtype)
         self.learning_rate = learning_rate
@@ -32,7 +31,8 @@ class ConstantLR(LearningRateDecay):
         return self.learning_rate
 
 
-class LinearDecay(LearningRateDecay):
+class LinearDecay(
+        paddle.fluid.dygraph.learning_rate_scheduler.LearningRateDecay):
     def __init__(self,
                  learning_rate,
                  warmup_steps,
@@ -60,7 +60,7 @@ class LinearDecay(LearningRateDecay):
             tmp_step_num = self.step_num
             tmp_decay_steps = self.decay_steps
             if self.cycle:
-                div_res = fluid.layers.ceil(
+                div_res = paddle.ceil(
                     self.create_lr_var(tmp_step_num / float(self.decay_steps)))
                 if tmp_step_num == 0:
                     div_res = self.create_lr_var(1.0)
@@ -100,9 +100,9 @@ class Optimizer(object):
     def lr_schedule(self):
         if self.warmup_steps > 0:
             if self.scheduler == 'noam_decay':
-                self.scheduled_lr = fluid.dygraph.NoamDecay(1 / (
-                    self.warmup_steps * (self.learning_rate**2)),
-                                                            self.warmup_steps)
+                self.scheduled_lr = paddle.fluid.dygraph.learning_rate_scheduler.NoamDecay(
+                    1 / (self.warmup_steps *
+                         (self.learning_rate**2)), self.warmup_steps)
             elif self.scheduler == 'linear_warmup_decay':
                 self.scheduled_lr = LinearDecay(self.learning_rate,
                                                 self.warmup_steps,
@@ -110,14 +110,12 @@ class Optimizer(object):
             else:
                 raise ValueError("Unkown learning rate scheduler, should be "
                                  "'noam_decay' or 'linear_warmup_decay'")
-            optimizer = fluid.optimizer.Adam(
-                learning_rate=self.scheduled_lr,
-                parameter_list=self.parameter_list)
+            optimizer = paddle.optimizer.Adam(
+                learning_rate=self.scheduled_lr, parameters=self.parameter_list)
         else:
             self.scheduled_lr = ConstantLR(self.learning_rate)
-            optimizer = fluid.optimizer.Adam(
-                learning_rate=self.scheduled_lr,
-                parameter_list=self.parameter_list)
+            optimizer = paddle.optimizer.Adam(
+                learning_rate=self.scheduled_lr, parameters=self.parameter_list)
 
         return optimizer
 
@@ -165,6 +163,6 @@ class Optimizer(object):
                     updated_param = param.numpy() - param_list[
                         param.name].numpy(
                         ) * self.weight_decay * self.scheduled_lr.step().numpy()
-                updated_param_var = fluid.dygraph.to_variable(updated_param)
+                updated_param_var = paddle.to_tensor(data=updated_param)
                 param = updated_param_var
                 #param = paddle.reshape(x=updated_param_var, shape=list(updated_param_var.shape))

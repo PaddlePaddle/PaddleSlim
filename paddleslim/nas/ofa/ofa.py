@@ -16,17 +16,13 @@ import logging
 import numpy as np
 from collections import namedtuple
 import paddle
-import paddle.fluid as fluid
 from .utils.utils import get_paddle_version, remove_model_fn, build_input
 from .layers import SuperConv2D, SuperLinear
-from paddle.nn import Layer
 from .layers_base import BaseBlock, Block
 from .utils.utils import search_idx
 from ...common import get_logger
 from ...core import GraphWrapper, dygraph2program
 from .get_sub_model import check_search_space, broadcast_search_space
-from paddle.fluid import core
-from paddle.fluid.framework import Variable
 import numbers
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -76,7 +72,7 @@ DistillConfig = namedtuple(
 DistillConfig.__new__.__defaults__ = (None, ) * len(DistillConfig._fields)
 
 
-class OFABase(Layer):
+class OFABase(paddle.nn.Layer):
     def __init__(self, model):
         super(OFABase, self).__init__()
         self.model = model
@@ -267,7 +263,7 @@ class OFA(OFABase):
             )
 
         ### instance model by user can input super-param easily.
-        assert isinstance(self.distill_config.teacher_model, Layer)
+        assert isinstance(self.distill_config.teacher_model, paddle.nn.Layer)
 
         # load teacher parameter
         if self.distill_config.teacher_model_path != None:
@@ -505,7 +501,7 @@ class OFA(OFABase):
             Sact = Sact[0] if isinstance(Sact, tuple) else Sact
             Tact = Tact[0] if isinstance(Tact, tuple) else Tact
             if self.distill_config.distill_fn == None:
-                loss = fluid.layers.mse_loss(Sact, Tact.detach())
+                loss = paddle.nn.functional.mse_loss(Sact, Tact.detach())
             else:
                 loss = distill_fn(Sact, Tact.detach())
             losses.append(loss)
@@ -611,11 +607,11 @@ class OFA(OFABase):
                 if name in pruned_state_dict:
                     p = t_value._place()
                     if p.is_cpu_place():
-                        place = core.CPUPlace()
+                        place = paddle.fluid.core.CPUPlace()
                     elif p.is_cuda_pinned_place():
-                        place = core.CUDAPinnedPlace()
+                        place = paddle.fluid.core.CUDAPinnedPlace()
                     else:
-                        place = core.CUDAPlace(p.gpu_device_id())
+                        place = paddle.fluid.core.CUDAPlace(p.gpu_device_id())
                     t_value.set(pruned_state_dict[name], place)
 
         if super_model_state_dict != None and len(super_model_state_dict) != 0:
@@ -667,12 +663,12 @@ class OFA(OFABase):
             input_shapes = []
             input_dtypes = []
             for n in inputs:
-                if isinstance(n, Variable):
+                if isinstance(n, paddle.static.Variable):
                     input_shapes.append(n)
                     input_dtypes.append(n.numpy().dtype)
 
             for key, val in kwargs.items():
-                if isinstance(val, Variable):
+                if isinstance(val, paddle.static.Variable):
                     input_shapes.append(val)
                     input_dtypes.append(val.numpy().dtype)
                 elif isinstance(val, dict):

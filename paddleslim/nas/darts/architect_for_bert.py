@@ -15,9 +15,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.base import to_variable
+import paddle
 
 
 class Architect(object):
@@ -26,12 +24,12 @@ class Architect(object):
         self.network_weight_decay = 1e-3
         self.eta = eta
         self.model = model
-        self.optimizer = fluid.optimizer.Adam(
-            arch_learning_rate,
-            0.5,
-            0.999,
-            regularization=fluid.regularizer.L2Decay(1e-3),
-            parameter_list=self.model.arch_parameters())
+        self.optimizer = paddle.optimizer.Adam(
+            learning_rate=arch_learning_rate,
+            beta1=0.5,
+            beta2=0.999,
+            weight_decay=paddle.regularizer.L2Decay(coeff=1e-3),
+            parameters=self.model.arch_parameters())
         self.place = place
         self.unrolled = unrolled
         if self.unrolled:
@@ -45,8 +43,8 @@ class Architect(object):
             self.unrolled_optimizer = paddle.optimizer.Momentum(
                 self.eta,
                 self.network_momentum,
-                regularization=fluid.regularizer.L2DecayRegularizer(
-                    self.network_weight_decay),
+                regularization=paddle.regularizer.L2Decay(
+                    coeff=self.network_weight_decay),
                 parameter_list=self.unrolled_model_params)
 
     def step(self, train_data, valid_data, epoch):
@@ -69,11 +67,11 @@ class Architect(object):
 
         unrolled_loss.backward()
         vector = [
-            to_variable(param._grad_ivar().numpy())
+            paddle.to_tensor(data=param._grad_ivar().numpy())
             for param in self.unrolled_model_params
         ]
         arch_params_grads = [
-            (alpha, to_variable(ualpha._grad_ivar().numpy()))
+            (alpha, paddle.to_tensor(data=ualpha._grad_ivar().numpy()))
             for alpha, ualpha in zip(self.model.arch_parameters(),
                                      self.unrolled_model.arch_parameters())
         ]
@@ -95,9 +93,9 @@ class Architect(object):
         self.unrolled_model.clear_gradients()
 
     def _hessian_vector_product(self, vector, data, r=1e-2):
-        R = r * fluid.layers.rsqrt(
-            fluid.layers.sum(
-                [fluid.layers.reduce_sum(paddle.square(v)) for v in vector]))
+        R = r * paddle.rsqrt(
+            paddle.fluid.layers.sum(
+                [paddle.sum(x=paddle.square(v)) for v in vector]))
 
         model_params = [
             p for p in self.model.parameters()
@@ -110,7 +108,7 @@ class Architect(object):
         loss = self.model.loss(data)
         loss.backward()
         grads_p = [
-            to_variable(param._grad_ivar().numpy())
+            paddle.to_tensor(data=param._grad_ivar().numpy())
             for param in self.model.arch_parameters()
         ]
 
@@ -122,7 +120,7 @@ class Architect(object):
         loss = self.model.loss(data)
         loss.backward()
         grads_n = [
-            to_variable(param._grad_ivar().numpy())
+            paddle.to_tensor(data=param._grad_ivar().numpy())
             for param in self.model.arch_parameters()
         ]
         for param, grad in zip(model_params, vector):
