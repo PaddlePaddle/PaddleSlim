@@ -1,7 +1,6 @@
 
 Global:
   reader_config: configs/yolo_reader.yml
-  input_list: ['image']
   arch: PPYOLOE    # When export exclude_nms=True, need set arch: PPYOLOE
   Evaluation: True
   model_dir: ./ppyoloe_crn_s_300e_coco

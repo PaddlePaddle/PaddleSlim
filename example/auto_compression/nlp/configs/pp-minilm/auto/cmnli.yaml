@@ -10,7 +10,7 @@ TransformerPrune:
   pruned_ratio: 0.25
 HyperParameterOptimization:
 Distillation:
-Quantization:
+QuantPost:
 TrainConfig:
   epochs: 6
   eval_iter: 2000

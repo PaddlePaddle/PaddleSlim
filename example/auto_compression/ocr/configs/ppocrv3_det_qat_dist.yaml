@@ -4,7 +4,6 @@ Global:
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
   algorithm: DB
-  input_name: 'x'
   
 Distillation:
   alpha: 1.0

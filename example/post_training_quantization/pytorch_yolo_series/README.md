@@ -26,6 +26,10 @@
 | YOLOv6s |  Base模型 | 640*640  |  42.4   |   9.06ms  |   2.90ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov6s.onnx) |
 | YOLOv6s |  KL离线量化(量化分析前) | 640*640  |  30.3   |   - |   -   |  1.83ms  |  -  | - |
 | YOLOv6s |  KL离线量化(量化分析后) | 640*640  |  39.7   |   - |   -   |  -  |  -  | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov6s_analyzed_ptq.tar) |
+| YOLOv6s | avg离线量化 | 640*640  |  33.8   |   - |   -   |  1.83ms  |  -  | - |
+| YOLOv6s |  avg离线量化(+Adaround) | 640*640  |  39.2 |   - |   -   |  -  |  -  | - |
+| YOLOv6s |  avg离线量化(+BRECQ) | 640*640  |  38.7   |   - |   -   |  -  |  -  | - |
+| YOLOv6s |  avg离线量化(+QDrop) | 640*640  |  38.0   |   - |   -   |  -  |  -  | - |
 |  |  |  |  |  |  |  |  |  |
 | YOLOv7 |  Base模型 | 640*640  |  51.1   |   26.84ms  |   7.44ms   |  -  |  - | [Model](https://paddle-slim-models.bj.bcebos.com/act/yolov7.onnx) |
 | YOLOv7 |  KL离线量化 | 640*640  |  50.2   |   -  |   -   |  4.55ms  |  - | - |
@@ -116,7 +120,10 @@ python eval.py --config_path=./configs/yolov5s_ptq.yaml
 
 
 #### 3.6 提高离线量化精度
-本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。
+
+###### 3.6.1 量化分析工具
+本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisQuant```详解见[AnalysisQuant.md](../../../docs/zh_cn/tutorials/quant/AnalysisQuant.md)。
+
 
 由于YOLOv6离线量化效果较差，以YOLOv6为例，量化分析工具具体使用方法如下：
 
@@ -151,10 +158,52 @@ python post_quant.py --config_path=./configs/yolov6s_analyzed_ptq.yaml --save_di
 **加速分析过程**
 
 使用量化分析工具时，因需要逐层量化模型并进行验证，因此过程可能较慢，若想加速分析过程，可以在配置文件中设置 `fast_val_anno_path` ，输入一个图片数量较少的annotation文件路径。注意，用少量数据验证的模型精度不一定等于全量数据验证的模型精度，若只需分析时获得不同层量化效果的相对排序，可以使用少量数据集；若要求准确精度，请使用全量验证数据集。如需要全量验证数据，将 `fast_val_anno_path` 设置为None即可。
+若需要少量验证数据集来快速验证，可下载：[单张COCO验证数据集](https://bj.bcebos.com/v1/paddle-slim-models/data/small_instances_val2017.json)。
 
 注：分析之后若需要直接产出符合目标精度的量化模型，demo代码不会使用少量数据集验证，会自动使用全量验证数据。
 
 量化分析工具详细介绍见[量化分析工具介绍](../analysis.md)
+
+###### 3.6.2 精度重构工具
+本节介绍如何使用精度重构工具提高精度。该工具的思想是，通过最小化量化前后模型输出的重构误差（minimizing the reconstruction error，MRE），学习权重的取整方式（上取整or下取整），从而`fine-tune`经量化后的模型的权重，提高精度。同样以YOLOv6为例，运行命令如下：
+
+```shell
+python fine_tune.py --config_path=./configs/yolov6s_fine_tune.yaml --recon_level=layer-wise
+```
+其中`recon_level`表示重构的粒度，默认为`layer-wise`，即逐层重构。如下图，该工具首先会统计激活和权重量化需要的`scales`，随后为每个权重添加`soft-rounding`操作使得权重的取整方式可学习，以及逐层的增加重构`loss`。
+
+<p align="center">
+<img src="../../../docs/images/adaround.png" width=749 hspace='10'/> <br />
+</p>
+
+通过最小化重构`loss`，为每层的权重学习最合适的`round`方式，其思想类似[论文](https://arxiv.org/abs/2004.10568)提出的`Adround`方法。
+该过程也可看成知识蒸馏，预训练模型可视为教师模型，经离线量化后的模型可视为学生模型。
+类似的，该工具还支持以`region/block`为单位添加重构`loss`，类似[论文](https://arxiv.org/pdf/2102.05426)提出的`BRECQ`方法，其中`region`可能包含多层，如下图所示。
+
+<p align="center">
+<img src="../../../docs/images/brecq.png" width=749 hspace='10'/> <br />
+</p>
+
+具体运行命令如下：
+
+```shell
+python fine_tune.py --config_path=./configs/yolov6s_fine_tune.yaml --recon_level=region-wise
+```
+此外，该工具还支持在重构过程中引入激活量化产生的噪声，如下图所示，在每层前插入`quant/dequant`节点，随机的进行激活量化，核心思想类似[论文](https://arxiv.org/pdf/2203.05740)提出的`QDrop`方法。
+
+<p align="center">
+<img src="../../../docs/images/qdrop.png" width=749 hspace='10'/> <br />
+</p>
+
+
+
+具体运行命令如下，只需将`simulate_activation_quant`设置为`True`即可。
+
+```shell
+python fine_tune.py --config_path=./configs/yolov6s_fine_tune.yaml --simulate_activation_quant=True
+```
+实验结果如上表所示，与量化分析工具不同，精度重构工具无需跳过某些层，就可提升离线量化精度。
+
 
 ## 4.预测部署
 预测部署可参考[YOLO系列模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series)

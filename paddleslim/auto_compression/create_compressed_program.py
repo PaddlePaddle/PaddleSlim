@@ -385,7 +385,9 @@ def build_quant_program(executor, place, config, train_program_info,
 def _get_label_info(dataloader, feed_target_names):
     label_info = {}
     for data in dataloader():
-        for key, value in data[0].items():
+        if isinstance(data, list) or isinstance(data, tuple):
+            data = data[0]
+        for key, value in data.items():
             if key in feed_target_names:
                 continue
             label_info['name'] = key

@@ -1,0 +1,10 @@
+arch: YOLOv6
+model_dir:  ./yolov6s.onnx
+dataset_dir: /dataset/coco/
+model_filename: model.pdmodel
+params_filename: model.pdiparams
+train_image_dir: train2017
+val_image_dir: val2017
+train_anno_path: annotations/instances_train2017.json
+val_anno_path: annotations/instances_val2017.json
+skip_tensor_list: None

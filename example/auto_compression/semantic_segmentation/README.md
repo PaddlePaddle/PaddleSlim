@@ -30,6 +30,8 @@
 | UNet | 量化训练 |  64.93 | - |10.228| [config](./configs/unet/unet_qat.yaml) | [model](https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/unet_qat.tar) |
 | Deeplabv3-ResNet50 | Baseline |  79.90 | -|12.766| -| [model](https://paddleseg.bj.bcebos.com/tipc/easyedge/RES-paddle2-Deeplabv3-ResNet50.zip)|
 | Deeplabv3-ResNet50 | 量化训练 |  79.26 | - |8.839|[config](./configs/deeplabv3/deeplabv3_qat.yaml) | [model](https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/deeplabv3_qat.tar) |
+| BiSeNetV2 | Baseline |  73.17 | -|35.61| -| [model](https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/BiSeNetV2.tar)|
+| BiSeNetV2 | 量化训练 |  73.20 | - |15.94|[config](./configs/BiSeNetV2/BiSeNetV2_qat.yaml) | [model](https://bj.bcebos.com/v1/paddle-slim-models/act/PaddleSeg/qat/BiSeNetV2_qat.tar) |
 
 - ARM CPU测试环境：`高通骁龙710处理器(SDM710 2*A75(2.2GHz) 6*A55(1.7GHz))`；
 
@@ -37,7 +39,7 @@
 
   - 硬件：NVIDIA Tesla T4 单卡
   - 软件：CUDA 11.0, cuDNN 8.0, TensorRT 8.0
-  - 测试配置：batch_size: 40, max_seq_len: 128
+  - 测试配置：batch_size: 40
 
 下面将以开源数据集为例介绍如何对PP-HumanSeg-Lite进行自动压缩。
 
@@ -47,7 +49,7 @@
 
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim >= 2.3
-- PaddleSeg >= 2.5
+- PaddleSeg == 2.5.0
 
 安装paddlepaddle：
 ```shell
@@ -67,13 +69,13 @@ pip install paddleslim
 git clone https://github.com/PaddlePaddle/PaddleSlim.git
 ```
 
-安装paddleseg
+安装paddleseg 2.5.0
 
 ```shell
 pip install paddleseg==2.5.0
 ```
 
-注：安装[PaddleSeg](https://github.com/PaddlePaddle/PaddleSeg)的目的只是为了直接使用PaddleSeg中的Dataloader组件，不涉及模型组网等。推荐安装PaddleSeg 2.5.0, 不同版本的PaddleSeg的Dataloader返回数据的格式略有不同.
+注：安装[PaddleSeg](https://github.com/PaddlePaddle/PaddleSeg)的目的只是为了直接使用PaddleSeg中的Dataloader组件，不涉及模型组网等。本示例需安装**PaddleSeg 2.5.0**, 不同版本的PaddleSeg的Dataloader返回数据的格式略有不同.
 
 #### 3.2 准备数据集
 

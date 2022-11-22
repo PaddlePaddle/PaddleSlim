@@ -89,11 +89,11 @@ python -m paddle.distributed.launch run.py --save_dir='./save_quant_mobilev3/' -
 
 **验证精度**
 
-根据训练log可以看到模型验证的精度，若需再次验证精度，修改配置文件```./configs/MobileNetV1/qat_dis.yaml```中所需验证模型的文件夹路径及模型和参数名称```model_dir, model_filename, params_filename```，然后使用以下命令进行验证：
+根据训练log可以看到模型验证的精度，若需再次验证精度，修改配置文件```./configs/mobilenetv3_large_qat_dis.yaml```中所需验证模型的文件夹路径及模型和参数名称```model_dir, model_filename, params_filename```，然后使用以下命令进行验证：
 
 ```shell
 export CUDA_VISIBLE_DEVICES=0
-python eval.py --config_path='./configs/eval.yaml'
+python eval.py --config_path='./configs/mobilenetv3_large_qat_dis.yaml'
 ```
 
 
@@ -101,6 +101,6 @@ python eval.py --config_path='./configs/eval.yaml'
 
 #### 4.1 PaddleLite端侧部署
 PaddleLite端侧部署可参考：
-- [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleClas/blob/develop/docs/zh_CN/inference_deployment/paddle_lite_deploy.md)
+- [Paddle Lite全量化模型部署](https://www.paddlepaddle.org.cn/lite/develop/demo_guides/verisilicon_timvx.html#tim-vx)
 
 ## 5.FAQ

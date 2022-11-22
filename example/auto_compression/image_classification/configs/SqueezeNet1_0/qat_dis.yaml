@@ -1,5 +1,4 @@
 Global:
-  input_name: inputs
   model_dir: SqueezeNet1_0_infer
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
@@ -21,6 +20,8 @@ Quantization:
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
+  - matmul
+  - matmul_v2
   weight_bits: 8
 TrainConfig:
   epochs: 1
