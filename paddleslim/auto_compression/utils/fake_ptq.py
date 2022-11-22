@@ -169,5 +169,6 @@ def post_quant_fake(executor,
             feed_vars=feed_vars,
             fetch_vars=_fetch_list,
             executor=executor,
-            program=_program)
+            program=_program,
+            clip_extra=False)
         print("The quantized model is saved in: " + save_model_path)
