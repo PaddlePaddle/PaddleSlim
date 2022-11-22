@@ -11,7 +11,7 @@ Distillation:
   node:
   - conv2d_103.tmp_1
 
-Quantization:
+QuantAware:
   onnx_format: True
   quantize_op_types:
   - conv2d
