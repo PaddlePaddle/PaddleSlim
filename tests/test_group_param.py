@@ -14,7 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
-import paddle.fluid as fluid
+import paddle
 from layers import conv_bn_layer
 from paddleslim.prune import StaticPruningCollections
 from static_case import StaticCase

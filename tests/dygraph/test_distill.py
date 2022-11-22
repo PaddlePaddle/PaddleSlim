@@ -4,9 +4,6 @@ import logging
 import numpy as np
 import unittest
 import paddle
-import paddle.nn as nn
-from paddle.vision.models import MobileNetV1
-import paddle.vision.transforms as T
 from paddleslim.dygraph.dist import Distill, config2yaml
 from paddleslim.common.log_helper import get_logger
 
@@ -21,7 +18,8 @@ class TestImperativeDistill(unittest.TestCase):
         self.distill_configs = self.prepare_config()
 
     def prepare_model(self):
-        return MobileNetV1(), MobileNetV1()
+        return paddle.vision.models.MobileNetV1(
+        ), paddle.vision.models.MobileNetV1()
 
     def prepare_config(self):
         self.convert_fn = False
@@ -45,7 +43,10 @@ class TestImperativeDistill(unittest.TestCase):
         return distill_configs
 
     def test_distill(self):
-        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        transform = paddle.vision.transforms.Compose([
+            paddle.vision.transforms.Transpose(),
+            paddle.vision.transforms.Normalize([127.5], [127.5])
+        ])
 
         train_dataset = paddle.vision.datasets.Cifar10(
             mode='train', backend='cv2', transform=transform)
@@ -110,24 +111,24 @@ class TestImperativeDistill(unittest.TestCase):
 
 class TestImperativeDistillCase1(TestImperativeDistill):
     def prepare_model(self):
-        class convbn(nn.Layer):
+        class convbn(paddle.nn.Layer):
             def __init__(self):
                 super(convbn, self).__init__()
-                self.conv = nn.Conv2D(3, 3, 3, padding=1)
-                self.bn = nn.BatchNorm(3)
+                self.conv = paddle.nn.Conv2D(3, 3, 3, padding=1)
+                self.bn = paddle.nn.BatchNorm(3)
 
             def forward(self, x):
                 conv_out = self.conv(x)
                 bn_out = self.bn(conv_out)
                 return tuple([conv_out, bn_out])
 
-        class Model(nn.Layer):
+        class Model(paddle.nn.Layer):
             def __init__(self):
                 super(Model, self).__init__()
-                self.conv1 = nn.Conv2D(3, 3, 3, padding=1)
+                self.conv1 = paddle.nn.Conv2D(3, 3, 3, padding=1)
                 self.conv2 = convbn()
-                self.conv3 = nn.Conv2D(3, 3, 3, padding=1)
-                self.fc = nn.Linear(3072, 10)
+                self.conv3 = paddle.nn.Conv2D(3, 3, 3, padding=1)
+                self.fc = paddle.nn.Linear(3072, 10)
 
             def forward(self, x):
                 self.conv1_out = self.conv1(x)

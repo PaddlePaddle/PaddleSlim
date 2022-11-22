@@ -469,8 +469,7 @@ class ReconstructionQuanter(object):
             shape=weight.shape,
             dtype=weight.dtype,
             name=weight.name + ".alpha",
-            default_initializer=paddle.nn.initializer.NumpyArrayInitializer(
-                self._alpha, ), )
+            default_initializer=paddle.nn.initializer.Assign(self._alpha, ), )
 
         h_v = paddle.clip(
             paddle.nn.functional.sigmoid(v) * (ZETA - GAMMA) + GAMMA,
@@ -482,8 +481,7 @@ class ReconstructionQuanter(object):
                 dtype=weight.dtype,
                 shape=weight.shape,
                 name=weight.name + '.scale',
-                default_initializer=paddle.nn.initializer.NumpyArrayInitializer(
-                    scale, ))
+                default_initializer=paddle.nn.initializer.Assign(scale, ))
         else:
             scale_var = scale
 

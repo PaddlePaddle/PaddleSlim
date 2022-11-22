@@ -18,8 +18,7 @@ from __future__ import print_function
 
 import numpy as np
 import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import ConstantInitializer, KaimingUniform
+from paddle.nn.initializer import Constant, KaimingUniform
 from paddle.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable
@@ -45,10 +44,10 @@ class ConvBN(paddle.nn.Layer):
             num_channels=c_out,
             param_attr=paddle.ParamAttr(
                 name=name + "_bn_scale" if name is not None else None,
-                initializer=ConstantInitializer(value=1)),
+                initializer=Constant(value=1)),
             bias_attr=paddle.ParamAttr(
                 name=name + "_bn_offset" if name is not None else None,
-                initializer=ConstantInitializer(value=0)),
+                initializer=Constant(value=0)),
             moving_mean_name=name + "_bn_mean" if name is not None else None,
             moving_variance_name=name + "_bn_variance"
             if name is not None else None)

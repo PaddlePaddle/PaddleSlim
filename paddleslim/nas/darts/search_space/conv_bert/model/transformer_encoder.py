@@ -60,10 +60,10 @@ class MixedOp(paddle.nn.Layer):
             op = OPS[primitive](n_channel, name
                                 if name is None else name + "/" + primitive)
             if 'pool' in primitive:
-                gama = ParamAttr(
+                gama = paddle.ParamAttr(
                     initializer=paddle.nn.initializer.Constant(value=1),
                     trainable=False)
-                beta = ParamAttr(
+                beta = paddle.ParamAttr(
                     initializer=paddle.nn.initializer.Constant(value=0),
                     trainable=False)
                 BN = paddle.nn.BatchNorm(
@@ -147,10 +147,10 @@ class ReluConvBN(paddle.nn.Layer):
             bias_attr=False,
             use_cudnn=use_cudnn)
 
-        gama = ParamAttr(
+        gama = paddle.ParamAttr(
             initializer=paddle.nn.initializer.Constant(value=1),
             trainable=affine)
-        beta = ParamAttr(
+        beta = paddle.ParamAttr(
             initializer=paddle.nn.initializer.Constant(value=0),
             trainable=affine)
 
@@ -266,7 +266,7 @@ class EncoderLayer(paddle.nn.Layer):
         self.alphas = paddle.static.create_parameter(
             shape=[k, num_ops],
             dtype="float32",
-            default_initializer=paddle.nn.initializer.NormalInitializer(
+            default_initializer=paddle.nn.initializer.Normal(
                 loc=0.0, scale=1e-3))
 
         self.pool2d_avg = paddle.fluid.dygraph.Pool2D(
@@ -285,9 +285,9 @@ class EncoderLayer(paddle.nn.Layer):
             out = paddle.nn.Linear(
                 in_features=self._n_channel,
                 out_features=num_labels,
-                weight_attr=ParamAttr(
+                weight_attr=paddle.ParamAttr(
                     initializer=paddle.nn.initializer.KaimingUniform()),
-                bias_attr=ParamAttr(
+                bias_attr=paddle.ParamAttr(
                     initializer=paddle.nn.initializer.KaimingUniform()))
             self.bns.append(bn)
             self.outs.append(out)

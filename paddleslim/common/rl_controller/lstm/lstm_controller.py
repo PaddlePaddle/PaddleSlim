@@ -16,16 +16,20 @@ import math
 import logging
 import numpy as np
 import paddle
+import paddle.fluid as fluid
+from paddle.fluid import ParamAttr
+from paddle.fluid.layers import RNNCell, LSTMCell, rnn
+from paddle.fluid.contrib.layers import basic_lstm
 from ...controller import RLBaseController
 from ...log_helper import get_logger
 from ..utils import RLCONTROLLER
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-uniform_initializer = lambda x: paddle.nn.initializer.Uniform(low=-x, high=x)
+uniform_initializer = lambda x: fluid.initializer.UniformInitializer(low=-x, high=x)
 
 
-class lstm_cell(paddle.fluid.layers.RNNCell):
+class lstm_cell(RNNCell):
     def __init__(self, num_layers, hidden_size):
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -36,9 +40,7 @@ class lstm_cell(paddle.fluid.layers.RNNCell):
         bias_attr = ParamAttr(initializer=uniform_initializer(
             1.0 / math.sqrt(hidden_size)))
         for i in range(num_layers):
-            self.lstm_cells.append(
-                paddle.fluid.layers.LSTMCell(hidden_size, param_attr,
-                                             bias_attr))
+            self.lstm_cells.append(LSTMCell(hidden_size, param_attr, bias_attr))
 
     def call(self, inputs, states):
         new_states = []
@@ -98,7 +100,7 @@ class LSTM(RLBaseController):
             shape=(self.controller_batch_size, self.hidden_size),
             dtype='float32',
             default_initializer=uniform_initializer(1.0))
-        self.baseline = paddle.fluid.layers.create_global_var(
+        self.baseline = fluid.layers.create_global_var(
             shape=[1],
             value=0.0,
             dtype='float32',
@@ -111,49 +113,51 @@ class LSTM(RLBaseController):
         entropies = []
         sample_log_probs = []
 
-        paddle.disable_static('Controller')
-        self._create_parameter()
-        inputs = self.g_emb
+        with fluid.unique_name.guard('Controller'):
+            self._create_parameter()
+            inputs = self.g_emb
 
-        for idx in range(len(self.range_tables)):
-            logits, output, states = self._lstm(
-                inputs, hidden, cell, token_idx=idx)
-            hidden, cell = np.squeeze(states)
-            probs = paddle.nn.functional.softmax(logits, axis=1)
-            if is_inference:
-                action = paddle.argmax(probs, axis=1)
-            else:
-                if init_actions:
-                    action = paddle.slice(
-                        init_actions, axes=[1], starts=[idx], ends=[idx + 1])
-                    action = paddle.squeeze(action, axis=[1])
-                    action.stop_gradient = True
+            for idx in range(len(self.range_tables)):
+                logits, output, states = self._lstm(
+                    inputs, hidden, cell, token_idx=idx)
+                hidden, cell = np.squeeze(states)
+                probs = paddle.nn.functional.softmax(logits, axis=1)
+                if is_inference:
+                    action = paddle.argmax(probs, axis=1)
                 else:
-                    action = paddle.fluid.layers.sampling_id(probs)
-            actions.append(action)
-            log_prob = paddle.nn.functional.softmax_with_cross_entropy(
-                logits,
-                paddle.reshape(
-                    action, shape=[paddle.shape(action), 1]),
-                axis=1)
-            sample_log_probs.append(log_prob)
+                    if init_actions:
+                        action = paddle.slice(
+                            init_actions,
+                            axes=[1],
+                            starts=[idx],
+                            ends=[idx + 1])
+                        action = paddle.squeeze(action, axis=[1])
+                        action.stop_gradient = True
+                    else:
+                        action = fluid.layers.sampling_id(probs)
+                actions.append(action)
+                log_prob = paddle.nn.functional.softmax_with_cross_entropy(
+                    logits,
+                    paddle.reshape(
+                        action, shape=[paddle.shape(action), 1]),
+                    axis=1)
+                sample_log_probs.append(log_prob)
 
-            entropy = log_prob * paddle.exp(-1 * log_prob)
-            entropy.stop_gradient = True
-            entropies.append(entropy)
+                entropy = log_prob * paddle.exp(-1 * log_prob)
+                entropy.stop_gradient = True
+                entropies.append(entropy)
 
-            action_emb = paddle.cast(action, dtype=np.int64)
-            inputs = paddle.static.nn.embedding(
-                action_emb,
-                size=(self.max_range_table, self.hidden_size),
-                param_attr=paddle.ParamAttr(
-                    name='emb_w', initializer=uniform_initializer(1.0)))
+                action_emb = paddle.cast(action, dtype=np.int64)
+                inputs = paddle.static.nn.embedding(
+                    action_emb,
+                    size=(self.max_range_table, self.hidden_size),
+                    param_attr=paddle.ParamAttr(
+                        name='emb_w', initializer=uniform_initializer(1.0)))
 
-        self.sample_log_probs = paddle.concat(sample_log_probs, axis=0)
+            self.sample_log_probs = paddle.concat(sample_log_probs, axis=0)
 
-        entropies = paddle.stack(entropies)
-        self.sample_entropies = paddle.sum(entropies)
-        paddle.enable_static()
+            entropies = paddle.stack(entropies)
+            self.sample_entropies = paddle.sum(entropies)
 
         return actions
 
@@ -168,26 +172,21 @@ class LSTM(RLBaseController):
                 default_initializer=uniform_initializer(1.0))
 
             paddle.assign(
-                paddle.fluid.layers.uniform_random(shape=self.g_emb.shape),
-                self.g_emb)
-            hidden = paddle.static.data(
-                name='hidden', shape=[None, self.hidden_size])
-            cell = paddle.static.data(
-                name='cell', shape=[None, self.hidden_size])
+                fluid.layers.uniform_random(shape=self.g_emb.shape), self.g_emb)
+            hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
+            cell = fluid.data(name='cell', shape=[None, self.hidden_size])
             self.tokens = self._network(hidden, cell, is_inference=is_inference)
 
         with paddle.static.program_guard(self.learn_program):
-            hidden = paddle.static.data(
-                name='hidden', shape=[None, self.hidden_size])
-            cell = paddle.static.data(
-                name='cell', shape=[None, self.hidden_size])
-            init_actions = paddle.static.data(
+            hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
+            cell = fluid.data(name='cell', shape=[None, self.hidden_size])
+            init_actions = fluid.data(
                 name='init_actions',
                 shape=[None, len(self.range_tables)],
                 dtype='int64')
             self._network(hidden, cell, init_actions=init_actions)
 
-            rewards = paddle.static.data(name='rewards', shape=[None])
+            rewards = fluid.data(name='rewards', shape=[None])
             self.rewards = paddle.mean(rewards)
 
             if self.weight_entropy is not None:
@@ -198,7 +197,7 @@ class LSTM(RLBaseController):
             paddle.assign(self.baseline - (1.0 - self.decay) *
                           (self.baseline - self.rewards), self.baseline)
             self.loss = self.sample_log_probs * (self.rewards - self.baseline)
-            clip = paddle.fluid.clip.GradientClipByNorm(clip_norm=5.0)
+            clip = fluid.clip.GradientClipByNorm(clip_norm=5.0)
             if self.decay_steps is not None:
                 lr = paddle.optimizer.lr.ExponentialDecay(
                     learning_rate=self.controller_lr,

@@ -17,7 +17,6 @@ sys.path.append(".")
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 
 import paddle
-import paddle.dataset.mnist as reader
 import unittest
 from paddleslim.quant import quant_post_hpo
 from static_case import StaticCase
@@ -117,7 +116,7 @@ class TestQuantPostHpoCase1(StaticCase):
 
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
-        paddle.static.save_inference_model(
+        paddle.fluid.io.save_inference_model(
             dirname='./test_quant_post_hpo',
             feeded_var_names=[image.name, label.name],
             target_vars=[avg_cost, acc_top1, acc_top5],
@@ -138,7 +137,7 @@ class TestQuantPostHpoCase1(StaticCase):
             save_model_filename='__model__',
             save_params_filename='__params__',
             runcount_limit=2)
-        quant_post_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+        quant_post_prog, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
             dirname='./test_quant_post_hpo_inference',
             executor=exe,
             model_filename='__model__',

@@ -14,7 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
-import paddle.fluid as fluid
+import paddle
 from paddleslim.prune import Pruner, save_model, load_model
 from layers import conv_bn_layer
 from static_case import StaticCase
@@ -37,20 +37,21 @@ class TestSaveAndLoad(StaticCase):
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
             feature = paddle.reshape(conv6, [-1, 128, 16])
-            predict = paddle.static.nn.fc(input=feature, size=10, act='softmax')
+            predict = paddle.static.nn.fc(feature, 10, activation='softmax')
             label = paddle.static.data(
                 name='label', shape=[None, 1], dtype='int64')
             print(label.shape)
             print(predict.shape)
-            cost = fluid.layers.cross_entropy(input=predict, label=label)
-            avg_cost = fluid.layers.mean(cost)
-            adam_optimizer = fluid.optimizer.AdamOptimizer(0.01)
+            cost = paddle.nn.functional.cross_entropy(
+                input=predict, label=label)
+            avg_cost = paddle.mean(x=cost)
+            adam_optimizer = paddle.optimizer.Adam(learning_rate=0.01)
             adam_optimizer.minimize(avg_cost)
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
 
-        scope = paddle.static.global_scope
+        scope = paddle.static.global_scope()
         exe.run(startup_program, scope=scope)
         criterion = 'bn_scale'
         pruner = Pruner(criterion)

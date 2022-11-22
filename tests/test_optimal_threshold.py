@@ -14,7 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
-import paddle.fluid as fluid
+import paddle
 from paddleslim.prune import Pruner
 from layers import conv_bn_layer
 from static_case import StaticCase
@@ -48,7 +48,7 @@ class TestPrune(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = fluid.Scope()
+        scope = paddle.fluid.Scope()
         exe.run(startup_program, scope=scope)
         criterion = 'bn_scale'
         idx_selector = 'optimal_threshold'

@@ -15,7 +15,6 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle
-import paddle.fluid as fluid
 from paddleslim.nas import RLNAS
 from paddleslim.analysis import flops
 from static_case import StaticCase

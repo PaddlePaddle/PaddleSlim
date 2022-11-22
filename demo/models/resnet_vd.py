@@ -20,7 +20,6 @@ import math
 
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
 
 __all__ = [
     "ResNet", "ResNet18_vd", "ResNet34_vd", "ResNet50_vd", "ResNet101_vd",
@@ -120,9 +119,9 @@ class ResNet():
         stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
 
         out = paddle.static.nn.fc(
-            input=pool,
-            size=class_dim,
-            param_attr=paddle.ParamAttr(
+            pool,
+            class_dim,
+            weight_attr=paddle.ParamAttr(
                 initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
 
         return out
@@ -143,7 +142,7 @@ class ResNet():
             padding=(filter_size - 1) // 2,
             groups=groups,
             act=None,
-            param_attr=ParamAttr(name=name + "_weights"),
+            param_attr=paddle.ParamAttr(name=name + "_weights"),
             bias_attr=False)
         if name == "conv1":
             bn_name = "bn_" + name
@@ -152,8 +151,8 @@ class ResNet():
         return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
-            param_attr=ParamAttr(name=bn_name + '_scale'),
-            bias_attr=ParamAttr(bn_name + '_offset'),
+            param_attr=paddle.ParamAttr(name=bn_name + '_scale'),
+            bias_attr=paddle.ParamAttr(bn_name + '_offset'),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
 
@@ -181,7 +180,7 @@ class ResNet():
             padding=(filter_size - 1) // 2,
             groups=groups,
             act=None,
-            param_attr=ParamAttr(name=name + "_weights"),
+            param_attr=paddle.ParamAttr(name=name + "_weights"),
             bias_attr=False)
         if name == "conv1":
             bn_name = "bn_" + name
@@ -190,8 +189,8 @@ class ResNet():
         return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
-            param_attr=ParamAttr(name=bn_name + '_scale'),
-            bias_attr=ParamAttr(bn_name + '_offset'),
+            param_attr=paddle.ParamAttr(name=bn_name + '_scale'),
+            bias_attr=paddle.ParamAttr(bn_name + '_offset'),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
 

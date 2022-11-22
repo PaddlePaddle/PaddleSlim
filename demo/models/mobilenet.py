@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import paddle
 import paddle.fluid as fluid
 from paddle.nn.initializer import KaimingUniform
-from paddle.fluid.param_attr import ParamAttr
 
 __all__ = ['MobileNet']
 
@@ -128,12 +128,12 @@ class MobileNet():
             pool_type='avg',
             global_pooling=True)
         with fluid.name_scope('last_fc'):
-            output = paddle.static.nn.fc(input=input,
-                                         size=class_dim,
-                                         param_attr=ParamAttr(
-                                             initializer=KaimingUniform(),
-                                             name="fc7_weights"),
-                                         bias_attr=ParamAttr(name="fc7_offset"))
+            output = paddle.static.nn.fc(
+                input,
+                class_dim,
+                weight_attr=paddle.ParamAttr(
+                    initializer=KaimingUniform(), name="fc7_weights"),
+                bias_attr=paddle.ParamAttr(name="fc7_offset"))
 
         return output
 
@@ -157,15 +157,15 @@ class MobileNet():
             groups=num_groups,
             act=None,
             use_cudnn=use_cudnn,
-            param_attr=ParamAttr(
+            param_attr=paddle.ParamAttr(
                 initializer=KaimingUniform(), name=name + "_weights"),
             bias_attr=False)
         bn_name = name + "_bn"
         return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
-            param_attr=ParamAttr(name=bn_name + "_scale"),
-            bias_attr=ParamAttr(name=bn_name + "_offset"),
+            param_attr=paddle.ParamAttr(name=bn_name + "_scale"),
+            bias_attr=paddle.ParamAttr(name=bn_name + "_offset"),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
 

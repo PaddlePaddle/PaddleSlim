@@ -1,6 +1,6 @@
+import paddle
 import paddle.fluid as fluid
 from paddle.nn.initializer import KaimingUniform
-from paddle.fluid.param_attr import ParamAttr
 import math
 
 __all__ = [
@@ -112,13 +112,14 @@ class MobileNetV3():
             stride=1,
             padding=0,
             act=None,
-            param_attr=ParamAttr(name='last_1x1_conv_weights'),
+            param_attr=paddle.ParamAttr(name='last_1x1_conv_weights'),
             bias_attr=False)
         conv = fluid.layers.hard_swish(conv)
-        out = paddle.static.nn.fc(input=conv,
-                                  size=class_dim,
-                                  param_attr=ParamAttr(name='fc_weights'),
-                                  bias_attr=ParamAttr(name='fc_offset'))
+        out = paddle.static.nn.fc(
+            conv,
+            class_dim,
+            weight_attr=paddle.ParamAttr(name='fc_weights'),
+            bias_attr=paddle.ParamAttr(name='fc_offset'))
         return out
 
     def conv_bn_layer(self,
@@ -141,16 +142,16 @@ class MobileNetV3():
             groups=num_groups,
             act=None,
             use_cudnn=use_cudnn,
-            param_attr=ParamAttr(name=name + '_weights'),
+            param_attr=paddle.ParamAttr(name=name + '_weights'),
             bias_attr=False)
         bn_name = name + '_bn'
         bn = paddle.static.nn.batch_norm(
             input=conv,
-            param_attr=ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=bn_name + "_scale",
                 regularizer=fluid.regularizer.L2DecayRegularizer(
                     regularization_coeff=0.0)),
-            bias_attr=ParamAttr(
+            bias_attr=paddle.ParamAttr(
                 name=bn_name + "_offset",
                 regularizer=fluid.regularizer.L2DecayRegularizer(
                     regularization_coeff=0.0)),
@@ -175,15 +176,15 @@ class MobileNetV3():
             filter_size=1,
             num_filters=num_mid_filter,
             act='relu',
-            param_attr=ParamAttr(name=name + '_1_weights'),
-            bias_attr=ParamAttr(name=name + '_1_offset'))
+            param_attr=paddle.ParamAttr(name=name + '_1_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_1_offset'))
         conv2 = paddle.static.nn.conv2d(
             input=conv1,
             filter_size=1,
             num_filters=num_out_filter,
             act='hard_sigmoid',
-            param_attr=ParamAttr(name=name + '_2_weights'),
-            bias_attr=ParamAttr(name=name + '_2_offset'))
+            param_attr=paddle.ParamAttr(name=name + '_2_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_2_offset'))
 
         scale = fluid.layers.elementwise_mul(x=input, y=conv2, axis=0)
         return scale

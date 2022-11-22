@@ -15,8 +15,7 @@
 import paddle.fluid as fluid
 from paddle.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D, BatchNorm
-from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import ConstantInitializer, KaimingUniform
+from paddle.nn.initializer import Constant, KaimingUniform
 
 
 OPS = {
@@ -59,8 +58,8 @@ OPS = {
 
 
 def bn_param_config(affine=False):
-    gama = ParamAttr(initializer=ConstantInitializer(value=1), trainable=affine)
-    beta = ParamAttr(initializer=ConstantInitializer(value=0), trainable=affine)
+    gama = paddle.ParamAttr(initializer=Constant(value=1), trainable=affine)
+    beta = paddle.ParamAttr(initializer=Constant(value=0), trainable=affine)
     return gama, beta
 
 

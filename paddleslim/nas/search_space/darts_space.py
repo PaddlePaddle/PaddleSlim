@@ -113,7 +113,7 @@ class DartsSpace(SearchSpaceBase):
         k = (1. / out.shape[1])**0.5
         out = paddle.static.nn.fc(out,
                                   num_classes,
-                                  param_attr=paddle.ParamAttr(
+                                  weight_attr=paddle.ParamAttr(
                                       name=name + "/fc_weights",
                                       initializer=paddle.nn.initializer.Uniform(
                                           low=-k, high=k)),
@@ -402,10 +402,10 @@ class DartsSpace(SearchSpaceBase):
             conv1,
             param_attr=paddle.ParamAttr(
                 name=name + "/bn_scale",
-                initializer=paddle.nn.initializer.ConstantInitializer(value=1)),
+                initializer=paddle.nn.initializer.Constant(value=1)),
             bias_attr=paddle.ParamAttr(
                 name=name + "/bn_offset",
-                initializer=paddle.nn.initializer.ConstantInitializer(value=0)),
+                initializer=paddle.nn.initializer.Constant(value=0)),
             moving_mean_name=name + "/bn_mean",
             moving_variance_name=name + "/bn_variance")
         return bn1
@@ -606,11 +606,11 @@ class DartsSpace(SearchSpaceBase):
         beta_name = name + "/" + str(op) + "/beta"
         gama = paddle.ParamAttr(
             name=gama_name,
-            initializer=paddle.nn.initializer.ConstantInitializer(value=1),
+            initializer=paddle.nn.initializer.Constant(value=1),
             trainable=affine)
         beta = paddle.ParamAttr(
             name=beta_name,
-            initializer=paddle.nn.initializer.ConstantInitializer(value=0),
+            initializer=paddle.nn.initializer.Constant(value=0),
             trainable=affine)
         return gama, beta
 

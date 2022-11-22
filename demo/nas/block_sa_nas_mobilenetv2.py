@@ -10,7 +10,6 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 import paddle.vision.transforms as T
 import paddle.static as static
-from paddle import ParamAttr
 from paddleslim.analysis import flops
 from paddleslim.nas import SANAS
 from paddleslim.common import get_logger
@@ -38,14 +37,14 @@ def conv_bn_layer(input,
         groups=num_groups,
         act=None,
         use_cudnn=use_cudnn,
-        param_attr=ParamAttr(name=name + '_weights'),
+        param_attr=paddle.ParamAttr(name=name + '_weights'),
         bias_attr=False)
     bn_name = name + '_bn'
     return static.nn.batch_norm(
         input=conv,
         act=act,
-        param_attr=ParamAttr(name=bn_name + '_scale'),
-        bias_attr=ParamAttr(name=bn_name + '_offset'),
+        param_attr=paddle.ParamAttr(name=bn_name + '_scale'),
+        bias_attr=paddle.ParamAttr(name=bn_name + '_offset'),
         moving_mean_name=bn_name + '_mean',
         moving_variance_name=bn_name + '_variance')
 
@@ -130,8 +129,8 @@ def search_mobilenetv2_block(config, args, image_size):
             output = static.nn.fc(
                 x=data,
                 size=args.class_dim,
-                weight_attr=ParamAttr(name='mobilenetv2_fc_weights'),
-                bias_attr=ParamAttr(name='mobilenetv2_fc_offset'))
+                weight_attr=paddle.ParamAttr(name='mobilenetv2_fc_weights'),
+                bias_attr=paddle.ParamAttr(name='mobilenetv2_fc_offset'))
 
             softmax_out = F.softmax(output)
             cost = F.cross_entropy(softmax_out, label=label)

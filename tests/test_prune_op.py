@@ -16,7 +16,6 @@ sys.path.append("../")
 import unittest
 from static_case import StaticCase
 import paddle
-import paddle.fluid as fluid
 from paddleslim.prune import Pruner
 from static_case import StaticCase
 from layers import conv_bn_layer
@@ -45,7 +44,7 @@ class TestPrune(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = fluid.Scope()
+        scope = paddle.fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         # test backward search of concat
@@ -123,7 +122,7 @@ class TestSplit(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = fluid.Scope()
+        scope = paddle.fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         # test backward search of concat
@@ -160,7 +159,7 @@ class TestMul(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = fluid.Scope()
+        scope = paddle.fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         # test backward search of concat

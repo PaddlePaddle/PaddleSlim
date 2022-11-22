@@ -17,7 +17,6 @@ import os
 import sys
 import unittest
 import paddle
-import paddle.fluid as fluid
 from static_case import StaticCase
 from paddleslim.nas import SANAS
 from paddleslim.analysis import flops

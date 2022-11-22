@@ -103,9 +103,7 @@ def transform_and_save_int8_model(original_path, save_path):
                 feed_target_names,
                 fetch_targets,
                 exe,
-                inference_program,
-                model_filename=model_filename,
-                params_filename=params_filename)
+                program=inference_program)
         print(
             "Success! INT8 model obtained from the Quant model can be found at {}\n"
             .format(save_path))

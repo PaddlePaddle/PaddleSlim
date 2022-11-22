@@ -16,7 +16,6 @@ sys.path.append("../")
 import unittest
 import numpy
 import paddle
-import paddle.fluid as fluid
 from static_case import StaticCase
 from paddleslim.prune import sensitivity, merge_sensitive, load_sensitivities, get_ratios_by_loss
 from layers import conv_bn_layer
@@ -38,7 +37,7 @@ class TestSensitivity(StaticCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
-            out = paddle.static.nn.fc(conv6, size=10, act='softmax')
+            out = paddle.static.nn.fc(conv6, 10, activation='softmax')
             acc_top1 = paddle.static.accuracy(input=out, label=label, k=1)
         eval_program = main_program.clone(for_test=True)
 
@@ -50,7 +49,7 @@ class TestSensitivity(StaticCase):
             paddle.dataset.mnist.test(), batch_size=128)
 
         def eval_func(program):
-            feeder = fluid.DataFeeder(
+            feeder = paddle.fluid.DataFeeder(
                 feed_list=['image', 'label'], place=place, program=program)
             acc_set = []
             for data in val_reader():
@@ -64,7 +63,7 @@ class TestSensitivity(StaticCase):
 
         def eval_func_for_args(args):
             program = args[0]
-            feeder = fluid.DataFeeder(
+            feeder = paddle.fluid.DataFeeder(
                 feed_list=['image', 'label'], place=place, program=program)
             acc_set = []
             for data in val_reader():

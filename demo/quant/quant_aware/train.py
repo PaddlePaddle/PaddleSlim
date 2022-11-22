@@ -310,13 +310,11 @@ def compress(args):
         os.makedirs(model_path)
 
     paddle.static.save_inference_model(
-        dirname=float_path,
-        feeded_var_names=[image.name],
-        target_vars=[out],
-        executor=exe,
-        main_program=float_program,
-        model_filename=float_path + '/model',
-        params_filename=float_path + '/params')
+        os.path.join(float_path, "model"),
+        [image.name],
+        [out],
+        exe,
+        program=float_program, )
 
 
 def main():

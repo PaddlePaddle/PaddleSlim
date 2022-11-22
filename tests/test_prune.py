@@ -14,8 +14,8 @@
 import sys
 sys.path.append("../")
 import unittest
+import paddle
 from static_case import StaticCase
-import paddle.fluid as fluid
 from paddleslim.prune import Pruner
 from static_case import StaticCase
 from layers import conv_bn_layer
@@ -52,7 +52,7 @@ class TestPrune(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = fluid.Scope()
+        scope = paddle.fluid.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         main_program, _, _ = pruner.prune(

@@ -439,13 +439,9 @@ def compress(args):
 
     # 4. Save inference model
     paddle.static.save_inference_model(
-        dirname=model_path,
-        feeded_var_names=[image.name],
-        target_vars=[out],
-        executor=exe,
-        main_program=float_program,
-        model_filename=model_path + '/model.pdmodel',
-        params_filename=model_path + '/model.pdiparams')
+        os.path.join(model_path, 'model')[image.name], [out],
+        exe,
+        program=float_program)
 
 
 def main():

@@ -19,7 +19,6 @@ import numpy as np
 import paddle
 import paddle.fluid as fluid
 from paddle.nn.initializer import KaimingUniform
-from paddle.fluid.param_attr import ParamAttr
 
 
 class SlimFaceNet():
@@ -152,7 +151,7 @@ class SlimFaceNet():
             groups=1,
             act=None,
             use_cudnn=True,
-            param_attr=ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name='linear_conv1x1_weights',
                 initializer=KaimingUniform(),
                 regularizer=fluid.regularizer.L2Decay(4e-4)),
@@ -160,8 +159,8 @@ class SlimFaceNet():
         bn_name = 'linear_conv1x1_bn'
         x = paddle.static.nn.batch_norm(
             x,
-            param_attr=ParamAttr(name=bn_name + "_scale"),
-            bias_attr=ParamAttr(name=bn_name + "_offset"),
+            param_attr=paddle.ParamAttr(name=bn_name + "_scale"),
+            bias_attr=paddle.ParamAttr(name=bn_name + "_offset"),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
 
@@ -240,12 +239,12 @@ class SlimFaceNet():
             filter_size=1,
             num_filters=num_mid_filter,
             act=None,
-            param_attr=ParamAttr(name=name + '_1_weights'),
-            bias_attr=ParamAttr(name=name + '_1_offset'))
+            param_attr=paddle.ParamAttr(name=name + '_1_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_1_offset'))
         conv1 = fluid.layers.prelu(
             conv1,
             mode='channel',
-            param_attr=ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + '_prelu',
                 regularizer=fluid.regularizer.L2Decay(0.0)))
         conv2 = paddle.static.nn.conv2d(
@@ -253,8 +252,8 @@ class SlimFaceNet():
             filter_size=1,
             num_filters=num_out_filter,
             act='hard_sigmoid',
-            param_attr=ParamAttr(name=name + '_2_weights'),
-            bias_attr=ParamAttr(name=name + '_2_offset'))
+            param_attr=paddle.ParamAttr(name=name + '_2_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_2_offset'))
         scale = fluid.layers.elementwise_mul(x=input, y=conv2, axis=0)
         return scale
 
@@ -277,21 +276,21 @@ class SlimFaceNet():
             groups=num_groups,
             act=None,
             use_cudnn=use_cudnn,
-            param_attr=ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + '_weights', initializer=KaimingUniform()),
             bias_attr=False)
         bn_name = name + '_bn'
         bn = paddle.static.nn.batch_norm(
             input=conv,
-            param_attr=ParamAttr(name=bn_name + "_scale"),
-            bias_attr=ParamAttr(name=bn_name + "_offset"),
+            param_attr=paddle.ParamAttr(name=bn_name + "_scale"),
+            bias_attr=paddle.ParamAttr(name=bn_name + "_offset"),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
         if if_act:
             return fluid.layers.prelu(
                 bn,
                 mode='channel',
-                param_attr=ParamAttr(
+                param_attr=paddle.ParamAttr(
                     name=name + '_prelu',
                     regularizer=fluid.regularizer.L2Decay(0.0)))
         else:

@@ -37,7 +37,7 @@ OPTIMIZER_OPS = [
 
 class VarWrapper(object):
     def __init__(self, var, graph):
-        assert isinstance(var, paddle.static.Variable)
+        #        assert isinstance(var, paddle.static.Variable), f"The type is {type(var)}"
         assert isinstance(graph, GraphWrapper)
         self._var = var
         self._graph = graph

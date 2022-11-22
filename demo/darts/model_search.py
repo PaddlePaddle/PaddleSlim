@@ -17,8 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
-from paddle.nn.initializer import NormalInitializer, KaimingUniform, ConstantInitializer
+from paddle.nn.initializer import Normal, KaimingUniform, Constant
 from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
@@ -52,10 +51,10 @@ class MixedOp(paddle.nn.Layer):
         for primitive in PRIMITIVES:
             op = OPS[primitive](c_cur // self._k, stride, False)
             if 'pool' in primitive:
-                gama = ParamAttr(
+                gama = paddle.ParamAttr(
                     initializer=paddle.nn.initializer.Constant(value=1),
                     trainable=False)
-                beta = ParamAttr(
+                beta = paddle.ParamAttr(
                     initializer=paddle.nn.initializer.Constant(value=0),
                     trainable=False)
                 BN = BatchNorm(
@@ -160,10 +159,8 @@ class Network(paddle.nn.Layer):
                 bias_attr=False),
             BatchNorm(
                 num_channels=c_cur,
-                param_attr=paddle.ParamAttr(
-                    initializer=ConstantInitializer(value=1)),
-                bias_attr=paddle.ParamAttr(
-                    initializer=ConstantInitializer(value=0))))
+                param_attr=paddle.ParamAttr(initializer=Constant(value=1)),
+                bias_attr=paddle.ParamAttr(initializer=Constant(value=0))))
 
         c_prev_prev, c_prev, c_cur = c_cur, c_cur, c_in
         cells = []
@@ -184,8 +181,8 @@ class Network(paddle.nn.Layer):
         self.classifier = Linear(
             input_dim=c_prev,
             output_dim=num_classes,
-            param_attr=ParamAttr(initializer=KaimingUniform()),
-            bias_attr=ParamAttr(initializer=KaimingUniform()))
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
+            bias_attr=paddle.ParamAttr(initializer=KaimingUniform()))
 
         self._initialize_alphas()
 
@@ -244,12 +241,12 @@ class Network(paddle.nn.Layer):
         self.alphas_normal = paddle.static.create_parameter(
             shape=[k, num_ops],
             dtype="float32",
-            default_initializer=NormalInitializer(
+            default_initializer=Normal(
                 loc=0.0, scale=1e-3))
         self.alphas_reduce = paddle.static.create_parameter(
             shape=[k, num_ops],
             dtype="float32",
-            default_initializer=NormalInitializer(
+            default_initializer=Normal(
                 loc=0.0, scale=1e-3))
         self._arch_parameters = [
             self.alphas_normal,
@@ -259,12 +256,12 @@ class Network(paddle.nn.Layer):
             self.betas_normal = paddle.static.create_parameter(
                 shape=[k],
                 dtype="float32",
-                default_initializer=NormalInitializer(
+                default_initializer=Normal(
                     loc=0.0, scale=1e-3))
             self.betas_reduce = paddle.static.create_parameter(
                 shape=[k],
                 dtype="float32",
-                default_initializer=NormalInitializer(
+                default_initializer=Normal(
                     loc=0.0, scale=1e-3))
             self._arch_parameters += [self.betas_normal, self.betas_reduce]
 

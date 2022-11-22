@@ -20,9 +20,6 @@ from static_case import StaticCase
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
-import paddle.dataset.mnist as reader
-from paddle.fluid.framework import IrGraph
-from paddle.fluid import core
 import numpy as np
 
 
@@ -41,7 +38,8 @@ class TestQuantAwareCase1(StaticCase):
 
     def get_op_number(self, prog):
 
-        graph = IrGraph(core.Graph(prog.desc), for_test=False)
+        graph = paddle.fluid.framework.IrGraph(
+            paddle.fluid.core.Graph(prog.desc), for_test=False)
         quant_op_nums = 0
         op_nums = 0
         for op in graph.all_op_nodes():

@@ -2,7 +2,6 @@ import sys
 sys.path.append("../")
 import unittest
 from static_case import StaticCase
-import paddle.fluid as fluid
 import paddle
 from paddleslim.prune import UnstructuredPruner
 from layers import conv_bn_layer

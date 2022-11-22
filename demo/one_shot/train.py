@@ -92,7 +92,7 @@ class MNIST(paddle.nn.Layer):
             self.pool_2_shape,
             10,
             param_attr=paddle.ParamAttr(
-                initializer=paddle.nn.initializer.NormalInitializer(
+                initializer=paddle.nn.initializer.Normal(
                     loc=0.0, scale=scale)),
             act="softmax")
 

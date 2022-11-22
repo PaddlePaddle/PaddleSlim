@@ -14,6 +14,8 @@
 
 import inspect
 import paddle
+import paddle.nn as nn
+import paddle.nn.functional as F
 
 __all__ = ['Counter', 'init_index', 'functional2layer']
 

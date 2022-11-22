@@ -14,7 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
-import paddle.fluid as fluid
+import paddle
 from paddleslim.analysis import model_size
 from layers import conv_bn_layer
 from static_case import StaticCase

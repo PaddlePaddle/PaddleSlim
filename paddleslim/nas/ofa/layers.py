@@ -101,14 +101,14 @@ class SuperConv2D(paddle.nn.Conv2D):
             of the input channels, while the second half of the filters is only
             connected to the second half of the input channels. Default: 1.
         param_attr (ParamAttr, optional): The parameter attribute for learnable weights(Parameter)
-            of conv2d. If it is set to None or one attribute of ParamAttr, conv2d
-            will create ParamAttr as param_attr. If the Initializer of the param_attr
+            of conv2d. If it is set to None or one attribute of paddle.ParamAttr, conv2d
+            will create paddle.ParamAttr as param_attr. If the Initializer of the param_attr
             is not set, the parameter is initialized with :math:`Normal(0.0, std)`,
             and the :math:`std` is :math:`(\\frac{2.0 }{filter\\_elem\\_num})^{0.5}`. Default: None.
         bias_attr (ParamAttr or bool, optional): The attribute for the bias of conv2d.
             If it is set to False, no bias will be added to the output units.
-            If it is set to None or one attribute of ParamAttr, conv2d
-            will create ParamAttr as bias_attr. If the Initializer of the bias_attr
+            If it is set to None or one attribute of paddle.ParamAttr, conv2d
+            will create paddle.ParamAttr as bias_attr. If the Initializer of the bias_attr
             is not set, the bias is initialized zero. Default: None.
         use_cudnn (bool, optional): Use cudnn kernel or not, it is valid only when the cudnn
             library is installed. Default: True.
@@ -418,13 +418,13 @@ class SuperConv2DTranspose(paddle.nn.Conv2DTranspose):
             filters is only connected to the second half of the input channels.
             Default: 1.
         param_attr (ParamAttr, optional): The parameter attribute for learnable weights(Parameter)
-            of conv2d_transpose. If it is set to None or one attribute of ParamAttr, conv2d_transpose
-            will create ParamAttr as param_attr. If the Initializer of the param_attr
+            of conv2d_transpose. If it is set to None or one attribute of paddle.ParamAttr, conv2d_transpose
+            will create paddle.ParamAttr as param_attr. If the Initializer of the param_attr
             is not set, the parameter is initialized with Xavier. Default: None.
         bias_attr (ParamAttr or bool, optional): The attribute for the bias of conv2d_transpose.
             If it is set to False, no bias will be added to the output units.
-            If it is set to None or one attribute of ParamAttr, conv2d_transpose
-            will create ParamAttr as bias_attr. If the Initializer of the bias_attr
+            If it is set to None or one attribute of paddle.ParamAttr, conv2d_transpose
+            will create paddle.ParamAttr as bias_attr. If the Initializer of the bias_attr
             is not set, the bias is initialized zero. Default: None.
         use_cudnn(bool, optional): Use cudnn kernel or not, it is valid only when the cudnn
             library is installed. Default: True.
@@ -683,8 +683,8 @@ class SuperSeparableConv2D(paddle.nn.Layer):
         norm_layer(class): The normalization layer between two convolution. Default: InstanceNorm2D.
         bias_attr (ParamAttr or bool, optional): The attribute for the bias of convolution.
             If it is set to False, no bias will be added to the output units.
-            If it is set to None or one attribute of ParamAttr, convolution
-            will create ParamAttr as bias_attr. If the Initializer of the bias_attr
+            If it is set to None or one attribute of paddle.ParamAttr, convolution
+            will create paddle.ParamAttr as bias_attr. If the Initializer of the bias_attr
             is not set, the bias is initialized zero. Default: None.
         scale_factor(float): The scale factor of the first conv's output channel. Default: 1.
     Returns:
@@ -819,8 +819,8 @@ class SuperLinear(paddle.nn.Linear):
             paddle.ParamAttr.
         bias_attr (ParamAttr|bool, optional): The attribute for the learnable bias
             of this layer. If it is set to False, no bias will be added to the output.
-            If it is set to None or one kind of ParamAttr, a bias parameter will
-            be created according to ParamAttr. For detailed information, please refer
+            If it is set to None or one kind of paddle.ParamAttr, a bias parameter will
+            be created according to paddle.ParamAttr. For detailed information, please refer
             to paddle.ParamAttr. The default value is None and the bias will be
             initialized to zero.
         name (str, optional): Normally there is no need for user to set this parameter.
@@ -910,12 +910,12 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
         epsilon(float, optional): The small value added to the variance to prevent division by zero. Default: 1e-5.
         momentum(float, optional): The value used for the moving_mean and moving_var computation. Default: 0.9.
         weight_attr(ParamAttr|bool, optional): The parameter attribute for Parameter `scale`
-            of batch_norm. If it is set to None or one attribute of ParamAttr, batch_norm
-            will create ParamAttr as weight_attr. If it is set to Fasle, the weight is not learnable.
+            of batch_norm. If it is set to None or one attribute of paddle.ParamAttr, batch_norm
+            will create paddle.ParamAttr as weight_attr. If it is set to Fasle, the weight is not learnable.
             If the Initializer of the weight_attr is not set, the parameter is initialized with Xavier. Default: None.
         bias_attr(ParamAttr|bool, optional): The parameter attribute for the bias of batch_norm.
-            If it is set to None or one attribute of ParamAttr, batch_norm
-            will create ParamAttr as bias_attr. If it is set to Fasle, the weight is not learnable.
+            If it is set to None or one attribute of paddle.ParamAttr, batch_norm
+            will create paddle.ParamAttr as bias_attr. If it is set to Fasle, the weight is not learnable.
             If the Initializer of the bias_attr is not set, the bias is initialized zero. Default: None.
         data_format(str, optional): Specify the input data format, the data format can be "NCHW" or "NHWC". Default: NCHW.
         name(str, optional): Name for the BatchNorm, default is None. For more information, please refer to :ref:`api_guide_Name`..
@@ -1176,12 +1176,12 @@ class SuperInstanceNorm2D(paddle.nn.InstanceNorm2D):
         epsilon(float, optional): The small value added to the variance to prevent division by zero. Default: 1e-5.
         momentum(float, optional): The value used for the moving_mean and moving_var computation. Default: 0.9.
         weight_attr(ParamAttr|bool, optional): The parameter attribute for Parameter `scale`
-            of batch_norm. If it is set to None or one attribute of ParamAttr, batch_norm
-            will create ParamAttr as weight_attr. If it is set to Fasle, the weight is not learnable.
+            of batch_norm. If it is set to None or one attribute of paddle.ParamAttr, batch_norm
+            will create paddle.ParamAttr as weight_attr. If it is set to Fasle, the weight is not learnable.
             If the Initializer of the weight_attr is not set, the parameter is initialized with Xavier. Default: None.
         bias_attr(ParamAttr|bool, optional): The parameter attribute for the bias of batch_norm.
-            If it is set to None or one attribute of ParamAttr, batch_norm
-            will create ParamAttr as bias_attr. If it is set to Fasle, the weight is not learnable.
+            If it is set to None or one attribute of paddle.ParamAttr, batch_norm
+            will create paddle.ParamAttr as bias_attr. If it is set to Fasle, the weight is not learnable.
             If the Initializer of the bias_attr is not set, the bias is initialized zero. Default: None.
         data_format(str, optional): Specify the input data format, the data format can be "NCHW" or "NHWC". Default: NCHW.
         name(str, optional): Name for the BatchNorm, default is None. For more information, please refer to :ref:`api_guide_Name`..
@@ -1368,7 +1368,7 @@ class SuperEmbedding(paddle.nn.Embedding):
             default weight parameter property is used. See usage for details in :ref:`api_ParamAttr` . In addition,
             user-defined or pre-trained word vectors can be loaded with the :attr:`param_attr` parameter.
             The local word vector needs to be transformed into numpy format, and the shape of local word
-            vector should be consistent with :attr:`num_embeddings` . Then :ref:`api_initializer_NumpyArrayInitializer`
+            vector should be consistent with :attr:`num_embeddings` . Then :ref:`api_initializer_Assign`
             is used to load custom or pre-trained word vectors. See code example for details.
         name(str|None): For detailed information, please refer
                to :ref:`api_guide_Name`. Usually name is no need to set and

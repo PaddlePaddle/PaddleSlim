@@ -127,10 +127,10 @@ class MobileNet():
             global_pooling=True)
 
         output = paddle.static.nn.fc(
-            input=input,
-            size=class_dim,
-            act='softmax',
-            param_attr=paddle.ParamAttr(
+            input,
+            class_dim,
+            activation='softmax',
+            weight_attr=paddle.ParamAttr(
                 initializer=paddle.nn.initializer.KaimingUniform(),
                 name="fc7_weights"),
             bias_attr=paddle.ParamAttr(name="fc7_offset"))

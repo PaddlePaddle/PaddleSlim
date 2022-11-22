@@ -137,9 +137,9 @@ class SlimMobileNet():
         conv = paddle.nn.functional.hardswish(x=conv)
         drop = paddle.nn.functional.dropout(x=conv, dropout_prob=0.2)
         out = paddle.static.nn.fc(
-            input=drop,
-            size=class_dim,
-            param_attr=paddle.ParamAttr(name='fc_weights'),
+            drop,
+            class_dim,
+            weight_attr=paddle.ParamAttr(name='fc_weights'),
             bias_attr=paddle.ParamAttr(name='fc_offset'))
         return out
 

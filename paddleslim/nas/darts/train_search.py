@@ -194,16 +194,15 @@ class DARTSearch(object):
                              (self.batchsize * device_num))
         if self.unrolled:
             step_per_epoch *= 2
-
-        learning_rate = paddle.fluid.dygraph.CosineDecay(
-            self.learning_rate, step_per_epoch, self.num_epochs)
+        learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
+            self.learning_rate, self.num_epochs // 2)
 
         clip = paddle.fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0)
         optimizer = paddle.optimizer.Momentum(
             learning_rate,
             0.9,
-            regularization=paddle.regularizer.L2Decay(coeff=3e-4),
-            parameter_list=model_parameters,
+            weight_decay=3e-4,
+            parameters=model_parameters,
             grad_clip=clip)
 
         if self.use_data_parallel:
@@ -241,8 +240,7 @@ class DARTSearch(object):
             paddle.fluid.dygraph.parallel.Env().local_rank == 0)
 
         for epoch in range(self.num_epochs):
-            logger.info('Epoch {}, lr {:.6f}'.format(
-                epoch, optimizer.current_step_lr()))
+            logger.info('Epoch {}, lr {:.6f}'.format(epoch, optimizer.get_lr()))
 
             genotype = get_genotype(base_model)
             logger.info('genotype = %s', genotype)

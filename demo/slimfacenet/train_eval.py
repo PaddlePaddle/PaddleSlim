@@ -144,11 +144,9 @@ def train(exe, train_program, train_out, test_program, test_out, args):
                 print('Best AVE: {}'.format(best_ave))
                 out_feature, test_reader, flods, flags = test_out
                 paddle.static.save_inference_model(
-                    executor=exe,
-                    dirname='./out_inference',
-                    feeded_var_names=['image_test'],
-                    target_vars=[out_feature],
-                    main_program=test_program)
+                    './out_inference', ['image_test'], [out_feature],
+                    exe,
+                    program=test_program)
 
 
 def build_program(program, startup, args, is_train=True):

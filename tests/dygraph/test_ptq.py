@@ -18,58 +18,54 @@ sys.path.append("../../")
 import unittest
 import logging
 import paddle
-import paddle.nn as nn
-import paddle.fluid as fluid
-from paddle.fluid.log_helper import get_logger
-import paddle.vision.transforms as T
 
 from paddleslim import PTQ
 
-_logger = get_logger(
+_logger = paddle.fluid.log_helper.get_logger(
     __name__, logging.INFO, fmt='%(asctime)s-%(levelname)s: %(message)s')
 
 
-class ImperativeLenet(nn.Layer):
+class ImperativeLenet(paddle.nn.Layer):
     def __init__(self, num_classes=10):
         super(ImperativeLenet, self).__init__()
-        self.features = nn.Sequential(
-            nn.Conv2D(
+        self.features = paddle.nn.Sequential(
+            paddle.nn.Conv2D(
                 in_channels=1,
                 out_channels=6,
                 kernel_size=3,
                 stride=1,
                 padding=1,
                 bias_attr=False),
-            nn.BatchNorm2D(6),
-            nn.ReLU(),
-            nn.MaxPool2D(
+            paddle.nn.BatchNorm2D(6),
+            paddle.nn.ReLU(),
+            paddle.nn.MaxPool2D(
                 kernel_size=2, stride=2),
-            nn.Conv2D(
+            paddle.nn.Conv2D(
                 in_channels=6,
                 out_channels=16,
                 kernel_size=5,
                 stride=1,
                 padding=0),
-            nn.BatchNorm2D(16),
-            nn.PReLU(),
-            nn.MaxPool2D(
+            paddle.nn.BatchNorm2D(16),
+            paddle.nn.PReLU(),
+            paddle.nn.MaxPool2D(
                 kernel_size=2, stride=2))
 
-        self.fc = nn.Sequential(
-            nn.Linear(
+        self.fc = paddle.nn.Sequential(
+            paddle.nn.Linear(
                 in_features=400, out_features=120),
-            nn.LeakyReLU(),
-            nn.Linear(
+            paddle.nn.LeakyReLU(),
+            paddle.nn.Linear(
                 in_features=120, out_features=84),
-            nn.Sigmoid(),
-            nn.Linear(
+            paddle.nn.Sigmoid(),
+            paddle.nn.Linear(
                 in_features=84, out_features=num_classes),
-            nn.Softmax())
+            paddle.nn.Softmax())
 
     def forward(self, inputs):
         x = self.features(inputs)
 
-        x = fluid.layers.flatten(x, 1)
+        x = paddle.fluid.layers.flatten(x, 1)
         x = self.fc(x)
         return x
 
@@ -149,7 +145,10 @@ class TestPTQ(unittest.TestCase):
 
         _logger.info("prepare data")
         batch_size = 64
-        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        transform = paddle.vision.transforms.Compose([
+            paddle.vision.transforms.Transpose(),
+            paddle.vision.transforms.Normalize([127.5], [127.5])
+        ])
         train_dataset = paddle.vision.datasets.MNIST(
             mode='train', backend='cv2', transform=transform)
         val_dataset = paddle.vision.datasets.MNIST(

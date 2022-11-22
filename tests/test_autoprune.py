@@ -14,7 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
-import paddle.fluid as fluid
+import paddle
 from paddleslim.prune import Pruner
 from paddleslim.prune import AutoPruner
 from static_case import StaticCase
@@ -53,12 +53,12 @@ class TestPrune(StaticCase):
         val_program = paddle.static.default_main_program().clone(for_test=True)
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = fluid.Scope()
+        scope = paddle.fluid.Scope()
         exe.run(startup_program, scope=scope)
 
         pruner = AutoPruner(
             val_program,
-            paddle.static.global_scope,
+            paddle.static.global_scope(),
             place,
             params=params,
             init_ratios=[0.33] * len(params),

@@ -21,7 +21,6 @@ from static_case import StaticCase
 sys.path.append("../demo")
 from models import *
 from layers import conv_bn_layer
-import paddle.dataset.mnist as reader
 import numpy as np
 from paddleslim.quant import quant_recon_static
 
@@ -103,7 +102,7 @@ class ReconPTQ(unittest.TestCase):
                         format(iter, cost, top1, top5))
 
         train(main_program)
-        paddle.static.save_inference_model(
+        paddle.fluid.io.save_inference_model(
             dirname=self.tmpdir.name,
             feeded_var_names=[image.name],
             target_vars=[out],

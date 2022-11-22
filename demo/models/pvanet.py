@@ -3,9 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
 from paddle.nn.initializer import KaimingUniform
-from paddle.fluid.param_attr import ParamAttr
 import os, sys, time, math
 import numpy as np
 from collections import namedtuple
@@ -84,12 +82,12 @@ class PVANet():
             conv5 = self._bn(conv5, 'relu', 'conv5_4_last_bn')
         end_points['conv5'] = conv5
 
-        output = paddle.static.nn.fc(input=input,
-                                     size=class_dim,
-                                     param_attr=ParamAttr(
-                                         initializer=KaimingUniform(),
-                                         name="fc_weights"),
-                                     bias_attr=ParamAttr(name="fc_offset"))
+        output = paddle.static.nn.fc(
+            input,
+            class_dim,
+            weight_attr=paddle.ParamAttr(
+                initializer=KaimingUniform(), name="fc_weights"),
+            bias_attr=paddle.ParamAttr(name="fc_offset"))
 
         return output
 
@@ -252,8 +250,8 @@ class PVANet():
             groups=groups,
             act=act,
             use_cudnn=True,
-            param_attr=ParamAttr(name=name + '_weights'),
-            bias_attr=ParamAttr(name=name + '_bias'),
+            param_attr=paddle.ParamAttr(name=name + '_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_bias'),
             name=name)
         return net
 
@@ -264,8 +262,8 @@ class PVANet():
             name=name,
             moving_mean_name=name + '_mean',
             moving_variance_name=name + '_variance',
-            param_attr=ParamAttr(name=name + '_scale'),
-            bias_attr=ParamAttr(name=name + '_offset'))
+            param_attr=paddle.ParamAttr(name=name + '_scale'),
+            bias_attr=paddle.ParamAttr(name=name + '_offset'))
         return net
 
     def _bn_relu_conv(self,
@@ -343,8 +341,8 @@ class PVANet():
             stride=stride,
             padding=padding,
             act=None,
-            param_attr=ParamAttr(name=name + '_weights'),
-            bias_attr=ParamAttr(name=name + '_bias'),
+            param_attr=paddle.ParamAttr(name=name + '_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_bias'),
             name=name + 'deconv')
         return self._bn(deconv, act, name + '_bn')
 
@@ -394,8 +392,8 @@ def Detector_Header(f_common, net, class_num):
         8,
         1,
         use_cudnn=True,
-        param_attr=ParamAttr(name='geo_4_conv_weights'),
-        bias_attr=ParamAttr(name='geo_4_conv_bias'),
+        param_attr=paddle.ParamAttr(name='geo_4_conv_weights'),
+        bias_attr=paddle.ParamAttr(name='geo_4_conv_bias'),
         name='geo_4_conv')
 
     name = 'score_class_num' + str(class_num + 1)
@@ -407,8 +405,8 @@ def Detector_Header(f_common, net, class_num):
         class_num + 1,
         1,
         use_cudnn=True,
-        param_attr=ParamAttr(name=name + '_conv_weights'),
-        bias_attr=ParamAttr(name=name + '_conv_bias'),
+        param_attr=paddle.ParamAttr(name=name + '_conv_weights'),
+        bias_attr=paddle.ParamAttr(name=name + '_conv_bias'),
         name=name + '_conv')
 
     f_score = fluid.layers.transpose(f_score, perm=[0, 2, 3, 1])

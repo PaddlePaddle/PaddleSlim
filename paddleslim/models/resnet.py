@@ -78,11 +78,11 @@ class ResNet():
             stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
             fc_name = fc_name if fc_name is None else prefix_name + fc_name
             out = paddle.static.nn.fc(
-                input=pool,
-                size=class_dim,
-                act='softmax',
+                pool,
+                class_dim,
+                activation='softmax',
                 name=fc_name,
-                param_attr=paddle.ParamAttr(
+                weight_attr=paddle.ParamAttr(
                     initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
         else:
             for block in range(len(depth)):
@@ -101,11 +101,11 @@ class ResNet():
             stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
             fc_name = fc_name if fc_name is None else prefix_name + fc_name
             out = paddle.static.nn.fc(
-                input=pool,
-                size=class_dim,
-                act='softmax',
+                pool,
+                class_dim,
+                activation='softmax',
                 name=fc_name,
-                param_attr=paddle.ParamAttr(
+                weight_attr=paddle.ParamAttr(
                     initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
 
         return out
