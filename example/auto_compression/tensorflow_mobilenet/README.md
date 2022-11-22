@@ -31,22 +31,22 @@
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
-- PaddlePaddle >= 2.4rc0 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.4rc
+- PaddlePaddle >= 2.4.0 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim >= 2.4.0
 - [X2Paddle](https://github.com/PaddlePaddle/X2Paddle) >= 1.3.6
 - opencv-python
 
 （1）安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle==2.4rc0
+pip install paddlepaddle
 # GPU
-pip install paddlepaddle_gpu==2.4rc0
+pip install paddlepaddle_gpu
 ```
 
 （2）安装paddleslim：
 ```shell
-pip install paddleslim==2.4rc
+pip install paddleslim
 ```
 
 （3）安装TensorFlow:

@@ -16,7 +16,7 @@ This tutorial uses the GLUE/SST-2 dataset as an example to perform 1-bit quantiz
 
 ```shell
 pip install paddlenlp
-pip install paddlepaddle_gpu==2.4rc0
+pip install paddlepaddle_gpu
 ```
 
 ### Acquisition of data and training models
@@ -88,11 +88,10 @@ If you find our work useful in your research, please consider citing:
 
 ```shell
 @inproceedings{Qin:iclr22,
-  author    = {Haotong Qin and Yifu Ding and Mingyuan Zhang and Qinghua Yan and 
+  author    = {Haotong Qin and Yifu Ding and Mingyuan Zhang and Qinghua Yan and
   Aishan Liu and Qingqing Dang and Ziwei Liu and Xianglong Liu},
   title     = {BiBERT: Accurate Fully Binarized BERT},
   booktitle = {International Conference on Learning Representations (ICLR)},
   year      = {2022}
 }
 ```
-

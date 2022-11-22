@@ -9,8 +9,8 @@
 ## 版本要求
 ```bash
 python3.5+
-paddlepaddle>=2.4rc0
-paddleslim>=2.4rc
+paddlepaddle>=2.4.0
+paddleslim>=2.4.0
 ```
 
 请参照github安装[paddlepaddle](https://github.com/PaddlePaddle/Paddle)和[paddleslim](https://github.com/PaddlePaddle/PaddleSlim)。
