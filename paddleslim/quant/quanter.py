@@ -319,7 +319,7 @@ def quant_aware(program,
     skip_tensor_list = []
     same_scale_tensor_list = []
     if model_type == 'transformer' and pattern_ops is None:
-        pattern_ops, _, model_type = get_patterns(program)
+        pattern_ops, model_type = get_patterns(program)
         if model_type != 'transformer':
             _logger.info(
                 'Warning! After analysis, the real model type is not transformer! If you encounter this situation, please raise an issue let us know in which case "get_patterns" determines model type is not transformer.'

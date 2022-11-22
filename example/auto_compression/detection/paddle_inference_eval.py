@@ -338,7 +338,7 @@ def predict_image(predictor,
     img, scale_factor = image_preprocess(image_file, image_shape)
     inputs = {}
     inputs["image"] = img
-    if include_nms:
+    if FLAGS.include_nms:
         inputs['scale_factor'] = scale_factor
     input_names = predictor.get_input_names()
     for i, _ in enumerate(input_names):
