@@ -1,5 +1,5 @@
 # For unittests
-Quantization:
+QuantAware:
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
