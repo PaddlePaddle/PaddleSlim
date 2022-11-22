@@ -218,11 +218,11 @@ def export_onnx(model_dir,
     try:
         import paddle2onnx
         version = paddle2onnx.__version__
-        if version != '1.0.1':
-            os.system('python -m pip install -U paddle2onnx==1.0.1')
+        if version < '1.0.1':
+            os.system('python -m pip install -U paddle2onnx==1.0.3')
     except:
         from pip._internal import main
-        main(['install', 'paddle2onnx==1.0.1'])
+        main(['install', 'paddle2onnx==1.0.3'])
     import paddle2onnx
     paddle2onnx.command.c_paddle_to_onnx(
         model_file=os.path.join(model_dir, model_filename),
