@@ -13,7 +13,7 @@ Distillation:
   - concat_2.tmp_0
   - concat_1.tmp_0
 
-Quantization:
+QuantAware:
   use_pact: True
   weight_quantize_type: 'channel_wise_abs_max'
   activation_quantize_type: 'moving_average_abs_max'
