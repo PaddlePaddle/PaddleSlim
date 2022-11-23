@@ -694,7 +694,7 @@ class AutoCompression:
             train_program_info, test_program_info = self._prepare_program(
                 inference_program, feed_target_names, fetch_targets, patterns,
                 default_distill_node_pair, strategy, config, train_config)
-            if 'unstructure' in self._strategy:
+            if 'unstructure' in strategy:
                 test_program_info.program._program = remove_unused_var_nodes(
                     test_program_info.program._program)
             test_program_info = self._start_train(
