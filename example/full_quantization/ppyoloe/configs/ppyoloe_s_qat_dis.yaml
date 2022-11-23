@@ -16,7 +16,7 @@ PTQ:   # Post Training Quantization
   batch_size: 10
   batch_nums: 10
 
-Quantization:   # Auto Compression
+QuantAware:   # Auto Compression
   onnx_format: true
   use_pact: true
   activation_quantize_type: 'moving_average_abs_max'

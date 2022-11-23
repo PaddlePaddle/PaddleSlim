@@ -3,11 +3,11 @@
 
 ## 1.1 各压缩方法超参解析
 
-### 1.1.1 量化训练（quantization）
+### 1.1.1 量化训练（quant aware）
 
 量化参数主要设置量化比特数和量化op类型，其中量化op包含卷积层（conv2d, depthwise_conv2d）和全连接层（mul, matmul_v2）。以下为只量化卷积层的示例：
 ```yaml
-Quantization:
+QuantAware:
     use_pact: false                               # 量化训练是否使用PACT方法
     weight_quantize_type: 'channel_wise_abs_max'  # 权重量化方式
     quantize_op_types: [conv2d, depthwise_conv2d] # 量化OP列表
