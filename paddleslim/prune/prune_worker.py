@@ -93,13 +93,11 @@ class PruneWorker(object):
             )))
 
         if self._visit(var, pruned_axis):
-            # print('pruned var: {}'.format(var))
             self._prune(var, pruned_axis, transforms)
 
     def _visit(self, var, pruned_axis):
         key = "_".join([str(self.op.idx()), var.name()])
         key = "_".join([key, self.op.all_inputs()[0].name()])
-        # print(key, self.visited)
         if pruned_axis not in self.visited:
             self.visited[pruned_axis] = {}
         if key in self.visited[pruned_axis]:
@@ -114,8 +112,6 @@ class PruneWorker(object):
             raise UnsupportOpError("Variable {} was skipped.".format(var.name(
             )))
         pre_ops = var.inputs()
-        # print('=======pre-ops==========')
-        # print(pre_ops)
         for op in pre_ops:
             self._prune_op(op, var, axis, transforms)
         next_ops = var.outputs()
@@ -148,7 +144,6 @@ class PruneWorker(object):
         _logger.debug(
             f"visit {op.type()} by var [{var.name()}] on axis [{pruned_axis}];\t visited={self.visited}\n"
         )
-        # print("prune {} in recursion".format(cls))
         worker = cls(op, self.pruned_params, self.visited, self.skip_stranger)
         worker.skip_vars = self.skip_vars
         worker.prune(var, pruned_axis, transforms)
@@ -189,7 +184,6 @@ class reshape2(PruneWorker):
             longer_shape
         ), "length of {} must be smaller than length of {}.".format(
             shorter_shape, longer_shape)
-        # print(shorter_shape)
         dim_old = shorter_shape[pruned_axis]
         dim_new = longer_shape[pruned_axis]
         k = dim_old / dim_new
@@ -250,7 +244,6 @@ class reshape2(PruneWorker):
                 transform = {"repeat": in_shape[pruned_axis + 1]}
             else:
                 transform = {}
-            print(self.op.attr('shape'))
             self._visit_and_search(out_var, pruned_axis,
                                    transforms + [transform])
         elif var in self.op.outputs("Out"):
@@ -526,7 +519,6 @@ class default_worker(PruneWorker):
                                              skip_stranger)
 
     def _prune(self, var, pruned_axis, transforms):
-        # print(var.name(), pruned_axis, var.shape())
         if var in self.op.all_outputs():
             for in_var in self.op.all_inputs():
                 if len(in_var.shape()) == len(var.shape()):
@@ -749,7 +741,6 @@ class mul(PruneWorker):
                     "repeat": repeat
                 }])
         elif var == y:
-            # print("pruned axis: {}, y_num_col_dims: {}, x_shape: {}, x_num_col_dims: {}".format(pruned_axis, y_num_col_dims, x_shape, x_num_col_dims))
             if (pruned_axis < y_num_col_dims) and (
                     1 < len(x_shape) - x_num_col_dims) and max(x_shape[
                         x_num_col_dims:]) != np.prod(y_shape[:y_num_col_dims]):
@@ -845,7 +836,6 @@ class matmul(PruneWorker):
             mappings = [(x_shape_len - 2, -1, x_shape_len - 2),
                         (x_shape_len - 1, x_shape_len - 2, -1),
                         (-1, x_shape_len - 1, x_shape_len - 1)]
-        # print(var.name(), x.shape(), y.shape(), mappings, pruned_axis)
         if var == x:
             for x_i, y_i, out_i in mappings:
                 if pruned_axis == x_i:
@@ -853,10 +843,8 @@ class matmul(PruneWorker):
                         if 'w_' in y.name():
                             self.append_pruned_vars(y, y_i, transforms)
                         self._visit_and_search(y, y_i, transforms)
-                        # print("add and prune: {}".format(y))
                     if out_i != -1:
                         self._visit_and_search(out, out_i, transforms)
-                        # print("prune: {}".format(out))
                     break
         if var == y:
             for x_i, y_i, out_i in mappings:
@@ -864,12 +852,7 @@ class matmul(PruneWorker):
                     if 'w_' in var.name():
                         self.append_pruned_vars(var, y_i, transforms)
                         self._visit_and_search(var, y_i, transforms)
-                    # if x_i != -1:
-                    #     print("+++++++++++++", x)
-                    #     # self.append_pruned_vars(x, x_i, transforms)
-                    #     self._visit_and_search(x, x_i, transforms)
                     if out_i != -1:
-                        # print("==========", out)
                         self._visit_and_search(out, out_i, transforms)
                     break
         if var == out:
@@ -973,7 +956,6 @@ class flatten_contiguous_range(PruneWorker):
             self._visit_and_search(in_var, pruned_axis, transforms)
 
         if var in self.op.inputs("X"):
-            # print('prune flatten: {}'.format(var))
             out_var = self.op.outputs("Out")[0]
             in_var = self.op.inputs("X")[0]
             stride = 1

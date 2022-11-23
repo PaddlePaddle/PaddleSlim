@@ -17,15 +17,23 @@ class L1NormFilterPruner(FilterPruner):
         super(L1NormFilterPruner, self).__init__(
             model, inputs, sen_file=sen_file, opt=opt, skip_leaves=skip_leaves)
 
-    def cal_mask(self, pruned_ratio, collection, reshape=-1):
+    def cal_mask(self, pruned_ratio, collection, num_head=-1):
         var_name = collection.master_name
         pruned_axis = collection.master_axis
         value = collection.values[var_name]
 
-        if value.shape[1] == 3 * value.shape[0]:
-            reshape = reshape
+        if (value.shape[1] == 3 * value.shape[0] or
+                value.shape[1] == value.shape[0]) and num_head != -1:
+            num_head = num_head
+            assert value.size % (
+                value.shape[0] * num_head
+            ) == 0, "weight shape must be divisible by num_head."
+            _logger.debug(
+                "fused-qkv or query/key/value weight detected, we will prune on num_head: {} -> {}."
+                .format(reshape, int(reshape * (1 - pruned_ratio))))
         else:
-            reshape = -1
+            num_head = -1
+
         groups = 1
         for _detail in collection.all_pruning_details():
             assert (isinstance(_detail.axis, int))
@@ -35,10 +43,9 @@ class L1NormFilterPruner(FilterPruner):
                     groups = _groups
                     break
 
-        original_shape = value.shape
-        if reshape > 0:
-            k = int(value.size / value.shape[0] / reshape)
-            value = value.reshape((value.shape[0], reshape, k))
+        if num_head != -1:
+            k = int(value.size / value.shape[0] / num_head)
+            value = value.reshape((value.shape[0], num_head, k))
 
         reduce_dims = [i for i in range(len(value.shape)) if i != pruned_axis]
         l1norm = np.mean(np.abs(value), axis=tuple(reduce_dims))
@@ -57,7 +64,7 @@ class L1NormFilterPruner(FilterPruner):
             mask = mask.reshape([groups, -1])
         mask[pruned_idx] = 0
 
-        if reshape != -1:
+        if num_head != -1:
             mask = np.repeat(mask[:, np.newaxis], k, axis=1)
             return mask.flatten()
 

@@ -244,10 +244,8 @@ class PruningPlan():
                                           format(param.name))
                         # save optimizer accumulators into layer buffer
                         self._buffer_opt(param.name, sub_layer, opt)
-                        # print('============pruned value shape============')
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims, value)
-                        # print(pruned_value.shape)
                         self._prune_opt(param.name, dims, bool_mask, opt)
 
                         p = t_value._place()

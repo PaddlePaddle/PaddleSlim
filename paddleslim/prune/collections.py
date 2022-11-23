@@ -142,7 +142,8 @@ class PruningCollections(object):
                                    graph,
                                    skip_stranger=True,
                                    skip_vars=None,
-                                   skip_leaves=True):
+                                   skip_leaves=True,
+                                   prune_type='conv'):
         """Collect convolution layers of graph into groups. The layers in the same group is relative on pruning operation.
         A group is a list of tuple with format (param_name, axis) in which `param_name` is the name of parameter and `axis` is the axis to be pruned on.
     
@@ -186,6 +187,12 @@ class PruningCollections(object):
         visited = {}
         collections = []
         unsupported_warnings = set()
+
+        if prune_type == 'conv':
+            prune_axis = 0
+        elif prune_type == 'fc':
+            prune_axis = 1
+
         for _param in params:
             pruned_params = []
             param = graph.var(_param)
@@ -214,10 +221,9 @@ class PruningCollections(object):
                              visited=visited,
                              skip_stranger=skip_stranger)
                 worker.skip_vars = skip_vars
-            print('worker type: {}'.format(type(worker)))
             try:
                 visited_backup = copy.deepcopy(worker.visited)
-                worker.prune(param, pruned_axis=1, transforms=[])
+                worker.prune(param, pruned_axis=prune_axis, transforms=[])
             except UnsupportOpError as e:
                 visited.clear()
                 visited.update(visited_backup)
@@ -226,14 +232,11 @@ class PruningCollections(object):
                 if len(pruned_params) != 0:
                     collection = PruningCollection(master=({
                         "name": param.name(),
-                        "axis": 1
+                        "axis": prune_axis,
                     }))
                     for _param, _axis, _transform, _op in pruned_params:
                         tmp = PruningDetails(_param, _axis, _transform, _op)
                         collection.add(tmp)
-                        # print(tmp)
-                        print('add {} into collection details'.format(
-                            _param.name()))
                     collections.append(collection)
         for warn in unsupported_warnings:
             _logger.warning(warn)

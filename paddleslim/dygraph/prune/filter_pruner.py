@@ -77,7 +77,6 @@ class FilterPruner(Pruner):
             if isinstance(sub_layer, SKIP_LAYERS):
                 for param in sub_layer.parameters():
                     self.skip_vars.append(param.name)
-        print(self.skip_vars)
 
     def sensitive(self,
                   eval_func=None,
@@ -295,7 +294,7 @@ class FilterPruner(Pruner):
         if self.plan is not None:
             self.plan.restore(self.model, opt=self.opt)
 
-    def cal_mask(self, pruned_ratio, collection, reshape=None):
+    def cal_mask(self, pruned_ratio, collection, num_head=-1):
         raise NotImplemented("cal_mask is not implemented")
 
     def prune_var(self, var_name, pruned_axis, pruned_ratio, apply="impretive"):
@@ -325,7 +324,7 @@ class FilterPruner(Pruner):
                                                                 pruned_axis)
         plan = PruningPlan(self.model.full_name)
         if collection is None:
-            print(
+            _logger.debug(
                 f"Can not find collection with master ['name': {var_name}, 'axis': {pruned_axis}]"
             )
             return plan
@@ -333,7 +332,7 @@ class FilterPruner(Pruner):
             f"Pruning variable [{var_name}] and its relatives {list(collection.variables())}"
         )
 
-        mask = self.cal_mask(pruned_ratio, collection, reshape=16)
+        mask = self.cal_mask(pruned_ratio, collection, num_head=-1)
         for _detail in collection.all_pruning_details():
             # Varibales can be pruned on multiple axies. 
             src_mask = copy.deepcopy(mask)
@@ -342,9 +341,6 @@ class FilterPruner(Pruner):
                 src_mask = self._transform_mask(src_mask, tran)
             current_mask = src_mask
             groups = _detail.op.attr('groups')
-            print(_detail.op)
-            shape_attr = _detail.op.attr("shape")
-            print(shape_attr)
             if groups is None or groups == 1:
                 assert len(current_mask) == var_shape[
                     _detail.
@@ -352,7 +348,6 @@ class FilterPruner(Pruner):
             plan.add(_detail.name,
                      PruningMask(_detail.axis, current_mask, pruned_ratio,
                                  _detail.op))
-            # print(plan)
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":

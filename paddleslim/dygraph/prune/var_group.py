@@ -20,30 +20,28 @@ class DygraphPruningCollections(PruningCollections):
       - skip_leaves(bool): Whether to skip the last convolution layers.
     """
 
-    def __init__(self, model, inputs, skip_leaves=True):
+    def __init__(self, model, inputs, skip_leaves=True, prune_type='conv'):
+        assert prune_type in ['conv', 'fc'
+                              ], "Please select conv or fc as your prune type."
         _logger.debug("Parsing model with input: {}".format(inputs))
         # model can be in training mode, because some model contains auxiliary parameters for training.
         program = dygraph2program(
-            model, inputs=inputs, dtypes=['int64'] * len(inputs))
-        # program = dygraph2program(model, inputs=inputs)
+            model, inputs=inputs, dtypes=[inp.dtype for inp in inputs])
 
         graph = GraphWrapper(program)
-        params = [
-            _param.name
-            for _param in model.parameters()
-            # if (len(_param.shape) == 2 or len(_param.shape) == 4) and 'conv2d_26' not in _param.name 
-            # if len(_param.shape) == 2 and (_param.shape[0] == 4*_param.shape[1] or _param.shape[1] == 4*_param.shape[0])
-            # if len(_param.shape) == 2 and (_param.shape[1] == 3*_param.shape[0])
-            # if _param.name == 'linear_0.w_0'
-            if len(_param.shape) == 2 and (_param.shape[1] == 4 * _param.shape[
-                0]) or (len(_param.shape) == 2 and (_param.shape[1] == 3 *
-                                                    _param.shape[0]))
-            # if len(_param.shape) == 4
-        ]
-        print('=======params=======')
-        print(params)
+        if prune_type == 'conv':
+            params = [
+                _param.name for _param in model.parameters()
+                if len(_param.shape) == 4
+            ]
+        elif prune_type == 'fc':
+            params = [
+                _param.name for _param in model.parameters()
+                if len(_param.shape) == 2
+            ]
+
         self._collections = self.create_pruning_collections(
-            params, graph, skip_leaves=skip_leaves)
+            params, graph, skip_leaves=skip_leaves, prune_type=prune_type)
         _logger.info("Found {} collections.".format(len(self._collections)))
 
         _name2values = {}
