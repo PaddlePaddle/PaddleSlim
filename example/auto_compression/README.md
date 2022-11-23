@@ -165,7 +165,7 @@ ac = AutoCompression(
     params_filename="inference.pdiparams",
     save_dir="MobileNetV1_quant",
     config={"QuantPost": {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
-    ### config={"Quantization": {}, "Distillation": {}}, ### 如果您的系统为Windows系统, 请使用当前这一行配置
+    ### config={"QuantAware": {}, "Distillation": {}}, ### 如果您的系统为Windows系统, 请使用当前这一行配置
     train_dataloader=train_loader,
     eval_dataloader=train_loader)
 ac.compress()
