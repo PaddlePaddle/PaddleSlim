@@ -53,7 +53,6 @@ def _is_mha(pattern_ops, pattern_ops_type, skip_quant_tensor_list=[]):
     for op in pattern_ops:
         if op.type() in ['matmul', 'matmul_v2']:
             if not is_dynamic_weight_op(op):
-                skip_quant_tensor_list.extend(op._op.input('X'))
                 matmul_num += 1
     if matmul_num == 2:
         return True
@@ -80,14 +79,15 @@ def _is_ffn(pattern_ops, pattern_ops_type):
 
 
 def get_patterns(program, only_final_node=True):
-    """ distinguish the pattern in the program and get distillation node """
-    distill_node = []
+    """ distinguish the pattern in the program and get model type """
     skip_quant_tensor_list = []
     patterns = {}
     graph = GraphWrapper(program)
     block_num = 0
     model_type = None
     for op in graph.ops():
+        if len(op.all_inputs()) == 0 or op.all_inputs()[0] is None:
+            continue
         belonged_teacher = False
         for inp in op.all_inputs():
             if 'teacher' in inp._var.name:
@@ -106,8 +106,9 @@ def get_patterns(program, only_final_node=True):
                     out_var_name = op.all_outputs()[0]._var.name
 
                     shortcut_start_op = shortcut_start_op[0]
+                    next_op = graph.next_ops(op)
                     pattern_ops, pattern_ops_type = traversal_ops(
-                        shortcut_start_op, graph, op.idx())
+                        shortcut_start_op, graph, next_op[0].idx())
 
                     pattern_name = shortcut_start_op.type() + '$' + str(op.idx(
                     ))
@@ -122,10 +123,6 @@ def get_patterns(program, only_final_node=True):
                         pattern_name = 'FFN$' + str(block_num)
                         block_num += 1
 
-                        if not only_final_node:
-                            distill_node.append('teacher_' + out_var_name)
-                            distill_node.append(out_var_name)
-
                     if model_type == 'transformer' and (
                             'fetch' in pattern_ops_type or
                             pattern_ops_type[-1] == 'scale'):
@@ -138,16 +135,6 @@ def get_patterns(program, only_final_node=True):
 
                     patterns[pattern_name] = pattern_ops
 
-                    if model_type != 'transformer' and (not only_final_node):
-                        distill_node.append('teacher_' + out_var_name)
-                        distill_node.append(out_var_name)
-
-    ### add the output of final weight node to distill node
-    final_weight_node = find_final_nodes(program)
-    for out_var in final_weight_node:
-        distill_node.append('teacher_' + out_var.name())
-        distill_node.append(out_var.name())
-
     #### skip quant matmul in attention
     if model_type == 'transformer':
         for block_id in range(len(program.blocks)):
@@ -156,4 +143,4 @@ def get_patterns(program, only_final_node=True):
                     if inp_name in skip_quant_tensor_list:
                         op._set_attr("op_namescope", "skip_quant")
 
-    return patterns, distill_node, model_type
+    return patterns, model_type

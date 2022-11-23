@@ -118,7 +118,7 @@ quant_post_dynamic
 quant_post_static
 ---------------
 
-.. py:function:: paddleslim.quant.quant_post_static(executor,model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='__model__', save_params_filename='__params__', batch_size=16, batch_nums=None, scope=None, algo='KL', round_type='round', quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', onnx_format=False, skip_tensor_list=None, optimize_model=False)
+.. py:function:: paddleslim.quant.quant_post_static(executor,model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='model.pdmodel', save_params_filename='model.pdiparams', batch_size=16, batch_nums=None, scope=None, algo='KL', round_type='round', quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', onnx_format=False, skip_tensor_list=None, optimize_model=False)
 
 `源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/quanter.py>`_
 
@@ -217,21 +217,138 @@ quant_post_static
         target_vars=[out],
         main_program=val_prog,
         executor=exe,
-        model_filename='__model__',
-        params_filename='__params__')
+        model_filename='model.pdmodel',
+        params_filename='model.pdiparams')
     quant_post_static(
         executor=exe,
         model_dir='./model_path',
         quantize_model_path='./save_path',
         sample_generator=val_reader,
-        model_filename='__model__',
-        params_filename='__params__',
+        model_filename='model.pdmodel',
+        params_filename='model.pdiparams',
         batch_size=16,
         batch_nums=10)
 
 更详细的用法请参考 `离线量化demo <https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post>`_ 。
 
 
+quant_recon_static
+---------------
+
+.. py:function:: paddleslim.quant.quant_recon_static(executor,model_dir, quantize_model_path, batch_generator=None, sample_generator=None, model_filename=None, params_filename=None, save_model_filename='model.pdmodel', save_params_filename='model.pdiparams', batch_size=16, batch_nums=None, scope=None, algo='KL', recon_level='layer-wise', simulate_activation_quant=False, bias_correction=False, quantizable_op_type=["conv2d","depthwise_conv2d","mul"], is_full_quantize=False, weight_bits=8, activation_bits=8, activation_quantize_type='range_abs_max', weight_quantize_type='channel_wise_abs_max', onnx_format=False, skip_tensor_list=None, optimize_model=False, regions=None, region_weights_names=None, epochs=20, drop_prob=0.5, lr=0.1)
+
+`源代码 <https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/quant/reconstruction_quantization.py>`_
+
+静态离线量化重构，使用少量校准数据计算量化因子，可以快速得到量化模型，并使用校准数据，以及BRECQ/QDrop方法对量化后权重的取整方式进行重构学习。使用该量化模型进行预测，可以减少计算量、降低计算内存、减小模型大小。
+
+**使用条件:**
+
+* 有训练好的预测模型
+* 有少量校准数据，比如几十到几百张图片
+
+**使用步骤：**
+
+* 产出量化模型：使用PaddleSlim调用量化重构接口，产出重构量化模型权重后的模型
+* 量化模型预测：使用PaddleLite或者PaddleInference加载量化模型进行预测推理
+
+**优点：**
+
+* 减小计算量、降低计算内存、减小模型大小
+* 不需要大量训练数据
+* 相对静态离线量化可进一步提升量化后模型的精度
+
+**缺点：**
+
+* 对层数较多的模型，重构过程需要一定的时间开销。
+
+**参数:**
+
+- **executor (fluid.Executor)** - 执行模型的executor，可以在cpu或者gpu上执行。
+- **model_dir（str)** - 需要量化的模型所在的文件夹。
+- **quantize_model_path(str)** - 保存量化后的模型的路径
+- **batch_generator(python generator)** - 读取数据样本，每次返回一个batch的数据。和 `sample_generator` 只能设置一个。
+- **sample_generator(python generator)** - 读取数据样本，每次返回一个样本。
+- **model_filename(str, optional)** - 模型文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
+- **params_filename(str, optional)** - 参数文件名，如果需要量化的模型的参数存在一个文件中，则需要设置 ``params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``None`` 。
+- **save_model_filename(str)** - 用于保存量化模型的模型文件名，如果想让参数存在一个文件中，则需要设置 ``save_model_filename`` 为模型文件的名称，否则设置为 ``None`` 即可。默认值是 ``__model__`` 。
+- **save_params_filename(str)** - 用于保存模型的参数文件名，如果想让参数存在一个文件中，则需要设置 ``save_params_filename`` 为参数文件的名称，否则设置为 ``None`` 即可。默认值是 ``__params__`` 。
+- **batch_size(int)** - 每个batch的图片数量。默认值为32 。
+- **batch_nums(int, optional)** - 迭代次数。如果设置为 ``None`` ，则会一直运行到 ``sample_generator`` 迭代结束， 否则，迭代次数为 ``batch_nums``, 也就是说参与对 ``Scale`` 进行校正的样本个数为 ``'batch_nums' * 'batch_size'`` .
+- **scope(fluid.Scope, optional)** - 用来获取和写入 ``Variable`` , 如果设置为 ``None`` ,则使用 `fluid.global_scope() <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/api_cn/executor_cn/global_scope_cn.html>`_ . 默认值是 ``None`` .
+- **algo(str)** - 量化时使用的算法名称，可为 ``'KL'``，``'mse'``, ``'hist'``， ``'avg'``，或者 ``'abs_max'`` 。该参数仅针对激活值的量化，因为参数值的量化使用的方式为 ``'channel_wise_abs_max'`` . 当 ``algo`` 设置为 ``'abs_max'`` 时，使用校正数据的激活值的绝对值的最大值当作 ``Scale`` 值，当设置为 ``'KL'`` 时，则使用KL散度的方法来计算 ``Scale`` 值，当设置为 ``'avg'`` 时，使用校正数据激活值的最大绝对值平均数作为 ``Scale`` 值，当设置为 ``'hist'`` 时，则使用基于百分比的直方图的方法来计算 ``Scale`` 值，当设置为 ``'mse'`` 时，则使用搜索最小mse损失的方法来计算 ``Scale`` 值。默认值为 ``'hist'`` 。
+- **hist_percent(float)** -  ``'hist'`` 方法的百分位数。默认值为0.9999。
+- **bias_correction(bool)** -  是否使用 bias correction 算法。默认值为 False 。
+- **recon_level(str)** -重构粒度，目前支持['layer-wise', 'region-wise']，默认值为layer-wise，即逐层重构。
+- **simulate_activation_quant(bool)** -在重构量化后模型weight的round方式时，是否考虑激活量化带来的噪声。默认值为False。
+- **quantizable_op_type(list[str])** -  需要量化的 op 类型列表。默认值为 ``["conv2d", "depthwise_conv2d", "mul"]`` 。
+- **is_full_quantize(bool)** - 是否量化所有可支持的op类型。如果设置为False, 则按照 ``'quantizable_op_type'`` 的设置进行量化。如果设置为True, 则按照 `量化配置 <#id2>`_  中 ``QUANT_DEQUANT_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES`` 定义的op进行量化。  
+- **weight_bits(int)** - weight的量化比特位数, 默认值为8。
+- **activation_bits(int)** - 激活值的量化比特位数, 默认值为8。
+- **weight_quantize_type(str)** - weight的量化方式，可选 `abs_max` 或者 `channel_wise_abs_max` ,通常情况下选 `channel_wise_abs_max` 模型量化精度更高。
+- **activation_quantize_type(str)** - 激活值的量化方式, 可选 `range_abs_max` 和 `moving_average_abs_max` 。设置激活量化方式不会影响计算scale的算法，只是影响在保存模型时使用哪种operator。
+- **onnx_format(bool)** - ONNX量化模型格式，可选`True`和`False`。默认是False。
+- **skip_tensor_list(list)** - 跳过量化Tensor的列表，默认是None，需设置成Tensor的name，Tensor的name可以通过可视化工具查看。
+- **optimize_model(bool)** - 是否在量化之前对模型进行fuse优化。executor必须在cpu上执才可以设置该参数为True，然后会将`conv2d/depthwise_conv2d/conv2d_tranpose + batch_norm`进行fuse。
+- **region(list[list])** -一些region构成的列表，region是指原program中的一个子图，其只有一个输入op和一个输出op，region可由用户手动给出也可自动产出，默认值为None。
+- **region_weights_names(list[list])** -每个region中所包含的weight名称，可由用户手动指定，也可自动产出，默认值为None。
+- **epochs(int)** -重构过程的epoch数量，默认值为20。
+- **lr(float)** -重构过程的学习率，默认值为0。
+- **drop_prob(float)** -引入激活量化噪声的概率，默认值为0.5，只有在simulate_activation_quant=True时才生效。
+**返回**
+
+无。
+
+**代码示例**
+
+.. warning::
+
+   此api需要加载 ``${model_path}`` 下的模型，所以示例中首先导出了inference model。
+
+.. code-block:: python
+
+    import paddle
+    import paddle.fluid as fluid
+    import paddle.dataset.mnist as reader
+    from paddleslim.models import MobileNet
+    from paddleslim.quant import quant_recon_static
+
+    paddle.enable_static()
+    val_reader = reader.test()
+    use_gpu = True
+    place = fluid.CUDAPlace(0) if use_gpu else fluid.CPUPlace()
+    exe = fluid.Executor(place)
+    paddle.enable_static()
+    image = paddle.static.data(name='image', shape=[None, 1, 28, 28], dtype='float32')
+    model = MobileNet()
+    out = model.net(input=image, class_dim=10)
+    main_prog = paddle.static.default_main_program()
+    val_prog = main_prog.clone(for_test=True)
+    place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
+    exe.run(paddle.static.default_startup_program())
+
+    paddle.fluid.io.save_inference_model(
+        dirname='./model_path',
+        feeded_var_names=[image.name],
+        target_vars=[out],
+        main_program=val_prog,
+        executor=exe,
+        model_filename='model.pdmodel',
+        params_filename='model.pdiparams')
+    quant_recon_static(
+        executor=exe,
+        model_dir='./model_path',
+        quantize_model_path='./save_path',
+        sample_generator=val_reader,
+        model_filename='model.pdmodel',
+        params_filename='model.pdiparams',
+        batch_size=16,
+        batch_nums=10,
+        region=None,
+        region_weights_names=None,
+        recon_level='region-wise')
+
+更详细的用法请参考 `量化重构demo <https://github.com/gushiqiao/PaddleSlim/tree/develop/example/post_training_quantization/pytorch_yolo_series>`_ 。
 
 
 quant_aware

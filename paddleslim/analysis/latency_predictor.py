@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import time
 import os
 import pip
 import platform
@@ -95,10 +95,10 @@ class TableLatencyPredictor(LatencyPredictor):
             raise NotImplementedError(
                 'latency predictor does NOT support running on Windows.')
         elif platform.system().lower() == 'darwin':
-            py_verion = platform.python_version().split('.')
+            py_version = platform.python_version().split('.')
             if int(py_version[0]) != 3 or int(py_version[1]) != 9:
                 raise NotImplementedError(
-                    'latency predictor does NOT support running on macOS when python version is not 3.9.'
+                    'Latency predictor does NOT support running on macOS when python version is not 3.9.'
                 )
 
         _logger.info("pip install paddleslim-opt-tools")

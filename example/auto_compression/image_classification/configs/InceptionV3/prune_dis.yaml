@@ -1,12 +1,11 @@
 Global:
-  input_name: x
   model_dir: InceptionV3_infer
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
   batch_size: 32
   resize_size: 320
   crop_size: 299
-  data_dir: /ILSVRC2012
+  data_dir: ./ILSVRC2012
   
 Distillation:
   alpha: 1.0

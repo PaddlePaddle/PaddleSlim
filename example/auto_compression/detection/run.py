@@ -20,9 +20,11 @@ import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
 from keypoint_utils import keypoint_post_process
+from post_process import PPYOLOEPostProcess
+from paddleslim.common.dataloader import get_feed_vars
 
 
 def argsparser():
@@ -98,6 +100,10 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             res = keypoint_post_process(data, data_input, exe,
                                         compiled_test_program, test_fetch_list,
                                         outs)
+        if 'arch' in global_config and global_config['arch'] == 'PPYOLOE':
+            postprocess = PPYOLOEPostProcess(
+                score_threshold=0.01, nms_threshold=0.6)
+            res = postprocess(np.array(outs[0]), data_all['scale_factor'])
         else:
             for out in outs:
                 v = np.array(out)
@@ -121,13 +127,17 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 def main():
     global global_config
     all_config = load_slim_config(FLAGS.config_path)
-    assert "Global" in all_config, f"Key 'Global' not found in config file. \n{all_config}"
+    assert "Global" in all_config, "Key 'Global' not found in config file. \n{}".format(
+        all_config)
     global_config = all_config["Global"]
     reader_cfg = load_config(global_config['reader_config'])
 
     train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
                                         reader_cfg['worker_num'],
                                         return_list=True)
+    global_config['input_list'] = get_feed_vars(
+        global_config['model_dir'], global_config['model_filename'],
+        global_config['params_filename'])
     train_loader = reader_wrapper(train_loader, global_config['input_list'])
 
     if 'Evaluation' in global_config.keys() and global_config[

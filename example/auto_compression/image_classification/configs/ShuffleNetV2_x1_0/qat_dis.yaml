@@ -1,17 +1,16 @@
 Global:
-  input_name: inputs
   model_dir: ShuffleNetV2_x1_0_infer
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
   batch_size: 32
-  data_dir: /ILSVRC2012
+  data_dir: ./ILSVRC2012
 
 Distillation:
   alpha: 1.0
   loss: l2
   node:
   - softmax_0.tmp_0
-Quantization:
+QuantAware:
   use_pact: true
   activation_bits: 8
   is_full_quantize: false
@@ -22,6 +21,8 @@ Quantization:
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
+  - matmul
+  - matmul_v2
   weight_bits: 8
 TrainConfig:
   epochs: 1

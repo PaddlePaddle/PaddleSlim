@@ -1,8 +1,9 @@
 # For unittests
-Quantization:
+QuantAware:
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
+  onnx_format: True
 
 Distillation:
   alpha: 1.0
@@ -10,7 +11,7 @@ Distillation:
 
 TrainConfig:
   epochs: 1
-  eval_iter: 1070
+  eval_iter: 1
   learning_rate: 2.0e-5
   optimizer_builder:
     optimizer: 

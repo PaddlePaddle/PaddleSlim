@@ -47,8 +47,10 @@ default_hpo_config = {
 
 # default quant config, can be used by ptq&hpo and qat&distillation
 default_quant_config = {
-    'quantize_op_types':
-    ['conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'],
+    'quantize_op_types': [
+        'conv2d', 'depthwise_conv2d', 'conv2d_transpose', 'mul', 'matmul',
+        'matmul_v2'
+    ],
     'weight_bits': 8,
     'activation_bits': 8,
     "is_full_quantize": False,
@@ -123,17 +125,17 @@ def create_strategy_config(strategy_str, model_type):
         ### only platform is linux can use smac to do hyperparameter optimization
         ### choose quant_aware to do quantization in other platform
         if platform.system().lower() == 'linux':
-            quant_config = Quantization(**default_quant_config)
+            quant_config = QuantAware(**default_quant_config)
             hpo_config = HyperParameterOptimization(**hpo_config_tester)
             configs.append({
-                'Quantization': quant_config,
+                'QuantPost': quant_config,
                 'HyperParameterOptimization': hpo_config
             })
         else:
-            quant_config = Quantization(**default_quant_config)
+            quant_config = QuantAware(**default_quant_config)
             dis_config = Distillation()
             configs.append({
-                'Quantization': quant_config,
+                'QuantAware': quant_config,
                 'Distillation': dis_config
             })
 
@@ -246,18 +248,18 @@ def get_final_quant_config(ptq_loss, model_type=None):
         return None
     ### if emd loss less than MAGIC_MAX_EMD_DISTANCE, select quant_post & hpo.
     elif ptq_loss < MAGIC_MAX_EMD_DISTANCE:
-        quant_config = Quantization(**default_quant_config)
+        quant_config = QuantAware(**default_quant_config)
         hpo_config = HyperParameterOptimization(**default_hpo_config)
         configs = [{
-            'Quantization': quant_config,
+            'QuantPost': quant_config,
             'HyperParameterOptimization': hpo_config
         }]
 
     ### if emd loss greater than MAGIC_MAX_EMD_DISTANCE, select qat & dist.
     else:
-        quant_config = Quantization(**default_quant_config)
+        quant_config = QuantAware(**default_quant_config)
         dis_config = Distillation()
-        configs = [{'Quantization': quant_config, 'Distillation': dis_config}]
+        configs = [{'QuantAware': quant_config, 'Distillation': dis_config}]
         _logger.info("Start Quantization and Distillation Training.")
 
     return configs

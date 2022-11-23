@@ -23,7 +23,7 @@ import paddle
 import paddle.nn as nn
 from paddle.io import DataLoader
 from imagenet_reader import ImageNetDataset
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 
 
 def argsparser():
@@ -98,7 +98,8 @@ def eval():
 
 def main(args):
     global global_config
-    global_config = load_slim_config(args.config_path)
+    all_config = load_slim_config(args.config_path)
+    global_config = all_config["Global"]
 
     global data_dir
     data_dir = global_config['data_dir']

@@ -20,8 +20,9 @@ import paddle
 from ppdet.core.workspace import load_config, merge_config
 from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
-from paddleslim.auto_compression.config_helpers import load_config as load_slim_config
+from paddleslim.common import load_config as load_slim_config
 from keypoint_utils import keypoint_post_process
+from post_process import PPYOLOEPostProcess
 
 
 def argsparser():
@@ -39,21 +40,6 @@ def argsparser():
         help="which device used to compress.")
 
     return parser
-
-
-def reader_wrapper(reader, input_list):
-    def gen():
-        for data in reader:
-            in_dict = {}
-            if isinstance(input_list, list):
-                for input_name in input_list:
-                    in_dict[input_name] = data[input_name]
-            elif isinstance(input_list, dict):
-                for input_name in input_list.keys():
-                    in_dict[input_list[input_name]] = data[input_name]
-            yield in_dict
-
-    return gen
 
 
 def convert_numpy_data(data, metric):
@@ -88,12 +74,8 @@ def eval():
         data_all = convert_numpy_data(data, metric)
         data_input = {}
         for k, v in data.items():
-            if isinstance(global_config['input_list'], list):
-                if k in global_config['input_list']:
-                    data_input[k] = np.array(v)
-            elif isinstance(global_config['input_list'], dict):
-                if k in global_config['input_list'].keys():
-                    data_input[global_config['input_list'][k]] = np.array(v)
+            if k in feed_target_names:
+                data_input[k] = np.array(v)
 
         outs = exe.run(val_program,
                        feed=data_input,
@@ -103,6 +85,10 @@ def eval():
         if 'arch' in global_config and global_config['arch'] == 'keypoint':
             res = keypoint_post_process(data, data_input, exe, val_program,
                                         fetch_targets, outs)
+        if 'arch' in global_config and global_config['arch'] == 'PPYOLOE':
+            postprocess = PPYOLOEPostProcess(
+                score_threshold=0.01, nms_threshold=0.6)
+            res = postprocess(np.array(outs[0]), data_all['scale_factor'])
         else:
             for out in outs:
                 v = np.array(out)

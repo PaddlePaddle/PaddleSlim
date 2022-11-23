@@ -23,8 +23,10 @@ import json
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, to_variable, Layer, guard
-from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
+from paddle.nn import Conv2D
+from paddle.fluid.dygraph import Embedding, LayerNorm, Linear, Layer
+from paddle.fluid.dygraph import Pool2D, BatchNorm, Linear
+from paddle.fluid.dygraph import to_variable, guard
 from paddle.fluid import ParamAttr
 from paddle.fluid.initializer import MSRA
 from .transformer_encoder import EncoderLayer

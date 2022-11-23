@@ -1,4 +1,6 @@
 import os
+import sys
+sys.setrecursionlimit(10000)
 
 ALL_WEIGHT_OP = [
     'conv2d', 'mul', 'matmul', 'embedding', 'conv2d_transpose',
@@ -51,6 +53,7 @@ def get_weight(op, return_name=True):
                 return inp.name()
             else:
                 return inp
+    return None
 
 
 def is_dynamic_weight_op(op):

@@ -1,10 +1,9 @@
 Global:
-  input_name: x
   model_dir: EfficientNetB0_infer
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
   batch_size: 32
-  data_dir: /ILSVRC2012
+  data_dir: ./ILSVRC2012
   
 Distillation:
   alpha: 1.0

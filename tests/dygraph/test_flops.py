@@ -65,7 +65,6 @@ class TestFLOPsCase2(unittest.TestCase):
         net = Net2()
         x = np.random.uniform(-1, 1, x_shape).astype('float32')
         y = np.random.uniform(-1, 1, y_shape).astype('float32')
-
         inputs = [paddle.to_tensor(x), paddle.to_tensor(y)]
         FLOPs1 = flops(net, inputs, only_conv=False)
         shapes = [x_shape, y_shape]

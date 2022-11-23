@@ -17,11 +17,22 @@ from __future__ import division
 from __future__ import print_function
 
 import platform
+import subprocess
 
 from setuptools import find_packages
 from setuptools import setup
 
-slim_version = "2.3.0"
+if 'develop' in subprocess.getoutput('git branch'):
+    slim_version = '0.0.0_dev'
+else:
+    tag_list = subprocess.getoutput('git tag').split('\n')
+    if 'rc' in tag_list[-1]:
+        if tag_list[-1].split('-')[0] == tag_list[-2]:
+            slim_version = tag_list[-2]
+        else:
+            slim_version = tag_list[-1]
+    else:
+        slim_version = tag_list[-1]
 
 with open('./requirements.txt') as f:
     setup_requires = f.read().splitlines()
@@ -30,7 +41,7 @@ setup(
     name='paddleslim',
     version=slim_version,
     description=('A toolkit for generating small model.'),
-    long_description='',
+    long_description='Tools for model compression',
     url='http://gitlab.baidu.com/PaddlePaddle/PaddleSlim',
     author='PaddlePaddle Author',
     author_email='dltp-all@baidu.com',

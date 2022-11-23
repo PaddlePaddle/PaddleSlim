@@ -18,24 +18,15 @@ import logging
 import numbers
 import paddle
 from ...common import get_logger
+import paddle.nn as nn
+from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding, SyncBatchNorm
+from paddle import ParamAttr
 from .utils.utils import get_paddle_version
 pd_ver = get_paddle_version()
-if pd_ver == 185:
-    import paddle.fluid.dygraph.nn as nn
-    from paddle.fluid.dygraph.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding
-    from paddle.fluid import ParamAttr
-    from .layers_old import *
-    from . import layers_old as layers
-    Layer = paddle.fluid.dygraph.Layer
-else:
-    import paddle.nn as nn
-    from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding, SyncBatchNorm
-    from paddle import ParamAttr
-    from .layers import *
-    from . import layers
-    Layer = paddle.nn.Layer
+from .layers import *
+from . import layers
+from paddle.nn import Layer
 from .layers_base import Block
-from . import layers_old
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['supernet', 'Convert']

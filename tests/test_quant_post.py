@@ -132,8 +132,8 @@ class TestQuantAwareCase1(StaticCase):
         quant_post_prog, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
             dirname='./test_quant_post_inference',
             executor=exe,
-            model_filename='__model__',
-            params_filename='__params__')
+            model_filename='model.pdmodel',
+            params_filename='model.pdiparams')
         top1_2, top5_2 = test(quant_post_prog, fetch_targets)
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
         print("after quantization: top1: {}, top5: {}".format(top1_2, top5_2))

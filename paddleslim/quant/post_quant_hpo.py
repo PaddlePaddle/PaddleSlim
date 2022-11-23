@@ -29,13 +29,6 @@ import shutil
 import glob
 from scipy.stats import wasserstein_distance
 
-# smac
-from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
-    UniformFloatHyperparameter, UniformIntegerHyperparameter
-from smac.configspace import ConfigurationSpace
-from smac.facade.smac_hpo_facade import SMAC4HPO
-from smac.scenario.scenario import Scenario
-
 from paddleslim.common import get_logger
 from paddleslim.quant import quant_post
 
@@ -85,6 +78,7 @@ class QuantConfig(object):
                  activation_bits=8,
                  weight_quantize_type='channel_wise_abs_max',
                  optimize_model=False,
+                 onnx_format=False,
                  is_use_cache_file=False,
                  cache_dir="./temp_post_training"):
         """QuantConfig init"""
@@ -113,6 +107,7 @@ class QuantConfig(object):
         self.activation_bits = activation_bits
         self.weight_quantize_type = weight_quantize_type
         self.optimize_model = optimize_model
+        self.onnx_format = onnx_format
         self.is_use_cache_file = is_use_cache_file
         self.cache_dir = cache_dir
 
@@ -144,12 +139,7 @@ def standardization(data):
     """standardization numpy array"""
     mu = np.mean(data, axis=0)
     sigma = np.std(data, axis=0)
-    if isinstance(sigma, list) or isinstance(sigma, np.ndarray):
-        for idx, sig in enumerate(sigma):
-            if sig == 0.:
-                sigma[idx] = 1e-13
-    else:
-        sigma = 1e-13 if sigma == 0. else sigma
+    sigma = 1e-13 if sigma == 0. else sigma
     return (data - mu) / sigma
 
 
@@ -246,15 +236,19 @@ def eval_quant_model():
         if have_invalid_num(out_float) or have_invalid_num(out_quant):
             continue
 
-        out_float_list.append(list(out_float))
-        out_quant_list.append(list(out_quant))
+        try:
+            if len(out_float) > 3:
+                out_float = standardization(out_float)
+                out_quant = standardization(out_quant)
+        except:
+            continue
+        out_float_list.append(out_float)
+        out_quant_list.append(out_quant)
         valid_data_num += 1
 
         if valid_data_num >= max_eval_data_num:
             break
 
-    out_float_list = standardization(out_float_list)
-    out_quant_list = standardization(out_quant_list)
     emd_sum = cal_emd_lose(out_float_list, out_quant_list,
                            out_len_sum / float(valid_data_num))
     _logger.info("output diff: {}".format(emd_sum))
@@ -299,7 +293,8 @@ def quantize(cfg):
         hist_percent=hist_percent, \
         bias_correction=bias_correct, \
         batch_size=batch_size, \
-        batch_nums=batch_num)
+        batch_nums=batch_num,
+        onnx_format=g_quant_config.onnx_format)
 
     global g_min_emd_loss
     try:
@@ -364,6 +359,7 @@ def quant_post_hpo(
         batch_size=[10, 30],  ### uniform sample in list.
         batch_num=[10, 30],  ### uniform sample in list.
         optimize_model=False,
+        onnx_format=False,
         is_use_cache_file=False,
         cache_dir="./temp_post_training",
         runcount_limit=30):
@@ -411,12 +407,24 @@ def quant_post_hpo(
         optimize_model(bool, optional): If set optimize_model as True, it applies some
                 passes to optimize the model before quantization. So far, the place of
                 executor must be cpu it supports fusing batch_norm into convs.
+        onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is False.
         is_use_cache_file(bool): This param is deprecated.
         cache_dir(str): This param is deprecated.
         runcount_limit(int): max. number of model quantization.
     Returns:
         None
     """
+
+    try:
+        import smac
+    except:
+        os.system('python -m pip install -U smac')
+    # smac
+    from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
+        UniformFloatHyperparameter, UniformIntegerHyperparameter
+    from smac.configspace import ConfigurationSpace
+    from smac.facade.smac_hpo_facade import SMAC4HPO
+    from smac.scenario.scenario import Scenario
 
     global g_quant_config
     g_quant_config = QuantConfig(
@@ -426,7 +434,7 @@ def quant_post_hpo(
         model_filename, params_filename, save_model_filename,
         save_params_filename, scope, quantizable_op_type, is_full_quantize,
         weight_bits, activation_bits, weight_quantize_type, optimize_model,
-        is_use_cache_file, cache_dir)
+        onnx_format, is_use_cache_file, cache_dir)
     cs = ConfigurationSpace()
 
     hyper_params = []

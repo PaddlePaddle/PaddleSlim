@@ -1,19 +1,18 @@
 Global:
-  input_name: x
   model_dir: save_quant_inception
   model_filename: inference.pdmodel
   params_filename: inference.pdiparams
   batch_size: 32
   resize_size: 320
   img_size: 299
-  data_dir: /workspace/dataset/ILSVRC2012
+  data_dir: ./ILSVRC2012
   
 Distillation:
   alpha: 1.0
   loss: l2
   node:
   - softmax_1.tmp_0
-Quantization:
+QuantAware:
   is_full_quantize: false
   activation_quantize_type: moving_average_abs_max
   weight_quantize_type: channel_wise_abs_max
@@ -22,6 +21,8 @@ Quantization:
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
+  - matmul
+  - matmul_v2
   weight_bits: 8
   
 TrainConfig:
