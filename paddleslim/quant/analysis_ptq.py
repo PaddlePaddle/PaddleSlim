@@ -51,7 +51,7 @@ class AnalysisPTQ(object):
                  resume=False,
                  ptq_config=None):
         """
-        AnalysisQuant provides to analysis the sensitivity of each op in the model.
+        AnalysisPTQ provides to analysis the sensitivity of each op in the model.
         
         Args:
             model_dir(str): the path of fp32 model that will be quantized, it can also be '.onnx'

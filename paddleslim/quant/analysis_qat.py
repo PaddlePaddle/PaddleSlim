@@ -42,7 +42,20 @@ class AnalysisQAT(object):
                  save_dir='analysis_results',
                  resume=False):
         '''
+        AnalysisQAT provides to analysis the sensitivity of each op in the model.
         
+        Args:
+            quant_model_dir(str): the path of INT8 model that quantized through QAT
+            float_model_dir(str): the path of FP32 model that is the base model of quant_model
+            model_filename(str, optional): the model file name of the model
+            params_filename(str, optional): the parameter file name of the model
+            quantizable_op_type(list of str, optional): the type of op that will be analyzed
+            eval_function(function): eval function, define by yourself to return the metric of the inference program, can be used to judge the metric of quantized model. 
+            data_loader(Python Generator, Paddle.io.DataLoader, optional): the
+                Generator or Dataloader provides calibrate data, and it could
+                return a batch every time
+            save_dir(str, optional): the output dir that stores the analyzed information
+            resume(bool, optional): When break off while ananlyzing, could resume analysis program and load already analyzed information.
         '''
         if model_filename is None:
             model_filename = 'model.pdmodel'
@@ -64,7 +77,6 @@ class AnalysisQAT(object):
         devices = paddle.device.get_device().split(':')[0]
         self.places = paddle.device._convert_to_place(devices)
         executor = paddle.static.Executor(self.places)
-        #self.scope = paddle.static.global_scope()
         [program, self.feed_list,
          self.fetch_list] = paddle.fluid.io.load_inference_model(
              self.quant_model_dir, executor, self.model_filename,
@@ -169,16 +181,11 @@ class AnalysisQAT(object):
                         with paddle.static.scope_guard(quant_scope):
                             quant_scope.find_var(in_var.name()).get_tensor(
                             ).set(float_weight, paddle.fluid.CPUPlace())
-                        # scale_var = graph._find_node_by_name(op_node.inputs, op_node.input('Scale')[0])
-                        # scale = np.array(self.scope.find_var(scale_var.name()).get_tensor())
-                        # int_weight = np.array(self.scope.find_var(in_var.name()).get_tensor()).astype(np.float32)
-                        # scale = list(scale) if len(scale) > 1 else scale[0]
-                        # float_weight = dequant_tensor(int_weight, scale)
-                        # self.scope.find_var(in_var.name()).get_tensor().set(float_weight, paddle.fluid.CPUPlace())
                         input_rename_map[out_var.node] = in_var
                     graph.safe_remove_nodes(op_node)
                     removed.append(op_node.id())
                     output_rename_map[in_var.node] = out_var
+
             for op_node in graph.all_op_nodes():
                 if op_node.id() in removed:
                     continue
@@ -201,14 +208,6 @@ class AnalysisQAT(object):
 
             saved_program = graph.to_program()
             with paddle.static.scope_guard(quant_scope):
-                paddle.fluid.io.save_inference_model(
-                    dirname=self.save_dir,
-                    model_filename='model.pdmodel',
-                    params_filename='model.pdiparams',
-                    feeded_var_names=self.feed_list,
-                    target_vars=self.fetch_list,
-                    executor=executor,
-                    main_program=saved_program)
                 _logger.info('Skip quant {}, evaluating....'.format(layer_name))
                 metric = self.eval_function(executor, saved_program,
                                             self.feed_list,
