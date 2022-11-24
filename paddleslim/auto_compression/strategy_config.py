@@ -16,7 +16,7 @@ from collections import namedtuple
 
 __all__ = [
     "BaseStrategy",
-    "Quantization",
+    "QuantAware",
     "Distillation",
     "MultiTeacherDistillation",
     "HyperParameterOptimization",
@@ -33,7 +33,7 @@ __all__ = [
 ]
 
 SUPPORTED_CONFIG = [
-    "Quantization",
+    "QuantAware",
     "Distillation",
     "MultiTeacherDistillation",
     "HyperParameterOptimization",
@@ -52,7 +52,7 @@ class BaseStrategy:
         self.name = name
 
 
-class Quantization(BaseStrategy):
+class QuantAware(BaseStrategy):
     def __init__(self,
                  quantize_op_types=[
                      'conv2d', 'depthwise_conv2d', 'conv2d_transpose', 'mul',
@@ -87,7 +87,7 @@ class Quantization(BaseStrategy):
             onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is False.
             is_full_quantize(bool): If True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES. Default: False.
         """
-        super(Quantization, self).__init__("Quantization")
+        super(QuantAware, self).__init__("QuantAware")
         self.quantize_op_types = quantize_op_types
         self.weight_bits = weight_bits
         self.activation_bits = activation_bits

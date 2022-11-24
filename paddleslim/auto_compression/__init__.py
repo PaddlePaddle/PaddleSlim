@@ -20,7 +20,8 @@ from .utils import *
 
 __all__ = [
     "AutoCompression",
-    "Quantization",
+    "QuantAware",
+    "QuantPost",
     "Distillation",
     "MultiTeacherDistillation",
     "HyperParameterOptimization",
