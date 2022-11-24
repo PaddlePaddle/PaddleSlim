@@ -1,4 +1,4 @@
-# 量化分析工具详细教程
+# PTQ量化分析工具详细教程
 
 ## 1. 量化分析工具功能
 1. 统计分析(statistical_analyse)：
@@ -13,7 +13,7 @@
     - 输入预期精度，直接产出符合预期精度的量化模型。
 
 
-## 2. paddleslim.quant.AnalysisQuant 可传入参数解析
+## 2. paddleslim.quant.AnalysisPTQ 可传入参数解析
 ```yaml
 model_dir
 model_filename: None
@@ -39,7 +39,7 @@ ptq_config
 ## 3. 量化分析工具的使用
 **创建量化分析工具** ：
 ```
-analyzer = AnalysisQuant(
+analyzer = AnalysisPTQ(
 		model_dir=config["model_dir"],
 		model_filename=config["model_filename"],
 		params_filename=config["params_filename"],
