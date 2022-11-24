@@ -2,7 +2,7 @@ Data:
   Eval:
     dataset:
       name: GPTDataset
-      input_dir: /paddle/xuchang/parallel_quant/FleetX/examples/gpt/single/lambada_test.jsonl 
+      input_dir: ./lambada_test.jsonl 
       max_seq_len: 1024
       overlapping_eval: 32
     loader:
@@ -12,7 +12,7 @@ Data:
       batch_size: 1
       
 Offline_Eval:
-  eval_path:  /paddle/xuchang/parallel_quant/FleetX/examples/gpt/single/lambada_test.jsonl 
+  eval_path:  ./lambada_test.jsonl 
   cloze_eval: True
   overlapping_eval: 32
   batch_size: 1

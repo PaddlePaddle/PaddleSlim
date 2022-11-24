@@ -2,8 +2,8 @@ Global:
   device: gpu
   seed: 1024
   gpt_config: ./configs/gpt_config.yaml
-  quant_model_dir: ./GPT_345M_QAT_w_analysis
-  float_model_dir: /paddle/xuchang/parallel_quant/FleetX/examples/gpt/single/GPT_345M_Baseline
+  quant_model_dir: ./GPT_345_QAT_wo_analysis
+  float_model_dir: ./GPT_345M_Baseline
   model_filename: model.pdmodel
   params_filename: model.pdiparams
   quantizable_op_type: ["mul", "matmul", "matmul_v2"]
