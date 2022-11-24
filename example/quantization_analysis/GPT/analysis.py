@@ -116,8 +116,8 @@ def eval_function(exe, program, feed_names, fetch_list):
         ppl = math.exp(min(20, total_loss))
         token_ratio = (num_tokenized_tokens - 1) / (num_original_tokens - 1)
         adjusted_ppl = math.exp(min(20, total_loss * token_ratio))
-        string = ' validation results on {} | '.format(gpt_config[
-            'Offline_Eval']['eval_path'])
+        string = ' validation results on {} | '.format(gpt_config['Data'][
+            'Eval']['dataset']['name'])
         string += 'avg loss: {:.4E} | '.format(total_loss)
         string += 'ppl: {:.4E} | '.format(ppl)
         string += 'adjusted ppl: {:.4E} | '.format(adjusted_ppl)
@@ -126,8 +126,8 @@ def eval_function(exe, program, feed_names, fetch_list):
     else:
         num_correct = float(total_score)
         acc = float(num_correct / num_examples)
-        string = ' validation results on {} | '.format(gpt_config[
-            'Offline_Eval']['eval_path'])
+        string = ' validation results on {} | '.format(gpt_config['Data'][
+            'Eval']['dataset']['name'])
         string += 'number correct: {:.4E} | '.format(num_correct)
         string += 'total examples: {:.4E} | '.format(num_examples)
         string += 'avg accuracy: {:.4E}'.format(acc)

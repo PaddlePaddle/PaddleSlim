@@ -11,10 +11,3 @@ Data:
       collate_fn: gpt_collate_fn
       batch_size: 1
       
-Offline_Eval:
-  eval_path:  ./lambada_test.jsonl 
-  cloze_eval: True
-  overlapping_eval: 32
-  batch_size: 1
-  max_seq_len: 1024
-  logging_freq: 10
