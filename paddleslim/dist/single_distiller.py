@@ -17,6 +17,15 @@ import paddle
 from paddleslim.core import GraphWrapper
 
 
+def find_var(program, block, var_name):
+    try:
+        var = block.var(var_name)
+    except:
+        parent_block = program.block(block.parent_idx)
+        var = parent_block._find_var_recursive(var_name)
+    return var
+
+
 def merge(teacher_program,
           student_program,
           data_name_map,
@@ -52,55 +61,94 @@ def merge(teacher_program,
     if teacher_scope == None:
         teacher_scope = scope
     teacher_program = teacher_program.clone(for_test=True)
-    for teacher_var in teacher_program.list_vars():
-        skip_rename = False
-        if teacher_var.name != 'fetch' and (not merge_feed or
-                                            teacher_var.name != 'feed'):
-            if teacher_var.name in data_name_map.keys():
-                new_name = data_name_map[teacher_var.name]
-                if new_name == teacher_var.name:
-                    skip_rename = True
-            else:
-                new_name = name_prefix + teacher_var.name
-            if not skip_rename:
-                # scope var rename
-                old_var = teacher_scope.var(teacher_var.name).get_tensor()
-                renamed_var = scope.var(new_name).get_tensor()
-                renamed_var.set(np.array(old_var), place)
+    for block in teacher_program.blocks:
+        for teacher_var in list(block.vars.values()):
+            ### rename variable in block
+            skip_rename = False
+            if teacher_var.name != 'fetch' and (not merge_feed or
+                                                teacher_var.name != 'feed'):
+                if teacher_var.name in data_name_map.keys():
+                    new_name = data_name_map[teacher_var.name]
+                    if new_name == teacher_var.name:
+                        skip_rename = True
+                else:
+                    new_name = name_prefix + teacher_var.name
+                if not skip_rename:
+                    # scope var rename
+                    old_var = teacher_scope.var(teacher_var.name).get_tensor()
+                    renamed_var = scope.var(new_name).get_tensor()
+                    renamed_var.set(np.array(old_var), place)
 
-                # program var rename
-                renamed_var = teacher_program.global_block()._rename_var(
-                    teacher_var.name, new_name)
+                    # program var rename
+                    renamed_var = block._rename_var(teacher_var.name, new_name)
 
-    for teacher_var in teacher_program.list_vars():
-        if teacher_var.name != 'fetch' and (not merge_feed or
-                                            teacher_var.name != 'feed'):
-            # student program add var
-            new_var = student_program.global_block()._clone_variable(
-                teacher_var, force_persistable=False)
-            new_var.stop_gradient = True
+        ### input and output of the sub_block need to rename specially.
+        inner_vars_name = [var.name for var in block.vars.values()]
+
+        for op in block.ops:
+            for iname in op.input_names:
+                for in_var_name in op.input(iname):
+                    if in_var_name != 'fetch' and (
+                            not merge_feed or in_var_name != 'feed'
+                    ) and in_var_name not in inner_vars_name:
+                        if in_var_name in data_name_map.keys():
+                            new_name = data_name_map[in_var_name]
+                            if new_name != in_var_name:
+                                op._rename_input(in_var_name,
+                                                 name_prefix + in_var_name)
+                        else:
+                            op._rename_input(in_var_name,
+                                             name_prefix + in_var_name)
+
+            for oname in op.output_names:
+                for out_var_name in op.output(oname):
+                    if out_var_name != 'fetch' and (
+                            not merge_feed or out_var_name != 'feed'
+                    ) and out_var_name not in inner_vars_name:
+                        if out_var_name in data_name_map.keys():
+                            new_name = data_name_map[out_var_name]
+                            if new_name != out_var_name:
+                                op._rename_output(out_var_name,
+                                                  name_prefix + out_var_name)
+                        else:
+                            op._rename_output(out_var_name,
+                                              name_prefix + out_var_name)
 
     for block in teacher_program.blocks:
+        for teacher_var in list(block.vars.values()):
+            if teacher_var.name != 'fetch' and (not merge_feed or
+                                                teacher_var.name != 'feed'):
+                # student program add var
+                new_var = student_program.block(block.idx)._clone_variable(
+                    teacher_var, force_persistable=False)
+                new_var.stop_gradient = True
+
+    for block in reversed(teacher_program.blocks):
         for op in block.ops:
             if (not merge_feed or op.type != 'feed') and op.type != 'fetch':
                 inputs = {}
                 outputs = {}
                 attrs = {}
                 for input_name in op.input_names:
-                    inputs[input_name] = [
-                        block.var(in_var_name)
-                        for in_var_name in op.input(input_name)
-                    ]
+                    inputs[input_name] = []
+                    for in_var_name in op.input(input_name):
+                        inputs[input_name].append(
+                            find_var(teacher_program, block, in_var_name))
 
                 for output_name in op.output_names:
-                    outputs[output_name] = [
-                        block.var(out_var_name)
-                        for out_var_name in op.output(output_name)
-                    ]
+                    outputs[output_name] = []
+                    for out_var_name in op.output(output_name):
+                        outputs[output_name].append(
+                            find_var(teacher_program, block, out_var_name))
                 for attr_name in op.attr_names:
-                    attrs[attr_name] = op.attr(attr_name)
-                student_program.global_block().append_op(
+                    if attr_name == 'sub_block':
+                        attrs[attr_name] = student_program.block(
+                            op._block_attr("sub_block").idx)
+                    else:
+                        attrs[attr_name] = op.attr(attr_name)
+                student_program.block(op.block.idx).append_op(
                     type=op.type, inputs=inputs, outputs=outputs, attrs=attrs)
+        student_program._sync_with_cpp()
 
     student_graph = GraphWrapper(student_program)
     for op in student_graph.ops():

@@ -416,7 +416,8 @@ def quant_aware(program,
                 executor=executor,
                 is_test=is_test)
 
-            transform_pass.apply(main_graph)
+            for sub_graph in main_graph.all_sub_graphs():
+                transform_pass.apply(sub_graph)
 
         if len(quant_dequant_ops) > 0:
             qdq_func = 'AddQuantDequantPassV2' if config[
@@ -431,7 +432,8 @@ def quant_aware(program,
                 is_test=is_test,
                 scale_dict=scale_dict)
 
-            quant_dequant_pass.apply(main_graph)
+            for sub_graph in main_graph.all_sub_graphs():
+                quant_dequant_pass.apply(sub_graph)
 
     out_scale_training_pass = OutScaleForTrainingPass(
         scope=scope,
@@ -440,7 +442,8 @@ def quant_aware(program,
         is_test=is_test,
         scale_dict=scale_dict)
 
-    out_scale_training_pass.apply(main_graph)
+    for sub_graph in main_graph.all_sub_graphs():
+        out_scale_training_pass.apply(sub_graph)
 
     if (weight_preprocess_func is not None or
             act_preprocess_func is not None) and not for_test:
