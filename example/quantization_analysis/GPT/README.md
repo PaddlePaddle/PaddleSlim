@@ -6,7 +6,7 @@
 
 ## 2.Benchmark
 | 模型  |  策略  | ACC | Inference模型 |
-| :-------- |:-------- | :--------: |
+| :-------- |:-------- | :--------: | :--------: |
 | GPT-345M | Baseline | 44.17 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_Baseline.tar) |
 | GPT-345M | 量化训练(分析前) | 41.58 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345_QAT_wo_analysis.tar) |
 | GPT-345M | 量化训练(分析后)  | 44.84 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_QAT_w_analysis.tar) |
