@@ -237,10 +237,10 @@ class reshape2(PruneWorker):
         if var in self.op.inputs("X"):
             if (len(out_shape) > len(in_shape)):
                 self.op.set_attr('shape',
-                                 [0, 0, int(shape[2] * 0.75), shape[3]])
+                                 [0, 0, int(shape[2] * 0.875), shape[3]])
                 transform = {"squeeze": out_shape[pruned_axis + 1]}
             elif (len(out_shape) < len(in_shape)):
-                self.op.set_attr('shape', [0, 0, int(shape[2] * 0.75)])
+                self.op.set_attr('shape', [0, 0, int(shape[2] * 0.875)])
                 transform = {"repeat": in_shape[pruned_axis + 1]}
             else:
                 transform = {}
@@ -248,11 +248,11 @@ class reshape2(PruneWorker):
                                    transforms + [transform])
         elif var in self.op.outputs("Out"):
             if (len(in_shape) > len(out_shape)):
-                self.op.set_attr('shape', [0, 0, int(shape[2] * 0.75)])
+                self.op.set_attr('shape', [0, 0, int(shape[2] * 0.875)])
                 transform = {"squeeze": in_shape[pruned_axis + 1]}
             elif (len(in_shape) < len(in_shape)):
                 self.op.set_attr('shape',
-                                 [0, 0, int(shape[2] * 0.75), shape[3]])
+                                 [0, 0, int(shape[2] * 0.875), shape[3]])
                 transform = {"repeat": out_shape[pruned_axis + 1]}
             else:
                 transform = {}

@@ -58,14 +58,25 @@ class FilterPruner(Pruner):
     
     """
 
-    def __init__(self, model, inputs, sen_file=None, opt=None,
-                 skip_leaves=True):
+    def __init__(self,
+                 model,
+                 inputs,
+                 sen_file=None,
+                 opt=None,
+                 skip_leaves=True,
+                 prune_type='conv',
+                 input_dtype='float32'):
         super(FilterPruner, self).__init__(model, inputs, opt=opt)
         self._status = Status(sen_file)
         self.skip_leaves = skip_leaves
         # sensitive and collections are just used in filter pruning
         self.collections = DygraphPruningCollections(
-            model, inputs, skip_leaves=self.skip_leaves)
+            model,
+            inputs,
+            skip_leaves=self.skip_leaves,
+            prune_type=prune_type,
+            input_dtype=input_dtype)
+        self.prune_type = prune_type
 
         # skip vars in:
         # 1. depthwise conv2d layer
@@ -351,7 +362,12 @@ class FilterPruner(Pruner):
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":
-            plan.apply(self.model, lazy=False, opt=self.opt)
+            plan.apply(
+                self.model,
+                lazy=False,
+                opt=self.opt,
+                prune_type=self.prune_type,
+                pruned_ratio=pruned_ratio)
         return plan
 
     def _transform_mask(self, mask, transform):

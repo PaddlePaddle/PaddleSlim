@@ -202,15 +202,23 @@ class PruningPlan():
 
                         t_value.set(value * expand_mask, place)
 
-    def imperative_apply(self, model, opt=None):
+    def imperative_apply(self,
+                         model,
+                         opt=None,
+                         prune_type='conv',
+                         pruned_ratio=0.0):
         """
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
+        prune_type = 'fc'
+        pruned_ratio = 0.125
         for name, sub_layer in model.named_sublayers(include_self=True):
-            if 'reshape' in name:
+            #TODO(minghaoBD): 'shape[2] = int(shape[2] * (1 - pruned_ratio))' is only tested on reshapes between transformer-block's fully connected layers. 
+            # More cases should be tested and more flexible coding should be developed.  
+            if 'reshape' in name and prune_type == 'fc':
                 shape = sub_layer.__getattr__("shape")
-                shape[2] = int(shape[2] * 0.75)
+                shape[2] = int(shape[2] * (1 - pruned_ratio))
                 sub_layer.__setattr__("shape", shape)
                 print("setting param: {} shape to {}".format(
                     name, sub_layer.__getattr__("shape")))
@@ -247,7 +255,7 @@ class PruningPlan():
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims, value)
                         self._prune_opt(param.name, dims, bool_mask, opt)
-
+                        print(param.name, pruned_value.shape)
                         p = t_value._place()
                         if p.is_cpu_place():
                             place = paddle.CPUPlace()
