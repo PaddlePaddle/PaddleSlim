@@ -59,12 +59,10 @@ def get_weight(op, return_name=True):
 def is_dynamic_weight_op(op):
     weight_ops = ALL_WEIGHT_OP
     if op.type() in weight_ops:
-        if op.type() in ['mul', 'matmul', 'matmul_v2']:
-            for inp in sorted(op.all_inputs()):
-                if inp._var.persistable == True:
-                    return True
-            return False
-        return True
+        for inp in sorted(op.all_inputs()):
+            if inp._var.persistable == True:
+                return True
+        return False
     return False
 
 

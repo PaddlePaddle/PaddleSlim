@@ -30,7 +30,7 @@ def find_final_nodes(program):
     final_nodes = []
     graph = GraphWrapper(program)
     for op in sorted(graph.ops()):
-        if op.type() in ALL_WEIGHT_OP and is_output_weight_ops(op, graph):
+        if is_dynamic_weight_op(op) and is_output_weight_ops(op, graph):
             n_op = has_bias(op, graph)
             if n_op is not None:
                 final_nodes.extend(n_op.all_outputs())

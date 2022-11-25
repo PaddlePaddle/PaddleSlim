@@ -17,13 +17,20 @@ import paddle
 from paddleslim.core import GraphWrapper
 
 
-def find_var(program, block, var_name):
+def _find_var_from_current_block(program, block, var_name):
     try:
         var = block.var(var_name)
     except:
         parent_block = program.block(block.parent_idx)
         var = parent_block._find_var_recursive(var_name)
     return var
+
+
+def _find_var_from_program(program, var_name):
+    for block in program.blocks:
+        if block.has_var(var_name):
+            return block.var(var_name)
+    raise ValueError("var {} not in this program".format(var_name))
 
 
 def merge(teacher_program,
@@ -133,13 +140,15 @@ def merge(teacher_program,
                     inputs[input_name] = []
                     for in_var_name in op.input(input_name):
                         inputs[input_name].append(
-                            find_var(teacher_program, block, in_var_name))
+                            _find_var_from_current_block(teacher_program, block,
+                                                         in_var_name))
 
                 for output_name in op.output_names:
                     outputs[output_name] = []
                     for out_var_name in op.output(output_name):
                         outputs[output_name].append(
-                            find_var(teacher_program, block, out_var_name))
+                            _find_var_from_current_block(teacher_program, block,
+                                                         out_var_name))
                 for attr_name in op.attr_names:
                     if attr_name == 'sub_block':
                         attrs[attr_name] = student_program.block(
@@ -185,10 +194,10 @@ def fsp(teacher_var1_name,
     """
     if program == None:
         program = paddle.static.default_main_program()
-    teacher_var1 = program.global_block().var(teacher_var1_name)
-    teacher_var2 = program.global_block().var(teacher_var2_name)
-    student_var1 = program.global_block().var(student_var1_name)
-    student_var2 = program.global_block().var(student_var2_name)
+    teacher_var1 = _find_var_from_program(program, teacher_var1_name)
+    teacher_var2 = _find_var_from_program(program, teacher_var2_name)
+    student_var1 = _find_var_from_program(program, student_var1_name)
+    student_var2 = _find_var_from_program(program, student_var2_name)
     teacher_fsp_matrix = paddle.fluid.layers.fsp_matrix(teacher_var1,
                                                         teacher_var2)
     student_fsp_matrix = paddle.fluid.layers.fsp_matrix(student_var1,
@@ -213,8 +222,8 @@ def l2(teacher_var_name, student_var_name, program=None):
     """
     if program == None:
         program = paddle.static.default_main_program()
-    student_var = program.global_block().var(student_var_name)
-    teacher_var = program.global_block().var(teacher_var_name)
+    student_var = _find_var_from_program(program, student_var_name)
+    teacher_var = _find_var_from_program(program, teacher_var_name)
     l2_loss = paddle.mean(
         paddle.nn.functional.square_error_cost(student_var, teacher_var))
     return l2_loss
@@ -242,8 +251,8 @@ def soft_label(teacher_var_name,
     """
     if program == None:
         program = paddle.static.default_main_program()
-    student_var = program.global_block().var(student_var_name)
-    teacher_var = program.global_block().var(teacher_var_name)
+    student_var = _find_var_from_program(program, student_var_name)
+    teacher_var = _find_var_from_program(program, teacher_var_name)
     teacher_var.stop_gradient = True
 
     student_var = paddle.nn.functional.softmax(student_var /
@@ -273,7 +282,7 @@ def loss(loss_func, program=None, **kwargs):
     for item in kwargs.items():
         if isinstance(item[1], str):
             func_parameters.setdefault(item[0],
-                                       program.global_block().var(item[1]))
+                                       _find_var_from_program(program, item[1]))
         else:
             func_parameters.setdefault(item[0], item[1])
     loss = loss_func(**func_parameters)
@@ -345,8 +354,8 @@ def dkd(teacher_var_name,
     """
     if program == None:
         program = paddle.static.default_main_program()
-    student_var = program.global_block().var(student_var_name)
-    teacher_var = program.global_block().var(teacher_var_name)
+    student_var = _find_var_from_program(program, student_var_name)
+    teacher_var = _find_var_from_program(program, teacher_var_name)
     return _dkd_loss(
         student_var,
         teacher_var,
