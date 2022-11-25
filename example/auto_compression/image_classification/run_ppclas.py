@@ -117,10 +117,10 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
 def main():
     rank_id = paddle.distributed.get_rank()
     if args.devices == 'gpu':
-        place = paddle.CUDAPlace(rank_id)
+        paddle.CUDAPlace(rank_id)
         device = paddle.set_device('gpu')
     else:
-        place = paddle.CPUPlace()
+        paddle.CPUPlace()
         device = paddle.set_device('cpu')
     global global_config
     all_config = load_slim_config(args.config_path)
