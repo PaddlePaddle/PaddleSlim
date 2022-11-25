@@ -21,7 +21,7 @@ __all__ = ['preprocess_transformer_patterns']
 def _append_transformer_prune_params(op, graph, block_num, params_dict):
     for next_op in graph.next_ops(op):
         if next_op.type() in ['mul', 'matmul', 'matmul_v2'
-                              ] and is_dynamic_weight_op(next_op):
+                              ] and has_trainable_var(next_op):
             if block_num not in params_dict:
                 params_dict[block_num] = {}
                 params_dict[block_num]['P1'] = [get_weight(next_op)]

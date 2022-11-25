@@ -17,20 +17,28 @@ import paddle
 from paddleslim.core import GraphWrapper
 
 
-def _find_var_from_current_block(program, block, var_name):
-    try:
-        var = block.var(var_name)
-    except:
-        parent_block = program.block(block.parent_idx)
-        var = parent_block._find_var_recursive(var_name)
-    return var
-
-
 def _find_var_from_program(program, var_name):
     for block in program.blocks:
         if block.has_var(var_name):
             return block.var(var_name)
     raise ValueError("var {} not in this program".format(var_name))
+
+
+def _except_feed_fetch(var_name, merge_feed):
+    if var_name != 'fetch' and (not merge_feed or var_name != 'feed'):
+        return True
+    return False
+
+
+def _is_same_block(block1, block2):
+    if len(block1.ops) != len(block2.ops):
+        return False
+
+    for op1, op2 in zip(block1.ops, block2.ops):
+        if op1.type() != op2.type():
+            return False
+
+    return True
 
 
 def merge(teacher_program,
@@ -70,10 +78,8 @@ def merge(teacher_program,
     teacher_program = teacher_program.clone(for_test=True)
     for block in teacher_program.blocks:
         for teacher_var in list(block.vars.values()):
-            ### rename variable in block
             skip_rename = False
-            if teacher_var.name != 'fetch' and (not merge_feed or
-                                                teacher_var.name != 'feed'):
+            if _except_feed_fetch(teacher_var.name, merge_feed):
                 if teacher_var.name in data_name_map.keys():
                     new_name = data_name_map[teacher_var.name]
                     if new_name == teacher_var.name:
@@ -90,14 +96,12 @@ def merge(teacher_program,
                     renamed_var = block._rename_var(teacher_var.name, new_name)
 
         ### input and output of the sub_block need to rename specially.
-        inner_vars_name = [var.name for var in block.vars.values()]
-
         for op in block.ops:
             for iname in op.input_names:
                 for in_var_name in op.input(iname):
-                    if in_var_name != 'fetch' and (
-                            not merge_feed or in_var_name != 'feed'
-                    ) and in_var_name not in inner_vars_name:
+                    if _except_feed_fetch(
+                            in_var_name,
+                            merge_feed) and not block.has_var(in_var_name):
                         if in_var_name in data_name_map.keys():
                             new_name = data_name_map[in_var_name]
                             if new_name != in_var_name:
@@ -109,9 +113,9 @@ def merge(teacher_program,
 
             for oname in op.output_names:
                 for out_var_name in op.output(oname):
-                    if out_var_name != 'fetch' and (
-                            not merge_feed or out_var_name != 'feed'
-                    ) and out_var_name not in inner_vars_name:
+                    if _except_feed_fetch(
+                            out_var_name,
+                            merge_feed) and not block.has_var(out_var_name):
                         if out_var_name in data_name_map.keys():
                             new_name = data_name_map[out_var_name]
                             if new_name != out_var_name:
@@ -126,8 +130,13 @@ def merge(teacher_program,
             if teacher_var.name != 'fetch' and (not merge_feed or
                                                 teacher_var.name != 'feed'):
                 # student program add var
-                new_var = student_program.block(block.idx)._clone_variable(
-                    teacher_var, force_persistable=False)
+                if len(student_program.blocks) > 1 and _is_same_block(
+                        block, student_program.block(block.idx)):
+                    new_var = student_program.block(block.idx)._clone_variable(
+                        teacher_var, force_persistable=False)
+                else:
+                    new_var = student_program.global_block()._clone_variable(
+                        teacher_var, force_persistable=False)
                 new_var.stop_gradient = True
 
     for block in reversed(teacher_program.blocks):
@@ -140,23 +149,34 @@ def merge(teacher_program,
                     inputs[input_name] = []
                     for in_var_name in op.input(input_name):
                         inputs[input_name].append(
-                            _find_var_from_current_block(teacher_program, block,
-                                                         in_var_name))
+                            block._find_var_recursive(in_var_name))
 
                 for output_name in op.output_names:
                     outputs[output_name] = []
                     for out_var_name in op.output(output_name):
                         outputs[output_name].append(
-                            _find_var_from_current_block(teacher_program, block,
-                                                         out_var_name))
+                            block._find_var_recursive(out_var_name))
+
                 for attr_name in op.attr_names:
                     if attr_name == 'sub_block':
                         attrs[attr_name] = student_program.block(
                             op._block_attr("sub_block").idx)
                     else:
                         attrs[attr_name] = op.attr(attr_name)
-                student_program.block(op.block.idx).append_op(
-                    type=op.type, inputs=inputs, outputs=outputs, attrs=attrs)
+                if len(student_program.blocks) > 1 and _is_same_block(
+                        block, student_program.block(block.idx)):
+                    student_program.block(op.block.idx).append_op(
+                        type=op.type,
+                        inputs=inputs,
+                        outputs=outputs,
+                        attrs=attrs)
+                else:
+                    student_program.global_block().append_op(
+                        type=op.type,
+                        inputs=inputs,
+                        outputs=outputs,
+                        attrs=attrs)
+
         student_program._sync_with_cpp()
 
     student_graph = GraphWrapper(student_program)
