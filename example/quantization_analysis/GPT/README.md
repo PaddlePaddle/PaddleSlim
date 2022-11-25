@@ -9,7 +9,7 @@
 | :-------- |:-------- | :--------: | :--------: |
 | GPT-345M | Baseline | 44.17 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_Baseline.tar) |
 | GPT-345M | 量化训练(分析前) | 41.58 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345_QAT_wo_analysis.tar) |
-| GPT-345M | 量化训练(分析后)  | 44.84 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_QAT_w_analysis.tar) |
+| GPT-345M | 量化训练(分析后/跳过7层Linear)  | 44.94 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_QAT_w_analysis.tar) |
 
 
 - ACC的指标均在基于[LAMBADA](https://raw.githubusercontent.com/cybertronai/bflm/master/lambada_test.jsonl)数据集，采用 ACC(accuracy) 指标评测得到
