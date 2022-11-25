@@ -14,24 +14,17 @@
 
 
 ## 2. paddleslim.quant.AnalysisPTQ 可传入参数解析
-```yaml
-model_dir
-model_filename: None
-params_filename: None
-eval_function: None
-data_loader: None
-save_dir: 'analysis_results'
-resume: False
-ptq_config
-```
-- model_dir: 必须传入的模型文件路径，可为文件夹名；若模型为ONNX类型，直接输入'.onnx'模型文件名称即可。
-- model_filename: 默认为None，若model_dir为文件夹名，则必须传入以'.pdmodel'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入。
-- params_filename: 默认为None，若model_dir为文件夹名，则必须传入以'.pdiparams'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入。
-- eval_function：若需要验证精度，需要传入自定义的验证函数。
-- data_loader：模型校准时使用的数据，DataLoader继承自`paddle.io.DataLoader`。可以直接使用模型套件中的DataLoader，或者根据[paddle.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/io/DataLoader_cn.html#dataloader)自定义所需要的DataLoader。
-- save_dir：分析后保存模型精度或pdf等文件的文件夹，默认为`analysis_results`。
-- resume：是否加载中间分析文件
-- ptq_config：可传入的离线量化中的参数，详细可参考[离线量化文档](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post)。
+| **参数名**                   | **参数释义**                              |
+|-----------------------------|-----------------------------------------|
+| model_dir | 必须传入的模型文件路径，可为文件夹名；若模型为ONNX类型，直接输入'.onnx'模型文件名称即可 |
+| model_filename | 默认为None，若model_dir为文件夹名，则必须传入以'.pdmodel'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入 |
+| params_filename | 默认为None，若model_dir为文件夹名，则必须传入以'.pdiparams'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入 |
+| eval_function | 若需要验证精度，需要传入自定义的验证函数 |
+| data_loader | 模型校准时使用的数据，DataLoader继承自`paddle.io.DataLoader`。可以直接使用模型套件中的DataLoader，或者根据[paddle.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/io/DataLoader_cn.html#dataloader)自定义所需要的DataLoader |
+| save_dir | 分析后保存模型精度或pdf等文件的文件夹，默认为`analysis_results`|
+| resume | 是否加载中间分析文件，默认为False|
+| ptq_config | 可传入的离线量化中的参数，详细可参考[离线量化文档](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post) |
+
 
 
 

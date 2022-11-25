@@ -6,17 +6,19 @@
 
 
 ## 2. paddleslim.quant.AnalysisQAT 可传入参数解析
+| **参数名**                   | **参数释义**                              |
+|-----------------------------|-----------------------------------------|
+| quant_model_dir | 必须传入的量化后的模型文件路径 |
+| float_model_dir | 必须传入的量化前的模型文件路径 |
+| model_filename | 默认为None，若model_dir为文件夹名，则必须传入以'.pdmodel'结尾的模型名称 |
+| params_filename | 默认为None，若model_dir为文件夹名，则必须传入以'.pdiparams'结尾的模型名称 |
+| quantizable_op_type | 需分析的量化的op类型，默认为`conv2d`, `depthwise_conv2d`, `mul` |
+| qat_metric | 量化模型的精度，可不传入，默认为None，不传入时会自动计算 |
+| eval_function | 需要传入自定义的验证函数 |
+| data_loader | 模型校准时使用的数据，DataLoader继承自`paddle.io.DataLoader`。可以直接使用模型套件中的DataLoader，或者根据[paddle.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/io/DataLoader_cn.html#dataloader)自定义所需要的DataLoader |
+| save_dir | 分析后保存模型精度或pdf等文件的文件夹，默认为`analysis_results`|
+| resume | 是否加载中间分析文件，默认为False|
 
-- quant_model_dir: 必须传入的量化后的模型文件路径，可为文件夹名
-- float_model_dir: 必须传入的量化前的模型文件路径，可为文件夹名
-- model_filename: 默认为None，若model_dir为文件夹名，则必须传入以'.pdmodel'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入。
-- params_filename: 默认为None，若model_dir为文件夹名，则必须传入以'.pdiparams'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入。
-- quantizable_op_type: 需分析的量化的op类型，默认为`conv2d`, `depthwise_conv2d`, `mul`。
-- qat_metric: 量化模型的精度，可不传入，默认为None，不传入时会自动计算。
-- eval_function：需要传入自定义的验证函数。
-- data_loader：模型校准时使用的数据，DataLoader继承自`paddle.io.DataLoader`。可以直接使用模型套件中的DataLoader，或者根据[paddle.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/io/DataLoader_cn.html#dataloader)自定义所需要的DataLoader。
-- save_dir：分析后保存模型精度或pdf等文件的文件夹，默认为`analysis_results`。
-- resume：是否加载中间分析文件
 
 
 
