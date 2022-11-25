@@ -1,8 +1,9 @@
 # For unittests
-Quantization:
+QuantAware:
   quantize_op_types:
   - conv2d
   - depthwise_conv2d
+  onnx_format: True
 
 Distillation:
   alpha: 1.0

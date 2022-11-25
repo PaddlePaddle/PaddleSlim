@@ -98,7 +98,7 @@ def eval(args):
         if batch_id % 100 == 0:
             print('Eval iter: ', batch_id)
     result = np.mean(np.array(results), axis=0)
-    print("top1_acc/top5_acc= {}".format(result))
+    print("acc_top1: {}; acc_top5: {}".format(result[0], result[1]))
     sys.stdout.flush()
 
 
