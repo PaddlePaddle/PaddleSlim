@@ -19,7 +19,7 @@ class Pruner(object):
         opt(paddle.optimizer.Optimizer): The model's optimizer. Default: None.
     """
 
-    def __init__(self, model, inputs, opt=None):
+    def __init__(self, model, inputs, opt=None, prune_type='conv'):
         self.model = model
         self.inputs = inputs
         self._var_shapes = {}
@@ -27,6 +27,7 @@ class Pruner(object):
             self._var_shapes[var.name] = var.shape
         self.plan = None
         self.opt = opt
+        self.prune_type = prune_type
 
     def status(self, data=None, eval_func=None, status_file=None):
         raise NotImplemented("status is not implemented")
@@ -54,6 +55,11 @@ class Pruner(object):
         if apply == "lazy":
             global_plan.apply(self.model, lazy=True)
         elif apply == "impretive":
-            global_plan.apply(self.model, lazy=False, opt=self.opt)
+            global_plan.apply(
+                self.model,
+                lazy=False,
+                opt=self.opt,
+                prune_type=self.prune_type,
+                pruned_ratio=ratio)
         self.plan = global_plan
         return global_plan

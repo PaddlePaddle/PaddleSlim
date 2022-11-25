@@ -65,8 +65,13 @@ class FilterPruner(Pruner):
                  opt=None,
                  skip_leaves=True,
                  prune_type='conv',
+                 num_head=-1,
                  input_dtype='float32'):
         super(FilterPruner, self).__init__(model, inputs, opt=opt)
+
+        self.num_head = num_head
+        self.prune_type = prune_type
+
         self._status = Status(sen_file)
         self.skip_leaves = skip_leaves
         # sensitive and collections are just used in filter pruning
@@ -76,7 +81,6 @@ class FilterPruner(Pruner):
             skip_leaves=self.skip_leaves,
             prune_type=prune_type,
             input_dtype=input_dtype)
-        self.prune_type = prune_type
 
         # skip vars in:
         # 1. depthwise conv2d layer
@@ -343,7 +347,7 @@ class FilterPruner(Pruner):
             f"Pruning variable [{var_name}] and its relatives {list(collection.variables())}"
         )
 
-        mask = self.cal_mask(pruned_ratio, collection, num_head=-1)
+        mask = self.cal_mask(pruned_ratio, collection, num_head=self.num_head)
         for _detail in collection.all_pruning_details():
             # Varibales can be pruned on multiple axies. 
             src_mask = copy.deepcopy(mask)

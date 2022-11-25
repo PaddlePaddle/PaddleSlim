@@ -161,11 +161,17 @@ class PruningPlan():
                 t_value.set(np.array(t_backup).astype("float32"), place)
                 del sub_layer._buffers[backup_name]
 
-    def apply(self, model, lazy=False, opt=None):
+    def apply(self,
+              model,
+              lazy=False,
+              opt=None,
+              prune_type='conv',
+              pruned_ratio=0.0):
         if lazy:
             self.lazy_apply(model)
         else:
-            self.imperative_apply(model, opt)
+            self.imperative_apply(
+                model, opt, prune_type=prune_type, pruned_ratio=pruned_ratio)
 
     def lazy_apply(self, model):
         for name, sub_layer in model.named_sublayers():
@@ -211,8 +217,6 @@ class PruningPlan():
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
-        prune_type = 'fc'
-        pruned_ratio = 0.125
         for name, sub_layer in model.named_sublayers(include_self=True):
             #TODO(minghaoBD): 'shape[2] = int(shape[2] * (1 - pruned_ratio))' is only tested on reshapes between transformer-block's fully connected layers. 
             # More cases should be tested and more flexible coding should be developed.  
