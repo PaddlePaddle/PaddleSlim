@@ -9,7 +9,7 @@ Distillation:
   alpha: 1.0
   loss: l2
 
-Quantization:
+QuantAware:
   use_pact: true
   activation_bits: 8
   is_full_quantize: false

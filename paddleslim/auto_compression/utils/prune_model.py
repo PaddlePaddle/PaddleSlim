@@ -94,7 +94,8 @@ def get_sparse_model(executor, places, model_file, param_file, ratio,
         feed_vars=feed_vars,
         fetch_vars=fetch_targets,
         executor=executor,
-        program=inference_program)
+        program=inference_program,
+        clip_extra=False)
     print("The pruned model is saved in: ", save_path)
 
 
@@ -169,4 +170,5 @@ def get_prune_model(executor, places, model_file, param_file, ratio, save_path):
         feed_vars=feed_vars,
         fetch_vars=fetch_targets,
         executor=executor,
-        program=main_program)
+        program=main_program,
+        clip_extra=False)

@@ -87,7 +87,7 @@ class AutoCompression:
                 Only one strategy(quant_post with hyperparameter optimization) can set train_config 
                 to None. Default: None. 
             strategy_config(dict, list(dict), optional): The strategy config. You can set single config to get multi-strategy config, such as
-                1. set ``Quantization`` and ``Distillation`` to get quant_aware and distillation compress config.
+                1. set ``QuantAware`` and ``Distillation`` to get quant_aware and distillation compress config.
                     The Quantization config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L55`_ .
                     The Distillation config can reference `https://github.com/PaddlePaddle/PaddleSlim/blob/develop/paddleslim/auto_compression/strategy_config.py#L107`_ .
                 2. set ``QuantPost`` and ``HyperParameterOptimization`` to get quant_post and hyperparameter optimization compress config.
@@ -264,7 +264,12 @@ class AutoCompression:
         save_path = os.path.join(save_path, "infered_shape")
         os.makedirs(save_path)
         paddle.static.save_inference_model(
-            save_path, feed_vars, fetch_targets, exe, program=inference_program)
+            save_path,
+            feed_vars,
+            fetch_targets,
+            exe,
+            program=inference_program,
+            clip_extra=False)
         _logger.info(f"Saved model infered shape to {save_path}")
 
     @property
@@ -344,7 +349,7 @@ class AutoCompression:
         strategy = []
         config = []
         for strategy_c in strategy_config:
-            quant_config = strategy_c.get("Quantization", None)
+            quant_config = strategy_c.get("QuantAware", None)
             hpo_config = strategy_c.get("HyperParameterOptimization", None)
             ptq_config = strategy_c.get("QuantPost", None)
             prune_config = strategy_c.get("ChannelPrune", None)
@@ -763,7 +768,7 @@ class AutoCompression:
             train_program_info, test_program_info = self._prepare_program(
                 inference_program, feed_target_names, fetch_targets, patterns,
                 strategy, config, train_config)
-            if 'unstructure' in self._strategy:
+            if 'unstructure' in strategy:
                 test_program_info.program._program = remove_unused_var_nodes(
                     test_program_info.program._program)
             test_program_info = self._start_train(
@@ -900,7 +905,8 @@ class AutoCompression:
             feed_vars=feed_vars,
             fetch_vars=test_program_info.fetch_targets,
             executor=self._exe,
-            program=test_program)
+            program=test_program,
+            clip_extra=False)
 
     def export_onnx(self,
                     model_name='quant_model.onnx',
