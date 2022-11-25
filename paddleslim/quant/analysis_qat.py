@@ -22,7 +22,7 @@ import numpy as np
 import paddle
 from paddle.fluid import core
 from paddle.fluid.framework import IrGraph
-from ..common import get_logger
+from ..common import get_logger, load_inference_model
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -50,6 +50,7 @@ class AnalysisQAT(object):
             model_filename(str, optional): the model file name of the model
             params_filename(str, optional): the parameter file name of the model
             quantizable_op_type(list of str, optional): the type of op that will be analyzed
+            qat_metric(float, optional): the metric of the quantized model, which will be calculated automatically if is None
             eval_function(function): eval function, define by yourself to return the metric of the inference program, can be used to judge the metric of quantized model. 
             data_loader(Python Generator, Paddle.io.DataLoader, optional): the
                 Generator or Dataloader provides calibrate data, and it could
@@ -77,27 +78,27 @@ class AnalysisQAT(object):
         devices = paddle.device.get_device().split(':')[0]
         self.places = paddle.device._convert_to_place(devices)
         executor = paddle.static.Executor(self.places)
-        [program, self.feed_list,
-         self.fetch_list] = paddle.fluid.io.load_inference_model(
-             self.quant_model_dir, executor, self.model_filename,
-             self.params_filename)
+        [program, self.feed_list, self.fetch_list] = load_inference_model(
+            self.quant_model_dir,
+            executor=executor,
+            model_filename=self.model_filename,
+            params_filename=self.params_filename)
         _logger.info('Loaded model from: {}'.format(quant_model_dir))
 
         graph = IrGraph(core.Graph(program.desc), for_test=True)
 
         # find all inputs for each quantizable op
-        self.tobe_removed_input_lists = []
+        self.inputs_of_quantized_op = []
         sorted_ops = graph.topology_sort()
         for op_node in sorted_ops:
             op_name = op_node.name()
             if op_name in quantizable_op_type:
-                inputs = op_node.op().input_arg_names()
-                for i in inputs:
-                    if 'quantized' in i:
-                        self.tobe_removed_input_lists.append(inputs)
+                input_names = op_node.op().input_arg_names()
+                for input_name in input_names:
+                    if 'quantized' in input_name:
+                        self.inputs_of_quantized_op.append(input_names)
                         break
 
-        #self.data_loader = wrap_dataloader(data_loader, self.feed_list)
         if self.qat_metric is None:
             _logger.info('Calculating the metric of QAT model...')
             self.qat_metric = self.eval_function(
@@ -123,104 +124,130 @@ class AnalysisQAT(object):
         _logger.info('Load checkpoint from {}.'.format(self.checkpoint_name))
         return True
 
+    def get_weight_name(self, inputs_names):
+        # TODO(xc)
+        w_idx = 0 if 'w_0' in inputs_names[0] else 1
+        weight_name = inputs_names[w_idx].split('.quantized.dequantized')[0]
+        return weight_name
+
+    def get_new_in_out_map(
+            self,
+            input_list,
+            graph,
+            float_scope,
+            quant_scope, ):
+
+        input_rename_map = {}
+        output_rename_map = {}
+        removed_ops = []
+        for op_node in graph.all_op_nodes():
+            if op_node.id() in removed_ops:
+                continue
+            in_names = op_node.input_arg_names()
+            out_names = op_node.output_arg_names()
+            if len(out_names) == 1 and out_names[0] in input_list:
+                in_var = graph._find_node_by_name(op_node.inputs,
+                                                  op_node.input('X')[0])
+                out_var = graph._find_node_by_name(op_node.outputs,
+                                                   op_node.output('Y')[0])
+                if 'quantized' in in_var.name():
+                    # act
+                    for op in graph.all_op_nodes():
+                        o_ns = op.output_arg_names()
+                        if len(o_ns) == 1 and o_ns[0] == in_var.name():
+                            in_var_1 = graph._find_node_by_name(
+                                op.inputs, op.input('X')[0])
+                            graph.safe_remove_nodes(op)
+                            removed_ops.append(op.id())
+                            input_rename_map[out_var.node] = in_var_1
+                else:
+                    # weight
+                    with paddle.static.scope_guard(float_scope):
+                        float_weight = np.array(
+                            float_scope.find_var(in_var.name()).get_tensor())
+                    with paddle.static.scope_guard(quant_scope):
+                        quant_scope.find_var(in_var.name()).get_tensor().set(
+                            float_weight, self.places)
+                    input_rename_map[out_var.node] = in_var
+                graph.safe_remove_nodes(op_node)
+                removed_ops.append(op_node.id())
+                output_rename_map[in_var.node] = out_var
+
+        return input_rename_map, output_rename_map, removed_ops
+
+    def relink_graph(self, graph, input_rename_map, output_rename_map,
+                     removed_ops):
+        for op_node in graph.all_op_nodes():
+            if op_node.id() in removed_ops:
+                continue
+            for var in op_node.inputs:
+                if var.node in input_rename_map:
+                    old_in = var
+                    new_in = input_rename_map[var.node]
+                    graph.update_input_link(old_in, new_in, op_node)
+                    _logger.info(
+                        f'relink {op_node.name()} \'s input node from {old_in.name()} to {new_in.name()}.'
+                    )
+            for var in op_node.outputs:
+                if var.node in output_rename_map:
+                    old_out = var
+                    new_out = output_rename_map[var.node]
+                    graph.update_input_link(old_out, new_out, op_node)
+                    _logger.info(
+                        f'relink {op_node.name()} \'s output node from {old_out.name()} to {new_out.name()}.'
+                    )
+
+        return graph.to_program()
+
     def metric_error_analyse(self):
         executor = paddle.static.Executor(self.places)
 
         float_scope = paddle.static.Scope()
         quant_scope = paddle.static.Scope()
 
-        for idx, input_list in enumerate(self.tobe_removed_input_lists):
-            w_idx = 0 if 'w_0' in input_list[0] else 1
-            layer_name = input_list[w_idx].split('.quantized.dequantized')[0]
+        for idx, input_list in enumerate(self.inputs_of_quantized_op):
+            weight_name = self.get_weight_name(input_list)
             _logger.info(
                 'Checking {}/{} quant model: without quant layer {}'.format(
-                    idx + 1, len(self.tobe_removed_input_lists), layer_name))
+                    idx + 1, len(self.inputs_of_quantized_op), weight_name))
 
-            input_rename_map = {}
-            output_rename_map = {}
             with paddle.static.scope_guard(float_scope):
-                [float_program, feed_target_names,
-                 fetch_targets] = paddle.fluid.io.load_inference_model(
-                     self.float_model_dir, executor, self.model_filename,
-                     self.params_filename)
+                load_inference_model(
+                    self.float_model_dir,
+                    executor=executor,
+                    model_filename=self.model_filename,
+                    params_filename=self.params_filename)
 
             with paddle.static.scope_guard(quant_scope):
                 [program, self.feed_list,
-                 self.fetch_list] = paddle.fluid.io.load_inference_model(
-                     self.quant_model_dir, executor, self.model_filename,
-                     self.params_filename)
+                 self.fetch_list] = load_inference_model(
+                     self.quant_model_dir,
+                     executor=executor,
+                     model_filename=self.model_filename,
+                     params_filename=self.params_filename)
+
             program_copy = program.clone()
             graph = IrGraph(core.Graph(program_copy.desc), for_test=True)
-            removed = []
-            for op_node in graph.all_op_nodes():
-                if op_node.id() in removed:
-                    continue
-                in_names = op_node.input_arg_names()
-                out_names = op_node.output_arg_names()
-                if len(out_names) == 1 and out_names[0] in input_list:
-                    in_var = graph._find_node_by_name(op_node.inputs,
-                                                      op_node.input('X')[0])
-                    out_var = graph._find_node_by_name(op_node.outputs,
-                                                       op_node.output('Y')[0])
-                    if 'quantized' in in_var.name():
-                        # act
-                        for op in graph.all_op_nodes():
-                            o_ns = op.output_arg_names()
-                            if len(o_ns) == 1 and o_ns[0] == in_var.name():
-                                in_var_1 = graph._find_node_by_name(
-                                    op.inputs, op.input('X')[0])
-                                graph.safe_remove_nodes(op)
-                                removed.append(op.id())
-                                input_rename_map[out_var.node] = in_var_1
-                    else:
-                        # weight
-                        with paddle.static.scope_guard(float_scope):
-                            float_weight = np.array(
-                                float_scope.find_var(in_var.name()).get_tensor(
-                                ))
-                        with paddle.static.scope_guard(quant_scope):
-                            quant_scope.find_var(in_var.name()).get_tensor(
-                            ).set(float_weight, paddle.fluid.CPUPlace())
-                        input_rename_map[out_var.node] = in_var
-                    graph.safe_remove_nodes(op_node)
-                    removed.append(op_node.id())
-                    output_rename_map[in_var.node] = out_var
-
-            for op_node in graph.all_op_nodes():
-                if op_node.id() in removed:
-                    continue
-                for var in op_node.inputs:
-                    if var.node in input_rename_map:
-                        old_in = var
-                        new_in = input_rename_map[var.node]
-                        graph.update_input_link(old_in, new_in, op_node)
-                        _logger.info(
-                            f'relink {op_node.name()} \'s input node from {old_in.name()} to {new_in.name()}.'
-                        )
-                for var in op_node.outputs:
-                    if var.node in output_rename_map:
-                        old_out = var
-                        new_out = output_rename_map[var.node]
-                        graph.update_input_link(old_out, new_out, op_node)
-                        _logger.info(
-                            f'relink {op_node.name()} \'s output node from {old_out.name()} to {new_out.name()}.'
-                        )
-
-            saved_program = graph.to_program()
+            input_rename_map, output_rename_map, removed_ops = self.get_new_in_out_map(
+                input_list, graph, float_scope, quant_scope)
+            saved_program = self.relink_graph(graph, input_rename_map,
+                                              output_rename_map, removed_ops)
             with paddle.static.scope_guard(quant_scope):
-                _logger.info('Skip quant {}, evaluating....'.format(layer_name))
+                _logger.info('Skip quant {}, evaluating....'.format(
+                    weight_name))
                 metric = self.eval_function(executor, saved_program,
                                             self.feed_list,
                                             self.fetch_list) * 100
-                self.nonquant_layer_metrics[layer_name] = metric
+                self.nonquant_layer_metrics[weight_name] = metric
                 _logger.info(
                     'When skip quant {}, the metric is {}, the diff is {}'.
-                    format(layer_name,
+                    format(weight_name,
                            round(metric, 4), round(metric - self.qat_metric,
                                                    4)))
             self.save_checkpoint()
 
         executor.close()
+
         self.sensitivity_ranklist = sorted(
             self.nonquant_layer_metrics,
             key=self.nonquant_layer_metrics.get,

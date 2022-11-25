@@ -1,4 +1,4 @@
-# PTQ量化分析工具详细教程
+# PTQ(Post Training Quantization)量化分析工具详细教程
 
 ## 1. 量化分析工具功能
 1. 统计分析(statistical_analyse)：
@@ -40,13 +40,13 @@ ptq_config
 **创建量化分析工具** ：
 ```
 analyzer = AnalysisPTQ(
-		model_dir=config["model_dir"],
-		model_filename=config["model_filename"],
-		params_filename=config["params_filename"],
-		eval_function=eval_function,
-		data_loader=data_loader,
-		save_dir=config['save_dir'],
-		ptq_config=config['PTQ'])
+        model_dir=config["model_dir"],
+        model_filename=config["model_filename"],
+        params_filename=config["params_filename"],
+        eval_function=eval_function,
+        data_loader=data_loader,
+        save_dir=config['save_dir'],
+        ptq_config=config['PTQ'])
 ```
 
 **统计分析**
@@ -64,21 +64,21 @@ analyzer.statistical_analyse()
 - `quantized_activation_histplot.pdf`：量化后INT数据类型的模型激活直方图
 - `quantized_weight_histplot.pdf`：量化后INT数据类型的模型权重直方图
 - `statistic.csv`：量化前后权重和激活的具体数据信息，表格中会保存的信息有：
-	- Var Name: Variable的名称
-	- Var Type：Variable的类型，Weight或Activation
-	- Corresponding Weight Name：如果为Activation，其对应的Weight名称
-	- FP32 Min：量化前Float数据类型的最小值
-	- FP32 Max：量化前Float数据类型的最大值
-	- FP32 Mean：量化前Float数据类型的平均值
-	- FP32 Std：量化前Float数据类型的方差值
-	- Quantized Min：量化后INT数据类型的最小值
-	- Quantized Max：量化后INT数据类型的最大值
-	- Quantized Mean：量化后INT数据类型的平均值
-	- Quantized Std：量化后INT数据类型的方差值
-	- Diff Min：量化前后该Variable的相差的最小值
-	- Diff Max：量化前后该Variable的相差的最大值
-	- Diff Mean：量化前后该Variable的相差的平均值
-	- Diff Std：量化前后该Variable的相差的方差值
+    - Var Name: Variable的名称
+    - Var Type：Variable的类型，Weight或Activation
+    - Corresponding Weight Name：如果为Activation，其对应的Weight名称
+    - FP32 Min：量化前Float数据类型的最小值
+    - FP32 Max：量化前Float数据类型的最大值
+    - FP32 Mean：量化前Float数据类型的平均值
+    - FP32 Std：量化前Float数据类型的方差值
+    - Quantized Min：量化后INT数据类型的最小值
+    - Quantized Max：量化后INT数据类型的最大值
+    - Quantized Mean：量化后INT数据类型的平均值
+    - Quantized Std：量化后INT数据类型的方差值
+    - Diff Min：量化前后该Variable的相差的最小值
+    - Diff Max：量化前后该Variable的相差的最大值
+    - Diff Mean：量化前后该Variable的相差的平均值
+    - Diff Std：量化前后该Variable的相差的方差值
 
 
 **精度误差分析**
@@ -96,3 +96,11 @@ analyzer.get_target_quant_model(target_metric)
 
 ## 4. 根据分析结果执行离线量化
 执行完量化分析工具后，可根据 `analysis.txt` 中的精度排序，在量化中去掉效果较差的层，具体操作为：在调用 `paddleslim.quant.quant_post_static` 时加入参数 `skip_tensor_list`，将需要去掉的层传入即可。
+
+
+## FAQ：
+- 与QAT(Quantization-Aware Training)量化分析工具的区别：与QAT量化分析工具不同的是，PTQ量化分析工具则是加载待量化的原模型，对模型所有层依次进行量化，每次量化一层，进行验证获取精度误差分析。而QAT量化分析工具加载量化训练后的量化模型，遍历所有量化的层，依次去掉量化层，加载Float模型的参数，并进行验证获取精度误差分析。
+
+- PTQ量化分析工具设计的原因：PTQ量化分析工具依次量化模型中的每一层，而不是依次去掉量化层是由于PTQ本身的高效性。依次量化一层进行验证，查看对模型精度的损失十分直观。
+
+- 量化分析工具为什么要区分PTQ和QAT：实验证明PTQ和QAT后的量化模型的敏感层并不完全一致，将两种算法分开，敏感度分析结果更加准确。
