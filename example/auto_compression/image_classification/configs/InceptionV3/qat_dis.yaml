@@ -12,7 +12,7 @@ Distillation:
   loss: l2
   node:
   - softmax_1.tmp_0
-Quantization:
+QuantAware:
   is_full_quantize: false
   activation_quantize_type: moving_average_abs_max
   weight_quantize_type: channel_wise_abs_max

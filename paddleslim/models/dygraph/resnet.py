@@ -15,7 +15,8 @@
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.layer_helper import LayerHelper
-from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
+from paddle.nn import Conv2D
+from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
 
 
 class ConvBNLayer(fluid.dygraph.Layer):
@@ -114,11 +115,7 @@ class ResNet(fluid.dygraph.Layer):
         num_filters = [64, 128, 256, 512]
 
         self.conv = ConvBNLayer(
-            num_channels=3,
-            num_filters=64,
-            filter_size=7,
-            stride=1,
-            act='relu')
+            num_channels=3, num_filters=64, filter_size=7, stride=1, act='relu')
         self.pool2d_max = Pool2D(
             pool_size=3, pool_stride=2, pool_padding=1, pool_type='max')
 

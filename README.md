@@ -20,7 +20,7 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
 - 🔥 **2022.08.16：[自动化压缩](example/auto_compression)功能升级**
   - 支持直接加载ONNX模型和Paddle模型导出至ONNX
-  - 发布量化分析工具试用版，发布[YOLO系列离线量化工具](example/post_training_quantization/pytorch_yolo_series/)
+  - 发布[量化分析工具](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/AnalysisQuant.md)，发布[YOLO系列离线量化工具](example/post_training_quantization/pytorch_yolo_series/)
   - 更新[YOLO-Series自动化压缩模型库](example/auto_compression/pytorch_yolo_series)
 
   | 模型  | Base mAP<sup>val<br>0.5:0.95 | ACT量化mAP<sup>val<br>0.5:0.95  | 模型体积压缩比 | 预测时延<sup><small>FP32</small><sup><br><sup>  | 预测时延<sup><small>INT8</small><sup><br><sup> | 预测加速比 |
@@ -182,6 +182,9 @@ git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
 python setup.py install
 ```
 
+### 验证安装
+
+安装完成后您可以使用 python 或 python3 进入 python 解释器，输入import paddleslim, 没有报错则说明安装成功。
 
 ### 快速开始
 
@@ -311,5 +314,5 @@ python setup.py install
 - 欢迎加入PaddleSlim 微信技术交流群
 
  <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/197434181-e21f9ea1-a3bd-482f-b622-c19bb152ff75.png"  width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg"  width = "225" height = "225" />
   </div>

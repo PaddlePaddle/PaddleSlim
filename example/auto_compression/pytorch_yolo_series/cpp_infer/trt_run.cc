@@ -84,6 +84,7 @@ void run(Predictor *predictor, const std::vector<type> &input,
   for (int i = 0; i < FLAGS_repeats; ++i) {
     auto input_names = predictor->GetInputNames();
     auto input_t = predictor->GetInputHandle(input_names[0]);
+
     input_t->Reshape(input_shape);
     input_t->CopyFromCpu(input.data());
 
@@ -92,30 +93,34 @@ void run(Predictor *predictor, const std::vector<type> &input,
     auto output_names = predictor->GetOutputNames();
     auto output_t = predictor->GetOutputHandle(output_names[0]);
     std::vector<int> output_shape = output_t->shape();
-    output_t -> ShareExternalData<type>(out_data, out_shape, paddle_infer::PlaceType::kGPU);
+    output_t->CopyToCpu(out_data);
+    
   }
-  
+
   LOG(INFO) << "[" << FLAGS_run_mode << " bs-" << FLAGS_batch_size << " ] run avg time is " << time_diff(st, time()) / FLAGS_repeats
             << " ms";
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   google::ParseCommandLineFlags(&argc, &argv, true);
   auto predictor = InitPredictor();
+
+  std::cout << "====== Use float instead of FP16 data ======" << std::endl;
+  std::vector<float> input_data(FLAGS_batch_size * 3 * 640 * 640, float(1.0));
   std::vector<int> input_shape = {FLAGS_batch_size, 3, 640, 640};
-  // float16
-  using dtype = float16;
-  std::vector<dtype> input_data(FLAGS_batch_size * 3 * 640 * 640, dtype(1.0));
 
   int out_box_shape = 25200;
   if (FLAGS_arch == "YOLOv6"){
     out_box_shape = 8400;
   }
-  dtype *out_data;
+  float* out_data;
+  std::vector<int> out_shape{ FLAGS_batch_size, 1, out_box_shape, 85};
   int out_data_size = FLAGS_batch_size * out_box_shape * 85;
+  
+  // Only use Pinned mem for D2H.
   cudaHostAlloc((void**)&out_data, sizeof(float) * out_data_size, cudaHostAllocMapped);
 
-  std::vector<int> out_shape{ FLAGS_batch_size, 1, out_box_shape, 85};
-  run<dtype>(predictor.get(), input_data, input_shape, out_data, out_shape);
+  run<float>(predictor.get(), input_data, input_shape, out_data, out_shape);
   return 0;
 }

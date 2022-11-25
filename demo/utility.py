@@ -28,7 +28,6 @@ import tarfile
 import zipfile
 import logging
 import paddle.fluid as fluid
-import paddle.compat as cpt
 from paddle.fluid import core
 from paddle.fluid.framework import Program
 
@@ -36,7 +35,8 @@ logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
 
-DOWNLOAD_RETRY_LIMIT=3
+DOWNLOAD_RETRY_LIMIT = 3
+
 
 def print_arguments(args):
     """Print argparse's arguments.
@@ -92,7 +92,7 @@ def save_persistable_nodes(executor, dirname, graph):
     persistable_nodes = []
     all_persistable_nodes = graph.all_persistable_nodes()
     for node in all_persistable_nodes:
-        name = cpt.to_text(node.name())
+        name = node.name()
         if name not in persistable_node_names:
             persistable_node_names.add(name)
             persistable_nodes.append(node)
@@ -127,7 +127,7 @@ def load_persistable_nodes(executor, dirname, graph):
     persistable_nodes = []
     all_persistable_nodes = graph.all_persistable_nodes()
     for node in all_persistable_nodes:
-        name = cpt.to_text(node.name())
+        name = node.name()
         if name not in persistable_node_names:
             persistable_node_names.add(name)
             persistable_nodes.append(node)
@@ -211,6 +211,7 @@ def _download(url, path, md5sum=None):
 
     return fullname
 
+
 def _md5check(fullname, md5sum=None):
     if md5sum is None:
         return True
@@ -224,9 +225,10 @@ def _md5check(fullname, md5sum=None):
 
     if calc_md5sum != md5sum:
         _logger.info("File {} md5 check failed, {}(calc) != "
-                    "{}(base)".format(fullname, calc_md5sum, md5sum))
+                     "{}(base)".format(fullname, calc_md5sum, md5sum))
         return False
     return True
+
 
 def _decompress(fname):
     """
@@ -260,6 +262,7 @@ def _decompress(fname):
 
     shutil.rmtree(fpath_tmp)
     os.remove(fname)
+
 
 def _move_and_merge_tree(src, dst):
     """
