@@ -24,8 +24,7 @@ import logging
 import paddle
 from paddleslim.common import AvgrageMeter, get_logger
 from paddleslim.dist import DML
-from paddleslim.models.dygraph import MobileNetV1
-from paddleslim.models.dygraph import ResNet
+from paddle.vision.models import MobileNetV1, resnet34
 import cifar100_reader as reader
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 from utility import add_arguments, print_arguments
@@ -152,13 +151,13 @@ def main(args):
     # 2. Define neural network
     if args.models == "mobilenet-mobilenet":
         models = [
-            MobileNetV1(class_dim=args.class_num),
-            MobileNetV1(class_dim=args.class_num)
+            MobileNetV1(num_classes=args.class_num),
+            MobileNetV1(num_classes=args.class_num)
         ]
     elif args.models == "mobilenet-resnet50":
         models = [
-            MobileNetV1(class_dim=args.class_num),
-            ResNet(class_dim=args.class_num)
+            MobileNetV1(num_classes=args.class_num),
+            resnet34(num_classes=args.class_num)
         ]
     else:
         logger.info("You can define the model as you wish")

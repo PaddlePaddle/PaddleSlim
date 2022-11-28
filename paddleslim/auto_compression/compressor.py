@@ -24,6 +24,7 @@ from time import gmtime, strftime
 import platform
 import paddle
 import itertools
+import paddle.distributed.fleet as fleet
 from ..quant.quanter import convert, quant_post
 from ..quant.reconstruction_quantization import quant_recon_static
 from ..common.recover_program import recover_inference_program
@@ -160,7 +161,7 @@ class AutoCompression:
         self.default_distill_node_pair, self.model_type = self._get_model_info()
 
         if self.train_config is not None and self.train_config.use_fleet:
-            paddle.distributed.fleet.init(is_collective=True)
+            fleet.init(is_collective=True)
 
         if with_variable_shape(
                 self.model_dir,
@@ -446,7 +447,7 @@ class AutoCompression:
         build_strategy = paddle.static.BuildStrategy()
         exec_strategy = paddle.static.ExecutionStrategy()
 
-        strategy = paddle.distributed.fleet.DistributedStrategy()
+        strategy = fleet.DistributedStrategy()
         strategy.build_strategy = build_strategy
         if train_config.recompute_config is not None:
             strategy.recompute = True

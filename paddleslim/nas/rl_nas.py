@@ -87,6 +87,7 @@ class RLNAS(object):
                 os._exit(1)
 
         cls = RLCONTROLLER.get(key.upper())
+        print(f"RLCONTROLLER: {RLCONTROLLER}")
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":

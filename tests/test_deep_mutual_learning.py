@@ -18,7 +18,6 @@ import logging
 import numpy as np
 import paddle
 from static_case import StaticCase
-from paddleslim.models.dygraph import MobileNetV1
 from paddleslim.dist import DML
 from paddleslim.common import get_logger
 logger = get_logger(__name__, level=logging.INFO)

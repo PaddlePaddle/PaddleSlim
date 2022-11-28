@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-from paddleslim import models
 from paddleslim import prune
 from paddleslim import nas
 from paddleslim import analysis
@@ -22,8 +21,13 @@ from paddleslim import quant
 from paddleslim import dygraph
 from paddleslim import auto_compression
 __all__ = [
-    'models', 'prune', 'nas', 'analysis', 'dist', 'quant', 'dygraph',
-    'auto_compression'
+    'prune',
+    'nas',
+    'analysis',
+    'dist',
+    'quant',
+    'dygraph',
+    'auto_compression',
 ]
 
 from paddleslim.dygraph import *
