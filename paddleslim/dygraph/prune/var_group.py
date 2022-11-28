@@ -30,8 +30,13 @@ class DygraphPruningCollections(PruningCollections):
                               ], "Please select conv or fc as your prune type."
         _logger.debug("Parsing model with input: {}".format(inputs))
         # model can be in training mode, because some model contains auxiliary parameters for training.
-        program = dygraph2program(
-            model, inputs=inputs, dtypes=[input_dtype] * len(inputs))
+        #TODO(minghaoBD): support dictionary input
+        if isinstance(inputs[0], int):
+            dtypes = [input_dtype]
+        elif isinstance(inputs[0], list):
+            dtypes = [input_dtype] * len(inputs)
+
+        program = dygraph2program(model, inputs=inputs, dtypes=dtypes)
 
         graph = GraphWrapper(program)
         if prune_type == 'conv':

@@ -29,7 +29,7 @@ class L2NormFilterPruner(FilterPruner):
             skip_leaves=skip_leaves,
             prune_type=prune_type,
             input_dtype=input_dtype,
-            num_haed=num_haed)
+            num_head=num_head)
 
     def cal_mask(self, pruned_ratio, collection, num_head=-1):
         var_name = collection.master_name
