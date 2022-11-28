@@ -452,10 +452,6 @@ act_suite.addTest(
         op=paddle.fluid.layers.resize_nearest, scale=2.))
 act_suite.addTest(TestActivation(op=paddle.floor))
 act_suite.addTest(TestActivation(op=paddle.scale))
-act_suite.addTest(
-    TestActivation(
-        op=paddle.fluid.layers.nn.uniform_random_batch_size_like,
-        shape=[8, 8, 16, 16]))
 
 
 class TestDepthwiseConv2d(TestPruneWorker):
