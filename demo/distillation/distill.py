@@ -213,8 +213,7 @@ def compress(args):
                            val_acc5[0]))
         if args.save_inference:
             paddle.static.save_inference_model(
-                os.path.join("./saved_models", str(epoch_id)), ["image"],
-                [out],
+                os.path.join("./saved_models", str(epoch_id)), [image], [out],
                 exe,
                 program=student_program)
         _logger.info("epoch {} top1 {:.6f}, top5 {:.6f}".format(
