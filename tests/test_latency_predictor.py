@@ -300,7 +300,7 @@ class TestCase2(unittest.TestCase):
             model_dir='test_mobilenetv2',
             model_filename='inference.pdmodel',
             params_filename='inference.pdiparams',
-            input_shape=[1, 3, 250, 250],
+            input_shapes=[1, 3, 250, 250],
             save_path='test_mobilenetv2_250')
 
         model_file = 'test_mobilenetv2_250/infered_shape.pdmodel'
@@ -313,7 +313,7 @@ class TestCase2(unittest.TestCase):
             model_dir='test_mobilenetv2_qat',
             model_filename='inference.pdmodel',
             params_filename='inference.pdiparams',
-            input_shape=[1, 3, 250, 250],
+            input_shapes=[1, 3, 250, 250],
             save_path='test_mobilenetv2_qat_250')
 
         model_file = 'test_mobilenetv2_qat_250/infered_shape.pdmodel'
