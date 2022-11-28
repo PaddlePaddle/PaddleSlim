@@ -110,7 +110,7 @@ class ModelCase5(paddle.nn.Layer):
         image = inputs['image']
         image = self.bn1(image)
         img_size = paddle.fluid.data(
-            name='img_size', shape=[None, 2], dtype='int64')
+            name='img_size', shape=[None, 2], dtype='int32')
         anchors = [10, 13, 16, 30, 33, 23]
         boxes, scores = paddle.fluid.layers.yolo_box(
             x=image,
@@ -180,7 +180,7 @@ class ModelCase7(paddle.nn.Layer):
         image = inputs['image']
         image = self.bn1(image)
         img_size = paddle.fluid.data(
-            name='img_size', shape=[None, 2], dtype='int64')
+            name='img_size', shape=[None, 2], dtype='int32')
         anchors = [10, 13, 16, 30, 33, 23]
         boxes, scores = paddle.fluid.layers.yolo_box(
             x=image,
@@ -431,6 +431,7 @@ class TestCase8(unittest.TestCase):
             model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
+        paddle.disable_static()
         model2 = ModelCase7()
         model_file, param_file = save_det_model(
             model2,
