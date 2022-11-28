@@ -31,17 +31,17 @@
 | ERNIE 3.0-Medium | 剪枝+量化训练| 74.17 | 56.84 | 59.75 | 80.54 | 76.03 | 76.97 | 80.80 | 72.16 |
 
 模型在不同任务上平均精度以及加速对比如下：
-|  模型 |策略| Accuracy（avg） | 时延(ms) | 加速比 |
-|:-------:|:--------:|:----------:|:------------:| :------:|
-|PP-MiniLM| Base模型|  72.81 | 128.01 | - |
-|PP-MiniLM| 剪枝+离线量化 |  72.44 | 17.97 | 7.12 |
-|ERNIE 3.0-Medium| Base模型| 73.09  | 29.25(fp16) | - |
-|ERNIE 3.0-Medium| 剪枝+量化训练 |  72.16 | 19.61 | 1.49 |
+|  模型 |策略| Accuracy（avg） | 预测时延<sup><small>FP32</small><sup><br><sup> | 预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 加速比 |
+|:-------:|:--------:|:----------:|:------------:|:------:|:------:|:------:|
+|PP-MiniLM| Base模型|  72.81 | 94.49ms | 23.31ms | - |  - |
+|PP-MiniLM| 剪枝+离线量化 |  71.85 | - | - | 15.76ms | 5.99x |
+|ERNIE 3.0-Medium| Base模型| 73.09  | 89.71ms | 20.76ms | - | - |
+|ERNIE 3.0-Medium| 剪枝+量化训练 |  72.16 | - | - | 14.08ms | 6.37x |
 
 性能测试的环境为
 - 硬件：NVIDIA Tesla T4 单卡
-- 软件：CUDA 11.0, cuDNN 8.0, TensorRT 8.0
-- 测试配置：batch_size: 40, max_seq_len: 128
+- 软件：CUDA 11.2, cuDNN 8.1, TensorRT 8.4
+- 测试配置：batch_size: 32, max_seq_len: 128
 
 ## 3. 自动压缩流程
 
@@ -157,7 +157,9 @@ Prune:
   pruned_ratio: 0.25
 ```
 
-- 优化参数
+- 离线量化超参搜索
+
+本示例的离线量化采取了超参搜索策略，以选择最优的超参数取得更好的离线量化效果。首先，配置待搜索的参数：
 
 ```yaml
 HyperParameterOptimization:
@@ -177,12 +179,12 @@ HyperParameterOptimization:
   - channel_wise_abs_max
 ```
 
-- 量化参数
+其次，配置离线量化参数：
 
 量化参数主要设置量化比特数和量化op类型，其中量化op包含卷积层（conv2d, depthwise_conv2d）和全连接层（mul，matmul_v2）。
 
 ```yaml
-Quantization:
+QuantPost:
   activation_bits: 8
   quantize_op_types:
   - conv2d

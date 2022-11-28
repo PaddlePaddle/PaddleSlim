@@ -13,7 +13,7 @@ Distillation:
   - conv2d_85.tmp_0
   - conv2d_86.tmp_0
 
-Quantization:
+QuantAware:
   activation_quantize_type: 'range_abs_max'
   quantize_op_types:
   - conv2d

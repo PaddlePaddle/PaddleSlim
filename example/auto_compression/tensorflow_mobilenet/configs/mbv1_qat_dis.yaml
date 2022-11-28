@@ -38,7 +38,7 @@ Distillation:
   - batch_norm_26.tmp_3
   - conv2d_42.tmp_1
 
-Quantization:
+QuantAware:
   use_pact: true
   activation_bits: 8
   is_full_quantize: false
