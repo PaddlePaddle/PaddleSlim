@@ -35,7 +35,8 @@ class DygraphPruningCollections(PruningCollections):
             dtypes = [input_dtype]
         elif isinstance(inputs[0], list):
             dtypes = [input_dtype] * len(inputs)
-
+        else:
+            dtypes = [input_dtype]
         program = dygraph2program(model, inputs=inputs, dtypes=dtypes)
 
         graph = GraphWrapper(program)
