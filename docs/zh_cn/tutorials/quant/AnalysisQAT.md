@@ -45,7 +45,7 @@ analyzer = AnalysisQAT(
 ```
 analyzer.metric_error_analyse()
 ```
-调用该接口，会遍历量化模型中的每一层，去掉量化节点并计算当前层不量化的模型精度。调用该接口时，需要输入Eval Function。会产出所有去掉一层量化的模型精度排序，将默认保存在 `./analysis_results/analysis.txt` 中。
+调用该接口，会遍历量化模型中的每一层，去掉量化节点并计算当前层不量化的模型精度。调用该接口时，需要输入Eval Function。会产出所有去掉一层量化的模型精度排序，将默认保存在 `./analysis_results/analysis.txt` 中。具体使用可参考[GPT量化训练敏感度分析DEMO](../../../../example/quantization_analysis/GPT/README.md)。
 
 
 ## FAQ：

@@ -9,7 +9,7 @@
 | :-------- |:-------- | :--------: | :--------: |
 | GPT-345M | Baseline | 44.17 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_Baseline.tar) |
 | GPT-345M | 量化训练(分析前) | 41.58 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345_QAT_wo_analysis.tar) |
-| GPT-345M | 量化训练(分析后/跳过7层Linear)  | 44.94 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_QAT_w_analysis.tar) |
+| GPT-345M | 量化训练(分析后)  | 44.94 | [Model](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_QAT_w_analysis_infer.tar) |
 
 
 - ACC的指标均在基于[LAMBADA](https://raw.githubusercontent.com/cybertronai/bflm/master/lambada_test.jsonl)数据集，采用 ACC(accuracy) 指标评测得到
@@ -40,3 +40,7 @@ python analysis.py --config_path=./configs/gpt_345M_analysis.yaml
 敏感度排序前10层分别为：```linear_31```，```linear_27```，```linear_22```，```linear_43```，```linear_83```，```linear_15```，```linear_87```，```linear_3```，```linear_38```，```linear_39```。在这十层中，其中有八层属于```TransformerDecoder```中第二个FFN层，两层属于```TransformerDecoder```中第一个FFN层，而```MultiHeadAttention```中的Linear层都相对不敏感。
 
 ```paddleslim.quant.AnalysisQAT```详解见[AnalysisQAT.md](../../../docs/zh_cn/tutorials/quant/AnalysisQAT.md)。
+
+#### 3.5 重新量化训练
+
+根据分析结果，重新量化训练时，去掉了```linear_31```，```linear_27```，```linear_22```，```linear_43```，```linear_83```，```linear_15```，```linear_87```七层Linear的量化，最后量化模型精度达到44.94。
