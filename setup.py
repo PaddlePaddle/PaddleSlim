@@ -27,7 +27,7 @@ if 'develop' in subprocess.getoutput('git branch'):
 else:
     tag_list = subprocess.getoutput('git tag').split('\n')
     if 'rc' in tag_list[-1]:
-        if tag_list[-1].split('-')[0] == tag_list[-2]:
+        if tag_list[-1].split('rc')[0] in tag_list[-2]:
             slim_version = tag_list[-2]
         else:
             slim_version = tag_list[-1]

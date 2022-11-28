@@ -88,7 +88,7 @@ ACT相比传统的模型压缩方法，
 | [语义分割](./semantic_segmentation) | Deeplabv3-ResNet50            | 79.90                  | 79.26                  | 12.766           | 8.839            | **1.44**   | NVIDIA Tesla T4 |
 | [语义分割](./semantic_segmentation) | BiSeNetV2                     | 73.17                  | 73.20                  | 35.61            | 15.94            | **2.23**   | NVIDIA Tesla T4 |
 | [NLP](./nlp)                    | PP-MiniLM                     | 72.81                  | 72.44                  | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4 |
-| [NLP](./nlp)                    | ERNIE 3.0-Medium              | 73.09                  | 72.40                  | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4 |
+| [NLP](./nlp)                    | ERNIE 3.0-Medium              | 73.09                  | 72.16                  | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4 |
 | [NLP](./pytorch_huggingface)    | bert-base-cased（Hugging-Face） | 81.35                  | 81.51                  | 11.60            | 4.83             | **2.40**   | NVIDIA Tesla T4 |
 | [目标检测](./detection)             | SSD-MobileNetv1               | 73.8(voc)              | 73.52                  | 4.0              | 1.7              | **2.35**   | NVIDIA Tesla T4 |
 | [目标检测](./pytorch_yolo_series)   | YOLOv5s<br/>(PyTorch)         | 37.4                   | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4 |
