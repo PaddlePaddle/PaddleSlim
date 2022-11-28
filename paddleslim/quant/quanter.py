@@ -1,5 +1,3 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
-#
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -387,6 +385,7 @@ def quant_aware(program,
         scale_dict = post_training_quantization._scale_dict
     else:
         main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
+        sub_graphs = [sub_graph for sub_graph in main_graph.all_sub_graphs()]
         transform_pass_ops = []
         quant_dequant_ops = []
         for op_type in config['quantize_op_types']:
@@ -416,7 +415,7 @@ def quant_aware(program,
                 executor=executor,
                 is_test=is_test)
 
-            for sub_graph in main_graph.all_sub_graphs():
+            for sub_graph in sub_graphs:
                 transform_pass.apply(sub_graph)
 
         if len(quant_dequant_ops) > 0:
@@ -432,7 +431,7 @@ def quant_aware(program,
                 is_test=is_test,
                 scale_dict=scale_dict)
 
-            for sub_graph in main_graph.all_sub_graphs():
+            for sub_graph in sub_graphs:
                 quant_dequant_pass.apply(sub_graph)
 
     out_scale_training_pass = OutScaleForTrainingPass(
@@ -442,17 +441,18 @@ def quant_aware(program,
         is_test=is_test,
         scale_dict=scale_dict)
 
-    for sub_graph in main_graph.all_sub_graphs():
+    for sub_graph in sub_graphs:
         out_scale_training_pass.apply(sub_graph)
 
-    if (weight_preprocess_func is not None or
-            act_preprocess_func is not None) and not for_test:
+    if (weight_preprocess_func is not None or act_preprocess_func is not None
+        ) and not for_test and not config['onnx_format']:
         _logger.info(
             "When a preprocess_func is used in quant_aware, Need to save a mapping table to match variable names in the convert phase."
         )
         _logger.info("The mapping table is saved as '{}'.".format(
             VARS_MAPPING_TABLE))
-        save_dict(main_graph.out_node_mapping_table)
+        for sub_graph in sub_graphs:
+            save_dict(sub_graph.out_node_mapping_table)
 
     # TDOD: remove it.
     if draw_graph:

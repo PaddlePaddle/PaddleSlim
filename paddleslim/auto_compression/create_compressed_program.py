@@ -187,9 +187,6 @@ def _load_program_and_merge(executor,
 
     _remove_fetch_node(teacher_program)
 
-    if teacher_idx == None or teacher_idx == 1:
-        test_program = train_program.clone(for_test=True)
-
     target_nodes = _get_target_node(distill_node_pair)
     teacher_program = teacher_program._prune(target_nodes)
 
@@ -215,9 +212,9 @@ def _load_program_and_merge(executor,
         name_prefix=teacher_name_prefix,
         merge_feed=merge_feed)
     if teacher_idx == None or teacher_idx == 1:
-        return train_program, test_program, data_name_map
+        return train_program, data_name_map
     else:
-        return train_program, None, data_name_map
+        return train_program, data_name_map
 
 
 def build_distill_program(executor,
@@ -243,6 +240,8 @@ def build_distill_program(executor,
     distill_node_pair = _get_distill_node(train_program,
                                           config) or default_distill_node_pair
 
+    test_program = train_program.clone(for_test=True)
+
     target_nodes = _get_target_node(distill_node_pair)
     train_program = train_program._prune(target_nodes)
 
@@ -256,7 +255,7 @@ def build_distill_program(executor,
             params_filename = config["teacher_params_filename"][
                 tea_idx] if "teacher_params_filename" in config else None
             if tea_idx == 0:
-                train_program, test_program, data_name_map = _load_program_and_merge(
+                train_program, data_name_map = _load_program_and_merge(
                     executor,
                     place,
                     train_program,
@@ -268,7 +267,7 @@ def build_distill_program(executor,
                     teacher_idx=(tea_idx + 1),
                     feed_target_names=feed_target_names)
             else:
-                train_program, _, data_name_map = _load_program_and_merge(
+                train_program, data_name_map = _load_program_and_merge(
                     executor,
                     place,
                     train_program,
@@ -285,7 +284,7 @@ def build_distill_program(executor,
             "teacher_model_filename"] if "teacher_model_filename" in config else None
         params_filename = config[
             "teacher_params_filename"] if "teacher_params_filename" in config else None
-        train_program, test_program, data_name_map = _load_program_and_merge(
+        train_program, data_name_map = _load_program_and_merge(
             executor,
             place,
             train_program,
