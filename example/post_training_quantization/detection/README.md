@@ -130,7 +130,7 @@ python eval.py --config_path=./configs/ppyoloe_s_ptq.yaml
 - 要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
 
 #### 3.6 提高离线量化精度
-本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisQuant```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisQuant```详解见[AnalysisQuant.md](../../../docs/zh_cn/tutorials/quant/AnalysisQuant.md)。
+本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisPTQ```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisPTQ```详解见[AnalysisPTQ.md](../../../docs/zh_cn/tutorials/quant/AnalysisPTQ.md)。
 
 
 经过多个实验，包括尝试多种激活算法（avg，KL等）、weight的量化方式（abs_max，channel_wise_abs_max），对PicoDet-s进行离线量化后精度均为0，以PicoDet-s为例，量化分析工具具体使用方法如下：

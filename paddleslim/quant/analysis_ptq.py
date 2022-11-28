@@ -37,10 +37,10 @@ from ..common import get_feed_vars, wrap_dataloader, load_inference_model, get_m
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-__all__ = ["AnalysisQuant"]
+__all__ = ["AnalysisPTQ"]
 
 
-class AnalysisQuant(object):
+class AnalysisPTQ(object):
     def __init__(self,
                  model_dir,
                  model_filename=None,
@@ -51,7 +51,7 @@ class AnalysisQuant(object):
                  resume=False,
                  ptq_config=None):
         """
-        AnalysisQuant provides to analysis the sensitivity of each op in the model.
+        AnalysisPTQ provides to analysis the sensitivity of each op in the model.
         
         Args:
             model_dir(str): the path of fp32 model that will be quantized, it can also be '.onnx'
