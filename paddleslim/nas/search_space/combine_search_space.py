@@ -94,6 +94,8 @@ class CombineSearchSpace(object):
                 )
 
         space = cls(input_size, output_size, block_num, block_mask=block_mask)
+        print(f"SEARCHSPACE: {SEARCHSPACE}")
+        print(f"space:{space}")
         return space
 
     def init_tokens(self, tokens=None):

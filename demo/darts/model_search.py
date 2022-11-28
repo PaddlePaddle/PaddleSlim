@@ -126,7 +126,7 @@ class Cell(paddle.nn.Layer):
                 ])
             offset += len(states)
             states.append(s)
-        out = paddle.concat(input=states[-self._multiplier:], axis=1)
+        out = paddle.concat(states[-self._multiplier:], axis=1)
         return out
 
 

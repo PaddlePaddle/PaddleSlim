@@ -298,7 +298,7 @@ class DartsSpace(SearchSpaceBase):
         n3 = hidden3_0 + hidden3_1
 
         out = paddle.concat(
-            input=[n0, n1, n2, n3], axis=1, name=name + '_normal_cell_concat')
+            [n0, n1, n2, n3], axis=1, name=name + '_normal_cell_concat')
         return out
 
     def _reduction_cell(self,
@@ -380,9 +380,7 @@ class DartsSpace(SearchSpaceBase):
         r3 = hidden3_0 + hidden3_1
 
         out = paddle.concat(
-            input=[r0, r1, r2, r3],
-            axis=1,
-            name=name + '_reduction_cell_concat')
+            [r0, r1, r2, r3], axis=1, name=name + '_reduction_cell_concat')
         return out
 
     def _conv_bn(self, x, c_out, kernel_size, padding, stride, name):
@@ -561,7 +559,7 @@ class DartsSpace(SearchSpaceBase):
                 initializer=paddle.nn.initializer.Uniform(
                     low=-k, high=k)),
             bias_attr=False)
-        x = paddle.concat(input=[conv1, conv2], axis=1)
+        x = paddle.concat([conv1, conv2], axis=1)
         gama, beta = self._bn_param_config(name, affine, "fr_bn")
         x = paddle.static.nn.batch_norm(
             x,

@@ -30,7 +30,7 @@ __all__ = ["InceptionABlockSpace", "InceptionCBlockSpace"]
 
 @SEARCHSPACE.register
 class InceptionABlockSpace(SearchSpaceBase):
-    def __init__(self, input_size, output_size, block_num, block_mask):
+    def __init__(self, input_size, output_size, block_num, block_mask=None):
         super(InceptionABlockSpace, self).__init__(input_size, output_size,
                                                    block_num, block_mask)
         if self.block_mask == None:
@@ -193,6 +193,7 @@ class InceptionABlockSpace(SearchSpaceBase):
                     stride,
                     pool_type,
                     name=None):
+        print(f"hit _inceptionA----------------------------")
         pool1 = paddle.fluid.layers.pool2d(
             input=data,
             pool_size=filter_size,

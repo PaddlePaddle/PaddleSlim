@@ -104,9 +104,6 @@ class VarWrapper(object):
                 ops.append(op)
         return ops
 
-    def is_parameter(self):
-        self._var.is_parameter()
-
 
 class OpWrapper(object):
     def __init__(self, op, graph):
@@ -266,15 +263,6 @@ class GraphWrapper(object):
                 params.append(VarWrapper(param, self))
         return params
 
-    def is_parameter(self, var):
-        """
-        Whether the given variable is parameter.
-
-        Args:
-            var(VarWrapper): The given varibale.
-        """
-        return var._var.is_parameter()
-
     def is_persistable(self, var):
         """
         Whether the given variable is persistable.
@@ -362,18 +350,6 @@ class GraphWrapper(object):
                     if p.idx() != op.idx():
                         ops.append(p)
         return sorted(ops)
-
-    def get_param_by_op(self, op):
-        """
-        Get the parameters used by target operator.
-        """
-        assert isinstance(op, OpWrapper)
-        params = []
-        for var in op.all_inputs():
-            if var._var.is_parameter():
-                params.append(var)
-        assert len(params) > 0
-        return params
 
     def numel_params(self):
         """

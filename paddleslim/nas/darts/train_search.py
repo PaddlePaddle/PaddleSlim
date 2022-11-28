@@ -59,7 +59,6 @@ class DARTSearch(object):
         num_epochs(int): Epoch number. Default: 50.
         epochs_no_archopt(int): Epochs skip architecture optimize at begining. Default: 0.
         use_multiprocess(bool): Whether to use multiprocess in dataloader. Default: False.
-        use_data_parallel(bool): Whether to use data parallel mode. Default: False.
         log_freq(int): Log frequency. Default: 50.
 
     """
@@ -77,7 +76,6 @@ class DARTSearch(object):
                  num_epochs=50,
                  epochs_no_archopt=0,
                  use_multiprocess=False,
-                 use_data_parallel=False,
                  save_dir='./',
                  log_freq=50):
         self.model = model
@@ -92,7 +90,6 @@ class DARTSearch(object):
         self.epochs_no_archopt = epochs_no_archopt
         self.num_epochs = num_epochs
         self.use_multiprocess = use_multiprocess
-        self.use_data_parallel = use_data_parallel
         self.save_dir = save_dir
         self.log_freq = log_freq
 
@@ -127,12 +124,7 @@ class DARTSearch(object):
                 x=paddle.nn.functional.softmax_with_cross_entropy(logits,
                                                                   train_label))
 
-            if self.use_data_parallel:
-                loss = self.model.scale_loss(loss)
-                loss.backward()
-                self.model.apply_collective_grads()
-            else:
-                loss.backward()
+            loss.backward()
 
             optimizer.minimize(loss)
             self.model.clear_gradients()
@@ -189,7 +181,7 @@ class DARTSearch(object):
         logger.info("param size = {:.6f}MB".format(
             count_parameters_in_MB(model_parameters)))
 
-        device_num = paddle.fluid.dygraph.parallel.Env().nranks
+        device_num = 1
         step_per_epoch = int(self.num_imgs * 0.5 /
                              (self.batchsize * device_num))
         if self.unrolled:
@@ -204,10 +196,6 @@ class DARTSearch(object):
             weight_decay=3e-4,
             parameters=model_parameters,
             grad_clip=clip)
-
-        if self.use_data_parallel:
-            self.train_reader = paddle.fluid.contrib.reader.distributed_batch_reader(
-                self.train_reader)
 
         train_loader = paddle.io.DataLoader.from_generator(
             capacity=64,
@@ -230,14 +218,11 @@ class DARTSearch(object):
             model=self.model,
             eta=learning_rate,
             arch_learning_rate=self.arch_learning_rate,
-            unrolled=self.unrolled,
-            parallel=self.use_data_parallel)
+            unrolled=self.unrolled)
 
         self.model = architect.get_model()
 
-        save_parameters = (not self.use_data_parallel) or (
-            self.use_data_parallel and
-            paddle.fluid.dygraph.parallel.Env().local_rank == 0)
+        save_parameters = True
 
         for epoch in range(self.num_epochs):
             logger.info('Epoch {}, lr {:.6f}'.format(epoch, optimizer.get_lr()))

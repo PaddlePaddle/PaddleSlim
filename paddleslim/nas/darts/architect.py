@@ -16,10 +16,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import paddle
+import copy
 
 
 class Architect(object):
-    def __init__(self, model, eta, arch_learning_rate, unrolled, parallel):
+    def __init__(self, model, eta, arch_learning_rate, unrolled):
         self.network_momentum = 0.9
         self.network_weight_decay = 3e-4
         self.eta = eta
@@ -31,9 +32,8 @@ class Architect(object):
             weight_decay=paddle.regularizer.L2Decay(coeff=1e-3),
             parameters=self.model.arch_parameters())
         self.unrolled = unrolled
-        self.parallel = parallel
         if self.unrolled:
-            self.unrolled_model = self.model.new()
+            self.unrolled_model = copy.deepcopy(self.model)
             self.unrolled_model_params = [
                 p for p in self.unrolled_model.parameters()
                 if p.name not in
@@ -43,19 +43,11 @@ class Architect(object):
             self.unrolled_optimizer = paddle.optimizer.Momentum(
                 self.eta,
                 self.network_momentum,
-                regularization=paddle.regularizer.L2Decay(
-                    coeff=self.network_weight_decay),
-                parameter_list=self.unrolled_model_params)
-
-        if self.parallel:
-            strategy = paddle.fluid.dygraph.parallel.prepare_context()
-            self.parallel_model = paddle.DataParallel(self.model, strategy)
-            if self.unrolled:
-                self.parallel_unrolled_model = paddle.DataParallel(
-                    self.unrolled_model, strategy)
+                weight_decay=self.network_weight_decay,
+                parameters=self.unrolled_model_params)
 
     def get_model(self):
-        return self.parallel_model if self.parallel else self.model
+        return self.model
 
     def step(self, input_train, target_train, input_valid, target_valid):
         if self.unrolled:
@@ -69,12 +61,7 @@ class Architect(object):
 
     def _backward_step(self, input_valid, target_valid):
         loss = self.model._loss(input_valid, target_valid)
-        if self.parallel:
-            loss = self.parallel_model.scale_loss(loss)
-            loss.backward()
-            self.parallel_model.apply_collective_grads()
-        else:
-            loss.backward()
+        loss.backward()
         return loss
 
     def _backward_step_unrolled(self, input_train, target_train, input_valid,
@@ -82,13 +69,7 @@ class Architect(object):
         self._compute_unrolled_model(input_train, target_train)
         unrolled_loss = self.unrolled_model._loss(input_valid, target_valid)
 
-        if self.parallel:
-            unrolled_loss = self.parallel_unrolled_model.scale_loss(
-                unrolled_loss)
-            unrolled_loss.backward()
-            self.parallel_unrolled_model.apply_collective_grads()
-        else:
-            unrolled_loss.backward()
+        unrolled_loss.backward()
 
         vector = [
             paddle.to_tensor(data=param._grad_ivar().numpy())
@@ -114,12 +95,7 @@ class Architect(object):
             paddle.assign(y.detach(), x)
 
         loss = self.unrolled_model._loss(input, target)
-        if self.parallel:
-            loss = self.parallel_unrolled_model.scale_loss(loss)
-            loss.backward()
-            self.parallel_unrolled_model.apply_collective_grads()
-        else:
-            loss.backward()
+        loss.backward()
 
         self.unrolled_optimizer.minimize(loss)
         self.unrolled_model.clear_gradients()
@@ -138,12 +114,7 @@ class Architect(object):
             param_p = param + grad * R
             paddle.assign(param_p.detach(), param)
         loss = self.model._loss(input, target)
-        if self.parallel:
-            loss = self.parallel_model.scale_loss(loss)
-            loss.backward()
-            self.parallel_model.apply_collective_grads()
-        else:
-            loss.backward()
+        loss.backward()
 
         grads_p = [
             paddle.to_tensor(data=param._grad_ivar().numpy())
@@ -156,12 +127,7 @@ class Architect(object):
         self.model.clear_gradients()
 
         loss = self.model._loss(input, target)
-        if self.parallel:
-            loss = self.parallel_model.scale_loss(loss)
-            loss.backward()
-            self.parallel_model.apply_collective_grads()
-        else:
-            loss.backward()
+        loss.backward()
 
         grads_n = [
             paddle.to_tensor(data=param._grad_ivar().numpy())

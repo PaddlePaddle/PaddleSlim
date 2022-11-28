@@ -143,7 +143,7 @@ class Cell(paddle.nn.Layer):
                 if not isinstance(op2, Identity):
                     h2 = drop_path(h2, drop_prob)
             states += [h1 + h2]
-        out = paddle.concat(input=states[-self._multiplier:], axis=1)
+        out = paddle.concat(states[-self._multiplier:], axis=1)
         return out
 
 
