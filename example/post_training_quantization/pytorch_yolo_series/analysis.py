@@ -21,7 +21,7 @@ from tqdm import tqdm
 from post_process import YOLOPostProcess, coco_metric
 from dataset import COCOValDataset, COCOTrainDataset
 from paddleslim.common import load_config, load_onnx_model
-from paddleslim.quant.analysis import AnalysisQuant
+from paddleslim.quant.analysis_ptq import AnalysisPTQ
 
 
 def argsparser():
@@ -103,7 +103,7 @@ def main():
     load_onnx_model(config["model_dir"])
     inference_model_path = config["model_dir"].rstrip().rstrip(
         '.onnx') + '_infer'
-    analyzer = AnalysisQuant(
+    analyzer = AnalysisPTQ(
         model_dir=inference_model_path,
         model_filename='model.pdmodel',
         params_filename='model.pdiparams',

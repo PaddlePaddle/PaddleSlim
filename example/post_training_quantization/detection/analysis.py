@@ -23,7 +23,7 @@ from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
 from keypoint_utils import keypoint_post_process
 from post_process import PPYOLOEPostProcess
-from paddleslim.quant.analysis import AnalysisQuant
+from paddleslim.quant.analysis_ptq import AnalysisPTQ
 
 
 def argsparser():
@@ -161,7 +161,7 @@ def main():
     else:
         raise ValueError("metric currently only supports COCO and VOC.")
 
-    analyzer = AnalysisQuant(
+    analyzer = AnalysisPTQ(
         model_dir=config["model_dir"],
         model_filename=config["model_filename"],
         params_filename=config["params_filename"],
