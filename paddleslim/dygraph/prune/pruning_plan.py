@@ -161,17 +161,11 @@ class PruningPlan():
                 t_value.set(np.array(t_backup).astype("float32"), place)
                 del sub_layer._buffers[backup_name]
 
-    def apply(self,
-              model,
-              lazy=False,
-              opt=None,
-              prune_type='conv',
-              pruned_ratio=0.0):
+    def apply(self, model, lazy=False, opt=None, prune_type='conv'):
         if lazy:
             self.lazy_apply(model)
         else:
-            self.imperative_apply(
-                model, opt, prune_type=prune_type, pruned_ratio=pruned_ratio)
+            self.imperative_apply(model, opt, prune_type=prune_type)
 
     def lazy_apply(self, model):
         for name, sub_layer in model.named_sublayers():
@@ -208,24 +202,12 @@ class PruningPlan():
 
                         t_value.set(value * expand_mask, place)
 
-    def imperative_apply(self,
-                         model,
-                         opt=None,
-                         prune_type='conv',
-                         pruned_ratio=0.0):
+    def imperative_apply(self, model, opt=None, prune_type='conv'):
         """
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
         for name, sub_layer in model.named_sublayers(include_self=True):
-            #TODO(minghaoBD): 'shape[2] = int(shape[2] * (1 - pruned_ratio))' is only tested on reshapes between transformer-block's fully connected layers. 
-            # More cases should be tested and more flexible coding should be developed.  
-            if 'reshape' in name and prune_type == 'fc':
-                shape = sub_layer.__getattr__("shape")
-                shape[2] = int(shape[2] * (1 - pruned_ratio))
-                sub_layer.__setattr__("shape", shape)
-                print("setting param: {} shape to {}".format(
-                    name, sub_layer.__getattr__("shape")))
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
                     for _mask in self._masks[param.name]:
@@ -259,7 +241,6 @@ class PruningPlan():
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims, value)
                         self._prune_opt(param.name, dims, bool_mask, opt)
-                        print(param.name, pruned_value.shape)
                         p = t_value._place()
                         if p.is_cpu_place():
                             place = paddle.CPUPlace()

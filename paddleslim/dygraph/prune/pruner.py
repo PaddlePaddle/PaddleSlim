@@ -48,7 +48,6 @@ class Pruner(object):
         """
         axis = axis[0] if isinstance(axis, list) else axis
         global_plan = PruningPlan(self.model.full_name)
-        ratio = 0.0
         for var, ratio in ratios.items():
             if not global_plan.contains(var, axis):
                 plan = self.prune_var(var, axis, ratio, apply=None)
@@ -60,7 +59,6 @@ class Pruner(object):
                 self.model,
                 lazy=False,
                 opt=self.opt,
-                prune_type=self.prune_type,
-                pruned_ratio=ratio)
+                prune_type=self.prune_type)
         self.plan = global_plan
         return global_plan
