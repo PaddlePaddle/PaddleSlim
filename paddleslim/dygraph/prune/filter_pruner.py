@@ -370,8 +370,7 @@ class FilterPruner(Pruner):
                 self.model,
                 lazy=False,
                 opt=self.opt,
-                prune_type=self.prune_type,
-                pruned_ratio=pruned_ratio)
+                prune_type=self.prune_type)
         return plan
 
     def _transform_mask(self, mask, transform):
