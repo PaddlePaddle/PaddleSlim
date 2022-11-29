@@ -20,17 +20,38 @@ class DygraphPruningCollections(PruningCollections):
       - skip_leaves(bool): Whether to skip the last convolution layers.
     """
 
-    def __init__(self, model, inputs, skip_leaves=True):
+    def __init__(self,
+                 model,
+                 inputs,
+                 skip_leaves=True,
+                 prune_type='conv',
+                 input_dtype='float32'):
+        assert prune_type in ['conv', 'fc'
+                              ], "Please select conv or fc as your prune type."
         _logger.debug("Parsing model with input: {}".format(inputs))
         # model can be in training mode, because some model contains auxiliary parameters for training.
-        program = dygraph2program(model, inputs=inputs)
+        #TODO(minghaoBD): support dictionary input
+        if isinstance(inputs[0], int):
+            dtypes = [input_dtype]
+        elif isinstance(inputs[0], list):
+            dtypes = [input_dtype] * len(inputs)
+        else:
+            dtypes = [input_dtype]
+        program = dygraph2program(model, inputs=inputs, dtypes=dtypes)
+
         graph = GraphWrapper(program)
-        params = [
-            _param.name for _param in model.parameters()
-            if len(_param.shape) == 4
-        ]
+        if prune_type == 'conv':
+            params = [
+                _param.name for _param in model.parameters()
+                if len(_param.shape) == 4
+            ]
+        elif prune_type == 'fc':
+            params = [
+                _param.name for _param in model.parameters()
+                if len(_param.shape) == 2
+            ]
         self._collections = self.create_pruning_collections(
-            params, graph, skip_leaves=skip_leaves)
+            params, graph, skip_leaves=skip_leaves, prune_type=prune_type)
         _logger.info("Found {} collections.".format(len(self._collections)))
 
         _name2values = {}

@@ -132,7 +132,6 @@ class Pruner():
                                     f"change groups of {op.type()}({param.name()}) from {op.attr('groups')} to {new_groups};"
                                 )
                                 op.set_attr("groups", new_groups)
-                                print(op._op)
 
                         origin_shape = copy.deepcopy(param.shape())
                         if param_shape_backup is not None:
@@ -192,6 +191,13 @@ class Pruner():
                 elif "stride" in trans:
                     stride = trans['stride']
                     target = src.repeat(stride) if stride > 1 else src
+                elif "squeeze" in trans:
+                    repeat = trans['repeat']
+                    targets_set = set()
+                    for idx in src:
+                        targets_set.add(idx / repeat)
+                    target = list(targets_set)
+
                 src = target
 
             ret.append((name, axis, src))
