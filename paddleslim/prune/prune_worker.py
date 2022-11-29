@@ -840,8 +840,7 @@ class matmul(PruneWorker):
             for x_i, y_i, out_i in mappings:
                 if pruned_axis == x_i:
                     if y_i != -1:
-                        if 'w_' in y.name():
-                            self.append_pruned_vars(y, y_i, transforms)
+                        self.append_pruned_vars(y, y_i, transforms)
                         self._visit_and_search(y, y_i, transforms)
                     if out_i != -1:
                         self._visit_and_search(out, out_i, transforms)
@@ -849,6 +848,9 @@ class matmul(PruneWorker):
         if var == y:
             for x_i, y_i, out_i in mappings:
                 if pruned_axis == y_i:
+                    if x_i != -1:
+                        self.append_pruned_vars(x, x_i, transforms)
+                        self._visit_and_search(x, x_i, transforms)
                     if 'w_' in var.name():
                         self.append_pruned_vars(var, y_i, transforms)
                         self._visit_and_search(var, y_i, transforms)
@@ -859,12 +861,10 @@ class matmul(PruneWorker):
             for x_i, y_i, out_i in mappings:
                 if pruned_axis == out_i:
                     if x_i != -1:
-                        if 'w_' in x.name():
-                            self.append_pruned_vars(x, x_i, transforms)
+                        self.append_pruned_vars(x, x_i, transforms)
                         self._visit_and_search(x, x_i, transforms)
                     if y_i != -1:
-                        if 'w_' in y.name():
-                            self.append_pruned_vars(y, y_i, transforms)
+                        self.append_pruned_vars(y, y_i, transforms)
                         self._visit_and_search(y, y_i, transforms)
                     break
 
