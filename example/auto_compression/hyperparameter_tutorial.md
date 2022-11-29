@@ -154,22 +154,7 @@ ChannelPrune:
 ```
 
 - pruned_ratio: 每个卷积层的通道数被剪裁的比例。
-- prune_params_name: 待剪裁的卷积层的权重名称。通过以下脚本获得推理模型中所有卷积层的权重名称：
-
-```
-import paddle
-paddle.enable_static()
-model_dir="./inference_model"
-exe = paddle.static.Executor(paddle.CPUPlace())
-[inference_program, feed_target_names, fetch_targets] = (
-    paddle.static.load_inference_model(model_dir, exe))
-for var_ in inference_program.list_vars():
-    if var_.persistable and "conv2d" in var_.name:
-        print(f"{var_.name}")
-```
-
-或者，使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。
-
+- prune_params_name: 待剪裁的卷积层的权重名称。如果设置为 "None", 则会按照传入的剪枝比例对所有可以裁剪的卷积层进行裁剪。或者可以参考[结构化剪枝敏感度分析工具](./prune_sensitivity_analysis/README.md)获得合适的要剪枝的参数和比例。也可以使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。默认："None"。
 - criterion: 评估卷积通道重要性的指标。可选 “l1_norm” , “bn_scale” , “geometry_median”。具体定义和使用可参考[结构化稀疏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html)。
 
 ### 1.1.6 ASP半结构化稀疏
@@ -181,21 +166,7 @@ ASPPrune:
   - conv1_weights
 ```
 
-- prune_params_name: 待剪裁的卷积层的权重名称。通过以下脚本获得推理模型中所有卷积层的权重名称：
-
-```
-import paddle
-paddle.enable_static()
-model_dir="./inference_model"
-exe = paddle.static.Executor(paddle.CPUPlace())
-[inference_program, feed_target_names, fetch_targets] = (
-    paddle.static.load_inference_model(model_dir, exe))
-for var_ in inference_program.list_vars():
-    if var_.persistable and "conv2d" in var_.name:
-        print(f"{var_.name}")
-```
-
-或者，使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。
+- prune_params_name: 待剪裁的卷积层的权重名称。如果设置为 "None", 则会按照传入的剪枝比例对所有可以裁剪的卷积层进行裁剪。或者，使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。
 
 ### 1.1.7 Transformer结构化剪枝
 
@@ -242,7 +213,7 @@ UnstructurePrune:
 {'pruning_steps': int} # the total times you want to increase the ratio
 {'initial_ratio': float} # the initial ratio value
 ```
-- prune_params_type 目前只支持None和"conv1x1_only"两个选项，前者表示稀疏化除了归一化层的参数，后者表示只稀疏化1x1卷积。
+- prune_params_type 目前只支持None和"conv1x1_only"两个选项，前者表示稀疏化除了归一化层的参数，后者表示只稀疏化1x1卷积。默认："conv1x1_only".
 - local_sparsity 表示剪裁比例（ratio）应用的范围，仅在 'ratio' 模式生效。local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。各个矩阵稀疏度保持一致时，稀疏加速更显著。
 - 更多非结构化稀疏的参数含义详见[非结构化稀疏API文档](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/dygraph/pruners/unstructured_pruner.rst)
 

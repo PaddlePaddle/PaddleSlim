@@ -132,6 +132,7 @@ class Pruner():
                                     f"change groups of {op.type()}({param.name()}) from {op.attr('groups')} to {new_groups};"
                                 )
                                 op.set_attr("groups", new_groups)
+                                print(op._op)
 
                         origin_shape = copy.deepcopy(param.shape())
                         if param_shape_backup is not None:
@@ -188,6 +189,9 @@ class Pruner():
                     for idx in src:
                         idx = idx * repeat
                         target.extend(range(idx, idx + repeat))
+                elif "stride" in trans:
+                    stride = trans['stride']
+                    target = src.repeat(stride) if stride > 1 else src
                 src = target
 
             ret.append((name, axis, src))
