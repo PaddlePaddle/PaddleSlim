@@ -58,14 +58,29 @@ class FilterPruner(Pruner):
     
     """
 
-    def __init__(self, model, inputs, sen_file=None, opt=None,
-                 skip_leaves=True):
+    def __init__(self,
+                 model,
+                 inputs,
+                 sen_file=None,
+                 opt=None,
+                 skip_leaves=True,
+                 prune_type='conv',
+                 num_head=-1,
+                 input_dtype='float32'):
         super(FilterPruner, self).__init__(model, inputs, opt=opt)
+
+        self.num_head = num_head
+        self.prune_type = prune_type
+
         self._status = Status(sen_file)
         self.skip_leaves = skip_leaves
         # sensitive and collections are just used in filter pruning
         self.collections = DygraphPruningCollections(
-            model, inputs, skip_leaves=self.skip_leaves)
+            model,
+            inputs,
+            skip_leaves=self.skip_leaves,
+            prune_type=prune_type,
+            input_dtype=input_dtype)
 
         # skip vars in:
         # 1. depthwise conv2d layer
@@ -294,7 +309,7 @@ class FilterPruner(Pruner):
         if self.plan is not None:
             self.plan.restore(self.model, opt=self.opt)
 
-    def cal_mask(self, pruned_ratio, collection):
+    def cal_mask(self, pruned_ratio, collection, num_head=-1):
         raise NotImplemented("cal_mask is not implemented")
 
     def prune_var(self, var_name, pruned_axis, pruned_ratio, apply="impretive"):
@@ -332,13 +347,12 @@ class FilterPruner(Pruner):
             f"Pruning variable [{var_name}] and its relatives {list(collection.variables())}"
         )
 
-        mask = self.cal_mask(pruned_ratio, collection)
+        mask = self.cal_mask(pruned_ratio, collection, num_head=self.num_head)
         for _detail in collection.all_pruning_details():
             # Varibales can be pruned on multiple axies. 
             src_mask = copy.deepcopy(mask)
             var_shape = _detail.var.shape()
             for tran in _detail.transform:
-
                 src_mask = self._transform_mask(src_mask, tran)
             current_mask = src_mask
             groups = _detail.op.attr('groups')
@@ -352,7 +366,11 @@ class FilterPruner(Pruner):
         if apply == "lazy":
             plan.apply(self.model, lazy=True)
         elif apply == "impretive":
-            plan.apply(self.model, lazy=False, opt=self.opt)
+            plan.apply(
+                self.model,
+                lazy=False,
+                opt=self.opt,
+                prune_type=self.prune_type)
         return plan
 
     def _transform_mask(self, mask, transform):
@@ -372,6 +390,17 @@ class FilterPruner(Pruner):
             return mask
         elif "repeat" in transform and "tile" in transform:
             return np.tile(mask.repeat(transform["repeat"]), transform["tile"])
+        elif "squeeze" in transform:
+            squeeze = transform['squeeze']
+            tmp = mask.reshape((-1, squeeze))
+            tmp = np.max(tmp, axis=1)
+            tmp[tmp > 0] = 1
+            return tmp
+        elif "repeat" in transform:
+            repeat = transform['repeat']
+            tmp = np.repeat(mask[:, np.newaxis], repeat, axis=1)
+            return tmp.flatten()
         else:
             return mask
+
         return dst_mask
