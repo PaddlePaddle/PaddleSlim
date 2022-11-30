@@ -11,7 +11,7 @@ QuantAware:
     use_pact: false                               # 量化训练是否使用PACT方法
     weight_quantize_type: 'channel_wise_abs_max'  # 权重量化方式
     quantize_op_types: [conv2d, depthwise_conv2d] # 量化OP列表
-    onnx_format: false                            # 是否采用ONNX量化标准格式
+    onnx_format: false                            # 化后的模型是否和符合ONNX量化格式标准
     ############### 不常用，以下参数不用设置 #########################
     activation_bits: 8                            # 激活量化比特数
     weight_bits: 8                                # 权重量化比特数
@@ -34,7 +34,7 @@ QuantAware:
 from paddleslim.quant.quanter import TRANSFORM_PASS_OP_TYPES,QUANT_DEQUANT_PASS_OP_TYPES
 print(TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES)
 ```
-- onnx_format: 是否采用ONNX量化格式标准，如果需要导出成ONNX，则需要设置为True。
+- onnx_format: 量化后的模型是否和符合ONNX量化格式标准，**如果需要导出成ONNX，则需要设置为True。**
 - activation_bits:  激活量化bit数，可选1~8。默认为8。
 - weight_bits: 参数量化bit数，可选1~8。默认为8。
 - activation_quantize_type: 激活量化方式，可选 'abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。如果使用 TensorRT 加载量化后的模型来预测，请使用 'range_abs_max' 或 'moving_average_abs_max' 。默认为 'moving_average_abs_max'。
@@ -304,3 +304,7 @@ for var_ in inference_program.list_vars():
 paddle.static.save_inference_model("./infer_model", feed_vars, fetch_targets, exe, program=inference_program)
 
 ```
+
+### 5. 量化后模型如何导出成ONNX格式
+
+如果想导出ONNX格式的模型，需要在量化的时候设置 ``onnx_format=True``，而且仅支持PaddlePaddle2.4rc0 和PaddleSlim2.4rc0以上版本。
