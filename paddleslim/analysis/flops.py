@@ -130,6 +130,6 @@ def dygraph_flops(model, inputs, dtypes=None, only_conv=False, detail=False):
       detail(bool): Whether to return detail of each convolution layer.
     """
 
-    program = dygraph2program(model, inputs)
+    program = dygraph2program(model, inputs, dtypes=dtypes)
     graph = GraphWrapper(program)
     return _graph_flops(graph, only_conv=only_conv, detail=detail)
