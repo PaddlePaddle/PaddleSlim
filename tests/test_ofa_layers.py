@@ -80,5 +80,16 @@ class TestCase2(TestCase):
         out = self.model(self.data)
 
 
+class TestSuperSyncBatchNormInStatic(TestCase):
+    def setUp(self):
+        paddle.enable_static()
+        self.model = ModelCase2()
+        data_np = np.random.random((1, 3, 64, 64)).astype(np.float32)
+        self.data = paddle.to_tensor(data_np)
+
+    def test_ofa(self):
+        out = self.model(self.data)
+
+
 if __name__ == '__main__':
     unittest.main()

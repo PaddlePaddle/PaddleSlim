@@ -212,8 +212,7 @@ def main(args):
             fluid.dygraph.parallel.Env().local_rank == 0)
         best_top1 = 0
         for epoch in range(args.epochs):
-            logger.info('Epoch {}, lr {:.6f}'.format(
-                epoch, optimizer.current_step_lr()))
+            logger.info('Epoch {}, lr {:.6f}'.format(epoch, optimizer.get_lr()))
             train_top1, train_top5 = train(model, train_loader, optimizer,
                                            epoch, args)
             logger.info("Epoch {}, train_top1 {:.6f}, train_top5 {:.6f}".format(

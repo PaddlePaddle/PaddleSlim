@@ -12,13 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .utils.utils import get_paddle_version
-pd_ver = get_paddle_version()
 import paddle
-if pd_ver == 185:
-    Layer = paddle.nn.Layer
-else:
-    Layer = paddle.nn.Layer
 
 _cnt = 0
 
@@ -29,7 +23,7 @@ def counter():
     return _cnt
 
 
-class BaseBlock(Layer):
+class BaseBlock(paddle.nn.Layer):
     def __init__(self, key=None):
         super(BaseBlock, self).__init__()
         if key is not None:

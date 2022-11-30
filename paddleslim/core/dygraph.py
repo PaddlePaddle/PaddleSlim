@@ -74,26 +74,23 @@ def _to_var(x):
     return paddle.static.data(shape=shape, dtype=dtype, name=name)
 
 
-def to_variables(inputs, is_static=False):
+def to_variables(inputs):
     """
     Find and rename variables. Find np.ndarray and convert it to variable.
     """
     if isinstance(inputs,
                   (paddle.static.Variable, paddle.Tensor)) or isinstance(
                       inputs, np.ndarray):
-        if is_static:
-            return _to_var(inputs)
-        else:
-            return paddle.to_tensor(data=inputs)
+        return _to_var(inputs)
     elif isinstance(inputs, dict):
         ret = {}
         for _key in inputs:
-            ret[_key] = to_variables(inputs[_key], is_static)
+            ret[_key] = to_variables(inputs[_key])
         return ret
     elif isinstance(inputs, list):
         ret = []
         for _value in inputs:
-            ret.append(to_variables(_value, is_static))
+            ret.append(to_variables(_value))
         return ret
 
 
@@ -115,11 +112,11 @@ def _dy2prog(layer, inputs, dtypes=None):
                 True):
         if _is_shape(inputs):
             shapes = [inputs]
-            inputs = _create_tensors(shapes, dtypes=dtypes, is_static=True)
+            inputs = _create_tensors(shapes, dtypes=dtypes)
         elif _is_shapes(inputs):
-            inputs = _create_tensors(inputs, dtypes=dtypes, is_static=True)
+            inputs = _create_tensors(inputs, dtypes=dtypes)
         else:
-            inputs = to_variables(inputs, is_static=True)
+            inputs = to_variables(inputs)
         if isinstance(inputs, list):
             outputs = layer(*inputs)
         else:

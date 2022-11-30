@@ -428,6 +428,14 @@ class TestExport(unittest.TestCase):
                         name]['expand_ratio']
 
 
+class TestExportInCPU(TestExport):
+    def _init_model(self):
+        paddle.device.set_device("cpu")
+        self.origin_model = ModelOriginLinear()
+        model = ModelLinear()
+        self.ofa_model = OFA(model)
+
+
 class TestShortCut(unittest.TestCase):
     def setUp(self):
         model = paddle.vision.models.resnet50()

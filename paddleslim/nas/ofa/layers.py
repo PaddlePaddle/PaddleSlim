@@ -1003,22 +1003,6 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
                     self._use_global_stats, trainable_statistics)
                 return batch_norm_out
 
-        elif paddle.fluid.framework._in_legacy_dygraph():
-            if feature_dim != self._mean.shape[0]:
-                batch_norm_out, t1, t2, t3, t4, _ = paddle._legacy_C_ops.batch_norm(
-                    input, weight, bias, mean, variance, None, mean_out_tmp,
-                    variance_out_tmp, *attrs)
-                self._mean[:feature_dim].set_value(mean)
-                self._variance[:feature_dim].set_value(variance)
-                mean_out[:feature_dim].set_value(mean_out_tmp)
-                variance_out[:feature_dim].set_value(variance_out_tmp)
-                return batch_norm_out
-            else:
-                batch_norm_out, t1, t2, t3, t4, _ = paddle._legacy_C_ops.batch_norm(
-                    input, weight, bias, self._mean, self._variance, None,
-                    mean_out, variance_out, *attrs)
-                return batch_norm_out
-
         paddle.fluid.data_feeder.check_variable_and_dtype(
             input, 'input', ['float16', 'float32', 'float64'], 'BatchNorm')
 
@@ -1123,6 +1107,9 @@ class SuperSyncBatchNorm(paddle.nn.SyncBatchNorm):
 
             return sync_batch_norm_out
 
+        print(
+            f"hit static check_variable_and_dtype in ofa-----------------------------------"
+        )
         paddle.fluid.data_feeder.check_variable_and_dtype(
             input, 'input', ['float16', 'float32', 'float64'], 'SyncBatchNorm')
 
@@ -1299,10 +1286,6 @@ class SuperLayerNorm(paddle.nn.LayerNorm):
         if paddle.in_dynamic_mode():
             out, _, _ = paddle._C_ops.layer_norm(
                 input, weight, bias, self._epsilon, begin_norm_axis, False)
-        elif paddle.fluid.framework._in_legacy_dygraph():
-            out, _, _ = paddle._legacy_C_ops.layer_norm(
-                input, weight, bias, 'epsilon', self._epsilon,
-                'begin_norm_axis', begin_norm_axis)
         else:
             paddle.fluid.data_feeder.check_variable_and_dtype(
                 input, 'input', ['float32', 'float64'], 'LayerNorm')

@@ -607,9 +607,8 @@ class OFA(OFABase):
                 if name in pruned_state_dict:
                     p = t_value._place()
                     if p.is_cpu_place():
-                        place = paddle.fluid.core.CPUPlace()
-                    elif p.is_cuda_pinned_place():
-                        place = paddle.fluid.core.CUDAPinnedPlace()
+                        print(f"hit cpu in ofa-------------------------------")
+                        place = paddle.CPUPlace()
                     else:
                         place = paddle.fluid.core.CUDAPlace(p.gpu_device_id())
                     t_value.set(pruned_state_dict[name], place)

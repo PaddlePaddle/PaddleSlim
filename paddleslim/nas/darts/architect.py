@@ -85,7 +85,7 @@ class Architect(object):
         implicit_grads = self._hessian_vector_product(vector, input_train,
                                                       target_train)
         for (p, g), ig in zip(arch_params_grads, implicit_grads):
-            new_g = g - (ig * self.unrolled_optimizer.current_step_lr())
+            new_g = g - (ig * self.unrolled_optimizer.get_lr())
             paddle.assign(new_g.detach(), g)
         return arch_params_grads
 
