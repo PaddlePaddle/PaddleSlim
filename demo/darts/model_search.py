@@ -192,18 +192,6 @@ class Network(paddle.nn.Layer):
         for i, cell in enumerate(self.cells):
             if cell.reduction:
                 weights = paddle.nn.functional.softmax(self.alphas_reduce)
-                if self._method == "PC-DARTS":
-                    n = 3
-                    start = 2
-                    weights2 = paddle.nn.functional.softmax(self.betas_reduce[
-                        0:2])
-                    for i in range(self._steps - 1):
-                        end = start + n
-                        tw2 = paddle.nn.functional.softmax(self.betas_reduce[
-                            start:end])
-                        start = end
-                        n += 1
-                        weights2 = paddle.concat([weights2, tw2])
             else:
                 weights = paddle.nn.functional.softmax(self.alphas_normal)
                 if self._method == "PC-DARTS":
@@ -252,18 +240,6 @@ class Network(paddle.nn.Layer):
             self.alphas_normal,
             self.alphas_reduce,
         ]
-        if self._method == "PC-DARTS":
-            self.betas_normal = paddle.static.create_parameter(
-                shape=[k],
-                dtype="float32",
-                default_initializer=Normal(
-                    loc=0.0, scale=1e-3))
-            self.betas_reduce = paddle.static.create_parameter(
-                shape=[k],
-                dtype="float32",
-                default_initializer=Normal(
-                    loc=0.0, scale=1e-3))
-            self._arch_parameters += [self.betas_normal, self.betas_reduce]
 
     def arch_parameters(self):
         return self._arch_parameters

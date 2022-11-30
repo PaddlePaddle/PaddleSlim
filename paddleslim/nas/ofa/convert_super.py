@@ -528,12 +528,9 @@ class Convert:
                 layer = Block(SuperLinear(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            elif isinstance(
-                    layer,
-                    getattr(paddle.nn, 'InstanceNorm2D',
-                            paddle.fluid.dygraph.InstanceNorm)) and (
-                                getattr(self.context, 'expand', None) != None or
-                                getattr(self.context, 'channel', None) != None):
+            elif isinstance(layer, paddle.nn.InstanceNorm2D) and (
+                    getattr(self.context, 'expand', None) != None or
+                    getattr(self.context, 'channel', None) != None):
                 # num_features in InstanceNorm don't change after last weight operators
                 if idx > last_weight_layer_idx:
                     continue
