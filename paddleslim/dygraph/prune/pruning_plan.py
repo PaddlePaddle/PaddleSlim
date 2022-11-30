@@ -101,7 +101,6 @@ class PruningPlan():
             var_tmp = v.get(param_name)
             #NOTE: var_tmp.shape == [1] is used to skip variables like beta1_pow_acc in Adam optimizer. Its shape is [1] and there's no need to prune this one-value variable.
             if var_tmp is None or var_tmp.shape == [1]:
-                if var_tmp is not None: print(var_tmp.name, var_tmp.shape)
                 continue
             t_value = var_tmp.value().get_tensor()
             value = np.array(t_value).astype("float32")
@@ -161,11 +160,11 @@ class PruningPlan():
                 t_value.set(np.array(t_backup).astype("float32"), place)
                 del sub_layer._buffers[backup_name]
 
-    def apply(self, model, lazy=False, opt=None):
+    def apply(self, model, lazy=False, opt=None, prune_type='conv'):
         if lazy:
             self.lazy_apply(model)
         else:
-            self.imperative_apply(model, opt)
+            self.imperative_apply(model, opt, prune_type=prune_type)
 
     def lazy_apply(self, model):
         for name, sub_layer in model.named_sublayers():
@@ -202,12 +201,11 @@ class PruningPlan():
 
                         t_value.set(value * expand_mask, place)
 
-    def imperative_apply(self, model, opt=None):
+    def imperative_apply(self, model, opt=None, prune_type='conv'):
         """
         Pruning values of variable imperatively. It is valid when pruning
         on one dimension.
         """
-
         for name, sub_layer in model.named_sublayers(include_self=True):
             for param in sub_layer.parameters(include_sublayers=False):
                 if param.name in self._masks:
@@ -239,11 +237,9 @@ class PruningPlan():
                                           format(param.name))
                         # save optimizer accumulators into layer buffer
                         self._buffer_opt(param.name, sub_layer, opt)
-
                         pruned_value = np.apply_along_axis(
                             lambda data: data[bool_mask], dims, value)
                         self._prune_opt(param.name, dims, bool_mask, opt)
-
                         p = t_value._place()
                         if p.is_cpu_place():
                             place = paddle.CPUPlace()
