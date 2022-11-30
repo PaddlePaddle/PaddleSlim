@@ -57,7 +57,6 @@ class TestDARTS(unittest.TestCase):
                 out = self.stem(input) * self.alphas_normal[0][
                     0] * self.alphas_reduce[0][0]
                 out = paddle.reshape(out, [0, -1])
-                print(f"out shape: {out.shape}")
                 logits = self.classifier(out)
                 return logits
 
@@ -101,10 +100,6 @@ class TestDARTS(unittest.TestCase):
             place,
             num_epochs=5,
             unrolled=True)
-        searcher.train()
-        model = SuperNet("PC-DARTS")
-        searcher = DARTSearch(
-            model, train_reader, valid_reader, place, num_epochs=5)
         searcher.train()
 
 

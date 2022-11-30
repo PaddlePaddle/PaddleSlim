@@ -42,7 +42,7 @@ class MixedOp(paddle.nn.Layer):
     def __init__(self, c_cur, stride, method):
         super(MixedOp, self).__init__()
         self._method = method
-        self._k = 4 if self._method == "PC-DARTS" else 1
+        self._k = 1
         self.mp = Pool2D(
             pool_size=2,
             pool_stride=2,
@@ -64,23 +64,8 @@ class MixedOp(paddle.nn.Layer):
         self._ops = fluid.dygraph.LayerList(ops)
 
     def forward(self, x, weights):
-        if self._method == "PC-DARTS":
-            dim_2 = x.shape[1]
-            xtemp = x[:, :dim_2 // self._k, :, :]
-            xtemp2 = x[:, dim_2 // self._k:, :, :]
-
-            temp1 = fluid.layers.sums(
-                [weights[i] * op(xtemp) for i, op in enumerate(self._ops)])
-
-            if temp1.shape[2] == x.shape[2]:
-                out = paddle.concat([temp1, xtemp2], axis=1)
-            else:
-                out = paddle.concat([temp1, self.mp(xtemp2)], axis=1)
-            out = channel_shuffle(out, self._k)
-        else:
-            out = fluid.layers.sums(
-                [weights[i] * op(x) for i, op in enumerate(self._ops)])
-        return out
+        return fluid.layers.sums(
+            [weights[i] * op(x) for i, op in enumerate(self._ops)])
 
 
 class Cell(paddle.nn.Layer):
@@ -113,17 +98,10 @@ class Cell(paddle.nn.Layer):
         states = [s0, s1]
         offset = 0
         for i in range(self._steps):
-            if self._method == "PC-DARTS":
-                s = fluid.layers.sums([
-                    weights2[offset + j] *
-                    self._ops[offset + j](h, weights[offset + j])
-                    for j, h in enumerate(states)
-                ])
-            else:
-                s = fluid.layers.sums([
-                    self._ops[offset + j](h, weights[offset + j])
-                    for j, h in enumerate(states)
-                ])
+            s = fluid.layers.sums([
+                self._ops[offset + j](h, weights[offset + j])
+                for j, h in enumerate(states)
+            ])
             offset += len(states)
             states.append(s)
         out = paddle.concat(states[-self._multiplier:], axis=1)
@@ -194,18 +172,6 @@ class Network(paddle.nn.Layer):
                 weights = paddle.nn.functional.softmax(self.alphas_reduce)
             else:
                 weights = paddle.nn.functional.softmax(self.alphas_normal)
-                if self._method == "PC-DARTS":
-                    n = 3
-                    start = 2
-                    weights2 = paddle.nn.functional.softmax(self.betas_normal[
-                        0:2])
-                    for i in range(self._steps - 1):
-                        end = start + n
-                        tw2 = paddle.nn.functional.softmax(self.betas_normal[
-                            start:end])
-                        start = end
-                        n += 1
-                        weights2 = paddle.concat([weights2, tw2])
             s0, s1 = s1, cell(s0, s1, weights, weights2)
         out = self.global_pooling(s1)
         out = fluid.layers.squeeze(out, axes=[2, 3])

@@ -523,31 +523,102 @@ class TestMul(TestPruneWorker):
 
 
 mul_suite = unittest.TestSuite()
-ret = [{
-    'mul_0.tmp_0': [0]
-}] + [{
-    'y': [0]
-}] * 3 + [{}] + [{
-    'mul_0.tmp_0': [1]
-}] * 3 + [{
-    'x': [0]
-}, {}]
+ret = [
+    {
+        'mul_0.tmp_0': [0]
+    },
+    {
+        'y': [0]
+    },
+    {
+        'y': [0]
+    },
+    {
+        'y': [0]
+    },
+    {
+        'x': [1],
+        'y': [0]
+    },
+    {
+        'mul_0.tmp_0': [1],
+        'y': [1]
+    },
+    {
+        'mul_0.tmp_0': [1],
+        'y': [2]
+    },
+    {
+        'mul_0.tmp_0': [1],
+        'y': [3]
+    },
+    {
+        'x': [0]
+    },
+    {},
+]
 mul_suite.addTest(TestMul(x_num_col_dims=1, y_num_col_dims=1, ret=ret))
-ret = [{
-    'mul_0.tmp_0': [0]
-}] * 2 + [{}] * 4 + [{
-    'mul_0.tmp_0': [1]
-}] * 2 + [{}] * 2
+ret = [
+    {
+        'mul_0.tmp_0': [0]
+    },
+    {
+        'mul_0.tmp_0': [0]
+    },
+    {},
+    {},
+    {
+        'y': [0],
+        'x': [2]
+    },
+    {
+        'y': [1],
+        'x': [2]
+    },
+    {
+        'y': [2],
+        'mul_0.tmp_0': [1]
+    },
+    {
+        'y': [3],
+        'mul_0.tmp_0': [1]
+    },
+    {},
+    {},
+]
 mul_suite.addTest(TestMul(x_num_col_dims=2, y_num_col_dims=2, ret=ret))
-ret = [{
-    'mul_0.tmp_0': [0]
-}] * 3 + [{}] + [{
-    'x': [3]
-}] * 3 + [{
-    'mul_0.tmp_0': [1]
-}] + [{}, {
-    'y': [3]
-}]
+ret = [
+    {
+        'mul_0.tmp_0': [0]
+    },
+    {
+        'mul_0.tmp_0': [0]
+    },
+    {
+        'mul_0.tmp_0': [0]
+    },
+    {},
+    {
+        'x': [3],
+        'y': [0]
+    },
+    {
+        'x': [3],
+        'y': [1]
+    },
+    {
+        'x': [3],
+        'y': [2]
+    },
+    {
+        'mul_0.tmp_0': [1],
+        'y': [3]
+    },
+    {},
+    {
+        'y': [3]
+    },
+]
 mul_suite.addTest(TestMul(x_num_col_dims=3, y_num_col_dims=3, ret=ret))
 
 
@@ -715,32 +786,6 @@ class TestAverageAccumulates(TestPruneWorker):
             'conv1.w_0_sum_1_0': [0],
             'conv1.w_0_sum_2_0': [0],
             'conv1.w_0_sum_3_0': [0]
-        }))
-
-    def test_prune(self):
-        self.check_in_out()
-
-
-class TestAffineChannel(TestPruneWorker):
-    def __init__(self, methodName="test_prune"):
-        super(TestAffineChannel, self).__init__(methodName)
-
-    def define_layer(self, input):
-        conv1 = paddle.static.nn.conv2d(
-            input, 3, 8, name="conv1", bias_attr=False)
-
-        self.input = conv1
-        scale = paddle.static.data(name="scale", shape=[conv1.shape[1]])
-        bias = paddle.static.data(name="bias", shape=[conv1.shape[1]])
-        out = paddle.fluid.layers.affine_channel(conv1, scale=scale, bias=bias)
-        self.output = out
-
-    def set_cases(self):
-        self.cases.append((self.in_var, 1, {'scale': [0], 'bias': [0]}))
-        self.cases.append((self.out_var, 1, {
-            'conv1.w_0': [0],
-            'scale': [0],
-            'bias': [0]
         }))
 
     def test_prune(self):
