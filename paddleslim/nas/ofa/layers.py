@@ -991,8 +991,8 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                  "trainable_statistics", trainable_statistics)
 
         if in_dygraph_mode():
+            paddle_compile = os.environ.get("paddle_compile")
             if feature_dim != self._mean.shape[0]:
-                paddle_compile = os.environ.get("paddle_compile")
                 if not paddle_compile or "Develop" in paddle_compile:
                     # fit paddle develop
                     batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
@@ -1012,7 +1012,7 @@ class SuperBatchNorm2D(nn.BatchNorm2D):
                 variance_out[:feature_dim].set_value(variance_out_tmp)
                 return batch_norm_out
             else:
-                if paddle.version.full_version == '0.0.0':
+                if not paddle_compile or "Develop" in paddle_compile:
                     # fit paddle develop
                     batch_norm_out, t1, t2, t3, t4, _ = _C_ops.batch_norm(
                         input, mean, variance, weight, bias, not self.training,
