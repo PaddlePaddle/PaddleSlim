@@ -79,10 +79,10 @@ def train(model, train_reader, optimizer, epoch, drop_path_prob, args):
 
         prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
         prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
-        loss = fluid.layers.reduce_mean(
+        loss = paddle.mean(
             paddle.nn.functional.softmax_with_cross_entropy(logits, label))
         if args.auxiliary:
-            loss_aux = fluid.layers.reduce_mean(
+            loss_aux = paddle.mean(
                 paddle.nn.functional.softmax_with_cross_entropy(logits_aux,
                                                                 label))
             loss = loss + args.auxiliary_weight * loss_aux
@@ -122,7 +122,7 @@ def valid(model, valid_reader, epoch, args):
         logits, _ = model(image, 0, False)
         prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
         prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
-        loss = fluid.layers.reduce_mean(
+        loss = paddle.mean(
             paddle.nn.functional.softmax_with_cross_entropy(logits, label))
 
         n = image.shape[0]
@@ -137,7 +137,7 @@ def valid(model, valid_reader, epoch, args):
 
 
 def main(args):
-    place = paddle.CUDAPlace(fluid.dygraph.parallel.Env().dev_id) \
+    place = paddle.CUDAPlace(paddle.distributed.parallel.ParallelEnv().dev_id) \
         if args.use_data_parallel else paddle.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
@@ -152,7 +152,7 @@ def main(args):
         logger.info("param size = {:.6f}MB".format(
             count_parameters_in_MB(model.parameters())))
 
-        device_num = fluid.dygraph.parallel.Env().nranks
+        device_num = paddle.distributed.parallel.ParallelEnv().nranks
         step_per_epoch = int(args.trainset_num / (args.batch_size * device_num))
         learning_rate = fluid.dygraph.CosineDecay(args.learning_rate,
                                                   step_per_epoch, args.epochs)
@@ -200,7 +200,7 @@ def main(args):
 
         save_parameters = (not args.use_data_parallel) or (
             args.use_data_parallel and
-            fluid.dygraph.parallel.Env().local_rank == 0)
+            paddle.distributed.parallel.ParallelEnv().local_rank == 0)
         best_acc = 0
         for epoch in range(args.epochs):
             drop_path_prob = args.drop_path_prob * epoch / args.epochs

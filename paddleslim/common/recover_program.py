@@ -45,7 +45,7 @@ def _recover_reserve_space_with_bn(program):
                         generate_with_ignorable_key(".".join(
                             ["reserve_space", 'tmp'])),
                         dtype=block.var(op.input("X")[0]).dtype,
-                        type=paddle.fluid.core.VarDesc.VarType.LOD_TENSOR,
+                        type=paddle.framework.core.VarDesc.VarType.LOD_TENSOR,
                         persistable=False,
                         stop_gradient=True)
                     op.desc.set_output("ReserveSpace", [reserve_space.name])

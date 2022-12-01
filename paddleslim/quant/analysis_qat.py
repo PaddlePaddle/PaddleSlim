@@ -20,7 +20,7 @@ import logging
 import numpy as np
 
 import paddle
-from paddle.fluid import core
+from paddle.framework import core
 from paddle.fluid.framework import IrGraph
 from ..common import get_logger, load_inference_model
 

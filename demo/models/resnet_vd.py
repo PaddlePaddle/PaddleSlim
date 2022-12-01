@@ -234,8 +234,8 @@ class ResNet():
             stride,
             if_first=if_first,
             name=name + "_branch1")
-
-        return fluid.layers.elementwise_add(x=short, y=conv2, act='relu')
+        out = paddle.add(x=short, y=conv2)
+        return paddle.nn.functional.relu(out)
 
     def basic_block(self, input, num_filters, stride, name, if_first):
         conv0 = self.conv_bn_layer(
@@ -257,7 +257,7 @@ class ResNet():
             stride,
             if_first=if_first,
             name=name + "_branch1")
-        return fluid.layers.elementwise_add(x=short, y=conv1, act='relu')
+        return paddle.add(x=short, y=conv1, act='relu')
 
 
 def ResNet18_vd():

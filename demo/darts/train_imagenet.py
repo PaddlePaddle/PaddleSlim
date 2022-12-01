@@ -69,9 +69,9 @@ add_arg('use_data_parallel', ast.literal_eval,  False, "The flag indicating whet
 def cross_entropy_label_smooth(preds, targets, epsilon):
     preds = paddle.nn.functional.softmax(preds)
     targets_one_hot = fluid.one_hot(input=targets, depth=args.class_num)
-    targets_smooth = fluid.layers.label_smooth(
+    targets_smooth = paddle.nn.functional.label_smooth(
         targets_one_hot, epsilon=epsilon, dtype="float32")
-    loss = fluid.layers.cross_entropy(
+    loss = paddle.nn.functional.cross_entropy(
         input=preds, label=targets_smooth, soft_label=True)
     return loss
 
@@ -91,11 +91,11 @@ def train(model, train_reader, optimizer, epoch, args):
 
         prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
         prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
-        loss = fluid.layers.reduce_mean(
+        loss = paddle.mean(
             cross_entropy_label_smooth(logits, label, args.label_smooth))
 
         if args.auxiliary:
-            loss_aux = fluid.layers.reduce_mean(
+            loss_aux = paddle.mean(
                 cross_entropy_label_smooth(logits_aux, label,
                                            args.label_smooth))
             loss = loss + args.auxiliary_weight * loss_aux
@@ -135,7 +135,7 @@ def valid(model, valid_reader, epoch, args):
         logits, _ = model(image, False)
         prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
         prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
-        loss = fluid.layers.reduce_mean(
+        loss = paddle.mean(
             cross_entropy_label_smooth(logits, label, args.label_smooth))
 
         n = image.shape[0]
@@ -150,7 +150,7 @@ def valid(model, valid_reader, epoch, args):
 
 
 def main(args):
-    place = paddle.CUDAPlace(fluid.dygraph.parallel.Env().dev_id) \
+    place = paddle.CUDAPlace(paddle.distributed.parallel.ParallelEnv().dev_id) \
         if args.use_data_parallel else paddle.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
@@ -165,7 +165,7 @@ def main(args):
         logger.info("param size = {:.6f}MB".format(
             count_parameters_in_MB(model.parameters())))
 
-        device_num = fluid.dygraph.parallel.Env().nranks
+        device_num = paddle.distributed.parallel.ParallelEnv().nranks
         step_per_epoch = int(args.trainset_num / (args.batch_size * device_num))
         learning_rate = fluid.dygraph.ExponentialDecay(
             args.learning_rate, step_per_epoch, args.decay_rate, staircase=True)
@@ -209,7 +209,7 @@ def main(args):
 
         save_parameters = (not args.use_data_parallel) or (
             args.use_data_parallel and
-            fluid.dygraph.parallel.Env().local_rank == 0)
+            paddle.distributed.parallel.ParallelEnv().local_rank == 0)
         best_top1 = 0
         for epoch in range(args.epochs):
             logger.info('Epoch {}, lr {:.6f}'.format(epoch, optimizer.get_lr()))
