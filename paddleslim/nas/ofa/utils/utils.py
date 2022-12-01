@@ -16,7 +16,6 @@ import logging
 import paddle
 import numbers
 import numpy as np
-from paddle.fluid import core
 from ....common import get_logger
 
 
@@ -32,7 +31,7 @@ def get_paddle_version():
 
 pd_ver = get_paddle_version()
 if pd_ver == 185:
-    Layer = paddle.fluid.dygraph.Layer
+    Layer = paddle.nn.Layer
 else:
     Layer = paddle.nn.Layer
 
@@ -69,8 +68,8 @@ def to_tensor(string_values, name="text"):
         string_values(list[string]): The value will be setted to the tensor.
         name(string): The name of the tensor.
     """
-    tensor = paddle.Tensor(core.VarDesc.VarType.STRING, [], name,
-                           core.VarDesc.VarType.STRINGS, False)
+    tensor = paddle.Tensor(paddle.fluid.core.VarDesc.VarType.STRING, [], name,
+                           paddle.fluid.core.VarDesc.VarType.STRINGS, False)
     tensor.value().set_string_list(string_values)
     return tensor
 
@@ -82,7 +81,7 @@ def build_input(input_size, dtypes):
             dtype = dtypes[0]
         else:
             dtype = dtypes
-        if dtype == core.VarDesc.VarType.STRINGS:
+        if dtype == paddle.fluid.core.VarDesc.VarType.STRINGS:
             return to_tensor([""])
         return paddle.cast(paddle.rand(list(input_size)), dtype)
     if isinstance(input_size, dict):

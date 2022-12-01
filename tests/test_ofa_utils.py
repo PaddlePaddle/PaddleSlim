@@ -17,18 +17,16 @@ sys.path.append("../")
 import unittest
 import numpy as np
 import paddle
-import paddle.nn as nn
-from paddle.vision.models import mobilenet_v1
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 from paddleslim.nas.ofa.utils import set_state_dict, dynabert_config
 from paddleslim.nas.ofa.utils.nlp_utils import compute_neuron_head_importance, reorder_head, reorder_neuron
 from paddleslim.nas.ofa import OFA
 
 
-class TestModel(nn.Layer):
+class TestModel(paddle.nn.Layer):
     def __init__(self):
         super(TestModel, self).__init__()
-        encoder_layer = nn.TransformerEncoderLayer(
+        encoder_layer = paddle.nn.TransformerEncoderLayer(
             312,
             12,
             1024,
@@ -36,8 +34,8 @@ class TestModel(nn.Layer):
             activation='gelu',
             attn_dropout=0.1,
             act_dropout=0)
-        self.encoder = nn.TransformerEncoder(encoder_layer, 3)
-        self.fc = nn.Linear(312, 3)
+        self.encoder = paddle.nn.TransformerEncoder(encoder_layer, 3)
+        self.fc = paddle.nn.Linear(312, 3)
 
     def forward(self, input_ids, segment_ids, attention_mask=[None, None]):
         src = input_ids + segment_ids
@@ -109,7 +107,7 @@ class TestComputeImportanceCase2(TestComputeImportance):
 
 class TestSetStateDict(unittest.TestCase):
     def setUp(self):
-        self.model = mobilenet_v1()
+        self.model = paddle.vision.models.mobilenet_v1()
         self.origin_weights = {}
         for name, param in self.model.named_parameters():
             self.origin_weights[name] = param

@@ -4,12 +4,11 @@ sys.path.append("../../")
 import numpy as np
 import unittest
 import paddle
-from paddle.io import Dataset
 from paddleslim.common import load_config
 from paddleslim.auto_compression.compressor import AutoCompression
 
 
-class RandomDataset(Dataset):
+class RandomDataset(paddle.io.Dataset):
     def __init__(self, num_samples, sample_shape=[128]):
         self.num_samples = num_samples
         self.sample_shape = sample_shape
@@ -23,7 +22,7 @@ class RandomDataset(Dataset):
         return self.num_samples
 
 
-class RandomEvalDataset(Dataset):
+class RandomEvalDataset(paddle.io.Dataset):
     def __init__(self, num_samples, sample_shape=[128]):
         self.num_samples = num_samples
         self.sample_shape = sample_shape

@@ -17,8 +17,6 @@ import unittest
 import paddle
 import paddleslim
 from paddleslim.analysis import LatencyPredictor, TableLatencyPredictor
-from paddle.vision.models import mobilenet_v1, mobilenet_v2
-from paddle.nn import Conv2D, BatchNorm2D, ReLU, LayerNorm
 from paddleslim.analysis._utils import opt_model, save_cls_model, save_det_model
 
 
@@ -38,8 +36,8 @@ def channel_shuffle(x, groups):
 class ModelCase1(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase1, self).__init__()
-        self.conv1 = Conv2D(58, 58, 1)
-        self.conv2 = Conv2D(58, 58, 1)
+        self.conv1 = paddle.nn.Conv2D(58, 58, 1)
+        self.conv2 = paddle.nn.Conv2D(58, 58, 1)
 
     def forward(self, inputs):
         x1, x2 = paddle.split(
@@ -55,7 +53,7 @@ class ModelCase1(paddle.nn.Layer):
 class ModelCase2(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase2, self).__init__()
-        self.conv1 = Conv2D(3, 24, 3, stride=2, padding=1)
+        self.conv1 = paddle.nn.Conv2D(3, 24, 3, stride=2, padding=1)
 
     def forward(self, inputs):
         image = inputs['image']
@@ -66,7 +64,7 @@ class ModelCase2(paddle.nn.Layer):
 class ModelCase3(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase3, self).__init__()
-        self.conv1 = Conv2D(3, 24, 3, stride=2, padding=1)
+        self.conv1 = paddle.nn.Conv2D(3, 24, 3, stride=2, padding=1)
 
     def forward(self, inputs):
         image = inputs['image']
@@ -79,9 +77,9 @@ class ModelCase3(paddle.nn.Layer):
 class ModelCase4(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase4, self).__init__()
-        self.bn1 = BatchNorm2D(3)
-        self.ln1 = LayerNorm([3 * 16 * 16])
-        self.relu1 = ReLU()
+        self.bn1 = paddle.nn.BatchNorm2D(3)
+        self.ln1 = paddle.nn.LayerNorm([3 * 16 * 16])
+        self.relu1 = paddle.nn.ReLU()
         self.fc1 = paddle.nn.Linear(3 * 16 * 16, 3 * 16 * 16)
 
     def forward(self, inputs):
@@ -89,30 +87,29 @@ class ModelCase4(paddle.nn.Layer):
         x = paddle.reshape(x, [1, 3 * 16 * 16])
         x = self.ln1(x)
         x = self.fc1(x)
-        x = paddle.fluid.layers.unsqueeze(input=x, axes=[2])
+        x = paddle.unsqueeze(x=x, axis=[2])
         x = self.relu1(x)
-        y = paddle.fluid.layers.fill_constant(
-            x.shape, dtype=paddle.float32, value=1)
+        y = paddle.full(shape=x.shape, fill_value=1)
         x = paddle.stack([x, y], axis=3)
         x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
         x = paddle.exp(x)
         y += paddle.fluid.layers.uniform_random(y.shape)
-        y = paddle.fluid.layers.reduce_mean(y, dim=1, keep_dim=True)
+        y = paddle.mean(x=y, axis=1, keepdim=True)
         return paddle.greater_equal(x, y)
 
 
 class ModelCase5(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase5, self).__init__()
-        self.bn1 = BatchNorm2D(255)
+        self.bn1 = paddle.nn.BatchNorm2D(255)
 
     def forward(self, inputs):
         image = inputs['image']
         image = self.bn1(image)
-        img_size = paddle.fluid.data(
+        img_size = paddle.static.data(
             name='img_size', shape=[None, 2], dtype='int32')
         anchors = [10, 13, 16, 30, 33, 23]
-        boxes, scores = paddle.fluid.layers.yolo_box(
+        boxes, scores = paddle.vision.ops.yolo_box(
             x=image,
             img_size=img_size,
             class_num=80,
@@ -136,8 +133,8 @@ class ModelCase5(paddle.nn.Layer):
 class ModelCase6(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase6, self).__init__()
-        self.bn1 = BatchNorm2D(3)
-        self.relu1 = ReLU()
+        self.bn1 = paddle.nn.BatchNorm2D(3)
+        self.relu1 = paddle.nn.ReLU()
         self.fc1 = paddle.nn.Linear(3 * 16 * 16, 3 * 16 * 16)
         self.dp = paddle.nn.Dropout(p=0.5)
         self.lstm = paddle.nn.LSTM(
@@ -147,10 +144,9 @@ class ModelCase6(paddle.nn.Layer):
         x = self.bn1(inputs)
         x = paddle.reshape(x, [1, 3 * 16 * 16])
         x = self.fc1(x)
-        x = paddle.fluid.layers.unsqueeze(input=x, axes=[2])
+        x = paddle.unsqueeze(x=x, axis=[2])
         x = self.relu1(x)
-        y = paddle.fluid.layers.fill_constant(
-            x.shape, dtype=paddle.float32, value=1)
+        y = paddle.full(shape=x.shape, fill_value=1)
         # x = paddle.stack([x, y], axis=3)
         x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
         x = paddle.exp(x)
@@ -174,15 +170,15 @@ class ModelCase6(paddle.nn.Layer):
 class ModelCase7(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase7, self).__init__()
-        self.bn1 = BatchNorm2D(255)
+        self.bn1 = paddle.nn.BatchNorm2D(255)
 
     def forward(self, inputs):
         image = inputs['image']
         image = self.bn1(image)
-        img_size = paddle.fluid.data(
+        img_size = paddle.static.data(
             name='img_size', shape=[None, 2], dtype='int32')
         anchors = [10, 13, 16, 30, 33, 23]
-        boxes, scores = paddle.fluid.layers.yolo_box(
+        boxes, scores = paddle.vision.ops.yolo_box(
             x=image,
             img_size=img_size,
             class_num=80,
@@ -290,8 +286,7 @@ class TestCase2(unittest.TestCase):
         pred = LatencyPredictor()
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
+            fluid_program = paddle.static.Program.parse_from_string(f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
             graph_keys = pred._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
@@ -386,8 +381,7 @@ class TestCase6(unittest.TestCase):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
+            fluid_program = paddle.static.Program.parse_from_string(f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
             graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
@@ -410,8 +404,7 @@ class TestCase7(unittest.TestCase):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
+            fluid_program = paddle.static.Program.parse_from_string(f.read())
             graph = paddleslim.core.GraphWrapper(fluid_program)
             graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0

@@ -54,9 +54,12 @@ class TestSoftLabelLoss(StaticCase):
         for block in paddle.static.default_main_program().blocks:
             for op in block.ops:
                 loss_ops.append(op.type)
+        print(f"ret: {set(loss_ops).difference(set(merged_ops))}")
         self.assertTrue(set(merged_ops).difference(set(loss_ops)) == set())
-        self.assertTrue({'cross_entropy', 'softmax', 'reduce_mean'}.issubset(
-            set(loss_ops).difference(set(merged_ops))))
+
+        self.assertTrue({
+            'softmax_with_cross_entropy', 'softmax', 'reduce_mean'
+        }.issubset(set(loss_ops).difference(set(merged_ops))))
 
 
 if __name__ == '__main__':

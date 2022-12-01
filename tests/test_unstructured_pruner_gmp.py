@@ -2,7 +2,6 @@ import sys
 sys.path.append("../")
 import unittest
 from static_case import StaticCase
-import paddle.fluid as fluid
 import paddle
 from paddleslim.prune import UnstructuredPruner, GMPUnstructuredPruner
 from layers import conv_bn_layer
@@ -33,7 +32,7 @@ class TestUnstructuredPruner(StaticCase):
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
 
-            conv7 = fluid.layers.conv2d_transpose(
+            conv7 = paddle.static.nn.conv2d_transpose(
                 input=conv6, num_filters=16, filter_size=2, stride=2)
 
         place = paddle.static.cpu_places()[0]

@@ -14,7 +14,6 @@
 
 import copy
 import paddle
-import paddle.nn as nn
 
 from . import basic_loss
 from . import distillation_loss
@@ -22,7 +21,7 @@ from . import distillation_loss
 from .distillation_loss import DistillationLoss
 
 
-class CombinedLoss(nn.Layer):
+class CombinedLoss(paddle.nn.Layer):
     """
     CombinedLoss: a combination of loss function.
     Args:
@@ -40,7 +39,7 @@ class CombinedLoss(nn.Layer):
     def __init__(self, loss_config_list=None):
         super(CombinedLoss, self).__init__()
         loss_config_list = copy.deepcopy(loss_config_list)
-        self.loss_func = nn.LayerList()
+        self.loss_func = paddle.nn.LayerList()
         self.loss_weight = []
         assert isinstance(loss_config_list, list), (
             'operator config should be a list')

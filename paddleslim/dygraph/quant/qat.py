@@ -16,7 +16,6 @@ import copy
 import logging
 
 import paddle
-from paddle.fluid.contrib.slim.quantization import ImperativeQuantAware
 from ...common import get_logger
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -204,7 +203,7 @@ class QAT(object):
 
         # TODO: remove try-except when the version is stable
         try:
-            self.imperative_qat = ImperativeQuantAware(
+            self.imperative_qat = paddle.fluid.contrib.slim.quantization.ImperativeQuantAware(
                 weight_bits=self.config['weight_bits'],
                 activation_bits=self.config['activation_bits'],
                 weight_quantize_type=self.config['weight_quantize_type'],
@@ -221,7 +220,7 @@ class QAT(object):
                 onnx_format=self.config['onnx_format'],  # support Paddle >= 2.4
             )
         except:
-            self.imperative_qat = ImperativeQuantAware(
+            self.imperative_qat = paddle.fluid.contrib.slim.quantization.ImperativeQuantAware(
                 weight_bits=self.config['weight_bits'],
                 activation_bits=self.config['activation_bits'],
                 weight_quantize_type=self.config['weight_quantize_type'],
@@ -292,7 +291,7 @@ class QAT(object):
     def _remove_preprocess(self, model):
         state_dict = model.state_dict()
         try:
-            self.imperative_qat = ImperativeQuantAware(
+            self.imperative_qat = paddle.fluid.contrib.slim.quantization.ImperativeQuantAware(
                 weight_bits=self.config['weight_bits'],
                 activation_bits=self.config['activation_bits'],
                 weight_quantize_type=self.config['weight_quantize_type'],
@@ -303,7 +302,7 @@ class QAT(object):
                 onnx_format=self.config['onnx_format'],  # support Paddle >= 2.4
             )
         except:
-            self.imperative_qat = ImperativeQuantAware(
+            self.imperative_qat = paddle.fluid.contrib.slim.quantization.ImperativeQuantAware(
                 weight_bits=self.config['weight_bits'],
                 activation_bits=self.config['activation_bits'],
                 weight_quantize_type=self.config['weight_quantize_type'],
@@ -312,11 +311,12 @@ class QAT(object):
                 moving_rate=self.config['moving_rate'],
                 quantizable_layer_type=self.config['quantizable_layer_type'])
 
-        with paddle.utils.unique_name.guard():
-            if hasattr(model, "_layers"):
-                model = model._layers
-            model = self._model
-            self.imperative_qat.quantize(model)
-            model.set_state_dict(state_dict)
+        paddle.disable_static()
+        if hasattr(model, "_layers"):
+            model = model._layers
+        model = self._model
+        self.imperative_qat.quantize(model)
+        model.set_state_dict(state_dict)
+        paddle.enable_static()
 
         return model

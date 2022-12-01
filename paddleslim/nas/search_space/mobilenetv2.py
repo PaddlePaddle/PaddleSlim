@@ -17,8 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
+import paddle
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
@@ -204,7 +203,7 @@ class MobileNetV2Space(SearchSpaceBase):
                 act='relu6',
                 name='mobilenetv2_conv' + str(i + 1))
 
-            input = fluid.layers.pool2d(
+            input = paddle.fluid.layers.pool2d(
                 input=input,
                 pool_type='avg',
                 global_pooling=True,
@@ -222,7 +221,7 @@ class MobileNetV2Space(SearchSpaceBase):
         Returns:
             Variable, layer output.
         """
-        return fluid.layers.elementwise_add(input, data_residual)
+        return paddle.add(x=input, y=data_residual)
 
     def _inverted_residual_unit(self,
                                 input,
