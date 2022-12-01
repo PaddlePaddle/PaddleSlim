@@ -170,5 +170,7 @@ class ShapeAlign(paddle.nn.Layer):
                 bias_attr=bias_attr)
 
     def forward(self, feat):
+        if isinstance(feat, tuple):
+            feat = feat[0]
         out = self.align_op(feat)
         return out
