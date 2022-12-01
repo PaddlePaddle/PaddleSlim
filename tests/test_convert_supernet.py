@@ -16,14 +16,12 @@ import sys
 sys.path.append("../")
 import unittest
 import paddle
-import paddle.nn as nn
-from paddle.vision.models import mobilenet_v1
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 
 
 class TestConvertSuper(unittest.TestCase):
     def setUp(self):
-        self.model = mobilenet_v1()
+        self.model = paddle.vision.models.mobilenet_v1()
 
     def test_convert(self):
         sp_net_config = supernet(kernel_size=(3, 5, 7), expand_ratio=[1, 2, 4])
@@ -33,16 +31,16 @@ class TestConvertSuper(unittest.TestCase):
 
 class TestConvertSuperCase1(unittest.TestCase):
     def setUp(self):
-        class Model(nn.Layer):
+        class Model(paddle.nn.Layer):
             def __init__(self):
                 super(Model, self).__init__()
-                self.fc = nn.Linear(
+                self.fc = paddle.nn.Linear(
                     5,
                     10,
                     weight_attr=paddle.ParamAttr(
-                        initializer=nn.initializer.XavierNormal()),
+                        initializer=paddle.nn.initializer.XavierNormal()),
                     bias_attr=paddle.ParamAttr(
-                        initializer=nn.initializer.Constant(value=0.0)))
+                        initializer=paddle.nn.initializer.Constant(value=0.0)))
 
             def forward(self, inputs):
                 return self.fc(inputs)

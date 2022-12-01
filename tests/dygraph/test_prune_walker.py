@@ -4,14 +4,13 @@ import unittest
 import numpy as np
 import paddle
 from paddleslim.dygraph import L1NormFilterPruner
-from paddle.nn import Conv2D, Linear, Layer
 
 
-class Net(Layer):
+class Net(paddle.nn.Layer):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = Conv2D(3, 8, 3)
-        self.linear = Linear(8 * 30 * 30, 5)
+        self.conv1 = paddle.nn.Conv2D(3, 8, 3)
+        self.linear = paddle.nn.Linear(8 * 30 * 30, 5)
 
     def forward(self, x):
         tmp = self.conv1(x)

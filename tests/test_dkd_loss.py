@@ -26,7 +26,7 @@ class TestDKDLoss(StaticCase):
         conv1 = conv_bn_layer(input, 8, 3, "conv1")
         conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
         student_predict = conv1 + conv2
-        student_predict = paddle.fluid.layers.fc(student_predict, size=10)
+        student_predict = paddle.static.nn.fc(student_predict, 10)
 
         teacher_main = paddle.static.Program()
         teacher_startup = paddle.static.Program()
@@ -40,7 +40,7 @@ class TestDKDLoss(StaticCase):
             sum2 = conv4 + sum1
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             teacher_predict = conv_bn_layer(conv5, 8, 3, "conv6")
-            teacher_predict = paddle.fluid.layers.fc(teacher_predict, size=10)
+            teacher_predict = paddle.static.nn.fc(teacher_predict, 10)
 
         place = paddle.CPUPlace()
         data_name_map = {'image': 'image'}

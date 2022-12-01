@@ -15,11 +15,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print_arguments(args)
     paddle.enable_static()
-    place = fluid.CPUPlace()
+    place = paddle.CPUPlace()
     exe = paddle.static.Executor(paddle.CPUPlace())
 
     [inference_program, feed_target_names,
-     fetch_targets] = paddle.fluid.io.load_inference_model(
+     fetch_targets] = paddle.static.load_inference_model(
          dirname=args.model_dir,
          executor=exe,
          model_filename=args.model_filename,

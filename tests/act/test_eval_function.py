@@ -5,21 +5,20 @@ import numpy as np
 sys.path.append("../../")
 import paddle
 from PIL import Image
-from paddle.vision.datasets import DatasetFolder
-from paddle.vision.transforms import transforms
 from paddleslim.auto_compression import AutoCompression
 paddle.enable_static()
 
 
-class ImageNetDataset(DatasetFolder):
+class ImageNetDataset(paddle.vision.datasets.DatasetFolder):
     def __init__(self, data_dir, image_size=224, mode='train'):
         super(ImageNetDataset, self).__init__(data_dir)
         self.data_dir = data_dir
-        normalize = transforms.Normalize(
+        normalize = paddle.vision.transforms.transforms.Normalize(
             mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
-        self.transform = transforms.Compose([
-            transforms.Resize(256), transforms.CenterCrop(image_size),
-            transforms.Transpose(), normalize
+        self.transform = paddle.vision.transforms.transforms.Compose([
+            paddle.vision.transforms.transforms.Resize(256),
+            paddle.vision.transforms.transforms.CenterCrop(image_size),
+            paddle.vision.transforms.transforms.Transpose(), normalize
         ])
         self.mode = mode
         train_file_list = os.path.join(data_dir, 'train_list.txt')

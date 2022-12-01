@@ -529,15 +529,6 @@ class default_worker(PruneWorker):
 
 
 @PRUNE_WORKER.register
-class uniform_random_batch_size_like(activation):
-    def __init__(self, op, pruned_params, visited, skip_stranger):
-        super(uniform_random_batch_size_like, self).__init__(
-            op, pruned_params, visited, skip_stranger)
-        self.input_name = "Input"
-        self.output_name = "Out"
-
-
-@PRUNE_WORKER.register
 class bilinear_interp(activation):
     def __init__(self, op, pruned_params, visited, skip_stranger):
         super(bilinear_interp, self).__init__(op, pruned_params, visited,

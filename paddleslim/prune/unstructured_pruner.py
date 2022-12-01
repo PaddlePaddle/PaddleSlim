@@ -17,7 +17,7 @@ class UnstructuredPruner():
       - mode(str): the mode to prune the model, must be selected from 'ratio' and 'threshold'.
       - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.55.
       - threshold(float): the threshold to prune the model. Only set it when mode=='threshold'. Default: 1e-2.
-      - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
+      - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope(). Default: None.
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
       - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params and bias. Default: None
@@ -347,7 +347,7 @@ class GMPUnstructuredPruner(UnstructuredPruner):
     Args:
       - program(paddle.static.Program): The model to be pruned.
       - ratio(float): the ratio to prune the model. Only set it when mode=='ratio'. Default: 0.55.
-      - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope. Default: None.
+      - scope(paddle.static.Scope): The scope storing values of all variables. None means paddle.static.global_scope(). Default: None.
       - place(CPUPlace | CUDAPlace): The device place used to execute model. None means CPUPlace. Default: None.
       - prune_params_type(str): The argument to control which type of ops will be pruned. Currently we only support None (all but norms) or conv1x1_only as input. It acts as a straightforward call to conv1x1 pruning.  Default: None
       - skip_params_func(function): The function used to select the parameters which should be skipped when performing pruning. Default: normalization-related params. Default: None

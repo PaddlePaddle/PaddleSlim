@@ -3,7 +3,6 @@ import collections
 import numpy as np
 import logging
 from paddleslim.common import get_logger
-from paddle.fluid import core
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ['PruningPlan', 'PruningMask']
@@ -115,7 +114,7 @@ class PruningPlan():
             elif p.is_cuda_pinned_place():
                 place = paddle.CUDAPinnedPlace()
             else:
-                p = core.Place()
+                p = paddle.fluid.core.Place()
                 p.set_place(t_value._place())
                 place = paddle.CUDAPlace(p.gpu_device_id())
 
@@ -154,7 +153,7 @@ class PruningPlan():
                 elif p.is_cuda_pinned_place():
                     place = paddle.CUDAPinnedPlace()
                 else:
-                    p = core.Place()
+                    p = paddle.fluid.core.Place()
                     p.set_place(t_value._place())
                     place = paddle.CUDAPlace(p.gpu_device_id())
 
@@ -196,7 +195,7 @@ class PruningPlan():
                         elif p.is_cuda_pinned_place():
                             place = paddle.CUDAPinnedPlace()
                         else:
-                            p = core.Place()
+                            p = paddle.fluid.core.Place()
                             p.set_place(t_value._place())
                             place = paddle.CUDAPlace(p.gpu_device_id())
 
@@ -247,7 +246,7 @@ class PruningPlan():
                         elif p.is_cuda_pinned_place():
                             place = paddle.CUDAPinnedPlace()
                         else:
-                            p = core.Place()
+                            p = paddle.fluid.core.Place()
                             p.set_place(t_value._place())
                             place = paddle.CUDAPlace(p.gpu_device_id())
                         t_value.set(pruned_value, place)
@@ -275,7 +274,7 @@ class PruningPlan():
                     elif p.is_cuda_pinned_place():
                         place = paddle.CUDAPinnedPlace()
                     else:
-                        p = core.Place()
+                        p = paddle.fluid.core.Place()
                         p.set_place(t_value._place())
                         place = paddle.CUDAPlace(p.gpu_device_id())
 

@@ -23,7 +23,6 @@ import time
 import shutil
 import numpy as np
 import paddle
-import paddle.fluid as fluid
 from ..common.recover_program import recover_inference_program
 from .quanter import _quant_config_default, _parse_configs, pact, get_pact_optimizer
 from .quanter import quant_aware, convert

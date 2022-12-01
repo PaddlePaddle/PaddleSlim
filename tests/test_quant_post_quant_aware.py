@@ -3,18 +3,12 @@ import random
 sys.path.append("../")
 import unittest
 import paddle
-import paddle.nn as nn
-from paddle.io import Dataset
 from paddleslim.quant import quant_aware, convert
-from paddle.nn import TransformerEncoderLayer, TransformerEncoder, Linear
 from paddleslim.quant import quant_aware, convert
 from static_case import StaticCase
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
-import paddle.dataset.mnist as reader
-from paddle.fluid.framework import IrGraph
-from paddle.fluid import core
 import numpy as np
 
 np.random.seed(0)
@@ -22,7 +16,7 @@ random.seed(0)
 paddle.seed(0)
 
 
-class RandomDataset(Dataset):
+class RandomDataset(paddle.io.Dataset):
     def __init__(self, num_samples):
         self.num_samples = num_samples
 
@@ -39,12 +33,12 @@ class RandomDataset(Dataset):
 class TestQuantPostQuantAwareCase1(StaticCase):
     def test_accuracy(self):
         def simple_transformer(enc_input, attn_mask):
-            encoder_layer = nn.TransformerEncoderLayer(128, 2, 512)
-            encoder = TransformerEncoder(encoder_layer, 2)
+            encoder_layer = paddle.nn.TransformerEncoderLayer(128, 2, 512)
+            encoder = paddle.nn.TransformerEncoder(encoder_layer, 2)
             encoder_output = encoder(enc_input, attn_mask)
             first_token = encoder_output[:, 0]
             bias = paddle.full(shape=[1, 128], fill_value=1e-6)
-            linear = Linear(128, 2)
+            linear = paddle.nn.Linear(128, 2)
             logits = linear(first_token + bias)
             return logits
 

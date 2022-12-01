@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from paddle.fluid import Program
 from ..core import GraphWrapper, OpWrapper
+import paddle
 __all__ = ["LatencyEvaluator", "TableLatencyEvaluator"]
 
 
@@ -288,7 +288,7 @@ class TableLatencyEvaluator(LatencyEvaluator):
             latency(float): The latency of given graph on current evaluator.
         """
         total_latency = 0
-        if isinstance(graph, Program):
+        if isinstance(graph, paddle.static.Program):
             graph = GraphWrapper(graph)
         assert isinstance(graph, GraphWrapper)
         for op in self._get_ops_from_graph(graph, only_conv):

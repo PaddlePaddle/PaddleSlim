@@ -24,12 +24,6 @@ import numpy as np
 import random
 import tempfile
 import paddle
-from paddle.fluid import core
-from paddle.fluid import framework
-from paddle.fluid.framework import IrGraph
-from paddle.fluid.executor import global_scope
-from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
-from paddle.fluid.contrib.slim.quantization.utils import _get_op_input_var_names, _get_op_output_var_names, load_variable_data
 from .quanter import quant_post
 from ..core import GraphWrapper
 from ..common import get_logger
@@ -171,7 +165,7 @@ class AnalysisPTQ(object):
         _logger.info('Activation Statistic is saved in {}'.format(save_path))
 
     def create_ptq(self, executor, skip_tensor_list):
-        return PostTrainingQuantization(
+        return paddle.fluid.contrib.slim.quantization.PostTrainingQuantization(
             executor=executor,
             data_loader=self.data_loader,
             model_dir=self.model_dir,
@@ -278,7 +272,8 @@ class AnalysisPTQ(object):
     def collect_vars(self, scope, var_names):
         all_vars = {}
         for var_name in var_names:
-            var_tensor = load_variable_data(scope, var_name)
+            var_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+                scope, var_name)
             all_vars[var_name] = var_tensor
         return all_vars
 
@@ -290,7 +285,7 @@ class AnalysisPTQ(object):
             executor=executor, \
             model_filename=self.model_filename, \
             params_filename=self.params_filename)
-        scope = global_scope()
+        scope = paddle.static.Executor.global_scope()
         persistable_var_names = []
         for var in program.list_vars():
             if var.persistable:
@@ -310,7 +305,7 @@ class AnalysisPTQ(object):
     def collect_quant_stat(self):
         _logger.info('Collecting Statistic After PTQ...')
         executor = paddle.static.Executor(self.places)
-        scope = global_scope()
+        scope = paddle.static.Executor.global_scope()
         post_training_quantization = self.create_ptq(executor, None)
         program = post_training_quantization.quantize()
 
@@ -389,7 +384,8 @@ class AnalysisPTQ(object):
         for op_name in weight_names:
             for block_id in range(len(program.blocks)):
                 for op in program.blocks[block_id].ops:
-                    var_name_list = _get_op_input_var_names(op)
+                    var_name_list = paddle.fluid.contrib.slim.quantization.utils._get_op_input_var_names(
+                        op)
                     if op_name in var_name_list:
                         for var_name in var_name_list:
                             if var_name not in persistable_var_names:

@@ -4,8 +4,6 @@ import unittest
 import numpy as np
 import paddle
 from paddleslim import flops
-from paddle.vision.models import mobilenet_v1, resnet50
-from paddle.nn import Conv2D, Layer
 
 
 class TestFlops(unittest.TestCase):
@@ -20,11 +18,11 @@ class TestFlops(unittest.TestCase):
         self.assertTrue(FLOPs == self._gt)
 
 
-class Net1(Layer):
+class Net1(paddle.nn.Layer):
     def __init__(self):
         super(Net1, self).__init__()
-        self.conv1 = Conv2D(3, 2, 3)
-        self.conv2 = Conv2D(3, 2, 3)
+        self.conv1 = paddle.nn.Conv2D(3, 2, 3)
+        self.conv2 = paddle.nn.Conv2D(3, 2, 3)
 
     def forward(self, inputs):
         assert isinstance(inputs, dict)
@@ -74,8 +72,10 @@ class TestFLOPsCase2(unittest.TestCase):
 
 
 def add_cases(suite):
-    suite.addTest(TestFlops(net=mobilenet_v1, gt=11792896.0))
-    suite.addTest(TestFlops(net=resnet50, gt=83872768.0))
+    suite.addTest(
+        TestFlops(
+            net=paddle.vision.models.mobilenet_v1, gt=11792896.0))
+    suite.addTest(TestFlops(net=paddle.vision.models.resnet50, gt=83872768.0))
     suite.addTest(TestFLOPsCase1())
     suite.addTest(TestFLOPsCase2())
 

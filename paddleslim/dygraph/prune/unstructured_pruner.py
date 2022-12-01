@@ -90,6 +90,7 @@ class UnstructuredPruner():
                 tmp_array = np.ones(param.shape, dtype=np.float32)
                 mask_name = "_".join([param.name.replace(".", "_"), "mask"])
                 if mask_name not in sub_layer._buffers:
+                    print(f"target type: {type(paddle.to_tensor(tmp_array))}")
                     sub_layer.register_buffer(mask_name,
                                               paddle.to_tensor(tmp_array))
                 self.masks[param.name] = sub_layer._buffers[mask_name]
