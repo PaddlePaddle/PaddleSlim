@@ -6,13 +6,12 @@ import tempfile
 import paddle
 import unittest
 import numpy as np
-from paddle.io import Dataset
 from paddleslim.auto_compression import AutoCompression
 from paddleslim.common import load_config
 from paddleslim.common import load_inference_model, export_onnx
 
 
-class RandomEvalDataset(Dataset):
+class RandomEvalDataset(paddle.io.Dataset):
     def __init__(self, num_samples, image_shape=[3, 32, 32], class_num=10):
         self.num_samples = num_samples
         self.image_shape = image_shape

@@ -188,6 +188,13 @@ class Pruner():
                     for idx in src:
                         idx = idx * repeat
                         target.extend(range(idx, idx + repeat))
+                elif "squeeze" in trans:
+                    repeat = trans['repeat']
+                    targets_set = set()
+                    for idx in src:
+                        targets_set.add(idx / repeat)
+                    target = list(targets_set)
+
                 src = target
 
             ret.append((name, axis, src))

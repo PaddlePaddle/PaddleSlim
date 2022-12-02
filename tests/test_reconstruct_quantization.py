@@ -21,7 +21,6 @@ from static_case import StaticCase
 sys.path.append("../demo")
 from models import *
 from layers import conv_bn_layer
-import paddle.dataset.mnist as reader
 import numpy as np
 from paddleslim.quant import quant_recon_static
 

@@ -67,7 +67,7 @@ add_arg('use_data_parallel', ast.literal_eval,  False, "The flag indicating whet
 
 
 def cross_entropy_label_smooth(preds, targets, epsilon):
-    preds = fluid.layers.softmax(preds)
+    preds = paddle.nn.functional.softmax(preds)
     targets_one_hot = fluid.one_hot(input=targets, depth=args.class_num)
     targets_smooth = fluid.layers.label_smooth(
         targets_one_hot, epsilon=epsilon, dtype="float32")
@@ -89,8 +89,8 @@ def train(model, train_reader, optimizer, epoch, args):
         label.stop_gradient = True
         logits, logits_aux = model(image, True)
 
-        prec1 = fluid.layers.accuracy(input=logits, label=label, k=1)
-        prec5 = fluid.layers.accuracy(input=logits, label=label, k=5)
+        prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
+        prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
         loss = fluid.layers.reduce_mean(
             cross_entropy_label_smooth(logits, label, args.label_smooth))
 
@@ -133,8 +133,8 @@ def valid(model, valid_reader, epoch, args):
         image = to_variable(image_np)
         label = to_variable(label_np)
         logits, _ = model(image, False)
-        prec1 = fluid.layers.accuracy(input=logits, label=label, k=1)
-        prec5 = fluid.layers.accuracy(input=logits, label=label, k=5)
+        prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
+        prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
         loss = fluid.layers.reduce_mean(
             cross_entropy_label_smooth(logits, label, args.label_smooth))
 
@@ -150,8 +150,8 @@ def valid(model, valid_reader, epoch, args):
 
 
 def main(args):
-    place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id) \
-        if args.use_data_parallel else fluid.CUDAPlace(0)
+    place = paddle.CUDAPlace(fluid.dygraph.parallel.Env().dev_id) \
+        if args.use_data_parallel else paddle.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
         genotype = eval("genotypes.%s" % args.arch)
@@ -166,16 +166,12 @@ def main(args):
             count_parameters_in_MB(model.parameters())))
 
         device_num = fluid.dygraph.parallel.Env().nranks
-        step_per_epoch = int(args.trainset_num /
-                             (args.batch_size * device_num))
+        step_per_epoch = int(args.trainset_num / (args.batch_size * device_num))
         learning_rate = fluid.dygraph.ExponentialDecay(
-            args.learning_rate,
-            step_per_epoch,
-            args.decay_rate,
-            staircase=True)
+            args.learning_rate, step_per_epoch, args.decay_rate, staircase=True)
 
         clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=args.grad_clip)
-        optimizer = fluid.optimizer.MomentumOptimizer(
+        optimizer = paddle.optimizer.Momentum(
             learning_rate,
             momentum=args.momentum,
             regularization=fluid.regularizer.L2Decay(args.weight_decay),
@@ -216,18 +212,17 @@ def main(args):
             fluid.dygraph.parallel.Env().local_rank == 0)
         best_top1 = 0
         for epoch in range(args.epochs):
-            logger.info('Epoch {}, lr {:.6f}'.format(
-                epoch, optimizer.current_step_lr()))
+            logger.info('Epoch {}, lr {:.6f}'.format(epoch, optimizer.get_lr()))
             train_top1, train_top5 = train(model, train_loader, optimizer,
                                            epoch, args)
-            logger.info("Epoch {}, train_top1 {:.6f}, train_top5 {:.6f}".
-                        format(epoch, train_top1, train_top5))
+            logger.info("Epoch {}, train_top1 {:.6f}, train_top5 {:.6f}".format(
+                epoch, train_top1, train_top5))
             valid_top1, valid_top5 = valid(model, valid_loader, epoch, args)
             if valid_top1 > best_top1:
                 best_top1 = valid_top1
                 if save_parameters:
-                    fluid.save_dygraph(model.state_dict(),
-                                       args.model_save_dir + "/best_model")
+                    paddle.save(model.state_dict(),
+                                args.model_save_dir + "/best_model")
             logger.info(
                 "Epoch {}, valid_top1 {:.6f}, valid_top5 {:.6f}, best_valid_top1 {:6f}".
                 format(epoch, valid_top1, valid_top5, best_top1))

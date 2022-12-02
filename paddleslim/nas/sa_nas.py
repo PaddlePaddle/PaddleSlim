@@ -19,7 +19,7 @@ import numpy as np
 import json
 import hashlib
 import time
-import paddle.fluid as fluid
+import paddle
 from ..common import SAController
 from ..common import get_logger
 

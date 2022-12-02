@@ -17,8 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
+import paddle
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
@@ -158,5 +157,4 @@ class ResNetSpace(SearchSpaceBase):
         short = self._shortcut(
             input, num_filters * 4, stride, name=name + '_shortcut')
 
-        return fluid.layers.elementwise_add(
-            x=short, y=conv2, act='relu', name=name + '_bottleneck_add')
+        return paddle.add(x=short, y=conv2, name=name + '_bottleneck_add')

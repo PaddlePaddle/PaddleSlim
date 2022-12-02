@@ -309,14 +309,12 @@ def compress(args):
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
 
-    paddle.fluid.io.save_inference_model(
-        dirname=float_path,
-        feeded_var_names=[image.name],
-        target_vars=[out],
-        executor=exe,
-        main_program=float_program,
-        model_filename=float_path + '/model',
-        params_filename=float_path + '/params')
+    paddle.static.save_inference_model(
+        os.path.join(float_path, "model"),
+        [image],
+        [out],
+        exe,
+        program=float_program, )
 
 
 def main():

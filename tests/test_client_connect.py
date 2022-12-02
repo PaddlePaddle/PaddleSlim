@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
+import paddle
 sys.path.append("../")
 import os
 import time
 import signal
 import unittest
 from static_case import StaticCase
-import paddle.fluid as fluid
 from paddleslim.nas import SANAS
 from paddleslim.common.controller_client import ControllerClient
 import numpy as np

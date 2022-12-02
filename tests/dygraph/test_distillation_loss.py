@@ -18,7 +18,6 @@ import copy
 
 import unittest
 import paddle
-import paddle.nn.functional as F
 
 # basic loss
 from paddleslim.dygraph.dist.losses import CombinedLoss

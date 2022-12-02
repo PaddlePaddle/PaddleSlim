@@ -4,20 +4,19 @@ import unittest
 sys.path.append("../../")
 import paddle
 from PIL import Image
-from paddle.vision.datasets import DatasetFolder
-from paddle.vision.transforms import transforms
 from paddleslim.auto_compression import AutoCompression
 paddle.enable_static()
 
 
-class ImageNetDataset(DatasetFolder):
+class ImageNetDataset(paddle.vision.datasets.DatasetFolder):
     def __init__(self, path, image_size=224):
         super(ImageNetDataset, self).__init__(path)
-        normalize = transforms.Normalize(
+        normalize = paddle.vision.transforms.transforms.Normalize(
             mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
-        self.transform = transforms.Compose([
-            transforms.Resize(256), transforms.CenterCrop(image_size),
-            transforms.Transpose(), normalize
+        self.transform = paddle.vision.transforms.transforms.Compose([
+            paddle.vision.transforms.transforms.Resize(256),
+            paddle.vision.transforms.transforms.CenterCrop(image_size),
+            paddle.vision.transforms.transforms.Transpose(), normalize
         ])
 
     def __getitem__(self, idx):

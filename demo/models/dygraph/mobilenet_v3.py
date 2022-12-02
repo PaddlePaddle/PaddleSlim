@@ -18,7 +18,6 @@ from __future__ import print_function
 
 import numpy as np
 import paddle
-from paddle import ParamAttr
 import paddle.nn as nn
 import paddle.nn.functional as F
 from paddle.nn import Conv2D, BatchNorm, Linear, Dropout
@@ -148,14 +147,14 @@ class MobileNetV3(nn.Layer):
             kernel_size=1,
             stride=1,
             padding=0,
-            weight_attr=ParamAttr(name="last_1x1_conv_weights"),
+            weight_attr=paddle.ParamAttr(name="last_1x1_conv_weights"),
             bias_attr=False)
 
         self.out = Linear(
             self.cls_ch_expand,
             class_dim,
-            weight_attr=ParamAttr("fc_weights"),
-            bias_attr=ParamAttr(name="fc_offset"))
+            weight_attr=paddle.ParamAttr("fc_weights"),
+            bias_attr=paddle.ParamAttr(name="fc_offset"))
 
     def forward(self, inputs, label=None):
         x = self.conv1(inputs)
@@ -197,14 +196,14 @@ class ConvBNLayer(nn.Layer):
             stride=stride,
             padding=padding,
             groups=num_groups,
-            weight_attr=ParamAttr(name=name + "_weights"),
+            weight_attr=paddle.ParamAttr(name=name + "_weights"),
             bias_attr=False)
         self.bn = BatchNorm(
             num_channels=out_c,
             act=None,
-            param_attr=ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + "_bn_scale", regularizer=L2Decay(0.0)),
-            bias_attr=ParamAttr(
+            bias_attr=paddle.ParamAttr(
                 name=name + "_bn_offset", regularizer=L2Decay(0.0)),
             moving_mean_name=name + "_bn_mean",
             moving_variance_name=name + "_bn_variance")
@@ -291,16 +290,16 @@ class SEModule(nn.Layer):
             kernel_size=1,
             stride=1,
             padding=0,
-            weight_attr=ParamAttr(name=name + "_1_weights"),
-            bias_attr=ParamAttr(name=name + "_1_offset"))
+            weight_attr=paddle.ParamAttr(name=name + "_1_weights"),
+            bias_attr=paddle.ParamAttr(name=name + "_1_offset"))
         self.conv2 = Conv2D(
             in_channels=channel // reduction,
             out_channels=channel,
             kernel_size=1,
             stride=1,
             padding=0,
-            weight_attr=ParamAttr(name + "_2_weights"),
-            bias_attr=ParamAttr(name=name + "_2_offset"))
+            weight_attr=paddle.ParamAttr(name + "_2_weights"),
+            bias_attr=paddle.ParamAttr(name=name + "_2_offset"))
         if skip_se_quant:
             self.conv1.skip_quant = True
             self.conv2.skip_quant = True

@@ -17,8 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
+import paddle
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
@@ -31,7 +30,7 @@ __all__ = ["InceptionABlockSpace", "InceptionCBlockSpace"]
 
 @SEARCHSPACE.register
 class InceptionABlockSpace(SearchSpaceBase):
-    def __init__(self, input_size, output_size, block_num, block_mask):
+    def __init__(self, input_size, output_size, block_num, block_mask=None):
         super(InceptionABlockSpace, self).__init__(input_size, output_size,
                                                    block_num, block_mask)
         if self.block_mask == None:
@@ -194,7 +193,8 @@ class InceptionABlockSpace(SearchSpaceBase):
                     stride,
                     pool_type,
                     name=None):
-        pool1 = fluid.layers.pool2d(
+        print(f"hit _inceptionA----------------------------")
+        pool1 = paddle.fluid.layers.pool2d(
             input=data,
             pool_size=filter_size,
             pool_padding='SAME',
@@ -253,7 +253,7 @@ class InceptionABlockSpace(SearchSpaceBase):
             act='relu',
             name=name + '_conv4_3')
 
-        concat = fluid.layers.concat(
+        concat = paddle.concat(
             [conv1, conv2, conv3, conv4], axis=1, name=name + '_concat')
         return concat
 
@@ -433,7 +433,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
                     stride,
                     pool_type,
                     name=None):
-        pool1 = fluid.layers.pool2d(
+        pool1 = paddle.fluid.layers.pool2d(
             input=data,
             pool_size=filter_size,
             pool_padding='SAME',
@@ -506,7 +506,7 @@ class InceptionCBlockSpace(SearchSpaceBase):
             act='relu',
             name=name + '_conv4_3_2')
 
-        concat = fluid.layers.concat(
+        concat = paddle.concat(
             [conv1, conv2, conv3_1, conv3_2, conv4_1, conv4_2],
             axis=1,
             name=name + '_concat')

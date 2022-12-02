@@ -77,13 +77,14 @@ def train(model, train_reader, optimizer, epoch, drop_path_prob, args):
         label.stop_gradient = True
         logits, logits_aux = model(image, drop_path_prob, True)
 
-        prec1 = fluid.layers.accuracy(input=logits, label=label, k=1)
-        prec5 = fluid.layers.accuracy(input=logits, label=label, k=5)
+        prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
+        prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
         loss = fluid.layers.reduce_mean(
-            fluid.layers.softmax_with_cross_entropy(logits, label))
+            paddle.nn.functional.softmax_with_cross_entropy(logits, label))
         if args.auxiliary:
             loss_aux = fluid.layers.reduce_mean(
-                fluid.layers.softmax_with_cross_entropy(logits_aux, label))
+                paddle.nn.functional.softmax_with_cross_entropy(logits_aux,
+                                                                label))
             loss = loss + args.auxiliary_weight * loss_aux
 
         if args.use_data_parallel:
@@ -119,10 +120,10 @@ def valid(model, valid_reader, epoch, args):
         image = to_variable(image_np)
         label = to_variable(label_np)
         logits, _ = model(image, 0, False)
-        prec1 = fluid.layers.accuracy(input=logits, label=label, k=1)
-        prec5 = fluid.layers.accuracy(input=logits, label=label, k=5)
+        prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
+        prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
         loss = fluid.layers.reduce_mean(
-            fluid.layers.softmax_with_cross_entropy(logits, label))
+            paddle.nn.functional.softmax_with_cross_entropy(logits, label))
 
         n = image.shape[0]
         objs.update(loss.numpy(), n)
@@ -136,8 +137,8 @@ def valid(model, valid_reader, epoch, args):
 
 
 def main(args):
-    place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id) \
-        if args.use_data_parallel else fluid.CUDAPlace(0)
+    place = paddle.CUDAPlace(fluid.dygraph.parallel.Env().dev_id) \
+        if args.use_data_parallel else paddle.CUDAPlace(0)
 
     with fluid.dygraph.guard(place):
         genotype = eval("genotypes.%s" % args.arch)
@@ -156,7 +157,7 @@ def main(args):
         learning_rate = fluid.dygraph.CosineDecay(args.learning_rate,
                                                   step_per_epoch, args.epochs)
         clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=args.grad_clip)
-        optimizer = fluid.optimizer.MomentumOptimizer(
+        optimizer = paddle.optimizer.Momentum(
             learning_rate,
             momentum=args.momentum,
             regularization=fluid.regularizer.L2Decay(args.weight_decay),
@@ -212,8 +213,8 @@ def main(args):
             if valid_top1 > best_acc:
                 best_acc = valid_top1
                 if save_parameters:
-                    fluid.save_dygraph(model.state_dict(),
-                                       args.model_save_dir + "/best_model")
+                    paddle.save(model.state_dict(),
+                                args.model_save_dir + "/best_model")
             logger.info("Epoch {}, valid_acc {:.6f}, best_valid_acc {:.6f}".
                         format(epoch, valid_top1, best_acc))
 

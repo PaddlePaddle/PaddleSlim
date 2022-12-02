@@ -18,18 +18,14 @@ sys.path.append("../../")
 import unittest
 import logging
 import paddle
-import paddle.nn as nn
-import paddle.fluid as fluid
-from paddle.fluid.log_helper import get_logger
-import paddle.vision.transforms as T
 
 from paddleslim.dygraph.quant import QAT
 
-_logger = get_logger(
+_logger = paddle.fluid.log_helper.get_logger(
     __name__, logging.INFO, fmt='%(asctime)s-%(levelname)s: %(message)s')
 
 
-class ImperativeLenet(nn.Layer):
+class ImperativeLenet(paddle.nn.Layer):
     def __init__(self, num_classes=10, classifier_activation='softmax'):
         super(ImperativeLenet, self).__init__()
         self.features = paddle.nn.Sequential(
@@ -91,7 +87,10 @@ class TestQAT(unittest.TestCase):
         place = paddle.CUDAPlace(0) \
             if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
 
-        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        transform = paddle.vision.transforms.Compose([
+            paddle.vision.transforms.Transpose(),
+            paddle.vision.transforms.Normalize([127.5], [127.5])
+        ])
 
         train_dataset = paddle.vision.datasets.MNIST(
             mode='train', backend='cv2', transform=transform)

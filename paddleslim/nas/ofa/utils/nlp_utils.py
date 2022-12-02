@@ -15,8 +15,6 @@
 import os
 import numpy as np
 import paddle
-import paddle.nn as nn
-import paddle.nn.functional as F
 
 __all__ = ["compute_neuron_head_importance", "reorder_head", "reorder_neuron"]
 
@@ -26,7 +24,7 @@ def compute_neuron_head_importance(task_name,
                                    data_loader,
                                    num_layers,
                                    num_heads,
-                                   loss_fct=nn.loss.CrossEntropyLoss(),
+                                   loss_fct=paddle.nn.loss.CrossEntropyLoss(),
                                    intermediate_name='linear1',
                                    output_name='linear2'):
     """
@@ -102,7 +100,7 @@ def reorder_head(layer, index):
          layer(paddle.nn.Layer): the instance of `paddle.nn.MultiHeadAttention` layer.
          index(list): the sort indices of multi-head.
     """
-    assert isinstance(layer, nn.MultiHeadAttention), \
+    assert isinstance(layer, paddle.nn.MultiHeadAttention), \
            "layer in reorder_head must be the instance of `paddle.nn.MultiHeadAttention`."
     n, a = layer.num_heads, layer.head_dim
     idx = paddle.reshape(
@@ -210,14 +208,13 @@ def _mha_forward(self, query, key, value, attn_mask=None, cache=None):
 
     # scale dot product attention
     # TODO: use paddle.matmul, however it doesn't support `alpha`
-    product = paddle.fluid.layers.matmul(
-        x=q, y=k, transpose_y=True, alpha=self.head_dim**-0.5)
+    product = paddle.matmul(x=q, y=k, transpose_y=True)
     if attn_mask[0] is not None:
         # TODO(guosheng): support bool mask
         product = product + attn_mask[0]
-    weights = F.softmax(product)
+    weights = paddle.nn.functional.softmax(product)
     if self.dropout:
-        weights = F.dropout(
+        weights = paddle.nn.functional.dropout(
             weights,
             self.dropout,
             training=self.training,
@@ -300,7 +297,7 @@ def _encoder_layer_forward(self, src, src_mask=None, cache=None):
     return src if cache is None else (src, incremental_cache)
 
 
-nn.MultiHeadAttention.forward = _mha_forward
-nn.MultiHeadAttention._prepare_qkv = _prepare_qkv
-nn.TransformerEncoder.forward = _encoder_forward
-nn.TransformerEncoderLayer.forward = _encoder_layer_forward
+paddle.nn.MultiHeadAttention.forward = _mha_forward
+paddle.nn.MultiHeadAttention._prepare_qkv = _prepare_qkv
+paddle.nn.TransformerEncoder.forward = _encoder_forward
+paddle.nn.TransformerEncoderLayer.forward = _encoder_layer_forward

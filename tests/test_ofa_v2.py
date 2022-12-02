@@ -17,22 +17,21 @@ sys.path.append("../")
 import numpy as np
 import unittest
 import paddle
-import paddle.nn as nn
-from paddle.nn import ReLU
 from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
 from paddleslim.nas.ofa.convert_super import supernet
 from paddleslim.nas.ofa.convert_super import Convert, supernet
 
 
-class ModelV1(nn.Layer):
+class ModelV1(paddle.nn.Layer):
     def __init__(self, name=''):
         super(ModelV1, self).__init__()
-        self.model = nn.Sequential(nn.Conv2D(3, 12, 16), nn.ReLU())
+        self.model = paddle.nn.Sequential(
+            paddle.nn.Conv2D(3, 12, 16), paddle.nn.ReLU())
         self.cls = self.create_parameter(
             attr=paddle.ParamAttr(
                 name=name + 'cls',
-                initializer=nn.initializer.Assign(
+                initializer=paddle.nn.initializer.Assign(
                     paddle.zeros(shape=(2, 12, 17, 17)))),
             shape=(2, 12, 17, 17))
 
@@ -40,36 +39,38 @@ class ModelV1(nn.Layer):
         return self.cls + self.model(inputs)
 
 
-class ModelShortcut(nn.Layer):
+class ModelShortcut(paddle.nn.Layer):
     def __init__(self):
         super(ModelShortcut, self).__init__()
-        self.conv1 = nn.Sequential(
-            nn.Conv2D(3, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
-        self.branch1 = nn.Sequential(
-            nn.Conv2D(12, 12, 1),
-            nn.BatchNorm2D(12),
-            nn.ReLU(),
-            nn.Conv2D(
+        self.conv1 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(3, 12, 1),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
+        self.branch1 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 12, 1),
+            paddle.nn.BatchNorm2D(12),
+            paddle.nn.ReLU(),
+            paddle.nn.Conv2D(
                 12, 12, 1, groups=12),
-            nn.BatchNorm2D(12),
-            nn.ReLU(),
-            nn.Conv2D(
+            paddle.nn.BatchNorm2D(12),
+            paddle.nn.ReLU(),
+            paddle.nn.Conv2D(
                 12, 12, 1, groups=12),
-            nn.BatchNorm2D(12),
-            nn.ReLU())
-        self.branch2 = nn.Sequential(
-            nn.Conv2D(12, 12, 1),
-            nn.BatchNorm2D(12),
-            nn.ReLU(),
-            nn.Conv2D(
+            paddle.nn.BatchNorm2D(12),
+            paddle.nn.ReLU())
+        self.branch2 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 12, 1),
+            paddle.nn.BatchNorm2D(12),
+            paddle.nn.ReLU(),
+            paddle.nn.Conv2D(
                 12, 12, 1, groups=12),
-            nn.BatchNorm2D(12),
-            nn.ReLU(),
-            nn.Conv2D(12, 12, 1),
-            nn.BatchNorm2D(12),
-            nn.ReLU())
-        self.out = nn.Sequential(
-            nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+            paddle.nn.BatchNorm2D(12),
+            paddle.nn.ReLU(),
+            paddle.nn.Conv2D(12, 12, 1),
+            paddle.nn.BatchNorm2D(12),
+            paddle.nn.ReLU())
+        self.out = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 12, 1),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
 
     def forward(self, x):
         x = self.conv1(x)
@@ -81,21 +82,25 @@ class ModelShortcut(nn.Layer):
         return z
 
 
-class ModelElementwise(nn.Layer):
+class ModelElementwise(paddle.nn.Layer):
     def __init__(self):
         super(ModelElementwise, self).__init__()
-        self.conv1 = nn.Sequential(
-            nn.Conv2D(3, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
-        self.conv2 = nn.Sequential(
-            nn.Conv2D(12, 24, 3), nn.BatchNorm2D(24), nn.ReLU())
-        self.conv3 = nn.Sequential(
-            nn.Conv2D(24, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
-        self.out = nn.Sequential(
-            nn.Conv2D(12, 6, 1), nn.BatchNorm2D(6), nn.ReLU())
+        self.conv1 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(3, 12, 1),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
+        self.conv2 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 24, 3),
+            paddle.nn.BatchNorm2D(24), paddle.nn.ReLU())
+        self.conv3 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(24, 12, 1),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
+        self.out = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 6, 1),
+            paddle.nn.BatchNorm2D(6), paddle.nn.ReLU())
 
     def forward(self, x):
         d = paddle.randn(shape=[2, 12, x.shape[2], x.shape[3]], dtype='float32')
-        d = nn.functional.softmax(d)
+        d = paddle.nn.functional.softmax(d)
 
         x = self.conv1(x)
         x = x + d
@@ -105,42 +110,46 @@ class ModelElementwise(nn.Layer):
         return x
 
 
-class ModelMultiExit(nn.Layer):
+class ModelMultiExit(paddle.nn.Layer):
     def __init__(self):
         super(ModelMultiExit, self).__init__()
-        self.conv1 = nn.Sequential(
-            nn.Conv2D(3, 12, 3), nn.BatchNorm2D(12), nn.ReLU())
-        self.block1 = nn.Sequential(
-            nn.Conv2D(12, 24, 7),
-            nn.BatchNorm2D(24),
-            nn.ReLU(),
-            nn.MaxPool2D(
+        self.conv1 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(3, 12, 3),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
+        self.block1 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 24, 7),
+            paddle.nn.BatchNorm2D(24),
+            paddle.nn.ReLU(),
+            paddle.nn.MaxPool2D(
                 kernel_size=3, stride=2, padding=0),
-            nn.Conv2D(24, 24, 7),
-            nn.BatchNorm2D(24),
-            nn.ReLU(),
-            nn.MaxPool2D(
+            paddle.nn.Conv2D(24, 24, 7),
+            paddle.nn.BatchNorm2D(24),
+            paddle.nn.ReLU(),
+            paddle.nn.MaxPool2D(
                 kernel_size=3, stride=2, padding=0))
-        self.block2 = nn.Sequential(
-            nn.Conv2D(24, 24, 1),
-            nn.BatchNorm2D(24),
-            nn.ReLU(),
-            nn.MaxPool2D(
+        self.block2 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(24, 24, 1),
+            paddle.nn.BatchNorm2D(24),
+            paddle.nn.ReLU(),
+            paddle.nn.MaxPool2D(
                 kernel_size=3, stride=2, padding=1))
 
-        self.out1 = nn.Sequential(
-            nn.Conv2D(24, 24, 1), nn.BatchNorm2D(24), nn.ReLU())
+        self.out1 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(24, 24, 1),
+            paddle.nn.BatchNorm2D(24), paddle.nn.ReLU())
 
-        self.out2 = nn.Sequential(
-            nn.Conv2D(48, 24, 7),
-            nn.BatchNorm2D(24),
-            nn.ReLU(), nn.Conv2D(24, 24, 3), nn.BatchNorm2D(24), nn.ReLU())
+        self.out2 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(48, 24, 7),
+            paddle.nn.BatchNorm2D(24),
+            paddle.nn.ReLU(),
+            paddle.nn.Conv2D(24, 24, 3),
+            paddle.nn.BatchNorm2D(24), paddle.nn.ReLU())
 
     def forward(self, x):
         x = self.conv1(x)
 
         b1 = self.block1(x)
-        adapt = nn.UpsamplingBilinear2D(size=[b1.shape[2], b1.shape[2]])
+        adapt = paddle.nn.UpsamplingBilinear2D(size=[b1.shape[2], b1.shape[2]])
         b2 = self.block2(b1)
         up = adapt(b2)
         y1 = self.out1(b1)
@@ -149,17 +158,21 @@ class ModelMultiExit(nn.Layer):
         return [y1, y2]
 
 
-class ModelInputDict(nn.Layer):
+class ModelInputDict(paddle.nn.Layer):
     def __init__(self):
         super(ModelInputDict, self).__init__()
-        self.conv0 = nn.Sequential(
-            nn.Conv2D(3, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
-        self.conv1 = nn.Sequential(
-            nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
-        self.conv2 = nn.Sequential(
-            nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
-        self.conv3 = nn.Sequential(
-            nn.Conv2D(12, 12, 1), nn.BatchNorm2D(12), nn.ReLU())
+        self.conv0 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(3, 12, 1),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
+        self.conv1 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 12, 1),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
+        self.conv2 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 12, 1),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
+        self.conv3 = paddle.nn.Sequential(
+            paddle.nn.Conv2D(12, 12, 1),
+            paddle.nn.BatchNorm2D(12), paddle.nn.ReLU())
 
     def forward(self, x, data):
         x = self.conv1(self.conv0(x))
