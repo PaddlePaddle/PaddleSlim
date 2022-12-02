@@ -86,7 +86,7 @@ def skip_gram_word2vec(dict_size, embedding_size, is_sparse=False, neg_num=5):
 
     neg_emb_b_vec = paddle.reshape(neg_emb_b, shape=[-1, neg_num])
     true_logits = paddle.add(paddle.mean(
-        paddle.multiply(input_emb, true_emb_w), axis=1, keepdim=True),
+        paddle.multiply(input_emb, true_emb_w), keepdim=True),
                              true_emb_b)
     input_emb_re = paddle.reshape(input_emb, shape=[-1, 1, embedding_size])
     neg_matmul = fluid.layers.matmul(

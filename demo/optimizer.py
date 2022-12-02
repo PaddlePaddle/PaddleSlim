@@ -62,7 +62,7 @@ class Optimizer(object):
         self.decay_rate = decay_rate
         self.total_images = total_images
         if args.use_gpu:
-            devices_num = paddle.fluid.core.get_cuda_device_count()
+            devices_num = paddle.framework.core.get_cuda_device_count()
         else:
             devices_num = int(os.environ.get('CPU_NUM', 1))
 

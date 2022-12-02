@@ -227,10 +227,8 @@ class PVANet():
             is_bias=True,
             default_initializer=paddle.nn.initializer.Constant(value=0.0))
 
-        output = fluid.layers.elementwise_mul(
-            input, scale_param, axis=axis, name=prefix + 'mul')
-        output = fluid.layers.elementwise_add(
-            output, offset_param, axis=axis, name=prefix + 'add')
+        output = paddle.multiply(input, scale_param, name=prefix + 'mul')
+        output = paddle.add(output, offset_param, name=prefix + 'add')
         return output
 
     def _conv(self,
@@ -293,7 +291,7 @@ class PVANet():
 
     def _bn_crelu(self, input, name):
         net = self._bn(input, None, name + '_bn_1')
-        neg_net = fluid.layers.scale(net, scale=-1.0, name=name + '_neg')
+        neg_net = paddle.scale(net, scale=-1.0, name=name + '_neg')
         net = paddle.concat([net, neg_net], axis=1)
         net = self._scale(net, name + '_scale')
         net = paddle.nn.functional.relu(net, name=name + '_relu')
@@ -369,13 +367,13 @@ def Fpn_Fusion(blocks, net):
         if i == 0:
             g[i] = net.deconv_bn_layer(h[i], num_outputs[i], name='fpn_0')
         else:
-            out = fluid.layers.elementwise_add(x=g[i - 1], y=h[i])
+            out = paddle.add(x=g[i - 1], y=h[i])
             out = net.conv_bn_layer(out, num_outputs[i], 1,
                                     'fpn_trans_' + str(i))
             g[i] = net.deconv_bn_layer(
                 out, num_outputs[i], name='fpn_' + str(i))
 
-    out = fluid.layers.elementwise_add(x=g[-2], y=h[-1])
+    out = paddle.add(x=g[-2], y=h[-1])
     out = net.conv_bn_layer(out, num_outputs[-1], 1, 'fpn_post_0')
     out = net.conv_bn_layer(out, num_outputs[-1], 3, 'fpn_post_1')
 
@@ -409,7 +407,7 @@ def Detector_Header(f_common, net, class_num):
         bias_attr=paddle.ParamAttr(name=name + '_conv_bias'),
         name=name + '_conv')
 
-    f_score = fluid.layers.transpose(f_score, perm=[0, 2, 3, 1])
+    f_score = paddle.transpose(f_score, perm=[0, 2, 3, 1])
     f_score = paddle.reshape(f_score, shape=[-1, class_num + 1])
     f_score = paddle.nn.functional.softmax(input=f_score)
 
@@ -448,7 +446,7 @@ def inference(input, class_num=1, nms_thresh=0.2, score_thresh=0.5):
     f_score, f_geo = east(input, class_num)
     print("f_geo shape={}".format(f_geo.shape))
     print("f_score shape={}".format(f_score.shape))
-    f_score = fluid.layers.transpose(f_score, perm=[1, 0])
+    f_score = paddle.transpose(f_score, perm=[1, 0])
     return f_score, f_geo
 
 
@@ -460,20 +458,20 @@ def loss(f_score, f_geo, l_score, l_geo, l_mask, class_num=1):
     '''
     #smooth_l1_loss
     channels = 8
-    l_geo_split, l_short_edge = fluid.layers.split(
+    l_geo_split, l_short_edge = paddle.split(
         l_geo, num_or_sections=[channels, 1],
         dim=1)  #last channel is short_edge_norm
-    f_geo_split = fluid.layers.split(f_geo, num_or_sections=[channels], dim=1)
+    f_geo_split = paddle.split(f_geo, num_or_sections=[channels], dim=1)
     f_geo_split = f_geo_split[0]
 
     geo_diff = l_geo_split - f_geo_split
-    abs_geo_diff = fluid.layers.abs(geo_diff)
+    abs_geo_diff = paddle.abs(geo_diff)
     l_flag = l_score >= 1
-    l_flag = fluid.layers.cast(x=l_flag, dtype="float32")
+    l_flag = paddle.cast(x=l_flag, dtype="float32")
     l_flag = fluid.layers.expand(x=l_flag, expand_times=[1, channels, 1, 1])
 
     smooth_l1_sign = abs_geo_diff < l_flag
-    smooth_l1_sign = fluid.layers.cast(x=smooth_l1_sign, dtype="float32")
+    smooth_l1_sign = paddle.cast(x=smooth_l1_sign, dtype="float32")
 
     in_loss = abs_geo_diff * abs_geo_diff * smooth_l1_sign + (
         abs_geo_diff - 0.5) * (1.0 - smooth_l1_sign)
@@ -481,18 +479,19 @@ def loss(f_score, f_geo, l_score, l_geo, l_mask, class_num=1):
         x=l_short_edge, expand_times=[1, channels, 1, 1])
     out_loss = l_short_edge * in_loss * l_flag
     out_loss = out_loss * l_flag
-    smooth_l1_loss = fluid.layers.reduce_mean(out_loss)
+    smooth_l1_loss = paddle.mean(out_loss)
 
     ##softmax_loss
     l_score.stop_gradient = True
-    l_score = fluid.layers.transpose(l_score, perm=[0, 2, 3, 1])
+    l_score = paddle.transpose(l_score, perm=[0, 2, 3, 1])
     l_score.stop_gradient = True
     l_score = paddle.reshape(l_score, shape=[-1, 1])
     l_score.stop_gradient = True
-    l_score = fluid.layers.cast(x=l_score, dtype="int64")
+    l_score = paddle.cast(x=l_score, dtype="int64")
     l_score.stop_gradient = True
 
-    softmax_loss = fluid.layers.cross_entropy(input=f_score, label=l_score)
-    softmax_loss = fluid.layers.reduce_mean(softmax_loss)
+    softmax_loss = paddle.nn.functional.cross_entropy(
+        input=f_score, label=l_score)
+    softmax_loss = paddle.mean(softmax_loss)
 
     return softmax_loss, smooth_l1_loss

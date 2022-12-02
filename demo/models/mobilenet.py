@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import paddle
-import paddle.fluid as fluid
 from paddle.nn.initializer import KaimingUniform
 
 __all__ = ['MobileNet']
@@ -121,13 +120,8 @@ class MobileNet():
             scale=scale,
             name="conv6")
 
-        input = fluid.layers.pool2d(
-            input=input,
-            pool_size=0,
-            pool_stride=1,
-            pool_type='avg',
-            global_pooling=True)
-        with fluid.name_scope('last_fc'):
+        input = paddle.nn.functional.adaptive_avg_pool2d(input, 1)
+        with paddle.static.name_scope('last_fc'):
             output = paddle.static.nn.fc(
                 input,
                 class_dim,

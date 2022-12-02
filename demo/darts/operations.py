@@ -71,8 +71,8 @@ class Zero(paddle.nn.Layer):
 
     def forward(self, x):
         pooled = self.pool(x)
-        x = fluid.layers.zeros_like(
-            x) if self.stride == 1 else fluid.layers.zeros_like(pooled)
+        x = paddle.zeros_like(x) if self.stride == 1 else paddle.zeros_like(
+            pooled)
         return x
 
 

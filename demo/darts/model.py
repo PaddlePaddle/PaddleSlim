@@ -74,7 +74,7 @@ class Classifier(paddle.nn.Layer):
 
     def forward(self, x):
         x = self.pool2d(x)
-        x = fluid.layers.squeeze(x, axes=[2, 3])
+        x = paddle.squeeze(x, axes=[2, 3])
         out = self.fc(x)
         return out
 
@@ -85,7 +85,7 @@ def drop_path(x, drop_prob):
     mask = 1 - np.random.binomial(
         1, drop_prob, size=[x.shape[0]]).astype(np.float32)
     mask = to_variable(mask)
-    x = fluid.layers.elementwise_mul(x / keep_prob, mask, axis=0)
+    x = paddle.multiply(x / keep_prob, mask)
     return x
 
 
@@ -122,7 +122,7 @@ class Cell(paddle.nn.Layer):
             op = OPS[op_name](c_curr, stride, True)
             ops += [op]
             edge_index += 1
-        self._ops = fluid.dygraph.LayerList(ops)
+        self._ops = paddle.nn.LayerList(ops)
         self._indices = indices
 
     def forward(self, s0, s1, drop_prob, training):
@@ -206,7 +206,7 @@ class NetworkCIFAR(paddle.nn.Layer):
             c_prev_prev, c_prev = c_prev, cell._multiplier * c_curr
             if i == 2 * layers // 3:
                 c_to_auxiliary = c_prev
-        self.cells = fluid.dygraph.LayerList(cells)
+        self.cells = paddle.nn.LayerList(cells)
 
         if auxiliary:
             self.auxiliary_head = AuxiliaryHeadCIFAR(c_to_auxiliary,
@@ -288,7 +288,7 @@ class NetworkImageNet(paddle.nn.Layer):
             c_prev_prev, c_prev = c_prev, cell._multiplier * c_curr
             if i == 2 * layers // 3:
                 c_to_auxiliary = c_prev
-        self.cells = fluid.dygraph.LayerList(cells)
+        self.cells = paddle.nn.LayerList(cells)
 
         if auxiliary:
             self.auxiliary_head = AuxiliaryHeadImageNet(c_to_auxiliary,

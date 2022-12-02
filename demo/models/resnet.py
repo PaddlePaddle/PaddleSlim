@@ -184,8 +184,8 @@ class ResNet():
             is_first=False,
             name=name + "_branch1")
 
-        return fluid.layers.elementwise_add(
-            x=short, y=conv2, act='relu', name=name + ".add.output.5")
+        out = paddle.add(x=short, y=conv2, name=name + ".add.output.5")
+        return paddle.nn.functional.relu(out)
 
     def basic_block(self, input, num_filters, stride, is_first, name):
         conv0 = self.conv_bn_layer(
@@ -203,7 +203,9 @@ class ResNet():
             name=name + "_branch2b")
         short = self.shortcut(
             input, num_filters, stride, is_first, name=name + "_branch1")
-        return fluid.layers.elementwise_add(x=short, y=conv1, act='relu')
+
+        out = paddle.add(x=short, y=conv1)
+        return paddle.nn.functional.relu(out)
 
 
 def ResNet34(prefix_name=''):
