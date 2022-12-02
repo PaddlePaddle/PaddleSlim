@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-### NOTE: the API of this file is based on Paddle2.0, the API in layers_old.py is based on Paddle1.8
-
+import os
 import numpy as np
 import logging
 import paddle
@@ -21,6 +20,7 @@ import paddle
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
 from .layers_base import *
+from paddle.framework import _in_legacy_dygraph, in_dygraph_mode
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
@@ -985,22 +985,43 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
                  "use_global_stats", self._use_global_stats,
                  "trainable_statistics", trainable_statistics)
 
-        if paddle.in_dynamic_mode():
+        if in_dygraph_mode():
+            paddle_compile = os.environ.get("paddle_compile")
             if feature_dim != self._mean.shape[0]:
-                batch_norm_out, t1, t2, t3, t4, _ = paddle._C_ops.batch_norm(
-                    input, mean, variance, weight, bias, not self.training,
-                    self._momentum, self._epsilon, self._data_format,
-                    self._use_global_stats, trainable_statistics)
+                if not paddle_compile or "Develop" in paddle_compile:
+                    # fit paddle develop
+                    batch_norm_out, t1, t2, t3, t4, _ = paddle._C_ops.batch_norm(
+                        input, mean, variance, weight, bias, not self.training,
+                        self._momentum, self._epsilon, self._data_format,
+                        self._use_global_stats, trainable_statistics)
+                else:
+                    # fit paddle release
+                    batch_norm_out, t1, t2, t3, t4, _ = paddle._C_ops.batch_norm(
+                        input, weight, bias, mean, variance, self._momentum,
+                        self._epsilon, self._data_format, not self.training,
+                        self._use_global_stats, trainable_statistics, False,
+                        False)
+
                 self._mean[:feature_dim].set_value(mean)
                 self._variance[:feature_dim].set_value(variance)
                 mean_out[:feature_dim].set_value(mean_out_tmp)
                 variance_out[:feature_dim].set_value(variance_out_tmp)
                 return batch_norm_out
             else:
-                batch_norm_out, t1, t2, t3, t4, _ = paddle._C_ops.batch_norm(
-                    input, mean, variance, weight, bias, not self.training,
-                    self._momentum, self._epsilon, self._data_format,
-                    self._use_global_stats, trainable_statistics)
+                if not paddle_compile or "Develop" in paddle_compile:
+                    # fit paddle develop
+                    batch_norm_out, t1, t2, t3, t4, _ = paddle._C_ops.batch_norm(
+                        input, mean, variance, weight, bias, not self.training,
+                        self._momentum, self._epsilon, self._data_format,
+                        self._use_global_stats, trainable_statistics)
+
+                else:
+                    # fit paddle release
+                    batch_norm_out, t1, t2, t3, t4, _ = paddle._C_ops.batch_norm(
+                        input, weight, bias, mean, variance, self._momentum,
+                        self._epsilon, self._data_format, not self.training,
+                        self._use_global_stats, trainable_statistics, False)
+
                 return batch_norm_out
 
         paddle.fluid.data_feeder.check_variable_and_dtype(
