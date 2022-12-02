@@ -53,7 +53,7 @@ class TestPrune(StaticCase):
         val_program = paddle.static.default_main_program().clone(for_test=True)
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = paddle.fluid.Scope()
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
 
         pruner = AutoPruner(

@@ -102,8 +102,7 @@ class Architect(object):
 
     def _hessian_vector_product(self, vector, input, target, r=1e-2):
         R = r * paddle.rsqrt(
-            paddle.fluid.layers.sum(
-                [paddle.sum(x=paddle.square(v)) for v in vector]))
+            paddle.add_n([paddle.sum(x=paddle.square(v)) for v in vector]))
 
         model_params = [
             p for p in self.model.parameters()

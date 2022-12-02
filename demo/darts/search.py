@@ -63,7 +63,8 @@ def main(args):
     elif not args.use_data_parallel:
         place = paddle.CUDAPlace(0)
     else:
-        place = paddle.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
+        place = paddle.CUDAPlace(paddle.distributed.parallel.ParallelEnv()
+                                 .dev_id)
 
     train_reader, valid_reader = reader.train_search(
         batch_size=args.batch_size,

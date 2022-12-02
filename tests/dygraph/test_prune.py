@@ -28,6 +28,7 @@ class TestPrune(unittest.TestCase):
     def runTest(self):
         static_shapes = self.static_prune(self._net, self._ratios)
         dygraph_shapes = self.dygraph_prune(self._net, self._ratios)
+        lazy_dygraph_shapes = self.dygraph_lazy_prune(self._net, self._ratios)
         all_right = True
         for _name, _shape in static_shapes.items():
             if dygraph_shapes[_name] != list(_shape):
@@ -37,11 +38,18 @@ class TestPrune(unittest.TestCase):
                 all_right = False
         self.assertTrue(all_right)
 
-    def dygraph_prune(self, net, ratios):
+    def dygraph_lazy_prune(self, net, ratios):
+        if paddle.framework.core.is_compiled_with_cuda():
+            paddle.set_device('gpu')
+            self.dygraph_prune(net, ratios, apply="lazy")
+        paddle.set_device('cpu')
+        return self.dygraph_prune(net, ratios, apply="lazy")
+
+    def dygraph_prune(self, net, ratios, apply="impretive"):
         paddle.disable_static()
         model = net(pretrained=False)
         pruner = L1NormFilterPruner(model, [1, 3, 16, 16])
-        pruner.prune_vars(ratios, 0)
+        pruner.prune_vars(ratios, 0, apply=apply)
         shapes = {}
         for param in model.parameters():
             shapes[param.name] = param.shape
@@ -52,7 +60,7 @@ class TestPrune(unittest.TestCase):
         paddle.enable_static()
         main_program = paddle.static.Program()
         startup_program = paddle.static.Program()
-        with paddle.fluid.unique_name.guard():
+        with paddle.utils.unique_name.guard():
             with paddle.static.program_guard(main_program, startup_program):
                 input = paddle.static.data(
                     name="image", shape=[None, 3, 16, 16])
@@ -61,7 +69,7 @@ class TestPrune(unittest.TestCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = paddle.fluid.Scope()
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         main_program, _, _ = pruner.prune(

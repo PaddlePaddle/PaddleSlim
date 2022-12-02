@@ -68,7 +68,7 @@ class TestPrune(StaticCase):
                 return cond_conv2
 
             cond_output = paddle.static.nn.cond(cond, cond_block1, cond_block2)
-            sum3 = paddle.fluid.layers.sum([sum2, cond_output])
+            sum3 = paddle.add_n([sum2, cond_output])
 
             conv6 = conv_bn_layer(sum3, 8, 3, "conv6")
             sub1 = conv6 - sum3

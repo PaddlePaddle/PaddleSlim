@@ -113,7 +113,7 @@ class LSTM(RLBaseController):
         entropies = []
         sample_log_probs = []
 
-        with fluid.unique_name.guard('Controller'):
+        with paddle.utils.unique_name.guard('Controller'):
             self._create_parameter()
             inputs = self.g_emb
 

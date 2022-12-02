@@ -20,7 +20,7 @@ import collections
 import numpy as np
 
 import paddle
-from paddle.fluid import core
+from paddle.framework import core
 from paddle.fluid.layer_helper import LayerHelper
 from paddle.fluid.framework import IrGraph
 from paddle.fluid.contrib.slim.quantization import WeightQuantization
@@ -799,14 +799,10 @@ def pact(x, name=None):
         regularizer=paddle.fluid.regularizer.L2Decay(0.0001),
         learning_rate=1)
     u_param = helper.create_parameter(attr=u_param_attr, shape=[1], dtype=dtype)
-    x = paddle.fluid.layers.elementwise_sub(
-        x,
-        paddle.nn.functional.relu(
-            paddle.fluid.layers.elementwise_sub(x, u_param)))
-    x = paddle.fluid.layers.elementwise_add(
-        x,
-        paddle.nn.functional.relu(
-            paddle.fluid.layers.elementwise_sub(-u_param, x)))
+    x = paddle.subtract(x,
+                        paddle.nn.functional.relu(paddle.subtract(x, u_param)))
+    x = paddle.paddle.add(
+        x, paddle.nn.functional.relu(paddle.subtract(-u_param, x)))
 
     return x
 

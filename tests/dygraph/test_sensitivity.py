@@ -98,7 +98,7 @@ class TestSensitivity(unittest.TestCase):
         paddle.enable_static()
         main_program = paddle.static.Program()
         startup_program = paddle.static.Program()
-        with paddle.fluid.unique_name.guard():
+        with paddle.utils.unique_name.guard():
             with paddle.static.program_guard(main_program, startup_program):
                 input = paddle.static.data(
                     name="image", shape=[None, 1, 28, 28])

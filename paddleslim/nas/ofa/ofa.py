@@ -610,7 +610,8 @@ class OFA(OFABase):
                         print(f"hit cpu in ofa-------------------------------")
                         place = paddle.CPUPlace()
                     else:
-                        place = paddle.fluid.core.CUDAPlace(p.gpu_device_id())
+                        place = paddle.framework.core.CUDAPlace(p.gpu_device_id(
+                        ))
                     t_value.set(pruned_state_dict[name], place)
 
         if super_model_state_dict != None and len(super_model_state_dict) != 0:

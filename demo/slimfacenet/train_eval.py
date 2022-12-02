@@ -151,17 +151,17 @@ def train(exe, train_program, train_out, test_program, test_out, args):
 
 def build_program(program, startup, args, is_train=True):
     if args.use_gpu:
-        num_trainers = fluid.core.get_cuda_device_count()
+        num_trainers = paddle.device.cuda.device_count()
     else:
         num_trainers = int(os.environ.get('CPU_NUM', 1))
-    places = fluid.cuda_places() if args.use_gpu else paddle.CPUPlace()
+    places = paddle.static.cuda_places() if args.use_gpu else paddle.CPUPlace()
 
     train_dataset = CASIA_Face(root=args.train_data_dir)
     trainset_scale = len(train_dataset)
 
     with paddle.static.program_guard(
             main_program=program, startup_program=startup):
-        with fluid.unique_name.guard():
+        with paddle.utils.unique_name.guard():
             # Model construction
             model = models.__dict__[args.model](
                 class_dim=train_dataset.class_nums)
@@ -215,7 +215,7 @@ def build_program(program, startup, args, is_train=True):
                     return_list=False)
                 reader.set_sample_list_generator(
                     test_reader,
-                    places=fluid.cuda_places()
+                    places=paddle.static.cuda_places()
                     if args.use_gpu else paddle.CPUPlace())
 
                 model.extract_feature = True
@@ -296,7 +296,7 @@ def main():
     args = parser.parse_args()
 
     if args.use_gpu:
-        num_trainers = fluid.core.get_cuda_device_count()
+        num_trainers = paddle.fluid.core.get_cuda_device_count()
     else:
         num_trainers = int(os.environ.get('CPU_NUM', 1))
     print(args)
@@ -366,7 +366,8 @@ def main():
             return_list=False)
         reader.set_sample_list_generator(
             test_reader,
-            places=fluid.cuda_places() if args.use_gpu else paddle.CPUPlace())
+            places=paddle.static.cuda_places()
+            if args.use_gpu else paddle.CPUPlace())
         test_out = (fetch_targets, reader, flods, flags)
         print('fetch_targets[0]: ', fetch_targets[0])
         print('feed_target_names: ', feed_target_names)

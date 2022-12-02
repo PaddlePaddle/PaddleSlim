@@ -16,12 +16,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import paddle
 import paddle.fluid as fluid
 from paddle.nn.initializer import Normal, KaimingUniform, Constant
-from paddle.fluid.dygraph.nn import Conv2D, Pool2D, BatchNorm, Linear
+from paddle.nn import Conv2D, Pool2D, BatchNorm, Linear
 from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
 from operations import *
+import paddleslim
 
 
 def channel_shuffle(x, groups):
@@ -31,7 +33,7 @@ def channel_shuffle(x, groups):
     # reshape
     x = paddle.reshape(x,
                        [batchsize, groups, channels_per_group, height, width])
-    x = fluid.layers.transpose(x, [0, 2, 1, 3, 4])
+    x = paddle.transpose(x, [0, 2, 1, 3, 4])
 
     # flatten
     x = paddle.reshape(x, [batchsize, num_channels, height, width])
@@ -59,12 +61,12 @@ class MixedOp(paddle.nn.Layer):
                     trainable=False)
                 BN = BatchNorm(
                     c_cur // self._k, param_attr=gama, bias_attr=beta)
-                op = fluid.dygraph.Sequential(op, BN)
+                op = paddle.nn.Sequential(op, BN)
             ops.append(op)
-        self._ops = fluid.dygraph.LayerList(ops)
+        self._ops = paddle.nn.LayerList(ops)
 
     def forward(self, x, weights):
-        return fluid.layers.sums(
+        return paddle.add_n(
             [weights[i] * op(x) for i, op in enumerate(self._ops)])
 
 
@@ -89,7 +91,7 @@ class Cell(paddle.nn.Layer):
                 stride = 2 if reduction and j < 2 else 1
                 op = MixedOp(c_cur, stride, method)
                 ops.append(op)
-        self._ops = fluid.dygraph.LayerList(ops)
+        self._ops = paddle.nn.LayerList(ops)
 
     def forward(self, s0, s1, weights, weights2=None):
         s0 = self.preprocess0(s0)
@@ -98,7 +100,7 @@ class Cell(paddle.nn.Layer):
         states = [s0, s1]
         offset = 0
         for i in range(self._steps):
-            s = fluid.layers.sums([
+            s = paddle.add_n([
                 self._ops[offset + j](h, weights[offset + j])
                 for j, h in enumerate(states)
             ])
@@ -127,7 +129,7 @@ class Network(paddle.nn.Layer):
         self._method = method
 
         c_cur = stem_multiplier * c_in
-        self.stem = fluid.dygraph.Sequential(
+        self.stem = paddle.nn.Sequential(
             Conv2D(
                 num_channels=3,
                 num_filters=c_cur,
@@ -154,7 +156,7 @@ class Network(paddle.nn.Layer):
             reduction_prev = reduction
             cells.append(cell)
             c_prev_prev, c_prev = c_prev, multiplier * c_cur
-        self.cells = fluid.dygraph.LayerList(cells)
+        self.cells = paddle.nn.LayerList(cells)
         self.global_pooling = Pool2D(pool_type='avg', global_pooling=True)
         self.classifier = Linear(
             input_dim=c_prev,
@@ -174,13 +176,13 @@ class Network(paddle.nn.Layer):
                 weights = paddle.nn.functional.softmax(self.alphas_normal)
             s0, s1 = s1, cell(s0, s1, weights, weights2)
         out = self.global_pooling(s1)
-        out = fluid.layers.squeeze(out, axes=[2, 3])
+        out = paddle.squeeze(out, axes=[2, 3])
         logits = self.classifier(out)
         return logits
 
     def _loss(self, input, target):
         logits = self(input)
-        loss = fluid.layers.reduce_mean(
+        loss = paddle.mean(
             paddle.nn.functional.softmax_with_cross_entropy(logits, target))
         return loss
 

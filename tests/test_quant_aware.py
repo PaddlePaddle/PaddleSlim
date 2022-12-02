@@ -39,7 +39,7 @@ class TestQuantAwareCase1(StaticCase):
     def get_op_number(self, prog):
 
         graph = paddle.fluid.framework.IrGraph(
-            paddle.fluid.core.Graph(prog.desc), for_test=False)
+            paddle.framework.core.Graph(prog.desc), for_test=False)
         quant_op_nums = 0
         op_nums = 0
         for op in graph.all_op_nodes():
