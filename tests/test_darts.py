@@ -24,9 +24,9 @@ from layers import conv_bn_layer
 class TestDARTS(unittest.TestCase):
     def test_darts(self):
         class SuperNet(paddle.nn.Layer):
-            def __init__(self):
+            def __init__(self, method):
                 super(SuperNet, self).__init__()
-                self._method = 'DARTS'
+                self._method = method
                 self._steps = 1
                 self.stem = paddle.nn.Conv2D(
                     in_channels=1, out_channels=3, kernel_size=3, padding=1)
@@ -85,13 +85,21 @@ class TestDARTS(unittest.TestCase):
             return wrapper
 
         place = paddle.CUDAPlace(0)
-        model = SuperNet()
+        model = SuperNet("DARTS")
         trainset = paddle.dataset.mnist.train()
         validset = paddle.dataset.mnist.test()
         train_reader = batch_generator(trainset)
         valid_reader = batch_generator(validset)
         searcher = DARTSearch(
             model, train_reader, valid_reader, place, num_epochs=5)
+        searcher.train()
+        searcher = DARTSearch(
+            model,
+            train_reader,
+            valid_reader,
+            place,
+            num_epochs=5,
+            unrolled=True)
         searcher.train()
 
 

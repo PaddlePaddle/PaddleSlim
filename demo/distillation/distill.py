@@ -13,7 +13,7 @@ import numpy as np
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments, _download, _decompress
-from paddleslim.dist import merge, l2, soft_label, fsp
+from paddleslim.dist import merge, l2, soft_label
 
 logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
 _logger = logging.getLogger(__name__)
@@ -99,11 +99,11 @@ def compress(args):
     ) if args.use_gpu else paddle.static.cpu_places()
     place = places[0]
     if args.use_gpu:
-        devices_num = paddle.fluid.core.get_cuda_device_count()
+        devices_num = paddle.framework.core.get_cuda_device_count()
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
     with paddle.static.program_guard(student_program, s_startup):
-        with paddle.fluid.unique_name.guard():
+        with paddle.utils.unique_name.guard():
             image = paddle.static.data(
                 name='image', shape=[None] + image_shape, dtype='float32')
             label = paddle.static.data(
@@ -144,7 +144,7 @@ def compress(args):
     teacher_program = paddle.static.Program()
     t_startup = paddle.static.Program()
     with paddle.static.program_guard(teacher_program, t_startup):
-        with paddle.fluid.unique_name.guard():
+        with paddle.utils.unique_name.guard():
             image = paddle.static.data(
                 name='image', shape=[None] + image_shape, dtype='float32')
             predict = teacher_model.net(image, class_dim=class_dim)
@@ -212,9 +212,10 @@ def compress(args):
                     format(epoch_id, step_id, val_loss[0], val_acc1[0],
                            val_acc5[0]))
         if args.save_inference:
-            paddle.fluid.io.save_inference_model(
-                os.path.join("./saved_models", str(epoch_id)), ["image"],
-                [out], exe, student_program)
+            paddle.static.save_inference_model(
+                os.path.join("./saved_models", str(epoch_id)), [image], [out],
+                exe,
+                program=student_program)
         _logger.info("epoch {} top1 {:.6f}, top5 {:.6f}".format(
             epoch_id, np.mean(val_acc1s), np.mean(val_acc5s)))
 

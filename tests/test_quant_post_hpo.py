@@ -17,7 +17,6 @@ sys.path.append(".")
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 
 import paddle
-import paddle.dataset.mnist as reader
 import unittest
 from paddleslim.quant import quant_post_hpo
 from static_case import StaticCase

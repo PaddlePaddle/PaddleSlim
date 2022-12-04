@@ -1,7 +1,6 @@
 import numpy as np
 import logging
 import paddle
-from paddle.fluid.dygraph import TracedLayer
 from paddleslim.core import GraphWrapper, dygraph2program
 from paddleslim.prune import PruningCollections
 from paddleslim.common import get_logger

@@ -4,12 +4,11 @@ import unittest
 sys.path.append("../../")
 import numpy as np
 import paddle
-from paddle.io import Dataset
 from paddleslim.auto_compression import AutoCompression
 paddle.enable_static()
 
 
-class RandomEvalDataset(Dataset):
+class RandomEvalDataset(paddle.io.Dataset):
     def __init__(self, num_samples, image_shape=[3, 398, 224], class_num=10):
         self.num_samples = num_samples
         self.image_shape = image_shape

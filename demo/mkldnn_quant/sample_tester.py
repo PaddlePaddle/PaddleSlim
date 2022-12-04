@@ -24,7 +24,7 @@ import time
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.framework import IrGraph
-from paddle.fluid import core
+from paddle.framework import core
 
 logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
 _logger = logging.getLogger(__name__)
@@ -148,16 +148,16 @@ class SampleTester(unittest.TestCase):
                  batch_size=1,
                  batch_num=1,
                  skip_batch_num=0):
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
-        inference_scope = fluid.executor.global_scope()
-        with fluid.scope_guard(inference_scope):
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
+        inference_scope = paddle.static.Executor.global_scope()
+        with paddle.static.scope_guard(inference_scope):
             if os.path.exists(os.path.join(model_path, '__model__')):
-                [inference_program, feed_target_names,
-                 fetch_targets] = fluid.io.load_inference_model(model_path, exe)
+                [inference_program, feed_target_names, fetch_targets
+                 ] = paddle.static.load_inference_model(model_path, exe)
             else:
                 [inference_program, feed_target_names,
-                 fetch_targets] = fluid.io.load_inference_model(
+                 fetch_targets] = paddle.static.load_inference_model(
                      model_path, exe, 'model', 'params')
 
             graph = IrGraph(core.Graph(inference_program.desc), for_test=True)
@@ -244,7 +244,7 @@ class SampleTester(unittest.TestCase):
             return outputs, acc1_avg, acc5_avg, fps_avg, latency_avg
 
     def test_graph_transformation(self):
-        if not fluid.core.is_compiled_with_mkldnn():
+        if not paddle.fluid.core.is_compiled_with_mkldnn():
             return
 
         infer_model_path = test_case_args.infer_model

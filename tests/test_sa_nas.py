@@ -17,7 +17,6 @@ import os
 import sys
 import unittest
 import paddle
-import paddle.fluid as fluid
 from static_case import StaticCase
 from paddleslim.nas import SANAS
 from paddleslim.analysis import flops
@@ -82,12 +81,12 @@ class TestSANAS(StaticCase):
 
     def test_all_function(self):
         ### unittest for next_archs
-        next_program = fluid.Program()
-        startup_program = fluid.Program()
-        token2arch_program = fluid.Program()
+        next_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        token2arch_program = paddle.static.Program()
 
-        with fluid.program_guard(next_program, startup_program):
-            inputs = fluid.data(
+        with paddle.static.program_guard(next_program, startup_program):
+            inputs = paddle.static.data(
                 name='input', shape=[None, 3, 32, 32], dtype='float32')
             archs = self.sanas.next_archs()
             for arch in archs:
@@ -99,8 +98,8 @@ class TestSANAS(StaticCase):
         self.assertTrue(self.sanas.reward(float(1.0)), "reward is False")
 
         ### uniitest for tokens2arch
-        with fluid.program_guard(token2arch_program, startup_program):
-            inputs = fluid.data(
+        with paddle.static.program_guard(token2arch_program, startup_program):
+            inputs = paddle.static.data(
                 name='input', shape=[None, 3, 32, 32], dtype='float32')
             arch = self.sanas.tokens2arch(self.sanas.current_info()[
                 'current_tokens'])

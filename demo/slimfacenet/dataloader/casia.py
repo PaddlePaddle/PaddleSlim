@@ -78,7 +78,7 @@ class CASIA_Face(object):
 if __name__ == '__main__':
     data_dir = 'PATH to CASIA dataset'
 
-    place = fluid.CPUPlace()
+    place = paddle.CPUPlace()
     with fluid.dygraph.guard(place):
         dataset = CASIA_Face(root=data_dir)
         print(len(dataset))

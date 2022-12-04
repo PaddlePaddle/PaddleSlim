@@ -17,10 +17,8 @@ import unittest
 import time
 import numpy as np
 import paddle
-import paddle.fluid as fluid
-from paddleslim.prune import sensitivity
-import paddle.vision.transforms as T
 from paddle.static import InputSpec as Input
+from paddleslim.prune import sensitivity
 from paddleslim.dygraph import L1NormFilterPruner
 
 
@@ -29,7 +27,10 @@ class TestSensitivity(unittest.TestCase):
         super(TestSensitivity, self).__init__(methodName)
         self._pruner = pruner
         self._param_names = param_names
-        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        transform = paddle.vision.transforms.Compose([
+            paddle.vision.transforms.Transpose(),
+            paddle.vision.transforms.Normalize([127.5], [127.5])
+        ])
         self.train_dataset = paddle.vision.datasets.MNIST(
             mode="train", backend="cv2", transform=transform)
         self.val_dataset = paddle.vision.datasets.MNIST(
@@ -95,25 +96,27 @@ class TestSensitivity(unittest.TestCase):
 
     def static_sen(self, params):
         paddle.enable_static()
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[None, 1, 28, 28])
-                label = fluid.data(name="label", shape=[None, 1], dtype="int64")
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.utils.unique_name.guard():
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(
+                    name="image", shape=[None, 1, 28, 28])
+                label = paddle.static.data(
+                    name="label", shape=[None, 1], dtype="int64")
                 model = paddle.vision.models.LeNet()
                 out = model(input)
-                acc_top1 = fluid.layers.accuracy(input=out, label=label, k=1)
+                acc_top1 = paddle.static.accuracy(input=out, label=label, k=1)
         eval_program = main_program.clone(for_test=True)
-        place = fluid.CUDAPlace(0)
-        scope = fluid.global_scope()
-        exe = fluid.Executor(place)
+        place = paddle.CUDAPlace(0)
+        scope = paddle.static.global_scope()
+        exe = paddle.static.Executor(place)
         exe.run(startup_program)
 
         val_reader = paddle.fluid.io.batch(self.val_reader, batch_size=128)
 
         def eval_func(program):
-            feeder = fluid.DataFeeder(
+            feeder = paddle.fluid.DataFeeder(
                 feed_list=['image', 'label'], place=place, program=program)
             acc_set = []
             for data in val_reader():

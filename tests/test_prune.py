@@ -14,8 +14,8 @@
 import sys
 sys.path.append("../")
 import unittest
+import paddle
 from static_case import StaticCase
-import paddle.fluid as fluid
 from paddleslim.prune import Pruner
 from static_case import StaticCase
 from layers import conv_bn_layer
@@ -23,8 +23,8 @@ from layers import conv_bn_layer
 
 class TestPrune(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         #   X       X              O       X              O
         # conv1-->conv2-->sum1-->conv3-->conv4-->sum2-->conv5-->conv6
         #     |            ^ |                    ^
@@ -32,8 +32,8 @@ class TestPrune(StaticCase):
         #
         # X: prune output channels
         # O: prune input channels
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2
@@ -43,16 +43,16 @@ class TestPrune(StaticCase):
             conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
             conv6 = conv_bn_layer(conv5, 8, 3, "conv6")
 
-            conv7 = fluid.layers.conv2d_transpose(
+            conv7 = paddle.static.nn.conv2d_transpose(
                 input=conv6, num_filters=16, filter_size=2, stride=2)
 
         shapes = {}
         for param in main_program.global_block().all_parameters():
             shapes[param.name] = param.shape
 
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
-        scope = fluid.Scope()
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         main_program, _, _ = pruner.prune(
