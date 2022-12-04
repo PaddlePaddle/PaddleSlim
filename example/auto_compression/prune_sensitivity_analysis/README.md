@@ -165,5 +165,6 @@ resize_size = global_config[
 传入测试回调函数，配置（主要包括模型位置和模型名称等信息），分析文件保存的位置，要分析的裁剪比例和可以接受的精度目标损失。如果不传入可以接受的精度目标损失，则只返回敏感度分析情况。**把自动压缩代码中调用AutoCompression 和 ac.compress 的代码替换成以下代码即可**
 
 ```python
-analysis_prune(eval_function, global_config, args.analysis_file, args.pruned_ratios, args.target_loss)
+analysis_prune(eval_function, global_config['model_dir'], global_config['model_filename'], global_config['params_filename'], args.analysis_file,
+               args.pruned_ratios, args.target_loss)
 ```

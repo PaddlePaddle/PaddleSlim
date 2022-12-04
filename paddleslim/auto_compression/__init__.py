@@ -17,17 +17,11 @@ from .compressor import *
 from .strategy_config import *
 from .config_helpers import *
 from .utils import *
+from .analysis import *
 
 __all__ = [
-    "AutoCompression",
-    "QuantAware",
-    "QuantPost",
-    "Distillation",
-    "MultiTeacherDistillation",
-    "HyperParameterOptimization",
-    "Prune",
-    "UnstructurePrune",
-    "ProgramInfo",
-    "TrainConfig",
-    "predict_compressed_model",
+    "AutoCompression", "QuantAware", "QuantPost", "Distillation",
+    "MultiTeacherDistillation", "HyperParameterOptimization", "Prune",
+    "UnstructurePrune", "ProgramInfo", "TrainConfig",
+    "predict_compressed_model", "analysis_prune"
 ]

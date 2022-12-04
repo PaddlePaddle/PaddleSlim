@@ -8,6 +8,8 @@ from ..prune import sensitivity, get_ratios_by_loss
 
 _logger = get_logger(__name__, level=logging.INFO)
 
+__all__ = ['analysis_prune']
+
 
 def get_prune_params(program):
     params = []
@@ -21,7 +23,9 @@ def get_prune_params(program):
 
 
 def analysis_prune(eval_function,
-                   global_config,
+                   model_dir,
+                   model_filename,
+                   params_filename,
                    analysis_file,
                    pruned_ratios,
                    target_loss=None):
@@ -29,9 +33,9 @@ def analysis_prune(eval_function,
     places = paddle.device._convert_to_place(devices)
     exe = paddle.static.Executor(places)
     [eval_program, feed_target_names, fetch_targets] = (load_inference_model(
-        global_config['model_dir'],
-        model_filename=global_config['model_filename'],
-        params_filename=global_config['params_filename'],
+        model_dir,
+        model_filename=model_filename,
+        params_filename=params_filename,
         executor=exe))
     params = get_prune_params(eval_program)
 

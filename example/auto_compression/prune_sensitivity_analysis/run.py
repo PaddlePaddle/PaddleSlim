@@ -136,7 +136,9 @@ def main():
     resize_size = global_config[
         'resize_size'] if 'resize_size' in global_config else 256
 
-    analysis_prune(eval_function, global_config, args.analysis_file,
+    analysis_prune(eval_function, global_config['model_dir'],
+                   global_config['model_filename'],
+                   global_config['params_filename'], args.analysis_file,
                    args.pruned_ratios, args.target_loss)
 
 
