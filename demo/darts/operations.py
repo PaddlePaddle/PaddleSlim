@@ -15,8 +15,7 @@
 import paddle.fluid as fluid
 from paddle.nn import Conv2D
 from paddle.fluid.dygraph.nn import Pool2D, BatchNorm
-from paddle.fluid.param_attr import ParamAttr
-from paddle.fluid.initializer import ConstantInitializer, MSRAInitializer
+from paddle.nn.initializer import Constant, KaimingUniform
 
 
 OPS = {
@@ -59,12 +58,12 @@ OPS = {
 
 
 def bn_param_config(affine=False):
-    gama = ParamAttr(initializer=ConstantInitializer(value=1), trainable=affine)
-    beta = ParamAttr(initializer=ConstantInitializer(value=0), trainable=affine)
+    gama = paddle.ParamAttr(initializer=Constant(value=1), trainable=affine)
+    beta = paddle.ParamAttr(initializer=Constant(value=0), trainable=affine)
     return gama, beta
 
 
-class Zero(fluid.dygraph.Layer):
+class Zero(paddle.nn.Layer):
     def __init__(self, stride):
         super(Zero, self).__init__()
         self.stride = stride
@@ -72,12 +71,12 @@ class Zero(fluid.dygraph.Layer):
 
     def forward(self, x):
         pooled = self.pool(x)
-        x = fluid.layers.zeros_like(
-            x) if self.stride == 1 else fluid.layers.zeros_like(pooled)
+        x = paddle.zeros_like(x) if self.stride == 1 else paddle.zeros_like(
+            pooled)
         return x
 
 
-class Identity(fluid.dygraph.Layer):
+class Identity(paddle.nn.Layer):
     def __init__(self):
         super(Identity, self).__init__()
 
@@ -85,7 +84,7 @@ class Identity(fluid.dygraph.Layer):
         return x
 
 
-class FactorizedReduce(fluid.dygraph.Layer):
+class FactorizedReduce(paddle.nn.Layer):
     def __init__(self, c_in, c_out, affine=True):
         super(FactorizedReduce, self).__init__()
         assert c_out % 2 == 0
@@ -95,7 +94,7 @@ class FactorizedReduce(fluid.dygraph.Layer):
             filter_size=1,
             stride=2,
             padding=0,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv2 = Conv2D(
             num_channels=c_in,
@@ -103,20 +102,20 @@ class FactorizedReduce(fluid.dygraph.Layer):
             filter_size=1,
             stride=2,
             padding=0,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn = BatchNorm(num_channels=c_out, param_attr=gama, bias_attr=beta)
 
     def forward(self, x):
-        x = fluid.layers.relu(x)
-        out = fluid.layers.concat(
+        x = paddle.nn.functional.relu(x)
+        out = paddle.concat(
             input=[self.conv1(x), self.conv2(x[:, :, 1:, 1:])], axis=1)
         out = self.bn(out)
         return out
 
 
-class SepConv(fluid.dygraph.Layer):
+class SepConv(paddle.nn.Layer):
     def __init__(self, c_in, c_out, kernel_size, stride, padding, affine=True):
         super(SepConv, self).__init__()
         self.conv1 = Conv2D(
@@ -127,7 +126,7 @@ class SepConv(fluid.dygraph.Layer):
             padding=padding,
             groups=c_in,
             use_cudnn=False,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv2 = Conv2D(
             num_channels=c_in,
@@ -135,7 +134,7 @@ class SepConv(fluid.dygraph.Layer):
             filter_size=1,
             stride=1,
             padding=0,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn1 = BatchNorm(num_channels=c_in, param_attr=gama, bias_attr=beta)
@@ -147,7 +146,7 @@ class SepConv(fluid.dygraph.Layer):
             padding=padding,
             groups=c_in,
             use_cudnn=False,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv4 = Conv2D(
             num_channels=c_in,
@@ -155,25 +154,25 @@ class SepConv(fluid.dygraph.Layer):
             filter_size=1,
             stride=1,
             padding=0,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn2 = BatchNorm(
             num_channels=c_out, param_attr=gama, bias_attr=beta)
 
     def forward(self, x):
-        x = fluid.layers.relu(x)
+        x = paddle.nn.functional.relu(x)
         x = self.conv1(x)
         x = self.conv2(x)
         bn1 = self.bn1(x)
-        x = fluid.layers.relu(bn1)
+        x = paddle.nn.functional.relu(bn1)
         x = self.conv3(x)
         x = self.conv4(x)
         bn2 = self.bn2(x)
         return bn2
 
 
-class DilConv(fluid.dygraph.Layer):
+class DilConv(paddle.nn.Layer):
     def __init__(self,
                  c_in,
                  c_out,
@@ -192,28 +191,28 @@ class DilConv(fluid.dygraph.Layer):
             dilation=dilation,
             groups=c_in,
             use_cudnn=False,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv2 = Conv2D(
             num_channels=c_in,
             num_filters=c_out,
             filter_size=1,
             padding=0,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn1 = BatchNorm(
             num_channels=c_out, param_attr=gama, bias_attr=beta)
 
     def forward(self, x):
-        x = fluid.layers.relu(x)
+        x = paddle.nn.functional.relu(x)
         x = self.conv1(x)
         x = self.conv2(x)
         out = self.bn1(x)
         return out
 
 
-class Conv_7x1_1x7(fluid.dygraph.Layer):
+class Conv_7x1_1x7(paddle.nn.Layer):
     def __init__(self, c_in, c_out, stride, affine=True):
         super(Conv_7x1_1x7, self).__init__()
         self.conv1 = Conv2D(
@@ -221,28 +220,28 @@ class Conv_7x1_1x7(fluid.dygraph.Layer):
             num_filters=c_out,
             filter_size=(1, 7),
             padding=(0, 3),
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         self.conv2 = Conv2D(
             num_channels=c_in,
             num_filters=c_out,
             filter_size=(7, 1),
             padding=(3, 0),
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn1 = BatchNorm(
             num_channels=c_out, param_attr=gama, bias_attr=beta)
 
     def forward(self, x):
-        x = fluid.layers.relu(x)
+        x = paddle.nn.functional.relu(x)
         x = self.conv1(x)
         x = self.conv2(x)
         out = self.bn1(x)
         return out
 
 
-class ReLUConvBN(fluid.dygraph.Layer):
+class ReLUConvBN(paddle.nn.Layer):
     def __init__(self, c_in, c_out, kernel_size, stride, padding, affine=True):
         super(ReLUConvBN, self).__init__()
         self.conv = Conv2D(
@@ -251,13 +250,13 @@ class ReLUConvBN(fluid.dygraph.Layer):
             filter_size=kernel_size,
             stride=stride,
             padding=padding,
-            param_attr=fluid.ParamAttr(initializer=MSRAInitializer()),
+            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=False)
         gama, beta = bn_param_config(affine)
         self.bn = BatchNorm(num_channels=c_out, param_attr=gama, bias_attr=beta)
 
     def forward(self, x):
-        x = fluid.layers.relu(x)
+        x = paddle.nn.functional.relu(x)
         x = self.conv(x)
         out = self.bn(x)
         return out

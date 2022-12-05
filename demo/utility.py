@@ -27,9 +27,7 @@ import hashlib
 import tarfile
 import zipfile
 import logging
-import paddle.fluid as fluid
-from paddle.fluid import core
-from paddle.fluid.framework import Program
+from paddle.static import Program
 
 logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
 _logger = logging.getLogger(__name__)
@@ -77,90 +75,6 @@ def add_arguments(argname, type, default, help, argparser, **kwargs):
         type=type,
         help=help + ' Default: %(default)s.',
         **kwargs)
-
-
-def save_persistable_nodes(executor, dirname, graph):
-    """
-    Save persistable nodes to the given directory by the executor.
-
-    Args:
-        executor(Executor): The executor to run for saving node values.
-        dirname(str): The directory path.
-        graph(IrGraph): All the required persistable nodes in the graph will be saved.
-    """
-    persistable_node_names = set()
-    persistable_nodes = []
-    all_persistable_nodes = graph.all_persistable_nodes()
-    for node in all_persistable_nodes:
-        name = node.name()
-        if name not in persistable_node_names:
-            persistable_node_names.add(name)
-            persistable_nodes.append(node)
-    program = Program()
-    var_list = []
-    for node in persistable_nodes:
-        var_desc = node.var()
-        if var_desc.type() == core.VarDesc.VarType.RAW or \
-                var_desc.type() == core.VarDesc.VarType.READER:
-            continue
-        var = program.global_block().create_var(
-            name=var_desc.name(),
-            shape=var_desc.shape(),
-            dtype=var_desc.dtype(),
-            type=var_desc.type(),
-            lod_level=var_desc.lod_level(),
-            persistable=var_desc.persistable())
-        var_list.append(var)
-    fluid.io.save_vars(executor=executor, dirname=dirname, vars=var_list)
-
-
-def load_persistable_nodes(executor, dirname, graph):
-    """
-    Load persistable node values from the given directory by the executor.
-
-    Args:
-        executor(Executor): The executor to run for loading node values.
-        dirname(str): The directory path.
-        graph(IrGraph): All the required persistable nodes in the graph will be loaded.
-    """
-    persistable_node_names = set()
-    persistable_nodes = []
-    all_persistable_nodes = graph.all_persistable_nodes()
-    for node in all_persistable_nodes:
-        name = node.name()
-        if name not in persistable_node_names:
-            persistable_node_names.add(name)
-            persistable_nodes.append(node)
-    program = Program()
-    var_list = []
-
-    def _exist(var):
-        return os.path.exists(os.path.join(dirname, var.name))
-
-    def _load_var(name, scope):
-        return np.array(scope.find_var(name).get_tensor())
-
-    def _store_var(name, array, scope, place):
-        tensor = scope.find_var(name).get_tensor()
-        tensor.set(array, place)
-
-    for node in persistable_nodes:
-        var_desc = node.var()
-        if var_desc.type() == core.VarDesc.VarType.RAW or \
-                var_desc.type() == core.VarDesc.VarType.READER:
-            continue
-        var = program.global_block().create_var(
-            name=var_desc.name(),
-            shape=var_desc.shape(),
-            dtype=var_desc.dtype(),
-            type=var_desc.type(),
-            lod_level=var_desc.lod_level(),
-            persistable=var_desc.persistable())
-        if _exist(var):
-            var_list.append(var)
-        else:
-            _logger.info("Cannot find the var %s!!!" % (node.name()))
-    fluid.io.load_vars(executor=executor, dirname=dirname, vars=var_list)
 
 
 def _download(url, path, md5sum=None):

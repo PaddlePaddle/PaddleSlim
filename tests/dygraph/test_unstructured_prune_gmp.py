@@ -4,7 +4,6 @@ import unittest
 import paddle
 import numpy as np
 from paddleslim import UnstructuredPruner, GMPUnstructuredPruner
-from paddle.vision.models import mobilenet_v1
 
 
 class TestUnstructuredPruner(unittest.TestCase):
@@ -14,7 +13,8 @@ class TestUnstructuredPruner(unittest.TestCase):
         self._gen_model()
 
     def _gen_model(self):
-        self.net = mobilenet_v1(num_classes=10, pretrained=False)
+        self.net = paddle.vision.models.mobilenet_v1(
+            num_classes=10, pretrained=False)
         configs = {
             'stable_iterations': 0,
             'pruning_iterations': 1000,

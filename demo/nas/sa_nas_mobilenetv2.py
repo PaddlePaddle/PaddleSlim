@@ -12,7 +12,6 @@ import paddle.nn as nn
 import paddle.static as static
 import paddle.nn.functional as F
 import paddle.vision.transforms as T
-from paddle import ParamAttr
 from paddleslim.analysis import flops
 from paddleslim.nas import SANAS
 from paddleslim.common import get_logger

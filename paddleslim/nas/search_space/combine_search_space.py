@@ -17,8 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
+import paddle
 import logging
 from ...common import get_logger
 from .search_space_base import SearchSpaceBase
@@ -95,6 +94,8 @@ class CombineSearchSpace(object):
                 )
 
         space = cls(input_size, output_size, block_num, block_mask=block_mask)
+        print(f"SEARCHSPACE: {SEARCHSPACE}")
+        print(f"space:{space}")
         return space
 
     def init_tokens(self, tokens=None):

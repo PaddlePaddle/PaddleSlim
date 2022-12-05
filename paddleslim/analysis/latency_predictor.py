@@ -198,8 +198,7 @@ class TableLatencyPredictor(LatencyPredictor):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
+            fluid_program = paddle.static.Program.parse_from_string(f.read())
 
         graph = GraphWrapper(fluid_program)
 

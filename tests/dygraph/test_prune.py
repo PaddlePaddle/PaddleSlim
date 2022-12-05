@@ -15,9 +15,7 @@ import sys
 sys.path.append("../../")
 import unittest
 import paddle
-import paddle.fluid as fluid
 from paddleslim import L1NormFilterPruner
-from paddle.vision.models import mobilenet_v1, resnet50
 from paddleslim.prune import Pruner
 
 
@@ -30,6 +28,7 @@ class TestPrune(unittest.TestCase):
     def runTest(self):
         static_shapes = self.static_prune(self._net, self._ratios)
         dygraph_shapes = self.dygraph_prune(self._net, self._ratios)
+        lazy_dygraph_shapes = self.dygraph_lazy_prune(self._net, self._ratios)
         all_right = True
         for _name, _shape in static_shapes.items():
             if dygraph_shapes[_name] != list(_shape):
@@ -39,11 +38,18 @@ class TestPrune(unittest.TestCase):
                 all_right = False
         self.assertTrue(all_right)
 
-    def dygraph_prune(self, net, ratios):
+    def dygraph_lazy_prune(self, net, ratios):
+        if paddle.framework.core.is_compiled_with_cuda():
+            paddle.set_device('gpu')
+            self.dygraph_prune(net, ratios, apply="lazy")
+        paddle.set_device('cpu')
+        return self.dygraph_prune(net, ratios, apply="lazy")
+
+    def dygraph_prune(self, net, ratios, apply="impretive"):
         paddle.disable_static()
         model = net(pretrained=False)
         pruner = L1NormFilterPruner(model, [1, 3, 16, 16])
-        pruner.prune_vars(ratios, 0)
+        pruner.prune_vars(ratios, 0, apply=apply)
         shapes = {}
         for param in model.parameters():
             shapes[param.name] = param.shape
@@ -52,17 +58,18 @@ class TestPrune(unittest.TestCase):
 
     def static_prune(self, net, ratios):
         paddle.enable_static()
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
-        with fluid.unique_name.guard():
-            with fluid.program_guard(main_program, startup_program):
-                input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
+        with paddle.utils.unique_name.guard():
+            with paddle.static.program_guard(main_program, startup_program):
+                input = paddle.static.data(
+                    name="image", shape=[None, 3, 16, 16])
                 model = net(pretrained=False)
                 out = model(input)
 
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
-        scope = fluid.Scope()
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         main_program, _, _ = pruner.prune(
@@ -85,13 +92,14 @@ class TestPrune(unittest.TestCase):
 def add_cases(suite):
     suite.addTest(
         TestPrune(
-            net=mobilenet_v1,
+            net=paddle.vision.models.mobilenet_v1,
             ratios={"conv2d_22.w_0": 0.5,
                     "conv2d_8.w_0": 0.6}))
     suite.addTest(
         TestPrune(
-            net=resnet50, ratios={"conv2d_22.w_0": 0.5,
-                                  "conv2d_8.w_0": 0.6}))
+            net=paddle.vision.models.resnet50,
+            ratios={"conv2d_22.w_0": 0.5,
+                    "conv2d_8.w_0": 0.6}))
 
 
 def load_tests(loader, standard_tests, pattern):

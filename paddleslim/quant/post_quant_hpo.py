@@ -21,7 +21,6 @@ from time import gmtime, strftime
 import numpy as np
 import shutil
 import paddle
-import paddle.fluid as fluid
 import logging
 import argparse
 import functools
@@ -191,14 +190,14 @@ def eval_quant_model():
     quant_scope = paddle.static.Scope()
     with paddle.static.scope_guard(float_scope):
         [infer_prog_float, feed_target_names_float, fetch_targets_float] = \
-            fluid.io.load_inference_model(dirname=g_quant_config.float_infer_model_path, \
+            paddle.fluid.io.load_inference_model(dirname=g_quant_config.float_infer_model_path, \
             model_filename=g_quant_config.model_filename, \
             params_filename=g_quant_config.params_filename, \
             executor=g_quant_config.executor)
 
     with paddle.static.scope_guard(quant_scope):
         [infer_prog_quant, feed_target_names_quant, fetch_targets_quant] = \
-            fluid.io.load_inference_model(dirname=g_quant_model_cache_path, \
+            paddle.fluid.io.load_inference_model(dirname=g_quant_model_cache_path, \
             model_filename=g_quant_config.save_model_filename, \
             params_filename=g_quant_config.save_params_filename, \
             executor=g_quant_config.executor)
@@ -304,7 +303,7 @@ def quantize(cfg):
         float_scope = paddle.static.Scope()
         quant_scope = paddle.static.Scope()
         with paddle.static.scope_guard(float_scope):
-            [float_inference_program, feed_target_names, fetch_targets]= fluid.io.load_inference_model( \
+            [float_inference_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
                     dirname=g_quant_config.float_infer_model_path, \
                     model_filename=g_quant_config.model_filename, params_filename=g_quant_config.params_filename,
                     executor=g_quant_config.executor)
@@ -313,7 +312,7 @@ def quantize(cfg):
                 feed_target_names, fetch_targets)
 
         with paddle.static.scope_guard(quant_scope):
-            [quant_inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model( \
+            [quant_inference_program, feed_target_names, fetch_targets] = paddle.static.load_inference_model( \
                     dirname=g_quant_model_cache_path, \
                     model_filename=g_quant_config.model_filename, params_filename=g_quant_config.params_filename,
                     executor=g_quant_config.executor)

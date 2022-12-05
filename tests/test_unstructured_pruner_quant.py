@@ -2,7 +2,6 @@ import sys
 sys.path.append("../")
 import unittest
 from static_case import StaticCase
-import paddle.fluid as fluid
 import paddle
 from paddleslim.prune import UnstructuredPruner
 from layers import conv_bn_layer
@@ -24,15 +23,17 @@ class TestStaticMasks(StaticCase):
         startup_program = paddle.static.default_startup_program()
         with paddle.static.program_guard(main_program, startup_program):
             input = paddle.static.data(name='image', shape=[None, 3, 16, 16])
-            label = fluid.data(name='label', shape=[None, 1], dtype='int64')
+            label = paddle.static.data(
+                name='label', shape=[None, 1], dtype='int64')
             conv1 = conv_bn_layer(input, 8, 1, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 1, "conv2")
-            conv3 = fluid.layers.conv2d_transpose(
+            conv3 = paddle.static.nn.conv2d_transpose(
                 input=conv2, num_filters=16, filter_size=2, stride=2)
-            predict = fluid.layers.fc(input=conv3, size=10, act='softmax')
-            cost = fluid.layers.cross_entropy(input=predict, label=label)
-            adam_optimizer = fluid.optimizer.AdamOptimizer(0.01)
-            avg_cost = fluid.layers.mean(cost)
+            predict = paddle.static.nn.fc(conv3, 10, activation='softmax')
+            cost = paddle.nn.functional.cross_entropy(
+                input=predict, label=label)
+            adam_optimizer = paddle.optimizer.Adam(learning_rate=0.01)
+            avg_cost = paddle.mean(x=cost)
             adam_optimizer.minimize(avg_cost)
 
         place = paddle.static.cpu_places()[0]

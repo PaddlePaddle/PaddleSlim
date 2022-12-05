@@ -17,7 +17,6 @@ import copy
 import math
 import numpy as np
 import paddle
-import paddle.fluid as fluid
 
 __all__ = ['EvolutionaryController', 'RLBaseController']
 
@@ -63,12 +62,6 @@ class RLBaseController(object):
 
     def update(self, *args, **kwargs):
         raise NotImplementedError('Abstract method.')
-
-    def save_controller(self, program, output_dir):
-        fluid.save(program, output_dir)
-
-    def load_controller(self, program, load_dir):
-        fluid.load(program, load_dir)
 
     def get_params(self, program):
         var_dict = {}
