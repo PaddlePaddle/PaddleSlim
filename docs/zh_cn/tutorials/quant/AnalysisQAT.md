@@ -66,6 +66,13 @@ class ImageNetDataset(DatasetFolder):
     def __len__(self):
         return len(self.samples)
 
+train_dataset = ImageNetDataset(
+    "./ILSVRC2012_data_demo/ILSVRC2012/train/")
+image = paddle.static.data(
+    name='inputs', shape=[None] + [3, 224, 224], dtype='float32')
+train_loader = paddle.io.DataLoader(
+    train_dataset, feed_list=[image], batch_size=8, return_list=False)
+
 analyzer = AnalysisQAT(
     float_model_dir="./MobileNetV1_infer",
     quant_model_dir="./MobileNetV1_QAT",
