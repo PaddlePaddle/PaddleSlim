@@ -62,7 +62,7 @@ class TestSensitivity(StaticCase):
             return acc_val_mean
 
         def eval_func_for_args(program, feed_list):
-            feeder = fluid.DataFeeder(
+            feeder = paddle.fluid.DataFeeder(
                 feed_list=feed_list, place=place, program=program)
 
             acc_set = []
