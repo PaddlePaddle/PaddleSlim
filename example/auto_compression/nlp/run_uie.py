@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import json
 import functools
 from functools import partial
 import numpy as np
@@ -10,7 +11,7 @@ import paddle.nn as nn
 from paddle.io import Dataset, BatchSampler, DataLoader
 from paddlenlp.transformers import AutoModelForTokenClassification, AutoTokenizer
 from paddlenlp.datasets import load_dataset
-from paddlenlp.data import Stack, Tuple, Pad
+from paddlenlp.data import Stack, Tuple, Pad, Dict
 from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import SpanEvaluator
 
@@ -49,7 +50,11 @@ def map_offset(ori_offset, offset_mapping):
     return -1
 
 
-def convert_example(example, tokenizer, max_seq_len, multilingual=True):
+def convert_example(example,
+                    tokenizer,
+                    max_seq_len,
+                    multilingual=True,
+                    is_test=False):
     """
     example: {
         title
@@ -87,21 +92,35 @@ def convert_example(example, tokenizer, max_seq_len, multilingual=True):
         start_ids[start] = 1.0
         end_ids[end] = 1.0
     if multilingual:
-        tokenized_output = {
-            "input_ids": encoded_inputs["input_ids"],
-            "pos_ids": encoded_inputs["position_ids"],
-            "start_positions": start_ids,
-            "end_positions": end_ids
-        }
+        if not is_test:
+            tokenized_output = {
+                "input_ids": encoded_inputs["input_ids"],
+                "token_type_ids": encoded_inputs["token_type_ids"],
+                "start_ids": start_ids,
+                "end_ids": end_ids
+            }
+        else:
+            tokenized_output = {
+                "input_ids": encoded_inputs["input_ids"],
+                "token_type_ids": encoded_inputs["token_type_ids"],
+            }
     else:
-        tokenized_output = {
-            "input_ids": encoded_inputs["input_ids"],
-            "token_type_ids": encoded_inputs["token_type_ids"],
-            "pos_ids": encoded_inputs["position_ids"],
-            "att_mask": encoded_inputs["attention_mask"],
-            "start_positions": start_ids,
-            "end_positions": end_ids
-        }
+        if not is_test:
+            tokenized_output = {
+                "input_ids": encoded_inputs["input_ids"],
+                "token_type_ids": encoded_inputs["token_type_ids"],
+                "pos_ids": encoded_inputs["position_ids"],
+                "att_mask": encoded_inputs["attention_mask"],
+                "start_ids": start_ids,
+                "end_ids": end_ids
+            }
+        else:
+            tokenized_output = {
+                "input_ids": encoded_inputs["input_ids"],
+                "token_type_ids": encoded_inputs["token_type_ids"],
+                "pos_ids": encoded_inputs["position_ids"],
+                "att_mask": encoded_inputs["attention_mask"],
+            }
     return tokenized_output
 
 
@@ -110,9 +129,10 @@ def create_data_holder(multilingual=True):
     Define the input data holder for the glue task.
     """
 
+    return_list = []
     input_ids = paddle.static.data(
         name="input_ids", shape=[-1, -1], dtype="int64")
-    return_lis = [input_ids]
+    return_list = [input_ids]
 
     token_type_ids = paddle.static.data(
         name="token_type_ids", shape=[-1, -1], dtype="int64")
@@ -135,14 +155,94 @@ def create_data_holder(multilingual=True):
     return return_list
 
 
+def reader_proprecess(data_path, max_seq_len=512):
+    """
+    read json
+    """
+    with open(data_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            json_line = json.loads(line)
+            content = json_line['content'].strip()
+            prompt = json_line['prompt']
+            # Model Input is aslike: [CLS] Prompt [SEP] Content [SEP]
+            # It include three summary tokens.
+            if max_seq_len <= len(prompt) + 3:
+                raise ValueError(
+                    "The value of max_seq_len is too small, please set a larger value"
+                )
+            max_content_len = max_seq_len - len(prompt) - 3
+            if len(content) <= max_content_len:
+                yield json_line
+            else:
+                result_list = json_line['result_list']
+                json_lines = []
+                accumulate = 0
+                while True:
+                    cur_result_list = []
+
+                    for result in result_list:
+                        if result['start'] + 1 <= max_content_len < result[
+                                'end']:
+                            max_content_len = result['start']
+                            break
+
+                    cur_content = content[:max_content_len]
+                    res_content = content[max_content_len:]
+
+                    while True:
+                        if len(result_list) == 0:
+                            break
+                        elif result_list[0]['end'] <= max_content_len:
+                            if result_list[0]['end'] > 0:
+                                cur_result = result_list.pop(0)
+                                cur_result_list.append(cur_result)
+                            else:
+                                cur_result_list = [
+                                    result for result in result_list
+                                ]
+                                break
+                        else:
+                            break
+
+                    json_line = {
+                        'content': cur_content,
+                        'result_list': cur_result_list,
+                        'prompt': prompt
+                    }
+                    json_lines.append(json_line)
+
+                    for result in result_list:
+                        if result['end'] <= 0:
+                            break
+                        result['start'] -= max_content_len
+                        result['end'] -= max_content_len
+                    accumulate += max_content_len
+                    max_content_len = max_seq_len - len(prompt) - 3
+                    if len(res_content) == 0:
+                        break
+                    elif len(res_content) < max_content_len:
+                        json_line = {
+                            'content': res_content,
+                            'result_list': result_list,
+                            'prompt': prompt
+                        }
+                        json_lines.append(json_line)
+                        break
+                    else:
+                        content = res_content
+
+                for json_line in json_lines:
+                    yield json_line
+
+
 def reader():
     train_ds = load_dataset(
-        reader,
+        reader_proprecess,
         data_path=global_config['train_data'],
         max_seq_len=global_config['max_seq_length'],
         lazy=False)
     dev_ds = load_dataset(
-        reader,
+        reader_proprecess,
         data_path=global_config['dev_data'],
         max_seq_len=global_config['max_seq_length'],
         lazy=False)
@@ -159,7 +259,8 @@ def reader():
     dev_trans_fn = partial(
         convert_example,
         tokenizer=tokenizer,
-        max_seq_len=global_config['max_seq_length'])
+        max_seq_len=global_config['max_seq_length'],
+        is_test=False)
     dev_ds = dev_ds.map(dev_trans_fn)
 
     batchify_fn = lambda samples, fn=Dict({
@@ -181,7 +282,7 @@ def reader():
         train_ds,
         batch_sampler=train_batch_sampler,
         return_list=False,
-        feed_list=[input_ids, token_type_ids, start_ids, end_ids],
+        feed_list=[input_ids, token_type_ids],
         collate_fn=batchify_fn)
 
     dev_batch_sampler = paddle.io.BatchSampler(
@@ -190,7 +291,7 @@ def reader():
         dev_ds,
         batch_sampler=dev_batch_sampler,
         return_list=False,
-        feed_list=[input_ids, token_type_ids],
+        feed_list=[input_ids, token_type_ids, start_ids, end_ids],
         collate_fn=dev_batchify_fn)
     return train_dataloader, eval_dataloader
 
@@ -202,8 +303,6 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                          feed={
                              'input_ids': data[0]['input_ids'],
                              'token_type_ids': data[0]['token_type_ids'],
-                             'pos_ids': data[0]['pos_ids'],
-                             'att_mask': data[0]['att_mask'],
                          },
                          fetch_list=test_fetch_list)
         paddle.disable_static()
