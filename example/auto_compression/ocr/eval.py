@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
 import logging
 import numpy as np
 import argparse
@@ -21,11 +19,10 @@ from tqdm import tqdm
 import paddle
 from paddleslim.common import load_config as load_slim_config
 from paddleslim.common import get_logger
-from paddleslim.auto_compression import AutoCompression
+
+import sys
+sys.path.append('../PaddleOCR')
 from ppocr.data import build_dataloader
-from ppocr.modeling.architectures import build_model
-from ppocr.losses import build_loss
-from ppocr.optimizer import build_optimizer
 from ppocr.postprocess import build_post_process
 from ppocr.metrics import build_metric
 
@@ -37,7 +34,7 @@ def argsparser():
     parser.add_argument(
         '--config_path',
         type=str,
-        default='./image_classification/configs/eval.yaml',
+        default='./configs/ppocrv3_det_qat_dist.yaml',
         help="path of compression strategy config.")
     parser.add_argument(
         '--model_dir',
@@ -45,20 +42,6 @@ def argsparser():
         default='./ch_PP-OCRv3_det_infer',
         help='model directory')
     return parser
-
-
-extra_input_models = [
-    "SRN", "NRTR", "SAR", "SEED", "SVTR", "VisionLAN", "RobustScanner"
-]
-
-
-def sample_generator(loader):
-    def __reader__():
-        for indx, data in enumerate(loader):
-            images = np.array(data[0])
-            yield images
-
-    return __reader__
 
 
 def eval():
@@ -70,15 +53,13 @@ def eval():
         exe,
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"])
-    print('Loaded model from: {}'.format(global_config["model_dir"]))
+    logger.info('Loaded model from: {}'.format(global_config["model_dir"]))
 
     val_loader = build_dataloader(all_config, 'Eval', devices, logger)
     post_process_class = build_post_process(all_config['PostProcess'],
                                             global_config)
     eval_class = build_metric(all_config['Metric'])
     model_type = global_config['model_type']
-    extra_input = True if global_config[
-        'algorithm'] in extra_input_models else False
 
     with tqdm(
             total=len(val_loader),
@@ -86,27 +67,20 @@ def eval():
             ncols=80) as t:
         for batch_id, batch in enumerate(val_loader):
             images = batch[0]
-            if extra_input:
-                preds = exe.run(
-                    val_program,
-                    feed={feed_target_names[0]: images,
-                          'data': batch[1:]},
-                    fetch_list=fetch_targets)
-            else:
-                preds = exe.run(val_program,
-                                feed={feed_target_names[0]: images},
-                                fetch_list=fetch_targets)
+            preds, = exe.run(val_program,
+                             feed={feed_target_names[0]: images},
+                             fetch_list=fetch_targets)
 
             batch_numpy = []
             for item in batch:
                 batch_numpy.append(np.array(item))
 
             if model_type == 'det':
-                preds_map = {'maps': preds[0]}
+                preds_map = {'maps': preds}
                 post_result = post_process_class(preds_map, batch_numpy[1])
                 eval_class(post_result, batch_numpy)
             elif model_type == 'rec':
-                post_result = post_process_class(preds[0], batch_numpy[1])
+                post_result = post_process_class(preds, batch_numpy[1])
                 eval_class(post_result, batch_numpy)
 
             t.update()
