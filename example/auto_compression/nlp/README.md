@@ -30,6 +30,12 @@
 | ERNIE 3.0-Medium | Base模型| 75.35 | 57.45 | 60.17 | 81.16 | 77.19 | 80.59 | 79.70 | 73.09 |
 | ERNIE 3.0-Medium | 剪枝+量化训练| 74.17 | 56.84 | 59.75 | 80.54 | 76.03 | 76.97 | 80.80 | 72.16 |
 
+| 模型 | 策略 | 报销工单数据 |
+| UIE-base | Base模型 | [91.83](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base.tar) |
+| UIE-base | 量化训练 | [95.80](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base_qat_model.tar) |
+
+注：UIE模型精度为在5-shot(每个类别包含5条标注数据)数据集上进行模型微调的结果，压缩后精度更高可能原因是过拟合在当前数据集。
+
 模型在不同任务上平均精度以及加速对比如下：
 |  模型 |策略| Accuracy（avg） | 预测时延<sup><small>FP32</small><sup><br><sup> | 预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 加速比 |
 |:-------:|:--------:|:----------:|:------------:|:------:|:------:|:------:|
@@ -37,6 +43,8 @@
 |PP-MiniLM| 剪枝+离线量化 |  71.85 | - | - | 15.76ms | 5.99x |
 |ERNIE 3.0-Medium| Base模型| 73.09  | 89.71ms | 20.76ms | - | - |
 |ERNIE 3.0-Medium| 剪枝+量化训练 |  72.16 | - | - | 14.08ms | 6.37x |
+|UIE-base| Base模型| 91.83  | 42.66ms | 14.23ms | - | - |
+|UIE-base| 量化训练 |  95.80 | - | - | 10.94ms | 3.90x |
 
 性能测试的环境为
 - 硬件：NVIDIA Tesla T4 单卡
@@ -86,6 +94,7 @@ pip install paddlenlp
 |:------:|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|
 | PP-MiniLM | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/tnews.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/iflytek.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/cmnli.tar) | [ ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/ocnli.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/cluewsc.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/csl.tar) |
 | ERNIE 3.0-Medium | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/AFQMC.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/TNEWS.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/IFLYTEK.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CMNLI.tar) | [ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/OCNLI.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CLUEWSC2020.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CSL.tar) |
+| UIE-base | [报销工单](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base.tar) |
 
 从上表获得模型超链接, 并用以下命令下载推理模型文件:
 
@@ -107,6 +116,12 @@ tar -zxvf afqmc.tar
 ```shell
 export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path='./configs/pp-minilm/auto/afqmc.yaml' --save_dir='./save_afqmc_pruned/'
+```
+
+自动压缩UIE系列模型需要使用 run_uie.py 脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中训练部分的参数，将任务名称、模型类型、数据集名称、压缩参数传入，配置完成后便可对模型进行蒸馏量化训练。
+```shell
+export CUDA_VISIBLE_DEVICES=0
+python run_uie.py --config_path='./configs/uie/uie_base.yaml' --save_dir='./save_uie_qat/'
 ```
 
 如仅需验证模型精度，或验证压缩之后模型精度，在启动```run.py```脚本时，将配置文件中模型文件夹 ```model_dir``` 改为压缩之后保存的文件夹路径 ```./save_afqmc_pruned``` ，命令加上```--eval True```即可：
