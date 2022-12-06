@@ -30,6 +30,13 @@
 | ERNIE 3.0-Medium | Base模型| 75.35 | 57.45 | 60.17 | 81.16 | 77.19 | 80.59 | 79.70 | 73.09 |
 | ERNIE 3.0-Medium | 剪枝+量化训练| 74.17 | 56.84 | 59.75 | 80.54 | 76.03 | 76.97 | 80.80 | 72.16 |
 
+| 模型 | 策略 | 报销工单数据 |
+|:------:|:------:|:------:|
+| UIE-base | Base模型 | [91.83](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base.tar) |
+| UIE-base | 量化训练 | [95.80](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base_qat_model.tar) |
+
+注：UIE模型精度为在5-shot(每个类别包含5条标注数据)数据集上进行模型微调的结果，压缩后精度更高可能原因是过拟合在当前数据集。
+
 模型在不同任务上平均精度以及加速对比如下：
 |  模型 |策略| Accuracy（avg） | 预测时延<sup><small>FP32</small><sup><br><sup> | 预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 加速比 |
 |:-------:|:--------:|:----------:|:------------:|:------:|:------:|:------:|

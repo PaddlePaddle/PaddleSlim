@@ -45,6 +45,8 @@
 | MobileNetV3_large_x1_0 | 量化+蒸馏 | 74.04 | - | 9.85 | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_QAT.tar) |
 | MobileNetV3_large_x1_0_ssld | Baseline | 78.96 | - | 16.62 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV3_large_x1_0_ssld_infer.tar) |
 | MobileNetV3_large_x1_0_ssld | 量化+蒸馏 | 77.17 | - | 9.85 | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_ssld_QAT.tar) |
+| ViT_base_patch16_224 | Baseline | 81.89 | 367.17(batch_size=40) | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/ViT_base_patch16_224_infer.tar) |
+| ViT_base_patch16_224 | 量化+蒸馏 | 82.05 | 51.70(batch_size=40) | - | [Config](./configs/VIT/qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ViT_base_patch16_224_QAT.tar) |
 
 - ARM CPU 测试环境：`SDM865(4xA77+4xA55)`
 - Nvidia GPU 测试环境：
