@@ -21,12 +21,14 @@
 | 模型 | 策略 | Metric | GPU 耗时(ms) | ARM CPU 耗时(ms) | 配置文件 | Inference模型 |
 |:------:|:------:|:------:|:------:|:------:|:------:|:------:|
 | 中文PPOCRV3-det | Baseline | 84.57 | - | - | - | [Model](https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_det_infer.tar) |
-| 中文PPOCRV3-det | 量化+蒸馏 | 83.4 | - | - | [Config](./configs/ppocrv3_det_qat_dist.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/PPOCRV3_det_QAT.tar) |
-
+| 中文PPOCRV3-det | 量化+蒸馏 | 85.01 | - | - | [Config](./configs/ppocrv3_det_qat_dist.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/OCR/PPOCRV3_det_QAT.tar) |
+| 中文PPOCRV3-rec | Baseline | 76.48 | - | - | - | [Model](https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_rec_infer.tar) |
+| 中文PPOCRV3-rec | 量化+蒸馏 | 73.23 | - | - | [Config](./configs/ppocrv3_rec_qat_dist.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/OCR/PPOCRV3_rec_QAT.tar) |
+> PPOCRV3-det 的测试指标为 hmean，PPOCRV3-rec的测试指标为 accuracy.
 
 ## 3. 自动压缩流程
 
-#### 3.1 准备环境
+### 3.1 准备环境
 
 - python >= 3.6
 - PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
@@ -45,15 +47,21 @@ pip install paddlepaddle-gpu
 pip install paddleslim
 ```
 
-#### 3.2 准备数据集
+下载PaddleOCR:
+```shell
+git clone -b release/2.6 https://github.com/PaddlePaddle/PaddleOCR.git
+```
+> 下载 [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR.git) 的目的只是为了直接使用 PaddleOCR 中的 Dataloader 组件和精度评估模块，不涉及模型组网等。通过 `pip install paddleocr` 安装的 paddleocr 只有预测代码，没有数据集读取和精度评估的部分，因此需要下载 PaddleOCR 库。
+
+### 3.2 准备数据集
 公开数据集可参考[OCR数据集](https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.6/doc/doc_ch/dataset/ocr_datasets.md)。
 
-注意：使用不同的数据集需要修改配置文件中`dataset`中数据路径和数据处理部分。
+> 注意：使用不同的数据集需要修改配置文件中`dataset`中数据路径和数据处理部分。
 
-#### 3.3 准备预测模型
+### 3.3 准备预测模型
 预测模型的格式为：`model.pdmodel` 和 `model.pdiparams`两个，带`pdmodel`的是模型文件，带`pdiparams`后缀的是权重文件。
 
-注：其他像`__model__`和`__params__`分别对应`model.pdmodel` 和 `model.pdiparams`文件。
+> 注：其他像`__model__`和`__params__`分别对应`model.pdmodel` 和 `model.pdiparams`文件。
 
 可在[PaddleOCR模型库](https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.6/doc/doc_ch/models_list.md)中直接获取Inference模型，具体可参考下方获取中文PPOCRV3检测模型示例：
 
@@ -94,13 +102,13 @@ python eval.py --config_path='./configs/ppocrv3_det_qat_dist.yaml'
 ```
 
 ## 4.预测部署
-#### 4.1 Python预测推理
+### 4.1 Python预测推理
 
 环境配置：若使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
 Python预测引擎推理可参考[基于Python预测引擎推理](https://github.com/PaddlePaddle/PaddleOCR/blob/9cdab61d909eb595af849db885c257ca8c74cb57/doc/doc_ch/inference_ppocr.md)
 
-#### 4.2 PaddleLite端侧部署
+### 4.2 PaddleLite端侧部署
 PaddleLite端侧部署可参考：
 - [Paddle Lite部署](https://github.com/PaddlePaddle/PaddleOCR/tree/9cdab61d909eb595af849db885c257ca8c74cb57/deploy/lite)
 

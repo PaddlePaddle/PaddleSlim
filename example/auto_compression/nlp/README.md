@@ -31,6 +31,7 @@
 | ERNIE 3.0-Medium | 剪枝+量化训练| 74.17 | 56.84 | 59.75 | 80.54 | 76.03 | 76.97 | 80.80 | 72.16 |
 
 | 模型 | 策略 | 报销工单数据 |
+|:------:|:------:|:------:|
 | UIE-base | Base模型 | [91.83](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base.tar) |
 | UIE-base | 量化训练 | [95.80](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base_qat_model.tar) |
 
