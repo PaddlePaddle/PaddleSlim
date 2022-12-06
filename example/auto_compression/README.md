@@ -81,6 +81,7 @@ ACT相比传统的模型压缩方法，
 | [图像分类](./image_classification)  | InceptionV3                   | 79.14                  | 78.32                  | 4.79             | 1.47             | **3.26**   | NVIDIA Tesla T4 |
 | [图像分类](./image_classification)  | EfficientNetB0                | 77.02                  | 74.27                  | 1.95             | 1.44             | **1.35**   | NVIDIA Tesla T4 |
 | [图像分类](./image_classification)  | GhostNet_x1_0                 | 74.02                  | 72.62                  | 2.93             | 1.03             | **2.84**   | NVIDIA Tesla T4 |
+| [图像分类](./image_classification)  | ViT_base_patch16_224          | 81.89                  | 82.05                  | 367.17           | 51.70            | **7.10**   | NVIDIA Tesla T4 |
 | [语义分割](./semantic_segmentation) | PP-HumanSeg-Lite              | 92.87                  | 92.35                  | 56.36            | 37.71            | **1.49**   | SDM710          |
 | [语义分割](./semantic_segmentation) | PP-LiteSeg                    | 77.04                  | 76.93                  | 1.43             | 1.16             | **1.23**   | NVIDIA Tesla T4 |
 | [语义分割](./semantic_segmentation) | HRNet                         | 78.97                  | 78.90                  | 8.188            | 5.812            | **1.41**   | NVIDIA Tesla T4 |
