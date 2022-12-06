@@ -76,20 +76,20 @@ class AnalysisQATDemo(unittest.TestCase):
             **ptq_config)
         post_training_quantization.quantize()
         post_training_quantization.save_quantized_model(
-            "./MobileNetV1_QAT",
+            "./MobileNetV1_quant",
             model_filename='inference.pdmodel',
             params_filename='inference.pdiparams')
 
         analyzer = AnalysisQAT(
             float_model_dir="./MobileNetV1_infer",
-            quant_model_dir="./MobileNetV1_QAT",
+            quant_model_dir="./MobileNetV1_quant",
             model_filename="inference.pdmodel",
             params_filename="inference.pdiparams",
-            save_dir="MobileNetV1_analysis",
+            save_dir="analysis_result",
             data_loader=train_loader)
         analyzer.metric_error_analyse()
-        os.system('rm -rf MobileNetV1_analysis')
-        os.system('rm -rf MobileNetV1_QAT')
+        os.system('rm -rf analysis_result')
+        os.system('rm -rf MobileNetV1_quant')
 
 
 if __name__ == '__main__':
