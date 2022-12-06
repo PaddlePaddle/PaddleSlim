@@ -80,6 +80,7 @@ class AnalysisPTQ(object):
             'is_full_quantize'] if 'is_full_quantize' in ptq_config else False
         self.onnx_format = ptq_config[
             'onnx_format'] if 'onnx_format' in ptq_config else False
+        ptq_config['onnx_format'] = self.onnx_format
         if 'algo' not in ptq_config:
             ptq_config['algo'] = 'avg'
 
@@ -171,7 +172,6 @@ class AnalysisPTQ(object):
             model_filename=self.model_filename,
             params_filename=self.params_filename,
             skip_tensor_list=skip_tensor_list,
-            onnx_format=self.onnx_format,
             **self.ptq_config)
 
     def sampling(self, executor, program, scope):
@@ -187,19 +187,19 @@ class AnalysisPTQ(object):
                 break
 
     def fp_int_cosine_similarity(self, executor, float_program, quant_program,
-                                 float_scope, quant_scope, fetch_list):
+                                 float_scope, quant_scope):
         cosine_similarity = []
         for step, data in enumerate(self.data_loader()):
             with paddle.static.scope_guard(float_scope):
                 float_preds = executor.run(program=float_program,
                                            feed=data,
-                                           fetch_list=fetch_list,
+                                           fetch_list=self.fetch_list,
                                            return_numpy=False)
                 float_preds = float_preds[0]
             with paddle.static.scope_guard(quant_scope):
                 quant_preds = executor.run(program=quant_program,
                                            feed=data,
-                                           fetch_list=fetch_list,
+                                           fetch_list=self.fetch_list,
                                            return_numpy=False)
                 quant_preds = quant_preds[0]
             paddle.disable_static()
@@ -234,7 +234,9 @@ class AnalysisPTQ(object):
             metric = self.eval_function(executor, program, self.feed_list,
                                         self.fetch_list)
             if skip_list is None:
+                executor.close()
                 return metric
+
             sensitive_metric = self.base_metric - metric
             _logger.info(
                 "Quantized layer name: %s, the accuracy: %.4f, the sensitive metric: %.4f"
@@ -256,7 +258,7 @@ class AnalysisPTQ(object):
 
             metric = self.fp_int_cosine_similarity(executor, float_program,
                                                    quant_program, float_scope,
-                                                   quant_scope, self.fetch_list)
+                                                   quant_scope)
             sensitive_metric = 1.0 - metric
             _logger.info(
                 "Quantized layer name: %s, the cosine similarity: %.4f, the sensitive metric: %.4f"
@@ -283,6 +285,7 @@ class AnalysisPTQ(object):
                                                   fetch_list)
             _logger.info('Before quantized, the accuracy of the model is: {}'.
                          format(self.base_metric))
+            executor.close()
 
             # evaluate before quant 
             _logger.info('Start to evaluate the quantized model.')

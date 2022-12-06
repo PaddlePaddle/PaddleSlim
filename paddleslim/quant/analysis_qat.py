@@ -210,19 +210,19 @@ class AnalysisQAT(object):
         return graph.to_program()
 
     def fp_int_cosine_similarity(self, executor, float_program, quant_program,
-                                 float_scope, quant_scope, fetch_list):
+                                 float_scope, quant_scope):
         cosine_similarity = []
         for step, data in enumerate(self.data_loader()):
             with paddle.static.scope_guard(float_scope):
                 float_preds = executor.run(program=float_program,
                                            feed=data,
-                                           fetch_list=fetch_list,
+                                           fetch_list=self.fetch_list,
                                            return_numpy=False)
                 float_preds = float_preds[0]
             with paddle.static.scope_guard(quant_scope):
                 quant_preds = executor.run(program=quant_program,
                                            feed=data,
-                                           fetch_list=fetch_list,
+                                           fetch_list=self.fetch_list,
                                            return_numpy=False)
                 quant_preds = quant_preds[0]
             paddle.disable_static()
@@ -286,9 +286,9 @@ class AnalysisQAT(object):
                         'When skip quant %s, the eval metric is %.4f, the sensitive metric is %.4f'
                         % (weight_name, metric, metric - self.qat_metric))
             else:
-                metric = self.fp_int_cosine_similarity(
-                    executor, float_program, saved_program, float_scope,
-                    quant_scope, self.fetch_list)
+                metric = self.fp_int_cosine_similarity(executor, float_program,
+                                                       saved_program,
+                                                       float_scope, quant_scope)
                 self.nonquant_layer_metrics[weight_name] = 1 - metric
                 _logger.info(
                     'When skip quant %s, the cosine similarity is %.4f, the sensitive metric is %.4f'
