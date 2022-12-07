@@ -19,7 +19,7 @@
 | model_dir | 必须传入的模型文件路径，可为文件夹名；若模型为ONNX类型，直接输入'.onnx'模型文件名称即可 |
 | model_filename | 默认为None，若model_dir为文件夹名，则必须传入以'.pdmodel'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入 |
 | params_filename | 默认为None，若model_dir为文件夹名，则必须传入以'.pdiparams'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入 |
-| eval_function | 若需要验证精度，需要传入自定义的验证函数 |
+| eval_function | 若需要验证精度，需要传入自定义的验证函数；若不传入，精度误差分析将根据Cosine Similarity计算得出 |
 | data_loader | 模型校准时使用的数据，DataLoader继承自`paddle.io.DataLoader`。可以直接使用模型套件中的DataLoader，或者根据[paddle.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/io/DataLoader_cn.html#dataloader)自定义所需要的DataLoader |
 | save_dir | 分析后保存模型精度或pdf等文件的文件夹，默认为`analysis_results`|
 | resume | 是否加载中间分析文件，默认为False|
@@ -31,19 +31,65 @@
 
 ## 3. 量化分析工具的使用
 **创建量化分析工具** ：
+```shell
+# 下载Inference模型
+wget -q https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar
+tar -xf MobileNetV1_infer.tar
+# 下载demo数据集
+wget -q https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz
+tar -xf ILSVRC2012_data_demo.tar.gz
 ```
+
+```shell
+import paddle
+from PIL import Image
+from paddle.vision.datasets import DatasetFolder
+from paddle.vision.transforms import transforms
+from paddleslim.quant.analysis_ptq import AnalysisPTQ
+paddle.enable_static()
+
+class ImageNetDataset(DatasetFolder):
+    def __init__(self, path, image_size=224):
+        super(ImageNetDataset, self).__init__(path)
+        normalize = transforms.Normalize(
+            mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
+        self.transform = transforms.Compose([
+            transforms.Resize(256), transforms.CenterCrop(image_size),
+            transforms.Transpose(), normalize
+        ])
+
+    def __getitem__(self, idx):
+        img_path, _ = self.samples[idx]
+        return self.transform(Image.open(img_path).convert('RGB'))
+
+    def __len__(self):
+        return len(self.samples)
+
+train_dataset = ImageNetDataset(
+    "./ILSVRC2012_data_demo/ILSVRC2012/train/")
+image = paddle.static.data(
+    name='inputs', shape=[None] + [3, 224, 224], dtype='float32')
+train_loader = paddle.io.DataLoader(
+    train_dataset, feed_list=[image], batch_size=8, return_list=False)
+
 analyzer = AnalysisPTQ(
-        model_dir=config["model_dir"],
-        model_filename=config["model_filename"],
-        params_filename=config["params_filename"],
-        eval_function=eval_function,
-        data_loader=data_loader,
-        save_dir=config['save_dir'],
-        ptq_config=config['PTQ'])
+    model_dir="./MobileNetV1_infer",
+    model_filename="inference.pdmodel",
+    params_filename="inference.pdiparams",
+    save_dir="MobileNetV1_analysis",
+    ptq_config={
+          'quantizable_op_type': ["conv2d", "depthwise_conv2d"],
+          'weight_quantize_type': 'abs_max',
+          'activation_quantize_type': 'moving_average_abs_max',
+          'is_full_quantize': False,
+          'batch_size': 8,
+          'batch_nums': 1,
+    },
+    data_loader=train_loader)
 ```
 
 **统计分析**
-```
+```shell
 analyzer.statistical_analyse()
 ```
 
@@ -75,7 +121,7 @@ analyzer.statistical_analyse()
 
 
 **精度误差分析**
-```
+```shell
 analyzer.metric_error_analyse()
 ```
 调用该接口，会遍历量化模型中的一层，并计算量化该层后模型的损失。调用该接口时，需要输入Eval Function。会产出所有只量化一层的模型精度排序，将默认保存在 `./analysis_results/analysis.txt` 中。
@@ -83,8 +129,8 @@ analyzer.metric_error_analyse()
 
 
 **直接产出符合预期精度的目标量化模型**
-```
-analyzer.get_target_quant_model(target_metric)
+```shell
+analyzer.get_target_quant_model(target_metric=70.0)
 ```
 
 ## 4. 根据分析结果执行离线量化

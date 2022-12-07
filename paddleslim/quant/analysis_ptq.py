@@ -24,7 +24,7 @@ import numpy as np
 import random
 import tempfile
 import paddle
-from .quanter import quant_post
+import paddle.nn.functional as F
 from ..core import GraphWrapper
 from ..common import get_logger
 from ..common import get_feed_vars, wrap_dataloader, load_inference_model, get_model_dir
@@ -80,6 +80,7 @@ class AnalysisPTQ(object):
             'is_full_quantize'] if 'is_full_quantize' in ptq_config else False
         self.onnx_format = ptq_config[
             'onnx_format'] if 'onnx_format' in ptq_config else False
+        ptq_config['onnx_format'] = self.onnx_format
         if 'algo' not in ptq_config:
             ptq_config['algo'] = 'avg'
 
@@ -134,9 +135,8 @@ class AnalysisPTQ(object):
         # load tobe_analyized_layer from checkpoint
         if resume:
             self.load_checkpoint()
-        self.tobe_analyized_layer = set(self.support_quant_val_name_list) - set(
-            list(self.quant_layer_metrics.keys()))
-        self.tobe_analyized_layer = sorted(list(self.tobe_analyized_layer))
+        self.tobe_analyized_layer = sorted(
+            list(self.support_quant_val_name_list))
 
     def save_checkpoint(self):
         if not os.path.exists(self.save_dir):
@@ -172,7 +172,6 @@ class AnalysisPTQ(object):
             model_filename=self.model_filename,
             params_filename=self.params_filename,
             skip_tensor_list=skip_tensor_list,
-            onnx_format=self.onnx_format,
             **self.ptq_config)
 
     def sampling(self, executor, program, scope):
@@ -187,65 +186,125 @@ class AnalysisPTQ(object):
             if batch_id >= self.batch_nums:
                 break
 
-    def eval_quant_model(self, skip_list):
+    def fp_int_cosine_similarity(self, executor, float_program, quant_program,
+                                 float_scope, quant_scope):
+        cosine_similarity = []
+        for step, data in enumerate(self.data_loader()):
+            with paddle.static.scope_guard(float_scope):
+                float_preds = executor.run(program=float_program,
+                                           feed=data,
+                                           fetch_list=self.fetch_list,
+                                           return_numpy=False)
+                float_preds = float_preds[0]
+            with paddle.static.scope_guard(quant_scope):
+                quant_preds = executor.run(program=quant_program,
+                                           feed=data,
+                                           fetch_list=self.fetch_list,
+                                           return_numpy=False)
+                quant_preds = quant_preds[0]
+            paddle.disable_static()
+            float_preds = paddle.to_tensor(float_preds)
+            quant_preds = paddle.to_tensor(quant_preds)
+            cos_sim = F.cosine_similarity(float_preds, quant_preds).mean()
+            cos_sim = cos_sim.numpy()
+            cosine_similarity.append(cos_sim)
+            if step != 0 and (step % 10 == 0):
+                _logger.info("[step]: %d, cosine similarity: %.9f" %
+                             (step, np.array(cosine_similarity).mean()))
+            paddle.enable_static()
+
+        return np.array(cosine_similarity).mean()
+
+    def get_sensitive_metric(self, skip_list, layer_name):
         executor = paddle.static.Executor(self.places)
-        post_training_quantization = self.create_ptq(executor, skip_list)
-        program = post_training_quantization.quantize()
-        _logger.info('Evaluating...')
-        if self.onnx_format:
-            post_training_quantization.save_quantized_model(
-                self.temp_save_path,
-                model_filename='model.pdmodel',
-                params_filename='model.pdiparams')
-            program, _, _ = load_inference_model(
-                self.temp_save_path,
-                executor,
-                model_filename='model.pdmodel',
-                params_filename='model.pdiparams')
-        quant_metric = self.eval_function(executor, program, self.feed_list,
-                                          self.fetch_list)
+        if self.eval_function is not None:
+            post_training_quantization = self.create_ptq(executor, skip_list)
+            program = post_training_quantization.quantize()
+            _logger.info('Evaluating...')
+            if self.onnx_format:
+                post_training_quantization.save_quantized_model(
+                    self.temp_save_path,
+                    model_filename='model.pdmodel',
+                    params_filename='model.pdiparams')
+                program, _, _ = load_inference_model(
+                    self.temp_save_path,
+                    executor,
+                    model_filename='model.pdmodel',
+                    params_filename='model.pdiparams')
+            metric = self.eval_function(executor, program, self.feed_list,
+                                        self.fetch_list)
+            if skip_list is None:
+                executor.close()
+                return metric
+
+            sensitive_metric = self.base_metric - metric
+            _logger.info(
+                "Quantized layer name: %s, the accuracy: %.4f, the sensitive metric: %.4f"
+                % (layer_name, metric, sensitive_metric))
+        else:
+            float_scope = paddle.static.Scope()
+            quant_scope = paddle.static.Scope()
+            with paddle.static.scope_guard(float_scope):
+                [float_program, _, _] = load_inference_model(
+                    self.model_dir,
+                    executor=executor,
+                    model_filename=self.model_filename,
+                    params_filename=self.params_filename)
+
+            with paddle.static.scope_guard(quant_scope):
+                post_training_quantization = self.create_ptq(executor,
+                                                             skip_list)
+                quant_program = post_training_quantization.quantize()
+
+            metric = self.fp_int_cosine_similarity(executor, float_program,
+                                                   quant_program, float_scope,
+                                                   quant_scope)
+            sensitive_metric = 1.0 - metric
+            _logger.info(
+                "Quantized layer name: %s, the cosine similarity: %.4f, the sensitive metric: %.4f"
+                % (layer_name, metric, sensitive_metric))
+
         executor.close()
-        return quant_metric
+        return sensitive_metric
 
     def metric_error_analyse(self):
         '''
         Evaluate the quantized models, which are generated by quantizing each weight operator one by one. The results will be saved into analysis.txt.
         '''
         assert self.data_loader is not None, "When computing the sensitivity of quantized layers, the data loader is needed"
-        assert self.eval_function is not None, "When computing the sensitivity of quantized layers, the eval function is needed"
+        if self.eval_function is not None:
+            # evaluate before quant 
+            _logger.info('Start to evaluate the base model.')
+            executor = paddle.static.Executor(self.places)
+            [program, feed_list, fetch_list]= load_inference_model( \
+                self.model_dir, \
+                executor=executor, \
+                model_filename=self.model_filename, \
+                params_filename=self.params_filename)
+            self.base_metric = self.eval_function(executor, program, feed_list,
+                                                  fetch_list)
+            _logger.info('Before quantized, the accuracy of the model is: {}'.
+                         format(self.base_metric))
+            executor.close()
 
-        # evaluate before quant 
-        _logger.info('Start to evaluate the base model.')
-        executor = paddle.static.Executor(self.places)
-        [program, feed_list, fetch_list]= load_inference_model( \
-            self.model_dir, \
-            executor=executor, \
-            model_filename=self.model_filename, \
-            params_filename=self.params_filename)
-        self.base_metric = self.eval_function(executor, program, feed_list,
-                                              fetch_list)
-        _logger.info('Before quantized, the accuracy of the model is: {}'.
-                     format(self.base_metric))
-
-        # evaluate before quant 
-        _logger.info('Start to evaluate the quantized model.')
-        self.quant_metric = self.eval_quant_model(None)
-        _logger.info('After quantized, the accuracy of the model is: {}'.format(
-            self.quant_metric))
+            # evaluate before quant 
+            _logger.info('Start to evaluate the quantized model.')
+            self.quant_metric = self.get_sensitive_metric(
+                None, 'all quantizable layers')
+            _logger.info('After quantized, the accuracy of the model is: {}'.
+                         format(self.quant_metric))
 
         # For each layer, quantize the weight op and evaluate the quantized model.
         for i, layer_name in enumerate(self.tobe_analyized_layer):
+            if layer_name in self.quant_layer_metrics:
+                continue
+
             _logger.info('Checking {}/{} quant model: quant layer {}'.format(
                 i + 1, len(self.tobe_analyized_layer), layer_name))
             skip_list = copy.copy(list(self.support_quant_val_name_list))
             skip_list.remove(layer_name)
-            quant_metric = self.eval_quant_model(skip_list)
-            _logger.info(
-                "Quantized layer name: {}, eval metric: {}, the loss caused by this layer: {}".
-                format(layer_name,
-                       round(quant_metric, 4),
-                       round(self.base_metric - quant_metric, 4)))
-            self.quant_layer_metrics[layer_name] = quant_metric
+            sensitive_metric = self.get_sensitive_metric(skip_list, layer_name)
+            self.quant_layer_metrics[layer_name] = sensitive_metric
             self.save_checkpoint()
 
         if self.onnx_format:
@@ -254,18 +313,18 @@ class AnalysisPTQ(object):
         self.sensitivity_ranklist = sorted(
             self.quant_layer_metrics,
             key=self.quant_layer_metrics.get,
-            reverse=False)
+            reverse=True)
 
         _logger.info('Finished computing the sensitivity of the model.')
         for name in self.sensitivity_ranklist:
-            _logger.info("quant layer name: {}, eval metric: {}".format(
-                name, self.quant_layer_metrics[name]))
+            _logger.info("Quantized layer name: {}, sensitivity metric: {}".
+                         format(name, self.quant_layer_metrics[name]))
 
         analysis_file = os.path.join(self.save_dir, "analysis.txt")
         with open(analysis_file, "w") as analysis_ret_f:
             for name in self.sensitivity_ranklist:
                 analysis_ret_f.write(
-                    "quant layer name: {}, eval metric: {}\n".format(
+                    "Quantized layer name: {}, sensitivity metric: {}\n".format(
                         name, self.quant_layer_metrics[name]))
         _logger.info('Analysis file is saved in {}'.format(analysis_file))
 
@@ -285,7 +344,7 @@ class AnalysisPTQ(object):
             executor=executor, \
             model_filename=self.model_filename, \
             params_filename=self.params_filename)
-        scope = paddle.static.Executor.global_scope()
+        scope = paddle.static.global_scope()
         persistable_var_names = []
         for var in program.list_vars():
             if var.persistable:
@@ -294,6 +353,9 @@ class AnalysisPTQ(object):
         self.acts_weight_map = self.get_weight_act_map(
             program, self.weight_names, persistable_var_names)
         activations_names = list(self.acts_weight_map.keys())
+        for var in program.list_vars():
+            if var.name in activations_names:
+                var.persistable = True
 
         # sample 
         self.sampling(executor, program, scope)
@@ -305,7 +367,7 @@ class AnalysisPTQ(object):
     def collect_quant_stat(self):
         _logger.info('Collecting Statistic After PTQ...')
         executor = paddle.static.Executor(self.places)
-        scope = paddle.static.Executor.global_scope()
+        scope = paddle.static.global_scope()
         post_training_quantization = self.create_ptq(executor, None)
         program = post_training_quantization.quantize()
 
@@ -525,13 +587,13 @@ class AnalysisPTQ(object):
             rank_list = sorted(
                 self.quant_layer_metrics,
                 key=self.quant_layer_metrics.get,
-                reverse=False)
+                reverse=True)
         else:
             _logger.info(
                 'Analyse metric error before get target quantized model.')
             self.metric_error_analyse()
 
-        while True:
+        while len(rank_list) > 0:
             skip_list.append(rank_list.pop(0))
             _logger.info('Skip Ops: {}'.format(skip_list))
             executor = paddle.static.Executor(self.places)
@@ -559,3 +621,7 @@ class AnalysisPTQ(object):
                     'The quantized model does not satisfy the target metric. Skip next Op...'
                 )
             executor.close()
+        else:
+            _logger.info(
+                'Sorry, the target quantized model cannot be found. Please set lower target metric.'
+            )
