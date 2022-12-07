@@ -17,11 +17,9 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
+import paddle
 from paddle.nn.initializer import Constant, KaimingUniform
 from paddle.nn import Conv2D
-from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
-from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
 from genotypes import Genotype
 from operations import *
@@ -40,7 +38,7 @@ class ConvBN(paddle.nn.Layer):
                 name=name + "_conv" if name is not None else None,
                 initializer=KaimingUniform()),
             bias_attr=False)
-        self.bn = BatchNorm(
+        self.bn = paddle.nn.BatchNorm(
             num_channels=c_out,
             param_attr=paddle.ParamAttr(
                 name=name + "_bn_scale" if name is not None else None,
@@ -61,11 +59,11 @@ class ConvBN(paddle.nn.Layer):
 class Classifier(paddle.nn.Layer):
     def __init__(self, input_dim, num_classes, name=None):
         super(Classifier, self).__init__()
-        self.pool2d = Pool2D(pool_type='avg', global_pooling=True)
-        self.fc = Linear(
-            input_dim=input_dim,
-            output_dim=num_classes,
-            param_attr=paddle.ParamAttr(
+        self.pool2d = paddle.nn.AdaptiveAvgPool2D(output_size=1)
+        self.fc = paddle.nn.Linear(
+            input_dim,
+            num_classes,
+            weight_attr=paddle.ParamAttr(
                 name=name + "_fc_weights" if name is not None else None,
                 initializer=KaimingUniform()),
             bias_attr=paddle.ParamAttr(
@@ -84,7 +82,7 @@ def drop_path(x, drop_prob):
         keep_prob = 1. - drop_prob
     mask = 1 - np.random.binomial(
         1, drop_prob, size=[x.shape[0]]).astype(np.float32)
-    mask = to_variable(mask)
+    mask = paddle.to_tensor(mask)
     x = paddle.multiply(x / keep_prob, mask)
     return x
 
@@ -150,8 +148,7 @@ class Cell(paddle.nn.Layer):
 class AuxiliaryHeadCIFAR(paddle.nn.Layer):
     def __init__(self, C, num_classes):
         super(AuxiliaryHeadCIFAR, self).__init__()
-        self.avgpool = Pool2D(
-            pool_size=5, pool_stride=3, pool_padding=0, pool_type='avg')
+        self.avgpool = paddle.nn.AvgPool2D(5, stride=3, padding=0)
         self.conv_bn1 = ConvBN(
             c_curr=C,
             c_out=128,
@@ -228,8 +225,7 @@ class NetworkCIFAR(paddle.nn.Layer):
 class AuxiliaryHeadImageNet(paddle.nn.Layer):
     def __init__(self, C, num_classes):
         super(AuxiliaryHeadImageNet, self).__init__()
-        self.avgpool = Pool2D(
-            pool_size=5, pool_stride=2, pool_padding=0, pool_type='avg')
+        self.avgpool = paddle.nn.AvgPool2D(5, stride=2, padding=0)
         self.conv_bn1 = ConvBN(
             c_curr=C,
             c_out=128,

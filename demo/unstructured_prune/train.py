@@ -7,15 +7,14 @@ import functools
 import time
 import random
 import numpy as np
-import paddle.fluid as fluid
 from paddleslim.prune.unstructured_pruner import UnstructuredPruner, GMPUnstructuredPruner
 from paddleslim.common import get_logger
 sys.path.append(os.path.join(os.path.dirname("__file__"), os.path.pardir))
 import models
 from utility import add_arguments, print_arguments
 import paddle.vision.transforms as T
-from paddle.fluid.incubate.fleet.collective import fleet, DistributedStrategy
-from paddle.fluid.incubate.fleet.base import role_maker
+from paddle.distributed import fleet
+from paddle.distributed.fleet import DistributedStrategy
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -133,7 +132,7 @@ def compress(args):
 
     if use_data_parallel:
         # Fleet step 1: initialize the distributed environment
-        role = role_maker.PaddleCloudRoleMaker(is_collective=True)
+        role = fleet.PaddleCloudRoleMaker(is_collective=True)
         fleet.init(role)
 
     train_reader = None
@@ -256,8 +255,7 @@ def compress(args):
     if args.last_epoch > -1:
         assert args.checkpoint is not None and os.path.exists(
             args.checkpoint), "Please specify a valid checkpoint path."
-        paddle.fluid.io.load_persistables(
-            executor=exe, dirname=args.checkpoint, main_program=train_program)
+        paddle.static.load(train_program, args.checkpoint)
 
     elif args.pretrained_model:
         assert os.path.exists(
@@ -270,10 +268,9 @@ def compress(args):
 
         _logger.info("Load pretrained model from {}".format(
             args.pretrained_model))
-        # NOTE: We are using fluid.io.load_vars() because the pretrained model is from an older version which requires this API. 
+        # NOTE: We are using paddle.static.load_vars() because the pretrained model is from an older version which requires this API. 
         # Please consider using paddle.static.load(program, model_path) when possible
-        paddle.fluid.io.load_vars(
-            exe, args.pretrained_model, predicate=if_exist)
+        paddle.static.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
     def test(epoch, program):
         acc_top1_ns = []
@@ -358,8 +355,8 @@ def compress(args):
             if use_data_parallel:
                 fleet.save_persistables(executor=exe, dirname=args.model_path)
             else:
-                paddle.fluid.io.save_persistables(
-                    executor=exe, dirname=args.model_path)
+                paddle.static.load(paddle.static.default_main_program(),
+                                   args.model_path)
 
 
 def main():

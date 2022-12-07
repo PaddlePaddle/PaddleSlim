@@ -193,13 +193,12 @@ class InceptionABlockSpace(SearchSpaceBase):
                     stride,
                     pool_type,
                     name=None):
-        print(f"hit _inceptionA----------------------------")
-        pool1 = paddle.fluid.layers.pool2d(
-            input=data,
-            pool_size=filter_size,
-            pool_padding='SAME',
-            pool_type=pool_type,
-            name=name + '_pool2d')
+        if pool_type == "avg":
+            pool1 = paddle.nn.functional.avg_pool2d(
+                data, filter_size, padding='SAME', name=name + '_pool2d')
+        elif pool_type == "max":
+            pool1 = paddle.nn.functional.max_pool2d(
+                data, filter_size, padding='SAME', name=name + '_pool2d')
         conv1 = conv_bn_layer(
             input=pool1,
             filter_size=1,
@@ -433,12 +432,12 @@ class InceptionCBlockSpace(SearchSpaceBase):
                     stride,
                     pool_type,
                     name=None):
-        pool1 = paddle.fluid.layers.pool2d(
-            input=data,
-            pool_size=filter_size,
-            pool_padding='SAME',
-            pool_type=pool_type,
-            name=name + '_pool2d')
+        if pool_type == "avg":
+            pool1 = paddle.nn.functional.avg_pool2d(
+                data, filter_size, padding='SAME', name=name + '_pool2d')
+        elif pool_type == "max":
+            pool1 = paddle.nn.functional.max_pool2d(
+                data, filter_size, padding='SAME', name=name + '_pool2d')
         conv1 = conv_bn_layer(
             input=pool1,
             filter_size=1,

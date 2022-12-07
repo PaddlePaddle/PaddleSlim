@@ -19,7 +19,6 @@ from __future__ import print_function
 import math
 
 import paddle
-import paddle.fluid as fluid
 
 __all__ = [
     "ResNet", "ResNet18_vd", "ResNet34_vd", "ResNet50_vd", "ResNet101_vd",
@@ -80,12 +79,7 @@ class ResNet():
                 act='relu',
                 name='conv1_3')
 
-        conv = fluid.layers.pool2d(
-            input=conv,
-            pool_size=3,
-            pool_stride=2,
-            pool_padding=1,
-            pool_type='max')
+        conv = paddle.nn.functional.max_pool2d(conv, 3, stride=2, padding=1)
 
         if layers >= 50:
             for block in range(len(depth)):
@@ -114,8 +108,7 @@ class ResNet():
                         if_first=block == i == 0,
                         name=conv_name)
 
-        pool = fluid.layers.pool2d(
-            input=conv, pool_type='avg', global_pooling=True)
+        pool = paddle.nn.functional.adaptive_avg_pool2d(conv, 1)
         stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
 
         out = paddle.static.nn.fc(
@@ -164,13 +157,8 @@ class ResNet():
                           groups=1,
                           act=None,
                           name=None):
-        pool = fluid.layers.pool2d(
-            input=input,
-            pool_size=2,
-            pool_stride=2,
-            pool_padding=0,
-            pool_type='avg',
-            ceil_mode=True)
+        pool = paddle.nn.functional.avg_pool2d(
+            input, 2, stride=2, padding=0, ceil_mode=True)
 
         conv = paddle.static.nn.conv2d(
             input=pool,

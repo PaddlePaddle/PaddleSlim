@@ -19,10 +19,10 @@ import unittest
 import logging
 import paddle
 
+from paddleslim.common import get_logger
 from paddleslim import PTQ
 
-_logger = paddle.fluid.log_helper.get_logger(
-    __name__, logging.INFO, fmt='%(asctime)s-%(levelname)s: %(message)s')
+_logger = get_logger(__name__, level=logging.INFO)
 
 
 class ImperativeLenet(paddle.nn.Layer):

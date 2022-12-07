@@ -796,7 +796,7 @@ def pact(x, name=None):
     u_param_attr = paddle.ParamAttr(
         name=x.name + '_pact',
         initializer=paddle.nn.initializer.Constant(value=init_thres),
-        regularizer=paddle.fluid.regularizer.L2Decay(0.0001),
+        regularizer=paddle.paddle.regularizer.L2Decay(0.0001),
         learning_rate=1)
     u_param = helper.create_parameter(attr=u_param_attr, shape=[1], dtype=dtype)
     x = paddle.subtract(x,

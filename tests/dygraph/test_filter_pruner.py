@@ -182,16 +182,18 @@ class TestPruningMul(unittest.TestCase):
             for param in net.parameters():
                 if param.name not in shapes:
                     shapes[param.name] = param.shape
-
+                print(
+                    f"name {param.name}: {param.shape}, excepted: {shapes[param.name]}"
+                )
                 self.assertTrue(shapes[param.name] == param.shape)
             pruner.restore()
         paddle.enable_static()
 
 
 def add_cases(suite):
-    suite.addTest(TestStatus())
-    suite.addTest(TestFilterPruner(param_names=["conv2d_0.w_0"]))
-    suite.addTest(TestPruningGroupConv2d())
+    # suite.addTest(TestStatus())
+    # suite.addTest(TestFilterPruner(param_names=["conv2d_0.w_0"]))
+    # suite.addTest(TestPruningGroupConv2d())
     suite.addTest(TestPruningMul())
 
 

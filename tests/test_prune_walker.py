@@ -51,7 +51,7 @@ class TestPrune(StaticCase):
             flag = paddle.full(shape=[1], fill_value=1, dtype='int32')
             rand_flag = paddle.randint(2, dtype='int32')
             cond = paddle.less_than(x=flag, y=rand_flag)
-            cond_output = paddle.fluid.layers.create_global_var(
+            cond_output = paddle.static.create_global_var(
                 shape=[1],
                 value=0.0,
                 dtype='float32',
@@ -444,12 +444,6 @@ class TestActivation(TestPruneWorker):
 
 
 act_suite = unittest.TestSuite()
-act_suite.addTest(
-    TestActivation(
-        op=paddle.fluid.layers.resize_bilinear, scale=2.))
-act_suite.addTest(
-    TestActivation(
-        op=paddle.fluid.layers.resize_nearest, scale=2.))
 act_suite.addTest(TestActivation(op=paddle.floor))
 act_suite.addTest(TestActivation(op=paddle.scale))
 
@@ -774,8 +768,6 @@ class TestAverageAccumulates(TestPruneWorker):
         out = paddle.mean(conv1)
         opt = paddle.optimizer.Adam()
         opt.minimize(out)
-        model_average = paddle.fluid.optimizer.ModelAverage(
-            0.15, min_average_window=10000, max_average_window=12500)
 
     def set_cases(self):
         weight_var = self.graph.var('conv1.w_0')

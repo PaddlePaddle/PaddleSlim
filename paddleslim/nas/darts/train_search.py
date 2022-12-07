@@ -189,7 +189,7 @@ class DARTSearch(object):
         learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
             self.learning_rate, self.num_epochs // 2)
 
-        clip = paddle.fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0)
+        clip = paddle.nn.ClipGradByGlobalNorm(5.0)
         optimizer = paddle.optimizer.Momentum(
             learning_rate,
             0.9,

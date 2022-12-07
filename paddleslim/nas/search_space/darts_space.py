@@ -107,8 +107,7 @@ class DartsSpace(SearchSpaceBase):
         return net_arch
 
     def _classifier(self, x, num_classes, name):
-        out = paddle.fluid.layers.pool2d(
-            x, pool_type='avg', global_pooling=True)
+        out = paddle.nn.functional.adaptive_avg_pool2d(x, 1)
         out = paddle.squeeze(x=out, axis=[2, 3])
         k = (1. / out.shape[1])**0.5
         out = paddle.static.nn.fc(out,
@@ -125,8 +124,7 @@ class DartsSpace(SearchSpaceBase):
 
     def _auxiliary_cifar(self, x, num_classes, name):
         x = paddle.nn.functional.relu(x)
-        pooled = paddle.fluid.layers.pool2d(
-            x, pool_size=5, pool_stride=3, pool_padding=0, pool_type='avg')
+        pooled = paddle.nn.functional.avg_pool2d(x, 5, stride=3, padding=0)
         conv1 = self._conv_bn(
             x=pooled,
             c_out=128,
@@ -309,13 +307,8 @@ class DartsSpace(SearchSpaceBase):
                         drop_path_cell,
                         is_train,
                         name=None):
-        hidden0_0 = paddle.fluid.layers.pool2d(
-            input=s0,
-            pool_size=3,
-            pool_type="max",
-            pool_stride=2,
-            pool_padding=1,
-            name=name + '_reduction_cell_hidden0_0')
+        hidden0_0 = paddle.nn.functional.max_pool2d(
+            s0, 3, stride=2, padding=1, name=name + '_reduction_cell_hidden0_0')
         hidden0_1 = self._factorized_reduce(
             s1,
             filter_num,
@@ -329,12 +322,11 @@ class DartsSpace(SearchSpaceBase):
                 name=name + '_reduction_cell_hidden0_0')
         r0 = hidden0_0 + hidden0_1
 
-        hidden1_0 = paddle.fluid.layers.pool2d(
-            input=s1,
-            pool_size=3,
-            pool_type="max",
-            pool_stride=2,
-            pool_padding=1,
+        hidden1_0 = paddle.nn.functional.max_pool2d(
+            s1,
+            size=3,
+            stride=2,
+            padding=1,
             name=name + '_reduction_cell_hidden1_0')
         hidden1_1 = r0
         if is_train:
@@ -364,13 +356,8 @@ class DartsSpace(SearchSpaceBase):
         r2 = hidden2_0 + hidden2_1
 
         hidden3_0 = r0
-        hidden3_1 = paddle.fluid.layers.pool2d(
-            input=s1,
-            pool_size=3,
-            pool_type="max",
-            pool_stride=2,
-            pool_padding=1,
-            name=name + '_reduction_cell_hidden3_1')
+        hidden3_1 = paddle.nn.functional.max_pool2d(
+            s1, 3, stride=2, padding=1, name=name + '_reduction_cell_hidden3_1')
         if is_train:
             hidden3_1 = self._drop_path(
                 hidden3_1,

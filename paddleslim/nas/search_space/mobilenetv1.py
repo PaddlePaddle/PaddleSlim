@@ -196,11 +196,8 @@ class MobileNetV1Space(SearchSpaceBase):
             if check_points(layer_count, end_points):
                 return input, decode_ends
 
-            input = paddle.fluid.layers.pool2d(
-                input=input,
-                pool_type='avg',
-                global_pooling=True,
-                name='mobilenetv1_last_pool')
+            input = paddle.nn.functional.adaptive_avg_pool2d(
+                input, 1, name='mobilenetv1_last_pool')
 
             return input
 
