@@ -353,6 +353,9 @@ class AnalysisPTQ(object):
         self.acts_weight_map = self.get_weight_act_map(
             program, self.weight_names, persistable_var_names)
         activations_names = list(self.acts_weight_map.keys())
+        for var in program.list_vars():
+            if var.name in activations_names:
+                var.persistable = True
 
         # sample 
         self.sampling(executor, program, scope)
