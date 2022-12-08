@@ -355,7 +355,6 @@ class TestPruneWorker(unittest.TestCase):
         cls = PRUNE_WORKER.get(self.op.type())
         if cls is None:
             cls = PRUNE_WORKER.get("default_worker")
-
         # pruning input of conv op
         for _var, _axis, _ret in self.cases:
             pruned_params = []
@@ -370,6 +369,7 @@ class TestPruneWorker(unittest.TestCase):
                 if var.name() not in ret:
                     ret[var.name()] = []
                 ret[var.name()].append(axis)
+            print(f"excepted: {_ret}; actual: {ret}")
             self.assertTrue(ret == _ret)
 
 
@@ -775,9 +775,6 @@ class TestAverageAccumulates(TestPruneWorker):
             'conv1.w_0': [0],
             'conv1.w_0_moment1_0': [0],
             'conv1.w_0_moment2_0': [0],
-            'conv1.w_0_sum_1_0': [0],
-            'conv1.w_0_sum_2_0': [0],
-            'conv1.w_0_sum_3_0': [0]
         }))
 
     def test_prune(self):

@@ -323,11 +323,7 @@ class DartsSpace(SearchSpaceBase):
         r0 = hidden0_0 + hidden0_1
 
         hidden1_0 = paddle.nn.functional.max_pool2d(
-            s1,
-            size=3,
-            stride=2,
-            padding=1,
-            name=name + '_reduction_cell_hidden1_0')
+            s1, 3, stride=2, padding=1, name=name + '_reduction_cell_hidden1_0')
         hidden1_1 = r0
         if is_train:
             hidden1_0 = self._drop_path(

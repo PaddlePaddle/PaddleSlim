@@ -224,7 +224,7 @@ def compress(args):
     if use_data_parallel:
         dist_strategy = DistributedStrategy()
         dist_strategy.sync_batch_norm = False
-        dist_strategy.exec_strategy = paddle.static.ExecutionStrategy()
+        dist_strategy.execution_strategy = paddle.static.ExecutionStrategy()
         dist_strategy.fuse_all_reduce_ops = False
 
     train_program = paddle.static.default_main_program()
@@ -333,12 +333,8 @@ def compress(args):
             learning_rate.step()
             reader_start = time.time()
 
-    if use_data_parallel:
-        # Fleet step 4: get the compiled program from fleet
-        compiled_train_program = fleet.main_program
-    else:
-        compiled_train_program = paddle.static.CompiledProgram(
-            paddle.static.default_main_program())
+    compiled_train_program = paddle.static.CompiledProgram(
+        paddle.static.default_main_program())
 
     for i in range(args.last_epoch + 1, args.num_epochs):
         train(i, compiled_train_program)
@@ -355,7 +351,7 @@ def compress(args):
             if use_data_parallel:
                 fleet.save_persistables(executor=exe, dirname=args.model_path)
             else:
-                paddle.static.load(paddle.static.default_main_program(),
+                paddle.static.save(paddle.static.default_main_program(),
                                    args.model_path)
 
 
