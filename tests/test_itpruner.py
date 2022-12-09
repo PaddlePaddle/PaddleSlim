@@ -1,11 +1,7 @@
+import sys
+sys.path.append("../")
 import unittest
 import paddle
-import sys
-import os
-path = os.path.dirname(__file__)
-sys.path.append(os.path.dirname(path))
-sys.path.append("../")
-
 from paddleslim.nas.itpruner import ITPruner
 from paddleslim.nas.itpruner.Cifar.nets.resnet_cifar import ResNetCifar
 
