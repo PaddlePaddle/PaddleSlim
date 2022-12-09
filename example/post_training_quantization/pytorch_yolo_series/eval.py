@@ -51,8 +51,8 @@ def eval():
     val_program, feed_target_names, fetch_targets = load_inference_model(
         config["model_dir"].rstrip('/'),
         exe,
-        model_filename=config["model_filename"],
-        params_filename=config["params_filename"])
+        model_filename="model.pdmodel",
+        params_filename="model.pdiparams")
 
     bboxes_list, bbox_nums_list, image_id_list = [], [], []
     with tqdm(
