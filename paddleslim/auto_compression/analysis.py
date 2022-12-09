@@ -57,9 +57,11 @@ def analysis_prune(eval_function,
 
     _logger.info("finish analysis: {}".format(sensitivities))
 
+    ratios = {}
     if target_loss is not None:
         ratios = get_ratios_by_loss(sensitivities, target_loss)
         _logger.info("you can set prune_params_name: {} in ChannelPrune".format(
             ratios.keys()))
         _logger.info("you can set pruned_ratio: {} in ChannelPrune".format(
             ratios.values()))
+    return ratios

@@ -8,6 +8,7 @@ import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
 from paddle.vision.transforms import transforms
+from paddleslim.auto_compression import AutoCompression
 from paddleslim.auto_compression.analysis import analysis_prune
 paddle.enable_static()
 
@@ -52,6 +53,49 @@ class ImageNetDataset(DatasetFolder):
         return len(self.samples)
 
 
+def eval_func(program, exe, feed_names, fetch_list, dataloader):
+    results = []
+    with tqdm(
+            total=len(dataloader),
+            bar_format='Evaluation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
+            ncols=80) as t:
+        for batch_id, data in enumerate(dataloader):
+            image = data[0]['inputs']
+            label = data[0]['labels']
+            # top1_acc, top5_acc
+            if len(feed_names) == 1:
+                image = np.array(image)
+                label = np.array(label).astype('int64')
+                pred = exe.run(program,
+                               feed={feed_names[0]: image},
+                               fetch_list=fetch_list)
+                pred = np.array(pred[0])
+                label = np.array(label)
+                sort_array = pred.argsort(axis=1)
+                top_1_pred = sort_array[:, -1:][:, ::-1]
+                top_1 = np.mean(label == top_1_pred)
+                top_5_pred = sort_array[:, -5:][:, ::-1]
+                acc_num = 0
+                for i in range(len(label)):
+                    if label[i][0] in top_5_pred[i]:
+                        acc_num += 1
+                top_5 = float(acc_num) / len(label)
+                results.append([top_1, top_5])
+            else:
+                image = np.array(image)
+                label = np.array(label).astype('int64')
+                result = exe.run(
+                    program,
+                    feed={feed_names[0]: image,
+                          feed_names[1]: label},
+                    fetch_list=fetch_list)
+                result = [np.mean(r) for r in result]
+                results.append(result)
+            t.update()
+    result = np.mean(np.array(results), axis=0)
+    return result[0]
+
+
 class ACTChannelPrune(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(ACTChannelPrune, self).__init__(*args, **kwargs)
@@ -66,12 +110,21 @@ class ACTChannelPrune(unittest.TestCase):
             )
             os.system('tar -xf ILSVRC2012_data_demo.tar.gz')
 
-    def test_demo(self):
+        self.train_dataloader, self.eval_dataloader = self.create_dataloader()
+
+    def create_dataloader(self):
         train_dataset = ImageNetDataset("./ILSVRC2012_data_demo/ILSVRC2012/")
         image = paddle.static.data(
             name='inputs', shape=[None] + [3, 224, 224], dtype='float32')
         label = paddle.static.data(
             name='labels', shape=[None] + [1], dtype='float32')
+        train_dataloader = paddle.io.DataLoader(
+            train_dataset,
+            feed_list=[image],
+            batch_size=32,
+            shuffle=True,
+            num_workers=0,
+            return_list=False)
 
         def eval_reader(data_dir,
                         batch_size,
@@ -90,60 +143,99 @@ class ACTChannelPrune(unittest.TestCase):
                 return_list=False)
             return val_loader
 
+        val_loader = eval_reader(
+            './ILSVRC2012_data_demo/ILSVRC2012/',
+            batch_size=32,
+            crop_size=224,
+            resize_size=256)
+        return train_dataloader, val_loader
+
+    def get_analysis(self):
         def eval_function(compiled_test_program, exe, test_feed_names,
                           test_fetch_list):
-            val_loader = eval_reader(
-                './ILSVRC2012_data_demo/ILSVRC2012/',
-                batch_size=32,
-                crop_size=224,
-                resize_size=256)
+            res = eval_func(compiled_test_program, exe, test_feed_names,
+                            test_fetch_list, self.eval_dataloader)
+            return res
 
-            results = []
-            with tqdm(
-                    total=len(val_loader),
-                    bar_format='Evaluation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
-                    ncols=80) as t:
-                for batch_id, data in enumerate(val_loader):
-                    image = data[0]['inputs']
-                    label = data[0]['labels']
-                    # top1_acc, top5_acc
-                    if len(test_feed_names) == 1:
-                        image = np.array(image)
-                        label = np.array(label).astype('int64')
-                        pred = exe.run(compiled_test_program,
-                                       feed={test_feed_names[0]: image},
-                                       fetch_list=test_fetch_list)
-                        pred = np.array(pred[0])
-                        label = np.array(label)
-                        sort_array = pred.argsort(axis=1)
-                        top_1_pred = sort_array[:, -1:][:, ::-1]
-                        top_1 = np.mean(label == top_1_pred)
-                        top_5_pred = sort_array[:, -5:][:, ::-1]
-                        acc_num = 0
-                        for i in range(len(label)):
-                            if label[i][0] in top_5_pred[i]:
-                                acc_num += 1
-                        top_5 = float(acc_num) / len(label)
-                        results.append([top_1, top_5])
-                    else:
-                        # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
-                        image = np.array(image)
-                        label = np.array(label).astype('int64')
-                        result = exe.run(compiled_test_program,
-                                         feed={
-                                             test_feed_names[0]: image,
-                                             test_feed_names[1]: label
-                                         },
-                                         fetch_list=test_fetch_list)
-                        result = [np.mean(r) for r in result]
-                        results.append(result)
-                    t.update()
-            result = np.mean(np.array(results), axis=0)
-            return result[0]
+        ratios = analysis_prune(eval_function, './MobileNetV1_infer',
+                                'inference.pdmodel', 'inference.pdiparams',
+                                'senti.data', [0.1], 0.05)
+        return ratios
 
-        analysis_prune(eval_function, './MobileNetV1_infer',
-                       'inference.pdmodel', 'inference.pdiparams', 'senti.data',
-                       [0.1], 0.2)
+    def test_ac_prune(self):
+        ratios = self.get_analysis()
+
+        def eval_function(exe, compiled_test_program, test_feed_names,
+                          test_fetch_list):
+            res = eval_func(compiled_test_program, exe, test_feed_names,
+                            test_fetch_list, self.eval_dataloader)
+            return res
+
+        configs = {
+            'Distillation': {},
+            'TrainConfig': {
+                'epochs': 1,
+                'eval_iter': 1000,
+                'learning_rate': 5.0e-03,
+                'optimizer_builder': {
+                    'optimizer': {
+                        'type': 'SGD'
+                    },
+                    "weight_decay": 0.0005,
+                }
+            }
+        }
+        configs.update({
+            'ChannelPrune': {
+                'prune_params_name': list(ratios.keys())
+            }
+        })
+        configs['ChannelPrune'].update({'pruned_ratio': list(ratios.values())})
+
+        ac = AutoCompression(
+            model_dir='./MobileNetV1_infer',
+            model_filename="inference.pdmodel",
+            params_filename="inference.pdiparams",
+            save_dir="prune_output",
+            config=configs,
+            train_dataloader=self.train_dataloader,
+            eval_callback=eval_function)  # eval_function to verify accuracy
+        ac.compress()
+        os.system('rm -rf prune_output')
+
+    def test_ac_sparse(self):
+        def eval_function(exe, compiled_test_program, test_feed_names,
+                          test_fetch_list):
+            res = eval_func(compiled_test_program, exe, test_feed_names,
+                            test_fetch_list, self.eval_dataloader)
+            return res
+
+        configs = {
+            'Distillation': {},
+            'ASPPrune': {},
+            'TrainConfig': {
+                'epochs': 1,
+                'eval_iter': 1000,
+                'learning_rate': 5.0e-03,
+                'optimizer_builder': {
+                    'optimizer': {
+                        'type': 'SGD'
+                    },
+                    "weight_decay": 0.0005,
+                }
+            }
+        }
+
+        ac = AutoCompression(
+            model_dir='./MobileNetV1_infer',
+            model_filename="inference.pdmodel",
+            params_filename="inference.pdiparams",
+            save_dir="asp_output",
+            config=configs,
+            train_dataloader=self.train_dataloader,
+            eval_callback=eval_function)  # eval_function to verify accuracy
+        ac.compress()
+        os.system('rm -rf asp_output')
 
 
 if __name__ == '__main__':

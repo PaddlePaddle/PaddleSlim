@@ -269,7 +269,7 @@ class ChannelPrune:
 
 
 class ASPPrune:
-    def __init__(self, prune_params_name):
+    def __init__(self, prune_params_name=None):
         """
         ASPPrune Config.
         Args:
