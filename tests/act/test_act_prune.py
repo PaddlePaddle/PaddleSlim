@@ -162,6 +162,42 @@ class ACTChannelPrune(unittest.TestCase):
                                 'senti.data', [0.1], 0.05)
         return ratios
 
+    def test_ac_prune_name_is_None(self):
+        def eval_function(exe, compiled_test_program, test_feed_names,
+                          test_fetch_list):
+            res = eval_func(compiled_test_program, exe, test_feed_names,
+                            test_fetch_list, self.eval_dataloader)
+            return res
+
+        configs = {
+            'Distillation': {},
+            'ChannelPrune': {
+                'pruned_ratio': 0.1
+            },
+            'TrainConfig': {
+                'epochs': 1,
+                'eval_iter': 1000,
+                'learning_rate': 5.0e-03,
+                'optimizer_builder': {
+                    'optimizer': {
+                        'type': 'SGD'
+                    },
+                    "weight_decay": 0.0005,
+                }
+            }
+        }
+
+        ac = AutoCompression(
+            model_dir='./MobileNetV1_infer',
+            model_filename="inference.pdmodel",
+            params_filename="inference.pdiparams",
+            save_dir="prune_output",
+            config=configs,
+            train_dataloader=self.train_dataloader,
+            eval_callback=eval_function)  # eval_function to verify accuracy
+        ac.compress()
+        os.system('rm -rf prune_output')
+
     def test_ac_prune(self):
         ratios = self.get_analysis()
 
