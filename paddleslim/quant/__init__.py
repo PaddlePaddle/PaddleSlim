@@ -16,7 +16,6 @@ import platform
 import logging
 
 import paddle
-import paddle.version as fluid_version
 from ..common import get_logger
 
 _logger = get_logger(__name__, level=logging.INFO)

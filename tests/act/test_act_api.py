@@ -6,13 +6,12 @@ import tempfile
 import paddle
 import unittest
 import numpy as np
-from paddle.io import Dataset
 from paddleslim.auto_compression import AutoCompression
 from paddleslim.common import load_config
 from paddleslim.common import load_inference_model, export_onnx
 
 
-class RandomEvalDataset(Dataset):
+class RandomEvalDataset(paddle.io.Dataset):
     def __init__(self, num_samples, image_shape=[3, 32, 32], class_num=10):
         self.num_samples = num_samples
         self.image_shape = image_shape
@@ -151,6 +150,56 @@ class TestLoadONNXModel(ACTBase):
             save_file_path='output.onnx',
             opset_version=13,
             deploy_backend='tensorrt')
+
+
+class TestDictPTQ(ACTBase):
+    def __init__(self, *args, **kwargs):
+        super(TestDictPTQ, self).__init__(*args, **kwargs)
+
+    def test_compress(self):
+        image = paddle.static.data(
+            name='data', shape=[-1, 3, 32, 32], dtype='float32')
+        train_loader = paddle.io.DataLoader(
+            self.eval_dataset,
+            feed_list=[image],
+            batch_size=4,
+            return_list=False)
+        ac = AutoCompression(
+            model_dir=self.tmpdir.name,
+            model_filename="infer.pdmodel",
+            params_filename="infer.pdiparams",
+            save_dir="output",
+            config={'QuantPost': {}},
+            train_dataloader=train_loader,
+            eval_dataloader=train_loader
+        )  # eval_function to verify accuracy         
+        ac.compress()
+
+
+class TestDictPTQRecon(ACTBase):
+    def __init__(self, *args, **kwargs):
+        super(TestDictPTQRecon, self).__init__(*args, **kwargs)
+
+    def test_compress(self):
+        image = paddle.static.data(
+            name='data', shape=[-1, 3, 32, 32], dtype='float32')
+        train_loader = paddle.io.DataLoader(
+            self.eval_dataset,
+            feed_list=[image],
+            batch_size=4,
+            return_list=False)
+        ac = AutoCompression(
+            model_dir=self.tmpdir.name,
+            model_filename="infer.pdmodel",
+            params_filename="infer.pdiparams",
+            save_dir="output",
+            config={'QuantPost': {
+                'recon_level': 'layer-wise'
+            }},
+            train_dataloader=train_loader,
+            eval_dataloader=train_loader
+        )  # eval_function to verify accuracy         
+        ac.compress()
 
 
 if __name__ == '__main__':

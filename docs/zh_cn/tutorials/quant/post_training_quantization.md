@@ -22,13 +22,13 @@ s=\frac{2^{b-1}-1}{\alpha}
 $$
 
 $$
-x_{q}=\operatorname{quantize}(x, b, s)=\operatorname{clip}\left(\operatorname{round}(s \cdot x),-2^{b-1}+1,2^{b-1}-1\right)
+x_{q}=\operatorname{quantize}(x, b, s)=\operatorname{clip}\left(\operatorname{round}(s \cdot x),-2^{b-1},2^{b-1}-1\right)
 $$
 
 反量化过程可以用以下公式表述：
 
 $$
-x_{q}=\operatorname{quantize}(x, b, s)=\operatorname{clip}\left(\operatorname{round}(s \cdot x),-2^{b-1}+1,2^{b-1}-1\right)
+x_{dq}=\operatorname{dequantize}(x, s)=\frac{x}{s}
 $$
 
 其中，s为所选取的scale值，即将s作为尺度因子，将全精度参数映射到低比特取值范围；α为选定的全精度参数的表示范围，即全精度参数将被限制在[-α,α]内；b为量化的比特数，x为待量化的全精度参数。因此，如果给定量化的比特数b，我们只需要选定合适的α值，就可以确定量化所需的参数s。
@@ -74,7 +74,7 @@ $$
 说明：
 - 如果想使用bias_correction，可以在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`bias_correction`参数为True即可，默认为False。
 - 如果想使用Adaround方法，可以在PaddleSlim的[离线量化接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`round_type`参数为`adaround`即可，默认为`round`。
-- 如果想使用BRECQ方法，可以在PaddleSlim的[量化重构接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`recon_level`参数为`regionn-wise`即可，默认为`layer-wise`。
+- 如果想使用BRECQ方法，可以在PaddleSlim的[量化重构接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`recon_level`参数为`region-wise`即可，默认为`layer-wise`。
 - 如果想使用QDrop方法，可以在PaddleSlim的[量化重构接口](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/static/quant/quantization_api.rst#quant_post_static)修改`simulate_activation_quant`参数为`True`即可，默认为`False`。
 
 ### 效果对比

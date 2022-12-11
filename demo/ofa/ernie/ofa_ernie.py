@@ -46,7 +46,7 @@ from paddleslim.nas.ofa.convert_super import Convert, supernet
 def soft_cross_entropy(inp, target):
     inp_likelihood = L.log_softmax(inp, axis=-1)
     target_prob = L.softmax(target, axis=-1)
-    return -1. * L.mean(L.reduce_sum(inp_likelihood * target_prob, dim=-1))
+    return -1. * L.mean(paddle.sum(inp_likelihood * target_prob, dim=-1))
 
 
 if __name__ == '__main__':

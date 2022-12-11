@@ -20,14 +20,11 @@ from static_case import StaticCase
 sys.path.append("../demo")
 from models import MobileNet
 from layers import conv_bn_layer
-import paddle.dataset.mnist as reader
 import numpy as np
-
-from paddle.fluid.layer_helper import LayerHelper
 
 
 def pact(x):
-    helper = LayerHelper("pact", **locals())
+    helper = paddle.fluid.layer_helper.LayerHelper("pact", **locals())
     dtype = 'float32'
     init_thres = 20
     u_param_attr = paddle.ParamAttr(

@@ -81,6 +81,7 @@ ACT相比传统的模型压缩方法，
 | [图像分类](./image_classification)  | InceptionV3                   | 79.14                  | 78.32                  | 4.79             | 1.47             | **3.26**   | NVIDIA Tesla T4 |
 | [图像分类](./image_classification)  | EfficientNetB0                | 77.02                  | 74.27                  | 1.95             | 1.44             | **1.35**   | NVIDIA Tesla T4 |
 | [图像分类](./image_classification)  | GhostNet_x1_0                 | 74.02                  | 72.62                  | 2.93             | 1.03             | **2.84**   | NVIDIA Tesla T4 |
+| [图像分类](./image_classification)  | ViT_base_patch16_224          | 81.89                  | 82.05                  | 367.17           | 51.70            | **7.10**   | NVIDIA Tesla T4 |
 | [语义分割](./semantic_segmentation) | PP-HumanSeg-Lite              | 92.87                  | 92.35                  | 56.36            | 37.71            | **1.49**   | SDM710          |
 | [语义分割](./semantic_segmentation) | PP-LiteSeg                    | 77.04                  | 76.93                  | 1.43             | 1.16             | **1.23**   | NVIDIA Tesla T4 |
 | [语义分割](./semantic_segmentation) | HRNet                         | 78.97                  | 78.90                  | 8.188            | 5.812            | **1.41**   | NVIDIA Tesla T4 |
@@ -88,7 +89,7 @@ ACT相比传统的模型压缩方法，
 | [语义分割](./semantic_segmentation) | Deeplabv3-ResNet50            | 79.90                  | 79.26                  | 12.766           | 8.839            | **1.44**   | NVIDIA Tesla T4 |
 | [语义分割](./semantic_segmentation) | BiSeNetV2                     | 73.17                  | 73.20                  | 35.61            | 15.94            | **2.23**   | NVIDIA Tesla T4 |
 | [NLP](./nlp)                    | PP-MiniLM                     | 72.81                  | 72.44                  | 128.01           | 17.97            | **7.12**   | NVIDIA Tesla T4 |
-| [NLP](./nlp)                    | ERNIE 3.0-Medium              | 73.09                  | 72.40                  | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4 |
+| [NLP](./nlp)                    | ERNIE 3.0-Medium              | 73.09                  | 72.16                  | 29.25(fp16)      | 19.61            | **1.49**   | NVIDIA Tesla T4 |
 | [NLP](./pytorch_huggingface)    | bert-base-cased（Hugging-Face） | 81.35                  | 81.51                  | 11.60            | 4.83             | **2.40**   | NVIDIA Tesla T4 |
 | [目标检测](./detection)             | SSD-MobileNetv1               | 73.8(voc)              | 73.52                  | 4.0              | 1.7              | **2.35**   | NVIDIA Tesla T4 |
 | [目标检测](./pytorch_yolo_series)   | YOLOv5s<br/>(PyTorch)         | 37.4                   | 36.9                   | 5.95             | 1.87             | **3.18**   | NVIDIA Tesla T4 |
@@ -177,8 +178,8 @@ ac = AutoCompression(
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="MobileNetV1_quant",
-    config={"Quantization": {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
-    ### config={"Quantization": {}, "Distillation": {}}, ### 如果您的系统为Windows系统, 请使用当前这一行配置
+    config={"QuantPost": {}, "HyperParameterOptimization": {'ptq_algo': ['avg'], 'max_quant_count': 3}},
+    ### config={"QuantAware": {}, "Distillation": {}}, ### 如果您的系统为Windows系统, 请使用当前这一行配置
     train_dataloader=train_loader,
     eval_dataloader=train_loader)
 ac.compress()

@@ -182,7 +182,7 @@ def train_loop(args, train_program, reader, py_reader, loss, trainer_id, weight,
                         print("model saved in %s" % model_dir)
                 batch_id += 1
 
-        except paddle.fluid.core.EOFException:
+        except paddle.framework.core.EOFException:
             py_reader.reset()
             epoch_end = time.time()
             logger.info("Epoch: {0}, Train total expend: {1} ".format(

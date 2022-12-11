@@ -1,7 +1,8 @@
 
 Global:
   reader_config: configs/yolo_reader.yml
-  arch: PPYOLOE    # When export exclude_nms=True, need set arch: PPYOLOE
+  arch: PPYOLOE
+  include_nms: False
   Evaluation: True
   model_dir: ./ppyoloe_crn_s_300e_coco
   model_filename: model.pdmodel
@@ -11,7 +12,7 @@ Distillation:
   alpha: 1.0
   loss: soft_label
 
-Quantization:
+QuantAware:
   onnx_format: true
   use_pact: true
   activation_quantize_type: 'moving_average_abs_max'

@@ -15,7 +15,6 @@
 import os
 import types
 import paddle
-import paddle.fluid as fluid
 import numpy as np
 from collections import defaultdict
 import matplotlib

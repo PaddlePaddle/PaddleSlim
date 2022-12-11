@@ -23,10 +23,6 @@ import time
 import numpy as np
 import paddle
 
-import paddle.fluid as fluid
-from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
-from paddle.fluid.contrib.slim.quantization import utils
-
 from ..dist import merge
 from ..core.graph_wrapper import GraphWrapper
 from ..common import get_logger, recover_program
@@ -52,7 +48,8 @@ class Collections(object):
         return self._config
 
 
-class ReconstructionQuantization(PostTrainingQuantization):
+class ReconstructionQuantization(
+        paddle.fluid.contrib.slim.quantization.PostTrainingQuantization):
     """
     Utilizing reconstruction quantization method to quantize the FP32 model,
     and it uses calibrate data to get the quantization information for all
@@ -95,7 +92,7 @@ class ReconstructionQuantization(PostTrainingQuantization):
 
     def _preparation(self):
         batch_id = 0
-        with utils.tqdm(
+        with paddle.fluid.contrib.slim.quantization.utils.tqdm(
                 total=self._batch_nums,
                 bar_format='Preparation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
                 ncols=80, ) as t:
@@ -115,7 +112,7 @@ class ReconstructionQuantization(PostTrainingQuantization):
 
     def _sampling_threshold(self):
         batch_id = 0
-        with utils.tqdm(
+        with paddle.fluid.contrib.slim.quantization.utils.tqdm(
                 total=self._batch_nums,
                 bar_format='Sampling stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
                 ncols=80, ) as t:
@@ -167,7 +164,8 @@ class ReconstructionQuantization(PostTrainingQuantization):
             num_iterations=self._batch_nums,
             lr=self._config['lr'],
             bias_correction=self._bias_correction,
-            epochs=self._config['epochs'])
+            epochs=self._config['epochs'],
+            limit=self._config['limit'])
         self._program, self._scale_dict = reconstruction_quanter._run()
 
         if self._algo in ["KL", "hist"]:
@@ -229,7 +227,8 @@ class ReconstructionQuanter(object):
                  lr=0.1,
                  bias_correction=False,
                  epochs=20,
-                 drop_prob=0.5):
+                 drop_prob=0.5,
+                 limit=5):
         '''
         Reconstruction Quanter, used to optimize the rounding policy
         by reconstructing the intermediate output.
@@ -237,7 +236,7 @@ class ReconstructionQuanter(object):
             data_loader(Python Generator, Paddle.io.DataLoader, optional): The
                 Generator or Dataloader provides calibrate data, and it could
                 return a batch every time.
-            executor(fluid.Executor): The executor to load, run and save the
+            executor(paddle.static.Executor): The executor to load, run and save the
                 quantized model.
             scope(fluid.Scope, optional): The scope of the program, use it to load
                 and save variables. If scope=None, get scope by global_scope().
@@ -266,19 +265,17 @@ class ReconstructionQuanter(object):
             lr(float, optional): The learning rate of Reconstruction Quanter. Default is 0.1.
             bias_correction(bool, optional): If set as True, use the bias correction
                 method of https://arxiv.org/abs/1810.05723. Default is False.
-            drop_prob: The dropout probability of activation quantization, and it is valid only if 
+            drop_prob(float, optional): The dropout probability of activation quantization, and it is valid only if 
                 simulate_activation_quant is True. Default is 0.5.
+            limit(int, optional): The size of each region. Default is 5.
         Returns:
             None
         '''
 
         assert recon_level in [
             'layer-wise', 'region-wise'
-        ], "recon_level must be one of the ['layer-wise', 'region-wise'],but received: {}".format(
+        ], "recon_level must be one of the ['layer-wise', 'region-wise'], but received: {}".format(
             recon_level)
-        if recon_level == 'region-wise':
-            assert regions is not None, "The regions cannot be None."
-            assert region_weights_names is not None, "The region_weights_names cannot be None."
         self._simulate_activation_quant = simulate_activation_quant
         self._program = fp32_program
         self._data_loader = data_loader
@@ -301,7 +298,15 @@ class ReconstructionQuanter(object):
         self._regions = regions
         self._region_weights_names = region_weights_names
         self._bias_correction = bias_correction
-        if self._recon_level == 'layer-wise':
+        self._limit = limit
+
+        if recon_level == 'region-wise' and regions is None:
+            builder = RegionBuilder(program=self._program)
+            _logger.info('Begin Region division')
+            self._regions, self._region_weights_names = builder._create_regions(
+                limit=self._limit)
+            _logger.info('End Region division')
+        elif self._recon_level == 'layer-wise':
             regions, region_weights_names = self._get_layers()
             self._regions = regions
             self._region_weights_names = region_weights_names
@@ -314,7 +319,8 @@ class ReconstructionQuanter(object):
         self._input_weight_pairs = {}
         for block_id in range(len(self._program.blocks)):
             for op in self._program.blocks[block_id].ops:
-                in_var_names = utils._get_op_input_var_names(op)
+                in_var_names = paddle.fluid.contrib.slim.quantization.utils._get_op_input_var_names(
+                    op)
                 for in_var_name in in_var_names:
                     if in_var_name in persistable_var_names:
                         in_var_names.remove(in_var_name)
@@ -330,10 +336,11 @@ class ReconstructionQuanter(object):
 
     def _preprocess(self):
 
-        for name in self._weight_var_names:
-            for i, s in enumerate(self._scale_dict[name]):
-                if s == 0.0:
-                    self._scale_dict[name][i] = 1e-8
+        if self._weight_quantize_type == 'channel_wise_abs_max':
+            for name in self._weight_var_names:
+                for i, s in enumerate(self._scale_dict[name]):
+                    if s == 0.0:
+                        self._scale_dict[name][i] = 1e-8
 
         data_name_map = {}
         for name in self._feed_list:
@@ -358,44 +365,43 @@ class ReconstructionQuanter(object):
     def _run(self):
         self._preprocess()
         startup_program = paddle.static.Program()
+        tmp_program = self._student_program.clone()
         for k in range(len(self._regions)):
             region_ = self._regions[k]
-            names = self._region_weights_names[k]
-            tmp_program = self._student_program.clone()
+            tmp_program.global_block().var(region_[0]).stop_gradient = True
             quant_op_out_name = region_[1]
+            _logger.info(f"Region's input: {region_[0]}   output: {region_[1]}")
+
+            names = self._region_weights_names[k]
+            _logger.info(f"Current quanted weights: {names}")
+            loss_function = ReconstructionQuanterLoss(
+                program=tmp_program, weight_region_names=names)
+            update_params = [
+                tmp_program.global_block().var(name + '.alpha')
+                for name in names
+            ]
+
             with paddle.static.program_guard(tmp_program, startup_program):
-                loss_function = ReconstructionQuanterLoss(
-                    program=tmp_program, weight_region_names=names)
                 student_var = tmp_program.global_block().var(quant_op_out_name)
                 teacher_var = tmp_program.global_block().var("teacher_" +
                                                              quant_op_out_name)
-                scheduler = paddle.optimizer.lr.CosineAnnealingDecay(
-                    learning_rate=20,
-                    eta_min=2,
-                    T_max=2000,
-                    verbose=True, )
                 total_loss, recon_loss, round_loss = loss_function.get_loss(
                     student_var,
-                    teacher_var,
-                    scheduler, )
+                    teacher_var, )
                 train_fetches_loss = {
                     "total_loss": total_loss,
                     "recon_loss": recon_loss,
                     "round_loss": round_loss,
                 }
-                optimizer = paddle.optimizer.Adam(learning_rate=self._lr)
+                optimizer = paddle.optimizer.Adam(
+                    learning_rate=self._lr, parameters=update_params)
                 optimizer.minimize(total_loss)
             self._exe.run(startup_program)
             start_time = time.time()
             prev_start_time = start_time
-            loader = self._data_loader()
 
             for epoch in range(self._epochs):
-                for i, data in (
-                        enumerate(loader) if
-                    (isinstance(self._data_loader, paddle.fluid.io.DataLoader)
-                     and self._data_loader.batch_size == 1) else
-                        enumerate(self._data_loader())):
+                for i, data in (enumerate(self._data_loader())):
                     prev_start_time = start_time
                     start_time = time.time()
                     out = self._exe.run(
@@ -406,30 +412,31 @@ class ReconstructionQuanter(object):
                         ],
                         return_numpy=True, )
                     _logger.info(
-                        "Iter {:d}, lr {}, total_loss {:.5f}, recon_loss {:.5f}, round_loss {:.5f}, time {:.5f}s"
-                        .format(epoch, self._lr,
+                        "Epoch {:d}, Iter {:d}, lr {}, total_loss {:.5f}, recon_loss {:.5f}, round_loss {:.5f}, time {:.5f}s"
+                        .format(epoch, i, self._lr,
                                 np.mean(out[0]),
                                 np.mean(out[1]),
                                 np.mean(out[2]),
                                 start_time - prev_start_time), )
                     sys.stdout.flush()
-                    if i == self._num_iterations:
+                    if i + 1 == self._num_iterations:
                         break
-
-        self._update_scale()
+        if self._weight_quantize_type == 'channel_wise_abs_max':
+            self._update_scale()
         self._update_weights_to_int()
         if self._bias_correction:
             self._bias_correction_w()
         return self._program, self._scale_dict
 
     def _init_alpha(self, name, scale):
-        _tensor = utils.load_variable_data(self._scope, "teacher_" + name)
-        tensor_scaled = utils.quant_tensor(
+        _tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+            self._scope, "teacher_" + name)
+        tensor_scaled = paddle.fluid.contrib.slim.quantization.utils.quant_tensor(
             x=_tensor,
             scale=scale,
             weight_bits=self._weight_bits,
-            quant_axis=0 if self._weight_op_pairs[name] not in
-            utils._channelwise_quant_axis1_ops else 1)
+            quant_axis=0 if self._weight_op_pairs[name] not in paddle.fluid.
+            contrib.slim.quantization.utils._channelwise_quant_axis1_ops else 1)
         tensor_floor = np.floor(tensor_scaled)
         tensor = tensor_scaled - tensor_floor
         alpha = -np.log((ZETA - GAMMA) / (tensor - GAMMA) - 1)
@@ -462,8 +469,7 @@ class ReconstructionQuanter(object):
             shape=weight.shape,
             dtype=weight.dtype,
             name=weight.name + ".alpha",
-            default_initializer=fluid.initializer.NumpyArrayInitializer(
-                self._alpha, ), )
+            default_initializer=paddle.nn.initializer.Assign(self._alpha, ), )
 
         h_v = paddle.clip(
             paddle.nn.functional.sigmoid(v) * (ZETA - GAMMA) + GAMMA,
@@ -475,8 +481,7 @@ class ReconstructionQuanter(object):
                 dtype=weight.dtype,
                 shape=weight.shape,
                 name=weight.name + '.scale',
-                default_initializer=fluid.initializer.NumpyArrayInitializer(
-                    scale, ))
+                default_initializer=paddle.nn.initializer.Assign(scale, ))
         else:
             scale_var = scale
 
@@ -497,7 +502,6 @@ class ReconstructionQuanter(object):
                 scale = np.array(scale)
                 scale = scale.reshape(scale.shape[0], 1)
                 if len(shape) == 2:
-                    print(name)
                     scale = scale.repeat(shape[0], axis=1).T
                 else:
                     scale = scale.repeat(shape[1] * shape[2] * shape[3], axis=1)
@@ -645,6 +649,9 @@ class ReconstructionQuanter(object):
                           op.input('X')[0].endswith('scale')
                           ) or _type == 'sigmoid':
                         _inputs = {'X': op.input('X')[0]}
+                    elif (_type == 'scale' and
+                          op.input('X')[0].endswith('copy')):
+                        _inputs = {'X': var._var}
                     else:
                         _inputs = {'X': op.input('X')[0] + '.rounding'}
                 elif func == "_drop_quant_dequant":
@@ -730,10 +737,11 @@ class ReconstructionQuanter(object):
         for _name in self._weight_var_names:
 
             scale_name = _name + '.scale'
-            scale_tensor = utils.load_variable_data(self._scope, scale_name)
+            scale_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+                self._scope, scale_name)
             scale_list = []
             if self._weight_op_pairs[
-                    _name] in utils._channelwise_quant_axis1_ops:
+                    _name] in paddle.fluid.contrib.slim.quantization.utils._channelwise_quant_axis1_ops:
                 scale_list = list(scale_tensor[0])
             else:
                 for i in range(scale_tensor.shape[0]):
@@ -742,21 +750,23 @@ class ReconstructionQuanter(object):
 
     def _update_weights_to_int(self):
         for weight_var_name in self._weight_var_names:
-            alpha_tensor = utils.load_variable_data(
+            alpha_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
                 self._scope,
                 weight_var_name + '.alpha', )
             h_alpha_tensor = self._compute_soft_rounding_np(alpha_tensor)
-            weight_tensor = utils.load_variable_data(
+            weight_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
                 self._scope,
                 weight_var_name, )
-            weight_quant_tensor = utils.quant_tensor(
+            weight_quant_tensor = paddle.fluid.contrib.slim.quantization.utils.quant_tensor(
                 x=weight_tensor,
                 scale=self._scale_dict[weight_var_name],
                 weight_bits=self._weight_bits,
-                quant_axis=0 if self._weight_op_pairs[weight_var_name] not in
-                utils._channelwise_quant_axis1_ops else 1)
+                quant_axis=0
+                if self._weight_op_pairs[weight_var_name] not in paddle.fluid.
+                contrib.slim.quantization.utils._channelwise_quant_axis1_ops
+                else 1)
 
-            utils.set_variable_data(
+            paddle.fluid.contrib.slim.quantization.utils.set_variable_data(
                 self._scope,
                 self._place,
                 weight_var_name,
@@ -764,21 +774,23 @@ class ReconstructionQuanter(object):
 
     def _bias_correction_w(self):
         for weight_var_name in self._weight_var_names:
-            weight_var_tensor = utils.load_variable_data(
+            weight_var_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
                 self._scope,
                 "teacher_" + weight_var_name, )
-            weight_quant_tensor = utils.load_variable_data(
+            weight_quant_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
                 self._scope,
                 weight_var_name, )
             scale = self._scale_dict[weight_var_name]
-            final_weight_tensor = utils.bias_correction_w(
+            final_weight_tensor = paddle.fluid.contrib.slim.quantization.utils.bias_correction_w(
                 weight_var_tensor,
                 weight_quant_tensor,
                 scale,
-                quant_axis=0 if self._weight_op_pairs[weight_var_name] not in
-                utils._channelwise_quant_axis1_ops else 1,
+                quant_axis=0
+                if self._weight_op_pairs[weight_var_name] not in paddle.fluid.
+                contrib.slim.quantization.utils._channelwise_quant_axis1_ops
+                else 1,
                 weight_bits=self._weight_bits, )
-            utils.set_variable_data(
+            paddle.fluid.contrib.slim.quantization.utils.set_variable_data(
                 self._scope,
                 self._place,
                 weight_var_name,
@@ -786,7 +798,8 @@ class ReconstructionQuanter(object):
 
     def _compute_soft_rounding_np(self, alpha_v):
         return np.clip(
-            utils.stable_sigmoid(alpha_v) * (ZETA - GAMMA) + GAMMA,
+            paddle.fluid.contrib.slim.quantization.utils.stable_sigmoid(alpha_v)
+            * (ZETA - GAMMA) + GAMMA,
             a_min=0,
             a_max=1, )
 
@@ -831,7 +844,7 @@ class ReconstructionQuanterLoss(object):
             paddle.nn.functional.sigmoid(alpha_v) * (ZETA - GAMMA) + GAMMA, 0,
             1)
 
-    def get_loss(self, student_tensor, teacher_tensor, scheduler):
+    def get_loss(self, student_tensor, teacher_tensor, scheduler=None):
         if self.rec_loss_type == 'mse':
             rec_loss = paddle.nn.functional.mse_loss(
                 student_tensor,
@@ -857,6 +870,202 @@ class ReconstructionQuanterLoss(object):
             raise NotImplementedError
         total_loss = rec_loss + round_loss
         return total_loss, rec_loss, round_loss
+
+
+class PriorityQueue:
+    def __init__(self):
+        self._data = []
+        self._ops = set()
+        self._idx = 0
+        self._lazy_tag = True
+
+    def pop(self):
+        if not self._lazy_tag:
+            self._data = sorted(self._data, key=lambda x: x[0])
+            self._lazy_tag = True
+        if self._idx >= len(self._data): raise IndexError('Index out of range!')
+        ele = self._data[self._idx]
+        self._idx += 1
+        return ele
+
+    def push(self, depth, op):
+        if op in self._ops: return
+        self._data.append((depth, op))
+        self._ops.add(op)
+        self._lazy_tag = False
+
+    def empty(self):
+        return self._idx >= len(self._data)
+
+
+class RegionBuilder(object):
+    def __init__(self, program):
+        self._program = program
+        self._graph = GraphWrapper(self._program)
+        self._op_idx_map = {}
+        for op in self._graph.ops():
+            self._op_idx_map[op.idx()] = op
+        self._depth = {}
+        self._init_depth()
+        self._cache = {}
+        self._regions = []
+        self._region_weights_names = []
+
+    def _init_depth(self):
+        for op in self._graph.ops():
+            if len(self._graph.pre_ops(op)) == 0:
+                self._depth[op.idx()] = 0
+                continue
+
+            depths_cache = []
+            for up_op in self._graph.pre_ops(op):
+                assert up_op.idx() in self._depth
+                depths_cache.append(self._depth[up_op.idx()])
+            self._depth[op.idx()] = max(depths_cache) + 1
+
+    def _build(self, op, limit):
+        def _find_multi_input_ep(op):
+            least_first_queue = PriorityQueue()
+
+            for down_op in self._graph.next_ops(op):
+                least_first_queue.push(self._depth[down_op.idx()],
+                                       down_op.idx())
+
+            while not least_first_queue.empty():
+                iter_op_idx = least_first_queue.pop()[-1]
+                iter_op = self._op_idx_map[iter_op_idx]
+                if (least_first_queue.empty() and
+                        len(self._graph.pre_ops(iter_op)) > 1):
+                    return iter_op
+                for down_op in self._graph.next_ops(iter_op):
+                    least_first_queue.push(self._depth[down_op.idx()],
+                                           down_op.idx())
+            return None
+
+        def _find_coherent_ep(op):
+            ops = self._graph.next_ops(op)
+            if len(ops) == 1:
+                following_op = ops[0]
+                if following_op.type() == 'fetch':
+                    return None
+                inps = op.all_inputs()
+                non_parameter_input = 0
+                for var in inps:
+                    if not var._var.persistable:
+                        non_parameter_input += 1
+                upstream_ops = len(self._graph.pre_ops(following_op))
+                if non_parameter_input == 1 and upstream_ops == 1:
+                    return ops[0]
+            return None
+
+        sp, ep, future_ep = op, op, op
+        while future_ep is not None:
+            if len(self._graph.next_ops(ep)) <= 1:
+                future_ep = _find_coherent_ep(ep)
+            else:
+                future_ep = _find_multi_input_ep(ep)
+
+            if future_ep is None or self._depth[future_ep.idx()] - self._depth[
+                    sp.idx()] >= limit:
+                return self._create_region(sp, ep)
+            ep = future_ep
+
+        return self._create_region(sp=sp, ep=ep)
+
+    def _opset_matching(self, sp, ep):
+
+        if sp.idx() in self._cache: return self._cache[sp.idx()]
+
+        ret_collection = set()
+
+        following_ops = self._graph.next_ops(sp)
+
+        if (len(following_ops)) == 0:
+            return ret_collection.add(sp.idx())
+
+        for op in following_ops:
+            if op == ep:
+                ret_collection.update([sp.idx(), op.idx()])
+            else:
+                further_res = self._opset_matching(sp=op, ep=ep)
+
+                if further_res is None:
+                    return None
+
+                if len(further_res) > 0:
+                    ret_collection.update(further_res)
+                    ret_collection.add(sp.idx())
+        self._cache[sp.idx()] = ret_collection
+        return ret_collection
+
+    def opset_matching(self, sp, ep):
+
+        ret_collection, candidates = set(), set()
+        for op in self._graph.ops():
+            if op == sp:
+                candidates.add(op.idx())
+        for idx in candidates:
+            op = self._op_idx_map[idx]
+            partial_matchings = self._opset_matching(sp=op, ep=ep)
+            if partial_matchings is None:
+                return None
+            if len(partial_matchings) > 0:
+                ret_collection.update(partial_matchings)
+        self._cache.clear()
+        return ret_collection
+
+    def _create_region(self, sp, ep):
+        rps = self.opset_matching(sp, ep)
+        return sp, ep, rps
+
+    def _create_regions(self, limit):
+        visited = []
+        for op in self._graph.ops():
+            region = []
+            region_weight_names = []
+            if op.type() == 'fill_constant': continue
+            if op.type() == 'feed': continue
+            if op.type() == 'fetch': continue
+            if op.idx() in visited: continue
+
+            sp, ep, rps = self._build(op=op, limit=limit)
+            if rps is None:
+                continue
+            ops = [self._op_idx_map[idx] for idx in rps]
+
+            # add region's input var
+            inps = sp.all_inputs()
+            for var in inps:
+                if not var._var.persistable:
+                    region.append(var._var.name)
+                    break
+
+            # add region's output var
+            if ep.type() == 'batch_norm':
+                out_var = ep.outputs('Y')
+            else:
+                out_var = ep.all_outputs()
+            if not out_var[0]._var.persistable:
+                region.append(out_var[0]._var.name)
+
+            for idx in rps:
+                visited.append(idx)
+                op = self._op_idx_map[idx]
+                if op.type() not in [
+                        "conv2d", "depthwise_conv2d", "mul", "matmul",
+                        "matmul_v2"
+                ]:
+                    continue
+                inps = op.all_inputs()
+                for var in inps:
+                    if var._var.persistable:
+                        region_weight_names.append(var._var.name)
+
+            if len(region) < 2 or len(region_weight_names) < 1: continue
+            self._regions.append(region)
+            self._region_weights_names.append(region_weight_names)
+
+        return self._regions, self._region_weights_names
 
 
 def quant_recon_static(executor,
@@ -895,7 +1104,8 @@ def quant_recon_static(executor,
                        region_weights_names=None,
                        epochs=20,
                        drop_prob=0.5,
-                       lr=0.1):
+                       lr=0.1,
+                       limit=6):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -968,8 +1178,8 @@ def quant_recon_static(executor,
         skip_tensor_list(list): List of skip quant tensor name.
         is_use_cache_file(bool): This param is deprecated.
         cache_dir(str): This param is deprecated.
-        epochs: The number of steps in the reconstruction proces. Default is 20.
-        drop_prob: The dropout probability of activation quantization, and it is valid only if 
+        epochs(int): The number of steps in the reconstruction proces. Default is 20.
+        drop_prob(float): The dropout probability of activation quantization, and it is valid only if 
             simulate_activation_quant is True. Default is 0.5.
         regions(list[list], optional): The list of some regions, each region is a subgraph of
             fp32 program and it will have exact 1 input operation and 1 output operation. When 
@@ -977,6 +1187,7 @@ def quant_recon_static(executor,
             Default is None.
         region_weights_names(list[list], optional): The weight names inside every region.
             Default is None.
+        limit(int): The size of each region. Default is 6.
     Returns:
         None
     """
@@ -1012,7 +1223,8 @@ def quant_recon_static(executor,
         regions=regions,
         region_weights_names=region_weights_names,
         epochs=epochs,
-        lr=lr)
+        lr=lr,
+        limit=limit)
 
     reconstruction_quantization = ReconstructionQuantization(
         PTQCollections=PTQCollections, RSQCollections=RSQCollections)

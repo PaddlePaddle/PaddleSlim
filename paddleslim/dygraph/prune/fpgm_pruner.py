@@ -17,7 +17,7 @@ class FPGMFilterPruner(FilterPruner):
         super(FPGMFilterPruner, self).__init__(
             model, inputs, sen_file=sen_file, opt=opt, skip_leaves=skip_leaves)
 
-    def cal_mask(self, pruned_ratio, collection):
+    def cal_mask(self, pruned_ratio, collection, num_head=-1):
         var_name = collection.master_name
         pruned_axis = collection.master_axis
         value = collection.values[var_name]

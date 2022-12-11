@@ -14,7 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
-import paddle.fluid as fluid
+import paddle
 from layers import conv_bn_layer
 from paddleslim.prune import StaticPruningCollections
 from static_case import StaticCase
@@ -22,8 +22,8 @@ from static_case import StaticCase
 
 class TestPrune(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         #   X       X              O       X              O
         # conv1-->conv2-->sum1-->conv3-->conv4-->sum2-->conv5-->conv6
         #     |            ^ |                    ^
@@ -31,8 +31,8 @@ class TestPrune(StaticCase):
         #
         # X: prune output channels
         # O: prune input channels
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2

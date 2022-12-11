@@ -19,7 +19,7 @@ import numpy as np
 import json
 import hashlib
 import time
-import paddle.fluid as fluid
+import paddle
 from ..common.rl_controller.utils import RLCONTROLLER
 from ..common import get_logger
 
@@ -87,6 +87,7 @@ class RLNAS(object):
                 os._exit(1)
 
         cls = RLCONTROLLER.get(key.upper())
+        print(f"RLCONTROLLER: {RLCONTROLLER}")
 
         server_ip, server_port = server_addr
         if server_ip == None or server_ip == "":

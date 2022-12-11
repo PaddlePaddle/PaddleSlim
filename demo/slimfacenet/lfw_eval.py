@@ -88,8 +88,8 @@ def evaluation_10_fold(root='result.mat'):
         flags = np.squeeze(flags)
 
         mu = np.mean(
-            np.concatenate(
-                (featureLs[valFold[0], :], featureRs[valFold[0], :]), 0), 0)
+            np.concatenate((featureLs[valFold[0], :], featureRs[valFold[0], :]),
+                           0), 0)
         mu = np.expand_dims(mu, 0)
         featureLs = featureLs - mu
         featureRs = featureRs - mu
@@ -145,8 +145,7 @@ if __name__ == "__main__":
         '--use_gpu', default=0, type=int, help='Use GPU or not, 0 is not used')
     parser.add_argument(
         '--test_data_dir', default='./lfw', type=str, help='lfw_data_dir')
-    parser.add_argument(
-        '--resume', default='output/0', type=str, help='resume')
+    parser.add_argument('--resume', default='output/0', type=str, help='resume')
     parser.add_argument(
         '--feature_save_dir',
         default='result.mat',
@@ -154,7 +153,7 @@ if __name__ == "__main__":
         help='The path of the extract features save, must be .mat file')
     args = parser.parse_args()
 
-    place = fluid.CPUPlace() if args.use_gpu == 0 else fluid.CUDAPlace(0)
+    place = paddle.CPUPlace() if args.use_gpu == 0 else paddle.CUDAPlace(0)
     with fluid.dygraph.guard(place):
         train_dataset = CASIA_Face(root=args.train_data_dir)
         nl, nr, flods, flags = parse_filelist(args.test_data_dir)

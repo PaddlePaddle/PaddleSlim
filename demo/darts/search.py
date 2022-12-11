@@ -59,11 +59,12 @@ add_arg('use_data_parallel', ast.literal_eval,  False, "The flag indicating whet
 
 def main(args):
     if not args.use_gpu:
-        place = fluid.CPUPlace()
+        place = paddle.CPUPlace()
     elif not args.use_data_parallel:
-        place = fluid.CUDAPlace(0)
+        place = paddle.CUDAPlace(0)
     else:
-        place = fluid.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
+        place = paddle.CUDAPlace(paddle.distributed.parallel.ParallelEnv()
+                                 .dev_id)
 
     train_reader, valid_reader = reader.train_search(
         batch_size=args.batch_size,

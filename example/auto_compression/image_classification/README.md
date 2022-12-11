@@ -45,6 +45,8 @@
 | MobileNetV3_large_x1_0 | 量化+蒸馏 | 74.04 | - | 9.85 | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_QAT.tar) |
 | MobileNetV3_large_x1_0_ssld | Baseline | 78.96 | - | 16.62 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV3_large_x1_0_ssld_infer.tar) |
 | MobileNetV3_large_x1_0_ssld | 量化+蒸馏 | 77.17 | - | 9.85 | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_ssld_QAT.tar) |
+| ViT_base_patch16_224 | Baseline | 81.89 | 367.17(batch_size=40) | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/ViT_base_patch16_224_infer.tar) |
+| ViT_base_patch16_224 | 量化+蒸馏 | 82.05 | 51.70(batch_size=40) | - | [Config](./configs/VIT/qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ViT_base_patch16_224_QAT.tar) |
 
 - ARM CPU 测试环境：`SDM865(4xA77+4xA55)`
 - Nvidia GPU 测试环境：
@@ -71,6 +73,11 @@ pip install paddlepaddle-gpu
 安装paddleslim：
 ```shell
 pip install paddleslim
+```
+
+若使用`run_ppclas.py`脚本，需安装paddleclas：
+```shell
+pip install paddleclas
 ```
 
 #### 3.2 准备数据集
@@ -111,7 +118,12 @@ python -m paddle.distributed.launch run.py --save_dir='./save_quant_mobilev1/' -
 ```
 多卡训练指的是将训练任务按照一定方法拆分到多个训练节点完成数据读取、前向计算、反向梯度计算等过程，并将计算出的梯度上传至服务节点。服务节点在收到所有训练节点传来的梯度后，会将梯度聚合并更新参数。最后将参数发送给训练节点，开始新一轮的训练。多卡训练一轮训练能训练```batch size * num gpus```的数据，比如单卡的```batch size```为32，单轮训练的数据量即32，而四卡训练的```batch size```为32，单轮训练的数据量为128。
 
-注意 ```learning rate``` 与 ```batch size``` 呈线性关系，这里单卡 ```batch size``` 为32，对应的 ```learning rate``` 为0.015，那么如果 ```batch size``` 减小4倍改为8，```learning rate``` 也需除以4；多卡时 ```batch size``` 为32，```learning rate``` 需乘上卡数。所以改变 ```batch size``` 或改变训练卡数都需要对应修改 ```learning rate```。
+注意：
+
+- 参数设置：```learning rate``` 与 ```batch size``` 呈线性关系，这里单卡 ```batch size``` 为32，对应的 ```learning rate``` 为0.015，那么如果 ```batch size``` 减小4倍改为8，```learning rate``` 也需除以4；多卡时 ```batch size``` 为32，```learning rate``` 需乘上卡数。所以改变 ```batch size``` 或改变训练卡数都需要对应修改 ```learning rate```。
+
+- 如需要使用`PaddleClas`中的数据预处理和`DataLoader`，可以使用`run_ppclas.py`脚本启动，启动方式跟以上示例相同，但配置需要对其```PaddleClas```，可参考[ViT配置文件](./configs/VIT/data_reader.yml)。
+
 
 
 ## 4.预测部署

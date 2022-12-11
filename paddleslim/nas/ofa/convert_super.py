@@ -18,14 +18,10 @@ import logging
 import numbers
 import paddle
 from ...common import get_logger
-import paddle.nn as nn
-from paddle.nn import Conv2D, Conv2DTranspose, Linear, LayerNorm, Embedding, SyncBatchNorm
-from paddle import ParamAttr
 from .utils.utils import get_paddle_version
 pd_ver = get_paddle_version()
 from .layers import *
 from . import layers
-from paddle.nn import Layer
 from .layers_base import Block
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -60,13 +56,13 @@ class Convert:
         else:
             w_attr = layer._param_attr if pd_ver == 185 or use_bn_old else layer._weight_attr
 
-        if isinstance(w_attr, ParamAttr):
+        if isinstance(w_attr, paddle.ParamAttr):
             if w_attr != None and not isinstance(w_attr,
                                                  bool) and w_attr.name != None:
                 w_attr.name = 'super_' + w_attr.name
 
         if has_bias:
-            if isinstance(layer._bias_attr, ParamAttr):
+            if isinstance(layer._bias_attr, paddle.ParamAttr):
                 if layer._bias_attr != None and not isinstance(
                         layer._bias_attr,
                         bool) and layer._bias_attr.name != None:
@@ -87,7 +83,7 @@ class Convert:
         # search the first and last weight layer, don't change out channel of the last weight layer
         # don't change in channel of the first weight layer
         model = []
-        if isinstance(network, Layer):
+        if isinstance(network, paddle.nn.Layer):
             for name, sublayer in network.named_sublayers():
                 model.append(sublayer)
         else:
@@ -115,7 +111,7 @@ class Convert:
             ) == weight_layer_count, "length of channel must same as weight layer."
 
         for idx, layer in enumerate(model):
-            if isinstance(layer, Conv2D):
+            if isinstance(layer, paddle.nn.Conv2D):
                 attr_dict = layer.__dict__
                 key = attr_dict['_full_name']
 
@@ -237,8 +233,8 @@ class Convert:
                     layer = Block(SuperGroupConv2D(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            elif (isinstance(layer, nn.BatchNorm2D) or
-                  isinstance(layer, nn.BatchNorm)) and (
+            elif (isinstance(layer, paddle.nn.BatchNorm2D) or
+                  isinstance(layer, paddle.nn.BatchNorm)) and (
                       getattr(self.context, 'expand', None) != None or
                       getattr(self.context, 'channel', None) != None):
                 # num_features in BatchNorm don't change after last weight operators
@@ -246,7 +242,7 @@ class Convert:
                     continue
 
                 use_bn_old = False
-                if isinstance(layer, nn.BatchNorm):
+                if isinstance(layer, paddle.nn.BatchNorm):
                     use_bn_old = True
 
                 attr_dict = layer.__dict__
@@ -290,7 +286,7 @@ class Convert:
                     **new_attr_dict)
                 model[idx] = layer
 
-            elif isinstance(layer, SyncBatchNorm) and (
+            elif isinstance(layer, paddle.nn.SyncBatchNorm) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
                 # num_features in SyncBatchNorm don't change after last weight operators
@@ -330,7 +326,7 @@ class Convert:
 
             ### assume output_size = None, filter_size != None
             ### NOTE: output_size != None may raise error, solve when it happend. 
-            elif isinstance(layer, Conv2DTranspose):
+            elif isinstance(layer, paddle.nn.Conv2DTranspose):
                 attr_dict = layer.__dict__
                 key = attr_dict['_full_name']
 
@@ -464,7 +460,7 @@ class Convert:
                         SuperGroupConv2DTranspose(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            elif isinstance(layer, Linear) and (
+            elif isinstance(layer, paddle.nn.Linear) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
                 attr_dict = layer.__dict__
@@ -532,12 +528,9 @@ class Convert:
                 layer = Block(SuperLinear(**new_attr_dict), key=key)
                 model[idx] = layer
 
-            elif isinstance(
-                    layer,
-                    getattr(nn, 'InstanceNorm2D',
-                            paddle.fluid.dygraph.nn.InstanceNorm)) and (
-                                getattr(self.context, 'expand', None) != None or
-                                getattr(self.context, 'channel', None) != None):
+            elif isinstance(layer, paddle.nn.InstanceNorm2D) and (
+                    getattr(self.context, 'expand', None) != None or
+                    getattr(self.context, 'channel', None) != None):
                 # num_features in InstanceNorm don't change after last weight operators
                 if idx > last_weight_layer_idx:
                     continue
@@ -581,7 +574,7 @@ class Convert:
                     **new_attr_dict)
                 model[idx] = layer
 
-            elif isinstance(layer, LayerNorm) and (
+            elif isinstance(layer, paddle.nn.LayerNorm) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
                 ### TODO(ceci3): fix when normalized_shape != last_dim_of_input
@@ -616,7 +609,7 @@ class Convert:
                 layer = SuperLayerNorm(**new_attr_dict)
                 model[idx] = layer
 
-            elif isinstance(layer, Embedding) and (
+            elif isinstance(layer, paddle.nn.Embedding) and (
                     getattr(self.context, 'expand', None) != None or
                     getattr(self.context, 'channel', None) != None):
                 attr_dict = layer.__dict__
@@ -699,7 +692,7 @@ class Convert:
                 if sublayer.named_children():
                     get_split_names(sublayer, name_list + [name])
 
-        if isinstance(network, Layer):
+        if isinstance(network, paddle.nn.Layer):
             curr_id = 0
             self.name_list = []
             get_split_names(network, [])

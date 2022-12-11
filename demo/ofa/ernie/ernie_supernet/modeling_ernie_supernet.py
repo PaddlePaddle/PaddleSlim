@@ -31,6 +31,7 @@ if six.PY2:
 else:
     from pathlib import Path
 
+import paddle
 import paddle.fluid.dygraph as D
 import paddle.fluid as F
 import paddle.fluid.layers as L
@@ -73,14 +74,14 @@ def _attn_forward(self,
     else:
         n_head = self.n_head
 
-    q = L.transpose(
-        L.reshape(q, [0, 0, n_head, q.shape[-1] // n_head]),
+    q = paddle.transpose(
+        paddle.reshape(q, [0, 0, n_head, q.shape[-1] // n_head]),
         [0, 2, 1, 3])  #[batch, head, seq, dim]
-    k = L.transpose(
-        L.reshape(k, [0, 0, n_head, k.shape[-1] // n_head]),
+    k = paddle.transpose(
+        paddle.reshape(k, [0, 0, n_head, k.shape[-1] // n_head]),
         [0, 2, 1, 3])  #[batch, head, seq, dim]
-    v = L.transpose(
-        L.reshape(v, [0, 0, n_head, v.shape[-1] // n_head]),
+    v = paddle.transpose(
+        paddle.reshape(v, [0, 0, n_head, v.shape[-1] // n_head]),
         [0, 2, 1, 3])  #[batch, head, seq, dim]
 
     q = L.scale(q, scale=self.d_key**-0.5)
@@ -275,7 +276,7 @@ def _seqence_forward(self, *args, **kwargs):
         if len(labels.shape) == 1:
             labels = L.reshape(labels, [-1, 1])
         loss = L.softmax_with_cross_entropy(logits, labels)
-        loss = L.reduce_mean(loss)
+        loss = paddle.mean(loss)
     else:
         loss = None
     return loss, logits, additional_info

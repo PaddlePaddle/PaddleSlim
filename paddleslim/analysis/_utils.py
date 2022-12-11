@@ -119,7 +119,7 @@ def save_cls_model(model, input_shape, save_dir, data_type):
 
     if data_type == 'int8':
         paddle.enable_static()
-        exe = paddle.fluid.Executor(paddle.fluid.CPUPlace())
+        exe = paddle.static.Executor(paddle.CPUPlace())
         save_dir = os.path.dirname(model_file)
 
         quantize_model_path = os.path.join(save_dir, 'int8model')

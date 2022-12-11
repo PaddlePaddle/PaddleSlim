@@ -3,9 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import paddle
 import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
-from paddle.fluid.initializer import MSRA
-from paddle.fluid.param_attr import ParamAttr
+from paddle.nn.initializer import KaimingUniform
 import os, sys, time, math
 import numpy as np
 from collections import namedtuple
@@ -84,11 +82,12 @@ class PVANet():
             conv5 = self._bn(conv5, 'relu', 'conv5_4_last_bn')
         end_points['conv5'] = conv5
 
-        output = fluid.layers.fc(input=input,
-                                 size=class_dim,
-                                 param_attr=ParamAttr(
-                                     initializer=MSRA(), name="fc_weights"),
-                                 bias_attr=ParamAttr(name="fc_offset"))
+        output = paddle.static.nn.fc(
+            input,
+            class_dim,
+            weight_attr=paddle.ParamAttr(
+                initializer=KaimingUniform(), name="fc_weights"),
+            bias_attr=paddle.ParamAttr(name="fc_offset"))
 
         return output
 
@@ -193,7 +192,7 @@ class PVANet():
             path_net = self._conv_bn_relu(path_net, pool_path_outputs, 1,
                                           name + '_poolproj')
             paths.append(path_net)
-        block_net = fluid.layers.concat(paths, axis=1)
+        block_net = paddle.concat(paths, axis=1)
         block_net = self._conv(block_net, inception_outputs, 1,
                                name + '_out_conv')
 
@@ -210,28 +209,26 @@ class PVANet():
 
         prefix = name + '_'
         scale_shape = input.shape[axis:axis + num_axes]
-        param_attr = fluid.ParamAttr(name=prefix + 'gamma')
-        scale_param = fluid.layers.create_parameter(
+        param_attr = paddle.ParamAttr(name=prefix + 'gamma')
+        scale_param = paddle.static.create_parameter(
             shape=scale_shape,
             dtype=input.dtype,
             name=name,
             attr=param_attr,
             is_bias=True,
-            default_initializer=fluid.initializer.Constant(value=1.0))
+            default_initializer=paddle.nn.initializer.Constant(value=1.0))
 
-        offset_attr = fluid.ParamAttr(name=prefix + 'beta')
-        offset_param = fluid.layers.create_parameter(
+        offset_attr = paddle.ParamAttr(name=prefix + 'beta')
+        offset_param = paddle.static.create_parameter(
             shape=scale_shape,
             dtype=input.dtype,
             name=name,
             attr=offset_attr,
             is_bias=True,
-            default_initializer=fluid.initializer.Constant(value=0.0))
+            default_initializer=paddle.nn.initializer.Constant(value=0.0))
 
-        output = fluid.layers.elementwise_mul(
-            input, scale_param, axis=axis, name=prefix + 'mul')
-        output = fluid.layers.elementwise_add(
-            output, offset_param, axis=axis, name=prefix + 'add')
+        output = paddle.multiply(input, scale_param, name=prefix + 'mul')
+        output = paddle.add(output, offset_param, name=prefix + 'add')
         return output
 
     def _conv(self,
@@ -242,7 +239,7 @@ class PVANet():
               stride=1,
               groups=1,
               act=None):
-        net = fluid.layers.conv2d(
+        net = paddle.static.nn.conv2d(
             input=input,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -251,20 +248,20 @@ class PVANet():
             groups=groups,
             act=act,
             use_cudnn=True,
-            param_attr=ParamAttr(name=name + '_weights'),
-            bias_attr=ParamAttr(name=name + '_bias'),
+            param_attr=paddle.ParamAttr(name=name + '_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_bias'),
             name=name)
         return net
 
     def _bn(self, input, act, name):
-        net = fluid.layers.batch_norm(
+        net = paddle.static.nn.batch_norm(
             input=input,
             act=act,
             name=name,
             moving_mean_name=name + '_mean',
             moving_variance_name=name + '_variance',
-            param_attr=ParamAttr(name=name + '_scale'),
-            bias_attr=ParamAttr(name=name + '_offset'))
+            param_attr=paddle.ParamAttr(name=name + '_scale'),
+            bias_attr=paddle.ParamAttr(name=name + '_offset'))
         return net
 
     def _bn_relu_conv(self,
@@ -294,10 +291,10 @@ class PVANet():
 
     def _bn_crelu(self, input, name):
         net = self._bn(input, None, name + '_bn_1')
-        neg_net = fluid.layers.scale(net, scale=-1.0, name=name + '_neg')
-        net = fluid.layers.concat([net, neg_net], axis=1)
+        neg_net = paddle.scale(net, scale=-1.0, name=name + '_neg')
+        net = paddle.concat([net, neg_net], axis=1)
         net = self._scale(net, name + '_scale')
-        net = fluid.layers.relu(net, name=name + '_relu')
+        net = paddle.nn.functional.relu(net, name=name + '_relu')
         return net
 
     def _conv_bn_crelu(self,
@@ -335,15 +332,15 @@ class PVANet():
                         act='relu',
                         name=None):
         """Deconv bn layer."""
-        deconv = fluid.layers.conv2d_transpose(
+        deconv = paddle.static.nn.conv2d_transpose(
             input=input,
             num_filters=num_filters,
             filter_size=filter_size,
             stride=stride,
             padding=padding,
             act=None,
-            param_attr=ParamAttr(name=name + '_weights'),
-            bias_attr=ParamAttr(name=name + '_bias'),
+            param_attr=paddle.ParamAttr(name=name + '_weights'),
+            bias_attr=paddle.ParamAttr(name=name + '_bias'),
             name=name + 'deconv')
         return self._bn(deconv, act, name + '_bn')
 
@@ -370,13 +367,13 @@ def Fpn_Fusion(blocks, net):
         if i == 0:
             g[i] = net.deconv_bn_layer(h[i], num_outputs[i], name='fpn_0')
         else:
-            out = fluid.layers.elementwise_add(x=g[i - 1], y=h[i])
+            out = paddle.add(x=g[i - 1], y=h[i])
             out = net.conv_bn_layer(out, num_outputs[i], 1,
                                     'fpn_trans_' + str(i))
             g[i] = net.deconv_bn_layer(
                 out, num_outputs[i], name='fpn_' + str(i))
 
-    out = fluid.layers.elementwise_add(x=g[-2], y=h[-1])
+    out = paddle.add(x=g[-2], y=h[-1])
     out = net.conv_bn_layer(out, num_outputs[-1], 1, 'fpn_post_0')
     out = net.conv_bn_layer(out, num_outputs[-1], 3, 'fpn_post_1')
 
@@ -388,31 +385,31 @@ def Detector_Header(f_common, net, class_num):
     f_geo = net.conv_bn_layer(f_common, 64, 1, name='geo_1')
     f_geo = net.conv_bn_layer(f_geo, 64, 3, name='geo_2')
     f_geo = net.conv_bn_layer(f_geo, 64, 1, name='geo_3')
-    f_geo = fluid.layers.conv2d(
+    f_geo = paddle.static.nn.conv2d(
         f_geo,
         8,
         1,
         use_cudnn=True,
-        param_attr=ParamAttr(name='geo_4_conv_weights'),
-        bias_attr=ParamAttr(name='geo_4_conv_bias'),
+        param_attr=paddle.ParamAttr(name='geo_4_conv_weights'),
+        bias_attr=paddle.ParamAttr(name='geo_4_conv_bias'),
         name='geo_4_conv')
 
     name = 'score_class_num' + str(class_num + 1)
     f_score = net.conv_bn_layer(f_common, 64, 1, 'score_1')
     f_score = net.conv_bn_layer(f_score, 64, 3, 'score_2')
     f_score = net.conv_bn_layer(f_score, 64, 1, 'score_3')
-    f_score = fluid.layers.conv2d(
+    f_score = paddle.static.nn.conv2d(
         f_score,
         class_num + 1,
         1,
         use_cudnn=True,
-        param_attr=ParamAttr(name=name + '_conv_weights'),
-        bias_attr=ParamAttr(name=name + '_conv_bias'),
+        param_attr=paddle.ParamAttr(name=name + '_conv_weights'),
+        bias_attr=paddle.ParamAttr(name=name + '_conv_bias'),
         name=name + '_conv')
 
-    f_score = fluid.layers.transpose(f_score, perm=[0, 2, 3, 1])
-    f_score = fluid.layers.reshape(f_score, shape=[-1, class_num + 1])
-    f_score = fluid.layers.softmax(input=f_score)
+    f_score = paddle.transpose(f_score, perm=[0, 2, 3, 1])
+    f_score = paddle.reshape(f_score, shape=[-1, class_num + 1])
+    f_score = paddle.nn.functional.softmax(input=f_score)
 
     return f_score, f_geo
 
@@ -440,7 +437,7 @@ def east(input, class_num=31):
                 j // 8,
                 name='fusion_' + str(len(blocks)) + '_2')
         blocks.append(conv)
-    conv = fluid.layers.concat(blocks, axis=1)
+    conv = paddle.concat(blocks, axis=1)
     f_score, f_geo = Detector_Header(conv, net, class_num)
     return f_score, f_geo
 
@@ -449,7 +446,7 @@ def inference(input, class_num=1, nms_thresh=0.2, score_thresh=0.5):
     f_score, f_geo = east(input, class_num)
     print("f_geo shape={}".format(f_geo.shape))
     print("f_score shape={}".format(f_score.shape))
-    f_score = fluid.layers.transpose(f_score, perm=[1, 0])
+    f_score = paddle.transpose(f_score, perm=[1, 0])
     return f_score, f_geo
 
 
@@ -461,20 +458,20 @@ def loss(f_score, f_geo, l_score, l_geo, l_mask, class_num=1):
     '''
     #smooth_l1_loss
     channels = 8
-    l_geo_split, l_short_edge = fluid.layers.split(
+    l_geo_split, l_short_edge = paddle.split(
         l_geo, num_or_sections=[channels, 1],
         dim=1)  #last channel is short_edge_norm
-    f_geo_split = fluid.layers.split(f_geo, num_or_sections=[channels], dim=1)
+    f_geo_split = paddle.split(f_geo, num_or_sections=[channels], dim=1)
     f_geo_split = f_geo_split[0]
 
     geo_diff = l_geo_split - f_geo_split
-    abs_geo_diff = fluid.layers.abs(geo_diff)
+    abs_geo_diff = paddle.abs(geo_diff)
     l_flag = l_score >= 1
-    l_flag = fluid.layers.cast(x=l_flag, dtype="float32")
+    l_flag = paddle.cast(x=l_flag, dtype="float32")
     l_flag = fluid.layers.expand(x=l_flag, expand_times=[1, channels, 1, 1])
 
     smooth_l1_sign = abs_geo_diff < l_flag
-    smooth_l1_sign = fluid.layers.cast(x=smooth_l1_sign, dtype="float32")
+    smooth_l1_sign = paddle.cast(x=smooth_l1_sign, dtype="float32")
 
     in_loss = abs_geo_diff * abs_geo_diff * smooth_l1_sign + (
         abs_geo_diff - 0.5) * (1.0 - smooth_l1_sign)
@@ -482,18 +479,19 @@ def loss(f_score, f_geo, l_score, l_geo, l_mask, class_num=1):
         x=l_short_edge, expand_times=[1, channels, 1, 1])
     out_loss = l_short_edge * in_loss * l_flag
     out_loss = out_loss * l_flag
-    smooth_l1_loss = fluid.layers.reduce_mean(out_loss)
+    smooth_l1_loss = paddle.mean(out_loss)
 
     ##softmax_loss
     l_score.stop_gradient = True
-    l_score = fluid.layers.transpose(l_score, perm=[0, 2, 3, 1])
+    l_score = paddle.transpose(l_score, perm=[0, 2, 3, 1])
     l_score.stop_gradient = True
-    l_score = fluid.layers.reshape(l_score, shape=[-1, 1])
+    l_score = paddle.reshape(l_score, shape=[-1, 1])
     l_score.stop_gradient = True
-    l_score = fluid.layers.cast(x=l_score, dtype="int64")
+    l_score = paddle.cast(x=l_score, dtype="int64")
     l_score.stop_gradient = True
 
-    softmax_loss = fluid.layers.cross_entropy(input=f_score, label=l_score)
-    softmax_loss = fluid.layers.reduce_mean(softmax_loss)
+    softmax_loss = paddle.nn.functional.cross_entropy(
+        input=f_score, label=l_score)
+    softmax_loss = paddle.mean(softmax_loss)
 
     return softmax_loss, smooth_l1_loss
