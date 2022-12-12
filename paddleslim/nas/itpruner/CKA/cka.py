@@ -10,23 +10,11 @@ def center_gram(gram, unbiased=False):
     gram = gram.cuda()
     if not paddle.allclose(gram, paddle.t(gram)):
         raise ValueError('Input must be a symmetric matrix.')
-    if unbiased:
-        # This formulation of the U-statistic, from Szekely, G. J., & Rizzo, M.
-        # L. (2014). Partial distance correlation with methods for dissimilarities.
-        # The Annals of Statistics, 42(6), 2382-2412, seems to be more numerically
-        # stable than the alternative from Song et al. (2007).
-        n = gram.shape[0]
-        gram.fill_diagonal_(0)
-        means = paddle.sum(gram, 0, dtype=paddle.float64) / (n - 2)
-        means -= paddle.sum(means) / (2 * (n - 1))
-        gram -= means[:, None]
-        gram -= means[None, :]
-        gram.fill_diagonal_(0)
-    else:
-        means = paddle.mean(gram, 0)
-        means -= paddle.mean(means) / 2
-        gram -= means[:, None]
-        gram -= means[None, :]
+
+    means = paddle.mean(gram, 0)
+    means -= paddle.mean(means) / 2
+    gram -= means[:, None]
+    gram -= means[None, :]
 
     return gram
 
