@@ -57,8 +57,8 @@
 #### 3.1 准备环境
 
 - python >= 3.6
-- PaddlePaddle >= 2.4.0 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.4.0
+- PaddlePaddle >= 2.4 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim >= 2.4
 
 安装paddlepaddle：
 ```shell
@@ -71,6 +71,13 @@ pip install paddlepaddle_gpu
 安装paddleslim：
 ```shell
 pip install paddleslim
+```
+
+若使用`run_ppclas.py`脚本，需安装paddleclas：
+```shell
+git clone https://github.com/PaddlePaddle/PaddleClas.git -b release/2.5
+cd PaddleClas
+pip install --upgrade -r requirements.txt
 ```
 
 #### 3.2 准备数据集

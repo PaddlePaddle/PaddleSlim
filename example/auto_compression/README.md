@@ -27,6 +27,10 @@
 
 PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT），旨在通过Source-Free的方式，自动对预测模型进行压缩，压缩后模型可直接部署应用。
 
+- ACT可以自动处理常见的预测模型，如果有更特殊的改造需求，可以参考：[ACT超参配置教程](./hyperparameter_tutorial.md)来进行单独配置压缩策略。
+- ACT接口各个参数详细含义可以参考： [ACT API文档](../docs/zh_cn/api_cn/static/auto-compression/auto_compression_api.rst)。
+- 一些问题以及解决方案可以参考：[FAQ](./hyperparameter_tutorial.md#12-faq)。如果FAQ不能解决您的问题，欢迎加入用户群或者通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSlim/issues)给我们提issues。
+
 ## **News** 📢
 
 * 🎉 **2022.8.22** [**PaddleSlim v2.3.3**](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.3)全新发布！目前已经在图像分类、目标检测、图像分割、NLP等20多个模型验证正向效果。
@@ -237,6 +241,7 @@ ac.compress()
 ## 进阶使用
 
 - ACT可以自动处理常见的预测模型，如果有更特殊的改造需求，可以参考[ACT超参配置教程](./hyperparameter_tutorial.md)来进行单独配置压缩策略。
+- ACT接口各个参数详细含义可以参考 [ACT API文档](../docs/zh_cn/api_cn/static/auto-compression/auto_compression_api.rst)。
 
 ## 社区交流
 
