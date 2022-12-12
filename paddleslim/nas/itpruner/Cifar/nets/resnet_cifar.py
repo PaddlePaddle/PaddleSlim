@@ -131,23 +131,6 @@ class ResNetCifar(MyNetwork):
 
         return tensor
 
-    def cfg2params(self, cfg):
-        params = 0
-        params += (3 * 3 * 3 * 16 + 16 * 2) # conv1+bn1
-        in_c = 16
-        cfg_idx = 0
-        for i in range(3):
-            num_blocks = self.num_blocks[i]
-            for j in range(num_blocks):
-                c = cfg[cfg_idx]
-                params += (in_c * 3 * 3 * c + 2 * c + c * 3 * 3 * c + 2 * c) # per block params
-                if in_c != c:
-                    params += in_c * c # shortcut
-                in_c = c
-                cfg_idx += 1
-        params += (self.cfg[-1] + 1) * self.num_classes # fc layer
-        return params
-
     def cfg2flops(self, cfg):  # to simplify, only count convolution flops
         size = 32
         flops = 0
