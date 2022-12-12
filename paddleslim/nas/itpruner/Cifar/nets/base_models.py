@@ -3,14 +3,7 @@ import math
 
 
 class MyNetwork(nn.Layer):
-    def forward(self, x):
-        raise NotImplementedError
-
     def feature_extract(self, x):
-        raise NotImplementedError
-
-    @property
-    def config(self):
         raise NotImplementedError
 
     def cfg2params(self, cfg):
