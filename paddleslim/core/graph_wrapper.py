@@ -220,7 +220,7 @@ class OpWrapper(object):
 
 class GraphWrapper(object):
     """
-    It is a wrapper of paddle.fluid.framework.IrGraph with some special functions
+    It is a wrapper of paddle.framework.IrGraph with some special functions
     for paddle slim framework.
 
     Args:

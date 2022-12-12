@@ -97,7 +97,7 @@ def convert_python_to_tensor(weight, batch_size, sample_reader):
             if len(result[0]) == batch_size:
                 tensor_result = []
                 for tensor in result:
-                    t = paddle.fluid.Tensor()
+                    t = paddle.Tensor()
                     dat = np.array(tensor, dtype='int64')
                     if len(dat.shape) > 2:
                         dat = dat.reshape((dat.shape[0], dat.shape[2]))
@@ -105,7 +105,7 @@ def convert_python_to_tensor(weight, batch_size, sample_reader):
                         dat = dat.reshape((-1, 1))
                     t.set(dat, paddle.CPUPlace())
                     tensor_result.append(t)
-                tt = paddle.fluid.Tensor()
+                tt = paddle.Tensor()
                 neg_array = cs.searchsorted(np.random.sample(args.nce_num))
                 neg_array = np.tile(neg_array, batch_size)
                 tt.set(

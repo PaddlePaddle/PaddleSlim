@@ -23,8 +23,8 @@ import logging
 import argparse
 import functools
 
+import paddle
 import paddle.fluid as fluid
-from paddle.fluid.dygraph.base import to_variable
 from paddleslim.common import AvgrageMeter, get_logger
 from paddleslim.nas.darts import count_parameters_in_MB
 
@@ -72,8 +72,8 @@ def train(model, train_reader, optimizer, epoch, drop_path_prob, args):
 
     for step_id, data in enumerate(train_reader()):
         image_np, label_np = data
-        image = to_variable(image_np)
-        label = to_variable(label_np)
+        image = paddle.to_tensor(image_np)
+        label = paddle.to_tensor(label_np)
         label.stop_gradient = True
         logits, logits_aux = model(image, drop_path_prob, True)
 
@@ -117,8 +117,8 @@ def valid(model, valid_reader, epoch, args):
 
     for step_id, data in enumerate(valid_reader()):
         image_np, label_np = data
-        image = to_variable(image_np)
-        label = to_variable(label_np)
+        image = paddle.to_tensor(image_np)
+        label = paddle.to_tensor(label_np)
         logits, _ = model(image, 0, False)
         prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
         prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
@@ -140,83 +140,75 @@ def main(args):
     place = paddle.CUDAPlace(paddle.distributed.parallel.ParallelEnv().dev_id) \
         if args.use_data_parallel else paddle.CUDAPlace(0)
 
-    with fluid.dygraph.guard(place):
-        genotype = eval("genotypes.%s" % args.arch)
-        model = Network(
-            C=args.init_channels,
-            num_classes=args.class_num,
-            layers=args.layers,
-            auxiliary=args.auxiliary,
-            genotype=genotype)
+    genotype = eval("genotypes.%s" % args.arch)
+    model = Network(
+        C=args.init_channels,
+        num_classes=args.class_num,
+        layers=args.layers,
+        auxiliary=args.auxiliary,
+        genotype=genotype)
 
-        logger.info("param size = {:.6f}MB".format(
-            count_parameters_in_MB(model.parameters())))
+    logger.info("param size = {:.6f}MB".format(
+        count_parameters_in_MB(model.parameters())))
 
-        device_num = paddle.distributed.parallel.ParallelEnv().nranks
-        step_per_epoch = int(args.trainset_num / (args.batch_size * device_num))
-        learning_rate = fluid.dygraph.CosineDecay(args.learning_rate,
-                                                  step_per_epoch, args.epochs)
-        clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=args.grad_clip)
-        optimizer = paddle.optimizer.Momentum(
-            learning_rate,
-            momentum=args.momentum,
-            regularization=fluid.regularizer.L2Decay(args.weight_decay),
-            parameter_list=model.parameters(),
-            grad_clip=clip)
+    device_num = paddle.distributed.parallel.ParallelEnv().nranks
+    learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(args.learning_rate,
+                                                             args.epochs / 2)
+    clip = paddle.nn.ClipGradByGlobalNorm(args.grad_clip)
+    optimizer = paddle.optimizer.Momentum(
+        learning_rate,
+        momentum=args.momentum,
+        regularization=paddle.regularizer.L2Decay(args.weight_decay),
+        parameter_list=model.parameters(),
+        grad_clip=clip)
 
-        if args.use_data_parallel:
-            strategy = fluid.dygraph.parallel.prepare_context()
-            model = fluid.dygraph.parallel.DataParallel(model, strategy)
+    if args.use_data_parallel:
+        strategy = paddle.distributed.init_parallel_env()
+        model = paddle.DataParallel(model, strategy)
 
-        train_loader = fluid.io.DataLoader.from_generator(
-            capacity=64,
-            use_double_buffer=True,
-            iterable=True,
-            return_list=True,
-            use_multiprocess=args.use_multiprocess)
-        valid_loader = fluid.io.DataLoader.from_generator(
-            capacity=64,
-            use_double_buffer=True,
-            iterable=True,
-            return_list=True,
-            use_multiprocess=args.use_multiprocess)
+    train_loader = paddle.io.DataLoader.from_generator(
+        capacity=64,
+        use_double_buffer=True,
+        iterable=True,
+        return_list=True,
+        use_multiprocess=args.use_multiprocess)
+    valid_loader = paddle.io.DataLoader.from_generator(
+        capacity=64,
+        use_double_buffer=True,
+        iterable=True,
+        return_list=True,
+        use_multiprocess=args.use_multiprocess)
 
-        train_reader = reader.train_valid(
-            batch_size=args.batch_size,
-            is_train=True,
-            is_shuffle=True,
-            args=args)
-        valid_reader = reader.train_valid(
-            batch_size=args.batch_size,
-            is_train=False,
-            is_shuffle=False,
-            args=args)
-        if args.use_data_parallel:
-            train_reader = fluid.contrib.reader.distributed_batch_reader(
-                train_reader)
+    train_reader = reader.train_valid(
+        batch_size=args.batch_size, is_train=True, is_shuffle=True, args=args)
+    valid_reader = reader.train_valid(
+        batch_size=args.batch_size, is_train=False, is_shuffle=False, args=args)
+    if args.use_data_parallel:
+        train_reader = fluid.contrib.reader.distributed_batch_reader(
+            train_reader)
 
-        train_loader.set_batch_generator(train_reader, places=place)
-        valid_loader.set_batch_generator(valid_reader, places=place)
+    train_loader.set_batch_generator(train_reader, places=place)
+    valid_loader.set_batch_generator(valid_reader, places=place)
 
-        save_parameters = (not args.use_data_parallel) or (
-            args.use_data_parallel and
-            paddle.distributed.parallel.ParallelEnv().local_rank == 0)
-        best_acc = 0
-        for epoch in range(args.epochs):
-            drop_path_prob = args.drop_path_prob * epoch / args.epochs
-            logger.info('Epoch {}, lr {:.6f}'.format(
-                epoch, optimizer.current_step_lr()))
-            train_top1 = train(model, train_loader, optimizer, epoch,
-                               drop_path_prob, args)
-            logger.info("Epoch {}, train_acc {:.6f}".format(epoch, train_top1))
-            valid_top1 = valid(model, valid_loader, epoch, args)
-            if valid_top1 > best_acc:
-                best_acc = valid_top1
-                if save_parameters:
-                    paddle.save(model.state_dict(),
-                                args.model_save_dir + "/best_model")
-            logger.info("Epoch {}, valid_acc {:.6f}, best_valid_acc {:.6f}".
-                        format(epoch, valid_top1, best_acc))
+    save_parameters = (not args.use_data_parallel) or (
+        args.use_data_parallel and
+        paddle.distributed.parallel.ParallelEnv().local_rank == 0)
+    best_acc = 0
+    for epoch in range(args.epochs):
+        drop_path_prob = args.drop_path_prob * epoch / args.epochs
+        logger.info('Epoch {}, lr {:.6f}'.format(epoch,
+                                                 optimizer.current_step_lr()))
+        train_top1 = train(model, train_loader, optimizer, epoch,
+                           drop_path_prob, args)
+        logger.info("Epoch {}, train_acc {:.6f}".format(epoch, train_top1))
+        valid_top1 = valid(model, valid_loader, epoch, args)
+        if valid_top1 > best_acc:
+            best_acc = valid_top1
+            if save_parameters:
+                paddle.save(model.state_dict(),
+                            args.model_save_dir + "/best_model")
+        logger.info("Epoch {}, valid_acc {:.6f}, best_valid_acc {:.6f}".format(
+            epoch, valid_top1, best_acc))
 
 
 if __name__ == '__main__':

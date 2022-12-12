@@ -23,7 +23,7 @@ def model_size(program):
     Get total value numbers of all parameters.
 
     Args:
-        program(fluid.Program): The program used to calculate model size.
+        program(paddle.static.Program): The program used to calculate model size.
 
     Returns:
         int: The total count of all parameters. 
