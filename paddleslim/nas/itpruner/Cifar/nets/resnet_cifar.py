@@ -1,4 +1,3 @@
-from .base_models import MyNetwork
 import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
@@ -65,7 +64,7 @@ class BasicBlock(nn.Layer):
         return out
 
 
-class ResNetCifar(MyNetwork):
+class ResNetCifar(nn.Layer):
     def __init__(self, depth=20, num_classes=10, cfg=None, cutout=False):
         super(ResNetCifar, self).__init__()
         cfg_base = []
