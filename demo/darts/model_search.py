@@ -17,10 +17,8 @@ from __future__ import division
 from __future__ import print_function
 
 import paddle
-import paddle.fluid as fluid
 from paddle.nn.initializer import Normal, KaimingUniform, Constant
 from paddle.nn import Conv2D, Pool2D, BatchNorm, Linear
-from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
 from operations import *
 import paddleslim
@@ -159,9 +157,9 @@ class Network(paddle.nn.Layer):
         self.cells = paddle.nn.LayerList(cells)
         self.global_pooling = Pool2D(pool_type='avg', global_pooling=True)
         self.classifier = Linear(
-            input_dim=c_prev,
-            output_dim=num_classes,
-            param_attr=paddle.ParamAttr(initializer=KaimingUniform()),
+            c_prev,
+            num_classes,
+            weight_attr=paddle.ParamAttr(initializer=KaimingUniform()),
             bias_attr=paddle.ParamAttr(initializer=KaimingUniform()))
 
         self._initialize_alphas()

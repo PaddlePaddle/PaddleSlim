@@ -26,9 +26,6 @@ import logging
 import argparse
 
 import paddle
-import paddle.fluid as F
-import paddle.fluid.dygraph as FD
-import paddle.fluid.layers as L
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig, utils
 
 from propeller import log
@@ -44,9 +41,9 @@ from paddleslim.nas.ofa.convert_super import Convert, supernet
 
 
 def soft_cross_entropy(inp, target):
-    inp_likelihood = L.log_softmax(inp, axis=-1)
-    target_prob = L.softmax(target, axis=-1)
-    return -1. * L.mean(paddle.sum(inp_likelihood * target_prob, dim=-1))
+    inp_likelihood = paddle.nn.functional.log_softmax(inp, axis=-1)
+    target_prob = paddle.nn.functional.softmax(target, axis=-1)
+    return -1. * paddle.mean(paddle.sum(inp_likelihood * target_prob, dim=-1))
 
 
 if __name__ == '__main__':
@@ -194,200 +191,193 @@ if __name__ == '__main__':
     dev_ds.data_shapes = shapes
     dev_ds.data_types = types
 
-    place = F.CUDAPlace(0)
-    with FD.guard(place):
-        model = ErnieModelForSequenceClassification.from_pretrained(
-            args.from_pretrained, num_labels=3, name='')
-        setattr(model, 'return_additional_info', True)
+    place = paddle.CUDAPlace(0)
+    model = ErnieModelForSequenceClassification.from_pretrained(
+        args.from_pretrained, num_labels=3, name='')
+    setattr(model, 'return_additional_info', True)
 
-        origin_weights = {}
-        for name, param in model.named_parameters():
-            origin_weights[name] = param
+    origin_weights = {}
+    for name, param in model.named_parameters():
+        origin_weights[name] = param
 
-        sp_config = supernet(expand_ratio=args.width_mult_list)
-        model = Convert(sp_config).convert(model)
-        utils.set_state_dict(model, origin_weights)
-        del origin_weights
+    sp_config = supernet(expand_ratio=args.width_mult_list)
+    model = Convert(sp_config).convert(model)
+    utils.set_state_dict(model, origin_weights)
+    del origin_weights
 
-        teacher_model = ErnieModelForSequenceClassification.from_pretrained(
-            args.from_pretrained, num_labels=3, name='teacher')
-        setattr(teacher_model, 'return_additional_info', True)
+    teacher_model = ErnieModelForSequenceClassification.from_pretrained(
+        args.from_pretrained, num_labels=3, name='teacher')
+    setattr(teacher_model, 'return_additional_info', True)
 
-        default_run_config = {
-            'n_epochs': [[4 * args.epoch], [6 * args.epoch]],
-            'init_learning_rate': [[args.lr], [args.lr]],
-            'elastic_depth': args.depth_mult_list,
-            'dynamic_batch_size': [[1, 1], [1, 1]]
-        }
-        run_config = RunConfig(**default_run_config)
+    default_run_config = {
+        'n_epochs': [[4 * args.epoch], [6 * args.epoch]],
+        'init_learning_rate': [[args.lr], [args.lr]],
+        'elastic_depth': args.depth_mult_list,
+        'dynamic_batch_size': [[1, 1], [1, 1]]
+    }
+    run_config = RunConfig(**default_run_config)
 
-        model_cfg = get_config(args.from_pretrained)
+    model_cfg = get_config(args.from_pretrained)
 
-        default_distill_config = {'teacher_model': teacher_model}
-        distill_config = DistillConfig(**default_distill_config)
+    default_distill_config = {'teacher_model': teacher_model}
+    distill_config = DistillConfig(**default_distill_config)
 
-        ofa_model = OFA(model,
-                        run_config,
-                        distill_config=distill_config,
-                        elastic_order=['width', 'depth'])
+    ofa_model = OFA(model,
+                    run_config,
+                    distill_config=distill_config,
+                    elastic_order=['width', 'depth'])
 
-        ### suppose elastic width first
-        if args.reorder_weight:
-            head_importance, neuron_importance = compute_neuron_head_importance(
-                args, ofa_model.model, dev_ds, place, model_cfg)
-            reorder_neuron_head(ofa_model.model, head_importance,
-                                neuron_importance)
-        #################
+    ### suppose elastic width first
+    if args.reorder_weight:
+        head_importance, neuron_importance = compute_neuron_head_importance(
+            args, ofa_model.model, dev_ds, place, model_cfg)
+        reorder_neuron_head(ofa_model.model, head_importance, neuron_importance)
+    #################
 
-        if args.init_checkpoint is not None:
-            log.info('loading checkpoint from %s' % args.init_checkpoint)
-            sd, _ = FD.load_dygraph(args.init_checkpoint)
-            ofa_model.model.set_dict(sd)
+    if args.init_checkpoint is not None:
+        log.info('loading checkpoint from %s' % args.init_checkpoint)
+        sd, _ = paddle.load(args.init_checkpoint)
+        ofa_model.model.set_dict(sd)
 
-        g_clip = F.clip.GradientClipByGlobalNorm(1.0)  #experimental
-        if args.use_lr_decay:
-            opt = AdamW(
-                learning_rate=LinearDecay(args.lr,
-                                          int(args.warmup_proportion *
-                                              args.max_steps), args.max_steps),
-                parameter_list=ofa_model.model.parameters(),
-                weight_decay=args.wd,
-                grad_clip=g_clip)
+    g_clip = paddle.nn.ClipGradByGlobalNorm(1.0)  #experimental
+    if args.use_lr_decay:
+        opt = AdamW(
+            learning_rate=LinearDecay(args.lr,
+                                      int(args.warmup_proportion *
+                                          args.max_steps), args.max_steps),
+            parameter_list=ofa_model.model.parameters(),
+            weight_decay=args.wd,
+            grad_clip=g_clip)
+    else:
+        opt = AdamW(
+            args.lr,
+            parameter_list=ofa_model.model.parameters(),
+            weight_decay=args.wd,
+            grad_clip=g_clip)
+
+    for epoch in range(max(run_config.n_epochs[-1])):
+        ofa_model.set_epoch(epoch)
+        if epoch <= int(max(run_config.n_epochs[0])):
+            ofa_model.set_task('width')
+            depth_mult_list = [1.0]
         else:
-            opt = AdamW(
-                args.lr,
-                parameter_list=ofa_model.model.parameters(),
-                weight_decay=args.wd,
-                grad_clip=g_clip)
+            ofa_model.set_task('depth')
+            depth_mult_list = run_config.elastic_depth
+        for step, d in enumerate(tqdm(train_ds.start(place), desc='training')):
+            ids, sids, label = d
 
-        for epoch in range(max(run_config.n_epochs[-1])):
-            ofa_model.set_epoch(epoch)
-            if epoch <= int(max(run_config.n_epochs[0])):
-                ofa_model.set_task('width')
-                depth_mult_list = [1.0]
-            else:
-                ofa_model.set_task('depth')
-                depth_mult_list = run_config.elastic_depth
-            for step, d in enumerate(
-                    tqdm(
-                        train_ds.start(place), desc='training')):
-                ids, sids, label = d
+            accumulate_gradients = dict()
+            for param in opt._parameter_list:
+                accumulate_gradients[param.name] = 0.0
 
-                accumulate_gradients = dict()
-                for param in opt._parameter_list:
-                    accumulate_gradients[param.name] = 0.0
+            for depth_mult in depth_mult_list:
+                for width_mult in args.width_mult_list:
+                    net_config = utils.dynabert_config(
+                        ofa_model, width_mult, depth_mult=depth_mult)
+                    ofa_model.set_net_config(net_config)
 
+                    student_output, teacher_output = ofa_model(
+                        ids,
+                        sids,
+                        labels=label,
+                        num_layers=model_cfg['num_hidden_layers'])
+                    loss, student_logit, student_reps = student_output[
+                        0], student_output[1], student_output[2]['hiddens']
+                    teacher_logit, teacher_reps = teacher_output[
+                        1], teacher_output[2]['hiddens']
+
+                    if ofa_model.task == 'depth':
+                        depth_mult = ofa_model.current_config['depth']
+                        depth = round(model_cfg['num_hidden_layers'] *
+                                      depth_mult)
+                        kept_layers_index = []
+                        for i in range(1, depth + 1):
+                            kept_layers_index.append(
+                                math.floor(i / depth_mult) - 1)
+
+                        if mode == 'classification':
+                            logit_loss = soft_cross_entropy(
+                                student_logit, teacher_logit.detach())
+                        else:
+                            logit_loss = 0.0
+
+                        ### hidden_states distillation loss
+                        rep_loss = 0.0
+                        for stu_rep, tea_rep in zip(
+                                student_reps,
+                                list(teacher_reps[i]
+                                     for i in kept_layers_index)):
+                            tmp_loss = paddle.nn.functional.mse_loss(
+                                stu_rep, tea_rep.detach())
+                            rep_loss += tmp_loss
+
+                        loss = args.width_lambda1 * logit_loss + args.width_lambda2 * rep_loss
+
+                    else:
+                        ### logit distillation loss
+                        if mode == 'classification':
+                            logit_loss = soft_cross_entropy(
+                                student_logit, teacher_logit.detach())
+                        else:
+                            logit_loss = 0.0
+
+                        ### hidden_states distillation loss
+                        rep_loss = 0.0
+                        for stu_rep, tea_rep in zip(student_reps, teacher_reps):
+                            tmp_loss = paddle.nn.functional.mse_loss(
+                                stu_rep, tea_rep.detach())
+                            rep_loss += tmp_loss
+
+                        loss = args.width_lambda1 * logit_loss + args.width_lambda2 * rep_loss
+
+                    if step % 10 == 0:
+                        print('train loss %.5f lr %.3e' %
+                              (loss.numpy(), opt.current_step_lr()))
+
+                    loss.backward()
+                    param_grads = opt.backward(loss)
+                    for param in opt._parameter_list:
+                        accumulate_gradients[param.name] += param.gradient()
+            for k, v in param_grads:
+                assert k.name in accumulate_gradients.keys(
+                ), "{} not in accumulate_gradients".format(k.name)
+                v.set_value(accumulate_gradients[k.name])
+            opt.apply_optimize(
+                loss, startup_program=None, params_grads=param_grads)
+            ofa_model.model.clear_gradients()
+
+            if step % 100 == 0:
                 for depth_mult in depth_mult_list:
                     for width_mult in args.width_mult_list:
                         net_config = utils.dynabert_config(
                             ofa_model, width_mult, depth_mult=depth_mult)
                         ofa_model.set_net_config(net_config)
 
-                        student_output, teacher_output = ofa_model(
-                            ids,
-                            sids,
-                            labels=label,
-                            num_layers=model_cfg['num_hidden_layers'])
-                        loss, student_logit, student_reps = student_output[
-                            0], student_output[1], student_output[2]['hiddens']
-                        teacher_logit, teacher_reps = teacher_output[
-                            1], teacher_output[2]['hiddens']
+                        acc = []
+                        tea_acc = []
+                        ofa_model.model.eval()
+                        for step, d in enumerate(
+                                tqdm(
+                                    dev_ds.start(place),
+                                    desc='evaluating %d' % epoch)):
+                            ids, sids, label = d
+                            [loss, logits, _], [_, tea_logits, _] = ofa_model(
+                                ids,
+                                sids,
+                                labels=label,
+                                num_layers=model_cfg['num_hidden_layers'])
+                            a = paddle.argmax(logits, -1) == label
+                            acc.append(a.numpy())
 
-                        if ofa_model.task == 'depth':
-                            depth_mult = ofa_model.current_config['depth']
-                            depth = round(model_cfg['num_hidden_layers'] *
-                                          depth_mult)
-                            kept_layers_index = []
-                            for i in range(1, depth + 1):
-                                kept_layers_index.append(
-                                    math.floor(i / depth_mult) - 1)
-
-                            if mode == 'classification':
-                                logit_loss = soft_cross_entropy(
-                                    student_logit, teacher_logit.detach())
-                            else:
-                                logit_loss = 0.0
-
-                            ### hidden_states distillation loss
-                            rep_loss = 0.0
-                            for stu_rep, tea_rep in zip(
-                                    student_reps,
-                                    list(teacher_reps[i]
-                                         for i in kept_layers_index)):
-                                tmp_loss = L.mse_loss(stu_rep, tea_rep.detach())
-                                rep_loss += tmp_loss
-
-                            loss = args.width_lambda1 * logit_loss + args.width_lambda2 * rep_loss
-
-                        else:
-                            ### logit distillation loss
-                            if mode == 'classification':
-                                logit_loss = soft_cross_entropy(
-                                    student_logit, teacher_logit.detach())
-                            else:
-                                logit_loss = 0.0
-
-                            ### hidden_states distillation loss
-                            rep_loss = 0.0
-                            for stu_rep, tea_rep in zip(student_reps,
-                                                        teacher_reps):
-                                tmp_loss = L.mse_loss(stu_rep, tea_rep.detach())
-                                rep_loss += tmp_loss
-
-                            loss = args.width_lambda1 * logit_loss + args.width_lambda2 * rep_loss
-
-                        if step % 10 == 0:
-                            print('train loss %.5f lr %.3e' %
-                                  (loss.numpy(), opt.current_step_lr()))
-
-                        loss.backward()
-                        param_grads = opt.backward(loss)
-                        for param in opt._parameter_list:
-                            accumulate_gradients[param.name] += param.gradient()
-                for k, v in param_grads:
-                    assert k.name in accumulate_gradients.keys(
-                    ), "{} not in accumulate_gradients".format(k.name)
-                    v.set_value(accumulate_gradients[k.name])
-                opt.apply_optimize(
-                    loss, startup_program=None, params_grads=param_grads)
-                ofa_model.model.clear_gradients()
-
-                if step % 100 == 0:
-                    for depth_mult in depth_mult_list:
-                        for width_mult in args.width_mult_list:
-                            net_config = utils.dynabert_config(
-                                ofa_model, width_mult, depth_mult=depth_mult)
-                            ofa_model.set_net_config(net_config)
-
-                            acc = []
-                            tea_acc = []
-                            with FD.base._switch_tracer_mode_guard_(
-                                    is_train=False):
-                                ofa_model.model.eval()
-                                for step, d in enumerate(
-                                        tqdm(
-                                            dev_ds.start(place),
-                                            desc='evaluating %d' % epoch)):
-                                    ids, sids, label = d
-                                    [loss, logits,
-                                     _], [_, tea_logits, _] = ofa_model(
-                                         ids,
-                                         sids,
-                                         labels=label,
-                                         num_layers=model_cfg[
-                                             'num_hidden_layers'])
-                                    a = L.argmax(logits, -1) == label
-                                    acc.append(a.numpy())
-
-                                    ta = L.argmax(tea_logits, -1) == label
-                                    tea_acc.append(ta.numpy())
-                                ofa_model.model.train()
-                            print(
-                                'width_mult: %f, depth_mult: %f: acc %.5f, teacher acc %.5f'
-                                % (width_mult, depth_mult,
-                                   np.concatenate(acc).mean(),
-                                   np.concatenate(tea_acc).mean()))
+                            ta = paddle.argmax(tea_logits, -1) == label
+                            tea_acc.append(ta.numpy())
+                            ofa_model.model.train()
+                        print(
+                            'width_mult: %f, depth_mult: %f: acc %.5f, teacher acc %.5f'
+                            % (width_mult, depth_mult,
+                               np.concatenate(acc).mean(),
+                               np.concatenate(tea_acc).mean()))
         if args.save_dir is not None:
             if not os.path.exists(args.save_dir):
                 os.makedirs(args.save_dir)
-            F.save_dygraph(ofa_model.model.state_dict(), args.save_dir)
+            paddle.save(ofa_model.model.state_dict(), args.save_dir)

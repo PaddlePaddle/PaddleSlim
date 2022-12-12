@@ -57,15 +57,12 @@ def _recover_param_attr(program):
        Params in infermodel are stored in the form of variable, which can not be trained."""
     all_weights = [param for param in program.list_vars() \
         if param.persistable is True and param.name != 'feed' and param.name != 'fetch']
-    for w in all_weights:
-        new_w = paddle.fluid.framework.Parameter(
-            block=program.block(0),
-            shape=w.shape,
-            dtype=w.dtype,
-            type=w.type,
-            name=w.name)
-        new_w.set_value(w.get_value())
-        program.block(0).vars[w.name] = new_w
+    with paddle.static.program_guard(program):
+        for w in all_weights:
+            new_w = paddle.create_parameter(
+                shape=w.shape, dtype=w.dtype, name=w.name)
+            new_w.set_value(w.get_value())
+            program.block(0).vars[w.name] = new_w
     return program
 
 

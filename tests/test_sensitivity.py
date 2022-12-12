@@ -45,8 +45,7 @@ class TestSensitivity(StaticCase):
         exe = paddle.static.Executor(place)
         exe.run(startup_program)
 
-        val_reader = paddle.fluid.io.batch(
-            paddle.dataset.mnist.test(), batch_size=128)
+        val_reader = paddle.batch(paddle.dataset.mnist.test(), batch_size=128)
 
         def eval_func(program):
             feeder = paddle.fluid.DataFeeder(

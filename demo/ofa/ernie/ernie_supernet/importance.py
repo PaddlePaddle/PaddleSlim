@@ -15,16 +15,13 @@
 import os
 import numpy as np
 import paddle
-import paddle.fluid as F
-import paddle.fluid.dygraph as FD
-import paddle.fluid.layers as L
 
 
 def compute_neuron_head_importance(args, model, dev_ds, place, model_cfg):
     n_layers, n_heads = model_cfg['num_hidden_layers'], model_cfg[
         'num_attention_heads']
-    head_importance = L.zeros(shape=[n_layers, n_heads], dtype='float32')
-    head_mask = L.ones(shape=[n_layers, n_heads], dtype='float32')
+    head_importance = paddle.zeros(shape=[n_layers, n_heads], dtype='float32')
+    head_mask = paddle.ones(shape=[n_layers, n_heads], dtype='float32')
     head_mask.stop_gradient = False
 
     intermediate_weight = []
@@ -60,7 +57,8 @@ def compute_neuron_head_importance(args, model, dev_ds, place, model_cfg):
                 num_layers=model_cfg['num_hidden_layers'])
             loss = out[0]
             loss.backward()
-            head_importance += L.abs(FD.to_variable(head_mask.gradient()))
+            head_importance += paddle.abs(
+                paddle.to_tensor(head_mask.gradient()))
 
             for w1, b1, w2, current_importance in zip(
                     intermediate_weight, intermediate_bias, output_weight,
@@ -78,34 +76,36 @@ def reorder_neuron_head(model, head_importance, neuron_importance):
     # reorder heads and ffn neurons
     for layer, current_importance in enumerate(neuron_importance):
         # reorder heads
-        idx = L.argsort(head_importance[layer], descending=True)[-1]
+        idx = paddle.argsort(head_importance[layer], descending=True)[-1]
         #model.encoder_stack.block[layer].attn.reorder_heads(idx)
         reorder_head(model.encoder_stack.block[layer].attn, idx)
         # reorder neurons
-        idx = L.argsort(FD.to_variable(current_importance), descending=True)[-1]
+        idx = paddle.argsort(
+            paddle.to_tensor(current_importance), descending=True)[-1]
         #model.encoder_stack.block[layer].ffn.reorder_neurons(idx)
         reorder_neuron(model.encoder_stack.block[layer].ffn, idx)
 
 
 def reorder_head(layer, idx):
     n, a = layer.n_head, layer.d_key
-    index = L.reshape(
-        L.index_select(
-            L.reshape(
-                L.arange(
+    index = paddle.reshape(
+        paddle.index_select(
+            paddle.reshape(
+                paddle.arange(
                     0, n * a, dtype='int64'), shape=[n, a]),
             idx,
-            dim=0),
+            axis=0),
         shape=[-1])
 
     def reorder_head_matrix(linearLayer, index, dim=1):
-        W = L.index_select(linearLayer.weight, index, dim=dim).detach()
+        W = paddle.index_select(linearLayer.weight, index, axis=dim).detach()
         if linearLayer.bias is not None:
             if dim == 0:
-                b = L.assign(linearLayer.bias).detach()
+                b = paddle.assign(linearLayer.bias).detach()
             else:
-                b = L.assign(L.index_select(
-                    linearLayer.bias, index, dim=0)).detach()
+                b = paddle.assign(
+                    L.index_select(
+                        linearLayer.bias, index, dim=0)).detach()
 
         linearLayer.weight.stop_gradient = True
         linearLayer.weight.set_value(W)
@@ -127,13 +127,14 @@ def reorder_head(layer, idx):
 
 def reorder_neuron(layer, index, dim=0):
     def reorder_neurons_matrix(linearLayer, index, dim):
-        W = L.index_select(linearLayer.weight, index, dim=dim).detach()
+        W = paddle.index_select(linearLayer.weight, index, axis=dim).detach()
         if linearLayer.bias is not None:
             if dim == 0:
-                b = L.assign(linearLayer.bias).detach()
+                b = paddle.assign(linearLayer.bias).detach()
             else:
-                b = L.assign(L.index_select(
-                    linearLayer.bias, index, dim=0)).detach()
+                b = paddle.assign(
+                    L.index_select(
+                        linearLayer.bias, index, dim=0)).detach()
         linearLayer.weight.stop_gradient = True
         linearLayer.weight.set_value(W)
         linearLayer.weight.stop_gradient = False

@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle.fluid as fluid
+import paddle
 from paddle.nn import Conv2D
-from paddle.fluid.dygraph.nn import Pool2D, BatchNorm
+from paddle.nn import BatchNorm
 from paddle.nn.initializer import Constant, KaimingUniform
 
 
@@ -22,17 +22,15 @@ OPS = {
     'none':
     lambda C, stride, affine: Zero(stride),
     'avg_pool_3x3':
-    lambda C, stride, affine: Pool2D(
-        pool_size=3,
-        pool_type="avg",
-        pool_stride=stride,
-        pool_padding=1),
+    lambda C, stride, affine: paddle.nn.AvgPool2D(
+        3,
+        stride=stride,
+        padding=1),
     'max_pool_3x3':
-    lambda C, stride, affine: Pool2D(
-        pool_size=3,
-        pool_type="max",
-        pool_stride=stride,
-        pool_padding=1),
+    lambda C, stride, affine: paddle.nn.MaxPool2D(
+        3,
+        stride=stride,
+        padding=1),
     'skip_connect':
     lambda C, stride, affine: Identity()
     if stride == 1 else FactorizedReduce(C, C, affine),
@@ -67,7 +65,7 @@ class Zero(paddle.nn.Layer):
     def __init__(self, stride):
         super(Zero, self).__init__()
         self.stride = stride
-        self.pool = Pool2D(pool_size=1, pool_stride=2)
+        self.pool = paddle.nn.MaxPool2D(1, stride=2)
 
     def forward(self, x):
         pooled = self.pool(x)
