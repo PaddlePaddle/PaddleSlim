@@ -198,16 +198,3 @@ class ResNetCifar(MyNetwork):
 
         flops_singlecfg[-1] += 2 * self.cfg[-1] * self.num_classes # fc layer
         return flops_singlecfg, flops_doublecfg, flops_squarecfg
-
-    @property
-    def config(self):
-        return {
-            'name': self.__class__.__name__,
-            'cfg': self.cfg,
-            'cfg_base': self.cfg_base,
-            'dataset': 'cifar10',
-        }
-
-
-
-
