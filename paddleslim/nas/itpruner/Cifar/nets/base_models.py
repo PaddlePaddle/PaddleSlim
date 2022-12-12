@@ -1,6 +1,5 @@
 import paddle.nn as nn
 import math
-from ..utils import initializer
 
 
 class MyNetwork(nn.Layer):
