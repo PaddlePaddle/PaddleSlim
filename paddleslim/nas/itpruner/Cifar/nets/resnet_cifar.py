@@ -3,7 +3,6 @@ import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
 import numpy as np
-from ..utils.initializer import kaiming_normal_
 
 
 class LambdaLayer(nn.Layer):
@@ -102,12 +101,6 @@ class ResNetCifar(MyNetwork):
 
         self.pool = nn.AdaptiveAvgPool2D(1)
         self.linear = nn.Linear(cfg[-1], num_classes)
-
-        self.apply(self._init_weights)
-
-    def _init_weights(self, m):
-        if isinstance(m, nn.Conv2D) or isinstance(m, nn.Linear):
-            kaiming_normal_(m.weight)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
