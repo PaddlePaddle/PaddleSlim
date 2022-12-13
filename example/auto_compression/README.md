@@ -33,11 +33,11 @@ PaddleSlim推出全新自动化压缩工具（Auto Compression Toolkit, ACT）�
 
 ## **News** 📢
 
-* 🔥 【**直播分享**】**2022.11.7 晚 20:30～21:30《PaddleSlim自动压缩CV专场》。扫码报名，进入直播技术交流群**
-* 🔥 【**直播分享**】**2022.11.8 晚 20:30～21:30《PaddleSlim自动压缩NLP专场》。扫码报名，进入直播技术交流群**
+
+* 🔥🔥🔥 **【直播分享】2022年12月13日 20:30 《自动化压缩技术详解及ViT模型实战》，扫码报名，进入直播技术交流群**
 
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg" width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg" width = "180" height = "180" />
   </div>
 
 ## **特性**
@@ -66,7 +66,7 @@ ACT相比传统的模型压缩方法，
   <img src="https://user-images.githubusercontent.com/23690325/178102623-6de25af1-eec8-4825-bb15-4dad5bee7c9c.png" align="middle"  width="800" />
 </p>
 
-### **模型压缩效果Benchmark**
+## **模型压缩效果Benchmark**
 
 <font size=5>  </font>
 
