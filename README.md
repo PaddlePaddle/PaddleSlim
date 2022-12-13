@@ -21,7 +21,7 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
 - 🔥🔥🔥 **【直播分享】2022-12-13 20:30 《自动化压缩技术详解及ViT模型实战》，微信扫码报名**
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg"  width = "200" height = "200" />
+  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg"  width = "180" height = "180" />
   </div>
 
 - 🔥 **2022.08.16：[自动化压缩](example/auto_compression)功能升级**
