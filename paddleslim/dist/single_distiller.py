@@ -15,6 +15,7 @@
 import numpy as np
 import paddle
 from paddleslim.core import GraphWrapper
+import paddle.nn.functional as F
 
 
 def merge(teacher_program,
@@ -204,7 +205,10 @@ def soft_label(teacher_var_name,
                                                teacher_temperature)
     soft_label_loss = paddle.mean(
         paddle.nn.functional.cross_entropy(
-            input=student_var, label=teacher_var, soft_label=True))
+            input=student_var,
+            label=teacher_var,
+            soft_label=True,
+            use_softmax=False))
     return soft_label_loss
 
 
@@ -305,3 +309,47 @@ def dkd(teacher_var_name,
         temperature=temperature,
         alpha=alpha,
         beta=beta)
+
+
+def skd(teacher_var_name, student_var_name, program=None, multiplier=None):
+    """Combine variables from student model and teacher model 
+    by Spherical Knowledge Distillation loss (aka. skd-loss).
+    Reference: https://github.com/forjiuzhou/Spherical-Knowledge-Distillation
+    Args:
+        teacher_var_name(str): The name of teacher_var.
+        student_var_name(str): The name of student_var.
+        program(Program): The input distiller program. If not specified,
+                          the default program will be used. Default: None
+        multiplier(float): The multiplier to recover its norm to the original 
+        level. When it's None, the appropriate multiplier can be computed by 
+        teacher's logits with paddle.std(output_t, axis=1). Default: None.
+
+    Returns:
+        Variable: skd distiller loss.
+    """
+    if program == None:
+        program = paddle.static.default_main_program()
+
+    student_var = program.global_block().var(student_var_name)
+    teacher_var = program.global_block().var(teacher_var_name)
+    teacher_var.stop_gradient = True
+
+    if multiplier is None:
+        multiplier = paddle.std(teacher_var, axis=1, keepdim=True)
+
+    logits_student = paddle.static.nn.layer_norm(
+        student_var, begin_norm_axis=1, scale=False, shift=False,
+        epsilon=1e-7) * multiplier
+    logits_teacher = paddle.static.nn.layer_norm(
+        teacher_var, begin_norm_axis=1, scale=False, shift=False,
+        epsilon=1e-7) * multiplier
+
+    student_out = F.softmax(logits_student, axis=1)
+    teacher_out = F.softmax(logits_teacher, axis=1)
+    skd_loss = paddle.mean(
+        F.cross_entropy(
+            input=student_out,
+            label=teacher_out,
+            soft_label=True,
+            use_softmax=False))
+    return skd_loss
