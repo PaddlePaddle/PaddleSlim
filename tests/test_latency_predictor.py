@@ -93,7 +93,7 @@ class ModelCase4(paddle.nn.Layer):
         x = paddle.stack([x, y], axis=3)
         x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
         x = paddle.exp(x)
-        y += paddle.fluid.layers.uniform_random(y.shape)
+        y += paddle.uniform(y.shape)
         y = paddle.mean(x=y, axis=1, keepdim=True)
         return paddle.greater_equal(x, y)
 
@@ -286,8 +286,8 @@ class TestCase2(unittest.TestCase):
         pred = LatencyPredictor()
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.static.Program.parse_from_string(f.read())
-            graph = paddleslim.core.GraphWrapper(fluid_program)
+            _program = paddle.static.Program.parse_from_string(f.read())
+            graph = paddleslim.core.GraphWrapper(_program)
             graph_keys = pred._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
@@ -381,8 +381,8 @@ class TestCase6(unittest.TestCase):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.static.Program.parse_from_string(f.read())
-            graph = paddleslim.core.GraphWrapper(fluid_program)
+            _program = paddle.static.Program.parse_from_string(f.read())
+            graph = paddleslim.core.GraphWrapper(_program)
             graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
@@ -404,8 +404,8 @@ class TestCase7(unittest.TestCase):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.static.Program.parse_from_string(f.read())
-            graph = paddleslim.core.GraphWrapper(fluid_program)
+            _program = paddle.static.Program.parse_from_string(f.read())
+            graph = paddleslim.core.GraphWrapper(_program)
             graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 

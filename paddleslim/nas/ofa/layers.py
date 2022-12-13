@@ -1024,7 +1024,7 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
 
                 return batch_norm_out
 
-        paddle.fluid.data_feeder.check_variable_and_dtype(
+        paddle.common_ops_import.check_variable_and_dtype(
             input, 'input', ['float16', 'float32', 'float64'], 'BatchNorm')
 
         # for static need dict
@@ -1111,7 +1111,7 @@ class SuperSyncBatchNorm(paddle.nn.SyncBatchNorm):
                  "use_mkldnn", False, "fuse_with_relu", False,
                  "use_global_stats", False, 'trainable_statistics', False)
 
-        if paddle.fluid.framework._non_static_mode():
+        if paddle.in_dynamic_mode():
             if feature_dim != self._mean.shape[0]:
                 sync_batch_norm_out, _, _, _, _, _ = paddle._legacy_C_ops.sync_batch_norm(
                     input, weight, bias, self._mean, self._variance, mean_out,
@@ -1128,10 +1128,7 @@ class SuperSyncBatchNorm(paddle.nn.SyncBatchNorm):
 
             return sync_batch_norm_out
 
-        print(
-            f"hit static check_variable_and_dtype in ofa-----------------------------------"
-        )
-        paddle.fluid.data_feeder.check_variable_and_dtype(
+        paddle.common_ops_import.check_variable_and_dtype(
             input, 'input', ['float16', 'float32', 'float64'], 'SyncBatchNorm')
 
         attrs = {
@@ -1308,7 +1305,7 @@ class SuperLayerNorm(paddle.nn.LayerNorm):
             out, _, _ = paddle._C_ops.layer_norm(
                 input, weight, bias, self._epsilon, begin_norm_axis, False)
         else:
-            paddle.fluid.data_feeder.check_variable_and_dtype(
+            paddle.common_ops_import.check_variable_and_dtype(
                 input, 'input', ['float32', 'float64'], 'LayerNorm')
 
             inputs = dict()

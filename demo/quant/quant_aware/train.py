@@ -8,7 +8,6 @@ import math
 import time
 import random
 import numpy as np
-import paddle.fluid as fluid
 sys.path[0] = os.path.join(
     os.path.dirname("__file__"), os.path.pardir, os.path.pardir)
 from paddleslim.common import get_logger

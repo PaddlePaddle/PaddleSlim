@@ -188,6 +188,9 @@ class Pruner():
                     for idx in src:
                         idx = idx * repeat
                         target.extend(range(idx, idx + repeat))
+                elif "stride" in trans:
+                    stride = trans['stride']
+                    target = src.repeat(stride) if stride > 1 else src
                 elif "squeeze" in trans:
                     repeat = trans['repeat']
                     targets_set = set()

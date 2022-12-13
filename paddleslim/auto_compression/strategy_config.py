@@ -252,11 +252,14 @@ class QuantPost(BaseStrategy):
 
 
 class ChannelPrune:
-    def __init__(self, pruned_ratio, prune_params_name, criterion='l1_norm'):
+    def __init__(self,
+                 pruned_ratio,
+                 prune_params_name=None,
+                 criterion='l1_norm'):
         """
         ChannelPrune Config.
         Args:
-            pruned_ratio(float): The ratios to be pruned.
+            pruned_ratio(float|list[float]): The ratios to be pruned.
             prune_params_name(list(str)): A list of parameter names to be pruned.
             criterion(str|function): the criterion used to sort channels for pruning, can be choose from ['l1_norm', 'bn_scale', 'geometry_median']. Default: 'l1_norm'.
         """
@@ -266,7 +269,7 @@ class ChannelPrune:
 
 
 class ASPPrune:
-    def __init__(self, prune_params_name):
+    def __init__(self, prune_params_name=None):
         """
         ASPPrune Config.
         Args:
@@ -292,7 +295,7 @@ class UnstructurePrune:
                  threshold=0.01,
                  ratio=0.55,
                  gmp_config=None,
-                 prune_params_type=None,
+                 prune_params_type='conv1x1_only',
                  local_sparsity=False):
         """
         UnstructurePrune Config.
@@ -432,8 +435,8 @@ class ProgramInfo:
         """
         ProgramInfo Config.
         Args:
-            startup_program(paddle.static.Program): Startup program, the means of startup program can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/default_startup_program_cn.html#cn-api-fluid-default-startup-program>`_.
-            program(paddle.static.Program): main program, the means of main program can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/default_main_program_cn.html#cn-api-fluid-default-main-program>`_.
+            startup_program(paddle.static.Program): Startup program, the means of startup program can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/default_startup_program_cn.html#default-startup-program>`_.
+            program(paddle.static.Program): main program, the means of main program can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/static/default_main_program_cn.html#default-main-program>`_.
             feed_target_names(list(str)): The name of feed tensor in the program.
             fetch_targets(list(Variable)): The fetch variable in the program.
             optimizer(Optimizer, optional): Optimizer in training. Default: None.

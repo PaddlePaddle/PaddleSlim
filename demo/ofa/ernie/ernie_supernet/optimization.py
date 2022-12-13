@@ -19,12 +19,10 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 import re
-import paddle.fluid as F
-import paddle.fluid.layers as L
-import paddle.fluid.dygraph as D
+import paddle
 
 
-class AdamW(F.optimizer.AdamOptimizer):
+class AdamW(padlde.optimizer.Adam):
     """AdamW object for dygraph"""
 
     def __init__(self, *args, **kwargs):
@@ -39,5 +37,6 @@ class AdamW(F.optimizer.AdamOptimizer):
         super(AdamW, self).apply_optimize(loss, startup_program, params_grads)
         for p, g in params_grads:
             if not self.pat.match(p.name):
-                with D.no_grad():
-                    L.assign(p * (1. - self.wd * self.current_step_lr()), p)
+                with paddle.no_grad():
+                    paddle.assign(p * (1. - self.wd * self.current_step_lr()),
+                                  p)

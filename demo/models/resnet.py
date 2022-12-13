@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import paddle
-import paddle.fluid as fluid
 import math
 
 __all__ = ["ResNet", "ResNet34", "ResNet50", "ResNet101", "ResNet152"]
@@ -50,12 +49,7 @@ class ResNet():
             stride=2,
             act='relu',
             name=prefix_name + conv1_name)
-        conv = fluid.layers.pool2d(
-            input=conv,
-            pool_size=3,
-            pool_stride=2,
-            pool_padding=1,
-            pool_type='max')
+        conv = paddle.nn.functional.max_pool2d(conv, 3, stride=2, padding=1)
 
         if layers >= 50:
             for block in range(len(depth)):
@@ -74,8 +68,7 @@ class ResNet():
                         stride=2 if i == 0 and block != 0 else 1,
                         name=conv_name)
 
-            pool = fluid.layers.pool2d(
-                input=conv, pool_size=7, pool_type='avg', global_pooling=True)
+            pool = paddle.nn.functional.adaptive_avg_pool2d(conv, 1)
             stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
             fc_name = fc_name if fc_name is None else prefix_name + fc_name
             out = paddle.static.nn.fc(
@@ -97,8 +90,7 @@ class ResNet():
                         is_first=block == i == 0,
                         name=conv_name)
 
-            pool = fluid.layers.pool2d(
-                input=conv, pool_type='avg', global_pooling=True)
+            pool = paddle.nn.functional.adaptive_avg_pool2d(conv, 1)
             stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
             fc_name = fc_name if fc_name is None else prefix_name + fc_name
             out = paddle.static.nn.fc(
