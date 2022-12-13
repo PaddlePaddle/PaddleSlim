@@ -337,11 +337,17 @@ def skd(teacher_var_name, student_var_name, program=None, multiplier=None):
     if multiplier is None:
         multiplier = paddle.std(teacher_var, axis=1, keepdim=True)
 
-    logits_student = paddle.static.nn.layer_norm(
-        student_var, begin_norm_axis=1, scale=False, shift=False,
+    logits_student = F.layer_norm(
+        student_var,
+        student_var.shape[1:],
+        weight=None,
+        bias=None,
         epsilon=1e-7) * multiplier
-    logits_teacher = paddle.static.nn.layer_norm(
-        teacher_var, begin_norm_axis=1, scale=False, shift=False,
+    logits_teacher = F.layer_norm(
+        teacher_var,
+        teacher_var.shape[1:],
+        weight=None,
+        bias=None,
         epsilon=1e-7) * multiplier
 
     student_out = F.softmax(logits_student, axis=1)

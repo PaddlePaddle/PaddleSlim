@@ -49,6 +49,7 @@ class TestSKDLoss(StaticCase):
                 sum2 = conv4 + sum1
                 conv5 = conv_bn_layer(sum2, 8, 3, "conv5")
                 teacher_predict = conv_bn_layer(conv5, 8, 3, "conv6")
+
         exe.run(teacher_startup)
         exe.run(student_startup)
 
@@ -58,11 +59,11 @@ class TestSKDLoss(StaticCase):
         for block in student_program.blocks:
             for op in block.ops:
                 merged_ops.append(op.type)
-
-        distill_loss = skd('teacher_conv6_bn_output.tmp_2',
-                           'conv2_bn_output.tmp_2',
-                           program=student_program,
-                           multiplier=2)
+        with paddle.static.program_guard(student_program, student_startup):
+            distill_loss = skd('teacher_' + teacher_predict.name,
+                               student_predict.name,
+                               program=None,
+                               multiplier=None)
 
         loss_ops = []
         for block in student_program.blocks:
@@ -72,7 +73,7 @@ class TestSKDLoss(StaticCase):
         self.assertTrue(set(merged_ops).difference(set(loss_ops)) == set())
 
         self.assertTrue({
-            'softmax_with_cross_entropy', 'softmax', 'reduce_mean'
+            'softmax_with_cross_entropy', 'softmax', 'reduce_mean', 'layer_norm'
         }.issubset(set(loss_ops).difference(set(merged_ops))))
 
 
