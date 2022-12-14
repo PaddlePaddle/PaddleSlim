@@ -65,9 +65,9 @@
 安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle
-# GPU
-pip install paddlepaddle-gpu
+pip install paddlepaddle==2.4.1
+# GPU 以Ubuntu、CUDA 11.2为例
+python -m pip install paddlepaddle-gpu==2.4.1.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
 安装paddleslim：
