@@ -18,8 +18,18 @@ from .patterns_common import *
 __all__ = ['preprocess_transformer_patterns']
 
 
+def _find_gemm_op(op, graph):
+    while op.type() not in ['mul', 'matmul', 'matmul_v2']:
+        next_op = find_weight_op(op, graph)
+        op = next_op
+    return op
+
+
 def _append_transformer_prune_params(op, graph, block_num, params_dict):
     for next_op in graph.next_ops(op):
+        if next_op.type() == 'elementwise_add':
+            continue
+        next_op = _find_gemm_op(next_op, graph)
         if next_op.type() in ['mul', 'matmul', 'matmul_v2'
                               ] and is_dynamic_weight_op(next_op):
             if block_num not in params_dict:
@@ -30,7 +40,7 @@ def _append_transformer_prune_params(op, graph, block_num, params_dict):
             params_dict[block_num]['P1'].append(
                 get_weight(has_bias(next_op, graph)))
             op = next_op
-    next_op = find_weight_op(op, graph)
+    next_op = _find_gemm_op(find_weight_op(op, graph), graph)
     if next_op:
         params_dict[block_num]['P2'] = [get_weight(next_op)]
         params_dict[block_num]['P2'].append(

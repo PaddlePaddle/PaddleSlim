@@ -287,8 +287,10 @@ class TransformerPruner:
 
     def _preprocess_patterns(self, patterns, graph):
         """ Preprocess pattern of the program, get some info need by reorder"""
-        input_mask_op = patterns['input_mask']
-        layer_num = int((len(patterns) - 1) / 2)
+        input_mask_op = patterns.get('input_mask', None)
+        layer_num = int(
+            (len(patterns) - 1) / 2) if input_mask_op is not None else int(
+                (len(patterns) / 2))
 
         ### get real head number
         head_num = -1
@@ -445,13 +447,16 @@ class TransformerPruner:
             new_w = np.take(np_w, index, axis=dim)
             pd_w.set(new_w, place)
 
+        qkv_index_repeat_num = 3 if int(len(qkv) / 2) == 1 else 1
         for w_idx, weight_name in enumerate(qkv):
             if w_idx % 2 == 0:
                 ### reorder qkv weight 
-                reorder_head_matrix(weight_name, index, dim=1)
+                reorder_head_matrix(
+                    weight_name, np.tile(index, qkv_index_repeat_num), dim=1)
             else:
                 ### reorder qkv bias 
-                reorder_head_matrix(weight_name, index, dim=0)
+                reorder_head_matrix(
+                    weight_name, np.tile(index, qkv_index_repeat_num), dim=0)
 
         ### reorder attention output weight 
         reorder_head_matrix(attn_out[0], index, dim=0)
@@ -535,7 +540,7 @@ class TransformerPruner:
 
     def prune(self):
         ### get input_mask op and start to prune input_mask op
-        if self.input_mask_op.type == 'stack':
+        if self.input_mask_op is not None and self.input_mask_op.type == 'stack':
             self._update_input_mask_inputs(self.inference_program,
                                            self.input_mask_op, self.width_mult)
 
@@ -555,7 +560,7 @@ class TransformerPruner:
                             pruned_shape[-1] = int(origin_shape[-1] *
                                                    self.width_mult)
                             op.set_attr('shape', pruned_shape)
-                        elif len(origin_shape) == 4:
+                        elif len(origin_shape) == 4 or len(origin_shape) == 5:
                             pruned_shape[-2] = int(origin_shape[-2] *
                                                    self.width_mult)
                             op.set_attr('shape', pruned_shape)
