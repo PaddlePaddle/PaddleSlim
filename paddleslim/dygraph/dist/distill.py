@@ -260,7 +260,7 @@ class Distill(paddle.nn.Layer):
             tea_batch_outs = teacher_model.forward(*inputs, **kwargs)
             if not teacher_model.training:
                 tea_batch_outs = [i.detach() for i in tea_batch_outs]
-            teachers_batch_outs.extend(tea_batch_outs)
+            teachers_batch_outs.append(tea_batch_outs)
 
         ### update hook information.
         for model, _ in self._output_tensor_dict.items():
