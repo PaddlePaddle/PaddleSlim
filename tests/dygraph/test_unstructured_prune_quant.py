@@ -3,19 +3,18 @@ sys.path.append("../../")
 import unittest
 import paddle
 import numpy as np
-from paddleslim import UnstructuredPruner
-from paddle.vision.models import mobilenet_v1
-import paddle.vision.transforms as T
-import paddle.fluid as fluid
 from paddle.static import InputSpec as Input
-import paddle.nn.functional as F
+from paddleslim import UnstructuredPruner
 
 
 class TestStaticMasks(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestStaticMasks, self).__init__(*args, **kwargs)
         paddle.disable_static()
-        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        transform = paddle.vision.transforms.Compose([
+            paddle.vision.transforms.Transpose(),
+            paddle.vision.transforms.Normalize([127.5], [127.5])
+        ])
         self.train_dataset = paddle.vision.datasets.MNIST(
             mode="train", backend="cv2", transform=transform)
         self.train_loader = paddle.io.DataLoader(
@@ -37,12 +36,12 @@ class TestStaticMasks(unittest.TestCase):
                 paddle.assign(bool_tmp, output=mask)
 
     def runTest(self):
-        with fluid.unique_name.guard():
-            net = paddle.vision.models.LeNet()
-            optimizer = paddle.optimizer.Adam(
-                learning_rate=0.001, parameters=net.parameters())
-            inputs = [Input([None, 1, 28, 28], 'float32', name='image')]
-            labels = [Input([None, 1], 'int64', name='label')]
+        paddle.disable_static()
+        net = paddle.vision.models.LeNet()
+        optimizer = paddle.optimizer.Adam(
+            learning_rate=0.001, parameters=net.parameters())
+        inputs = [Input([None, 1, 28, 28], 'float32', name='image')]
+        labels = [Input([None, 1], 'int64', name='label')]
         pruner = UnstructuredPruner(net, mode='ratio', ratio=0.55)
         net.train()
         self._update_masks(pruner, 0.0)
@@ -54,7 +53,7 @@ class TestStaticMasks(unittest.TestCase):
             x_data = data[0]
             y_data = paddle.to_tensor(data[1])
             logits = net(x_data)
-            loss = F.cross_entropy(logits, y_data)
+            loss = paddle.nn.functional.cross_entropy(logits, y_data)
             loss.backward()
             optimizer.step()
             optimizer.clear_grad()

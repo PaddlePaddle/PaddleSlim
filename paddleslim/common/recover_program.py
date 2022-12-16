@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import six
-from paddle.fluid.framework import Parameter
-from paddle.fluid import unique_name
-from paddle.fluid import core
+import paddle
 from ..core import GraphWrapper
 
 __all__ = ['recover_inference_program']
@@ -43,10 +41,11 @@ def _recover_reserve_space_with_bn(program):
                 if "ReserveSpace" not in op.output_names or len(
                         op.output("ReserveSpace")) == 0:
                     reserve_space = block.create_var(
-                        name=unique_name.generate_with_ignorable_key(".".join(
+                        name=paddle.fluid.unique_name.
+                        generate_with_ignorable_key(".".join(
                             ["reserve_space", 'tmp'])),
                         dtype=block.var(op.input("X")[0]).dtype,
-                        type=core.VarDesc.VarType.LOD_TENSOR,
+                        type=paddle.framework.core.VarDesc.VarType.LOD_TENSOR,
                         persistable=False,
                         stop_gradient=True)
                     op.desc.set_output("ReserveSpace", [reserve_space.name])
@@ -58,15 +57,12 @@ def _recover_param_attr(program):
        Params in infermodel are stored in the form of variable, which can not be trained."""
     all_weights = [param for param in program.list_vars() \
         if param.persistable is True and param.name != 'feed' and param.name != 'fetch']
-    for w in all_weights:
-        new_w = Parameter(
-            block=program.block(0),
-            shape=w.shape,
-            dtype=w.dtype,
-            type=w.type,
-            name=w.name)
-        new_w.set_value(w.get_value())
-        program.block(0).vars[w.name] = new_w
+    with paddle.static.program_guard(program):
+        for w in all_weights:
+            new_w = paddle.create_parameter(
+                shape=w.shape, dtype=w.dtype, name=w.name)
+            new_w.set_value(w.get_value())
+            program.block(0).vars[w.name] = new_w
     return program
 
 

@@ -18,7 +18,7 @@ import pickle
 import numpy as np
 from collections import OrderedDict
 from collections.abc import Iterable
-from paddle.fluid.framework import Program, program_guard, Parameter, Variable
+import paddle
 
 __all__ = ['GraphWrapper', 'VarWrapper', 'OpWrapper']
 
@@ -37,7 +37,7 @@ OPTIMIZER_OPS = [
 
 class VarWrapper(object):
     def __init__(self, var, graph):
-        assert isinstance(var, (Variable, Parameter))
+        #        assert isinstance(var, paddle.static.Variable), f"The type is {type(var)}"
         assert isinstance(graph, GraphWrapper)
         self._var = var
         self._graph = graph
@@ -103,9 +103,6 @@ class VarWrapper(object):
             if self in op.all_inputs():
                 ops.append(op)
         return ops
-
-    def is_parameter(self):
-        return isinstance(self._var, Parameter)
 
 
 class OpWrapper(object):
@@ -223,7 +220,7 @@ class OpWrapper(object):
 
 class GraphWrapper(object):
     """
-    It is a wrapper of paddle.fluid.framework.IrGraph with some special functions
+    It is a wrapper of paddle.framework.IrGraph with some special functions
     for paddle slim framework.
 
     Args:
@@ -240,7 +237,7 @@ class GraphWrapper(object):
         """
         """
         super(GraphWrapper, self).__init__()
-        self.program = Program() if program is None else program
+        self.program = paddle.static.Program() if program is None else program
         self.persistables = {}
         self.teacher_persistables = {}
         for var in self.program.list_vars():
@@ -265,15 +262,6 @@ class GraphWrapper(object):
             for param in block.all_parameters():
                 params.append(VarWrapper(param, self))
         return params
-
-    def is_parameter(self, var):
-        """
-        Whether the given variable is parameter.
-
-        Args:
-            var(VarWrapper): The given varibale.
-        """
-        return isinstance(var._var, Parameter)
 
     def is_persistable(self, var):
         """
@@ -362,18 +350,6 @@ class GraphWrapper(object):
                     if p.idx() != op.idx():
                         ops.append(p)
         return sorted(ops)
-
-    def get_param_by_op(self, op):
-        """
-        Get the parameters used by target operator.
-        """
-        assert isinstance(op, OpWrapper)
-        params = []
-        for var in op.all_inputs():
-            if isinstance(var._var, Parameter):
-                params.append(var)
-        assert len(params) > 0
-        return params
 
     def numel_params(self):
         """

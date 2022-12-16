@@ -14,7 +14,7 @@
 import sys
 sys.path.append("../")
 import unittest
-import paddle.fluid as fluid
+import paddle
 from paddleslim.prune import Pruner
 from paddleslim.prune import AutoPruner
 from static_case import StaticCase
@@ -23,8 +23,8 @@ from layers import conv_bn_layer
 
 class TestPrune(StaticCase):
     def test_prune(self):
-        main_program = fluid.Program()
-        startup_program = fluid.Program()
+        main_program = paddle.static.Program()
+        startup_program = paddle.static.Program()
         #   X       X              O       X              O
         # conv1-->conv2-->sum1-->conv3-->conv4-->sum2-->conv5-->conv6
         #     |            ^ |                    ^
@@ -32,8 +32,8 @@ class TestPrune(StaticCase):
         #
         # X: prune output channels
         # O: prune input channels
-        with fluid.program_guard(main_program, startup_program):
-            input = fluid.data(name="image", shape=[None, 3, 16, 16])
+        with paddle.static.program_guard(main_program, startup_program):
+            input = paddle.static.data(name="image", shape=[None, 3, 16, 16])
             conv1 = conv_bn_layer(input, 8, 3, "conv1")
             conv2 = conv_bn_layer(conv1, 8, 3, "conv2")
             sum1 = conv1 + conv2
@@ -50,15 +50,15 @@ class TestPrune(StaticCase):
             if 'weights' in param.name:
                 params.append(param.name)
 
-        val_program = fluid.default_main_program().clone(for_test=True)
-        place = fluid.CPUPlace()
-        exe = fluid.Executor(place)
-        scope = fluid.Scope()
+        val_program = paddle.static.default_main_program().clone(for_test=True)
+        place = paddle.CPUPlace()
+        exe = paddle.static.Executor(place)
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
 
         pruner = AutoPruner(
             val_program,
-            fluid.global_scope(),
+            paddle.static.global_scope(),
             place,
             params=params,
             init_ratios=[0.33] * len(params),
@@ -78,7 +78,7 @@ class TestPrune(StaticCase):
         lastratio = None
         for i in range(10):
             pruned_program, pruned_val_program = pruner.prune(
-                fluid.default_main_program(), val_program)
+                paddle.static.default_main_program(), val_program)
             score = 0.2
             pruner.reward(score)
             if i == 0:

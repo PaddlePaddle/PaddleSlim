@@ -3,11 +3,6 @@ import paddle
 import collections
 import logging
 import numpy as np
-from paddle.fluid import core
-from paddle.fluid.framework import _dygraph_tracer, dygraph_only, _dygraph_guard, program_guard, in_dygraph_mode
-from paddle.fluid.dygraph.base import program_desc_tracing_guard, _switch_declarative_mode_guard_
-from paddle.fluid.dygraph.layers import Layer
-from paddle.fluid.framework import Block, ParamBase, Program, Variable
 from ..common import get_logger
 
 __all__ = ["dygraph2program"]
@@ -69,32 +64,6 @@ def _create_tensors(shapes, dtypes=None, is_static=False):
     return tensors
 
 
-def extract_vars(inputs):
-    """
-    Extract a list of variables from inputs.
-    Args:
-        inputs(Variable | list<Object> | dict): 
-    """
-    vars = []
-    if isinstance(inputs, Variable):
-        vars = [inputs]
-    elif isinstance(inputs, dict):
-        for _key, _value in inputs.items():
-            if isinstance(_value, Variable):
-                vars.append(_value)
-            else:
-                _logger.warn(
-                    f"Variable is excepted, but get an element with type({type(_value)}) from inputs whose type is dict. And the key of element is {_key}."
-                )
-    elif isinstance(inputs, (tuple, list)):
-
-        for _value in inputs:
-            vars.extend(extract_vars(_value))
-    if len(vars) == 0:
-        _logger.warn(f"Extract none variables from inputs.")
-    return vars
-
-
 def _to_var(x):
     """
     Convert Variable or np.array into Placeholder.
@@ -105,99 +74,48 @@ def _to_var(x):
     return paddle.static.data(shape=shape, dtype=dtype, name=name)
 
 
-def to_variables(inputs, is_static=False):
+def to_variables(inputs):
     """
     Find and rename variables. Find np.ndarray and convert it to variable.
     """
-    if isinstance(inputs, (Variable, paddle.Tensor)) or isinstance(inputs,
-                                                                   np.ndarray):
-        if is_static:
-            return _to_var(inputs)
-        else:
-            return paddle.fluid.dygraph.to_variable(inputs)
+    if isinstance(inputs,
+                  (paddle.static.Variable, paddle.Tensor)) or isinstance(
+                      inputs, np.ndarray):
+        return _to_var(inputs)
     elif isinstance(inputs, dict):
         ret = {}
         for _key in inputs:
-            ret[_key] = to_variables(inputs[_key], is_static)
+            ret[_key] = to_variables(inputs[_key])
         return ret
     elif isinstance(inputs, list):
         ret = []
         for _value in inputs:
-            ret.append(to_variables(_value, is_static))
+            ret.append(to_variables(_value))
         return ret
 
 
-@dygraph_only
-def dygraph2program(layer,
-                    inputs,
-                    feed_prefix='feed_',
-                    fetch_prefix='fetch_',
-                    tmp_prefix='t_',
-                    extract_inputs_fn=None,
-                    extract_outputs_fn=None,
-                    dtypes=None):
-    print(type(layer))
-    assert isinstance(layer, Layer)
-    extract_inputs_fn = extract_inputs_fn if extract_inputs_fn is not None else extract_vars
-    extract_outputs_fn = extract_outputs_fn if extract_outputs_fn is not None else extract_vars
-
-    if in_dygraph_mode():
-        return _dy2prog(layer, inputs, feed_prefix, fetch_prefix, tmp_prefix,
-                        extract_inputs_fn, extract_outputs_fn, dtypes)
-
-    tracer = _dygraph_tracer()._get_program_desc_tracer()
-
-    with program_desc_tracing_guard(True):
-
-        if _is_shape(inputs):
-            shapes = [inputs]
-            inputs = _create_tensors(shapes, dtypes=dtypes)
-            input_var_list = inputs
-        elif _is_shapes(inputs):
-            inputs = _create_tensors(inputs, dtypes=dtypes)
-            input_var_list = inputs
-        else:
-            inputs = to_variables(inputs)
-            input_var_list = extract_inputs_fn(inputs)
-
-        original_outputs = layer(*inputs)
-        # 'original_outputs' may be dict, so we should convert it to list of varibles.
-        # And should not create new varibles in 'extract_vars'.
-        out_var_list = extract_outputs_fn(original_outputs)
-        program_desc, feed_names, fetch_names, parameters = tracer.create_program_desc(
-            input_var_list, feed_prefix, out_var_list, fetch_prefix, tmp_prefix)
-        tracer.reset()
-
-    with _dygraph_guard(None):
-        program = Program()
-        program.desc = program_desc
-        program.blocks = [Block(program, 0)]
-        program._sync_with_cpp()
-    return program
+def dygraph2program(layer, inputs, dtypes=None):
+    assert isinstance(layer, paddle.nn.Layer)
+    return _dy2prog(layer, inputs, dtypes)
 
 
-def _dy2prog(layer,
-             inputs,
-             feed_prefix='feed_',
-             fetch_prefix='fetch_',
-             tmp_prefix='t_',
-             extract_inputs_fn=None,
-             extract_outputs_fn=None,
-             dtypes=None):
+def _dy2prog(layer, inputs, dtypes=None):
     """
     Tracing program in Eager Mode.
     """
     paddle.enable_static()
-    program = Program()
+    program = paddle.static.Program()
     # convert ParamBase into Parameter automatically by _switch_declarative_mode_guard_
-    with program_guard(program), _switch_declarative_mode_guard_(True):
+    with paddle.static.program_guard(
+            program), paddle.fluid.dygraph.base._switch_declarative_mode_guard_(
+                True):
         if _is_shape(inputs):
             shapes = [inputs]
-            inputs = _create_tensors(shapes, dtypes=dtypes, is_static=True)
+            inputs = _create_tensors(shapes, dtypes=dtypes)
         elif _is_shapes(inputs):
-            inputs = _create_tensors(inputs, dtypes=dtypes, is_static=True)
+            inputs = _create_tensors(inputs, dtypes=dtypes)
         else:
-            inputs = to_variables(inputs, is_static=True)
+            inputs = to_variables(inputs)
         if isinstance(inputs, list):
             outputs = layer(*inputs)
         else:

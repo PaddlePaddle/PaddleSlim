@@ -423,6 +423,33 @@ def _get_label_info(dataloader, feed_target_names):
     return label_info
 
 
+def _get_chn_prune_params(program):
+    params = []
+    original_shapes = {}
+    for block in program.blocks:
+        for op in block.ops:
+            if op.type == 'conv2d' and op.attr('groups') == 1:
+                for inp_name in op.input_arg_names:
+                    var_ = block.var(inp_name)
+                    if var_.persistable is True:
+                        params.append(inp_name)
+                        original_shapes[inp_name] = var_.shape
+    return params, original_shapes
+
+
+def _get_asp_prune_params(program):
+    params = []
+    for block in program.blocks:
+        for op in block.ops:
+            if (op.type == 'conv2d' and op.attr('groups') == 1
+                ) or op.type == 'mul' or op.type == 'matmul_v2':
+                for inp_name in op.input_arg_names:
+                    var_ = block.var(inp_name)
+                    if var_.persistable is True:
+                        params.append(inp_name)
+    return params
+
+
 def build_prune_program(executor,
                         place,
                         config,
@@ -452,20 +479,27 @@ def build_prune_program(executor,
     elif strategy.startswith('channel_prune'):
         from ..prune import Pruner
         pruner = Pruner(config["criterion"])
-        params = []
-        original_shapes = {}
-        ### TODO(ceci3): set default prune weight
-        for param in train_program_info.program.all_parameters():
-            if config['prune_params_name'] is not None and param.name in config[
-                    'prune_params_name']:
-                params.append(param.name)
-                original_shapes[param.name] = param.shape
+        if config['prune_params_name'] is None:
+            params, original_shapes = _get_chn_prune_params(
+                train_program_info.program)
+        else:
+            params = []
+            original_shapes = {}
+            for param in train_program_info.program.global_block(
+            ).all_parameters():
+                if config[
+                        'prune_params_name'] is not None and param.name in config[
+                            'prune_params_name']:
+                    params.append(param.name)
+                    original_shapes[param.name] = param.shape
 
         pruned_program, _, _ = pruner.prune(
             train_program_info.program,
             paddle.static.global_scope(),
             params=params,
-            ratios=[config['pruned_ratio']] * len(params),
+            ratios=[config['pruned_ratio']] * len(params)
+            if isinstance(config['pruned_ratio'], float) else
+            config['pruned_ratio'],
             place=place)
         _logger.info(
             "####################channel pruning##########################")
@@ -481,8 +515,11 @@ def build_prune_program(executor,
         from paddle.static import sparsity
         pruner = sparsity
         excluded_params_name = []
-        ### TODO(ceci3): set default prune weight
-        for param in train_program_info.program.all_parameters():
+        if config['prune_params_name'] is None:
+            config['prune_params_name'] = _get_asp_prune_params(
+                train_program_info.program)
+
+        for param in train_program_info.program.global_block().all_parameters():
             if config['prune_params_name'] is not None:
                 if param.name not in config['prune_params_name']:
                     excluded_params_name.append(param.name)

@@ -15,14 +15,13 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import paddle
 
 __all__ = ['DARTSearch', 'count_parameters_in_MB']
 
 import os
 import logging
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.base import to_variable
 from ...common import AvgrageMeter, get_logger
 from .architect import Architect
 from .get_genotype import get_genotype
@@ -52,7 +51,7 @@ class DARTSearch(object):
         model(Paddle DyGraph model): Super Network for Search.
         train_reader(Python Generator): Generator to provide training data.
         valid_reader(Python Generator): Generator to provide validation  data.
-        place(fluid.CPUPlace()|fluid.CUDAPlace(N)): This parameter represents the executor run on which device.
+        place(paddle.CPUPlace()|paddle.CUDAPlace(N)): This parameter represents the executor run on which device.
         learning_rate(float): Model parameter initial learning rate. Default: 0.025.
         batch_size(int): Minibatch size. Default: 64.
         arch_learning_rate(float): Learning rate for arch encoding. Default: 3e-4.
@@ -60,7 +59,6 @@ class DARTSearch(object):
         num_epochs(int): Epoch number. Default: 50.
         epochs_no_archopt(int): Epochs skip architecture optimize at begining. Default: 0.
         use_multiprocess(bool): Whether to use multiprocess in dataloader. Default: False.
-        use_data_parallel(bool): Whether to use data parallel mode. Default: False.
         log_freq(int): Log frequency. Default: 50.
 
     """
@@ -78,7 +76,6 @@ class DARTSearch(object):
                  num_epochs=50,
                  epochs_no_archopt=0,
                  use_multiprocess=False,
-                 use_data_parallel=False,
                  save_dir='./',
                  log_freq=50):
         self.model = model
@@ -93,7 +90,6 @@ class DARTSearch(object):
         self.epochs_no_archopt = epochs_no_archopt
         self.num_epochs = num_epochs
         self.use_multiprocess = use_multiprocess
-        self.use_data_parallel = use_data_parallel
         self.save_dir = save_dir
         self.log_freq = log_freq
 
@@ -109,11 +105,11 @@ class DARTSearch(object):
                 valid_data) in enumerate(zip(train_loader(), valid_loader())):
             train_image, train_label = train_data
             valid_image, valid_label = valid_data
-            train_image = to_variable(train_image)
-            train_label = to_variable(train_label)
+            train_image = paddle.to_tensor(data=train_image)
+            train_label = paddle.to_tensor(data=train_label)
             train_label.stop_gradient = True
-            valid_image = to_variable(valid_image)
-            valid_label = to_variable(valid_label)
+            valid_image = paddle.to_tensor(data=valid_image)
+            valid_label = paddle.to_tensor(data=valid_label)
             valid_label.stop_gradient = True
             n = train_image.shape[0]
 
@@ -122,17 +118,13 @@ class DARTSearch(object):
                                valid_label)
 
             logits = self.model(train_image)
-            prec1 = fluid.layers.accuracy(input=logits, label=train_label, k=1)
-            prec5 = fluid.layers.accuracy(input=logits, label=train_label, k=5)
-            loss = fluid.layers.reduce_mean(
-                fluid.layers.softmax_with_cross_entropy(logits, train_label))
+            prec1 = paddle.static.accuracy(input=logits, label=train_label, k=1)
+            prec5 = paddle.static.accuracy(input=logits, label=train_label, k=5)
+            loss = paddle.mean(
+                x=paddle.nn.functional.softmax_with_cross_entropy(logits,
+                                                                  train_label))
 
-            if self.use_data_parallel:
-                loss = self.model.scale_loss(loss)
-                loss.backward()
-                self.model.apply_collective_grads()
-            else:
-                loss.backward()
+            loss.backward()
 
             optimizer.minimize(loss)
             self.model.clear_gradients()
@@ -157,14 +149,15 @@ class DARTSearch(object):
         self.model.eval()
 
         for step_id, (image, label) in enumerate(valid_loader):
-            image = to_variable(image)
-            label = to_variable(label)
+            image = paddle.to_tensor(data=image)
+            label = paddle.to_tensor(data=label)
             n = image.shape[0]
             logits = self.model(image)
-            prec1 = fluid.layers.accuracy(input=logits, label=label, k=1)
-            prec5 = fluid.layers.accuracy(input=logits, label=label, k=5)
-            loss = fluid.layers.reduce_mean(
-                fluid.layers.softmax_with_cross_entropy(logits, label))
+            prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
+            prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
+            loss = paddle.mean(
+                x=paddle.nn.functional.softmax_with_cross_entropy(logits,
+                                                                  label))
             objs.update(loss.numpy(), n)
             top1.update(prec1.numpy(), n)
             top5.update(prec5.numpy(), n)
@@ -188,34 +181,29 @@ class DARTSearch(object):
         logger.info("param size = {:.6f}MB".format(
             count_parameters_in_MB(model_parameters)))
 
-        device_num = fluid.dygraph.parallel.Env().nranks
+        device_num = 1
         step_per_epoch = int(self.num_imgs * 0.5 /
                              (self.batchsize * device_num))
         if self.unrolled:
             step_per_epoch *= 2
+        learning_rate = paddle.optimizer.lr.CosineAnnealingDecay(
+            self.learning_rate, self.num_epochs // 2)
 
-        learning_rate = fluid.dygraph.CosineDecay(
-            self.learning_rate, step_per_epoch, self.num_epochs)
-
-        clip = fluid.clip.GradientClipByGlobalNorm(clip_norm=5.0)
-        optimizer = fluid.optimizer.MomentumOptimizer(
+        clip = paddle.nn.ClipGradByGlobalNorm(5.0)
+        optimizer = paddle.optimizer.Momentum(
             learning_rate,
             0.9,
-            regularization=fluid.regularizer.L2DecayRegularizer(3e-4),
-            parameter_list=model_parameters,
+            weight_decay=3e-4,
+            parameters=model_parameters,
             grad_clip=clip)
 
-        if self.use_data_parallel:
-            self.train_reader = fluid.contrib.reader.distributed_batch_reader(
-                self.train_reader)
-
-        train_loader = fluid.io.DataLoader.from_generator(
+        train_loader = paddle.io.DataLoader.from_generator(
             capacity=64,
             use_double_buffer=True,
             iterable=True,
             return_list=True,
             use_multiprocess=self.use_multiprocess)
-        valid_loader = fluid.io.DataLoader.from_generator(
+        valid_loader = paddle.io.DataLoader.from_generator(
             capacity=64,
             use_double_buffer=True,
             iterable=True,
@@ -230,18 +218,14 @@ class DARTSearch(object):
             model=self.model,
             eta=learning_rate,
             arch_learning_rate=self.arch_learning_rate,
-            unrolled=self.unrolled,
-            parallel=self.use_data_parallel)
+            unrolled=self.unrolled)
 
         self.model = architect.get_model()
 
-        save_parameters = (not self.use_data_parallel) or (
-            self.use_data_parallel and
-            fluid.dygraph.parallel.Env().local_rank == 0)
+        save_parameters = True
 
         for epoch in range(self.num_epochs):
-            logger.info('Epoch {}, lr {:.6f}'.format(
-                epoch, optimizer.current_step_lr()))
+            logger.info('Epoch {}, lr {:.6f}'.format(epoch, optimizer.get_lr()))
 
             genotype = get_genotype(base_model)
             logger.info('genotype = %s', genotype)
@@ -255,6 +239,5 @@ class DARTSearch(object):
                 logger.info("Epoch {}, valid_acc {:.6f}".format(epoch,
                                                                 valid_top1))
             if save_parameters:
-                fluid.save_dygraph(
-                    self.model.state_dict(),
-                    os.path.join(self.save_dir, str(epoch), "params"))
+                paddle.save(self.model.state_dict(),
+                            os.path.join(self.save_dir, str(epoch), "params"))

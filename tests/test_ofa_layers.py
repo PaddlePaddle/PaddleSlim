@@ -17,15 +17,13 @@ sys.path.append("../")
 import numpy as np
 import unittest
 import paddle
-import paddle.nn as nn
-from paddle.nn import ReLU
 from paddleslim.nas import ofa
 from paddleslim.nas.ofa import OFA, RunConfig, DistillConfig
 from paddleslim.nas.ofa.layers import *
 from paddleslim.nas.ofa.layers_base import Block
 
 
-class ModelCase1(nn.Layer):
+class ModelCase1(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase1, self).__init__()
         models = [SuperConv2D(3, 4, 3, bias_attr=False)]
@@ -34,7 +32,7 @@ class ModelCase1(nn.Layer):
         models += [SuperConv2D(4, 4, 3, groups=2)]
         models += [SuperConv2DTranspose(4, 4, 3, bias_attr=False)]
         models += [SuperConv2DTranspose(4, 4, 3, groups=4)]
-        models += [nn.Conv2DTranspose(4, 4, 3, groups=2)]
+        models += [paddle.nn.Conv2DTranspose(4, 4, 3, groups=2)]
         models += [SuperConv2DTranspose(4, 4, 3, groups=2)]
         models += [
             SuperSeparableConv2D(
@@ -51,7 +49,7 @@ class ModelCase1(nn.Layer):
         return self.models(inputs)
 
 
-class ModelCase2(nn.Layer):
+class ModelCase2(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase2, self).__init__()
         models = [SuperSyncBatchNorm(4)]
@@ -74,6 +72,17 @@ class TestCase(unittest.TestCase):
 
 class TestCase2(TestCase):
     def setUp(self):
+        self.model = ModelCase2()
+        data_np = np.random.random((1, 3, 64, 64)).astype(np.float32)
+        self.data = paddle.to_tensor(data_np)
+
+    def test_ofa(self):
+        out = self.model(self.data)
+
+
+class TestSuperSyncBatchNormInStatic(TestCase):
+    def setUp(self):
+        paddle.enable_static()
         self.model = ModelCase2()
         data_np = np.random.random((1, 3, 64, 64)).astype(np.float32)
         self.data = paddle.to_tensor(data_np)

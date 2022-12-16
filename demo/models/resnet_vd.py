@@ -19,8 +19,6 @@ from __future__ import print_function
 import math
 
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
 
 __all__ = [
     "ResNet", "ResNet18_vd", "ResNet34_vd", "ResNet50_vd", "ResNet101_vd",
@@ -81,12 +79,7 @@ class ResNet():
                 act='relu',
                 name='conv1_3')
 
-        conv = fluid.layers.pool2d(
-            input=conv,
-            pool_size=3,
-            pool_stride=2,
-            pool_padding=1,
-            pool_type='max')
+        conv = paddle.nn.functional.max_pool2d(conv, 3, stride=2, padding=1)
 
         if layers >= 50:
             for block in range(len(depth)):
@@ -115,15 +108,14 @@ class ResNet():
                         if_first=block == i == 0,
                         name=conv_name)
 
-        pool = fluid.layers.pool2d(
-            input=conv, pool_type='avg', global_pooling=True)
+        pool = paddle.nn.functional.adaptive_avg_pool2d(conv, 1)
         stdv = 1.0 / math.sqrt(pool.shape[1] * 1.0)
 
-        out = fluid.layers.fc(
-            input=pool,
-            size=class_dim,
-            param_attr=fluid.param_attr.ParamAttr(
-                initializer=fluid.initializer.Uniform(-stdv, stdv)))
+        out = paddle.static.nn.fc(
+            pool,
+            class_dim,
+            weight_attr=paddle.ParamAttr(
+                initializer=paddle.nn.initializer.Uniform(-stdv, stdv)))
 
         return out
 
@@ -135,7 +127,7 @@ class ResNet():
                       groups=1,
                       act=None,
                       name=None):
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=input,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -143,17 +135,17 @@ class ResNet():
             padding=(filter_size - 1) // 2,
             groups=groups,
             act=None,
-            param_attr=ParamAttr(name=name + "_weights"),
+            param_attr=paddle.ParamAttr(name=name + "_weights"),
             bias_attr=False)
         if name == "conv1":
             bn_name = "bn_" + name
         else:
             bn_name = "bn" + name[3:]
-        return fluid.layers.batch_norm(
+        return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
-            param_attr=ParamAttr(name=bn_name + '_scale'),
-            bias_attr=ParamAttr(bn_name + '_offset'),
+            param_attr=paddle.ParamAttr(name=bn_name + '_scale'),
+            bias_attr=paddle.ParamAttr(bn_name + '_offset'),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
 
@@ -165,15 +157,10 @@ class ResNet():
                           groups=1,
                           act=None,
                           name=None):
-        pool = fluid.layers.pool2d(
-            input=input,
-            pool_size=2,
-            pool_stride=2,
-            pool_padding=0,
-            pool_type='avg',
-            ceil_mode=True)
+        pool = paddle.nn.functional.avg_pool2d(
+            input, 2, stride=2, padding=0, ceil_mode=True)
 
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=pool,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -181,17 +168,17 @@ class ResNet():
             padding=(filter_size - 1) // 2,
             groups=groups,
             act=None,
-            param_attr=ParamAttr(name=name + "_weights"),
+            param_attr=paddle.ParamAttr(name=name + "_weights"),
             bias_attr=False)
         if name == "conv1":
             bn_name = "bn_" + name
         else:
             bn_name = "bn" + name[3:]
-        return fluid.layers.batch_norm(
+        return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
-            param_attr=ParamAttr(name=bn_name + '_scale'),
-            bias_attr=ParamAttr(bn_name + '_offset'),
+            param_attr=paddle.ParamAttr(name=bn_name + '_scale'),
+            bias_attr=paddle.ParamAttr(bn_name + '_offset'),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
 
@@ -235,8 +222,8 @@ class ResNet():
             stride,
             if_first=if_first,
             name=name + "_branch1")
-
-        return fluid.layers.elementwise_add(x=short, y=conv2, act='relu')
+        out = paddle.add(x=short, y=conv2)
+        return paddle.nn.functional.relu(out)
 
     def basic_block(self, input, num_filters, stride, name, if_first):
         conv0 = self.conv_bn_layer(
@@ -258,7 +245,7 @@ class ResNet():
             stride,
             if_first=if_first,
             name=name + "_branch1")
-        return fluid.layers.elementwise_add(x=short, y=conv1, act='relu')
+        return paddle.add(x=short, y=conv1, act='relu')
 
 
 def ResNet18_vd():

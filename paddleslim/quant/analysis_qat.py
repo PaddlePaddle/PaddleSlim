@@ -20,7 +20,8 @@ import logging
 import numpy as np
 
 import paddle
-from paddle.fluid import core
+import paddle.nn.functional as F
+from paddle.framework import core
 from paddle.fluid.framework import IrGraph
 from ..common import get_logger, load_inference_model
 
@@ -69,6 +70,7 @@ class AnalysisQAT(object):
         self.quantizable_op_type = quantizable_op_type
         self.qat_metric = qat_metric
         self.eval_function = eval_function
+        self.data_loader = data_loader
         self.save_dir = save_dir
         self.checkpoint_name = os.path.join(save_dir, 'analysis_checkpoint.pkl')
         self.nonquant_layer_metrics = {}
@@ -98,14 +100,22 @@ class AnalysisQAT(object):
                     if 'quantized' in input_name:
                         self.inputs_of_quantized_op.append(input_names)
                         break
+        if self.eval_function is None:
+            assert self.data_loader is not None, "DataLoader cannot be None if Eval Fuction is None."
+            _logger.info(
+                'The sensitivity will measured by cosine similarity of the outputs from float model and quantized model.'
+            )
 
-        if self.qat_metric is None:
+        if self.qat_metric is None and self.eval_function is not None:
             _logger.info('Calculating the metric of QAT model...')
             self.qat_metric = self.eval_function(
                 executor, program, self.feed_list, self.fetch_list) * 100
             _logger.info('The metric of QAT model is {}'.format(
                 round(self.qat_metric, 4)))
         executor.close()
+
+        if resume:
+            self.load_checkpoint()
 
     def save_checkpoint(self):
         if not os.path.exists(self.save_dir):
@@ -199,6 +209,35 @@ class AnalysisQAT(object):
 
         return graph.to_program()
 
+    def fp_int_cosine_similarity(self, executor, float_program, quant_program,
+                                 float_scope, quant_scope):
+        cosine_similarity = []
+        for step, data in enumerate(self.data_loader()):
+            with paddle.static.scope_guard(float_scope):
+                float_preds = executor.run(program=float_program,
+                                           feed=data,
+                                           fetch_list=self.fetch_list,
+                                           return_numpy=False)
+                float_preds = float_preds[0]
+            with paddle.static.scope_guard(quant_scope):
+                quant_preds = executor.run(program=quant_program,
+                                           feed=data,
+                                           fetch_list=self.fetch_list,
+                                           return_numpy=False)
+                quant_preds = quant_preds[0]
+            paddle.disable_static()
+            float_preds = paddle.to_tensor(float_preds)
+            quant_preds = paddle.to_tensor(quant_preds)
+            cos_sim = F.cosine_similarity(float_preds, quant_preds).mean()
+            cos_sim = cos_sim.numpy()
+            cosine_similarity.append(cos_sim)
+            if step != 0 and (step % 10 == 0):
+                _logger.info("[step]: %d, cosine similarity: %.9f" %
+                             (step, np.array(cosine_similarity).mean()))
+            paddle.enable_static()
+
+        return np.array(cosine_similarity).mean()
+
     def metric_error_analyse(self):
         executor = paddle.static.Executor(self.places)
 
@@ -207,12 +246,14 @@ class AnalysisQAT(object):
 
         for idx, input_list in enumerate(self.inputs_of_quantized_op):
             weight_name = self.get_weight_name(input_list)
+            if weight_name in self.nonquant_layer_metrics:
+                continue
             _logger.info(
                 'Checking {}/{} quant model: without quant layer {}'.format(
                     idx + 1, len(self.inputs_of_quantized_op), weight_name))
 
             with paddle.static.scope_guard(float_scope):
-                load_inference_model(
+                [float_program, _, _] = load_inference_model(
                     self.float_model_dir,
                     executor=executor,
                     model_filename=self.model_filename,
@@ -232,18 +273,26 @@ class AnalysisQAT(object):
                 input_list, graph, float_scope, quant_scope)
             saved_program = self.relink_graph(graph, input_rename_map,
                                               output_rename_map, removed_ops)
-            with paddle.static.scope_guard(quant_scope):
-                _logger.info('Skip quant {}, evaluating....'.format(
-                    weight_name))
-                metric = self.eval_function(executor, saved_program,
-                                            self.feed_list,
-                                            self.fetch_list) * 100
-                self.nonquant_layer_metrics[weight_name] = metric
+            if self.eval_function is not None:
+                with paddle.static.scope_guard(quant_scope):
+                    _logger.info('Skip quant {}, evaluating....'.format(
+                        weight_name))
+                    metric = self.eval_function(executor, saved_program,
+                                                self.feed_list,
+                                                self.fetch_list) * 100
+                    self.nonquant_layer_metrics[
+                        weight_name] = metric - self.qat_metric
+                    _logger.info(
+                        'When skip quant %s, the eval metric is %.4f, the sensitive metric is %.4f'
+                        % (weight_name, metric, metric - self.qat_metric))
+            else:
+                metric = self.fp_int_cosine_similarity(executor, float_program,
+                                                       saved_program,
+                                                       float_scope, quant_scope)
+                self.nonquant_layer_metrics[weight_name] = 1 - metric
                 _logger.info(
-                    'When skip quant {}, the metric is {}, the diff is {}'.
-                    format(weight_name,
-                           round(metric, 4), round(metric - self.qat_metric,
-                                                   4)))
+                    'When skip quant %s, the cosine similarity is %.4f, the sensitive metric is %.4f'
+                    % (weight_name, metric, 1 - metric))
             self.save_checkpoint()
 
         executor.close()
@@ -254,13 +303,13 @@ class AnalysisQAT(object):
             reverse=True)
         _logger.info('Finished computing the sensitivity of the model.')
         for name in self.sensitivity_ranklist:
-            _logger.info("without quant layer name: {}, eval metric: {}".format(
-                name, self.nonquant_layer_metrics[name]))
+            _logger.info("Without quant layer name: {}, sensitive metric: {}".
+                         format(name, self.nonquant_layer_metrics[name]))
 
         analysis_file = os.path.join(self.save_dir, "analysis.txt")
         with open(analysis_file, "w") as analysis_ret_f:
             for name in self.sensitivity_ranklist:
                 analysis_ret_f.write(
-                    "without layer name: {}, eval metric: {}\n".format(
-                        name, self.nonquant_layer_metrics[name]))
+                    "Without quant layer name: {}, sensitive metric: {}\n".
+                    format(name, self.nonquant_layer_metrics[name]))
         _logger.info('Analysis file is saved in {}'.format(analysis_file))

@@ -107,8 +107,8 @@ def test_ofa():
                     y_data = np.array(
                         [x[1] for x in data]).astype('int64').reshape(-1, 1)
 
-                    img = paddle.dygraph.to_variable(dy_x_data)
-                    label = paddle.dygraph.to_variable(y_data)
+                    img = paddle.to_tensor(dy_x_data)
+                    label = paddle.to_tensor(y_data)
                     label.stop_gradient = True
 
                     for model_no in range(run_config.dynamic_batch_size[idx]):

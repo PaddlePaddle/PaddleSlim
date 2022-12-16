@@ -19,8 +19,6 @@ import scipy.io
 import numpy as np
 
 import paddle
-from paddle import fluid
-
 from dataloader.casia import CASIA_Face
 from dataloader.lfw import LFW
 from paddleslim import models
@@ -88,8 +86,8 @@ def evaluation_10_fold(root='result.mat'):
         flags = np.squeeze(flags)
 
         mu = np.mean(
-            np.concatenate(
-                (featureLs[valFold[0], :], featureRs[valFold[0], :]), 0), 0)
+            np.concatenate((featureLs[valFold[0], :], featureRs[valFold[0], :]),
+                           0), 0)
         mu = np.expand_dims(mu, 0)
         featureLs = featureLs - mu
         featureRs = featureRs - mu
@@ -116,10 +114,7 @@ def test(test_reader, flods, flags, net, args):
             data_list[1].append(data[_][1])
             data_list[2].append(data[_][2])
             data_list[3].append(data[_][3])
-        res = [
-            net(fluid.dygraph.to_variable(np.array(d))).numpy()
-            for d in data_list
-        ]
+        res = [net(paddle.to_tensor(np.array(d))).numpy() for d in data_list]
         featureL = np.concatenate((res[0], res[1]), 1)
         featureR = np.concatenate((res[2], res[3]), 1)
         if featureLs is None:
@@ -145,8 +140,7 @@ if __name__ == "__main__":
         '--use_gpu', default=0, type=int, help='Use GPU or not, 0 is not used')
     parser.add_argument(
         '--test_data_dir', default='./lfw', type=str, help='lfw_data_dir')
-    parser.add_argument(
-        '--resume', default='output/0', type=str, help='resume')
+    parser.add_argument('--resume', default='output/0', type=str, help='resume')
     parser.add_argument(
         '--feature_save_dir',
         default='result.mat',
@@ -154,22 +148,19 @@ if __name__ == "__main__":
         help='The path of the extract features save, must be .mat file')
     args = parser.parse_args()
 
-    place = fluid.CPUPlace() if args.use_gpu == 0 else fluid.CUDAPlace(0)
-    with fluid.dygraph.guard(place):
-        train_dataset = CASIA_Face(root=args.train_data_dir)
-        nl, nr, flods, flags = parse_filelist(args.test_data_dir)
-        test_dataset = LFW(nl, nr)
-        test_reader = paddle.fluid.io.batch(
-            test_dataset.reader,
-            batch_size=args.test_batchsize,
-            drop_last=False)
+    place = paddle.CPUPlace() if args.use_gpu == 0 else paddle.CUDAPlace(0)
+    train_dataset = CASIA_Face(root=args.train_data_dir)
+    nl, nr, flods, flags = parse_filelist(args.test_data_dir)
+    test_dataset = LFW(nl, nr)
+    test_reader = paddle.batch(
+        test_dataset.reader, batch_size=args.test_batchsize, drop_last=False)
 
-        net = models.__dict__[args.model](class_dim=train_dataset.class_nums)
-        if args.resume:
-            assert os.path.exists(args.resume + ".pdparams"
-                                  ), "Given dir {}.pdparams not exist.".format(
-                                      args.resume)
-            para_dict, opti_dict = fluid.dygraph.load_dygraph(args.resume)
-            net.set_dict(para_dict)
+    net = models.__dict__[args.model](class_dim=train_dataset.class_nums)
+    if args.resume:
+        assert os.path.exists(
+            args.resume +
+            ".pdparams"), "Given dir {}.pdparams not exist.".format(args.resume)
+        para_dict, opti_dict = paddle.load(args.resume)
+        net.set_dict(para_dict)
 
-        test(test_reader, flods, flags, net, args)
+    test(test_reader, flods, flags, net, args)

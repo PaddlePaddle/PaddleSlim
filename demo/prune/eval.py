@@ -13,6 +13,7 @@ from paddleslim.analysis import flops
 sys.path[0] = os.path.join(os.path.dirname("__file__"), os.path.pardir)
 import models
 from utility import add_arguments, print_arguments
+import paddle.vision.transforms as T
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -37,6 +38,12 @@ def eval(args):
         val_dataset = paddle.vision.datasets.MNIST(mode='test')
         class_dim = 10
         image_shape = "1,28,28"
+    elif args.data == "cifar10":
+        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        val_dataset = paddle.vision.datasets.Cifar10(
+            mode="test", backend="cv2", transform=transform)
+        class_dim = 10
+        image_shape = "3, 32, 32"
     elif args.data == "imagenet":
         import imagenet_reader as reader
         val_dataset = reader.ImageNetDataset(mode='val')

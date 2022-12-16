@@ -16,31 +16,35 @@ import math
 import logging
 import numpy as np
 import paddle
-import paddle.fluid as fluid
-from paddle.fluid import ParamAttr
-from paddle.fluid.layers import RNNCell, LSTMCell, rnn
-from paddle.fluid.contrib.layers import basic_lstm
+from paddle.nn import LSTMCell
 from ...controller import RLBaseController
 from ...log_helper import get_logger
 from ..utils import RLCONTROLLER
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-uniform_initializer = lambda x: fluid.initializer.UniformInitializer(low=-x, high=x)
+uniform_initializer = lambda x: paddle.nn.initializer.Uniform(low=-x, high=x)
 
 
-class lstm_cell(RNNCell):
+class lstm_cell(paddle.nn.RNNCellBase):
     def __init__(self, num_layers, hidden_size):
         self.num_layers = num_layers
         self.hidden_size = hidden_size
         self.lstm_cells = []
 
-        param_attr = ParamAttr(initializer=uniform_initializer(
+        param_attr = paddle.ParamAttr(initializer=uniform_initializer(
             1.0 / math.sqrt(hidden_size)))
-        bias_attr = ParamAttr(initializer=uniform_initializer(
+        bias_attr = paddle.ParamAttr(initializer=uniform_initializer(
             1.0 / math.sqrt(hidden_size)))
         for i in range(num_layers):
-            self.lstm_cells.append(LSTMCell(hidden_size, param_attr, bias_attr))
+            self.lstm_cells.append(
+                LSTMCell(
+                    hidden_size,
+                    hidden_size,
+                    weight_ih_attr=param_attr,
+                    weight_hh_attr=param_attr,
+                    bias_ih_attr=bias_attr,
+                    bias_hh_attr=bias_attr))
 
     def call(self, inputs, states):
         new_states = []
@@ -100,7 +104,7 @@ class LSTM(RLBaseController):
             shape=(self.controller_batch_size, self.hidden_size),
             dtype='float32',
             default_initializer=uniform_initializer(1.0))
-        self.baseline = fluid.layers.create_global_var(
+        self.baseline = paddle.static.create_global_var(
             shape=[1],
             value=0.0,
             dtype='float32',
@@ -113,7 +117,7 @@ class LSTM(RLBaseController):
         entropies = []
         sample_log_probs = []
 
-        with fluid.unique_name.guard('Controller'):
+        with paddle.utils.unique_name.guard('Controller'):
             self._create_parameter()
             inputs = self.g_emb
 
@@ -134,7 +138,10 @@ class LSTM(RLBaseController):
                         action = paddle.squeeze(action, axis=[1])
                         action.stop_gradient = True
                     else:
-                        action = fluid.layers.sampling_id(probs)
+                        multinomial = paddle.distribution.Multinomial(1, probs)
+                        action = paddle.argmax(
+                            multinomial.sample((1, )), axis=-1)
+                        action = paddle.flatten(action)
                 actions.append(action)
                 log_prob = paddle.nn.functional.softmax_with_cross_entropy(
                     logits,
@@ -171,22 +178,25 @@ class LSTM(RLBaseController):
                 dtype='float32',
                 default_initializer=uniform_initializer(1.0))
 
-            paddle.assign(
-                fluid.layers.uniform_random(shape=self.g_emb.shape), self.g_emb)
-            hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
-            cell = fluid.data(name='cell', shape=[None, self.hidden_size])
+            paddle.assign(paddle.uniform(shape=self.g_emb.shape), self.g_emb)
+            hidden = paddle.static.data(
+                name='hidden', shape=[None, self.hidden_size])
+            cell = paddle.static.data(
+                name='cell', shape=[None, self.hidden_size])
             self.tokens = self._network(hidden, cell, is_inference=is_inference)
 
         with paddle.static.program_guard(self.learn_program):
-            hidden = fluid.data(name='hidden', shape=[None, self.hidden_size])
-            cell = fluid.data(name='cell', shape=[None, self.hidden_size])
-            init_actions = fluid.data(
+            hidden = paddle.static.data(
+                name='hidden', shape=[None, self.hidden_size])
+            cell = paddle.static.data(
+                name='cell', shape=[None, self.hidden_size])
+            init_actions = paddle.static.data(
                 name='init_actions',
                 shape=[None, len(self.range_tables)],
                 dtype='int64')
             self._network(hidden, cell, init_actions=init_actions)
 
-            rewards = fluid.data(name='rewards', shape=[None])
+            rewards = paddle.static.data(name='rewards', shape=[None])
             self.rewards = paddle.mean(rewards)
 
             if self.weight_entropy is not None:
@@ -197,7 +207,7 @@ class LSTM(RLBaseController):
             paddle.assign(self.baseline - (1.0 - self.decay) *
                           (self.baseline - self.rewards), self.baseline)
             self.loss = self.sample_log_probs * (self.rewards - self.baseline)
-            clip = fluid.clip.GradientClipByNorm(clip_norm=5.0)
+            clip = paddle.nn.ClipGradByNorm(clip_norm=5.0)
             if self.decay_steps is not None:
                 lr = paddle.optimizer.lr.ExponentialDecay(
                     learning_rate=self.controller_lr,

@@ -15,9 +15,8 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import paddle.fluid as fluid
-from paddle.fluid.initializer import MSRA
-from paddle.fluid.param_attr import ParamAttr
+import paddle
+from paddle.nn.initializer import KaimingUniform
 
 __all__ = [
     'MobileNetV2', 'MobileNetV2_x0_25, '
@@ -101,17 +100,13 @@ class MobileNetV2():
             if_act=True,
             name='conv9')
 
-        input = fluid.layers.pool2d(
-            input=input,
-            pool_size=7,
-            pool_stride=1,
-            pool_type='avg',
-            global_pooling=True)
+        input = paddle.nn.functional.adaptive_avg_pool2d(input, 1)
 
-        output = fluid.layers.fc(input=input,
-                                 size=class_dim,
-                                 param_attr=ParamAttr(name='fc10_weights'),
-                                 bias_attr=ParamAttr(name='fc10_offset'))
+        output = paddle.static.nn.fc(
+            input,
+            class_dim,
+            weight_attr=paddle.ParamAttr(name='fc10_weights'),
+            bias_attr=paddle.ParamAttr(name='fc10_offset'))
         return output
 
     def conv_bn_layer(self,
@@ -125,7 +120,7 @@ class MobileNetV2():
                       if_act=True,
                       name=None,
                       use_cudnn=True):
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=input,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -134,22 +129,22 @@ class MobileNetV2():
             groups=num_groups,
             act=None,
             use_cudnn=use_cudnn,
-            param_attr=ParamAttr(name=name + '_weights'),
+            param_attr=paddle.ParamAttr(name=name + '_weights'),
             bias_attr=False)
         bn_name = name + '_bn'
-        bn = fluid.layers.batch_norm(
+        bn = paddle.static.nn.batch_norm(
             input=conv,
-            param_attr=ParamAttr(name=bn_name + "_scale"),
-            bias_attr=ParamAttr(name=bn_name + "_offset"),
+            param_attr=paddle.ParamAttr(name=bn_name + "_scale"),
+            bias_attr=paddle.ParamAttr(name=bn_name + "_offset"),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
         if if_act:
-            return fluid.layers.relu6(bn)
+            return paddle.nn.functional.relu6(bn)
         else:
             return bn
 
     def shortcut(self, input, data_residual):
-        return fluid.layers.elementwise_add(input, data_residual)
+        return paddle.add(input, data_residual)
 
     def inverted_residual_unit(self,
                                input,

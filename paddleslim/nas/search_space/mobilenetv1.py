@@ -17,8 +17,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
+import paddle
 from .search_space_base import SearchSpaceBase
 from .base_layer import conv_bn_layer
 from .search_space_registry import SEARCHSPACE
@@ -52,8 +51,7 @@ class MobileNetV1Space(SearchSpaceBase):
             [128, 144, 160, 192, 224, 256, 320, 384, 512, 576, 640, 704,
              768])  #13
         self.filter_num9 = np.array(
-            [160, 192, 224, 256, 320, 384, 512, 640, 768, 832, 1024,
-             1048])  #12
+            [160, 192, 224, 256, 320, 384, 512, 640, 768, 832, 1024, 1048])  #12
         # self.k_size means kernel size
         self.k_size = np.array([3, 5])  #2
         # self.repeat means repeat_num in forth downsample 
@@ -198,11 +196,8 @@ class MobileNetV1Space(SearchSpaceBase):
             if check_points(layer_count, end_points):
                 return input, decode_ends
 
-            input = fluid.layers.pool2d(
-                input=input,
-                pool_type='avg',
-                global_pooling=True,
-                name='mobilenetv1_last_pool')
+            input = paddle.nn.functional.adaptive_avg_pool2d(
+                input, 1, name='mobilenetv1_last_pool')
 
             return input
 

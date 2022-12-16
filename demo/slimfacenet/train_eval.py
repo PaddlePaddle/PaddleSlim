@@ -21,7 +21,6 @@ import numpy as np
 
 import paddle
 import paddle.fluid as fluid
-import paddle.fluid.compiler as compiler
 
 from dataloader.casia import CASIA_Face
 from dataloader.lfw import LFW
@@ -30,6 +29,7 @@ from paddleslim import models
 from paddleslim.quant import quant_post_static
 
 paddle.enable_static()
+
 
 def now():
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
@@ -45,19 +45,19 @@ def creat_optimizer(args, trainset_scale):
         ]
         lr = [float(e) for e in args.lr_list.strip().split(',')]
         assert len(bd) == len(lr) - 1
-        optimizer = fluid.optimizer.Momentum(
-            learning_rate=fluid.layers.piecewise_decay(
+        optimizer = paddle.optimizer.Momentum(
+            learning_rate=paddle.optimizer.lr.PiecewiseDecay(
                 boundaries=bd, values=lr),
             momentum=0.9,
-            regularization=fluid.regularizer.L2Decay(args.l2_decay))
+            weight_decay=args.l2_decay)
     elif args.lr_strategy == 'cosine_decay':
         lr = args.lr
         step_each_epoch = trainset_scale // args.train_batchsize
-        optimizer = fluid.optimizer.Momentum(
-            learning_rate=fluid.layers.cosine_decay(lr, step_each_epoch,
-                                                    args.total_epoch),
+        optimizer = paddle.optimizer.Momentum(
+            learning_rate=paddle.optimizer.lr.CosineAnnealingDecay(
+                lr, args.total_epoch / 2),
             momentum=0.9,
-            regularization=fluid.regularizer.L2Decay(args.l2_decay))
+            weight_decay=args.l2_decay)
     else:
         print('Wrong learning rate strategy')
         exit()
@@ -116,9 +116,9 @@ def test(test_exe, test_program, test_out, args):
 def train(exe, train_program, train_out, test_program, test_out, args):
     loss, acc, global_lr, train_reader = train_out
     fetch_list_train = [loss.name, acc.name, global_lr.name]
-    build_strategy = fluid.BuildStrategy()
+    build_strategy = paddle.static.BuildStrategy()
     build_strategy.fuse_all_optimizer_ops = True
-    compiled_prog = compiler.CompiledProgram(
+    compiled_prog = paddle.static.CompiledProgram(
         train_program, build_strategy=build_strategy).with_data_parallel(
             loss_name=loss.name, build_strategy=build_strategy)
     best_ave = 0
@@ -135,46 +135,45 @@ def train(exe, train_program, train_out, test_program, test_out, args):
                        float(np.mean(np.array(global_lr)))))
         if batch_id % args.save_frequency == 0:
             model_path = os.path.join(args.save_ckpt, str(epoch_id))
-            fluid.io.save_persistables(
-                executor=exe, dirname=model_path, main_program=train_program)
+            paddle.static.save(train_program, model_path)
             temp_ave = test(exe, test_program, test_out, args)
             if temp_ave > best_ave:
                 best_ave = temp_ave
                 print('Best AVE: {}'.format(best_ave))
                 out_feature, test_reader, flods, flags = test_out
-                fluid.io.save_inference_model(
-                    executor=exe,
-                    dirname='./out_inference',
-                    feeded_var_names=['image_test'],
-                    target_vars=[out_feature],
-                    main_program=test_program)
+                paddle.static.save_inference_model(
+                    './out_inference', ['image_test'], [out_feature],
+                    exe,
+                    program=test_program)
 
 
 def build_program(program, startup, args, is_train=True):
     if args.use_gpu:
-        num_trainers = fluid.core.get_cuda_device_count()
+        num_trainers = paddle.device.cuda.device_count()
     else:
         num_trainers = int(os.environ.get('CPU_NUM', 1))
-    places = fluid.cuda_places() if args.use_gpu else fluid.CPUPlace()
+    places = paddle.static.cuda_places() if args.use_gpu else paddle.CPUPlace()
 
     train_dataset = CASIA_Face(root=args.train_data_dir)
     trainset_scale = len(train_dataset)
 
-    with fluid.program_guard(main_program=program, startup_program=startup):
-        with fluid.unique_name.guard():
+    with paddle.static.program_guard(
+            main_program=program, startup_program=startup):
+        with paddle.utils.unique_name.guard():
             # Model construction
             model = models.__dict__[args.model](
                 class_dim=train_dataset.class_nums)
 
             if is_train:
-                image = fluid.data(
+                image = paddle.static.data(
                     name='image', shape=[-1, 3, 112, 96], dtype='float32')
-                label = fluid.data(name='label', shape=[-1, 1], dtype='int64')
-                train_reader = fluid.io.batch(
+                label = paddle.static.data(
+                    name='label', shape=[-1, 1], dtype='int64')
+                train_reader = paddle.batch(
                     train_dataset.reader,
                     batch_size=args.train_batchsize // num_trainers,
                     drop_last=False)
-                reader = fluid.io.DataLoader.from_generator(
+                reader = paddle.io.DataLoader.from_generator(
                     feed_list=[image, label],
                     capacity=64,
                     iterable=True,
@@ -191,29 +190,21 @@ def build_program(program, startup, args, is_train=True):
             else:
                 nl, nr, flods, flags = parse_filelist(args.test_data_dir)
                 test_dataset = LFW(nl, nr)
-                test_reader = fluid.io.batch(
+                test_reader = paddle.batch(
                     test_dataset.reader,
                     batch_size=args.test_batchsize,
                     drop_last=False)
-                image_test = fluid.data(
+                image_test = paddle.static.data(
                     name='image_test', shape=[-1, 3, 112, 96], dtype='float32')
-                image_test1 = fluid.data(
-                    name='image_test1',
-                    shape=[-1, 3, 112, 96],
-                    dtype='float32')
-                image_test2 = fluid.data(
-                    name='image_test2',
-                    shape=[-1, 3, 112, 96],
-                    dtype='float32')
-                image_test3 = fluid.data(
-                    name='image_test3',
-                    shape=[-1, 3, 112, 96],
-                    dtype='float32')
-                image_test4 = fluid.data(
-                    name='image_test4',
-                    shape=[-1, 3, 112, 96],
-                    dtype='float32')
-                reader = fluid.io.DataLoader.from_generator(
+                image_test1 = paddle.static.data(
+                    name='image_test1', shape=[-1, 3, 112, 96], dtype='float32')
+                image_test2 = paddle.static.data(
+                    name='image_test2', shape=[-1, 3, 112, 96], dtype='float32')
+                image_test3 = paddle.static.data(
+                    name='image_test3', shape=[-1, 3, 112, 96], dtype='float32')
+                image_test4 = paddle.static.data(
+                    name='image_test4', shape=[-1, 3, 112, 96], dtype='float32')
+                reader = paddle.io.DataLoader.from_generator(
                     feed_list=[
                         image_test1, image_test2, image_test3, image_test4
                     ],
@@ -222,8 +213,8 @@ def build_program(program, startup, args, is_train=True):
                     return_list=False)
                 reader.set_sample_list_generator(
                     test_reader,
-                    places=fluid.cuda_places()
-                    if args.use_gpu else fluid.CPUPlace())
+                    places=paddle.static.cuda_places()
+                    if args.use_gpu else paddle.CPUPlace())
 
                 model.extract_feature = True
                 feature = model.net(image_test)
@@ -235,7 +226,7 @@ def build_program(program, startup, args, is_train=True):
 def quant_val_reader_batch():
     nl, nr, flods, flags = parse_filelist(args.test_data_dir)
     test_dataset = LFW(nl, nr)
-    test_reader = fluid.io.batch(
+    test_reader = paddle.batch(
         test_dataset.reader, batch_size=1, drop_last=False)
     shuffle_reader = fluid.io.shuffle(test_reader, 3)
 
@@ -303,7 +294,7 @@ def main():
     args = parser.parse_args()
 
     if args.use_gpu:
-        num_trainers = fluid.core.get_cuda_device_count()
+        num_trainers = paddle.framework.core.get_cuda_device_count()
     else:
         num_trainers = int(os.environ.get('CPU_NUM', 1))
     print(args)
@@ -317,16 +308,16 @@ def main():
         f.writelines('num_trainers: {}'.format(num_trainers) + '\n')
 
     if args.action == 'train':
-        train_program = fluid.Program()
-    test_program = fluid.Program()
-    startup_program = fluid.Program()
+        train_program = paddle.static.Program()
+    test_program = paddle.static.Program()
+    startup_program = paddle.static.Program()
 
     if args.action == 'train':
         train_out = build_program(train_program, startup_program, args, True)
     test_out = build_program(test_program, startup_program, args, False)
     test_program = test_program.clone(for_test=True)
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-    exe = fluid.Executor(place)
+    place = paddle.CUDAPlace(0) if args.use_gpu else paddle.CPUPlace()
+    exe = paddle.static.Executor(place)
     exe.run(startup_program)
 
     if args.action == 'train':
@@ -345,35 +336,36 @@ def main():
             batch_nums=np.random.randint(4, 10))
     elif args.action == 'test':
         [inference_program, feed_target_names,
-         fetch_targets] = fluid.io.load_inference_model(
+         fetch_targets] = paddle.static.load_inference_model(
              dirname='./quant_model/',
              model_filename=None,
              params_filename=None,
              executor=exe)
         nl, nr, flods, flags = parse_filelist(args.test_data_dir)
         test_dataset = LFW(nl, nr)
-        test_reader = fluid.io.batch(
+        test_reader = paddle.batch(
             test_dataset.reader,
             batch_size=args.test_batchsize,
             drop_last=False)
-        image_test = fluid.data(
+        image_test = paddle.static.data(
             name='image_test', shape=[-1, 3, 112, 96], dtype='float32')
-        image_test1 = fluid.data(
+        image_test1 = paddle.static.data(
             name='image_test1', shape=[-1, 3, 112, 96], dtype='float32')
-        image_test2 = fluid.data(
+        image_test2 = paddle.static.data(
             name='image_test2', shape=[-1, 3, 112, 96], dtype='float32')
-        image_test3 = fluid.data(
+        image_test3 = paddle.static.data(
             name='image_test3', shape=[-1, 3, 112, 96], dtype='float32')
-        image_test4 = fluid.data(
+        image_test4 = paddle.static.data(
             name='image_test4', shape=[-1, 3, 112, 96], dtype='float32')
-        reader = fluid.io.DataLoader.from_generator(
+        reader = paddle.io.DataLoader.from_generator(
             feed_list=[image_test1, image_test2, image_test3, image_test4],
             capacity=64,
             iterable=True,
             return_list=False)
         reader.set_sample_list_generator(
             test_reader,
-            places=fluid.cuda_places() if args.use_gpu else fluid.CPUPlace())
+            places=paddle.static.cuda_places()
+            if args.use_gpu else paddle.CPUPlace())
         test_out = (fetch_targets, reader, flods, flags)
         print('fetch_targets[0]: ', fetch_targets[0])
         print('feed_target_names: ', feed_target_names)

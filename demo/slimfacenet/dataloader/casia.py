@@ -20,7 +20,6 @@ else:
     import imageio as imgreader
 import os
 import paddle
-from paddle import fluid
 
 
 class CASIA_Face(object):
@@ -78,20 +77,18 @@ class CASIA_Face(object):
 if __name__ == '__main__':
     data_dir = 'PATH to CASIA dataset'
 
-    place = fluid.CPUPlace()
-    with fluid.dygraph.guard(place):
-        dataset = CASIA_Face(root=data_dir)
-        print(len(dataset))
-        print(dataset.class_nums)
-        trainloader = paddle.fluid.io.batch(
-            dataset.reader, batch_size=1, drop_last=False)
-        for i in range(10):
-            for data in trainloader():
-                img = np.array([x[0] for x in data]).astype('float32')
-                img = fluid.dygraph.to_variable(img)
-                print(img.shape)
-                label = np.array([x[1] for x in data]).astype('int64').reshape(
-                    -1, 1)
-                label = fluid.dygraph.to_variable(label)
-                print(label.shape)
-        print(len(dataset))
+    place = paddle.CPUPlace()
+    dataset = CASIA_Face(root=data_dir)
+    print(len(dataset))
+    print(dataset.class_nums)
+    trainloader = paddle.batch(dataset.reader, batch_size=1, drop_last=False)
+    for i in range(10):
+        for data in trainloader():
+            img = np.array([x[0] for x in data]).astype('float32')
+            img = paddle.to_tensor(img)
+            print(img.shape)
+            label = np.array([x[1] for x in data]).astype('int64').reshape(-1,
+                                                                           1)
+            label = paddle.to_tensor(label)
+            print(label.shape)
+    print(len(dataset))

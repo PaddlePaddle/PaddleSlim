@@ -17,8 +17,6 @@ import unittest
 import paddle
 import paddleslim
 from paddleslim.analysis import LatencyPredictor, TableLatencyPredictor
-from paddle.vision.models import mobilenet_v1, mobilenet_v2
-from paddle.nn import Conv2D, BatchNorm2D, ReLU, LayerNorm
 from paddleslim.analysis._utils import opt_model, save_cls_model, save_det_model
 
 
@@ -38,8 +36,8 @@ def channel_shuffle(x, groups):
 class ModelCase1(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase1, self).__init__()
-        self.conv1 = Conv2D(58, 58, 1)
-        self.conv2 = Conv2D(58, 58, 1)
+        self.conv1 = paddle.nn.Conv2D(58, 58, 1)
+        self.conv2 = paddle.nn.Conv2D(58, 58, 1)
 
     def forward(self, inputs):
         x1, x2 = paddle.split(
@@ -55,7 +53,7 @@ class ModelCase1(paddle.nn.Layer):
 class ModelCase2(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase2, self).__init__()
-        self.conv1 = Conv2D(3, 24, 3, stride=2, padding=1)
+        self.conv1 = paddle.nn.Conv2D(3, 24, 3, stride=2, padding=1)
 
     def forward(self, inputs):
         image = inputs['image']
@@ -66,7 +64,7 @@ class ModelCase2(paddle.nn.Layer):
 class ModelCase3(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase3, self).__init__()
-        self.conv1 = Conv2D(3, 24, 3, stride=2, padding=1)
+        self.conv1 = paddle.nn.Conv2D(3, 24, 3, stride=2, padding=1)
 
     def forward(self, inputs):
         image = inputs['image']
@@ -79,9 +77,9 @@ class ModelCase3(paddle.nn.Layer):
 class ModelCase4(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase4, self).__init__()
-        self.bn1 = BatchNorm2D(3)
-        self.ln1 = LayerNorm([3 * 16 * 16])
-        self.relu1 = ReLU()
+        self.bn1 = paddle.nn.BatchNorm2D(3)
+        self.ln1 = paddle.nn.LayerNorm([3 * 16 * 16])
+        self.relu1 = paddle.nn.ReLU()
         self.fc1 = paddle.nn.Linear(3 * 16 * 16, 3 * 16 * 16)
 
     def forward(self, inputs):
@@ -89,30 +87,29 @@ class ModelCase4(paddle.nn.Layer):
         x = paddle.reshape(x, [1, 3 * 16 * 16])
         x = self.ln1(x)
         x = self.fc1(x)
-        x = paddle.fluid.layers.unsqueeze(input=x, axes=[2])
+        x = paddle.unsqueeze(x=x, axis=[2])
         x = self.relu1(x)
-        y = paddle.fluid.layers.fill_constant(
-            x.shape, dtype=paddle.float32, value=1)
+        y = paddle.full(shape=x.shape, fill_value=1)
         x = paddle.stack([x, y], axis=3)
         x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
         x = paddle.exp(x)
-        y += paddle.fluid.layers.uniform_random(y.shape)
-        y = paddle.fluid.layers.reduce_mean(y, dim=1, keep_dim=True)
+        y += paddle.uniform(y.shape)
+        y = paddle.mean(x=y, axis=1, keepdim=True)
         return paddle.greater_equal(x, y)
 
 
 class ModelCase5(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase5, self).__init__()
-        self.bn1 = BatchNorm2D(255)
+        self.bn1 = paddle.nn.BatchNorm2D(255)
 
     def forward(self, inputs):
         image = inputs['image']
         image = self.bn1(image)
-        img_size = paddle.fluid.data(
-            name='img_size', shape=[None, 2], dtype='int64')
+        img_size = paddle.static.data(
+            name='img_size', shape=[None, 2], dtype='int32')
         anchors = [10, 13, 16, 30, 33, 23]
-        boxes, scores = paddle.fluid.layers.yolo_box(
+        boxes, scores = paddle.vision.ops.yolo_box(
             x=image,
             img_size=img_size,
             class_num=80,
@@ -136,8 +133,8 @@ class ModelCase5(paddle.nn.Layer):
 class ModelCase6(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase6, self).__init__()
-        self.bn1 = BatchNorm2D(3)
-        self.relu1 = ReLU()
+        self.bn1 = paddle.nn.BatchNorm2D(3)
+        self.relu1 = paddle.nn.ReLU()
         self.fc1 = paddle.nn.Linear(3 * 16 * 16, 3 * 16 * 16)
         self.dp = paddle.nn.Dropout(p=0.5)
         self.lstm = paddle.nn.LSTM(
@@ -147,10 +144,9 @@ class ModelCase6(paddle.nn.Layer):
         x = self.bn1(inputs)
         x = paddle.reshape(x, [1, 3 * 16 * 16])
         x = self.fc1(x)
-        x = paddle.fluid.layers.unsqueeze(input=x, axes=[2])
+        x = paddle.unsqueeze(x=x, axis=[2])
         x = self.relu1(x)
-        y = paddle.fluid.layers.fill_constant(
-            x.shape, dtype=paddle.float32, value=1)
+        y = paddle.full(shape=x.shape, fill_value=1)
         # x = paddle.stack([x, y], axis=3)
         x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
         x = paddle.exp(x)
@@ -174,15 +170,15 @@ class ModelCase6(paddle.nn.Layer):
 class ModelCase7(paddle.nn.Layer):
     def __init__(self):
         super(ModelCase7, self).__init__()
-        self.bn1 = BatchNorm2D(255)
+        self.bn1 = paddle.nn.BatchNorm2D(255)
 
     def forward(self, inputs):
         image = inputs['image']
         image = self.bn1(image)
-        img_size = paddle.fluid.data(
-            name='img_size', shape=[None, 2], dtype='int64')
+        img_size = paddle.static.data(
+            name='img_size', shape=[None, 2], dtype='int32')
         anchors = [10, 13, 16, 30, 33, 23]
-        boxes, scores = paddle.fluid.layers.yolo_box(
+        boxes, scores = paddle.vision.ops.yolo_box(
             x=image,
             img_size=img_size,
             class_num=80,
@@ -194,53 +190,94 @@ class ModelCase7(paddle.nn.Layer):
         return boxes, scores, box, var
 
 
-class TestCase1(unittest.TestCase):
+class TestCase(unittest.TestCase):
+    def setUp(slef):
+        os.system(
+            'wget -q https://bj.bcebos.com/v1/paddle-slim-models/LatencyPredictor/test_mobilenetv1.tar'
+        )
+        os.system('tar -xf test_mobilenetv1.tar')
+        os.system(
+            'wget -q https://bj.bcebos.com/v1/paddle-slim-models/LatencyPredictor/test_mobilenetv1_qat.tar'
+        )
+        os.system('tar -xf test_mobilenetv1_qat.tar')
+
     def test_case1(self):
         paddle.disable_static()
-        model = mobilenet_v1()
         predictor = TableLatencyPredictor(table_file='SD710')
-        model_file, param_file = save_cls_model(
-            model,
-            input_shape=[1, 3, 224, 224],
-            save_dir="./inference_model",
-            data_type='fp32')
+        model_file = 'test_mobilenetv1/inference.pdmodel'
+        param_file = 'test_mobilenetv1/inference.pdiparams'
         latency = predictor.predict(
             model_file=model_file, param_file=param_file, data_type='fp32')
+        assert latency > 0
 
-        model_file, param_file = save_cls_model(
-            model,
-            input_shape=[1, 3, 224, 224],
-            save_dir="./inference_model",
-            data_type='int8')
+        model_file = 'test_mobilenetv1_qat/inference.pdmodel'
+        param_file = 'test_mobilenetv1_qat/inference.pdiparams'
         latency = predictor.predict(
             model_file=model_file, param_file=param_file, data_type='int8')
         assert latency > 0
 
 
 class TestCase2(unittest.TestCase):
+    def setUp(slef):
+        os.system(
+            'wget -q https://bj.bcebos.com/v1/paddle-slim-models/LatencyPredictor/test_mobilenetv2.tar'
+        )
+        os.system('tar -xf test_mobilenetv2.tar')
+        os.system(
+            'wget -q https://bj.bcebos.com/v1/paddle-slim-models/LatencyPredictor/test_mobilenetv2_qat.tar'
+        )
+        os.system('tar -xf test_mobilenetv2_qat.tar')
+
+    def _infer_shape(self, model_dir, model_filename, params_filename,
+                     input_shapes, save_path):
+        assert type(input_shapes) in [
+            dict, list, tuple
+        ], f'Type of input_shapes should be in [dict, tuple or list] but got {type(input_shapes)}.'
+        paddle.enable_static()
+        exe = paddle.static.Executor(paddle.CPUPlace())
+
+        model_name = '.'.join(model_filename.split('.')[:-1])
+        model_path_prefix = os.path.join(model_dir, model_name)
+        [inference_program, feed_target_names, fetch_targets] = (
+            paddle.static.load_inference_model(
+                path_prefix=model_path_prefix, executor=exe))
+
+        if type(input_shapes) in [list, tuple]:
+            assert len(
+                feed_target_names
+            ) == 1, f"The number of model's inputs should be 1 but got {feed_target_names}."
+            input_shapes = {feed_target_names[0]: input_shapes}
+
+        feed_vars = []
+        for var_ in inference_program.list_vars():
+            if var_.name in feed_target_names:
+                feed_vars.append(var_)
+                var_.desc.set_shape(input_shapes[var_.name])
+
+        for block in inference_program.blocks:
+            for op in block.ops:
+                if op.type not in ["feed", "fetch"]:
+                    op.desc.infer_shape(block.desc)
+
+        save_path = os.path.join(save_path, "infered_shape")
+        os.makedirs(save_path)
+        paddle.static.save_inference_model(
+            save_path,
+            feed_vars,
+            fetch_targets,
+            exe,
+            program=inference_program,
+            clip_extra=False)
+        print(f"Saved model infered shape to {save_path}")
+
     def test_case2(self):
-        paddle.disable_static()
-        model = mobilenet_v2()
         predictor = TableLatencyPredictor(table_file='SD710')
-        model_file, param_file = save_cls_model(
-            model,
-            input_shape=[1, 3, 224, 224],
-            save_dir="./inference_model",
-            data_type='fp32')
+        model_file = 'test_mobilenetv2/inference.pdmodel'
+        param_file = 'test_mobilenetv2/inference.pdiparams'
         latency = predictor.predict(
             model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
-
-class TestCase3(unittest.TestCase):
-    def test_case3(self):
-        paddle.disable_static()
-        model = mobilenet_v2()
-        model_file, param_file = save_cls_model(
-            model,
-            input_shape=[1, 3, 224, 224],
-            save_dir="./inference_model",
-            data_type='fp32')
         pbmodel_file = opt_model(
             model_file=model_file,
             param_file=param_file,
@@ -249,15 +286,40 @@ class TestCase3(unittest.TestCase):
         pred = LatencyPredictor()
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
-            graph = paddleslim.core.GraphWrapper(fluid_program)
+            _program = paddle.static.Program.parse_from_string(f.read())
+            graph = paddleslim.core.GraphWrapper(_program)
             graph_keys = pred._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
+        self._infer_shape(
+            model_dir='test_mobilenetv2',
+            model_filename='inference.pdmodel',
+            params_filename='inference.pdiparams',
+            input_shapes=[1, 3, 250, 250],
+            save_path='test_mobilenetv2_250')
 
-class TestCase4(unittest.TestCase):
-    def test_case4(self):
+        model_file = 'test_mobilenetv2_250/infered_shape.pdmodel'
+        param_file = 'test_mobilenetv2_250/infered_shape.pdiparams'
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file, data_type='fp32')
+        assert latency > 0
+
+        self._infer_shape(
+            model_dir='test_mobilenetv2_qat',
+            model_filename='inference.pdmodel',
+            params_filename='inference.pdiparams',
+            input_shapes=[1, 3, 250, 250],
+            save_path='test_mobilenetv2_qat_250')
+
+        model_file = 'test_mobilenetv2_qat_250/infered_shape.pdmodel'
+        param_file = 'test_mobilenetv2_qat_250/infered_shape.pdiparams'
+        latency = predictor.predict(
+            model_file=model_file, param_file=param_file, data_type='int8')
+        assert latency > 0
+
+
+class TestCase3(unittest.TestCase):
+    def test_case3(self):
         paddle.disable_static()
         model = ModelCase1()
         model_file, param_file = save_cls_model(
@@ -271,23 +333,8 @@ class TestCase4(unittest.TestCase):
         assert latency > 0
 
 
-class TestCase5(unittest.TestCase):
-    def test_case5(self):
-        paddle.disable_static()
-        model = mobilenet_v1()
-        predictor = TableLatencyPredictor(table_file='SD710')
-        model_file, param_file = save_cls_model(
-            model,
-            input_shape=[1, 3, 224, 224],
-            save_dir="./inference_model",
-            data_type='fp32')
-        latency = predictor.predict(
-            model_file=model_file, param_file=param_file, data_type='fp32')
-        assert latency > 0
-
-
-class TestCase6(unittest.TestCase):
-    def test_case6(self):
+class TestCase4(unittest.TestCase):
+    def test_case4(self):
         paddle.disable_static()
         model = ModelCase2()
         predictor = TableLatencyPredictor(table_file='SD710')
@@ -301,8 +348,8 @@ class TestCase6(unittest.TestCase):
         assert latency > 0
 
 
-class TestCase7(unittest.TestCase):
-    def test_case7(self):
+class TestCase5(unittest.TestCase):
+    def test_case5(self):
         paddle.disable_static()
         model = ModelCase3()
         predictor = TableLatencyPredictor(table_file='SD710')
@@ -317,8 +364,8 @@ class TestCase7(unittest.TestCase):
         assert latency > 0
 
 
-class TestCase8(unittest.TestCase):
-    def test_case8(self):
+class TestCase6(unittest.TestCase):
+    def test_case6(self):
         paddle.disable_static()
         model = ModelCase4()
         predictor = LatencyPredictor()
@@ -334,15 +381,14 @@ class TestCase8(unittest.TestCase):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
-            graph = paddleslim.core.GraphWrapper(fluid_program)
+            _program = paddle.static.Program.parse_from_string(f.read())
+            graph = paddleslim.core.GraphWrapper(_program)
             graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
 
-class TestCase9(unittest.TestCase):
-    def test_case9(self):
+class TestCase7(unittest.TestCase):
+    def test_case7(self):
         paddle.disable_static()
         model = ModelCase5()
         predictor = LatencyPredictor()
@@ -358,40 +404,19 @@ class TestCase9(unittest.TestCase):
 
         paddle.enable_static()
         with open(pbmodel_file, "rb") as f:
-            fluid_program = paddle.fluid.framework.Program.parse_from_string(
-                f.read())
-            graph = paddleslim.core.GraphWrapper(fluid_program)
+            _program = paddle.static.Program.parse_from_string(f.read())
+            graph = paddleslim.core.GraphWrapper(_program)
             graph_keys = predictor._get_key_info_from_graph(graph=graph)
             assert len(graph_keys) > 0
 
 
-class TestCase10(unittest.TestCase):
-    def test_case10(self):
+class TestCase8(unittest.TestCase):
+    def test_case8(self):
         paddle.disable_static()
-        model = mobilenet_v2()
-        model2 = ModelCase6()
-        model3 = ModelCase7()
         predictor = TableLatencyPredictor(table_file='SD710')
+        model = ModelCase6()
         model_file, param_file = save_cls_model(
             model,
-            input_shape=[1, 3, 250, 250],
-            save_dir="./inference_model",
-            data_type='fp32')
-        latency = predictor.predict(
-            model_file=model_file, param_file=param_file, data_type='fp32')
-        assert latency > 0
-
-        model_file, param_file = save_cls_model(
-            model,
-            input_shape=[1, 3, 250, 250],
-            save_dir="./inference_model",
-            data_type='int8')
-        latency = predictor.predict(
-            model_file=model_file, param_file=param_file, data_type='int8')
-        assert latency > 0
-
-        model_file, param_file = save_cls_model(
-            model2,
             input_shape=[1, 3, 16, 16],
             save_dir="./inference_model",
             data_type='fp32')
@@ -399,8 +424,10 @@ class TestCase10(unittest.TestCase):
             model_file=model_file, param_file=param_file, data_type='fp32')
         assert latency > 0
 
+        paddle.disable_static()
+        model2 = ModelCase7()
         model_file, param_file = save_det_model(
-            model3,
+            model2,
             input_shape=[1, 255, 14, 14],
             save_dir="./inference_model",
             data_type='fp32')

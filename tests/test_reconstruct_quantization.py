@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
+import os
 sys.path.append("../")
 import unittest
 import tempfile
@@ -21,7 +22,6 @@ from static_case import StaticCase
 sys.path.append("../demo")
 from models import *
 from layers import conv_bn_layer
-import paddle.dataset.mnist as reader
 import numpy as np
 from paddleslim.quant import quant_recon_static
 
@@ -103,14 +103,12 @@ class ReconPTQ(unittest.TestCase):
                         format(iter, cost, top1, top5))
 
         train(main_program)
-        paddle.fluid.io.save_inference_model(
-            dirname=self.tmpdir.name,
-            feeded_var_names=[image.name],
-            target_vars=[out],
-            main_program=val_program,
-            executor=exe,
-            model_filename='model.pdmodel',
-            params_filename='params.pdiparams')
+        paddle.static.save_inference_model(
+            os.path.join(self.tmpdir.name, "infer"),
+            feed_vars=[image],
+            fetch_vars=[out],
+            program=val_program,
+            executor=exe)
         print(f"saved infer model to [{self.tmpdir.name}]")
         self.data_loader = sample_generator_creator()
 
@@ -131,8 +129,8 @@ class TestReconRegion(ReconPTQ):
             self.tmpdir.name,
             quantize_model_path='output_region',
             sample_generator=self.data_loader,
-            model_filename='model.pdmodel',
-            params_filename='params.pdiparams',
+            model_filename='infer.pdmodel',
+            params_filename='infer.pdiparams',
             batch_nums=1,
             epochs=1,
             algo='abs_max',
@@ -155,8 +153,8 @@ class TestReconLayer(ReconPTQ):
             self.tmpdir.name,
             quantize_model_path='output_layer',
             sample_generator=self.data_loader,
-            model_filename='model.pdmodel',
-            params_filename='params.pdiparams',
+            model_filename='infer.pdmodel',
+            params_filename='infer.pdiparams',
             batch_nums=1,
             epochs=1,
             algo='KL',

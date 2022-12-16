@@ -17,10 +17,7 @@ import unittest
 import logging
 import numpy as np
 import paddle
-import paddle.fluid as fluid
 from static_case import StaticCase
-import paddle.dataset.mnist as reader
-from paddleslim.models.dygraph import MobileNetV1
 from paddleslim.dist import DML
 from paddleslim.common import get_logger
 logger = get_logger(__name__, level=logging.INFO)

@@ -1,9 +1,8 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import paddle.fluid as fluid
-from paddle.fluid.initializer import MSRA
-from paddle.fluid.param_attr import ParamAttr
+import paddle
+from paddle.nn.initializer import KaimingUniform
 
 __all__ = ['MobileNet']
 
@@ -121,19 +120,14 @@ class MobileNet():
             scale=scale,
             name="conv6")
 
-        input = fluid.layers.pool2d(
-            input=input,
-            pool_size=0,
-            pool_stride=1,
-            pool_type='avg',
-            global_pooling=True)
-        with fluid.name_scope('last_fc'):
-            output = fluid.layers.fc(input=input,
-                                     size=class_dim,
-                                     param_attr=ParamAttr(
-                                         initializer=MSRA(),
-                                         name="fc7_weights"),
-                                     bias_attr=ParamAttr(name="fc7_offset"))
+        input = paddle.nn.functional.adaptive_avg_pool2d(input, 1)
+        with paddle.static.name_scope('last_fc'):
+            output = paddle.static.nn.fc(
+                input,
+                class_dim,
+                weight_attr=paddle.ParamAttr(
+                    initializer=KaimingUniform(), name="fc7_weights"),
+                bias_attr=paddle.ParamAttr(name="fc7_offset"))
 
         return output
 
@@ -148,7 +142,7 @@ class MobileNet():
                       act='relu',
                       use_cudnn=True,
                       name=None):
-        conv = fluid.layers.conv2d(
+        conv = paddle.static.nn.conv2d(
             input=input,
             num_filters=num_filters,
             filter_size=filter_size,
@@ -157,15 +151,15 @@ class MobileNet():
             groups=num_groups,
             act=None,
             use_cudnn=use_cudnn,
-            param_attr=ParamAttr(
-                initializer=MSRA(), name=name + "_weights"),
+            param_attr=paddle.ParamAttr(
+                initializer=KaimingUniform(), name=name + "_weights"),
             bias_attr=False)
         bn_name = name + "_bn"
-        return fluid.layers.batch_norm(
+        return paddle.static.nn.batch_norm(
             input=conv,
             act=act,
-            param_attr=ParamAttr(name=bn_name + "_scale"),
-            bias_attr=ParamAttr(name=bn_name + "_offset"),
+            param_attr=paddle.ParamAttr(name=bn_name + "_scale"),
+            bias_attr=paddle.ParamAttr(name=bn_name + "_offset"),
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
 

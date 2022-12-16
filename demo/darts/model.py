@@ -17,18 +17,15 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import paddle.fluid as fluid
-from paddle.fluid.param_attr import ParamAttr
-from paddle.fluid.initializer import ConstantInitializer, MSRAInitializer
+import paddle
+from paddle.nn.initializer import Constant, KaimingUniform
 from paddle.nn import Conv2D
-from paddle.fluid.dygraph.nn import Pool2D, BatchNorm, Linear
-from paddle.fluid.dygraph.base import to_variable
 from genotypes import PRIMITIVES
 from genotypes import Genotype
 from operations import *
 
 
-class ConvBN(fluid.dygraph.Layer):
+class ConvBN(paddle.nn.Layer):
     def __init__(self, c_curr, c_out, kernel_size, padding, stride, name=None):
         super(ConvBN, self).__init__()
         self.conv = Conv2D(
@@ -37,18 +34,18 @@ class ConvBN(fluid.dygraph.Layer):
             filter_size=kernel_size,
             stride=stride,
             padding=padding,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + "_conv" if name is not None else None,
-                initializer=MSRAInitializer()),
+                initializer=KaimingUniform()),
             bias_attr=False)
-        self.bn = BatchNorm(
+        self.bn = paddle.nn.BatchNorm(
             num_channels=c_out,
-            param_attr=fluid.ParamAttr(
+            param_attr=paddle.ParamAttr(
                 name=name + "_bn_scale" if name is not None else None,
-                initializer=ConstantInitializer(value=1)),
-            bias_attr=fluid.ParamAttr(
+                initializer=Constant(value=1)),
+            bias_attr=paddle.ParamAttr(
                 name=name + "_bn_offset" if name is not None else None,
-                initializer=ConstantInitializer(value=0)),
+                initializer=Constant(value=0)),
             moving_mean_name=name + "_bn_mean" if name is not None else None,
             moving_variance_name=name + "_bn_variance"
             if name is not None else None)
@@ -59,23 +56,23 @@ class ConvBN(fluid.dygraph.Layer):
         return bn
 
 
-class Classifier(fluid.dygraph.Layer):
+class Classifier(paddle.nn.Layer):
     def __init__(self, input_dim, num_classes, name=None):
         super(Classifier, self).__init__()
-        self.pool2d = Pool2D(pool_type='avg', global_pooling=True)
-        self.fc = Linear(
-            input_dim=input_dim,
-            output_dim=num_classes,
-            param_attr=fluid.ParamAttr(
+        self.pool2d = paddle.nn.AdaptiveAvgPool2D(output_size=1)
+        self.fc = paddle.nn.Linear(
+            input_dim,
+            num_classes,
+            weight_attr=paddle.ParamAttr(
                 name=name + "_fc_weights" if name is not None else None,
-                initializer=MSRAInitializer()),
-            bias_attr=fluid.ParamAttr(
+                initializer=KaimingUniform()),
+            bias_attr=paddle.ParamAttr(
                 name=name + "_fc_bias" if name is not None else None,
-                initializer=MSRAInitializer()))
+                initializer=KaimingUniform()))
 
     def forward(self, x):
         x = self.pool2d(x)
-        x = fluid.layers.squeeze(x, axes=[2, 3])
+        x = paddle.squeeze(x, axes=[2, 3])
         out = self.fc(x)
         return out
 
@@ -85,12 +82,12 @@ def drop_path(x, drop_prob):
         keep_prob = 1. - drop_prob
     mask = 1 - np.random.binomial(
         1, drop_prob, size=[x.shape[0]]).astype(np.float32)
-    mask = to_variable(mask)
-    x = fluid.layers.elementwise_mul(x / keep_prob, mask, axis=0)
+    mask = paddle.to_tensor(mask)
+    x = paddle.multiply(x / keep_prob, mask)
     return x
 
 
-class Cell(fluid.dygraph.Layer):
+class Cell(paddle.nn.Layer):
     def __init__(self, genotype, c_prev_prev, c_prev, c_curr, reduction,
                  reduction_prev):
         super(Cell, self).__init__()
@@ -123,7 +120,7 @@ class Cell(fluid.dygraph.Layer):
             op = OPS[op_name](c_curr, stride, True)
             ops += [op]
             edge_index += 1
-        self._ops = fluid.dygraph.LayerList(ops)
+        self._ops = paddle.nn.LayerList(ops)
         self._indices = indices
 
     def forward(self, s0, s1, drop_prob, training):
@@ -144,15 +141,14 @@ class Cell(fluid.dygraph.Layer):
                 if not isinstance(op2, Identity):
                     h2 = drop_path(h2, drop_prob)
             states += [h1 + h2]
-        out = fluid.layers.concat(input=states[-self._multiplier:], axis=1)
+        out = paddle.concat(states[-self._multiplier:], axis=1)
         return out
 
 
-class AuxiliaryHeadCIFAR(fluid.dygraph.Layer):
+class AuxiliaryHeadCIFAR(paddle.nn.Layer):
     def __init__(self, C, num_classes):
         super(AuxiliaryHeadCIFAR, self).__init__()
-        self.avgpool = Pool2D(
-            pool_size=5, pool_stride=3, pool_padding=0, pool_type='avg')
+        self.avgpool = paddle.nn.AvgPool2D(5, stride=3, padding=0)
         self.conv_bn1 = ConvBN(
             c_curr=C,
             c_out=128,
@@ -170,17 +166,17 @@ class AuxiliaryHeadCIFAR(fluid.dygraph.Layer):
         self.classifier = Classifier(768, num_classes, 'aux')
 
     def forward(self, x):
-        x = fluid.layers.relu(x)
+        x = paddle.nn.functional.relu(x)
         x = self.avgpool(x)
         conv1 = self.conv_bn1(x)
-        conv1 = fluid.layers.relu(conv1)
+        conv1 = paddle.nn.functional.relu(conv1)
         conv2 = self.conv_bn2(conv1)
-        conv2 = fluid.layers.relu(conv2)
+        conv2 = paddle.nn.functional.relu(conv2)
         out = self.classifier(conv2)
         return out
 
 
-class NetworkCIFAR(fluid.dygraph.Layer):
+class NetworkCIFAR(paddle.nn.Layer):
     def __init__(self, C, num_classes, layers, auxiliary, genotype):
         super(NetworkCIFAR, self).__init__()
         self._layers = layers
@@ -207,7 +203,7 @@ class NetworkCIFAR(fluid.dygraph.Layer):
             c_prev_prev, c_prev = c_prev, cell._multiplier * c_curr
             if i == 2 * layers // 3:
                 c_to_auxiliary = c_prev
-        self.cells = fluid.dygraph.LayerList(cells)
+        self.cells = paddle.nn.LayerList(cells)
 
         if auxiliary:
             self.auxiliary_head = AuxiliaryHeadCIFAR(c_to_auxiliary,
@@ -226,11 +222,10 @@ class NetworkCIFAR(fluid.dygraph.Layer):
         return logits, logits_aux
 
 
-class AuxiliaryHeadImageNet(fluid.dygraph.Layer):
+class AuxiliaryHeadImageNet(paddle.nn.Layer):
     def __init__(self, C, num_classes):
         super(AuxiliaryHeadImageNet, self).__init__()
-        self.avgpool = Pool2D(
-            pool_size=5, pool_stride=2, pool_padding=0, pool_type='avg')
+        self.avgpool = paddle.nn.AvgPool2D(5, stride=2, padding=0)
         self.conv_bn1 = ConvBN(
             c_curr=C,
             c_out=128,
@@ -248,17 +243,17 @@ class AuxiliaryHeadImageNet(fluid.dygraph.Layer):
         self.classifier = Classifier(768, num_classes, 'aux')
 
     def forward(self, x):
-        x = fluid.layers.relu(x)
+        x = paddle.nn.functional.relu(x)
         x = self.avgpool(x)
         conv1 = self.conv_bn1(x)
-        conv1 = fluid.layers.relu(conv1)
+        conv1 = paddle.nn.functional.relu(conv1)
         conv2 = self.conv_bn2(conv1)
-        conv2 = fluid.layers.relu(conv2)
+        conv2 = paddle.nn.functional.relu(conv2)
         out = self.classifier(conv2)
         return out
 
 
-class NetworkImageNet(fluid.dygraph.Layer):
+class NetworkImageNet(paddle.nn.Layer):
     def __init__(self, C, num_classes, layers, auxiliary, genotype):
         super(NetworkImageNet, self).__init__()
         self._layers = layers
@@ -289,7 +284,7 @@ class NetworkImageNet(fluid.dygraph.Layer):
             c_prev_prev, c_prev = c_prev, cell._multiplier * c_curr
             if i == 2 * layers // 3:
                 c_to_auxiliary = c_prev
-        self.cells = fluid.dygraph.LayerList(cells)
+        self.cells = paddle.nn.LayerList(cells)
 
         if auxiliary:
             self.auxiliary_head = AuxiliaryHeadImageNet(c_to_auxiliary,
@@ -299,9 +294,9 @@ class NetworkImageNet(fluid.dygraph.Layer):
     def forward(self, input, training):
         logits_aux = None
         s0 = self.stem_a0(input)
-        s0 = fluid.layers.relu(s0)
+        s0 = paddle.nn.functional.relu(s0)
         s0 = self.stem_a1(s0)
-        s1 = fluid.layers.relu(s0)
+        s1 = paddle.nn.functional.relu(s0)
         s1 = self.stem_b(s1)
 
         for i, cell in enumerate(self.cells):

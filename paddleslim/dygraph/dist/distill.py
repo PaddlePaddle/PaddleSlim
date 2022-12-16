@@ -16,7 +16,6 @@ import copy
 import collections
 import numpy as np
 import paddle
-import paddle.nn as nn
 from ...common.wrapper_function import init_index, functional2layer
 from . import losses
 from .losses.basic_loss import BASIC_LOSS
@@ -91,7 +90,7 @@ def _remove_hooks(hooks):
         hook.remove()
 
 
-class Distill(nn.Layer):
+class Distill(paddle.nn.Layer):
     """
         Distill API.
         configs(list(dict) | string): the list of distill config or the path of yaml file which contain the distill config.
@@ -111,9 +110,9 @@ class Distill(nn.Layer):
         super(Distill, self).__init__()
         if convert_fn:
             functional2layer()
-        if isinstance(students, nn.Layer):
+        if isinstance(students, paddle.nn.Layer):
             students = [students]
-        if isinstance(teachers, nn.Layer):
+        if isinstance(teachers, paddle.nn.Layer):
             teachers = [teachers]
 
         if isinstance(configs, list):
@@ -125,8 +124,8 @@ class Distill(nn.Layer):
                 raise NotImplementedError("distill config file type error!")
         else:
             raise NotImplementedError("distill config error!")
-        self._student_models = nn.LayerList(students)
-        self._teacher_models = nn.LayerList(teachers)
+        self._student_models = paddle.nn.LayerList(students)
+        self._teacher_models = paddle.nn.LayerList(teachers)
         self._return_model_outputs = return_model_outputs
 
         self._loss_config_list = []

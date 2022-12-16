@@ -299,8 +299,8 @@ def soft_label(teacher_var_name,
     teacher_var = paddle.nn.functional.softmax(teacher_var /
                                                teacher_temperature)
     soft_label_loss = paddle.mean(
-        paddle.fluid.layers.cross_entropy(
-            student_var, teacher_var, soft_label=True))
+        paddle.nn.functional.cross_entropy(
+            input=student_var, label=teacher_var, soft_label=True))
     return soft_label_loss
 
 

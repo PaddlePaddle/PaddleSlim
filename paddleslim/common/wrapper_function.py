@@ -39,7 +39,7 @@ class Counter:
         return counter_wrapper
 
 
-class FuncWrapper(nn.Layer):
+class FuncWrapper(paddle.nn.Layer):
     """
     """
 
@@ -121,10 +121,11 @@ def functional2layer():
     not_convert = ['linear', 'conv1d', 'conv1d_transpose', \
                    'conv2d', 'conv2d_transpose', 'conv3d', \
                    'conv3d_transpose', 'one_hot', 'embedding']
-    for f in dir(F):
+    for f in dir(paddle.nn.functional):
         if not f.startswith('__') and f not in not_convert and not f.startswith(
                 'origin_'):
-            setattr(F, 'origin_{}'.format(f), eval('F.{}'.format(f)))
+            setattr(paddle.nn.functional, 'origin_{}'.format(f),
+                    eval('F.{}'.format(f)))
             if inspect.isfunction(eval('F.{}'.format(f))):
                 new_fn = convert_fn(eval('F.{}'.format(f)))
-                setattr(F, '{}'.format(f), new_fn)
+                setattr(paddle.nn.functional, '{}'.format(f), new_fn)
