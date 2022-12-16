@@ -35,7 +35,7 @@ def _is_same_block(block1, block2):
         return False
 
     for op1, op2 in zip(block1.ops, block2.ops):
-        if op1.type() != op2.type():
+        if op1.type != op2.type:
             return False
 
     return True
@@ -76,6 +76,26 @@ def merge(teacher_program,
     if teacher_scope == None:
         teacher_scope = scope
     teacher_program = teacher_program.clone(for_test=True)
+
+    is_same_model = True
+    if len(student_program.blocks) == len(teacher_program.blocks):
+        for block in teacher_program.blocks:
+            if not _is_same_block(block, student_program.block(block.idx)):
+                is_same_model = False
+                break
+    else:
+        is_same_model = False
+
+    if is_same_model:
+        for block in student_program.blocks:
+            for op in block.ops:
+                if op.type == 'while':
+                    tmp_var = []
+                    for _var_name in op.input('X'):
+                        tmp_var.append('teacher_' + _var_name)
+                    tmp_var.extend(op.input('X'))
+                    op.desc.set_input("X", tmp_var)
+
     for block in teacher_program.blocks:
         for teacher_var in list(block.vars.values()):
             skip_rename = False
@@ -130,8 +150,7 @@ def merge(teacher_program,
             if teacher_var.name != 'fetch' and (not merge_feed or
                                                 teacher_var.name != 'feed'):
                 # student program add var
-                if len(student_program.blocks) > 1 and _is_same_block(
-                        block, student_program.block(block.idx)):
+                if len(student_program.blocks) > 1 and is_same_model:
                     new_var = student_program.block(block.idx)._clone_variable(
                         teacher_var, force_persistable=False)
                 else:
@@ -140,7 +159,7 @@ def merge(teacher_program,
                 new_var.stop_gradient = True
 
     for block in reversed(teacher_program.blocks):
-        for op in block.ops:
+        for op_idx, op in enumerate(block.ops):
             if (not merge_feed or op.type != 'feed') and op.type != 'fetch':
                 inputs = {}
                 outputs = {}
@@ -163,9 +182,9 @@ def merge(teacher_program,
                             op._block_attr("sub_block").idx)
                     else:
                         attrs[attr_name] = op.attr(attr_name)
-                if len(student_program.blocks) > 1 and _is_same_block(
-                        block, student_program.block(block.idx)):
-                    student_program.block(op.block.idx).append_op(
+                if len(student_program.blocks) > 1 and is_same_model:
+                    student_program.block(op.block.idx)._insert_op(
+                        2 * op_idx,
                         type=op.type,
                         inputs=inputs,
                         outputs=outputs,
