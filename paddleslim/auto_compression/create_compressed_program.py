@@ -188,7 +188,8 @@ def _load_program_and_merge(executor,
     _remove_fetch_node(teacher_program)
 
     target_nodes = _get_target_node(distill_node_pair)
-    teacher_program = teacher_program._prune(target_nodes)
+    ### TODO(ceci3): turn on _prune
+    #    teacher_program = teacher_program._prune(target_nodes)
 
     data_name_map = {}
 
@@ -243,7 +244,8 @@ def build_distill_program(executor,
     test_program = train_program.clone(for_test=True)
 
     target_nodes = _get_target_node(distill_node_pair)
-    train_program = train_program._prune(target_nodes)
+    ### TODO(ceci3): start prune network
+    #    train_program = train_program._prune(target_nodes)
 
     teacher_model_dir = config[
         "teacher_model_dir"] if "teacher_model_dir" in config else config[
