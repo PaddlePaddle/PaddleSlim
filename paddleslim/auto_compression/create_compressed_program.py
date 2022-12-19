@@ -188,8 +188,7 @@ def _load_program_and_merge(executor,
     _remove_fetch_node(teacher_program)
 
     target_nodes = _get_target_node(distill_node_pair)
-    ### TODO(ceci3): turn on _prune
-    #    teacher_program = teacher_program._prune(target_nodes)
+    teacher_program = teacher_program._prune(target_nodes)
 
     data_name_map = {}
 
@@ -244,8 +243,34 @@ def build_distill_program(executor,
     test_program = train_program.clone(for_test=True)
 
     target_nodes = _get_target_node(distill_node_pair)
-    ### TODO(ceci3): start prune network
-    #    train_program = train_program._prune(target_nodes)
+
+    def _prepend_feed(block, feed_idx, feed_target_names):
+        for idx in feed_idx[::-1]:
+            block._remove_op(idx)
+
+        feed_var = block.create_var(
+            name='feed',
+            type=paddle.framework.core.VarDesc.VarType.FEED_MINIBATCH,
+            persistable=True, )
+
+        for i, name in enumerate(feed_target_names):
+            out = block.var(name)
+            block._prepend_op(
+                type='feed',
+                inputs={'X': [feed_var]},
+                outputs={'Out': [out]},
+                attrs={'col': i})
+
+    judge_feed_pos = False
+    if train_program.desc.block(0).op(0).type() != 'feed':
+        judge_feed_pos = True
+    if judge_feed_pos:
+        feed_idx = []
+        for op in train_program.global_block().ops:
+            if op.type == 'feed':
+                feed_idx.append(op.idx)
+        _prepend_feed(train_program.global_block(), feed_idx, feed_target_names)
+    train_program = train_program._prune(target_nodes)
 
     teacher_model_dir = config[
         "teacher_model_dir"] if "teacher_model_dir" in config else config[
