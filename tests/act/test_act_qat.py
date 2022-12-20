@@ -72,5 +72,26 @@ class ACTQATWhileOP(unittest.TestCase):
         os.system('rm -rf qat_while_output')
 
 
+class ACTQATWhileOPCase2(ACTQATWhileOP):
+    def get_config(self):
+        self.config = {
+            'QuantAware': {
+                'quantize_op_types': ['conv2d', 'mul', 'relu']
+            },
+            'Distillation': {},
+            'TrainConfig': {
+                'epochs': 1,
+                'eval_iter': 100,
+                'learning_rate': 5.0e-03,
+                'optimizer_builder': {
+                    'optimizer': {
+                        'type': 'SGD'
+                    },
+                    "weight_decay": 0.0005,
+                }
+            }
+        }
+
+
 if __name__ == '__main__':
     unittest.main()
