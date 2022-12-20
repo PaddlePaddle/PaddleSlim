@@ -3,6 +3,7 @@ import sys
 import unittest
 import numpy as np
 sys.path.append("../../")
+
 import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder

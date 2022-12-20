@@ -29,8 +29,6 @@
 
 ```text
 .
-├── cluster_train.py    # 分布式训练函数
-├── cluster_train.sh    # 本地模拟多机脚本
 ├── train.py            # 训练函数
 ├── infer.py            # 预测脚本
 ├── net.py              # 网络结构
@@ -117,12 +115,6 @@ python train.py -h
 单机多线程训练
 ```bash
 OPENBLAS_NUM_THREADS=1 CPU_NUM=5 python train.py --train_data_dir data/convert_text8 --dict_path data/test_build_dict --num_passes 10 --batch_size 100 --model_output_dir v1_cpu5_b100_lr1dir --base_lr 1.0 --print_batch 1000 --with_speed --is_sparse
-```
-
-本地单机模拟多机训练
-
-```bash
-sh cluster_train.sh
 ```
 
 本示例中按照单机多线程训练的命令进行训练，训练完毕后，可看到在当前文件夹下保存模型的路径为:     ``v1_cpu5_b100_lr1dir``, 运行 ``ls v1_cpu5_b100_lr1dir``可看到该文件夹下保存了训练的10个epoch的模型文件。

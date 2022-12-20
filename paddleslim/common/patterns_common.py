@@ -132,5 +132,6 @@ def is_shortcut(op, graph, sc_path, shortcut_start_op):
                 if n_op.idx() != op.idx():
                     sc_path.append(p_op.type())
                     sc_path.append(n_op.type())
-                    return _find_next_target_op(n_op, graph, op.idx(), sc_path)
-    return False
+                    return _find_next_target_op(n_op, graph, op.idx(),
+                                                sc_path), op.idx()
+    return False, -1

@@ -83,6 +83,7 @@ def main():
         batch_nums=10,
         algo=FLAGS.algo,
         hist_percent=0.999,
+        quantizable_op_type=["conv2d", "depthwise_conv2d"],
         is_full_quantize=False,
         bias_correction=False,
         onnx_format=False,

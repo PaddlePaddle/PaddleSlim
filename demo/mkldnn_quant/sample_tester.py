@@ -22,7 +22,6 @@ import six
 import numpy as np
 import time
 import paddle
-import paddle.fluid as fluid
 from paddle.fluid.framework import IrGraph
 from paddle.framework import core
 
@@ -244,7 +243,7 @@ class SampleTester(unittest.TestCase):
             return outputs, acc1_avg, acc5_avg, fps_avg, latency_avg
 
     def test_graph_transformation(self):
-        if not paddle.fluid.core.is_compiled_with_mkldnn():
+        if not paddle.framework.core.is_compiled_with_mkldnn():
             return
 
         infer_model_path = test_case_args.infer_model

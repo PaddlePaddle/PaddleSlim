@@ -35,7 +35,7 @@
 1.3 自定义计算逻辑
 ##########
 
-首先需要根据 `如何基于Paddle自定义DataLoader <>`_ 章节定义测试数据集 ``test_dataloader`` 。
+首先需要根据 `如何基于Paddle自定义DataLoader <https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/beginner/data_load_cn.html>`_ 章节定义测试数据集 ``test_dataloader`` 。
 
 ```python
 

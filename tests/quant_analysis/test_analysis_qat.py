@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 sys.path.append("../../")
+
 import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
@@ -35,12 +36,14 @@ class AnalysisQATDemo(unittest.TestCase):
         super(AnalysisQATDemo, self).__init__(*args, **kwargs)
         if not os.path.exists('MobileNetV1_infer'):
             os.system(
-                'wget -q https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
+                'wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
             )
             os.system('tar -xf MobileNetV1_infer.tar')
-        if not os.path.exists('ILSVRC2012_data_demo'):
+        if not os.path.exists(
+                os.path.join('.', 'ILSVRC2012_data_demo', 'ILSVRC2012',
+                             'train')):
             os.system(
-                'wget -q https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
+                'wget https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
             )
             os.system('tar -xf ILSVRC2012_data_demo.tar.gz')
 

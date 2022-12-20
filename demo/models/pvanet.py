@@ -22,13 +22,8 @@ class PVANet():
 
     def net(self, input, include_last_bn_relu=True, class_dim=1000):
         conv1 = self._conv_bn_crelu(input, 16, 7, stride=2, name="conv1_1")
-        pool1 = fluid.layers.pool2d(
-            input=conv1,
-            pool_size=3,
-            pool_stride=2,
-            pool_padding=1,
-            pool_type='max',
-            name='pool1')
+        pool1 = paddle.nn.functional.max_pool2d(
+            conv1, 3, stride=2, padding=1, name='pool1')
 
         end_points = {}
         conv2 = self._conv_stage(
@@ -182,13 +177,8 @@ class PVANet():
             paths.append(path_net)
 
         if stride > 1:
-            path_net = fluid.layers.pool2d(
-                input,
-                pool_size=3,
-                pool_stride=2,
-                pool_padding=1,
-                pool_type='max',
-                name=name + '_pool')
+            path_net = paddle.nn.functional.max_pool2d(
+                input, 3, stride=2, padding=1, name=name + '_pool')
             path_net = self._conv_bn_relu(path_net, pool_path_outputs, 1,
                                           name + '_poolproj')
             paths.append(path_net)
