@@ -428,8 +428,7 @@ def quant_aware(program,
                 quant_bits=config['activation_bits'],
                 skip_pattern=config['not_quant_pattern'],
                 quantizable_op_type=quant_dequant_ops,
-                is_test=is_test,
-                scale_dict=scale_dict)
+                is_test=is_test)
 
             quant_dequant_pass.apply(main_graph)
 

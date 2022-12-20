@@ -101,14 +101,15 @@ def get_patterns(program, only_final_node=True):
             if (not inp1._var.persistable) and (not inp2._var.persistable):
                 sc_path = []
                 shortcut_start_op = []
-                is_sc = is_shortcut(op, graph, sc_path, shortcut_start_op)
+                is_sc, target_op_idx = is_shortcut(op, graph, sc_path,
+                                                   shortcut_start_op)
                 if is_sc:
                     out_var_name = op.all_outputs()[0]._var.name
 
                     shortcut_start_op = shortcut_start_op[0]
-                    next_op = graph.next_ops(op)
+                    next_ops = graph.next_ops(op)
                     pattern_ops, pattern_ops_type = traversal_ops(
-                        shortcut_start_op, graph, next_op[0].idx())
+                        shortcut_start_op, graph, target_op_idx)
 
                     pattern_name = shortcut_start_op.type() + '$' + str(op.idx(
                     ))

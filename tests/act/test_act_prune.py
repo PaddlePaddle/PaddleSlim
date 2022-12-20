@@ -274,5 +274,60 @@ class ACTChannelPrune(unittest.TestCase):
         os.system('rm -rf asp_output')
 
 
+class ACTViTPrune(ACTChannelPrune):
+    def __init__(self, *args, **kwargs):
+        super(ACTViTPrune, self).__init__(*args, **kwargs)
+        if not os.path.exists('ViT_base_patch16_224_infer'):
+            os.system(
+                'wget -q https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/ViT_base_patch16_224_infer.tar'
+            )
+            os.system('tar -xf ViT_base_patch16_224_infer.tar')
+        if not os.path.exists('ILSVRC2012_data_demo'):
+            os.system(
+                'wget -q https://sys-p0.bj.bcebos.com/slim_ci/ILSVRC2012_data_demo.tar.gz'
+            )
+            os.system('tar -xf ILSVRC2012_data_demo.tar.gz')
+
+        self.train_dataloader, self.eval_dataloader = self.create_dataloader()
+
+    def test_act_vit_transformer_prune(self):
+        def eval_function(exe, compiled_test_program, test_feed_names,
+                          test_fetch_list):
+            res = eval_func(compiled_test_program, exe, test_feed_names,
+                            test_fetch_list, self.eval_dataloader)
+            return res
+
+        configs = {
+            'Distillation': {},
+            'TransformerPrune': {
+                'pruned_ratio': 0.1
+            },
+            'TrainConfig': {
+                'epochs': 1,
+                'eval_iter': 1000,
+                'learning_rate': 5.0e-03,
+                'optimizer_builder': {
+                    'optimizer': {
+                        'type': 'SGD'
+                    },
+                    "weight_decay": 0.0005,
+                }
+            }
+        }
+
+        ac = AutoCompression(
+            model_dir='./ViT_base_patch16_224_infer',
+            model_filename="inference.pdmodel",
+            params_filename="inference.pdiparams",
+            save_dir="vit_prune_output",
+            config=configs,
+            train_dataloader=self.train_dataloader,
+            eval_callback=eval_function,
+            eval_dataloader=self.
+            eval_dataloader)  # eval_function to verify accuracy
+        ac.compress()
+        os.system('rm -rf vit_prune_output')
+
+
 if __name__ == '__main__':
     unittest.main()
