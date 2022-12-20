@@ -45,6 +45,8 @@
 | MobileNetV3_large_x1_0 | 量化+蒸馏 | 74.04 | - | 9.85 | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_QAT.tar) |
 | MobileNetV3_large_x1_0_ssld | Baseline | 78.96 | - | 16.62 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV3_large_x1_0_ssld_infer.tar) |
 | MobileNetV3_large_x1_0_ssld | 量化+蒸馏 | 77.17 | - | 9.85 | [Config](./configs/MobileNetV3_large_x1_0/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/MobileNetV3_large_x1_0_ssld_QAT.tar) |
+| ViT_base_patch16_224 | Baseline | 81.89 | 367.17(batch_size=40) | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/ViT_base_patch16_224_infer.tar) |
+| ViT_base_patch16_224 | 量化+蒸馏 | 82.05 | 51.70(batch_size=40) | - | [Config](./configs/VIT/qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ViT_base_patch16_224_QAT.tar) |
 
 - ARM CPU 测试环境：`SDM865(4xA77+4xA55)`
 - Nvidia GPU 测试环境：
@@ -57,8 +59,8 @@
 #### 3.1 准备环境
 
 - python >= 3.6
-- PaddlePaddle >= 2.4.0 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.4.0
+- PaddlePaddle >= 2.4 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim >= 2.4
 
 安装paddlepaddle：
 ```shell
@@ -71,6 +73,13 @@ pip install paddlepaddle_gpu
 安装paddleslim：
 ```shell
 pip install paddleslim
+```
+
+若使用`run_ppclas.py`脚本，需安装paddleclas：
+```shell
+git clone https://github.com/PaddlePaddle/PaddleClas.git -b release/2.5
+cd PaddleClas
+pip install --upgrade -r requirements.txt
 ```
 
 #### 3.2 准备数据集
