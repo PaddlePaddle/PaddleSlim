@@ -28,7 +28,19 @@ def analysis_prune(eval_function,
                    params_filename,
                    analysis_file,
                    pruned_ratios,
-                   target_loss=None):
+                   target_loss=None,
+                   criterion='l1_norm'):
+    '''
+    Args:
+        eval_func(function): The callback function used to evaluate the model. It should accept a instance of `paddle.static.Program` as argument and return a score on test dataset.
+        model_dir(str): Directory path to load model. If you want to load onnx model, only set ``model_dir=model.onnx``.
+        model_filename(str): Specify model_filename. If you want to load onnx model, model filename should be None.
+        params_filename(str): Specify params_filename. If you want to load onnx model, params filename should be None.
+        analysis_file(str): The file to save the sensitivities. It will append the latest computed sensitivities into the file. And the sensitivities in the file would not be computed again. This file can be loaded by `pickle` library.
+        pruned_ratios(list): The ratios to be pruned.
+        criterion(str|function): The criterion used to sort channels for pruning. Currently supports l1_ norm, bn_scale, geometry_median. Default: l1_norm.
+    '''
+
     devices = paddle.device.get_device().split(':')[0]
     places = paddle.device._convert_to_place(devices)
     exe = paddle.static.Executor(places)
@@ -47,7 +59,8 @@ def analysis_prune(eval_function,
         eval_function,
         sensitivities_file=analysis_file,
         eval_args=[exe, feed_target_names, fetch_targets],
-        pruned_ratios=pruned_ratios)
+        pruned_ratios=pruned_ratios,
+        criterion='l1_norm')
 
     with open(analysis_file, 'rb') as f:
         if sys.version_info < (3, 0):

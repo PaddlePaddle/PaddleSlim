@@ -431,7 +431,8 @@ class ProgramInfo:
                  feed_target_names,
                  fetch_targets,
                  optimizer=None,
-                 learning_rate=None):
+                 learning_rate=None,
+                 loss_dict=None):
         """
         ProgramInfo Config.
         Args:
@@ -441,6 +442,7 @@ class ProgramInfo:
             fetch_targets(list(Variable)): The fetch variable in the program.
             optimizer(Optimizer, optional): Optimizer in training. Default: None.
             learning_rate(float|paddle.optimizer.lr, optional): learning_rate in training. Default: None.
+            loss_dict(dict): The components of losses.
         """
         self.startup_program = startup_program
         self.program = program
@@ -448,3 +450,4 @@ class ProgramInfo:
         self.fetch_targets = fetch_targets
         self.optimizer = optimizer
         self.learning_rate = learning_rate
+        self.loss_dict = loss_dict
