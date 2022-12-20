@@ -37,10 +37,10 @@ from ..common import get_feed_vars, wrap_dataloader, load_inference_model, get_m
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-__all__ = ["AnalysisQuant"]
+__all__ = ["AnalysisPTQ"]
 
 
-class AnalysisQuant(object):
+class AnalysisPTQ(object):
     def __init__(self,
                  model_dir,
                  model_filename=None,
@@ -51,7 +51,7 @@ class AnalysisQuant(object):
                  resume=False,
                  ptq_config=None):
         """
-        AnalysisQuant provides to analysis the sensitivity of each op in the model.
+        AnalysisPTQ provides to analysis the sensitivity of each op in the model.
         
         Args:
             model_dir(str): the path of fp32 model that will be quantized, it can also be '.onnx'
@@ -403,7 +403,8 @@ class AnalysisQuant(object):
         statistic = []
         box_fp_dist, box_q_dist = [], []
         hist_fp_dist, hist_q_dist = {}, {}
-        for var_name in fp_tensors:
+        fp_tensor_names = sorted(list(fp_tensors.keys()))
+        for var_name in fp_tensor_names:
             fp_tensor = fp_tensors[var_name]
             quant_name = var_name_map[
                 var_name] if var_name_map is not None else var_name
@@ -503,7 +504,9 @@ class AnalysisQuant(object):
             for name in hist_data:
                 plt.hist(hist_data[name][0], bins=hist_data[name][1])
                 plt.xlabel(name)
-                plt.ylabel("Frequency")
+                plt.ylabel("Probability")
+                locs, _ = plt.yticks()
+                plt.yticks(locs, np.round(locs / len(hist_data[name][0]), 3))
                 if 'act' in save_name:
                     plt.title("Hist of Activation {}".format(name))
                 else:
