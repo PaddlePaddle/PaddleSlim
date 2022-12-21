@@ -44,6 +44,7 @@ try:
     from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
     from paddle.fluid.contrib.slim.quantization import PostTrainingQuantizationProgram
     from paddle.fluid.contrib.slim.quantization import AddQuantDequantForInferencePass
+    from paddle.fluid.contrib.slim.quantization import quant_config
 except:
     _logger.warning(
         "Some functions fail to import, please update PaddlePaddle version to 2.4+"
@@ -106,7 +107,9 @@ _quant_config_default = {
     # quant post to get initial scale for quant_aware
     'quant_post_first': False,
     # whether scale can be train
-    'scale_trainable': True
+    'scale_trainable': True,
+    # Deploy backend, it could be: None, TensorRT, MKLDNN
+    'deploy_backend': None
 }
 
 
@@ -197,6 +200,32 @@ def _parse_configs(user_config):
 
     assert isinstance(configs['moving_rate'], float), \
         "moving_rate must be float value, The decay coefficient of moving average, default is 0.9."
+
+    deploy_backend = configs['deploy_backend']
+    assert not deploy_backend or deploy_backend.lower() in [
+        'tensorrt', 'mkldnn', 'arm'
+    ], "Deploy Backend {} not support, please choose None, tensorrt or mkldnn.".format(
+        deploy_backend)
+    try:
+        if not deploy_backend:
+            configs['quant_config'] = quant_config.BaseQuantizer(
+                quant_operation_types=configs['quantize_op_types'],
+                quant_bits=configs['weight_bits'], )
+        elif deploy_backend.lower() == "tensorrt":
+            configs['quant_config'] = quant_config.TensorRTQuantizer(
+                quant_operation_types=configs['quantize_op_types'],
+                quant_bits=configs['weight_bits'], )
+        elif deploy_backend.lower() == "mkldnn":
+            configs['quant_config'] = quant_config.MKLDNNQuantizer(
+                quant_operation_types=configs['quantize_op_types'],
+                quant_bits=configs['weight_bits'], )
+        elif deploy_backend.lower() == "arm":
+            configs['quant_config'] = quant_config.ARMCPUQuantizer(
+                quant_operation_types=configs['quantize_op_types'],
+                quant_bits=configs['weight_bits'], )
+    except:
+        _logger.warning(
+            "Set deploy_backend failed, Please update PaddlePaddle to 2.4.2+")
 
     return configs
 
@@ -389,11 +418,17 @@ def quant_aware(program,
         main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
         transform_pass_ops = []
         quant_dequant_ops = []
-        for op_type in config['quantize_op_types']:
-            if op_type in TRANSFORM_PASS_OP_TYPES:
-                transform_pass_ops.append(op_type)
-            elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
-                quant_dequant_ops.append(op_type)
+        if 'quant_config' in config and config['quant_config']:
+            transform_pass_ops = config[
+                'quant_config'].weight_quant_operation_types
+            quant_dequant_ops = config[
+                'quant_config'].activation_quant_operation_types
+        else:
+            for op_type in config['quantize_op_types']:
+                if op_type in TRANSFORM_PASS_OP_TYPES:
+                    transform_pass_ops.append(op_type)
+                elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
+                    quant_dequant_ops.append(op_type)
         if len(transform_pass_ops) > 0:
             trannsform_func = 'QuantizationTransformPassV2' if config[
                 'onnx_format'] else 'QuantizationTransformPass'
@@ -484,8 +519,8 @@ def quant_post_static(executor,
                       hist_percent=0.9999,
                       bias_correction=False,
                       quantizable_op_type=[
-                          "conv2d", "depthwise_conv2d", "mul", "matmul",
-                          "matmul_v2"
+                          "conv2d", "depthwise_conv2d", "conv2d_transpose",
+                          "mul", "matmul", "matmul_v2"
                       ],
                       is_full_quantize=False,
                       weight_bits=8,
@@ -495,8 +530,7 @@ def quant_post_static(executor,
                       optimize_model=False,
                       onnx_format=False,
                       skip_tensor_list=None,
-                      is_use_cache_file=False,
-                      cache_dir="./temp_post_training"):
+                      deploy_backend=None):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -568,8 +602,9 @@ def quant_post_static(executor,
                 executor must be cpu it supports fusing batch_norm into convs.
         onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is False.
         skip_tensor_list(list): List of skip quant tensor name.
-        is_use_cache_file(bool): This param is deprecated.
-        cache_dir(str): This param is deprecated.
+        deploy_backend(str): Deploy backend, it could be None, TensorRT, MKLDNN, ARM.
+                Other backends will continue to expand, the default is None, which means to
+                use the default general quantization configuration.
     
     Returns:
         None
@@ -597,8 +632,10 @@ def quant_post_static(executor,
             activation_quantize_type=activation_quantize_type,
             weight_quantize_type=weight_quantize_type,
             onnx_format=onnx_format,
-            skip_tensor_list=skip_tensor_list,  # support in Paddle >= 2.3.1
-            optimize_model=optimize_model)
+            skip_tensor_list=skip_tensor_list,
+            optimize_model=optimize_model,
+            deploy_backend=deploy_backend,  # >= Paddle 2.4.2
+        )
     except:
         post_training_quantization = PostTrainingQuantization(
             executor=executor,
@@ -622,6 +659,7 @@ def quant_post_static(executor,
             activation_quantize_type=activation_quantize_type,
             weight_quantize_type=weight_quantize_type,
             onnx_format=onnx_format,
+            skip_tensor_list=skip_tensor_list,
             optimize_model=optimize_model)
 
     post_training_quantization.quantize()
