@@ -287,8 +287,10 @@ class TransformerPruner:
 
     def _preprocess_patterns(self, patterns, graph):
         """ Preprocess pattern of the program, get some info need by reorder"""
-        input_mask_op = patterns['input_mask']
-        layer_num = int((len(patterns) - 1) / 2)
+        input_mask_op = patterns.get('input_mask', None)
+        layer_num = int(
+            (len(patterns) - 1) / 2) if input_mask_op is not None else int(
+                (len(patterns) / 2))
 
         ### get real head number
         head_num = -1
@@ -395,8 +397,6 @@ class TransformerPruner:
                     shape=[program.global_block().var(w_name).shape[1]],
                     dtype='float32'))
 
-        exe.run(paddle.static.default_startup_program())
-
         ### need to send a dataloader with label
         for batch_id, data in enumerate(dataloader()):
             outs = exe.run(program, feed=data, fetch_list=fetch_list)
@@ -445,13 +445,21 @@ class TransformerPruner:
             new_w = np.take(np_w, index, axis=dim)
             pd_w.set(new_w, place)
 
+        if int(len(qkv) / 2) == 1:
+            q_index = index
+            k_index = index + 768
+            v_index = index + (768 * 2)
+            qkv_index = np.append(np.append(q_index, k_index), v_index)
+        else:
+            qkv_index = index
+
         for w_idx, weight_name in enumerate(qkv):
             if w_idx % 2 == 0:
                 ### reorder qkv weight 
-                reorder_head_matrix(weight_name, index, dim=1)
+                reorder_head_matrix(weight_name, qkv_index, dim=1)
             else:
                 ### reorder qkv bias 
-                reorder_head_matrix(weight_name, index, dim=0)
+                reorder_head_matrix(weight_name, qkv_index, dim=0)
 
         ### reorder attention output weight 
         reorder_head_matrix(attn_out[0], index, dim=0)
@@ -507,7 +515,13 @@ class TransformerPruner:
         op.desc.set_input(
             'X', input_var_name[:int(len(input_var_name) * new_inputs_len)])
 
-    def _prune_weight(self, graph, scope, place, pruned_name, pruned_ratio):
+    def _prune_weight(self,
+                      graph,
+                      scope,
+                      place,
+                      pruned_name,
+                      pruned_ratio,
+                      fuse_qkv=False):
         """ Prune every weight in program """
         param = graph.var(pruned_name)
         _var = scope.find_var(param.name())
@@ -516,26 +530,62 @@ class TransformerPruner:
         param_t = _var.get_tensor()
         pruned_ratio = [pruned_ratio[1]] if len(param_t.shape(
         )) == 1 else pruned_ratio
-        pruned_shape = np.multiply(param_t.shape(), pruned_ratio)
-        pruned_shape = list(map(int, pruned_shape))
-        param.set_shape(pruned_shape)
-        if len(pruned_shape) == 2:
-            pruned_param = np.array(param_t)[:pruned_shape[0], :pruned_shape[1]]
+        origin_shape = param_t.shape()
+
+        def process_qkv(qkv_param, pruned_ratio):
+            qkv_param_shape = qkv_param.shape()
+            if len(qkv_param_shape) == 2:
+                tmp_qkv_param_shape = [qkv_param_shape[0], -1, 3]
+            else:
+                tmp_qkv_param_shape = [-1, 3]
+            tmp_param = np.reshape(qkv_param, tmp_qkv_param_shape)
+            tmp_pruned_ratio = pruned_ratio + [1.0]
+            tmp_pruned_shape = np.multiply(tmp_param.shape, tmp_pruned_ratio)
+            tmp_pruned_shape = list(map(int, tmp_pruned_shape))
+            if len(qkv_param_shape) == 2:
+                tmp_prune_qkv_param = tmp_param[:tmp_pruned_shape[
+                    0], :tmp_pruned_shape[1], :tmp_pruned_shape[2]]
+                pruned_param = np.reshape(tmp_prune_qkv_param,
+                                          (qkv_param_shape[0], -1))
+            else:
+                tmp_prune_qkv_param = tmp_param[:tmp_pruned_shape[0], :
+                                                tmp_pruned_shape[1]]
+                pruned_param = np.reshape(tmp_prune_qkv_param, (-1))
+            return pruned_param
+
+        if fuse_qkv:
+            pruned_param = process_qkv(param_t, pruned_ratio)
+            param.set_shape(pruned_param.shape)
+            param_t.set(pruned_param, place)
         else:
-            pruned_param = np.array(param_t)[:pruned_shape[0]]
-        param_t.set(pruned_param, place)
+            pruned_shape = np.multiply(param_t.shape(), pruned_ratio)
+            pruned_shape = list(map(int, pruned_shape))
+            param.set_shape(pruned_shape)
+            if len(pruned_shape) == 2:
+                pruned_param = np.array(param_t)[:pruned_shape[0], :
+                                                 pruned_shape[1]]
+            else:
+                pruned_param = np.array(param_t)[:pruned_shape[0]]
+            param_t.set(pruned_param, place)
 
     def _prune_transformer(self, scope, place, graph, pruned_dict):
         """ Prune transformer program """
+        qkv_weights_name = []
+        if (len(self.mha_weight[0]['P1']) // 2 == 1):
+            for _, mha_weights_name in self.mha_weight.items():
+                qkv_weights_name.extend(mha_weights_name['P1'])
         for name, value in pruned_dict.items():
             ### prune weight
-            self._prune_weight(graph, scope, place, name, value)
+            fuse_qkv = False
+            if name in qkv_weights_name:
+                fuse_qkv = True
+            self._prune_weight(graph, scope, place, name, value, fuse_qkv)
         graph.infer_shape()
         return graph.program
 
     def prune(self):
         ### get input_mask op and start to prune input_mask op
-        if self.input_mask_op.type == 'stack':
+        if self.input_mask_op is not None and self.input_mask_op.type == 'stack':
             self._update_input_mask_inputs(self.inference_program,
                                            self.input_mask_op, self.width_mult)
 
@@ -555,7 +605,7 @@ class TransformerPruner:
                             pruned_shape[-1] = int(origin_shape[-1] *
                                                    self.width_mult)
                             op.set_attr('shape', pruned_shape)
-                        elif len(origin_shape) == 4:
+                        elif len(origin_shape) == 4 or len(origin_shape) == 5:
                             pruned_shape[-2] = int(origin_shape[-2] *
                                                    self.width_mult)
                             op.set_attr('shape', pruned_shape)
