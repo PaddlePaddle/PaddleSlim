@@ -84,6 +84,13 @@ def _create_optimizer(train_config):
     return opt, lr
 
 
+def _find_var_from_program(program, var_name):
+    for block in program.blocks:
+        if block.has_var(var_name):
+            return block.var(var_name)
+    raise ValueError("var {} not in this program".format(var_name))
+
+
 def _get_distill_node(student_program, config):
     node = config.get('node')
     if len(node) == 0:
@@ -95,7 +102,7 @@ def _get_distill_node(student_program, config):
     else:
         test_node = node[0]
     try:
-        test_var = student_program.global_block().var(test_node)
+        test_var = _find_var_from_program(student_program, test_node)
         distill_node_pair = []
         if isinstance(node[0], list):
             for n_list in node:
@@ -111,6 +118,14 @@ def _get_distill_node(student_program, config):
         return distill_node_pair
     except:
         return node
+
+
+def _get_target_node(distill_node):
+    targets = []
+    for idx, node in enumerate(distill_node):
+        if idx % 2 != 0:
+            targets.append(node)
+    return targets
 
 
 def _parse_distill_loss(distill_node_pair,
@@ -150,6 +165,7 @@ def _load_program_and_merge(executor,
                             model_dir,
                             model_filename,
                             params_filename,
+                            distill_node_pair,
                             teacher_idx=None,
                             feed_target_names=None):
     scope = paddle.static.global_scope()
@@ -172,8 +188,8 @@ def _load_program_and_merge(executor,
 
     _remove_fetch_node(teacher_program)
 
-    if teacher_idx == None or teacher_idx == 1:
-        test_program = train_program.clone(for_test=True)
+    target_nodes = _get_target_node(distill_node_pair)
+    teacher_program = teacher_program._prune(target_nodes)
 
     data_name_map = {}
 
@@ -197,9 +213,9 @@ def _load_program_and_merge(executor,
         name_prefix=teacher_name_prefix,
         merge_feed=merge_feed)
     if teacher_idx == None or teacher_idx == 1:
-        return train_program, test_program, data_name_map
+        return train_program, data_name_map
     else:
-        return train_program, None, data_name_map
+        return train_program, data_name_map
 
 
 def build_distill_program(executor,
@@ -225,6 +241,38 @@ def build_distill_program(executor,
     distill_node_pair = _get_distill_node(train_program,
                                           config) or default_distill_node_pair
 
+    test_program = train_program.clone(for_test=True)
+
+    target_nodes = _get_target_node(distill_node_pair)
+
+    def _prepend_feed(block, feed_idx, feed_target_names):
+        for idx in feed_idx[::-1]:
+            block._remove_op(idx)
+
+        feed_var = block.create_var(
+            name='feed',
+            type=paddle.framework.core.VarDesc.VarType.FEED_MINIBATCH,
+            persistable=True, )
+
+        for i, name in enumerate(feed_target_names):
+            out = block.var(name)
+            block._prepend_op(
+                type='feed',
+                inputs={'X': [feed_var]},
+                outputs={'Out': [out]},
+                attrs={'col': i})
+
+    judge_feed_pos = False
+    if train_program.desc.block(0).op(0).type() != 'feed':
+        judge_feed_pos = True
+    if judge_feed_pos:
+        feed_idx = []
+        for op in train_program.global_block().ops:
+            if op.type == 'feed':
+                feed_idx.append(op.idx)
+        _prepend_feed(train_program.global_block(), feed_idx, feed_target_names)
+    train_program = train_program._prune(target_nodes)
+
     teacher_model_dir = config[
         "teacher_model_dir"] if "teacher_model_dir" in config else config[
             "teacher_model_path_prefix"]
@@ -235,7 +283,7 @@ def build_distill_program(executor,
             params_filename = config["teacher_params_filename"][
                 tea_idx] if "teacher_params_filename" in config else None
             if tea_idx == 0:
-                train_program, test_program, data_name_map = _load_program_and_merge(
+                train_program, data_name_map = _load_program_and_merge(
                     executor,
                     place,
                     train_program,
@@ -243,10 +291,11 @@ def build_distill_program(executor,
                     teacher_model_dir[tea_idx],
                     model_filename,
                     params_filename,
+                    distill_node_pair,
                     teacher_idx=(tea_idx + 1),
                     feed_target_names=feed_target_names)
             else:
-                train_program, _, data_name_map = _load_program_and_merge(
+                train_program, data_name_map = _load_program_and_merge(
                     executor,
                     place,
                     train_program,
@@ -254,6 +303,7 @@ def build_distill_program(executor,
                     teacher_model_dir[tea_idx],
                     model_filename,
                     params_filename,
+                    distill_node_pair,
                     teacher_idx=(tea_idx + 1),
                     feed_target_names=feed_target_names)
 
@@ -262,7 +312,7 @@ def build_distill_program(executor,
             "teacher_model_filename"] if "teacher_model_filename" in config else None
         params_filename = config[
             "teacher_params_filename"] if "teacher_params_filename" in config else None
-        train_program, test_program, data_name_map = _load_program_and_merge(
+        train_program, data_name_map = _load_program_and_merge(
             executor,
             place,
             train_program,
@@ -270,6 +320,7 @@ def build_distill_program(executor,
             teacher_model_dir,
             model_filename,
             params_filename,
+            distill_node_pair,
             teacher_idx=None,
             feed_target_names=feed_target_names)
     # all feed node should set stop_gradient is False, for using pact quant algo.
@@ -480,7 +531,7 @@ def build_prune_program(executor,
             place=place)
         _logger.info(
             "####################channel pruning##########################")
-        for param in pruned_program.global_block().all_parameters():
+        for param in pruned_program.all_parameters():
             if param.name in original_shapes:
                 _logger.info("{}, from {} to {}".format(
                     param.name, original_shapes[param.name], param.shape))
