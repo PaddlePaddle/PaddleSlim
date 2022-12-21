@@ -19,7 +19,7 @@ from ..core import GraphWrapper
 from ..common import get_logger
 from ..common.recover_program import recover_inference_program
 from ..common.transformer_pattern import preprocess_transformer_patterns
-from ..common.patterns_common import is_dynamic_weight_op
+from ..common.patterns_common import has_trainable_var
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -297,7 +297,7 @@ class TransformerPruner:
         tmp_mha_ops = patterns['MHA$0']
         for op in tmp_mha_ops:
             if op.type() in ['matmul', 'matmul_v2'] and (
-                    not is_dynamic_weight_op(op)) and head_num == -1:
+                    not has_trainable_var(op)) and head_num == -1:
                 inp_var = op.inputs("X")
                 head_num = inp_var[0].shape()[1]
 

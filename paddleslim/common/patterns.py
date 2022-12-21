@@ -30,7 +30,7 @@ def find_final_nodes(program):
     final_nodes = []
     graph = GraphWrapper(program)
     for op in sorted(graph.ops()):
-        if op.type() in ALL_WEIGHT_OP and is_output_weight_ops(op, graph):
+        if has_trainable_var(op) and is_final_op_with_trainable_var(op, graph):
             n_op = has_bias(op, graph)
             if n_op is not None:
                 final_nodes.extend(n_op.all_outputs())
@@ -52,7 +52,7 @@ def _is_mha(pattern_ops, pattern_ops_type, skip_quant_tensor_list=[]):
     matmul_num = 0
     for op in pattern_ops:
         if op.type() in ['matmul', 'matmul_v2']:
-            if not is_dynamic_weight_op(op):
+            if not has_trainable_var(op):
                 matmul_num += 1
     if matmul_num == 2:
         return True
@@ -68,7 +68,7 @@ def _is_ffn(pattern_ops, pattern_ops_type):
     act_num = 0
     for op in pattern_ops:
         if op.type() in ['mul', 'matmul', 'matmul_v2']:
-            if is_dynamic_weight_op(op):
+            if has_trainable_var(op):
                 linear_num += 1
         if op.type() in ['relu', 'gelu']:
             act_num += 1

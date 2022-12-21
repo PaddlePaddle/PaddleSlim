@@ -31,7 +31,7 @@ def _append_transformer_prune_params(op, graph, block_num, params_dict):
             continue
         next_op = _find_gemm_op(next_op, graph)
         if next_op.type() in ['mul', 'matmul', 'matmul_v2'
-                              ] and is_dynamic_weight_op(next_op):
+                              ] and has_trainable_var(next_op):
             if block_num not in params_dict:
                 params_dict[block_num] = {}
                 params_dict[block_num]['P1'] = [get_weight(next_op)]
