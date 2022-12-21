@@ -24,6 +24,7 @@ from ..common.recover_program import recover_inference_program, _remove_fetch_no
 from ..common import get_logger
 from .strategy_config import ProgramInfo
 from ..common.load_model import load_inference_model
+from ..analysis import flops
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
@@ -521,6 +522,8 @@ def build_prune_program(executor,
                     params.append(param.name)
                     original_shapes[param.name] = param.shape
 
+        origin_flops = flops(train_program_info.program)
+
         pruned_program, _, _ = pruner.prune(
             train_program_info.program,
             paddle.static.global_scope(),
@@ -531,12 +534,18 @@ def build_prune_program(executor,
             place=place)
         _logger.info(
             "####################channel pruning##########################")
-        for param in pruned_program.all_parameters():
+        for param in pruned_program.global_block().all_parameters():
             if param.name in original_shapes:
                 _logger.info("{}, from {} to {}".format(
                     param.name, original_shapes[param.name], param.shape))
         _logger.info(
             "####################channel pruning end##########################")
+
+        final_flops = flops(pruned_program)
+        pruned_flops = abs(origin_flops - final_flops) / origin_flops
+        _logger.info("FLOPs before pruning: {}".format(origin_flops))
+        _logger.info("FLOPs after pruning: {}. Pruned FLOPs: {}%.".format(
+            final_flops, round(pruned_flops * 100, 2)))
         train_program_info.program = pruned_program
 
     elif strategy.startswith('asp'):
