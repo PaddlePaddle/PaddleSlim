@@ -131,12 +131,12 @@ def _parse_distill_loss(distill_node_pair,
     for node, loss_clas, lam in zip(distill_node_pair, distill_loss,
                                     distill_lambda):
         tmp_loss = losses.get(loss_clas, 0.0)
-        _logger.info("train config.distill_node_pair: {}".format(node, loss,
-                                                                 lam))
+        _logger.info("train config.distill_node_pair: {}".format(
+            node, loss_clas, lam))
         assert len(node) % 2 == 0, \
             "distill_node_pair config wrong, the length needs to be an even number"
         for i in range(len(node) // 2):
-            tmp_loss += eval(loss)(node[i * 2], node[i * 2 + 1]) * lam
+            tmp_loss += eval(loss_clas)(node[i * 2], node[i * 2 + 1]) * lam
         loss_dist += tmp_loss
         losses[loss_clas] = tmp_loss
 
