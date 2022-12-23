@@ -550,7 +550,7 @@ class AutoCompression:
             train_program_info = self._compiled_program(train_program_info,
                                                         strategy)
             test_program_info = self._compiled_program(test_program_info,
-                                                       self._strategy)
+                                                       strategy)
         return train_program_info, test_program_info
 
     def _compiled_program(self, program_info, strategy):

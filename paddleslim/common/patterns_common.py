@@ -39,7 +39,7 @@ def find_weight_op(op, graph):
     """ Find operators with weight."""
     next_ops = sorted(graph.next_ops(op))
     for next_op in next_ops:
-        if is_dynamic_weight_op(next_op):
+        if has_trainable_var(next_op):
             return next_op
         else:
             return find_weight_op(next_op, graph)
@@ -56,25 +56,24 @@ def get_weight(op, return_name=True):
     return None
 
 
-def is_dynamic_weight_op(op):
+def has_trainable_var(op):
+    """ Judge whether the operator with trainable variable """
     weight_ops = ALL_WEIGHT_OP
     if op.type() in weight_ops:
-        if op.type() in ['mul', 'matmul', 'matmul_v2']:
-            for inp in sorted(op.all_inputs()):
-                if inp._var.persistable == True:
-                    return True
-            return False
-        return True
+        for inp in sorted(op.all_inputs()):
+            if inp._var.persistable == True:
+                return True
+        return False
     return False
 
 
-def is_output_weight_ops(op, graph):
+def is_final_op_with_trainable_var(op, graph):
     """ Judge whether is the final op with weights in the graph """
     next_ops = sorted(graph.next_ops(op))
     for next_op in next_ops:
-        if is_dynamic_weight_op(next_op):
+        if has_trainable_var(next_op):
             return False
-        return is_output_weight_ops(next_op, graph)
+        return is_final_op_with_trainable_var(next_op, graph)
     return True
 
 
@@ -132,5 +131,6 @@ def is_shortcut(op, graph, sc_path, shortcut_start_op):
                 if n_op.idx() != op.idx():
                     sc_path.append(p_op.type())
                     sc_path.append(n_op.type())
-                    return _find_next_target_op(n_op, graph, op.idx(), sc_path)
-    return False
+                    return _find_next_target_op(n_op, graph, op.idx(),
+                                                sc_path), op.idx()
+    return False, -1

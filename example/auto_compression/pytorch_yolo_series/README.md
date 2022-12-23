@@ -45,20 +45,20 @@
 ## 3. 自动压缩流程
 
 ### 3.1 准备环境
-- PaddlePaddle >= 2.3.2版本 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)根据相应环境的安装指令进行安装）
-- PaddleSlim >= 2.3.3版本
+- PaddlePaddle >= 2.4版本 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)根据相应环境的安装指令进行安装）
+- PaddleSlim >= 2.4版本
 
 （1）安装paddlepaddle
-```
+```shell
 # CPU
-pip install paddlepaddle==2.3.2
+pip install paddlepaddle==2.4.1
 # GPU 以Ubuntu、CUDA 11.2为例
-python -m pip install paddlepaddle-gpu==2.3.2.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
+python -m pip install paddlepaddle-gpu==2.4.1.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
-（2）安装paddleslim>=2.3.3
+（2）安装paddleslim>=2.4
 ```shell
-pip install paddleslim==2.3.3
+pip install paddleslim
 ```
 
 #### 版本对齐
