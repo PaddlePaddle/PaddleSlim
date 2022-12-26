@@ -60,7 +60,7 @@ def analysis_prune(eval_function,
         sensitivities_file=analysis_file,
         eval_args=[exe, feed_target_names, fetch_targets],
         pruned_ratios=pruned_ratios,
-        criterion='l1_norm')
+        criterion=criterion)
 
     with open(analysis_file, 'rb') as f:
         if sys.version_info < (3, 0):
