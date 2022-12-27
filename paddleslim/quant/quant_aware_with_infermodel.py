@@ -29,7 +29,6 @@ from .quanter import quant_aware, convert
 from ..dist import merge, l2, soft_label
 from ..auto_compression.create_compressed_program import build_distill_program
 import logging
-logging.getLogger().setLevel(logging.INFO)
 from ..common import get_logger
 _logger = get_logger(__name__, level=logging.INFO)
 
