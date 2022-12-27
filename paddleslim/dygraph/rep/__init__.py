@@ -17,11 +17,12 @@ import paddle.nn as nn
 
 from ...common import get_logger
 from .diversebranchblock import DiverseBranchBlock
+from .acblock import ACBlock
 _logger = get_logger(__name__, level=logging.INFO)
 
 __all__ = ["Reparameterization"]
 
-SUPPORT_REP_DICT = {"DBB": DiverseBranchBlock, }
+SUPPORT_REP_DICT = {"DBB": DiverseBranchBlock, "ACB": ACBlock}
 
 
 class Reparameterization:
@@ -29,7 +30,7 @@ class Reparameterization:
     Re-parameterization interface of dygraph model.
     Args:
         model(nn.Layer): Model of networks.
-        algo(str): Reparameterized algorithm, currently supports: `DBB`.
+        algo(str): Reparameterized algorithm, currently supports: `DBB`, `ACB`.
         op_type(str): The layer that the reparameterization module will replace, currently supports `conv_bn`.
     """
 
@@ -113,8 +114,8 @@ class Reparameterization:
         For example, if name is 'block_1/convbn_1/conv_1', the parent layer is
         'block_1/convbn_1' and the sub_name is `conv_1`.
         Args:
-            model(paddle.nn.Layer): the model to be quantized.
-            name(string): the name of a layer
+            model(paddle.nn.Layer): the model to be reparameterized.
+            name(string): the name of a layer.
 
         Returns:
             parent_layer, subname

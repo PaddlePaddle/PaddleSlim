@@ -134,7 +134,7 @@ class TestRep(unittest.TestCase):
                         "Train | At epoch {} step {}: loss = {:}, acc= {:}".
                         format(epoch, batch_id, avg_loss.numpy(), acc.numpy()))
 
-    def test_ptq(self):
+    def test_dbb(self):
         seed = 1
         np.random.seed(seed)
         paddle.static.default_main_program().random_seed = seed
@@ -174,12 +174,73 @@ class TestRep(unittest.TestCase):
         reper = Reparameterization(algo="DBB")
         reper(fp32_lenet)
 
-        _logger.info("train the reparameterization model")
+        _logger.info("train the DBB reparameterization model")
         self.model_train(fp32_lenet, train_reader)
 
         rep_top1, rep_top5 = self.model_test(fp32_lenet, test_reader)
 
-        _logger.info("save and test the reparameterization model")
+        _logger.info("save and test the DBB reparameterization model")
+        reper.convert_to_deploy()
+        save_path = "./tmp/model"
+        input_spec = paddle.static.InputSpec(
+            shape=[None, 1, 28, 28], dtype='float32')
+        paddle.jit.save(fp32_lenet, save_path, input_spec=[input_spec])
+
+        _logger.info("FP32 acc: top1: {}, top5: {}".format(fp32_top1,
+                                                           fp32_top5))
+        _logger.info("Int acc: top1: {}, top5: {}".format(rep_top1, rep_top5))
+
+        diff = 0.005
+        self.assertTrue(
+            fp32_top1 - rep_top1 < diff,
+            msg="The acc of rep model is too lower than fp32 model")
+
+    def test_acb(self):
+        seed = 1
+        np.random.seed(seed)
+        paddle.static.default_main_program().random_seed = seed
+        paddle.static.default_startup_program().random_seed = seed
+
+        _logger.info("create the fp32 model")
+        fp32_lenet = ImperativeLenet()
+
+        _logger.info("prepare data")
+        batch_size = 64
+        transform = paddle.vision.transforms.Compose([
+            paddle.vision.transforms.Transpose(),
+            paddle.vision.transforms.Normalize([127.5], [127.5])
+        ])
+        train_dataset = paddle.vision.datasets.MNIST(
+            mode='train', backend='cv2', transform=transform)
+        val_dataset = paddle.vision.datasets.MNIST(
+            mode='test', backend='cv2', transform=transform)
+
+        place = paddle.CUDAPlace(0) \
+            if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
+        train_reader = paddle.io.DataLoader(
+            train_dataset,
+            drop_last=True,
+            places=place,
+            batch_size=batch_size,
+            return_list=True)
+        test_reader = paddle.io.DataLoader(
+            val_dataset, places=place, batch_size=batch_size, return_list=True)
+
+        _logger.info("train the fp32 model")
+        self.model_train(fp32_lenet, train_reader)
+
+        _logger.info("test fp32 model")
+        fp32_top1, fp32_top5 = self.model_test(fp32_lenet, test_reader)
+
+        reper = Reparameterization(algo="ACB")
+        reper(fp32_lenet)
+
+        _logger.info("train the ACB reparameterization model")
+        self.model_train(fp32_lenet, train_reader)
+
+        rep_top1, rep_top5 = self.model_test(fp32_lenet, test_reader)
+
+        _logger.info("save and test the ACB reparameterization model")
         reper.convert_to_deploy()
         save_path = "./tmp/model"
         input_spec = paddle.static.InputSpec(
