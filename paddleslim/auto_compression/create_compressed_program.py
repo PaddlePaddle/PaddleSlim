@@ -539,8 +539,8 @@ def build_prune_program(executor,
         train_program_info.program = pruned_program
 
     elif strategy.startswith('asp'):
-        from paddle.static import sparsity
-        pruner = sparsity
+        from paddle.incubate import asp
+        pruner = asp
         excluded_params_name = []
         if config['prune_params_name'] is None:
             config['prune_params_name'] = _get_asp_prune_params(
