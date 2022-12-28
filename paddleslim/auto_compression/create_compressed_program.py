@@ -24,6 +24,7 @@ from ..common.recover_program import recover_inference_program, _remove_fetch_no
 from ..common import get_logger
 from .strategy_config import ProgramInfo
 from ..common.load_model import load_inference_model
+from ..analysis import flops
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
@@ -118,7 +119,7 @@ def _parse_distill_loss(distill_node_pair,
                         distill_lambda=1.0):
     """parse distill loss config"""
     loss_dist = 0.0
-    losses = []
+    losses = {}
     if isinstance(distill_node_pair[0], str):
         assert isinstance(distill_loss, str)
         assert isinstance(distill_lambda, float)
@@ -128,16 +129,17 @@ def _parse_distill_loss(distill_node_pair,
 
     assert len(distill_node_pair) == len(distill_loss)
     assert len(distill_node_pair) == len(distill_lambda)
-    for node, loss, lam in zip(distill_node_pair, distill_loss, distill_lambda):
-        tmp_loss = 0.0
-        _logger.info("train config.distill_node_pair: {}".format(node, loss,
-                                                                 lam))
+    for node, loss_clas, lam in zip(distill_node_pair, distill_loss,
+                                    distill_lambda):
+        tmp_loss = losses.get(loss_clas, 0.0)
+        _logger.info("train config.distill_node_pair: {}".format(
+            node, loss_clas, lam))
         assert len(node) % 2 == 0, \
             "distill_node_pair config wrong, the length needs to be an even number"
         for i in range(len(node) // 2):
-            tmp_loss += eval(loss)(node[i * 2], node[i * 2 + 1])
-        loss_dist += lam * tmp_loss
-        losses.append(tmp_loss)
+            tmp_loss += eval(loss_clas)(node[i * 2], node[i * 2 + 1]) * lam
+        loss_dist += tmp_loss
+        losses[loss_clas] = tmp_loss
 
     return loss_dist, losses
 
@@ -313,7 +315,7 @@ def build_distill_program(executor,
                         use_dynamic_loss_scaling=True,
                         **train_config['amp_config'])
 
-            distill_loss, losses = _parse_distill_loss(
+            distill_loss, loss_dict = _parse_distill_loss(
                 distill_node_pair,
                 config.get('loss') or 'l2',  ### default loss is l2
                 config.get('alpha') or 1.0)  ### default alpha is 1.0
@@ -334,7 +336,7 @@ def build_distill_program(executor,
 
     train_program_info = ProgramInfo(startup_program, train_program,
                                      feed_target_names, train_fetch_list,
-                                     optimizer, learning_rate)
+                                     optimizer, learning_rate, loss_dict)
     test_program_info = ProgramInfo(startup_program, test_program,
                                     feed_target_names, fetch_targets)
     return train_program_info, test_program_info
@@ -469,6 +471,8 @@ def build_prune_program(executor,
                     params.append(param.name)
                     original_shapes[param.name] = param.shape
 
+        origin_flops = flops(train_program_info.program)
+
         pruned_program, _, _ = pruner.prune(
             train_program_info.program,
             paddle.static.global_scope(),
@@ -485,6 +489,12 @@ def build_prune_program(executor,
                     param.name, original_shapes[param.name], param.shape))
         _logger.info(
             "####################channel pruning end##########################")
+
+        final_flops = flops(pruned_program)
+        pruned_flops = abs(origin_flops - final_flops) / origin_flops
+        _logger.info("FLOPs before pruning: {}".format(origin_flops))
+        _logger.info("FLOPs after pruning: {}. Pruned FLOPs: {}%.".format(
+            final_flops, round(pruned_flops * 100, 2)))
         train_program_info.program = pruned_program
 
     elif strategy.startswith('asp'):
