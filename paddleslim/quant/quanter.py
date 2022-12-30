@@ -21,15 +21,14 @@ import paddle
 from paddle.framework import core
 from paddle.fluid.layer_helper import LayerHelper
 from paddle.fluid.framework import IrGraph
-from paddle.fluid.contrib.slim.quantization import WeightQuantization
-from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass
-from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
-from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
-from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
-from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
-from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
-from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
-from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
+from paddle.static.quantization import WeightQuantization
+from paddle.static.quantization import QuantizationTransformPass
+from paddle.static.quantization import QuantizationFreezePass
+from paddle.static.quantization import ConvertToInt8Pass
+from paddle.static.quantization import PostTrainingQuantization
+from paddle.static.quantization import AddQuantDequantPass
+from paddle.static.quantization import OutScaleForTrainingPass
+from paddle.static.quantization import OutScaleForInferencePass
 from ..common import get_logger
 from ..common.patterns import get_patterns
 from ..common.patterns_common import has_trainable_var, get_weight
@@ -37,11 +36,11 @@ from ..core.graph_wrapper import GraphWrapper
 _logger = get_logger(__name__, level=logging.INFO)
 
 try:
-    from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
-    from paddle.fluid.contrib.slim.quantization import QuantWeightPass
-    from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
-    from paddle.fluid.contrib.slim.quantization import PostTrainingQuantizationProgram
-    from paddle.fluid.contrib.slim.quantization import AddQuantDequantForInferencePass
+    from paddle.static.quantization import QuantizationTransformPassV2
+    from paddle.static.quantization import QuantWeightPass
+    from paddle.static.quantization import AddQuantDequantPassV2
+    from paddle.static.quantization import PostTrainingQuantizationProgram
+    from paddle.static.quantization import AddQuantDequantForInferencePass
 except:
     _logger.warning(
         "Some functions fail to import, please update PaddlePaddle version to 2.4+"
@@ -62,7 +61,7 @@ ACTIVATION_QUANTIZATION_TYPES_TENSORRT = [
 
 VALID_DTYPES = ['int8']
 try:
-    from paddle.fluid.contrib.slim.quantization import utils
+    from paddle.static.quantization import utils
     TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
 except:

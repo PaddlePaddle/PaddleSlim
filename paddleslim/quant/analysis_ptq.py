@@ -165,7 +165,7 @@ class AnalysisPTQ(object):
         _logger.info('Activation Statistic is saved in {}'.format(save_path))
 
     def create_ptq(self, executor, skip_tensor_list):
-        return paddle.fluid.contrib.slim.quantization.PostTrainingQuantization(
+        return paddle.static.quantization.PostTrainingQuantization(
             executor=executor,
             data_loader=self.data_loader,
             model_dir=self.model_dir,
@@ -331,7 +331,7 @@ class AnalysisPTQ(object):
     def collect_vars(self, scope, var_names):
         all_vars = {}
         for var_name in var_names:
-            var_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+            var_tensor = paddle.static.quantization.utils.load_variable_data(
                 scope, var_name)
             all_vars[var_name] = var_tensor
         return all_vars
@@ -446,7 +446,7 @@ class AnalysisPTQ(object):
         for op_name in weight_names:
             for block_id in range(len(program.blocks)):
                 for op in program.blocks[block_id].ops:
-                    var_name_list = paddle.fluid.contrib.slim.quantization.utils._get_op_input_var_names(
+                    var_name_list = paddle.static.quantization.utils._get_op_input_var_names(
                         op)
                     if op_name in var_name_list:
                         for var_name in var_name_list:
