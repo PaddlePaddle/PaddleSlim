@@ -45,7 +45,7 @@ To generate fake quantized model with quant-aware strategy, see [Quant-aware tra
 To generate post-training fake quantized model, see [Offline post-training quantization tutorial](https://paddleslim.readthedocs.io/en/latest/quick_start/index_en.html)
 
 ## 3. Convert the fake quantized model to DNNL INT8 model
-In order to deploy an INT8 model on the CPU, we need to collect scales, remove all fake_quantize/fake_dequantize operators, optimize the graph and quantize it, turning it into the final DNNL INT8 model. This is done by the script [save_quant_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py). Copy the script to the directory where the demo is located: `/PATH_TO_PaddleSlim/demo/mkldnn_quant/` and run it as follows:
+In order to deploy an INT8 model on the CPU, we need to collect scales, remove all fake_quantize/fake_dequantize operators, optimize the graph and quantize it, turning it into the final DNNL INT8 model. This is done by the script [save_quant_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/static/quantization/tests/save_quant_model.py). Copy the script to the directory where the demo is located: `/PATH_TO_PaddleSlim/demo/mkldnn_quant/` and run it as follows:
 ```
 python save_quant_model.py --quant_model_path=/PATH/TO/SAVE/FLOAT32/quant/MODEL --int8_model_save_path=/PATH/TO/SAVE/INT8/MODEL
 ```
@@ -176,4 +176,4 @@ For INT8 models accuracy and performance results see [CPU deployment predicts th
 ## FAQ
 
 - For deploying INT8 NLP models on CPU, see [ERNIE model quant INT8 accuracy and performance reproduction](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c++/ernie/mkldnn)
-- The detailed DNNL quantification process can be viewed in [SLIM quant for INT8 DNNL](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/README.md)
+- The detailed DNNL quantification process can be viewed in [SLIM quant for INT8 DNNL](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/static/quantization/tests/README.md)
