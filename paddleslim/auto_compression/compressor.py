@@ -783,13 +783,17 @@ class AutoCompression:
         total_epochs = train_config.epochs if train_config.epochs else 100
         total_train_iter = 0
         stop_training = False
+
+        loss_vars = [var for var in train_program_info.loss_dict.values()]
+        loss_names = [name for name in train_program_info.loss_dict.keys()]
+
         for epoch_id in range(total_epochs):
             if stop_training:
                 break
             for batch_id, data in enumerate(self.train_dataloader()):
-                np_probs_float, = self._exe.run(train_program_info.program, \
+                loss = self._exe.run(train_program_info.program, \
                     feed=data, \
-                    fetch_list=train_program_info.fetch_targets)
+                    fetch_list=train_program_info.fetch_targets+loss_vars)
                 if not isinstance(train_program_info.learning_rate, float):
                     train_program_info.learning_rate.step()
                 if 'unstructure' in strategy:
@@ -800,10 +804,12 @@ class AutoCompression:
                 else:
                     logging_iter = train_config.logging_iter
                 if batch_id % int(logging_iter) == 0:
-                    _logger.info(
-                        "Total iter: {}, epoch: {}, batch: {}, loss: {}".format(
-                            total_train_iter, epoch_id, batch_id,
-                            np_probs_float))
+                    print_info = "Total iter: {}, epoch: {}, batch: {}, loss: {}".format(
+                        total_train_iter, epoch_id, batch_id, loss[0])
+                    for idx, loss_value in enumerate(loss[1:]):
+                        print_info += '{}: {} '.format(loss_names[idx],
+                                                       loss_value)
+                    _logger.info(print_info)
                 total_train_iter += 1
                 if total_train_iter % int(
                         train_config.eval_iter) == 0 and total_train_iter != 0:
