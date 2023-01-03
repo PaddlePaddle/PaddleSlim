@@ -24,10 +24,22 @@
 
 量化敏感度分析基于验证集获得每层的敏感度，可下载和使用 [LAMBADA](https://raw.githubusercontent.com/cybertronai/bflm/master/lambada_test.jsonl) 或者 [WikiText](https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-v1.zip) 数据集。本示例使用LAMBADA数据集来进行敏感度分析。
 
-#### 3.3 准备预测模型
-- [GPT-345M](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_Baseline.tar) ：Base模型
-- [GPT-345M](https://bj.bcebos.com/v1/paddle-slim-models/GPT_345_QAT_wo_analysis.tar) ：分析前量化训练后的模型
+```shell
+# 下载验证数据
+wget https://raw.githubusercontent.com/cybertronai/bflm/master/lambada_test.jsonl
+```
 
+#### 3.3 准备预测模型
+- 下载量化前Base模型
+```shell
+wget https://bj.bcebos.com/v1/paddle-slim-models/GPT_345M_Baseline.tar
+```
+- 下载分析前量化训练后的模型
+```shell
+wget https://bj.bcebos.com/v1/paddle-slim-models/GPT_345_QAT_wo_analysis.tar
+```
+
+如想自行导出，可参考[GPT模型量化训练](https://github.com/PaddlePaddle/PaddleFleetX/blob/release/2.4/projects/gpt/docs/quantization_aware_training.md)。
 
 #### 3.4 量化敏感度分析
 量化敏感度分析示例通过analysis.py脚本启动，会使用接口```paddleslim.quant.AnalysisQAT```对模型进行敏感度分析。配置config文件中模型路径、数据路径和量化相关的参数，配置完成后便可对模型进行敏感度分析。具体运行命令为：
@@ -44,3 +56,4 @@ python analysis.py --config_path=./configs/gpt_345M_analysis.yaml
 #### 3.5 重新量化训练
 
 根据分析结果，重新量化训练时，去掉了```linear_31```，```linear_27```，```linear_22```，```linear_43```，```linear_83```，```linear_15```，```linear_87```七层Linear的量化，最后量化模型精度达到44.94。
+重新量化训练的过程在 PaddleFleetX 中实现，可参考[GPT模型量化训练](https://github.com/PaddlePaddle/PaddleFleetX/blob/release/2.4/projects/gpt/docs/quantization_aware_training.md)。

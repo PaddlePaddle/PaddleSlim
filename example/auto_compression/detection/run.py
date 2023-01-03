@@ -100,9 +100,13 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             res = keypoint_post_process(data, data_input, exe,
                                         compiled_test_program, test_fetch_list,
                                         outs)
-        if 'arch' in global_config and global_config['arch'] == 'PPYOLOE':
-            postprocess = PPYOLOEPostProcess(
-                score_threshold=0.01, nms_threshold=0.6)
+        elif 'include_nms' in global_config and not global_config[
+                'include_nms']:
+            if 'arch' in global_config and global_config['arch'] == 'PPYOLOE':
+                postprocess = PPYOLOEPostProcess(
+                    score_threshold=0.01, nms_threshold=0.6)
+            else:
+                assert "Not support arch={} now.".format(global_config['arch'])
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
         else:
             for out in outs:

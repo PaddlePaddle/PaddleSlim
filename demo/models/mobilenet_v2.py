@@ -16,7 +16,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import paddle
-import paddle.fluid as fluid
 from paddle.nn.initializer import KaimingUniform
 
 __all__ = [
@@ -101,12 +100,7 @@ class MobileNetV2():
             if_act=True,
             name='conv9')
 
-        input = fluid.layers.pool2d(
-            input=input,
-            pool_size=7,
-            pool_stride=1,
-            pool_type='avg',
-            global_pooling=True)
+        input = paddle.nn.functional.adaptive_avg_pool2d(input, 1)
 
         output = paddle.static.nn.fc(
             input,
@@ -150,7 +144,7 @@ class MobileNetV2():
             return bn
 
     def shortcut(self, input, data_residual):
-        return fluid.layers.elementwise_add(input, data_residual)
+        return paddle.add(input, data_residual)
 
     def inverted_residual_unit(self,
                                input,

@@ -203,11 +203,8 @@ class MobileNetV2Space(SearchSpaceBase):
                 act='relu6',
                 name='mobilenetv2_conv' + str(i + 1))
 
-            input = paddle.fluid.layers.pool2d(
-                input=input,
-                pool_type='avg',
-                global_pooling=True,
-                name='mobilenetv2_last_pool')
+            input = paddle.nn.functional.adaptive_avg_pool2d(
+                input, 1, name='mobilenetv2_last_pool')
 
             return input
 

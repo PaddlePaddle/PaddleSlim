@@ -44,7 +44,7 @@ class TestPrune(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = paddle.fluid.Scope()
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         # test backward search of concat
@@ -122,7 +122,7 @@ class TestSplit(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = paddle.fluid.Scope()
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         # test backward search of concat
@@ -159,7 +159,7 @@ class TestMul(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = paddle.fluid.Scope()
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
         pruner = Pruner()
         # test backward search of concat

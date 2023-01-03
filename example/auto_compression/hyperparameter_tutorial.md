@@ -11,7 +11,7 @@ QuantAware:
     use_pact: false                               # 量化训练是否使用PACT方法
     weight_quantize_type: 'channel_wise_abs_max'  # 权重量化方式
     quantize_op_types: [conv2d, depthwise_conv2d] # 量化OP列表
-    onnx_format: false                            # 是否采用ONNX量化标准格式
+    onnx_format: false                            # 化后的模型是否和符合ONNX量化格式标准
     ############### 不常用，以下参数不用设置 #########################
     activation_bits: 8                            # 激活量化比特数
     weight_bits: 8                                # 权重量化比特数
@@ -34,7 +34,7 @@ QuantAware:
 from paddleslim.quant.quanter import TRANSFORM_PASS_OP_TYPES,QUANT_DEQUANT_PASS_OP_TYPES
 print(TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES)
 ```
-- onnx_format: 是否采用ONNX量化格式标准，如果需要导出成ONNX，则需要设置为True。
+- onnx_format: 量化后的模型是否和符合ONNX量化格式标准，**如果需要导出成ONNX，则需要设置为True。**
 - activation_bits:  激活量化bit数，可选1~8。默认为8。
 - weight_bits: 参数量化bit数，可选1~8。默认为8。
 - activation_quantize_type: 激活量化方式，可选 'abs_max' , 'range_abs_max' , 'moving_average_abs_max' 。如果使用 TensorRT 加载量化后的模型来预测，请使用 'range_abs_max' 或 'moving_average_abs_max' 。默认为 'moving_average_abs_max'。
@@ -154,22 +154,7 @@ ChannelPrune:
 ```
 
 - pruned_ratio: 每个卷积层的通道数被剪裁的比例。
-- prune_params_name: 待剪裁的卷积层的权重名称。通过以下脚本获得推理模型中所有卷积层的权重名称：
-
-```
-import paddle
-paddle.enable_static()
-model_dir="./inference_model"
-exe = paddle.static.Executor(paddle.CPUPlace())
-[inference_program, feed_target_names, fetch_targets] = (
-    paddle.static.load_inference_model(model_dir, exe))
-for var_ in inference_program.list_vars():
-    if var_.persistable and "conv2d" in var_.name:
-        print(f"{var_.name}")
-```
-
-或者，使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。
-
+- prune_params_name: 待剪裁的卷积层的权重名称。如果设置为 "None", 则会按照传入的剪枝比例对所有可以裁剪的卷积层进行裁剪。或者可以参考[结构化剪枝敏感度分析工具](./prune_sensitivity_analysis/README.md)获得合适的要剪枝的参数和比例。也可以使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。默认："None"。
 - criterion: 评估卷积通道重要性的指标。可选 “l1_norm” , “bn_scale” , “geometry_median”。具体定义和使用可参考[结构化稀疏API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/static/prune/prune_api.html)。
 
 ### 1.1.6 ASP半结构化稀疏
@@ -181,21 +166,7 @@ ASPPrune:
   - conv1_weights
 ```
 
-- prune_params_name: 待剪裁的卷积层的权重名称。通过以下脚本获得推理模型中所有卷积层的权重名称：
-
-```
-import paddle
-paddle.enable_static()
-model_dir="./inference_model"
-exe = paddle.static.Executor(paddle.CPUPlace())
-[inference_program, feed_target_names, fetch_targets] = (
-    paddle.static.load_inference_model(model_dir, exe))
-for var_ in inference_program.list_vars():
-    if var_.persistable and "conv2d" in var_.name:
-        print(f"{var_.name}")
-```
-
-或者，使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。
+- prune_params_name: 待剪裁的卷积层的权重名称。如果设置为 "None", 则会按照传入的剪枝比例对所有可以裁剪的卷积层进行裁剪。或者，使用[Netron工具](https://netron.app/) 可视化`*.pdmodel`模型文件，选择合适的卷积层进行剪裁。
 
 ### 1.1.7 Transformer结构化剪枝
 
@@ -242,7 +213,7 @@ UnstructurePrune:
 {'pruning_steps': int} # the total times you want to increase the ratio
 {'initial_ratio': float} # the initial ratio value
 ```
-- prune_params_type 目前只支持None和"conv1x1_only"两个选项，前者表示稀疏化除了归一化层的参数，后者表示只稀疏化1x1卷积。
+- prune_params_type 目前只支持None和"conv1x1_only"两个选项，前者表示稀疏化除了归一化层的参数，后者表示只稀疏化1x1卷积。默认："conv1x1_only".
 - local_sparsity 表示剪裁比例（ratio）应用的范围，仅在 'ratio' 模式生效。local_sparsity 开启时意味着每个参与剪裁的参数矩阵稀疏度均为 'ratio'， 关闭时表示只保证模型整体稀疏度达到'ratio'，但是每个参数矩阵的稀疏度可能存在差异。各个矩阵稀疏度保持一致时，稀疏加速更显著。
 - 更多非结构化稀疏的参数含义详见[非结构化稀疏API文档](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/api_cn/dygraph/pruners/unstructured_pruner.rst)
 
@@ -333,3 +304,7 @@ for var_ in inference_program.list_vars():
 paddle.static.save_inference_model("./infer_model", feed_vars, fetch_targets, exe, program=inference_program)
 
 ```
+
+### 5. 量化后模型如何导出成ONNX格式
+
+如果想导出ONNX格式的模型，需要在量化的时候设置 ``onnx_format=True``，而且仅支持PaddlePaddle2.4rc0 和PaddleSlim2.4rc0以上版本。

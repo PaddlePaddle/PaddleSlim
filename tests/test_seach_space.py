@@ -24,6 +24,9 @@ import numpy as np
 
 
 class TestDartsSpace(StaticCase):
+    def __init__(self, methodNmae="test_search_space"):
+        super(TestDartsSpace, self).__init__(methodNmae)
+
     def setUp(self):
         paddle.enable_static()
         self.init_test_case()
@@ -89,6 +92,7 @@ search_space_suite.addTest(
 search_space_suite.addTest(TestSearchSpace(search_sapce_name="ResNetSpace"))
 search_space_suite.addTest(
     TestSearchSpace(search_sapce_name="ResNetBlockSpace"))
+search_space_suite.addTest(TestDartsSpace())
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=2)

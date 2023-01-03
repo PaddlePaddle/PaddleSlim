@@ -1,0 +1,22 @@
+Global:
+  model_dir: ./UIE
+  model_filename: inference.pdmodel
+  params_filename: inference.pdiparams
+  batch_size: 1
+  max_seq_length: 512
+  train_data: ./data/train.txt
+  dev_data: ./data/dev.txt
+TrainConfig:
+  epochs: 200
+  eval_iter: 100
+  learning_rate: 1.0e-5
+  optimizer_builder:
+    optimizer:
+      type: AdamW
+    weight_decay: 0.01
+
+QuantAware:
+  onnx_format: True
+Distillation:
+  alpha: 1.0
+  loss: l2

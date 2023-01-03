@@ -94,7 +94,6 @@ def to_variables(inputs):
         return ret
 
 
-@paddle.fluid.framework.dygraph_only
 def dygraph2program(layer, inputs, dtypes=None):
     assert isinstance(layer, paddle.nn.Layer)
     return _dy2prog(layer, inputs, dtypes)

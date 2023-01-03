@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
 import logging
 from tqdm import tqdm
 import numpy as np
@@ -22,13 +20,14 @@ import paddle
 from paddleslim.common import load_config as load_slim_config
 from paddleslim.common import get_logger
 from paddleslim.auto_compression import AutoCompression
+from paddleslim.common.dataloader import get_feed_vars
+
+import sys
+sys.path.append('../PaddleOCR')
 from ppocr.data import build_dataloader
-from ppocr.modeling.architectures import build_model
-from ppocr.losses import build_loss
-from ppocr.optimizer import build_optimizer
 from ppocr.postprocess import build_post_process
 from ppocr.metrics import build_metric
-from paddleslim.common.dataloader import get_feed_vars
+
 logger = get_logger(__name__, level=logging.INFO)
 
 
@@ -76,20 +75,20 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             ncols=80) as t:
         for batch_id, batch in enumerate(val_loader):
             images = batch[0]
-            preds = exe.run(compiled_test_program,
-                            feed={test_feed_names[0]: images},
-                            fetch_list=test_fetch_list)
+            preds, = exe.run(compiled_test_program,
+                             feed={test_feed_names[0]: images},
+                             fetch_list=test_fetch_list)
 
             batch_numpy = []
             for item in batch:
                 batch_numpy.append(np.array(item))
 
             if model_type == 'det':
-                preds_map = {'maps': preds[0]}
+                preds_map = {'maps': preds}
                 post_result = post_process_class(preds_map, batch_numpy[1])
                 eval_class(post_result, batch_numpy)
             elif model_type == 'rec':
-                post_result = post_process_class(preds[0], batch_numpy[1])
+                post_result = post_process_class(preds, batch_numpy[1])
                 eval_class(post_result, batch_numpy)
             t.update()
         metric = eval_class.get_metric()

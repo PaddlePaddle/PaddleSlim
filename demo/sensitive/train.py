@@ -66,8 +66,7 @@ def compress(args):
         def if_exist(var):
             return os.path.exists(os.path.join(args.pretrained_model, var.name))
 
-        paddle.fluid.io.load_vars(
-            exe, args.pretrained_model, predicate=if_exist)
+        paddle.static.load_vars(exe, args.pretrained_model, predicate=if_exist)
 
     valid_loader = paddle.io.DataLoader(
         val_dataset,

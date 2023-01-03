@@ -31,9 +31,7 @@ if six.PY2:
 else:
     from pathlib import Path
 
-import paddle.fluid.dygraph as D
-import paddle.fluid as F
-import paddle.fluid.layers as L
+import paddle
 from ernie.file_utils import _fetch_from_remote
 from ernie.modeling_ernie import AttentionLayer, ErnieBlock, ErnieModel, ErnieEncoderStack, ErnieModelForSequenceClassification
 
@@ -65,37 +63,37 @@ def _attn_forward(self,
     cache = (k, v)
     if past_cache is not None:
         cached_k, cached_v = past_cache
-        k = L.concat([cached_k, k], 1)
-        v = L.concat([cached_v, v], 1)
+        k = paddle.concat([cached_k, k], 1)
+        v = paddle.concat([cached_v, v], 1)
 
     if hasattr(self.q, 'fn') and self.q.fn.cur_config['expand_ratio'] != None:
         n_head = int(self.n_head * self.q.fn.cur_config['expand_ratio'])
     else:
         n_head = self.n_head
 
-    q = L.transpose(
-        L.reshape(q, [0, 0, n_head, q.shape[-1] // n_head]),
+    q = paddle.transpose(
+        paddle.reshape(q, [0, 0, n_head, q.shape[-1] // n_head]),
         [0, 2, 1, 3])  #[batch, head, seq, dim]
-    k = L.transpose(
-        L.reshape(k, [0, 0, n_head, k.shape[-1] // n_head]),
+    k = paddle.transpose(
+        paddle.reshape(k, [0, 0, n_head, k.shape[-1] // n_head]),
         [0, 2, 1, 3])  #[batch, head, seq, dim]
-    v = L.transpose(
-        L.reshape(v, [0, 0, n_head, v.shape[-1] // n_head]),
+    v = paddle.transpose(
+        paddle.reshape(v, [0, 0, n_head, v.shape[-1] // n_head]),
         [0, 2, 1, 3])  #[batch, head, seq, dim]
 
-    q = L.scale(q, scale=self.d_key**-0.5)
-    score = L.matmul(q, k, transpose_y=True)
+    q = paddle.scale(q, scale=self.d_key**-0.5)
+    score = paddle.matmul(q, k, transpose_y=True)
     if attn_bias is not None:
         score += attn_bias
 
-    score = L.softmax(score, use_cudnn=True)
+    score = paddle.nn.functional.softmax(score, use_cudnn=True)
     score = self.dropout(score)
     if head_mask is not None:
         score = score * head_mask
 
-    out = L.matmul(score, v)
-    out = L.transpose(out, [0, 2, 1, 3])
-    out = L.reshape(out, [0, 0, out.shape[2] * out.shape[3]])
+    out = paddle.matmul(score, v)
+    out = paddle.transpose(out, [0, 2, 1, 3])
+    out = paddle.reshape(out, [0, 0, out.shape[2] * out.shape[3]])
 
     out = self.o(out)
     return out, cache
@@ -187,23 +185,25 @@ def _ernie_model_forward(self,
                ) == 2, 'expect src_ids.shape = [batch, sequecen], got %s' % (
                    repr(src_ids.shape))
     assert attn_bias is not None if past_cache else True, 'if `past_cache` is specified; attn_bias should not be None'
-    d_batch = L.shape(src_ids)[0]
-    d_seqlen = L.shape(src_ids)[1]
+    d_batch = paddle.shape(src_ids)[0]
+    d_seqlen = paddle.shape(src_ids)[1]
     if pos_ids is None:
-        pos_ids = L.reshape(L.range(0, d_seqlen, 1, dtype='int32'), [1, -1])
-        pos_ids = L.cast(pos_ids, 'int64')
+        pos_ids = paddle.reshape(
+            L.range(
+                0, d_seqlen, 1, dtype='int32'), [1, -1])
+        pos_ids = paddle.cast(pos_ids, 'int64')
     if attn_bias is None:
         if input_mask is None:
-            input_mask = L.cast(src_ids != 0, 'float32')
+            input_mask = paddle.cast(src_ids != 0, 'float32')
         assert len(input_mask.shape) == 2
-        input_mask = L.unsqueeze(input_mask, axes=[-1])
-        attn_bias = L.matmul(input_mask, input_mask, transpose_y=True)
+        input_mask = paddle.unsqueeze(input_mask, axis=[-1])
+        attn_bias = paddle.matmul(input_mask, input_mask, transpose_y=True)
         if use_causal_mask:
-            sequence = L.reshape(
-                L.range(
+            sequence = paddle.reshape(
+                paddle.arange(
                     0, d_seqlen, 1, dtype='float32') + 1., [1, 1, -1, 1])
-            causal_mask = L.cast(
-                (L.matmul(
+            causal_mask = paddle.cast(
+                (paddle.matmul(
                     sequence, 1. / sequence, transpose_y=True) >= 1.),
                 'float32')
             attn_bias *= causal_mask
@@ -212,21 +212,23 @@ def _ernie_model_forward(self,
             attn_bias.shape
         ) == 3, 'expect attn_bias tobe rank 3, got %r' % attn_bias.shape
     attn_bias = (1. - attn_bias) * -10000.0
-    attn_bias = L.unsqueeze(attn_bias, [1])
+    attn_bias = paddle.unsqueeze(attn_bias, [1])
     attn_bias.stop_gradient = True
 
     if sent_ids is None:
-        sent_ids = L.zeros_like(src_ids)
+        sent_ids = paddle.zeros_like(src_ids)
 
     if head_mask is not None:
         if len(head_mask.shape) == 1:
-            head_mask = L.unsqueeze(
-                L.unsqueeze(L.unsqueeze(L.unsqueeze(head_mask, 0), 0), -1), -1)
-            head_mask = L.expand(
-                head_mask, expand_times=[num_layers, 1, 1, 1, 1])
+            head_mask = paddle.unsqueeze(
+                paddle.unsqueeze(
+                    paddle.unsqueeze(paddle.unsqueeze(head_mask, 0), 0), -1),
+                -1)
+            head_mask = paddle.expand(
+                head_mask, shape=[head_mask.shape[0] * num_layers, 1, 1, 1, 1])
         elif len(head_mask.shape) == 2:
-            head_mask = L.unsqueeze(
-                L.unsqueeze(L.unsqueeze(head_mask, 1), -1), -1)
+            head_mask = paddle.unsqueeze(
+                paddle.unsqueeze(paddle.unsqueeze(head_mask, 1), -1), -1)
 
     else:
         head_mask = [None] * num_layers
@@ -273,9 +275,9 @@ def _seqence_forward(self, *args, **kwargs):
 
     if labels is not None:
         if len(labels.shape) == 1:
-            labels = L.reshape(labels, [-1, 1])
-        loss = L.softmax_with_cross_entropy(logits, labels)
-        loss = L.reduce_mean(loss)
+            labels = paddle.reshape(labels, [-1, 1])
+        loss = paddle.nn.functional.softmax_with_cross_entropy(logits, labels)
+        loss = paddle.mean(loss)
     else:
         loss = None
     return loss, logits, additional_info

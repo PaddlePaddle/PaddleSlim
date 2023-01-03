@@ -87,7 +87,7 @@ def sensitivity(program,
                 if eval_args is None:
                     baseline = eval_func(graph.program)
                 else:
-                    baseline = eval_func(eval_args)
+                    baseline = eval_func(graph.program, *eval_args)
 
             pruner = Pruner(criterion=criterion)
             _logger.info("sensitive - param: {}; ratios: {}".format(name,
@@ -104,7 +104,7 @@ def sensitivity(program,
             if eval_args is None:
                 pruned_metric = eval_func(pruned_program)
             else:
-                pruned_metric = eval_func(eval_args)
+                pruned_metric = eval_func(pruned_program, *eval_args)
             loss = (baseline - pruned_metric) / baseline
             _logger.info("pruned param: {}; {}; loss={}".format(name, ratio,
                                                                 loss))

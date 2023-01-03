@@ -48,7 +48,7 @@ class TestPrune(StaticCase):
 
         place = paddle.CPUPlace()
         exe = paddle.static.Executor(place)
-        scope = paddle.fluid.Scope()
+        scope = paddle.static.Scope()
         exe.run(startup_program, scope=scope)
         criterion = 'bn_scale'
         pruner = Pruner(criterion)

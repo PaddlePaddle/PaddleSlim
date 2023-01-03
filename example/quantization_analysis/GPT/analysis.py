@@ -104,8 +104,8 @@ def eval_function(exe, program, feed_names, fetch_list):
             total_score += acc.numpy()[0]
 
         if eval_step != 0 and (eval_step % 10 == 0):
-            print("[eval] step: %d, batch: %d, %s: %.9f, speed: %.2f step/s" %
-                  (eval_step, eval_step, score_name, total_score,
+            print("[eval] step: %d, %s: %.9f, speed: %.2f step/s" %
+                  (eval_step, score_name, total_score,
                    1. / (time.time() - tic_eval)))
             tic_eval = time.time()
         paddle.enable_static()

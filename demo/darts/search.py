@@ -22,8 +22,6 @@ import ast
 import argparse
 import functools
 
-import paddle.fluid as fluid
-from paddle.fluid.dygraph.base import to_variable
 import reader
 from model_search import Network
 from paddleslim.nas.darts import DARTSearch
@@ -63,7 +61,8 @@ def main(args):
     elif not args.use_data_parallel:
         place = paddle.CUDAPlace(0)
     else:
-        place = paddle.CUDAPlace(fluid.dygraph.parallel.Env().dev_id)
+        place = paddle.CUDAPlace(paddle.distributed.parallel.ParallelEnv()
+                                 .dev_id)
 
     train_reader, valid_reader = reader.train_search(
         batch_size=args.batch_size,
@@ -71,26 +70,25 @@ def main(args):
         is_shuffle=True,
         args=args)
 
-    with fluid.dygraph.guard(place):
-        model = Network(args.init_channels, args.class_num, args.layers,
-                        args.method)
-        searcher = DARTSearch(
-            model,
-            train_reader,
-            valid_reader,
-            place,
-            learning_rate=args.learning_rate,
-            batchsize=args.batch_size,
-            num_imgs=args.trainset_num,
-            arch_learning_rate=args.arch_learning_rate,
-            unrolled=args.unrolled,
-            num_epochs=args.epochs,
-            epochs_no_archopt=args.epochs_no_archopt,
-            use_multiprocess=args.use_multiprocess,
-            use_data_parallel=args.use_data_parallel,
-            save_dir=args.model_save_dir,
-            log_freq=args.log_freq)
-        searcher.train()
+    model = Network(args.init_channels, args.class_num, args.layers,
+                    args.method)
+    searcher = DARTSearch(
+        model,
+        train_reader,
+        valid_reader,
+        place,
+        learning_rate=args.learning_rate,
+        batchsize=args.batch_size,
+        num_imgs=args.trainset_num,
+        arch_learning_rate=args.arch_learning_rate,
+        unrolled=args.unrolled,
+        num_epochs=args.epochs,
+        epochs_no_archopt=args.epochs_no_archopt,
+        use_multiprocess=args.use_multiprocess,
+        use_data_parallel=args.use_data_parallel,
+        save_dir=args.model_save_dir,
+        log_freq=args.log_freq)
+    searcher.train()
 
 
 if __name__ == '__main__':

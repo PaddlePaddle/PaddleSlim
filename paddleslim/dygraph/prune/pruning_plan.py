@@ -114,7 +114,7 @@ class PruningPlan():
             elif p.is_cuda_pinned_place():
                 place = paddle.CUDAPinnedPlace()
             else:
-                p = paddle.fluid.core.Place()
+                p = paddle.framework.core.Place()
                 p.set_place(t_value._place())
                 place = paddle.CUDAPlace(p.gpu_device_id())
 
@@ -153,7 +153,7 @@ class PruningPlan():
                 elif p.is_cuda_pinned_place():
                     place = paddle.CUDAPinnedPlace()
                 else:
-                    p = paddle.fluid.core.Place()
+                    p = paddle.framework.core.Place()
                     p.set_place(t_value._place())
                     place = paddle.CUDAPlace(p.gpu_device_id())
 
@@ -190,12 +190,15 @@ class PruningPlan():
                             "float32")
 
                         p = t_value._place()
+                        print(f"hit pruning plan--------------------")
                         if p.is_cpu_place():
+                            print(f"hit pruning plan cpu--------------------")
                             place = paddle.CPUPlace()
                         elif p.is_cuda_pinned_place():
                             place = paddle.CUDAPinnedPlace()
                         else:
-                            p = paddle.fluid.core.Place()
+                            print(f"hit pruning plan gpu--------------------")
+                            p = paddle.framework.core.Place()
                             p.set_place(t_value._place())
                             place = paddle.CUDAPlace(p.gpu_device_id())
 
@@ -246,7 +249,7 @@ class PruningPlan():
                         elif p.is_cuda_pinned_place():
                             place = paddle.CUDAPinnedPlace()
                         else:
-                            p = paddle.fluid.core.Place()
+                            p = paddle.framework.core.Place()
                             p.set_place(t_value._place())
                             place = paddle.CUDAPlace(p.gpu_device_id())
                         t_value.set(pruned_value, place)
@@ -274,7 +277,7 @@ class PruningPlan():
                     elif p.is_cuda_pinned_place():
                         place = paddle.CUDAPinnedPlace()
                     else:
-                        p = paddle.fluid.core.Place()
+                        p = paddle.framework.core.Place()
                         p.set_place(t_value._place())
                         place = paddle.CUDAPlace(p.gpu_device_id())
 

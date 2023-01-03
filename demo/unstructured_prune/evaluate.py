@@ -7,7 +7,6 @@ import functools
 import math
 import time
 import numpy as np
-import paddle.fluid as fluid
 sys.path.append(os.path.join(os.path.dirname("__file__"), os.path.pardir))
 from paddleslim.prune.unstructured_pruner import UnstructuredPruner
 from paddleslim.common import get_logger
@@ -90,7 +89,7 @@ def compress(args):
             return os.path.exists(os.path.join(args.pruned_model, var.name))
 
         _logger.info("Load pruned model from {}".format(args.pruned_model))
-        paddle.fluid.io.load_vars(exe, args.pruned_model, predicate=if_exist)
+        paddle.static.load_vars(exe, args.pruned_model, predicate=if_exist)
 
     def test(epoch, program):
         acc_top1_ns = []

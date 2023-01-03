@@ -17,7 +17,6 @@ import datetime
 import numpy as np
 
 import paddle
-import paddle.fluid as fluid
 from paddle.nn.initializer import KaimingUniform
 
 
@@ -154,7 +153,7 @@ class SlimFaceNet():
             param_attr=paddle.ParamAttr(
                 name='linear_conv1x1_weights',
                 initializer=KaimingUniform(),
-                regularizer=fluid.regularizer.L2Decay(4e-4)),
+                regularizer=paddle.regularizer.L2Decay(4e-4)),
             bias_attr=False)
         bn_name = 'linear_conv1x1_bn'
         x = paddle.static.nn.batch_norm(
@@ -172,8 +171,8 @@ class SlimFaceNet():
         out = self.arc_margin_product(
             x, label, self.class_dim, s=32.0, m=0.50, mode=2)
         softmax = paddle.nn.functional.softmax(input=out)
-        cost = fluid.layers.cross_entropy(input=softmax, label=label)
-        loss = fluid.layers.mean(x=cost)
+        cost = paddle.nn.functional.cross_entropy(input=softmax, label=label)
+        loss = paddle.mean(x=cost)
         acc = paddle.static.accuracy(input=out, label=label, k=1)
         return loss, acc
 
@@ -227,13 +226,13 @@ class SlimFaceNet():
         if num_in_filter != num_out_filter or stride != 1:
             return linear_conv
         else:
-            return fluid.layers.elementwise_add(
-                x=input_data, y=linear_conv, act=None)
+
+            out = paddle.add(x=input_data, y=linear_conv, act=None)
+            return paddle.nn.functional.relu(out)
 
     def se_block(self, input, num_out_filter, ratio=4, name=None):
         num_mid_filter = int(num_out_filter // ratio)
-        pool = fluid.layers.pool2d(
-            input=input, pool_type='avg', global_pooling=True, use_cudnn=False)
+        paddle.nn.functional.adaptive_avg_pool2d(input, 1)
         conv1 = paddle.static.nn.conv2d(
             input=pool,
             filter_size=1,
@@ -241,12 +240,12 @@ class SlimFaceNet():
             act=None,
             param_attr=paddle.ParamAttr(name=name + '_1_weights'),
             bias_attr=paddle.ParamAttr(name=name + '_1_offset'))
-        conv1 = fluid.layers.prelu(
+        conv1 = paddle.static.nn.prelu(
             conv1,
             mode='channel',
             param_attr=paddle.ParamAttr(
                 name=name + '_prelu',
-                regularizer=fluid.regularizer.L2Decay(0.0)))
+                regularizer=paddle.regularizer.L2Decay(0.0)))
         conv2 = paddle.static.nn.conv2d(
             input=conv1,
             filter_size=1,
@@ -254,7 +253,7 @@ class SlimFaceNet():
             act='hard_sigmoid',
             param_attr=paddle.ParamAttr(name=name + '_2_weights'),
             bias_attr=paddle.ParamAttr(name=name + '_2_offset'))
-        scale = fluid.layers.elementwise_mul(x=input, y=conv2, axis=0)
+        scale = paddle.multiply(x=input, y=conv2)
         return scale
 
     def conv_bn_layer(self,
@@ -287,20 +286,18 @@ class SlimFaceNet():
             moving_mean_name=bn_name + '_mean',
             moving_variance_name=bn_name + '_variance')
         if if_act:
-            return fluid.layers.prelu(
+            return paddle.static.nn.prelu(
                 bn,
                 mode='channel',
                 param_attr=paddle.ParamAttr(
                     name=name + '_prelu',
-                    regularizer=fluid.regularizer.L2Decay(0.0)))
+                    regularizer=paddle.regularizer.L2Decay(0.0)))
         else:
             return bn
 
     def arc_margin_product(self, input, label, out_dim, s=32.0, m=0.50, mode=2):
-        input_norm = fluid.layers.sqrt(
-            fluid.layers.reduce_sum(
-                paddle.square(input), dim=1))
-        input = fluid.layers.elementwise_div(input, input_norm, axis=0)
+        input_norm = paddle.sqrt(paddle.sum(paddle.square(input), dim=1))
+        input = paddle.divide(input, input_norm, axis=0)
 
         weight = paddle.static.create_parameter(
             shape=[out_dim, input.shape[1]],
@@ -308,15 +305,13 @@ class SlimFaceNet():
             name='weight_norm',
             attr=paddle.ParamAttr(
                 initializer=paddle.nn.initializer.Xavier(),
-                regularizer=fluid.regularizer.L2Decay(4e-4)))
+                regularizer=paddle.regularizer.L2Decay(4e-4)))
 
-        weight_norm = fluid.layers.sqrt(
-            fluid.layers.reduce_sum(
-                paddle.square(weight), dim=1))
-        weight = fluid.layers.elementwise_div(weight, weight_norm, axis=0)
-        weight = fluid.layers.transpose(weight, perm=[1, 0])
-        cosine = fluid.layers.mul(input, weight)
-        sine = fluid.layers.sqrt(1.0 - paddle.square(cosine))
+        weight_norm = paddle.sqrt(paddle.sum(paddle.square(weight), dim=1))
+        weight = paddle.divide(weight, weight_norm, axis=0)
+        weight = paddle.transpose(weight, perm=[1, 0])
+        cosine = paddle.matmul(input, weight)
+        sine = paddle.sqrt(1.0 - paddle.square(cosine))
 
         cos_m = math.cos(m)
         sin_m = math.sin(m)
@@ -332,17 +327,15 @@ class SlimFaceNet():
         else:
             pass
 
-        one_hot = fluid.layers.one_hot(input=label, depth=out_dim)
-        output = fluid.layers.elementwise_mul(
-            one_hot, phi) + fluid.layers.elementwise_mul(
-                (1.0 - one_hot), cosine)
+        one_hot = paddle.nn.functional.one_hot(label, out_dim)
+        output = paddle.multiply(one_hot, phi) + paddle.multiply(
+            (1.0 - one_hot), cosine)
         output = output * s
         return output
 
     def paddle_where_more_than(self, target, limit, x, y):
-        mask = fluid.layers.cast(x=(target > limit), dtype='float32')
-        output = fluid.layers.elementwise_mul(
-            mask, x) + fluid.layers.elementwise_mul((1.0 - mask), y)
+        mask = paddle.cast(x=(target > limit), dtype='float32')
+        output = paddle.multiply(mask, x) + paddle.multiply((1.0 - mask), y)
         return output
 
 

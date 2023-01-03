@@ -18,8 +18,6 @@ if six.PY2:
     import scipy.misc as imgreader
 else:
     import imageio as imgreader
-import paddle
-from paddle import fluid
 
 
 class LFW(object):

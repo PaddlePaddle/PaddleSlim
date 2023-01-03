@@ -60,20 +60,6 @@ def set_state_dict(model, state_dict):
             _logger.info('{} is not in state_dict'.format(tmp_n))
 
 
-def to_tensor(string_values, name="text"):
-    """
-    Create the tensor that the value holds the list of string.
-    NOTICE: The value will be holded in the cpu place.
-    Parameters:
-        string_values(list[string]): The value will be setted to the tensor.
-        name(string): The name of the tensor.
-    """
-    tensor = paddle.Tensor(paddle.fluid.core.VarDesc.VarType.STRING, [], name,
-                           paddle.fluid.core.VarDesc.VarType.STRINGS, False)
-    tensor.value().set_string_list(string_values)
-    return tensor
-
-
 def build_input(input_size, dtypes):
     if isinstance(input_size, list) and all(
             isinstance(i, numbers.Number) for i in input_size):
@@ -81,8 +67,10 @@ def build_input(input_size, dtypes):
             dtype = dtypes[0]
         else:
             dtype = dtypes
-        if dtype == paddle.fluid.core.VarDesc.VarType.STRINGS:
-            return to_tensor([""])
+        # if dtype == paddle.framework.core.VarDesc.VarType.STRINGS:
+        #    return to_tensor([""])
+        # TODO: Uncommet Add unittest for strings dtype
+        assert dtype != paddle.framework.core.VarDesc.VarType.STRINGS
         return paddle.cast(paddle.rand(list(input_size)), dtype)
     if isinstance(input_size, dict):
         inputs = {}

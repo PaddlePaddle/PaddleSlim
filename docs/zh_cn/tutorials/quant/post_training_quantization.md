@@ -22,13 +22,13 @@ s=\frac{2^{b-1}-1}{\alpha}
 $$
 
 $$
-x_{q}=\operatorname{quantize}(x, b, s)=\operatorname{clip}\left(\operatorname{round}(s \cdot x),-2^{b-1}+1,2^{b-1}-1\right)
+x_{q}=\operatorname{quantize}(x, b, s)=\operatorname{clip}\left(\operatorname{round}(s \cdot x),-2^{b-1},2^{b-1}-1\right)
 $$
 
 反量化过程可以用以下公式表述：
 
 $$
-x_{q}=\operatorname{quantize}(x, b, s)=\operatorname{clip}\left(\operatorname{round}(s \cdot x),-2^{b-1}+1,2^{b-1}-1\right)
+x_{dq}=\operatorname{dequantize}(x, s)=\frac{x}{s}
 $$
 
 其中，s为所选取的scale值，即将s作为尺度因子，将全精度参数映射到低比特取值范围；α为选定的全精度参数的表示范围，即全精度参数将被限制在[-α,α]内；b为量化的比特数，x为待量化的全精度参数。因此，如果给定量化的比特数b，我们只需要选定合适的α值，就可以确定量化所需的参数s。

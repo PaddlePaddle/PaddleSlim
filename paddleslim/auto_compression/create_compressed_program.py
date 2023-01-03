@@ -24,6 +24,7 @@ from ..common.recover_program import recover_inference_program, _remove_fetch_no
 from ..common import get_logger
 from .strategy_config import ProgramInfo
 from ..common.load_model import load_inference_model
+from ..analysis import flops
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
@@ -84,6 +85,13 @@ def _create_optimizer(train_config):
     return opt, lr
 
 
+def _find_var_from_program(program, var_name):
+    for block in program.blocks:
+        if block.has_var(var_name):
+            return block.var(var_name)
+    raise ValueError("var {} not in this program".format(var_name))
+
+
 def _get_distill_node(student_program, config):
     node = config.get('node')
     if len(node) == 0:
@@ -95,7 +103,7 @@ def _get_distill_node(student_program, config):
     else:
         test_node = node[0]
     try:
-        test_var = student_program.global_block().var(test_node)
+        test_var = _find_var_from_program(student_program, test_node)
         distill_node_pair = []
         if isinstance(node[0], list):
             for n_list in node:
@@ -113,12 +121,33 @@ def _get_distill_node(student_program, config):
         return node
 
 
+def _get_target_node(distill_node, teacher=False):
+    tmp_nodes = set()
+    if isinstance(distill_node[0], list):
+        for n_list in distill_node:
+            for n in n_list:
+                tmp_nodes.add(n)
+    else:
+        for n in distill_node:
+            tmp_nodes.add(n)
+
+    targets = []
+    for node in tmp_nodes:
+        if teacher and 'teacher_' in node:
+            tmp = node.split('teacher_')[-1]
+            targets.append(tmp)
+        if not teacher and 'teacher_' not in node:
+            targets.append(node)
+
+    return targets
+
+
 def _parse_distill_loss(distill_node_pair,
                         distill_loss='l2',
                         distill_lambda=1.0):
     """parse distill loss config"""
     loss_dist = 0.0
-    losses = []
+    losses = {}
     if isinstance(distill_node_pair[0], str):
         assert isinstance(distill_loss, str)
         assert isinstance(distill_lambda, float)
@@ -128,16 +157,17 @@ def _parse_distill_loss(distill_node_pair,
 
     assert len(distill_node_pair) == len(distill_loss)
     assert len(distill_node_pair) == len(distill_lambda)
-    for node, loss, lam in zip(distill_node_pair, distill_loss, distill_lambda):
-        tmp_loss = 0.0
-        _logger.info("train config.distill_node_pair: {}".format(node, loss,
-                                                                 lam))
+    for node, loss_clas, lam in zip(distill_node_pair, distill_loss,
+                                    distill_lambda):
+        tmp_loss = losses.get(loss_clas, 0.0)
+        _logger.info("train config.distill_node_pair: {}".format(
+            node, loss_clas, lam))
         assert len(node) % 2 == 0, \
             "distill_node_pair config wrong, the length needs to be an even number"
         for i in range(len(node) // 2):
-            tmp_loss += eval(loss)(node[i * 2], node[i * 2 + 1])
-        loss_dist += lam * tmp_loss
-        losses.append(tmp_loss)
+            tmp_loss += eval(loss_clas)(node[i * 2], node[i * 2 + 1]) * lam
+        loss_dist += tmp_loss
+        losses[loss_clas] = tmp_loss
 
     return loss_dist, losses
 
@@ -149,6 +179,7 @@ def _load_program_and_merge(executor,
                             model_dir,
                             model_filename,
                             params_filename,
+                            distill_node_pair,
                             teacher_idx=None,
                             feed_target_names=None):
     scope = paddle.static.global_scope()
@@ -171,8 +202,8 @@ def _load_program_and_merge(executor,
 
     _remove_fetch_node(teacher_program)
 
-    if teacher_idx == None or teacher_idx == 1:
-        test_program = train_program.clone(for_test=True)
+    target_nodes = _get_target_node(distill_node_pair, True)
+    teacher_program = teacher_program._prune(target_nodes)
 
     data_name_map = {}
 
@@ -196,9 +227,9 @@ def _load_program_and_merge(executor,
         name_prefix=teacher_name_prefix,
         merge_feed=merge_feed)
     if teacher_idx == None or teacher_idx == 1:
-        return train_program, test_program, data_name_map
+        return train_program, data_name_map
     else:
-        return train_program, None, data_name_map
+        return train_program, data_name_map
 
 
 def build_distill_program(executor,
@@ -224,6 +255,38 @@ def build_distill_program(executor,
     distill_node_pair = _get_distill_node(train_program,
                                           config) or default_distill_node_pair
 
+    test_program = train_program.clone(for_test=True)
+
+    target_nodes = _get_target_node(distill_node_pair)
+
+    def _prepend_feed(block, feed_idx, feed_target_names):
+        for idx in feed_idx[::-1]:
+            block._remove_op(idx)
+
+        feed_var = block.create_var(
+            name='feed',
+            type=paddle.framework.core.VarDesc.VarType.FEED_MINIBATCH,
+            persistable=True, )
+
+        for i, name in enumerate(feed_target_names):
+            out = block.var(name)
+            block._prepend_op(
+                type='feed',
+                inputs={'X': [feed_var]},
+                outputs={'Out': [out]},
+                attrs={'col': i})
+
+    judge_feed_pos = False
+    if train_program.desc.block(0).op(0).type() != 'feed':
+        judge_feed_pos = True
+    if judge_feed_pos:
+        feed_idx = []
+        for op in train_program.global_block().ops:
+            if op.type == 'feed':
+                feed_idx.append(op.idx)
+        _prepend_feed(train_program.global_block(), feed_idx, feed_target_names)
+    train_program = train_program._prune(target_nodes)
+
     teacher_model_dir = config[
         "teacher_model_dir"] if "teacher_model_dir" in config else config[
             "teacher_model_path_prefix"]
@@ -234,7 +297,7 @@ def build_distill_program(executor,
             params_filename = config["teacher_params_filename"][
                 tea_idx] if "teacher_params_filename" in config else None
             if tea_idx == 0:
-                train_program, test_program, data_name_map = _load_program_and_merge(
+                train_program, data_name_map = _load_program_and_merge(
                     executor,
                     place,
                     train_program,
@@ -242,10 +305,11 @@ def build_distill_program(executor,
                     teacher_model_dir[tea_idx],
                     model_filename,
                     params_filename,
+                    distill_node_pair,
                     teacher_idx=(tea_idx + 1),
                     feed_target_names=feed_target_names)
             else:
-                train_program, _, data_name_map = _load_program_and_merge(
+                train_program, data_name_map = _load_program_and_merge(
                     executor,
                     place,
                     train_program,
@@ -253,6 +317,7 @@ def build_distill_program(executor,
                     teacher_model_dir[tea_idx],
                     model_filename,
                     params_filename,
+                    distill_node_pair,
                     teacher_idx=(tea_idx + 1),
                     feed_target_names=feed_target_names)
 
@@ -261,7 +326,7 @@ def build_distill_program(executor,
             "teacher_model_filename"] if "teacher_model_filename" in config else None
         params_filename = config[
             "teacher_params_filename"] if "teacher_params_filename" in config else None
-        train_program, test_program, data_name_map = _load_program_and_merge(
+        train_program, data_name_map = _load_program_and_merge(
             executor,
             place,
             train_program,
@@ -269,6 +334,7 @@ def build_distill_program(executor,
             teacher_model_dir,
             model_filename,
             params_filename,
+            distill_node_pair,
             teacher_idx=None,
             feed_target_names=feed_target_names)
     # all feed node should set stop_gradient is False, for using pact quant algo.
@@ -313,7 +379,7 @@ def build_distill_program(executor,
                         use_dynamic_loss_scaling=True,
                         **train_config['amp_config'])
 
-            distill_loss, losses = _parse_distill_loss(
+            distill_loss, loss_dict = _parse_distill_loss(
                 distill_node_pair,
                 config.get('loss') or 'l2',  ### default loss is l2
                 config.get('alpha') or 1.0)  ### default alpha is 1.0
@@ -334,7 +400,7 @@ def build_distill_program(executor,
 
     train_program_info = ProgramInfo(startup_program, train_program,
                                      feed_target_names, train_fetch_list,
-                                     optimizer, learning_rate)
+                                     optimizer, learning_rate, loss_dict)
     test_program_info = ProgramInfo(startup_program, test_program,
                                     feed_target_names, fetch_targets)
     return train_program_info, test_program_info
@@ -399,6 +465,33 @@ def _get_label_info(dataloader, feed_target_names):
     return label_info
 
 
+def _get_chn_prune_params(program):
+    params = []
+    original_shapes = {}
+    for block in program.blocks:
+        for op in block.ops:
+            if op.type == 'conv2d' and op.attr('groups') == 1:
+                for inp_name in op.input_arg_names:
+                    var_ = block.var(inp_name)
+                    if var_.persistable is True:
+                        params.append(inp_name)
+                        original_shapes[inp_name] = var_.shape
+    return params, original_shapes
+
+
+def _get_asp_prune_params(program):
+    params = []
+    for block in program.blocks:
+        for op in block.ops:
+            if (op.type == 'conv2d' and op.attr('groups') == 1
+                ) or op.type == 'mul' or op.type == 'matmul_v2':
+                for inp_name in op.input_arg_names:
+                    var_ = block.var(inp_name)
+                    if var_.persistable is True:
+                        params.append(inp_name)
+    return params
+
+
 def build_prune_program(executor,
                         place,
                         config,
@@ -428,20 +521,29 @@ def build_prune_program(executor,
     elif strategy.startswith('channel_prune'):
         from ..prune import Pruner
         pruner = Pruner(config["criterion"])
-        params = []
-        original_shapes = {}
-        ### TODO(ceci3): set default prune weight
-        for param in train_program_info.program.global_block().all_parameters():
-            if config['prune_params_name'] is not None and param.name in config[
-                    'prune_params_name']:
-                params.append(param.name)
-                original_shapes[param.name] = param.shape
+        if config['prune_params_name'] is None:
+            params, original_shapes = _get_chn_prune_params(
+                train_program_info.program)
+        else:
+            params = []
+            original_shapes = {}
+            for param in train_program_info.program.global_block(
+            ).all_parameters():
+                if config[
+                        'prune_params_name'] is not None and param.name in config[
+                            'prune_params_name']:
+                    params.append(param.name)
+                    original_shapes[param.name] = param.shape
+
+        origin_flops = flops(train_program_info.program)
 
         pruned_program, _, _ = pruner.prune(
             train_program_info.program,
             paddle.static.global_scope(),
             params=params,
-            ratios=[config['pruned_ratio']] * len(params),
+            ratios=[config['pruned_ratio']] * len(params)
+            if isinstance(config['pruned_ratio'], float) else
+            config['pruned_ratio'],
             place=place)
         _logger.info(
             "####################channel pruning##########################")
@@ -451,13 +553,22 @@ def build_prune_program(executor,
                     param.name, original_shapes[param.name], param.shape))
         _logger.info(
             "####################channel pruning end##########################")
+
+        final_flops = flops(pruned_program)
+        pruned_flops = abs(origin_flops - final_flops) / origin_flops
+        _logger.info("FLOPs before pruning: {}".format(origin_flops))
+        _logger.info("FLOPs after pruning: {}. Pruned FLOPs: {}%.".format(
+            final_flops, round(pruned_flops * 100, 2)))
         train_program_info.program = pruned_program
 
     elif strategy.startswith('asp'):
-        from paddle.static import sparsity
-        pruner = sparsity
+        from paddle.incubate import asp
+        pruner = asp
         excluded_params_name = []
-        ### TODO(ceci3): set default prune weight
+        if config['prune_params_name'] is None:
+            config['prune_params_name'] = _get_asp_prune_params(
+                train_program_info.program)
+
         for param in train_program_info.program.global_block().all_parameters():
             if config['prune_params_name'] is not None:
                 if param.name not in config['prune_params_name']:

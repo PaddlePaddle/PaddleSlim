@@ -98,7 +98,7 @@ class TestSensitivity(unittest.TestCase):
         paddle.enable_static()
         main_program = paddle.static.Program()
         startup_program = paddle.static.Program()
-        with paddle.fluid.unique_name.guard():
+        with paddle.utils.unique_name.guard():
             with paddle.static.program_guard(main_program, startup_program):
                 input = paddle.static.data(
                     name="image", shape=[None, 1, 28, 28])
@@ -113,7 +113,7 @@ class TestSensitivity(unittest.TestCase):
         exe = paddle.static.Executor(place)
         exe.run(startup_program)
 
-        val_reader = paddle.fluid.io.batch(self.val_reader, batch_size=128)
+        val_reader = paddle.batch(self.val_reader, batch_size=128)
 
         def eval_func(program):
             feeder = paddle.fluid.DataFeeder(
