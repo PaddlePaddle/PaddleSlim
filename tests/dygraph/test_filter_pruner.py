@@ -149,8 +149,10 @@ class MulNet(paddle.nn.Layer):
 
     def forward(self, x):
         conv_a = self.conv_a(x)
-        conv_a = paddle.flatten(x, stop_axis=2)
-        return paddle.matmul(self.b, conv_a)
+        return paddle.fluid.layers.mul(self.b,
+                                       conv_a,
+                                       x_num_col_dims=1,
+                                       y_num_col_dims=3)
 
 
 class TestPruningMul(unittest.TestCase):

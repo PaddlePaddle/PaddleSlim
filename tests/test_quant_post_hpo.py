@@ -117,13 +117,11 @@ class TestQuantPostHpoCase1(StaticCase):
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
         paddle.static.save_inference_model(
-            path_prefix='./test_quant_post_hpo',
+            path_prefix='./test_quant_post_hpo/model',
             feed_vars=[image, label],
             fetch_vars=[avg_cost, acc_top1, acc_top5],
-            program=val_prog,
             executor=exe,
-            model_filename='model.pdmodel',
-            params_filename='model.pdiparams')
+            program=val_prog)
 
         quant_post_hpo(
             exe,
