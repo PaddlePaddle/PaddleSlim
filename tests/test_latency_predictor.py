@@ -116,7 +116,7 @@ class ModelCase5(paddle.nn.Layer):
             anchors=anchors,
             conf_thresh=0.01,
             downsample_ratio=32)
-        out = paddle.fluid.layers.matrix_nms(
+        out = paddle.vision.matrix_nms(
             bboxes=boxes,
             scores=scores,
             background_label=0,
@@ -125,7 +125,7 @@ class ModelCase5(paddle.nn.Layer):
             nms_top_k=400,
             keep_top_k=200,
             normalized=False)
-        box, var = paddle.version.prior_box(
+        box, var = paddle.vision.prior_box(
             input=image, image=image, min_sizes=[2.], clip=True, flip=True)
         return boxes, scores, box, var, out
 
