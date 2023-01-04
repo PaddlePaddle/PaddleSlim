@@ -382,6 +382,7 @@ def quant_aware(program,
             **calib_config)
         main_graph = post_training_quantization.quantize()
         scale_dict = post_training_quantization._scale_dict
+        sub_graphs = [sub_graph for sub_graph in main_graph.all_sub_graphs()]
     else:
         main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
         sub_graphs = [sub_graph for sub_graph in main_graph.all_sub_graphs()]
@@ -743,10 +744,10 @@ def convert(program,
 
 def quant_post_dynamic(model_dir,
                        save_model_dir,
-                       model_filename=None,
-                       params_filename=None,
-                       save_model_filename=None,
-                       save_params_filename=None,
+                       model_filename,
+                       params_filename,
+                       save_model_filename='model.pdmodel',
+                       save_params_filename='model.pdiparams',
                        quantizable_op_type=["conv2d", "mul"],
                        weight_bits=8,
                        generate_test_model=False):
@@ -763,22 +764,15 @@ def quant_post_dynamic(model_dir,
         model_dir(str): The path of the fp32 model that will be quantized,
                 and the model and params files are under the path.
         save_model_dir(str): The path to save the quantized model.
-        model_filename(str, optional): The name of file used to load the
-                inference program. If it is None, the default filename
-                '__model__' will be used. Default is 'None'.
-        params_filename(str, optional): The name of file used to load all
-                parameters. When all parameters were saved in a single
-                binary file, set it as the real filename. If parameters
-                were saved in separate files, set it as 'None'. Default is
-                'None'.
+        model_filename(str): The name of file used to load the
+                inference program. 
+        params_filename(str): The name of file used to load all
+                parameters.
         save_model_dir(str): The path used to save the quantized model.
         save_model_filename(str, optional): The name of file to 
-                save the inference program. If it is None, the default 
-                filename '__model__' will be used. Default is 'None'.
+                save the inference program. Default is 'model.pdmodel'.
         save_params_filename(str, optional): The name of file to 
-                save all parameters. If it is None, parameters were 
-                saved in separate files. If it is not None, all 
-                parameters were saved in a single binary file.
+                save all parameters. Default is 'model.pdiparams'.
         quantizable_op_type(list[str], optional): The list of ops 
                 that will be quantized, and the quantized ops should be
                 contained in ["conv2d", "depthwise_conv2d", "mul"]. 

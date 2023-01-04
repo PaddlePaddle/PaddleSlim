@@ -68,8 +68,8 @@ class QuantConfig(object):
                  eval_function=None,
                  model_filename=None,
                  params_filename=None,
-                 save_model_filename='__model__',
-                 save_params_filename='__params__',
+                 save_model_filename='model.pdmodel',
+                 save_params_filename='model.pdiparams',
                  scope=None,
                  quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
                  is_full_quantize=False,
@@ -190,14 +190,14 @@ def eval_quant_model():
     quant_scope = paddle.static.Scope()
     with paddle.static.scope_guard(float_scope):
         [infer_prog_float, feed_target_names_float, fetch_targets_float] = \
-            paddle.fluid.io.load_inference_model(dirname=g_quant_config.float_infer_model_path, \
+            paddle.static.load_inference_model(path_prefix=g_quant_config.float_infer_model_path, \
             model_filename=g_quant_config.model_filename, \
             params_filename=g_quant_config.params_filename, \
             executor=g_quant_config.executor)
 
     with paddle.static.scope_guard(quant_scope):
         [infer_prog_quant, feed_target_names_quant, fetch_targets_quant] = \
-            paddle.fluid.io.load_inference_model(dirname=g_quant_model_cache_path, \
+            paddle.static.load_inference_model(path_prefix=g_quant_model_cache_path, \
             model_filename=g_quant_config.save_model_filename, \
             params_filename=g_quant_config.save_params_filename, \
             executor=g_quant_config.executor)
@@ -304,7 +304,7 @@ def quantize(cfg):
         quant_scope = paddle.static.Scope()
         with paddle.static.scope_guard(float_scope):
             [float_inference_program, feed_target_names, fetch_targets]= paddle.static.load_inference_model( \
-                    dirname=g_quant_config.float_infer_model_path, \
+                    path_prefix=g_quant_config.float_infer_model_path, \
                     model_filename=g_quant_config.model_filename, params_filename=g_quant_config.params_filename,
                     executor=g_quant_config.executor)
             float_metric = g_quant_config.eval_function(
@@ -313,7 +313,7 @@ def quantize(cfg):
 
         with paddle.static.scope_guard(quant_scope):
             [quant_inference_program, feed_target_names, fetch_targets] = paddle.static.load_inference_model( \
-                    dirname=g_quant_model_cache_path, \
+                    path_prefix=g_quant_model_cache_path, \
                     model_filename=g_quant_config.model_filename, params_filename=g_quant_config.params_filename,
                     executor=g_quant_config.executor)
             quant_metric = g_quant_config.eval_function(
@@ -344,8 +344,8 @@ def quant_post_hpo(
         eval_function=None,
         model_filename=None,
         params_filename=None,
-        save_model_filename='__model__',
-        save_params_filename='__params__',
+        save_model_filename='model,pdmodel',
+        save_params_filename='model.pdiparams',
         scope=None,
         quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
         is_full_quantize=False,
@@ -388,9 +388,8 @@ def quant_post_hpo(
                 When all parameters are saved in a single file, set it
                 as filename. If parameters are saved in separate files,
                 set it as 'None'. Default : 'None'.
-        save_model_filename(str): The name of model file to save the quantized inference program.  Default: '__model__'.
-        save_params_filename(str): The name of file to save all related parameters.
-                If it is set None, parameters will be saved in separate files. Default: '__params__'.
+        save_model_filename(str): The name of model file to save the quantized inference program.  Default: 'model.pdmodel'.
+        save_params_filename(str): The name of file to save all related parameters. Default: 'model.pdiparams'.
         scope(paddle.static.Scope, optional): The scope to run program, use it to load
                         and save variables. If scope is None, will use paddle.static.global_scope().
         quantizable_op_type(list[str], optional): The list of op types

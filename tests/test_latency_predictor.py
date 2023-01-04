@@ -125,7 +125,7 @@ class ModelCase5(paddle.nn.Layer):
             nms_top_k=400,
             keep_top_k=200,
             normalized=False)
-        box, var = paddle.fluid.layers.prior_box(
+        box, var = paddle.version.prior_box(
             input=image, image=image, min_sizes=[2.], clip=True, flip=True)
         return boxes, scores, box, var, out
 
