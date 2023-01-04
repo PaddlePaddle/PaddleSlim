@@ -185,7 +185,7 @@ class ModelCase7(paddle.nn.Layer):
             anchors=anchors,
             conf_thresh=0.01,
             downsample_ratio=32)
-        box, var = paddle.vision.ops.layers.prior_box(
+        box, var = paddle.vision.ops.prior_box(
             input=image, image=image, min_sizes=[2.], clip=True, flip=True)
         return boxes, scores, box, var
 
