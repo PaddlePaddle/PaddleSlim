@@ -105,7 +105,7 @@ _quant_config_default = {
     'quant_post_first': False,
     # whether scale can be train
     'scale_trainable': True,
-    # Deploy backend, it could be: None, TensorRT, MKLDNN
+    # Deploy backend, it could be: None, TensorRT, MKLDNN, ARM
     'deploy_backend': None
 }
 
