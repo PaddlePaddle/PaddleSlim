@@ -44,7 +44,7 @@ try:
     from paddle.static.quantization import quant_config
 except:
     _logger.warning(
-        "Some functions fail to import, please update PaddlePaddle version to 2.4+"
+        "Some functions failed to import, better to update PaddlePaddle to the latest develop version."
     )
 
 WEIGHT_QUANTIZATION_TYPES = [
@@ -206,23 +206,23 @@ def _parse_configs(user_config):
     try:
         if not deploy_backend:
             configs['quant_config'] = quant_config.BaseQuantizer(
-                quant_operation_types=configs['quantize_op_types'],
+                quantizable_op_type=configs['quantize_op_types'],
                 quant_bits=configs['weight_bits'], )
         elif deploy_backend.lower() == "tensorrt":
             configs['quant_config'] = quant_config.TensorRTQuantizer(
-                quant_operation_types=configs['quantize_op_types'],
+                quantizable_op_type=configs['quantize_op_types'],
                 quant_bits=configs['weight_bits'], )
         elif deploy_backend.lower() == "mkldnn":
             configs['quant_config'] = quant_config.MKLDNNQuantizer(
-                quant_operation_types=configs['quantize_op_types'],
+                quantizable_op_type=configs['quantize_op_types'],
                 quant_bits=configs['weight_bits'], )
         elif deploy_backend.lower() == "arm":
             configs['quant_config'] = quant_config.ARMCPUQuantizer(
-                quant_operation_types=configs['quantize_op_types'],
+                quantizable_op_type=configs['quantize_op_types'],
                 quant_bits=configs['weight_bits'], )
     except:
         _logger.warning(
-            "Set deploy_backend failed, Please update PaddlePaddle to 2.4.2+")
+            "Set deploy_backend failed, Please update to PaddlePaddle Develop.")
 
     return configs
 
