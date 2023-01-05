@@ -1,5 +1,3 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
-#
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,28 +21,27 @@ import paddle
 from paddle.framework import core
 from paddle.fluid.layer_helper import LayerHelper
 from paddle.fluid.framework import IrGraph
-from paddle.fluid.contrib.slim.quantization import WeightQuantization
-from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass
-from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
-from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
-from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
-from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
-from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
-from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
-from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
+from paddle.static.quantization import WeightQuantization
+from paddle.static.quantization import QuantizationTransformPass
+from paddle.static.quantization import QuantizationFreezePass
+from paddle.static.quantization import ConvertToInt8Pass
+from paddle.static.quantization import PostTrainingQuantization
+from paddle.static.quantization import AddQuantDequantPass
+from paddle.static.quantization import OutScaleForTrainingPass
+from paddle.static.quantization import OutScaleForInferencePass
 from ..common import get_logger
 from ..common.patterns import get_patterns
-from ..common.patterns_common import is_dynamic_weight_op, get_weight
+from ..common.patterns_common import has_trainable_var, get_weight
 from ..core.graph_wrapper import GraphWrapper
 _logger = get_logger(__name__, level=logging.INFO)
 
 try:
-    from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
-    from paddle.fluid.contrib.slim.quantization import QuantWeightPass
-    from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
-    from paddle.fluid.contrib.slim.quantization import PostTrainingQuantizationProgram
-    from paddle.fluid.contrib.slim.quantization import AddQuantDequantForInferencePass
-    from paddle.fluid.contrib.slim.quantization import quant_config
+    from paddle.static.quantization import QuantizationTransformPassV2
+    from paddle.static.quantization import QuantWeightPass
+    from paddle.static.quantization import AddQuantDequantPassV2
+    from paddle.static.quantization import PostTrainingQuantizationProgram
+    from paddle.static.quantization import AddQuantDequantForInferencePass
+    from paddle.static.quantization import quant_config
 except:
     _logger.warning(
         "Some functions fail to import, please update PaddlePaddle version to 2.4+"
@@ -65,7 +62,7 @@ ACTIVATION_QUANTIZATION_TYPES_TENSORRT = [
 
 VALID_DTYPES = ['int8']
 try:
-    from paddle.fluid.contrib.slim.quantization import utils
+    from paddle.static.quantization import utils
     TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
 except:
@@ -370,7 +367,7 @@ def quant_aware(program,
 
                 for op in ops:
                     if op._op.type in ['matmul', 'matmul_v2'] and (
-                            not is_dynamic_weight_op(op)):
+                            not has_trainable_var(op)):
                         input_names = op._op.input_arg_names
                         for input_name in input_names:
                             pre_op = find_pre_ops(program, input_name)[0]
@@ -414,8 +411,10 @@ def quant_aware(program,
             **calib_config)
         main_graph = post_training_quantization.quantize()
         scale_dict = post_training_quantization._scale_dict
+        sub_graphs = [sub_graph for sub_graph in main_graph.all_sub_graphs()]
     else:
         main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
+        sub_graphs = [sub_graph for sub_graph in main_graph.all_sub_graphs()]
         transform_pass_ops = []
         quant_dequant_ops = []
         if 'quant_config' in config and config['quant_config']:
@@ -451,7 +450,8 @@ def quant_aware(program,
                 executor=executor,
                 is_test=is_test)
 
-            transform_pass.apply(main_graph)
+            for sub_graph in sub_graphs:
+                transform_pass.apply(sub_graph)
 
         if len(quant_dequant_ops) > 0:
             qdq_func = 'AddQuantDequantPassV2' if config[
@@ -463,10 +463,10 @@ def quant_aware(program,
                 quant_bits=config['activation_bits'],
                 skip_pattern=config['not_quant_pattern'],
                 quantizable_op_type=quant_dequant_ops,
-                is_test=is_test,
-                scale_dict=scale_dict)
+                is_test=is_test)
 
-            quant_dequant_pass.apply(main_graph)
+            for sub_graph in sub_graphs:
+                quant_dequant_pass.apply(sub_graph)
 
     out_scale_training_pass = OutScaleForTrainingPass(
         scope=scope,
@@ -475,16 +475,18 @@ def quant_aware(program,
         is_test=is_test,
         scale_dict=scale_dict)
 
-    out_scale_training_pass.apply(main_graph)
+    for sub_graph in sub_graphs:
+        out_scale_training_pass.apply(sub_graph)
 
-    if (weight_preprocess_func is not None or
-            act_preprocess_func is not None) and not for_test:
+    if (weight_preprocess_func is not None or act_preprocess_func is not None
+        ) and not for_test and not config['onnx_format']:
         _logger.info(
             "When a preprocess_func is used in quant_aware, Need to save a mapping table to match variable names in the convert phase."
         )
         _logger.info("The mapping table is saved as '{}'.".format(
             VARS_MAPPING_TABLE))
-        save_dict(main_graph.out_node_mapping_table)
+        for sub_graph in sub_graphs:
+            save_dict(sub_graph.out_node_mapping_table)
 
     # TDOD: remove it.
     if draw_graph:
@@ -615,7 +617,7 @@ def quant_post_static(executor,
             sample_generator=sample_generator,
             batch_generator=batch_generator,
             data_loader=data_loader,
-            model_dir=model_dir,
+            model_dir=model_dir.rstrip('/'),
             model_filename=model_filename,
             params_filename=params_filename,
             batch_size=batch_size,
@@ -634,7 +636,7 @@ def quant_post_static(executor,
             onnx_format=onnx_format,
             skip_tensor_list=skip_tensor_list,
             optimize_model=optimize_model,
-            deploy_backend=deploy_backend,  # >= Paddle 2.4.2
+            deploy_backend=deploy_backend,  # support at Paddle develop
         )
     except:
         post_training_quantization = PostTrainingQuantization(
@@ -642,7 +644,7 @@ def quant_post_static(executor,
             sample_generator=sample_generator,
             batch_generator=batch_generator,
             data_loader=data_loader,
-            model_dir=model_dir,
+            model_dir=model_dir.rstrip('/'),
             model_filename=model_filename,
             params_filename=params_filename,
             batch_size=batch_size,
@@ -722,18 +724,21 @@ def convert(program,
 
     if config['onnx_format']:
         quant_weight_pass = QuantWeightPass(scope, place)
-        quant_weight_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            quant_weight_pass.apply(sub_graph)
         try:
             out_scale_infer_pass = AddQuantDequantForInferencePass(
                 scope=scope, place=place, quant_bits=config['activation_bits'])
-            out_scale_infer_pass.apply(test_graph)
+            for sub_graph in test_graph.all_sub_graphs():
+                out_scale_infer_pass.apply(sub_graph)
         except:
             _logger.warning(
                 "Unable to convert quant model with onnx_format=True, please update PaddlePaddle >= 2.4.0"
             )
     else:
         out_scale_infer_pass = OutScaleForInferencePass(scope=scope)
-        out_scale_infer_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            out_scale_infer_pass.apply(sub_graph)
         # Freeze the graph after training by adjusting the quantize
         # operators' order for the inference.
         freeze_pass = QuantizationFreezePass(
@@ -744,13 +749,31 @@ def convert(program,
             weight_quantize_type=config['weight_quantize_type'])
         if os.path.exists(VARS_MAPPING_TABLE):
             test_graph.out_node_mapping_table = load_dict()
-        freeze_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            freeze_pass.apply(sub_graph)
 
     freezed_program = test_graph.to_program()
 
+    # Move sub blocks persistable var to global block
+    global_block = freezed_program.global_block()
+    for _op in global_block.ops:
+        if _op.type == "while":
+            _block_id = _op.attr("sub_block").id
+            _block = freezed_program.block(_block_id)
+            persistables = []
+            for _name, _var in _block.vars.items():
+                if _var.persistable:
+                    global_block._clone_variable(_var)
+                    persistables.append(_name)
+            for _name in persistables:
+                _block._remove_var(_name)
+            persistables.extend(_op.input('X'))
+            _op.desc.set_input("X", persistables)
+
     if save_int8:
         convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
-        convert_int8_pass.apply(test_graph)
+        for sub_graph in test_graph.all_sub_graphs():
+            convert_int8_pass.apply(sub_graph)
         freezed_program_int8 = test_graph.to_program()
         return freezed_program, freezed_program_int8
     else:
@@ -759,10 +782,10 @@ def convert(program,
 
 def quant_post_dynamic(model_dir,
                        save_model_dir,
-                       model_filename=None,
-                       params_filename=None,
-                       save_model_filename=None,
-                       save_params_filename=None,
+                       model_filename,
+                       params_filename,
+                       save_model_filename='model.pdmodel',
+                       save_params_filename='model.pdiparams',
                        quantizable_op_type=["conv2d", "mul"],
                        weight_bits=8,
                        generate_test_model=False):
@@ -779,22 +802,15 @@ def quant_post_dynamic(model_dir,
         model_dir(str): The path of the fp32 model that will be quantized,
                 and the model and params files are under the path.
         save_model_dir(str): The path to save the quantized model.
-        model_filename(str, optional): The name of file used to load the
-                inference program. If it is None, the default filename
-                '__model__' will be used. Default is 'None'.
-        params_filename(str, optional): The name of file used to load all
-                parameters. When all parameters were saved in a single
-                binary file, set it as the real filename. If parameters
-                were saved in separate files, set it as 'None'. Default is
-                'None'.
+        model_filename(str): The name of file used to load the
+                inference program. 
+        params_filename(str): The name of file used to load all
+                parameters.
         save_model_dir(str): The path used to save the quantized model.
         save_model_filename(str, optional): The name of file to 
-                save the inference program. If it is None, the default 
-                filename '__model__' will be used. Default is 'None'.
+                save the inference program. Default is 'model.pdmodel'.
         save_params_filename(str, optional): The name of file to 
-                save all parameters. If it is None, parameters were 
-                saved in separate files. If it is not None, all 
-                parameters were saved in a single binary file.
+                save all parameters. Default is 'model.pdiparams'.
         quantizable_op_type(list[str], optional): The list of ops 
                 that will be quantized, and the quantized ops should be
                 contained in ["conv2d", "depthwise_conv2d", "mul"]. 

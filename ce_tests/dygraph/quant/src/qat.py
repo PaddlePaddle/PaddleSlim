@@ -31,7 +31,7 @@ from paddle.metric.metrics import Accuracy
 import paddle.vision.models as models
 
 from paddleslim import QAT
-from paddle.fluid.contrib.slim.quantization import ImperativeQuantAware
+from paddle.quantization import ImperativeQuantAware
 
 from imagenet_dataset import ImageNetDataset
 

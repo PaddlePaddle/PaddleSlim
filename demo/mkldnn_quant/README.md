@@ -54,7 +54,7 @@ import numpy as np
 
 为了部署在CPU上，我们将保存的quant模型，通过一个转化脚本，移除fake_quantize/fake_dequantize op，进行算子融合和优化并且转化为INT8模型。
 
-脚本在官网的位置为[save_quant_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py)。
+脚本在官网的位置为[save_quant_model.py](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/static/quantization/tests/save_quant_model.py)。
 
 复制脚本到本样例所在目录(`/PATH_TO_PaddleSlim/demo/mkldnn_quant/`)，并执行如下命令：
 ```
@@ -181,4 +181,4 @@ INT8模型精度和性能结果参考[CPU部署预测INT8模型的精度和性�
 ## FAQ
 
 - 自然语言处理模型在CPU上的部署和预测参考样例[ERNIE 模型 QUANT INT8 精度与性能复现](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c++/ernie/mkldnn)
-- 具体DNNL量化原理可以查看[SLIM Quant for INT8 MKLDNN](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/README.md)。
+- 具体DNNL量化原理可以查看[SLIM Quant for INT8 MKLDNN](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/static/quantization/tests/README.md)。

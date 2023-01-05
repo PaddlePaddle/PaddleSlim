@@ -20,7 +20,7 @@ import paddle
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
 from .layers_base import *
-from paddle.framework import _in_legacy_dygraph, in_dygraph_mode
+from paddle.framework import in_dygraph_mode
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',

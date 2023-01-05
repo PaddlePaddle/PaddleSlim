@@ -13,19 +13,17 @@
 # limitations under the License.
 import copy
 import logging
-import math
-import os
-import re
-import shutil
 import sys
 import time
 
 import numpy as np
 import paddle
+from paddle.static.quantization import utils
+from paddle.static.quantization import PostTrainingQuantization
 
 from ..dist import merge
 from ..core.graph_wrapper import GraphWrapper
-from ..common import get_logger, recover_program
+from ..common import get_logger
 
 __all__ = ['ReconstructionQuantization', ]
 
@@ -48,8 +46,7 @@ class Collections(object):
         return self._config
 
 
-class ReconstructionQuantization(
-        paddle.fluid.contrib.slim.quantization.PostTrainingQuantization):
+class ReconstructionQuantization(PostTrainingQuantization):
     """
     Utilizing reconstruction quantization method to quantize the FP32 model,
     and it uses calibrate data to get the quantization information for all
@@ -92,7 +89,7 @@ class ReconstructionQuantization(
 
     def _preparation(self):
         batch_id = 0
-        with paddle.fluid.contrib.slim.quantization.utils.tqdm(
+        with utils.tqdm(
                 total=self._batch_nums,
                 bar_format='Preparation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
                 ncols=80, ) as t:
@@ -112,7 +109,7 @@ class ReconstructionQuantization(
 
     def _sampling_threshold(self):
         batch_id = 0
-        with paddle.fluid.contrib.slim.quantization.utils.tqdm(
+        with utils.tqdm(
                 total=self._batch_nums,
                 bar_format='Sampling stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
                 ncols=80, ) as t:
@@ -161,6 +158,7 @@ class ReconstructionQuantization(
             region_weights_names=self._config['region_weights_names'],
             recon_level=self._config['recon_level'],
             simulate_activation_quant=self._config['simulate_activation_quant'],
+            skip_tensor_list=self._skip_tensor_list,
             num_iterations=self._batch_nums,
             lr=self._config['lr'],
             bias_correction=self._bias_correction,
@@ -174,7 +172,7 @@ class ReconstructionQuantization(
             self._quantized_threshold = self._scale_dict
 
     def _postprocessing(self):
-        if self._algo is 'min_max':
+        if self._algo == 'min_max':
             self._save_input_threhold()
         else:
             self._update_program()
@@ -223,6 +221,7 @@ class ReconstructionQuanter(object):
                  region_weights_names,
                  recon_level,
                  simulate_activation_quant,
+                 skip_tensor_list=None,
                  num_iterations=1000,
                  lr=0.1,
                  bias_correction=False,
@@ -256,6 +255,7 @@ class ReconstructionQuanter(object):
                 Currently support ['layer-wise', 'region-wise'] types. Default is layer-wise.
             simulate_activation_quant(bool, optional): Whether we need the noise caused by activation 
                 quantization during the reconstruction process.
+            skip_tensor_list(list): List of skip quant tensor name.
             regions(list[list], optional): The list of some regions, each region is a subgraph of
                 fp32 program and it will have exact 1 input operation and 1 output operation. When 
                 the recon-level is region, the reconstruction loss of each region is minimized.
@@ -299,6 +299,7 @@ class ReconstructionQuanter(object):
         self._region_weights_names = region_weights_names
         self._bias_correction = bias_correction
         self._limit = limit
+        self._skip_tensor_list = skip_tensor_list
 
         if recon_level == 'region-wise' and regions is None:
             builder = RegionBuilder(program=self._program)
@@ -319,14 +320,15 @@ class ReconstructionQuanter(object):
         self._input_weight_pairs = {}
         for block_id in range(len(self._program.blocks)):
             for op in self._program.blocks[block_id].ops:
-                in_var_names = paddle.fluid.contrib.slim.quantization.utils._get_op_input_var_names(
-                    op)
+                in_var_names = utils._get_op_input_var_names(op)
                 for in_var_name in in_var_names:
                     if in_var_name in persistable_var_names:
                         in_var_names.remove(in_var_name)
                         self._input_weight_pairs[in_var_name] = in_var_names
                         break
         for name in self._weight_var_names:
+            if self._skip_tensor_list is not None and name in self._skip_tensor_list:
+                continue
             region_weights_names.append([name])
             region_ = []
             region_.append(self._input_weight_pairs[name][0])
@@ -429,14 +431,14 @@ class ReconstructionQuanter(object):
         return self._program, self._scale_dict
 
     def _init_alpha(self, name, scale):
-        _tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+        _tensor = paddle.static.quantization.utils.load_variable_data(
             self._scope, "teacher_" + name)
-        tensor_scaled = paddle.fluid.contrib.slim.quantization.utils.quant_tensor(
+        tensor_scaled = paddle.static.quantization.utils.quant_tensor(
             x=_tensor,
             scale=scale,
             weight_bits=self._weight_bits,
-            quant_axis=0 if self._weight_op_pairs[name] not in paddle.fluid.
-            contrib.slim.quantization.utils._channelwise_quant_axis1_ops else 1)
+            quant_axis=0 if self._weight_op_pairs[name] not in
+            utils._channelwise_quant_axis1_ops else 1)
         tensor_floor = np.floor(tensor_scaled)
         tensor = tensor_scaled - tensor_floor
         alpha = -np.log((ZETA - GAMMA) / (tensor - GAMMA) - 1)
@@ -735,13 +737,13 @@ class ReconstructionQuanter(object):
 
     def _update_scale(self):
         for _name in self._weight_var_names:
-
+            if self._skip_tensor_list is not None and _name in self._skip_tensor_list:
+                continue
             scale_name = _name + '.scale'
-            scale_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
-                self._scope, scale_name)
+            scale_tensor = utils.load_variable_data(self._scope, scale_name)
             scale_list = []
             if self._weight_op_pairs[
-                    _name] in paddle.fluid.contrib.slim.quantization.utils._channelwise_quant_axis1_ops:
+                    _name] in utils._channelwise_quant_axis1_ops:
                 scale_list = list(scale_tensor[0])
             else:
                 for i in range(scale_tensor.shape[0]):
@@ -750,23 +752,23 @@ class ReconstructionQuanter(object):
 
     def _update_weights_to_int(self):
         for weight_var_name in self._weight_var_names:
-            alpha_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+            if self._skip_tensor_list is not None and weight_var_name in self._skip_tensor_list:
+                continue
+            alpha_tensor = utils.load_variable_data(
                 self._scope,
                 weight_var_name + '.alpha', )
             h_alpha_tensor = self._compute_soft_rounding_np(alpha_tensor)
-            weight_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+            weight_tensor = utils.load_variable_data(
                 self._scope,
                 weight_var_name, )
-            weight_quant_tensor = paddle.fluid.contrib.slim.quantization.utils.quant_tensor(
+            weight_quant_tensor = utils.quant_tensor(
                 x=weight_tensor,
                 scale=self._scale_dict[weight_var_name],
                 weight_bits=self._weight_bits,
-                quant_axis=0
-                if self._weight_op_pairs[weight_var_name] not in paddle.fluid.
-                contrib.slim.quantization.utils._channelwise_quant_axis1_ops
-                else 1)
+                quant_axis=0 if self._weight_op_pairs[weight_var_name] not in
+                utils._channelwise_quant_axis1_ops else 1)
 
-            paddle.fluid.contrib.slim.quantization.utils.set_variable_data(
+            utils.set_variable_data(
                 self._scope,
                 self._place,
                 weight_var_name,
@@ -774,23 +776,21 @@ class ReconstructionQuanter(object):
 
     def _bias_correction_w(self):
         for weight_var_name in self._weight_var_names:
-            weight_var_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+            weight_var_tensor = utils.load_variable_data(
                 self._scope,
                 "teacher_" + weight_var_name, )
-            weight_quant_tensor = paddle.fluid.contrib.slim.quantization.utils.load_variable_data(
+            weight_quant_tensor = utils.load_variable_data(
                 self._scope,
                 weight_var_name, )
             scale = self._scale_dict[weight_var_name]
-            final_weight_tensor = paddle.fluid.contrib.slim.quantization.utils.bias_correction_w(
+            final_weight_tensor = utils.bias_correction_w(
                 weight_var_tensor,
                 weight_quant_tensor,
                 scale,
-                quant_axis=0
-                if self._weight_op_pairs[weight_var_name] not in paddle.fluid.
-                contrib.slim.quantization.utils._channelwise_quant_axis1_ops
-                else 1,
+                quant_axis=0 if self._weight_op_pairs[weight_var_name] not in
+                utils._channelwise_quant_axis1_ops else 1,
                 weight_bits=self._weight_bits, )
-            paddle.fluid.contrib.slim.quantization.utils.set_variable_data(
+            utils.set_variable_data(
                 self._scope,
                 self._place,
                 weight_var_name,
@@ -798,8 +798,7 @@ class ReconstructionQuanter(object):
 
     def _compute_soft_rounding_np(self, alpha_v):
         return np.clip(
-            paddle.fluid.contrib.slim.quantization.utils.stable_sigmoid(alpha_v)
-            * (ZETA - GAMMA) + GAMMA,
+            utils.stable_sigmoid(alpha_v) * (ZETA - GAMMA) + GAMMA,
             a_min=0,
             a_max=1, )
 
@@ -1197,7 +1196,7 @@ def quant_recon_static(executor,
         sample_generator=sample_generator,
         batch_generator=batch_generator,
         data_loader=data_loader,
-        model_dir=model_dir,
+        model_dir=model_dir.rstrip('/'),
         model_filename=model_filename,
         params_filename=params_filename,
         batch_size=batch_size,

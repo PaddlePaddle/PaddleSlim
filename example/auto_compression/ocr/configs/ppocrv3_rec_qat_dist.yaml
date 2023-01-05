@@ -15,7 +15,7 @@ Distillation:
    - ['linear_43.tmp_1']
    - ['linear_43.tmp_1']
 
-Quantization:
+QuantAware:
   use_pact: true
   activation_bits: 8
   is_full_quantize: false

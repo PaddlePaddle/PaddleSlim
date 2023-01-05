@@ -116,14 +116,12 @@ class TestQuantPostHpoCase1(StaticCase):
 
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
-        paddle.fluid.io.save_inference_model(
-            dirname='./test_quant_post_hpo',
-            feeded_var_names=[image.name, label.name],
-            target_vars=[avg_cost, acc_top1, acc_top5],
-            main_program=val_prog,
+        paddle.static.save_inference_model(
+            path_prefix='./test_quant_post_hpo/model',
+            feed_vars=[image, label],
+            fetch_vars=[avg_cost, acc_top1, acc_top5],
             executor=exe,
-            model_filename='model',
-            params_filename='params')
+            program=val_prog)
 
         quant_post_hpo(
             exe,
@@ -132,16 +130,13 @@ class TestQuantPostHpoCase1(StaticCase):
             "./test_quant_post_hpo_inference",
             train_sample_generator=sample_generator_creator(),
             eval_sample_generator=sample_generator_creator(),
-            model_filename="model",
-            params_filename="params",
-            save_model_filename='__model__',
-            save_params_filename='__params__',
+            model_filename="model.pdmodel",
+            params_filename="model.pdiparams",
+            save_model_filename='model.pdmodel',
+            save_params_filename='model.pdiparams',
             runcount_limit=2)
-        quant_post_prog, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
-            dirname='./test_quant_post_hpo_inference',
-            executor=exe,
-            model_filename='__model__',
-            params_filename='__params__')
+        quant_post_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+            path_prefix='./test_quant_post_hpo_inference/model', executor=exe)
         top1_2, top5_2 = test(quant_post_prog, fetch_targets)
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
         print("after quantization: top1: {}, top5: {}".format(top1_2, top5_2))

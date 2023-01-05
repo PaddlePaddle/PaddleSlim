@@ -1,12 +1,13 @@
 import os
 import sys
 import unittest
-sys.path.append("../")
+sys.path.append("../../")
+
 import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
 from paddle.vision.transforms import transforms
-from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
+from paddle.static.quantization import PostTrainingQuantization
 from paddleslim.quant.analysis_qat import AnalysisQAT
 
 paddle.enable_static()

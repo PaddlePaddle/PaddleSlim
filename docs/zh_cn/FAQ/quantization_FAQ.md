@@ -35,9 +35,9 @@ config->EnableTensorRtEngine(1 << 20      /* workspace_size*/,
                         false             /* use_calib_mode*/);
 ```
 
--  如果量化模型在x86上线，需要使用[INT8 MKL-DNN](https://github.com/PaddlePaddle/Paddle/tree/develop/python/paddle/fluid/contrib/slim/tests)
+-  如果量化模型在x86上线，需要使用[INT8 MKL-DNN](https://github.com/PaddlePaddle/Paddle/tree/develop/python/paddle/static/quantization/tests)
 
-    - 首先对模型进行转化，可以参考[脚本](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py)
+    - 首先对模型进行转化，可以参考[脚本](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/static/quantization/tests/save_quant_model.py)
 
     - 转化之后可使用预测部署API进行加载。比如[c++ API](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/advanced_guide/inference_deployment/inference/native_infer.html)
 
