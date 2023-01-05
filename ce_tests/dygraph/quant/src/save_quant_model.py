@@ -23,7 +23,7 @@ import numpy as np
 import time
 import paddle
 from paddle.fluid.framework import IrGraph
-from paddle.fluid.contrib.slim.quantization import Quant2Int8MkldnnPass
+from paddle.quantization import Quant2Int8MkldnnPass
 from paddle.framework import core
 
 paddle.enable_static()

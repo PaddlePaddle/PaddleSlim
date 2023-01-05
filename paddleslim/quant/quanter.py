@@ -21,15 +21,14 @@ import paddle
 from paddle.framework import core
 from paddle.fluid.layer_helper import LayerHelper
 from paddle.fluid.framework import IrGraph
-from paddle.fluid.contrib.slim.quantization import WeightQuantization
-from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass
-from paddle.fluid.contrib.slim.quantization import QuantizationFreezePass
-from paddle.fluid.contrib.slim.quantization import ConvertToInt8Pass
-from paddle.fluid.contrib.slim.quantization import TransformForMobilePass
-from paddle.fluid.contrib.slim.quantization import PostTrainingQuantization
-from paddle.fluid.contrib.slim.quantization import AddQuantDequantPass
-from paddle.fluid.contrib.slim.quantization import OutScaleForTrainingPass
-from paddle.fluid.contrib.slim.quantization import OutScaleForInferencePass
+from paddle.static.quantization import WeightQuantization
+from paddle.static.quantization import QuantizationTransformPass
+from paddle.static.quantization import QuantizationFreezePass
+from paddle.static.quantization import ConvertToInt8Pass
+from paddle.static.quantization import PostTrainingQuantization
+from paddle.static.quantization import AddQuantDequantPass
+from paddle.static.quantization import OutScaleForTrainingPass
+from paddle.static.quantization import OutScaleForInferencePass
 from ..common import get_logger
 from ..common.patterns import get_patterns
 from ..common.patterns_common import has_trainable_var, get_weight
@@ -37,11 +36,11 @@ from ..core.graph_wrapper import GraphWrapper
 _logger = get_logger(__name__, level=logging.INFO)
 
 try:
-    from paddle.fluid.contrib.slim.quantization import QuantizationTransformPassV2
-    from paddle.fluid.contrib.slim.quantization import QuantWeightPass
-    from paddle.fluid.contrib.slim.quantization import AddQuantDequantPassV2
-    from paddle.fluid.contrib.slim.quantization import PostTrainingQuantizationProgram
-    from paddle.fluid.contrib.slim.quantization import AddQuantDequantForInferencePass
+    from paddle.static.quantization import QuantizationTransformPassV2
+    from paddle.static.quantization import QuantWeightPass
+    from paddle.static.quantization import AddQuantDequantPassV2
+    from paddle.static.quantization import PostTrainingQuantizationProgram
+    from paddle.static.quantization import AddQuantDequantForInferencePass
 except:
     _logger.warning(
         "Some functions fail to import, please update PaddlePaddle version to 2.4+"
@@ -62,7 +61,7 @@ ACTIVATION_QUANTIZATION_TYPES_TENSORRT = [
 
 VALID_DTYPES = ['int8']
 try:
-    from paddle.fluid.contrib.slim.quantization import utils
+    from paddle.static.quantization import utils
     TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
 except:
@@ -383,6 +382,7 @@ def quant_aware(program,
             **calib_config)
         main_graph = post_training_quantization.quantize()
         scale_dict = post_training_quantization._scale_dict
+        sub_graphs = [sub_graph for sub_graph in main_graph.all_sub_graphs()]
     else:
         main_graph = IrGraph(core.Graph(program.desc), for_test=for_test)
         sub_graphs = [sub_graph for sub_graph in main_graph.all_sub_graphs()]
@@ -582,7 +582,7 @@ def quant_post_static(executor,
             sample_generator=sample_generator,
             batch_generator=batch_generator,
             data_loader=data_loader,
-            model_dir=model_dir,
+            model_dir=model_dir.rstrip('/'),
             model_filename=model_filename,
             params_filename=params_filename,
             batch_size=batch_size,
@@ -607,7 +607,7 @@ def quant_post_static(executor,
             sample_generator=sample_generator,
             batch_generator=batch_generator,
             data_loader=data_loader,
-            model_dir=model_dir,
+            model_dir=model_dir.rstrip('/'),
             model_filename=model_filename,
             params_filename=params_filename,
             batch_size=batch_size,
@@ -744,10 +744,10 @@ def convert(program,
 
 def quant_post_dynamic(model_dir,
                        save_model_dir,
-                       model_filename=None,
-                       params_filename=None,
-                       save_model_filename=None,
-                       save_params_filename=None,
+                       model_filename,
+                       params_filename,
+                       save_model_filename='model.pdmodel',
+                       save_params_filename='model.pdiparams',
                        quantizable_op_type=["conv2d", "mul"],
                        weight_bits=8,
                        generate_test_model=False):
@@ -764,22 +764,15 @@ def quant_post_dynamic(model_dir,
         model_dir(str): The path of the fp32 model that will be quantized,
                 and the model and params files are under the path.
         save_model_dir(str): The path to save the quantized model.
-        model_filename(str, optional): The name of file used to load the
-                inference program. If it is None, the default filename
-                '__model__' will be used. Default is 'None'.
-        params_filename(str, optional): The name of file used to load all
-                parameters. When all parameters were saved in a single
-                binary file, set it as the real filename. If parameters
-                were saved in separate files, set it as 'None'. Default is
-                'None'.
+        model_filename(str): The name of file used to load the
+                inference program. 
+        params_filename(str): The name of file used to load all
+                parameters.
         save_model_dir(str): The path used to save the quantized model.
         save_model_filename(str, optional): The name of file to 
-                save the inference program. If it is None, the default 
-                filename '__model__' will be used. Default is 'None'.
+                save the inference program. Default is 'model.pdmodel'.
         save_params_filename(str, optional): The name of file to 
-                save all parameters. If it is None, parameters were 
-                saved in separate files. If it is not None, all 
-                parameters were saved in a single binary file.
+                save all parameters. Default is 'model.pdiparams'.
         quantizable_op_type(list[str], optional): The list of ops 
                 that will be quantized, and the quantized ops should be
                 contained in ["conv2d", "depthwise_conv2d", "mul"]. 

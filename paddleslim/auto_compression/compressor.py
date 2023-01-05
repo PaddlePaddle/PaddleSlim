@@ -804,7 +804,7 @@ class AutoCompression:
                 else:
                     logging_iter = train_config.logging_iter
                 if batch_id % int(logging_iter) == 0:
-                    print_info = "Total iter: {}, epoch: {}, batch: {}, loss: {}".format(
+                    print_info = "Total iter: {}, epoch: {}, batch: {}, loss: {} ".format(
                         total_train_iter, epoch_id, batch_id, loss[0])
                     for idx, loss_value in enumerate(loss[1:]):
                         print_info += '{}: {} '.format(loss_names[idx],
