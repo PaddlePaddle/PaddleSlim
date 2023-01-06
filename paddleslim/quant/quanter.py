@@ -62,12 +62,14 @@ ACTIVATION_QUANTIZATION_TYPES_TENSORRT = [
 
 VALID_DTYPES = ['int8']
 try:
+    TRANSFORM_PASS_OP_TYPES = list(
+        quant_config.SUPPORT_WEIGHT_QUANTIZATION_OP_DICT.keys())
+    QUANT_DEQUANT_PASS_OP_TYPES = list(
+        quant_config.SUPPORT_ACT_QUANTIZATION_OP_DICT.keys())
+except:
     from paddle.static.quantization import utils
     TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
-except:
-    TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
-    QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
 
 TENSORRT_OP_TYPES = [
     'mul', 'conv2d', 'pool2d', 'depthwise_conv2d', 'elementwise_add',
@@ -100,7 +102,7 @@ _quant_config_default = {
     # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
     'is_full_quantize': False,
     # if True, use onnx format to quant.
-    'onnx_format': False,
+    'onnx_format': True,
     # quant post to get initial scale for quant_aware
     'quant_post_first': False,
     # whether scale can be train
@@ -530,7 +532,7 @@ def quant_post_static(executor,
                       activation_quantize_type='range_abs_max',
                       weight_quantize_type='channel_wise_abs_max',
                       optimize_model=False,
-                      onnx_format=False,
+                      onnx_format=True,
                       skip_tensor_list=None,
                       deploy_backend=None):
     """
@@ -602,7 +604,7 @@ def quant_post_static(executor,
         optimize_model(bool, optional): If set optimize_model as True, it applies some 
                 passes to optimize the model before quantization. So far, the place of
                 executor must be cpu it supports fusing batch_norm into convs.
-        onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is False.
+        onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is True.
         skip_tensor_list(list): List of skip quant tensor name.
         deploy_backend(str): Deploy backend, it could be None, TensorRT, MKLDNN, ARM.
                 Other backends will continue to expand, the default is None, which means to
@@ -677,12 +679,7 @@ def quant_post_static(executor,
 quant_post = quant_post_static
 
 
-def convert(program,
-            place,
-            config=None,
-            scope=None,
-            save_int8=False,
-            save_clip_ranges_path='./'):
+def convert(program, place, config=None, scope=None, save_int8=False):
     """
     convert quantized and well-trained ``program`` to final  quantized
     ``program``that can be used to  save ``inference model``.
@@ -704,7 +701,6 @@ def convert(program,
         save_int8: Whether to return ``program`` which model parameters'
                 dtype is ``int8``. This parameter can only be used to
                 get model size. Default: ``False``.
-        save_clip_ranges_path: If config.onnx_format=True, quantization clip ranges will be saved locally.
 
     Returns:
         Tuple : freezed program which can be used for inference.
