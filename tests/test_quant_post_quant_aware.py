@@ -143,8 +143,7 @@ class TestQuantPostQuantAwareCase1(StaticCase):
             scale_dict=scale_dict,
             model_type='transformer')
         train(quant_train_prog)
-        quant_eval_prog, int8_prog = convert(
-            quant_eval_prog, place, config, save_int8=True)
+        quant_eval_prog = convert(quant_eval_prog, place, config)
         top1_2 = test(quant_eval_prog)
         # values before quantization and after quantization should be close
         print("before quantization: top1: {}".format(top1_1))

@@ -158,7 +158,9 @@ def post_quant_fake(executor,
 
         for block_id in range(len(_program.blocks)):
             for op in _program.blocks[block_id].ops:
-                if op.type in (_quantizable_op_type + utils._out_scale_op_list):
+                if op.type in (
+                        _quantizable_op_type +
+                        list(quant_config.SUPPORT_QUANTIZATION_OP_DICT.keys())):
                     out_var_names = utils._get_op_output_var_names(op)
                     for var_name in out_var_names:
                         analysis_and_save_info(op, var_name)
