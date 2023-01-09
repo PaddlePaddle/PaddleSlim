@@ -766,7 +766,7 @@ def convert(program, place, config=None, scope=None, save_int8=False):
             persistables.extend(_op.input('X'))
             _op.desc.set_input("X", persistables)
 
-    if save_int8:
+    if save_int8 and not config['onnx_format']:
         convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
         for sub_graph in test_graph.all_sub_graphs():
             convert_int8_pass.apply(sub_graph)

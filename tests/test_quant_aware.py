@@ -45,7 +45,20 @@ class TestQuantAwareCase1(StaticCase):
         for op in graph.all_op_nodes():
             if op.name() in ['conv2d', 'depthwise_conv2d', 'mul']:
                 op_nums += 1
-            elif 'fake_' in op.name():
+            elif 'quantize_linear' in op.name():
+                quant_op_nums += 1
+        return op_nums, quant_op_nums
+
+    def get_convert_op_number(self, prog):
+
+        graph = paddle.fluid.framework.IrGraph(
+            paddle.framework.core.Graph(prog.desc), for_test=False)
+        quant_op_nums = 0
+        op_nums = 0
+        for op in graph.all_op_nodes():
+            if op.name() not in ['quantize_linear', 'dequantize_linear']:
+                op_nums += 1
+            elif 'quantize_linear' in op.name():
                 quant_op_nums += 1
         return op_nums, quant_op_nums
 
@@ -65,7 +78,7 @@ class TestQuantAwareCase1(StaticCase):
             train_prog, place, config=config_1, for_test=True)
         op_nums_1, quant_op_nums_1 = self.get_op_number(quant_prog_1)
         convert_prog_1 = convert(quant_prog_1, place, config=config_1)
-        convert_op_nums_1, convert_quant_op_nums_1 = self.get_op_number(
+        convert_op_nums_1, convert_quant_op_nums_1 = self.get_convert_op_number(
             convert_prog_1)
 
         config_1['not_quant_pattern'] = ['last_fc']
@@ -73,17 +86,17 @@ class TestQuantAwareCase1(StaticCase):
             train_prog, place, config=config_1, for_test=True)
         op_nums_2, quant_op_nums_2 = self.get_op_number(quant_prog_2)
         convert_prog_2 = convert(quant_prog_2, place, config=config_1)
-        convert_op_nums_2, convert_quant_op_nums_2 = self.get_op_number(
+        convert_op_nums_2, convert_quant_op_nums_2 = self.get_convert_op_number(
             convert_prog_2)
 
         self.assertTrue(op_nums_1 == op_nums_2)
         # test quant_aware op numbers
-        self.assertTrue(op_nums_1 * 4 == quant_op_nums_1)
+        self.assertTrue(op_nums_1 * 2 == quant_op_nums_1)
         # test convert op numbers
-        self.assertTrue(convert_op_nums_1 * 2 == convert_quant_op_nums_1)
+        self.assertTrue(convert_op_nums_1 == convert_quant_op_nums_1)
         # test skip_quant
-        self.assertTrue(quant_op_nums_1 - 4 == quant_op_nums_2)
-        self.assertTrue(convert_quant_op_nums_1 - 2 == convert_quant_op_nums_2)
+        self.assertTrue(quant_op_nums_1 - 2 == quant_op_nums_2)
+        self.assertTrue(convert_quant_op_nums_1 - 1 == convert_quant_op_nums_2)
 
 
 class TestQuantAwareCase2(StaticCase):

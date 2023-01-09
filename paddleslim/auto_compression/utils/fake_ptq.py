@@ -3,6 +3,7 @@ import paddle
 from paddle.fluid.framework import IrGraph
 from paddle.framework import core
 from paddle.static.quantization import QuantizationTransformPass, QuantizationTransformPassV2, AddQuantDequantPass, AddQuantDequantPassV2, QuantizationFreezePass, QuantWeightPass
+from paddle.static.quantization import utils
 
 try:
     from paddle.static.quantization import quant_config
@@ -11,7 +12,6 @@ try:
     QUANT_DEQUANT_PASS_OP_TYPES = list(
         quant_config.SUPPORT_ACT_QUANTIZATION_OP_DICT.keys())
 except:
-    from paddle.static.quantization import utils
     TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
 

@@ -180,10 +180,10 @@ class ReconstructionQuantization(PostTrainingQuantization):
         # save out_threshold for quantized ops.
         self._save_output_threshold()
 
-        if any(op_type in self._quantizable_op_type
+        if any(op_type in self.quant_config.activation_quant_operation_types
                for op_type in self._dynamic_quantize_op_type):
             self._collect_dynamic_quantize_op_threshold(
-                self._dynamic_quantize_op_type, )
+                self._dynamic_quantize_op_type)
 
         # Move sub blocks persistable var to global block
         global_block = self._program.global_block()
