@@ -139,7 +139,7 @@ class TestQuantAwareCase(StaticCase):
         self.assertTrue(op_nums_1 == op_nums_2)
         # test skip_quant
         self.assertTrue(quant_op_nums_1 - 2 == quant_op_nums_2)
-        self.assertTrue(convert_quant_op_nums_1 - 1 == convert_quant_op_nums_2)
+        self.assertTrue(convert_quant_op_nums_1 == convert_quant_op_nums_2)
 
     def get_op_number(self, prog):
         graph = paddle.fluid.framework.IrGraph(
