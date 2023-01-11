@@ -200,17 +200,15 @@ def compress(args):
 
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):
-            # loss_1, loss_2, loss_3 = exe.run(
-            loss_1, loss_2 = exe.run(
+            loss_1, loss_2, loss_3 = exe.run(
                 parallel_main,
                 feed=data,
-                # fetch_list=[loss.name, avg_cost.name, distill_loss.name])
-                fetch_list=[loss.name, avg_cost.name])
+                fetch_list=[loss.name, avg_cost.name, distill_loss.name])
             if step_id % args.log_period == 0:
                 _logger.info(
                     "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
                     format(epoch_id, step_id,
-                           lr.get_lr(), loss_1[0], loss_2[0], 1))
+                           lr.get_lr(), loss_1[0], loss_2[0], loss_3[0]))
             lr.step()
         val_acc1s = []
         val_acc5s = []
