@@ -197,8 +197,6 @@ def compress(args):
     exe.run(s_startup)
     parallel_main = paddle.static.CompiledProgram(
         student_program, build_strategy=build_strategy)
-    
-    print(student_program)
 
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):
