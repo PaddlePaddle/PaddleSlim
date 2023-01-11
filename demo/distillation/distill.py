@@ -36,7 +36,7 @@ add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
 add_arg('num_epochs',       int,  2,               "The number of total epochs.")
 add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'")
-add_arg('log_period',       int,  1,                 "Log period in batches.")
+add_arg('log_period',       int,  20,                 "Log period in batches.")
 add_arg('model',            str,  "MobileNet",          "Set the network to use.")
 add_arg('pretrained_model', str,  None,                "Whether to use pretrained model.")
 add_arg('teacher_model',    str,  "ResNet50_vd",          "Set the teacher network to use.")
@@ -109,38 +109,37 @@ def compress(args):
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
     with paddle.static.program_guard(student_program, s_startup):
-        with paddle.utils.unique_name.guard():
-            image = paddle.static.data(
-                name='image', shape=[None] + image_shape, dtype='float32')
-            label = paddle.static.data(
-                name='label', shape=[None, 1], dtype='int64')
-            train_loader = paddle.io.DataLoader(
-                train_dataset,
-                places=places,
-                feed_list=[image, label],
-                drop_last=True,
-                batch_size=args.batch_size ,
-                return_list=False,
-                shuffle=True,
-                use_shared_memory=True,
-                num_workers=4)
-            valid_loader = paddle.io.DataLoader(
-                val_dataset,
-                places=place,
-                feed_list=[image, label],
-                drop_last=False,
-                return_list=False,
-                use_shared_memory=True,
-                batch_size=args.batch_size,
-                shuffle=False)
-            # model definition
-            model = models.__dict__[args.model]()
-            out = model.net(input=image, class_dim=class_dim)
-            cost = paddle.nn.functional.loss.cross_entropy(
-                input=out, label=label)
-            avg_cost = paddle.mean(x=cost)
-            acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
-            acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
+        image = paddle.static.data(
+            name='image', shape=[None] + image_shape, dtype='float32')
+        label = paddle.static.data(
+            name='label', shape=[None, 1], dtype='int64')
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            places=places,
+            feed_list=[image, label],
+            drop_last=True,
+            batch_size=args.batch_size ,
+            return_list=False,
+            shuffle=True,
+            use_shared_memory=True,
+            num_workers=4)
+        valid_loader = paddle.io.DataLoader(
+            val_dataset,
+            places=place,
+            feed_list=[image, label],
+            drop_last=False,
+            return_list=False,
+            use_shared_memory=True,
+            batch_size=args.batch_size,
+            shuffle=False)
+        # model definition
+        model = models.__dict__[args.model]()
+        out = model.net(input=image, class_dim=class_dim)
+        cost = paddle.nn.functional.loss.cross_entropy(
+            input=out, label=label)
+        avg_cost = paddle.mean(x=cost)
+        acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
+        acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
 
     val_program = student_program.clone(for_test=True)
     exe = paddle.static.Executor(place)
@@ -177,13 +176,6 @@ def compress(args):
 
     data_name_map = {'image': 'image'}
 
-    print('teacher_program')
-    print(teacher_program)
-
-    print('------------------')
-    print('student_program')
-    print(student_program)
-
     merge(teacher_program, student_program, data_name_map, place)
 
     build_strategy = paddle.static.BuildStrategy()
@@ -197,9 +189,8 @@ def compress(args):
 
     with paddle.static.program_guard(student_program, s_startup):
         distill_loss = soft_label("teacher_fc_0.tmp_0", "fc_0.tmp_0",
-                                  student_program)
+                                student_program)
         loss = avg_cost + distill_loss
-        loss = avg_cost
         lr, opt = create_optimizer(args)
         opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
         opt.minimize(loss)
@@ -207,6 +198,7 @@ def compress(args):
     parallel_main = paddle.static.CompiledProgram(
         student_program, build_strategy=build_strategy)
     
+    print(student_program)
 
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):
