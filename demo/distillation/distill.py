@@ -34,7 +34,7 @@ add_arg('lr',               float,  0.1,               "The learning rate used t
 add_arg('lr_strategy',      str,  "piecewise_decay",   "The learning rate decay strategy.")
 add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.")
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
-add_arg('num_epochs',       int,  2,               "The number of total epochs.")
+add_arg('num_epochs',       int,  120,               "The number of total epochs.")
 add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'")
 add_arg('log_period',       int,  20,                 "Log period in batches.")
 add_arg('model',            str,  "MobileNet",          "Set the network to use.")
@@ -185,7 +185,6 @@ def compress(args):
     dist_strategy.sync_batch_norm = False
     dist_strategy.build_strategy = build_strategy
     dist_strategy.fuse_all_reduce_ops = False
-
 
     with paddle.static.program_guard(student_program, s_startup):
         distill_loss = soft_label("teacher_fc_0.tmp_0", "fc_0.tmp_0",
