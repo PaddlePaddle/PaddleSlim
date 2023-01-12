@@ -130,7 +130,8 @@ class TestQuantAwareWithInferModelCase1(StaticCase):
             'weight_quantize_type': 'channel_wise_abs_max',
             'activation_quantize_type': 'moving_average_abs_max',
             'not_quant_pattern': ['skip_quant'],
-            'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul']
+            'quantize_op_types': ['conv2d', 'depthwise_conv2d', 'mul'],
+            'onnx_format': False
         }
         train_config = {
             "num_epoch": 1,  # training epoch num

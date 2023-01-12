@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import sys
 sys.path.append("../")
 import unittest
@@ -23,70 +24,7 @@ from layers import conv_bn_layer
 import numpy as np
 
 
-class TestQuantAwareCase1(StaticCase):
-    def get_model(self):
-        image = paddle.static.data(
-            name='image', shape=[None, 1, 28, 28], dtype='float32')
-        label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
-        model = MobileNet()
-        out = model.net(input=image, class_dim=10)
-        cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
-        avg_cost = paddle.mean(x=cost)
-        startup_prog = paddle.static.default_startup_program()
-        train_prog = paddle.static.default_main_program()
-        return startup_prog, train_prog
-
-    def get_op_number(self, prog):
-
-        graph = paddle.fluid.framework.IrGraph(
-            paddle.framework.core.Graph(prog.desc), for_test=False)
-        quant_op_nums = 0
-        op_nums = 0
-        for op in graph.all_op_nodes():
-            if op.name() in ['conv2d', 'depthwise_conv2d', 'mul']:
-                op_nums += 1
-            elif 'fake_' in op.name():
-                quant_op_nums += 1
-        return op_nums, quant_op_nums
-
-    def test_quant_op(self):
-        startup_prog, train_prog = self.get_model()
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
-        exe = paddle.static.Executor(place)
-        exe.run(startup_prog)
-        config_1 = {
-            'weight_quantize_type': 'channel_wise_abs_max',
-            'activation_quantize_type': 'moving_average_abs_max',
-            'quantize_op_types': ['depthwise_conv2d', 'mul', 'conv2d'],
-        }
-
-        quant_prog_1 = quant_aware(
-            train_prog, place, config=config_1, for_test=True)
-        op_nums_1, quant_op_nums_1 = self.get_op_number(quant_prog_1)
-        convert_prog_1 = convert(quant_prog_1, place, config=config_1)
-        convert_op_nums_1, convert_quant_op_nums_1 = self.get_op_number(
-            convert_prog_1)
-
-        config_1['not_quant_pattern'] = ['last_fc']
-        quant_prog_2 = quant_aware(
-            train_prog, place, config=config_1, for_test=True)
-        op_nums_2, quant_op_nums_2 = self.get_op_number(quant_prog_2)
-        convert_prog_2 = convert(quant_prog_2, place, config=config_1)
-        convert_op_nums_2, convert_quant_op_nums_2 = self.get_op_number(
-            convert_prog_2)
-
-        self.assertTrue(op_nums_1 == op_nums_2)
-        # test quant_aware op numbers
-        self.assertTrue(op_nums_1 * 4 == quant_op_nums_1)
-        # test convert op numbers
-        self.assertTrue(convert_op_nums_1 * 2 == convert_quant_op_nums_1)
-        # test skip_quant
-        self.assertTrue(quant_op_nums_1 - 4 == quant_op_nums_2)
-        self.assertTrue(convert_quant_op_nums_1 - 2 == convert_quant_op_nums_2)
-
-
-class TestQuantAwareCase2(StaticCase):
+class TestQuantAwareCase(StaticCase):
     def test_accuracy(self):
         image = paddle.static.data(
             name='image', shape=[None, 1, 28, 28], dtype='float32')
@@ -103,7 +41,7 @@ class TestQuantAwareCase2(StaticCase):
             weight_decay=paddle.regularizer.L2Decay(4e-5))
         optimizer.minimize(avg_cost)
         main_prog = paddle.static.default_main_program()
-        val_prog = main_prog.clone(for_test=True)
+        val_prog = paddle.static.default_main_program().clone(for_test=True)
 
         place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
         ) else paddle.CPUPlace()
@@ -173,13 +111,60 @@ class TestQuantAwareCase2(StaticCase):
         }
         quant_train_prog = quant_aware(main_prog, place, config, for_test=False)
         quant_eval_prog = quant_aware(val_prog, place, config, for_test=True)
+        op_nums_1, quant_op_nums_1 = self.get_op_number(quant_eval_prog)
+        # test quant_aware op numbers
+        self.assertTrue(op_nums_1 * 2 == quant_op_nums_1)
+
         train(quant_train_prog)
-        quant_eval_prog, int8_prog = convert(
-            quant_eval_prog, place, config, save_int8=True)
-        top1_2, top5_2 = test(quant_eval_prog)
+        convert_eval_prog = convert(quant_eval_prog, place, config)
+
+        top1_2, top5_2 = test(convert_eval_prog)
         # values before quantization and after quantization should be close
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
         print("after quantization: top1: {}, top5: {}".format(top1_2, top5_2))
+
+        convert_op_nums_1, convert_quant_op_nums_1 = self.get_convert_op_number(
+            convert_eval_prog)
+        # test convert op numbers
+        self.assertTrue(convert_op_nums_1 + 25 == convert_quant_op_nums_1)
+
+        config['not_quant_pattern'] = ['last_fc']
+        quant_prog_2 = quant_aware(
+            main_prog, place, config=config, for_test=True)
+        op_nums_2, quant_op_nums_2 = self.get_op_number(quant_prog_2)
+        convert_prog_2 = convert(quant_prog_2, place, config=config)
+        convert_op_nums_2, convert_quant_op_nums_2 = self.get_convert_op_number(
+            convert_prog_2)
+
+        self.assertTrue(op_nums_1 == op_nums_2)
+        # test skip_quant
+        self.assertTrue(quant_op_nums_1 - 2 == quant_op_nums_2)
+        self.assertTrue(convert_quant_op_nums_1 == convert_quant_op_nums_2)
+
+    def get_op_number(self, prog):
+        graph = paddle.fluid.framework.IrGraph(
+            paddle.framework.core.Graph(prog.desc), for_test=False)
+        quant_op_nums = 0
+        op_nums = 0
+        for op in graph.all_op_nodes():
+            if op.name() in ['conv2d', 'depthwise_conv2d', 'mul']:
+                op_nums += 1
+            elif op.name() == 'quantize_linear':
+                quant_op_nums += 1
+        return op_nums, quant_op_nums
+
+    def get_convert_op_number(self, prog):
+        graph = paddle.fluid.framework.IrGraph(
+            paddle.framework.core.Graph(prog.desc), for_test=True)
+        quant_op_nums = 0
+        op_nums = 0
+        dequant_num = 0
+        for op in graph.all_op_nodes():
+            if op.name() not in ['quantize_linear', 'dequantize_linear']:
+                op_nums += 1
+            elif op.name() == 'quantize_linear':
+                quant_op_nums += 1
+        return op_nums, quant_op_nums
 
 
 if __name__ == '__main__':
