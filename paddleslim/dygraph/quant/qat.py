@@ -57,8 +57,8 @@ _quant_config_default = {
     'quantizable_layer_type': ['Conv2D', 'Linear'],
     # whether fuse conv and bn before QAT
     'fuse_conv_bn': False,
-    # Whether to export the quantized model with format of ONNX. Default is False.
-    'onnx_format': False,
+    # Whether to export the quantized model with format of ONNX. Default is True.
+    'onnx_format': True,
 }
 
 

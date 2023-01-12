@@ -41,9 +41,10 @@ try:
     from paddle.static.quantization import AddQuantDequantPassV2
     from paddle.static.quantization import PostTrainingQuantizationProgram
     from paddle.static.quantization import AddQuantDequantForInferencePass
+    from paddle.static.quantization import quant_config
 except:
     _logger.warning(
-        "Some functions fail to import, please update PaddlePaddle version to 2.4+"
+        "Some functions failed to import, better to update PaddlePaddle to the latest develop version."
     )
 
 WEIGHT_QUANTIZATION_TYPES = [
@@ -61,12 +62,14 @@ ACTIVATION_QUANTIZATION_TYPES_TENSORRT = [
 
 VALID_DTYPES = ['int8']
 try:
+    TRANSFORM_PASS_OP_TYPES = list(
+        quant_config.SUPPORT_WEIGHT_QUANTIZATION_OP_DICT.keys())
+    QUANT_DEQUANT_PASS_OP_TYPES = list(
+        quant_config.SUPPORT_ACT_QUANTIZATION_OP_DICT.keys())
+except:
     from paddle.static.quantization import utils
     TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
-except:
-    TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
-    QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
 
 TENSORRT_OP_TYPES = [
     'mul', 'conv2d', 'pool2d', 'depthwise_conv2d', 'elementwise_add',
@@ -99,11 +102,13 @@ _quant_config_default = {
     # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
     'is_full_quantize': False,
     # if True, use onnx format to quant.
-    'onnx_format': False,
+    'onnx_format': True,
     # quant post to get initial scale for quant_aware
     'quant_post_first': False,
     # whether scale can be train
-    'scale_trainable': True
+    'scale_trainable': True,
+    # Deploy backend, it could be: None, TensorRT, MKLDNN, ARM
+    'deploy_backend': None
 }
 
 
@@ -194,6 +199,32 @@ def _parse_configs(user_config):
 
     assert isinstance(configs['moving_rate'], float), \
         "moving_rate must be float value, The decay coefficient of moving average, default is 0.9."
+
+    deploy_backend = configs['deploy_backend']
+    assert not deploy_backend or deploy_backend.lower() in [
+        'tensorrt', 'mkldnn', 'arm'
+    ], "Deploy Backend {} not support, please choose None, tensorrt or mkldnn.".format(
+        deploy_backend)
+    try:
+        if not deploy_backend:
+            configs['quant_config'] = quant_config.BaseQuantizer(
+                quantizable_op_type=configs['quantize_op_types'],
+                quant_bits=configs['weight_bits'], )
+        elif deploy_backend.lower() == "tensorrt":
+            configs['quant_config'] = quant_config.TensorRTQuantizer(
+                quantizable_op_type=configs['quantize_op_types'],
+                quant_bits=configs['weight_bits'], )
+        elif deploy_backend.lower() == "mkldnn":
+            configs['quant_config'] = quant_config.MKLDNNQuantizer(
+                quantizable_op_type=configs['quantize_op_types'],
+                quant_bits=configs['weight_bits'], )
+        elif deploy_backend.lower() == "arm":
+            configs['quant_config'] = quant_config.ARMCPUQuantizer(
+                quantizable_op_type=configs['quantize_op_types'],
+                quant_bits=configs['weight_bits'], )
+    except:
+        _logger.warning(
+            "Set deploy_backend failed, Please update to PaddlePaddle Develop.")
 
     return configs
 
@@ -388,11 +419,17 @@ def quant_aware(program,
         sub_graphs = [sub_graph for sub_graph in main_graph.all_sub_graphs()]
         transform_pass_ops = []
         quant_dequant_ops = []
-        for op_type in config['quantize_op_types']:
-            if op_type in TRANSFORM_PASS_OP_TYPES:
-                transform_pass_ops.append(op_type)
-            elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
-                quant_dequant_ops.append(op_type)
+        if 'quant_config' in config and config['quant_config']:
+            transform_pass_ops = config[
+                'quant_config'].weight_quant_operation_types
+            quant_dequant_ops = config[
+                'quant_config'].activation_quant_operation_types
+        else:
+            for op_type in config['quantize_op_types']:
+                if op_type in TRANSFORM_PASS_OP_TYPES:
+                    transform_pass_ops.append(op_type)
+                elif op_type in QUANT_DEQUANT_PASS_OP_TYPES:
+                    quant_dequant_ops.append(op_type)
         if len(transform_pass_ops) > 0:
             trannsform_func = 'QuantizationTransformPassV2' if config[
                 'onnx_format'] else 'QuantizationTransformPass'
@@ -486,8 +523,8 @@ def quant_post_static(executor,
                       hist_percent=0.9999,
                       bias_correction=False,
                       quantizable_op_type=[
-                          "conv2d", "depthwise_conv2d", "mul", "matmul",
-                          "matmul_v2"
+                          "conv2d", "depthwise_conv2d", "conv2d_transpose",
+                          "mul", "matmul", "matmul_v2"
                       ],
                       is_full_quantize=False,
                       weight_bits=8,
@@ -495,10 +532,9 @@ def quant_post_static(executor,
                       activation_quantize_type='range_abs_max',
                       weight_quantize_type='channel_wise_abs_max',
                       optimize_model=False,
-                      onnx_format=False,
+                      onnx_format=True,
                       skip_tensor_list=None,
-                      is_use_cache_file=False,
-                      cache_dir="./temp_post_training"):
+                      deploy_backend=None):
     """
     The function utilizes static post training quantization method to
     quantize the fp32 model. It uses calibrate data to calculate the
@@ -568,10 +604,11 @@ def quant_post_static(executor,
         optimize_model(bool, optional): If set optimize_model as True, it applies some 
                 passes to optimize the model before quantization. So far, the place of
                 executor must be cpu it supports fusing batch_norm into convs.
-        onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is False.
+        onnx_format(bool): Whether to export the quantized model with format of ONNX. Default is True.
         skip_tensor_list(list): List of skip quant tensor name.
-        is_use_cache_file(bool): This param is deprecated.
-        cache_dir(str): This param is deprecated.
+        deploy_backend(str): Deploy backend, it could be None, TensorRT, MKLDNN, ARM.
+                Other backends will continue to expand, the default is None, which means to
+                use the default general quantization configuration.
     
     Returns:
         None
@@ -599,8 +636,10 @@ def quant_post_static(executor,
             activation_quantize_type=activation_quantize_type,
             weight_quantize_type=weight_quantize_type,
             onnx_format=onnx_format,
-            skip_tensor_list=skip_tensor_list,  # support in Paddle >= 2.3.1
-            optimize_model=optimize_model)
+            skip_tensor_list=skip_tensor_list,
+            optimize_model=optimize_model,
+            deploy_backend=deploy_backend,  # support at Paddle develop
+        )
     except:
         post_training_quantization = PostTrainingQuantization(
             executor=executor,
@@ -624,6 +663,7 @@ def quant_post_static(executor,
             activation_quantize_type=activation_quantize_type,
             weight_quantize_type=weight_quantize_type,
             onnx_format=onnx_format,
+            skip_tensor_list=skip_tensor_list,
             optimize_model=optimize_model)
 
     post_training_quantization.quantize()
@@ -639,12 +679,7 @@ def quant_post_static(executor,
 quant_post = quant_post_static
 
 
-def convert(program,
-            place,
-            config=None,
-            scope=None,
-            save_int8=False,
-            save_clip_ranges_path='./'):
+def convert(program, place, config=None, scope=None, save_int8=False):
     """
     convert quantized and well-trained ``program`` to final  quantized
     ``program``that can be used to  save ``inference model``.
@@ -666,7 +701,6 @@ def convert(program,
         save_int8: Whether to return ``program`` which model parameters'
                 dtype is ``int8``. This parameter can only be used to
                 get model size. Default: ``False``.
-        save_clip_ranges_path: If config.onnx_format=True, quantization clip ranges will be saved locally.
 
     Returns:
         Tuple : freezed program which can be used for inference.
@@ -732,6 +766,9 @@ def convert(program,
             persistables.extend(_op.input('X'))
             _op.desc.set_input("X", persistables)
 
+    assert not (
+        save_int8 and config['onnx_format']
+    ), "When onnx_format=True, already saved int8 weight,so you can't set save_int8=True."
     if save_int8:
         convert_int8_pass = ConvertToInt8Pass(scope=scope, place=place)
         for sub_graph in test_graph.all_sub_graphs():
