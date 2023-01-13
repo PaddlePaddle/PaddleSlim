@@ -216,7 +216,7 @@ class AnalysisQAT(object):
             with paddle.static.scope_guard(float_scope):
                 float_preds = executor.run(program=float_program,
                                            feed=data,
-                                           fetch_list=self.fetch_list,
+                                           fetch_list=self.float_fetch_list,
                                            return_numpy=False)
                 float_preds = float_preds[0]
             with paddle.static.scope_guard(quant_scope):
@@ -253,11 +253,12 @@ class AnalysisQAT(object):
                     idx + 1, len(self.inputs_of_quantized_op), weight_name))
 
             with paddle.static.scope_guard(float_scope):
-                [float_program, _, _] = load_inference_model(
-                    self.float_model_dir,
-                    executor=executor,
-                    model_filename=self.model_filename,
-                    params_filename=self.params_filename)
+                [float_program, self.float_feed_list,
+                 self.float_fetch_list] = load_inference_model(
+                     self.float_model_dir,
+                     executor=executor,
+                     model_filename=self.model_filename,
+                     params_filename=self.params_filename)
 
             with paddle.static.scope_guard(quant_scope):
                 [program, self.feed_list,
