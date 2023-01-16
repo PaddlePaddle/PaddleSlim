@@ -2,15 +2,18 @@ import os
 import paddle
 from paddle.fluid.framework import IrGraph
 from paddle.framework import core
-from paddle.fluid.contrib.slim.quantization import QuantizationTransformPass, QuantizationTransformPassV2, AddQuantDequantPass, AddQuantDequantPassV2, QuantizationFreezePass, QuantWeightPass
+from paddle.static.quantization import QuantizationTransformPass, QuantizationTransformPassV2, AddQuantDequantPass, AddQuantDequantPassV2, QuantizationFreezePass, QuantWeightPass
+from paddle.static.quantization import utils
 
 try:
-    from paddle.fluid.contrib.slim.quantization import utils
+    from paddle.static.quantization import quant_config
+    TRANSFORM_PASS_OP_TYPES = list(
+        quant_config.SUPPORT_WEIGHT_QUANTIZATION_OP_DICT.keys())
+    QUANT_DEQUANT_PASS_OP_TYPES = list(
+        quant_config.SUPPORT_ACT_QUANTIZATION_OP_DICT.keys())
+except:
     TRANSFORM_PASS_OP_TYPES = utils._weight_supported_quantizable_op_type
     QUANT_DEQUANT_PASS_OP_TYPES = utils._act_supported_quantizable_op_type
-except:
-    TRANSFORM_PASS_OP_TYPES = QuantizationTransformPass._supported_quantizable_op_type
-    QUANT_DEQUANT_PASS_OP_TYPES = AddQuantDequantPass._supported_quantizable_op_type
 
 from ...common.load_model import load_inference_model
 
@@ -155,7 +158,9 @@ def post_quant_fake(executor,
 
         for block_id in range(len(_program.blocks)):
             for op in _program.blocks[block_id].ops:
-                if op.type in (_quantizable_op_type + utils._out_scale_op_list):
+                if op.type in (
+                        _quantizable_op_type +
+                        list(quant_config.SUPPORT_QUANTIZATION_OP_DICT.keys())):
                     out_var_names = utils._get_op_output_var_names(op)
                     for var_name in out_var_names:
                         analysis_and_save_info(op, var_name)

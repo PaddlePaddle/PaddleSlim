@@ -311,9 +311,7 @@ def export_quant_infermodel(
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
     ############################################################################################################
-    float_program, int8_program = convert(test_program, place, quant_config, \
-                                          scope=scope, \
-                                          save_int8=True)
+    float_program = convert(test_program, place, quant_config, scope=scope)
     ############################################################################################################
     # 4. Save inference model
     ############################################################################################################

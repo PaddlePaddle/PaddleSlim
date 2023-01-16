@@ -17,11 +17,16 @@ import logging
 
 import paddle
 import paddle.nn as nn
-import paddle.fluid.contrib.slim.quantization as Q
-from paddle.fluid.contrib.slim.quantization import AbsmaxQuantizer
-from paddle.fluid.contrib.slim.quantization import HistQuantizer
-from paddle.fluid.contrib.slim.quantization import KLQuantizer
-from paddle.fluid.contrib.slim.quantization import PerChannelAbsmaxQuantizer
+
+from paddle.quantization import (
+    PTQConfig,
+    ImperativePTQ,
+    AbsmaxQuantizer,
+    HistQuantizer,
+    KLQuantizer,
+    PerChannelAbsmaxQuantizer,
+    SUPPORT_ACT_QUANTIZERS,
+    SUPPORT_WT_QUANTIZERS, )
 from ...common import get_logger
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -56,14 +61,14 @@ class PTQ(object):
         print("activation_quantizer", activation_quantizer)
         activation_quantizer = eval(activation_quantizer)(**kwargs)
         weight_quantizer = eval(weight_quantizer)()
-        assert isinstance(activation_quantizer, tuple(Q.SUPPORT_ACT_QUANTIZERS))
-        assert isinstance(weight_quantizer, tuple(Q.SUPPORT_WT_QUANTIZERS))
+        assert isinstance(activation_quantizer, tuple(SUPPORT_ACT_QUANTIZERS))
+        assert isinstance(weight_quantizer, tuple(SUPPORT_WT_QUANTIZERS))
 
-        quant_config = Q.PTQConfig(
+        quant_config = PTQConfig(
             activation_quantizer=activation_quantizer,
             weight_quantizer=weight_quantizer)
 
-        self.ptq = Q.ImperativePTQ(quant_config=quant_config)
+        self.ptq = ImperativePTQ(quant_config=quant_config)
 
     def quantize(self, model, inplace=False, fuse=False, fuse_list=None):
         """

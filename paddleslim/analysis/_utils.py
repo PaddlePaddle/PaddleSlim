@@ -19,9 +19,11 @@ import paddle
 import paddleslim
 import subprocess
 import time
-import ssl
 import requests
 import shutil
+import logging
+from ..common import get_logger
+_logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
     "save_cls_model", "save_det_model", "nearest_interpolate", "opt_model",
     "load_predictor"
@@ -36,7 +38,7 @@ def _get_download(url, fullname):
     try:
         req = requests.get(url, stream=True)
     except Exception as e:  # requests.exceptions.ConnectionError
-        logger.info("Downloading {} from {} failed with exception {}".format(
+        _logger.info("Downloading {} from {} failed with exception {}".format(
             fname, url, str(e)))
         return False
 
