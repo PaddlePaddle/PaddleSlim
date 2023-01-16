@@ -64,7 +64,7 @@ def parse_args():
 def transform_and_save_int8_model(original_path, save_path):
     place = paddle.CPUPlace()
     exe = paddle.static.Executor(place)
-    inference_scope = paddle.static.Executor.global_scope()
+    inference_scope = paddle.static.global_scope()
     model_filename = 'model.pdmodel'
     params_filename = 'model.pdiparams'
 
