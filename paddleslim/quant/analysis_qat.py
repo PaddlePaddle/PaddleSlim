@@ -160,7 +160,7 @@ class AnalysisQAT(object):
                                                   op_node.input('X')[0])
                 out_var = graph._find_node_by_name(op_node.outputs,
                                                    op_node.output('Y')[0])
-                if 'quantized' in in_var.name():
+                if not in_var.persistable():
                     # act
                     for op in graph.all_op_nodes():
                         o_ns = op.output_arg_names()
@@ -173,8 +173,9 @@ class AnalysisQAT(object):
                 else:
                     # weight
                     with paddle.static.scope_guard(float_scope):
+                        float_name = in_var.name().replace('.quantized', '')
                         float_weight = np.array(
-                            float_scope.find_var(in_var.name()).get_tensor())
+                            float_scope.find_var(float_name).get_tensor())
                     with paddle.static.scope_guard(quant_scope):
                         quant_scope.find_var(in_var.name()).get_tensor().set(
                             float_weight, self.places)
