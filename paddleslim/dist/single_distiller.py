@@ -14,6 +14,7 @@
 
 import numpy as np
 import paddle
+from ..common.recover_program import _recover_outputs_attr
 from paddleslim.core import GraphWrapper
 import paddle.nn.functional as F
 
@@ -76,7 +77,9 @@ def merge(teacher_program,
         scope = paddle.static.global_scope()
     if teacher_scope == None:
         teacher_scope = scope
+
     teacher_program = teacher_program.clone(for_test=True)
+    teacher_program = _recover_outputs_attr(teacher_program)
 
     is_same_model = True
     if len(student_program.blocks) == len(teacher_program.blocks):
