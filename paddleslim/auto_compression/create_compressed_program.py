@@ -25,6 +25,7 @@ from ..common import get_logger
 from .strategy_config import ProgramInfo
 from ..common.load_model import load_inference_model
 from ..analysis import flops
+from .loss_scale import LossScaling
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
@@ -78,10 +79,8 @@ def _create_optimizer(train_config):
     ### build optimizer
     optim_params = optimizer_builder['optimizer']
     optim_type = optim_params.pop('type')
-    opt = getattr(optimizer, optim_type)(learning_rate=lr,
-                                         grad_clip=grad_clip,
-                                         weight_decay=reg,
-                                         **optim_params)
+    opt = getattr(optimizer, optim_type)(
+        learning_rate=lr, grad_clip=grad_clip, weight_decay=reg, **optim_params)
     return opt, lr
 
 
@@ -160,8 +159,8 @@ def _parse_distill_loss(distill_node_pair,
     for node, loss_clas, lam in zip(distill_node_pair, distill_loss,
                                     distill_lambda):
         tmp_loss = losses.get(loss_clas, 0.0)
-        _logger.info("train config.distill_node_pair: {}".format(
-            node, loss_clas, lam))
+        _logger.info(
+            "train config.distill_node_pair: {}".format(node, loss_clas, lam))
         assert len(node) % 2 == 0, \
             "distill_node_pair config wrong, the length needs to be an even number"
         for i in range(len(node) // 2):
@@ -347,6 +346,8 @@ def build_distill_program(executor,
     with paddle.static.program_guard(train_program, startup_program):
         with paddle.utils.unique_name.guard('merge'):
             optimizer, learning_rate = _create_optimizer(train_config)
+            if train_config.get('amp_config') is None:
+                optimizer = LossScaling(optimizer)
 
             if train_config.get('use_fleet'):
                 optimizer = fleet.distributed_optimizer(optimizer,
@@ -529,9 +530,7 @@ def build_prune_program(executor,
             original_shapes = {}
             for param in train_program_info.program.global_block(
             ).all_parameters():
-                if config[
-                        'prune_params_name'] is not None and param.name in config[
-                            'prune_params_name']:
+                if config['prune_params_name'] is not None and param.name in config['prune_params_name']:
                     params.append(param.name)
                     original_shapes[param.name] = param.shape
 
@@ -541,9 +540,8 @@ def build_prune_program(executor,
             train_program_info.program,
             paddle.static.global_scope(),
             params=params,
-            ratios=[config['pruned_ratio']] * len(params)
-            if isinstance(config['pruned_ratio'], float) else
-            config['pruned_ratio'],
+            ratios=[config['pruned_ratio']] * len(params) if isinstance(
+                config['pruned_ratio'], float) else config['pruned_ratio'],
             place=place)
         _logger.info(
             "####################channel pruning##########################")

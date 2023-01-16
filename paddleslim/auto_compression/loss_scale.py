@@ -145,7 +145,7 @@ def update_loss_scaling(
 class LossScaling:
     def __init__(self,
                  optimizer,
-                 init_loss_scaling=2**15,
+                 init_loss_scaling=2**31,
                  incr_every_n_steps=2,
                  decr_every_n_nan_or_inf=2,
                  incr_ratio=2.0,
