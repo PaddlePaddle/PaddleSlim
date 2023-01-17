@@ -3,9 +3,11 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+from random import sample
 import sys
 import math
 import logging
+from xmlrpc.client import FastMarshaller
 import paddle
 import argparse
 import functools
@@ -25,7 +27,7 @@ _logger.setLevel(logging.INFO)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size',       int,  64,                 "Minibatch size.")
+add_arg('batch_size',       int,  256,                 "Minibatch size.")
 add_arg('use_gpu',          bool, True,                "Whether to use GPU or not.")
 add_arg('save_inference',   bool, False,                "Whether to save inference model.")
 add_arg('total_images',     int,  1281167,              "Training image number.")
@@ -36,12 +38,13 @@ add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
 add_arg('num_epochs',       int,  120,               "The number of total epochs.")
 add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'")
-add_arg('log_period',       int,  20,                 "Log period in batches.")
+add_arg('log_period',       int,  1,                 "Log period in batches.")
 add_arg('model',            str,  "MobileNet",          "Set the network to use.")
 add_arg('pretrained_model', str,  None,                "Whether to use pretrained model.")
 add_arg('teacher_model',    str,  "ResNet50_vd",          "Set the teacher network to use.")
 add_arg('teacher_pretrained_model', str,  "./ResNet50_vd_pretrained",                "Whether to use pretrained model.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
+parser.add_argument('--fleet', action='store_true')
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -80,7 +83,8 @@ def create_optimizer(args):
 
 def compress(args):
 
-    fleet.init(is_collective=True)
+    if args.fleet:
+        fleet.init(is_collective=True)
 
     if args.data == "cifar10":
         train_dataset = paddle.vision.datasets.Cifar10(mode='train')
@@ -113,15 +117,19 @@ def compress(args):
             name='image', shape=[None] + image_shape, dtype='float32')
         label = paddle.static.data(
             name='label', shape=[None, 1], dtype='int64')
+        sampler = paddle.io.DistributedBatchSampler(
+            train_dataset,
+            shuffle=False,
+            drop_last=True,
+            batch_size=args.batch_size ,
+        )
         train_loader = paddle.io.DataLoader(
             train_dataset,
             places=places,
             feed_list=[image, label],
-            drop_last=True,
-            batch_size=args.batch_size ,
+            batch_sampler=sampler,
             return_list=False,
-            shuffle=True,
-            use_shared_memory=True,
+            use_shared_memory=False,
             num_workers=4)
         valid_loader = paddle.io.DataLoader(
             val_dataset,
@@ -129,7 +137,7 @@ def compress(args):
             feed_list=[image, label],
             drop_last=False,
             return_list=False,
-            use_shared_memory=True,
+            use_shared_memory=False,
             batch_size=args.batch_size,
             shuffle=False)
         # model definition
@@ -179,35 +187,58 @@ def compress(args):
     merge(teacher_program, student_program, data_name_map, place)
 
     build_strategy = paddle.static.BuildStrategy()
-    build_strategy.fuse_all_reduce_ops = False
+    # build_strategy.fuse_all_reduce_ops = False
 
     dist_strategy = DistributedStrategy()
-    dist_strategy.sync_batch_norm = False
-    dist_strategy.build_strategy = build_strategy
-    dist_strategy.fuse_all_reduce_ops = False
+    # dist_strategy.sync_batch_norm = False
+    # dist_strategy.build_strategy = build_strategy
+    # dist_strategy.fuse_all_reduce_ops = False
+    # dist_strategy.nccl_comm_num = 1
+    # dist_strategy.fuse_all_reduce_ops = True
+    # dist_strategy.fuse_grad_size_in_MB = 16
 
     with paddle.static.program_guard(student_program, s_startup):
         distill_loss = soft_label("teacher_fc_0.tmp_0", "fc_0.tmp_0",
                                 student_program)
         loss = avg_cost + distill_loss
         lr, opt = create_optimizer(args)
-        opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
+        if args.fleet:
+            opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
         opt.minimize(loss)
     exe.run(s_startup)
-    parallel_main = paddle.static.CompiledProgram(
-        student_program, build_strategy=build_strategy)
+    if args.fleet:
+        parallel_main = paddle.static.CompiledProgram(
+            student_program, build_strategy=build_strategy)
+    else:
+        parallel_main = paddle.static.CompiledProgram(
+                student_program).with_data_parallel(
+            loss_name=loss.name, build_strategy=build_strategy)
 
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):
             loss_1, loss_2, loss_3 = exe.run(
                 parallel_main,
                 feed=data,
-                fetch_list=[loss.name, avg_cost.name, distill_loss.name])
-            if step_id % args.log_period == 0:
+                fetch_list=[loss.name, avg_cost.name, distill_loss.name],
+                return_merged=True if args.fleet or True else False)
+            # _logger.info(data[0]['image'].shape())
+            if step_id % args.log_period == 0 and args.fleet:
                 _logger.info(
                     "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
                     format(epoch_id, step_id,
                            lr.get_lr(), loss_1[0], loss_2[0], loss_3[0]))
+            else:
+                _logger.info(
+                    "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
+                    format(epoch_id, step_id,
+                           lr.get_lr(), loss_1[0], loss_2[0], loss_3[0]))
+                # _logger.info(
+                #     "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
+                #     format(epoch_id, step_id,
+                #            lr.get_lr(), 0, 0, 0))
+                # _logger.info(loss_1)
+                # _logger.info(loss_2)
+                # _logger.info(loss_3)
             lr.step()
         val_acc1s = []
         val_acc5s = []
@@ -240,4 +271,10 @@ def main():
 
 if __name__ == '__main__':
     paddle.enable_static()
+    paddle.seed(1234)
+    import numpy as np
+    np.random.seed(0)
+    import random
+    random.seed(0)
+
     main()
