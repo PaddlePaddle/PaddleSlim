@@ -83,7 +83,7 @@ class QuantConfig(object):
         """QuantConfig init"""
         self.executor = executor
         self.place = place
-        self.float_infer_model_path = float_infer_model_path
+        self.float_infer_model_path = float_infer_model_path.rstrip('/')
         self.quantize_model_path = quantize_model_path
         self.algo = algo,
         self.hist_percent = hist_percent,
