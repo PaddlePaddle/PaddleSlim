@@ -241,9 +241,9 @@ class AutoCompression:
         ], f'Type of input_shapes should be in [dict, tuple or list] but got {type(input_shapes)}.'
         paddle.enable_static()
         exe = paddle.static.Executor(paddle.CPUPlace())
-        [inference_program, feed_target_names,
-         fetch_targets] = load_inference_model(model_dir, exe, model_filename,
-                                               params_filename)
+        [inference_program,
+         feed_target_names, fetch_targets] = load_inference_model(
+             model_dir, exe, model_filename, params_filename)
 
         if type(input_shapes) in [list, tuple]:
             assert len(
@@ -451,30 +451,29 @@ class AutoCompression:
         strategy.build_strategy = build_strategy
         if train_config.recompute_config is not None:
             strategy.recompute = True
-            strategy.recompute_configs = { ** train_config.recompute_config}
+            strategy.recompute_configs = {**train_config.recompute_config}
         if train_config.sharding_config is not None:
             strategy.sharding = True
-            strategy.sharding_configs = { ** train_config.sharding_config}
+            strategy.sharding_configs = {**train_config.sharding_config}
         if train_config.amp_config is not None:
             strategy.amp = True
-            strategy.amp_configs = { ** train_config.amp_config}
+            strategy.amp_configs = {**train_config.amp_config}
         if train_config.asp_config is not None:
             strategy.asp = True
         return strategy
 
     def _prepare_program(self, program, feed_target_names, fetch_targets,
                          patterns, strategy, config, train_config):
-        train_program = recover_inference_program(program)
         startup_program = paddle.static.Program()
+        train_program = recover_inference_program(program, startup_program)
         train_program_info = ProgramInfo(startup_program, train_program,
                                          feed_target_names, fetch_targets)
 
         config_dict = config.__dict__
-        if "prune_strategy" in config_dict and config_dict[
-                "prune_strategy"] == "gmp" and config_dict[
-                    'gmp_config'] is None:
+        if "prune_strategy" in config_dict and config_dict["prune_strategy"] == "gmp" and config_dict['gmp_config'] is None:
             _logger.info(
-                "Calculating the iterations per epoch……(It will take some time)")
+                "Calculating the iterations per epoch……(It will take some time)"
+            )
             # NOTE:XXX: This way of calculating the iters needs to be improved.
             if train_config.epochs:
                 iters_per_epoch = len(list(self.train_dataloader()))
@@ -587,9 +586,8 @@ class AutoCompression:
         train_config = None
         strategy_idx = None
         self.final_metric = -1.0
-        for strategy_idx, (
-                strategy, config, train_config
-        ) in enumerate(zip(self._strategy, self._config, self.train_config)):
+        for strategy_idx, (strategy, config, train_config) in enumerate(
+                zip(self._strategy, self._config, self.train_config)):
             self.single_strategy_compress(strategy, config, strategy_idx,
                                           train_config)
 
@@ -815,7 +813,7 @@ class AutoCompression:
                         train_config.eval_iter) == 0 and total_train_iter != 0:
                     if self.eval_function is not None:
 
-                        # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation. 
+                        # GMP pruner step 3: update params before summrizing sparsity, saving model or evaluation.
                         if 'unstructure' in strategy:
                             self._pruner.update_params()
 
