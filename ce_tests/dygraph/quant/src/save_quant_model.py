@@ -23,7 +23,7 @@ import numpy as np
 import time
 import paddle
 from paddle.fluid.framework import IrGraph
-from paddle.fluid.contrib.slim.quantization import Quant2Int8MkldnnPass
+from paddle.static.quantization import Quant2Int8MkldnnPass
 from paddle.framework import core
 
 paddle.enable_static()
@@ -64,7 +64,7 @@ def parse_args():
 def transform_and_save_int8_model(original_path, save_path):
     place = paddle.CPUPlace()
     exe = paddle.static.Executor(place)
-    inference_scope = paddle.static.Executor.global_scope()
+    inference_scope = paddle.static.global_scope()
     model_filename = 'model.pdmodel'
     params_filename = 'model.pdiparams'
 

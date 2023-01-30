@@ -139,9 +139,10 @@ def main():
     train_loader = create('EvalReader')(reader_cfg['TrainDataset'],
                                         reader_cfg['worker_num'],
                                         return_list=True)
-    global_config['input_list'] = get_feed_vars(
-        global_config['model_dir'], global_config['model_filename'],
-        global_config['params_filename'])
+    if global_config.get('input_list') is None:
+        global_config['input_list'] = get_feed_vars(
+            global_config['model_dir'], global_config['model_filename'],
+            global_config['params_filename'])
     train_loader = reader_wrapper(train_loader, global_config['input_list'])
 
     if 'Evaluation' in global_config.keys() and global_config[

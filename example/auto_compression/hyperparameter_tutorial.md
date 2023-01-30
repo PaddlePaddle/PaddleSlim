@@ -276,7 +276,7 @@ print(f"Operators in inference model:\n{op_types.keys()}")
 
 执行以下代码，查看当前PaddlePaddle版本的量化功能所支持的OP类型：
 ```
-from paddle.fluid.contrib.slim.quantization.utils import _weight_supported_quantizable_op_type, _act_supported_quantizable_op_type
+from paddle.static.quantization.utils import _weight_supported_quantizable_op_type, _act_supported_quantizable_op_type
 print(f"_supported_quantizable_op_type:\n{_weight_supported_quantizable_op_type}")
 print(f"_supported_quantizable_op_type:\n{_act_supported_quantizable_op_type}")
 ```

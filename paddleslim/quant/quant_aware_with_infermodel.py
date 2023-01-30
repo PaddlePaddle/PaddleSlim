@@ -37,25 +37,34 @@ _logger = get_logger(__name__, level=logging.INFO)
 ############################################################################################################
 _train_config_default = {
     # configs of training aware quantization with infermodel
-    "num_epoch": 1000,  # training epoch num
-    "max_iter": -1,  # max training iteration num
+    "num_epoch":
+    1000,  # training epoch num
+    "max_iter":
+    -1,  # max training iteration num
     "save_iter_step":
     1000,  # save quant model checkpoint every save_iter_step iteration
-    "learning_rate": 0.0001,  # learning rate
-    "weight_decay": 0.0001,  # weight decay
-    "use_pact": False,  # use pact quantization or not
+    "learning_rate":
+    0.0001,  # learning rate
+    "weight_decay":
+    0.0001,  # weight decay
+    "use_pact":
+    False,  # use pact quantization or not
     # quant model checkpoints save path
-    "quant_model_ckpt_path": "./quant_model_checkpoints/",
+    "quant_model_ckpt_path":
+    "./quant_model_checkpoints/",
     # storage directory of teacher model + teacher model name (excluding suffix)
-    "teacher_model_path_prefix": None,
+    "teacher_model_path_prefix":
+    None,
     # storage directory of model + model name (excluding suffix)
-    "model_path_prefix": None,
+    "model_path_prefix":
+    None,
     """ distillation node configuration: 
         the name of the distillation supervision nodes is configured as a list, 
         and the teacher node and student node are arranged in pairs.
         for example, ["teacher_fc_0.tmp_0", "fc_0.tmp_0", "teacher_batch_norm_24.tmp_4", "batch_norm_24.tmp_4"]
     """
-    "node": None
+    "node":
+    None
 }
 
 
@@ -184,9 +193,9 @@ def quant_aware_with_infermodel(executor,
         place,
         quant_config,
         scope=scope,
-        act_preprocess_func=act_preprocess_func,
-        optimizer_func=optimizer_func,
-        executor=pact_executor,
+        act_preprocess_func=None,
+        optimizer_func=None,
+        executor=None,
         for_test=True)
     train_program = quant_aware(
         train_program,
@@ -225,8 +234,7 @@ def quant_aware_with_infermodel(executor,
                 test_callback(compiled_test_prog, test_feed_names,
                               test_fetch_list, checkpoint_name)
             iter_sum += 1
-            if train_config["max_iter"] >= 0 and iter_sum > train_config[
-                    "max_iter"]:
+            if train_config["max_iter"] >= 0 and iter_sum > train_config["max_iter"]:
                 return
 
 
@@ -311,9 +319,7 @@ def export_quant_infermodel(
     #    operators' order for the inference.
     #    The dtype of float_program's weights is float32, but in int8 range.
     ############################################################################################################
-    float_program, int8_program = convert(test_program, place, quant_config, \
-                                          scope=scope, \
-                                          save_int8=True)
+    float_program = convert(test_program, place, quant_config, scope=scope)
     ############################################################################################################
     # 4. Save inference model
     ############################################################################################################
