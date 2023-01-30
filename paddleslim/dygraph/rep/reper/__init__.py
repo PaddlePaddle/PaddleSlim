@@ -1,4 +1,4 @@
-# Copyright (c) 2022  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2023  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import rep
-from . import config
-from . import reper
+from . import diversebranchblock
+from . import acblock
+from . import base
 
-from .rep import Reparameter
-from .config import *
-from .reper import *
+from .diversebranchblock import DiverseBranchBlock
+from .acblock import ACBlock
 
 __all__ = []
-__all__ += rep.__all__
-__all__ += config.__all__
-__all__ += reper.__all__
+__all__ += diversebranchblock.__all__
+__all__ += acblock.__all__

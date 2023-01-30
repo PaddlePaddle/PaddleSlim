@@ -20,7 +20,7 @@ import logging
 import paddle
 
 from paddleslim.common import get_logger
-from paddleslim import Reparameterization
+from paddleslim.dygraph.rep import Reparameter, DBBRepConfig, ACBRepConfig
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -38,8 +38,7 @@ class ImperativeLenet(paddle.nn.Layer):
                 bias_attr=False),
             paddle.nn.BatchNorm2D(6),
             paddle.nn.ReLU(),
-            paddle.nn.MaxPool2D(
-                kernel_size=2, stride=2),
+            paddle.nn.MaxPool2D(kernel_size=2, stride=2),
             paddle.nn.Conv2D(
                 in_channels=6,
                 out_channels=16,
@@ -47,19 +46,14 @@ class ImperativeLenet(paddle.nn.Layer):
                 stride=1,
                 padding=0),
             paddle.nn.BatchNorm2D(16),
-            paddle.nn.PReLU(),
-            paddle.nn.MaxPool2D(
-                kernel_size=2, stride=2))
+            paddle.nn.PReLU(), paddle.nn.MaxPool2D(kernel_size=2, stride=2))
 
         self.fc = paddle.nn.Sequential(
-            paddle.nn.Linear(
-                in_features=400, out_features=120),
+            paddle.nn.Linear(in_features=400, out_features=120),
             paddle.nn.LeakyReLU(),
-            paddle.nn.Linear(
-                in_features=120, out_features=84),
+            paddle.nn.Linear(in_features=120, out_features=84),
             paddle.nn.Sigmoid(),
-            paddle.nn.Linear(
-                in_features=84, out_features=num_classes),
+            paddle.nn.Linear(in_features=84, out_features=num_classes),
             paddle.nn.Softmax())
 
     def forward(self, inputs):
@@ -74,17 +68,6 @@ class TestRep(unittest.TestCase):
     """
     Test dygraph reparameterization.
     """
-
-    def calibrate(self, model, test_reader, batch_num=10):
-        model.eval()
-        for batch_id, data in enumerate(test_reader):
-            img = paddle.to_tensor(data[0])
-            img = paddle.reshape(img, [-1, 1, 28, 28])
-
-            out = model(img)
-
-            if batch_num + 1 >= batch_num:
-                break
 
     def model_test(self, model, test_reader):
         model.eval()
@@ -171,8 +154,9 @@ class TestRep(unittest.TestCase):
         _logger.info("test fp32 model")
         fp32_top1, fp32_top5 = self.model_test(fp32_lenet, test_reader)
 
-        reper = Reparameterization(algo="DBB")
-        reper(fp32_lenet)
+        rep_config = DBBRepConfig()
+        reper = Reparameter(rep_config)
+        reper.prepare(fp32_lenet)
 
         _logger.info("train the DBB reparameterization model")
         self.model_train(fp32_lenet, train_reader)
@@ -180,14 +164,14 @@ class TestRep(unittest.TestCase):
         rep_top1, rep_top5 = self.model_test(fp32_lenet, test_reader)
 
         _logger.info("save and test the DBB reparameterization model")
-        reper.convert_to_deploy()
+        reper.convert(fp32_lenet)
         save_path = "./tmp/model"
         input_spec = paddle.static.InputSpec(
             shape=[None, 1, 28, 28], dtype='float32')
         paddle.jit.save(fp32_lenet, save_path, input_spec=[input_spec])
 
-        _logger.info("FP32 acc: top1: {}, top5: {}".format(fp32_top1,
-                                                           fp32_top5))
+        _logger.info(
+            "FP32 acc: top1: {}, top5: {}".format(fp32_top1, fp32_top5))
         _logger.info("Int acc: top1: {}, top5: {}".format(rep_top1, rep_top5))
 
         diff = 0.005
@@ -232,8 +216,9 @@ class TestRep(unittest.TestCase):
         _logger.info("test fp32 model")
         fp32_top1, fp32_top5 = self.model_test(fp32_lenet, test_reader)
 
-        reper = Reparameterization(algo="ACB")
-        reper(fp32_lenet)
+        rep_config = ACBRepConfig()
+        reper = Reparameter(rep_config)
+        reper.prepare(fp32_lenet)
 
         _logger.info("train the ACB reparameterization model")
         self.model_train(fp32_lenet, train_reader)
@@ -241,14 +226,14 @@ class TestRep(unittest.TestCase):
         rep_top1, rep_top5 = self.model_test(fp32_lenet, test_reader)
 
         _logger.info("save and test the ACB reparameterization model")
-        reper.convert_to_deploy()
+        reper.convert(fp32_lenet)
         save_path = "./tmp/model"
         input_spec = paddle.static.InputSpec(
             shape=[None, 1, 28, 28], dtype='float32')
         paddle.jit.save(fp32_lenet, save_path, input_spec=[input_spec])
 
-        _logger.info("FP32 acc: top1: {}, top5: {}".format(fp32_top1,
-                                                           fp32_top5))
+        _logger.info(
+            "FP32 acc: top1: {}, top5: {}".format(fp32_top1, fp32_top5))
         _logger.info("Int acc: top1: {}, top5: {}".format(rep_top1, rep_top5))
 
         diff = 0.005

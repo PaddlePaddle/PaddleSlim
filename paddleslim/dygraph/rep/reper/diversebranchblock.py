@@ -1,4 +1,4 @@
-# Copyright (c) 2022  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2023  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -51,11 +51,11 @@ class ConvBNLayer(nn.Layer):
 
 
 class IdentityBasedConv1x1(nn.Conv2D):
-    def __init__(
-            self,
-            channels,
-            groups=1,
-            weight_attr=ParamAttr(initializer=nn.initializer.Constant(0.0))):
+    def __init__(self,
+                 channels,
+                 groups=1,
+                 weight_attr=ParamAttr(
+                     initializer=nn.initializer.Constant(0.0))):
         super(IdentityBasedConv1x1, self).__init__(
             in_channels=channels,
             out_channels=channels,
@@ -135,13 +135,8 @@ class DiverseBranchBlock(nn.Layer):
                  kernel_size,
                  stride=1,
                  groups=1,
-                 internal_channels_1x1_3x3=None,
-                 act=None):
+                 internal_channels_1x1_3x3=None):
         super(DiverseBranchBlock, self).__init__()
-        if act is None:
-            self.act = nn.Identity()
-        else:
-            self.act = act
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
@@ -156,31 +151,30 @@ class DiverseBranchBlock(nn.Layer):
         # 1x1-avg branch
         self.dbb_avg = nn.Sequential()
         if groups < out_channels:
-            self.dbb_avg.add_sublayer(
-                'conv',
-                nn.Conv2D(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                    groups=groups,
-                    bias_attr=False))
-            self.dbb_avg.add_sublayer(
-                'bn',
-                BNAndPadLayer(
-                    pad_pixels=self.padding, num_features=out_channels))
-            self.dbb_avg.add_sublayer(
-                'avg',
-                nn.AvgPool2D(
-                    kernel_size=kernel_size, stride=stride, padding=0))
+            self.dbb_avg.add_sublayer('conv',
+                                      nn.Conv2D(
+                                          in_channels=in_channels,
+                                          out_channels=out_channels,
+                                          kernel_size=1,
+                                          stride=1,
+                                          padding=0,
+                                          groups=groups,
+                                          bias_attr=False))
+            self.dbb_avg.add_sublayer('bn',
+                                      BNAndPadLayer(
+                                          pad_pixels=self.padding,
+                                          num_features=out_channels))
+            self.dbb_avg.add_sublayer('avg',
+                                      nn.AvgPool2D(
+                                          kernel_size=kernel_size,
+                                          stride=stride,
+                                          padding=0))
         else:
-            self.dbb_avg.add_sublayer(
-                'avg',
-                nn.AvgPool2D(
-                    kernel_size=kernel_size,
-                    stride=stride,
-                    padding=self.padding))
+            self.dbb_avg.add_sublayer('avg',
+                                      nn.AvgPool2D(
+                                          kernel_size=kernel_size,
+                                          stride=stride,
+                                          padding=self.padding))
         self.dbb_avg.add_sublayer('avgbn', nn.BatchNorm2D(out_channels))
 
         # 1x1 branch
@@ -194,10 +188,10 @@ class DiverseBranchBlock(nn.Layer):
             internal_channels_1x1_3x3 = in_channels if groups < out_channels else 2 * in_channels
         self.dbb_1x1_kxk = nn.Sequential()
         if internal_channels_1x1_3x3 == in_channels:
-            self.dbb_1x1_kxk.add_sublayer(
-                'idconv1',
-                IdentityBasedConv1x1(
-                    channels=in_channels, groups=groups))
+            self.dbb_1x1_kxk.add_sublayer('idconv1',
+                                          IdentityBasedConv1x1(
+                                              channels=in_channels,
+                                              groups=groups))
         else:
             self.dbb_1x1_kxk.add_sublayer(
                 'conv1',
@@ -214,16 +208,15 @@ class DiverseBranchBlock(nn.Layer):
             BNAndPadLayer(
                 pad_pixels=self.padding,
                 num_features=internal_channels_1x1_3x3))
-        self.dbb_1x1_kxk.add_sublayer(
-            'conv2',
-            nn.Conv2D(
-                in_channels=internal_channels_1x1_3x3,
-                out_channels=out_channels,
-                kernel_size=kernel_size,
-                stride=stride,
-                padding=0,
-                groups=groups,
-                bias_attr=False))
+        self.dbb_1x1_kxk.add_sublayer('conv2',
+                                      nn.Conv2D(
+                                          in_channels=internal_channels_1x1_3x3,
+                                          out_channels=out_channels,
+                                          kernel_size=kernel_size,
+                                          stride=stride,
+                                          padding=0,
+                                          groups=groups,
+                                          bias_attr=False))
         self.dbb_1x1_kxk.add_sublayer('bn2', nn.BatchNorm2D(out_channels))
 
     def _fuse_bn(self, kernel, bn):
@@ -249,14 +242,15 @@ class DiverseBranchBlock(nn.Layer):
             k1_group_width = k1.shape[0] // groups
             k2_group_width = k2.shape[0] // groups
             for g in range(groups):
-                k1_T_slice = k1_T[:, g * k1_group_width:(g + 1) *
-                                  k1_group_width, :, :]
-                k2_slice = k2[g * k2_group_width:(g + 1) *
-                              k2_group_width, :, :, :]
+                k1_T_slice = k1_T[:, g * k1_group_width:(
+                    g + 1) * k1_group_width, :, :]
+                k2_slice = k2[g * k2_group_width:(g + 1
+                                                  ) * k2_group_width, :, :, :]
                 k_slices.append(F.conv2d(k2_slice, k1_T_slice))
-                b_slices.append((k2_slice * b1[g * k1_group_width:(
-                    g + 1) * k1_group_width].reshape((1, -1, 1, 1))).sum((1, 2,
-                                                                          3)))
+                b_slices.append(
+                    (k2_slice *
+                     b1[g * k1_group_width:(g + 1) * k1_group_width].reshape(
+                         (1, -1, 1, 1))).sum((1, 2, 3)))
             k = paddle.concat(k_slices)
             b_hat = paddle.concat(b_slices)
         return k, b_hat + b2
@@ -264,8 +258,8 @@ class DiverseBranchBlock(nn.Layer):
     def _fuse_avg(self, channels, kernel_size, groups):
         input_dim = channels // groups
         k = paddle.zeros((channels, input_dim, kernel_size, kernel_size))
-        k[np.arange(channels), np.tile(np.arange(input_dim),
-                                       groups), :, :] = 1.0 / kernel_size**2
+        k[np.arange(channels),
+          np.tile(np.arange(input_dim), groups), :, :] = 1.0 / kernel_size**2
         return k
 
     # This has not been tested with non-square kernels (kernel.size(2) != kernel.size(3)) nor even-size kernels
@@ -291,8 +285,8 @@ class DiverseBranchBlock(nn.Layer):
             k_1x1_kxk_first = self.dbb_1x1_kxk.idconv1.get_actual_kernel()
         else:
             k_1x1_kxk_first = self.dbb_1x1_kxk.conv1.weight
-        k_1x1_kxk_first, b_1x1_kxk_first = self._fuse_bn(k_1x1_kxk_first,
-                                                         self.dbb_1x1_kxk.bn1)
+        k_1x1_kxk_first, b_1x1_kxk_first = self._fuse_bn(
+            k_1x1_kxk_first, self.dbb_1x1_kxk.bn1)
         k_1x1_kxk_second, b_1x1_kxk_second = self._fuse_bn(
             self.dbb_1x1_kxk.conv2.weight, self.dbb_1x1_kxk.bn2)
         k_1x1_kxk_merged, b_1x1_kxk_merged = self._fuse_1x1_kxk(
@@ -303,8 +297,8 @@ class DiverseBranchBlock(nn.Layer):
             groups=self.groups)
 
         k_avg = self._fuse_avg(self.out_channels, self.kernel_size, self.groups)
-        k_1x1_avg_second, b_1x1_avg_second = self._fuse_bn(k_avg,
-                                                           self.dbb_avg.avgbn)
+        k_1x1_avg_second, b_1x1_avg_second = self._fuse_bn(
+            k_avg, self.dbb_avg.avgbn)
         if hasattr(self.dbb_avg, 'conv'):
             k_1x1_avg_first, b_1x1_avg_first = self._fuse_bn(
                 self.dbb_avg.conv.weight, self.dbb_avg.bn)
@@ -343,11 +337,11 @@ class DiverseBranchBlock(nn.Layer):
     def forward(self, inputs):
 
         if hasattr(self, 'dbb_reparam'):
-            return self.act(self.dbb_reparam(inputs))
+            return self.dbb_reparam(inputs)
 
         out = self.dbb_origin(inputs)
         if hasattr(self, 'dbb_1x1'):
             out += self.dbb_1x1(inputs)
         out += self.dbb_avg(inputs)
         out += self.dbb_1x1_kxk(inputs)
-        return self.act(out)
+        return out

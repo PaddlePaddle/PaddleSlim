@@ -31,7 +31,7 @@ from paddle.static import load_program_state
 from paddle.vision.models import mobilenet_v1
 import paddle.vision.transforms as T
 from paddleslim.common import get_logger
-from paddleslim import Reparameterization
+from paddleslim.dygraph.rep import Reparameter, DBBRepConfig, ACBRepConfig
 
 sys.path.append(os.path.join(os.path.dirname("__file__")))
 from optimizer import create_optimizer
@@ -128,8 +128,9 @@ def train(args):
     pretrain = True if args.data == "imagenet" else False
     net = mobilenet_v1(pretrained=pretrain, num_classes=class_dim)
 
-    reper = Reparameterization(algo="DBB")
-    reper(net)
+    rep_config = DBBRepConfig()
+    reper = Reparameter(rep_config)
+    reper.prepare(net)
     paddle.summary(net, (1, 3, 224, 224))
 
     opt, lr = create_optimizer(net, trainer_num, args)
@@ -296,7 +297,7 @@ def train(args):
                 paddle.save(opt.state_dict(), model_prefix + ".pdopt")
 
     # Save model
-    reper.convert_to_deploy()
+    reper.convert(net)
     if paddle.distributed.get_rank() == 0:
         # load best model
         load_dygraph_pretrain(net,

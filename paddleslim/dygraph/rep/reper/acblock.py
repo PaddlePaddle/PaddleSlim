@@ -1,4 +1,4 @@
-# Copyright (c) 2022  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2023  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import paddle.nn.functional as F
 from paddle import ParamAttr
 from paddle.regularizer import L2Decay
 from paddle.nn.initializer import KaimingNormal
+
+from .base import BaseConv2DReper
 
 __all__ = ["ACBlock"]
 
@@ -55,7 +57,7 @@ class ConvBNLayer(nn.Layer):
         return x
 
 
-class ACBlock(nn.Layer):
+class ACBlock(BaseConv2DReper):
     """
     An instance of the ACBlock module, which replaces the conv-bn layer in the network.
     Refer from Paper: https://arxiv.org/abs/1908.03930.
@@ -67,13 +69,8 @@ class ACBlock(nn.Layer):
                  kernel_size,
                  stride=1,
                  groups=1,
-                 padding=None,
-                 act=None):
+                 padding=None):
         super(ACBlock, self).__init__()
-        if act is None:
-            self.act = nn.Identity()
-        else:
-            self.act = act
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
@@ -124,9 +121,9 @@ class ACBlock(nn.Layer):
         asym_w = asym_kernel.shape[3]
         square_h = square_kernel.shape[2]
         square_w = square_kernel.shape[3]
-        square_kernel[:, :, square_h // 2 - asym_h // 2:square_h // 2 - asym_h
-                      // 2 + asym_h, square_w // 2 - asym_w // 2:square_w // 2 -
-                      asym_w // 2 + asym_w] += asym_kernel
+        square_kernel[:, :, square_h // 2 - asym_h // 2:square_h // 2 -
+                      asym_h // 2 + asym_h, square_w // 2 - asym_w // 2:
+                      square_w // 2 - asym_w // 2 + asym_w] += asym_kernel
 
     def _fuse_bn(self, kernel, bn):
         running_mean = bn._mean
@@ -171,7 +168,7 @@ class ACBlock(nn.Layer):
 
     def forward(self, input):
         if hasattr(self, 'fused_branch'):
-            return self.act(self.fused_branch(input))
+            return self.fused_branch(input)
 
         out = self.square_branch(input)
         if self.crop > 0:
@@ -182,4 +179,4 @@ class ACBlock(nn.Layer):
             hor_input = input
         out += self.ver_branch(ver_input)
         out += self.hor_branch(hor_input)
-        return self.act(out)
+        return out
