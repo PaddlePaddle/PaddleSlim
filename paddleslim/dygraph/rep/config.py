@@ -19,7 +19,7 @@ from .reper import DiverseBranchBlock, ACBlock
 
 SUPPORT_REP_TYPE_LAYERS = [nn.Conv2D, nn.Linear]
 
-__all__ = ["BaseRepConfig", "DBBRepConfig"]
+__all__ = ["BaseRepConfig", "DBBRepConfig", "ACBRepConfig"]
 
 
 class BaseRepConfig:
