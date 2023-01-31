@@ -3,11 +3,9 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-from random import sample
 import sys
 import math
 import logging
-from xmlrpc.client import FastMarshaller
 import paddle
 import argparse
 import functools
@@ -117,14 +115,12 @@ def compress(args):
     with paddle.static.program_guard(student_program, s_startup):
         image = paddle.static.data(
             name='image', shape=[None] + image_shape, dtype='float32')
-        label = paddle.static.data(
-            name='label', shape=[None, 1], dtype='int64')
+        label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
         sampler = paddle.io.DistributedBatchSampler(
             train_dataset,
             shuffle=False,
             drop_last=True,
-            batch_size=args.batch_size,
-        )
+            batch_size=args.batch_size)
         train_loader = paddle.io.DataLoader(
             train_dataset,
             places=places,
@@ -145,8 +141,7 @@ def compress(args):
         # model definition
         model = models.__dict__[args.model]()
         out = model.net(input=image, class_dim=class_dim)
-        cost = paddle.nn.functional.loss.cross_entropy(
-            input=out, label=label)
+        cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
         avg_cost = paddle.mean(x=cost)
         acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
         acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
@@ -185,7 +180,6 @@ def compress(args):
     paddle.static.load(teacher_program, args.teacher_pretrained_model, exe)
 
     data_name_map = {'image': 'image'}
-
     merge(teacher_program, student_program, data_name_map, place)
 
     build_strategy = paddle.static.BuildStrategy()
@@ -194,7 +188,7 @@ def compress(args):
 
     with paddle.static.program_guard(student_program, s_startup):
         distill_loss = soft_label("teacher_fc_0.tmp_0", "fc_0.tmp_0",
-                                student_program)
+                                  student_program)
         loss = avg_cost + distill_loss
         lr, opt = create_optimizer(args)
         if args.fleet:
@@ -205,16 +199,15 @@ def compress(args):
         parallel_main = student_program
     else:
         parallel_main = paddle.static.CompiledProgram(
-                student_program).with_data_parallel(
-            loss_name=loss.name, build_strategy=build_strategy)
+            student_program).with_data_parallel(
+                loss_name=loss.name, build_strategy=build_strategy)
 
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):
             loss_1, loss_2, loss_3 = exe.run(
                 parallel_main,
                 feed=data,
-                fetch_list=[loss.name, avg_cost.name, distill_loss.name],
-                return_merged=True)
+                fetch_list=[loss.name, avg_cost.name, distill_loss.name])
             if step_id % args.log_period == 0:
                 _logger.info(
                     "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
