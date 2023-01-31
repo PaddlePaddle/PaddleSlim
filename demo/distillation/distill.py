@@ -112,6 +112,8 @@ def compress(args):
         devices_num = paddle.framework.core.get_cuda_device_count()
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
+    if not args.fleet:
+        args.batch_size = args.batch_size // devices_num
     with paddle.static.program_guard(student_program, s_startup):
         image = paddle.static.data(
             name='image', shape=[None] + image_shape, dtype='float32')
@@ -121,7 +123,7 @@ def compress(args):
             train_dataset,
             shuffle=False,
             drop_last=True,
-            batch_size=args.batch_size ,
+            batch_size=args.batch_size,
         )
         train_loader = paddle.io.DataLoader(
             train_dataset,
@@ -187,15 +189,8 @@ def compress(args):
     merge(teacher_program, student_program, data_name_map, place)
 
     build_strategy = paddle.static.BuildStrategy()
-    # build_strategy.fuse_all_reduce_ops = False
-
     dist_strategy = DistributedStrategy()
-    # dist_strategy.sync_batch_norm = False
-    # dist_strategy.build_strategy = build_strategy
-    # dist_strategy.fuse_all_reduce_ops = False
-    # dist_strategy.nccl_comm_num = 1
-    # dist_strategy.fuse_all_reduce_ops = True
-    # dist_strategy.fuse_grad_size_in_MB = 16
+    dist_strategy.build_strategy = build_strategy
 
     with paddle.static.program_guard(student_program, s_startup):
         distill_loss = soft_label("teacher_fc_0.tmp_0", "fc_0.tmp_0",
@@ -207,8 +202,7 @@ def compress(args):
         opt.minimize(loss)
     exe.run(s_startup)
     if args.fleet:
-        parallel_main = paddle.static.CompiledProgram(
-            student_program, build_strategy=build_strategy)
+        parallel_main = student_program
     else:
         parallel_main = paddle.static.CompiledProgram(
                 student_program).with_data_parallel(
@@ -220,25 +214,12 @@ def compress(args):
                 parallel_main,
                 feed=data,
                 fetch_list=[loss.name, avg_cost.name, distill_loss.name],
-                return_merged=True if args.fleet or True else False)
-            # _logger.info(data[0]['image'].shape())
-            if step_id % args.log_period == 0 and args.fleet:
+                return_merged=True)
+            if step_id % args.log_period == 0:
                 _logger.info(
                     "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
                     format(epoch_id, step_id,
                            lr.get_lr(), loss_1[0], loss_2[0], loss_3[0]))
-            else:
-                _logger.info(
-                    "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
-                    format(epoch_id, step_id,
-                           lr.get_lr(), loss_1[0], loss_2[0], loss_3[0]))
-                # _logger.info(
-                #     "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
-                #     format(epoch_id, step_id,
-                #            lr.get_lr(), 0, 0, 0))
-                # _logger.info(loss_1)
-                # _logger.info(loss_2)
-                # _logger.info(loss_3)
             lr.step()
         val_acc1s = []
         val_acc5s = []
@@ -272,7 +253,6 @@ def main():
 if __name__ == '__main__':
     paddle.enable_static()
     paddle.seed(1234)
-    import numpy as np
     np.random.seed(0)
     import random
     random.seed(0)
