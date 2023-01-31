@@ -25,7 +25,9 @@ from ..dist import merge
 from ..core.graph_wrapper import GraphWrapper
 from ..common import get_logger
 
-__all__ = ['ReconstructionQuantization', ]
+__all__ = [
+    'ReconstructionQuantization',
+]
 
 _logger = get_logger(
     __name__,
@@ -91,7 +93,8 @@ class ReconstructionQuantization(PostTrainingQuantization):
         batch_id = 0
         with utils.tqdm(
                 total=self._batch_nums,
-                bar_format='Preparation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
+                bar_format=
+                'Preparation stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
                 ncols=80, ) as t:
             for data in self._data_loader():
                 self._executor.run(
@@ -111,7 +114,8 @@ class ReconstructionQuantization(PostTrainingQuantization):
         batch_id = 0
         with utils.tqdm(
                 total=self._batch_nums,
-                bar_format='Sampling stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
+                bar_format=
+                'Sampling stage, Run batch:|{bar}| {n_fmt}/{total_fmt}',
                 ncols=80, ) as t:
             for data in self._data_loader():
                 self._executor.run(
@@ -237,7 +241,7 @@ class ReconstructionQuanter(object):
                 return a batch every time.
             executor(paddle.static.Executor): The executor to load, run and save the
                 quantized model.
-            scope(fluid.Scope, optional): The scope of the program, use it to load
+            scope(static.Scope, optional): The scope of the program, use it to load
                 and save variables. If scope=None, get scope by global_scope().
             place(CPUPlace()|CUDAPlace(N)): This parameter represents
                                                     paddle run on which device.
@@ -385,8 +389,8 @@ class ReconstructionQuanter(object):
 
             with paddle.static.program_guard(tmp_program, startup_program):
                 student_var = tmp_program.global_block().var(quant_op_out_name)
-                teacher_var = tmp_program.global_block().var("teacher_" +
-                                                             quant_op_out_name)
+                teacher_var = tmp_program.global_block().var(
+                    "teacher_" + quant_op_out_name)
                 total_loss, recon_loss, round_loss = loss_function.get_loss(
                     student_var,
                     teacher_var, )
@@ -471,7 +475,8 @@ class ReconstructionQuanter(object):
             shape=weight.shape,
             dtype=weight.dtype,
             name=weight.name + ".alpha",
-            default_initializer=paddle.nn.initializer.Assign(self._alpha, ), )
+            default_initializer=paddle.nn.initializer.Assign(
+                self._alpha, ), )
 
         h_v = paddle.clip(
             paddle.nn.functional.sigmoid(v) * (ZETA - GAMMA) + GAMMA,
@@ -483,13 +488,14 @@ class ReconstructionQuanter(object):
                 dtype=weight.dtype,
                 shape=weight.shape,
                 name=weight.name + '.scale',
-                default_initializer=paddle.nn.initializer.Assign(scale, ))
+                default_initializer=paddle.nn.initializer.Assign(
+                    scale, ))
         else:
             scale_var = scale
 
         quantized_weight = _quant(weight_copy, scale_var)
-        floor_weight = (paddle.floor(quantized_weight) - quantized_weight
-                        ).detach() + quantized_weight
+        floor_weight = (paddle.floor(quantized_weight) -
+                        quantized_weight).detach() + quantized_weight
         clip_weight = paddle.clip(floor_weight + h_v, -bnt, bnt)
         w = _dequant(clip_weight, scale_var)
         return w
@@ -525,8 +531,9 @@ class ReconstructionQuanter(object):
 
     def _insert_drop_quant_dequant(self):
         for op in self._graph.ops():
-            if op.type(
-            ) in ['conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2']:
+            if op.type() in [
+                    'conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'
+            ]:
                 if op.type() in ['conv2d', 'depthwise_conv2d']:
                     if op.inputs("Filter")[0].name().startswith("teacher"):
                         break
@@ -670,8 +677,8 @@ class ReconstructionQuanter(object):
                             'X': var._var,
                             'Y': op.input('Y')[0] + '.qdrop',
                         }
-                    elif _type == 'scale' and op.input('X')[
-                            0] == inputs.name + '.tmp':
+                    elif _type == 'scale' and op.input(
+                            'X')[0] == inputs.name + '.tmp':
                         _inputs = {'X': var._var}
                     else:
                         _inputs = {'X': op.input('X')[0] + '.qdrop'}
@@ -687,11 +694,13 @@ class ReconstructionQuanter(object):
                     'conv2d', 'depthwise_conv2d', 'mul', 'matmul', 'matmul_v2'
             ]:
                 continue
-            if op.type() in ['conv2d', 'depthwise_conv2d'] and op.inputs(
-                    'Filter')[0].name().startswith('teacher'):
+            if op.type() in [
+                    'conv2d', 'depthwise_conv2d'
+            ] and op.inputs('Filter')[0].name().startswith('teacher'):
                 continue
-            if op.type() in ['mul', 'matmul', 'matmul_v2'] and op.inputs('Y')[
-                    0].name().startswith('teacher'):
+            if op.type() in [
+                    'mul', 'matmul', 'matmul_v2'
+            ] and op.inputs('Y')[0].name().startswith('teacher'):
                 continue
             if func == '_soft_rounding':
                 op._op._rename_input(inputs.name, out.name + '.rounding')
@@ -964,8 +973,8 @@ class RegionBuilder(object):
             else:
                 future_ep = _find_multi_input_ep(ep)
 
-            if future_ep is None or self._depth[future_ep.idx()] - self._depth[
-                    sp.idx()] >= limit:
+            if future_ep is None or self._depth[future_ep.idx(
+            )] - self._depth[sp.idx()] >= limit:
                 return self._create_region(sp, ep)
             ep = future_ep
 

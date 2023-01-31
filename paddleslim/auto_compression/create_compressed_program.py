@@ -78,10 +78,8 @@ def _create_optimizer(train_config):
     ### build optimizer
     optim_params = optimizer_builder['optimizer']
     optim_type = optim_params.pop('type')
-    opt = getattr(optimizer, optim_type)(learning_rate=lr,
-                                         grad_clip=grad_clip,
-                                         weight_decay=reg,
-                                         **optim_params)
+    opt = getattr(optimizer, optim_type)(
+        learning_rate=lr, grad_clip=grad_clip, weight_decay=reg, **optim_params)
     return opt, lr
 
 
@@ -160,8 +158,8 @@ def _parse_distill_loss(distill_node_pair,
     for node, loss_clas, lam in zip(distill_node_pair, distill_loss,
                                     distill_lambda):
         tmp_loss = losses.get(loss_clas, 0.0)
-        _logger.info("train config.distill_node_pair: {}".format(
-            node, loss_clas, lam))
+        _logger.info(
+            "train config.distill_node_pair: {}".format(node, loss_clas, lam))
         assert len(node) % 2 == 0, \
             "distill_node_pair config wrong, the length needs to be an even number"
         for i in range(len(node) // 2):
@@ -529,9 +527,7 @@ def build_prune_program(executor,
             original_shapes = {}
             for param in train_program_info.program.global_block(
             ).all_parameters():
-                if config[
-                        'prune_params_name'] is not None and param.name in config[
-                            'prune_params_name']:
+                if config['prune_params_name'] is not None and param.name in config['prune_params_name']:
                     params.append(param.name)
                     original_shapes[param.name] = param.shape
 
@@ -541,9 +537,8 @@ def build_prune_program(executor,
             train_program_info.program,
             paddle.static.global_scope(),
             params=params,
-            ratios=[config['pruned_ratio']] * len(params)
-            if isinstance(config['pruned_ratio'], float) else
-            config['pruned_ratio'],
+            ratios=[config['pruned_ratio']] * len(params) if isinstance(
+                config['pruned_ratio'], float) else config['pruned_ratio'],
             place=place)
         _logger.info(
             "####################channel pruning##########################")
@@ -577,8 +572,9 @@ def build_prune_program(executor,
                     pruner.add_supported_layer(param.name)
             if "teacher_" in param.name:
                 excluded_params_name.append(param.name)
-        pruner.set_excluded_layers(train_program_info.program,
-                                   excluded_params_name)
+        pruner.set_excluded_layers(
+            main_program=train_program_info.program,
+            param_names=excluded_params_name)
     elif strategy.startswith('transformer_prune'):
         from .transformer_pruner import TransformerPruner
         assert eval_dataloader is not None, "transformer_pruner must set eval_dataloader"

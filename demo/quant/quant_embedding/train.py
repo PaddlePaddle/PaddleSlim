@@ -121,7 +121,7 @@ def convert_python_to_tensor(weight, batch_size, sample_reader):
 def train_loop(args, train_program, reader, py_reader, loss, trainer_id, weight,
                lr):
 
-    py_reader.decorate_tensor_provider(
+    py_reader.set_batch_generator(
         convert_python_to_tensor(weight, args.batch_size, reader.train()))
 
     place = paddle.CPUPlace()
@@ -213,6 +213,7 @@ def train(args):
     loss, py_reader = skip_gram_word2vec(
         word2vec_reader.dict_size,
         args.embedding_size,
+        args.batch_size,
         is_sparse=args.is_sparse,
         neg_num=args.nce_num)
 
@@ -223,7 +224,7 @@ def train(args):
 
     optimizer.minimize(loss)
 
-    # do local training 
+    # do local training
     logger.info("run local training")
     main_program = paddle.static.default_main_program()
     train_loop(args, main_program, word2vec_reader, py_reader, loss, 0,
