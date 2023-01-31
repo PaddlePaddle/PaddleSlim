@@ -18,13 +18,14 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
 ## 产品动态
 
+- 🔥 2022.01.18: 发布[YOLOv8自动化压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/detection)，量化预测加速2.5倍。
 
-- 🔥🔥🔥 **【直播分享】2022-12-13 20:30 《自动化压缩技术详解及ViT模型实战》，微信扫码报名**
+- **【直播分享】2022-12-13 20:30 《自动化压缩技术详解及ViT模型实战》，微信扫码报名**
   <div align="center">
   <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg"  width = "180" height = "180" />
   </div>
 
-- 🔥 **2022.08.16：[自动化压缩](example/auto_compression)功能升级**
+- **2022.08.16：[自动化压缩](example/auto_compression)功能升级**
   - 支持直接加载ONNX模型和Paddle模型导出至ONNX
   - 发布[量化分析工具](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/AnalysisQuant.md)，发布[YOLO系列离线量化工具](example/post_training_quantization/pytorch_yolo_series/)
   - 更新[YOLO-Series自动化压缩模型库](example/auto_compression/pytorch_yolo_series)
@@ -37,8 +38,10 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
   | YOLOv7 |  51.1   | 50.9 | 3.9倍 |  26.84ms  |   4.55ms   |  5.9倍  |
   | YOLOv7-Tiny | 37.3   | 37.0 | 3.9倍 | 5.06ms  |   1.68ms   |  3.0倍  |
 
+<details>
+<summary>历史更新</summary>
 
-- 🔥 **2022.07.01: 发布[v2.3.0版本](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.0)**
+- **2022.07.01: 发布[v2.3.0版本](https://github.com/PaddlePaddle/PaddleSlim/releases/tag/v2.3.0)**
 
   - 发布[自动化压缩功能](example/auto_compression)
     - 支持代码无感知压缩：开发者只需提供推理模型文件和数据，既可进行离线量化（PTQ）、量化训练（QAT）、稀疏训练等压缩任务。
@@ -52,9 +55,6 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
   - 新增延时预估工具
     - 支持对稀疏化模型、低比特量化模型的性能预估；支持预估指定模型在特定部署环境下 (ARM CPU + Paddle Lite) 的推理性能；提供 SD625、SD710、RK3288 芯片 + Paddle Lite 的预估接口。
     - 提供部署环境自动扩展工具，可以自动增加在更多 ARM CPU 设备上的预估工具。
-
-<details>
-<summary>历史更新</summary>
 
 - **2021.11.15: 发布v2.2.0版本**
 

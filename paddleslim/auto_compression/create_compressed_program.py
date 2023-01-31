@@ -575,8 +575,9 @@ def build_prune_program(executor,
                     pruner.add_supported_layer(param.name)
             if "teacher_" in param.name:
                 excluded_params_name.append(param.name)
-        pruner.set_excluded_layers(train_program_info.program,
-                                   excluded_params_name)
+        pruner.set_excluded_layers(
+            main_program=train_program_info.program,
+            param_names=excluded_params_name)
     elif strategy.startswith('transformer_prune'):
         from .transformer_pruner import TransformerPruner
         assert eval_dataloader is not None, "transformer_pruner must set eval_dataloader"
