@@ -16,45 +16,10 @@ import numpy as np
 
 import paddle
 import paddle.nn as nn
-import paddle.nn.functional as F
-from paddle import ParamAttr
-from paddle.regularizer import L2Decay
-from paddle.nn.initializer import KaimingNormal
 
-from .base import BaseConv2DReper
+from .base import BaseConv2DReper, ConvBNLayer
 
 __all__ = ["ACBlock"]
-
-
-class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 filter_size,
-                 stride,
-                 groups=1,
-                 padding=None):
-        super().__init__()
-        if not padding:
-            padding = filter_size // 2
-        self.conv = nn.Conv2D(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=filter_size,
-            stride=stride,
-            padding=padding,
-            groups=groups,
-            weight_attr=ParamAttr(initializer=KaimingNormal()),
-            bias_attr=False)
-        self.bn = nn.BatchNorm2D(
-            out_channels,
-            weight_attr=ParamAttr(regularizer=L2Decay(0.0)),
-            bias_attr=ParamAttr(regularizer=L2Decay(0.0)))
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        return x
 
 
 class ACBlock(BaseConv2DReper):
@@ -70,15 +35,13 @@ class ACBlock(BaseConv2DReper):
                  stride=1,
                  groups=1,
                  padding=None):
-        super(ACBlock, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.groups = groups
-        self.padding = padding
-        if not self.padding:
-            self.padding = self.kernel_size // 2
+        super(ACBlock, self).__init__(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            groups=groups,
+            padding=padding)
         if self.padding - self.kernel_size // 2 >= 0:
             self.crop = 0
             # Compared to the KxK layer, the padding of the 1xK layer and Kx1 layer should be adjust to align the sliding windows (Fig 2 in the paper)

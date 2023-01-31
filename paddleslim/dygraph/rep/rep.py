@@ -143,8 +143,9 @@ class Reparameter:
                     in_channels=module._in_channels,
                     out_channels=module._out_channels,
                     kernel_size=module._kernel_size[0],
-                    stride=module._stride,
-                    groups=module._groups)
+                    stride=module._stride[0],
+                    groups=module._groups,
+                    padding=module._padding)
                 setattr(parent_layer, sub_name, new_layer)
 
             if isinstance(module, nn.BatchNorm2D) or isinstance(

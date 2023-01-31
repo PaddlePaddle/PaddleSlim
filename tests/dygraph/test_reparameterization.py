@@ -44,12 +44,13 @@ class ImperativeLenet(paddle.nn.Layer):
                 out_channels=16,
                 kernel_size=5,
                 stride=1,
-                padding=0),
+                padding=2,
+                bias_attr=False),
             paddle.nn.BatchNorm2D(16),
             paddle.nn.PReLU(), paddle.nn.MaxPool2D(kernel_size=2, stride=2))
 
         self.fc = paddle.nn.Sequential(
-            paddle.nn.Linear(in_features=400, out_features=120),
+            paddle.nn.Linear(in_features=784, out_features=120),
             paddle.nn.LeakyReLU(),
             paddle.nn.Linear(in_features=120, out_features=84),
             paddle.nn.Sigmoid(),

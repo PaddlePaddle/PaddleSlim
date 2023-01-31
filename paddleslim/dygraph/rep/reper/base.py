@@ -13,6 +13,9 @@
 # limitations under the License.
 
 import paddle.nn as nn
+from paddle import ParamAttr
+from paddle.regularizer import L2Decay
+from paddle.nn.initializer import KaimingNormal
 
 
 class BaseConv2DReper(nn.Layer):
@@ -34,11 +37,40 @@ class BaseConv2DReper(nn.Layer):
         self.stride = stride
         self.groups = groups
         self.padding = padding
-        if not self.padding:
-            self.padding = self.kernel_size // 2
 
     def convert_to_deploy(self):
         pass
 
     def forward(self, input):
         pass
+
+
+class ConvBNLayer(nn.Layer):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 filter_size,
+                 stride,
+                 groups=1,
+                 padding=None):
+        super().__init__()
+        if not padding:
+            padding = filter_size // 2
+        self.conv = nn.Conv2D(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=filter_size,
+            stride=stride,
+            padding=padding,
+            groups=groups,
+            weight_attr=ParamAttr(initializer=KaimingNormal()),
+            bias_attr=False)
+        self.bn = nn.BatchNorm2D(
+            out_channels,
+            weight_attr=ParamAttr(regularizer=L2Decay(0.0)),
+            bias_attr=ParamAttr(regularizer=L2Decay(0.0)))
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        return x
