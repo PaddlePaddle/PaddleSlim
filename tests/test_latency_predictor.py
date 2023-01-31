@@ -147,10 +147,8 @@ class ModelCase6(paddle.nn.Layer):
         x = paddle.unsqueeze(x=x, axis=[2])
         x = self.relu1(x)
         y = paddle.full(shape=x.shape, fill_value=1)
-        # x = paddle.stack([x, y], axis=3)
         x = paddle.slice(x, axes=[0], starts=[0], ends=[1])
         x = paddle.exp(x)
-        # y += paddle.fluid.layers.uniform_random(y.shape)
         y = paddle.expand(y, shape=[1, 768, 768, 2])
         x = paddle.expand(x, shape=[1, 768, 768, 2])
         out = paddle.concat([x, y])
@@ -161,8 +159,8 @@ class ModelCase6(paddle.nn.Layer):
         max_idx = paddle.argmax(
             out1.reshape((outshape[0], outshape[1], outshape[2] * outshape[3])),
             axis=-1)
-        out2 = out2.reshape(
-            (outshape[0], outshape[1], outshape[2] * outshape[3]))
+        out2 = out2.reshape((outshape[0], outshape[1],
+                             outshape[2] * outshape[3]))
         res, _ = self.lstm(out2)
         return res, max_idx
 
@@ -238,9 +236,9 @@ class TestCase2(unittest.TestCase):
 
         model_name = '.'.join(model_filename.split('.')[:-1])
         model_path_prefix = os.path.join(model_dir, model_name)
-        [inference_program, feed_target_names, fetch_targets] = (
-            paddle.static.load_inference_model(
-                path_prefix=model_path_prefix, executor=exe))
+        [inference_program, feed_target_names,
+         fetch_targets] = (paddle.static.load_inference_model(
+             path_prefix=model_path_prefix, executor=exe))
 
         if type(input_shapes) in [list, tuple]:
             assert len(
