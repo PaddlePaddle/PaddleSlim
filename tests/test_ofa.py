@@ -299,10 +299,11 @@ class TestOFA(unittest.TestCase):
         self.elastic_order = ['kernel_size', 'width', 'depth']
 
     def test_ofa(self):
-        ofa_model = OFA(self.model,
-                        self.run_config,
-                        distill_config=self.distill_config,
-                        elastic_order=self.elastic_order)
+        ofa_model = OFA(
+            self.model,
+            self.run_config,
+            distill_config=self.distill_config,
+            elastic_order=self.elastic_order)
 
         start_epoch = 0
         for idx in range(len(self.run_config.n_epochs)):
@@ -316,8 +317,8 @@ class TestOFA(unittest.TestCase):
                                       self.run_config.n_epochs[idx][ph_idx]):
                     if epoch_id == 0:
                         ofa_model.set_epoch(epoch_id)
-                    for model_no in range(self.run_config.dynamic_batch_size[
-                            idx]):
+                    for model_no in range(
+                            self.run_config.dynamic_batch_size[idx]):
                         output = ofa_model(self.data)
                         if (isinstance(output, tuple)):
                             output = output[0]
@@ -325,11 +326,11 @@ class TestOFA(unittest.TestCase):
                         if self.distill_config.mapping_layers != None:
                             dis_loss = ofa_model.calc_distill_loss()
                             loss += dis_loss
-                            dis_loss = dis_loss.numpy()[0]
+                            dis_loss = float(dis_loss)
                         else:
                             dis_loss = 0
                         print('epoch: {}, loss: {}, distill loss: {}'.format(
-                            epoch_id, loss.numpy()[0], dis_loss))
+                            epoch_id, float(loss), dis_loss))
                         loss.backward()
                         adam.minimize(loss)
                         adam.clear_gradients()
@@ -536,8 +537,9 @@ class TestManualSetting(unittest.TestCase):
         self.ofa_model2 = OFA(self.model, run_config=run_config)
         self.ofa_model2._clear_search_space(self.data)
         #print(self.ofa_model2._ofa_layers)
-        assert self.ofa_model2._ofa_layers['models.1'][
-            'expand_ratio'] == [0.25, 1.0]
+        assert self.ofa_model2._ofa_layers['models.1']['expand_ratio'] == [
+            0.25, 1.0
+        ]
         assert len(self.ofa_model2._ofa_layers) == 2
         #print(self.ofa_model_1._ofa_layers)
 
