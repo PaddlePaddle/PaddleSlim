@@ -52,8 +52,8 @@ def quantize(args):
         eval_sample_generator=reader_generator(reader.val()),
         model_filename=args.model_filename,
         params_filename=args.params_filename,
-        save_model_filename='__model__',
-        save_params_filename='__params__',
+        save_model_filename='model.pdmodel',
+        save_params_filename='model.pdiparams',
         quantizable_op_type=["conv2d", "depthwise_conv2d", "mul"],
         weight_quantize_type=['channel_wise_abs_max'],
         runcount_limit=args.max_model_quant_count)
