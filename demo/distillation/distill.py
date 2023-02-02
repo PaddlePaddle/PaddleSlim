@@ -80,8 +80,7 @@ def create_optimizer(args):
 
 def compress(args):
 
-    if args.fleet:
-        fleet.init(is_collective=True)
+    fleet.init(is_collective=True)
 
     if args.data == "cifar10":
         train_dataset = paddle.vision.datasets.Cifar10(mode='train')
@@ -109,8 +108,6 @@ def compress(args):
         devices_num = paddle.framework.core.get_cuda_device_count()
     else:
         devices_num = int(os.environ.get('CPU_NUM', 1))
-    if not args.fleet:
-        args.batch_size = args.batch_size // devices_num
     with paddle.static.program_guard(student_program, s_startup):
         image = paddle.static.data(
             name='image', shape=[None] + image_shape, dtype='float32')
@@ -182,10 +179,8 @@ def compress(args):
     merge(teacher_program, student_program, data_name_map, place)
 
     build_strategy = paddle.static.BuildStrategy()
-    build_strategy.fuse_all_reduce_ops = True if args.fuse_reduce else False
     dist_strategy = DistributedStrategy()
     dist_strategy.build_strategy = build_strategy
-    dist_strategy.fuse_all_reduce_ops = True if args.fuse_reduce else False
 
     with paddle.static.program_guard(student_program, s_startup):
         distill_loss = soft_label("teacher_fc_0.tmp_0", "fc_0.tmp_0",
@@ -240,9 +235,4 @@ def main():
 
 if __name__ == '__main__':
     paddle.enable_static()
-    paddle.seed(1234)
-    np.random.seed(0)
-    import random
-    random.seed(0)
-
     main()
