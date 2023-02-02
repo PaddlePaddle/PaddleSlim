@@ -43,6 +43,7 @@ add_arg('teacher_model',    str,  "ResNet50_vd",          "Set the teacher netwo
 add_arg('teacher_pretrained_model', str,  "./ResNet50_vd_pretrained",                "Whether to use pretrained model.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
 parser.add_argument('--fleet', action='store_true')
+parser.add_argument('--fuse_reduce', action='store_true')
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -183,8 +184,10 @@ def compress(args):
     merge(teacher_program, student_program, data_name_map, place)
 
     build_strategy = paddle.static.BuildStrategy()
+    build_strategy.fuse_all_reduce_ops = True if args.fuse_reduce else False
     dist_strategy = DistributedStrategy()
     dist_strategy.build_strategy = build_strategy
+    dist_strategy.fuse_all_reduce_ops = True if args.fuse_reduce else False
 
     with paddle.static.program_guard(student_program, s_startup):
         distill_loss = soft_label("teacher_fc_0.tmp_0", "fc_0.tmp_0",
