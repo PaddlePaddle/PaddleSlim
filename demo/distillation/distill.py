@@ -36,14 +36,12 @@ add_arg('l2_decay',         float,  3e-5,               "The l2_decay parameter.
 add_arg('momentum_rate',    float,  0.9,               "The value of momentum_rate.")
 add_arg('num_epochs',       int,  120,               "The number of total epochs.")
 add_arg('data',             str, "imagenet",                 "Which data to use. 'cifar10' or 'imagenet'")
-add_arg('log_period',       int,  1,                 "Log period in batches.")
+add_arg('log_period',       int,  20,                 "Log period in batches.")
 add_arg('model',            str,  "MobileNet",          "Set the network to use.")
 add_arg('pretrained_model', str,  None,                "Whether to use pretrained model.")
 add_arg('teacher_model',    str,  "ResNet50_vd",          "Set the teacher network to use.")
 add_arg('teacher_pretrained_model', str,  "./ResNet50_vd_pretrained",                "Whether to use pretrained model.")
 parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
-parser.add_argument('--fleet', action='store_true')
-parser.add_argument('--fuse_reduce', action='store_true')
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
@@ -194,16 +192,10 @@ def compress(args):
                                   student_program)
         loss = avg_cost + distill_loss
         lr, opt = create_optimizer(args)
-        if args.fleet:
-            opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
+        opt = fleet.distributed_optimizer(opt, strategy=dist_strategy)
         opt.minimize(loss)
     exe.run(s_startup)
-    if args.fleet:
-        parallel_main = student_program
-    else:
-        parallel_main = paddle.static.CompiledProgram(
-            student_program).with_data_parallel(
-                loss_name=loss.name, build_strategy=build_strategy)
+    parallel_main = student_program
 
     for epoch_id in range(args.num_epochs):
         for step_id, data in enumerate(train_loader):

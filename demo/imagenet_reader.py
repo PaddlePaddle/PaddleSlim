@@ -113,10 +113,16 @@ def process_image(sample,
         print(img_path, "not exists!")
         return None
     if mode == 'train':
-        img = crop_image(img, target_size=crop_size, center=True)
+        if rotate: img = rotate_image(img)
+        img = random_crop(img, crop_size)
     else:
         img = resize_short(img, target_size=resize_size)
         img = crop_image(img, target_size=crop_size, center=True)
+    if mode == 'train':
+        if color_jitter:
+            img = distort_color(img)
+        if np.random.randint(0, 2) == 1:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
 
     if img.mode != 'RGB':
         img = img.convert('RGB')
@@ -175,7 +181,7 @@ def train(data_dir=DATA_DIR):
     return _reader_creator(
         file_list,
         'train',
-        shuffle=False,
+        shuffle=True,
         color_jitter=False,
         rotate=False,
         data_dir=data_dir)
@@ -208,7 +214,6 @@ class ImageNetDataset(Dataset):
         if mode == 'train':
             with open(train_file_list) as flist:
                 full_lines = [line.strip() for line in flist]
-                np.random.seed(0)
                 np.random.shuffle(full_lines)
                 lines = full_lines
             self.data = [line.split() for line in lines]
