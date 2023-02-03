@@ -399,7 +399,8 @@ def eval(predictor, val_loader, metric, rerun_flag=False):
     input_names = predictor.get_input_names()
     output_names = predictor.get_output_names()
     boxes_tensor = predictor.get_output_handle(output_names[0])
-    boxes_num = predictor.get_output_handle(output_names[1])
+    if FLAGS.include_nms:
+        boxes_num = predictor.get_output_handle(output_names[1])
     for batch_id, data in enumerate(val_loader):
         data_all = {k: np.array(v) for k, v in data.items()}
         for i, _ in enumerate(input_names):

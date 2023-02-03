@@ -139,7 +139,8 @@ def save_cls_model(model, input_shape, save_dir, data_type):
             batch_nums=1,
             weight_bits=8,
             activation_bits=8,
-            quantizable_op_type=["conv2d", "depthwise_conv2d"])
+            quantizable_op_type=["conv2d", "depthwise_conv2d"],
+            onnx_format=False)
 
         model_file = os.path.join(quantize_model_path, 'model.pdmodel')
         param_file = os.path.join(quantize_model_path, 'model.pdiparams')

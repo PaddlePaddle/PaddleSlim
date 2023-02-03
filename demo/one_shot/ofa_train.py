@@ -34,7 +34,9 @@ class Model(nn.Layer):
             models += [ReLU()]
             models += [nn.Pool2D(2, 'max', 2)]
             models += [
-                nn.Linear(784, 120), nn.Linear(120, 84), nn.Linear(84, 10)
+                nn.Linear(784, 120),
+                nn.Linear(120, 84),
+                nn.Linear(84, 10)
             ]
             models = ofa_super.convert(models)
         self.models = paddle.nn.Sequential(*models)
@@ -104,8 +106,9 @@ def test_ofa():
                     dy_x_data = np.array(
                         [x[0].reshape(1, 28, 28)
                          for x in data]).astype('float32')
-                    y_data = np.array(
-                        [x[1] for x in data]).astype('int64').reshape(-1, 1)
+                    y_data = np.array([x[1]
+                                       for x in data]).astype('int64').reshape(
+                                           -1, 1)
 
                     img = paddle.to_tensor(dy_x_data)
                     label = paddle.to_tensor(y_data)
@@ -122,7 +125,7 @@ def test_ofa():
                             print(
                                 'epoch: {}, batch: {}, loss: {}, distill loss: {}'.
                                 format(epoch_id, batch_id,
-                                       loss.numpy()[0], dis_loss.numpy()[0]))
+                                       float(loss), float(dis_loss)))
                     ### accumurate dynamic_batch_size network of gradients for same batch of data
                     ### NOTE: need to fix gradients accumulate in PaddlePaddle
                     adam.minimize(loss)

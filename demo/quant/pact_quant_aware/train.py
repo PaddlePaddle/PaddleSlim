@@ -18,7 +18,7 @@ from paddleslim.analysis import flops
 from paddleslim.quant import quant_aware, quant_post, convert
 import models
 from utility import add_arguments, print_arguments
-from paddle.fluid.layer_helper import LayerHelper
+from paddle.common_ops_import import LayerHelper
 quantization_model_save_dir = './quantization_models/'
 
 _logger = get_logger(__name__, level=logging.INFO)
@@ -146,8 +146,8 @@ def compress(args):
         raise ValueError("{} is not supported.".format(args.data))
 
     image_shape = [int(m) for m in image_shape.split(",")]
-    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
-                                                                     model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(
+        args.model, model_list)
     image = paddle.static.data(
         name='image', shape=[None] + image_shape, dtype='float32')
     if args.use_pact:
