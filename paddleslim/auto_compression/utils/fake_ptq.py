@@ -107,8 +107,7 @@ def post_quant_fake(executor,
             add_quant_dequant_pass = AddQuantDequantPassV2(
                 scope=_scope,
                 place=_place,
-                quantizable_op_type=minor_quantizable_op_types,
-                is_full_quantized=is_full_quantize)
+                quantizable_op_type=minor_quantizable_op_types)
         else:
             add_quant_dequant_pass = AddQuantDequantPass(
                 scope=_scope,
