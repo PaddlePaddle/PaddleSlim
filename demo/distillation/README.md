@@ -13,7 +13,7 @@
 默认配置:
 
 ```yaml
-batch_size: 256
+batch_size: 64
 init_lr: 0.1
 lr_strategy: piecewise_decay
 l2_decay: 3e-5
@@ -21,14 +21,14 @@ momentum_rate: 0.9
 num_epochs: 120
 data: imagenet
 ```
-训练使用默认配置启动即可
+训练使用默认配置启动即可。这里的batch_size指每张卡上的batch_size。
 
 ### 2. 启动训练
 
 在配置好ImageNet数据集后，用以下命令启动训练即可:
 
 ```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python distill.py
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch distill.py
 ```
 
 ### 3. 训练结果

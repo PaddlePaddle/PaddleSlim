@@ -50,28 +50,28 @@ def load_inference_model(path_prefix,
         ), 'Please check {}, or fix params_filename parameter.'.format(
             os.path.join(path_prefix, model_name + '.pdiparams'))
         model_path_prefix = os.path.join(path_prefix, model_name)
-        [inference_program, feed_target_names, fetch_targets] = (
-            paddle.static.load_inference_model(
-                path_prefix=model_path_prefix, executor=executor))
+        [inference_program, feed_target_names,
+         fetch_targets] = (paddle.static.load_inference_model(
+             path_prefix=model_path_prefix, executor=executor))
     elif model_filename is not None and params_filename is not None:
-        [inference_program, feed_target_names, fetch_targets] = (
-            paddle.static.load_inference_model(
-                path_prefix=path_prefix,
-                executor=executor,
-                model_filename=model_filename,
-                params_filename=params_filename))
+        [inference_program, feed_target_names,
+         fetch_targets] = (paddle.static.load_inference_model(
+             path_prefix=path_prefix,
+             executor=executor,
+             model_filename=model_filename,
+             params_filename=params_filename))
     else:
         model_name = '.'.join(model_filename.split('.')
                               [:-1]) if model_filename is not None else 'model'
         if os.path.exists(os.path.join(path_prefix, model_name + '.pdmodel')):
             model_path_prefix = os.path.join(path_prefix, model_name)
-            [inference_program, feed_target_names, fetch_targets] = (
-                paddle.static.load_inference_model(
-                    path_prefix=model_path_prefix, executor=executor))
+            [inference_program, feed_target_names,
+             fetch_targets] = (paddle.static.load_inference_model(
+                 path_prefix=model_path_prefix, executor=executor))
         else:
-            [inference_program, feed_target_names, fetch_targets] = (
-                paddle.static.load_inference_model(
-                    path_prefix=path_prefix, executor=executor))
+            [inference_program, feed_target_names,
+             fetch_targets] = (paddle.static.load_inference_model(
+                 path_prefix=path_prefix, executor=executor))
 
     return [inference_program, feed_target_names, fetch_targets]
 
@@ -125,13 +125,13 @@ def load_onnx_model(model_path,
             version = x2paddle.__version__
             v0, v1, v2 = version.split('.')
             version_sum = int(v0) * 100 + int(v1) * 10 + int(v2)
-            if version_sum < 139:
+            if version_sum != 139:
                 _logger.warning(
-                    "x2paddle>=1.3.9 is required, please use \"pip install x2paddle\"."
+                    "x2paddle==1.3.9 is required, please use \"pip install x2paddle==1.3.9\"."
                 )
-                os.system('python -m pip install -U x2paddle')
+                os.system('python -m pip install -U x2paddle==1.3.9')
         except:
-            os.system('python -m pip install -U x2paddle')
+            os.system('python -m pip install -U x2paddle==1.3.9')
         # check onnx installation and version
         try:
             pkg.require('onnx')
@@ -153,7 +153,8 @@ def load_onnx_model(model_path,
         time_info = int(time.time())
         if not disable_feedback:
             ConverterCheck(
-                task="ONNX", time_info=time_info, convert_state="Start").start()
+                task="ONNX", time_info=time_info,
+                convert_state="Start").start()
         # support distributed convert model
         model_idx = paddle.distributed.get_rank(
         ) if paddle.distributed.get_world_size() > 1 else 0

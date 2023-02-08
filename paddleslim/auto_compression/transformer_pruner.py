@@ -296,13 +296,14 @@ class TransformerPruner:
         head_num = -1
         tmp_mha_ops = patterns['MHA$0']
         for op in tmp_mha_ops:
-            if op.type() in ['matmul', 'matmul_v2'] and (
-                    not has_trainable_var(op)) and head_num == -1:
+            if op.type() in [
+                    'matmul', 'matmul_v2'
+            ] and (not has_trainable_var(op)) and head_num == -1:
                 inp_var = op.inputs("X")
                 head_num = inp_var[0].shape()[1]
 
-        mha_weight, ffn_weight = preprocess_transformer_patterns(patterns,
-                                                                 graph)
+        mha_weight, ffn_weight = preprocess_transformer_patterns(
+            patterns, graph)
         return input_mask_op, layer_num, head_num, mha_weight, ffn_weight
 
     def _program_add_mask(self, program, patterns, layer_num, head_num,
@@ -312,7 +313,7 @@ class TransformerPruner:
         for ft in fetch_targets:
             fetch_list.append(ft.name)
         program = recover_inference_program(program)
-        block = program.global_block()
+        block = program.current_block()
         head_mask = block.create_var(
             name='head_mask',
             shape=[layer_num, head_num],
@@ -325,11 +326,12 @@ class TransformerPruner:
             1.0,
             out=head_mask,
             stop_gradient=False)
-        head_mask = unsqueeze_op(
-            block, -1,
-            unsqueeze_op(block, -1,
-                         unsqueeze_op(block, 1, head_mask, feed_num + 1),
-                         feed_num + 2), feed_num + 3)
+        head_mask = unsqueeze_op(block, -1,
+                                 unsqueeze_op(block, -1,
+                                              unsqueeze_op(
+                                                  block, 1, head_mask,
+                                                  feed_num + 1), feed_num + 2),
+                                 feed_num + 3)
 
         for pattern_name, pattern in patterns.items():
             if 'MHA' in pattern_name:
@@ -432,8 +434,7 @@ class TransformerPruner:
         index = np.reshape(
             np.take(
                 np.reshape(
-                    np.arange(
-                        0, head_num * num_per_head, dtype='int64'),
+                    np.arange(0, head_num * num_per_head, dtype='int64'),
                     (head_num, num_per_head)),
                 idx,
                 axis=0), (-1))
@@ -455,13 +456,13 @@ class TransformerPruner:
 
         for w_idx, weight_name in enumerate(qkv):
             if w_idx % 2 == 0:
-                ### reorder qkv weight 
+                ### reorder qkv weight
                 reorder_head_matrix(weight_name, qkv_index, dim=1)
             else:
-                ### reorder qkv bias 
+                ### reorder qkv bias
                 reorder_head_matrix(weight_name, qkv_index, dim=0)
 
-        ### reorder attention output weight 
+        ### reorder attention output weight
         reorder_head_matrix(attn_out[0], index, dim=0)
 
     def _reorder_neuron(self, scope, place, weight, idx):
@@ -528,8 +529,8 @@ class TransformerPruner:
         if _var is None:
             return
         param_t = _var.get_tensor()
-        pruned_ratio = [pruned_ratio[1]] if len(param_t.shape(
-        )) == 1 else pruned_ratio
+        pruned_ratio = [pruned_ratio[1]
+                        ] if len(param_t.shape()) == 1 else pruned_ratio
         origin_shape = param_t.shape()
 
         def process_qkv(qkv_param, pruned_ratio):
@@ -602,12 +603,12 @@ class TransformerPruner:
                         origin_shape = op.attr('shape')
                         pruned_shape = origin_shape
                         if len(origin_shape) == 3:
-                            pruned_shape[-1] = int(origin_shape[-1] *
-                                                   self.width_mult)
+                            pruned_shape[-1] = int(
+                                origin_shape[-1] * self.width_mult)
                             op.set_attr('shape', pruned_shape)
                         elif len(origin_shape) == 4 or len(origin_shape) == 5:
-                            pruned_shape[-2] = int(origin_shape[-2] *
-                                                   self.width_mult)
+                            pruned_shape[-2] = int(
+                                origin_shape[-2] * self.width_mult)
                             op.set_attr('shape', pruned_shape)
                         else:
                             raise IndexError
