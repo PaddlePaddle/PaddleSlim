@@ -15,11 +15,14 @@
 from typing import Dict, Union
 
 import paddle.nn as nn
-from .reper import DiverseBranchBlock, ACBlock
+from .reper import DiverseBranchBlock, ACBlock, RepVGGBlock, SlimRepBlock
 
 SUPPORT_REP_TYPE_LAYERS = [nn.Conv2D, nn.Linear]
 
-__all__ = ["BaseRepConfig", "DBBRepConfig", "ACBRepConfig"]
+__all__ = [
+    "BaseRepConfig", "DBBRepConfig", "ACBRepConfig", "RepVGGConfig",
+    "SlimRepConfig"
+]
 
 
 class BaseRepConfig:
@@ -122,6 +125,44 @@ class ACBRepConfig(BaseRepConfig):
     def __init__(
             self,
             type_config: Dict={nn.Conv2D: ACBlock},
+            layer_config: Dict=None, ):
+        self._type_config = self._set_type_config(type_config)
+        self._layer_config = self._set_layer_config(layer_config)
+
+
+class RepVGGConfig(BaseRepConfig):
+    """
+    RepVGG reparameterization configuration class.
+    Args:
+        type_config(dict): Set the reper by the type of layer. The key of `type_config` 
+            should be subclass of `paddle.nn.Layer`. Its priority is lower than `layer_config`.
+            Default is: `{nn.Conv2D: ACBlock}`.
+        layer_config(dict): Set the reper by layer. It has the highest priority among
+            all the setting methods. Such as: `{model.conv1: ACBlock}`. Default is None. 
+    """
+
+    def __init__(
+            self,
+            type_config: Dict={nn.Conv2D: RepVGGBlock},
+            layer_config: Dict=None, ):
+        self._type_config = self._set_type_config(type_config)
+        self._layer_config = self._set_layer_config(layer_config)
+
+
+class SlimRepConfig(BaseRepConfig):
+    """
+    SlimRepBlock reparameterization configuration class.
+    Args:
+        type_config(dict): Set the reper by the type of layer. The key of `type_config` 
+            should be subclass of `paddle.nn.Layer`. Its priority is lower than `layer_config`.
+            Default is: `{nn.Conv2D: ACBlock}`.
+        layer_config(dict): Set the reper by layer. It has the highest priority among
+            all the setting methods. Such as: `{model.conv1: ACBlock}`. Default is None. 
+    """
+
+    def __init__(
+            self,
+            type_config: Dict={nn.Conv2D: SlimRepBlock},
             layer_config: Dict=None, ):
         self._type_config = self._set_type_config(type_config)
         self._layer_config = self._set_layer_config(layer_config)

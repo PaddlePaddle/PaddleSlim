@@ -14,11 +14,17 @@
 
 from . import diversebranchblock
 from . import acblock
+from . import repvgg
+from . import slimrep
 from . import base
 
 from .diversebranchblock import DiverseBranchBlock
 from .acblock import ACBlock
+from .repvgg import RepVGGBlock
+from .slimrep import SlimRepBlock
 
 __all__ = []
 __all__ += diversebranchblock.__all__
 __all__ += acblock.__all__
+__all__ += repvgg.__all__
+__all__ += slimrep.__all__
