@@ -125,13 +125,13 @@ def load_onnx_model(model_path,
             version = x2paddle.__version__
             v0, v1, v2 = version.split('.')
             version_sum = int(v0) * 100 + int(v1) * 10 + int(v2)
-            if version_sum < 139:
+            if version_sum != 139:
                 _logger.warning(
-                    "x2paddle>=1.3.9 is required, please use \"pip install x2paddle\"."
+                    "x2paddle==1.3.9 is required, please use \"pip install x2paddle==1.3.9\"."
                 )
-                os.system('python -m pip install -U x2paddle')
+                os.system('python -m pip install -U x2paddle==1.3.9')
         except:
-            os.system('python -m pip install -U x2paddle')
+            os.system('python -m pip install -U x2paddle==1.3.9')
         # check onnx installation and version
         try:
             pkg.require('onnx')
