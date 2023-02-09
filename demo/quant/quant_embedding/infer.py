@@ -157,13 +157,13 @@ def infer_step(args, vocab_size, test_reader, use_cuda, i2w):
                     for data in test_reader():
                         step_id += 1
                         b_size = len([dat[0] for dat in data])
-                        wa = np.array([dat[0] for dat in 
+                        wa = np.array([dat[0] for dat in
                                        data]).astype("int64").reshape(
                                            b_size, 1)
-                        wb = np.array([dat[1] for dat in 
+                        wb = np.array([dat[1] for dat in
                                        data]).astype("int64").reshape(
                                            b_size, 1)
-                        wc = np.array([dat[2] for dat in 
+                        wc = np.array([dat[2] for dat in
                                        data]).astype("int64").reshape(
                                            b_size, 1)
 
