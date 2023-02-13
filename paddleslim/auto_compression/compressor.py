@@ -445,7 +445,6 @@ class AutoCompression:
 
     def _prepare_fleet_strategy(train_config):
         build_strategy = paddle.static.BuildStrategy()
-        exec_strategy = paddle.static.ExecutionStrategy()
 
         strategy = fleet.DistributedStrategy()
         strategy.build_strategy = build_strategy
@@ -553,19 +552,16 @@ class AutoCompression:
         return train_program_info, test_program_info
 
     def _compiled_program(self, program_info, strategy):
-        compiled_prog = paddle.static.CompiledProgram(program_info.program)
+
         build_strategy = paddle.static.BuildStrategy()
-        exec_strategy = paddle.static.ExecutionStrategy()
         if 'qat' in strategy:
             build_strategy.memory_optimize = False
             build_strategy.enable_inplace = False
             build_strategy.fuse_all_reduce_ops = False
             build_strategy.sync_batch_norm = False
 
-        compiled_prog = compiled_prog.with_data_parallel(
-            loss_name=program_info.fetch_targets[0].name,
-            build_strategy=build_strategy,
-            exec_strategy=exec_strategy)
+        compiled_prog = paddle.static.CompiledProgram(
+            program_info.program, build_strategy=build_strategy)
         program_info.program = compiled_prog
         return program_info
 

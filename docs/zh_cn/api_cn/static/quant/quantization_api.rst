@@ -453,13 +453,6 @@ convert
    #调用api
    quant_train_program = quant.quant_aware(train_program, place, config, for_test=False)
    quant_eval_program = quant.quant_aware(eval_program, place, config, for_test=True)
-   #关闭策略
-   build_strategy.fuse_all_reduce_ops = False
-   build_strategy.sync_batch_norm = False
-   quant_train_program = quant_train_program.with_data_parallel(
-       loss_name=avg_cost.name,
-       build_strategy=build_strategy,
-       exec_strategy=exec_strategy)
    
    inference_prog = quant.convert(quant_eval_program, place, config)
 

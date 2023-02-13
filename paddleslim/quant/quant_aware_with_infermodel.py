@@ -107,17 +107,15 @@ def _parse_train_configs(train_config):
 
 def _compile_program(program, fetch_var_name):
     """compiling program"""
-    compiled_prog = paddle.static.CompiledProgram(program)
+
     build_strategy = paddle.static.BuildStrategy()
     build_strategy.memory_optimize = False
     build_strategy.enable_inplace = False
     build_strategy.fuse_all_reduce_ops = False
     build_strategy.sync_batch_norm = False
     exec_strategy = paddle.static.ExecutionStrategy()
-    compiled_prog = compiled_prog.with_data_parallel(
-        loss_name=fetch_var_name,
-        build_strategy=build_strategy,
-        exec_strategy=exec_strategy)
+    compiled_prog = paddle.static.CompiledProgram(
+        program, exec_strategy=exec_strategy)
     return compiled_prog
 
 

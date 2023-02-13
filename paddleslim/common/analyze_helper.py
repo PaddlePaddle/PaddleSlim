@@ -103,13 +103,11 @@ class VarCollector(object):
     def run(self, reader, exe, step=None, loss_name=None):
         if not hasattr(self.program, '_program'):
             # Compile the native program to speed up
-            program = paddle.static.CompiledProgram(
-                self.program).with_data_parallel(loss_name=loss_name)
+            program = paddle.static.CompiledProgram(self.program)
 
         for idx, data in enumerate(reader):
-            vars_np = exe.run(program=program,
-                              feed=data,
-                              fetch_list=self.real_names)
+            vars_np = exe.run(
+                program=program, feed=data, fetch_list=self.real_names)
             mapped_vars_np = dict(zip(self.real_names, vars_np))
             values = self.update(mapped_vars_np)
 
@@ -129,8 +127,7 @@ class VarCollector(object):
 
         if not hasattr(self.program, '_program'):
             # Compile the native program to speed up
-            program = paddle.static.CompiledProgram(
-                self.program).with_data_parallel(loss_name=loss_name)
+            program = paddle.static.CompiledProgram(self.program)
         for idx, data in enumerate(reader):
             vars_np = exe.run(program=program, feed=data, fetch_list=fetch_list)
             vars_np = [np.max(var) for var in vars_np]
@@ -172,5 +169,5 @@ class VarCollector(object):
                     plt.show()
                     pdf.savefig()
                     plt.close()
-        _logger.info("variables histogram have been saved as {}".format(
-            pdf_path))
+        _logger.info(
+            "variables histogram have been saved as {}".format(pdf_path))
