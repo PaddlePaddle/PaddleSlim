@@ -31,7 +31,7 @@ def argsparser():
     parser.add_argument(
         '--config_path',
         type=str,
-        default='./image_classification/configs/eval.yaml',
+        default='./configs/eval.yaml',
         help="path of compression strategy config.")
     parser.add_argument(
         '--model_dir',
@@ -41,10 +41,11 @@ def argsparser():
     return parser
 
 
-def eval_reader(data_dir, batch_size, crop_size, resize_size):
+def eval_reader(data_dir, vit_flag, batch_size, crop_size, resize_size):
     val_reader = ImageNetDataset(
         mode='val',
         data_dir=data_dir,
+        vit_flag=vit_flag,
         crop_size=crop_size,
         resize_size=resize_size)
     val_loader = DataLoader(
@@ -66,9 +67,11 @@ def eval():
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"])
     print('Loaded model from: {}'.format(global_config["model_dir"]))
+    vit_flag = 'ViT_base' in global_config["model_dir"]
 
     val_loader = eval_reader(
         data_dir,
+        vit_flag=vit_flag,
         batch_size=global_config['batch_size'],
         crop_size=img_size,
         resize_size=resize_size)
@@ -77,9 +80,10 @@ def eval():
     for batch_id, (image, label) in enumerate(val_loader):
         image = np.array(image)
         label = np.array(label).astype('int64')
-        pred = exe.run(val_program,
-                       feed={feed_target_names[0]: image},
-                       fetch_list=fetch_targets)
+        pred = exe.run(
+            val_program,
+            feed={feed_target_names[0]: image},
+            fetch_list=fetch_targets)
         pred = np.array(pred[0])
         label = np.array(label)
         sort_array = pred.argsort(axis=1)
@@ -107,10 +111,10 @@ def main(args):
         global_config['model_dir'] = args.model_dir
 
     global img_size, resize_size
-    img_size = int(global_config[
-        'img_size']) if 'img_size' in global_config else 224
-    resize_size = int(global_config[
-        'resize_size']) if 'resize_size' in global_config else 256
+    img_size = int(
+        global_config['img_size']) if 'img_size' in global_config else 224
+    resize_size = int(
+        global_config['resize_size']) if 'resize_size' in global_config else 256
 
     result = eval()
     print('Eval Top1:', result)
