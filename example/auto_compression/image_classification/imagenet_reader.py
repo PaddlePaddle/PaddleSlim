@@ -56,8 +56,8 @@ def random_crop(img, size, scale=[0.08, 1.0], ratio=[3. / 4., 4. / 3.]):
     scale_max = min(scale[1], bound)
     scale_min = min(scale[0], bound)
 
-    target_area = img.size[0] * img.size[1] * np.random.uniform(scale_min,
-                                                                scale_max)
+    target_area = img.size[0] * img.size[1] * np.random.uniform(
+        scale_min, scale_max)
     target_size = math.sqrt(target_area)
     w = int(target_size * w)
     h = int(target_size * h)
@@ -99,7 +99,8 @@ def distort_color(img):
     return img
 
 
-def process_image(sample, mode, color_jitter, rotate, crop_size, resize_size):
+def process_image(sample, mode, vit_flag, color_jitter, rotate, crop_size,
+                  resize_size):
     img_path = sample[0]
 
     try:
@@ -122,6 +123,12 @@ def process_image(sample, mode, color_jitter, rotate, crop_size, resize_size):
     if img.mode != 'RGB':
         img = img.convert('RGB')
 
+    global img_mean
+    global img_std
+
+    if vit_flag == True:
+        img_mean = np.array([0.5, 0.5, 0.5]).reshape((3, 1, 1))
+        img_std = np.array([0.5, 0.5, 0.5]).reshape((3, 1, 1))
     img = np.array(img).astype('float32').transpose((2, 0, 1)) / 255
     img -= img_mean
     img /= img_std
@@ -189,12 +196,14 @@ class ImageNetDataset(Dataset):
     def __init__(self,
                  data_dir=DATA_DIR,
                  mode='train',
+                 vit_flag=False,
                  crop_size=DATA_DIM,
                  resize_size=RESIZE_DIM):
         super(ImageNetDataset, self).__init__()
         self.data_dir = data_dir
         self.crop_size = crop_size
         self.resize_size = resize_size
+        self.vit_flag = vit_flag
         train_file_list = os.path.join(data_dir, 'train_list.txt')
         val_file_list = os.path.join(data_dir, 'val_list.txt')
         test_file_list = os.path.join(data_dir, 'test_list.txt')
@@ -220,7 +229,8 @@ class ImageNetDataset(Dataset):
                 color_jitter=False,
                 rotate=False,
                 crop_size=self.crop_size,
-                resize_size=self.resize_size)
+                resize_size=self.resize_size,
+                vit_flag=self.vit_flag)
             return data, np.array([label]).astype('int64')
         elif self.mode == 'val':
             data, label = process_image(
@@ -229,7 +239,8 @@ class ImageNetDataset(Dataset):
                 color_jitter=False,
                 rotate=False,
                 crop_size=self.crop_size,
-                resize_size=self.resize_size)
+                resize_size=self.resize_size,
+                vit_flag=self.vit_flag)
             return data, np.array([label]).astype('int64')
         elif self.mode == 'test':
             data = process_image(
@@ -238,7 +249,8 @@ class ImageNetDataset(Dataset):
                 color_jitter=False,
                 rotate=False,
                 crop_size=self.crop_size,
-                resize_size=self.resize_size)
+                resize_size=self.resize_size,
+                vit_flag=self.vit_flag)
             return data
 
     def __len__(self):

@@ -104,8 +104,8 @@ class Predictor(object):
         self.rerun_flag = False
         self.paddle_predictor = self._create_paddle_predictor()
         input_names = self.paddle_predictor.get_input_names()
-        self.input_tensor = self.paddle_predictor.get_input_handle(input_names[
-            0])
+        self.input_tensor = self.paddle_predictor.get_input_handle(
+            input_names[0])
 
         output_names = self.paddle_predictor.get_output_names()
         self.output_tensor = self.paddle_predictor.get_output_handle(
@@ -226,6 +226,7 @@ class Predictor(object):
         elif args.use_mkldnn:
             print_msg = "using MKLDNN"
         time_avg = predict_time / sample_nums
+        print(time_avg * 1000)
         print(
             "[Benchmark]{}\t{}\tbatch size: {}.Inference time(ms): min={}, max={}, avg={}".
             format(
