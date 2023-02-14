@@ -113,9 +113,8 @@ def _compile_program(program, fetch_var_name):
     build_strategy.enable_inplace = False
     build_strategy.fuse_all_reduce_ops = False
     build_strategy.sync_batch_norm = False
-    exec_strategy = paddle.static.ExecutionStrategy()
     compiled_prog = paddle.static.CompiledProgram(
-        program, exec_strategy=exec_strategy)
+        program, build_strategy=build_strategy)
     return compiled_prog
 
 
