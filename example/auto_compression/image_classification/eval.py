@@ -31,7 +31,7 @@ def argsparser():
     parser.add_argument(
         '--config_path',
         type=str,
-        default='./configs/eval.yaml',
+        default='./image_classification/configs/eval.yaml',
         help="path of compression strategy config.")
     parser.add_argument(
         '--model_dir',

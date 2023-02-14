@@ -3,8 +3,8 @@ DataLoader:
   Train:
     dataset:
       name: ImageNetDataset
-      image_root: /paddle/dataset/imagenet/ILSVRC2012/
-      cls_label_path: /paddle/dataset/imagenet/ILSVRC2012/train_list.txt
+      image_root: ./dataset/ILSVRC2012/
+      cls_label_path: ./dataset/ILSVRC2012/train_list.txt
       transform_ops:
         - DecodeImage:
             to_rgb: True

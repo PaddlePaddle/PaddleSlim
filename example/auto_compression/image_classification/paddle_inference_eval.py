@@ -50,7 +50,7 @@ def argsparser():
     parser.add_argument("--img_size", type=int, default=224)
     parser.add_argument("--resize_size", type=int, default=256)
     parser.add_argument(
-        "--data_path", type=str, default="/paddle/dataset/imagenet/ILSVRC2012/")
+        "--data_path", type=str, default="./dataset/ILSVRC2012/")
     parser.add_argument(
         "--use_gpu", type=bool, default=False, help="Whether to use gpu")
     parser.add_argument(
