@@ -21,7 +21,7 @@ from functools import partial
 import numpy as np
 import paddle
 import paddle.nn as nn
-from paddle.io import DataLoader
+from paddle.io import DataLoader, DistributedBatchSampler
 from imagenet_reader import ImageNetDataset
 from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
@@ -72,9 +72,10 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         if len(test_feed_names) == 1:
             image = np.array(image)
             label = np.array(label).astype('int64')
-            pred = exe.run(compiled_test_program,
-                           feed={test_feed_names[0]: image},
-                           fetch_list=test_fetch_list)
+            pred = exe.run(
+                compiled_test_program,
+                feed={test_feed_names[0]: image},
+                fetch_list=test_fetch_list)
             pred = np.array(pred[0])
             label = np.array(label)
             sort_array = pred.argsort(axis=1)
@@ -114,13 +115,13 @@ def main():
     data_dir = global_config['data_dir']
 
     train_dataset = ImageNetDataset(mode='train', data_dir=data_dir)
-
-    train_loader = DataLoader(
+    batch_sampler = DistributedBatchSampler(
         train_dataset,
         batch_size=global_config['batch_size'],
         shuffle=True,
-        drop_last=True,
-        num_workers=0)
+        drop_last=True)
+    train_loader = DataLoader(
+        train_dataset, batch_sampler=batch_sampler, num_workers=0)
     train_dataloader = reader_wrapper(train_loader, global_config['input_name'])
 
     ac = AutoCompression(
