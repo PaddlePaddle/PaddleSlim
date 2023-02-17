@@ -189,7 +189,6 @@ def compress(args):
         return_list=False,
         batch_sampler=sampler,
         use_shared_memory=True,
-        shuffle=shuffle,
         num_workers=num_workers)
 
     valid_loader = paddle.io.DataLoader(
