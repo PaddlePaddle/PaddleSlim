@@ -41,7 +41,7 @@ add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
 add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used, support l1_norm and batch_norm_scale.")
 add_arg('save_inference',   bool, False,                "Whether to save inference model.")
 add_arg('ce_test',          bool, False, "Whether to CE test.")
-add_arg('fleet',            action='store_true',  help="Whether to turn on distributed training.")
+parser.add_argument('fleet',            action='store_true',  help="Whether to turn on distributed training.")
 # yapf: enable
 
 model_list = models.__all__

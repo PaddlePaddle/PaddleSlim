@@ -385,7 +385,7 @@ def build_distill_program(executor,
             loss.stop_gradient = False
 
             if 'prune_params_name' in config:  ### prune
-                if 'pruned_ratio' not in config and dist_strategy is not None:  ### asp
+                if 'pruned_ratio' not in config and dist_strategy is None:  ### asp
                     optimizer = pruner.decorate(optimizer)
                 optimizer.minimize(loss)
             elif 'prune_strategy' in config:  ###unstructure prune

@@ -69,7 +69,7 @@ add_arg('analysis',          bool, False,
 add_arg('onnx_format',          bool, False,
         "Whether use onnx format or not.")
 add_arg('ce_test',                 bool,   False,       "Whether to CE test.")
-add_arg('fleet',            action='store_true',  help="Whether to turn on distributed training.")
+parser.add_argument('fleet',            action='store_true',  help="Whether to turn on distributed training.")
 
 # yapf: enable
 

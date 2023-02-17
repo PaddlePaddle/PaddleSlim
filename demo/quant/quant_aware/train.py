@@ -42,7 +42,7 @@ add_arg('log_period',       int, 10,                 "Log period in batches.")
 add_arg('checkpoint_dir',         str, "output",           "checkpoint save dir")
 add_arg('ce_test',                 bool,   False,       "Whether to CE test.")
 add_arg('onnx_format',      bool,   False,          "Whether to export the quantized model with format of ONNX.")
-add_arg('fleet',            action='store_true',  help="Whether to turn on distributed training.")
+parser.add_argument('fleet',            action='store_true',  help="Whether to turn on distributed training.")
 # yapf: enable
 
 model_list = [m for m in dir(models) if "__" not in m]
