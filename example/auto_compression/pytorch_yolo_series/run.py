@@ -67,10 +67,11 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             ncols=80) as t:
         for data in val_loader:
             data_all = {k: np.array(v) for k, v in data.items()}
-            outs = exe.run(compiled_test_program,
-                           feed={test_feed_names[0]: data_all['image']},
-                           fetch_list=test_fetch_list,
-                           return_numpy=False)
+            outs = exe.run(
+                compiled_test_program,
+                feed={test_feed_names[0]: data_all['image']},
+                fetch_list=test_fetch_list,
+                return_numpy=False)
             res = postprocess(np.array(outs[0]), data_all['scale_factor'])
             bboxes_list.append(res['bbox'])
             bbox_nums_list.append(res['bbox_num'])
@@ -93,12 +94,10 @@ def main():
         paddle.vision.image.set_image_backend('cv2')
         train_dataset = paddle.vision.datasets.ImageFolder(
             global_config['image_path'], transform=yolo_image_preprocess)
+        batch_sampler = paddle.io.DistributedBatchSampler(
+            train_dataset, batch_size=1, shuffle=True, drop_last=True)
         train_loader = paddle.io.DataLoader(
-            train_dataset,
-            batch_size=1,
-            shuffle=True,
-            drop_last=True,
-            num_workers=0)
+            train_dataset, batch_sampler=batch_sampler, num_workers=0)
         train_loader = reader_wrapper(train_loader, input_name=input_name)
         eval_func = None
     else:
@@ -107,8 +106,10 @@ def main():
             image_dir=global_config['coco_train_image_dir'],
             anno_path=global_config['coco_train_anno_path'],
             input_name=input_name)
+        batch_sampler = paddle.io.DistributedBatchSampler(
+            dataset, batch_size=1, shuffle=True, drop_last=True)
         train_loader = paddle.io.DataLoader(
-            dataset, batch_size=1, shuffle=True, drop_last=True, num_workers=0)
+            dataset, batch_size=1, num_workers=0, batch_sampler=batch_sampler)
         if paddle.distributed.get_rank() == 0:
             eval_func = eval_function
             global val_loader

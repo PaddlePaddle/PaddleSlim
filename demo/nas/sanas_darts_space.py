@@ -119,8 +119,8 @@ def train(main_prog, exe, epoch_id, train_loader, fetch_list, args):
                     [[drop_path_probility * epoch_id / args.retain_epoch]
                      for i in range(args.batch_size)]).astype(np.float32)
                 drop_path_mask = 1 - np.random.binomial(
-                    1, drop_path_prob[0],
-                    size=[args.batch_size, 20, 4, 2]).astype(np.float32)
+                    1, drop_path_prob[0], size=[args.batch_size, 20, 4, 2
+                                                ]).astype(np.float32)
                 feed.append({
                     "image": image,
                     "label": label,
@@ -195,8 +195,8 @@ def search(config, args, image_size, is_server=True):
 
         current_params = count_parameters_in_MB(
             train_program.global_block().all_parameters(), 'cifar10')
-        _logger.info('step: {}, current_params: {}M'.format(step,
-                                                            current_params))
+        _logger.info(
+            'step: {}, current_params: {}M'.format(step, current_params))
         if current_params > float(3.77):
             continue
 
@@ -222,9 +222,7 @@ def search(config, args, image_size, is_server=True):
 
         build_strategy = static.BuildStrategy()
         train_compiled_program = static.CompiledProgram(
-            train_program).with_data_parallel(
-                loss_name=train_fetch_list[0].name,
-                build_strategy=build_strategy)
+            train_program, build_strategy=build_strategy)
 
         valid_top1_list = []
         for epoch_id in range(args.retain_epoch):
@@ -234,8 +232,8 @@ def search(config, args, image_size, is_server=True):
                 step, epoch_id, train_top1))
             valid_top1 = valid(test_program, exe, epoch_id, test_loader,
                                test_fetch_list, args)
-            _logger.info("TEST: Epoch {}, valid_acc {:.6f}".format(epoch_id,
-                                                                   valid_top1))
+            _logger.info(
+                "TEST: Epoch {}, valid_acc {:.6f}".format(epoch_id, valid_top1))
             valid_top1_list.append(valid_top1)
         sa_nas.reward(float(valid_top1_list[-1] + valid_top1_list[-2]) / 2)
 
@@ -276,19 +274,18 @@ def final_test(config, args, image_size, token=None):
 
     build_strategy = static.BuildStrategy()
     train_compiled_program = static.CompiledProgram(
-        train_program).with_data_parallel(
-            loss_name=train_fetch_list[0].name, build_strategy=build_strategy)
+        train_program, build_strategy=build_strategy)
 
     valid_top1_list = []
     for epoch_id in range(args.retain_epoch):
         train_top1 = train(train_compiled_program, exe, epoch_id, train_loader,
                            train_fetch_list, args)
-        _logger.info("TRAIN: Epoch {}, train_acc {:.6f}".format(epoch_id,
-                                                                train_top1))
+        _logger.info(
+            "TRAIN: Epoch {}, train_acc {:.6f}".format(epoch_id, train_top1))
         valid_top1 = valid(test_program, exe, epoch_id, test_loader,
                            test_fetch_list, args)
-        _logger.info("TEST: Epoch {}, valid_acc {:.6f}".format(epoch_id,
-                                                               valid_top1))
+        _logger.info(
+            "TEST: Epoch {}, valid_acc {:.6f}".format(epoch_id, valid_top1))
         valid_top1_list.append(valid_top1)
 
         output_dir = os.path.join('darts_output', str(epoch_id))

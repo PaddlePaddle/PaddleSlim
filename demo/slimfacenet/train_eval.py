@@ -71,21 +71,25 @@ def test(test_exe, test_program, test_out, args):
     for idx, data in enumerate(test_reader()):
         res = []
         res.append(
-            test_exe.run(test_program,
-                         feed={u'image_test': data[0][u'image_test1']},
-                         fetch_list=out_feature))
+            test_exe.run(
+                test_program,
+                feed={u'image_test': data[0][u'image_test1']},
+                fetch_list=out_feature))
         res.append(
-            test_exe.run(test_program,
-                         feed={u'image_test': data[0][u'image_test2']},
-                         fetch_list=out_feature))
+            test_exe.run(
+                test_program,
+                feed={u'image_test': data[0][u'image_test2']},
+                fetch_list=out_feature))
         res.append(
-            test_exe.run(test_program,
-                         feed={u'image_test': data[0][u'image_test3']},
-                         fetch_list=out_feature))
+            test_exe.run(
+                test_program,
+                feed={u'image_test': data[0][u'image_test3']},
+                fetch_list=out_feature))
         res.append(
-            test_exe.run(test_program,
-                         feed={u'image_test': data[0][u'image_test4']},
-                         fetch_list=out_feature))
+            test_exe.run(
+                test_program,
+                feed={u'image_test': data[0][u'image_test4']},
+                fetch_list=out_feature))
         featureL = np.concatenate((res[0][0], res[1][0]), 1)
         featureR = np.concatenate((res[2][0], res[3][0]), 1)
         if featureLs is None:
@@ -119,14 +123,12 @@ def train(exe, train_program, train_out, test_program, test_out, args):
     build_strategy = paddle.static.BuildStrategy()
     build_strategy.fuse_all_optimizer_ops = True
     compiled_prog = paddle.static.CompiledProgram(
-        train_program, build_strategy=build_strategy).with_data_parallel(
-            loss_name=loss.name, build_strategy=build_strategy)
+        train_program, build_strategy=build_strategy)
     best_ave = 0
     for epoch_id in range(args.start_epoch, args.total_epoch):
         for batch_id, data in enumerate(train_reader()):
-            loss, acc, global_lr = exe.run(compiled_prog,
-                                           feed=data,
-                                           fetch_list=fetch_list_train)
+            loss, acc, global_lr = exe.run(
+                compiled_prog, feed=data, fetch_list=fetch_list_train)
             avg_loss = np.mean(np.array(loss))
             avg_acc = np.mean(np.array(acc))
             print(

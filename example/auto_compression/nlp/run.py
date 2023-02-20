@@ -174,11 +174,11 @@ def reader():
         Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # token_type 
     ): fn(samples)
 
-    train_batch_sampler = paddle.io.BatchSampler(
+    train_batch_sampler = paddle.io.DistributedBatchSampler(
         train_ds, batch_size=global_config['batch_size'], shuffle=True)
 
-    [input_ids, token_type_ids, labels] = create_data_holder(global_config[
-        'task_name'])
+    [input_ids, token_type_ids,
+     labels] = create_data_holder(global_config['task_name'])
     feed_list_name = []
     train_data_loader = DataLoader(
         dataset=train_ds,
@@ -215,12 +215,13 @@ def reader():
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric.reset()
     for data in eval_dataloader():
-        logits = exe.run(compiled_test_program,
-                         feed={
-                             test_feed_names[0]: data[0]['input_ids'],
-                             test_feed_names[1]: data[0]['token_type_ids']
-                         },
-                         fetch_list=test_fetch_list)
+        logits = exe.run(
+            compiled_test_program,
+            feed={
+                test_feed_names[0]: data[0]['input_ids'],
+                test_feed_names[1]: data[0]['token_type_ids']
+            },
+            fetch_list=test_fetch_list)
         paddle.disable_static()
         labels_pd = paddle.to_tensor(np.array(data[0]['label']).flatten())
         logits_pd = paddle.to_tensor(logits[0])
@@ -244,12 +245,13 @@ def eval():
     metric.reset()
     print('Evaluating...')
     for data in eval_dataloader():
-        logits = exe.run(val_program,
-                         feed={
-                             feed_target_names[0]: data[0]['input_ids'],
-                             feed_target_names[1]: data[0]['token_type_ids']
-                         },
-                         fetch_list=fetch_targets)
+        logits = exe.run(
+            val_program,
+            feed={
+                feed_target_names[0]: data[0]['input_ids'],
+                feed_target_names[1]: data[0]['token_type_ids']
+            },
+            fetch_list=fetch_targets)
         paddle.disable_static()
         labels_pd = paddle.to_tensor(np.array(data[0]['label']).flatten())
         logits_pd = paddle.to_tensor(logits[0])

@@ -52,18 +52,7 @@ val_program = quant_aware(val_program, place, quant_config, scope=None, for_test
 compiled_train_prog = quant_aware(train_prog, place, quant_config, scope=None, for_test=False)
 ```
 
-### 关掉指定build策略
 
-```
-build_strategy = paddle.static.BuildStrategy()
-build_strategy.fuse_all_reduce_ops = False
-build_strategy.sync_batch_norm = False
-exec_strategy = paddle.static.ExecutionStrategy()
-compiled_train_prog = compiled_train_prog.with_data_parallel(
-        loss_name=avg_cost.name,
-        build_strategy=build_strategy,
-        exec_strategy=exec_strategy)
-```
 
 
 ### 训练命令
@@ -81,7 +70,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log -
             --model MobileNet \
             --pretrained_model ./pretrain/MobileNetV1_pretrained \
             --checkpoint_dir ./output/mobilenetv1 \
-            --num_epochs 30
+            --num_epochs 30 \
+            --fleet
 ```
 
 运行之后，可看到``best_model``的最后测试结果，和MobileNet量化前的精度top1=70.99%, top5=89.68%非常相近。

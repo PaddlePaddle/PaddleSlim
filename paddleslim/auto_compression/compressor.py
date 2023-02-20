@@ -157,10 +157,10 @@ class AutoCompression:
         self.deploy_hardware = deploy_hardware
 
         paddle.enable_static()
-        self._exe, self._places = self._prepare_envs()
+        self._exe, self._places, self.fleet = self._prepare_envs()
         self.default_distill_node_pair, self.model_type = self._get_model_info()
 
-        if self.train_config is not None and self.train_config.use_fleet:
+        if self.fleet:
             fleet.init(is_collective=True)
 
         if with_variable_shape(
@@ -306,7 +306,8 @@ class AutoCompression:
         places = paddle.device._convert_to_place(devices)
         _logger.info(f"devices: {devices}")
         exe = paddle.static.Executor(places)
-        return exe, places
+        fleet = paddle.device.cuda.device_count() > 1
+        return exe, places, fleet
 
     def _get_model_info(self):
         [inference_program, _, _] = (load_inference_model(
@@ -443,9 +444,8 @@ class AutoCompression:
 
         return strategy, config
 
-    def _prepare_fleet_strategy(train_config):
+    def _prepare_fleet_strategy(self, train_config):
         build_strategy = paddle.static.BuildStrategy()
-        exec_strategy = paddle.static.ExecutionStrategy()
 
         strategy = fleet.DistributedStrategy()
         strategy.build_strategy = build_strategy
@@ -458,8 +458,6 @@ class AutoCompression:
         if train_config.amp_config is not None:
             strategy.amp = True
             strategy.amp_configs = {**train_config.amp_config}
-        if train_config.asp_config is not None:
-            strategy.asp = True
         return strategy
 
     def _prepare_program(self, program, feed_target_names, fetch_targets,
@@ -498,7 +496,7 @@ class AutoCompression:
                 self._exe, self._places, config_dict, train_program_info,
                 strategy, patterns, self.eval_dataloader)
 
-        if train_config.use_fleet:
+        if self.fleet:
             dist_strategy = self._prepare_fleet_strategy(train_config)
         else:
             dist_strategy = None
@@ -534,7 +532,7 @@ class AutoCompression:
 
         self._exe.run(train_program_info.startup_program)
 
-        if (not train_config.use_fleet) and train_config.amp_config is not None:
+        if (not self.fleet) and train_config.amp_config is not None:
             if hasattr(
                     train_config.amp_config,
                     'use_pure_fp16') and train_config.amp_config.use_pure_fp16:
@@ -545,7 +543,7 @@ class AutoCompression:
             ### prune weight in scope
             self._pruner.prune_model(train_program_info.program)
 
-        if not train_config.use_fleet:
+        if not self.fleet:
             train_program_info = self._compiled_program(train_program_info,
                                                         strategy)
             test_program_info = self._compiled_program(test_program_info,
@@ -553,19 +551,16 @@ class AutoCompression:
         return train_program_info, test_program_info
 
     def _compiled_program(self, program_info, strategy):
-        compiled_prog = paddle.static.CompiledProgram(program_info.program)
+
         build_strategy = paddle.static.BuildStrategy()
-        exec_strategy = paddle.static.ExecutionStrategy()
         if 'qat' in strategy:
             build_strategy.memory_optimize = False
             build_strategy.enable_inplace = False
             build_strategy.fuse_all_reduce_ops = False
             build_strategy.sync_batch_norm = False
 
-        compiled_prog = compiled_prog.with_data_parallel(
-            loss_name=program_info.fetch_targets[0].name,
-            build_strategy=build_strategy,
-            exec_strategy=exec_strategy)
+        compiled_prog = paddle.static.CompiledProgram(
+            program_info.program, build_strategy=build_strategy)
         program_info.program = compiled_prog
         return program_info
 
@@ -823,8 +818,12 @@ class AutoCompression:
                             test_program_info.fetch_targets)
 
                         if metric > best_metric:
+                            tmp_program = test_program_info.program._program if isinstance(
+                                test_program_info.program,
+                                paddle.static.CompiledProgram
+                            ) else test_program_info.program
                             paddle.static.save(
-                                program=test_program_info.program._program,
+                                program=tmp_program,
                                 model_path=os.path.join(self.tmp_dir,
                                                         'best_model'))
                             best_metric = metric

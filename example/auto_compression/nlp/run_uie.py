@@ -181,8 +181,7 @@ def reader_proprecess(data_path, max_seq_len=512):
                     cur_result_list = []
 
                     for result in result_list:
-                        if result['start'] + 1 <= max_content_len < result[
-                                'end']:
+                        if result['start'] + 1 <= max_content_len < result['end']:
                             max_content_len = result['start']
                             break
 
@@ -276,7 +275,7 @@ def reader():
 
     [input_ids, token_type_ids, start_ids, end_ids] = create_data_holder()
 
-    train_batch_sampler = paddle.io.BatchSampler(
+    train_batch_sampler = paddle.io.DistributedBatchSampler(
         dataset=train_ds, batch_size=global_config['batch_size'], shuffle=True)
     train_dataloader = paddle.io.DataLoader(
         train_ds,
@@ -299,12 +298,13 @@ def reader():
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric.reset()
     for data in eval_dataloader():
-        logits = exe.run(compiled_test_program,
-                         feed={
-                             'input_ids': data[0]['input_ids'],
-                             'token_type_ids': data[0]['token_type_ids'],
-                         },
-                         fetch_list=test_fetch_list)
+        logits = exe.run(
+            compiled_test_program,
+            feed={
+                'input_ids': data[0]['input_ids'],
+                'token_type_ids': data[0]['token_type_ids'],
+            },
+            fetch_list=test_fetch_list)
         paddle.disable_static()
 
         start_ids = paddle.to_tensor(np.array(data[0]['start_ids']))
@@ -313,8 +313,8 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         start_prob = paddle.to_tensor(logits[0])
         end_prob = paddle.to_tensor(logits[1])
 
-        num_correct, num_infer, num_label = metric.compute(start_prob, end_prob,
-                                                           start_ids, end_ids)
+        num_correct, num_infer, num_label = metric.compute(
+            start_prob, end_prob, start_ids, end_ids)
         metric.update(num_correct, num_infer, num_label)
         paddle.enable_static()
     precision, recall, f1 = metric.accumulate()
