@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .conv_bn import QuantedConv2DBatchNorm, Conv2DBatchNormWrapper
+from .constraint import FusionConstraint, Constraint
+from .conv_bn_constraints import FreezedConvBNConstraint
 
-__all__ = ["QuantedConv2DBatchNorm", "Conv2DBatchNormWrapper"]
+__all__ = ["Constraint", "FusionConstraint", "FreezedConvBNConstraint"]

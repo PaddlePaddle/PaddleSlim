@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .conv_bn import QuantedConv2DBatchNorm, Conv2DBatchNormWrapper
+from .constraint import FusionConstraint
+from ..nn import Conv2DBatchNormWrapper, QuantedConv2DBatchNorm
 
-__all__ = ["QuantedConv2DBatchNorm", "Conv2DBatchNormWrapper"]
+FUSED_LAYER = Conv2DBatchNormWrapper
+QAT_FUSED_LAYER = QuantedConv2DBatchNorm
+
+
+class FreezedConvBNConstraint(FusionConstraint):
+    def apply(self, model, graph, config):
+        conv_bn_pairs = graph.find_conv_bn()
+        for pair in conv_bn_pairs:
+            pair = [node._layer for node in pair]
+            self.fuse_ops(model, FUSED_LAYER, pair, config)
+            config.add_qat_layer_mapping(FUSED_LAYER, QAT_FUSED_LAYER)

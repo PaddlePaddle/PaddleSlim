@@ -71,6 +71,16 @@ class BatchNorm(Layer):
         return batch_norm_out, batch_mean, batch_variance
 
 
+class Conv2DBatchNormWrapper(paddle.nn.Layer):
+    def __init__(self, conv, bn):
+        super(Conv2DBatchNormWrapper, self).__init__()
+        self._conv = conv
+        self._bn = bn
+
+    def forward(self, inputs):
+        return self._bn(self._conv(inputs))
+
+
 class QuantedConv2DBatchNorm(Layer):
     r"""Wrapper layer to simulate folding batch norms during quantization-aware training.
     Fisrtly, it will execute once convolution and batch norms prior to quantizing weights
