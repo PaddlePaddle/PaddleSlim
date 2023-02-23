@@ -18,8 +18,11 @@ from ..core import registry
 from .registry import *
 from ..core import dygraph
 from .dygraph import *
+from .graph_tracer import GraphTracer
+from .graph import Graph
 
 __all__ = []
 __all__ += graph_wrapper.__all__
 __all__ += registry.__all__
 __all__ += dygraph.__all__
+__all__ += ["GraphTracer", "Graph"]
