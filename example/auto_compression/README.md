@@ -255,7 +255,7 @@ ac.compress()
 ## 进阶使用
 
 - ACT可以自动处理常见的预测模型，如果有更特殊的改造需求，可以参考[ACT超参配置教程](./hyperparameter_tutorial.md)来进行单独配置压缩策略。
-- ACT接口各个参数详细含义可以参考 [ACT API文档](../docs/zh_cn/api_cn/static/auto-compression/auto_compression_api.rst)。
+- ACT接口各个参数详细含义可以参考 [ACT API文档](../../docs/zh_cn/api_cn/static/auto-compression/auto_compression_api.rst)。
 
 ## 社区交流
 
