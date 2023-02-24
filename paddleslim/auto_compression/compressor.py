@@ -763,8 +763,13 @@ class AutoCompression:
                 inference_program, feed_target_names, fetch_targets, patterns,
                 strategy, config, train_config)
             if 'unstructure' in strategy:
-                test_program_info.program._program = remove_unused_var_nodes(
-                    test_program_info.program._program)
+                if isinstance(test_program_info.program,
+                              paddle.static.CompiledProgram):
+                    test_program_info.program._program = remove_unused_var_nodes(
+                        test_program_info.program._program)
+                else:
+                    test_program_info.program = remove_unused_var_nodes(
+                        test_program_info.program)
             test_program_info = self._start_train(
                 train_program_info, test_program_info, strategy, train_config)
             if paddle.distributed.get_rank() == 0:
