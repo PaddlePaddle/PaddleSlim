@@ -20,9 +20,18 @@ QAT_FUSED_LAYER = QuantedConv2DBatchNorm
 
 
 class FreezedConvBNConstraint(FusionConstraint):
+    def __init__(self, freeze_bn_delay=0):
+        self._freeze_bn_delay = freeze_bn_delay
+
     def apply(self, model, graph, config):
         conv_bn_pairs = graph.find_conv_bn()
         for pair in conv_bn_pairs:
             pair = [node._layer for node in pair]
             self.fuse_ops(model, FUSED_LAYER, pair, config)
             config.add_qat_layer_mapping(FUSED_LAYER, QAT_FUSED_LAYER)
+
+        def _set_freeze_bn_delay(layer):
+            if isinstance(layer, FUSED_LAYER):
+                setattr(layer, "_freeze_bn_delay", self._freeze_bn_delay)
+
+        model.apply(_set_freeze_bn_delay)

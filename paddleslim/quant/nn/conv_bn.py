@@ -20,6 +20,7 @@ import paddle
 from paddle.nn import Layer
 from paddle.nn import functional as F
 from paddle.nn.layer.norm import _BatchNormBase
+from paddle.nn.quant.format import ConvertibleQuantedLayer
 
 
 class BatchNorm(Layer):
@@ -40,6 +41,7 @@ class BatchNorm(Layer):
         self._training = True
         self._batch_mean = None
         self._batch_variance = None
+        assert self._bias is not None
 
     def forward(self, input):
         r"""
@@ -63,9 +65,11 @@ class BatchNorm(Layer):
             self._bn._momentum,
             self._bn._epsilon,
             self._bn._data_format,
-            True,  # use_global_stats
+            False,  # use_global_stats
             False,  # trainable_statistics
         )
+        batch_mean.stop_gradient = True
+        batch_variance.stop_gradient = True
         self._batch_mean = batch_mean
         self._batch_variance = batch_variance
         return batch_norm_out, batch_mean, batch_variance
@@ -76,12 +80,13 @@ class Conv2DBatchNormWrapper(paddle.nn.Layer):
         super(Conv2DBatchNormWrapper, self).__init__()
         self._conv = conv
         self._bn = bn
+        self._freeze_bn_delay = None
 
     def forward(self, inputs):
         return self._bn(self._conv(inputs))
 
 
-class QuantedConv2DBatchNorm(Layer):
+class QuantedConv2DBatchNorm(ConvertibleQuantedLayer):
     r"""Wrapper layer to simulate folding batch norms during quantization-aware training.
     Fisrtly, it will execute once convolution and batch norms prior to quantizing weights
     to get the long term statistics(i.e. runing mean and runing variance).
@@ -96,10 +101,11 @@ class QuantedConv2DBatchNorm(Layer):
     Reference: Quantizing deep convolutional networks for efficient inference: A whitepaper
     """
 
-    def __init__(self, conv_bn, q_config):
+    def __init__(self, conv_bn: Conv2DBatchNormWrapper, q_config):
         super(QuantedConv2DBatchNorm, self).__init__()
         conv = conv_bn._conv
         bn = conv_bn._bn
+        self._freeze_bn_delay = conv_bn._freeze_bn_delay
         # For Conv2D
         self._groups = getattr(conv, '_groups')
         self._stride = getattr(conv, '_stride')
@@ -113,6 +119,10 @@ class QuantedConv2DBatchNorm(Layer):
         self.conv_weight = getattr(conv, 'weight')
         self.conv_bias = getattr(conv, 'bias')
 
+        if self.conv_bias is None:
+            self.conv_bias = paddle.create_parameter(
+                bn.bias.shape, dtype=self.conv_weight.dtype, is_bias=True)
+
         self.bn = BatchNorm(bn)
 
         self.weight_quanter = None
@@ -124,6 +134,8 @@ class QuantedConv2DBatchNorm(Layer):
 
         self._freeze_bn = False
 
+        self._steps = 0
+
     def freeze_bn(self):
         self._freeze_bn = True
 
@@ -131,10 +143,21 @@ class QuantedConv2DBatchNorm(Layer):
         self._freeze_bn = False
 
     def forward(self, input):
-        if self._freeze_bn:
-            return self._forward_with_bn_freezed(input)
+        if self.training:
+            if self._freeze_bn_delay == self._steps:
+                self.freeze_bn()
+
+            if self._freeze_bn:
+                out = self._forward_with_bn_freezed(input)
+                print("_forward_with_bn_freezed---------------")
+            else:
+                out = self._forward_with_bn_unfreezed(input)
+                print("_forward_with_bn_unfreezed---------------")
+            self._steps += 1
+            return out
         else:
-            return self._forward_with_bn_unfreezed(input)
+            print("_eval_forward---------------")
+            return self._eval_forward(input)
 
     def _forward_with_bn_unfreezed(self, input):
         quant_input = input
@@ -151,10 +174,24 @@ class QuantedConv2DBatchNorm(Layer):
         # Step 3: Excute conv with merged weights
         conv_out = self._conv_forward(quant_input, quant_weight)
         # Step 4: Scale output of conv and merge bias
-        conv_out = conv_out * (self.bn._runing_variance / batch_variance)
+        factor = paddle.reshape((self.bn._runing_variance / batch_variance),
+                                [1, -1, 1, 1])
+        factor.stop_gradient = True
+        conv_out = conv_out * factor
         merged_bias = self._merge_conv_unfreezed_bn_bias(
             self.conv_bias, self.bn)
-        return self._conv_forward(quant_input, quant_weight) + merged_bias
+        # merged_bias = self._merge_conv_freezed_bn_bias(self.conv_bias, self.bn)
+        return conv_out + paddle.reshape(merged_bias, [1, -1, 1, 1])
+
+    def _eval_forward(self, input):
+        quant_input = input
+        if self.activation_quanter is not None:
+            quant_input = self.activation_quanter(quant_input)
+        if self.weight_quanter is not None:
+            quant_weight = self.weight_quanter(self.conv_weight)
+        conv_out = self._conv_forward(quant_input, quant_weight)
+        return conv_out
+        #return conv_out + paddle.reshape(self.conv_bias, [1, -1, 1, 1])
 
     def _forward_with_bn_freezed(self, input):
         quant_input = input
@@ -171,24 +208,29 @@ class QuantedConv2DBatchNorm(Layer):
         conv_out = self._conv_forward(quant_input, quant_weight)
         # Step 4: Merge bias of conv and bn
         merged_bias = self._merge_conv_freezed_bn_bias(self.conv_bias, self.bn)
-        return conv_out + merged_bias
+        return conv_out + paddle.reshape(merged_bias, [1, -1, 1, 1])
 
     def _merge_conv_bn_weight(self, conv_weight, bn: BatchNorm):
-        merged_weight = bn._weight * conv_weight / bn._runing_variance
+        merged_weight = paddle.reshape(
+            bn._weight, [-1, 1, 1, 1]) * conv_weight / paddle.reshape(
+                bn._runing_variance, [-1, 1, 1, 1])
         conv_weight.set_value(merged_weight)
         return conv_weight
 
     def _merge_conv_freezed_bn_bias(self, conv_bias, bn: BatchNorm):
+        assert conv_bias is not None
+
         merged_bias = (conv_bias + bn._bias -
                        (bn._weight * bn._runing_mean) / bn._runing_variance)
         conv_bias.set_value(merged_bias)
-        return merged_bias
+        return conv_bias
 
     def _merge_conv_unfreezed_bn_bias(self, conv_bias, bn: BatchNorm):
+        assert conv_bias is not None
         merged_bias = (conv_bias + bn._bias -
                        bn._weight * bn._batch_mean / bn._batch_variance)
         conv_bias.set_value(merged_bias)
-        return merged_bias
+        return conv_bias
 
     def _conv_bn(self, input, conv_weight):
         return self._bn_forward(self._conv_forward(input, conv_weight))
@@ -208,9 +250,15 @@ class QuantedConv2DBatchNorm(Layer):
         return F.conv2d(
             inputs,
             weights,
-            bias=self.bias,
+            bias=self.conv_bias,
             padding=self._padding,
             stride=self._stride,
             dilation=self._dilation,
             groups=self._groups,
             data_format=self._data_format, )
+
+    def weights_to_quanters(self):
+        return [('conv_weight', 'weight_quanter')]
+
+    def activation_quanters(self):
+        return ['activation_quanter']
