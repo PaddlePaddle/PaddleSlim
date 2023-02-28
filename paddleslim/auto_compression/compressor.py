@@ -127,7 +127,7 @@ class AutoCompression:
 
         self.final_dir = save_dir
         if not os.path.exists(self.final_dir):
-            os.makedirs(self.final_dir)
+            os.makedirs(self.final_dir, exist_ok=True)
 
         # load config
         if isinstance(config, str):
@@ -263,7 +263,7 @@ class AutoCompression:
                     op.desc.infer_shape(block.desc)
 
         save_path = os.path.join(save_path, "infered_shape")
-        os.makedirs(save_path)
+        os.makedirs(save_path, exist_ok=True)
         paddle.static.save_inference_model(
             save_path,
             feed_vars,
