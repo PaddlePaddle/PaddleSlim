@@ -63,7 +63,7 @@ def _get_skip_params(program):
                 skip_params.add(input.name())
     for param in program.all_parameters():
         if len(param.shape) == 1:
-            skip_params.add(param.name)  
+            skip_params.add(param.name)
     return skip_params
 ```
 
@@ -79,7 +79,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py --batch_size 64 --data imagenet --lr 0.05
 CUDA_VISIBLE_DEVICES=0 python train.py --batch_size 64 --data imagenet --lr 0.05 --pruning_mode ratio --ratio 0.55
 ```
 
-GPU多卡训练：由于静态图多卡训练方式与非结构化稀疏中的mask逻辑存在兼容性问题，会在一定程度上影响训练精度，我们建议使用[Fleet](https://www.paddlepaddle.org.cn/documentation/docs/zh/1.5/user_guides/howto/training/fleet_api_howto_cn.html)方式启动稀疏化多卡训练，实测精度与单卡一致。同时，为帮助开发者将`with_data_parallel`方式配置的分布式代码转换为`Fleet`我们在[示例代码](./train.py)里面也用`"Fleet step"`清晰标注出了用代码需要做的更改
+GPU多卡训练：由于静态图多卡训练方式与非结构化稀疏中的mask逻辑存在兼容性问题，会在一定程度上影响训练精度，我们建议使用[Fleet](https://www.paddlepaddle.org.cn/documentation/docs/zh/1.5/user_guides/howto/training/fleet_api_howto_cn.html)方式启动稀疏化多卡训练，[示例代码](./train.py)里面用`"Fleet step"`清晰标注出了设置流程
 ```bash
 python -m paddle.distributed.launch \
           --selected_gpus="0,1,2,3" \
@@ -135,7 +135,7 @@ for epoch in range(epochs):
         loss_n, acc_top1_n, acc_top5_n = exe.run(
             train_program,
             feed=data,
-            fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])  
+            fetch_list=[avg_cost.name, acc_top1.name, acc_top5.name])
         learning_rate.step()
         #STEP2: update the pruner's threshold given the updated parameters
         pruner.step()

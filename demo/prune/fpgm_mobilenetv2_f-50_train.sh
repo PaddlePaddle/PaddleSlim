@@ -1,7 +1,7 @@
 #!/bin/bash  
 export CUDA_VISIBLE_DEVICES=0,1
 export FLAGS_fraction_of_gpu_memory_to_use=0.98
-python train.py \
+python -m paddle.distributed.launch train.py \
     --model="MobileNetV2" \
     --pretrained_model="/workspace/models/MobileNetV2_pretrained" \
     --data="imagenet" \
@@ -14,4 +14,5 @@ python train.py \
     --lr_strategy="piecewise_decay" \
     --criterion="geometry_median" \
     --model_path="./fpgm_mobilenetv2_models" \
+    --fleet \
     2>&1 | tee fpgm_mobilenetv2_train.log

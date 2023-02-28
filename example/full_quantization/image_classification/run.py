@@ -23,7 +23,7 @@ from tqdm import tqdm
 import numpy as np
 import paddle
 import paddle.nn as nn
-from paddle.io import DataLoader
+from paddle.io import DataLoader, DistributedBatchSampler
 from imagenet_reader import ImageNetDataset
 from paddleslim.common import load_config as load_slim_config
 from paddleslim.auto_compression import AutoCompression
@@ -97,9 +97,10 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             if len(test_feed_names) == 1:
                 image = np.array(image)
                 label = np.array(label).astype('int64')
-                pred = exe.run(compiled_test_program,
-                               feed={test_feed_names[0]: image},
-                               fetch_list=test_fetch_list)
+                pred = exe.run(
+                    compiled_test_program,
+                    feed={test_feed_names[0]: image},
+                    fetch_list=test_fetch_list)
                 pred = np.array(pred[0])
                 label = np.array(label)
                 sort_array = pred.argsort(axis=1)
@@ -116,12 +117,11 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                 # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
                 image = np.array(image)
                 label = np.array(label).astype('int64')
-                result = exe.run(compiled_test_program,
-                                 feed={
-                                     test_feed_names[0]: image,
-                                     test_feed_names[1]: label
-                                 },
-                                 fetch_list=test_fetch_list)
+                result = exe.run(
+                    compiled_test_program,
+                    feed={test_feed_names[0]: image,
+                          test_feed_names[1]: label},
+                    fetch_list=test_fetch_list)
                 result = [np.mean(r) for r in result]
                 results.append(result)
             t.update()
@@ -144,13 +144,13 @@ def main():
     global_config = all_config["Global"]
 
     gpu_num = paddle.distributed.get_world_size()
-    if isinstance(all_config['TrainConfig']['learning_rate'],
-                  dict) and all_config['TrainConfig']['learning_rate'][
-                      'type'] == 'CosineAnnealingDecay':
+    if isinstance(
+            all_config['TrainConfig']['learning_rate'], dict
+    ) and all_config['TrainConfig']['learning_rate']['type'] == 'CosineAnnealingDecay':
         step = int(
             math.ceil(
-                float(args.total_images) / (global_config['batch_size'] *
-                                            gpu_num)))
+                float(args.total_images) / (
+                    global_config['batch_size'] * gpu_num)))
         all_config['TrainConfig']['learning_rate']['T_max'] = step
         print('total training steps:', step)
 
@@ -167,13 +167,15 @@ def main():
         data_dir=data_dir,
         crop_size=img_size,
         resize_size=resize_size)
-
+    batch_sampler = DistributedBatchSampler(
+        train_dataset,
+        batch_size=global_config['batch_size'],
+        shuffle=True,
+        drop_last=True)
     train_loader = DataLoader(
         train_dataset,
         places=[place],
-        batch_size=global_config['batch_size'],
-        shuffle=True,
-        drop_last=True,
+        batch_sampler=batch_sampler,
         num_workers=0)
     train_dataloader = reader_wrapper(train_loader, global_config['input_name'])
 
@@ -191,8 +193,7 @@ def main():
                 global_config['batch_size'],
                 crop_size=img_size,
                 resize_size=resize_size,
-                place=place),
-            global_config['input_name']))
+                place=place), global_config['input_name']))
 
     ac.compress()
 

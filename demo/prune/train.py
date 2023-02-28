@@ -15,6 +15,7 @@ from paddleslim.analysis import flops
 import models
 from utility import add_arguments, print_arguments
 import paddle.vision.transforms as T
+from paddle.distributed import fleet
 
 _logger = get_logger(__name__, level=logging.INFO)
 
@@ -40,6 +41,7 @@ add_arg('pruned_ratio',     float, None,         "The ratios to be pruned.")
 add_arg('criterion',        str, "l1_norm",         "The prune criterion to be used, support l1_norm and batch_norm_scale.")
 add_arg('save_inference',   bool, False,                "Whether to save inference model.")
 add_arg('ce_test',          bool, False, "Whether to CE test.")
+parser.add_argument('fleet',            action='store_true',  help="Whether to turn on distributed training.")
 # yapf: enable
 
 model_list = models.__all__
@@ -96,6 +98,8 @@ def create_optimizer(args, step_per_epoch):
 
 
 def compress(args):
+    if args.fleet:
+        fleet.init(is_collective=True)
 
     num_workers = 4
     shuffle = True
@@ -130,8 +134,8 @@ def compress(args):
     else:
         raise ValueError("{} is not supported.".format(args.data))
     image_shape = [int(m) for m in image_shape.split(",")]
-    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
-                                                                     model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(
+        args.model, model_list)
     places = paddle.static.cuda_places(
     ) if args.use_gpu else paddle.static.cpu_places()
     place = places[0]
@@ -140,13 +144,16 @@ def compress(args):
         name='image', shape=[None] + image_shape, dtype='float32')
     label = paddle.static.data(name='label', shape=[None, 1], dtype='int64')
     batch_size_per_card = int(args.batch_size / len(places))
+    sampler = paddle.io.DistributedBatchSampler(
+        train_dataset,
+        shuffle=shuffle,
+        drop_last=True,
+        batch_size=batch_size_per_card)
     train_loader = paddle.io.DataLoader(
         train_dataset,
         places=places,
         feed_list=[image, label],
-        drop_last=True,
-        batch_size=batch_size_per_card,
-        shuffle=shuffle,
+        batch_sampler=sampler,
         return_list=False,
         use_shared_memory=True,
         num_workers=num_workers)
@@ -171,6 +178,8 @@ def compress(args):
     acc_top5 = paddle.metric.accuracy(input=out, label=label, k=5)
     val_program = paddle.static.default_main_program().clone(for_test=True)
     opt, learning_rate = create_optimizer(args, step_per_epoch)
+    if args.fleet:
+        opt = fleet.distributed_optimizer(opt)
     opt.minimize(avg_cost)
 
     exe.run(paddle.static.default_startup_program())
@@ -180,8 +189,8 @@ def compress(args):
         def if_exist(var):
             return os.path.exists(os.path.join(args.pretrained_model, var.name))
 
-        _logger.info("Load pretrained model from {}".format(
-            args.pretrained_model))
+        _logger.info(
+            "Load pretrained model from {}".format(args.pretrained_model))
         paddle.static.load(paddle.static.default_main_program(),
                            args.pretrained_model, exe)
 
@@ -247,13 +256,10 @@ def compress(args):
         place=place)
     _logger.info("FLOPs after pruning: {}".format(flops(pruned_program)))
 
-    build_strategy = paddle.static.BuildStrategy()
-    exec_strategy = paddle.static.ExecutionStrategy()
-    train_program = paddle.static.CompiledProgram(
-        pruned_program).with_data_parallel(
-            loss_name=avg_cost.name,
-            build_strategy=build_strategy,
-            exec_strategy=exec_strategy)
+    if args.fleet:
+        train_program = paddle.static.CompiledProgram(pruned_program)
+    else:
+        train_program = pruned_program
 
     for i in range(args.num_epochs):
         train(i, train_program)
@@ -268,8 +274,8 @@ def compress(args):
                 infer_model_path, [image], [out],
                 exe,
                 program=pruned_val_program)
-            _logger.info("Saved inference model into [{}]".format(
-                infer_model_path))
+            _logger.info(
+                "Saved inference model into [{}]".format(infer_model_path))
 
 
 def main():

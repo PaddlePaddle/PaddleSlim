@@ -346,7 +346,7 @@ def build_distill_program(executor,
         with paddle.utils.unique_name.guard('merge'):
             optimizer, learning_rate = _create_optimizer(train_config)
 
-            if train_config.get('use_fleet'):
+            if dist_strategy is not None:
                 optimizer = fleet.distributed_optimizer(optimizer,
                                                         dist_strategy)
             else:
@@ -385,8 +385,7 @@ def build_distill_program(executor,
             loss.stop_gradient = False
 
             if 'prune_params_name' in config:  ### prune
-                if 'pruned_ratio' not in config and not train_config.get(
-                        'use_fleet'):  ### asp
+                if 'pruned_ratio' not in config and dist_strategy is None:  ### asp
                     optimizer = pruner.decorate(optimizer)
                 optimizer.minimize(loss)
             elif 'prune_strategy' in config:  ###unstructure prune
