@@ -20,6 +20,30 @@ QAT_FUSED_LAYER = QuantedConv2DBatchNorm
 
 
 class FreezedConvBNConstraint(FusionConstraint):
+    """ Simulate the folding of convolution and batch norm with a correction strategy.
+    Reference to: Quantizing deep convolutional networks for efficient inference: A whitepaper
+    Args:
+        - freeze_bn_delay(int): After the 'freeze_bn_delay' steps training, switch from using batch
+    statistics to long-term moving averages for batch normalization.
+
+    Examples:
+       .. code-block:: python
+
+            import paddle
+            from paddleslim.quant import SlimQuantConfig
+            from paddleslim.quant import SlimQAT
+            from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
+            from paddle.vision.models import resnet18
+
+            model = resnet18()
+            quanter = FakeQuanterWithAbsMaxObserver(moving_rate=0.9)
+            q_config = SlimQuantConfig(activation=quanter, weight=quanter)
+            q_config.add_constraints(FreezedConvBNConstraint(freeze_bn_delay=1))
+            qat = SlimQAT(q_config)
+            quant_model = qat.quantize(model, inplace=True, inputs=x)
+
+    """
+
     def __init__(self, freeze_bn_delay=0):
         self._freeze_bn_delay = freeze_bn_delay
 

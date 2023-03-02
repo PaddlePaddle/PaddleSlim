@@ -41,3 +41,4 @@ except Exception as e:
 from .quant_embedding import quant_embedding
 from . import nn
 from .qat import SlimQAT
+from .config import SlimQuantConfig

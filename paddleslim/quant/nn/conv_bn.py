@@ -14,8 +14,6 @@
 """
 Wrapper layer to simulate folding batch norms during quantization-aware training.
 """
-pass
-
 import paddle
 from paddle.nn import Layer
 from paddle.nn import functional as F
@@ -149,14 +147,11 @@ class QuantedConv2DBatchNorm(ConvertibleQuantedLayer):
 
             if self._freeze_bn:
                 out = self._forward_with_bn_freezed(input)
-                print("_forward_with_bn_freezed---------------")
             else:
                 out = self._forward_with_bn_unfreezed(input)
-                print("_forward_with_bn_unfreezed---------------")
             self._steps += 1
             return out
         else:
-            print("_eval_forward---------------")
             return self._eval_forward(input)
 
     def _forward_with_bn_unfreezed(self, input):

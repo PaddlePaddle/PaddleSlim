@@ -1,4 +1,4 @@
-# Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2023  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
 # you may not use this file except in compliance with the License.
@@ -13,49 +13,127 @@
 # limitations under the License.
 
 import sys
+import os
 import unittest
-import numpy as np
-
 sys.path.append("../")
-
 import paddle
+import tempfile
 from paddle.vision.models import resnet18
-from paddle.quantization import QuantConfig
+from paddleslim.quant import SlimQuantConfig as QuantConfig
 from paddleslim.quant import SlimQAT
 from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
-from paddleslim.quant.nn.conv_bn import QuantedConv2DBatchNorm
-from paddleslim.quant.constraints import FreezedConvBNConstraint
+from paddle.quantization.quanters.abs_max import FakeQuanterWithAbsMaxObserverLayer
+from paddle.nn.quant.format import LinearDequanter, LinearQuanter
+
+
+def load_model_and_count_layer(model_path, layer_types):
+    layer2count = dict([(_layer, 0) for _layer in layer_types])
+    paddle.enable_static()
+    exe = paddle.static.Executor(paddle.CPUPlace())
+    main_program = paddle.static.Program()
+    startup_program = paddle.static.Program()
+    with paddle.static.program_guard(main_program, startup_program):
+        [
+            inference_program,
+            feed_target_names,
+            fetch_targets,
+        ] = paddle.static.load_inference_model(model_path, exe)
+    for _op in inference_program.global_block().ops:
+        if _op.type in layer2count:
+            layer2count[_op.type] += 1
+    paddle.disable_static()
+    return layer2count
 
 
 class TestQuantAwareTraining(unittest.TestCase):
+    def setUp(self):
+        paddle.set_device("cpu")
+        self.init_case()
+        self.dummy_input = paddle.rand([1, 3, 224, 224])
+        self.temp_dir = tempfile.TemporaryDirectory(dir="./")
+        self.path = os.path.join(self.temp_dir.name, 'qat')
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def extra_qconfig(self, q_config):
+        """The subclass of TestQuantAwareTraining can implement the function to add more special configuration."""
+        pass
+
+    def init_case(self):
+        quanter = FakeQuanterWithAbsMaxObserver(moving_rate=0.9)
+        self.quantizer_type = FakeQuanterWithAbsMaxObserverLayer
+        self.quantizer_type_in_static = "fake_quantize_dequantize_moving_average_abs_max"
+        self.q_config = QuantConfig(activation=None, weight=None)
+        self.q_config.add_type_config(
+            paddle.nn.Conv2D, activation=quanter, weight=quanter)
+        self.extra_qconfig(self.q_config)
+
+    def _count_layers(self, model, layer_type):
+        count = 0
+        for _layer in model.sublayers(True):
+            if isinstance(_layer, layer_type):
+                count += 1
+        return count
+
     def test_quantize(self):
         model = resnet18()
-        quanter = FakeQuanterWithAbsMaxObserver(moving_rate=0.9)
-        q_config = QuantConfig(activation=quanter, weight=quanter)
-        # It will freeze the batch normaliztion after 'freeze_bn_delay' steps
-        q_config.add_constraints(FreezedConvBNConstraint(freeze_bn_delay=1))
-        qat = SlimQAT(q_config)
-        x = paddle.rand([1, 3, 224, 224])
-        quant_model = qat.quantize(model, inplace=True, inputs=x)
+        qat = SlimQAT(self.q_config)
+        quant_model = qat.quantize(model, inplace=True, inputs=self.dummy_input)
         quant_model.train()
-        out = quant_model(x)
+        out = quant_model(self.dummy_input)
         out.backward()
-        out = quant_model(x)
-        out.backward()
-        quant_model.eval()
-        out = quant_model(x)
-        print("------------------convert-----------------")
-        infer_model = qat.convert(quant_model, inplace=True)
-        infer_model(x)
-        print(infer_model)
-        paddle.jit.save(infer_model, "./infer_model", input_spec=[x])
+        quantizer_cnt = self._count_layers(quant_model, self.quantizer_type)
+        expected_quantizer_cnt = 21
+        self.assertEqual(quantizer_cnt, expected_quantizer_cnt)
 
-        fuse_conv_bn_cnt = 0
-        expected_quant_layer_cnt = 12
-        for layer in quant_model.sublayers():
-            if isinstance(layer, QuantedConv2DBatchNorm):
-                fuse_conv_bn_cnt += 1
-        self.assertEqual(fuse_conv_bn_cnt, expected_quant_layer_cnt)
+    def test_convert(self):
+        model = resnet18()
+        qat = SlimQAT(self.q_config)
+        quant_model = qat.quantize(model, inplace=True, inputs=self.dummy_input)
+        converted_model = qat.convert(quant_model, inplace=True)
+
+        # check count of LinearQuanter and LinearDequanter in dygraph
+        quantizer_count_in_dygraph = self._count_layers(converted_model,
+                                                        LinearQuanter)
+        dequantizer_count_in_dygraph = self._count_layers(
+            converted_model, LinearDequanter)
+        expected_quantizer_count = 20
+        expected_dequantizer_count = 21
+        self.assertEqual(quantizer_count_in_dygraph, expected_quantizer_count)
+        self.assertEqual(dequantizer_count_in_dygraph,
+                         expected_dequantizer_count)
+
+        # check count of LinearQuanter and LinearDequanter in static model saved by jit.save
+        save_path = os.path.join(self.path, 'converted_model')
+        quant_model.eval()
+        paddle.jit.save(quant_model, save_path, input_spec=[self.dummy_input])
+
+        layer2count = load_model_and_count_layer(
+            save_path, ["quantize_linear", "dequantize_linear"])
+        quantizer_count_in_static_model = layer2count['quantize_linear']
+        dequantizer_count_in_static_model = layer2count['dequantize_linear']
+        self.assertEqual(quantizer_count_in_dygraph,
+                         quantizer_count_in_static_model)
+        self.assertEqual(dequantizer_count_in_dygraph,
+                         dequantizer_count_in_static_model)
+
+    def test_trace_qat_graph(self):
+        model = resnet18()
+        qat = SlimQAT(self.q_config)
+        quant_model = qat.quantize(model, inplace=True, inputs=self.dummy_input)
+        quantizer_count_indygraph = self._count_layers(quant_model,
+                                                       self.quantizer_type)
+        save_path = os.path.join(self.path, 'qat_model')
+        quant_model.eval()
+        paddle.jit.save(quant_model, save_path, input_spec=[self.dummy_input])
+
+        layer2count = load_model_and_count_layer(
+            save_path, [self.quantizer_type_in_static])
+        quantizer_count_in_static_model = layer2count[
+            self.quantizer_type_in_static]
+        self.assertEqual(quantizer_count_indygraph,
+                         quantizer_count_in_static_model)
 
 
 if __name__ == '__main__':

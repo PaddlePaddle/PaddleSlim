@@ -13,27 +13,42 @@
 # limitations under the License.
 
 import paddle
+import abc
+from typing import List
+from paddleslim.core.graph import Graph
+from paddleslim.quant.config import SlimQuantConfig
 
 __all__ = ["FusionConstraint", "Constraint"]
 
 
-class Constraint():
-    """在量化训练或离线量化过程中，需要遵循的约束。可以是且不限于以下几种约束：
-    1. Operators Fusion: 将多个Operators当做一个融合的Operator，只量化融合Operator的输入和输出
-    2. 多个Tensors的量化相互影响：比如多个Tensors量化参数需要保持一致，或需要满足更复杂的要求
-    3. 统计量化参数的过程与常规的forward流程不一样，需要特殊处理
+class Constraint(metaclass=abc.ABCMeta):
+    """ Constraints are the rules applied on layers during quantization-aware training.
+    The abstract class defined the interface of constraint. All the constraints should
+    extend this abstract class and implement the 'apply' function.
     """
 
-    def apply(self, model, graph, qconfig):
-        """将约束应用到目标模型上，并更新量化配置信息。应该在量化训练和离线量化校准操作前执行该方法。
-        该方法会直接inplace地对model和qconfig进行操作。
-        该方法为抽象方法，所有继承Constraint的子类都应该实现该方法。
+    @abc.abstractmethod
+    def apply(self,
+              model: paddle.nn.Layer,
+              graph: Graph,
+              qconfig: SlimQuantConfig) -> None:
+        """ Apply the rules of the constraint on the model in place.
+        Usually, there are three steps to implement the apply function:
+        1. Find all the targets to be constrained. Each target can be one layer or a group of layers.
+        2. If the target is a group of layers, fuse it into a fusion layer.
+        3. Mapping the fusion layer to a QAT strategy layer by the "add_qat_layer_mapping" function of "qconfig".
+        
+        Args:
+        - model(paddle.nn.Layer): The model to be constrained.
+        - graph(Graph): A structure stored the DAG of executing model. It is used to
+        help find layers by some pattern.
+        - qconfig(SlimQuantConfig): The configuration of quantization.
         """
         pass
 
 
-class FusionConstraint(Constraint):
-    """Define some functoins used to fuse operators.
+class FusionConstraint(Constraint, metaclass=abc.ABCMeta):
+    """ Define some functions used to fuse operators.
     """
 
     def _find_parent_and_sublayer_name(self, model, layer):
@@ -52,8 +67,18 @@ class FusionConstraint(Constraint):
         parent_layer._sub_layers[sub_name] = target
         setattr(parent_layer, sub_name, target)
 
-    def fuse_ops(self, model, fused_layer_type, layers, config):
-        """将模型中多层融合为一层。
+    def fuse_ops(self,
+                 model: paddle.nn.Layer,
+                 fused_layer_type,
+                 layers: List[paddle.nn.Layer],
+                 config: SlimQuantConfig):
+        """ Fuse layers into fusion layer.
+        Args:
+            - model(paddle.nn.Layer): The model whose sublayers will be fused. 
+            - fused_layer_type(type): Type of fusion layer.
+            - layers(list): List of layers to be fused. It will be the arguments to create 'fused_layer_type' instance
+            by calling fused_layer_type(*layers).
+            - configs(SlimQuantConfig): The configuration of quantization.
         """
         fused_layer = fused_layer_type(*layers)
 
