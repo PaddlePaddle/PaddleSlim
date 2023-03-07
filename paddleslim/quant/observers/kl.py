@@ -43,7 +43,7 @@ class KLObserver(ObserverFactory):
             quant_bits=8,
             bins_count=2048,
             upsample_bins_count=64, ):
-        super(KLObserverLayer, self).__init__(
+        super(KLObserver, self).__init__(
             quant_bits=quant_bits,
             bins_count=bins_count,
             upsample_bins_count=upsample_bins_count, )
@@ -71,8 +71,8 @@ class KLObserverLayer(BaseHistObserver):
             symmetric=True)
 
     def _search_min_max_by_kl(self):
-        bin_width = (self._hist_max - self._hist_min) / self._bins_count
-        _max = cal_kl_threshold(self._hist, bin_width, self.bit_length)
+        bin_width = (self._hist_max - self._hist_min) / self._bin_count
+        _max = cal_kl_threshold(self._hist, bin_width, self.bit_length())
         return 0., _max
 
     def cal_min_max(self):

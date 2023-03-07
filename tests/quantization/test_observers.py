@@ -21,12 +21,18 @@ from paddle.vision.models import resnet18
 from paddle.quantization import QuantConfig
 from paddle.quantization import PTQ
 
-from paddleslim.quant.observers import HistObserver
+from paddleslim.quant.observers import HistObserver, KLObserver
 from paddleslim.quant.observers.hist import PercentHistObserverLayer
+from paddleslim.quant.observers.kl import KLObserverLayer
 from paddle.nn.quant.format import LinearDequanter, LinearQuanter
 
 
 class TestPTQWithHistObserver(unittest.TestCase):
+    def __init__(self, observer, observer_type, *args, **kvargs):
+        super(TestPTQWithHistObserver, self).__init__(*args, **kvargs)
+        self.observer = observer
+        self.observer_type = observer_type
+
     def setUp(self):
         paddle.set_device("cpu")
         self.init_case()
@@ -37,12 +43,16 @@ class TestPTQWithHistObserver(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
+    def runTest(self):
+        self.test_quantize()
+        self.test_convert()
+
     def init_case(self):
-        observer = HistObserver()
-        self.observer_type = PercentHistObserverLayer
+        # observer = HistObserver()
+        # self.observer_type = PercentHistObserverLayer
         self.q_config = QuantConfig(activation=None, weight=None)
         self.q_config.add_type_config(
-            paddle.nn.Conv2D, activation=observer, weight=observer)
+            paddle.nn.Conv2D, activation=self.observer, weight=self.observer)
 
     def _count_layers(self, model, layer_type):
         count = 0
@@ -79,5 +89,15 @@ class TestPTQWithHistObserver(unittest.TestCase):
         self.assertEqual(dequantizer_count_in_dygraph, conv_count * 2)
 
 
+observer_suite = unittest.TestSuite()
+observer_suite.addTest(
+    TestPTQWithHistObserver(
+        observer=HistObserver(), observer_type=PercentHistObserverLayer))
+observer_suite.addTest(
+    TestPTQWithHistObserver(
+        observer=KLObserver(bins_count=256, upsample_bins_count=32),
+        observer_type=KLObserverLayer))
+
 if __name__ == '__main__':
-    unittest.main()
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(observer_suite)

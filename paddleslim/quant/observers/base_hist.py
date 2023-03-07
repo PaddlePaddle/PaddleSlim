@@ -76,7 +76,6 @@ class BaseHistObserver(UniformObserver):
                 self._upsample_bin_count, )
             self._hist_min, self._hist_max = new_min, new_max
             self._hist = new_hist
-        print(f"self._hist: {self._hist}")
         return inputs
 
     def update_min_max_and_hist(self, tensor, origin_min, origin_max,
