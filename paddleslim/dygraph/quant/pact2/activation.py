@@ -45,8 +45,6 @@ class PAct2(Layer):
         default_clips = (-clip_init2, clip_init2) \
             if (self.signed == True or self.signed is None) else (0.0, clip_init2)
         self.register_buffer("clips_act", paddle.to_tensor(default_clips, dtype=np.float32))
-        print(self.clips_act)
-        input()
 
         # range_update_factor_min is the lower bound for exponential update factor.
         # using 0.0 will freeze the ranges, since the update_factor becomes too small after some time

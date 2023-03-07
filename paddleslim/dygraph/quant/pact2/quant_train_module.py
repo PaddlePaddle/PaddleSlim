@@ -110,31 +110,24 @@ class QuantTrainPAct2(PAct2):
             xq = x
         
         if (self.quantize_enable and self.quantize_activations):
-            print("1")
             use_per_channel_q = (self.per_channel_q == 'all')
             clip_min, clip_max, scale, scale_inv = self.get_clips_scale_act(xq, use_per_channel_q=use_per_channel_q)
             width_min, width_max = self.get_widths_act()
             # no need to call super().forward here as clipping with width_min/windth_max-1 after scaling has the same effect.
             yq = quantize_dequantize_g(xq, scale, width_min, width_max - 1, self.power2_activation_range, 1, 'round_up')
         else:
-            print("2")
             yq = super().forward(xq, update_activation_range=False, enable=True)
 
         if self.quantize_backward_type == 'ste':
-            print("3")
             yq = propagate_quant_ste(y, yq)
         elif self.quantize_backward_type == 'qte':
-            print("4")
             yq = propagate_quant_qte(y, yq)
         else:
             assert False, 'quantize_backward_type must be one of ste or qte'
         
         # pass on the clips to be used in the next quantization
-        yq.clips_act = 1
-        yq.clips_act = self.get_clips_act()
-        print(yq.clips_act)
-        input()
-        return yq
+        yq_clips_act = self.get_clips_act()
+        return yq, yq_clips_act # notice, return yq and yq_clips_act !!!
 
     def apply_constrain_weights(self, merged_weight):
         return constrain_weight(merged_weight)
