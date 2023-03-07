@@ -15,7 +15,7 @@
 import numpy as np
 import math
 
-from base_hist import BaseHistObserver
+from .base_hist import BaseHistObserver
 from paddle.quantization.factory import ObserverFactory
 
 

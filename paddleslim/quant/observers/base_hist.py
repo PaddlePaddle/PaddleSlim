@@ -16,7 +16,7 @@ import abc
 import paddle
 import numpy as np
 
-from uniform import UniformObserver
+from .uniform import UniformObserver
 
 
 class BaseHistObserver(UniformObserver):
@@ -76,6 +76,7 @@ class BaseHistObserver(UniformObserver):
                 self._upsample_bin_count, )
             self._hist_min, self._hist_max = new_min, new_max
             self._hist = new_hist
+        print(f"self._hist: {self._hist}")
         return inputs
 
     def update_min_max_and_hist(self, tensor, origin_min, origin_max,
@@ -116,8 +117,8 @@ class BaseHistObserver(UniformObserver):
 
     def _merge_histograms(
             self,
-            new_hist: np.Array,
-            origin_hist: np.Array,
+            new_hist: np.ndarray,
+            origin_hist: np.ndarray,
             upsample_bins_count: int,
             downsample_bins_count: int,
             start_bin_idx: int,
@@ -157,6 +158,7 @@ class BaseHistObserver(UniformObserver):
     def cal_thresholds(self):
         """ Compute thresholds for MAX function.
         """
+        assert self._hist is not None
         self._min, self._max = self.cal_min_max()
         self._scale, self._zero_point = self.cal_scales_zero_points()
 

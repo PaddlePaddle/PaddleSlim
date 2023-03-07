@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from hist import HistObserver
-from kl import KLObserver
+from .hist import HistObserver
+from .kl import KLObserver
 
 __all__ = ["HistObserver", "KLObserver"]

@@ -44,22 +44,22 @@ class UniformObserver(BaseObserver):
         if self._qmin is not None and self._qmax is not None:
             return self.qmin, self.qmax
         if self._sign:
-            self.qmin = -2**(self.bit_length - 1)
-            self.qmax = 2**(self.bit_length - 1) - 1
+            self.qmin = -2**(self.bit_length() - 1)
+            self.qmax = 2**(self.bit_length() - 1) - 1
         else:
             self.qmin = 0
-            self.qmax = 2**self.bit_length
+            self.qmax = 2**self.bit_length()
         return self.qmin, self.qmax
 
     def cal_scales_zero_points(self):
         """ Compute the scales and zero_points.
         """
-        assert _min is not None and _max is not None
+        assert self._min is not None and self._max is not None
         _qmin, _qmax = self.qmin_qmax
         # For one-sided distributions, the range (_min , _max ) is relaxed to include zero.
         # It is important to ensure that common operations like zero padding do not cause quantization errors.
-        _min = min(_min, 0.)
-        _max = max(_max, 0.)
+        _min = min(self._min, 0.)
+        _max = max(self._max, 0.)
 
         if self._symmetric:
             self._scale = max(-_min, _max) / (float(_qmax - _qmin) / 2)

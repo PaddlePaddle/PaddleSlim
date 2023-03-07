@@ -15,7 +15,7 @@
 import paddle
 import numpy as np
 
-from base_hist import BaseHistObserver
+from .base_hist import BaseHistObserver
 from paddle.quantization.factory import ObserverFactory
 
 
@@ -45,7 +45,7 @@ class HistObserver(ObserverFactory):
                  percent=0.999,
                  sign=True,
                  symmetric=True):
-        super(PercentHistObserverLayer, self).__init__(
+        super(HistObserver, self).__init__(
             quant_bits=quant_bits,
             bins_count=bins_count,
             upsample_bins_count=upsample_bins_count,
@@ -80,7 +80,7 @@ class PercentHistObserverLayer(BaseHistObserver):
         self._percent = percent
 
     def _cal_min_max_by_percent(self):
-        hist = hist / np.sum(hist, dtype=np.float64)
+        hist = self._hist / np.sum(self._hist, dtype=np.float64)
         cumsumed_hist = np.cumsum(hist)
         max_idx = np.argwhere(cumsumed_hist >= self._percent)[0]
         min_idx = np.argwhere(cumsumed_hist >= (1 - self._percent))[0]
