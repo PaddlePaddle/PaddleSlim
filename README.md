@@ -28,7 +28,7 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 <details>
 <summary>2022.08.16：自动化压缩功能升级</summary>
   - 支持直接加载ONNX模型和Paddle模型导出至ONNX
-  - 发布[量化分析工具](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/AnalysisQuant.md)，发布[YOLO系列离线量化工具](example/post_training_quantization/pytorch_yolo_series/)
+  - 发布量化分析工具，发布[YOLO系列离线量化工具](example/post_training_quantization/pytorch_yolo_series/)
   - 更新[YOLO-Series自动化压缩模型库](example/auto_compression/pytorch_yolo_series)
 
   | 模型  | Base mAP<sup>val<br>0.5:0.95 | ACT量化mAP<sup>val<br>0.5:0.95  | 模型体积压缩比 | 预测时延<sup><small>FP32</small><sup><br><sup>  | 预测时延<sup><small>INT8</small><sup><br><sup> | 预测加速比 |
@@ -188,6 +188,7 @@ python setup.py install
 | 2.1.1         | 2.1.1          |       >=2.8   |
 | 2.3.0         | 2.3.0          |       >=2.11  |
 | 2.4.0         | 2.4.0          |       >=2.11  |
+| develop       | develop        |       >=2.11  |
 
 ## 文档教程
 
@@ -202,6 +203,7 @@ python setup.py install
 - [结构化剪枝](docs/zh_cn/quick_start/static/pruning_tutorial.md)
 - [蒸馏](docs/zh_cn/quick_start/static/distillation_tutorial.md)
 - [NAS](docs/zh_cn/quick_start/static/nas_tutorial.md)
+- [量化分析工具](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/AnalysisPTQ.md)
 
 ### 更多教程
 
