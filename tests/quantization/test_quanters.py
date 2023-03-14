@@ -20,8 +20,12 @@ import tempfile
 from paddle.vision.models import resnet18
 from paddle.quantization import QuantConfig
 from paddle.quantization import QAT
-from paddleslim.quant.quanters.lsq_act import ActLSQplusQuanterLayer, ActLSQplusQuanter
-from paddleslim.quant.quanters.lsq_weight import WeightLSQplusQuanterLayer, WeightLSQplusQuanter
+from paddleslim.quant.quanters import ActLSQplusQuanter, WeightLSQplusQuanter, PACTQuanter
+from paddleslim.quant.quanters.lsq_act import ActLSQplusQuanterLayer
+from paddleslim.quant.quanters.lsq_weight import WeightLSQplusQuanterLayer
+from paddleslim.quant.quanters.pact import PACTQuanterLayer
+from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
+from paddle.quantization.quanters.abs_max import FakeQuanterWithAbsMaxObserverLayer
 from paddle.nn.quant.format import LinearDequanter, LinearQuanter
 
 
@@ -105,6 +109,12 @@ observer_suite.addTest(
         act_observer=ActLSQplusQuanter(),
         act_observer_type=ActLSQplusQuanterLayer,
         weight_observer=WeightLSQplusQuanter(per_channel=True),
+        weight_observer_type=WeightLSQplusQuanterLayer))
+observer_suite.addTest(
+    TestQATWithQuanters(
+        act_observer=PACTQuanter(quanter=FakeQuanterWithAbsMaxObserverLayer),
+        act_observer_type=PACTQuanterLayer,
+        weight_observer=WeightLSQplusQuanter(),
         weight_observer_type=WeightLSQplusQuanterLayer))
 
 if __name__ == '__main__':
