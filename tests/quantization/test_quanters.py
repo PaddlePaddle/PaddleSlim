@@ -20,11 +20,8 @@ import tempfile
 from paddle.vision.models import resnet18
 from paddle.quantization import QuantConfig
 from paddle.quantization import QAT
-# from paddleslim.quant.quanters import ActLSQPlusQuanter, WeightLSQplusQuanter
 from paddleslim.quant.quanters.lsq_act import ActLSQplusQuanterLayer, ActLSQplusQuanter
 from paddleslim.quant.quanters.lsq_weight import WeightLSQplusQuanterLayer, WeightLSQplusQuanter
-from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
-from paddle.quantization.quanters.abs_max import FakeQuanterWithAbsMaxObserverLayer
 from paddle.nn.quant.format import LinearDequanter, LinearQuanter
 
 
