@@ -149,8 +149,10 @@ class ActLSQplusQuanterLayer(BaseFakeQuanterLayer):
 
         if self._init_state == 0:
             self.init_params(activation)
-        elif self._init_state < self.batch_init:
+        elif self._init_state < self._batch_init:
             self.collect_gaussian(activation)
+
+        activation.stop_gradient = False
 
         if not self._symmetric:
             q_a = LsqPlusActFunc.apply(activation, self._scale, self._beta,

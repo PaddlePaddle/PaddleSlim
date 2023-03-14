@@ -159,7 +159,7 @@ class WeightLSQplusQuanterLayer(BaseFakeQuanterLayer):
 
         if self._init_state == 0:
             self.init_params(weight)
-        elif self._init_state < self.batch_init:
+        elif self._init_state < self._batch_init:
             self.collect_gaussian(weight)
 
         weight.stop_gradient = False
