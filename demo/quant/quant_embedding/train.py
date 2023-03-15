@@ -133,8 +133,8 @@ def train_loop(args, train_program, reader, py_reader, loss, trainer_id, weight,
     if int(os.getenv("CPU_NUM")) > 1:
         build_strategy.reduce_strategy = paddle.static.BuildStrategy.ReduceStrategy.Reduce
 
-    program = paddle.static.CompiledProgram(train_program).with_data_parallel(
-        loss_name=loss.name, build_strategy=build_strategy)
+    program = paddle.static.CompiledProgram(
+        train_program, build_strategy=build_strategy)
 
     for pass_id in range(args.num_passes):
         py_reader.start()

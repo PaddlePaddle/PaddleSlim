@@ -120,17 +120,14 @@ def create_data_holder(task_name, input_names):
     inputs = []
     for name in input_names:
         inputs.append(
-            paddle.static.data(
-                name=name, shape=[-1, -1], dtype="int64"))
+            paddle.static.data(name=name, shape=[-1, -1], dtype="int64"))
 
     if task_name == "sts-b":
         inputs.append(
-            paddle.static.data(
-                name="label", shape=[-1, 1], dtype="float32"))
+            paddle.static.data(name="label", shape=[-1, 1], dtype="float32"))
     else:
         inputs.append(
-            paddle.static.data(
-                name="label", shape=[-1, 1], dtype="int64"))
+            paddle.static.data(name="label", shape=[-1, 1], dtype="int64"))
 
     return inputs
 
@@ -164,7 +161,7 @@ def reader():
             Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # token_type 
         ): fn(samples)
 
-    train_batch_sampler = paddle.io.BatchSampler(
+    train_batch_sampler = paddle.io.DistributedBatchSampler(
         train_ds,
         batch_size=global_config['batch_size'],
         shuffle=True,
@@ -257,13 +254,14 @@ def reader():
 def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric.reset()
     for data in eval_dataloader():
-        logits = exe.run(compiled_test_program,
-                         feed={
-                             test_feed_names[0]: data[0]['x0'],
-                             test_feed_names[1]: data[0]['x1'],
-                             test_feed_names[2]: data[0]['x2']
-                         },
-                         fetch_list=test_fetch_list)
+        logits = exe.run(
+            compiled_test_program,
+            feed={
+                test_feed_names[0]: data[0]['x0'],
+                test_feed_names[1]: data[0]['x1'],
+                test_feed_names[2]: data[0]['x2']
+            },
+            fetch_list=test_fetch_list)
         paddle.disable_static()
         if isinstance(metric, PearsonAndSpearman):
             labels_pd = paddle.to_tensor(np.array(data[0]['label'])).reshape(
@@ -293,13 +291,14 @@ def eval():
     metric.reset()
     print('Evaluating...')
     for data in eval_dataloader():
-        logits = exe.run(val_program,
-                         feed={
-                             feed_target_names[0]: data[0]['x0'],
-                             feed_target_names[1]: data[0]['x1'],
-                             feed_target_names[2]: data[0]['x2']
-                         },
-                         fetch_list=fetch_targets)
+        logits = exe.run(
+            val_program,
+            feed={
+                feed_target_names[0]: data[0]['x0'],
+                feed_target_names[1]: data[0]['x1'],
+                feed_target_names[2]: data[0]['x2']
+            },
+            fetch_list=fetch_targets)
         paddle.disable_static()
         if isinstance(metric, PearsonAndSpearman):
             labels_pd = paddle.to_tensor(np.array(data[0]['label'])).reshape(
