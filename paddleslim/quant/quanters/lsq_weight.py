@@ -27,20 +27,23 @@ from .base_fake_quanter import BaseFakeQuanterLayer
 
 class WeightLSQplusQuanter(QuanterFactory):
     r"""
-    It collects maximum absolute values of target tensor.
+    Weight quantizer. More details can be found in 
+    https://arxiv.org/pdf/1902.08153.pdf and https://arxiv.org/pdf/2004.09576.pdf.
     Args:
-        bit_length(int, optional): Number of bits to represent an quantized integer in binary.
-        dtype(str, optional): The data type of input tensor.
-        name (str, optional): This parameter is used by developers to print debugging information. \
-            For details, please refer to :ref:`api_guide_Name`. Default is None.
+        per_channel(bool): Whether layer-wise or channel-wise quantization, where True for layer-wise quantization and False for channel-wise quantization.
+        batch_init(int): Number of batches that collect Gaussian approximation for the weight distribution in each layer.
+        quant_linear(bool): whether the weight is from Linear.
+        dtype(str): Trainable data type.
+        name(str): The name of the layer.
+        reduce_type(str): The reduce type which is needed when parallel training.
     Examples:
        .. code-block:: python
             from paddle.quantization import QuantConfig
-            from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
-            quanter = FakeQuanterWithAbsMaxObserver(moving_rate=0.99)
-            q_config = QuantConfig(activation=quanter, weight=quanter)
+            from paddle.quantization.quanters import ActLSQplusQuanter, WeightLSQplusQuanter
+            weight_quanter = WeightLSQplusQuanter()
+            act_quanter = ActLSQplusQuanter()
+            q_config = QuantConfig(activation=act_quanter, weight=weight_quanter)
     """
-
     def __init__(self,
                  quant_bits=8,
                  sign=True,
@@ -84,8 +87,6 @@ class WeightLSQplusQuanterLayer(BaseFakeQuanterLayer):
                  name=None):
         super(WeightLSQplusQuanterLayer, self).__init__()
 
-        self._quant_bits = quant_bits
-        self._sign = sign
         self._per_channel = per_channel
         self._quant_linear = quant_linear
         self._batch_init = batch_init
@@ -103,7 +104,6 @@ class WeightLSQplusQuanterLayer(BaseFakeQuanterLayer):
         self._scale_name = unique_name.generate(scale_prefix)
         s_attr = ParamAttr(
             name=self._scale_name, initializer=Constant(1.0), trainable=True)
-        # print(layer.weight)
 
         channel_num = layer.weight.shape[
             self._quant_axis] if self._per_channel else 1
@@ -111,7 +111,6 @@ class WeightLSQplusQuanterLayer(BaseFakeQuanterLayer):
         self._scale = self.create_parameter(
             shape=[channel_num], attr=s_attr, dtype=dtype)
         self._scale.stop_gradient = False
-        self._zero_point = None
 
     def init_params(self, weight):
         self.g = paddle.to_tensor(1.0 / math.sqrt(weight.numel() * self.qmax))

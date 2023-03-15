@@ -26,18 +26,22 @@ from paddle.quantization.base_quanter import BaseQuanter
 
 class PACTQuanter(QuanterFactory):
     r"""
-    It collects maximum absolute values of target tensor.
+    PArameterized Clipping acTivation(PACT) uses an activation clipping parameter alpha to find the right quantization scale. 
+    More details can be found in 
+    https://arxiv.org/pdf/1805.06085.pdf.
     Args:
-        bit_length(int, optional): Number of bits to represent an quantized integer in binary.
-        dtype(str, optional): The data type of input tensor.
-        name (str, optional): This parameter is used by developers to print debugging information. \
-            For details, please refer to :ref:`api_guide_Name`. Default is None.
+        quanter(BaseQuanter, required): It can be any BaseQuanter. PACT can be used with any other quantization method.
+        init_value(float, optional): Value of initial alpha. Default 100
+        learning_rate(float, optional): The learning rate of alpha when optimizing.
+        dtype(str): Trainable data type.
+        name(str): The name of the layer.
     Examples:
        .. code-block:: python
             from paddle.quantization import QuantConfig
-            from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
-            quanter = FakeQuanterWithAbsMaxObserver(moving_rate=0.99)
-            q_config = QuantConfig(activation=quanter, weight=quanter)
+            from paddle.quantization.quanters import PACTQuanter
+            from paddle.quantization.quanters.abs_max import FakeQuanterWithAbsMaxObserverLayer
+            pact_quanter = PACTQuanter(quanter=FakeQuanterWithAbsMaxObserverLayer)
+            q_config = QuantConfig(activation=pact_quanter, weight=pact_quanter)
     """
 
     def __init__(self,

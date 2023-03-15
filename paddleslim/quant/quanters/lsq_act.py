@@ -26,20 +26,23 @@ from .lsq_func import LsqFunc, LsqPlusActFunc
 
 class ActLSQplusQuanter(QuanterFactory):
     r"""
-    It collects maximum absolute values of target tensor.
+    Activation quantizer. More details can be found in 
+    https://arxiv.org/pdf/1902.08153.pdf and https://arxiv.org/pdf/2004.09576.pdf.
     Args:
-        bit_length(int, optional): Number of bits to represent an quantized integer in binary.
-        dtype(str, optional): The data type of input tensor.
-        name (str, optional): This parameter is used by developers to print debugging information. \
-            For details, please refer to :ref:`api_guide_Name`. Default is None.
+        per_channel(bool): whether layer-wise or channel-wise quantization, where True for layer-wise quantization and False for channel-wise quantization.
+        batch_init(int): number of batches that collect Gaussian approximation for the weight distribution in each layer.
+        quant_linear(bool): whether the weight is from Linear.
+        dtype(str): data type.
+        name(str): the name of the layer.
+        reduce_type(str): the reduce type which is needed when parallel training.
     Examples:
        .. code-block:: python
             from paddle.quantization import QuantConfig
-            from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
-            quanter = FakeQuanterWithAbsMaxObserver(moving_rate=0.99)
-            q_config = QuantConfig(activation=quanter, weight=quanter)
+            from paddle.quantization.quanters import ActLSQplusQuanter, WeightLSQplusQuanter
+            weight_quanter = WeightLSQplusQuanter()
+            act_quanter = ActLSQplusQuanter()
+            q_config = QuantConfig(activation=act_quanter, weight=weight_quanter)
     """
-
     def __init__(self,
                  quant_bits=8,
                  sign=True,
@@ -79,9 +82,6 @@ class ActLSQplusQuanterLayer(BaseFakeQuanterLayer):
                  name=None):
         super(ActLSQplusQuanterLayer, self).__init__()
 
-        self._quant_bits = quant_bits
-        self._sign = sign
-        self._symmetric = symmetric
         self._per_channel = per_channel
         self._quant_linear = quant_linear
         self._batch_init = batch_init
@@ -114,8 +114,6 @@ class ActLSQplusQuanterLayer(BaseFakeQuanterLayer):
             self._beta = self.create_parameter(
                 shape=[1], attr=beta_attr, dtype='float32')
             self._beta.stop_gradient = False
-
-        self._zero_point = None
 
     def init_params(self, activation):
         self.g = paddle.to_tensor(
