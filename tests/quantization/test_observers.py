@@ -17,6 +17,7 @@ import os
 import unittest
 import paddle
 import tempfile
+sys.path.append("../../")
 from paddle.vision.models import resnet18
 from paddle.quantization import QuantConfig
 from paddle.quantization import PTQ
