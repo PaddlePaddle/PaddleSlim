@@ -21,34 +21,37 @@ from paddle.quantization.factory import ObserverFactory
 
 class HistObserver(ObserverFactory):
     r"""
-    It collects maximum absolute values of target tensor.
+    It collects tensor values into a histogram. And calculate quantization parameters
+    based on a percent ratio.
 
     Args:
-        bit_length(int, optional): Number of bits to represent an quantized integer in binary.
-        dtype(str, optional): The data type of input tensor.
-        name (str, optional): This parameter is used by developers to print debugging information. \
-            For details, please refer to :ref:`api_guide_Name`. Default is None.
+        quant_bits (int): The number of bits for quantization.
+        bins_count(int): The number of equal-width bins.
+        percent(float): The percentage of bins that are retained when clipping the outliers.
+        sign (bool): Whether the quantized integer includes a sign.
+        symmetric (bool): Whether it is symmetric quantization. the quantization is symmetric.
+        In symmetric quantization, the range of floating point values is relaxed to be symmetric
+        around zero and the zero-point is always 0.
+        
 
     Examples:
        .. code-block:: python
 
             from paddle.quantization import QuantConfig
-            from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
-            quanter = FakeQuanterWithAbsMaxObserver(moving_rate=0.99)
+            from paddle.quantization.quanters import HistObserver
+            quanter = HistObserver()
             q_config = QuantConfig(activation=quanter, weight=quanter)
     """
 
     def __init__(self,
                  quant_bits=8,
                  bins_count=2048,
-                 upsample_bins_count=64,
                  percent=0.999,
                  sign=True,
                  symmetric=True):
         super(HistObserver, self).__init__(
             quant_bits=quant_bits,
             bins_count=bins_count,
-            upsample_bins_count=upsample_bins_count,
             percent=percent,
             sign=sign,
             symmetric=symmetric)
@@ -58,8 +61,9 @@ class HistObserver(ObserverFactory):
 
 
 class PercentHistObserverLayer(BaseHistObserver):
-    """
-    Per-tensor abs max quantizer.
+    r"""
+    It collects tensor values into a histogram. And calculate quantization parameters
+    based on a percent ratio.
     """
 
     def __init__(self,

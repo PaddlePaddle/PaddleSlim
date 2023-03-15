@@ -12,12 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import abc
+from typing import Tuple
 import numpy as np
 from paddle.quantization.base_observer import BaseObserver
 
 
 class UniformObserver(BaseObserver):
-    """ An abstract class used for uniform quantization. 
+    """ This is the base class for a uniform quantization observer, which provides
+    common functions for calculating the scale and zero-point used in uniform quantization.
+    Uniform quantization maps floating point values to integers, where the scale determines
+    the step size of the quantizer and the floating point zero is mapped to the zero-point,
+    an integer value ensuring that zero is quantized without error.
+
+    Args:
+        quant_bits (int): The number of bits for quantization.
+        sign (bool): Whether the quantized integer includes a sign.
+        symmetric (bool): Whether it is symmetric quantization. the quantization is symmetric.
+        In symmetric quantization, the range of floating point values is relaxed to be symmetric
+        around zero and the zero-point is always 0.
+         
     """
 
     def __init__(
@@ -40,26 +54,39 @@ class UniformObserver(BaseObserver):
 
     @property
     def qmin_qmax(self):
-        """ Get the range of the integer."""
+        """ Calculate the range of the quantized integer based on the specified
+        quant_bits, sign, and symmetric properties."""
         if self._qmin is not None and self._qmax is not None:
-            return self.qmin, self.qmax
+            return self._qmin, self._qmax
         if self._sign:
-            self.qmin = -2**(self.bit_length() - 1)
-            self.qmax = 2**(self.bit_length() - 1) - 1
+            self._qmin = -2**(self.bit_length() - 1)
+            self._qmax = 2**(self.bit_length() - 1) - 1
         else:
-            self.qmin = 0
-            self.qmax = 2**self.bit_length()
-        return self.qmin, self.qmax
+            self._qmin = 0
+            self._qmax = 2**self.bit_length()
+        return self._qmin, self._qmax
 
-    def cal_scales_zero_points(self):
-        """ Compute the scales and zero_points.
+    @abc.abstractmethod
+    @property
+    def min_value(self) -> float:
+        """ The minimum value of floating-point numbers."""
+        pass
+
+    @abc.abstractmethod
+    @property
+    def max_value(self) -> float:
+        """ The maximum value of floating-point numbers."""
+        pass
+
+    def cal_scales_zero_points(self) -> Tuple[float, float]:
+        """ Calculate the scales and zero points based on the min_value and max_value.
         """
-        assert self._min is not None and self._max is not None
+        assert self.min_value is not None and self.max_value is not None
         _qmin, _qmax = self.qmin_qmax
         # For one-sided distributions, the range (_min , _max ) is relaxed to include zero.
         # It is important to ensure that common operations like zero padding do not cause quantization errors.
-        _min = min(self._min, 0.)
-        _max = max(self._max, 0.)
+        _min = min(self.min_value, 0.)
+        _max = max(self.max_value, 0.)
 
         if self._symmetric:
             self._scale = max(-_min, _max) / (float(_qmax - _qmin) / 2)

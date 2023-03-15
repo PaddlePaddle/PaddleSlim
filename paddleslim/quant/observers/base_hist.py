@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import abc
+from typing import Tuple
 import paddle
 import numpy as np
 
@@ -21,32 +22,39 @@ from .uniform import UniformObserver
 
 class BaseHistObserver(UniformObserver):
     """
-    Per-tensor abs max quantizer.
+    It is a base class of histogram observers defined some functions to
+    collects the values of multi batches to a histogram.
+    Args:
+        quant_bits (int): The number of bits for quantization.
+        sign (bool): Whether the quantized integer includes a sign.
+        symmetric (bool): Whether it is symmetric quantization. the quantization is symmetric.
+        In symmetric quantization, the range of floating point values is relaxed to be symmetric
+        around zero and the zero-point is always 0.
+        bins_count(int): The number of equal-width bins.
     """
 
-    def __init__(self,
-                 quant_bits=8,
-                 bins_count=2048,
-                 upsample_bins_count=64,
-                 sign=True,
+    def __init__(self, quant_bits=8, bins_count=2048, sign=True,
                  symmetric=True):
         super(BaseHistObserver, self).__init__(
             quant_bits=quant_bits,
             sign=sign,
             symmetric=symmetric, )
         self._bin_count = bins_count
-        self._upsample_bin_count = upsample_bins_count
+        self._upsample_bin_count = 64
 
         self._hist_min = None
         self._hist_max = None
         self._hist = None
 
     def _min_max(self, tensor):
-        """" """
+        """" Get the min and max value of a tensor.
+        """
         return float(paddle.min(tensor).numpy()), float(
             paddle.max(tensor).numpy())
 
     def _init_hists(self, inputs):
+        """" Initialize the histogram instance based on a tensor.
+        """
         _min, _max = self._min_max(inputs)
         hist = None
         if _max > _min:
@@ -56,8 +64,6 @@ class BaseHistObserver(UniformObserver):
         return hist
 
     def forward(self, inputs):
-        """ Calculate forward pass.
-        """
         self._scale = None
         self._zero_point = None
         self._min = None
@@ -67,7 +73,7 @@ class BaseHistObserver(UniformObserver):
             self._hist_min, self._hist_max = self._min_max(inputs)
             self._hist = self._init_hists(inputs)
         else:
-            new_min, new_max, new_hist = self.update_min_max_and_hist(
+            new_min, new_max, new_hist = self._update_min_max_and_hist(
                 inputs,
                 self._hist_min,
                 self._hist_max,
@@ -78,8 +84,17 @@ class BaseHistObserver(UniformObserver):
             self._hist = new_hist
         return inputs
 
-    def update_min_max_and_hist(self, tensor, origin_min, origin_max,
-                                origin_hist, bins_count, upsample_bins_count):
+    def _update_min_max_and_hist(self, tensor, origin_min, origin_max,
+                                 origin_hist, bins_count, upsample_bins_count):
+        """ Update the histogram and its range based on the values of the target tensor.
+        Args:
+            tensor: The tensor used to update the histogram.
+            origin_min(float): The minimum of the original histogram's range.
+            origin_max(float): The max of the original histogram's range.
+            origin_hist: The original histogram.
+            bins_count(int): The number of histogram bins.
+            upsample_bins_count(int): The number of upsampled bins used to extend the histogram.
+        """
 
         _origin_min, _origin_max = origin_min, origin_max
         _new_min, _new_max = self._min_max(tensor)
@@ -151,36 +166,33 @@ class BaseHistObserver(UniformObserver):
         return new_min, new_max, downsample_bins_count, start_bin_idx
 
     @abc.abstractmethod
-    def cal_min_max(self):
+    def cal_min_max(self) -> Tuple[float, float]:
+        """ Calculate the minimum and maximum based on the histogram. """
         pass
 
     def cal_thresholds(self):
-        """ Compute thresholds for MAX function.
-        """
         assert self._hist is not None
         self._min, self._max = self.cal_min_max()
         self._scale, self._zero_point = self.cal_scales_zero_points()
 
+    def min_value(self) -> float:
+        return self._min
+
+    def max_value(self) -> float:
+        return self._max
+
     def bit_length(self):
-        """ Return the bit length of quantized data.
-        """
         return self._quant_bits
 
     def quant_axis(self):
-        """ Return quantization axis.
-        """
         return -1
 
     def scales(self):
-        """ Return output scales.
-        """
         if self._scale is None:
             self.cal_thresholds()
         return self._scale
 
     def zero_points(self):
-        """ Return output zero points.
-        """
         if self._zero_point is None:
             self.cal_thresholds()
         return self._zero_point

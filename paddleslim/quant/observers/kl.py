@@ -20,33 +20,27 @@ from paddle.quantization.factory import ObserverFactory
 
 
 class KLObserver(ObserverFactory):
-    r"""
-    It collects maximum absolute values of target tensor.
+    r""" 
+    Calculate quantization parameters that minimize the Kullback–Leibler divergence
+    between the distribution of floating values and the distribution of quantized
+    floating values.
 
     Args:
-        bit_length(int, optional): Number of bits to represent an quantized integer in binary.
-        dtype(str, optional): The data type of input tensor.
-        name (str, optional): This parameter is used by developers to print debugging information. \
-            For details, please refer to :ref:`api_guide_Name`. Default is None.
+        quant_bits (int): The number of bits for quantization.
+        bins_count(int): The number of equal-width bins.
 
     Examples:
        .. code-block:: python
 
             from paddle.quantization import QuantConfig
-            from paddle.quantization.quanters import FakeQuanterWithAbsMaxObserver
-            quanter = FakeQuanterWithAbsMaxObserver(moving_rate=0.99)
+            from paddle.quantization.quanters import KLObserver
+            quanter = KLObserver()
             q_config = QuantConfig(activation=quanter, weight=quanter)
     """
 
-    def __init__(
-            self,
-            quant_bits=8,
-            bins_count=2048,
-            upsample_bins_count=64, ):
+    def __init__(self, quant_bits=8, bins_count=2048):
         super(KLObserver, self).__init__(
-            quant_bits=quant_bits,
-            bins_count=bins_count,
-            upsample_bins_count=upsample_bins_count, )
+            quant_bits=quant_bits, bins_count=bins_count)
 
     def _get_class(self):
         return KLObserverLayer
@@ -57,16 +51,10 @@ class KLObserverLayer(BaseHistObserver):
     Per-tensor KL observer.
     """
 
-    def __init__(
-            self,
-            layer,
-            quant_bits=8,
-            bins_count=2048,
-            upsample_bins_count=64, ):
+    def __init__(self, layer, quant_bits=8, bins_count=2048):
         super(KLObserverLayer, self).__init__(
             quant_bits=quant_bits,
             bins_count=bins_count,
-            upsample_bins_count=upsample_bins_count,
             sign=True,
             symmetric=True)
 
