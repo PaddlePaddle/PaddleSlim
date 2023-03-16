@@ -18,6 +18,7 @@ import unittest
 import paddle
 import tempfile
 import numpy as np
+sys.path.append("../../")
 
 from paddle.vision.models import resnet18
 from paddle.quantization import QuantConfig
@@ -76,7 +77,6 @@ class TestQATWithQuanters(unittest.TestCase):
         self.weight_observer_type = weight_observer_type
 
     def setUp(self):
-        paddle.set_device("cpu")
         self.init_case()
         self.dummy_input = paddle.rand([1, 3, 224, 224])
         self.temp_dir = tempfile.TemporaryDirectory(dir="./")
@@ -219,6 +219,8 @@ class TestQATWithQuanters(unittest.TestCase):
         self.assertTrue(
             top1_1 - top1_2 < diff,
             msg="The acc of quant model is too lower than fp32 model")
+        _logger.info('done')
+        return
 
     def test_convert(self):
         model = resnet18()
@@ -253,7 +255,7 @@ observer_suite.addTest(
         weight_observer_type=WeightLSQplusQuanterLayer))
 observer_suite.addTest(
     TestQATWithQuanters(
-        act_observer=PACTQuanter(quanter=FakeQuanterWithAbsMaxObserverLayer),
+        act_observer=PACTQuanter(quanter=ActLSQplusQuanterLayer),
         act_observer_type=PACTQuanterLayer,
         weight_observer=WeightLSQplusQuanter(),
         weight_observer_type=WeightLSQplusQuanterLayer))
@@ -261,3 +263,5 @@ observer_suite.addTest(
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(observer_suite)
+    os.system('rm -rf ILSVRC2012_data_demo.tar.gz')
+    os.system('rm -rf ILSVRC2012_data_demo')

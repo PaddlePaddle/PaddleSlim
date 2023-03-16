@@ -51,7 +51,11 @@ class PACTQuanter(QuanterFactory):
                  dtype='float32',
                  name=None):
         super(PACTQuanter, self).__init__(
-            quanter=quanter, init_value=init_value, dtype=dtype, name=name)
+            quanter=quanter,
+            init_value=init_value,
+            learning_rate=learning_rate,
+            dtype=dtype,
+            name=name)
 
     def _get_class(self):
         return PACTQuanterLayer
