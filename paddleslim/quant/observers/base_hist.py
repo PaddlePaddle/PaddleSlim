@@ -73,6 +73,7 @@ class BaseHistObserver(UniformObserver):
             self._hist_min, self._hist_max = self._min_max(inputs)
             self._hist = self._init_hists(inputs)
         else:
+            print(f"hit 1----------")
             new_min, new_max, new_hist = self._update_min_max_and_hist(
                 inputs,
                 self._hist_min,
@@ -100,13 +101,16 @@ class BaseHistObserver(UniformObserver):
         _new_min, _new_max = self._min_max(tensor)
 
         if (_new_max - _new_min) == 0.0:
+            print(f"hit 2----------")
             return _origin_min, _origin_max, origin_hist
         elif _origin_max - _origin_min == 0.0:
+            print(f"hit 3----------")
             new_hist, _ = np.histogram(
                 tensor.numpy(), range=(_new_min, _new_max), bins=bins_count)
             new_hist = new_hist.astype(np.float32)
             return _new_min, _new_max, new_hist
         elif _new_max <= _origin_max and _new_min >= _origin_min:
+            print(f"hit 4----------")
             new_hist, _ = np.histogram(
                 tensor.numpy(),
                 range=(_origin_min, _origin_max),
@@ -115,6 +119,7 @@ class BaseHistObserver(UniformObserver):
             new_hist += origin_hist
             return _origin_min, _origin_max, new_hist
         else:
+            print(f"hit 5----------")
             _new_min = min(_new_min, _origin_min)
             _new_max = max(_new_max, _origin_max)
             _new_min, _new_max, downsample_bins_count, start_bin_idx = self._relax_min_max(
