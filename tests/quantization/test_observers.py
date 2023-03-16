@@ -110,6 +110,5 @@ observer_suite.addTest(
         observer=AVGObserver(), observer_type=AVGObserverLayer))
 
 if __name__ == '__main__':
-    runner = unittest.TextTestRunner()
+    runner = unittest.TextTestRunner(verbosity=2)
     runner.run(observer_suite)
-    os._exit(0)
