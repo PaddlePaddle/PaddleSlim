@@ -56,8 +56,6 @@ class UniformObserver(BaseObserver):
     def qmin_qmax(self):
         """ Calculate the range of the quantized integer based on the specified
         quant_bits, sign, and symmetric properties."""
-        if self._qmin is not None and self._qmax is not None:
-            return self._qmin, self._qmax
         if self._sign:
             self._qmin = -2**(self.bit_length() - 1)
             self._qmax = 2**(self.bit_length() - 1) - 1
@@ -69,12 +67,16 @@ class UniformObserver(BaseObserver):
     @abc.abstractmethod
     def min_value(self) -> float:
         """ The minimum value of floating-point numbers."""
-        pass
+        raise NotImplementedError(
+            "Please implement the abstract method to get the The minimum value of floating-point numbers."
+        )
 
     @abc.abstractmethod
     def max_value(self) -> float:
         """ The maximum value of floating-point numbers."""
-        pass
+        raise NotImplementedError(
+            "Please implement the abstract method to get the the maximum value value of floating-point numbers."
+        )
 
     def cal_scales_zero_points(self) -> Tuple[float, float]:
         """ Calculate the scales and zero points based on the min_value and max_value.

@@ -72,6 +72,7 @@ class TestPTQWithHistObserver(unittest.TestCase):
         out = quant_model(zero_input)
         out = quant_model(self.dummy_input)
         out = quant_model(zero_input)
+        out = quant_model(self.dummy_input + 1.)
         quantizer_cnt = self._count_layers(quant_model, self.observer_type)
         self.assertEqual(quantizer_cnt, 2 * conv_count)
 
@@ -96,10 +97,23 @@ class TestPTQWithHistObserver(unittest.TestCase):
 observer_suite = unittest.TestSuite()
 observer_suite.addTest(
     TestPTQWithHistObserver(
-        observer=HistObserver(), observer_type=PercentHistObserverLayer))
-# observer_suite.addTest(
-#     TestPTQWithHistObserver(
-#         observer=KLObserver(bins_count=256), observer_type=KLObserverLayer))
+        observer=HistObserver(sign=True, symmetric=True),
+        observer_type=PercentHistObserverLayer))
+observer_suite.addTest(
+    TestPTQWithHistObserver(
+        observer=HistObserver(sign=False, symmetric=True),
+        observer_type=PercentHistObserverLayer))
+observer_suite.addTest(
+    TestPTQWithHistObserver(
+        observer=HistObserver(sign=True, symmetric=False),
+        observer_type=PercentHistObserverLayer))
+observer_suite.addTest(
+    TestPTQWithHistObserver(
+        observer=HistObserver(sign=False, symmetric=False),
+        observer_type=PercentHistObserverLayer))
+observer_suite.addTest(
+    TestPTQWithHistObserver(
+        observer=KLObserver(bins_count=256), observer_type=KLObserverLayer))
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=2)
