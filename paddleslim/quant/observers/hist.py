@@ -70,14 +70,12 @@ class PercentHistObserverLayer(BaseHistObserver):
                  layer,
                  quant_bits=8,
                  bins_count=2048,
-                 upsample_bins_count=64,
                  percent=0.999,
                  sign=True,
                  symmetric=True):
         super(PercentHistObserverLayer, self).__init__(
             quant_bits=quant_bits,
             bins_count=bins_count,
-            upsample_bins_count=upsample_bins_count,
             sign=sign,
             symmetric=symmetric)
 

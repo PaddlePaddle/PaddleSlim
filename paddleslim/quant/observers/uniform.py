@@ -67,13 +67,11 @@ class UniformObserver(BaseObserver):
         return self._qmin, self._qmax
 
     @abc.abstractmethod
-    @property
     def min_value(self) -> float:
         """ The minimum value of floating-point numbers."""
         pass
 
     @abc.abstractmethod
-    @property
     def max_value(self) -> float:
         """ The maximum value of floating-point numbers."""
         pass
@@ -81,12 +79,12 @@ class UniformObserver(BaseObserver):
     def cal_scales_zero_points(self) -> Tuple[float, float]:
         """ Calculate the scales and zero points based on the min_value and max_value.
         """
-        assert self.min_value is not None and self.max_value is not None
+        assert self.min_value() is not None and self.max_value() is not None
         _qmin, _qmax = self.qmin_qmax
         # For one-sided distributions, the range (_min , _max ) is relaxed to include zero.
         # It is important to ensure that common operations like zero padding do not cause quantization errors.
-        _min = min(self.min_value, 0.)
-        _max = max(self.max_value, 0.)
+        _min = min(self.min_value(), 0.)
+        _max = max(self.max_value(), 0.)
 
         if self._symmetric:
             self._scale = max(-_min, _max) / (float(_qmax - _qmin) / 2)

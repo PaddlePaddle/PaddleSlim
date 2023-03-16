@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import sys
+sys.path.append("../../")
 import os
 import unittest
 import paddle
@@ -95,8 +96,7 @@ observer_suite.addTest(
         observer=HistObserver(), observer_type=PercentHistObserverLayer))
 observer_suite.addTest(
     TestPTQWithHistObserver(
-        observer=KLObserver(bins_count=256, upsample_bins_count=32),
-        observer_type=KLObserverLayer))
+        observer=KLObserver(bins_count=256), observer_type=KLObserverLayer))
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=2)
