@@ -22,15 +22,19 @@ from paddle.vision.models import resnet18
 from paddle.quantization import QuantConfig
 from paddle.quantization import PTQ
 
-from paddleslim.quant.observers import HistObserver, KLObserver
+from paddleslim.quant.observers import HistObserver, KLObserver, EMDObserver, MSEObserver, AVGObserver
 from paddleslim.quant.observers.hist import PercentHistObserverLayer
+from paddleslim.quant.observers.kl import KLObserverLayer
+from paddleslim.quant.observers.mse import MSEObserverLayer
+from paddleslim.quant.observers.avg import AVGObserverLayer
+from paddleslim.quant.observers.emd import EMDObserverLayer
 from paddleslim.quant.observers.kl import KLObserverLayer
 from paddle.nn.quant.format import LinearDequanter, LinearQuanter
 
 
-class TestPTQWithHistObserver(unittest.TestCase):
+class TestPTQObserver(unittest.TestCase):
     def __init__(self, observer, observer_type, *args, **kvargs):
-        super(TestPTQWithHistObserver, self).__init__(*args, **kvargs)
+        super(TestPTQObserver, self).__init__(*args, **kvargs)
         self.observer = observer
         self.observer_type = observer_type
 
@@ -49,8 +53,6 @@ class TestPTQWithHistObserver(unittest.TestCase):
         self.test_convert()
 
     def init_case(self):
-        # observer = HistObserver()
-        # self.observer_type = PercentHistObserverLayer
         self.q_config = QuantConfig(activation=None, weight=None)
         self.q_config.add_type_config(
             paddle.nn.Conv2D, activation=self.observer, weight=self.observer)
@@ -96,25 +98,31 @@ class TestPTQWithHistObserver(unittest.TestCase):
 
 observer_suite = unittest.TestSuite()
 observer_suite.addTest(
-    TestPTQWithHistObserver(
+    TestPTQObserver(
         observer=HistObserver(sign=True, symmetric=True),
         observer_type=PercentHistObserverLayer))
 observer_suite.addTest(
-    TestPTQWithHistObserver(
+    TestPTQObserver(
         observer=HistObserver(sign=False, symmetric=True),
         observer_type=PercentHistObserverLayer))
 observer_suite.addTest(
-    TestPTQWithHistObserver(
+    TestPTQObserver(
         observer=HistObserver(sign=True, symmetric=False),
         observer_type=PercentHistObserverLayer))
 observer_suite.addTest(
-    TestPTQWithHistObserver(
+    TestPTQObserver(
         observer=HistObserver(sign=False, symmetric=False),
         observer_type=PercentHistObserverLayer))
 observer_suite.addTest(
-    TestPTQWithHistObserver(
+    TestPTQObserver(
         observer=KLObserver(bins_count=256), observer_type=KLObserverLayer))
 
+observer_suite.addTest(
+    TestPTQObserver(observer=AVGObserver(), observer_type=AVGObserverLayer))
+observer_suite.addTest(
+    TestPTQObserver(observer=EMDObserver(), observer_type=EMDObserverLayer))
+observer_suite.addTest(
+    TestPTQObserver(observer=MSEObserver(), observer_type=MSEObserverLayer))
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(observer_suite)
