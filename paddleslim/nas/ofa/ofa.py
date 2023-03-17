@@ -359,8 +359,8 @@ class OFA(OFABase):
             if isinstance(v, dict):
                 sample_cands[k] = self._sample_from_nestdict(
                     v, sample_type=sample_type, task=task, phase=phase)
-            elif isinstance(v, list) or isinstance(v, set) or isinstance(v,
-                                                                         tuple):
+            elif isinstance(v, list) or isinstance(v, set) or isinstance(
+                    v, tuple):
                 if sample_type == 'largest':
                     sample_cands[k] = v[-1]
                 elif sample_type == 'smallest':
@@ -413,8 +413,8 @@ class OFA(OFABase):
                     key = all_tokens.index(cand)
                     self.token_map[self.task][name][key] = cand
             else:
-                raise NotImplementedError("Task {} not in ofa layers".format(
-                    self.task))
+                raise NotImplementedError(
+                    "Task {} not in ofa layers".format(self.task))
 
         self.search_cands = []
         for layer, t_map in self.token_map[self.task].items():
@@ -610,8 +610,8 @@ class OFA(OFABase):
                         print(f"hit cpu in ofa-------------------------------")
                         place = paddle.CPUPlace()
                     else:
-                        place = paddle.framework.core.CUDAPlace(p.gpu_device_id(
-                        ))
+                        place = paddle.framework.core.CUDAPlace(
+                            p.gpu_device_id())
                     t_value.set(pruned_state_dict[name], place)
 
         if super_model_state_dict != None and len(super_model_state_dict) != 0:
@@ -739,10 +739,9 @@ class OFA(OFABase):
                     if key not in self._param2key.keys():
                         continue
 
-                    ### if skip_layers and same ss both have same layer, 
-                    ### the layers related to this layer need to add to skip_layers 
-                    if self._skip_layers != None and self._param2key[
-                            key] in self._skip_layers:
+                    ### if skip_layers and same ss both have same layer,
+                    ### the layers related to this layer need to add to skip_layers
+                    if self._skip_layers != None and self._param2key[key] in self._skip_layers:
                         self._skip_layers += [self._param2key[sk] for sk in ss]
                         per_ss = []
                         break
@@ -758,8 +757,8 @@ class OFA(OFABase):
 
             self._same_ss = tmp_same_ss
 
-            ### if fixed_by_input layer in a same ss, 
-            ### layers in this same ss should all be fixed 
+            ### if fixed_by_input layer in a same ss,
+            ### layers in this same ss should all be fixed
             tmp_fixed_by_input = []
             for ss in self._same_ss:
                 for key in fixed_by_input:
@@ -781,7 +780,7 @@ class OFA(OFABase):
                 set(output_conv + fixed_by_input + depthwise_conv))
         ### clear depthwise convs from search space because of its output channel cannot change
         ### clear output convs from search space because of model output shape cannot change
-        ### clear convs that operate with fixed input 
+        ### clear convs that operate with fixed input
         for name, sublayer in model_to_traverse.named_sublayers():
             if isinstance(sublayer, BaseBlock):
                 for param in sublayer.parameters():
@@ -794,8 +793,8 @@ class OFA(OFABase):
         teacher_output = None
         if self._add_teacher:
             self._reset_hook_before_forward()
-            teacher_output = self.ofa_teacher_model.model.forward(*inputs,
-                                                                  **kwargs)
+            teacher_output = self.ofa_teacher_model.model.forward(
+                *inputs, **kwargs)
         # ============================================================
 
         # ====================   student process  =====================
