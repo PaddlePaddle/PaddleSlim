@@ -14,5 +14,10 @@
 
 from .hist import HistObserver
 from .kl import KLObserver
+from .mse import MSEObserver
+from .emd import EMDObserver
+from .avg import AVGObserver
 
-__all__ = ["HistObserver", "KLObserver"]
+__all__ = [
+    "HistObserver", "KLObserver", "MSEObserver", "EMDObserver", "AVGObserver"
+]
