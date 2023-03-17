@@ -21,7 +21,7 @@ from paddle.nn import Layer
 from paddle.nn.initializer import Constant
 from paddle.utils import unique_name
 from paddle.quantization.factory import QuanterFactory
-from .lsq_func import LsqFunc
+from .lsq_func import LsqFunc, round
 from .base_fake_quanter import BaseFakeQuanterLayer
 
 
@@ -44,6 +44,7 @@ class WeightLSQplusQuanter(QuanterFactory):
             act_quanter = ActLSQplusQuanter()
             q_config = QuantConfig(activation=act_quanter, weight=weight_quanter)
     """
+
     def __init__(self,
                  quant_bits=8,
                  sign=True,
@@ -198,6 +199,6 @@ class WeightLSQplusQuanterLayer(BaseFakeQuanterLayer):
                     self._zero_point = (self.qmax + self.qmin) / 2
             else:
                 self._zero_point = self.qmin - round(self.qmin / self._scale)
-                self._zero_point = np.clip(self._zero_point, self.qmin,
-                                           self.qmax)
+                self._zero_point = paddle.clip(self._zero_point, self.qmin,
+                                               self.qmax)
         return self._zero_point

@@ -249,7 +249,7 @@ observer_suite.addTest(
         weight_observer_type=WeightLSQplusQuanterLayer))
 observer_suite.addTest(
     TestQATWithQuanters(
-        act_observer=ActLSQplusQuanter(),
+        act_observer=ActLSQplusQuanter(symmetric=False),
         act_observer_type=ActLSQplusQuanterLayer,
         weight_observer=WeightLSQplusQuanter(per_channel=True),
         weight_observer_type=WeightLSQplusQuanterLayer))

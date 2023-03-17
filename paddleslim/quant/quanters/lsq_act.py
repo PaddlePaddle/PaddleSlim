@@ -21,7 +21,7 @@ from paddle.nn.initializer import Constant
 from paddle.utils import unique_name
 from paddle.quantization.factory import QuanterFactory
 from .base_fake_quanter import BaseFakeQuanterLayer
-from .lsq_func import LsqFunc, LsqPlusActFunc
+from .lsq_func import LsqFunc, LsqPlusActFunc, round
 
 
 class ActLSQplusQuanter(QuanterFactory):
@@ -43,6 +43,7 @@ class ActLSQplusQuanter(QuanterFactory):
             act_quanter = ActLSQplusQuanter()
             q_config = QuantConfig(activation=act_quanter, weight=weight_quanter)
     """
+
     def __init__(self,
                  quant_bits=8,
                  sign=True,
@@ -81,7 +82,7 @@ class ActLSQplusQuanterLayer(BaseFakeQuanterLayer):
                  dtype='float32',
                  name=None):
         super(ActLSQplusQuanterLayer, self).__init__()
-
+        self._symmetric = symmetric
         self._per_channel = per_channel
         self._quant_linear = quant_linear
         self._batch_init = batch_init
@@ -141,7 +142,7 @@ class ActLSQplusQuanterLayer(BaseFakeQuanterLayer):
             paddle.distributed.all_reduce(
                 self._scale, op=paddle.distributed.ReduceOp.MAX)
 
-        if not self._symmetric and self.reduce_type == "max":
+        if not self._symmetric and self._reduce_type == "max":
             paddle.distributed.all_reduce(
                 self._beta, op=paddle.distributed.ReduceOp.MAX)
 
@@ -191,6 +192,6 @@ class ActLSQplusQuanterLayer(BaseFakeQuanterLayer):
                     self._zero_point = (self.qmax + self.qmin) / 2
             else:
                 self._zero_point = self.qmin - round(self.qmin / self._scale)
-                self._zero_point = np.clip(self._zero_point, self.qmin,
-                                           self.qmax)
+                self._zero_point = paddle.clip(self._zero_point, self.qmin,
+                                               self.qmax)
         return self._zero_point
