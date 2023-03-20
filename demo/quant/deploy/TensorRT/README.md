@@ -9,7 +9,7 @@ NVIDIA TensorRT 是一个高性能的深度学习预测库，适用于Nvidia GPU
 - 在Nvidia GPU上部署预测：在GPU上以INT8类型进行预测部署。
 
 参考资料：
-* PaddleInference NV GPU部署量化模型[文档](https://paddle-inference.readthedocs.io/en/latest/optimize/paddle_trt.html)
+* PaddleInference NV GPU部署量化模型[文档](https://www.paddlepaddle.org.cn/inference/v2.4/guides/nv_gpu_infer/trt_fp16_int8.html)
 
 ## 1. 准备环境
 

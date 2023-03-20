@@ -12,12 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .hist import HistObserver
-from .kl import KLObserver
-from .mse import MSEObserver
-from .emd import EMDObserver
-from .avg import AVGObserver
+from .lsq_act import ActLSQplusQuanter
+from .lsq_weight import WeightLSQplusQuanter
+from .pact import PACTQuanter
 
-__all__ = [
-    "HistObserver", "KLObserver", "MSEObserver", "EMDObserver", "AVGObserver"
-]
+__all__ = ["ActLSQplusQuanter", "WeightLSQplusQuanter", "PACTQuanter"]
