@@ -17,16 +17,12 @@ import sys
 import pickle
 import copy
 import logging
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 import csv
 import numpy as np
 import random
 import tempfile
 import paddle
-from ..core import GraphWrapper
-from ..common import get_logger
-from ..common import get_feed_vars, wrap_dataloader, load_inference_model, get_model_dir
+from ..common import get_logger, load_inference_model
 from paddle.fluid.framework import IrGraph
 from paddle.framework import core
 
@@ -55,6 +51,30 @@ class Analysis(object):
                  resume=False,
                  save_dir='analysis_results',
                  quant_config=None):
+        '''
+        Analysis provides to analysis the sensitivity of each op in the model.
+        
+        Args:
+            float_model_dir(str, required): the path of fp32 model, it can also be '.onnx'
+            quant_model_dir(str, optional):the path of quantized model, if is None, float model will be quantized by PTQ
+            model_filename(str, optional): the model file name of the fp32 and quantized model
+            params_filename(str, optional): the parameter file name of the fp32 and quantized model
+            eval_function(function): eval function, define by yourself to return the metric of the inference program, can be used to judge the metric of quantized model.  (TODO: optional)
+            data_loader(Python Generator, Paddle.io.DataLoader, optional): the
+                Generator or Dataloader provides calibrate data, and it could
+                return a batch every time
+            save_dir(str, optional): the output dir that stores the analyzed information
+            resume(bool, optional): When break off while ananlyzing, could resume analysis program and load already analyzed information.
+            quant_config(dict, optional): the args that can initialize PostTrainingQuantization
+        
+        Examples:
+        .. code-block:: python
+       
+        from paddleslim.quant.analysis import Analysis
+        analyzer = Analysis(quant_model_dir=quant_model_dir)
+        analyzer.metric_error_analyse()
+          
+        '''
         if model_filename is None:
             model_filename = 'model.pdmodel'
         if params_filename is None:
