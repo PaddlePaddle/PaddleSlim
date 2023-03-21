@@ -7,7 +7,7 @@ import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
 from paddle.vision.transforms import transforms
-from paddleslim.quant.analysis_ptq import AnalysisPTQ
+from paddleslim.quant.analysis import Analysis
 paddle.enable_static()
 
 
@@ -17,7 +17,8 @@ class ImageNetDataset(DatasetFolder):
         normalize = transforms.Normalize(
             mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
         self.transform = transforms.Compose([
-            transforms.Resize(256), transforms.CenterCrop(image_size),
+            transforms.Resize(256),
+            transforms.CenterCrop(image_size),
             transforms.Transpose(), normalize
         ])
 
@@ -51,12 +52,12 @@ class AnalysisPTQDemo(unittest.TestCase):
         train_loader = paddle.io.DataLoader(
             train_dataset, feed_list=[image], batch_size=8, return_list=False)
 
-        analyzer = AnalysisPTQ(
-            model_dir="./MobileNetV1_infer",
+        analyzer = Analysis(
+            float_model_dir="./MobileNetV1_infer",
             model_filename="inference.pdmodel",
             params_filename="inference.pdiparams",
             save_dir="MobileNetV1_analysis",
-            ptq_config={
+            quant_config={
                 'quantizable_op_type': ["conv2d", "depthwise_conv2d"],
                 'weight_quantize_type': 'abs_max',
                 'activation_quantize_type': 'moving_average_abs_max',
