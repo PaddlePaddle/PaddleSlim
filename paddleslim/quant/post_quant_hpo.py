@@ -419,7 +419,7 @@ def quant_post_hpo(
     except:
         _logger.warning(
             "smac==1.4.0 is required, please use \"pip install smac==1.4.0\".")
-        os.system('python -m pip smac==1.4.0')
+        os.system('python -m pip install smac==1.4.0')
 
     from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
         UniformFloatHyperparameter, UniformIntegerHyperparameter
