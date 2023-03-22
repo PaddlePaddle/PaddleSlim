@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# sys.path.append("../../")
-
 import unittest
 import sys
 import os
@@ -22,7 +20,7 @@ import paddle
 import tempfile
 import random
 import numpy as np
-
+sys.path.append("../../")
 import paddle
 import paddle.distributed as dist
 import paddle.distributed.fleet as fleet
