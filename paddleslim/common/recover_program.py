@@ -71,6 +71,8 @@ def _recover_param_attr(program, startup_program):
         if param.persistable is True and param.name != 'feed' and param.name != 'fetch']
     with paddle.static.program_guard(program, startup_program):
         for w in all_weights:
+            if w.dtype not in [paddle.float32]:
+                continue
             new_w = paddle.create_parameter(
                 shape=w.shape, dtype=w.dtype, name=w.name)
             new_w.set_value(w.get_value())
