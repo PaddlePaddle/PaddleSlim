@@ -8,7 +8,7 @@ import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
 from paddle.vision.transforms import transforms
-from paddleslim.quant.analysis_ptq import AnalysisPTQ
+from paddleslim.quant.analysis import Analysis
 paddle.enable_static()
 
 
@@ -19,7 +19,8 @@ class ImageNetDataset(DatasetFolder):
         normalize = transforms.Normalize(
             mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
         self.transform = transforms.Compose([
-            transforms.Resize(256), transforms.CenterCrop(image_size),
+            transforms.Resize(256),
+            transforms.CenterCrop(image_size),
             transforms.Transpose(), normalize
         ])
         self.mode = mode
@@ -52,9 +53,9 @@ class ImageNetDataset(DatasetFolder):
         return len(self.samples)
 
 
-class AnalysisPTQEvalFunction(unittest.TestCase):
+class AnalysisEvalFunction(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(AnalysisPTQEvalFunction, self).__init__(*args, **kwargs)
+        super(AnalysisEvalFunction, self).__init__(*args, **kwargs)
         if not os.path.exists('MobileNetV1_infer'):
             os.system(
                 'wget -q https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar'
@@ -116,9 +117,10 @@ class AnalysisPTQEvalFunction(unittest.TestCase):
                 if len(test_feed_names) == 1:
                     image = np.array(image)
                     label = np.array(label).astype('int64')
-                    pred = exe.run(compiled_test_program,
-                                   feed={test_feed_names[0]: image},
-                                   fetch_list=test_fetch_list)
+                    pred = exe.run(
+                        compiled_test_program,
+                        feed={test_feed_names[0]: image},
+                        fetch_list=test_fetch_list)
                     pred = np.array(pred[0])
                     label = np.array(label)
                     sort_array = pred.argsort(axis=1)
@@ -135,12 +137,13 @@ class AnalysisPTQEvalFunction(unittest.TestCase):
                     # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
                     image = np.array(image)
                     label = np.array(label).astype('int64')
-                    result = exe.run(compiled_test_program,
-                                     feed={
-                                         test_feed_names[0]: image,
-                                         test_feed_names[1]: label
-                                     },
-                                     fetch_list=test_fetch_list)
+                    result = exe.run(
+                        compiled_test_program,
+                        feed={
+                            test_feed_names[0]: image,
+                            test_feed_names[1]: label
+                        },
+                        fetch_list=test_fetch_list)
                     result = [np.mean(r) for r in result]
                     results.append(result)
                 if batch_id % 100 == 0:
@@ -148,12 +151,12 @@ class AnalysisPTQEvalFunction(unittest.TestCase):
             result = np.mean(np.array(results), axis=0)
             return result[0]
 
-        analyzer = AnalysisPTQ(
-            model_dir="./MobileNetV1_infer",
+        analyzer = Analysis(
+            float_model_dir="./MobileNetV1_infer",
             model_filename="inference.pdmodel",
             params_filename="inference.pdiparams",
             save_dir="MobileNetV1_analysis",
-            ptq_config={
+            quant_config={
                 'quantizable_op_type': ["conv2d", "depthwise_conv2d"],
                 'weight_quantize_type': 'abs_max',
                 'activation_quantize_type': 'moving_average_abs_max',
@@ -164,7 +167,7 @@ class AnalysisPTQEvalFunction(unittest.TestCase):
             data_loader=train_loader,
             eval_function=eval_function)
         analyzer.metric_error_analyse()
-        analyzer.get_target_quant_model(69.5)
+        analyzer.get_target_quant_model(0.695)
         os.system('rm -rf MobileNetV1_analysis')
 
 

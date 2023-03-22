@@ -21,7 +21,7 @@ from tqdm import tqdm
 from post_process import YOLOPostProcess, coco_metric
 from dataset import COCOValDataset, COCOTrainDataset
 from paddleslim.common import load_config, load_onnx_model
-from paddleslim.quant.analysis_ptq import AnalysisPTQ
+from paddleslim.quant.analysis import Analysis
 
 
 def argsparser():
@@ -41,7 +41,8 @@ def argsparser():
         '--resume',
         type=bool,
         default=False,
-        help="When break off while ananlyzing, could resume analysis program and load already analyzed information."
+        help=
+        "When break off while ananlyzing, could resume analysis program and load already analyzed information."
     )
     return parser
 
@@ -54,10 +55,11 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             ncols=80) as t:
         for data in val_loader:
             data_all = {k: np.array(v) for k, v in data.items()}
-            outs = exe.run(compiled_test_program,
-                           feed={test_feed_names[0]: data_all['image']},
-                           fetch_list=test_fetch_list,
-                           return_numpy=False)
+            outs = exe.run(
+                compiled_test_program,
+                feed={test_feed_names[0]: data_all['image']},
+                fetch_list=test_fetch_list,
+                return_numpy=False)
             res = {}
             postprocess = YOLOPostProcess(
                 score_threshold=0.001, nms_threshold=0.65, multi_label=True)
@@ -103,15 +105,15 @@ def main():
     load_onnx_model(config["model_dir"])
     inference_model_path = config["model_dir"].rstrip().rstrip(
         '.onnx') + '_infer'
-    analyzer = AnalysisPTQ(
-        model_dir=inference_model_path,
+    analyzer = Analysis(
+        float_model_dir=inference_model_path,
         model_filename='model.pdmodel',
         params_filename='model.pdiparams',
         eval_function=eval_function,
         data_loader=data_loader,
         save_dir=config['save_dir'],
         resume=FLAGS.resume,
-        ptq_config=ptq_config)
+        quant_config=ptq_config)
 
     analyzer.statistical_analyse()
     analyzer.metric_error_analyse()

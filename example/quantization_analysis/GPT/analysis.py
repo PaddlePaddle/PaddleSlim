@@ -21,7 +21,7 @@ import time
 
 import paddle
 from paddleslim.common import load_config as load_slim_config
-from paddleslim.quant.analysis_qat import AnalysisQAT
+from paddleslim.quant.analysis import Analysis
 from ppfleetx.data import build_dataloader
 from ppfleetx.distributed.apis import env
 from utils import parse_config
@@ -164,17 +164,15 @@ def main():
     global eval_loader
     eval_loader = eval_reader_wrapper(valid_data_loader)
 
-    analyzer = AnalysisQAT(
+    analyzer = Analysis(
         quant_model_dir=global_config["quant_model_dir"],
         float_model_dir=global_config["float_model_dir"],
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"],
-        quantizable_op_type=global_config['quantizable_op_type'],
-        qat_metric=global_config['qat_metric']
-        if 'qat_metric' in global_config else None,
         eval_function=eval_function,
         data_loader=eval_loader,
         save_dir=FLAGS.save_dir,
+        quant_config=all_config['quant_config'],
         resume=global_config['resume'], )
     analyzer.metric_error_analyse()
 

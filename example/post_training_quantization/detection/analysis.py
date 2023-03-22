@@ -23,7 +23,7 @@ from ppdet.core.workspace import create
 from ppdet.metrics import COCOMetric, VOCMetric, KeyPointTopDownCOCOEval
 from keypoint_utils import keypoint_post_process
 from post_process import PPYOLOEPostProcess
-from paddleslim.quant.analysis_ptq import AnalysisPTQ
+from paddleslim.quant.analysis import Analysis
 
 
 def argsparser():
@@ -87,10 +87,11 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
                 elif isinstance(config['input_list'], dict):
                     if k in config['input_list'].keys():
                         data_input[config['input_list'][k]] = np.array(v)
-            outs = exe.run(compiled_test_program,
-                           feed=data_input,
-                           fetch_list=test_fetch_list,
-                           return_numpy=False)
+            outs = exe.run(
+                compiled_test_program,
+                feed=data_input,
+                fetch_list=test_fetch_list,
+                return_numpy=False)
             res = {}
             if 'arch' in config and config['arch'] == 'keypoint':
                 res = keypoint_post_process(data, data_input, exe,
@@ -115,8 +116,7 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
     metric.log()
     map_res = metric.get_results()
     metric.reset()
-    map_key = 'keypoint' if 'arch' in config and config[
-        'arch'] == 'keypoint' else 'bbox'
+    map_key = 'keypoint' if 'arch' in config and config['arch'] == 'keypoint' else 'bbox'
     return map_res[map_key][0]
 
 
@@ -127,9 +127,8 @@ def main():
     ptq_config = config['PTQ']
 
     # val dataset is sufficient for PTQ
-    data_loader = create('EvalReader')(config['EvalDataset'],
-                                       config['worker_num'],
-                                       return_list=True)
+    data_loader = create('EvalReader')(
+        config['EvalDataset'], config['worker_num'], return_list=True)
     ptq_data_loader = reader_wrapper(data_loader, config['input_list'])
 
     # fast_val_anno_path, such as annotation path of several pictures can accelerate analysis
@@ -139,10 +138,11 @@ def main():
     global val_loader
     _eval_batch_sampler = paddle.io.BatchSampler(
         dataset, batch_size=config['EvalReader']['batch_size'])
-    val_loader = create('EvalReader')(dataset,
-                                      config['worker_num'],
-                                      batch_sampler=_eval_batch_sampler,
-                                      return_list=True)
+    val_loader = create('EvalReader')(
+        dataset,
+        config['worker_num'],
+        batch_sampler=_eval_batch_sampler,
+        return_list=True)
     global metric
     if config['metric'] == 'COCO':
         clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
@@ -161,14 +161,14 @@ def main():
     else:
         raise ValueError("metric currently only supports COCO and VOC.")
 
-    analyzer = AnalysisPTQ(
-        model_dir=config["model_dir"],
+    analyzer = Analysis(
+        float_model_dir=config["model_dir"],
         model_filename=config["model_filename"],
         params_filename=config["params_filename"],
         eval_function=eval_function,
         data_loader=ptq_data_loader,
         save_dir=config['save_dir'],
-        ptq_config=ptq_config,
+        quant_config=ptq_config,
         resume=True, )
 
     analyzer.statistical_analyse()
