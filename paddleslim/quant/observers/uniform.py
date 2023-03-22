@@ -89,7 +89,7 @@ class UniformObserver(BaseObserver):
         _max = max(self.max_value(), 0.)
 
         if self._symmetric:
-            self._scale = max(-_min, _max) / (float(_qmax - _qmin) / 2)
+            self._scale = max(-_min, _max)
             if self._sign:
                 self._zero_point = 0
             else:
