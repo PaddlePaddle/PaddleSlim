@@ -5,11 +5,16 @@ Global:
   float_model_dir: ./GPT_345M_Baseline
   model_filename: model.pdmodel
   params_filename: model.pdiparams
-  quantizable_op_type: ["mul", "matmul", "matmul_v2"]
   resume: False
   reader_config: ./configs/gpt_reader.yaml
   cloze_eval: True # True for LAMBADA Dataset; False for WikiText
   
-  
+quant_config:
+  quantizable_op_type: ["mul", "matmul", "matmul_v2"]
+  weight_quantize_type: 'abs_max'
+  activation_quantize_type: 'moving_average_abs_max'
+  is_full_quantize: False
+  batch_size: 8
+  batch_nums: 10
 
       
