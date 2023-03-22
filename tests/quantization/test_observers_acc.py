@@ -31,6 +31,8 @@ from paddleslim.quant.observers.mse import MSEObserverLayer
 from paddleslim.quant.observers.avg import AVGObserverLayer
 from paddleslim.quant.observers.emd import EMDObserverLayer
 from paddleslim.quant.observers.kl import KLObserverLayer
+from paddleslim.quant.observers.mse_weight import MSEChannelWiseWeightObserver
+from paddleslim.quant.observers.abs_max_weight import AbsMaxChannelWiseWeightObserver
 from paddle.nn.quant.format import LinearDequanter, LinearQuanter
 
 import logging
@@ -70,10 +72,14 @@ class ImperativeLenet(paddle.nn.Layer):
 
 
 class TestPTQObserverAcc(unittest.TestCase):
-    def __init__(self, observer, observer_type, *args, **kvargs):
+    def __init__(self,
+                 activation_observer,
+                 weight_observer=None,
+                 *args,
+                 **kvargs):
         super(TestPTQObserverAcc, self).__init__(*args, **kvargs)
-        self.observer = observer
-        self.observer_type = observer_type
+        self.act_observer = activation_observer
+        self.weight_observer = weight_observer
 
     def setUp(self):
         paddle.set_device("cpu")
@@ -100,7 +106,9 @@ class TestPTQObserverAcc(unittest.TestCase):
     def init_case(self):
         self.q_config = QuantConfig(activation=None, weight=None)
         self.q_config.add_type_config(
-            paddle.nn.Conv2D, activation=self.observer, weight=self.observer)
+            paddle.nn.Conv2D,
+            activation=self.act_observer,
+            weight=self.weight_observer)
 
     def _count_layers(self, model, layer_type):
         count = 0
@@ -202,7 +210,7 @@ class TestPTQObserverAcc(unittest.TestCase):
         quant_model = ptq.quantize(model, inplace=False)
 
         ptq_sample(quant_model)
-        converted_model = ptq.convert(quant_model, inplace=False)
+        converted_model = ptq.convert(quant_model, inplace=True)
         top1_2, top5_2 = test(converted_model)
 
         _logger.info(
@@ -220,20 +228,26 @@ class TestPTQObserverAcc(unittest.TestCase):
 
 
 observer_suite = unittest.TestSuite()
-observer_suite.addTest(
-    TestPTQObserverAcc(
-        observer=HistObserver(sign=True, symmetric=True),
-        observer_type=PercentHistObserverLayer))
-observer_suite.addTest(
-    TestPTQObserverAcc(
-        observer=KLObserver(bins_count=256), observer_type=KLObserverLayer))
 
-observer_suite.addTest(
-    TestPTQObserverAcc(observer=AVGObserver(), observer_type=AVGObserverLayer))
-observer_suite.addTest(
-    TestPTQObserverAcc(observer=EMDObserver(), observer_type=EMDObserverLayer))
-observer_suite.addTest(
-    TestPTQObserverAcc(observer=MSEObserver(), observer_type=MSEObserverLayer))
+for _observer in [
+        AVGObserver(),
+        EMDObserver(),
+        MSEObserver(),
+        KLObserver(bins_count=256),
+        HistObserver(sign=True, symmetric=True),
+]:
+    observer_suite.addTest(
+        TestPTQObserverAcc(
+            activation_observer=_observer, weight_observer=_observer))
+
+for _weight_observer in [
+        MSEChannelWiseWeightObserver(),
+        AbsMaxChannelWiseWeightObserver(),
+]:
+    observer_suite.addTest(
+        TestPTQObserverAcc(
+            activation_observer=MSEObserver(),
+            weight_observer=_weight_observer))
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=2)

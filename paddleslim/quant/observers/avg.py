@@ -64,7 +64,7 @@ class AVGObserverLayer(UniformObserver):
 
     def cal_min_max(self, inputs):
         abs_avg_value = paddle.abs(inputs.reshape((inputs.shape[0], -1)))
-        abs_avg_value = float(paddle.max(paddle.abs(abs_avg_value)))
+        abs_avg_value = float(paddle.mean(paddle.max(abs_avg_value, axis=(1))))
         return 0, abs_avg_value
 
     def cal_thresholds(self):

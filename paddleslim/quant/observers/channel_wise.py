@@ -19,7 +19,7 @@ from .mse import MSEObserverLayer
 from .uniform import UniformObserver
 from paddle.quantization.factory import ObserverFactory
 
-CHANNEL_AXIS: Dict[type, int] = {paddle.nn.Conv2D: 0}
+CHANNEL_AXIS: Dict[type, int] = {paddle.nn.Conv2D: 0, paddle.nn.Linear: 1}
 
 
 class ChannelWiseObserver(UniformObserver):
