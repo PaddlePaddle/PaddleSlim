@@ -15,7 +15,7 @@
 import sys
 import os
 import unittest
-sys.path.append("../")
+sys.path.append("../../")
 import paddle
 import tempfile
 from paddle.vision.models import resnet18

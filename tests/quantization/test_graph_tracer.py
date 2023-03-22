@@ -16,7 +16,7 @@ import sys
 import os
 import unittest
 import tempfile
-sys.path.append("../")
+sys.path.append("../../")
 import paddle
 from paddle.vision.models import resnet18
 from paddleslim.core.graph_tracer import GraphTracer
