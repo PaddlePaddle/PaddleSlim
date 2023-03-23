@@ -33,7 +33,7 @@ def _append_transformer_prune_params(op_lists, graph, block_num, params_dict):
         next_op = _find_gemm_op(next_op, graph)
         if next_op.type() in [
                 'mul', 'matmul', 'matmul_v2'
-        ] and has_trainable_var(next_op) and next_op in op_list:
+        ] and has_trainable_var(next_op) and next_op in op_lists:
             if block_num not in params_dict:
                 params_dict[block_num] = {}
                 params_dict[block_num]['P1'] = [get_weight(next_op)]
@@ -43,7 +43,7 @@ def _append_transformer_prune_params(op_lists, graph, block_num, params_dict):
                 get_weight(has_bias(next_op, graph)))
             op = next_op
     next_op = _find_gemm_op(find_weight_op(op, graph), graph)
-    if next_op and next_op in op_list:
+    if next_op and next_op in op_lists:
         params_dict[block_num]['P2'] = [get_weight(next_op)]
         params_dict[block_num]['P2'].append(
             get_weight(has_bias(next_op, graph)))
