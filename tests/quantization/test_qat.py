@@ -78,17 +78,18 @@ class TestQuantAwareTraining(unittest.TestCase):
 
     def test_quantize(self):
         model = resnet18()
+        conv_count = self._count_layers(model, paddle.nn.Conv2D)
         qat = SlimQAT(self.q_config)
         quant_model = qat.quantize(model, inplace=True, inputs=self.dummy_input)
         quant_model.train()
         out = quant_model(self.dummy_input)
         out.backward()
         quantizer_cnt = self._count_layers(quant_model, self.quantizer_type)
-        expected_quantizer_cnt = 21
-        self.assertEqual(quantizer_cnt, expected_quantizer_cnt)
+        self.assertEqual(quantizer_cnt, conv_count * 2)
 
     def test_convert(self):
         model = resnet18()
+        conv_count = self._count_layers(model, paddle.nn.Conv2D)
         qat = SlimQAT(self.q_config)
         quant_model = qat.quantize(model, inplace=True, inputs=self.dummy_input)
         converted_model = qat.convert(quant_model, inplace=True)
@@ -98,11 +99,9 @@ class TestQuantAwareTraining(unittest.TestCase):
                                                         LinearQuanter)
         dequantizer_count_in_dygraph = self._count_layers(
             converted_model, LinearDequanter)
-        expected_quantizer_count = 20
-        expected_dequantizer_count = 21
-        self.assertEqual(quantizer_count_in_dygraph, expected_quantizer_count)
-        self.assertEqual(dequantizer_count_in_dygraph,
-                         expected_dequantizer_count)
+
+        self.assertEqual(quantizer_count_in_dygraph, conv_count)
+        self.assertEqual(dequantizer_count_in_dygraph, conv_count * 2)
 
         # check count of LinearQuanter and LinearDequanter in static model saved by jit.save
         save_path = os.path.join(self.path, 'converted_model')
