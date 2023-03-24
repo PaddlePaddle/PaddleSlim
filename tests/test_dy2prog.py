@@ -32,8 +32,8 @@ class TestEagerDygraph2Program(unittest.TestCase):
     def prepare_inputs(self):
         self.inputs = [3, 28, 28]
         self.ops = [
-            'assign_value', 'reshape2', 'conv2d', 'elementwise_add', 'pool2d',
-            'reshape2', 'matmul_v2', 'elementwise_add'
+            'assign_value', 'reshape2', 'conv2d', 'reshape2', 'elementwise_add',
+            'pool2d', 'reshape2', 'matmul_v2', 'elementwise_add'
         ]
 
     def prepare_layer(self):
@@ -51,8 +51,8 @@ class TestEagerDygraph2Program2(TestEagerDygraph2Program):
     def prepare_inputs(self):
         self.inputs = [[3, 28, 28]]
         self.ops = [
-            'assign_value', 'reshape2', 'conv2d', 'elementwise_add', 'pool2d',
-            'reshape2', 'matmul_v2', 'elementwise_add'
+            'assign_value', 'reshape2', 'conv2d', 'reshape2', 'elementwise_add',
+            'pool2d', 'reshape2', 'matmul_v2', 'elementwise_add'
         ]
 
 
@@ -60,8 +60,8 @@ class TestEagerDygraph2Program3(TestEagerDygraph2Program):
     def prepare_inputs(self):
         self.inputs = paddle.randn([3, 28, 28])
         self.ops = [
-            'reshape2', 'conv2d', 'elementwise_add', 'pool2d', 'reshape2',
-            'matmul_v2', 'elementwise_add'
+            'reshape2', 'conv2d', 'reshape2', 'elementwise_add', 'pool2d',
+            'reshape2', 'matmul_v2', 'elementwise_add'
         ]
 
 
@@ -69,8 +69,8 @@ class TestEagerDygraph2Program4(TestEagerDygraph2Program):
     def prepare_inputs(self):
         self.inputs = [paddle.randn([3, 28, 28])]
         self.ops = [
-            'reshape2', 'conv2d', 'elementwise_add', 'pool2d', 'reshape2',
-            'matmul_v2', 'elementwise_add'
+            'reshape2', 'conv2d', 'reshape2', 'elementwise_add', 'pool2d',
+            'reshape2', 'matmul_v2', 'elementwise_add'
         ]
 
 
