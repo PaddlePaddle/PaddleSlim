@@ -233,7 +233,7 @@ class reshape2(PruneWorker):
         assert self._valid_reshape2(
             shape), "we don't support the shape {} in pruning".format(shape)
         # assert self._valid_pruned_axis(shape, pruned_axis), "we don't support pruned axis is {} when shape is changing from {} to {}".format(pruned_axis, in_shape, out_shape)
-        self.append_pruned_vars(xshape_var, pruned_axis + 1, transforms)
+        # self.append_pruned_vars(xshape_var, pruned_axis + 1, transforms)
         if var in self.op.inputs("X"):
             if (len(out_shape) > len(in_shape)):
                 #self.op.set_attr('shape',
@@ -254,6 +254,10 @@ class reshape2(PruneWorker):
                 #self.op.set_attr('shape',
                 #                  [0, 0, int(shape[2] * 0.875), shape[3]])
                 transform = {"repeat": out_shape[pruned_axis + 1]}
+            elif len(in_shape) == 1 and len(
+                    out_shape) == 4 and out_shape[pruned_axis] == in_shape[0]:
+                transform = {}
+                self.append_pruned_vars(in_var, 0, transforms)
             else:
                 transform = {}
             self._visit_and_search(in_var, pruned_axis,
