@@ -1,17 +1,19 @@
 # 图像分类模型自动压缩示例
 
 目录：
-- [1. 简介](#1简介)
-- [2. Benchmark](#2Benchmark)
-- [3. 自动压缩流程](#自动压缩流程)
-  - [3.1 准备环境](#31-准备准备)
-  - [3.2 准备数据集](#32-准备数据集)
-  - [3.3 准备预测模型](#33-准备预测模型)
-  - [3.4 自动压缩并产出模型](#34-自动压缩并产出模型)
-- [4. 预测部署](#4预测部署)
-  - [4.1 Python预测推理](#41-Python预测推理)
-  - [4.2 PaddleLite端侧部署](#42-PaddleLite端侧部署)
-- [5. FAQ](5FAQ)
+- [图像分类模型自动压缩示例](#图像分类模型自动压缩示例)
+  - [1. 简介](#1-简介)
+  - [2. Benchmark](#2-benchmark)
+    - [PaddleClas模型](#paddleclas模型)
+  - [3. 自动压缩流程](#3-自动压缩流程)
+      - [3.1 准备环境](#31-准备环境)
+      - [3.2 准备数据集](#32-准备数据集)
+      - [3.3 准备预测模型](#33-准备预测模型)
+      - [3.4 自动压缩并产出模型](#34-自动压缩并产出模型)
+  - [4.预测部署](#4预测部署)
+      - [4.1 Paddle Inference 验证性能](#41-paddle-inference-验证性能)
+      - [4.2 PaddleLite端侧部署](#42-paddlelite端侧部署)
+  - [5.FAQ](#5faq)
 
 
 ## 1. 简介
@@ -34,7 +36,7 @@
 | PPLCNetV2_base | Baseline | 76.86 | - | 36.50 | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/PPLCNetV2_base_infer.tar) |
 | PPLCNetV2_base | 量化+蒸馏 | 76.39 | - | 15.79 | [Config](./configs/PPLCNetV2_base/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/PPLCNetV2_base_QAT.tar) |
 | PPHGNet_tiny | Baseline | 79.59 | 2.82 | - | - |[Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/PPHGNet_tiny_infer.tar) |
-| PPHGNet_tiny | 量化+蒸馏 | 79.24 | 0.98 | - | [Config](./configs/PPHGNet_tiny/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/PPHGNet_tiny_QAT.tar) |
+| PPHGNet_tiny | 量化+蒸馏 | 78.86 | 0.98 | - | [Config](./configs/PPHGNet_tiny/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/PPHGNet_tiny_QAT.tar) |
 | InceptionV3 | Baseline | 79.14 | 4.79 | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/InceptionV3_infer.tar) |
 | InceptionV3 | 量化+蒸馏 | 78.32 | 1.47 | - | [Config](./configs/InceptionV3/qat_dis.yaml) | [Model](https://paddle-slim-models.bj.bcebos.com/act/InceptionV3_QAT.tar) |
 | EfficientNetB0 | Baseline | 77.02 | 1.95 | - | - | [Model](https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/EfficientNetB0_infer.tar) |
