@@ -175,7 +175,6 @@ class QuantedConv2DBatchNorm(ConvertibleQuantedLayer):
         conv_out = conv_out * factor
         merged_bias = self._merge_conv_unfreezed_bn_bias(
             self.conv_bias, self.bn)
-        # merged_bias = self._merge_conv_freezed_bn_bias(self.conv_bias, self.bn)
         return conv_out + paddle.reshape(merged_bias, [1, -1, 1, 1])
 
     def _eval_forward(self, input):
@@ -185,8 +184,9 @@ class QuantedConv2DBatchNorm(ConvertibleQuantedLayer):
         if self.weight_quanter is not None:
             quant_weight = self.weight_quanter(self.conv_weight)
         conv_out = self._conv_forward(quant_input, quant_weight)
+        conv_out = conv_out if self.conv_bias is None else conv_out + paddle.reshape(
+            self.conv_bias, [1, -1, 1, 1])
         return conv_out
-        #return conv_out + paddle.reshape(self.conv_bias, [1, -1, 1, 1])
 
     def _forward_with_bn_freezed(self, input):
         quant_input = input
