@@ -50,6 +50,14 @@ class Pruner():
 
         self.pruned_weights = False
 
+    def _update_reshape_op(self, param: VarWrapper, op: OpWrapper, new_shape):
+        if op.type() == 'reshape2':
+            _param_shape = param.shape()
+            _shape_attr = op.attr('shape')
+            if len(_param_shape) == 1 and _param_shape[0] == _shape_attr[1]:
+                _shape_attr[1] = new_shape[0]
+                op.set_attr("shape", _shape_attr)
+
     def prune(self,
               program,
               scope,
@@ -111,8 +119,8 @@ class Pruner():
             merge_pruned_params[param][pruned_axis].append(pruned_idx)
         for param_name in merge_pruned_params:
             for pruned_axis in merge_pruned_params[param_name]:
-                pruned_idx = np.concatenate(merge_pruned_params[param_name][
-                    pruned_axis])
+                pruned_idx = np.concatenate(
+                    merge_pruned_params[param_name][pruned_axis])
                 param = graph.var(param_name)
                 _groups = 1
                 if not lazy:
@@ -138,6 +146,7 @@ class Pruner():
                             param_shape_backup[param.name()] = origin_shape
                         new_shape = list(param.shape())
                         new_shape[pruned_axis] -= len(pruned_idx)
+                        self._update_reshape_op(param, op, new_shape)
                         param.set_shape(new_shape)
 
                 if not only_graph and (_groups == 1 or pruned_axis != 1):
@@ -159,8 +168,8 @@ class Pruner():
                     except IndexError as e:
                         _logger.error(
                             "Pruning {} with shape {} on axis {}, but get [{}]; ".
-                            format(param.name(),
-                                   param_t.shape(), pruned_axis, e))
+                            format(param.name(), param_t.shape(), pruned_axis,
+                                   e))
 
         graph.infer_shape()
         self.pruned_weights = (not only_graph)
