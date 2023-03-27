@@ -19,7 +19,7 @@ QuantAware:
 TrainConfig:
   epochs: 1
   eval_iter: 400
-  learning_rate: 0.0005
+  learning_rate: 0.00005
   optimizer_builder:
     optimizer: 
       type: SGD

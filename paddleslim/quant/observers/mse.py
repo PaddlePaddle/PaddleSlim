@@ -64,6 +64,7 @@ class MSEObserverLayer(UniformObserver):
         abs_max_value = float(paddle.max(paddle.abs(inputs.flatten())))
         abs_max_value = 1e-8 if abs_max_value == 0.0 else abs_max_value
         s = 0.3
+        scale_mse = abs_max_value
         while s <= 1.0:
             scale = s * abs_max_value
             s += 0.02
@@ -75,8 +76,8 @@ class MSEObserverLayer(UniformObserver):
             mse_loss = float(((inputs - quant_dequant_var)**2).mean())
             if mse_loss <= self.calibration_loss:
                 self.calibration_loss = mse_loss
-
-        return 0, scale
+                scale_mse = scale
+        return 0, scale_mse
 
     def cal_thresholds(self):
         """ Compute thresholds for MAX function.

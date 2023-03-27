@@ -7,9 +7,7 @@ Global:
 
 Distillation:
   alpha: 1.0
-  loss: l2
-  node:
-  - softmax_1.tmp_0
+  loss: soft_label
 
 QuantAware:
   use_pact: true
@@ -29,10 +27,10 @@ QuantAware:
 
 TrainConfig:
   epochs: 1
-  eval_iter: 500
+  eval_iter: 5000
   learning_rate: 
     type: CosineAnnealingDecay 
-    learning_rate: 0.015
+    learning_rate: 0.001
   optimizer_builder:
     optimizer:
       type: Momentum
