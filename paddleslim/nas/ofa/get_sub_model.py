@@ -82,7 +82,7 @@ def _find_weight_ops(op, graph, weights):
     """
     pre_ops = sorted(graph.pre_ops(op))
     for pre_op in pre_ops:
-        ### if depthwise conv is one of elementwise's input, 
+        ### if depthwise conv is one of elementwise's input,
         ### add it into this same search space
         if _is_depthwise(pre_op):
             for inp in pre_op.all_inputs():
@@ -122,6 +122,14 @@ def _is_output_weight_ops(op, graph):
     return True
 
 
+def if_is_bias(op, graph):
+    pre_ops = sorted(graph.pre_ops(op))
+    if 'conv' in pre_ops[0].type() and pre_ops[1].type() == "reshape2":
+        if pre_ops[1].inputs('X')[0]._var.persistable == True:
+            return True
+    return False
+
+
 def check_search_space(graph):
     """ Find the shortcut in the model and set same config for this situation.
     """
@@ -130,7 +138,7 @@ def check_search_space(graph):
     depthwise_conv = []
     fixed_by_input = []
     for op in graph.ops():
-        # if there is no weight ops after this op, 
+        # if there is no weight ops after this op,
         # this op can be seen as an output
         if _is_output_weight_ops(op, graph) and _is_dynamic_weight_op(op):
             for inp in op.all_inputs():
@@ -139,8 +147,10 @@ def check_search_space(graph):
 
         if op.type() == 'elementwise_add' or op.type() == 'elementwise_mul':
             inp1, inp2 = op.all_inputs()[0], op.all_inputs()[1]
-            if (not inp1._var.persistable) and (not inp2._var.persistable):
-                # if one of two vars comes from input, 
+            is_bias = if_is_bias(op, graph)
+            if ((not inp1._var.persistable) and
+                (not inp2._var.persistable)) and not is_bias:
+                # if one of two vars comes from input,
                 # then the two vars in this elementwise op should be all fixed
                 if inp1.inputs() and inp2.inputs():
                     pre_fixed_op_1, pre_fixed_op_2 = [], []
@@ -152,11 +162,11 @@ def check_search_space(graph):
                         fixed_by_input += pre_fixed_op_2
                     if not pre_fixed_op_2:
                         fixed_by_input += pre_fixed_op_1
-                elif (not inp1.inputs() and inp2.inputs()) or (
-                        inp1.inputs() and not inp2.inputs()):
+                elif (not inp1.inputs() and
+                      inp2.inputs()) or (inp1.inputs() and not inp2.inputs()):
                     pre_fixed_op = []
-                    inputs = inp1.inputs() if not inp2.inputs(
-                    ) else inp2.inputs()
+                    inputs = inp1.inputs(
+                    ) if not inp2.inputs() else inp2.inputs()
                     pre_fixed_op = _find_weight_ops(inputs[0], graph,
                                                     pre_fixed_op)
                     fixed_by_input += pre_fixed_op
@@ -213,14 +223,16 @@ def broadcast_search_space(same_search_space, param2key, origin_config):
             if key in origin_config:
                 if 'expand_ratio' in origin_config[pre_key]:
                     origin_config[key].update({
-                        'expand_ratio': origin_config[pre_key]['expand_ratio']
+                        'expand_ratio':
+                        origin_config[pre_key]['expand_ratio']
                     })
                 elif 'channel' in origin_config[pre_key]:
                     origin_config[key].update({
-                        'channel': origin_config[pre_key]['channel']
+                        'channel':
+                        origin_config[pre_key]['channel']
                     })
             else:
-                # if the pre_key is removed from config for some reasons 
+                # if the pre_key is removed from config for some reasons
                 # such as it is fixed by hand or by elementwise op
                 if pre_key in origin_config:
                     if 'expand_ratio' in origin_config[pre_key]:
