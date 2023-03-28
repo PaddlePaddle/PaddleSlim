@@ -39,3 +39,6 @@ except Exception as e:
         "please use Paddle >= {} or develop version".format(min_paddle_version))
 
 from .quant_embedding import quant_embedding
+from . import nn
+from .qat import SlimQAT
+from .config import SlimQuantConfig
