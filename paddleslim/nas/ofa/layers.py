@@ -1047,14 +1047,16 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
             "Variance": [variance]
         }
 
-        helper = paddle.fluid.layer_helper.LayerHelper('batch_norm')
+        saved_mean = self._helper.create_variable_for_type_inference(
+            dtype=self._dtype, stop_gradient=True)
+        saved_variance = self._helper.create_variable_for_type_inference(
+            dtype=self._dtype, stop_gradient=True)
+        reserve_space = self._helper.create_variable_for_type_inference(
+            dtype=self._helper.input_dtype(input), stop_gradient=True)
 
-        param_dtype = input.dtype if input.dtype != 'float16' else 'float32'
-        saved_mean = helper.create_variable_for_type_inference(
-            dtype=param_dtype, stop_gradient=True)
-        saved_variance = helper.create_variable_for_type_inference(
-            dtype=param_dtype, stop_gradient=True)
-        batch_norm_out = helper.create_variable_for_type_inference(input.dtype)
+        batch_norm_out = (
+            input if self._in_place else
+            self._helper.create_variable_for_type_inference(self._dtype))
 
         outputs = {
             "Y": [batch_norm_out],
@@ -1064,13 +1066,10 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
             "SavedVariance": [saved_variance]
         }
 
-        if self.training or trainable_statistics:
-            # reserve_space is only used for training.
-            reserve_space = helper.create_variable_for_type_inference(
-                dtype=input.dtype, stop_gradient=True)
+        if reserve_space is not None:
             outputs["ReserveSpace"] = [reserve_space]
 
-        helper.append_op(
+        self._helper.append_op(
             type="batch_norm", inputs=inputs, outputs=outputs, attrs=attrs)
         self.cur_config = {'prune_dim': feature_dim}
         return batch_norm_out
