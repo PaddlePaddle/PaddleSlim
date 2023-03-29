@@ -53,11 +53,11 @@ pip install scikit-image imgaug
 ```
 
 
-下载PaddleOCR:（需要下载到 Paddleslim/example/auto_compression/ 目录下）
+下载PaddleOCR:
 ```shell
 git clone -b release/2.6 https://github.com/PaddlePaddle/PaddleOCR.git
 ```
-> 下载 [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR.git) 的目的只是为了直接使用 PaddleOCR 中的 Dataloader 组件和精度评估模块，不涉及模型组网等。通过 `pip install paddleocr` 安装的 paddleocr 只有预测代码，没有数据集读取和精度评估的部分，因此需要下载 PaddleOCR 库。
+> 你需要下载到 Paddleslim/example/auto_compression/ 目录下并运行 pip install -r requirements.txt 安装依赖。下载 [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR.git) 的目的只是为了直接使用 PaddleOCR 中的 Dataloader 组件和精度评估模块，不涉及模型组网等。通过 `pip install paddleocr` 安装的 paddleocr 只有预测代码，没有数据集读取和精度评估的部分，因此需要下载 PaddleOCR 库。
 
 ### 3.2 准备数据集
 公开数据集可参考[OCR数据集](https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.6/doc/doc_ch/dataset/ocr_datasets.md)，然后根据程序运行过程中提示放置到对应位置。
