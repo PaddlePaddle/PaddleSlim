@@ -77,7 +77,7 @@ class QuantConfig(object):
                  activation_bits=8,
                  weight_quantize_type='channel_wise_abs_max',
                  optimize_model=False,
-                 onnx_format=False,
+                 onnx_format=True,
                  is_use_cache_file=False,
                  cache_dir="./temp_post_training"):
         """QuantConfig init"""
@@ -358,7 +358,7 @@ def quant_post_hpo(
         batch_size=[10, 30],  ### uniform sample in list.
         batch_num=[10, 30],  ### uniform sample in list.
         optimize_model=False,
-        onnx_format=False,
+        onnx_format=True,
         is_use_cache_file=False,
         cache_dir="./temp_post_training",
         runcount_limit=30):
