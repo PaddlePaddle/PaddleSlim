@@ -68,7 +68,7 @@ class QuantAware(BaseStrategy):
                  window_size=10000,
                  moving_rate=0.9,
                  for_tensorrt=False,
-                 onnx_format=False,
+                 onnx_format=True,
                  is_full_quantize=False):
         """
         Quantization Config.
@@ -201,7 +201,7 @@ class QuantPost(BaseStrategy):
                  activation_quantize_type='range_abs_max',
                  simulate_activation_quant=False,
                  skip_tensor_list=None,
-                 onnx_format=False,
+                 onnx_format=True,
                  quantize_op_types=[
                      "conv2d", "depthwise_conv2d", "mul", "matmul", "matmul_v2"
                  ],
