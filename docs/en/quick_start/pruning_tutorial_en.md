@@ -8,6 +8,8 @@ by a demo of MobileNetV1 model on MNIST dataset. This tutorial following workflo
 3. Prune model
 4. Train pruned model
 
+For more background details about Channel Pruning, please refer to He, Yihui, Xiangyu Zhang, and Jian Sun. Channel pruning for accelerating very deep neural networks.
+
 ## 1. Import dependency
 
 PaddleSlim dependents on Paddle1.7. Please ensure that you have installed paddle correctly. Import Paddle and PaddleSlim as below:

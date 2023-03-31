@@ -11,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# 
+# This file contains code adapted from channel-pruning (https://github.com/yihui-he/channel-pruning)
+# Copyright (c) 2018 Yihui He 何宜晖
+# Licensed under the MIT License (see https://github.com/yihui-he/channel-pruning/blob/master/LICENSE for details)
 
 import logging
 import numpy as np
