@@ -22,12 +22,14 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
 
 - **【直播分享】2022-12-13 20:30 《自动化压缩技术详解及ViT模型实战》，微信扫码报名**
   <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg"  width = "180" height = "180" />
+  <img src="https://user-images.githubusercontent.com/54695910/216616669-21fcbcf3-60f3-44ca-938f-9c1fcb0af73f.jpg"  width = "180" height = "180" />
   </div>
 
-- **2022.08.16：[自动化压缩](example/auto_compression)功能升级**
+<details>
+<summary>2022.08.16：自动化压缩功能升级</summary>
+
   - 支持直接加载ONNX模型和Paddle模型导出至ONNX
-  - 发布[量化分析工具](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/AnalysisQuant.md)，发布[YOLO系列离线量化工具](example/post_training_quantization/pytorch_yolo_series/)
+  - 发布量化分析工具，发布[YOLO系列离线量化工具](example/post_training_quantization/pytorch_yolo_series)
   - 更新[YOLO-Series自动化压缩模型库](example/auto_compression/pytorch_yolo_series)
 
   | 模型  | Base mAP<sup>val<br>0.5:0.95 | ACT量化mAP<sup>val<br>0.5:0.95  | 模型体积压缩比 | 预测时延<sup><small>FP32</small><sup><br><sup>  | 预测时延<sup><small>INT8</small><sup><br><sup> | 预测加速比 |
@@ -37,6 +39,8 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
   | YOLOv6s | 42.4   | 41.3 | 3.9倍 |  9.06ms  |   1.83ms   | 5.0倍   |
   | YOLOv7 |  51.1   | 50.9 | 3.9倍 |  26.84ms  |   4.55ms   |  5.9倍  |
   | YOLOv7-Tiny | 37.3   | 37.0 | 3.9倍 | 5.06ms  |   1.68ms   |  3.0倍  |
+
+</details>
 
 <details>
 <summary>历史更新</summary>
@@ -50,7 +54,7 @@ PaddleSlim是一个专注于深度学习模型压缩的工具库，提供**低�
     - 发布`X2Paddle`模型自动化压缩方案:[YOLOv5](example/auto_compression/pytorch_yolo_series)、[YOLOv6](example/auto_compression/pytorch_yolo_series)、[YOLOv7](example/auto_compression/pytorch_yolo_series)、[HuggingFace](example/auto_compression/pytorch_huggingface)、[MobileNet](example/auto_compression/tensorflow_mobilenet)。
   - 升级量化功能
     - 统一量化模型格式；离线量化支持while op；修复BERT大模型量化训练过慢的问题。
-    - 新增7种[离线量化方法](docs/zh_cn/tutorials/quant/post_training_quantization.md), 包括HIST, AVG, EMD, Bias Correction, AdaRound等。
+    - 新增7种[离线量化方法](docs/zh_cn/tutorials/quant/Quantization_intro.md), 包括HIST, AVG, EMD, Bias Correction, AdaRound等。
   - 支持半结构化稀疏训练
   - 新增延时预估工具
     - 支持对稀疏化模型、低比特量化模型的性能预估；支持预估指定模型在特定部署环境下 (ARM CPU + Paddle Lite) 的推理性能；提供 SD625、SD710、RK3288 芯片 + Paddle Lite 的预估接口。
@@ -126,8 +130,6 @@ PaddleSlim支持以下功能，也支持自定义量化、裁剪等功能。
 - *表示仅支持静态图，**表示仅支持动态图
 - 敏感度裁剪指的是通过各个层的敏感度分析来确定各个卷积层的剪裁率，需要和其他裁剪方法配合使用。
 
-### 多场景效果展示
-
 PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并且测试了Nvidia GPU、ARM等设备上的加速情况，这里展示部分模型的压缩效果，详细方案可以参考下面CV和NLP模型压缩方案:
 
 <p align="center">
@@ -135,51 +137,40 @@ PaddleSlim在典型视觉和自然语言处理任务上做了模型压缩，并�
 <strong>表1: 部分场景模型压缩加速情况</strong>
 </p>
 
-注:
+<details>
+<summary>注意事项</summary>
+
 - YOLOv3: 在移动端SD855上加速3.55倍。
 - PP-OCR: 体积由8.9M减少到2.9M, 在SD855上加速1.27倍。
 - BERT: 模型参数由110M减少到80M，精度提升的情况下，Tesla T4 GPU FP16计算加速1.47倍。
+</details>
 
-### 自动压缩效果展示
+### 不同压缩方法效果
+<details>
+<summary>自动压缩效果</summary>
 
 <p align="center">
 <img width="800" alt="image" src="https://user-images.githubusercontent.com/7534971/168805367-f9d1299d-93e3-44d0-84da-870217edeb54.png"/> <br />
 <strong>表3: 自动压缩效果</strong>
 </p>
 
-### 离线量化效果对比
+</details>
+
+<details>
+<summary>离线量化效果对比</summary>
 
 <p align="center">
 <img width="750" alt="image" src="https://user-images.githubusercontent.com/7534971/169042883-9ca281ce-19be-4525-a3d2-c54cea4a2cbd.png"/> <br />
 <strong>表2: 多种离线量化方法效果对比</strong>
 </p>
 
-## 文档教程
-
-## 版本对齐
-
-|  PaddleSlim   | PaddlePaddle   | PaddleLite    |
-| :-----------: | :------------: | :------------:|
-| 1.0.1         | <=1.7          |       2.7     |
-| 1.1.1         | 1.8            |       2.7     |
-| 1.2.0         | 2.0Beta/RC     |       2.8     |
-| 2.0.0         | 2.0            |       2.8     |
-| 2.1.0         | 2.1.0          |       2.8     |
-| 2.1.1         | 2.1.1          |       >=2.8   |
-| 2.3.0         | 2.3.0          |       >=2.11  |
-
-
+</details>
 
 ## 安装
 
-安装最新版本：
+安装发布版本：
 ```bash
-pip install paddleslim -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-
-安装指定版本：
-```bash
-pip install paddleslim==2.3.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install paddleslim
 ```
 
 安装develop版本：
@@ -188,13 +179,24 @@ git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
 python setup.py install
 ```
 
-### 验证安装
+- 验证安装：安装完成后您可以使用 python 或 python3 进入 python 解释器，输入import paddleslim, 没有报错则说明安装成功。
+- 版本对齐：
 
-安装完成后您可以使用 python 或 python3 进入 python 解释器，输入import paddleslim, 没有报错则说明安装成功。
+|  PaddleSlim   | PaddlePaddle   | PaddleLite    |
+| :-----------: | :------------: | :------------:|
+| 2.0.0         | 2.0            |       2.8     |
+| 2.1.0         | 2.1.0          |       2.8     |
+| 2.1.1         | 2.1.1          |       >=2.8   |
+| 2.3.0         | 2.3.0          |       >=2.11  |
+| 2.4.0         | 2.4.0          |       >=2.11  |
+| develop       | develop        |       >=2.11  |
+
+## 文档教程
+
+### 模型压缩技术
+- [模型量化技术](docs/zh_cn/tutorials/quant/Quantization_intro.md)
 
 ### 快速开始
-
-快速开始教程是能基于CIFAR10数据集快速运行起来的简单示例，若您是Paddle官方模型套件用户，请直接使用下方的CV模型压缩或者NLP模型压缩中教程。
 
 - 🔥 [自动压缩](example/auto_compression)
 - [量化训练](docs/zh_cn/quick_start/static/quant_aware_tutorial.md)
@@ -202,6 +204,7 @@ python setup.py install
 - [结构化剪枝](docs/zh_cn/quick_start/static/pruning_tutorial.md)
 - [蒸馏](docs/zh_cn/quick_start/static/distillation_tutorial.md)
 - [NAS](docs/zh_cn/quick_start/static/nas_tutorial.md)
+- [量化分析工具](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/AnalysisPTQ.md)
 
 ### 更多教程
 
@@ -232,13 +235,16 @@ python setup.py install
   - [知识蒸馏示例](demo/distillation)
 
 
-#### 推理部署
+### 推理部署
+- [Benchmark](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/QUANT_BENCHMARK.md)
+- 量化部署支持的预测库：
+    - Paddle Inference：[GPU量化部署](demo/quant/deploy/TensorRT/README.md)、Intel CPU量化部署。
+    - Paddle Lite：[量化部署](docs/zh_cn/deploy/deploy_cls_model_on_mobile_device.md)
+    - ONNX
 
-- [Intel CPU量化部署](demo/mkldnn_quant/README.md)
-- [Nvidia GPU量化部署](demo/quant/deploy/TensorRT/README.md)
-- [PaddleLite量化部署](docs/zh_cn/deploy/deploy_cls_model_on_mobile_device.md)
+## CV模型压缩
+### 多场景效果展示
 
-### CV模型压缩
 本系列教程均基于Paddle官方的模型套件中模型进行压缩，若您不是模型套件用户，更推荐使用快速教程和进阶教程。
 
 - 检测模型压缩
@@ -320,5 +326,5 @@ python setup.py install
 - 欢迎加入PaddleSlim 微信技术交流群
 
  <div align="center">
-  <img src="https://user-images.githubusercontent.com/54695910/199486336-11d661a7-6cbd-47b1-823c-3e4ac38bb7d5.jpg"  width = "225" height = "225" />
+  <img src="https://user-images.githubusercontent.com/54695910/216616669-21fcbcf3-60f3-44ca-938f-9c1fcb0af73f.jpg"  width = "225" height = "225" />
   </div>

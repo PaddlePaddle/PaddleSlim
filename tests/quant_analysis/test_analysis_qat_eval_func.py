@@ -8,7 +8,7 @@ import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
 from paddle.vision.transforms import transforms
-from paddleslim.quant.analysis_qat import AnalysisQAT
+from paddleslim.quant.analysis import Analysis
 from paddle.static.quantization import PostTrainingQuantization
 
 paddle.enable_static()
@@ -21,7 +21,8 @@ class ImageNetDataset(DatasetFolder):
         normalize = transforms.Normalize(
             mean=[123.675, 116.28, 103.53], std=[58.395, 57.120, 57.375])
         self.transform = transforms.Compose([
-            transforms.Resize(256), transforms.CenterCrop(image_size),
+            transforms.Resize(256),
+            transforms.CenterCrop(image_size),
             transforms.Transpose(), normalize
         ])
         self.mode = mode
@@ -118,9 +119,10 @@ class AnalysisQATEvalFunction(unittest.TestCase):
                 if len(test_feed_names) == 1:
                     image = np.array(image)
                     label = np.array(label).astype('int64')
-                    pred = exe.run(compiled_test_program,
-                                   feed={test_feed_names[0]: image},
-                                   fetch_list=test_fetch_list)
+                    pred = exe.run(
+                        compiled_test_program,
+                        feed={test_feed_names[0]: image},
+                        fetch_list=test_fetch_list)
                     pred = np.array(pred[0])
                     label = np.array(label)
                     sort_array = pred.argsort(axis=1)
@@ -137,12 +139,13 @@ class AnalysisQATEvalFunction(unittest.TestCase):
                     # eval "eval model", which inputs are image and label, output is top1 and top5 accuracy
                     image = np.array(image)
                     label = np.array(label).astype('int64')
-                    result = exe.run(compiled_test_program,
-                                     feed={
-                                         test_feed_names[0]: image,
-                                         test_feed_names[1]: label
-                                     },
-                                     fetch_list=test_fetch_list)
+                    result = exe.run(
+                        compiled_test_program,
+                        feed={
+                            test_feed_names[0]: image,
+                            test_feed_names[1]: label
+                        },
+                        fetch_list=test_fetch_list)
                     result = [np.mean(r) for r in result]
                     results.append(result)
                 if batch_id % 100 == 0:
@@ -150,8 +153,8 @@ class AnalysisQATEvalFunction(unittest.TestCase):
             result = np.mean(np.array(results), axis=0)
             return result[0]
 
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         executor = paddle.static.Executor(place)
 
         ptq_config = {
@@ -178,12 +181,13 @@ class AnalysisQATEvalFunction(unittest.TestCase):
             model_filename='inference.pdmodel',
             params_filename='inference.pdiparams')
 
-        analyzer = AnalysisQAT(
+        analyzer = Analysis(
             float_model_dir="./MobileNetV1_infer",
             quant_model_dir="./MobileNetV1_QAT",
             model_filename="inference.pdmodel",
             params_filename="inference.pdiparams",
             save_dir="MobileNetV1_analysis",
+            quant_config=ptq_config,
             data_loader=train_loader,
             eval_function=eval_function)
         analyzer.metric_error_analyse()

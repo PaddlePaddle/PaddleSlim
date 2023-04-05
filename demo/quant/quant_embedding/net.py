@@ -131,7 +131,7 @@ def infer_network(vocab_size, emb_size):
     emb_c = paddle.static.nn.embedding(
         input=analogy_c, size=[vocab_size, emb_size], param_attr="emb")
     target = paddle.add(paddle.add(emb_b, -emb_a), emb_c)
-    emb_all_label_l2 = paddle.linalg.norm(emb_all_label, p=2, axis=1)
+    emb_all_label_l2 = F.normalize(emb_all_label, p=2, axis=1)
     dist = paddle.matmul(x=target, y=emb_all_label_l2, transpose_y=True)
     values, pred_idx = paddle.topk(x=dist, k=4)
     return values, pred_idx

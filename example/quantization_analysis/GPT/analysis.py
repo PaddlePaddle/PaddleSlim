@@ -21,7 +21,7 @@ import time
 
 import paddle
 from paddleslim.common import load_config as load_slim_config
-from paddleslim.quant.analysis_qat import AnalysisQAT
+from paddleslim.quant.analysis import Analysis
 from ppfleetx.data import build_dataloader
 from ppfleetx.distributed.apis import env
 from utils import parse_config
@@ -67,10 +67,11 @@ def eval_function(exe, program, feed_names, fetch_list):
     eval_losses = []
     total_score = 0
     for eval_step, (data, labels, loss_mask, info) in enumerate(eval_loader()):
-        preds = exe.run(program=program,
-                        feed=data,
-                        fetch_list=fetch_list,
-                        return_numpy=False)
+        preds = exe.run(
+            program=program,
+            feed=data,
+            fetch_list=fetch_list,
+            return_numpy=False)
 
         paddle.disable_static()
 
@@ -88,7 +89,7 @@ def eval_function(exe, program, feed_names, fetch_list):
             masked_lm_loss = paddle.nn.functional.cross_entropy(
                 preds, labels, reduction="none")
             loss = paddle.sum(masked_lm_loss * loss_mask)
-            eval_losses.append(loss.numpy()[0])
+            eval_losses.append(float(loss))
             total_score += loss.numpy() / (num_tokenized_tokens - 1)
 
         else:
@@ -100,8 +101,8 @@ def eval_function(exe, program, feed_names, fetch_list):
             acc = paddle.where(
                 paddle.cast(loss_mask, 'bool'), acc, paddle.ones_like(acc))
             acc = paddle.sum(paddle.prod(acc, -1))
-            eval_losses.append(acc.numpy()[0])
-            total_score += acc.numpy()[0]
+            eval_losses.append(float(acc))
+            total_score += float(acc)
 
         if eval_step != 0 and (eval_step % 10 == 0):
             print("[eval] step: %d, %s: %.9f, speed: %.2f step/s" %
@@ -116,8 +117,8 @@ def eval_function(exe, program, feed_names, fetch_list):
         ppl = math.exp(min(20, total_loss))
         token_ratio = (num_tokenized_tokens - 1) / (num_original_tokens - 1)
         adjusted_ppl = math.exp(min(20, total_loss * token_ratio))
-        string = ' validation results on {} | '.format(gpt_config['Data'][
-            'Eval']['dataset']['name'])
+        string = ' validation results on {} | '.format(
+            gpt_config['Data']['Eval']['dataset']['name'])
         string += 'avg loss: {:.4E} | '.format(total_loss)
         string += 'ppl: {:.4E} | '.format(ppl)
         string += 'adjusted ppl: {:.4E} | '.format(adjusted_ppl)
@@ -126,8 +127,8 @@ def eval_function(exe, program, feed_names, fetch_list):
     else:
         num_correct = float(total_score)
         acc = float(num_correct / num_examples)
-        string = ' validation results on {} | '.format(gpt_config['Data'][
-            'Eval']['dataset']['name'])
+        string = ' validation results on {} | '.format(
+            gpt_config['Data']['Eval']['dataset']['name'])
         string += 'number correct: {:.4E} | '.format(num_correct)
         string += 'total examples: {:.4E} | '.format(num_examples)
         string += 'avg accuracy: {:.4E}'.format(acc)
@@ -163,17 +164,15 @@ def main():
     global eval_loader
     eval_loader = eval_reader_wrapper(valid_data_loader)
 
-    analyzer = AnalysisQAT(
+    analyzer = Analysis(
         quant_model_dir=global_config["quant_model_dir"],
         float_model_dir=global_config["float_model_dir"],
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"],
-        quantizable_op_type=global_config['quantizable_op_type'],
-        qat_metric=global_config['qat_metric']
-        if 'qat_metric' in global_config else None,
         eval_function=eval_function,
         data_loader=eval_loader,
         save_dir=FLAGS.save_dir,
+        quant_config=all_config['quant_config'],
         resume=global_config['resume'], )
     analyzer.metric_error_analyse()
 

@@ -141,15 +141,13 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
 
         build_strategy = static.BuildStrategy()
         train_compiled_program = static.CompiledProgram(
-            train_program).with_data_parallel(
-                loss_name=avg_cost.name, build_strategy=build_strategy)
+            train_program, build_strategy=build_strategy)
         for epoch_id in range(args.retain_epoch):
             for batch_id, data in enumerate(train_loader()):
                 fetches = [avg_cost.name]
                 s_time = time.time()
-                outs = exe.run(train_compiled_program,
-                               feed=data,
-                               fetch_list=fetches)[0]
+                outs = exe.run(
+                    train_compiled_program, feed=data, fetch_list=fetches)[0]
                 batch_time = time.time() - s_time
                 if batch_id % 10 == 0:
                     _logger.info(
@@ -161,9 +159,8 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
             test_fetches = [
                 test_avg_cost.name, test_acc_top1.name, test_acc_top5.name
             ]
-            batch_reward = exe.run(test_program,
-                                   feed=data,
-                                   fetch_list=test_fetches)
+            batch_reward = exe.run(
+                test_program, feed=data, fetch_list=test_fetches)
             reward_avg = np.mean(np.array(batch_reward), axis=1)
             reward.append(reward_avg)
 

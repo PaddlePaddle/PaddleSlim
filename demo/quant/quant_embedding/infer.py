@@ -1,11 +1,8 @@
 import argparse
 import sys
 import time
-import math
-import unittest
-import contextlib
 import numpy as np
-import six
+import os
 import paddle
 import net
 import utils
@@ -72,7 +69,7 @@ def infer_epoch(args, vocab_size, test_reader, use_cuda, i2w):
             values, pred = net.infer_network(vocab_size, emb_size)
             for epoch in range(start_index, last_index + 1):
                 copy_program = main_program.clone()
-                model_path = model_dir + "/pass-" + str(epoch)
+                model_path = os.path.join(model_dir, "pass-" + str(epoch))
                 paddle.static.load(copy_program, model_path, exe)
                 if args.emb_quant:
                     config = {
@@ -92,29 +89,33 @@ def infer_epoch(args, vocab_size, test_reader, use_cuda, i2w):
                 for data in test_reader():
                     step_id += 1
                     b_size = len([dat[0] for dat in data])
-                    wa = np.array(
-                        [dat[0] for dat in data]).astype("int64").reshape(
-                            b_size, 1)
-                    wb = np.array(
-                        [dat[1] for dat in data]).astype("int64").reshape(
-                            b_size, 1)
-                    wc = np.array(
-                        [dat[2] for dat in data]).astype("int64").reshape(
-                            b_size, 1)
+                    wa = np.array([dat[0]
+                                   for dat in data]).astype("int64").reshape(
+                                       b_size, 1)
+                    wb = np.array([dat[1]
+                                   for dat in data]).astype("int64").reshape(
+                                       b_size, 1)
+                    wc = np.array([dat[2]
+                                   for dat in data]).astype("int64").reshape(
+                                       b_size, 1)
 
                     label = [dat[3] for dat in data]
                     input_word = [dat[4] for dat in data]
-                    para = exe.run(copy_program,
-                                   feed={
-                                       "analogy_a": wa,
-                                       "analogy_b": wb,
-                                       "analogy_c": wc,
-                                       "all_label":
-                                       np.arange(vocab_size).reshape(
-                                           vocab_size, 1).astype("int64"),
-                                   },
-                                   fetch_list=[pred.name, values],
-                                   return_numpy=False)
+                    para = exe.run(
+                        copy_program,
+                        feed={
+                            "analogy_a":
+                            wa,
+                            "analogy_b":
+                            wb,
+                            "analogy_c":
+                            wc,
+                            "all_label":
+                            np.arange(vocab_size).reshape(vocab_size,
+                                                          1).astype("int64"),
+                        },
+                        fetch_list=[pred.name, values],
+                        return_numpy=False)
                     pre = np.array(para[0])
                     val = np.array(para[1])
                     for ii in range(len(label)):
@@ -156,24 +157,27 @@ def infer_step(args, vocab_size, test_reader, use_cuda, i2w):
                     for data in test_reader():
                         step_id += 1
                         b_size = len([dat[0] for dat in data])
-                        wa = np.array(
-                            [dat[0] for dat in data]).astype("int64").reshape(
-                                b_size, 1)
-                        wb = np.array(
-                            [dat[1] for dat in data]).astype("int64").reshape(
-                                b_size, 1)
-                        wc = np.array(
-                            [dat[2] for dat in data]).astype("int64").reshape(
-                                b_size, 1)
+                        wa = np.array([dat[0] for dat in
+                                       data]).astype("int64").reshape(
+                                           b_size, 1)
+                        wb = np.array([dat[1] for dat in
+                                       data]).astype("int64").reshape(
+                                           b_size, 1)
+                        wc = np.array([dat[2] for dat in
+                                       data]).astype("int64").reshape(
+                                           b_size, 1)
 
                         label = [dat[3] for dat in data]
                         input_word = [dat[4] for dat in data]
                         para = exe.run(
                             copy_program,
                             feed={
-                                "analogy_a": wa,
-                                "analogy_b": wb,
-                                "analogy_c": wc,
+                                "analogy_a":
+                                wa,
+                                "analogy_b":
+                                wb,
+                                "analogy_c":
+                                wc,
                                 "all_label":
                                 np.arange(vocab_size).reshape(vocab_size, 1),
                             },

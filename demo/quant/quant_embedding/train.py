@@ -97,21 +97,16 @@ def convert_python_to_tensor(weight, batch_size, sample_reader):
             if len(result[0]) == batch_size:
                 tensor_result = []
                 for tensor in result:
-                    t = paddle.Tensor()
                     dat = np.array(tensor, dtype='int64')
                     if len(dat.shape) > 2:
                         dat = dat.reshape((dat.shape[0], dat.shape[2]))
                     elif len(dat.shape) == 1:
                         dat = dat.reshape((-1, 1))
-                    t.set(dat, paddle.CPUPlace())
-                    tensor_result.append(t)
-                tt = paddle.Tensor()
+                    tensor_result.append(dat)
                 neg_array = cs.searchsorted(np.random.sample(args.nce_num))
                 neg_array = np.tile(neg_array, batch_size)
-                tt.set(
-                    neg_array.reshape((batch_size, args.nce_num)),
-                    paddle.CPUPlace())
-                tensor_result.append(tt)
+                tensor_result.append(
+                    neg_array.reshape((batch_size, args.nce_num)))
                 yield tensor_result
                 result = [[], []]
 
@@ -138,8 +133,8 @@ def train_loop(args, train_program, reader, py_reader, loss, trainer_id, weight,
     if int(os.getenv("CPU_NUM")) > 1:
         build_strategy.reduce_strategy = paddle.static.BuildStrategy.ReduceStrategy.Reduce
 
-    program = paddle.static.CompiledProgram(train_program).with_data_parallel(
-        loss_name=loss.name, build_strategy=build_strategy)
+    program = paddle.static.CompiledProgram(
+        train_program, build_strategy=build_strategy)
 
     for pass_id in range(args.num_passes):
         py_reader.start()

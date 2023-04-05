@@ -68,7 +68,7 @@ class QuantAware(BaseStrategy):
                  window_size=10000,
                  moving_rate=0.9,
                  for_tensorrt=False,
-                 onnx_format=False,
+                 onnx_format=True,
                  is_full_quantize=False):
         """
         Quantization Config.
@@ -201,7 +201,7 @@ class QuantPost(BaseStrategy):
                  activation_quantize_type='range_abs_max',
                  simulate_activation_quant=False,
                  skip_tensor_list=None,
-                 onnx_format=False,
+                 onnx_format=True,
                  quantize_op_types=[
                      "conv2d", "depthwise_conv2d", "mul", "matmul", "matmul_v2"
                  ],
@@ -339,7 +339,6 @@ class TrainConfig:
                  logging_iter=10,
                  origin_metric=None,
                  target_metric=None,
-                 use_fleet=False,
                  amp_config=None,
                  recompute_config=None,
                  sharding_config=None,
@@ -372,8 +371,7 @@ class TrainConfig:
             logging_iter(int): Log period in batches. Default: 10.
             origin_metric(float, optional): The Metric of model before compress, used to check whether the dataloader is correct if is not None. Default: None.
             target_metric(float, optional): The Metric of model after compress, if set target metric, the metric of compressed model satisfy the requirements, will be stop training. If not set, will train epochs as users set. Default: None.
-            use_fleet(bool): Whether to use fleet. Default: False.
-            amp_config(dict, optional): The dictionary contains all the configs of amp. Default: None. The detailed description is as below if use_fleet=False: 
+            amp_config(dict, optional): The dictionary contains all the configs of amp. Default: None. The detailed description is as below when turning on distributed training: 
               .. code-block:: python
                  AMP-O1 `<https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/performance_improving/amp_cn.html#id2>`_ : 
                      {'custom_white_list', set} # The custom white_list. It's the set of ops that support
@@ -389,10 +387,10 @@ class TrainConfig:
                      {'use_fp16_guard': bool} # Whether to use `fp16_guard` when constructing the program.
               ..
               If you want to use AMP-O2, you need to set use_pure_fp16 is True and use_fp16_guard is False.
-              If use_fleet=True, the key of amp_config can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#amp-configs>`_.
+              when turning on distributed training, the key of amp_config can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#amp-configs>`_.
 
-            recompute_config(dict, optional): The dictionary contains all the configs of recompute. Default: None. The recompute config only can be set when use_fleet=True, the key of recompute_config can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#recompute-configs>`_. 
-            sharding_config(dict, optional): The dictionary contains all the configs of sharding. Default: None. The sharding config only can be set when use_fleet=True, the key of sharding_config can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#sharding-configs>`_.
+            recompute_config(dict, optional): The dictionary contains all the configs of recompute. Default: None. The recompute config only can be set when turning on distributed training, the key of recompute_config can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#recompute-configs>`_. 
+            sharding_config(dict, optional): The dictionary contains all the configs of sharding. Default: None. The sharding config only can be set when turning on distributed training, the key of sharding_config can reference `<https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/distributed/fleet/DistributedStrategy_cn.html#sharding-configs>`_.
             sparse_model(bool, optional): Set sparse_model to ``True`` to remove mask tensor when the compress strategy is unstructure prune. Default: False.
         """
         self.epochs = epochs
@@ -403,7 +401,6 @@ class TrainConfig:
         self.logging_iter = logging_iter
         self.origin_metric = origin_metric
         self.target_metric = target_metric
-        self.use_fleet = use_fleet
         self.amp_config = amp_config
         self.recompute_config = recompute_config
         self.sharding_config = sharding_config
