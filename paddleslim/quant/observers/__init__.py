@@ -19,6 +19,9 @@ from .emd import EMDObserver
 from .avg import AVGObserver
 from .mse_weight import MSEChannelWiseWeightObserver
 from .abs_max_weight import AbsMaxChannelWiseWeightObserver
+from .reconstruct import ReconstructPTQ
+from .reconstruct_act import ReconstructActObserver
+from .reconstruct_weight import ReconstructWeightObserver
 
 __all__ = [
     "HistObserver",
@@ -29,4 +32,7 @@ __all__ = [
     "MSEWeightObserver",
     "MSEChannelWiseWeightObserver",
     "AbsMaxChannelWiseWeightObserver",
+    "ReconstructPTQ",
+    "ReconstructActObserver",
+    "ReconstructWeightObserver",
 ]
