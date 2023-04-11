@@ -208,8 +208,7 @@ class SuperConv2D(paddle.nn.Conv2D):
             filters = self.weight
         else:
             filters = self.weight[:out_nc, :in_nc, start:end, start:end]
-        if self.transform_kernel != False and kernel_size < self._kernel_size[
-                0]:
+        if self.transform_kernel != False and kernel_size < self._kernel_size[0]:
             ### if transform kernel, then use matrix to transform
             start_filter = self.weight[:out_nc, :in_nc, :, :]
             for i in range(len(self.ks_set) - 1, 0, -1):
@@ -223,10 +222,11 @@ class SuperConv2D(paddle.nn.Conv2D):
                     _input_filter,
                     shape=[(_input_filter.shape[0] * _input_filter.shape[1]),
                            -1])
-                _input_filter = paddle.matmul(
-                    _input_filter,
-                    self.__getattr__('%dto%d_matrix' %
-                                     (src_ks, target_ks)), False, False)
+                _input_filter = paddle.matmul(_input_filter,
+                                              self.__getattr__(
+                                                  '%dto%d_matrix' %
+                                                  (src_ks, target_ks)), False,
+                                              False)
                 _input_filter = paddle.reshape(
                     _input_filter,
                     shape=[
@@ -279,11 +279,11 @@ class SuperConv2D(paddle.nn.Conv2D):
             out_nc = int(channel)
         else:
             out_nc = self._out_channels
-        ks = int(self._kernel_size[0]) if kernel_size == None else int(
-            kernel_size)
+        ks = int(
+            self._kernel_size[0]) if kernel_size == None else int(kernel_size)
 
-        groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
-                                                                        out_nc)
+        groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(
+            in_nc, out_nc)
 
         weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
 
@@ -293,7 +293,7 @@ class SuperConv2D(paddle.nn.Conv2D):
             padding = self._padding
 
         if self.bias is not None:
-            ### if conv is depthwise conv, expand_ratio=0, but conv' expand 
+            ### if conv is depthwise conv, expand_ratio=0, but conv' expand
             ### ratio before depthwise conv is not equal to 1.0, the shape of the weight
             ### about this depthwise conv is changed, but out_nc is not change,
             ### so need to change bias shape according to the weight_out_nc.
@@ -513,8 +513,7 @@ class SuperConv2DTranspose(paddle.nn.Conv2DTranspose):
     def get_active_filter(self, in_nc, out_nc, kernel_size):
         start, end = compute_start_end(self._kernel_size[0], kernel_size)
         filters = self.weight[:in_nc, :out_nc, start:end, start:end]
-        if self.transform_kernel != False and kernel_size < self._kernel_size[
-                0]:
+        if self.transform_kernel != False and kernel_size < self._kernel_size[0]:
             start_filter = self.weight[:in_nc, :out_nc, :, :]
             for i in range(len(self.ks_set) - 1, 0, -1):
                 src_ks = self.ks_set[i]
@@ -527,10 +526,11 @@ class SuperConv2DTranspose(paddle.nn.Conv2DTranspose):
                     _input_filter,
                     shape=[(_input_filter.shape[0] * _input_filter.shape[1]),
                            -1])
-                _input_filter = paddle.matmul(
-                    _input_filter,
-                    self.__getattr__('%dto%d_matrix' %
-                                     (src_ks, target_ks)), False, False)
+                _input_filter = paddle.matmul(_input_filter,
+                                              self.__getattr__(
+                                                  '%dto%d_matrix' %
+                                                  (src_ks, target_ks)), False,
+                                              False)
                 _input_filter = paddle.reshape(
                     _input_filter,
                     shape=[
@@ -590,11 +590,11 @@ class SuperConv2DTranspose(paddle.nn.Conv2DTranspose):
         else:
             out_nc = self._out_channels
 
-        ks = int(self._kernel_size[0]) if kernel_size == None else int(
-            kernel_size)
+        ks = int(
+            self._kernel_size[0]) if kernel_size == None else int(kernel_size)
 
-        groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(in_nc,
-                                                                        out_nc)
+        groups, weight_in_nc, weight_out_nc = self.get_groups_in_out_nc(
+            in_nc, out_nc)
 
         weight = self.get_active_filter(weight_in_nc, weight_out_nc, ks)
 
@@ -731,8 +731,8 @@ class SuperSeparableConv2D(paddle.nn.Layer):
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self.conv[0]._out_channels
         if self.expand_ratio != None:
-            self.base_output_dim = int(self.conv[0]._out_channels /
-                                       max(self.expand_ratio))
+            self.base_output_dim = int(
+                self.conv[0]._out_channels / max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
         """
@@ -863,8 +863,8 @@ class SuperLinear(paddle.nn.Linear):
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self._out_features
         if self.expand_ratio != None:
-            self.base_output_dim = int(self._out_features /
-                                       max(self.expand_ratio))
+            self.base_output_dim = int(
+                self._out_features / max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
         """
@@ -941,9 +941,9 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
                  data_format='NCHW',
                  use_global_stats=None,
                  name=None):
-        super(SuperBatchNorm2D, self).__init__(
-            num_features, momentum, epsilon, weight_attr, bias_attr,
-            data_format, use_global_stats, name)
+        super(SuperBatchNorm2D,
+              self).__init__(num_features, momentum, epsilon, weight_attr,
+                             bias_attr, data_format, use_global_stats, name)
         self.cur_config = None
 
     def forward(self, input):
@@ -1047,15 +1047,16 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
             "Variance": [variance]
         }
 
-        helper = paddle.fluid.dygraph.layer_object_helper.LayerObjectHelper(
-            'batch_norm')
+        saved_mean = self._helper.create_variable_for_type_inference(
+            dtype=self._dtype, stop_gradient=True)
+        saved_variance = self._helper.create_variable_for_type_inference(
+            dtype=self._dtype, stop_gradient=True)
+        reserve_space = self._helper.create_variable_for_type_inference(
+            dtype=self._helper.input_dtype(input), stop_gradient=True)
 
-        param_dtype = input.dtype if input.dtype != 'float16' else 'float32'
-        saved_mean = helper.create_variable_for_type_inference(
-            dtype=param_dtype, stop_gradient=True)
-        saved_variance = helper.create_variable_for_type_inference(
-            dtype=param_dtype, stop_gradient=True)
-        batch_norm_out = helper.create_variable_for_type_inference(input.dtype)
+        batch_norm_out = (
+            input if self._in_place else
+            self._helper.create_variable_for_type_inference(self._dtype))
 
         outputs = {
             "Y": [batch_norm_out],
@@ -1065,13 +1066,10 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
             "SavedVariance": [saved_variance]
         }
 
-        if self.training or trainable_statistics:
-            # reserve_space is only used for training.
-            reserve_space = helper.create_variable_for_type_inference(
-                dtype=input.dtype, stop_gradient=True)
+        if reserve_space is not None:
             outputs["ReserveSpace"] = [reserve_space]
 
-        helper.append_op(
+        self._helper.append_op(
             type="batch_norm", inputs=inputs, outputs=outputs, attrs=attrs)
         self.cur_config = {'prune_dim': feature_dim}
         return batch_norm_out
@@ -1150,8 +1148,7 @@ class SuperSyncBatchNorm(paddle.nn.SyncBatchNorm):
             "Variance": [self._variance]
         }
 
-        helper = paddle.fluid.dygraph.layer_object_helper.LayerObjectHelper(
-            'sync_batch_norm')
+        helper = paddle.fluid.layer_helper.LayerHelper('sync_batch_norm')
 
         saved_mean = helper.create_variable_for_type_inference(
             dtype=self._dtype, stop_gradient=True)
@@ -1211,9 +1208,9 @@ class SuperInstanceNorm2D(paddle.nn.InstanceNorm2D):
                  bias_attr=None,
                  data_format='NCHW',
                  name=None):
-        super(SuperInstanceNorm2D, self).__init__(num_features, epsilon,
-                                                  momentum, weight_attr,
-                                                  bias_attr, data_format, name)
+        super(SuperInstanceNorm2D,
+              self).__init__(num_features, epsilon, momentum, weight_attr,
+                             bias_attr, data_format, name)
         self.cur_config = None
 
     def forward(self, input):
@@ -1319,8 +1316,7 @@ class SuperLayerNorm(paddle.nn.LayerNorm):
                 "begin_norm_axis": begin_norm_axis
             }
 
-            helper = paddle.fluid.dygraph.layer_object_helper.LayerObjectHelper(
-                'layer_norm')
+            helper = paddle.fluid.layer_helper.LayerHelper('layer_norm')
 
             dtype = input.dtype
             mean_out = helper.create_variable_for_type_inference(
@@ -1399,17 +1395,17 @@ class SuperEmbedding(paddle.nn.Embedding):
                  sparse=False,
                  weight_attr=None,
                  name=None):
-        super(SuperEmbedding, self).__init__(num_embeddings, embedding_dim,
-                                             padding_idx, sparse, weight_attr,
-                                             name)
+        super(SuperEmbedding,
+              self).__init__(num_embeddings, embedding_dim, padding_idx, sparse,
+                             weight_attr, name)
         self.candidate_config = candidate_config
         self.cur_config = None
         self.expand_ratio = candidate_config[
             'expand_ratio'] if 'expand_ratio' in candidate_config else None
         self.base_output_dim = self._embedding_dim
         if self.expand_ratio != None:
-            self.base_output_dim = int(self._embedding_dim /
-                                       max(self.expand_ratio))
+            self.base_output_dim = int(
+                self._embedding_dim / max(self.expand_ratio))
 
     def forward(self, input, expand_ratio=None, channel=None):
         """

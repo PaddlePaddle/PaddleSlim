@@ -1,4 +1,4 @@
-# PTQ(Post Training Quantization)量化分析工具详细教程
+# 量化分析工具详细教程
 
 ## 1. 量化分析工具功能
 1. 统计分析(statistical_analyse)：
@@ -13,17 +13,18 @@
     - 输入预期精度，直接产出符合预期精度的量化模型。
 
 
-## 2. paddleslim.quant.AnalysisPTQ 可传入参数解析
+## 2. paddleslim.quant.Analysis 可传入参数解析
 | **参数名**                   | **参数释义**                              |
 |-----------------------------|-----------------------------------------|
-| model_dir | 必须传入的模型文件路径，可为文件夹名；若模型为ONNX类型，直接输入'.onnx'模型文件名称即可 |
+| float_model_dir | 必须传入的模型文件路径，可为文件夹名；若模型为ONNX类型，直接输入'.onnx'模型文件名称即可 |
+| quant_model_dir | 默认为None，传入的量化模型文件路径，可为文件夹名；若模型为ONNX类型，直接输入'.onnx'模型文件名称即可； 若不传入，分析工具将使用PTQ进行量化并分析|
 | model_filename | 默认为None，若model_dir为文件夹名，则必须传入以'.pdmodel'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入 |
 | params_filename | 默认为None，若model_dir为文件夹名，则必须传入以'.pdiparams'结尾的模型名称，若model_dir为'.onnx'模型文件名称，则不需要传入 |
 | eval_function | 若需要验证精度，需要传入自定义的验证函数；若不传入，精度误差分析将根据Cosine Similarity计算得出 |
 | data_loader | 模型校准时使用的数据，DataLoader继承自`paddle.io.DataLoader`。可以直接使用模型套件中的DataLoader，或者根据[paddle.io.DataLoader](https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/io/DataLoader_cn.html#dataloader)自定义所需要的DataLoader |
 | save_dir | 分析后保存模型精度或pdf等文件的文件夹，默认为`analysis_results`|
 | resume | 是否加载中间分析文件，默认为False|
-| ptq_config | 可传入的离线量化中的参数，详细可参考[离线量化文档](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post) |
+| quant_config | 可传入的离线量化中的参数，详细可参考[离线量化文档](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/quant/quant_post) |
 
 
 
@@ -45,7 +46,7 @@ import paddle
 from PIL import Image
 from paddle.vision.datasets import DatasetFolder
 from paddle.vision.transforms import transforms
-from paddleslim.quant.analysis_ptq import AnalysisPTQ
+from paddleslim.quant.analysis import Analysis
 paddle.enable_static()
 
 class ImageNetDataset(DatasetFolder):
@@ -72,12 +73,12 @@ image = paddle.static.data(
 train_loader = paddle.io.DataLoader(
     train_dataset, feed_list=[image], batch_size=8, return_list=False)
 
-analyzer = AnalysisPTQ(
-    model_dir="./MobileNetV1_infer",
+analyzer = Analysis(
+    float_model_dir="./MobileNetV1_infer",
     model_filename="inference.pdmodel",
     params_filename="inference.pdiparams",
     save_dir="MobileNetV1_analysis",
-    ptq_config={
+    quant_config={
           'quantizable_op_type': ["conv2d", "depthwise_conv2d"],
           'weight_quantize_type': 'abs_max',
           'activation_quantize_type': 'moving_average_abs_max',
@@ -124,22 +125,17 @@ analyzer.statistical_analyse()
 ```shell
 analyzer.metric_error_analyse()
 ```
-调用该接口，会遍历量化模型中的一层，并计算量化该层后模型的损失。调用该接口时，需要输入Eval Function。会产出所有只量化一层的模型精度排序，将默认保存在 `./analysis_results/analysis.txt` 中。
+若不传入quant_model_dir，并且调用该接口，会遍历量化模型中的一层，并计算量化该层后模型的损失。调用该接口时，需要输入Eval Function。会产出所有只量化一层的模型精度排序，将默认保存在 `./analysis_results/analysis.txt` 中。
+
+若传入quant_model_dir，并且调用该接口，会遍历量化模型中的每一层，去掉量化节点并计算当前层不量化的模型精度。调用该接口时，需要输入Eval Function。会产出所有去掉一层量化的模型精度排序，将默认保存在 `./analysis_results/analysis.txt` 中。具体使用可参考[GPT量化训练敏感度分析DEMO](../../../../example/quantization_analysis/GPT/README.md)。
+
 
 
 
 **直接产出符合预期精度的目标量化模型**
 ```shell
-analyzer.get_target_quant_model(target_metric=70.0)
+analyzer.get_target_quant_model(target_metric=0.70)
 ```
 
 ## 4. 根据分析结果执行离线量化
 执行完量化分析工具后，可根据 `analysis.txt` 中的精度排序，在量化中去掉效果较差的层，具体操作为：在调用 `paddleslim.quant.quant_post_static` 时加入参数 `skip_tensor_list`，将需要去掉的层传入即可。
-
-
-## FAQ：
-- 与QAT(Quantization-Aware Training)量化分析工具的区别：与QAT量化分析工具不同的是，PTQ量化分析工具则是加载待量化的原模型，对模型所有层依次进行量化，每次量化一层，进行验证获取精度误差分析。而QAT量化分析工具加载量化训练后的量化模型，遍历所有量化的层，依次去掉量化层，加载Float模型的参数，并进行验证获取精度误差分析。
-
-- PTQ量化分析工具设计的原因：PTQ量化分析工具依次量化模型中的每一层，而不是依次去掉量化层是由于PTQ本身的高效性。依次量化一层进行验证，查看对模型精度的损失十分直观。
-
-- 量化分析工具为什么要区分PTQ和QAT：实验证明PTQ和QAT后的量化模型的敏感层并不完全一致，将两种算法分开，敏感度分析结果更加准确。

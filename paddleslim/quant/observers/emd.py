@@ -63,6 +63,7 @@ class EMDObserverLayer(UniformObserver):
         abs_max_value = float(paddle.max(paddle.flatten(inputs)))
         abs_max_value = 1e-8 if abs_max_value == 0.0 else abs_max_value
         s = 0.3
+        scale_emd = abs_max_value
         while s <= 1.0:
             scale = s * abs_max_value
             s += 0.02
@@ -78,8 +79,8 @@ class EMDObserverLayer(UniformObserver):
             emd_loss = float(emd_loss)
             if emd_loss <= self._calibration_loss:
                 self._calibration_loss = emd_loss
-
-        return 0, scale
+                scale_emd = scale
+        return 0, scale_emd
 
     def cal_thresholds(self):
         """ Compute thresholds for MAX function.
