@@ -99,7 +99,7 @@ _quant_config_default = {
     'moving_rate': 0.9,
     # if True, 'quantize_op_types' will be TENSORRT_OP_TYPES
     'for_tensorrt': False,
-    # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
+    # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES
     'is_full_quantize': False,
     # if True, use onnx format to quant.
     'onnx_format': True,
@@ -342,6 +342,13 @@ def quant_aware(program,
             for next_op in find_next_ops(program, output_name):
                 if next_op.type == 'layer_norm':
                     return True
+                elif next_op.type == 'elementwise_mul':
+                    next_op_output_names = next_op.output_arg_names
+                    for next_output_name in next_op_output_names:
+                        for next_next_op in find_next_ops(
+                                program, next_output_name):
+                            if next_next_op.type == 'layer_norm':
+                                return True
         return False
 
     skip_tensor_list = []
@@ -368,8 +375,8 @@ def quant_aware(program,
                 same_scale_tensor_list.append(qkv_weight_tensor)
 
                 for op in ops:
-                    if op._op.type in ['matmul', 'matmul_v2'] and (
-                            not has_trainable_var(op)):
+                    if op._op.type in ['matmul', 'matmul_v2'
+                                       ] and (not has_trainable_var(op)):
                         input_names = op._op.input_arg_names
                         for input_name in input_names:
                             pre_op = find_pre_ops(program, input_name)[0]
@@ -377,8 +384,8 @@ def quant_aware(program,
                                 continue
                             elif pre_op.type == 'scale':
                                 qkv_output_tensor.append(
-                                    input_name + '#/#{}'.format(
-                                        pre_op.attr('scale')))
+                                    input_name +
+                                    '#/#{}'.format(pre_op.attr('scale')))
                             else:
                                 qkv_output_tensor.append(input_name)
                     elif op._op.type == 'elementwise_add':
@@ -485,8 +492,8 @@ def quant_aware(program,
         _logger.info(
             "When a preprocess_func is used in quant_aware, Need to save a mapping table to match variable names in the convert phase."
         )
-        _logger.info("The mapping table is saved as '{}'.".format(
-            VARS_MAPPING_TABLE))
+        _logger.info(
+            "The mapping table is saved as '{}'.".format(VARS_MAPPING_TABLE))
         for sub_graph in sub_graphs:
             save_dict(sub_graph.out_node_mapping_table)
 
