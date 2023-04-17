@@ -122,20 +122,20 @@ class ModelNetDataset(Dataset):
         shape_ids = {}
         if self.num_category == 10:
             shape_ids["train"] = [
-                line.rstrip() for line in 
+                line.rstrip() for line in
                 open(os.path.join(self.root, "modelnet10_train.txt"))
             ]
             shape_ids["test"] = [
-                line.rstrip() for line in 
+                line.rstrip() for line in
                 open(os.path.join(self.root, "modelnet10_test.txt"))
             ]
         else:
             shape_ids["train"] = [
-                line.rstrip() for line in 
+                line.rstrip() for line in
                 open(os.path.join(self.root, "modelnet40_train.txt"))
             ]
             shape_ids["test"] = [
-                line.rstrip() for line in 
+                line.rstrip() for line in
                 open(os.path.join(self.root, "modelnet40_test.txt"))
             ]
 
