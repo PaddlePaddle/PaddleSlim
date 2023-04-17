@@ -17,7 +17,7 @@ import paddle
 from paddle.io import DataLoader
 from paddle.metric import Accuracy
 from data import ModelNetDataset
-from model import CrossEntropyMatrixRegularization, PointNetClassifier
+from model import PointNetClassifier
 
 
 def parse_args():
