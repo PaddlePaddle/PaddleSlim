@@ -86,7 +86,7 @@ def _graph_flops(graph, only_conv=True, detail=False):
             k_size = op.attr("ksize")
             flops += h_out * w_out * c_out * (k_size[0]**2)
 
-        elif op.type() == 'mul':
+        elif op.type() in ['mul', 'matmul', 'matmul_v2']:
             x_shape = list(op.inputs("X")[0].shape())
             y_shape = op.inputs("Y")[0].shape()
             if x_shape[0] == -1:
