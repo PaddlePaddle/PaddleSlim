@@ -175,7 +175,7 @@ pip install paddleslim
 
 安装develop版本：
 ```bash
-git clone https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+git clone https://github.com/PaddlePaddle/PaddleSlim.git && cd PaddleSlim
 python setup.py install
 ```
 
