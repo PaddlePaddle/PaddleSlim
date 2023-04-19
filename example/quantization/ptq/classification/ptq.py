@@ -187,7 +187,8 @@ def main():
 
     dummy_input = paddle.static.InputSpec(
         shape=[None, 3, 224, 224], dtype='float32')
-    paddle.jit.save(infer_model, "./int8_infer", [dummy_input])
+    save_path = os.path.join(FLAGS.output_dir, "int8_infer")
+    paddle.jit.save(infer_model, save_path, [dummy_input])
 
 
 if __name__ == '__main__':
