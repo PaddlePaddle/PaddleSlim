@@ -70,11 +70,12 @@ class BaseHistObserver(UniformObserver):
         self._max = None
 
         if self._hist_min is None or self._hist_max is None:
-            self._hist_min, self._hist_max = self._min_max(inputs)
-            self._hist = self._init_hists(inputs)
+            self._hist_min, self._hist_max = self._min_max(
+                inputs.cast('float32'))
+            self._hist = self._init_hists(inputs.cast('float32'))
         else:
             new_min, new_max, new_hist = self._update_min_max_and_hist(
-                inputs,
+                inputs.cast('float32'),
                 self._hist_min,
                 self._hist_max,
                 self._hist,

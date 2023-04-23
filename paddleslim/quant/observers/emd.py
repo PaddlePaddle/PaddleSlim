@@ -60,6 +60,7 @@ class EMDObserverLayer(UniformObserver):
         return inputs
 
     def cal_min_max(self, inputs):
+        inputs = inputs.cast('float32')
         abs_max_value = float(paddle.max(paddle.flatten(inputs)))
         abs_max_value = 1e-8 if abs_max_value == 0.0 else abs_max_value
         s = 0.3
