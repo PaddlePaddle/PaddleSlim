@@ -49,7 +49,7 @@ class MSEChannelWiseWeightObserverLayer(AbsMaxChannelWiseWeightObserverLayer):
             layer, quant_bits=quant_bits)
 
     def _cal_abs_max(self, inputs):
-
+        inputs = inputs.cast('float32')
         reduce_axis = tuple(
             [i for i in range(len(inputs.shape)) if i != self.quant_axis()])
         abs_max_values = paddle.max(paddle.abs(inputs), axis=reduce_axis)
