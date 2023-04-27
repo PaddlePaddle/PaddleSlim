@@ -66,6 +66,8 @@ class TestRestructPTQ(unittest.TestCase):
         return count
 
     def test_recon_layer(self):
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         model = resnet18()
         weight_layers = self._count_layers(model, paddle.nn.Conv2D)
         weight_layers += self._count_layers(model, paddle.nn.Linear)
@@ -122,11 +124,14 @@ class TestRestructPTQ(unittest.TestCase):
         self.assertEqual(quantizer_cnt, weight_layers)
 
         # 4. save quantized model
-        final_model = adaround_ptq.convert(quant_model, True)
-        inputs = InputSpec([None, 3, 224, 224], 'float32', name='x')
-        paddle.jit.save(final_model, self.temp_dir + '/recon_region', [inputs])
+        final_model = recon_ptq.convert(quant_model, True)
+        inputs = paddle.static.InputSpec(
+            [None, 3, 224, 224], 'float32', name='x')
+        paddle.jit.save(final_model, self.temp_dir + '/recon_layer', [inputs])
 
     def test_recon_region(self):
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         model = resnet18()
         weight_layers = self._count_layers(model, paddle.nn.Conv2D)
         weight_layers += self._count_layers(model, paddle.nn.Linear)
@@ -184,6 +189,11 @@ class TestRestructPTQ(unittest.TestCase):
         self.assertEqual(quantizer_cnt, weight_layers)
 
         # 4. save quantized model
-        final_model = adaround_ptq.convert(quant_model, True)
-        inputs = InputSpec([None, 3, 224, 224], 'float32', name='x')
+        final_model = recon_ptq.convert(quant_model, True)
+        inputs = paddle.static.InputSpec(
+            [None, 3, 224, 224], 'float32', name='x')
         paddle.jit.save(final_model, self.temp_dir + '/recon_region', [inputs])
+
+
+if __name__ == '__main__':
+    unittest.main()
