@@ -49,7 +49,7 @@ def _recover_outputs_attr(program):
                         persistable=False,
                         stop_gradient=True)
                     op.desc.set_output("ReserveSpace", [reserve_space.name])
-            if op.type == 'transpose2':
+            if op.type == 'transpose2' or op.type == 'flatten_contiguous_range' or op.type == 'unsqueeze2':
                 if 'XShape' not in op.output_names:
                     xshape = block.create_var(
                         name=paddle.fluid.
