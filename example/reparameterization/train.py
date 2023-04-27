@@ -26,6 +26,8 @@ import math
 import time
 import random
 import numpy as np
+import distutils.util
+import six
 from paddle.distributed import ParallelEnv
 from paddle.static import load_program_state
 from paddle.vision.models import mobilenet_v1
@@ -35,31 +37,49 @@ from paddleslim.dygraph.rep import Reparameter, DBBRepConfig, ACBRepConfig
 
 sys.path.append(os.path.join(os.path.dirname("__file__")))
 from optimizer import create_optimizer
-sys.path.append(
-    os.path.join(os.path.dirname("__file__"), os.path.pardir, os.path.pardir))
-from utility import add_arguments, print_arguments
 
 _logger = get_logger(__name__, level=logging.INFO)
 
-parser = argparse.ArgumentParser(description=__doc__)
-add_arg = functools.partial(add_arguments, argparser=parser)
-# yapf: disable
-add_arg('batch_size',               int,    64,                                         "Single Card Minibatch size.")
-add_arg('use_gpu',                  bool,   True,                                        "Whether to use GPU or not.")
-add_arg('lr',                       float,  0.1,                                      "The learning rate used to fine-tune pruned model.")
-add_arg('lr_strategy',              str,    "piecewise_decay",                           "The learning rate decay strategy.")
-add_arg('l2_decay',                 float,  0.00003,                                        "The l2_decay parameter.")
-add_arg('ls_epsilon',               float,  0.0,                                         "Label smooth epsilon.")
-add_arg('use_pact',                 bool,   False,                                       "Whether to use PACT method.")
-add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
-add_arg('momentum_rate',            float,  0.9,                                         "The value of momentum_rate.")
-add_arg('num_epochs',               int,    120,                                           "The number of total epochs.")
-add_arg('total_images',             int,    1281167,                                     "The number of total training images.")
-add_arg('data',                     str,    "imagenet",                                  "Which data to use. 'cifar10' or 'imagenet'")
-add_arg('log_period',               int,    10,                                          "Log period in batches.")
-add_arg('model_save_dir',           str,    "./output_models",                           "model save directory.")
-parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
-# yapf: enable
+
+def print_arguments(args):
+    """Print argparse's arguments.
+
+    Usage:
+
+    .. code-block:: python
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("name", default="Jonh", type=str, help="User name.")
+        args = parser.parse_args()
+        print_arguments(args)
+
+    :param args: Input argparse.Namespace for printing.
+    :type args: argparse.Namespace
+    """
+    print("-----------  Configuration Arguments -----------")
+    for arg, value in sorted(six.iteritems(vars(args))):
+        print("%s: %s" % (arg, value))
+    print("------------------------------------------------")
+
+
+def add_arguments(argname, type, default, help, argparser, **kwargs):
+    """Add argparse's argument.
+
+    Usage:
+
+    .. code-block:: python
+
+        parser = argparse.ArgumentParser()
+        add_argument("name", str, "Jonh", "User name.", parser)
+        args = parser.parse_args()
+    """
+    type = distutils.util.strtobool if type == bool else type
+    argparser.add_argument(
+        "--" + argname,
+        default=default,
+        type=type,
+        help=help + ' Default: %(default)s.',
+        **kwargs)
 
 
 def load_dygraph_pretrain(model, path=None, load_static_weights=False):
@@ -110,8 +130,9 @@ def train(args):
         args.total_images = 50000
     elif args.data == "imagenet":
         import imagenet_reader as reader
-        train_dataset = reader.ImageNetDataset(mode='train')
-        val_dataset = reader.ImageNetDataset(mode='val')
+        train_dataset = reader.ImageNetDataset(
+            data_dir=args.data_dir, mode='train')
+        val_dataset = reader.ImageNetDataset(data_dir=args.data_dir, mode='val')
         class_dim = 1000
         image_shape = "3,224,224"
     else:
@@ -313,11 +334,31 @@ def train(args):
             ])
 
 
-def main():
+def main(parser):
     args = parser.parse_args()
     print_arguments(args)
     train(args)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_arg = functools.partial(add_arguments, argparser=parser)
+    # yapf: disable
+    add_arg('batch_size',               int,    64,                                         "Single Card Minibatch size.")
+    add_arg('data_dir',               str,    "dataset/ILSVRC2012/",                                         "Single Card Minibatch size.")
+    add_arg('use_gpu',                  bool,   True,                                        "Whether to use GPU or not.")
+    add_arg('lr',                       float,  0.1,                                      "The learning rate used to fine-tune pruned model.")
+    add_arg('lr_strategy',              str,    "piecewise_decay",                           "The learning rate decay strategy.")
+    add_arg('l2_decay',                 float,  0.00003,                                        "The l2_decay parameter.")
+    add_arg('ls_epsilon',               float,  0.0,                                         "Label smooth epsilon.")
+    add_arg('use_pact',                 bool,   False,                                       "Whether to use PACT method.")
+    add_arg('ce_test',                 bool,   False,                                        "Whether to CE test.")
+    add_arg('momentum_rate',            float,  0.9,                                         "The value of momentum_rate.")
+    add_arg('num_epochs',               int,    120,                                           "The number of total epochs.")
+    add_arg('total_images',             int,    1281167,                                     "The number of total training images.")
+    add_arg('data',                     str,    "imagenet",                                  "Which data to use. 'cifar10' or 'imagenet'")
+    add_arg('log_period',               int,    10,                                          "Log period in batches.")
+    add_arg('model_save_dir',           str,    "./output_models",                           "model save directory.")
+    parser.add_argument('--step_epochs', nargs='+', type=int, default=[30, 60, 90], help="piecewise decay step")
+    # yapf: enable
+    main(parser)
