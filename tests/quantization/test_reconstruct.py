@@ -11,7 +11,7 @@ from paddle.vision.models import resnet18
 from paddle.quantization import QuantConfig
 from paddleslim.quant.observers import AVGObserver, AbsMaxChannelWiseWeightObserver, ReconstructActObserver, ReconstructWeightObserver, ReconstructPTQ
 from paddleslim.quant.observers.avg import AVGObserverLayer
-from paddleslim.quant.observers.abs_max_weight import AbsMaxWeightsObserverLayer
+from paddleslim.quant.observers.abs_max_weight import AbsMaxChannelWiseWeightObserverLayer
 from paddleslim.quant.observers.reconstruct_act import ReconstructActObserverLayer
 from paddleslim.quant.observers.reconstruct_weight import ReconstructWeightObserverLayer
 
@@ -116,7 +116,7 @@ class TestRestructPTQ(unittest.TestCase):
                                            ReconstructActObserverLayer)
         self.assertEqual(quantizer_cnt, weight_layers)
         quantizer_cnt = self._count_layers(quant_model,
-                                           AbsMaxWeightsObserverLayer)
+                                           AbsMaxChannelWiseWeightObserverLayer)
         self.assertEqual(quantizer_cnt, weight_layers)
         quantizer_cnt = self._count_layers(quant_model, AVGObserverLayer)
         self.assertEqual(quantizer_cnt, weight_layers)
@@ -178,7 +178,7 @@ class TestRestructPTQ(unittest.TestCase):
                                            ReconstructActObserverLayer)
         self.assertEqual(quantizer_cnt, weight_layers)
         quantizer_cnt = self._count_layers(quant_model,
-                                           AbsMaxWeightsObserverLayer)
+                                           AbsMaxChannelWiseWeightObserverLayer)
         self.assertEqual(quantizer_cnt, weight_layers)
         quantizer_cnt = self._count_layers(quant_model, AVGObserverLayer)
         self.assertEqual(quantizer_cnt, weight_layers)
