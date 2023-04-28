@@ -108,6 +108,9 @@ class ReconstructWeightObserverLayer(UniformObserver):
             paddle.nn.functional.sigmoid(self.alpha) * (ZETA - GAMMA) + GAMMA,
             0, 1)
 
+    def set_batch_nums(self, batch_nums):
+        self._batch_nums = batch_nums
+
     def cal_thresholds(self):
         """ Compute thresholds.
         """

@@ -22,6 +22,8 @@ from paddle.nn.quant.format import (
     ConvertibleQuantedLayer,
     LinearQuanterDequanter, )
 from ...common import get_logger
+from .reconstruct_weight import ReconstructWeightObserverLayer
+from .reconstruct_act import ReconstructActObserverLayer
 
 _logger = get_logger(
     __name__,
@@ -34,6 +36,15 @@ ZETA = 1.1
 
 class ReconstructPTQ(PTQ):
     """ Utilizing reconstruction quantization method to quantize the FP32 model, and it uses calibrate data to get the quantization information for all quantized variables.
+    Args:
+        model(paddle.nn.Layer): The FP32 model to be quantized.
+        config(paddle.quantization.QuantConfig): The quant configuration.
+        data_loader(Python Generator, Paddle.io.DataLoader): The
+            Generator or Dataloader provides calibrate data, and it could
+            return a batch every time.
+        epochs(int): The number of epochs in the reconstruction proces. Default is 10.
+        batch_nums (int): Total number of minibatchs used to calibrate quantized variables. It will cover the batch_nums in ReconstructActObserver and ReconstructWeightObserver. Default is 10.
+        lr(float): The learning rate. Default is 0.1.
     """
 
     def __init__(self,
@@ -66,6 +77,7 @@ class ReconstructPTQ(PTQ):
         """
         self.origin_model.eval()
         self.quant_model = self.quantize(self.origin_model, inplace=False)
+        self._set_batch_nums()
 
         # apply hook
         if self._recon_level == 'layer-wise':
@@ -93,6 +105,16 @@ class ReconstructPTQ(PTQ):
         layer_name = layer.full_name()
         self.all_origin_layer_outputs[layer_name] = outputs
         return outputs
+
+    def _set_batch_nums(self):
+        for layer in self.quant_model.sublayers():
+            if isinstance(layer, tuple(self._qat_layer_mapping.values())):
+                if isinstance(layer.weight_quanter,
+                              ReconstructWeightObserverLayer):
+                    layer.weight_quanter.set_batch_nums(self._batch_nums)
+                if isinstance(layer.activation_quanter,
+                              ReconstructActObserverLayer):
+                    layer.activation_quanter.set_batch_nums(self._batch_nums)
 
     def _get_layers(self):
         quant_model_layers = {}

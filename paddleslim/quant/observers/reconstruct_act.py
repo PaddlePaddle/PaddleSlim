@@ -89,6 +89,9 @@ class ReconstructActObserverLayer(UniformObserver):
 
         return inputs
 
+    def set_batch_nums(self, batch_nums):
+        self._batch_nums = batch_nums
+
     def cal_thresholds(self):
         """ Compute thresholds.
         """

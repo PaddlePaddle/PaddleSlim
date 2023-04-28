@@ -17,6 +17,7 @@ from paddleslim.dist import merge, l2, soft_label
 
 from paddle.distributed import fleet
 from paddle.distributed.fleet import DistributedStrategy
+import paddle.vision.transforms as T
 
 logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
 _logger = logging.getLogger(__name__)
@@ -83,8 +84,11 @@ def compress(args):
     fleet.init(is_collective=True)
 
     if args.data == "cifar10":
-        train_dataset = paddle.vision.datasets.Cifar10(mode='train')
-        val_dataset = paddle.vision.datasets.Cifar10(mode='test')
+        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        train_dataset = paddle.vision.datasets.Cifar10(
+            mode='train', backend="cv2", transform=transform)
+        val_dataset = paddle.vision.datasets.Cifar10(
+            mode='test', backend="cv2", transform=transform)
         class_dim = 10
         image_shape = "3,32,32"
     elif args.data == "imagenet":
@@ -97,8 +101,8 @@ def compress(args):
         raise ValueError("{} is not supported.".format(args.data))
     image_shape = [int(m) for m in image_shape.split(",")]
 
-    assert args.model in model_list, "{} is not in lists: {}".format(args.model,
-                                                                     model_list)
+    assert args.model in model_list, "{} is not in lists: {}".format(
+        args.model, model_list)
     student_program = paddle.static.Program()
     s_startup = paddle.static.Program()
     places = paddle.static.cuda_places(
@@ -137,6 +141,8 @@ def compress(args):
         # model definition
         model = models.__dict__[args.model]()
         out = model.net(input=image, class_dim=class_dim)
+        if args.data == 'cifar10':
+            label = paddle.reshape(label, [-1, 1])
         cost = paddle.nn.functional.loss.cross_entropy(input=out, label=label)
         avg_cost = paddle.mean(x=cost)
         acc_top1 = paddle.metric.accuracy(input=out, label=label, k=1)
