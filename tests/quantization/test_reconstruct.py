@@ -56,14 +56,9 @@ class TestRestructPTQ(unittest.TestCase):
                 count += 1
         return count
 
-
-class TestRestructPTQLayers(TestRestructPTQ):
     def test_recon_layer(self):
         place = paddle.CUDAPlace(
             0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
-        model = resnet18()
-        weight_layers = self._count_layers(model, paddle.nn.Conv2D)
-        weight_layers += self._count_layers(model, paddle.nn.Linear)
 
         def reader_wrapper(reader, inputs='x'):
             def gen():
@@ -78,7 +73,7 @@ class TestRestructPTQLayers(TestRestructPTQ):
             dataset,
             drop_last=True,
             places=place,
-            batch_size=16,
+            batch_size=8,
             return_list=True)
         train_loader = reader_wrapper(train_reader)
 
@@ -93,20 +88,24 @@ class TestRestructPTQLayers(TestRestructPTQ):
             paddle.nn.Linear, activation=act_observer, weight=weight_observer)
 
         # 2. initialize ReconstructPTQ
-        recon_ptq = ReconstructPTQ(
-            model,
-            self.q_config,
-            train_loader,
-            epochs=1,
-            batch_nums=5,
-            lr=0.1,
-            recon_level='layer-wise')
+        with paddle.utils.unique_name.guard():
+            model = resnet18()
+            recon_ptq = ReconstructPTQ(
+                model,
+                self.q_config,
+                train_loader,
+                epochs=1,
+                batch_nums=5,
+                lr=0.1,
+                recon_level='layer-wise')
 
-        recon_ptq.init_ptq()
+            recon_ptq.init_ptq()
 
         # 3. run ReconstructPTQ
         quant_model = recon_ptq.run()
 
+        weight_layers = self._count_layers(model, paddle.nn.Conv2D)
+        weight_layers += self._count_layers(model, paddle.nn.Linear)
         quantizer_cnt = self._count_layers(quant_model,
                                            ReconstructWeightObserverLayer)
         self.assertEqual(quantizer_cnt, weight_layers)
@@ -126,14 +125,9 @@ class TestRestructPTQLayers(TestRestructPTQ):
         save_dir = os.path.join(self.temp_dir.name, 'recon_layer')
         paddle.jit.save(final_model, save_dir, [inputs])
 
-
-class TestRestructPTQLayers(TestRestructPTQ):
     def test_recon_region(self):
         place = paddle.CUDAPlace(
             0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
-        model = resnet18()
-        weight_layers = self._count_layers(model, paddle.nn.Conv2D)
-        weight_layers += self._count_layers(model, paddle.nn.Linear)
 
         def reader_wrapper(reader, inputs='x'):
             def gen():
@@ -148,7 +142,7 @@ class TestRestructPTQLayers(TestRestructPTQ):
             dataset,
             drop_last=True,
             places=place,
-            batch_size=16,
+            batch_size=8,
             return_list=True)
         train_loader = reader_wrapper(train_reader)
 
@@ -163,20 +157,24 @@ class TestRestructPTQLayers(TestRestructPTQ):
             paddle.nn.Linear, activation=act_observer, weight=weight_observer)
 
         # 2. initialize ReconstructPTQ
-        recon_ptq = ReconstructPTQ(
-            model,
-            self.q_config,
-            train_loader,
-            epochs=1,
-            batch_nums=10,
-            lr=0.1,
-            recon_level='region-wise')
+        with paddle.utils.unique_name.guard():
+            model = resnet18()
+            recon_ptq = ReconstructPTQ(
+                model,
+                self.q_config,
+                train_loader,
+                epochs=1,
+                batch_nums=10,
+                lr=0.1,
+                recon_level='region-wise')
 
-        recon_ptq.init_ptq()
+            recon_ptq.init_ptq()
 
         # 3. run ReconstructPTQ
         quant_model = recon_ptq.run()
 
+        weight_layers = self._count_layers(model, paddle.nn.Conv2D)
+        weight_layers += self._count_layers(model, paddle.nn.Linear)
         quantizer_cnt = self._count_layers(quant_model,
                                            ReconstructWeightObserverLayer)
         self.assertEqual(quantizer_cnt, weight_layers)
