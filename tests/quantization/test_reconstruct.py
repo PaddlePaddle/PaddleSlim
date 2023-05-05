@@ -39,21 +39,11 @@ class RandomDataset(paddle.io.Dataset):
         return self.num_samples
 
 
-def reader_wrapper(reader):
-    def gen():
-        for data in reader():
-            img = paddle.to_tensor(data)
-            yield {'x': img}
-
-    return gen
-
-
 class TestRestructPTQ(unittest.TestCase):
     def __init__(self, *args, **kvargs):
         super(TestRestructPTQ, self).__init__(*args, **kvargs)
 
     def setUp(self):
-        paddle.set_device("cpu")
         self.temp_dir = tempfile.TemporaryDirectory(dir="./")
 
     def tearDown(self):
@@ -66,6 +56,8 @@ class TestRestructPTQ(unittest.TestCase):
                 count += 1
         return count
 
+
+class TestRestructPTQLayers(TestRestructPTQ):
     def test_recon_layer(self):
         place = paddle.CUDAPlace(
             0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
@@ -134,6 +126,8 @@ class TestRestructPTQ(unittest.TestCase):
         save_dir = os.path.join(self.temp_dir.name, 'recon_layer')
         paddle.jit.save(final_model, save_dir, [inputs])
 
+
+class TestRestructPTQLayers(TestRestructPTQ):
     def test_recon_region(self):
         place = paddle.CUDAPlace(
             0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
@@ -162,8 +156,9 @@ class TestRestructPTQ(unittest.TestCase):
         weight_observer = ReconstructWeightObserver(ptq_observer=MSEObserver())
         act_observer = ReconstructActObserver(
             ptq_observer=AVGObserver(), qdrop=True)
-        self.q_config = QuantConfig(
-            activation=act_observer, weight=weight_observer)
+        self.q_config = QuantConfig(activation=None, weight=None)
+        self.q_config.add_type_config(
+            paddle.nn.Conv2D, activation=act_observer, weight=weight_observer)
         self.q_config.add_type_config(
             paddle.nn.Linear, activation=act_observer, weight=weight_observer)
 

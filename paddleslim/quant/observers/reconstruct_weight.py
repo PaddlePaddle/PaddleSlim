@@ -100,6 +100,7 @@ class ReconstructWeightObserverLayer(UniformObserver):
         return dequant_weight
 
     def _prepare_scale(self, scale, weight_shape):
+        scale = paddle.to_tensor(scale)
         if scale.shape[0] == 1:
             self.scale = scale
         else:
