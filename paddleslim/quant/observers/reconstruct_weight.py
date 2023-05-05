@@ -60,13 +60,11 @@ class ReconstructWeightObserverLayer(UniformObserver):
         self.alpha = None
         self._alpha_prefix = ("{}.round_alpha".format(layer.full_name()))
 
-    def _init_alpha(self, weight):
+    def _init_alpha(self, weight, scale):
         """ Initialize alpha
         """
-        scale = self._ptq_observer.scales()
-
         quantized_weight = np.clip(
-            self._quant(weight.numpy(), scale), self._qmin, self._qmax)
+            self._quant(weight.numpy(), scale.numpy()), self._qmin, self._qmax)
         floor_weight = np.floor(quantized_weight)
         mantissa = quantized_weight - floor_weight
         init_alpha = -np.log((ZETA - GAMMA) / (mantissa - GAMMA) - 1)
@@ -76,7 +74,6 @@ class ReconstructWeightObserverLayer(UniformObserver):
             name=self._alpha_name,
             initializer=Assign(value=init_alpha),
             trainable=True)
-        #print(alpha_attr.name)
         self.alpha = self.create_parameter(
             shape=weight.shape, attr=alpha_attr, dtype=weight.dtype)
 
@@ -89,19 +86,31 @@ class ReconstructWeightObserverLayer(UniformObserver):
 
         if self._current_iters == self._batch_nums:
             weights = self._ptq_observer(weights)
-            self._init_alpha(weights)
+            self._prepare_scale(self._ptq_observer.scales(), weights.shape)
+            self._init_alpha(weights, self.scale)
             return weights
 
-        scale = self._ptq_observer.scales()
         h_alpha = self.compute_soft_rounding()
-
-        quantized_weight = self._quant(weights, scale)
+        quantized_weight = self._quant(weights, self.scale)
         floor_weight = (paddle.floor(quantized_weight) -
                         quantized_weight).detach() + quantized_weight
         clip_weight = paddle.clip(floor_weight + h_alpha, self._qmin,
                                   self._qmax)
-        dequant_weight = self._dequant(clip_weight, scale)
+        dequant_weight = self._dequant(clip_weight, self.scale)
         return dequant_weight
+
+    def _prepare_scale(self, scale, weight_shape):
+        if scale.shape[0] == 1:
+            self.scale = scale
+        else:
+            self.scale = scale.reshape([scale.shape[0], 1])
+            if len(weight_shape) == 2:
+                self.scale = self.scale.repeat_interleave(
+                    weight_shape[0], axis=1).t()
+            else:
+                self.scale = self.scale.repeat_interleave(
+                    weight_shape[1] * weight_shape[2] * weight_shape[3], axis=1)
+                self.scale = self.scale.reshape(weight_shape)
 
     def compute_soft_rounding(self):
         return paddle.clip(
@@ -142,7 +151,7 @@ class ReconstructWeightObserverLayer(UniformObserver):
     def quant_axis(self):
         """ Return quantization axis.
         """
-        return -1
+        return self._ptq_observer.quant_axis()
 
     def scales(self):
         """ Return output scales.

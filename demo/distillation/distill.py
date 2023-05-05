@@ -222,8 +222,7 @@ def compress(args):
             if step_id % args.log_period == 0:
                 _logger.info(
                     "valid_epoch {} step {} loss {:.6f}, top1 {:.6f}, top5 {:.6f}".
-                    format(epoch_id, step_id, val_loss[0], val_acc1[0],
-                           val_acc5[0]))
+                    format(epoch_id, step_id, val_loss, val_acc1, val_acc5))
         if args.save_inference:
             paddle.static.save_inference_model(
                 os.path.join("./saved_models", str(epoch_id)), [image], [out],

@@ -54,4 +54,4 @@ class MSEChannelWiseWeightObserverLayer(AbsMaxChannelWiseWeightObserverLayer):
         abs_max_values = paddle.max(paddle.abs(inputs), axis=reduce_axis)
         abs_max_values = paddle.where(abs_max_values == np.float32(0.0),
                                       np.float32(1e-8), abs_max_values)
-        return abs_max_values
+        return abs_max_values.detach()

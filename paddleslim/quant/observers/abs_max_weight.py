@@ -83,7 +83,7 @@ class AbsMaxChannelWiseWeightObserverLayer(ChannelWiseObserver):
             result = paddle.where(mse_loss < minimum_loss, scales, result)
             minimum_loss = paddle.minimum(mse_loss, minimum_loss)
 
-        return result
+        return result.detach()
 
     def min_value(self) -> float:
         return 0.

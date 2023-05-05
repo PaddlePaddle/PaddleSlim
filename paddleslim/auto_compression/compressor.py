@@ -570,7 +570,7 @@ class AutoCompression:
         tmp_base_name = "_".join([prefix, str(os.getppid()), s_datetime])
         tmp_dir = os.path.join(base_dir, tmp_base_name)
         if not os.path.exists(tmp_dir):
-            os.makedirs(tmp_dir)
+            os.makedirs(tmp_dir, exist_ok=True)
         return tmp_dir
 
     def compress(self):

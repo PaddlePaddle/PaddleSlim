@@ -127,7 +127,11 @@ class ReconstructPTQ(PTQ):
 
         elif self._recon_level == 'region-wise':
             for block in self.quant_model.children():
-                quant_model_layers[block.full_name()] = []
+                if isinstance(block, tuple(self._qat_layer_mapping.values())):
+                    layer_name = block.full_name().split("quanted_")[-1]
+                    quant_model_layers[layer_name] = [block]
+                else:
+                    quant_model_layers[block.full_name()] = []
                 for layer in block.sublayers():
                     if isinstance(layer,
                                   tuple(self._qat_layer_mapping.values())):
@@ -188,9 +192,9 @@ class ReconstructPTQ(PTQ):
                     _logger.info(
                         "Epoch {:d}, Iter {:d}, lr {}, total_loss {:.5f}, recon_loss {:.5f}, round_loss {:.5f}, time {:.5f}s"
                         .format(epoch, batch_id, self._lr,
-                                total_loss.numpy()[0],
-                                recon_loss.numpy()[0],
-                                round_loss.numpy()[0], cur_time - start_time), )
+                                float(total_loss),
+                                float(recon_loss),
+                                float(round_loss), cur_time - start_time), )
 
                     if batch_id + 1 == self._batch_nums:
                         break
@@ -211,7 +215,7 @@ class ReconstructPTQ(PTQ):
             if isinstance(layer, tuple(self._qat_layer_mapping.values())):
                 h_alpha = layer.weight_quanter.compute_soft_rounding()
                 quant_weight = self._quant(layer.weight,
-                                           layer.weight_quanter.scales(),
+                                           layer.weight_quanter.scale,
                                            layer.weight_quanter._qmax)
                 adaround_weight = paddle.floor(quant_weight) + h_alpha
                 new_alpha = adaround_weight - paddle.round(quant_weight)
