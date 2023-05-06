@@ -84,7 +84,8 @@ def _graph_flops(graph, only_conv=True, detail=False):
             output_shape = op.outputs("Out")[0].shape()
             _, c_out, h_out, w_out = output_shape
             k_size = op.attr("ksize")
-            flops += h_out * w_out * c_out * (k_size[0]**2)
+            if op.attr('pooling_type') == 'avg':
+                flops += (h_out * w_out * c_out * (k_size[0]**2) * 2)
 
         elif op.type() in ['mul', 'matmul', 'matmul_v2']:
             x_shape = list(op.inputs("X")[0].shape())
@@ -101,7 +102,11 @@ def _graph_flops(graph, only_conv=True, detail=False):
             input_shape = list(op.inputs("X")[0].shape())
             if input_shape[0] == -1:
                 input_shape[0] = 1
-            flops += np.product(input_shape)
+            if op.type() == 'batch_norm':
+                op_flops = np.product(input_shape) * 2
+            else:
+                op_flops = np.product(input_shape)
+            flops += op_flops
 
     if detail:
         return flops, params2flops
