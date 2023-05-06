@@ -140,12 +140,12 @@ def search_mobilenetv2(config, args, image_size, is_server=True):
                 fetches = [avg_cost.name]
                 s_time = time.time()
                 outs = exe.run(
-                    train_compiled_program, feed=data, fetch_list=fetches)[0]
+                    train_compiled_program, feed=data[0], fetch_list=fetches)
                 batch_time = time.time() - s_time
                 if batch_id % 10 == 0:
                     _logger.info(
                         'TRAIN: steps: {}, epoch: {}, batch: {}, cost: {}, batch_time: {}ms'.
-                        format(step, epoch_id, batch_id, outs[0], batch_time))
+                        format(step, epoch_id, batch_id, outs, batch_time))
 
         reward = []
         for batch_id, data in enumerate(test_loader()):
