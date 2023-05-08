@@ -45,7 +45,7 @@
 | SSD-MobileNetv1 |  73.8  |   73.52    |   4.0ms  |  1.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ssd_mbv1_voc_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ssd_mobilenet_v1_quant.tar) |
 - 测速环境：Tesla T4，TensorRT 8.4.1，CUDA 11.2，batch_size=1，包含NMS.
 
-### RTDETR
+### RT-DETR
 
 | 模型              | Base mAP | 离线量化mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 |  TRT-INT8  |                           配置文件                           |                           量化模型                           |
 | :---------------- | :------- | :---------: | :--------: | :------: | :------: | :--------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
