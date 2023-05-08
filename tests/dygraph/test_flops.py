@@ -73,9 +73,8 @@ class TestFLOPsCase2(unittest.TestCase):
 
 def add_cases(suite):
     suite.addTest(
-        TestFlops(
-            net=paddle.vision.models.mobilenet_v1, gt=11792896.0))
-    suite.addTest(TestFlops(net=paddle.vision.models.resnet50, gt=83872768.0))
+        TestFlops(net=paddle.vision.models.mobilenet_v1, gt=12920832.0))
+    suite.addTest(TestFlops(net=paddle.vision.models.resnet50, gt=86112768.0))
     suite.addTest(TestFLOPsCase1())
     suite.addTest(TestFLOPsCase2())
 

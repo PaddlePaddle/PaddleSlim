@@ -609,10 +609,17 @@ class AutoCompression:
             shutil.rmtree(self.tmp_dir)
 
             if self.eval_function is not None and self.final_metric < 0.0:
+                model_filename = None
+                if self.model_filename is None:
+                    model_filename = "model.pdmodel"
+                elif self.model_filename.endswith(".pdmodel"):
+                    model_filename = self.model_filename
+                else:
+                    model_filename = self.model_filename + '.pdmodel'
+
                 [inference_program, feed_target_names, fetch_targets]= load_inference_model( \
                     final_model_path, \
-                    model_filename=self.model_filename, params_filename=self.params_filename,
-                    executor=self._exe)
+                    model_filename=model_filename, executor=self._exe)
                 self.final_metric = self.eval_function(
                     self._exe, inference_program, feed_target_names,
                     fetch_targets)

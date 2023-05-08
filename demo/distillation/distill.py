@@ -208,7 +208,7 @@ def compress(args):
                 _logger.info(
                     "train_epoch {} step {} lr {:.6f}, loss {:.6f}, class loss {:.6f}, distill loss {:.6f}".
                     format(epoch_id, step_id,
-                           lr.get_lr(), loss_1[0], loss_2[0], loss_3[0]))
+                           lr.get_lr(), loss_1, loss_2, loss_3))
             lr.step()
         val_acc1s = []
         val_acc5s = []
