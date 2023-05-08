@@ -65,7 +65,7 @@
 
 - 上表测试环境：A10，TensorRT 8.6.0，CUDA 11.6，batch_size=1。
 - mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
-- 两个表中的离线量化不量化模型中matmul，ACT量化了模型中的matmul。
+- 两个表中的离线量化只量化模型中的conv2d，ACT量化模型中的conv2d和matmul。
 
 ## 3. 自动压缩流程
 
