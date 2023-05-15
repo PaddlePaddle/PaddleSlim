@@ -204,6 +204,8 @@ def merge(teacher_program,
 
     for block in reversed(student_program.blocks):
         for op_idx, op in enumerate(block.ops):
+            if op.type == 'while':
+                continue
             for output_name in op.output_names:
                 for out_var_name in op.output(output_name):
                     if name_prefix in out_var_name:
