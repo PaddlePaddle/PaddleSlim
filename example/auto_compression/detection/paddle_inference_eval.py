@@ -64,7 +64,8 @@ def argsparser():
         "--device",
         type=str,
         default="GPU",
-        help="Choose the device you want to run, it can be: CPU/GPU/XPU, default is GPU",
+        help=
+        "Choose the device you want to run, it can be: CPU/GPU/XPU, default is GPU",
     )
     parser.add_argument(
         "--use_dynamic_shape",
@@ -270,8 +271,8 @@ def load_predictor(
             dynamic_shape_file = os.path.join(FLAGS.model_path,
                                               "dynamic_shape.txt")
             if os.path.exists(dynamic_shape_file):
-                config.enable_tuned_tensorrt_dynamic_shape(dynamic_shape_file,
-                                                           True)
+                config.enable_tuned_tensorrt_dynamic_shape(
+                    dynamic_shape_file, True)
                 print("trt set dynamic shape done!")
             else:
                 config.collect_shape_range_info(dynamic_shape_file)
@@ -282,48 +283,6 @@ def load_predictor(
     config.enable_memory_optim()
     predictor = create_predictor(config)
     return predictor, rerun_flag
-
-
-def get_current_memory_mb():
-    """
-    It is used to Obtain the memory usage of the CPU and GPU during the running of the program.
-    And this function Current program is time-consuming.
-    """
-    try:
-        pkg.require('pynvml')
-    except:
-        from pip._internal import main
-        main(['install', 'pynvml'])
-    try:
-        pkg.require('psutil')
-    except:
-        from pip._internal import main
-        main(['install', 'psutil'])
-    try:
-        pkg.require('GPUtil')
-    except:
-        from pip._internal import main
-        main(['install', 'GPUtil'])
-    import pynvml
-    import psutil
-    import GPUtil
-
-    gpu_id = int(os.environ.get("CUDA_VISIBLE_DEVICES", 0))
-
-    pid = os.getpid()
-    p = psutil.Process(pid)
-    info = p.memory_full_info()
-    cpu_mem = info.uss / 1024.0 / 1024.0
-    gpu_mem = 0
-    gpu_percent = 0
-    gpus = GPUtil.getGPUs()
-    if gpu_id is not None and len(gpus) > 0:
-        gpu_percent = gpus[gpu_id].load
-        pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-        meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        gpu_mem = meminfo.used / 1024.0 / 1024.0
-    return round(cpu_mem, 4), round(gpu_mem, 4)
 
 
 def predict_image(predictor,
@@ -353,6 +312,7 @@ def predict_image(predictor,
     predict_time = 0.0
     time_min = float("inf")
     time_max = float("-inf")
+    paddle.device.cuda.synchronize()
     for i in range(repeats):
         start_time = time.time()
         predictor.run()
@@ -367,13 +327,8 @@ def predict_image(predictor,
         time_min = min(time_min, timed)
         time_max = max(time_max, timed)
         predict_time += timed
-        cpu_mem, gpu_mem = get_current_memory_mb()
-        cpu_mems += cpu_mem
-        gpu_mems += gpu_mem
 
     time_avg = predict_time / repeats
-    print("[Benchmark]Avg cpu_mem:{} MB, avg gpu_mem: {} MB".format(
-        cpu_mems / repeats, gpu_mems / repeats))
     print("[Benchmark]Inference time(ms): min={}, max={}, avg={}".format(
         round(time_min * 1000, 2),
         round(time_max * 1000, 1), round(time_avg * 1000, 1)))
@@ -406,6 +361,7 @@ def eval(predictor, val_loader, metric, rerun_flag=False):
         for i, _ in enumerate(input_names):
             input_tensor = predictor.get_input_handle(input_names[i])
             input_tensor.copy_from_cpu(data_all[input_names[i]])
+        paddle.device.cuda.synchronize()
         start_time = time.time()
         predictor.run()
         np_boxes = boxes_tensor.copy_to_cpu()
@@ -418,9 +374,6 @@ def eval(predictor, val_loader, metric, rerun_flag=False):
         time_min = min(time_min, timed)
         time_max = max(time_max, timed)
         predict_time += timed
-        cpu_mem, gpu_mem = get_current_memory_mb()
-        cpu_mems += cpu_mem
-        gpu_mems += gpu_mem
         if not FLAGS.include_nms:
             postprocess = PPYOLOEPostProcess(
                 score_threshold=0.3, nms_threshold=0.6)
@@ -436,8 +389,6 @@ def eval(predictor, val_loader, metric, rerun_flag=False):
     map_res = metric.get_results()
     metric.reset()
     time_avg = predict_time / sample_nums
-    print("[Benchmark]Avg cpu_mem:{} MB, avg gpu_mem: {} MB".format(
-        cpu_mems / sample_nums, gpu_mems / sample_nums))
     print("[Benchmark]Inference time(ms): min={}, max={}, avg={}".format(
         round(time_min * 1000, 2),
         round(time_max * 1000, 1), round(time_avg * 1000, 1)))
@@ -473,9 +424,10 @@ def main():
 
         dataset = reader_cfg["EvalDataset"]
         global val_loader
-        val_loader = create("EvalReader")(reader_cfg["EvalDataset"],
-                                          reader_cfg["worker_num"],
-                                          return_list=True)
+        val_loader = create("EvalReader")(
+            reader_cfg["EvalDataset"],
+            reader_cfg["worker_num"],
+            return_list=True)
         clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
         anno_file = dataset.get_anno()
         metric = COCOMetric(
