@@ -20,7 +20,7 @@ import paddle
 from ...common import get_logger
 from .utils.utils import compute_start_end, get_same_padding, convert_to_list
 from .layers_base import *
-from paddle.framework import in_dygraph_mode
+from paddle.framework import in_dynamic_mode
 
 __all__ = [
     'SuperConv2D', 'SuperConv2DTranspose', 'SuperSeparableConv2D',
@@ -985,7 +985,7 @@ class SuperBatchNorm2D(paddle.nn.BatchNorm2D):
                  "use_global_stats", self._use_global_stats,
                  "trainable_statistics", trainable_statistics)
 
-        if in_dygraph_mode():
+        if in_dynamic_mode():
             paddle_compile = os.environ.get("paddle_compile")
             if feature_dim != self._mean.shape[0]:
                 if not paddle_compile or "Develop" in paddle_compile:
