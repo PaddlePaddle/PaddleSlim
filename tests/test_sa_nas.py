@@ -33,7 +33,7 @@ def compute_op_num(program):
                 ch_list.append(int(param.shape[0]))
     return params, ch_list
 
-
+# 测试一下
 class TestSANAS(StaticCase):
     def setUp(self):
         paddle.enable_static()
