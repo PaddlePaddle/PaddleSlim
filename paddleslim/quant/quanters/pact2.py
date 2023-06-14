@@ -184,8 +184,8 @@ class PACT2QuanterLayer(BaseFakeQuanterLayer):
         # downsample for fast_mode
         fast_stride = 2
         fast_stride2 = fast_stride * 2
-        if fast_mode and len(src.size()) == 4 and (
-                src.size(2) > fast_stride2) and (src.size(3) > fast_stride2):
+        if fast_mode and len(src.shape) == 4 and (
+                src.shape[2] > fast_stride2) and (src.shape[3] > fast_stride2):
             r_start = random.randint(0, fast_stride - 1)
             c_start = random.randint(0, fast_stride - 1)
             src = src[..., r_start::fast_stride, c_start::fast_stride]
@@ -202,11 +202,10 @@ class PACT2QuanterLayer(BaseFakeQuanterLayer):
         mult_factor = (num_bins / range_val)
         tensor_int = (src.flatten() - offset) * mult_factor
         tensor_int = paddle.round(tensor_int)
-        tensor_int = paddle.cast(tensor_int, dtype='int64')
 
-        hist = paddle.bincount(tensor_int)
-        hist_sum = paddle.sum(hist)
-        hist_array = hist.numpy() * cum_freq / float(hist_sum)
+        hist = np.bincount(tensor_int.numpy().astype(np.int32))
+        hist_sum = np.sum(hist)
+        hist_array = hist.astype(np.float32) * cum_freq / float(hist_sum)
         return hist_array, mn, mx, mult_factor, offset
 
     def _extrema_hist_search(self, hist_array, range_shrink_percentile=0.01):
