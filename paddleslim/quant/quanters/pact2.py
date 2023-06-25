@@ -84,12 +84,12 @@ class PACT2QuanterLayer(BaseFakeQuanterLayer):
 
     def forward(self, activation):
         self._current_iters += 1
-        if self._update_range:
+        if self.training and self._update_range:
             with paddle.no_grad():
                 self._update_clip_range(activation)
         clips = self._get_clips_value()
         act = paddle.clip(activation, clips[0], clips[1])
-        self._scale.set_value(clips[1])
+        self._scale.set_value(clips[1].unsqueeze(0))
         return self._quant_dequant(act)
 
     def _update_clip_range(self, act):
