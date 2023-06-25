@@ -74,7 +74,7 @@ class PACT2QuanterLayer(BaseFakeQuanterLayer):
         scale_name = unique_name.generate(scale_prefix)
 
         scale_attr = paddle.ParamAttr(
-            name=scale_name, initializer=Constant(1.0), trainable=True)
+            name=scale_name, initializer=Constant(1.0), trainable=False)
         self._scale = self.create_parameter(
             shape=[1], attr=scale_attr, dtype='float32')
 
