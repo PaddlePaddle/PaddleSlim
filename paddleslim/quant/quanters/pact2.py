@@ -121,8 +121,8 @@ class PACT2QuanterLayer(BaseFakeQuanterLayer):
             new_mn = (new_mn_scaled / mult_factor) + offset
             new_mx = (new_mx_scaled / mult_factor) + offset
 
-            new_mn = paddle.max(min_value, new_mn)
-            new_mx = paddle.min(max_value, new_mx)
+            new_mn = max(min_value, new_mn)
+            new_mx = min(max_value, new_mx)
             return new_mn, new_mx
 
         elif self._extrema_mode == 'sigma':
