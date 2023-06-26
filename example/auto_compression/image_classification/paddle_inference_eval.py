@@ -54,6 +54,8 @@ def argsparser():
     parser.add_argument(
         "--use_gpu", type=bool, default=False, help="Whether to use gpu")
     parser.add_argument(
+        "--use_custom_device", type=bool, default=False, help="Whether to use CustomDevice")
+    parser.add_argument(
         "--use_trt", type=bool, default=False, help="Whether to use tensorrt")
     parser.add_argument(
         "--use_mkldnn", type=bool, default=False, help="Whether to use mkldnn")
@@ -124,6 +126,14 @@ class Predictor(object):
 
         if args.use_gpu:
             config.enable_use_gpu(args.gpu_mem, 0)
+        elif args.use_custom_device:
+            config.disable_gpu()
+            config.enable_custom_device(paddle.device.get_all_custom_device_type()[0] , 0)
+            if args.use_mkldnn:
+                config.enable_mkldnn()
+                if args.use_int8:
+                    config.enable_mkldnn_int8(
+                        {"conv2d", "depthwise_conv2d", "transpose2", "pool2d"})
         else:
             config.disable_gpu()
             config.set_cpu_math_library_num_threads(args.cpu_num_threads)
