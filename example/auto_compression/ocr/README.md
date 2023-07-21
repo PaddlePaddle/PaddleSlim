@@ -47,14 +47,20 @@ python -m pip install paddlepaddle-gpu==2.4.1.post112 -f https://www.paddlepaddl
 pip install paddleslim
 ```
 
+安装其他依赖：
+```shell
+pip install scikit-image imgaug
+```
+
+
 下载PaddleOCR:
 ```shell
 git clone -b release/2.6 https://github.com/PaddlePaddle/PaddleOCR.git
 ```
-> 下载 [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR.git) 的目的只是为了直接使用 PaddleOCR 中的 Dataloader 组件和精度评估模块，不涉及模型组网等。通过 `pip install paddleocr` 安装的 paddleocr 只有预测代码，没有数据集读取和精度评估的部分，因此需要下载 PaddleOCR 库。
+> 你需要下载到 Paddleslim/example/auto_compression/ 目录下并运行 pip install -r requirements.txt 安装依赖。下载 [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR.git) 的目的只是为了直接使用 PaddleOCR 中的 Dataloader 组件和精度评估模块，不涉及模型组网等。通过 `pip install paddleocr` 安装的 paddleocr 只有预测代码，没有数据集读取和精度评估的部分，因此需要下载 PaddleOCR 库。
 
 ### 3.2 准备数据集
-公开数据集可参考[OCR数据集](https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.6/doc/doc_ch/dataset/ocr_datasets.md)。
+公开数据集可参考[OCR数据集](https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.6/doc/doc_ch/dataset/ocr_datasets.md)，然后根据程序运行过程中提示放置到对应位置。
 
 > 注意：使用不同的数据集需要修改配置文件中`dataset`中数据路径和数据处理部分。
 
@@ -63,11 +69,16 @@ git clone -b release/2.6 https://github.com/PaddlePaddle/PaddleOCR.git
 
 > 注：其他像`__model__`和`__params__`分别对应`model.pdmodel` 和 `model.pdiparams`文件。
 
-可在[PaddleOCR模型库](https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.6/doc/doc_ch/models_list.md)中直接获取Inference模型，具体可参考下方获取中文PPOCRV3检测模型示例：
+可在[PaddleOCR模型库](https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.6/doc/doc_ch/models_list.md)中直接获取Inference模型，具体可参考下方获取中文PPOCRV3模型示例：
 
 ```shell
 wget https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_det_infer.tar
 tar -xf ch_PP-OCRv3_det_infer.tar
+```
+
+```shell
+wget https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_rec_infer.tar
+tar -xf ch_PP-OCRv3_rec_infer.tar
 ```
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口 ```paddleslim.auto_compression.AutoCompression``` 对模型进行量化训练和蒸馏。配置config文件中模型路径、数据集路径、蒸馏、量化和训练等部分的参数，配置完成后便可开始自动压缩。
