@@ -1,0 +1,25 @@
+Global:
+  reader_config: configs/dataset/composition-1k_dataset.yaml
+  model_dir: ./output/PPMatting
+  model_filename: model.pdmodel
+  params_filename: model.pdiparams
+  batch_size: 4
+
+Distillation:
+  alpha: 1.0
+  loss: soft_label
+  
+QuantAware:
+  onnx_format: True
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+
+TrainConfig:
+  epochs: 2
+  eval_iter: 1000
+  learning_rate: 0.00001
+  optimizer_builder:
+    optimizer: 
+      type: SGD
+    weight_decay: 4.0e-05
