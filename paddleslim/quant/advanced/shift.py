@@ -86,7 +86,6 @@ class Shift():
                 self._forward_hook_list.append(forward_pre_hook_handle)
 
     def _get_shift_layers(self):
-        print(self.layer_order)
         self.ln_linear_dict, self.linear_ln_dict = get_ln_linear_info(
             self.layer_order, self.norm_flag, self.linear_flag, self.fused_qkv,
             self.parallel_ffn, self.skip_norm_list)
