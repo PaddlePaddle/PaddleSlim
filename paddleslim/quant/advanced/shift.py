@@ -61,8 +61,7 @@ class Shift():
         self.layer_order = []
         self.zero_point_dict = {}
         self.smooth_scale_dict = {}
-        self.global_min = float('inf')
-        self.global_max = float('-inf')
+        self.glabal_min_max = {}
 
         self.model.eval()
         self.step = 0
@@ -141,19 +140,26 @@ class Shift():
         zero_point = x.mean(axis=(0, 1)) if len(x.shape) > 2 else x.mean(axis=1)
         _min, _max = x.min(), x.max()
 
-        if ln_name not in self.zero_point_dict:
-            self.zero_point_dict[ln_name] = zero_point
+        if ln_name not in self.zero_point_dict or ln_name not in self.glabal_min_max:
+
+            if self.sample_function is None:
+                self.glabal_min_max[ln_name] = _min, _max
+                self.zero_point_dict[ln_name] = paddle.ones_like(zero_point) * (
+                    _min + _max) / 2
+            else:
+                self.zero_point_dict[ln_name] = zero_point
+
         else:
             if self.sample_function is not None:
-
                 self.zero_point_dict[ln_name] = self.sample_function.sample(
                     zero_point, self.zero_point_dict[ln_name], ln_name)
             else:
-                # self.zero_point_dict[ln_name] = zero_point
-                self.global_min = _min if _min < self.global_min else self.global_min
-                self.global_max = _max if _max > self.global_max else self.global_max
+                global_min, global_max = self.glabal_min_max[ln_name]
+                global_min = global_min if global_min < _min else _min
+                global_max = global_max if global_max > _max else _max
+                self.glabal_min_max[ln_name] = global_min, global_max
                 self.zero_point_dict[ln_name] = paddle.ones_like(zero_point) * (
-                    self.global_min + self.global_max) / 2
+                    global_min + global_max) / 2
 
         # per step print once
         if self.print_step == self.step:
