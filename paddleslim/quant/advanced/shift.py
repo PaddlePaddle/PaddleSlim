@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from re import sub
 import numpy as np
 import paddle
 from .utils import get_ln_linear_info, find_parent_layer_and_sub_name
@@ -54,7 +55,6 @@ class Shift():
         self.norm_flag = model_config.get("norm_flag", 'norm')
         self.parallel_ffn = model_config.get("parallel_ffn", False)
         self.skip_norm_list = model_config.get("skip_norm_list", [])
-
         self.shift_all_linears = shift_all_linears
         self.sample_function = sample_function
 
@@ -86,6 +86,7 @@ class Shift():
                 self._forward_hook_list.append(forward_pre_hook_handle)
 
     def _get_shift_layers(self):
+        print(self.layer_order)
         self.ln_linear_dict, self.linear_ln_dict = get_ln_linear_info(
             self.layer_order, self.norm_flag, self.linear_flag, self.fused_qkv,
             self.parallel_ffn, self.skip_norm_list)
@@ -137,6 +138,7 @@ class Shift():
         x = input[0] if type(input) == tuple else input
         x = x.cast('float32')
         x.stop_gradient = True
+
         zero_point = x.mean(axis=(0, 1)) if len(x.shape) > 2 else x.mean(axis=1)
         _min, _max = x.min(), x.max()
 
@@ -144,9 +146,11 @@ class Shift():
             self.zero_point_dict[ln_name] = zero_point
         else:
             if self.sample_function is not None:
+
                 self.zero_point_dict[ln_name] = self.sample_function.sample(
                     zero_point, self.zero_point_dict[ln_name], ln_name)
             else:
+                # self.zero_point_dict[ln_name] = zero_point
                 self.global_min = _min if _min < self.global_min else self.global_min
                 self.global_max = _max if _max > self.global_max else self.global_max
                 self.zero_point_dict[ln_name] = paddle.ones_like(zero_point) * (
@@ -183,6 +187,7 @@ class Shift():
                                      float(zero_point.min()),
                                      float(zero_point.max())))
                         break
+
                 if not hasattr(sub_layer, "bias") or sub_layer.bias is None:
                     sub_layer.bias = paddle.create_parameter(
                         shape=shift_bias.shape,
@@ -214,9 +219,8 @@ class Shift():
                         zero_point = self.zero_point_dict[layer_name].squeeze()
                         param_tmp = param - zero_point
                         paddle.assign(param_tmp.cast(param.dtype), output=param)
-                        print(
-                            "[shift WOBiasHelpLayer] update layer_norm {} weight.".
-                            format(param.name))
+                        print("[shift] update layer_norm bias {}.".format(
+                            param.name))
                         break
 
         # update ShiftSmoothRowParallelLinear weight
@@ -231,6 +235,7 @@ class Shift():
                            float(sub_layer.shift_bias.cast("float32").min()),
                            float(sub_layer.shift_bias.max().cast("float32"))))
                 sub_layer.convert_weight(shift_bias=zero_point)
+
                 print(
                     "[shift ShiftSmoothHelpLayer] after param: {}, shift_bias min: {}, max: {}".
                     format(linear_name,
