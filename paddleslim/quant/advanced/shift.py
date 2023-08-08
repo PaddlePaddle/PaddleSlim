@@ -138,14 +138,14 @@ class Shift():
         x.stop_gradient = True
 
         zero_point = x.mean(axis=(0, 1)) if len(x.shape) > 2 else x.mean(axis=1)
-        _min, _max = x.min(), x.max()
+        _min = x.min(axis=(0, 1)) if len(x.shape) > 2 else x.min(axis=1)
+        _max = x.max(axis=(0, 1)) if len(x.shape) > 2 else x.max(axis=1)
 
         if ln_name not in self.zero_point_dict or ln_name not in self.glabal_min_max:
 
             if self.sample_function is None:
                 self.glabal_min_max[ln_name] = _min, _max
-                self.zero_point_dict[ln_name] = paddle.ones_like(zero_point) * (
-                    _min + _max) / 2
+                self.zero_point_dict[ln_name] = (_min + _max) / 2
             else:
                 self.zero_point_dict[ln_name] = zero_point
 
@@ -158,8 +158,7 @@ class Shift():
                 global_min = global_min if global_min < _min else _min
                 global_max = global_max if global_max > _max else _max
                 self.glabal_min_max[ln_name] = global_min, global_max
-                self.zero_point_dict[ln_name] = paddle.ones_like(zero_point) * (
-                    global_min + global_max) / 2
+                self.zero_point_dict[ln_name] = (global_min + global_max) / 2
 
         # per step print once
         if self.print_step == self.step:

@@ -40,8 +40,8 @@
 ### 2. PTQ接口介绍：
 | **PTQ接口**  | **传入参数及其含义**                              | **介绍**                              |
 |-----------------------------|-----------------------------------------|-----------------------------------------|
-| quantize | model：需要被量化的模型 <br> inplace：inplace=True时，该模型会被inplace的量化；inplace=False时，不改变原模型，并且会return一个量化的模型 | 对模型需要量化的层插入observers以采样到需要的量化信息
-| convert | model：需要被转化的量化模型 <br> inplace：inplace=True时，该模型会被inplace的量化；inplace=False时，不改变原模型，并且会return一个量化的模型 | 将模型转化成onnx形式，进行此步骤之后才能对量化模型进行验证、导出成静态图等
+| quantize | `model`：需要被量化的模型 <br> `inplace`：inplace=True时，该模型会被inplace的量化；inplace=False时，不改变原模型，并且会return一个量化的模型 | 对模型需要量化的层插入observers以采样到需要的量化信息
+| convert | `model`：需要被转化的量化模型 <br> `inplace`：inplace=True时，该模型会被inplace的量化；inplace=False时，不改变原模型，并且会return一个量化的模型 | 将模型转化成onnx形式，进行此步骤之后才能对量化模型进行验证、导出成静态图等
 
 
 ## 使用示例
@@ -83,7 +83,7 @@ model = ptq.quantize(model, inplace=True)
 
 # ptq sample
 ptq_step = 100
-for step in range(ptq_step):
+for step, data in enumerate(dataloader):
     pred = model(data)
     if step == ptq_step:
         break
