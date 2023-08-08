@@ -131,3 +131,28 @@ for cur_name, cur_layer in model.named_sublayers():
 
 
 ## 5. LayerWiseQuantError
+LayerWiseQuantError是按层级别分析量化损失的方法，对于模型中每一层，量化后，计算当前层量化输出和原始模型输出的误差。
+| **参数名**                   | **参数类型**                              | **参数释义**                              |
+|-----------------------------|-----------------------------------------|-----------------------------------------|
+| layer | paddle.nn.Layer |必须入的需要量化的层，现仅支持nn.Linear，ColumnParallelLinear和RowParallelLinear类型 |
+| weight_bits | int | 可选参数，权重量化比特数，默认为8 |
+| act_bits| int | 可选参数，激活量化比特数，默认为8 |
+| weight_quant_method| str | 可选参数，权重量化方法，可选`abs_max`，`abs_max_channel_wise`，`avg`，默认为`abs_max_channel_wise` |
+| act_quant_method| str | 可选参数，激活量化方法，可选`abs_max`，`avg` |
+| loss_function | function | 可选参数，使用的误差函数，默认为mse_loss |
+
+```shell
+from paddleslim.quant.advanced import LayerWiseQuantError
+
+model = LLM()
+for cur_name, cur_layer in model.named_sublayers():
+    if type(cur_layer) == paddle.nn.Linear:
+        gptq_layer = LayerWiseQuantError(cur_layer)
+
+for data in dataloader():
+    model(data)
+
+for cur_name, cur_layer in model.named_sublayers():
+    if type(cur_layer) == LayerWiseQuantError:
+        print(cur_name, cur_layer.losses.mean())
+```
