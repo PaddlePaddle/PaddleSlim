@@ -32,10 +32,10 @@
 `QuantConfig`：在执行量化操作之前，首先要配置量化相关的信息，主要是指定每层的各个输入使用什么Observer或Quanter。可通过以下调用方法，根据需求添加每层的量化配置信息：
 | **QuantConfig接口**  | **传入参数及其含义**                              | **注意事项**                              |
 |-----------------------------|-----------------------------------------|-----------------------------------------|
-| add_layer_config | layer: 指定模型的某一层或某些层的list<br>activation: 用于量化激活以上指定layer的`Observer`或`Quanter` <br> weight: 用于量化权重以上指定layer的`Observer`或`Quanter` | 此方法是最高优的要求，这些层的量化方式将按照这里的要求，而不是按照其他配置进行量化
-| add_name_config | layer_name: 指定模型的某一层的名字或某些层的名字的list <br> activation: 用于量化激活以上指定layer的`Observer`或`Quanter` <br> weight: 用于量化权重以上指定layer的`Observer`或`Quanter` | 此方法的优先级仅此于add_layer_config
-| add_type_config | layer_type：指定需要量化的layer类型，可以为单个layer类型，或一个layer类型的list，layer类型必须为paddle.nn.Layer的子类 <br> activation: 用于量化激活以上指定layer的`Observer`或`Quanter` <br> weight: 用于量化权重以上指定layer的`Observer`或`Quanter` | 此方法的优先级此于add_name_config，指定需要量化的layer类型，如nn.Linear, 量化时将对所有nn.Linear进行量化，并指定weight和activation的quanter类型
-| add_qat_layer_mapping | source：被量化的layer <br> target：量化的layer | source和target必须为paddle.nn.Layer的子类；当指定需要量化的layer类型，如果在框架中没有实现该层量化时，需要指定该layer的量化层，比如ColumnParallelLinear对应PaddleSlim中实现的QuantizedColumnParallelLinear
+| add_layer_config | `layer`: 指定模型的某一层或某些层的list<br><br>`activation`: 用于量化激活以上指定layer的`Observer`或`Quanter` <br><br> `weight`: 用于量化权重以上指定layer的`Observer`或`Quanter` | 此方法是最高优的要求，这些层的量化方式将按照这里的要求，而不是按照其他配置进行量化
+| add_name_config | `layer_name`: 指定模型的某一层的名字或某些层的名字的list <br><br> `activation`: 用于量化激活以上指定layer的`Observer`或`Quanter` <br><br> `weight`: 用于量化权重以上指定layer的`Observer`或`Quanter` | 此方法的优先级仅此于add_layer_config
+| add_type_config | `layer_type`：指定需要量化的layer类型，可以为单个layer类型，或一个layer类型的list，layer类型必须为paddle.nn.Layer的子类 <br><br> `activation`: 用于量化激活以上指定layer的`Observer`或`Quanter` <br><br> `weight`: 用于量化权重以上指定layer的`Observer`或`Quanter` | 此方法的优先级此于add_name_config，指定需要量化的layer类型，如nn.Linear, 量化时将对所有nn.Linear进行量化，并指定weight和activation的quanter类型
+| add_qat_layer_mapping | `source`：被量化的layer <br><br> `target`：量化的layer | source和target必须为paddle.nn.Layer的子类；当指定需要量化的layer类型，如果在框架中没有实现该层量化时，需要指定该layer的量化层，比如ColumnParallelLinear对应PaddleSlim中实现的QuantizedColumnParallelLinear
 
 ### 2. PTQ接口介绍：
 | **PTQ接口**  | **传入参数及其含义**                              | **介绍**                              |
