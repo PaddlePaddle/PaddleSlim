@@ -81,8 +81,8 @@ class PieceWiseSearch():
             centroids, labels = k_means(act_abs_max, k_piece)
             piece = ['piece_{}'.format(a) for a in range(len(centroids))]
             for i in range(len(centroids)):
-                print('search for piece {}; centroids value is {}'.format(
-                    piece[i], centroids[centroids.argsort()[i]].numpy()))
+                # print('search for piece {}; centroids value is {}'.format(
+                #     piece[i], centroids[centroids.argsort()[i]].numpy()))
                 alpha = self.search_alpha_min
                 alpha_max = self.search_scale_max
                 calibration_loss = float('inf')
@@ -138,21 +138,21 @@ class PieceWiseSearch():
                     new_out = paddle.matmul(quant_dequant_act,
                                             quant_dequant_weight)
 
-                    mse_loss = ((origin_out - new_out)**2).mean()
-                    if mse_loss <= calibration_loss:
-                        calibration_loss = mse_loss
+                    cur_loss = self.loss_function(origin_out, new_out)
+                    if cur_loss <= calibration_loss:
+                        calibration_loss = cur_loss
                         final_smooth_scale = smooth_scale
                         final_alpha = alpha
 
-                print("Layer {} Piece {}, loss: {}, alpha : {}".format(
-                    layer_name, piece[i], float(calibration_loss), final_alpha))
+                # print("Layer {} Piece {}, loss: {}, alpha : {}".format(
+                #     layer_name, piece[i], float(calibration_loss), final_alpha))
                 if smooth_scale_out is None:
                     smooth_scale_out = final_smooth_scale
                 else:
                     smooth_scale_out += final_smooth_scale
 
-            if mse_loss < global_loss:
-                global_loss = mse_loss
+            if cur_loss < global_loss:
+                global_loss = cur_loss
                 best_scale = smooth_scale_out
                 if self.search_piece:
                     print('Find Better K-Piece {}'.format(k_piece))
