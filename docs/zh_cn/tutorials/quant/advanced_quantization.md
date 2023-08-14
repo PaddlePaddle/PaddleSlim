@@ -4,6 +4,7 @@
 ## **LLM量化效果Benchmark**
 
 1. Pretrained开源任务下，使用数据集C-eval，指标为acc，INT8 PTQ量化实验对比
+
 | 模型名称及大小 | baseline-fp16 | regular-int8 | regular-smooth-int8 | regular-shift-int8 | regular-shift-smooth-int8 | paddleslim-int8 |
 | ------------- | ------------- | ------------- | ----------- | ----------- | ----------- | ----------- |
 | LLama 13b | 0.3298 |  0.2496 | 0.2778 | 0.2548 | 0.2466 |  **0.3269** |
@@ -11,6 +12,7 @@
 | ChatGLM2 6b | 0.3157 | 0.2994 | 0.2986 | 0.2726 | 0.2429 | **0.3455** |
 
 2. Finetuned下游任务下，使用数据集nl2sql，指标为acc，INT8 PTQ量化实验对比
+
 | 模型名称及大小 | baseline-fp16 | regular-int8 | regular-smooth-int8 | regular-shift-int8 | regular-shift-smooth-int8 | PaddleSlim-int8 |
 | ------------- | ------------- | ------------- | ----------- | ----------- | ----------- | ----------- |
 | LLama 13b | 0.7832 |  0.3405 | 0.4236 | 0.3335 | 0.4526 |  **0.7807** |
@@ -18,6 +20,7 @@
 | ChatGLM2 6b | 0.7646 | 0.6408 | 0.6429 | 0.5783 | 0.5889 | **0.7689** |
 
 3. Pretrained开源任务和Finetuned下游任务下，Weight Only Int4量化实验对比
+
 | 模型名称及大小 | 任务类型/数据集 | baseline-fp16 | regular-int4 | PaddleSlim-int4 |
 | ------------- | ------------- | ------------- | ----------- | ----------- |
 | LLama 13b | Pretrained开源任务/C-eval |  0.3405 | 0.2927 | **0.3232** |
