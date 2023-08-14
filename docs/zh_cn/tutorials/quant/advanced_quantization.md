@@ -13,6 +13,22 @@
 | - | paddleslim-int8 | **0.7807** | **0.3269** |
 | - | regular-int4 | 0.7548 | 0.2927 |
 | - | paddleslim-int4 | **0.7755** | **0.3232** |
+| Bloom 7.1b |  baseline-fp16 | 0.7718 | 0.4108 |
+| - |  regular-int8 |  0.7648 | 0.3826 |
+| - |  regular-smooth-int8 |  0.7657 | 0.3870 |
+| - | regular-shift-int8 | 0.6899 | 0.3997 |
+| - | regular-shift-smooth-int8 | 0.7677 | 0.3722 |
+| - | paddleslim-int8 | **0.7704** | **0.4063** |
+| - | regular-int4 | 0.7518 | 0.3803 |
+| - | paddleslim-int4 | **0.7682** | **0.3937** |
+| ChatGLM2 6b |  baseline-fp16 | 0.7646 | 0.3157 |
+| - |  regular-int8 |  0.6408 | 0.2994 |
+| - |  regular-smooth-int8 |  0.6429 | 0.2986 |
+| - | regular-shift-int8 | 0.5783 | 0.2726 |
+| - | regular-shift-smooth-int8 | 0.5889 | 0.2429 |
+| - | paddleslim-int8 | **0.7689** | **0.3455** |
+| - | regular-int4 | 0.7420 | 0.2630 |
+| - | paddleslim-int4 | **0.7566** | **0.3150** |
 
 
 以下方法暂时仅支持Transformer模型，具体示例使用方法可参考[PaddleNLP LLM示例](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/llm#6-%E9%87%8F%E5%8C%96)，以下教程仅详细介绍API接口。
