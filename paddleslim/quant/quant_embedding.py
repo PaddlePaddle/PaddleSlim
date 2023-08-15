@@ -41,7 +41,9 @@ SUPPORT_QUANTIZE_TYPES = ['abs_max', 'log']
 SUPPORT_QUANTIZE_BITS = [8, 16]
 SUPPORT_DTYPE = ['int8', 'int16']
 
-_default_config = {"quantize_op_types": SUPPORT_OP_TYPES, }
+_default_config = {
+    "quantize_op_types": SUPPORT_OP_TYPES,
+}
 
 
 def _merge_config(old_config, new_config):
@@ -175,8 +177,8 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
         """
         bit_length = config['quantize_bits']
         scale = np.max(np.abs(tensor_array)).astype("float32")
-        quanted_tensor = np.round(tensor_array / scale * (
-            (1 << (bit_length - 1)) - 1))
+        quanted_tensor = np.round(tensor_array / scale *
+                                  ((1 << (bit_length - 1)) - 1))
         return scale, quanted_tensor.astype(config['dtype'])
 
     def _insert_dequant_abs_max_op(graph, scope, var_node, scale_node, config):
@@ -197,7 +199,8 @@ def _quant_embedding_abs_max(graph, scope, place, config, var_name,
         dequant_op = graph.create_op_node(
             op_type='dequantize_abs_max',
             attrs={
-                'max_range': float(max_range),
+                'max_range':
+                float(max_range),
                 'op_role':
                 paddle.framework.core.op_proto_and_checker_maker.OpRole.Forward
             },
@@ -279,8 +282,9 @@ def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
         for i in range(len(num_array)):
             value = num_array[i]
             idx = res[i]
-            if idx > 0 and ((idx == length) or (
-                    abs(array[idx - 1] - value) < abs(array[idx] - value))):
+            if idx > 0 and (
+                (idx == length) or
+                (abs(array[idx - 1] - value) < abs(array[idx] - value))):
                 res_refine.append(idx - 1)
             else:
                 res_refine.append(idx)
@@ -291,8 +295,8 @@ def _quant_embedding_log(graph, scope, place, config, var_name, embedding_node):
         quant array using log op
         """
         bit_length = config['quantize_bits']
-        log_and_quant = np.round(np.log2(np.abs(tensor_array)) /
-                                 _inverval) * _inverval
+        log_and_quant = np.round(
+            np.log2(np.abs(tensor_array)) / _inverval) * _inverval
         unique, counts = np.unique(log_and_quant, return_counts=True)
         topk_num = np.sort(unique)[-int(_dict_len / 2):]
 
@@ -451,7 +455,7 @@ def quant_embedding(program, place, config=None, scope=None):
     config = _merge_config(copy.deepcopy(_default_config), config)
     scope = paddle.static.global_scope() if scope is None else scope
 
-    graph = paddle.fluid.framework.IrGraph(
+    graph = paddle.framework.IrGraph(
         paddle.framework.core.Graph(program.desc), for_test=True)
     quantize_params_map = {}
     all_op = graph.all_op_nodes()

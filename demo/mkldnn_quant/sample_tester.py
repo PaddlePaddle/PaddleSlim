@@ -22,7 +22,7 @@ import six
 import numpy as np
 import time
 import paddle
-from paddle.fluid.framework import IrGraph
+from paddle.framework import IrGraph
 from paddle.framework import core
 
 logging.basicConfig(format='%(asctime)s-%(levelname)s: %(message)s')
@@ -49,7 +49,8 @@ def parse_args():
         '--batch_num',
         type=int,
         default=0,
-        help='Number of batches to process. 0 or less means whole dataset. Default: 0.'
+        help=
+        'Number of batches to process. 0 or less means whole dataset. Default: 0.'
     )
     parser.add_argument(
         '--with_accuracy_layer',
@@ -79,8 +80,8 @@ class SampleTester(unittest.TestCase):
                 while step < num:
                     fp.seek(imgs_offset + img_size * step)
                     img = fp.read(img_size)
-                    img = struct.unpack_from(
-                        '{}f'.format(img_ch * img_w * img_h), img)
+                    img = struct.unpack_from('{}f'.format(
+                        img_ch * img_w * img_h), img)
                     img = np.array(img)
                     img.shape = (img_ch, img_w, img_h)
                     fp.seek(labels_offset + label_size * step)
@@ -127,10 +128,8 @@ class SampleTester(unittest.TestCase):
                 conv_op_node = graph.create_op_node(
                     op_type='conv2d',
                     attrs=attrs,
-                    inputs={
-                        'Input': input_var_node,
-                        'Filter': weight_var_node
-                    },
+                    inputs={'Input': input_var_node,
+                            'Filter': weight_var_node},
                     outputs={'Output': output_var_node})
 
                 graph.link_to(input_var_node, conv_op_node)
@@ -152,8 +151,9 @@ class SampleTester(unittest.TestCase):
         inference_scope = paddle.static.Executor.global_scope()
         with paddle.static.scope_guard(inference_scope):
             if os.path.exists(os.path.join(model_path, '__model__')):
-                [inference_program, feed_target_names, fetch_targets
-                 ] = paddle.static.load_inference_model(model_path, exe)
+                [inference_program, feed_target_names,
+                 fetch_targets] = paddle.static.load_inference_model(
+                     model_path, exe)
             else:
                 [inference_program, feed_target_names,
                  fetch_targets] = paddle.static.load_inference_model(
@@ -193,24 +193,26 @@ class SampleTester(unittest.TestCase):
                 if (with_accuracy_layer == False):
                     # models that do not have accuracy measuring layers
                     start = time.time()
-                    out = exe.run(inference_program,
-                                  feed={feed_target_names[0]: images},
-                                  fetch_list=fetch_targets)
+                    out = exe.run(
+                        inference_program,
+                        feed={feed_target_names[0]: images},
+                        fetch_list=fetch_targets)
                     batch_time = (time.time() - start) * 1000  # in miliseconds
                     outputs.append(out[0])
                     # Calculate accuracy result
-                    batch_acc1, batch_acc5 = self._get_batch_accuracy(out[0],
-                                                                      labels)
+                    batch_acc1, batch_acc5 = self._get_batch_accuracy(
+                        out[0], labels)
                 else:
                     # models have accuracy measuring layers
                     labels = labels.reshape([-1, 1])
                     start = time.time()
-                    out = exe.run(inference_program,
-                                  feed={
-                                      feed_target_names[0]: images,
-                                      feed_target_names[1]: labels
-                                  },
-                                  fetch_list=fetch_targets)
+                    out = exe.run(
+                        inference_program,
+                        feed={
+                            feed_target_names[0]: images,
+                            feed_target_names[1]: labels
+                        },
+                        fetch_list=fetch_targets)
                     batch_time = (time.time() - start) * 1000  # in miliseconds
                     batch_acc1, batch_acc5 = out[1][0], out[2][0]
                     outputs.append(batch_acc1)
@@ -225,8 +227,8 @@ class SampleTester(unittest.TestCase):
                 appx = ' (warm-up)' if iters <= skip_batch_num else ''
                 _logger.info('batch {0}{5}, acc1: {1:.4f}, acc5: {2:.4f}, '
                              'latency: {3:.4f} ms, fps: {4:.2f}'.format(
-                                 iters, batch_acc1, batch_acc5, batch_time /
-                                 batch_size, fps, appx))
+                                 iters, batch_acc1, batch_acc5,
+                                 batch_time / batch_size, fps, appx))
 
             # Postprocess benchmark data
             batch_latencies = batch_times[skip_batch_num:]
@@ -237,8 +239,8 @@ class SampleTester(unittest.TestCase):
             infer_total_time = time.time() - infer_start_time
             acc1_avg = np.mean(infer_accs1)
             acc5_avg = np.mean(infer_accs5)
-            _logger.info('Total inference run time: {:.2f} s'.format(
-                infer_total_time))
+            _logger.info(
+                'Total inference run time: {:.2f} s'.format(infer_total_time))
 
             return outputs, acc1_avg, acc5_avg, fps_avg, latency_avg
 

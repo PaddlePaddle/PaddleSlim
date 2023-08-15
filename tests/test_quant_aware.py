@@ -179,7 +179,7 @@ class TestQuantAwareCase(StaticCase):
         self.assertEqual(quantizers_count, skip_quantizers_count_in_onnx)
 
     def count_op(self, prog, ops: List[str]):
-        graph = paddle.fluid.framework.IrGraph(
+        graph = paddle.framework.IrGraph(
             paddle.framework.core.Graph(prog.desc), for_test=False)
         op_nums = 0
         for op in graph.all_op_nodes():

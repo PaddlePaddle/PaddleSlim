@@ -42,8 +42,8 @@ class TestQuantAwareCase1(StaticCase):
         main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
 
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(paddle.static.default_startup_program())
 
@@ -95,9 +95,8 @@ class TestQuantAwareCase1(StaticCase):
             iter = 0
             result = [[], [], []]
             for data in valid_loader():
-                cost, top1, top5 = exe.run(program,
-                                           feed=data,
-                                           fetch_list=outputs)
+                cost, top1, top5 = exe.run(
+                    program, feed=data, fetch_list=outputs)
                 iter += 1
                 if iter % 100 == 0:
                     print('eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
@@ -111,28 +110,21 @@ class TestQuantAwareCase1(StaticCase):
 
         train(main_prog)
         top1_1, top5_1 = test(val_prog)
-        paddle.fluid.io.save_inference_model(
-            dirname='./test_quant_post',
-            feeded_var_names=[image.name, label.name],
-            target_vars=[avg_cost, acc_top1, acc_top5],
-            main_program=val_prog,
-            executor=exe,
-            model_filename='model',
-            params_filename='params')
+        paddle.static.save_inference_model(
+            './test_quant_post/model_fp32', [image, label],
+            [avg_cost, acc_top1, acc_top5],
+            exe,
+            program=val_prog)
 
         quant_post_static(
             exe,
-            './test_quant_post',
-            './test_quant_post_inference',
+            './test_quant_post/model_fp32',
+            './test_quant_post/model_int8',
             sample_generator=sample_generator_creator(),
-            model_filename='model',
-            params_filename='params',
             batch_nums=10)
-        quant_post_prog, feed_target_names, fetch_targets = paddle.fluid.io.load_inference_model(
-            dirname='./test_quant_post_inference',
-            executor=exe,
-            model_filename='model.pdmodel',
-            params_filename='model.pdiparams')
+        quant_post_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
+            './test_quant_post/model_int8',
+            exe, )
         top1_2, top5_2 = test(quant_post_prog, fetch_targets)
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
         print("after quantization: top1: {}, top5: {}".format(top1_2, top5_2))
