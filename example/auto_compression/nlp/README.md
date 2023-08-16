@@ -182,7 +182,7 @@ HyperParameterOptimization:
   batch_num:
   - 4
   - 16
-  bias_correct:
+  bias_correction:
   - true
   hist_percent:
   - 0.999

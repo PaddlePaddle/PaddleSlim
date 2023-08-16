@@ -85,7 +85,8 @@ class ReconstructionQuantization(PostTrainingQuantization):
         self._sampling_threshold()
         self._calculate_threshold()
         self._reset_activation_persistable()
-        self._reconstruction()
+        if not self._config['recon_level'].lower() == 'none':
+            self._reconstruction()
         self._postprocessing()
         return self._program
 

@@ -50,6 +50,7 @@
 - PaddlePaddle >= 2.4 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
 - PaddleSlim >= 2.4
 - PaddleSeg == 2.5.0
+- smac == 1.4.0
 
 安装paddlepaddle：
 ```shell
@@ -76,6 +77,12 @@ pip install paddleseg==2.5.0
 ```
 
 注：安装[PaddleSeg](https://github.com/PaddlePaddle/PaddleSeg)的目的只是为了直接使用PaddleSeg中的Dataloader组件，不涉及模型组网等。本示例需安装**PaddleSeg 2.5.0**, 不同版本的PaddleSeg的Dataloader返回数据的格式略有不同.
+
+安装smac
+
+```shell
+pip install smac==1.4.0
+```
 
 #### 3.2 准备数据集
 
