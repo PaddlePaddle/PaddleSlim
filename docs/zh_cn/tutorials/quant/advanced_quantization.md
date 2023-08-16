@@ -3,63 +3,44 @@
 
 ## **LLM量化效果Benchmark**
 
-1. Pretrained开源任务下，使用数据集C-eval，指标为acc，INT8 PTQ量化实验对比
+1. LLama 13b 在不同量化策略下精度对比
+|  量化策略 | ACC1/% | ACC2/% |
+| --------------- | ---------------- | ---------------- |
+|Baseline | 78.32 | 32.98 |
+| PTQ-INT8 |  34.05 | 24.96 |
+| SmoothQuant |  42.36 | 27.78 |
+| ShiftQuant | 33.35 | 25.48 |
+| Shift-SmoothQuant | 45.26 | 24.66 |
+| 自适应Shift-SmoothQuant | **78.07** | **32.69** |
+| PTQ-INT4 | 75.48 | 29.27 |
+| GPTQ | **77.55** | **32.32** |
 
-| 模型 | baseline<br>fp16 | regular<br>int8 | regular<br>smooth | regular<br>shift | regular<br>shift-smooth | paddleslim<br>int8 |
-| ------------- | ------------- | ------------- | ----------- | ----------- | ----------- | ----------- |
-| LLama 13b | 0.3298 |  0.2496 | 0.2778 | 0.2548 | 0.2466 |  **0.3269** |
-| Bloom 7.1b | 0.4108 | 0.3826 | 0.3870 | 0.3997 | 0.3722 | **0.4063** |
-| ChatGLM2 6b | 0.3157 | 0.2994 | 0.2986 | 0.2726 | 0.2429 | **0.3455** |
+2. Bloom 7.1b 在不同量化策略下精度对比
+|  量化策略 | ACC1 | ACC2 |
+| --------------- | ---------------- | ---------------- |
+| Baseline | 77.18 | 41.08 |
+| PTQ-INT8 |  76.48 | 38.26 |
+| SmoothQuant |  76.57 | 38.70 |
+| ShiftQuant | 68.99 | 39.97 |
+| Shift-SmoothQuant | 76.77 | 37.22 |
+| 自适应Shift-SmoothQuant | **77.04** | **40.63** |
+| PTQ-INT4 | 75.18 | 38.03 |
+| GPTQ | **76.82** | **39.37** |
 
-2. Finetuned下游任务下，使用数据集nl2sql，指标为acc，INT8 PTQ量化实验对比
+3. ChatGLM2 6b 在不同量化策略下精度对比
+|  量化策略 | ACC1 | ACC2 |
+| --------------- | ---------------- | ---------------- |
+| Baseline | 76.46 | 31.57 |
+| PTQ-INT8 |  64.08 | 29.94 |
+| SmoothQuant |  64.29 | 29.86 |
+| ShiftQuant | 57.83 | 27.26 |
+| Shift-SmoothQuant | 58.89 | 24.29 |
+| 自适应Shift-SmoothQuant | **76.89** | **34.55** |
+| PTQ-INT4 | 74.20 | 26.30 |
+| GPTQ | **75.66** | **31.50** |
 
-| 模型 | baseline<br>fp16 | regular<br>int8 | regular<br>smooth | regular<br>shift | regular<br>shift-smooth | paddleslim<br>int8 |
-| ------------- | ------------- | ------------- | ----------- | ----------- | ----------- | ----------- |
-| LLama 13b | 0.7832 |  0.3405 | 0.4236 | 0.3335 | 0.4526 |  **0.7807** |
-| Bloom 7.1b | 0.7718 | 0.7648 | 0.7657 | 0.6899 | 0.7677 | **0.7704** |
-| ChatGLM2 6b | 0.7646 | 0.6408 | 0.6429 | 0.5783 | 0.5889 | **0.7689** |
-
-3. Pretrained开源任务和Finetuned下游任务下，Weight Only Int4量化实验对比
-
-| 模型 | 任务类型/数据集 | baseline<br>fp16 | regular<br>int4 | PaddleSlim<br>int4 |
-| ------------- | ------------- | ------------- | ----------- | ----------- |
-| LLama 13b | Pretrained开源任务/C-eval |  0.3405 | 0.2927 | **0.3232** |
-| Bloom 7.1b | Pretrained开源任务/C-eval | 0.4108 | 0.3803 | **0.3937** |
-| ChatGLM2 6b | Pretrained开源任务/C-eval | 0.3157 | 0.2630 | **0.3150** |
-| LLama 13b | Finetuned下游任务/nl2sql | 0.7832 | 0.7548 | **0.7755** |
-| Bloom 7.1b | Finetuned下游任务/nl2sql | 0.7718 | 0.7518 | **0.7682** |
-| ChatGLM2 6b | Finetuned下游任务/nl2sql | 0.7646 | 0.7420 | **0.7566** |
-
-
-<!-- | 模型名称及大小 |  量化策略 | Finetuned下游任务 数据集nl2sql-指标acc | Pretrained开源任务 数据集C-eval-指标acc |
-| --------------- | --------------- | ---------------- | ---------------- |
-| LLama 13b | baseline-fp16 | 0.7832 | 0.3298 |
-| - |  regular-int8 |  0.3405 | 0.2496 |
-| - |  regular-smooth-int8 |  0.4236 | 0.2778 |
-| - | regular-shift-int8 | 0.3335 | 0.2548 |
-| - | regular-shift-smooth-int8 | 0.4526 | 0.2466 |
-| - | paddleslim-int8 | **0.7807** | **0.3269** |
-| - | regular-int4 | 0.7548 | 0.2927 |
-| - | paddleslim-int4 | **0.7755** | **0.3232** |
-|   |  |  |  |
-| Bloom 7.1b |  baseline-fp16 | 0.7718 | 0.4108 |
-| - |  regular-int8 |  0.7648 | 0.3826 |
-| - |  regular-smooth-int8 |  0.7657 | 0.3870 |
-| - | regular-shift-int8 | 0.6899 | 0.3997 |
-| - | regular-shift-smooth-int8 | 0.7677 | 0.3722 |
-| - | paddleslim-int8 | **0.7704** | **0.4063** |
-| - | regular-int4 | 0.7518 | 0.3803 |
-| - | paddleslim-int4 | **0.7682** | **0.3937** |
-|   |  |  |  |
-| ChatGLM2 6b |  baseline-fp16 | 0.7646 | 0.3157 |
-| - |  regular-int8 |  0.6408 | 0.2994 |
-| - |  regular-smooth-int8 |  0.6429 | 0.2986 |
-| - | regular-shift-int8 | 0.5783 | 0.2726 |
-| - | regular-shift-smooth-int8 | 0.5889 | 0.2429 |
-| - | paddleslim-int8 | **0.7689** | **0.3455** |
-| - | regular-int4 | 0.7420 | 0.2630 |
-| - | paddleslim-int4 | **0.7566** | **0.3150** | -->
-
+- ACC1：Finetuned下游任务下，使用数据集nl2sql的指标
+- ACC2：Pretrained开源任务下，使用数据集C-eval的指标
 
 以下方法暂时仅支持Transformer模型，具体示例使用方法可参考[PaddleNLP LLM示例](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/llm#6-%E9%87%8F%E5%8C%96)，以下教程仅详细介绍API接口。
 
