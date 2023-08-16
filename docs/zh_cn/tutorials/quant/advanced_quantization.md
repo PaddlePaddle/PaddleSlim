@@ -14,7 +14,7 @@
 | Shift-SmoothQuant | 45.26 | 24.66 |
 | 自适应Shift-SmoothQuant | **78.07** | **32.69** |
 | PTQ-INT4 | 75.48 | 29.27 |
-| GPTQ | **77.55** | **32.32** |
+| GPTQ-INT4 | **77.55** | **32.32** |
 
 2. Bloom 7.1b 在不同量化策略下精度对比
 
@@ -27,7 +27,7 @@
 | Shift-SmoothQuant | 76.77 | 37.22 |
 | 自适应Shift-SmoothQuant | **77.04** | **40.63** |
 | PTQ-INT4 | 75.18 | 38.03 |
-| GPTQ | **76.82** | **39.37** |
+| GPTQ-INT4 | **76.82** | **39.37** |
 
 3. ChatGLM2 6b 在不同量化策略下精度对比
 
@@ -40,7 +40,7 @@
 | Shift-SmoothQuant | 58.89 | 24.29 |
 | 自适应Shift-SmoothQuant | **76.89** | **34.55** |
 | PTQ-INT4 | 74.20 | 26.30 |
-| GPTQ | **75.66** | **31.50** |
+| GPTQ-INT4 | **75.66** | **31.50** |
 
 - ACC1：Finetuned下游任务下，使用数据集nl2sql的指标
 - ACC2：Pretrained开源任务下，使用数据集C-eval的指标
