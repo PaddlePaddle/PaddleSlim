@@ -17,6 +17,7 @@ from .kl import KLObserver
 from .mse import MSEObserver
 from .emd import EMDObserver
 from .avg import AVGObserver
+from .abs_max import AbsmaxObserver
 from .mse_weight import MSEChannelWiseWeightObserver
 from .abs_max_weight import AbsMaxChannelWiseWeightObserver
 
@@ -27,6 +28,7 @@ __all__ = [
     "EMDObserver",
     "AVGObserver",
     "MSEWeightObserver",
+    "AbsmaxObserver",
     "MSEChannelWiseWeightObserver",
     "AbsMaxChannelWiseWeightObserver",
 ]
