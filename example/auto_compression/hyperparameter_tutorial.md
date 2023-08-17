@@ -58,7 +58,7 @@ QuantPost:
     batch_nums: 50
     algo: 'hist'
     hist_percent: 0.999
-    bias_correction: False
+    bias_correct: False
     recon_level: None
     regions: None
     epochs: 20
@@ -71,7 +71,7 @@ QuantPost:
 - batch_nums: 离线量化迭代次数。如果设置为 None ，则会一直运行到全部训练数据迭代结束；否则，迭代次数为 batch_nums, 即参与对 Scale 进行校正的样本个数为 batch_nums * batch_size 。
 - algo: 量化时使用的算法名称，可为 'KL'，'mse', 'hist'， 'avg' 或 'abs_max'。当 algo 设置为 'abs_max' 时，使用校正数据的激活值的绝对值的最大值当作 scale 值，当设置为 'KL' 时，则使用KL散度的方法来计算 Scale 值，当设置为 'avg' 时，使用校正数据激活值的最大绝对值平均数作为 scale 值，当设置为 'hist' 时，则使用基于百分比的直方图的方法来计算 scale 值，当设置为 'mse' 时，则使用搜索最小mse损失的方法来计算 scale 值。默认值为 'hist' 。
 - hist_percent: 'hist' 方法的百分位数。默认值为0.9999。
-- bias_correction: 是否使用 bias correction 算法。默认值为 False 。
+- bias_correct: 是否使用 bias correction 算法。默认值为 False 。
 - recon_level: 设置该参数将在离线量化之后进行逐区域重建训练，目前支持 'layer-wise' 和 'region-wise'。当设置为'layer-wise'时， 以层为单位进行重建训练；当设置为'region-wise'时，以 `regions` 中每个块区域为单位进行重建训练；当设置为 None 时，则不进行重建训练。 默认值为 None 。
 - regions(list[list]): 当 recon_level 是 'region-wise' 时，需要设置该参数。该列表中每个元素由一个区域的输入和输出变量名组成，可参考该[示例](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/post_training_quantization/pytorch_yolo_series/configs/yolov6s_fine_tune.yaml#L11)。
 - epochs: 逐区域重建训练的训练次数。每个 epoch 内的样本数量为 batch_nums * batch_size 。默认值为20。
@@ -85,13 +85,13 @@ QuantPost:
 ```yaml
 HyperParameterOptimization:
     ptq_algo: ["KL", "hist", "avg", "mse"]
-    bias_correction: [True, False]
+    bias_correct: [True, False]
     hist_percent: [0.98, 0.999],
     batch_num: [10, 30],
 ```
 以上配置项说明如下：
 - ptq_algo: 设置待搜索的离线量化算法。
-- bias_correction: 是否使用 bias correction 算法。
+- bias_correct: 是否使用 bias correction 算法。
 - hist_percent: 设置 'hist' 算法阈值的上限和下限，实际百分比在此范围内均匀采样而得。
 - batch_num: 设置 'batch_num' 的上下限，实际数值在此范围内均匀采样而得。
 

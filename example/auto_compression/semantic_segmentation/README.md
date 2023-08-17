@@ -78,12 +78,6 @@ pip install paddleseg==2.5.0
 
 注：安装[PaddleSeg](https://github.com/PaddlePaddle/PaddleSeg)的目的只是为了直接使用PaddleSeg中的Dataloader组件，不涉及模型组网等。本示例需安装**PaddleSeg 2.5.0**, 不同版本的PaddleSeg的Dataloader返回数据的格式略有不同.
 
-安装smac
-
-```shell
-pip install smac==1.4.0
-```
-
 #### 3.2 准备数据集
 
 开发者可下载开源数据集 (如[AISegment](https://github.com/aisegmentcn/matting_human_datasets)) 或自定义语义分割数据集。请参考[PaddleSeg数据准备文档](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.5/docs/data/marker/marker_cn.md)来检查、对齐数据格式即可。
