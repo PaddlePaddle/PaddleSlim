@@ -67,8 +67,9 @@ class AbsMaxChannelWiseWeightObserverLayer(ChannelWiseObserver):
             [i for i in range(len(inputs.shape)) if i != self.quant_axis()])
         abs_max_values = paddle.max(
             paddle.abs(inputs), axis=reduce_axis).cast("float32")
-        abs_max_values = paddle.where(abs_max_values == np.float32(0.0),
-                                      np.float32(1e-8), abs_max_values)
+        abs_max_values = paddle.where(
+            abs_max_values == paddle.to_tensor(0, dtype=inputs.dtype),
+            paddle.to_tensor(1e-8, dtype=inputs.dtype), abs_max_values)
         return abs_max_values
 
     def min_value(self) -> float:

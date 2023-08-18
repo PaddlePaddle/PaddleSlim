@@ -84,7 +84,7 @@ class PieceWiseSearch():
                 # print('search for piece {}; centroids value is {}'.format(
                 #     piece[i], centroids[centroids.argsort()[i]].numpy()))
                 alpha = self.search_alpha_min
-                alpha_max = self.search_scale_max
+                alpha_max = self.search_scale_max if self.search_scale_max is not None else self.search_alpha_max
                 calibration_loss = float('inf')
                 final_alpha = None
                 mask_for_search = paddle.where(labels == centroids.argsort()[i],
@@ -95,7 +95,9 @@ class PieceWiseSearch():
                     if alpha < 1:
                         alpha += 0.01
                         if alpha >= self.search_alpha_max:
-                            alpha = 1.
+                            alpha = self.search_scale_min
+                            if alpha is None:
+                                break
                     else:
                         alpha += 0.5
 
