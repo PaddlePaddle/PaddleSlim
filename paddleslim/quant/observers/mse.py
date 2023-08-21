@@ -82,6 +82,9 @@ class MSEObserverLayer(UniformObserver):
     def cal_thresholds(self):
         """ Compute thresholds for MAX function.
         """
+        if self._scale is not None:
+            self._zero_point = 0
+            return
         self._min, self._max = self._mse_min, self._mse_max
         self._scale, self._zero_point = self.cal_scales_zero_points()
 

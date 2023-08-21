@@ -81,7 +81,8 @@ class AbsMaxChannelWiseWeightObserverLayer(ChannelWiseObserver):
     def cal_thresholds(self):
         """ Compute thresholds for MAX function.
         """
-        self._scale = self._max
+        if self._scale is None:
+            self._scale = self._max
         self._zero_point = paddle.zeros_like(self._scale)
 
     def scales(self):
