@@ -153,8 +153,8 @@ class PieceWiseSearch():
                 else:
                     smooth_scale_out += final_smooth_scale
 
-            if cur_loss < global_loss:
-                global_loss = cur_loss
+            if calibration_loss < global_loss:
+                global_loss = calibration_loss
                 best_scale = smooth_scale_out
                 if self.search_piece:
                     print('Find Better K-Piece {}'.format(k_piece))
