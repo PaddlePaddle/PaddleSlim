@@ -62,6 +62,7 @@ class Smooth():
         self.norm_flag = model_config.get("norm_flag", 'norm')
         self.parallel_ffn = model_config.get("parallel_ffn", False)
         self.skip_norm_list = model_config.get("skip_norm_list", [])
+        self.skip_linear_list = model_config.get("skip_linear_list", [])
 
         self.alpha = alpha
         self.smooth_all_linears = smooth_all_linears
@@ -105,7 +106,7 @@ class Smooth():
             if not self.help_layers_ready:
                 rest_linears = [
                     l for l in self.layer_order
-                    if self.linear_flag in l and l not in self.linear_ln_dict
+                    if self.linear_flag in l and l not in self.linear_ln_dict and l not in self.skip_linear_list
                 ]
                 print('Preparing smooth layers', rest_linears)
                 for cur_name, sub_layer in self.model.named_sublayers():
