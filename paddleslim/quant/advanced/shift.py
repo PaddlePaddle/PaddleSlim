@@ -89,6 +89,7 @@ class Shift():
         self.ln_linear_dict, self.linear_ln_dict = get_ln_linear_info(
             self.layer_order, self.norm_flag, self.linear_flag, self.fused_qkv,
             self.parallel_ffn, self.skip_norm_list)
+
         assert len(self.ln_linear_dict) > 0, 'No LN/Linear pair found'
         for key in self.ln_linear_dict:
             print('shift pair LN {} : Linear {}'.format(
@@ -97,7 +98,8 @@ class Shift():
             if not self.help_layers_ready:
                 rest_linears = [
                     l for l in self.layer_order
-                    if self.linear_flag in l and l not in self.linear_ln_dict and l not in self.skip_linear_list
+                    if self.linear_flag in l and l not in self.linear_ln_dict
+                    and l not in self.skip_linear_list
                 ]
                 print('Preparing shift layers', rest_linears)
                 for cur_name, sub_layer in self.model.named_sublayers():
@@ -109,6 +111,7 @@ class Shift():
                         forward_pre_hook_handle = new_layer.register_forward_pre_hook(
                             self._forward_pre_hook)
                         self._forward_hook_list.append(forward_pre_hook_handle)
+
         self.got_shift_layers = True
 
     def _forward_pre_hook(self, layer, input):

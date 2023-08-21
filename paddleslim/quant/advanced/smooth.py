@@ -98,6 +98,7 @@ class Smooth():
         self.ln_linear_dict, self.linear_ln_dict = get_ln_linear_info(
             self.layer_order, self.norm_flag, self.linear_flag, self.fused_qkv,
             self.parallel_ffn, self.skip_norm_list)
+
         assert len(self.ln_linear_dict) > 0, 'No LN/Linear pair found'
         for key in self.ln_linear_dict:
             print('smooth pair LN {} : Linear {}'.format(
@@ -106,7 +107,8 @@ class Smooth():
             if not self.help_layers_ready:
                 rest_linears = [
                     l for l in self.layer_order
-                    if self.linear_flag in l and l not in self.linear_ln_dict and l not in self.skip_linear_list
+                    if self.linear_flag in l and l not in self.linear_ln_dict
+                    and l not in self.skip_linear_list
                 ]
                 print('Preparing smooth layers', rest_linears)
                 for cur_name, sub_layer in self.model.named_sublayers():
