@@ -54,6 +54,7 @@ class LayerWiseQuantError(nn.Layer):
             if type(cur_layer) == LayerWiseQuantError:
                 print(cur_name, cur_layer.losses.mean())
         '''
+        super(LayerWiseQuantError, self).__init__()
         self.layer = layer
         self.weight = layer.weight
         self.weight_bits = weight_bits
@@ -62,14 +63,13 @@ class LayerWiseQuantError(nn.Layer):
         self.act_method = act_quant_method
         self.loss_function = loss_function
         self.losses = []
+        self.loss = None
 
     def forward(self, input):
         act = input[0] if type(input) == tuple else input
         origin_out = paddle.matmul(act, self.weight)
         bnt = (1 << (self.weight_bits - 1)) - 1
-        quant_scale = compute_scales(
-            self.weight.cast('float32'),
-            method=self.weight_method).cast(self.weight.dtype)
+        quant_scale = compute_scales(self.weight, method=self.weight_method)
         quant_weight = paddle.clip(
             paddle.round(self.weight / quant_scale * bnt), -bnt - 1, bnt)
         quant_dequant_weight = quant_weight / bnt * quant_scale
@@ -80,6 +80,7 @@ class LayerWiseQuantError(nn.Layer):
             paddle.round(act / quant_scale * bnt), -bnt - 1, bnt)
         quant_dequant_act = quant_act / bnt * quant_scale
         quant_out = paddle.matmul(quant_dequant_act, quant_dequant_weight)
-        loss = self.loss_function(origin_out, quant_out)
+        loss = self.loss_function(origin_out, quant_out).cast('float32')
         self.losses.append(loss)
+        self.loss = paddle.to_tensor(self.losses, dtype='float32').mean()
         return self.layer(input)

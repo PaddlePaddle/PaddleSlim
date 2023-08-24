@@ -26,7 +26,7 @@ class ShiftSmoothHelpLayer(nn.Layer):
         super(ShiftSmoothHelpLayer, self).__init__()
         self.weight = layer.weight
         shift_shape = self.weight.shape[0]
-        if hasattr(layer, "bias") or layer.bias is None:
+        if not hasattr(layer, "bias") or layer.bias is None:
             self.bias = paddle.create_parameter(
                 shape=[self.weight.shape[1]],
                 dtype=self.weight.dtype,
