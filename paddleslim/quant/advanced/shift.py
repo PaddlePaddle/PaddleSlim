@@ -55,13 +55,13 @@ class Shift():
         self.norm_flag = model_config.get("norm_flag", 'norm')
         self.parallel_ffn = model_config.get("parallel_ffn", False)
         self.skip_norm_list = model_config.get("skip_norm_list", [])
+        self.skip_linear_list = model_config.get("skip_linear_list", [])
         self.shift_all_linears = shift_all_linears
         self.sample_function = sample_function
 
         self.layer_order = []
         self.zero_point_dict = {}
         self.smooth_scale_dict = {}
-        self.glabal_min_max = {}
 
         self.model.eval()
         self.step = 0
@@ -88,6 +88,7 @@ class Shift():
         self.ln_linear_dict, self.linear_ln_dict = get_ln_linear_info(
             self.layer_order, self.norm_flag, self.linear_flag, self.fused_qkv,
             self.parallel_ffn, self.skip_norm_list)
+
         assert len(self.ln_linear_dict) > 0, 'No LN/Linear pair found'
         for key in self.ln_linear_dict:
             print('shift pair LN {} : Linear {}'.format(
@@ -97,6 +98,7 @@ class Shift():
                 rest_linears = [
                     l for l in self.layer_order
                     if self.linear_flag in l and l not in self.linear_ln_dict
+                    and l not in self.skip_linear_list
                 ]
                 print('Preparing shift layers', rest_linears)
                 for cur_name, sub_layer in self.model.named_sublayers():
@@ -108,6 +110,7 @@ class Shift():
                         forward_pre_hook_handle = new_layer.register_forward_pre_hook(
                             self._forward_pre_hook)
                         self._forward_hook_list.append(forward_pre_hook_handle)
+
         self.got_shift_layers = True
 
     def _forward_pre_hook(self, layer, input):
@@ -134,17 +137,15 @@ class Shift():
 
     def _sample_zero_point(self, input, ln_name):
         x = input[0] if type(input) == tuple else input
-        x = x.cast('float32')
         x.stop_gradient = True
 
         zero_point = x.mean(axis=(0, 1)) if len(x.shape) > 2 else x.mean(axis=1)
         _min = x.min(axis=(0, 1)) if len(x.shape) > 2 else x.min(axis=1)
         _max = x.max(axis=(0, 1)) if len(x.shape) > 2 else x.max(axis=1)
 
-        if ln_name not in self.zero_point_dict or ln_name not in self.glabal_min_max:
+        if ln_name not in self.zero_point_dict:
 
             if self.sample_function is None:
-                self.glabal_min_max[ln_name] = _min, _max
                 self.zero_point_dict[ln_name] = (_min + _max) / 2
             else:
                 self.zero_point_dict[ln_name] = zero_point
@@ -154,11 +155,9 @@ class Shift():
                 self.zero_point_dict[ln_name] = self.sample_function.sample(
                     zero_point, self.zero_point_dict[ln_name], ln_name)
             else:
-                global_min, global_max = self.glabal_min_max[ln_name]
-                global_min = global_min if global_min < _min else _min
-                global_max = global_max if global_max > _max else _max
-                self.glabal_min_max[ln_name] = global_min, global_max
-                self.zero_point_dict[ln_name] = (global_min + global_max) / 2
+                cur_zero_point = (_min + _max) / 2
+                self.zero_point_dict[ln_name] = (
+                    self.zero_point_dict[ln_name] + cur_zero_point) / 2
 
         # per step print once
         if self.print_step == self.step:
@@ -183,13 +182,13 @@ class Shift():
                 shift_bias = None
                 for param in sub_layer.parameters(include_sublayers=False):
                     if 'w_0' in param.name:
-                        zero_point = self.zero_point_dict[ln_name].squeeze()
-                        shift_bias = paddle.matmul(zero_point,
-                                                   param.cast('float32'))
+                        zero_point = self.zero_point_dict[
+                            ln_name].squeeze().cast(param.dtype)
+                        shift_bias = paddle.matmul(zero_point, param)
                         print("[shift] param: {}, zero_point min: {}, max: {}".
                               format(param.name,
-                                     float(zero_point.min()),
-                                     float(zero_point.max())))
+                                     float(zero_point.cast("float32").min()),
+                                     float(zero_point.cast("float32").max())))
                         break
 
                 if not hasattr(sub_layer, "bias") or sub_layer.bias is None:

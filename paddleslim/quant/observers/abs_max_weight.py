@@ -65,10 +65,10 @@ class AbsMaxChannelWiseWeightObserverLayer(ChannelWiseObserver):
     def _cal_abs_max(self, inputs):
         reduce_axis = tuple(
             [i for i in range(len(inputs.shape)) if i != self.quant_axis()])
-        abs_max_values = paddle.max(
-            paddle.abs(inputs), axis=reduce_axis).cast("float32")
-        abs_max_values = paddle.where(abs_max_values == np.float32(0.0),
-                                      np.float32(1e-8), abs_max_values)
+        abs_max_values = paddle.max(paddle.abs(inputs), axis=reduce_axis)
+        abs_max_values = paddle.where(
+            abs_max_values == paddle.to_tensor(0, dtype=inputs.dtype),
+            paddle.to_tensor(1e-8, dtype=inputs.dtype), abs_max_values)
         return abs_max_values
 
     def min_value(self) -> float:
@@ -80,7 +80,8 @@ class AbsMaxChannelWiseWeightObserverLayer(ChannelWiseObserver):
     def cal_thresholds(self):
         """ Compute thresholds for MAX function.
         """
-        self._scale = self._max
+        if self._scale is None:
+            self._scale = self._max
         self._zero_point = paddle.zeros_like(self._scale)
 
     def scales(self):
