@@ -48,8 +48,10 @@ def compute_scales(x, method='abs_max'):
     elif method == 'abs_max_channel_wise':
         reduce_axis = tuple([i for i in range(len(x.shape)) if i != 1])
         quant_scale = paddle.max(paddle.abs(x), axis=reduce_axis)
-        quant_scale = paddle.where(quant_scale == np.float32(0.0),
-                                   np.float32(1e-8), quant_scale)
+        quant_scale = paddle.where(quant_scale == paddle.to_tensor(
+            0, dtype=x.dtype),
+                                   paddle.to_tensor(1e-8, dtype=x.dtype),
+                                   quant_scale)
     return quant_scale
 
 

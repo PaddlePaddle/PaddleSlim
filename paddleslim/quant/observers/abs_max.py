@@ -18,7 +18,7 @@ from .uniform import UniformObserver
 from paddle.quantization.factory import ObserverFactory
 
 
-class AVGObserver(ObserverFactory):
+class AbsmaxObserver(ObserverFactory):
     r"""
     It collects maximum absolute values of target tensor.
     Args:
@@ -35,37 +35,36 @@ class AVGObserver(ObserverFactory):
     """
 
     def __init__(self, quant_bits=8):
-        super(AVGObserver, self).__init__(quant_bits=quant_bits)
+        super(AbsmaxObserver, self).__init__(quant_bits=quant_bits)
 
     def _get_class(self):
-        return AVGObserverLayer
+        return AbsmaxObserverLayer
 
 
-class AVGObserverLayer(UniformObserver):
+class AbsmaxObserverLayer(UniformObserver):
     def __init__(
             self,
             layer,
             quant_bits=8, ):
-        super(AVGObserverLayer, self).__init__(quant_bits=quant_bits)
+        super(AbsmaxObserverLayer, self).__init__(quant_bits=quant_bits)
         self._quant_bits = quant_bits
-        self._avg_list = []
+        self._layer = layer
+        self._scale = None
+        self._zero_point = None
+        self._min = None
+        self._max = paddle.to_tensor(1e-7, dtype="float32")
+        self.step = 0
 
     def forward(self, inputs):
         """ Calculate forward pass.
         """
-        self._scale = None
-        self._zero_point = None
-        self._min = None
-        self._max = None
-        self._avg_min, self._avg_max = self.cal_min_max(inputs)
-        self._avg_list.append(self._avg_max)
-
+        self._min, self._max = self.cal_min_max(inputs)
         return inputs
 
     def cal_min_max(self, inputs):
-        abs_avg_value = paddle.abs(inputs.reshape((inputs.shape[0], -1)))
-        abs_avg_value = float(paddle.mean(paddle.max(abs_avg_value, axis=(1))))
-        return 0, abs_avg_value
+        abs_max_val = paddle.max(paddle.abs(inputs.cast("float32")))
+        abs_max_val = paddle.maximum(abs_max_val, self._max)
+        return 0, abs_max_val
 
     def cal_thresholds(self):
         """ Compute thresholds for MAX function.
@@ -73,8 +72,6 @@ class AVGObserverLayer(UniformObserver):
         if self._scale is not None:
             self._zero_point = 0
             return
-        self._min, self._max = self._avg_min, paddle.mean(
-            paddle.to_tensor(self._avg_list))
         self._scale, self._zero_point = self.cal_scales_zero_points()
 
     def min_value(self) -> float:
