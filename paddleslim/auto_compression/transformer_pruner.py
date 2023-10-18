@@ -121,18 +121,25 @@ def unsqueeze_op(block, axis, inputs, op_idx):
     """ Insert unsqueeze op to program"""
     out_name = inputs.name
     out_shape = list(inputs.shape)
+    axis = len(out_shape) + 1 + axis if axis < 0 else axis
     out_shape.insert(axis, 1)
     global global_idx
     out = block.create_var(
         name='{}.unsqueeze_out.tmp_{}'.format(out_name, global_idx),
         shape=out_shape,
         dtype=inputs.dtype)
+
+    xshape = block.create_var(
+        name='{}.unsqueeze_shape.tmp_{}'.format(out_name, global_idx),
+        shape=None)
+
     global_idx += 1
     block._insert_op(
         op_idx,
-        type='unsqueeze',
+        type='unsqueeze2',
         inputs={'X': inputs},
-        outputs={'Out': out},
+        outputs={'Out': out,
+                 'XShape': xshape},
         attrs={"axes": [axis]})
     return out
 
@@ -154,7 +161,7 @@ def slice_op(block, axis, inputs, op_idx):
     """ Insert slice op to program"""
     out_name = inputs.name
     out_shape = list(inputs.shape)
-    out_shape.pop(0)
+    out_shape[0] = 1
     global global_idx
     out = block.create_var(
         name='{}.slice_out.tmp_{}'.format(out_name, global_idx),
@@ -165,7 +172,7 @@ def slice_op(block, axis, inputs, op_idx):
         "axes": [0],
         "starts": [axis],
         "ends": [axis + 1],
-        "decrease_axis": [0]
+        "infer_flags": [1]
     }
     block._insert_op(
         op_idx,
@@ -326,13 +333,8 @@ class TransformerPruner:
             1.0,
             out=head_mask,
             stop_gradient=False)
-        head_mask = unsqueeze_op(block, -1,
-                                 unsqueeze_op(block, -1,
-                                              unsqueeze_op(
-                                                  block, 1, head_mask,
-                                                  feed_num + 1), feed_num + 2),
-                                 feed_num + 3)
-
+        tmp = unsqueeze_op(block, -1, head_mask, feed_num + 1)
+        head_mask = unsqueeze_op(block, -1, tmp, feed_num + 3)
         for pattern_name, pattern in patterns.items():
             if 'MHA' in pattern_name:
                 block_num = int(pattern_name.split('$')[-1])

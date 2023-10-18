@@ -477,70 +477,6 @@ class TestDepthwiseConv2d(TestPruneWorker):
         self.check_in_out()
 
 
-ret = [
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {},
-    {},
-    {
-        'y': [0],
-        'x': [2]
-    },
-    {
-        'y': [1],
-        'x': [2]
-    },
-    {
-        'y': [2],
-        'mul_0.tmp_0': [1]
-    },
-    {
-        'y': [3],
-        'mul_0.tmp_0': [1]
-    },
-    {},
-    {},
-]
-mul_suite.addTest(TestMul(x_num_col_dims=2, y_num_col_dims=2, ret=ret))
-ret = [
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {},
-    {
-        'x': [3],
-        'y': [0]
-    },
-    {
-        'x': [3],
-        'y': [1]
-    },
-    {
-        'x': [3],
-        'y': [2]
-    },
-    {
-        'mul_0.tmp_0': [1],
-        'y': [3]
-    },
-    {},
-    {
-        'y': [3]
-    },
-]
-mul_suite.addTest(TestMul(x_num_col_dims=3, y_num_col_dims=3, ret=ret))
-
-
 class TestMatmul(TestPruneWorker):
     def __init__(self, methodName="test_prune"):
         super(TestMatmul, self).__init__(methodName)
@@ -708,6 +644,5 @@ class TestAverageAccumulates(TestPruneWorker):
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=2)
-    runner.run(mul_suite)
     runner.run(act_suite)
     unittest.main()

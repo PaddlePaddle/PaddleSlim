@@ -118,13 +118,18 @@ class TestQuantAwareCase1(StaticCase):
 
         quant_post_static(
             exe,
-            './test_quant_post/model_fp32',
+            './test_quant_post/',
             './test_quant_post/model_int8',
+            params_filename="model_fp32.pdiparams",
+            model_filename="model_fp32.pdmodel",
             sample_generator=sample_generator_creator(),
+            data_loader=valid_loader,
             batch_nums=10)
         quant_post_prog, feed_target_names, fetch_targets = paddle.static.load_inference_model(
             './test_quant_post/model_int8',
-            exe, )
+            exe,
+            model_filename="model.pdmodel",
+            params_filename="model.pdiparams")
         top1_2, top5_2 = test(quant_post_prog, fetch_targets)
         print("before quantization: top1: {}, top5: {}".format(top1_1, top5_1))
         print("after quantization: top1: {}, top5: {}".format(top1_2, top5_2))

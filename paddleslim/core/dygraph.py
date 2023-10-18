@@ -108,7 +108,8 @@ def _dy2prog(layer, inputs, dtypes=None):
     # convert ParamBase into Parameter automatically by _switch_declarative_mode_guard_
     with paddle.static.program_guard(
             program), paddle.base.dygraph.base._to_static_mode_guard_(
-                is_to_static=True):
+                is_to_static=True
+            ), paddle.base.framework._stride_in_no_check_dy2st_diff():
         if _is_shape(inputs):
             shapes = [inputs]
             inputs = _create_tensors(shapes, dtypes=dtypes)

@@ -25,6 +25,7 @@ from layers import conv_bn_layer
 import numpy as np
 
 
+@unittest.skip("Deprecated quantization for static graph in PaddleSlim>=2.6.0")
 class TestQuantAwareCase(StaticCase):
     def test_accuracy(self):
         image = paddle.static.data(
@@ -154,6 +155,7 @@ class TestQuantAwareCase(StaticCase):
         quantizers_count = self.count_op(convert_eval_prog, ['quantize_linear'])
         observers_count = self.count_op(quant_eval_prog,
                                         ['moving_average_abs_max_scale'])
+
         self.assertEqual(quantizers_count, ops_with_weights_count +
                          ops_without_weights_count + observers_count)
 

@@ -34,8 +34,8 @@ class ReconPTQ(unittest.TestCase):
         self._gen_model()
 
     def _gen_model(self):
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         main_program = paddle.static.Program()
         startup_program = paddle.static.Program()
@@ -74,7 +74,7 @@ class ReconPTQ(unittest.TestCase):
             drop_last=True,
             batch_size=64,
             return_list=False)
-        valid_loader = paddle.io.DataLoader(
+        self.valid_loader = paddle.io.DataLoader(
             test_dataset,
             places=place,
             feed_list=[image, label],
@@ -121,14 +121,15 @@ class TestReconRegion(ReconPTQ):
         super(TestReconRegion, self).__init__(*args, **kwargs)
 
     def test_qdrop_region(self):
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         quant_recon_static(
             exe,
             self.tmpdir.name,
             quantize_model_path='output_region',
             sample_generator=self.data_loader,
+            data_loader=self.valid_loader,
             model_filename='infer.pdmodel',
             params_filename='infer.pdiparams',
             batch_nums=1,
@@ -145,14 +146,15 @@ class TestReconLayer(ReconPTQ):
         super(TestReconLayer, self).__init__(*args, **kwargs)
 
     def test_qdrop_layer(self):
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         quant_recon_static(
             exe,
             self.tmpdir.name,
             quantize_model_path='output_layer',
             sample_generator=self.data_loader,
+            data_loader=self.valid_loader,
             model_filename='infer.pdmodel',
             params_filename='infer.pdiparams',
             batch_nums=1,
