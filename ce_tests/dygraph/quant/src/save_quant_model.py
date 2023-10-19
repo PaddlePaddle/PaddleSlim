@@ -22,7 +22,7 @@ import six
 import numpy as np
 import time
 import paddle
-from paddle.fluid.framework import IrGraph
+from paddle.framework import IrGraph
 from paddle.static.quantization import Quant2Int8MkldnnPass
 from paddle.framework import core
 
@@ -45,7 +45,8 @@ def parse_args():
         '--ops_to_quantize',
         type=str,
         default='',
-        help='A comma separated list of operators to quantize. Only quantizable operators are taken into account. If the option is not used, an attempt to quantize all quantizable operators will be made.'
+        help=
+        'A comma separated list of operators to quantize. Only quantizable operators are taken into account. If the option is not used, an attempt to quantize all quantizable operators will be made.'
     )
     parser.add_argument(
         '--op_ids_to_skip',
@@ -70,8 +71,9 @@ def transform_and_save_int8_model(original_path, save_path):
 
     with paddle.static.scope_guard(inference_scope):
         if os.path.exists(os.path.join(original_path, '__model__')):
-            [inference_program, feed_target_names, fetch_targets
-             ] = paddle.static.load_inference_model(original_path, exe)
+            [inference_program, feed_target_names,
+             fetch_targets] = paddle.static.load_inference_model(
+                 original_path, exe)
         else:
             [inference_program, feed_target_names,
              fetch_targets] = paddle.static.load_inference_model(

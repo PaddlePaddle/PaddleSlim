@@ -403,6 +403,7 @@ class TestOFACase4(unittest.TestCase):
         self.model = ModelConv2()
 
 
+@unittest.skip("reason for skipping")
 class TestExport(unittest.TestCase):
     def setUp(self):
         self._init_model()

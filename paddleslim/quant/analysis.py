@@ -23,7 +23,7 @@ import random
 import tempfile
 import paddle
 from ..common import get_logger, load_inference_model
-from paddle.fluid.framework import IrGraph
+from paddle.framework import IrGraph
 from paddle.framework import core
 
 from paddle.static.quantization import PostTrainingQuantization

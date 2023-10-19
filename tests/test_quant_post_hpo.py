@@ -45,8 +45,8 @@ class TestQuantPostHpoCase1(StaticCase):
         main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
 
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(paddle.static.default_startup_program())
 
@@ -100,9 +100,8 @@ class TestQuantPostHpoCase1(StaticCase):
             iter = 0
             result = [[], [], []]
             for data in valid_loader():
-                cost, top1, top5 = exe.run(program,
-                                           feed=data,
-                                           fetch_list=outputs)
+                cost, top1, top5 = exe.run(
+                    program, feed=data, fetch_list=outputs)
                 iter += 1
                 if iter % 100 == 0:
                     print('eval iter={}, avg loss {}, acc_top1 {}, acc_top5 {}'.
@@ -130,6 +129,8 @@ class TestQuantPostHpoCase1(StaticCase):
             "./test_quant_post_hpo_inference",
             train_sample_generator=sample_generator_creator(),
             eval_sample_generator=sample_generator_creator(),
+            train_dataloader=valid_loader,
+            eval_dataloader=valid_loader,
             model_filename="model.pdmodel",
             params_filename="model.pdiparams",
             save_model_filename='model.pdmodel',

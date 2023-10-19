@@ -1147,7 +1147,7 @@ class SuperSyncBatchNorm(paddle.nn.SyncBatchNorm):
             "Variance": [self._variance]
         }
 
-        helper = paddle.fluid.layer_helper.LayerHelper('sync_batch_norm')
+        helper = paddle.framework.LayerHelper('sync_batch_norm')
 
         saved_mean = helper.create_variable_for_type_inference(
             dtype=self._dtype, stop_gradient=True)
@@ -1315,7 +1315,7 @@ class SuperLayerNorm(paddle.nn.LayerNorm):
                 "begin_norm_axis": begin_norm_axis
             }
 
-            helper = paddle.fluid.layer_helper.LayerHelper('layer_norm')
+            helper = paddle.framework.LayerHelper('layer_norm')
 
             dtype = input.dtype
             mean_out = helper.create_variable_for_type_inference(

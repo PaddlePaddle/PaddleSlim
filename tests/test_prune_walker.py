@@ -99,10 +99,11 @@ class TestPrune(StaticCase):
         exe.run(startup_program)
         x = np.random.random(size=(10, 3, 16, 16)).astype('float32')
         label = np.random.random(size=(10, 1)).astype('int64')
-        loss_data, = exe.run(main_program,
-                             feed={"image": x,
-                                   "label": label},
-                             fetch_list=[cost.name])
+        loss_data, = exe.run(
+            main_program,
+            feed={"image": x,
+                  "label": label},
+            fetch_list=[cost.name])
         pruner = Pruner()
         main_program, _, _ = pruner.prune(
             main_program,
@@ -115,10 +116,11 @@ class TestPrune(StaticCase):
             param_backup=None,
             param_shape_backup=None)
 
-        loss_data, = exe.run(main_program,
-                             feed={"image": x,
-                                   "label": label},
-                             fetch_list=[cost.name])
+        loss_data, = exe.run(
+            main_program,
+            feed={"image": x,
+                  "label": label},
+            fetch_list=[cost.name])
 
 
 class TestUnsqueeze2(StaticCase):
@@ -437,7 +439,9 @@ class TestActivation(TestPruneWorker):
 
     def set_cases(self):
         self.cases.append((self.in_var, 1, {'conv2.w_0': [1]}))
-        self.cases.append((self.out_var, 1, {'conv1.w_0': [0], }))
+        self.cases.append((self.out_var, 1, {
+            'conv1.w_0': [0],
+        }))
 
     def check(self):
         self.check_in_out()
@@ -471,149 +475,6 @@ class TestDepthwiseConv2d(TestPruneWorker):
 
     def test_prune(self):
         self.check_in_out()
-
-
-class TestMul(TestPruneWorker):
-    def __init__(self,
-                 methodName="check",
-                 x_num_col_dims=1,
-                 y_num_col_dims=1,
-                 ret=[]):
-        super(TestMul, self).__init__(methodName)
-        self.x_num_col_dims = x_num_col_dims
-        self.y_num_col_dims = y_num_col_dims
-        self.ret = ret
-
-    def define_layer(self, input):
-        x = paddle.static.data(name="x", shape=[1, 1, 1, 1])
-        y = paddle.static.data(name="y", shape=[1, 1, 1, 1])
-        self.input = x
-        self.y = y
-        out = paddle.fluid.layers.mul(x,
-                                      y,
-                                      x_num_col_dims=self.x_num_col_dims,
-                                      y_num_col_dims=self.y_num_col_dims)
-        self.output = out
-
-    def set_cases(self):
-        y = self.graph.var(self.y.name)
-        x = self.in_var
-        out = self.out_var
-        self.cases.append((x, 0, self.ret[0]))
-        self.cases.append((x, 1, self.ret[1]))
-        self.cases.append((x, 2, self.ret[2]))
-        self.cases.append((x, 3, self.ret[3]))
-
-        self.cases.append((y, 0, self.ret[4]))
-        self.cases.append((y, 1, self.ret[5]))
-        self.cases.append((y, 2, self.ret[6]))
-        self.cases.append((y, 3, self.ret[7]))
-
-        self.cases.append((out, 0, self.ret[8]))
-        self.cases.append((out, 1, self.ret[9]))
-
-    def check(self):
-        self.check_in_out()
-
-
-mul_suite = unittest.TestSuite()
-ret = [
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {
-        'y': [0]
-    },
-    {
-        'y': [0]
-    },
-    {
-        'y': [0]
-    },
-    {
-        'x': [1],
-        'y': [0]
-    },
-    {
-        'mul_0.tmp_0': [1],
-        'y': [1]
-    },
-    {
-        'mul_0.tmp_0': [1],
-        'y': [2]
-    },
-    {
-        'mul_0.tmp_0': [1],
-        'y': [3]
-    },
-    {
-        'x': [0]
-    },
-    {},
-]
-mul_suite.addTest(TestMul(x_num_col_dims=1, y_num_col_dims=1, ret=ret))
-ret = [
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {},
-    {},
-    {
-        'y': [0],
-        'x': [2]
-    },
-    {
-        'y': [1],
-        'x': [2]
-    },
-    {
-        'y': [2],
-        'mul_0.tmp_0': [1]
-    },
-    {
-        'y': [3],
-        'mul_0.tmp_0': [1]
-    },
-    {},
-    {},
-]
-mul_suite.addTest(TestMul(x_num_col_dims=2, y_num_col_dims=2, ret=ret))
-ret = [
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {
-        'mul_0.tmp_0': [0]
-    },
-    {},
-    {
-        'x': [3],
-        'y': [0]
-    },
-    {
-        'x': [3],
-        'y': [1]
-    },
-    {
-        'x': [3],
-        'y': [2]
-    },
-    {
-        'mul_0.tmp_0': [1],
-        'y': [3]
-    },
-    {},
-    {
-        'y': [3]
-    },
-]
-mul_suite.addTest(TestMul(x_num_col_dims=3, y_num_col_dims=3, ret=ret))
 
 
 class TestMatmul(TestPruneWorker):
@@ -783,6 +644,5 @@ class TestAverageAccumulates(TestPruneWorker):
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=2)
-    runner.run(mul_suite)
     runner.run(act_suite)
     unittest.main()
