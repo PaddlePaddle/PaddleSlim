@@ -21,6 +21,7 @@ from paddleslim.nas.darts import DARTSearch
 from layers import conv_bn_layer
 
 
+@unittest.skip("Deprecated darts in PaddleSlim>=2.6.0")
 class TestDARTS(unittest.TestCase):
     def test_darts(self):
         class SuperNet(paddle.nn.Layer):
@@ -63,8 +64,8 @@ class TestDARTS(unittest.TestCase):
             def _loss(self, input, label):
                 logits = self.forward(input)
                 return paddle.mean(
-                    paddle.nn.functional.softmax_with_cross_entropy(logits,
-                                                                    label))
+                    paddle.nn.functional.softmax_with_cross_entropy(
+                        logits, label))
 
         def batch_generator(reader):
             def wrapper():

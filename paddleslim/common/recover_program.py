@@ -41,7 +41,7 @@ def _recover_outputs_attr(program):
                 if "ReserveSpace" not in op.output_names or len(
                         op.output("ReserveSpace")) == 0:
                     reserve_space = block.create_var(
-                        name=paddle.fluid.
+                        name=paddle.utils.
                         unique_name.generate_with_ignorable_key(
                             ".".join(["reserve_space", 'tmp'])),
                         dtype=block.var(op.input("X")[0]).dtype,
@@ -52,7 +52,7 @@ def _recover_outputs_attr(program):
             if op.type == 'transpose2' or op.type == 'flatten_contiguous_range' or op.type == 'unsqueeze2':
                 if 'XShape' not in op.output_names:
                     xshape = block.create_var(
-                        name=paddle.fluid.
+                        name=paddle.utils.
                         unique_name.generate_with_ignorable_key(
                             ".".join(["xshape", 'tmp'])),
                         dtype=block.var(op.input("X")[0]).dtype,

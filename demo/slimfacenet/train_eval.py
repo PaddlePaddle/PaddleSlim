@@ -20,7 +20,6 @@ import scipy.io
 import numpy as np
 
 import paddle
-import paddle.fluid as fluid
 
 from dataloader.casia import CASIA_Face
 from dataloader.lfw import LFW
@@ -230,11 +229,10 @@ def quant_val_reader_batch():
     test_dataset = LFW(nl, nr)
     test_reader = paddle.batch(
         test_dataset.reader, batch_size=1, drop_last=False)
-    shuffle_reader = fluid.io.shuffle(test_reader, 3)
 
     def _reader():
         while True:
-            for idx, data in enumerate(shuffle_reader()):
+            for idx, data in enumerate(test_reader()):
                 yield np.expand_dims(data[0][0], axis=0)
 
     return _reader
