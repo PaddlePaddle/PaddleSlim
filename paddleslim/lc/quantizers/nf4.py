@@ -1,5 +1,6 @@
 import paddle
 from .base_quantizer import BaseQuantizer
+import paddleslim_ops
 
 
 class NF4Quantizer(BaseQuantizer):
@@ -13,7 +14,9 @@ class NF4Quantizer(BaseQuantizer):
         self.double_quant_scale = None
 
     def quantize(self, x: paddle.Tensor):
-        return x
+        out, abs_max = paddleslim_ops.quantize_nf4(x)
+        self.quant_scale = abs_max
+        return out
 
     def dequantize(self, x: paddle.Tensor):
         return x
