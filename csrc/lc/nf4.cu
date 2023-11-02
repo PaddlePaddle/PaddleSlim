@@ -226,10 +226,8 @@ std::vector<paddle::Tensor> QuantizeNF4(const paddle::Tensor& input, int block_s
     }
 }
 
-
-
-
 PD_BUILD_OP(quantize_nf4)
     .Inputs({"input"})
     .Outputs({"out", "abs_max"})
+    .Attrs({"block_size: int"})
     .SetKernelFn(PD_KERNEL(QuantizeNF4));
