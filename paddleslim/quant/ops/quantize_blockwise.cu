@@ -447,12 +447,12 @@ std::vector<paddle::Tensor> QuantizeBlockwise(const paddle::Tensor& input, const
     }
 };
 
-std::vector<std::vector<int64_t>> GetQuantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape){
+std::vector<std::vector<int64_t>> GetQuantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, int blocksize, int n, std::string quant_type){
     int64_t final_axis_shape = input_shape[1] / 2;
-    if (code_shape.empty())
-        return {input_shape};
-    else
+    if (quant_type != "8bit")
         return {{input_shape[0], final_axis_shape}};
+    else
+        return {input_shape};
 }
 
 std::vector<paddle::DataType> GetQuantizeBlockwiseInferDtype(const paddle::DataType& input_dtype, const paddle::DataType& code_dtype){

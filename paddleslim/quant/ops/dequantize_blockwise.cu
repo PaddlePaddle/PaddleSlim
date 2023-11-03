@@ -106,7 +106,7 @@ __device__ float dDequantizeNF4(unsigned char val)
 
 
 template<typename T, int TILE_SIZE, int THREADS, int NUM_PER_TH, int DATA_TYPE>
-__global__ void kDequantizeBlockwise(float *code, unsigned char * A, float * absmax, T *out, const int blocksize, const int n)
+__global__ void kDequantizeBlockwise(const float *code, const unsigned char * A, const float * absmax, T *out, int blocksize, int n)
 {
 
   const int n_load = (gridDim.x * TILE_SIZE);
@@ -172,19 +172,19 @@ __global__ void kDequantizeBlockwise(float *code, unsigned char * A, float * abs
   }
 }
 
-template __global__ void kDequantizeBlockwise<half, 512, 64, 8, FP4>(float *code, unsigned char * A, float * absmax, half *out, const int blocksize, const int n);
-template __global__ void kDequantizeBlockwise<half, 512, 64, 8, General8bit>(float *code, unsigned char * A, float * absmax, half *out, const int blocksize, const int n);
-template __global__ void kDequantizeBlockwise<half, 512, 64, 8, NF4>(float *code, unsigned char * A, float * absmax, half *out, const int blocksize, const int n);
-template __global__ void kDequantizeBlockwise<float, 512, 64, 8, FP4>(float *code, unsigned char * A, float * absmax, float *out, const int blocksize, const int n);
-template __global__ void kDequantizeBlockwise<float, 512, 64, 8, General8bit>(float *code, unsigned char * A, float * absmax, float *out, const int blocksize, const int n);
-template __global__ void kDequantizeBlockwise<float, 512, 64, 8, NF4>(float *code, unsigned char * A, float * absmax, float *out, const int blocksize, const int n);
-template __global__ void kDequantizeBlockwise<__nv_bfloat16, 512, 64, 8, FP4>(float *code, unsigned char * A, float * absmax, __nv_bfloat16 *out, const int blocksize, const int n);
-template __global__ void kDequantizeBlockwise<__nv_bfloat16, 512, 64, 8, General8bit>(float *code, unsigned char * A, float * absmax, __nv_bfloat16 *out, const int blocksize, const int n);
-template __global__ void kDequantizeBlockwise<__nv_bfloat16, 512, 64, 8, NF4>(float *code, unsigned char * A, float * absmax, __nv_bfloat16 *out, const int blocksize, const int n);
+//template __global__ void kDequantizeBlockwise<half, 512, 64, 8, FP4>(const float *code, const unsigned char * A, const float * absmax, half *out, int blocksize, int n);
+//template __global__ void kDequantizeBlockwise<half, 512, 64, 8, General8bit>(const float *code, const unsigned char * A, const float * absmax, half *out, int blocksize, int n);
+//template __global__ void kDequantizeBlockwise<half, 512, 64, 8, NF4>(const float *code, const unsigned char * A, const float * absmax, half *out, int blocksize, int n);
+template __global__ void kDequantizeBlockwise<float, 512, 64, 8, FP4>(const float *code, const unsigned char * A, const float * absmax, float *out, int blocksize, int n);
+template __global__ void kDequantizeBlockwise<float, 512, 64, 8, General8bit>(const float *code, const unsigned char * A, const float * absmax, float *out, int blocksize, int n);
+template __global__ void kDequantizeBlockwise<float, 512, 64, 8, NF4>(const float *code, const unsigned char * A, const float * absmax, float *out, int blocksize, int n);
+//template __global__ void kDequantizeBlockwise<__nv_bfloat16, 512, 64, 8, FP4>(const float *code, const unsigned char * A, const float * absmax, __nv_bfloat16 *out, int blocksize, int n);
+//template __global__ void kDequantizeBlockwise<__nv_bfloat16, 512, 64, 8, General8bit>(const float *code, const unsigned char * A, const float * absmax, __nv_bfloat16 *out, int blocksize, int n);
+//template __global__ void kDequantizeBlockwise<__nv_bfloat16, 512, 64, 8, NF4>(const float *code, const unsigned char * A, const float * absmax, __nv_bfloat16 *out, int blocksize, int n);
 
 
 
-template<typename T, int DATA_TYPE> void dequantize_blockwise(float *code, unsigned char *A, float *absmax, T *out, int blocksize, int n)
+template<typename T, int DATA_TYPE> void dequantize_blockwise(const float *code, const unsigned char *A, const float *absmax, T *out, int blocksize, int n)
 {
   int num_blocks = n/blocksize;
   num_blocks = n % blocksize == 0 ? num_blocks : num_blocks + 1;
@@ -198,15 +198,15 @@ template<typename T, int DATA_TYPE> void dequantize_blockwise(float *code, unsig
   CUDA_CHECK_RETURN(cudaPeekAtLastError());
 }
 
-template void dequantize_blockwise<float, General8bit>(float *code, unsigned char *A, float *absmax, float *out, int blocksize, int n);
-template void dequantize_blockwise<float, FP4>(float *code, unsigned char *A, float *absmax, float *out, int blocksize, int n);
-template void dequantize_blockwise<float, NF4>(float *code, unsigned char *A, float *absmax, float *out, int blocksize, int n);
-template void dequantize_blockwise<half, General8bit>(float *code, unsigned char *A, float *absmax, half *out, int blocksize, int n);
-template void dequantize_blockwise<half, FP4>(float *code, unsigned char *A, float *absmax, half *out, int blocksize, int n);
-template void dequantize_blockwise<half, NF4>(float *code, unsigned char *A, float *absmax, half *out, int blocksize, int n);
-template void dequantize_blockwise<__nv_bfloat16, General8bit>(float *code, unsigned char *A, float *absmax, __nv_bfloat16 *out, int blocksize, int n);
-template void dequantize_blockwise<__nv_bfloat16, FP4>(float *code, unsigned char *A, float *absmax, __nv_bfloat16 *out, int blocksize, int n);
-template void dequantize_blockwise<__nv_bfloat16, NF4>(float *code, unsigned char *A, float *absmax, __nv_bfloat16 *out, int blocksize, int n);
+template void dequantize_blockwise<float, General8bit>(const float *code, const unsigned char *A, const float *absmax, float *out, int blocksize, int n);
+template void dequantize_blockwise<float, FP4>(const float *code, const unsigned char *A, const float *absmax, float *out, int blocksize, int n);
+template void dequantize_blockwise<float, NF4>(const float *code, const unsigned char *A, const float *absmax, float *out, int blocksize, int n);
+//template void dequantize_blockwise<half, General8bit>(const float *code, const unsigned char *A, const float *absmax, half *out, int blocksize, int n);
+//template void dequantize_blockwise<half, FP4>(const float *code, const unsigned char *A, const float *absmax, half *out, int blocksize, int n);
+//template void dequantize_blockwise<half, NF4>(const float *code, const unsigned char *A, const float *absmax, half *out, int blocksize, int n);
+//template void dequantize_blockwise<__nv_bfloat16, General8bit>(const float *code, const unsigned char *A, const float *absmax, __nv_bfloat16 *out, int blocksize, int n);
+//template void dequantize_blockwise<__nv_bfloat16, FP4>(const float *code, const unsigned char *A, const float *absmax, __nv_bfloat16 *out, int blocksize, int n);
+//template void dequantize_blockwise<__nv_bfloat16, NF4>(const float *code, const unsigned char *A, const float *absmax, __nv_bfloat16 *out, int blocksize, int n);
 
 std::vector<paddle::Tensor> DequantizeBlockwise(const paddle::Tensor& input, const paddle::Tensor& code, const paddle::Tensor& absmax, int blocksize, int n, std::string quant_type, std::string out_type) {
     auto input_num = input.numel();
@@ -215,52 +215,34 @@ std::vector<paddle::Tensor> DequantizeBlockwise(const paddle::Tensor& input, con
         out_shape = {input_num * 2, 1};
     }
 
-    paddle::DataType date_t = paddle::DataType::FLOAT32;
-    if (out_type == "float16")
-        data_t = paddle::DataType::FLOAT16;
-    else if  (out_type == "bfloat16")
-        data_t = paddle::DataType::BFLOAT16;
+    auto out = paddle::empty(out_shape, paddle::DataType::FLOAT32, input.place());
 
-    auto out = paddle::empty(out_shape, data_t, input.place());
-
-    switch(out.type()) {
-        case paddle::DataType::FLOAT32:
-            dequantize_blockwise<float, General8bit>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
-            return {out};
-        case paddle::DataType::FLOAT16:
-            dequantize_blockwise<half, General8bit>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<half>(), blocksize, n);
-            return {out};
-        case paddle::DataType::BFLOAT16:
-            dequantize_blockwise<__nv_bfloat16, General8bit>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<__nv_bfloat16>(), blocksize, n);
-            return {out};
-        default:
-            PD_THROW(
-                "NOT supported data type. "
-                "Only float16, bfloat16 and float32 are supported. ");
-            break;
-    }
+    if (quant_type == "8bit")
+        dequantize_blockwise<float, General8bit>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
+    else if (quant_type == "nf4")
+        dequantize_blockwise<float, NF4>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
+    else if (quant_type == "fp4")
+        dequantize_blockwise<float, FP4>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
+    else
+        PD_THROW("NOT supported quant type. Only 8bit, nf4, fp4 are supported. ");
+    return {out};
 };
 
-std::vector<std::vector<int64_t>> GetDequantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, abs_max_shape){
-    if (code_shape.empty())
-        return {input_shape[0], input_shape[1] * 2};
-    return {input_shape};
-}
-
-std::vector<paddle::DataType> GetDequantizeBlockwiseInferDtype(const paddle::DataType& input_dtype, const paddle::DataType& code_dtype, const paddle::DataType& abs_max_dtype, int blocksize, int n, std::string quant_type, std::string out_type){
-    if (out_type == "bfloat16")
-        return {paddle::DataType::BFLOAT16};
-    else if (out_type == "float16")
-        return {paddle::DataType::FLOAT16};
+std::vector<std::vector<int64_t>> GetDequantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, const std::vector<int64_t>& abs_max_shape, int blocksize, int n, std::string quant_type, std::string out_type){
+    if (quant_type != "8bit")
+        return {{input_shape[0], input_shape[1] * 2}};
     else
-        return {paddle::DataType::FLOAT32};
+        return {input_shape};
+}
+std::vector<paddle::DataType> GetDequantizeBlockwiseInferDtype(const paddle::DataType& input_dtype, const paddle::DataType& code_dtype, const paddle::DataType& abs_max_dtype){
+    return {paddle::DataType::FLOAT32};
 }
 
 
 PD_BUILD_OP(dequant_blockwise)
     .Inputs({"input", "code", "abs_max"})
     .Outputs({"output"})
-    .Attrs({"blocksize: int", "n: int", "quant_type: std::string", "out_type: std::string"})
+    .Attrs({"blocksize: int", "n: int", "quant_type: std::string"})
     .SetKernelFn(PD_KERNEL(DequantizeBlockwise))
     .SetInferShapeFn(PD_INFER_SHAPE(GetDequantizeBlockwiseInferShape))
     .SetInferDtypeFn(PD_INFER_DTYPE(GetDequantizeBlockwiseInferDtype));
