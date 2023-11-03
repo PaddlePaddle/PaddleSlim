@@ -24,6 +24,7 @@ class PDTraits<paddle::DataType::FLOAT32> {
 public:
   typedef float DataType;
   typedef float data_t;
+  static const paddle::DataType  dtype_s = paddle::DataType::FLOAT32;
 };
 
 template <>
@@ -31,6 +32,7 @@ class PDTraits<paddle::DataType::FLOAT16> {
 public:
   typedef half DataType;
   typedef paddle::float16 data_t;
+  static const paddle::DataType  dtype_s = paddle::DataType::FLOAT16;
 };
 
 template <>
@@ -38,4 +40,5 @@ class PDTraits<paddle::DataType::BFLOAT16> {
 public:
   typedef __nv_bfloat16 DataType;
   typedef paddle::bfloat16 data_t;
+  static const paddle::DataType  dtype_s = paddle::DataType::BFLOAT16;
 };

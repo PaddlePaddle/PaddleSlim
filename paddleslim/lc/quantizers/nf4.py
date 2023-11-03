@@ -19,8 +19,9 @@ class NF4Quantizer(BaseQuantizer):
         self.quant_scale = abs_max
         return out
 
-    def dequantize(self, x: paddle.Tensor):
-        return x
+    def dequantize(self, x: paddle.Tensor, dtype: int):
+        return paddleslim_ops.dequantize_nf4(
+            x, self.quant_scale, block_size=self.block_size, dtype=dtype)
 
     def matmul(self, x: paddle.Tensor, y: paddle.Tensor, bias: paddle.Tensor):
         return x @ self.dequantize(y) + bias
