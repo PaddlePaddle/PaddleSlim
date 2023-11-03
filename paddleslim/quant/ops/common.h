@@ -1,5 +1,5 @@
-#ifndef ops_H
-#define ops_H
+#ifndef COMMON_H
+#define COMMON_H
 
 typedef enum LC_DataType_t
 {
