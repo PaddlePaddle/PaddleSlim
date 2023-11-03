@@ -273,32 +273,6 @@ __global__ void kQuantizeBlockwise(const float * code, const T * __restrict__ A,
   }
 }
 
-__device__ float dDequantizeFP4Tree(unsigned char val, float absmax)
-{
-  float sign = (val & 0b1000) == 8 ? -1.0f : 1.0f;
-  if((val & 0b0100) == 4) // 0
-    if((val & 0b0010) == 2) //01
-      if((val & 0b0001) == 1) // 111
-        return 0.25000000f*absmax*sign; // 1111
-      else
-        return 0.16666667f*absmax*sign; // 1110
-    else
-      if((val & 0b0001) == 1) // 110
-        return 0.50000000f*absmax*sign; // 1101
-      else
-        return 0.33333333f*absmax*sign; // 1100
-  else
-    if((val & 0b0010) == 2) //10
-      if((val & 0b0001) == 1) // 101
-        return 1.00000000f*absmax*sign; // 1011
-      else
-        return 0.66666667f*absmax*sign; // 1010
-    else
-      if((val & 0b0001) == 1) // 100
-        return 5.208333333e-03f*absmax*sign; // 1001
-      else
-        return 0.00000000f*absmax*sign; // 1000
-}
 
 #define MAKE_kQuantizeBlockwise(dtype, blocksize, num_per_thread, data_type_name) \
 template __global__ void kQuantizeBlockwise<dtype, blocksize, num_per_thread, data_type_name>(const float * code, const dtype * __restrict__ A, float *absmax, unsigned char *out, int n); \
@@ -389,6 +363,8 @@ template <typename T, int DATA_TYPE> void quantize_blockwise(const float *code, 
     kQuantizeBlockwise<T, 128, 2, DATA_TYPE><<<num_blocks, 64>>>(code, A, absmax, out, n);
   else if(blocksize == 64)
     kQuantizeBlockwise<T, 64, 2, DATA_TYPE><<<num_blocks, 32>>>(code, A, absmax, out, n);
+  else
+    PD_THROW("only support blocksize is [64, 128, 256, 512, 1024, 2048, 4096].");
 
 
   CUDA_CHECK_RETURN(cudaPeekAtLastError());
@@ -417,8 +393,9 @@ std::vector<paddle::Tensor> QuantizeBlockwise(const paddle::Tensor& input, const
         case paddle::DataType::FLOAT32:
             if (quant_type == "8bit")
                 quantize_blockwise<float, General8bit>(code.data<float>(), input.data<float>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
-            else if (quant_type == "nf4")
+            else if (quant_type == "nf4") {
                 quantize_blockwise<float, NF4>(NULL, input.data<float>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+            }
             else if (quant_type == "fp4")
                 quantize_blockwise<float, FP4>(NULL, input.data<float>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             return {out, absmax};
@@ -448,9 +425,9 @@ std::vector<paddle::Tensor> QuantizeBlockwise(const paddle::Tensor& input, const
 };
 
 std::vector<std::vector<int64_t>> GetQuantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, int blocksize, int n, std::string quant_type){
-    int64_t final_axis_shape = input_shape[1] / 2;
+    int64_t first_shape = input_shape[0] * input_shape[1] / 2;
     if (quant_type != "8bit")
-        return {{input_shape[0], final_axis_shape}};
+        return {{first_shape, 1}};
     else
         return {input_shape};
 }
