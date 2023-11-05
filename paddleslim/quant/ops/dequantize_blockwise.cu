@@ -186,10 +186,8 @@ template __global__ void kDequantizeBlockwise<float, 512, 64, 8, NF4>(const floa
 
 template<typename T, int DATA_TYPE> void dequantize_blockwise(const float *code, const unsigned char *A, const float *absmax, T *out, int blocksize, int n)
 {
-  std::cout << "n: " << n << std::endl;
   int num_blocks = n/blocksize;
   num_blocks = n % blocksize == 0 ? num_blocks : num_blocks + 1;
-  std::cout << "data type: " << DATA_TYPE << std::endl;
   int tile_size = (DATA_TYPE > 0) ? 1024 : 512;
 
   if(DATA_TYPE > 0)
@@ -210,15 +208,16 @@ template void dequantize_blockwise<float, NF4>(const float *code, const unsigned
 //template void dequantize_blockwise<__nv_bfloat16, FP4>(const float *code, const unsigned char *A, const float *absmax, __nv_bfloat16 *out, int blocksize, int n);
 //template void dequantize_blockwise<__nv_bfloat16, NF4>(const float *code, const unsigned char *A, const float *absmax, __nv_bfloat16 *out, int blocksize, int n);
 
-std::vector<paddle::Tensor> DequantizeBlockwise(const paddle::Tensor& input, const paddle::Tensor& code, const paddle::Tensor& absmax, int blocksize, int n, std::string quant_type) {
-    auto input_num = input.numel();
+std::vector<paddle::Tensor> DequantizeBlockwise(const paddle::Tensor& input, const paddle::Tensor& code, const paddle::Tensor& absmax, int blocksize, std::string quant_type) {
+    int64_t input_numel = input.numel();
+    int n = input_numel;
     std::vector<int64_t> out_shape = input.shape();
     if (quant_type != "8bit") { // 4bit
-        out_shape = {input_num * 2, 1};
+        out_shape = {input_numel * 2, 1};
+        n = n * 2;
     }
     auto out = paddle::empty(out_shape, paddle::DataType::FLOAT32, input.place());
 
-    std::cout << "quant type: " << quant_type << std::endl;
     if (quant_type == "8bit")
         dequantize_blockwise<float, General8bit>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
     else if (quant_type == "nf4")
@@ -230,8 +229,8 @@ std::vector<paddle::Tensor> DequantizeBlockwise(const paddle::Tensor& input, con
     return {out};
 };
 
-std::vector<std::vector<int64_t>> GetDequantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, const std::vector<int64_t>& abs_max_shape, int blocksize, int n, std::string quant_type){
-    int64_t first_shape = n * 2; //input_shape[0] * input_shape[1] * 2;
+std::vector<std::vector<int64_t>> GetDequantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, const std::vector<int64_t>& abs_max_shape, int blocksize, std::string quant_type){
+    int64_t first_shape = input_shape[0] * input_shape[1] * 2;
     if (quant_type != "8bit")
         return {{first_shape, 1}};
     else
@@ -245,7 +244,7 @@ std::vector<paddle::DataType> GetDequantizeBlockwiseInferDtype(const paddle::Dat
 PD_BUILD_OP(dequant_blockwise)
     .Inputs({"input", "code", "abs_max"})
     .Outputs({"output"})
-    .Attrs({"blocksize: int", "n: int", "quant_type: std::string"})
+    .Attrs({"blocksize: int", "quant_type: std::string"})
     .SetKernelFn(PD_KERNEL(DequantizeBlockwise))
     .SetInferShapeFn(PD_INFER_SHAPE(GetDequantizeBlockwiseInferShape))
     .SetInferDtypeFn(PD_INFER_DTYPE(GetDequantizeBlockwiseInferDtype));

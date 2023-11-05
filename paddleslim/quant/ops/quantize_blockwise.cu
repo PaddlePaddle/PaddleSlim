@@ -380,14 +380,14 @@ template void quantize_blockwise<__nv_bfloat16, General8bit>(const float *code, 
 template void quantize_blockwise<__nv_bfloat16, FP4>(const float *code, const __nv_bfloat16 *A, float *absmax, unsigned char *out, int blocksize, int n);
 template void quantize_blockwise<__nv_bfloat16, NF4>(const float *code, const __nv_bfloat16 *A, float *absmax, unsigned char *out, int blocksize, int n);
 
-std::vector<paddle::Tensor> QuantizeBlockwise(const paddle::Tensor& input, const paddle::Tensor& code, int blocksize, int n, std::string quant_type) {
-    auto input_num = input.numel();
+std::vector<paddle::Tensor> QuantizeBlockwise(const paddle::Tensor& input, const paddle::Tensor& code, int blocksize, std::string quant_type) {
+    int n = input.numel();
     std::vector<int64_t> out_shape = input.shape();
     if (quant_type != "8bit") { // 4bit
-        out_shape = {input_num / 2, 1};
+        out_shape = {(n + 1) / 2, 1};
     }
     auto out = paddle::empty(out_shape, paddle::DataType::UINT8, input.place());
-    int64_t absmax_shape = input_num / blocksize;
+    int64_t absmax_shape = n / blocksize;
     auto absmax = paddle::empty({absmax_shape}, paddle::DataType::FLOAT32, input.place());
     switch(input.type()) {
         case paddle::DataType::FLOAT32:
@@ -424,8 +424,8 @@ std::vector<paddle::Tensor> QuantizeBlockwise(const paddle::Tensor& input, const
     }
 };
 
-std::vector<std::vector<int64_t>> GetQuantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, int blocksize, int n, std::string quant_type){
-    int64_t first_shape = input_shape[0] * input_shape[1] / 2;
+std::vector<std::vector<int64_t>> GetQuantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, int blocksize, std::string quant_type){
+    int64_t first_shape = (input_shape[0] * input_shape[1] + 1) / 2;
     if (quant_type != "8bit")
         return {{first_shape, 1}};
     else
@@ -439,7 +439,7 @@ std::vector<paddle::DataType> GetQuantizeBlockwiseInferDtype(const paddle::DataT
 PD_BUILD_OP(quant_blockwise)
     .Inputs({"input", "code"})
     .Outputs({"output", "abs_max"})
-    .Attrs({"blocksize: int", "n: int", "quant_type: std::string"})
+    .Attrs({"blocksize: int", "quant_type: std::string"})
     .SetKernelFn(PD_KERNEL(QuantizeBlockwise))
     .SetInferShapeFn(PD_INFER_SHAPE(GetQuantizeBlockwiseInferShape))
     .SetInferDtypeFn(PD_INFER_DTYPE(GetQuantizeBlockwiseInferDtype));
