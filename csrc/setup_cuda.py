@@ -17,5 +17,6 @@ from paddle.utils.cpp_extension import CUDAExtension, setup
 setup(
     name="paddleslim_ops",
     ext_modules=CUDAExtension(sources=[
-        "./lc/nf4.cu",
+        "./lc/quantize_blockwise.cu",
+        "./lc/dequantize_blockwise.cu",
     ]), )
