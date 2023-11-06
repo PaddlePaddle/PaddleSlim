@@ -20,6 +20,7 @@ from paddleslim import dist
 from paddleslim import quant
 from paddleslim import dygraph
 from paddleslim import auto_compression
+from paddleslim import lc
 __all__ = [
     'prune',
     'nas',
@@ -28,6 +29,7 @@ __all__ = [
     'quant',
     'dygraph',
     'auto_compression',
+    'lc',
 ]
 
 from paddleslim.dygraph import *
