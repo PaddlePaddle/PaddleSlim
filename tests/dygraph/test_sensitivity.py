@@ -85,7 +85,8 @@ class TestSensitivity(unittest.TestCase):
 
         sen = pruner.sensitive(
             eval_func=eval_fn,
-            sen_file="_".join(["./dygraph_sen_", str(time.time())]),
+            sen_file="_".join(["./dygraph_sen_",
+                               str(time.time())]),
             #sen_file="sen.pickle",
             target_vars=self._param_names)
         params = {}
@@ -116,13 +117,13 @@ class TestSensitivity(unittest.TestCase):
         val_reader = paddle.batch(self.val_reader, batch_size=128)
 
         def eval_func(program):
-            feeder = paddle.fluid.DataFeeder(
-                feed_list=['image', 'label'], place=place, program=program)
             acc_set = []
             for data in val_reader():
-                acc_np = exe.run(program=program,
-                                 feed=feeder.feed(data),
-                                 fetch_list=[acc_top1])
+                acc_np = exe.run(
+                    program=program,
+                    feed={"image": data[0],
+                          "label": data[1]},
+                    fetch_list=[acc_top1])
                 acc_set.append(float(acc_np[0]))
             acc_val_mean = np.array(acc_set).mean()
             return acc_val_mean
@@ -142,15 +143,15 @@ class TestSensitivity(unittest.TestCase):
             self._param_names,
             eval_func,
             sensitivities_file="_".join(
-                ["./sensitivities_file", str(time.time())]),
+                ["./sensitivities_file",
+                 str(time.time())]),
             criterion=criterion)
         return sen
 
 
 def add_cases(suite):
     suite.addTest(
-        TestSensitivity(
-            pruner="l1norm", param_names=["conv2d_0.w_0"]))
+        TestSensitivity(pruner="l1norm", param_names=["conv2d_0.w_0"]))
 
 
 def load_tests(loader, standard_tests, pattern):

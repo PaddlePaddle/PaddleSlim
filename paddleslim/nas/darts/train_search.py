@@ -121,8 +121,8 @@ class DARTSearch(object):
             prec1 = paddle.static.accuracy(input=logits, label=train_label, k=1)
             prec5 = paddle.static.accuracy(input=logits, label=train_label, k=5)
             loss = paddle.mean(
-                x=paddle.nn.functional.softmax_with_cross_entropy(logits,
-                                                                  train_label))
+                x=paddle.nn.functional.softmax_with_cross_entropy(
+                    logits, train_label))
 
             loss.backward()
 
@@ -156,8 +156,8 @@ class DARTSearch(object):
             prec1 = paddle.static.accuracy(input=logits, label=label, k=1)
             prec5 = paddle.static.accuracy(input=logits, label=label, k=5)
             loss = paddle.mean(
-                x=paddle.nn.functional.softmax_with_cross_entropy(logits,
-                                                                  label))
+                x=paddle.nn.functional.softmax_with_cross_entropy(
+                    logits, label))
             objs.update(loss.numpy(), n)
             top1.update(prec1.numpy(), n)
             top5.update(prec5.numpy(), n)
@@ -197,21 +197,10 @@ class DARTSearch(object):
             parameters=model_parameters,
             grad_clip=clip)
 
-        train_loader = paddle.io.DataLoader.from_generator(
-            capacity=64,
-            use_double_buffer=True,
-            iterable=True,
-            return_list=True,
-            use_multiprocess=self.use_multiprocess)
-        valid_loader = paddle.io.DataLoader.from_generator(
-            capacity=64,
-            use_double_buffer=True,
-            iterable=True,
-            return_list=True,
-            use_multiprocess=self.use_multiprocess)
-
-        train_loader.set_batch_generator(self.train_reader, places=self.place)
-        valid_loader.set_batch_generator(self.valid_reader, places=self.place)
+        train_loader = paddle.io.DataLoader(
+            self.train_reader, use_buffer_reader=True, return_list=True)
+        valid_loader = paddle.io.DataLoader(
+            self.valid_reader, use_buffer_reader=True, return_list=True)
 
         base_model = self.model
         architect = Architect(
@@ -236,8 +225,8 @@ class DARTSearch(object):
 
             if epoch == self.num_epochs - 1:
                 valid_top1 = self.valid_one_epoch(valid_loader, epoch)
-                logger.info("Epoch {}, valid_acc {:.6f}".format(epoch,
-                                                                valid_top1))
+                logger.info(
+                    "Epoch {}, valid_acc {:.6f}".format(epoch, valid_top1))
             if save_parameters:
                 paddle.save(self.model.state_dict(),
                             os.path.join(self.save_dir, str(epoch), "params"))

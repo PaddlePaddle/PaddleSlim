@@ -173,7 +173,7 @@ def convert_model_out_2_nparr(model_out):
         model_out = [model_out]
     out_list = []
     for out in model_out:
-        out_list.append(np.array(out))
+        out_list.append(np.array(out).reshape((1, )))
 
     out_nparr = np.concatenate(out_list)
     out_nparr = np.squeeze(out_nparr.flatten())
@@ -221,7 +221,8 @@ def eval_quant_model():
         with paddle.static.scope_guard(quant_scope):
             out_quant = g_quant_config.executor.run(infer_prog_quant, \
                 fetch_list=fetch_targets_quant, feed=data if feed_dict else make_feed_dict(feed_target_names_quant, data))
-
+        print(f"out_float: {out_float}")
+        print(f"out_quant: {out_quant}")
         out_float = convert_model_out_2_nparr(out_float)
         out_quant = convert_model_out_2_nparr(out_quant)
         if len(out_float.shape) <= 0 or len(out_quant.shape) <= 0:
@@ -296,9 +297,9 @@ def quantize(cfg):
         onnx_format=g_quant_config.onnx_format)
 
     global g_min_emd_loss
-    try:
+    if g_quant_config.eval_function is None:
         emd_loss = eval_quant_model()
-    except:
+    else:
         ### if eval_function is not None, use eval function provided by user.
         float_scope = paddle.static.Scope()
         quant_scope = paddle.static.Scope()
