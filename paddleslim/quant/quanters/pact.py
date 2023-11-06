@@ -38,7 +38,7 @@ class PACTQuanter(QuanterFactory):
     Examples:
        .. code-block:: python
             from paddle.quantization import QuantConfig
-            from paddle.quantization.quanters import PACTQuanter
+            from paddleslim.quant.quanters import PACTQuanter
             from paddle.quantization.quanters.abs_max import FakeQuanterWithAbsMaxObserverLayer
             pact_quanter = PACTQuanter(quanter=FakeQuanterWithAbsMaxObserverLayer)
             q_config = QuantConfig(activation=pact_quanter, weight=pact_quanter)

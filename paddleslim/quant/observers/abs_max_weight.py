@@ -52,6 +52,7 @@ class AbsMaxChannelWiseWeightObserverLayer(ChannelWiseObserver):
         self.quant_bits = quant_bits
         self.calibration_loss = float('inf')
         self.qmin, self.qmax = self.qmin_qmax
+        self._layer = layer
         self._max = None
         self._scale = None
         self._zero_point = None
@@ -65,25 +66,10 @@ class AbsMaxChannelWiseWeightObserverLayer(ChannelWiseObserver):
         reduce_axis = tuple(
             [i for i in range(len(inputs.shape)) if i != self.quant_axis()])
         abs_max_values = paddle.max(paddle.abs(inputs), axis=reduce_axis)
-        abs_max_values = paddle.where(abs_max_values == np.float32(0.0),
-                                      np.float32(1e-8), abs_max_values)
-        minimum_loss = paddle.full(abs_max_values.shape, float('inf'))
-        result = abs_max_values
-        factor = 0.3
-        while factor <= 1.0:
-            scales = factor * abs_max_values
-            factor += 0.02
-            expand_scales = paddle.unsqueeze(scales, axis=reduce_axis)
-            quant_var = paddle.clip(
-                paddle.round(inputs / expand_scales * self.qmax), self.qmin,
-                self.qmax)
-            quant_dequant_var = quant_var / self.qmax * expand_scales
-
-            mse_loss = ((inputs - quant_dequant_var)**2).mean(axis=reduce_axis)
-            result = paddle.where(mse_loss < minimum_loss, scales, result)
-            minimum_loss = paddle.minimum(mse_loss, minimum_loss)
-
-        return result
+        abs_max_values = paddle.where(
+            abs_max_values == paddle.to_tensor(0, dtype=inputs.dtype),
+            paddle.to_tensor(1e-8, dtype=inputs.dtype), abs_max_values)
+        return abs_max_values
 
     def min_value(self) -> float:
         return 0.
@@ -94,7 +80,8 @@ class AbsMaxChannelWiseWeightObserverLayer(ChannelWiseObserver):
     def cal_thresholds(self):
         """ Compute thresholds for MAX function.
         """
-        self._scale = self._max
+        if self._scale is None:
+            self._scale = self._max
         self._zero_point = paddle.zeros_like(self._scale)
 
     def scales(self):

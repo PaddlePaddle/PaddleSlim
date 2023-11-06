@@ -48,27 +48,27 @@ class TestSensitivity(StaticCase):
         val_reader = paddle.batch(paddle.dataset.mnist.test(), batch_size=128)
 
         def eval_func(program):
-            feeder = paddle.fluid.DataFeeder(
-                feed_list=['image', 'label'], place=place, program=program)
             acc_set = []
             for data in val_reader():
-                acc_np = exe.run(program=program,
-                                 feed=feeder.feed(data),
-                                 fetch_list=[acc_top1])
+                acc_np = exe.run(
+                    program=program,
+                    feed={"image": data[0],
+                          "label": data[1]},
+                    fetch_list=[acc_top1])
                 acc_set.append(float(acc_np[0]))
             acc_val_mean = numpy.array(acc_set).mean()
             print("acc_val_mean: {}".format(acc_val_mean))
             return acc_val_mean
 
         def eval_func_for_args(program, feed_list):
-            feeder = paddle.fluid.DataFeeder(
-                feed_list=feed_list, place=place, program=program)
 
             acc_set = []
             for data in val_reader():
-                acc_np = exe.run(program=program,
-                                 feed=feeder.feed(data),
-                                 fetch_list=[acc_top1])
+                acc_np = exe.run(
+                    program=program,
+                    feed={"image": data[0],
+                          "label": data[1]},
+                    fetch_list=[acc_top1])
                 acc_set.append(float(acc_np[0]))
             acc_val_mean = numpy.array(acc_set).mean()
             print("acc_val_mean: {}".format(acc_val_mean))

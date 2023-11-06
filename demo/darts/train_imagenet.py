@@ -24,7 +24,6 @@ import argparse
 import functools
 
 import paddle
-import paddle.fluid as fluid
 from paddleslim.common import AvgrageMeter, get_logger
 from paddleslim.nas.darts import count_parameters_in_MB
 
@@ -166,8 +165,8 @@ def main(args):
 
     device_num = paddle.distributed.parallel.ParallelEnv().nranks
     step_per_epoch = int(args.trainset_num / (args.batch_size * device_num))
-    learning_rate = paddle.optimizer.lr.ExponentialDecay(args.learning_rate,
-                                                         args.decay_rate)
+    learning_rate = paddle.optimizer.lr.ExponentialDecay(
+        args.learning_rate, args.decay_rate)
 
     clip = paddle.nn.ClipGradByGlobalNorm(args.grad_clip)
     optimizer = paddle.optimizer.Momentum(
@@ -181,24 +180,29 @@ def main(args):
         strategy = paddle.distributed.init_parallel_env()
         model = paddle.DataParallel(model, strategy)
 
-    train_loader = paddle.io.DataLoader.from_generator(
-        capacity=64, use_double_buffer=True, iterable=True, return_list=True)
-    valid_loader = paddle.io.DataLoader.from_generator(
-        capacity=64, use_double_buffer=True, iterable=True, return_list=True)
-
-    train_reader = paddle.batch(
-        reader.imagenet_reader(args.data_dir, 'train'),
+    train_dataset = reader.imagenet_reader(args.data_dir, 'train')
+    valid_dataset = reader.imagenet_reader(args.data_dir, 'val')
+    valid_loader = paddle.io.DataLoader(
+        valid_dataset,
         batch_size=args.batch_size,
-        drop_last=True)
-    valid_reader = paddle.batch(
-        reader.imagenet_reader(args.data_dir, 'val'),
-        batch_size=args.batch_size)
-    if args.use_data_parallel:
-        train_reader = fluid.contrib.reader.distributed_batch_reader(
-            train_reader)
+        use_buffer_reader=True,
+        return_list=True)
 
-    train_loader.set_sample_list_generator(train_reader, places=place)
-    valid_loader.set_sample_list_generator(valid_reader, places=place)
+    if not args.use_data_parallel:
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            batch_size=args.batch_size,
+            use_buffer_reader=True,
+            return_list=True,
+            drop_last=True)
+    else:
+        sampler = paddle.io.DistributedBatchSampler(
+            train_dataset, args.batch_size, drop_last=True)
+        train_loader = paddle.io.DataLoader(
+            train_dataset,
+            batch_sampler=sampler,
+            use_buffer_reader=True,
+            return_list=True)
 
     save_parameters = (not args.use_data_parallel) or (
         args.use_data_parallel and

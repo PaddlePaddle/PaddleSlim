@@ -12,23 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .hist import HistObserver
-from .kl import KLObserver
-from .mse import MSEObserver
-from .emd import EMDObserver
-from .avg import AVGObserver
-from .abs_max import AbsmaxObserver
-from .mse_weight import MSEChannelWiseWeightObserver
-from .abs_max_weight import AbsMaxChannelWiseWeightObserver
+from . import gptq
+from . import smooth
+from . import shift
+from . import piecewise_search
+from . import sample
+from . import layerwise_quant_error
+from . import utils_layers
 
-__all__ = [
-    "HistObserver",
-    "KLObserver",
-    "MSEObserver",
-    "EMDObserver",
-    "AVGObserver",
-    "MSEWeightObserver",
-    "AbsmaxObserver",
-    "MSEChannelWiseWeightObserver",
-    "AbsMaxChannelWiseWeightObserver",
-]
+from .gptq import *
+from .smooth import *
+from .shift import *
+from .piecewise_search import *
+from .sample import *
+from .layerwise_quant_error import *
+from .utils_layers import *
+
+__all__ = []
+__all__ += gptq.__all__
+__all__ += smooth.__all__
+__all__ += shift.__all__
+__all__ += piecewise_search.__all__
+__all__ += sample.__all__
+__all__ += layerwise_quant_error.__all__
+__all__ += utils_layers.__all__

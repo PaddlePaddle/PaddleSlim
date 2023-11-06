@@ -609,7 +609,7 @@ def remove_unused_var_nodes(program):
         program(paddle.static.Program): The sparse model.
     '''
     from paddle.framework import core
-    from paddle.fluid.framework import IrGraph
+    from paddle.framework import IrGraph
     graph = IrGraph(core.Graph(program.desc), for_test=True)
     removed_nodes = set()
     ops = graph.all_op_nodes()

@@ -24,7 +24,6 @@ sys.path.append("../../")
 import paddle
 import paddle.distributed as dist
 import paddle.distributed.fleet as fleet
-import paddle.fluid as fluid
 import paddle.nn as nn
 from paddle.distributed.utils.launch_utils import find_free_ports, get_cluster
 from paddle.quantization import QuantConfig
@@ -284,8 +283,8 @@ class TestDistMPTraning(unittest.TestCase):
                 loss_a.numpy(), loss_b.numpy(), rtol=1e-6)
 
     def test_mp_model_1(self):
-        if (not fluid.core.is_compiled_with_cuda() or
-                fluid.core.get_cuda_device_count() == 0):
+        if (not paddle.device.is_compiled_with_cuda() or
+                paddle.device.cuda.device_count() == 0):
             return
         selected_gpus = get_gpus('0,1')
         cluster = None
@@ -308,8 +307,8 @@ class TestDistMPTraning(unittest.TestCase):
         self.train(model_a, optimizer_a, model_b, optimizer_b)
 
     def test_mp_model_2(self):
-        if (not fluid.core.is_compiled_with_cuda() or
-                fluid.core.get_cuda_device_count() == 0):
+        if (not paddle.device.is_compiled_with_cuda() or
+                paddle.device.cuda.device_count() == 0):
             return
         selected_gpus = get_gpus('0,1')
         cluster = None
