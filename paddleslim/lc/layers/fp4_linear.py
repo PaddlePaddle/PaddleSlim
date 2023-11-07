@@ -1,19 +1,19 @@
 import paddle
 import paddle.nn as nn
-from paddleslim.lc.quantizers import NF4Quantizer
+from paddleslim.lc.quantizers import FP4Quantizer
 from .linear import Linear4bit
 
 
-class NF4Linear(Linear4bit):
+class FP4Linear(Linear4bit):
     def __init__(
             self,
             linear: nn.Linear,
             block_size=64,
             use_double_quant=False, ):
-        super(NF4Linear, self).__init__(linear, quant_type="nf4")
+        super(FP4Linear, self).__init__(linear, quant_type="fp4")
         self.block_size = block_size
         self.double_quant = use_double_quant
-        self.quantizer = NF4Quantizer(block_size, self.double_quant)
+        self.quantizer = FP4Quantizer(block_size, self.double_quant)
 
     def quantize(self):
         quantized_weight = self.quantizer.quantize(self.linear.weight).reshape([self.out_features // 2, self.in_features])
