@@ -118,7 +118,7 @@ def double_quant(abs_max, code, blocksize, double_quant_type="dynamic"):
     offset = abs_max.mean()
     abs_max -= offset
     if code is None:
-        if quant_type=="fp8":
+        if double_quant_type=="fp8":
             code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
         else:
             code = paddle.to_tensor(create_dynamic_map())
@@ -127,7 +127,7 @@ def double_quant(abs_max, code, blocksize, double_quant_type="dynamic"):
 
 def double_dequant(qabs_max, offset, code, double_quant_scale, blocksize, double_quant_type="dynamic"):
     if code is None:
-        if quant_type=="fp8":
+        if double_quant_type=="fp8":
             code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
         else:
             code = paddle.to_tensor(create_dynamic_map())
