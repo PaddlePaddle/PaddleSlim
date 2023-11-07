@@ -51,6 +51,50 @@ def create_dynamic_map(signed=True, max_exponent_bits=7, total_bits=8):
     data.sort()
     return data
 
+def create_fp8_map(signed=True, exponent_bits=5, precision_bits=2, total_bits=8):
+    e = exponent_bits
+    p = precision_bits
+    has_sign = 1 if signed else 0
+    assert e+p == total_bits-has_sign
+    # the exponent is biased to 2^(e-1) -1 == 0
+    evalues = []
+    pvalues = []
+    for i, val in enumerate(range(-((2**(exponent_bits-has_sign))), 2**(exponent_bits-has_sign), 1)):
+        evalues.append(2**val)
+
+
+    values = []
+    lst = list(itertools.product([0, 1], repeat=precision_bits))
+    #for ev in evalues:
+    bias = 2**(exponent_bits-1)
+    for evalue in range(2**(exponent_bits)):
+        for bit_pattern in lst:
+            value = (1 if evalue != 0 else 0)
+            for i, pval in enumerate(list(bit_pattern)):
+                value += pval*(2**-(i+1))
+            if evalue == 0:
+                # subnormals
+                value = value*2**-(bias)
+            else:
+                # normals
+                value = value*2**-(evalue-bias-1)
+            values.append(value)
+            if signed:
+                values.append(-value)
+
+
+    assert len(values) == 2**total_bits
+    values.sort()
+    if total_bits < 8:
+        gap = 256 - len(values)
+        for i in range(gap):
+            values.append(0)
+    values.sort()
+    code /= code.max()
+
+    return code
+
+
 def quantize_nf4(x, blocksize):
     return quant_blockwise(x, None, blocksize=blocksize, quant_type="nf4")
 
@@ -64,25 +108,31 @@ def dequantize_fp4(x, absmax, blocksize):
     return dequant_blockwise(x, None, absmax, blocksize=blocksize,  quant_type="fp4")
 
 
-def quantize_fp8(x, code, blocksize):
+def quantize_8bit(x, code, blocksize):
     return quant_blockwise(x, code, blocksize=blocksize, quant_type="8bit")
 
-def dequantize_fp8(x, code, absmax, blocksize):
+def dequantize_8bit(x, code, absmax, blocksize):
     return dequant_blockwise(x, code, absmax, blocksize=blocksize, quant_type="8bit")
 
-def double_quant(abs_max, code, blocksize):
+def double_quant(abs_max, code, blocksize, double_quant_type="dynamic"):
     offset = abs_max.mean()
     abs_max -= offset
     if code is None:
-        code = paddle.to_tensor(create_dynamic_map())
-    qabs_max, double_quant_scale = quantize_fp8(abs_max, code, blocksize)
+        if quant_type=="fp8":
+            code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
+        else:
+            code = paddle.to_tensor(create_dynamic_map())
+    qabs_max, double_quant_scale = quantize_8bit(abs_max, code, blocksize)
     return qabs_max, double_quant_scale, offset, code
 
-def double_dequant(qabs_max, offset, code, double_quant_scale, blocksize):
+def double_dequant(qabs_max, offset, code, double_quant_scale, blocksize, double_quant_type="dynamic"):
     if code is None:
-        code = paddle.to_tensor(create_dynamic_map())
+        if quant_type=="fp8":
+            code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
+        else:
+            code = paddle.to_tensor(create_dynamic_map())
 
-    abs_max = dequantize_fp8(qabs_max, code, double_quant_scale, blocksize)
+    abs_max = dequantize_8bit(qabs_max, code, double_quant_scale, blocksize)
     abs_max += offset
     return abs_max
 
