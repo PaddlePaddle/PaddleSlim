@@ -1,5 +1,5 @@
 import paddle
-from custom_setup_ops import quant_blockwise, dequant_blockwise
+from paddleslim_ops import quant_blockwise, dequant_blockwise
 
 def create_dynamic_map(signed=True, max_exponent_bits=7, total_bits=8):
     """
