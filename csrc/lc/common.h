@@ -28,6 +28,30 @@ typedef enum LC_DataType_t
 template <typename T, int DATA_TYPE> void quantize_blockwise(const float * code, const T *A, float *absmax, unsigned char *out, int blocksize, int n);
 template<typename T, int DATA_TYPE> void dequantize_blockwise(const float *code, const unsigned char *A, float *absmax, T *out, int block_size, int n);
 
+template <paddle::DataType D>
+class PDTraits;
+
+template <>
+class PDTraits<paddle::DataType::FLOAT32> {
+public:
+  typedef float DataType;
+  typedef float data_t;
+};
+
+template <>
+class PDTraits<paddle::DataType::FLOAT16> {
+public:
+  typedef half DataType;
+  typedef paddle::float16 data_t;
+};
+
+template <>
+class PDTraits<paddle::DataType::BFLOAT16> {
+public:
+  typedef __nv_bfloat16 DataType;
+  typedef paddle::bfloat16 data_t;
+};
+
 
 #define CUDA_CHECK_RETURN(value) {                      \
   cudaError_t _m_cudaStat = value;                    \
