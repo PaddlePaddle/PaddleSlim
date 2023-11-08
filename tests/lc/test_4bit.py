@@ -57,7 +57,7 @@ class TestNF4(unittest.TestCase):
                 child.quantize()
 
         src = paddle.rand((2, 4, 64))
-        self.model(src)
+        out = self.model(src)
 
 class TestFP4(unittest.TestCase):
     def setUp(self):
@@ -67,7 +67,7 @@ class TestFP4(unittest.TestCase):
         replace_layers = {}
         for name, child in model.named_sublayers():
             if isinstance(child, paddle.nn.Linear):
-                replace_layers[name] = FP4Linear(child, use_double_quant=True)
+                replace_layers[name] = FP4Linear(child, use_double_quant=False)
 
         for key, value in replace_layers.items():
             name_list = key.split('.')

@@ -107,32 +107,20 @@ def dequantize_nf4(x, absmax, blocksize):
 def dequantize_fp4(x, absmax, blocksize):
     return dequant_blockwise(x, None, absmax, blocksize=blocksize,  quant_type="fp4")
 
-
-def quantize_8bit(x, code, blocksize):
+def quantize_8bit(x, code, blocksize, quant_type="fp8"):
+    if code is None:
+        if quant_type=="fp8":
+            code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
+        else:
+            code = paddle.to_tensor(create_dynamic_map())
     return quant_blockwise(x, code, blocksize=blocksize, quant_type="8bit")
 
-def dequantize_8bit(x, code, absmax, blocksize):
+def dequantize_8bit(x, code, absmax, blocksize, quant_type="fp8"):
+    if code is None:
+        if quant_type=="fp8":
+            code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
+        else:
+            code = paddle.to_tensor(create_dynamic_map())
+
     return dequant_blockwise(x, code, absmax, blocksize=blocksize, quant_type="8bit")
-
-def double_quant(abs_max, code, blocksize, double_quant_type="dynamic"):
-    offset = abs_max.mean()
-    abs_max -= offset
-    if code is None:
-        if double_quant_type=="fp8":
-            code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
-        else:
-            code = paddle.to_tensor(create_dynamic_map())
-    qabs_max, double_quant_scale = quantize_8bit(abs_max, code, blocksize)
-    return qabs_max, double_quant_scale, offset, code
-
-def double_dequant(qabs_max, offset, code, double_quant_scale, blocksize, double_quant_type="dynamic"):
-    if code is None:
-        if double_quant_type=="fp8":
-            code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
-        else:
-            code = paddle.to_tensor(create_dynamic_map())
-
-    abs_max = dequantize_8bit(qabs_max, code, double_quant_scale, blocksize)
-    abs_max += offset
-    return abs_max
 

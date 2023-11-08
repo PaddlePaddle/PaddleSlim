@@ -34,4 +34,4 @@ class FP4Linear(Linear4bit):
         paddle.assign(quantized_weight, self.quant_weight)
 
     def forward(self, x):
-        return self.quantizer.matmul(x, self.quant_weight, self.linear.bias)
+        return self.quantizer.matmul(x, self.quant_weight.reshape([-1, 1]), self.linear.bias)
