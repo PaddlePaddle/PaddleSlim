@@ -362,41 +362,36 @@ MAKE_kQuantizeBlockwise(__nv_bfloat16,   64, 2, NF4)
 
 
 
-template <typename T, int DATA_TYPE> void quantize_blockwise(const float *code, const T *A, float *absmax, unsigned char *out, int blocksize, int n)
+template <paddle::DataType D, int DATA_TYPE> void quantize_blockwise(const float *code, const paddle::Tensor& A, float *absmax, unsigned char *out, int blocksize, int n)
 {
+  typedef PDTraits<D> traits_;
+  typedef typename traits_::DataType DataType_;
+  typedef typename traits_::data_t data_t;
+
   int num_blocks = n/blocksize;
   num_blocks = n % blocksize == 0 ? num_blocks : num_blocks + 1;
 
+  const DataType_* A_data = reinterpret_cast<const DataType_*>(A.data<data_t>()); 
   if(blocksize == 4096)
-    kQuantizeBlockwise<T, 4096, 4, 0><<<num_blocks, 1024>>>(code, A, absmax, out, n);
+    kQuantizeBlockwise<DataType_, 4096, 4, 0><<<num_blocks, 1024>>>(code, A_data, absmax, out, n);
   else if(blocksize == 2048)
-    kQuantizeBlockwise<T, 2048, 4, DATA_TYPE><<<num_blocks, 512>>>(code, A, absmax, out, n);
+    kQuantizeBlockwise<DataType_, 2048, 4, DATA_TYPE><<<num_blocks, 512>>>(code, A_data, absmax, out, n);
   else if(blocksize == 1024)
-    kQuantizeBlockwise<T, 1024, 4, DATA_TYPE><<<num_blocks, 256>>>(code, A, absmax, out, n);
+    kQuantizeBlockwise<DataType_, 1024, 4, DATA_TYPE><<<num_blocks, 256>>>(code, A_data, absmax, out, n);
   else if(blocksize == 512)
-    kQuantizeBlockwise<T, 512, 2, DATA_TYPE><<<num_blocks, 256>>>(code, A, absmax, out, n);
+    kQuantizeBlockwise<DataType_, 512, 2, DATA_TYPE><<<num_blocks, 256>>>(code, A_data, absmax, out, n);
   else if(blocksize == 256)
-    kQuantizeBlockwise<T, 256, 2, DATA_TYPE><<<num_blocks, 128>>>(code, A, absmax, out, n);
+    kQuantizeBlockwise<DataType_, 256, 2, DATA_TYPE><<<num_blocks, 128>>>(code, A_data, absmax, out, n);
   else if(blocksize == 128)
-    kQuantizeBlockwise<T, 128, 2, DATA_TYPE><<<num_blocks, 64>>>(code, A, absmax, out, n);
+    kQuantizeBlockwise<DataType_, 128, 2, DATA_TYPE><<<num_blocks, 64>>>(code, A_data, absmax, out, n);
   else if(blocksize == 64)
-    kQuantizeBlockwise<T, 64, 2, DATA_TYPE><<<num_blocks, 32>>>(code, A, absmax, out, n);
+    kQuantizeBlockwise<DataType_, 64, 2, DATA_TYPE><<<num_blocks, 32>>>(code, A_data, absmax, out, n);
   else
     PD_THROW("only support blocksize is [64, 128, 256, 512, 1024, 2048, 4096].");
 
 
   CUDA_CHECK_RETURN(cudaPeekAtLastError());
 }
-
-template void quantize_blockwise<half, General8bit>(const float *code, const half *A, float *absmax, unsigned char *out, int blocksize, int n);
-template void quantize_blockwise<half, FP4>(const float *code, const half *A, float *absmax, unsigned char *out, int blocksize, int n);
-template void quantize_blockwise<half, NF4>(const float *code, const half *A, float *absmax, unsigned char *out, int blocksize, int n);
-template void quantize_blockwise<float, General8bit>(const float *code, const float *A, float *absmax, unsigned char *out, int blocksize, int n);
-template void quantize_blockwise<float, FP4>(const float *code, const float *A, float *absmax, unsigned char *out, int blocksize, int n);
-template void quantize_blockwise<float, NF4>(const float *code, const float *A, float *absmax, unsigned char *out, int blocksize, int n);
-template void quantize_blockwise<__nv_bfloat16, General8bit>(const float *code, const __nv_bfloat16 *A, float *absmax, unsigned char *out, int blocksize, int n);
-template void quantize_blockwise<__nv_bfloat16, FP4>(const float *code, const __nv_bfloat16 *A, float *absmax, unsigned char *out, int blocksize, int n);
-template void quantize_blockwise<__nv_bfloat16, NF4>(const float *code, const __nv_bfloat16 *A, float *absmax, unsigned char *out, int blocksize, int n);
 
 std::vector<paddle::Tensor> QuantizeBlockwise(const paddle::Tensor& input, const paddle::Tensor& code, int blocksize, std::string quant_type) {
     int n = input.numel();
@@ -410,28 +405,28 @@ std::vector<paddle::Tensor> QuantizeBlockwise(const paddle::Tensor& input, const
     switch(input.type()) {
         case paddle::DataType::FLOAT32:
             if (quant_type == "8bit")
-                quantize_blockwise<float, General8bit>(code.data<float>(), input.data<float>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::FLOAT32, General8bit>(code.data<float>(), input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             else if (quant_type == "nf4") {
-                quantize_blockwise<float, NF4>(NULL, input.data<float>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::FLOAT32, NF4>(NULL, input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             }
             else if (quant_type == "fp4")
-                quantize_blockwise<float, FP4>(NULL, input.data<float>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::FLOAT32, FP4>(NULL, input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             return {out, absmax};
         case paddle::DataType::FLOAT16:
             if (quant_type == "8bit")
-                quantize_blockwise<half, General8bit>(code.data<float>(), input.data<half>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::FLOAT16, General8bit>(code.data<float>(), input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             else if (quant_type == "nf4")
-                quantize_blockwise<half, NF4>(NULL, input.data<half>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::FLOAT16, NF4>(NULL, input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             else if (quant_type == "fp4")
-                quantize_blockwise<half, FP4>(NULL, input.data<half>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::FLOAT16, FP4>(NULL, input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             return {out, absmax};
         case paddle::DataType::BFLOAT16:
             if (quant_type == "8bit")
-                quantize_blockwise<__nv_bfloat16, General8bit>(code.data<float>(), input.data<__nv_bfloat16>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::BFLOAT16, General8bit>(code.data<float>(), input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             else if (quant_type == "nf4")
-                quantize_blockwise<__nv_bfloat16, NF4>(NULL, input.data<__nv_bfloat16>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::BFLOAT16, NF4>(NULL, input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             else if (quant_type == "fp4")
-                quantize_blockwise<__nv_bfloat16, FP4>(NULL, input.data<__nv_bfloat16>(), absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
+                quantize_blockwise<paddle::DataType::BFLOAT16, FP4>(NULL, input, absmax.data<float>(), out.data<unsigned char>(), blocksize, n);
             return {out, absmax};
 
         default:

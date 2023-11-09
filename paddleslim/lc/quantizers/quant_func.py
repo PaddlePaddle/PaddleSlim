@@ -1,3 +1,4 @@
+import itertools
 import paddle
 from paddleslim_ops import quant_blockwise, dequant_blockwise
 
@@ -90,6 +91,7 @@ def create_fp8_map(signed=True, exponent_bits=5, precision_bits=2, total_bits=8)
         for i in range(gap):
             values.append(0)
     values.sort()
+    code = paddle.to_tensor(values)
     code /= code.max()
 
     return code
@@ -110,7 +112,7 @@ def dequantize_fp4(x, absmax, blocksize):
 def quantize_8bit(x, code, blocksize, quant_type="fp8"):
     if code is None:
         if quant_type=="fp8":
-            code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
+            code = create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4)
         else:
             code = paddle.to_tensor(create_dynamic_map())
     return quant_blockwise(x, code, blocksize=blocksize, quant_type="8bit")
@@ -118,7 +120,7 @@ def quantize_8bit(x, code, blocksize, quant_type="fp8"):
 def dequantize_8bit(x, code, absmax, blocksize, quant_type="fp8"):
     if code is None:
         if quant_type=="fp8":
-            code = paddle.to_tensor(create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4))
+            code = create_fp8_map(signed=True, exponent_bits=2, precision_bits=1, total_bits=4)
         else:
             code = paddle.to_tensor(create_dynamic_map())
 
