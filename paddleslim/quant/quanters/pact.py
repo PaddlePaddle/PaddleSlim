@@ -39,8 +39,8 @@ class PACTQuanter(QuanterFactory):
        .. code-block:: python
             from paddle.quantization import QuantConfig
             from paddleslim.quant.quanters import PACTQuanter
-            from paddle.quantization.quanters.abs_max import FakeQuanterWithAbsMaxObserverLayer
-            pact_quanter = PACTQuanter(quanter=FakeQuanterWithAbsMaxObserverLayer)
+            from paddle.quantization.quanters.abs_max import FakeQuanterWithAbsMaxObserver
+            pact_quanter = PACTQuanter(quanter=FakeQuanterWithAbsMaxObserver())
             q_config = QuantConfig(activation=pact_quanter, weight=pact_quanter)
     """
 
@@ -71,7 +71,7 @@ class PACTQuanterLayer(BaseQuanter):
                  name=None):
         super(PACTQuanterLayer, self).__init__()
 
-        self.quanter = quanter(layer)
+        self.quanter = quanter._instance(layer)
         alpha_prefix = ("{}.pact".format(name)
                         if name else 'quant_dequant.pact')
         name = unique_name.generate(alpha_prefix)
