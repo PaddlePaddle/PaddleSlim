@@ -66,14 +66,6 @@ def eval():
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"])
 
-    features = None
-    for _var in val_program.list_vars():
-        print(f"meeting: {_var.name}")
-        if _var.name == "conv2d_98.tmp_1":
-            print(f"find {_var.name}")
-            features = _var
-
-    fetch_targets.append(features)
     print('Loaded model from: {}'.format(global_config["model_dir"]))
 
     val_loader = eval_reader(
@@ -90,8 +82,6 @@ def eval():
             val_program,
             feed={feed_target_names[0]: image},
             fetch_list=fetch_targets)
-        features = np.array(pred[1])
-        print(f"feature shape: {features.shape}")
 
         pred = np.array(pred[0])
         label = np.array(label)
