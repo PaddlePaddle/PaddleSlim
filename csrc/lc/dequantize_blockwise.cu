@@ -201,7 +201,6 @@ template __global__ void kDequantizeBlockwise<float, 512, 64, 8, NF4>(const floa
 //template __global__ void kDequantizeBlockwise<__nv_bfloat16, 512, 64, 8, NF4>(const float *code, const unsigned char * A, const float * absmax, __nv_bfloat16 *out, int blocksize, int n);
 
 
-
 template<typename T, int DATA_TYPE> void dequantize_blockwise(const float *code, const unsigned char *A, const float *absmax, T *out, int blocksize, int n)
 {
   int num_blocks = n/blocksize;
@@ -229,6 +228,11 @@ template void dequantize_blockwise<float, NF4>(const float *code, const unsigned
 std::vector<paddle::Tensor> DequantizeBlockwise(const paddle::Tensor& input, const paddle::Tensor& code, const paddle::Tensor& absmax, int blocksize, std::string quant_type) {
     int64_t input_numel = input.numel();
     int n = input_numel;
+    if (blocksize == -1)
+        if (quant_type == "8bit")
+            PD_THROW("blocksize is -1 only support NF4 and FP4.");
+        else
+            blocksize = n / absmax.numel() * 2;
     std::vector<int64_t> out_shape = input.shape();
     if (quant_type != "8bit") { // 4bit
         out_shape = {input_numel * 2, 1};
