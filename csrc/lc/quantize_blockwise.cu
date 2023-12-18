@@ -380,8 +380,8 @@ __global__ void kQuantizeChannelwise(const float *code,
     switch(DATA_TYPE)
     {
         case FP4:
-            packed_4bit |= dQuantizeFP4(((float)A[2*i])*inv_local_absmax) << 4;
-            packed_4bit |= dQuantizeFP4(((float)A[2*i+1])*inv_local_absmax);
+            packed_4bit |= dQuantizeFP4(((float)A[idx])*inv_local_absmax) << 4;
+            packed_4bit |= dQuantizeFP4(((float)A[idx+cout])*inv_local_absmax);
             out[i] = packed_4bit;
             break;
         case NF4:
