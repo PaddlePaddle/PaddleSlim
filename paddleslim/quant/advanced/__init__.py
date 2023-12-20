@@ -19,6 +19,8 @@ from . import piecewise_search
 from . import sample
 from . import layerwise_quant_error
 from . import utils_layers
+from . import awq_search
+from . import auto_clip
 
 from .gptq import *
 from .smooth import *
@@ -27,6 +29,8 @@ from .piecewise_search import *
 from .sample import *
 from .layerwise_quant_error import *
 from .utils_layers import *
+from .awq_search import *
+from .auto_clip import *
 
 __all__ = []
 __all__ += gptq.__all__
@@ -36,3 +40,5 @@ __all__ += piecewise_search.__all__
 __all__ += sample.__all__
 __all__ += layerwise_quant_error.__all__
 __all__ += utils_layers.__all__
+__all__ += awq_search.__all__
+__all__ += auto_clip.__all__
