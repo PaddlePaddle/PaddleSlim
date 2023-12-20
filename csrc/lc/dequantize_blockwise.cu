@@ -201,7 +201,6 @@ template __global__ void kDequantizeBlockwise<float, 512, 64, 8, NF4>(const floa
 //template __global__ void kDequantizeBlockwise<__nv_bfloat16, 512, 64, 8, NF4>(const float *code, const unsigned char * A, const float * absmax, __nv_bfloat16 *out, int blocksize, int n);
 
 
-
 template<typename T, int DATA_TYPE> void dequantize_blockwise(const float *code, const unsigned char *A, const float *absmax, T *out, int blocksize, int n)
 {
   int num_blocks = n/blocksize;
@@ -226,6 +225,50 @@ template void dequantize_blockwise<float, NF4>(const float *code, const unsigned
 //template void dequantize_blockwise<__nv_bfloat16, FP4>(const float *code, const unsigned char *A, const float *absmax, __nv_bfloat16 *out, int blocksize, int n);
 //template void dequantize_blockwise<__nv_bfloat16, NF4>(const float *code, const unsigned char *A, const float *absmax, __nv_bfloat16 *out, int blocksize, int n);
 
+template <typename T, int DATA_TYPE>
+__global__ void kDequantizeChannelwise(const unsigned char* A,
+                                      const float *absmax,
+                                      float *out,
+                                      int n,
+                                      int cout) {
+  int idx = blockDim.x * blockIdx.x + threadIdx.x;
+
+  int num = n / 2;
+  //int part_n = num / cout;
+  for (int i = idx; i < num; i += blockDim.x * gridDim.x) {
+    float local_absmax = absmax[i%cout];
+    int idx = 2*(i/cout)* cout + i%cout;
+    switch(DATA_TYPE)
+    {
+        case FP4:
+            out[i*2 + i%cout] = dDequantizeFP4Tree(A[i] >> 4, local_absmax);
+            out[i*2 + cout + i%cout] = dDequantizeFP4Tree(A[i] & 0x0F, local_absmax);
+            break;
+        case NF4:
+            out[idx] = dDequantizeNF4(A[i] >> 4)* local_absmax;
+            out[idx + cout] = dDequantizeNF4(A[i] & 0x0F)* local_absmax;
+            break;
+    }
+    __syncthreads();
+  }
+}
+
+template<typename T, int DATA_TYPE> void dequantize_channelwise(const unsigned char *A, const float *absmax, T *out, int n, int cout)
+{
+  int max_threads = 1024; 
+  int64_t block_size =
+      std::min(static_cast<int64_t>(n),
+               static_cast<int64_t>(max_threads/ 4));
+
+  const int64_t max_blocks =
+      std::max(((max_threads - 1) / block_size + 1), static_cast<int64_t>(1));
+  const int64_t grid_size =
+      std::min(max_blocks, (n + block_size - 1) / block_size);
+
+  kDequantizeChannelwise<T, DATA_TYPE><<<grid_size, block_size>>>(A, absmax, out, n, cout);
+  CUDA_CHECK_RETURN(cudaPeekAtLastError());
+}
+
 std::vector<paddle::Tensor> DequantizeBlockwise(const paddle::Tensor& input, const paddle::Tensor& code, const paddle::Tensor& absmax, int blocksize, std::string quant_type) {
     int64_t input_numel = input.numel();
     int n = input_numel;
@@ -234,23 +277,44 @@ std::vector<paddle::Tensor> DequantizeBlockwise(const paddle::Tensor& input, con
         out_shape = {input_numel * 2, 1};
         n = n * 2;
     }
+    if (blocksize == -1) {
+        out_shape = {input.shape()[0] * 2, input.shape()[1]};
+    }
     auto out = paddle::empty(out_shape, paddle::DataType::FLOAT32, input.place());
 
-    if (quant_type == "8bit")
-        dequantize_blockwise<float, General8bit>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
-    else if (quant_type == "nf4")
-        dequantize_blockwise<float, NF4>(NULL, input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
-    else if (quant_type == "fp4")
-        dequantize_blockwise<float, FP4>(NULL, input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
-    else
-        PD_THROW("NOT supported quant type. Only 8bit, nf4, fp4 are supported. ");
+    if (blocksize == -1) {
+        if (quant_type == "8bit")
+            PD_THROW("blocksize is -1 only support NF4 and FP4.");
+        else
+            blocksize = n / absmax.numel() * 2;
+
+        int cout = input.shape()[1];
+        if (quant_type == "nf4")
+            dequantize_channelwise<float, NF4>(input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), n, cout);
+        else if (quant_type == "fp4")
+            dequantize_channelwise<float, FP4>(input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), n, cout);
+        else
+            PD_THROW("NOT supported quant type. Only 8bit, nf4, fp4 are supported. ");
+    } else {
+      if (quant_type == "8bit")
+          dequantize_blockwise<float, General8bit>(code.data<float>(), input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
+      else if (quant_type == "nf4")
+          dequantize_blockwise<float, NF4>(NULL, input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
+      else if (quant_type == "fp4")
+          dequantize_blockwise<float, FP4>(NULL, input.data<unsigned char>(), absmax.data<float>(), out.data<float>(), blocksize, n);
+      else
+          PD_THROW("NOT supported quant type. Only 8bit, nf4, fp4 are supported. ");
+    }
     return {out};
 };
 
 std::vector<std::vector<int64_t>> GetDequantizeBlockwiseInferShape(const std::vector<int64_t>& input_shape, const std::vector<int64_t>& code_shape, const std::vector<int64_t>& abs_max_shape, int blocksize, std::string quant_type){
     int64_t first_shape = input_shape[0] * input_shape[1] * 2;
     if (quant_type != "8bit")
-        return {{first_shape, 1}};
+        if (blocksize != -1)
+            return {{first_shape, 1}};
+        else
+            return {{input_shape[0] * 2, input_shape[1]}};
     else
         return {input_shape};
 }
