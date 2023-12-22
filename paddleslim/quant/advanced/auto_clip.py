@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+AutoClip.
+"""
 import paddle
 import paddle.nn as nn
 import numpy as np
@@ -30,14 +32,14 @@ class AutoClip(nn.Layer):
     def __init__(
             self,
             model,
-            weight_bits=8,
+            weight_bits=4,
             weight_quant_method='groupwise',
             loss_function=mse_loss,
             sample_function=None,
             n_grid=20,
             max_shrink=0.5,
-            n_sample_token=128,
-            group_size=-1,
+            n_sample_token=512,
+            group_size=128,
             ):
         super(AutoClip, self).__init__()
         self.model = model
@@ -79,24 +81,23 @@ class AutoClip(nn.Layer):
                 self.sampled_inputs[name] = input
 
     
-    def auto_clip(self, group_size=128, oc_batch_size=1024):
+    def auto_clip(self, group_size=128, oc_batch_size=256):
         """
         search clip scale for each layer and update the layer's weight
         """
         for sub_name, sub_layer in self.model.named_sublayers():
             name = sub_layer.full_name()
-            if name not in self.sampled_inputs:
+            if name not in self.sampled_inputs or 'out_linear' in sub_name:
                 continue
-            print('AutoClipping', sub_name, name)
+            
             weight = sub_layer.weight.cast('float16')
             weight_t = paddle.transpose(weight, perm=[1, 0])
             x = self.sampled_inputs[name].cast('float16')
+            print('AutoClipping', sub_name, name, x.shape, weight.shape)
             x = x.reshape([-1, x.shape[-1]])
             x = x.reshape([1, x.shape[0], -1, group_size])
             x = x[:, 0::x.shape[1] // self.n_sample_token]
             weight_t = weight_t.reshape([weight_t.shape[0], 1, -1, group_size])
-            # fast test
-            # oc_batch_size = weight_t.shape[0] // 4
             oc_batch_size = oc_batch_size if weight_t.shape[0] % oc_batch_size == 0 else 128  # prevent OOM
             assert weight_t.shape[0] % oc_batch_size == 0
 
@@ -115,13 +116,16 @@ class AutoClip(nn.Layer):
                     max_val_tmp = max_val
                     cur_w = paddle.where(w > max_val_tmp, max_val_tmp, w)
                     cur_w = paddle.where(cur_w < - max_val_tmp, - max_val_tmp, cur_w)
-                    quant_dequant_weight = fake_quant(cur_w, method='abs_max', weight_bits=4)
+                    org_w_shape = cur_w.shape
+                    cur_w_r = cur_w.reshape([-1, self.group_size]).transpose([1, 0])
+                    quant_dequant_weight = fake_quant(cur_w_r, method='abs_max_channel_wise', weight_bits=4)
+                    quant_dequant_weight = quant_dequant_weight.transpose([1, 0]).reshape(org_w_shape)
                     cur_out = (x * quant_dequant_weight).sum(axis=-1)
                     # co, 1, n_group, 1
                     tmp = (cur_out - org_out).detach().clone()
                     err = paddle.pow(tmp, 2).mean(axis=1).reshape(min_errs.shape)
                     print('block {} search s {} err {}'.format(i_b, i_s, err.mean().item()))
-                    del cur_w, cur_out, quant_dequant_weight, tmp
+                    del cur_w, cur_out, quant_dequant_weight, tmp, cur_w_r
                     paddle.device.cuda.empty_cache()
 
                     cur_best_idx = paddle.where(err < min_errs)
@@ -152,4 +156,3 @@ class AutoClip(nn.Layer):
 
             del best_max_val, weight_t, x, weight, self.sampled_inputs[name], w_all, best_max_val_all
             paddle.device.cuda.empty_cache()
-
