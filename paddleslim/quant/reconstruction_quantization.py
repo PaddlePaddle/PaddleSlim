@@ -362,7 +362,6 @@ class ReconstructionQuanter(object):
             merge_feed=True, )
 
         self._graph = GraphWrapper(self._student_program)
-
         if self._simulate_activation_quant:
             self._insert_drop_quant_dequant()
         self._insert_soft_rounding()
@@ -556,6 +555,7 @@ class ReconstructionQuanter(object):
         inputs = var._var
         startup_program = paddle.static.Program()
         new_program = paddle.static.Program()
+        new_program._name_generator = program._name_generator
         with paddle.static.program_guard(new_program, startup_program):
             if func == "_soft_rounding":
                 out = self._soft_rounding(inputs, scale)
