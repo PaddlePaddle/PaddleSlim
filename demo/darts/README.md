@@ -16,8 +16,6 @@
 │
 ├── search.py 模型结构搜索入口
 │
-├── train.py CIFAR10数据集评估训练入口
-│
 ├── train_imagenet.py ImageNet数据集评估训练入口
 │
 ├── visualize.py 模型结构可视化入口
@@ -67,14 +65,12 @@ python -m paddle.distributed.launch --selected_gpus=0,1,2,3 --log_dir ./mylog se
 在得到搜索结构Genotype之后，可以对其进行评估训练，从而获得它在特定数据集上的真实性能
 
 ```bash
-python train.py --arch='PC_DARTS'            # 在CIFAR10数据集上对搜索到的结构评估训练
 python train_imagenet.py --arch='PC_DARTS'   # 在ImageNet数据集上对搜索得到的结构评估训练
 ```
 
 同样，也支持用多卡进行评估训练, 以4卡为例(GPU id: 0-3), 启动命令如下：
 
 ```bash
-python -m paddle.distributed.launch --selected_gpus=0,1,2,3  --log_dir ./mylog train.py --use_data_parallel 1 --arch='DARTS_V2'
 python -m paddle.distributed.launch --selected_gpus=0,1,2,3  --log_dir ./mylog train_imagenet.py --use_data_parallel 1 --arch='DARTS_V2'
 ```
 

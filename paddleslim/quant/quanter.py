@@ -19,8 +19,8 @@ import numpy as np
 
 import paddle
 from paddle.framework import core
-from paddle.fluid.layer_helper import LayerHelper
-from paddle.fluid.framework import IrGraph
+from paddle.framework import LayerHelper
+from paddle.framework import IrGraph
 from paddle.static.quantization import WeightQuantization
 from paddle.static.quantization import QuantizationTransformPass
 from paddle.static.quantization import QuantizationFreezePass
@@ -99,7 +99,7 @@ _quant_config_default = {
     'moving_rate': 0.9,
     # if True, 'quantize_op_types' will be TENSORRT_OP_TYPES
     'for_tensorrt': False,
-    # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES 
+    # if True, 'quantoze_op_types' will be TRANSFORM_PASS_OP_TYPES + QUANT_DEQUANT_PASS_OP_TYPES
     'is_full_quantize': False,
     # if True, use onnx format to quant.
     'onnx_format': True,
@@ -368,8 +368,8 @@ def quant_aware(program,
                 same_scale_tensor_list.append(qkv_weight_tensor)
 
                 for op in ops:
-                    if op._op.type in ['matmul', 'matmul_v2'] and (
-                            not has_trainable_var(op)):
+                    if op._op.type in ['matmul', 'matmul_v2'
+                                       ] and (not has_trainable_var(op)):
                         input_names = op._op.input_arg_names
                         for input_name in input_names:
                             pre_op = find_pre_ops(program, input_name)[0]
@@ -377,8 +377,8 @@ def quant_aware(program,
                                 continue
                             elif pre_op.type == 'scale':
                                 qkv_output_tensor.append(
-                                    input_name + '#/#{}'.format(
-                                        pre_op.attr('scale')))
+                                    input_name +
+                                    '#/#{}'.format(pre_op.attr('scale')))
                             else:
                                 qkv_output_tensor.append(input_name)
                     elif op._op.type == 'elementwise_add':
@@ -485,8 +485,8 @@ def quant_aware(program,
         _logger.info(
             "When a preprocess_func is used in quant_aware, Need to save a mapping table to match variable names in the convert phase."
         )
-        _logger.info("The mapping table is saved as '{}'.".format(
-            VARS_MAPPING_TABLE))
+        _logger.info(
+            "The mapping table is saved as '{}'.".format(VARS_MAPPING_TABLE))
         for sub_graph in sub_graphs:
             save_dict(sub_graph.out_node_mapping_table)
 

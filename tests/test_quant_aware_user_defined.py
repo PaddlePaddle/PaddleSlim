@@ -24,7 +24,7 @@ import numpy as np
 
 
 def pact(x):
-    helper = paddle.fluid.layer_helper.LayerHelper("pact", **locals())
+    helper = paddle.framework.LayerHelper("pact", **locals())
     dtype = 'float32'
     init_thres = 20
     u_param_attr = paddle.ParamAttr(
@@ -76,8 +76,8 @@ class TestQuantAwareCase1(StaticCase):
         main_prog = paddle.static.default_main_program()
         val_prog = main_prog.clone(for_test=True)
 
-        place = paddle.CUDAPlace(0) if paddle.is_compiled_with_cuda(
-        ) else paddle.CPUPlace()
+        place = paddle.CUDAPlace(
+            0) if paddle.is_compiled_with_cuda() else paddle.CPUPlace()
         exe = paddle.static.Executor(place)
         exe.run(paddle.static.default_startup_program())
 
