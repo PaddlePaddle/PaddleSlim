@@ -23,14 +23,14 @@ class ImageNetDataset(Dataset):
         if self.mode == 'train':
             self.transform = transforms.Compose([
                 transforms.RandomResizedCrop(image_size),
-                transforms.RandomHorizontalFlip(), transforms.Transpose(),
-                normalize
+                transforms.RandomHorizontalFlip(),
+                transforms.Transpose(), normalize
             ])
         else:
             self.transform = transforms.Compose([
                 transforms.Resize(resize_short_size),
-                transforms.CenterCrop(image_size), transforms.Transpose(),
-                normalize
+                transforms.CenterCrop(image_size),
+                transforms.Transpose(), normalize
             ])
 
         if mode == 'train':
@@ -38,7 +38,7 @@ class ImageNetDataset(Dataset):
                 full_lines = [line.strip() for line in flist]
                 np.random.shuffle(full_lines)
                 if os.getenv('PADDLE_TRAINING_ROLE'):
-                    # distributed mode if the env var `PADDLE_TRAINING_ROLE` exits
+                    # distributed mode if the env var `PADDLE_TRAINING_ROLE` exists
                     trainer_id = int(os.getenv("PADDLE_TRAINER_ID", "0"))
                     trainer_count = int(os.getenv("PADDLE_TRAINERS_NUM", "1"))
                     per_node_lines = len(full_lines) // trainer_count

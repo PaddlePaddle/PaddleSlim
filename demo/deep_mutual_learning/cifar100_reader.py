@@ -49,7 +49,7 @@ def preprocess(sample, is_training):
     img = Image.fromarray(rgb_array, 'RGB')
 
     if is_training:
-        # pad, ramdom crop, random_flip_left_right, random_rotation
+        # pad, random crop, random_flip_left_right, random_rotation
         img = ImageOps.expand(img, (4, 4, 4, 4), fill=0)
         left_top = np.random.randint(8, size=2)
         img = img.crop((left_top[1], left_top[0], left_top[1] + IMAGE_SIZE,
