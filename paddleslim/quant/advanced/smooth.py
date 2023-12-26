@@ -26,6 +26,8 @@ class Smooth():
             model_config,
             alpha=0.5,
             smooth_all_linears=False,
+            start_sample_step=10000,
+            smooth_method='smoothquant',
             sample_function=None,
             search_function=None, ):
         '''
@@ -68,6 +70,8 @@ class Smooth():
         self.smooth_all_linears = smooth_all_linears
         self.sample_function = sample_function
         self.search_function = search_function
+        self.start_sample_step = start_sample_step
+        self.smooth_method = smooth_method
 
         self.model.eval()
         self.step = 0
@@ -98,7 +102,6 @@ class Smooth():
         self.ln_linear_dict, self.linear_ln_dict = get_ln_linear_info(
             self.layer_order, self.norm_flag, self.linear_flag, self.fused_qkv,
             self.parallel_ffn, self.skip_norm_list)
-
         assert len(self.ln_linear_dict) > 0, 'No LN/Linear pair found'
         for key in self.ln_linear_dict:
             print('smooth pair LN {} : Linear {}'.format(
@@ -147,29 +150,32 @@ class Smooth():
     def _sample_scale(self, input, ln_name):
         x = input[0] if type(input) == tuple else input
         x.stop_gradient = True
-        x_abs_max = x.abs().max(axis=1, keepdim=True)
-        x_abs_max = x_abs_max.max(axis=0)
+
+        if self.smooth_method == 'smoothquant':
+            x_abs_max = x.abs().max(axis=1, keepdim=True)
+            x_abs_max = x_abs_max.max(axis=0)
+        elif self.smooth_method == 'awq':
+            x_abs_max = x.abs().reshape([-1, x.shape[-1]])
+            x_abs_max = x_abs_max.mean(axis=0).reshape([1, -1])
+        else:
+            raise NotImplementedError("To be implemented")
 
         if ln_name not in self.scale_dict:
             self.sampled_inputs[ln_name] = x
             self.scale_dict[ln_name] = x_abs_max
         else:
-            if self.sample_function is not None:
+            if self.sample_function is not None and self.step >= self.start_sample_step:
                 self.sampled_inputs[ln_name] = self.sample_function.sample(
                     x, self.sampled_inputs[ln_name], ln_name)
             else:
                 self.sampled_inputs[ln_name] = x
-            tmp1 = paddle.concat([x_abs_max, self.scale_dict[ln_name]], axis=0)
-            self.scale_dict[ln_name] = tmp1.max(axis=0, keepdim=True)
+            if self.smooth_method == 'smoothquant':
+                tmp1 = paddle.concat([x_abs_max, self.scale_dict[ln_name]], axis=0)
+                self.scale_dict[ln_name] = tmp1.max(axis=0, keepdim=True)
+            elif self.smooth_method == 'awq':
+                tmp1 = paddle.concat([x_abs_max, self.scale_dict[ln_name]], axis=0)
+                self.scale_dict[ln_name] = tmp1.mean(axis=0, keepdim=True)
 
-        # per step print once
-        if self.print_step == self.step:
-            print('[Smooth] Step [{}]: {}. abs_min: {}, abs_max: {}'.format(
-                self.step, ln_name,
-                float(self.scale_dict[ln_name].cast("float32").min()),
-                float(self.scale_dict[ln_name].cast("float32").max())))
-            if ln_name == list(self.linear_ln_dict.values())[-1]:
-                self.print_step += 1
 
     def update_weight(self):
 
@@ -181,24 +187,20 @@ class Smooth():
             if type(sub_layer) == ShiftSmoothHelpLayer:
                 ln_name = layer_name
             if ln_name is not None:
-                act_abs_max = self.scale_dict[ln_name].cast("float32")
-                sampled_input = self.sampled_inputs[ln_name].cast("float32")
+                act_abs_max = self.scale_dict[ln_name].cast("float16")
+                sampled_input = self.sampled_inputs[ln_name].cast("float16")
                 for param in sub_layer.parameters(include_sublayers=False):
                     if 'w_0' in param.name:
-                        weight = param.cast("float32")
+                        # weight = param.cast("float32")
                         if self.search_function is not None:
                             s = self.search_function.search(
-                                layer_name, sampled_input, act_abs_max, weight)
+                                layer_name, sampled_input, act_abs_max, param.cast("float16"))
                         else:
-                            w_abs_max = weight.abs().max(axis=-1, keepdim=True)
+                            w_abs_max = param.abs().max(axis=-1, keepdim=True)
                             rw_abs_max = w_abs_max.reshape(act_abs_max.shape)
-                            act_abs_max_np = act_abs_max.numpy()
-                            weight_abs_max_np = rw_abs_max.numpy()
-                            s = (
-                                np.power(act_abs_max_np, self.alpha) / np.power(
-                                    weight_abs_max_np, 1 - self.alpha)).clip(
-                                        min=1e-5)
-                            s = paddle.to_tensor(s, dtype="float32")
+                            act_abs_max_tmp = act_abs_max.detach().clone()
+                            s = paddle.clip(paddle.pow(act_abs_max_tmp, self.alpha) / paddle.pow(
+                                rw_abs_max, 1 - self.alpha), min=1e-5)
 
                         self.smooth_scale_dict[ln_name] = s.cast(param.dtype)
                         break
