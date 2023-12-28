@@ -97,6 +97,8 @@ class PieceWiseSearch():
                 mask_for_search = paddle.where(labels == centroids.argsort()[i],
                                                1., 0.)
                 mask_for_ones = paddle.where(mask_for_search == 0., 1., 0.)
+                mask_for_search = mask_for_search.cast(dtype)
+                mask_for_ones = mask_for_ones.cast(dtype)
 
                 while alpha <= alpha_max:
                     if alpha < 1:
