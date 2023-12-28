@@ -125,6 +125,7 @@ class PieceWiseSearch():
                     if smooth_scale_out is not None:
                         mask_for_ones_new = paddle.where(
                             smooth_scale_out == 0., 1., 0.)
+                        mask_for_ones_new = mask_for_ones_new.cast(dtype)
                         mask_for_ones *= mask_for_ones_new
                         smooth_scale_ = smooth_scale_out + smooth_scale
                         smooth_scale_tmp = smooth_scale_ + mask_for_ones
