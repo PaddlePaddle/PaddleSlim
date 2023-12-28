@@ -110,6 +110,7 @@ class GPTQ(nn.Layer):
             H[dead, dead] = 1
             W[:, dead] = 0
         del dead
+
         if actorder:
             perm = paddle.argsort(paddle.diag(H), descending=True)
             W = W.transpose((1, 0))
