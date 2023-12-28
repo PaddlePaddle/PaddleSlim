@@ -71,7 +71,7 @@ class PieceWiseSearch():
         origin_out = paddle.matmul(act, weight)
         w_abs_max = weight.abs().max(axis=-1, keepdim=True)
         rw_abs_max = w_abs_max.reshape(act_abs_max.shape)
-        
+
         smooth_scale_out = None
         global_loss = float('inf')
         best_scale = None
@@ -89,7 +89,9 @@ class PieceWiseSearch():
             piece = ['piece_{}'.format(a) for a in range(len(centroids))]
             for i in range(len(centroids)):
                 print('search for piece {}; centroids value is {}'.format(
-                    piece[i], float(centroids[centroids.argsort()[i: i + 1]].cast('float32'))))
+                    piece[i],
+                    float(centroids[centroids.argsort()[i:i + 1]].cast(
+                        'float32'))))
                 alpha = self.search_alpha_min
                 alpha_max = self.search_scale_max if self.search_scale_max is not None else self.search_alpha_max
                 calibration_loss = float('inf')
@@ -97,6 +99,8 @@ class PieceWiseSearch():
                 mask_for_search = paddle.where(labels == centroids.argsort()[i],
                                                1., 0.)
                 mask_for_ones = paddle.where(mask_for_search == 0., 1., 0.)
+                mask_for_search = mask_for_search.cast(dtype)
+                mask_for_ones = mask_for_ones.cast(dtype)
 
                 while alpha <= alpha_max:
                     if alpha < 1:
@@ -112,19 +116,26 @@ class PieceWiseSearch():
 
                     if alpha < 1:
                         act_abs_max_tmp = act_abs_max.detach().clone()
-                        s = paddle.clip(paddle.pow(act_abs_max_tmp, alpha) / paddle.pow(
-                            rw_abs_max, 1 - alpha), min=1e-5)
-                        
-                        if self.use_clip or (k_piece == 1 and k_idx == 1 and self.search_clip):
-                            s = paddle.clip(act_abs_max_tmp / paddle.max(act_abs_max / s), min=1)
+                        s = paddle.clip(
+                            paddle.pow(act_abs_max_tmp, alpha) / paddle.pow(
+                                rw_abs_max, 1 - alpha),
+                            min=1e-5)
+
+                        if self.use_clip or (k_piece == 1 and k_idx == 1 and
+                                             self.search_clip):
+                            s = paddle.clip(
+                                act_abs_max_tmp / paddle.max(act_abs_max / s),
+                                min=1)
                         del act_abs_max_tmp
                         smooth_scale = s * mask_for_search
                     else:
-                        smooth_scale = paddle.to_tensor(alpha,  dtype=dtype) * mask_for_search
+                        smooth_scale = paddle.to_tensor(
+                            alpha, dtype=dtype) * mask_for_search
 
                     if smooth_scale_out is not None:
                         mask_for_ones_new = paddle.where(
                             smooth_scale_out == 0., 1., 0.)
+                        mask_for_ones_new = mask_for_ones_new.cast(dtype)
                         mask_for_ones *= mask_for_ones_new
                         smooth_scale_ = smooth_scale_out + smooth_scale
                         smooth_scale_tmp = smooth_scale_ + mask_for_ones
@@ -159,7 +170,8 @@ class PieceWiseSearch():
                         # print('Better alpha: {} loss: {}'.format(alpha, calibration_loss.cast('float32')))
 
                 print("Layer {} Piece {}, loss: {}, alpha : {}".format(
-                    layer_name, piece[i], float(calibration_loss.cast('float32')), final_alpha))
+                    layer_name, piece[i],
+                    float(calibration_loss.cast('float32')), final_alpha))
                 if smooth_scale_out is None:
                     smooth_scale_out = final_smooth_scale
                 else:
@@ -172,5 +184,5 @@ class PieceWiseSearch():
                     print('Find Better K-Piece {}'.format(k_piece))
             if not self.search_piece:
                 break
-        
+
         return best_scale
