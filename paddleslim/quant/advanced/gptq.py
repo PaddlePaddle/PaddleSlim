@@ -106,11 +106,9 @@ class GPTQ(nn.Layer):
         H = self.hessian
         del self.hessian
         dead = paddle.where(paddle.diag(H) == 0)
-        H[dead, dead] = 1
-        if dead[0].shape[0] == 0:
-            print('No diag of H is zero, skip GPTQ this layer.')
-            return
-        W[:, dead] = 0
+        if dead[0].shape[0] != 0:
+            H[dead, dead] = 1
+            W[:, dead] = 0
         del dead
         if actorder:
             perm = paddle.argsort(paddle.diag(H), descending=True)
