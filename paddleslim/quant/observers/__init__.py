@@ -20,6 +20,7 @@ from .avg import AVGObserver
 from .abs_max import AbsmaxObserver
 from .mse_weight import MSEChannelWiseWeightObserver
 from .abs_max_weight import AbsMaxChannelWiseWeightObserver
+from .groupwise import GroupWiseWeightObserver
 
 __all__ = [
     "HistObserver",
@@ -31,4 +32,5 @@ __all__ = [
     "AbsmaxObserver",
     "MSEChannelWiseWeightObserver",
     "AbsMaxChannelWiseWeightObserver",
+    "GroupWiseWeightObserver"
 ]
