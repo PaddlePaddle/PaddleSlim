@@ -106,8 +106,9 @@ class GPTQ(nn.Layer):
         H = self.hessian
         del self.hessian
         dead = paddle.where(paddle.diag(H) == 0)
-        H[dead, dead] = 1
-        W[:, dead] = 0
+        if dead[0].shape[0] != 0:
+            H[dead, dead] = 1
+            W[:, dead] = 0
         del dead
         if actorder:
             perm = paddle.argsort(paddle.diag(H), descending=True)
@@ -122,9 +123,15 @@ class GPTQ(nn.Layer):
         damp = percdamp * paddle.mean(paddle.diag(H))
         diag = paddle.arange(self.columns)
         H[diag, diag] += damp
-
-        H = paddle.inverse(H)
-        H = paddle.linalg.cholesky(H, upper=True)
+        try:
+            H = paddle.inverse(H)
+            H = paddle.linalg.cholesky(H, upper=True)
+        except:
+            print('We skip GPTQ this layer now.')
+            print(
+                'If you want GPTQ this layer, please try setting damp_percent larger or increasing the number of samples.'
+            )
+            return
         Hinv = H
 
         for i1 in range(0, self.columns, blocksize):

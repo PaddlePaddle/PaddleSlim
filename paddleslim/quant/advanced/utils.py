@@ -38,7 +38,7 @@ def k_means(weight, n_clusters, init='k-means++', max_iter=300):
     return paddle.to_tensor(centroids.flatten()), paddle.to_tensor(labels)
 
 
-def compute_scales(x, method='abs_max'):
+def compute_scales(x, method='abs_max', group_size=-1):
     if method == 'abs_max':
         quant_scale = float(paddle.max(paddle.abs(x.flatten())))
         quant_scale = 1e-8 if quant_scale == 0.0 else quant_scale
@@ -52,7 +52,25 @@ def compute_scales(x, method='abs_max'):
             0, dtype=x.dtype),
                                    paddle.to_tensor(1e-8, dtype=x.dtype),
                                    quant_scale)
+    elif method == 'groupwise':
+        input_shape = x.shape
+        input_processed = x.transpose([1, 0]).reshape(
+            [input_shape[1], input_shape[0] // group_size, group_size])
+        quant_scale = paddle.max(
+            paddle.abs(input_processed), axis=2) 
+        quant_scale = paddle.where(quant_scale == paddle.to_tensor(0, dtype=x.dtype),
+                                      paddle.to_tensor(1e-8, dtype=x.dtype), quant_scale)
+        quant_scale = quant_scale.transpose([1, 0])
+        
     return quant_scale
+
+def fake_quant(x, method='abs_max', weight_bits=8, group_size=-1):
+    bnt = (1 << (weight_bits - 1)) - 1
+    quant_scale = compute_scales(x, method=method, group_size=group_size)
+    quant_value = paddle.clip(
+        paddle.round(x / quant_scale * bnt), -bnt - 1, bnt)
+    quant_dequant_value = quant_value / bnt * quant_scale
+    return quant_dequant_value
 
 
 def find_parent_layer_and_sub_name(model, name):
