@@ -122,7 +122,7 @@ class PPYOLOEPostProcess(object):
                 picked_labels.extend([class_index] * box_probs.shape[0])
 
             if len(picked_box_probs) == 0:
-                out_boxes_list.append(np.empty((0, 4)))
+                out_boxes_list.append(np.empty((0, 6)))
 
             else:
                 picked_box_probs = np.concatenate(picked_box_probs)
