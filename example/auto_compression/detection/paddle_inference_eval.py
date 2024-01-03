@@ -18,6 +18,7 @@ import time
 import sys
 import cv2
 import numpy as np
+from tqdm import tqdm
 
 import paddle
 from paddle.inference import Config
@@ -85,12 +86,12 @@ def argsparser():
         type=str,
         default='True',
         help="Whether include nms or not.")
-    # 是否用来测速
     parser.add_argument(
-        '--speed',
-        type=str,
-        default='True',
-        help="if speed is True, it will print the inference time.")
+        "--trt_calib_mode",
+        type=bool,
+        default=False,
+        help="If the model is produced by TRT offline quantitative "
+        "calibration, trt_calib_mode need to set True.")
 
     return parser
 
@@ -214,8 +215,9 @@ def load_predictor(
         use_mkldnn=False,
         batch_size=1,
         device="CPU",
-        min_subgraph_size=3,
+        min_subgraph_size=4,
         use_dynamic_shape=False,
+        trt_calib_mode=False,
         trt_min_shape=1,
         trt_max_shape=1280,
         trt_opt_shape=640,
@@ -273,7 +275,7 @@ def load_predictor(
             min_subgraph_size=min_subgraph_size,
             precision_mode=precision_map[precision],
             use_static=True,
-            use_calib_mode=False, )
+            use_calib_mode=False)
 
         if use_dynamic_shape:
             dynamic_shape_file = os.path.join(FLAGS.model_path,
@@ -363,12 +365,9 @@ def eval(predictor, val_loader, metric, rerun_flag=False):
     input_names = predictor.get_input_names()
     output_names = predictor.get_output_names()
     boxes_tensor = predictor.get_output_handle(output_names[0])
-    print("output_names:", output_names)
-    print("Number of outputs:", len(output_names))
-    print("FLAGS.include_nms:", FLAGS.include_nms)
     if FLAGS.include_nms:
         boxes_num = predictor.get_output_handle(output_names[1])
-    for batch_id, data in enumerate(val_loader):
+    for batch_id, data in tqdm(enumerate(val_loader), total=len(val_loader), desc='Evaluating'):
         data_all = {k: np.array(v) for k, v in data.items()}
         for i, _ in enumerate(input_names):
             input_tensor = predictor.get_input_handle(input_names[i])
@@ -386,79 +385,26 @@ def eval(predictor, val_loader, metric, rerun_flag=False):
         time_min = min(time_min, timed)
         time_max = max(time_max, timed)
         predict_time += timed
-        # print("FLAGS.include_nms:", FLAGS.include_nms)
-        # print("FLAGS.speed:", FLAGS.speed)
-        # 如果include_nms为false且flags.speed为True，则走PPYOLOEPostProcess
-        if not FLAGS.include_nms and FLAGS.speed: 
-            # print("nms为True的时候走了PPYOLOEPostProcess")
+        if not FLAGS.include_nms:
             postprocess = PPYOLOEPostProcess(
                 score_threshold=0.3, nms_threshold=0.6)
             res = postprocess(np_boxes, data_all['scale_factor'])
-        #如果include_nms为false且flags.speed为False,则跳过
-        elif not FLAGS.include_nms and not FLAGS.speed:
-            continue
-        #如果include_nms,则直接返回
-        elif FLAGS.include_nms:
-            # print("nms为False的时候直接返回")
+        else:
             res = {'bbox': np_boxes, 'bbox_num': np_boxes_num}
         metric.update(data_all, res)
         if batch_id % 100 == 0:
-            print("Eval iter:", batch_id)
             sys.stdout.flush()
     metric.accumulate()
-    if not FLAGS.speed:
-        metric.log()
+    metric.log()
     map_res = metric.get_results()
     metric.reset()
     time_avg = predict_time / sample_nums
     print("[Benchmark]Inference time(ms): min={}, max={}, avg={}".format(
         round(time_min * 1000, 2),
         round(time_max * 1000, 1), round(time_avg * 1000, 1)))
-    if not FLAGS.speed:
-        print("[Benchmark] COCO mAP: {}".format(map_res["bbox"][0]))
+    print("[Benchmark] COCO mAP: {}".format(map_res["bbox"][0]))
     sys.stdout.flush()
 
-def inference_time(predictor, val_loader, metric, rerun_flag=False):
-    cpu_mems, gpu_mems = 0, 0
-    predict_time = 0.0
-    time_min = float("inf")
-    time_max = float("-inf")
-    sample_nums = len(val_loader)
-    input_names = predictor.get_input_names()
-    output_names = predictor.get_output_names()
-    boxes_tensor = predictor.get_output_handle(output_names[0])
-    print("output_names:", output_names)
-    print("Number of outputs:", len(output_names))
-    print("FLAGS.include_nms:", FLAGS.include_nms)
-    if FLAGS.include_nms:
-        boxes_num = predictor.get_output_handle(output_names[1])
-    
-    for batch_id, data in enumerate(val_loader):
-        data_all = {k: np.array(v) for k, v in data.items()}
-        for i, _ in enumerate(input_names):
-            input_tensor = predictor.get_input_handle(input_names[i])
-            input_tensor.copy_from_cpu(data_all[input_names[i]])
-        paddle.device.cuda.synchronize()
-        start_time = time.time()
-        predictor.run()
-        # np_boxes = boxes_tensor.copy_to_cpu()
-        if FLAGS.include_nms:
-            np_boxes_num = boxes_num.copy_to_cpu()
-        if rerun_flag:
-            return
-        end_time = time.time()
-        timed = end_time - start_time
-        time_min = min(time_min, timed)
-        time_max = max(time_max, timed)
-        predict_time += timed
-        # print("FLAGS.include_nms:", FLAGS.include_nms)
-        # print("FLAGS.speed:", FLAGS.speed)
-        # 如果include_nms为false且flags.speed为True，则走PPYOLOEPostProcess
-    time_avg = predict_time / sample_nums
-    print("[Benchmark]Inference time(ms): min={}, max={}, avg={}".format(
-        round(time_min * 1000, 2),
-        round(time_max * 1000, 1), round(time_avg * 1000, 1)))
-    sys.stdout.flush()
 
 def main():
     """
@@ -485,7 +431,6 @@ def main():
             repeats=repeats)
     else:
         reader_cfg = load_config(FLAGS.reader_config)
-        
         dataset = reader_cfg["EvalDataset"]
         global val_loader
         val_loader = create("EvalReader")(
@@ -496,11 +441,9 @@ def main():
         anno_file = dataset.get_anno()
         metric = COCOMetric(
             anno_file=anno_file, clsid2catid=clsid2catid, IouType="bbox")
-        if not FLAGS.speed:
-            eval(predictor, val_loader, metric, rerun_flag=rerun_flag)
-        else:
-            inference_time(predictor, val_loader, metric, rerun_flag=rerun_flag)
-
+        
+        eval(predictor, val_loader, metric, rerun_flag=rerun_flag)
+       
     if rerun_flag:
         print(
             "***** Collect dynamic shape done, Please rerun the program to get correct results. *****"
@@ -515,9 +458,6 @@ if __name__ == "__main__":
         FLAGS.include_nms = True 
     else:
         FLAGS.include_nms = False   
-
-    print('**************main****************')
-    print(FLAGS)
 
     # DataLoader need run on cpu
     paddle.set_device("cpu")
