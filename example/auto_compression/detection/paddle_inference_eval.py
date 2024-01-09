@@ -18,6 +18,7 @@ import time
 import sys
 import cv2
 import numpy as np
+from tqdm import tqdm
 
 import paddle
 from paddle.inference import Config
@@ -82,9 +83,15 @@ def argsparser():
     parser.add_argument("--img_shape", type=int, default=640, help="input_size")
     parser.add_argument(
         '--include_nms',
-        type=bool,
-        default=True,
+        type=str,
+        default='True',
         help="Whether include nms or not.")
+    parser.add_argument(
+        "--trt_calib_mode",
+        type=bool,
+        default=False,
+        help="If the model is produced by TRT offline quantitative "
+        "calibration, trt_calib_mode need to set True.")
 
     return parser
 
@@ -208,8 +215,9 @@ def load_predictor(
         use_mkldnn=False,
         batch_size=1,
         device="CPU",
-        min_subgraph_size=3,
+        min_subgraph_size=4,
         use_dynamic_shape=False,
+        trt_calib_mode=False,
         trt_min_shape=1,
         trt_max_shape=1280,
         trt_opt_shape=640,
@@ -238,9 +246,11 @@ def load_predictor(
     config = Config(
         os.path.join(model_dir, "model.pdmodel"),
         os.path.join(model_dir, "model.pdiparams"))
+
+    config.enable_memory_optim()
     if device == "GPU":
         # initial GPU memory(M), device ID
-        config.enable_use_gpu(200, 0)
+        config.enable_use_gpu(1000, 0)
         # optimize graph and fuse op
         config.switch_ir_optim(True)
     else:
@@ -260,12 +270,12 @@ def load_predictor(
     }
     if precision in precision_map.keys() and use_trt:
         config.enable_tensorrt_engine(
-            workspace_size=(1 << 25) * batch_size,
+            workspace_size=(1 << 30) * batch_size,
             max_batch_size=batch_size,
             min_subgraph_size=min_subgraph_size,
             precision_mode=precision_map[precision],
             use_static=True,
-            use_calib_mode=False, )
+            use_calib_mode=False)
 
         if use_dynamic_shape:
             dynamic_shape_file = os.path.join(FLAGS.model_path,
@@ -297,6 +307,7 @@ def predict_image(predictor,
     img, scale_factor = image_preprocess(image_file, image_shape)
     inputs = {}
     inputs["image"] = img
+
     if FLAGS.include_nms:
         inputs['scale_factor'] = scale_factor
     input_names = predictor.get_input_names()
@@ -356,7 +367,8 @@ def eval(predictor, val_loader, metric, rerun_flag=False):
     boxes_tensor = predictor.get_output_handle(output_names[0])
     if FLAGS.include_nms:
         boxes_num = predictor.get_output_handle(output_names[1])
-    for batch_id, data in enumerate(val_loader):
+    for batch_id, data in tqdm(
+            enumerate(val_loader), total=len(val_loader), desc='Evaluating'):
         data_all = {k: np.array(v) for k, v in data.items()}
         for i, _ in enumerate(input_names):
             input_tensor = predictor.get_input_handle(input_names[i])
@@ -382,7 +394,6 @@ def eval(predictor, val_loader, metric, rerun_flag=False):
             res = {'bbox': np_boxes, 'bbox_num': np_boxes_num}
         metric.update(data_all, res)
         if batch_id % 100 == 0:
-            print("Eval iter:", batch_id)
             sys.stdout.flush()
     metric.accumulate()
     metric.log()
@@ -421,7 +432,6 @@ def main():
             repeats=repeats)
     else:
         reader_cfg = load_config(FLAGS.reader_config)
-
         dataset = reader_cfg["EvalDataset"]
         global val_loader
         val_loader = create("EvalReader")(
@@ -432,6 +442,7 @@ def main():
         anno_file = dataset.get_anno()
         metric = COCOMetric(
             anno_file=anno_file, clsid2catid=clsid2catid, IouType="bbox")
+
         eval(predictor, val_loader, metric, rerun_flag=rerun_flag)
 
     if rerun_flag:
@@ -444,6 +455,10 @@ if __name__ == "__main__":
     paddle.enable_static()
     parser = argsparser()
     FLAGS = parser.parse_args()
+    if FLAGS.include_nms == 'True':
+        FLAGS.include_nms = True
+    else:
+        FLAGS.include_nms = False
 
     # DataLoader need run on cpu
     paddle.set_device("cpu")
