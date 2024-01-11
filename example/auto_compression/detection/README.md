@@ -78,15 +78,18 @@
 安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle==2.4.1
-# GPU 以Ubuntu、CUDA 11.2为例
-python -m pip install paddlepaddle-gpu==2.4.1.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
+python -m pip install paddlepaddle==2.6.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+#GPU 以ubuntu、CUDA11.6为例
+python -m pip install paddlepaddle-gpu==2.6.0.post116 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
 安装paddleslim：
 ```shell
 pip install paddleslim
 ```
+源码安装(推荐):
+git clone -b release/2.6 https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+python setup.py install
 
 安装paddledet：
 ```shell
@@ -101,7 +104,7 @@ pip install paddledet
 
 如果数据集为非COCO格式数据，请修改[configs](./configs)中reader配置文件中的Dataset字段。
 
-以PP-YOLOE模型为例，如果已经准备好数据集，请直接修改[./configs/yolo_reader.yml]中`EvalDataset`的`dataset_dir`字段为自己数据集路径即可。
+以PP-YOLOE模型为例，如果已经准备好数据集，请直接修改[./configs/yolo_reader.yml]中`EvalDataset`和`TrainDataset'的`dataset_dir`字段为自己数据集路径即可。
 
 #### 3.3 准备预测模型
 
@@ -113,10 +116,16 @@ pip install paddledet
 根据[PaddleDetection文档](https://github.com/PaddlePaddle/PaddleDetection/blob/develop/docs/tutorials/GETTING_STARTED_cn.md#8-%E6%A8%A1%E5%9E%8B%E5%AF%BC%E5%87%BA) 导出Inference模型，具体可参考下方PP-YOLOE模型的导出示例：
 - 下载代码
 ```
-git clone https://github.com/PaddlePaddle/PaddleDetection.git
+git clone -b release/2.6 https://github.com/PaddlePaddle/PaddleDetection.git
 ```
 - 导出预测模型
-
+- 当你使用Paddle Inference但不使用TensorRT时，运行以下命令导出模型(不包含NMS)
+```shell
+python tools/export_model.py \
+        -c configs/ppyoloe/ppyoloe_crn_s_300e_coco.yml \
+        -o weights=https://paddledet.bj.bcebos.com/models/ppyoloe_crn_s_300e_coco.pdparams \
+        exclude_post_process=True \
+```
 PPYOLOE-l模型，包含NMS：如快速体验，可直接下载[PP-YOLOE-l导出模型](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco.tar)
 ```shell
 python tools/export_model.py \
@@ -146,7 +155,7 @@ python tools/export_model.py \
 #### 3.4 自动压缩并产出模型
 
 蒸馏量化自动压缩示例通过run.py脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中模型路径、蒸馏、量化、和训练等部分的参数，配置完成后便可对模型进行量化和蒸馏。具体运行命令为：
-
+注意!!!，ppyoloe_s_qat_dis.yaml中属性include_nms，它默认为False，如果你导出的模型有nms，则将它修改为True。
 - 单卡训练：
 ```
 export CUDA_VISIBLE_DEVICES=0
@@ -155,10 +164,10 @@ python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./outpu
 
 - 多卡训练：
 ```
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log --gpus 0,1,2,3 run.py \
-          --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./output/'
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+python -m paddle.distributed.launch run.py --save_dir='./rtdetr_hgnetv2_l_6x_coco_quant' --config_path=./configs/rtdetr_hgnetv2_l_qat_dis.yaml
 ```
-
+0*640
 
 ## 4.预测部署
 
@@ -178,20 +187,45 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch --log_dir=log -
 | use_mkldnn | 是否启用```MKL-DNN```加速库，注意```use_mkldnn```与```use_gpu```同时为```True```时，将忽略```enable_mkldnn```，而使用```GPU```预测  |
 | cpu_threads | CPU预测时，使用CPU线程数量，默认10  |
 | precision | 预测精度，包括`fp32/fp16/int8`  |
+| include_nms | 是否包含nms，如果不包含nms，则设置False，如果包含nms，则设置为True  |
+| use_dynamic_shape | 是否使用动态shape，如果使用动态shape，则设置为True，否则设置为False  |
+| image_shape | 输入图片的大小。这里默认为640,意味着图像将被调整到640*640  |
+| trt_calib_mode | 如果模型是通过TensorRT离线量化校准生成的，那么需要将此参数设置为True。|
 
 
 - TensorRT预测：
 
 环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
-
+带NMS的
 ```shell
 python paddle_inference_eval.py \
-      --model_path=models/ppyoloe_crn_l_300e_coco_quant \
-      --reader_config=configs/yoloe_reader.yml \
-      --use_trt=True \
-      --precision=int8
+    --model_path=ppyoloe_crn_s_300e_coco \
+    --reader_config=configs/yolo_reader.yml \
+    --use_trt=True \
+    --precision=fp16 \
+    --include_nms=True \
+    --benchmark=True
 ```
-
+不带NMS的
+```shell
+python paddle_inference_eval.py \
+    --model_path=ppyoloe_crn_l_300e_coco \
+    --reader_config=configs/yolo_reader.yml \
+    --use_trt=True \
+    --precision=fp16 \
+    --include_nms=False \
+    --benchmark=True
+```
+- 原生GPU预测:
+```shell
+python paddle_inference_eval.py \
+    --model_path=ppyoloe_crn_s_300e_coco \
+    --reader_config=configs/yolo_reader.yml \
+    --device=GPU \
+    --precision=fp16 \
+    --include_nms=True \
+    --benchmark=True
+```
 - MKLDNN预测：
 
 ```shell
@@ -206,13 +240,7 @@ python paddle_inference_eval.py \
 
 - 模型为PPYOLOE，同时不包含NMS，可以使用C++预测demo进行测速：
 
-  进入[cpp_infer](./cpp_infer_ppyoloe)文件夹内，请按照[C++ TensorRT Benchmark测试教程](./cpp_infer_ppyoloe/README.md)进行准备环境及编译，然后开始测试：
-  ```shell
-  # 编译
-  bash complie.sh
-  # 执行
-  ./build/trt_run --model_file ppyoloe_s_quant/model.pdmodel --params_file ppyoloe_s_quant/model.pdiparams --run_mode=trt_int8
-  ```
+  直接参考https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/gpu/ppyoloe_crn_l
 
 ## 5.FAQ
 
