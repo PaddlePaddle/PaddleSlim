@@ -2,7 +2,7 @@
 Global:
   reader_config: configs/yolo_reader.yml
   arch: PPYOLOE
-  include_nms: True
+  include_nms: False
   Evaluation: True
   model_dir: ./ppyoloe_crn_l_300e_coco
   model_filename: model.pdmodel
@@ -31,4 +31,3 @@ TrainConfig:
     optimizer: 
       type: SGD
     weight_decay: 4.0e-05
-

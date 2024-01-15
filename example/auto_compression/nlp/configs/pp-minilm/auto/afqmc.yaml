@@ -6,11 +6,20 @@ Global:
   dataset: clue
   batch_size: 16
   max_seq_length: 128
-TransformerPrune:
-  pruned_ratio: 0.25
-HyperParameterOptimization:
+
+
+# 蒸馏
 Distillation:
-QuantPost:
+  teacher_model_dir: ./afqmc
+  teacher_model_filename: inference.pdmodel
+  teacher_params_filename: inference.pdiparams
+
+# 剪枝参数
+# 剪枝参数包括剪枝算法和裁剪度
+Prune:
+  prune_algo: transformer_pruner
+  pruned_ratio: 0.25
+
 TrainConfig:
   epochs: 6
   eval_iter: 1070
@@ -20,3 +29,12 @@ TrainConfig:
       type: AdamW
     weight_decay: 0.01
   origin_metric: 0.7403
+
+
+# 离线量化
+QuantPost:
+  activation_bits: 8
+  quantize_op_types:
+  - conv2d
+  - depthwise_conv2d
+  weight_bits: 8

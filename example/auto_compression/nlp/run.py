@@ -17,6 +17,8 @@ from paddlenlp.data.sampler import SamplerHelper
 from paddlenlp.metrics import Mcc, PearsonAndSpearman
 from paddleslim.common import load_config
 from paddleslim.auto_compression.compressor import AutoCompression
+import sys
+sys.setrecursionlimit(1500)  # 设置一个更高的限制，例如 1500
 
 
 def argsparser():
