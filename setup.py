@@ -22,17 +22,18 @@ import subprocess
 from setuptools import find_packages
 from setuptools import setup
 
-if 'develop' in subprocess.getoutput('git branch'):
-    slim_version = '0.0.0_dev'
-else:
-    tag_list = subprocess.getoutput('git tag').split('\n')
-    if 'rc' in tag_list[-1]:
-        if tag_list[-1].split('rc')[0] in tag_list[-2]:
-            slim_version = tag_list[-2]
-        else:
-            slim_version = tag_list[-1]
-    else:
-        slim_version = tag_list[-1]
+# if 'develop' in subprocess.getoutput('git branch'):
+#     slim_version = '0.0.0_dev'
+# else:
+#     tag_list = subprocess.getoutput('git tag').split('\n')
+#     if 'rc' in tag_list[-1]:
+#         if tag_list[-1].split('rc')[0] in tag_list[-2]:
+#             slim_version = tag_list[-2]
+#         else:
+#             slim_version = tag_list[-1]
+#     else:
+#         slim_version = tag_list[-1]
+slim_version = '2.6.0'
 
 with open('./requirements.txt') as f:
     setup_requires = f.read().splitlines()

@@ -97,10 +97,11 @@ def eval():
                 if k in config['input_list'].keys():
                     data_input[config['input_list'][k]] = np.array(v)
 
-        outs = exe.run(val_program,
-                       feed=data_input,
-                       fetch_list=fetch_targets,
-                       return_numpy=False)
+        outs = exe.run(
+            val_program,
+            feed=data_input,
+            fetch_list=fetch_targets,
+            return_numpy=False)
         res = {}
         if 'arch' in config and config['arch'] == 'keypoint':
             res = keypoint_post_process(data, data_input, exe, val_program,
@@ -112,6 +113,7 @@ def eval():
         else:
             for out in outs:
                 v = np.array(out)
+                # print("v",v)
                 if len(v.shape) > 1:
                     res['bbox'] = v
                 else:
@@ -130,9 +132,8 @@ def main():
 
     dataset = config['EvalDataset']
     global val_loader
-    val_loader = create('EvalReader')(config['EvalDataset'],
-                                      config['worker_num'],
-                                      return_list=True)
+    val_loader = create('EvalReader')(
+        config['EvalDataset'], config['worker_num'], return_list=True)
     metric = None
     if config['metric'] == 'COCO':
         clsid2catid = {v: k for k, v in dataset.catid2clsid.items()}
