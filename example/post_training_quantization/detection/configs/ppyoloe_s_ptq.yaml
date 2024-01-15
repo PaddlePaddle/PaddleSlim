@@ -1,4 +1,4 @@
-input_list: ['image', 'scale_factor']
+input_list: ['image', 'scale_factor'] 
 arch: PPYOLOE    # When export exclude_nms=True, need set arch: PPYOLOE
 model_dir: ./ppyoloe_crn_s_300e_coco
 model_filename: model.pdmodel
@@ -6,7 +6,6 @@ params_filename: model.pdiparams
 metric: COCO
 num_classes: 80
   
-
 # Datset configuration
 TrainDataset:
   !COCODataSet
