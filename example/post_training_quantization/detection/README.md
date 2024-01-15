@@ -22,8 +22,6 @@
 
 | 模型  |  策略  | 输入尺寸 | mAP<sup>val<br>0.5:0.95 | 预测时延<sup><small>FP32</small><sup><br><sup>(ms) |预测时延<sup><small>FP16</small><sup><br><sup>(ms) | 预测时延<sup><small>INT8</small><sup><br><sup>(ms) |  配置文件 | Inference模型  |
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
-| PP-YOLOE-s |  Base模型 | 640*640  |  43.1   |   11.2ms  |   7.7ms   |    -    |    -   | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_s_300e_coco.tar) |
-| PP-YOLOE-s |  离线量化 | 640*640  |  42.6    |     -     |     -     |  6.7ms  |    -   |   [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_ptq.tar) |
 |  |  |  |  |  |  |  |  |  |
 | PicoDet-s |  Base模型 | 416*416  |  32.5   |   -  |   -   |  -  |  - | [Model](https://paddledet.bj.bcebos.com/deploy/Inference/picodet_s_416_coco_lcnet.tar) |
 | PicoDet-s |  离线量化(量化分析前) | 416*416  |  0.0   |   - |   -   |  -  |  -  | - |
@@ -35,22 +33,24 @@
 ## 3. 离线量化流程
 
 #### 3.1 准备环境
-- PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.3
+- PaddlePaddle 2.5 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim 2.5
 - PaddleDet >= 2.4
 - opencv-python
 
 安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle
+python -m pip install paddlepaddle==2.5.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 # GPU
-pip install paddlepaddle-gpu
+python -m pip install paddlepaddle-gpu==2.5.0.post116 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
 安装paddleslim：
+注意，需要修改setup.py中slim_version='2.5'，否则会安装最新版本的PaddleSlim。
 ```shell
-pip install paddleslim
+git clone -b release/2.5 https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+python setup.py install
 ```
 
 安装paddledet：
@@ -66,7 +66,7 @@ pip install paddledet
 
 如果数据集为非COCO格式数据，请修改[configs](./configs)中reader配置文件中的Dataset字段。
 
-以PP-YOLOE模型为例，如果已经准备好数据集，请直接修改[./configs/ppyoloe_s_ptq.yml]中`EvalDataset`的`dataset_dir`字段为自己数据集路径即可。
+以PP-YOLOE模型为例，如果已经准备好数据集，请直接修改[./configs/ppyoloe_s_ptq.yml]中`EvalDataset`和`TrainDataset`的`dataset_dir`字段为自己数据集路径即可。
 
 #### 3.3 准备预测模型
 
@@ -125,12 +125,17 @@ python post_quant.py --config_path=./configs/picodet_s_ptq.yaml --save_dir=./pic
 export CUDA_VISIBLE_DEVICES=0
 python eval.py --config_path=./configs/ppyoloe_s_ptq.yaml
 ```
+这个，测试不出来模型精度，因为[ppyoloe_s_ptq.yaml](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/post_training_quantization/detection/configs/ppyoloe_s_ptq.yaml)的model_dir是没有NMS的，所以不打印精度
+```
+export CUDA_VISIBLE_DEVICES=0
+python eval.py --config_path=./configs/picodet_s_ptq.yaml
+```
 
 **注意**：
 - 要测试的模型路径可以在配置文件中`model_dir`字段下进行修改。
 
 #### 3.6 提高离线量化精度
-本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisPTQ```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisPTQ```详解见[AnalysisPTQ.md](../../../docs/zh_cn/tutorials/quant/AnalysisPTQ.md)。
+本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisPTQ```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisPTQ```详解见[离线量化](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/post_training_quantization.md)。
 
 
 经过多个实验，包括尝试多种激活算法（avg，KL等）、weight的量化方式（abs_max，channel_wise_abs_max），对PicoDet-s进行离线量化后精度均为0，以PicoDet-s为例，量化分析工具具体使用方法如下：
@@ -167,9 +172,96 @@ python post_quant.py --config_path=./configs/picodet_s_analyzed_ptq.yaml --save_
 注：分析之后若需要直接产出符合目标精度的量化模型，demo代码不会使用少量数据集验证，会自动使用全量验证数据。
 
 
-
 ## 4.预测部署
 预测部署可参考[Detection模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/detection)
+
+- TensorRT预测
+- 把[picodet_reader.yml](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/picodet_reader.yml)中的dataset_dir改成你环境下的数据集路径
+
+```shell
+python paddle_inference_eval.py \
+    --model_path=picodet_s_416_coco_lcnet \
+    --reader_config=configs/picodet_reader.yml \
+    --use_trt=True \
+    --precision=fp16 \
+    --include_nms=True \
+    --benchmark=True
+```
+量化分析前:
+```shell
+python paddle_inference_eval.py \
+    --model_path=picodet_s_ptq \
+    --reader_config=configs/picodet_reader.yml \
+    --use_trt=True \
+    --precision= \
+    --include_nms=True \
+    --benchmark=True
+```
+量化分析后:
+```shell
+python paddle_inference_eval.py \
+    --model_path=picodet_s_analyzed_ptq_out \
+    --reader_config=configs/picodet_reader.yml \
+    --use_trt=True \
+    --precision=int8 \
+    --include_nms=True \
+    --benchmark=True
+```
+- C++部署
+请参考[YOLOv3推理](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/gpu/yolov3)
+编译样例
+- 文件yolov3_test.cc改成PicoDet-s.cc，为预测的样例程序(程序中的输入为固定值，如果您有opencv或其他方式进行数据读取的需求，需要对程序进行一定的修改)。
+- 脚本compile.sh包含了第三方库、预编译库的信息配置。
+- 脚本run.sh为一键运行脚本。
+编译前，需要根据自己的环境修改compile.sh中的相关代码配置依赖库：
+```shell
+# 编译的 demo 名称
+DEMO_NAME=picoDet-s
+
+# 根据预编译库中的version.txt信息判断是否将以下三个标记打开
+WITH_MKL=ON
+WITH_GPU=ON
+USE_TENSORRT=ON
+
+# 配置预测库的根目录
+LIB_DIR=${work_path}/../lib/paddle_inference
+
+# 如果上述的WITH_GPU 或 USE_TENSORRT设为ON，请设置对应的CUDA， CUDNN， TENSORRT的路径。
+CUDNN_LIB=/usr/lib/x86_64-linux-gnu/
+CUDA_LIB=/usr/local/cuda/lib64
+TENSORRT_ROOT=/usr/local/TensorRT-7.1.3.4
+```
+运行bash compile.sh编译样例
+运行样例:
+- 使用原生GPU运行样例
+```shell
+./build/picodet-s --model_file picodet_s_416_coco_lenet/model.pdmodel --params_file picodet_s_416_coco_lenet/model.pdiparams
+```
+- 使用Trt FP32运行样例
+```shell
+./build/picodet-s --model_file picodet_s_416_coco_lenet/model.pdmodel --params_file picodet_s_416_coco_lenet/model.pdiparams --run_mode=trt_fp32
+```
+
+- 使用Trt FP16运行样例
+```shell
+./build/picodet-s --model_file picodet_s_416_coco_lenet/model.pdmodel --params_file picodet_s_416_coco_lenet/model.pdiparams --run_mode=trt_fp16
+```
+- 使用Trt INT8运行样例
+在使用Trt Int8运行样例时，相同的运行命令需要执行两次。
+生成量化校准表
+```shell
+./build/picodet-s --model_file picodet_s_416_coco_lcnet/model.pdmodel --params_file picodet_s_416_coco_lcnet/model.pdiparams --run_mode=trt_int8
+```
+执行后，模型文件夹Picodet下的_opt_cache文件夹下会多出一个名字为trt_calib_*的文件，即校准表。
+加载校准表执行预测
+```shell
+./build/picodet-s --model_file picodet_s_416_coco_lcnet/model.pdmodel --params_file picodet_s_416_coco_lcnet/model.pdiparams --run_mode=trt_int8
+```
+- 使用Trt dynamic shape运行样例(以FP32为例)
+```shell
+./build/picodet-s --model_file picodet_s_416_coco_lcnet/model.pdmodel --params_file picodet_s_416_coco_lcnet/model.pdiparams --run_mode=trt_fp32 --use_dynamic_shape=1
+```
+
 
 ## 5.FAQ
 
