@@ -41,8 +41,7 @@ def hard_nms(box_scores, iou_threshold, top_k=-1, candidate_size=200):
         rest_boxes = boxes[indexes, :]
         iou = iou_of(
             rest_boxes,
-            np.expand_dims(
-                current_box, axis=0), )
+            np.expand_dims(current_box, axis=0), )
         indexes = indexes[iou <= iou_threshold]
 
     return box_scores[picked, :]
@@ -122,7 +121,7 @@ class PPYOLOEPostProcess(object):
                 picked_labels.extend([class_index] * box_probs.shape[0])
 
             if len(picked_box_probs) == 0:
-                out_boxes_list.append(np.empty((0, 4)))
+                out_boxes_list.append(np.empty((0, 6)))
 
             else:
                 picked_box_probs = np.concatenate(picked_box_probs)
@@ -135,9 +134,8 @@ class PPYOLOEPostProcess(object):
                 # clas score box
                 out_box = np.concatenate(
                     [
-                        np.expand_dims(
-                            np.array(picked_labels), axis=-1), np.expand_dims(
-                                picked_box_probs[:, 4], axis=-1),
+                        np.expand_dims(np.array(picked_labels), axis=-1),
+                        np.expand_dims(picked_box_probs[:, 4], axis=-1),
                         picked_box_probs[:, :4]
                     ],
                     axis=1)
@@ -152,6 +150,6 @@ class PPYOLOEPostProcess(object):
         return out_boxes_list, box_num_list
 
     def __call__(self, outs, scale_factor):
-        out_boxes_list, box_num_list = self._non_max_suppression(outs,
-                                                                 scale_factor)
+        out_boxes_list, box_num_list = self._non_max_suppression(
+            outs, scale_factor)
         return {'bbox': out_boxes_list, 'bbox_num': box_num_list}
