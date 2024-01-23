@@ -6,11 +6,13 @@ Global:
   dataset: clue
   batch_size: 16
   max_seq_length: 128
-TransformerPrune:
+
+# 剪枝
+Prune:
+  prune_algo: transformer_pruner
   pruned_ratio: 0.25
-HyperParameterOptimization:
-Distillation:
-QuantPost:
+
+# 量化训练
 TrainConfig:
   epochs: 6
   eval_iter: 1110

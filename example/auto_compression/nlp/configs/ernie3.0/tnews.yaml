@@ -6,12 +6,17 @@ Global:
   dataset: clue
   batch_size: 16
   max_seq_length: 128
-TrainConfig:
-  epochs: 6
-  eval_iter: 1110
-  learning_rate: 2.0e-5
-  optimizer_builder:
-    optimizer: 
-      type: AdamW
-    weight_decay: 0.01
-  origin_metric: 0.5700
+
+# 剪枝
+Prune:
+  prune_algo: transformer_pruner
+  pruned_ratio: 0.25
+
+# 离线量化
+QuantPost:
+  activation_bits: 8
+  quantize_op_types:
+  - depthwise_conv2d
+  - conv2d
+  weight_bits: 8
+  
