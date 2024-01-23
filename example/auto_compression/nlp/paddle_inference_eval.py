@@ -238,7 +238,7 @@ class Predictor(object):
             config.enable_tensorrt_engine(
                 workspace_size=1 << 30,
                 max_batch_size=args.batch_size,
-                min_subgraph_size=76,
+                min_subgraph_size=5,
                 precision_mode=precision_map[args.precision],
                 use_static=True,
                 use_calib_mode=False, )
