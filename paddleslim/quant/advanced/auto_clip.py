@@ -21,14 +21,15 @@ from .utils import fake_quant
 from .metrics import mse_loss
 from paddle.distributed.fleet.meta_parallel import (
     ColumnParallelLinear,
-    RowParallelLinear,
-)
+    RowParallelLinear, )
 __all__ = ['AutoClip']
+
 
 class AutoClip(nn.Layer):
     """
     AutoClip from AWQ[https://arxiv.org/abs/2306.00978]
     """
+
     def __init__(
             self,
             model,
@@ -39,8 +40,7 @@ class AutoClip(nn.Layer):
             n_grid=20,
             max_shrink=0.5,
             n_sample_token=512,
-            group_size=128,
-            ):
+            group_size=128, ):
         super(AutoClip, self).__init__()
         self.model = model
         self.weight_bits = weight_bits
@@ -59,7 +59,9 @@ class AutoClip(nn.Layer):
     def _apply_hook(self):
         self._forward_hook_list = []
         for _, sub_layer in self.model.named_sublayers():
-            if type(sub_layer) in [ColumnParallelLinear, RowParallelLinear, paddle.nn.Linear]:
+            if type(sub_layer) in [
+                    ColumnParallelLinear, RowParallelLinear, paddle.nn.Linear
+            ]:
                 forward_pre_hook_handle = sub_layer.register_forward_pre_hook(
                     self._forward_pre_hook)
                 self._forward_hook_list.append(forward_pre_hook_handle)
@@ -67,7 +69,7 @@ class AutoClip(nn.Layer):
     def _forward_pre_hook(self, layer, input):
         self._sample_scale(input, layer.full_name())
         return input
-    
+
     def _sample_scale(self, input, name):
         input = input[0] if type(input) == tuple else input
         input.stop_gradient = True
@@ -80,7 +82,6 @@ class AutoClip(nn.Layer):
             else:
                 self.sampled_inputs[name] = input
 
-    
     def auto_clip(self, group_size=128, oc_batch_size=256):
         """
         search clip scale for each layer and update the layer's weight
@@ -89,7 +90,7 @@ class AutoClip(nn.Layer):
             name = sub_layer.full_name()
             if name not in self.sampled_inputs or 'out_linear' in sub_name:
                 continue
-            
+
             weight = sub_layer.weight.cast('float16')
             weight_t = paddle.transpose(weight, perm=[1, 0])
             x = self.sampled_inputs[name].cast('float16')
@@ -98,16 +99,18 @@ class AutoClip(nn.Layer):
             x = x.reshape([1, x.shape[0], -1, group_size])
             x = x[:, 0::x.shape[1] // self.n_sample_token]
             weight_t = weight_t.reshape([weight_t.shape[0], 1, -1, group_size])
-            oc_batch_size = oc_batch_size if weight_t.shape[0] % oc_batch_size == 0 else 128  # prevent OOM
+            oc_batch_size = oc_batch_size if weight_t.shape[
+                0] % oc_batch_size == 0 else 128  # prevent OOM
             assert weight_t.shape[0] % oc_batch_size == 0
 
             w_all = weight_t
             best_max_val_all = []
 
             for i_b in range(weight_t.shape[0] // oc_batch_size):
-                w = w_all[i_b * oc_batch_size: (i_b + 1) * oc_batch_size]
+                w = w_all[i_b * oc_batch_size:(i_b + 1) * oc_batch_size]
 
-                org_max_val = w.abs().max(axis=-1, keepdim=True)  # co, 1, n_group, 1
+                org_max_val = w.abs().max(
+                    axis=-1, keepdim=True)  # co, 1, n_group, 1
                 best_max_val = org_max_val.clone()
                 min_errs = paddle.ones_like(org_max_val, dtype='float16') * 1e9
                 org_out = (x * w).sum(axis=-1)  # co, n_token, n_group
@@ -115,16 +118,22 @@ class AutoClip(nn.Layer):
                     max_val = org_max_val * (1 - i_s / self.n_grid)
                     max_val_tmp = max_val
                     cur_w = paddle.where(w > max_val_tmp, max_val_tmp, w)
-                    cur_w = paddle.where(cur_w < - max_val_tmp, - max_val_tmp, cur_w)
+                    cur_w = paddle.where(cur_w < -max_val_tmp, -max_val_tmp,
+                                         cur_w)
                     org_w_shape = cur_w.shape
-                    cur_w_r = cur_w.reshape([-1, self.group_size]).transpose([1, 0])
-                    quant_dequant_weight = fake_quant(cur_w_r, method='abs_max_channel_wise', weight_bits=4)
-                    quant_dequant_weight = quant_dequant_weight.transpose([1, 0]).reshape(org_w_shape)
+                    cur_w_r = cur_w.reshape([-1,
+                                             self.group_size]).transpose([1, 0])
+                    quant_dequant_weight = fake_quant(
+                        cur_w_r, method='abs_max_channel_wise', weight_bits=4)
+                    quant_dequant_weight = quant_dequant_weight.transpose(
+                        [1, 0]).reshape(org_w_shape)
                     cur_out = (x * quant_dequant_weight).sum(axis=-1)
                     # co, 1, n_group, 1
                     tmp = (cur_out - org_out).detach().clone()
-                    err = paddle.pow(tmp, 2).mean(axis=1).reshape(min_errs.shape)
-                    print('block {} search s {} err {}'.format(i_b, i_s, err.mean().item()))
+                    err = paddle.pow(tmp,
+                                     2).mean(axis=1).reshape(min_errs.shape)
+                    print('block {} search s {} err {}'.format(
+                        i_b, i_s, err.mean().item()))
                     del cur_w, cur_out, quant_dequant_weight, tmp, cur_w_r
                     paddle.device.cuda.empty_cache()
 
@@ -143,10 +152,14 @@ class AutoClip(nn.Layer):
                 if 'w_0' in param.name:
                     param_tmp = param.transpose(perm=[1, 0]).cast('float16')
                     tmp_shape = param_tmp.shape
-                    param_tmp = param_tmp.reshape([best_max_val.shape[0], best_max_val.shape[1], -1])
-                    best_max_val = paddle.tile(best_max_val, repeat_times=(1, 1, param_tmp.shape[-1]))
-                    param_tmp = paddle.where(param_tmp > best_max_val, best_max_val, param_tmp)
-                    param_tmp = paddle.where(param_tmp < - best_max_val, - best_max_val, param_tmp)
+                    param_tmp = param_tmp.reshape(
+                        [best_max_val.shape[0], best_max_val.shape[1], -1])
+                    best_max_val = paddle.tile(
+                        best_max_val, repeat_times=(1, 1, param_tmp.shape[-1]))
+                    param_tmp = paddle.where(param_tmp > best_max_val,
+                                             best_max_val, param_tmp)
+                    param_tmp = paddle.where(param_tmp < -best_max_val,
+                                             -best_max_val, param_tmp)
                     param_tmp = param_tmp.reshape(tmp_shape).cast(param.dtype)
                     param_tmp = param_tmp.transpose(perm=[1, 0])
                     paddle.assign(param_tmp, output=param)
@@ -154,5 +167,6 @@ class AutoClip(nn.Layer):
                     paddle.device.cuda.empty_cache()
                     break
 
-            del best_max_val, weight_t, x, weight, self.sampled_inputs[name], w_all, best_max_val_all
+            del best_max_val, weight_t, x, weight, self.sampled_inputs[
+                name], w_all, best_max_val_all
             paddle.device.cuda.empty_cache()

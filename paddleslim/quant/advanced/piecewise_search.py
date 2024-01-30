@@ -71,7 +71,6 @@ class PieceWiseSearch():
         origin_out = paddle.matmul(act, weight)
         w_abs_max = weight.abs().max(axis=-1, keepdim=True)
         rw_abs_max = w_abs_max.reshape(act_abs_max.shape)
-
         smooth_scale_out = None
         global_loss = float('inf')
         best_scale = None
@@ -184,5 +183,4 @@ class PieceWiseSearch():
                     print('Find Better K-Piece {}'.format(k_piece))
             if not self.search_piece:
                 break
-
         return best_scale
