@@ -273,9 +273,6 @@ python paddle_inference_eval.py --model_path=yolov6s_ptq_out --dataset_dir==data
 ```shell
 ./build/yolov6_test --model_file yolov6s_infer/model.pdmodel --params_file yolov6s_infer/model.pdiparams --run_mode=trt_int8
 ```
-| 模型  | trt<sup><small>FP32</small><sup><br><sup>(ms) |trt<sup><small>FP16</small><sup><br><sup>(ms) | trt<sup><small>INT8</small><sup><br><sup>(ms) |  paddle_gpu<small>FP32</small><sup><br><sup>(ms) |
-| :-------- | | :----------------: | :----------------: | :---------------: |  :---------------: | 
-| YOLOv6s | 9.21972 | 3.13341 | 2.06266 | 11.4425 |  
 
 ## 5.FAQ
 - 如果想对模型进行自动压缩，可进入[YOLO系列模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series)中进行实验。
