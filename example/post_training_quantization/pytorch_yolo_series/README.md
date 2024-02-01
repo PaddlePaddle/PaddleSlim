@@ -208,23 +208,24 @@ python fine_tune.py --config_path=./configs/yolov6s_fine_tune.yaml --simulate_ac
 ## 4.预测部署
 预测部署可参考[YOLO系列模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series)
 量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
-| 参数名 |  含义  |
-| model_path | inference模型文件所在路径，该目录下需要有文件model.pdmodel和params.pdiparams两个文件 |
+| 参数名 | 含义 |
+|:------:|:------:|
+| model_path | inference 模型文件所在目录，该目录下需要有文件 model.pdmodel 和 model.pdiparams 两个文件 |
 | dataset_dir | 指定COCO数据集的目录，这是存储数据集的根目录 |
 | image_file | 如果只测试单张图片效果，直接根据image_file指定图片路径 |
 | val_image_dir | COCO数据集中验证图像的目录名，默认为val2017 |
 | val_anno_path | 指定COCO数据集的注释(annotation)文件路径，这是包含验证集标注信息的JSON文件，默认为annotations/instances_val2017.json |
 | benchmark | 指定是否运行性能基准测试。如果设置为True，程序将会进行性能测试 |
-| device | 使用GPU或者CPU预测，可选CPU/GPU/XPU，默认设置为GPU |
-| use_trt | 是否使用TensorRT进行预测|
-| use_mkldnn | 是否使用MKL-DNN加速库，注意use_mkldnn与use_gpu同时为True时,将忽略enable_mkldnn,而使用GPU预测|
-| use_dynamic_shape | 是否使用动态形状(dynamic_shape)功能 |
-| precision | fp32/fp16/int8|
+| device | 使用GPU或者CPU预测，可选CPU/GPU/XPU，默认设置为GPU   |
+| use_trt | 是否使用 TesorRT 预测引擎   |
+| use_mkldnn | 是否启用```MKL-DNN```加速库，注意```use_mkldnn```与```use_gpu```同时为```True```时，将忽略```enable_mkldnn```，而使用```GPU```预测  |
+| cpu_threads | CPU预测时，使用CPU线程数量，默认10  |
+| precision | 预测精度，包括`fp32/fp16/int8` |
 | arch | 指定所使用的模型架构的名称，例如YOLOv5 |
 | img_shape | 指定模型输入的图像尺寸 |
+| use_dynamic_shape | 是否使用动态shape，如果使用动态shape，则设置为True，否则设置为False  |
 | batch_size | 指定模型输入的批处理大小 |
-| use_mkldnn | 指定是否使用MKLDNN加速(主要针对CPU)|
-| cpu_threads | 指定在CPU上使用的线程数 |
+
 
 首先，我们拥有的yolov6.onnx，我们需要把ONNX模型转成paddle模型，具体参考使用[X2Paddle迁移推理模型](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/model_convert/convert_with_x2paddle_cn.html#x2paddle)
 - 安装X2Paddle
@@ -272,5 +273,9 @@ python paddle_inference_eval.py --model_path=yolov6s_ptq_out --dataset_dir==data
 ```shell
 ./build/yolov6_test --model_file yolov6s_infer/model.pdmodel --params_file yolov6s_infer/model.pdiparams --run_mode=trt_int8
 ```
+| 模型  | trt<sup><small>FP32</small><sup><br><sup>(ms) |trt<sup><small>FP16</small><sup><br><sup>(ms) | trt<sup><small>INT8</small><sup><br><sup>(ms) |  paddle_gpu<small>FP32</small><sup><br><sup>(ms) |
+| :-------- | | :----------------: | :----------------: | :---------------: |  :---------------: | 
+| YOLOv6s | 9.21972 | 3.13341 | 2.06266 | 11.4425 |  
+
 ## 5.FAQ
 - 如果想对模型进行自动压缩，可进入[YOLO系列模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series)中进行实验。
