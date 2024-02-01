@@ -206,7 +206,26 @@ QuantPost:
 
 ## 5. 预测部署
 
+
 量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
+
+以下字段用于配置预测参数：
+
+| 参数名 | 含义 |
+|:------:|:------:|
+| model_path | inference 模型文件所在目录，该目录下需要有文件 model.pdmodel 和 model.pdiparams 两个文件 |
+| model_filename | 模型文件的名称，默认值为inference.pdmodel |
+| params_filename | 参数文件的名称，默认值为inference.pdiparams |
+| task_name | 要执行的任务名称，默认值为afqmc |
+| dataset | 模型使用的数据集，默认值为clue |
+| device | 用于推理的设备，默认为gpu，可选cpu或gpu |
+| batch_size | 推理时的batch size，默认为32 |
+| max_seq_len | 输入序列在分词后的最大长度,默认值为128,如果序列长于此值，将会被截断;如果短于此值，将会被填充|
+| perf_warmup_steps | 性能测试的预热步数,默认值为20 |
+| use_trt | 一个标志(flag),用于决定是否使用TensorRT推理 |
+| precision | 推理精度，默认为fp32,可选fp16或int8 |
+| use_mkldnn | 一个标志(flag),用于决定是否使用MKLDNN推理 |
+| cpu_threads | CPU线程数，默认为1 |
 
 
 - TensorRT预测：
