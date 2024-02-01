@@ -254,7 +254,11 @@ python paddle_inference_eval.py --model_path=yolov6_model/inference_model --data
 ```shell
 python paddle_inference_eval.py --model_path=yolov6s_ptq_out --dataset_dir==datasets/coco --use_trt=True --precision=int8 --arch=YOLOv6
 ```
-#### 4.2 C++部署
+#### 4.2 MKLDNN Python部署
+```shell
+python paddle_inference_eval.py --model_path=yolov6_model/inference_model --dataset_dir=/work/GETR-Lite-paddle-new/inference/datasets/coco --device=CPU --use_mkldnn=True --precision=fp32 --arch=YOLOv6
+```
+#### 4.3 C++部署
 具体可参考[运行PP-YOLOE-l目标检测模型样例](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/gpu/ppyoloe_crn_l)
 将compile.sh中DEMO_NAME修改为yolov6_test，并且将ppyoloe_crn_l.cc修改为yolov6_test.cc,根据环境修改相关配置库
 运行bash compile.sh编译样例。
