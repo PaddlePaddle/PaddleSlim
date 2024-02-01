@@ -40,8 +40,8 @@
 ## 3. 离线量化流程
 
 #### 3.1 准备环境
-- PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim > 2.3版本
+- PaddlePaddle ==2.5 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim == 2.5
 - X2Paddle >= 1.3.9
 - opencv-python
 
@@ -49,14 +49,16 @@
 （1）安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle
+python -m pip install paddlepaddle==2.5.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 # GPU
-pip install paddlepaddle-gpu
+python -m pip install paddlepaddle-gpu==2.5.0.post116 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
 （2）安装paddleslim：
+注意，PaddleSlim这里setup.py需要更改 slim_version='2.5'
 ```shell
-pip install paddleslim
+git clone -b release/2.5 https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+python setup.py install
 ```
 
 #### 3.2 准备数据集
@@ -122,7 +124,7 @@ python eval.py --config_path=./configs/yolov5s_ptq.yaml
 #### 3.6 提高离线量化精度
 
 ###### 3.6.1 量化分析工具
-本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisPTQ```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisPTQ```详解见[AnalysisPTQ.md](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/post_training_quantization.md)。
+本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisPTQ```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisPTQ```详解见[离线量化](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/post_training_quantization.md)。
 
 
 由于YOLOv6离线量化效果较差，以YOLOv6为例，量化分析工具具体使用方法如下：
