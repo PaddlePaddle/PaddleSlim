@@ -245,7 +245,7 @@ python setup.py install
 ```shell
 x2paddle --framework=onnx --model=yolov6s.onnx --save_dir=yolov6_model
 ```
-- TensorRT Python部署
+#### 4.1 TensorRT Python部署
 使用[paddle_inference_eval.py](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/pytorch_yolo_series/paddle_inference_eval.py)部署
 ```shell
 python paddle_inference_eval.py --model_path=yolov6_model/inference_model --dataset_dir=datasets/coco --use_trt=True --precision=fp32 --arch=YOLOv6
@@ -254,8 +254,7 @@ python paddle_inference_eval.py --model_path=yolov6_model/inference_model --data
 ```shell
 python paddle_inference_eval.py --model_path=yolov6s_ptq_out --dataset_dir==datasets/coco --use_trt=True --precision=int8 --arch=YOLOv6
 ```
-**C++部署**
-
+#### 4.2 C++部署
 具体可参考[运行PP-YOLOE-l目标检测模型样例](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/gpu/ppyoloe_crn_l)
 将compile.sh中DEMO_NAME修改为yolov6_test，并且将ppyoloe_crn_l.cc修改为yolov6_test.cc,根据环境修改相关配置库
 运行bash compile.sh编译样例。
