@@ -56,16 +56,16 @@
 
 #### 3.1 准备环境
 - python >= 3.6
-- PaddlePaddle >= 2.4 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.4
-- PaddleNLP >= 2.3
+- PaddlePaddle ==2.5 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim ==2.5
+- PaddleNLP ==2.6
 
 安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle==2.4.1
+pip install paddlepaddle==2.5.0
 # GPU 以Ubuntu、CUDA 11.2为例
-python -m pip install paddlepaddle-gpu==2.4.1.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
+python -m pip install paddlepaddle-gpu==2.5.0.post116 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
 安装paddleslim：
@@ -95,7 +95,6 @@ pip install paddlenlp
 |:------:|:------:|:------:|:------:|:------:|:-----------:|:------:|:------:|
 | PP-MiniLM | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/afqmc.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/tnews.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/iflytek.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/cmnli.tar) | [ ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/ocnli.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/cluewsc.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/csl.tar) |
 | ERNIE 3.0-Medium | [afqmc](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/AFQMC.tar) | [tnews](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/TNEWS.tar) | [iflytek](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/IFLYTEK.tar) | [cmnli](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CMNLI.tar) | [ocnli](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/OCNLI.tar) | [cluewsc2020](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CLUEWSC2020.tar) | [csl](https://bj.bcebos.com/v1/paddle-slim-models/act/NLP/ernie3.0-medium/fp32_models/CSL.tar) |
-| UIE-base | [报销工单](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base.tar) |
 
 从上表获得模型超链接, 并用以下命令下载推理模型文件:
 
@@ -119,11 +118,6 @@ export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path='./configs/pp-minilm/auto/afqmc.yaml' --save_dir='./save_afqmc_pruned/'
 ```
 
-自动压缩UIE系列模型需要使用 run_uie.py 脚本启动，会使用接口```paddleslim.auto_compression.AutoCompression```对模型进行自动压缩。配置config文件中训练部分的参数，将任务名称、模型类型、数据集名称、压缩参数传入，配置完成后便可对模型进行蒸馏量化训练。
-```shell
-export CUDA_VISIBLE_DEVICES=0
-python run_uie.py --config_path='./configs/uie/uie_base.yaml' --save_dir='./save_uie_qat/'
-```
 
 如仅需验证模型精度，或验证压缩之后模型精度，在启动```run.py```脚本时，将配置文件中模型文件夹 ```model_dir``` 改为压缩之后保存的文件夹路径 ```./save_afqmc_pruned``` ，命令加上```--eval True```即可：
 ```shell
@@ -217,8 +211,6 @@ QuantPost:
 
 - TensorRT预测：
 
-环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
-
 首先下载量化好的模型：
 ```shell
 wget https://bj.bcebos.com/v1/paddle-slim-models/act/save_ppminilm_afqmc_new_calib.tar
@@ -227,10 +219,30 @@ tar -xf save_ppminilm_afqmc_new_calib.tar
 
 ```shell
 python paddle_inference_eval.py \
-      --model_path=save_ernie3_afqmc_new_cablib \
+      --model_path=save_ppminilm_afqmc_new_calib \
+      --model_filename=inference.pdmodel \
+      --params_filename=inference.pdiparams \
+      --task_name='afqmc' \
+      --use_trt \
+      --precision=int8
+```
+
+- ERNIE 3.0-Medium:
+```shell
+python paddle_inference_eval.py \
+      --model_path=TNEWS \
       --model_filename=infer.pdmodel \
       --params_filename=infer.pdiparams \
-      --task_name='afqmc' \
+      --task_name='tnews' \
+      --use_trt \
+      --precision=fp32
+```
+```shell
+python paddle_inference_eval.py \
+      --model_path=save_tnews_pruned \
+      --model_filename=infer.pdmodel \
+      --params_filename=infer.pdiparams \
+      --task_name='tnews' \
       --use_trt \
       --precision=int8
 ```
@@ -239,9 +251,9 @@ python paddle_inference_eval.py \
 
 ```shell
 python paddle_inference_eval.py \
-      --model_path=save_ernie3_afqmc_new_cablib \
-      --model_filename=infer.pdmodel \
-      --params_filename=infer.pdiparams \
+      --model_path=save_ppminilm_afqmc_new_calib \
+      --model_filename=inference.pdmodel \
+      --params_filename=inference.pdiparams \
       --task_name='afqmc' \
       --device=cpu \
       --use_mkldnn=True \
