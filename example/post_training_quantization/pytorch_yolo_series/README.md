@@ -40,8 +40,8 @@
 ## 3. 离线量化流程
 
 #### 3.1 准备环境
-- PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim > 2.3版本
+- PaddlePaddle ==2.5 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim == 2.5
 - X2Paddle >= 1.3.9
 - opencv-python
 
@@ -49,14 +49,16 @@
 （1）安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle
+python -m pip install paddlepaddle==2.5.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 # GPU
-pip install paddlepaddle-gpu
+python -m pip install paddlepaddle-gpu==2.5.0.post116 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
 （2）安装paddleslim：
+注意，PaddleSlim这里setup.py需要更改 slim_version='2.5'
 ```shell
-pip install paddleslim
+git clone -b release/2.5 https://github.com/PaddlePaddle/PaddleSlim.git & cd PaddleSlim
+python setup.py install
 ```
 
 #### 3.2 准备数据集
@@ -122,7 +124,7 @@ python eval.py --config_path=./configs/yolov5s_ptq.yaml
 #### 3.6 提高离线量化精度
 
 ###### 3.6.1 量化分析工具
-本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisPTQ```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisPTQ```详解见[AnalysisPTQ.md](../../../docs/zh_cn/tutorials/quant/AnalysisPTQ.md)。
+本节介绍如何使用量化分析工具提升离线量化精度。离线量化功能仅需使用少量数据，且使用简单、能快速得到量化模型，但往往会造成较大的精度损失。PaddleSlim提供量化分析工具，会使用接口```paddleslim.quant.AnalysisPTQ```，可视化展示出不适合量化的层，通过跳过这些层，提高离线量化模型精度。```paddleslim.quant.AnalysisPTQ```详解见[离线量化](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/post_training_quantization.md)。
 
 
 由于YOLOv6离线量化效果较差，以YOLOv6为例，量化分析工具具体使用方法如下：
@@ -207,7 +209,76 @@ python fine_tune.py --config_path=./configs/yolov6s_fine_tune.yaml --simulate_ac
 
 ## 4.预测部署
 预测部署可参考[YOLO系列模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series)
+量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
+| 参数名 | 含义 |
+|:------:|:------:|
+| model_path | inference 模型文件所在目录，该目录下需要有文件 model.pdmodel 和 model.pdiparams 两个文件 |
+| dataset_dir | 指定COCO数据集的目录，这是存储数据集的根目录 |
+| image_file | 如果只测试单张图片效果，直接根据image_file指定图片路径 |
+| val_image_dir | COCO数据集中验证图像的目录名，默认为val2017 |
+| val_anno_path | 指定COCO数据集的注释(annotation)文件路径，这是包含验证集标注信息的JSON文件，默认为annotations/instances_val2017.json |
+| benchmark | 指定是否运行性能基准测试。如果设置为True，程序将会进行性能测试 |
+| device | 使用GPU或者CPU预测，可选CPU/GPU/XPU，默认设置为GPU   |
+| use_trt | 是否使用 TesorRT 预测引擎   |
+| use_mkldnn | 是否启用```MKL-DNN```加速库，注意```use_mkldnn```与```use_gpu```同时为```True```时，将忽略```enable_mkldnn```，而使用```GPU```预测  |
+| cpu_threads | CPU预测时，使用CPU线程数量，默认10  |
+| precision | 预测精度，包括`fp32/fp16/int8` |
+| arch | 指定所使用的模型架构的名称，例如YOLOv5 |
+| img_shape | 指定模型输入的图像尺寸 |
+| use_dynamic_shape | 是否使用动态shape，如果使用动态shape，则设置为True，否则设置为False  |
+| batch_size | 指定模型输入的批处理大小 |
 
+
+首先，我们拥有的yolov6.onnx，我们需要把ONNX模型转成paddle模型，具体参考使用[X2Paddle迁移推理模型](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/model_convert/convert_with_x2paddle_cn.html#x2paddle)
+- 安装X2Paddle
+方式一:pip 安装
+```shell
+pip install X2Paddle==1.3.9
+```
+方式二:源码安装
+```shell
+git clone https://github.com/PaddlePaddle/X2Paddle.git
+cd X2Paddle
+python setup.py install
+```
+使用命令将YOLOv6.onnx模型转换成paddle模型
+```shell
+x2paddle --framework=onnx --model=yolov6s.onnx --save_dir=yolov6_model
+```
+#### 4.1 TensorRT Python部署
+使用[paddle_inference_eval.py](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/pytorch_yolo_series/paddle_inference_eval.py)部署
+```shell
+python paddle_inference_eval.py --model_path=yolov6_model/inference_model --dataset_dir=datasets/coco --use_trt=True --precision=fp32 --arch=YOLOv6
+```
+执行int8量化
+```shell
+python paddle_inference_eval.py --model_path=yolov6s_ptq_out --dataset_dir==datasets/coco --use_trt=True --precision=int8 --arch=YOLOv6
+```
+#### 4.2 MKLDNN Python部署
+```shell
+python paddle_inference_eval.py --model_path=yolov6_model/inference_model --dataset_dir=/work/GETR-Lite-paddle-new/inference/datasets/coco --device=CPU --use_mkldnn=True --precision=fp32 --arch=YOLOv6
+```
+#### 4.3 C++部署
+具体可参考[运行PP-YOLOE-l目标检测模型样例](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/gpu/ppyoloe_crn_l)
+将compile.sh中DEMO_NAME修改为yolov6_test，并且将ppyoloe_crn_l.cc修改为yolov6_test.cc,根据环境修改相关配置库
+运行bash compile.sh编译样例。
+- 运行样例
+-使用原生GPU运行样例(将ONNX模型转成的paddle模型复制到Paddle-Inference-demo/c++/gpu/ppyoloe_crn_l/目录下)
+```shell
+./build/yolov6_test --model_file yolov6s_infer/model.pdmodel --params_file yolov6s_infer/model.pdiparams
+```
+- 使用TensorRT FP32运行样例
+```shell
+./build/yolov6_test --model_file yolov6s_infer/model.pdmodel --params_file yolov6s_infer/model.pdiparams --run_mode=trt_fp32
+```
+- 使用TensorRT FP16运行样例
+```shell
+./build/yolov6_test --model_file yolov6s_infer/model.pdmodel --params_file yolov6s_infer/model.pdiparams --run_mode=trt_fp16
+```
+- 使用TensorRT INT8运行样例
+```shell
+./build/yolov6_test --model_file yolov6s_infer/model.pdmodel --params_file yolov6s_infer/model.pdiparams --run_mode=trt_int8
+```
 
 ## 5.FAQ
 - 如果想对模型进行自动压缩，可进入[YOLO系列模型自动压缩示例](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolo_series)中进行实验。
