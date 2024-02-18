@@ -16,56 +16,18 @@
 
 ## 2.Benchmark
 
-### PP-YOLOE
 
-| 模型  | Base mAP | 离线量化mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 |  配置文件 | 量化模型  |
-| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
-| PP-YOLOE-l | 50.9  |  - | 50.6  |   11.2ms  |   7.7ms   |  **6.7ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
-| PP-YOLOE-s |  43.1  |   41.2 |   42.6   |   6.51ms  |   2.77ms   |  **2.12ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_quant.tar) |
-| PP-YOLOE+ s |  43.7  |   - |   42.7   |   -  |   -   |  -  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_plus_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_plus_crn_s_80e_coco_no_nms_quant.tar) |
+| 模型  | Base mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 | MKL-DNN(int8) | paddle-gpu(int8) |  配置文件 | 量化模型  | 
+| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |:---------------------: |:---------------------: |
+| PP-YOLOE-l | 48.4  | 47.7  |  93.1ms  |   41.1ms   |  **26.4ms**  |   653.9ms   |   120.5ms   |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
+| PP-YOLOE-s |  43.1   |   42.5   |   43.1ms  |   20.0ms   |  **16.7ms**  |   329.5ms   |   57.0ms   |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_quant.tar) |
+| RT-DETR-HGNetv2-L |  53.1  |   52.8   |   28.0ms  |   9.4ms   |  **9.4ms**   |   532.5ms   |  40.3ms   |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_hgnetv2_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_hgnetv2_l_6x_coco_quant.tar) |
+| yolov3_mobilenet_v1_270e_coco |  29.2   |   26.6   |   53.2ms  |   27.1ms   |  **19.5ms**  |   199.3ms   |   97.9ms   |  [config](https://github.com/lizexu123/PaddleSlim/blob/ae9b75b3c8209fe5440319a3f7c1aa09218add30/example/auto_compression/detection/configs/yolov3_mbv1_qat_dis.yaml) | - |
 
-- mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
-- PP-YOLOE-l模型在Tesla V100的GPU环境下测试，并且开启TensorRT，batch_size=1，包含NMS，测试脚本是[benchmark demo](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.4/deploy/python)。
-- PP-YOLOE-s模型在Tesla T4，TensorRT 8.4.1，CUDA 11.2，batch_size=1，不包含NMS，测试脚本是[cpp_infer_ppyoloe](./cpp_infer_ppyoloe)。
+* mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
+* 测速环境:Tesla T4,TensorRT 8.6.1,CUDA 11.6,batch_size=1,cudnn 8.4.0  Intel(R)Xeon(R)Gold 6271C CPU 
 
-### YOLOv8
 
-| 模型  | Base mAP | 离线量化mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 |  配置文件 | 量化模型  |
-| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
-| YOLOv8-s | 44.9 |  43.9 | 44.3  |   9.27ms  |   4.65ms   |  **3.78ms**  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/yolov8_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/yolov8_s_500e_coco_trt_nms_quant.tar) |
-
-**注意：**
-- 表格中YOLOv8模型均为带NMS的模型，可直接在TRT中部署，如果需要对齐测试标准，需要测试不带NMS的模型。
-- mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
-- 表格中的性能在Tesla T4的GPU环境下测试，并且开启TensorRT，batch_size=1。
-
-### SSD on Pascal VOC
-| 模型  | Box AP | ACT量化Box AP | TRT-FP32 | TRT-INT8 |  配置文件 | 量化模型  |
-| :-------- |:-------- | :---------------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |
-| SSD-MobileNetv1 |  73.8  |   73.52    |   4.0ms  |  1.7ms  |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ssd_mbv1_voc_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ssd_mobilenet_v1_quant.tar) |
-- 测速环境：Tesla T4，TensorRT 8.4.1，CUDA 11.2，batch_size=1，包含NMS.
-
-### RT-DETR
-
-| 模型              | Base mAP | 离线量化mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 |  TRT-INT8  |                           配置文件                           |                           量化模型                           |
-| :---------------- | :------- | :---------: | :--------: | :------: | :------: | :--------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
-| RT-DETR-R50       | 53.1     |    52.9     |    53.0    | 32.05ms  |  9.12ms  | **6.96ms** | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_r50vd_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_r50vd_6x_coco_quant.tar) |
-| RT-DETR-R101      | 54.3     |      -      |    54.1    | 54.13ms  | 12.68ms  | **9.20ms** | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_r101vd_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_r101vd_6x_coco_quant.tar) |
-| RT-DETR-HGNetv2-L | 53.0     |      -      |    52.9    | 26.16ms  |  8.54ms  | **6.65ms** | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_hgnetv2_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_hgnetv2_l_6x_coco_quant.tar) |
-| RT-DETR-HGNetv2-X | 54.8     |      -      |    54.6    | 49.22ms  | 12.50ms  | **9.24ms** | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_hgnetv2_x_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_hgnetv2_x_6x_coco_quant.tar) |
-
-- 上表测试环境：Tesla T4，TensorRT 8.6.0，CUDA 11.7，batch_size=1。
-
-| 模型              | Base mAP | 离线量化mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 |  TRT-INT8  |                           配置文件                           |                           量化模型                           |
-| :---------------- | :------- | :---------: | :--------: | :------: | :------: | :--------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
-| RT-DETR-R50       | 53.1     |    52.9     |    53.0    |  9.64ms  |  5.00ms  | **3.99ms** | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_r50vd_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_r50vd_6x_coco_quant.tar) |
-| RT-DETR-R101      | 54.3     |      -      |    54.1    | 14.93ms  |  7.15ms  | **5.12ms** | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_r101vd_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_r101vd_6x_coco_quant.tar) |
-| RT-DETR-HGNetv2-L | 53.0     |      -      |    52.9    |  8.17ms  |  4.77ms  | **4.00ms** | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_hgnetv2_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_hgnetv2_l_6x_coco_quant.tar) |
-| RT-DETR-HGNetv2-X | 54.8     |      -      |    54.6    | 12.81ms  |  6.97ms  | **5.32ms** | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_hgnetv2_x_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_hgnetv2_x_6x_coco_quant.tar) |
-
-- 上表测试环境：A10，TensorRT 8.6.0，CUDA 11.6，batch_size=1。
-- mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
-- 两个表中的离线量化只量化模型中的conv2d，ACT量化模型中的conv2d和matmul。
 
 ## 3. 自动压缩流程
 
