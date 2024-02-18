@@ -240,7 +240,7 @@ python paddle_inference_eval.py \
 
 - 模型为PPYOLOE，同时不包含NMS，可以使用C++预测demo进行测速：
 
-  直接参考https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/gpu/ppyoloe_crn_l
+  直接参考[ppyoloe_crn_l](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/gpu/ppyoloe_crn_l)
 
 ## 5.FAQ
 
