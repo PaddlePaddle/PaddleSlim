@@ -70,8 +70,8 @@
 ## 3. 自动压缩流程
 
 #### 3.1 准备环境
-- PaddlePaddle >= 2.4 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.4
+- PaddlePaddle >= 2.5 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim >= 2.5
 - PaddleDet >= 2.4
 - opencv-python
 
@@ -167,7 +167,7 @@ python run.py --config_path=./configs/ppyoloe_l_qat_dis.yaml --save_dir='./outpu
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 python -m paddle.distributed.launch run.py --save_dir='./rtdetr_hgnetv2_l_6x_coco_quant' --config_path=./configs/rtdetr_hgnetv2_l_qat_dis.yaml
 ```
-0*640
+
 
 ## 4.预测部署
 
