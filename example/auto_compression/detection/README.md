@@ -17,12 +17,13 @@
 ## 2.Benchmark
 
 
-| 模型  | Base mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 | MKL-DNN(int8) | paddle-gpu(int8) |  配置文件 | 量化模型  | 
-| :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :----------------------: | :---------------------: |:---------------------: |:---------------------: |
-| PP-YOLOE-l | 48.4  | 47.7  |  93.1ms  |   41.1ms   |  **26.4ms**  |   653.9ms   |   120.5ms   |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
-| PP-YOLOE-s |  43.1   |   42.5   |   43.1ms  |   20.0ms   |  **16.7ms**  |   329.5ms   |   57.0ms   |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_quant.tar) |
-| RT-DETR-HGNetv2-L |  53.1  |   52.8   |   28.0ms  |   9.4ms   |  **9.4ms**   |   532.5ms   |  40.3ms   |  [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_hgnetv2_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_hgnetv2_l_6x_coco_quant.tar) |
-| yolov3_mobilenet_v1_270e_coco |  29.2   |   26.6   |   53.2ms  |   27.1ms   |  **19.5ms**  |   199.3ms   |   97.9ms   |  [config](https://github.com/lizexu123/PaddleSlim/blob/ae9b75b3c8209fe5440319a3f7c1aa09218add30/example/auto_compression/detection/configs/yolov3_mbv1_qat_dis.yaml) | - |
+| 模型 | Base mAP | ACT量化mAP | TRT-FP32 | TRT-FP16 | TRT-INT8 | MKL-DNN(int8) | paddle-gpu(int8) | 配置文件 | 量化模型 |
+| :--- | :------: | :--------: | :------: | :------: | :------: | :-----------: | :--------------: | :------: | :------: |
+| PP-YOLOE-l | 48.4 | 47.7 | 93.1ms | 41.1ms | **26.4ms** | 653.9ms | 120.5ms | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_crn_l_300e_coco_quant.tar) |
+| PP-YOLOE-s | 43.1 | 42.5 | 43.1ms | 20.0ms | **16.7ms** | 329.5ms | 57.0ms | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/ppyoloe_s_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/ppyoloe_s_quant.tar) |
+| RT-DETR-HGNetv2-L | 53.1 | 52.8 | 28.0ms | 9.4ms | **9.4ms** | 532.5ms | 40.3ms | [config](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/detection/configs/rtdetr_hgnetv2_l_qat_dis.yaml) | [Model](https://bj.bcebos.com/v1/paddle-slim-models/act/rtdetr_hgnetv2_l_6x_coco_quant.tar) |
+| yolov3_mobilenet_v1_270e_coco | 29.2 | 26.6 | 53.2ms | 27.1ms | **19.5ms** | 199.3ms | 97.9ms | [config](https://github.com/lizexu123/PaddleSlim/blob/ae9b75b3c8209fe5440319a3f7c1aa09218add30/example/auto_compression/detection/configs/yolov3_mbv1_qat_dis.yaml) | - |
+
 
 * mAP的指标均在COCO val2017数据集中评测得到，IoU=0.5:0.95。
 * 测速环境:Tesla T4,TensorRT 8.6.1,CUDA 11.6,batch_size=1,cudnn 8.4.0  Intel(R)Xeon(R)Gold 6271C CPU 
