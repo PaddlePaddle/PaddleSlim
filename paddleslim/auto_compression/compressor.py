@@ -161,7 +161,7 @@ class AutoCompression:
         self.default_distill_node_pair, self.model_type = self._get_model_info()
 
         if self.fleet:
-            fleet.init(is_collective=True)
+            fleet.init()
 
         if with_variable_shape(
                 self.model_dir,
