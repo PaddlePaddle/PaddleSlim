@@ -30,12 +30,6 @@
 | ERNIE 3.0-Medium | Base模型| 75.35 | 57.45 | 60.17 | 81.16 | 77.19 | 80.59 | 79.70 | 73.09 |
 | ERNIE 3.0-Medium | 剪枝+量化训练| 74.17 | 56.84 | 59.75 | 80.54 | 76.03 | 76.97 | 80.80 | 72.16 |
 
-| 模型 | 策略 | 报销工单数据 |
-|:------:|:------:|:------:|
-| UIE-base | Base模型 | [91.83](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base.tar) |
-| UIE-base | 量化训练 | [95.80](https://bj.bcebos.com/v1/paddle-slim-models/act/uie_base_qat_model.tar) |
-
-注：UIE模型精度为在5-shot(每个类别包含5条标注数据)数据集上进行模型微调的结果，压缩后精度更高可能原因是过拟合在当前数据集。
 
 模型在不同任务上平均精度以及加速对比如下：
 |  模型 |策略| Accuracy（avg） | 预测时延<sup><small>FP32</small><sup><br><sup> | 预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 加速比 |
@@ -44,8 +38,6 @@
 |PP-MiniLM| 剪枝+离线量化 |  71.85 | - | - | 15.76ms | 5.99x |
 |ERNIE 3.0-Medium| Base模型| 73.09  | 89.71ms | 20.76ms | - | - |
 |ERNIE 3.0-Medium| 剪枝+量化训练 |  72.16 | - | - | 14.08ms | 6.37x |
-|UIE-base| Base模型| 91.83  | 42.66ms | 14.23ms | - | - |
-|UIE-base| 量化训练 |  95.80 | - | - | 10.94ms | 3.90x |
 
 性能测试的环境为
 - 硬件：NVIDIA Tesla T4 单卡
@@ -206,7 +198,26 @@ QuantPost:
 
 ## 5. 预测部署
 
+
 量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
+
+以下字段用于配置预测参数：
+
+| 参数名 | 含义 |
+|:------:|:------:|
+| model_path | inference 模型文件所在目录，该目录下需要有文件 model.pdmodel 和 model.pdiparams 两个文件 |
+| model_filename | 模型文件的名称，默认值为inference.pdmodel |
+| params_filename | 参数文件的名称，默认值为inference.pdiparams |
+| task_name | 要执行的任务名称，默认值为afqmc |
+| dataset | 模型使用的数据集，默认值为clue |
+| device | 用于推理的设备，默认为gpu，可选cpu或gpu |
+| batch_size | 推理时的batch size，默认为32 |
+| max_seq_len | 输入序列在分词后的最大长度,默认值为128,如果序列长于此值，将会被截断;如果短于此值，将会被填充|
+| perf_warmup_steps | 性能测试的预热步数,默认值为20 |
+| use_trt | 一个标志(flag),用于决定是否使用TensorRT推理 |
+| precision | 推理精度，默认为fp32,可选fp16或int8 |
+| use_mkldnn | 一个标志(flag),用于决定是否使用MKLDNN推理 |
+| cpu_threads | CPU线程数，默认为1 |
 
 
 - TensorRT预测：

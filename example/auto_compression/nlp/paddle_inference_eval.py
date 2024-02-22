@@ -210,7 +210,7 @@ class Predictor(object):
         config = paddle.inference.Config(
             os.path.join(args.model_path, args.model_filename),
             os.path.join(args.model_path, args.params_filename))
-        config.switch_ir_debug(True)
+
         # 适用于ERNIE 3.0-Medium模型
         # config.exp_disable_tensorrt_ops(["elementwise_add"])
         # config.exp_disable_tensorrt_ops(["fused_embedding_eltwise_layernorm"])
