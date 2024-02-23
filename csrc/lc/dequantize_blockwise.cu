@@ -330,5 +330,3 @@ PD_BUILD_OP(dequant_blockwise)
     .SetKernelFn(PD_KERNEL(DequantizeBlockwise))
     .SetInferShapeFn(PD_INFER_SHAPE(GetDequantizeBlockwiseInferShape))
     .SetInferDtypeFn(PD_INFER_DTYPE(GetDequantizeBlockwiseInferDtype));
-
-

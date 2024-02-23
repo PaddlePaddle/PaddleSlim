@@ -517,4 +517,3 @@ PD_BUILD_OP(quant_blockwise)
     .SetKernelFn(PD_KERNEL(QuantizeBlockwise))
     .SetInferShapeFn(PD_INFER_SHAPE(GetQuantizeBlockwiseInferShape))
     .SetInferDtypeFn(PD_INFER_DTYPE(GetQuantizeBlockwiseInferDtype));
-
