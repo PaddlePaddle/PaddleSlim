@@ -14,10 +14,10 @@ WITH_MKL=ON
 WITH_GPU=ON
 USE_TENSORRT=ON
 
-LIB_DIR=/root/auto_compress/Paddle/build/paddle_inference_install_dir/
+LIB_DIR=/work/Paddle/build/paddle_inference_install_dir
 CUDNN_LIB=/usr/lib/x86_64-linux-gnu/
 CUDA_LIB=/usr/local/cuda/lib64
-TENSORRT_ROOT=/root/auto_compress/trt/trt8.4/
+TENSORRT_ROOT=/work/TensorRT-8.6.1.6
 
 WITH_ROCM=OFF
 ROCM_LIB=/opt/rocm/lib

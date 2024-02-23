@@ -79,7 +79,8 @@ def argsparser():
         "--device",
         type=str,
         default="GPU",
-        help="Choose the device you want to run, it can be: CPU/GPU/XPU, default is GPU",
+        help=
+        "Choose the device you want to run, it can be: CPU/GPU/XPU, default is GPU",
     )
     parser.add_argument(
         "--arch", type=str, default="YOLOv5", help="architectures name.")
@@ -180,8 +181,9 @@ def draw_box(img, boxes, scores, cls_ids, conf=0.5, class_names=None):
 
         txt_size = cv2.getTextSize(text, font, 0.4, 1)[0]
         cv2.rectangle(img, (x0, y0), (x1, y1), color, 2)
-        cv2.rectangle(img, (x0, y0 + 1), (
-            x0 + txt_size[0] + 1, y0 + int(1.5 * txt_size[1])), color, -1)
+        cv2.rectangle(img, (x0, y0 + 1), (x0 + txt_size[0] + 1,
+                                          y0 + int(1.5 * txt_size[1])), color,
+                      -1)
         cv2.putText(
             img,
             text, (x0, y0 + txt_size[1]),
@@ -288,8 +290,8 @@ def load_predictor(
             dynamic_shape_file = os.path.join(FLAGS.model_path,
                                               "dynamic_shape.txt")
             if os.path.exists(dynamic_shape_file):
-                config.enable_tuned_tensorrt_dynamic_shape(dynamic_shape_file,
-                                                           True)
+                config.enable_tuned_tensorrt_dynamic_shape(
+                    dynamic_shape_file, True)
                 print("trt set dynamic shape done!")
             else:
                 config.collect_shape_range_info(dynamic_shape_file)
@@ -315,7 +317,8 @@ def eval(predictor, val_loader, anno_file, rerun_flag=False):
     input_names = predictor.get_input_names()
     output_names = predictor.get_output_names()
     boxes_tensor = predictor.get_output_handle(output_names[0])
-    for batch_id, data in enumerate(val_loader):
+    for batch_id, data in tqdm(
+            enumerate(val_loader), total=len(val_loader), desc='Evaluating'):
         data_all = {k: np.array(v) for k, v in data.items()}
         inputs = {}
         if FLAGS.arch == "YOLOv6":
@@ -345,7 +348,6 @@ def eval(predictor, val_loader, anno_file, rerun_flag=False):
         cpu_mems += cpu_mem
         gpu_mems += gpu_mem
         if batch_id % 100 == 0:
-            print("Eval iter:", batch_id)
             sys.stdout.flush()
     print("[Benchmark]Avg cpu_mem:{} MB, avg gpu_mem: {} MB".format(
         cpu_mems / sample_nums, gpu_mems / sample_nums))
