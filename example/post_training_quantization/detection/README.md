@@ -309,6 +309,7 @@ I0623 08:41:14.419198 107053 analysis_predictor.cc:793] Generating TRT Calibrati
 | 模型 | trt-fp32 | trt-fp16 | trt-int8 | paddle_gpu fp32 | trt_fp32(dynamic_shape) |
 |:------:|:------:|:------:|:------:| :------:| :------:|
 | PicoDet-s | 3.05ms | 2.66ms | 2.40ms | 7.51ms | 2.82ms |
+
 测速环境:Tesla T4,TensorRT 8.6.1,CUDA 11.6,batch_size=1,cudnn 8.4.0  Intel(R)Xeon(R)Gold 6271C CPU
 
 ## 5.FAQ
