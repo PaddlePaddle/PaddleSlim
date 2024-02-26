@@ -1,5 +1,5 @@
 input_list: ['image', 'scale_factor']
-model_dir: ./picodet_s_416_coco_lcnet/
+model_dir: ./picodet_s_416_coco_lcnet
 model_filename: model.pdmodel
 params_filename: model.pdiparams
 save_dir: ./analysis_results
@@ -26,11 +26,11 @@ EvalDataset:
 
 # Small Dataset to accelerate analysis
 # If not exist, delete the dict of FastEvalDataset
-FastEvalDataset:
-  !COCODataSet
-    image_dir: val2017
-    anno_path: annotations/small_instances_val2017.json
-    dataset_dir: /dataset/coco/
+# FastEvalDataset:
+#   !COCODataSet
+#     image_dir: val2017
+#     anno_path: annotations/small_instances_val2017.json
+#     dataset_dir: /dataset/coco/
 
 
 eval_height: &eval_height 416
