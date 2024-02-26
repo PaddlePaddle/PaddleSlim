@@ -24,6 +24,7 @@
 | :-------- |:-------- |:--------: | :---------------------: | :----------------: | :----------------: | :---------------: | :-----------------------------: | :-----------------------------: |
 | yolov3_r50vd_dcn_270e_coco |  Base模型 | 608*608  |  40.6   |   92.2ms  |   41.3ms   |    -    |    -   | [Model](https://paddle-inference-dist.bj.bcebos.com/Paddle-Inference-Demo/yolov3_r50vd_dcn_270e_coco.tgz) |
 | yolov3_r50vd_dcn_270e_coco |  离线量化 | 608*608  |  40.3    |     -     |     -     |  27.9ms  |    -   |    |
+|  |  |  |  |  |  |  |  |  |
 | PicoDet-s |  Base模型 | 416*416  |  32.5   |   82.5ms  |   59.7ms   |  -  |  - | [Model](https://paddledet.bj.bcebos.com/deploy/Inference/picodet_s_416_coco_lcnet.tar) |
 | PicoDet-s |  离线量化(量化分析前) | 416*416  |  0.0   |   - |   -   |  39.1ms  |  -  | - |
 | PicoDet-s |  离线量化(量化分析后) | 416*416  |  24.9   |   - |   -   |  64.8ms  |  -  | [Infer Model](https://bj.bcebos.com/v1/paddle-slim-models/act/picodet_s_ptq.tar) |
