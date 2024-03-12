@@ -61,6 +61,17 @@ def _recover_outputs_attr(program):
                         persistable=False,
                         stop_gradient=True)
                     op.desc.set_output("XShape", [xshape.name])
+            if op.type == 'dropout':
+                if 'Mask' not in op.output_names:
+                    mask = block.create_var(
+                        name=paddle.utils.unique_name.
+                        generate_with_ignorable_key(".".join(["mask", 'tmp'])),
+                        dtype=block.var(op.input("X")[0]).dtype,
+                        type=paddle.framework.core.VarDesc.VarType.LOD_TENSOR,
+                        shape=block.var(op.input("X")[0]).shape,
+                        persistable=False,
+                        stop_gradient=True)
+                    op.desc.set_output("Mask", [mask.name])
     return program
 
 
