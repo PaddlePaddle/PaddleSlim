@@ -202,15 +202,17 @@ def merge(teacher_program,
 
         student_program._sync_with_cpp()
 
-    student_graph = GraphWrapper(student_program)
-    for op in student_graph.ops():
-        belongsto_teacher = False
-        for inp in op.all_inputs():
-            if 'teacher' in inp.name():
-                belongsto_teacher = True
-                break
-        if belongsto_teacher:
-            op._op._set_attr("skip_quant", True)
+    for block in reversed(student_program.blocks):
+        for op_idx, op in enumerate(block.ops):
+            if op.type == 'while':
+                continue
+            for output_name in op.output_names:
+                for out_var_name in op.output(output_name):
+                    if name_prefix in out_var_name:
+                        op._set_attr("skip_quant", True)
+                        out_var = block.var(out_var_name)
+                        # recover teacher var's attribute 'op' which is important for amp training
+                        out_var.op = op
 
 
 def fsp(teacher_var1_name,
@@ -298,10 +300,10 @@ def soft_label(teacher_var_name,
     teacher_var = _find_var_from_program(program, teacher_var_name)
     teacher_var.stop_gradient = True
 
-    student_var = paddle.nn.functional.softmax(student_var /
-                                               student_temperature)
-    teacher_var = paddle.nn.functional.softmax(teacher_var /
-                                               teacher_temperature)
+    student_var = paddle.nn.functional.softmax(
+        student_var / student_temperature)
+    teacher_var = paddle.nn.functional.softmax(
+        teacher_var / teacher_temperature)
     soft_label_loss = paddle.mean(
         paddle.nn.functional.cross_entropy(
             input=student_var,
