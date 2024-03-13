@@ -6,3 +6,4 @@ pyyaml
 scikit-learn
 swig
 opencv-python==4.6.0.66
+ConfigSpace==0.6.1
