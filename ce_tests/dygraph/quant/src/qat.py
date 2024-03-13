@@ -75,7 +75,7 @@ def main():
             }
             dygraph_qat = QAT(quant_config)
         else:
-            print("use navie api")
+            print("use naive api")
             dygraph_qat = ImperativeQuantAware(
                 weight_quantize_type=FLAGS.weight_quantize_type, )
         dygraph_qat.quantize(model)
@@ -112,12 +112,13 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    model.fit(train_dataset,
-              val_dataset,
-              batch_size=FLAGS.batch_size,
-              epochs=FLAGS.epoch,
-              save_dir=output_dir,
-              num_workers=FLAGS.num_workers)
+    model.fit(
+        train_dataset,
+        val_dataset,
+        batch_size=FLAGS.batch_size,
+        epochs=FLAGS.epoch,
+        save_dir=output_dir,
+        num_workers=FLAGS.num_workers)
 
     # save
     if FLAGS.enable_quant:
@@ -183,7 +184,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--enable_quant", action='store_true', help="enable quant model")
     parser.add_argument(
-        "--use_naive_api", action='store_true', help="use the navie api")
+        "--use_naive_api", action='store_true', help="use the naive api")
     parser.add_argument(
         "--weight_quantize_type", type=str, default='abs_max', help="")
 
