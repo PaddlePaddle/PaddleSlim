@@ -41,11 +41,11 @@ class BaseFakeQuanterLayer(BaseQuanter):
     def qmin_qmax(self):
         """ Get the range of the integer."""
         if self._qmin is not None and self._qmax is not None:
-            return self.qmin, self.qmax
+            return self._qmin, self._qmax
         if self._sign:
-            self.qmin = -2**(self.bit_length() - 1)
-            self.qmax = 2**(self.bit_length() - 1) - 1
+            self._qmin = -2**(self.bit_length() - 1)
+            self._qmax = 2**(self.bit_length() - 1) - 1
         else:
-            self.qmin = 0
-            self.qmax = 2**self.bit_length()
-        return self.qmin, self.qmax
+            self._qmin = 0
+            self._qmax = 2**self.bit_length()
+        return self._qmin, self._qmax
