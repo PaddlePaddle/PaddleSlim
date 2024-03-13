@@ -25,6 +25,7 @@ from ..common import get_logger
 from .strategy_config import ProgramInfo
 from ..common.load_model import load_inference_model
 from ..analysis import flops
+from .loss_scale import LossScaling
 
 _logger = get_logger(__name__, level=logging.INFO)
 __all__ = [
@@ -345,6 +346,8 @@ def build_distill_program(executor,
     with paddle.static.program_guard(train_program, startup_program):
         with paddle.utils.unique_name.guard('merge'):
             optimizer, learning_rate = _create_optimizer(train_config)
+            if train_config.get('amp_config') is None:
+                optimizer = LossScaling(optimizer)
 
             if dist_strategy is not None:
                 optimizer = fleet.distributed_optimizer(optimizer,

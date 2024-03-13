@@ -18,10 +18,11 @@ from .strategy_config import *
 from .config_helpers import *
 from .utils import *
 from .analysis import *
+from .loss_scale import *
 
 __all__ = [
     "AutoCompression", "QuantAware", "QuantPost", "Distillation",
     "MultiTeacherDistillation", "HyperParameterOptimization", "Prune",
     "UnstructurePrune", "ProgramInfo", "TrainConfig",
-    "predict_compressed_model", "analysis_prune"
+    "predict_compressed_model", "analysis_prune", "LossScaling"
 ]
