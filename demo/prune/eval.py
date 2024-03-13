@@ -35,7 +35,8 @@ def eval(args):
     train_reader = None
     test_reader = None
     if args.data == "mnist":
-        val_dataset = paddle.vision.datasets.MNIST(mode='test')
+        transform = T.Compose([T.Transpose(), T.Normalize([127.5], [127.5])])
+        val_dataset = paddle.vision.datasets.MNIST(mode='test', transform=transform)
         class_dim = 10
         image_shape = "1,28,28"
     elif args.data == "cifar10":
