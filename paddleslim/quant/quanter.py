@@ -342,6 +342,13 @@ def quant_aware(program,
             for next_op in find_next_ops(program, output_name):
                 if next_op.type == 'layer_norm':
                     return True
+                elif next_op.type == 'elementwise_mul':
+                    next_op_output_names = next_op.output_arg_names
+                    for next_output_name in next_op_output_names:
+                        for next_next_op in find_next_ops(
+                                program, next_output_name):
+                            if next_next_op.type == 'layer_norm':
+                                return True
         return False
 
     skip_tensor_list = []
