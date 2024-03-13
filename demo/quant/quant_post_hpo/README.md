@@ -13,28 +13,29 @@
 - ``'val_list.txt'``文件
 
 ### 准备需要量化的模型
-离线量化接口只支持加载通过``paddle.static.save_inference_model``接口保存的模型。因此如果您的模型是通过其他接口保存的，需要先将模型进行转化。本示例将以分类模型为例进行说明。
+离线量化接口只支持加载预测模型，预测模型保存接口： 动态图使用paddle.jit.save保存； 静态图使用paddle.static.save_inference_model保存。因此如果您的模型是通过其他接口保存的，需要先将模型进行转化。本示例将以分类模型为例进行说明。
 
-首先在[imagenet分类模型](https://github.com/PaddlePaddle/models/tree/develop/PaddleCV/image_classification#%E5%B7%B2%E5%8F%91%E5%B8%83%E6%A8%A1%E5%9E%8B%E5%8F%8A%E5%85%B6%E6%80%A7%E8%83%BD)中下载训练好的``mobilenetv1``模型。
+飞桨图像识别套件PaddleClas是飞桨为工业界和学术界所准备的一个图像识别任务的工具集，该工具已提供分类预测模型下载链接。
 
-在当前文件夹下创建``'pretrain'``文件夹，将``mobilenetv1``模型在该文件夹下解压，解压后的目录为``pretrain/MobileNetV1_pretrained``
+MobileNetV1预测模型下载链接：https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar
 
-### 导出模型
-通过运行以下命令可将模型转化为离线量化接口可用的模型：
 ```
-python ../quant_post/export_model.py --model "MobileNet" --pretrained_model ./pretrain/MobileNetV1_pretrained --data imagenet
+mkdir inference_model
+cd inference_model
+wget https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/inference/MobileNetV1_infer.tar
+tar xf MobileNetV1_infer.tar
+cd ..
 ```
-转化之后的模型存储在``inference_model/MobileNet/``文件夹下，可看到该文件夹下有``'model'``, ``'weights'``两个文件。
 
 ### 静态离线量化
 接下来对导出的模型文件进行静态离线量化，静态离线量化的脚本为[quant_post_hpo.py](./quant_post_hpo.py)，脚本中使用接口``paddleslim.quant.quant_post_hpo``对模型进行离线量化。运行命令为：
 ```
 python quant_post_hpo.py \
     --use_gpu=True \
-    --model_path="./inference_model/MobileNet/" \
-    --save_path="./inference_model/MobileNet_quant/" \
-    --model_filename="model" \
-    --params_filename="weights" \
+    --model_path="./inference_model/MobileNetV1_infer/" \
+    --save_path="./inference_model/MobileNetV1_infer_quant/" \
+    --model_filename="inference.pdmodel" \
+    --params_filename="inference.pdiparams" \
     --max_model_quant_count=26
 ```
 
@@ -53,11 +54,11 @@ python quant_post_hpo.py \
 
 首先测试量化前的模型的精度，运行以下命令：
 ```
-python ../quant_post/eval.py --model_path ./inference_model/MobileNet --model_name model --params_name weights
+python ../quant_post/eval.py --model_path ./inference_model/MobileNetV1_infer/ --model_name inference.pdmodel --params_name inference.pdiparams
 ```
 精度输出为:
 ```
-top1_acc/top5_acc= [0.70898 0.89534]
+top1_acc/top5_acc= [0.70903133 0.89540042]
 ```
 
 使用以下命令测试离线量化后的模型的精度：
@@ -68,5 +69,5 @@ python ../quant_post/eval.py --model_path ./inference_model/MobileNet_quant/ --m
 
 精度输出为
 ```
-top1_acc/top5_acc= [0.70653 0.89369]
+top1_acc/top5_acc= [0.70890231, 0.89324836]
 ```
