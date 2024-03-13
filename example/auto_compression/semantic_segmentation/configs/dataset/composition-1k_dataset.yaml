@@ -1,0 +1,44 @@
+batch_size: 2
+iters: 300000
+
+model:
+  type: PPMatting
+  backbone:
+    type: HRNet_W48
+    pretrained: https://bj.bcebos.com/paddleseg/dygraph/hrnet_w48_ssld.tar.gz
+  pretrained: Null
+
+train_dataset:
+  type: MattingDataset
+  dataset_root: /paddle/dataset/Composition-1k-merge
+  train_file: train.txt
+  transforms:
+    - type: LoadImages
+    - type: Padding
+      target_size: [512, 512]
+    - type: RandomCrop
+      crop_size: [[512, 512],[640, 640], [800, 800]]
+    - type: Resize
+      target_size: [512, 512]
+    - type: RandomDistort
+    - type: RandomBlur
+      prob: 0.1
+    - type: RandomHorizontalFlip
+    - type: Normalize
+  mode: train
+  separator: '|'
+
+val_dataset:
+  type: MattingDataset
+  dataset_root: /paddle/dataset/Composition-1k-merge
+  val_file: val.txt
+  transforms:
+    - type: LoadImages
+    - type: LimitShort
+      max_short: 1536
+    - type: ResizeToIntMult
+      mult_int: 32
+    - type: Normalize
+  mode: val
+  get_trimap: Falses
+  separator: '|'
