@@ -55,7 +55,7 @@ print(TENSORRT_OP_TYPES)
 ```yaml
 QuantPost:
     batch_size: 32
-    batch_nums: None
+    batch_nums: 50
     algo: 'hist'
     hist_percent: 0.999
     bias_correct: False

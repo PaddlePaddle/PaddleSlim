@@ -8,7 +8,7 @@ Distillation:
   alpha: 1.0
   loss: l2
   node:
-  - conv2d_95.tmp_0
+  - conv2d_95.tmp_0  # this need to be changed based on the output name of the last conv
 
 QuantAware:
   onnx_format: True
