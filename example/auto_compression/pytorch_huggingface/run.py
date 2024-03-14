@@ -274,7 +274,6 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
             correct = metric.compute(logits_pd, labels_pd)
             metric.update(correct)
         paddle.enable_static()
-    print("res", metric.accumulate())
     res = metric.accumulate()
 
     return res[0] if isinstance(res, list) or isinstance(res, tuple) else res
