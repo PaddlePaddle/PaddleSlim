@@ -1,6 +1,6 @@
 Global:
   input_names: ['x0', 'x1', 'x2']
-  model_dir: ./output/qqp
+  model_dir: ./x2paddle_qqp
   model_filename: model.pdmodel
   params_filename: model.pdiparams
   model_type: bert-base-cased
