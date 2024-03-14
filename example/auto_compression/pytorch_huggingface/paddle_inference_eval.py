@@ -329,7 +329,7 @@ def main():
         label_list=dev_ds.label_list,
         max_seq_length=args.max_seq_length,
         task_name=args.task_name,
-        return_attention_mask=True, )
+        return_attention_mask=False, )
 
     dev_ds = dev_ds.map(trans_func)
     batchify_fn = lambda samples, fn=Tuple(
