@@ -1,6 +1,6 @@
 Global:
   input_names: ['x0', 'x1', 'x2']
-  model_dir: ./x2paddle_sst2
+  model_dir: ./output/sst2
   model_filename: model.pdmodel
   params_filename: model.pdiparams
   model_type: bert-base-cased
@@ -10,6 +10,21 @@ Global:
   max_seq_length: 128
   padding: max_length
   return_attention_mask: True
+
+Distillation:
+  alpha: 1.0
+  loss: soft_label
+
+QuantAware:
+  use_pact: true
+  activation_quantize_type: 'moving_average_abs_max'
+  weight_bits: 8
+  activation_bits: 8
+  quantize_op_types:
+  - matmul
+  - matmul_v2
+
+
 TrainConfig:
   epochs: 3
   eval_iter: 3367
