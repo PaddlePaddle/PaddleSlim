@@ -27,7 +27,7 @@
 | bert-base-cased | 剪枝蒸馏+量化训练 | 58.69 | 85.05 | 90.74 | 90.42 | 65.34 | 92.08 | 88.22 |  81.51 |
 
 
-|  模型 |策略| Accuracy（avg） | 预测时延<sup><small>FP32</small><sup><br><sup> | 预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 加速比 |
+|  模型 |策略| Accuracy（avg） | trt<sup><small>FP32</small><sup><br><sup> | trt<sup><small>FP16</small><sup><br><sup> | trt<sup><small>INT8</small><sup><br><sup> | 加速比 |
 |:-------:|:----------:|:------------:|:------:|:------:|:------:|:------:|
 | bert-base-uncased | Base模型 |  92.66 | 173.00ms | 38.42ms | - | - |
 | bert-base-uncased | 剪枝+量化训练 | 92.31 | - | - | 33.24ms | 5.20x |
@@ -36,6 +36,7 @@
   - 硬件：NVIDIA Tesla T4 单卡
   - 软件：CUDA 11.2, cuDNN 8.1, TensorRT 8.6.1.6
   - 测试配置：batch_size: 32, seqence length: 128
+  - 预测脚本为[paddle_inference_eval.py](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/pytorch_huggingface/paddle_inference_eval.py)
 
 ## 3. 自动压缩流程
 #### 3.1 准备环境
