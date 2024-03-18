@@ -191,6 +191,7 @@ class Predictor(object):
         config = paddle.inference.Config(
             os.path.join(args.model_path, args.model_filename),
             os.path.join(args.model_path, args.params_filename))
+
         if args.device == "gpu":
             # set GPU configs accordingly
             config.enable_use_gpu(100, 0)
@@ -217,7 +218,7 @@ class Predictor(object):
                 min_subgraph_size=5,
                 precision_mode=precision_map[args.precision],
                 use_static=True,
-                use_calib_mode=True, )
+                use_calib_mode=False, )
 
             dynamic_shape_file = os.path.join(args.model_path,
                                               "dynamic_shape.txt")
@@ -329,7 +330,7 @@ def main():
         label_list=dev_ds.label_list,
         max_seq_length=args.max_seq_length,
         task_name=args.task_name,
-        return_attention_mask=False, )
+        return_attention_mask=True, )
 
     dev_ds = dev_ds.map(trans_func)
     batchify_fn = lambda samples, fn=Tuple(
