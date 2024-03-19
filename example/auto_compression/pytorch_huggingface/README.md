@@ -186,6 +186,11 @@ python run.py --config_path=./configs/cola.yaml --save_dir='./output/cola/'
 export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/cola.yaml  --eval True
 ```
+[bert-base-uncased模型](https://paddle-slim-models.bj.bcebos.com/act/infer_model.zip)
+```shell
+export CUDA_VISIBLE_DEVICES=0
+python run-uncased.py --config_path=./configs/cola-unsst2.yaml --save_dir='./output/unsst2'
+```
 
 ## 4. 预测部署
 
@@ -218,6 +223,11 @@ python run.py --config_path=./configs/cola.yaml  --eval True
 ```shell
 wget https://bj.bcebos.com/v1/paddle-slim-models/act/x2paddle_cola_new_calib.tar
 tar -xf x2paddle_cola_new_calib.tar
+```
+
+```shell
+wget https://paddle-slim-models.bj.bcebos.com/act/unsst2.zip
+unzip unstt2.zip
 ```
 
 ```shell
