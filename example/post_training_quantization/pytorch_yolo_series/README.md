@@ -164,7 +164,7 @@ python post_quant.py --config_path=./configs/yolov6s_analyzed_ptq.yaml --save_di
 
 注：分析之后若需要直接产出符合目标精度的量化模型，demo代码不会使用少量数据集验证，会自动使用全量验证数据。
 
-量化分析工具详细介绍见[量化分析工具介绍](../analysis.md)
+量化分析工具详细介绍见[量化分析工具介绍](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/docs/zh_cn/tutorials/quant/static/Analysis.md)
 
 ###### 3.6.2 精度重构工具
 本节介绍如何使用精度重构工具提高精度。该工具的思想是，通过最小化量化前后模型输出的重构误差（minimizing the reconstruction error，MRE），学习权重的取整方式（上取整or下取整），从而`fine-tune`经量化后的模型的权重，提高精度。同样以YOLOv6为例，运行命令如下：
