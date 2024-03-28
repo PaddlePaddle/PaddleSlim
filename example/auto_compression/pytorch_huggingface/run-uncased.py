@@ -82,7 +82,7 @@ def convert_example(example,
                     max_seq_length=512,
                     is_test=False,
                     padding='max_length',
-                    return_attention_mask=True):
+                    return_attention_mask=False):
     if not is_test:
         # `label_list == None` is for regression task
         label_dtype = "int64" if label_list else "float32"
@@ -101,14 +101,12 @@ def convert_example(example,
         truncation='longest_first')
     if not is_test:
         if return_attention_mask:
-            return example['input_ids'], example['attention_mask'], example[
-                'token_type_ids'], label
+            return example['input_ids'], example['token_type_ids'], label
         else:
             return example['input_ids'], example['token_type_ids'], label
     else:
         if return_attention_mask:
-            return example['input_ids'], example['attention_mask'], example[
-                'token_type_ids']
+            return example['input_ids'], example['token_type_ids']
         else:
             return example['input_ids'], example['token_type_ids']
 
@@ -152,7 +150,7 @@ def reader():
     if global_config['return_attention_mask']:
         batchify_fn = lambda samples, fn=Tuple(
             Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input
-            Pad(axis=0, pad_val=0),  # attention_mask
+            # Pad(axis=0, pad_val=0),  # attention_mask
             Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # token_type 
         ): fn(samples)
     else:
@@ -188,7 +186,7 @@ def reader():
     if global_config['return_attention_mask']:
         dev_batchify_fn = lambda samples, fn=Tuple(
             Pad(axis=0, pad_val=tokenizer.pad_token_id),  # input
-            Pad(axis=0, pad_val=0),  # attention_mask
+            # Pad(axis=0, pad_val=0),  # attention_mask
             Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  # token_type 
             Stack(dtype="int64" if train_ds.label_list else "float32")  # label
         ): fn(samples)
@@ -211,6 +209,7 @@ def reader():
             batch_size=global_config['batch_size'],
             shuffle=False,
             drop_last=True)
+
         dev_data_loader_matched = DataLoader(
             dataset=dev_ds_matched,
             batch_sampler=dev_batch_sampler_matched,
@@ -257,9 +256,9 @@ def eval_function(exe, compiled_test_program, test_feed_names, test_fetch_list):
         logits = exe.run(
             compiled_test_program,
             feed={
-                test_feed_names[0]: data[0]['x0'],
-                test_feed_names[1]: data[0]['x1'],
-                test_feed_names[2]: data[0]['x2']
+                test_feed_names[0]: data[0]['input_ids'],
+                test_feed_names[1]: data[0]['token_type_ids'],
+                # test_feed_names[2]: data[0]['position_ids']
             },
             fetch_list=test_fetch_list)
         paddle.disable_static()
@@ -289,15 +288,15 @@ def eval():
         model_filename=global_config["model_filename"],
         params_filename=global_config["params_filename"])
     print('Loaded model from: {}'.format(global_config["model_dir"]))
+
     metric.reset()
     print('Evaluating...')
     for data in eval_dataloader():
         logits = exe.run(
             val_program,
             feed={
-                feed_target_names[0]: data[0]['x0'],
-                feed_target_names[1]: data[0]['x1'],
-                feed_target_names[2]: data[0]['x2']
+                feed_target_names[0]: data[0]['input_ids'],
+                feed_target_names[1]: data[0]['token_type_ids'],
             },
             fetch_list=fetch_targets)
         paddle.disable_static()
