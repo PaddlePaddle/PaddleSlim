@@ -26,35 +26,36 @@
 | bert-base-cased | Base模型 | 60.06 | 84.31 | 90.68 | 90.84 | 63.53 | 91.63  | 88.46 |  81.35  |
 | bert-base-cased | 剪枝蒸馏+量化训练 | 58.69 | 85.05 | 90.74 | 90.42 | 65.34 | 92.08 | 88.22 |  81.51 |
 
-模型在多个任务上平均精度以及加速对比如下：
-|  模型 |策略| Accuracy（avg） | 预测时延<sup><small>FP32</small><sup><br><sup> | 预测时延<sup><small>FP16</small><sup><br><sup> | 预测时延<sup><small>INT8</small><sup><br><sup> | 加速比 |
-|:-------:|:----------:|:------------:|:------:|:------:|:------:|:------:|
-| bert-base-cased | Base模型 |  81.35 | 195ms | 51.58ms | - | - |
-| bert-base-cased | 剪枝+量化训练 | 81.51 | - | - | 31.33ms | 6.22x |
+基于bert-base-uncased模型，压缩前后的精度如下：
+|  模型 |策略| Accuracy（avg） | trt<sup><small>FP32</small><sup><br><sup> | trt<sup><small>FP16</small><sup><br><sup> | trt<sup><small>INT8</small><sup><br><sup> | 加速比 | 模型 |
+|:-------:|:----------:|:------------:|:------:|:------:|:------:|:------:|:------:|
+| bert-base-uncased | Base模型 |  92.66 | 173.00ms | 38.42ms | - | - | [Model](https://paddle-slim-models.bj.bcebos.com/act/infer_model.zip) |
+| bert-base-uncased | 剪枝+量化训练 | 92.31 | - | - | 33.24ms | 5.20x | [Model](https://paddle-slim-models.bj.bcebos.com/act/unsst2.zip) |
 
 - Nvidia GPU 测试环境：
   - 硬件：NVIDIA Tesla T4 单卡
-  - 软件：CUDA 11.2, cuDNN 8.1, TensorRT 8.4
+  - 软件：CUDA 11.2, cuDNN 8.1, TensorRT 8.6.1.6
   - 测试配置：batch_size: 32, seqence length: 128
+  - 预测脚本为[paddle_inference_eval.py](https://github.com/PaddlePaddle/PaddleSlim/blob/develop/example/auto_compression/pytorch_huggingface/paddle_inference_eval.py)
 
 ## 3. 自动压缩流程
 #### 3.1 准备环境
 - python >= 3.6
-- PaddlePaddle >= 2.3 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
-- PaddleSlim >= 2.3
+- PaddlePaddle ==2.6 （可从[Paddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)下载安装）
+- PaddleSlim ==2.6
 - X2Paddle develop版本
 - transformers >= 4.18.0
-- PaddleNLP >= 2.3
+- PaddleNLP 2.7.2
 - tensorflow == 1.14 (如需压缩TensorFlow模型)
-- onnx >= 1.6.0 (如需压缩ONNX模型)
-- torch >= 1.5.0 (如需压缩PyTorch模型)
+- onnx  1.15.0 (如需压缩ONNX模型)
+- torch 1.13.1 (如需压缩PyTorch模型)
 
 安装paddlepaddle：
 ```shell
 # CPU
-pip install paddlepaddle
-# GPU
-pip install paddlepaddle-gpu
+python -m pip install paddlepaddle==2.6.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+# GPU 以CUDA11.2为例
+python -m pip install paddlepaddle-gpu==2.6.0.post112 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
 安装paddleslim：
@@ -72,7 +73,7 @@ python setup.py install
 
 安装paddlenlp：
 ```shell
-pip install paddlenlp
+pip install --pre --upgrade paddlenlp -f https://www.paddlepaddle.org.cn/whl/paddlenlp.html
 ```
 
 注：安装PaddleNLP的目的是为了下载PaddleNLP中的数据集。
@@ -99,7 +100,7 @@ attention_msk = torch.zeros([batch_size, max_length]).long()
 from x2paddle.convert import pytorch2paddle
 pytorch2paddle(torch_model,
                save_dir='./x2paddle_cola/',
-               jit_type="trace",  
+               jit_type="trace",
                input_examples=[input_ids, attention_msk, token_type_ids])
 ```
 
@@ -186,13 +187,36 @@ python run.py --config_path=./configs/cola.yaml --save_dir='./output/cola/'
 export CUDA_VISIBLE_DEVICES=0
 python run.py --config_path=./configs/cola.yaml  --eval True
 ```
+[bert-base-uncased模型](https://paddle-slim-models.bj.bcebos.com/act/infer_model.zip)
+```shell
+export CUDA_VISIBLE_DEVICES=0
+python run-uncased.py --config_path=./configs/cola-unsst2.yaml --save_dir='./output/unsst2'
+```
 
 ## 4. 预测部署
 
 量化模型在GPU上可以使用TensorRT进行加速，在CPU上可以使用MKLDNN进行加速。
 
+以下字段用于配置预测参数：
 
-- TensorRT预测：
+| 参数名 | 含义 |
+|:------:|:------:|
+| model_path | inference 模型文件所在目录,该目录下需要有文件 model.pdmodel 和 model.pdiparams 两个文件 |
+| model_filename | 模型文件的名称,默认值为model.pdmodel |
+| params_filename | 参数文件的名称,默认值为model.pdiparams |
+| task_name | 要执行的任务名称,默认为cola,这里指定的任务应该是"METRIC_CLASSES"字典中包含的任务之一 |
+| model_type | 选择的模型类型,默认为bert-base-cased。这里指定了预训练模型的类型或架构 |
+| model_name_or_path | 模型的目录或名称,默认为bert-based-cased。这里可以指定一个预训练模型的目录或HuggingFace预训练模型的模型名称 |
+| device | 选择用于推理的设备，默认为gpu,这里可以是gpu或cpu |
+| batch_size | 预测的批处理大大小，默认为32 |
+| max_seq_length | 输入序列的最大长度，默认为128,超过这个长度的序列将被截断，短于这个长度的序列将被填充 |
+| perf_warmup_steps | 性能测试的预热步骤数,默认为20,这是在正式计算推理性能前,进行的预热迭代次数,以确保性能稳定 |
+| use_trt | 是否使用TensorRT进行推理 |
+| precision | 推理精度，默认为fp32,可设置为fp16或int8 |
+| use_mkldnn | 是否使用MKLDNN进行推理,默认为False。这是针对CPU推理时,是否启用MKL-DNN进行加速 |
+| cpu_threads | CPU线程数,默认为10。这是针对CPU推理时,指定使用的线程数 |
+
+- Paddle-TensorRT预测：
 
 环境配置：如果使用 TesorRT 预测引擎，需安装 ```WITH_TRT=ON``` 的Paddle，下载地址：[Python预测库](https://paddleinference.paddlepaddle.org.cn/master/user_guides/download_lib.html#python)
 
@@ -200,6 +224,11 @@ python run.py --config_path=./configs/cola.yaml  --eval True
 ```shell
 wget https://bj.bcebos.com/v1/paddle-slim-models/act/x2paddle_cola_new_calib.tar
 tar -xf x2paddle_cola_new_calib.tar
+```
+
+```shell
+wget https://paddle-slim-models.bj.bcebos.com/act/unsst2.zip
+unzip unstt2.zip
 ```
 
 ```shell
@@ -220,6 +249,22 @@ python paddle_inference_eval.py \
       --cpu_threads=10 \
       --batch_size=1 \
       --precision=int8
+```
+bert-base-uncased模型
+```shell
+python paddle_inference_eval.py \
+      --model_path=infer_model \
+      --use_trt \
+      --precision=fp32 \
+      --batch_size=1
+```
+```shell
+python paddle_inference_eval.py  \
+       --model_path=output/unsst2 \
+       --use_trt \
+       --precision=int8 \
+       --batch_size=32 \
+       --task_name=sst-2
 ```
 
 
