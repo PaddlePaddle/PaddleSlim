@@ -26,9 +26,9 @@
 | bert-base-cased | Base模型 | 60.06 | 84.31 | 90.68 | 90.84 | 63.53 | 91.63  | 88.46 |  81.35  |
 | bert-base-cased | 剪枝蒸馏+量化训练 | 58.69 | 85.05 | 90.74 | 90.42 | 65.34 | 92.08 | 88.22 |  81.51 |
 
-基于bert-base-uncased模型，压缩前后的精度及耗时如下:
-|  模型 |策略| Accuracy（avg） | trt<sup><small>FP32</small><sup><br><sup> | trt<sup><small>FP16</small><sup><br><sup> | trt<sup><small>INT8</small><sup><br><sup> | 加速比 | Inference模型 |
-|:-------:|:----------:|:------------:|:------:|:------:|:------:|:------:| |:-------:|
+基于bert-base-uncased模型，压缩前后的精度如下：
+|  模型 |策略| Accuracy（avg） | trt<sup><small>FP32</small><sup><br><sup> | trt<sup><small>FP16</small><sup><br><sup> | trt<sup><small>INT8</small><sup><br><sup> | 加速比 | 模型 |
+|:-------:|:----------:|:------------:|:------:|:------:|:------:|:------:|:------:|
 | bert-base-uncased | Base模型 |  92.66 | 173.00ms | 38.42ms | - | - | [Model](https://paddle-slim-models.bj.bcebos.com/act/infer_model.zip) |
 | bert-base-uncased | 剪枝+量化训练 | 92.31 | - | - | 33.24ms | 5.20x | [Model](https://paddle-slim-models.bj.bcebos.com/act/unsst2.zip) |
 
