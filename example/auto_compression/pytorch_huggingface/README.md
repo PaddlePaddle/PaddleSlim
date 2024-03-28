@@ -28,7 +28,7 @@
 
 基于bert-base-uncased模型，压缩前后的精度及耗时如下:
 |  模型 |策略| Accuracy（avg） | trt<sup><small>FP32</small><sup><br><sup> | trt<sup><small>FP16</small><sup><br><sup> | trt<sup><small>INT8</small><sup><br><sup> | 加速比 | Inference模型 |
-|:-------:|:----------:|:------------:|:------:|:------:|:------:|:------:| |:------:|
+|:-------:|:----------:|:------------:|:------:|:------:|:------:|:------:| |:-------:|
 | bert-base-uncased | Base模型 |  92.66 | 173.00ms | 38.42ms | - | - | [Model](https://paddle-slim-models.bj.bcebos.com/act/infer_model.zip) |
 | bert-base-uncased | 剪枝+量化训练 | 92.31 | - | - | 33.24ms | 5.20x | [Model](https://paddle-slim-models.bj.bcebos.com/act/unsst2.zip) |
 
