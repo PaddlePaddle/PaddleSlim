@@ -1,0 +1,2 @@
+CUDA_VISIBLE_DEVICES=0 python main.py --config cifar10.yml --exp ./ --doc cifar10-fp --timesteps 100 --ni 2>&1 | tee fp.log
+CUDA_VISIBLE_DEVICES=0 python main_binarydm.py --config cifar10.yml --exp ./ --doc cifar10-binarydm --timesteps 100 --ni 2>&1 | tee binarydm.log
