@@ -1298,7 +1298,7 @@ class SuperLayerNorm(paddle.nn.LayerNorm):
         self.cur_config = {'prune_dim': feature_dim}
 
         if paddle.in_dynamic_mode():
-            out, _, _ = paddle._C_ops.layer_norm(
+            out = paddle._C_ops.layer_norm(
                 input, weight, bias, self._epsilon, begin_norm_axis, False)
         else:
             paddle.common_ops_import.check_variable_and_dtype(
