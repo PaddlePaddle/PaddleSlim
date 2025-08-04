@@ -1,0 +1,18 @@
+python3 main.py \
+    --gpu=0 \
+    --model=BiDfsmn_thinnable --dfsmn_with_bn \
+    --method=Vanilla \
+    --distill \
+    --distill_alpha=0.01 \
+    --select_pass=high \
+    --J=1 \
+    --pretrained \
+    --teacher_model=BiDfsmn_thinnable_pre \
+    --teacher_model_checkpoint=${teacher_model_checkpoint_path} \
+    --version=speech_commands_v0.01 \
+    --num_classes=12 \
+    --lr-scheduler=cosin \
+    --opt=sgd \
+    --lr=5e-3 \
+    --weight-decay=1e-4 \
+    --epoch=300 
