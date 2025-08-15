@@ -90,7 +90,7 @@ class Server(object):
         if self._is_sync:
             self._wait_socket = self._ctx.socket(zmq.REP)
             self._wait_port = self._wait_socket.bind_to_random_port(
-                addr="tcp://*")
+                addr="tcp://127.0.0.1")
             self._wait_socket_linger = 0
             wait_thread = threading.Thread(
                 target=self._wait_for_params, args=())
