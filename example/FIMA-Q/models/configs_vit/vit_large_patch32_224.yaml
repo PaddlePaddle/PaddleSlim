@@ -1,0 +1,31 @@
+DATA:
+    IMAGE_SIZE: 224
+    CROP_PCT: 0.875
+MODEL:
+    TYPE: vit
+    NAME: vit_large_patch32_224
+    PATCH_SIZE: 32
+    MLP_RATIO: 4.0
+    QKV_BIAS: true
+    EMBED_DIM: 1024
+    DEPTH: 24
+    NUM_HEADS: 16
+    DROPOUT: 0.1  # same as paper
+    ATTENTION_DROPOUT: 0.1  # same as paper
+TRAIN:
+    NUM_EPOCHS: 300  # same as paper
+    WARMUP_EPOCHS: 32  # ~10k steps (4096 batch size)
+    WEIGHT_DECAY: 0.3  # same as paper
+    BASE_LR: 3e-3
+    WARMUP_START_LR: 1e-6
+    END_LR: 0.0
+    GRAD_CLIP: 1.0
+    ACCUM_ITER: 1
+    OPTIMIZER:
+        NAME: 'AdamW'
+        BETAS: (0.9, 0.999)
+
+VALIDATE_FREQ: 1
+SAVE_FREQ: 10
+REPORT_FREQ: 100
+
