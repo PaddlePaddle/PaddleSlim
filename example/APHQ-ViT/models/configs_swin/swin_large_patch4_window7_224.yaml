@@ -1,0 +1,11 @@
+DATA:
+    IMAGE_SIZE: 224
+    CROP_PCT: 0.9
+MODEL:
+    TYPE: swin
+    NAME: swin_large_patch4_window7_224
+    EMBED_DIM: 192
+    STAGE_DEPTHS: [2, 2, 18, 2]
+    NUM_HEADS: [6, 12, 24, 48]
+    WINDOW_SIZE: 7
+    PATCH_SIZE: 4

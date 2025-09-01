@@ -1,0 +1,12 @@
+DATA:
+    IMAGE_SIZE: 384
+    CROP_PCT: 1.0
+MODEL:
+    TYPE: swin
+    NAME: swin_base_patch4_window12_384
+    DROPPATH: 0.5
+    PATCH_SIZE: 4
+    WINDOW_SIZE: 12
+    EMBED_DIM: 128
+    STAGE_DEPTHS: [2, 2, 18, 2]
+    NUM_HEADS: [4, 8, 16, 32]
