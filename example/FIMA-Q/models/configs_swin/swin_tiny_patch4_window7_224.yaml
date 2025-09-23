@@ -1,0 +1,12 @@
+DATA:
+    IMAGE_SIZE: 224
+    CROP_PCT: 0.9
+MODEL:
+    TYPE: swin
+    NAME: swin_tiny_patch4_window7_224
+    DROPPATH: 0.2
+    EMBED_DIM: 96
+    STAGE_DEPTHS: [2, 2, 6, 2]
+    NUM_HEADS: [3, 6, 12, 24]
+    WINDOW_SIZE: 7
+    PATCH_SIZE: 4

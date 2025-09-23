@@ -1,0 +1,7 @@
+DATA:
+    IMAGE_SIZE: 224
+    #IMAGE_SIZE: 288
+    CROP_PCT: 0.875
+MODEL:
+    TYPE: RegNet
+    NAME: regnety_160
