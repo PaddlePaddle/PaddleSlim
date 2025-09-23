@@ -96,7 +96,9 @@ class GPTQ(nn.Layer):
                     blocksize=128,
                     percdamp=.01,
                     groupsize=-1,
-                    actorder=True):
+                    actorder=True,
+                    do_foem=False,
+                    foem_beta=0.1):
         print('quant', self.layer.full_name())
         W = self.layer.weight.t().cast('float32')
         weight_scale = compute_scales(W.t(), method=self.weight_quant_method)
@@ -116,6 +118,9 @@ class GPTQ(nn.Layer):
             W = W[perm].transpose((1, 0))
             H = H[perm].transpose((1, 0))
             H = H[perm].transpose((1, 0))
+
+        if do_foem:
+            fp_weight = W.clone()
 
         Losses = paddle.zeros_like(W)
         Q = paddle.zeros_like(W)
@@ -138,6 +143,8 @@ class GPTQ(nn.Layer):
             i2 = min(i1 + blocksize, self.columns)
             count = i2 - i1
             W1 = W[:, i1:i2]
+            if do_foem:
+                fp_weight1 = fp_weight[:, i1:i2]
             Q1 = paddle.zeros_like(W1)
             Err1 = paddle.zeros_like(W1)
             Losses1 = paddle.zeros_like(W1)
@@ -160,7 +167,11 @@ class GPTQ(nn.Layer):
                 Q1[:, i] = q
                 Losses1[:, i] = (w - q)**2 / d**2
 
-                err1 = (w - q) / d
+                if do_foem:
+                    err1 = ((w - q) - (w - fp_weight1[:, i]) * foem_beta) / d
+                else:
+                    err1 = (w - q) / d
+
                 W1[:, i:] -= err1.unsqueeze(1).matmul(Hinv1[i, i:].unsqueeze(0))
                 Err1[:, i] = err1
                 del w, d, q, err1
@@ -172,6 +183,8 @@ class GPTQ(nn.Layer):
             if Hinv[i1:i2, i2:].shape[1] != 0:
                 W[:, i2:] -= Err1.matmul(Hinv[i1:i2, i2:])
             del Err1, W1, Hinv1
+            if do_foem:
+                del fp_weight1
             paddle.device.cuda.empty_cache()
 
         print('time %.2f' % (time.time() - tick))
@@ -189,4 +202,6 @@ class GPTQ(nn.Layer):
 
         self.quantized = True
         del H, Q, Hinv, W, Losses
+        if do_foem:
+            del fp_weight
         paddle.device.cuda.empty_cache()
