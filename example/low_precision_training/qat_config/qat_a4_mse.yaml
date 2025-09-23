@@ -1,0 +1,15 @@
+quantization_manager: qat_quantization_manager
+
+weight_config:
+  qtype: "full"
+  granularity: "per-layer"
+  filters:
+    - 
+      id: 0
+      qtype: "full"
+    - 
+      name: "fc"
+      qtype: "full"
+
+calibration_config:
+  step: 50

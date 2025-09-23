@@ -1,0 +1,71 @@
+quantization_manager: qt_quantization_manager
+
+weight_forward_config:
+  qtype: "int4"
+  granularity: "N"
+  scaling: "dynamic"
+  observer: "mse"
+  stochastic: False
+  filters:
+    - 
+      id: 0
+      qtype: "full"
+    - 
+      name: "fc"
+      qtype: "full"
+
+weight_backward_config:
+  qtype: "int4"
+  granularity: "C"
+  scaling: "dynamic"
+  observer: "mse"
+  stochastic: False
+  filters:
+    - 
+      id: 0
+      qtype: "full"
+    - 
+      name: "fc"
+      qtype: "full"
+
+input_config:
+  qtype: "int4"
+  granularity: "N"
+  scaling: "dynamic"
+  observer: "mse"
+  stochastic: False
+  filters:
+    - 
+      id: 0
+      qtype: "full"
+    - 
+      name: "fc"
+      qtype: "full"
+
+grad_input_config:
+  qtype: "int4"
+  granularity: "NHW"
+  scaling: "dynamic"
+  observer: "minmax"
+  stochastic: True
+  filters:
+    - 
+      id: 0
+      qtype: "full"
+    - 
+      name: "fc"
+      qtype: "full"
+
+grad_weight_config:
+  qtype: "int4"
+  granularity: "NC"
+  scaling: "dynamic"
+  observer: "minmax"
+  stochastic: True
+  filters:
+    - 
+      id: 0
+      qtype: "full"
+    - 
+      name: "fc"
+      qtype: "full"
