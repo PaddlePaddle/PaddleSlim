@@ -1,0 +1,99 @@
+which: no ccache in (/mnt/disk3/conda/envs/paddle_t/bin:/root/.local/bin:/root/.local/opt/make-4.3/bin:/root/.local/opt/bison-3.2.1/bin:/root/.local/opt/binutils-2.32/bin:/opt/rh/devtoolset-11/root/usr/bin:/usr/local/bin:/usr/local/cuda/bin:/root/.vscode-server/cli/servers/Stable-ddc367ed5c8936efe395cffeec279b04ffd7db78/server/bin/remote-cli:/root/.local/bin:/root/.local/opt/make-4.3/bin:/root/.local/opt/bison-3.2.1/bin:/root/.local/opt/binutils-2.32/bin:/opt/rh/devtoolset-11/root/usr/bin:/usr/local/bin:/usr/local/cuda/bin:/opt/rh/devtoolset-11/root/usr/bin:/root/.local/bin:/root/.local/opt/make-4.3/bin:/root/.local/opt/bison-3.2.1/bin:/root/.local/opt/binutils-2.32/bin:/opt/rh/devtoolset-11/root/usr/bin:/usr/local/bin:/root/.cargo/bin:/usr/local/cuda/bin:/home/anaconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/usr/local/ssl/bin:/usr/lib64/mpich/bin:/usr/local/ssl/bin:/root/node-v18.20.3-linux-x64/bin:/usr/local/bin:/usr/lib64/mpich/bin:/root/bin:/root/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/scripts/noConfigScripts:/usr/local/ssl/bin:/usr/lib64/mpich/bin)
+/mnt/disk3/conda/envs/paddle_t/lib/python3.10/site-packages/paddle/utils/cpp_extension/extension_utils.py:715: UserWarning: No ccache found. Please be aware that recompiling all source files may be required. You can download and install ccache from: https://github.com/ccache/ccache/blob/master/doc/INSTALL.md
+  warnings.warn(warning_message)
+/mnt/disk3/conda/envs/paddle_t/lib/python3.10/site-packages/_distutils_hack/__init__.py:31: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+2025-10-20 13:26:53.930 | INFO     | jsq:prune_wanda_and_smoothquant_annealing:92 - test_only is False
+2025-10-20 13:26:53.930 | INFO     | jsq:prune_wanda_and_smoothquant_annealing:93 - rho is 2.1
+2025-10-20 13:26:53.930 | INFO     | jsq:prune_wanda_and_smoothquant_annealing:94 - sparsity_ratio is 0.4375
+2025-10-20 13:26:53.930 | INFO     | jsq:prune_wanda_and_smoothquant_annealing:95 - nbits is 8
+[32m[2025-10-20 13:26:53,930] [    INFO][0m - We are using <class 'paddlenlp.transformers.llama.modeling.LlamaForCausalLM'> to load '/root/.paddlenlp/models/facebook/llama-7b'.[0m
+[32m[2025-10-20 13:26:53,931] [    INFO][0m - Loading configuration file /root/.paddlenlp/models/facebook/llama-7b/config.json[0m
+[32m[2025-10-20 13:26:53,932] [    INFO][0m - Loading weights file /root/.paddlenlp/models/facebook/llama-7b/model.safetensors.index.json[0m
+W1020 13:26:53.938493  7813 gpu_resources.cc:114] Please NOTE: device: 0, GPU Compute Capability: 8.0, Driver API Version: 12.4, Runtime API Version: 11.8
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:08<00:34,  8.56s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:15<00:23,  7.85s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:23<00:15,  7.87s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:34<00:08,  8.90s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:42<00:00,  8.47s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:42<00:00,  8.40s/it]
+[32m[2025-10-20 13:27:36,651] [    INFO][0m - All model checkpoint weights were used when initializing LlamaForCausalLM.
+[0m
+[32m[2025-10-20 13:27:36,651] [    INFO][0m - All the weights of LlamaForCausalLM were initialized from the model checkpoint at /root/.paddlenlp/models/facebook/llama-7b.
+If your task is similar to the task the model of the checkpoint was trained on, you can already use LlamaForCausalLM for predictions without further training.[0m
+[32m[2025-10-20 13:27:36,653] [    INFO][0m - Generation config file not found, using a generation config created from the model config.[0m
+2025-10-20 13:27:36.654 | INFO     | jsq:prune_wanda_and_smoothquant_annealing:105 - sparsity type: unstructured
+2025-10-20 13:27:36.654 | INFO     | jsq:prune_wanda_and_smoothquant_annealing:112 - set n to 0, set m to 0
+2025-10-20 13:27:36.654 | INFO     | jsq:clip:133 - loading calibdation data
+2025-10-20 13:27:42.259 | INFO     | jsq:clip:141 - dataset loading complete
+2025-10-20 13:27:42.282 | INFO     | jsq:clip:155 - layer is 0
+2025-10-20 13:27:42.282 | INFO     | jsq:clip:202 - nsamples is 1
+W1020 13:27:43.078081  7813 gpu_resources.cc:243] WARNING: device: 0. The installed Paddle is compiled with CUDNN 8.9, but CUDNN version in your machine is 8.9, which may cause serious incompatible bug. Please recompile or reinstall Paddle with compatible CUDNN version.
+/mnt/disk3/conda/envs/paddle_t/lib/python3.10/site-packages/paddlenlp/utils/paddle_patch.py:94: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach(), rather than paddle.to_tensor(sourceTensor).
+  return origin_to_tensor(*args, **kwargs)
+2025-10-20 13:29:20.009 | INFO     | jsq:clip:155 - layer is 1
+2025-10-20 13:29:20.010 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:30:58.122 | INFO     | jsq:clip:155 - layer is 2
+2025-10-20 13:30:58.123 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:32:36.700 | INFO     | jsq:clip:155 - layer is 3
+2025-10-20 13:32:36.701 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:34:15.125 | INFO     | jsq:clip:155 - layer is 4
+2025-10-20 13:34:15.126 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:35:53.913 | INFO     | jsq:clip:155 - layer is 5
+2025-10-20 13:35:53.914 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:37:31.952 | INFO     | jsq:clip:155 - layer is 6
+2025-10-20 13:37:31.953 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:39:10.216 | INFO     | jsq:clip:155 - layer is 7
+2025-10-20 13:39:10.217 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:40:48.692 | INFO     | jsq:clip:155 - layer is 8
+2025-10-20 13:40:48.694 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:42:27.417 | INFO     | jsq:clip:155 - layer is 9
+2025-10-20 13:42:27.418 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:44:06.228 | INFO     | jsq:clip:155 - layer is 10
+2025-10-20 13:44:06.230 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:45:44.877 | INFO     | jsq:clip:155 - layer is 11
+2025-10-20 13:45:44.878 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:47:23.380 | INFO     | jsq:clip:155 - layer is 12
+2025-10-20 13:47:23.382 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:49:01.964 | INFO     | jsq:clip:155 - layer is 13
+2025-10-20 13:49:01.965 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:50:40.047 | INFO     | jsq:clip:155 - layer is 14
+2025-10-20 13:50:40.048 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:52:18.617 | INFO     | jsq:clip:155 - layer is 15
+2025-10-20 13:52:18.618 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:53:56.655 | INFO     | jsq:clip:155 - layer is 16
+2025-10-20 13:53:56.657 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:55:33.184 | INFO     | jsq:clip:155 - layer is 17
+2025-10-20 13:55:33.184 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:57:09.091 | INFO     | jsq:clip:155 - layer is 18
+2025-10-20 13:57:09.091 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 13:58:45.291 | INFO     | jsq:clip:155 - layer is 19
+2025-10-20 13:58:45.292 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:00:22.490 | INFO     | jsq:clip:155 - layer is 20
+2025-10-20 14:00:22.491 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:02:01.156 | INFO     | jsq:clip:155 - layer is 21
+2025-10-20 14:02:01.157 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:03:39.352 | INFO     | jsq:clip:155 - layer is 22
+2025-10-20 14:03:39.353 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:05:16.802 | INFO     | jsq:clip:155 - layer is 23
+2025-10-20 14:05:16.803 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:06:54.563 | INFO     | jsq:clip:155 - layer is 24
+2025-10-20 14:06:54.564 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:08:32.397 | INFO     | jsq:clip:155 - layer is 25
+2025-10-20 14:08:32.398 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:10:10.197 | INFO     | jsq:clip:155 - layer is 26
+2025-10-20 14:10:10.197 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:11:47.960 | INFO     | jsq:clip:155 - layer is 27
+2025-10-20 14:11:47.961 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:13:25.742 | INFO     | jsq:clip:155 - layer is 28
+2025-10-20 14:13:25.742 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:15:03.657 | INFO     | jsq:clip:155 - layer is 29
+2025-10-20 14:15:03.658 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:16:41.388 | INFO     | jsq:clip:155 - layer is 30
+2025-10-20 14:16:41.389 | INFO     | jsq:clip:202 - nsamples is 1
+2025-10-20 14:18:19.530 | INFO     | jsq:clip:155 - layer is 31
+2025-10-20 14:18:19.531 | INFO     | jsq:clip:202 - nsamples is 1
+[32m[2025-10-20 14:19:57,550] [    INFO][0m - Configuration saved in /mnt/disk3/cym/JSQ-paddle/llama-7b-paddle-1/config.json[0m
+[32m[2025-10-20 14:19:57,553] [    INFO][0m - Configuration saved in /mnt/disk3/cym/JSQ-paddle/llama-7b-paddle-1/generation_config.json[0m
+[32m[2025-10-20 14:21:24,218] [    INFO][0m - The model is bigger than the maximum size per checkpoint (10GB) and is going to be split in 3 checkpoint shards. You can find where each parameters has been saved in the index located at /mnt/disk3/cym/JSQ-paddle/llama-7b-paddle-1/model_state.pdparams.index.json.[0m
+[32m[2025-10-20 14:21:24,220] [    INFO][0m - We are using <class 'paddlenlp.transformers.llama.tokenizer.LlamaTokenizer'> to load 'facebook/llama-7b'.[0m
+[32m[2025-10-20 14:21:24,234] [    INFO][0m - tokenizer config file saved in /root/.paddlenlp/models/facebook/llama-7b/tokenizer_config.json[0m
+[32m[2025-10-20 14:21:24,234] [    INFO][0m - Special tokens file saved in /root/.paddlenlp/models/facebook/llama-7b/special_tokens_map.json[0m
+[32m[2025-10-20 14:21:24,234] [    INFO][0m - tokenizer config file saved in /mnt/disk3/cym/JSQ-paddle/llama-7b-paddle-1/tokenizer_config.json[0m
+[32m[2025-10-20 14:21:24,234] [    INFO][0m - Special tokens file saved in /mnt/disk3/cym/JSQ-paddle/llama-7b-paddle-1/special_tokens_map.json[0m
+2025-10-20 14:21:24.235 | INFO     | jsq:prune_wanda_and_smoothquant_annealing:128 - model saved to /mnt/disk3/cym/JSQ-paddle/llama-7b-paddle-1
