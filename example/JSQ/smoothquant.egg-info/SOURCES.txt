@@ -1,0 +1,12 @@
+README.md
+setup.py
+smoothquant/__init__.py
+smoothquant/fake_quant.py
+smoothquant/layerwrapper.py
+smoothquant/quantize.py
+smoothquant/smooth.py
+smoothquant/utils.py
+smoothquant.egg-info/PKG-INFO
+smoothquant.egg-info/SOURCES.txt
+smoothquant.egg-info/dependency_links.txt
+smoothquant.egg-info/top_level.txt
