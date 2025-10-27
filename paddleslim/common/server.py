@@ -62,7 +62,8 @@ class Server(object):
         self._ctx = zmq.Context()
         ### main socket
         self._server_socket = self._ctx.socket(zmq.REP)
-        server_address = "{}:{}".format(self._ip, self._port)
+        # Accept messages only from the local host
+        server_address = "{}:{}".format("127.0.0.1", self._port)
         self._server_socket.bind("tcp://{}".format(server_address))
         self._server_socket.linger = 0
         _logger.info("ControllerServer Start!!!")
