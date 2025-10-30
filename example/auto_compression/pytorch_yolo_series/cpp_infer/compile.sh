@@ -14,10 +14,14 @@ WITH_MKL=ON
 WITH_GPU=ON
 USE_TENSORRT=ON
 
-LIB_DIR=/root/auto_compress/Paddle/build/paddle_inference_install_dir/
+# Paddle Inference预测库路径
+LIB_DIR=/work/Paddle/build/paddle_inference_install_dir
+# CUDNN路径
 CUDNN_LIB=/usr/lib/x86_64-linux-gnu/
+# CUDA路径
 CUDA_LIB=/usr/local/cuda/lib64
-TENSORRT_ROOT=/root/auto_compress/trt/trt8.4/
+# TensorRT安装包路径，为TRT资源包解压后的绝对路径，其中包含lib和include文件夹
+TENSORRT_ROOT=/work/TensorRT-8.6.1.6
 
 WITH_ROCM=OFF
 ROCM_LIB=/opt/rocm/lib
