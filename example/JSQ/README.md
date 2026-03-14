@@ -1,4 +1,4 @@
-## FIMA-Q: Post-Training Quantization for Vision Transformers by Fisher Information Matrix Approximation
+## Compressing Large Language Models by Joint Sparsification and Quantization
 
 ## 1. 简介
 
